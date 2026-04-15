@@ -111,8 +111,11 @@ def _user_role(user) -> str:
         profile = EnhancedUserProfile.objects.filter(user=user).first()
         if profile and getattr(profile, 'platform_role', None):
             return profile.platform_role
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_app_manifest._user_role: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
     return 'viewer'
 
 
@@ -169,8 +172,11 @@ def get_manifest_data(user) -> dict:
             row = cursor.fetchone()
             if row:
                 latest_migration = f"{row[0]}.{row[1]}"
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_app_manifest.get_manifest_data: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return {
         'build_sha': build_sha,
@@ -209,8 +215,11 @@ def app_manifest(request):
                 row = cursor.fetchone()
                 if row:
                     latest_migration = f"{row[0]}.{row[1]}"
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_app_manifest.app_manifest: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
         manifest = _load_manifest()
         return Response({
             'backend_sha': backend_sha or None,

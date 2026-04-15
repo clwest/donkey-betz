@@ -20,6 +20,8 @@ import os
 # Session 850: Smart truncation for cleaner synthesis display
 from core.api_helpers import smart_truncate
 
+from django.db import models  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 
@@ -1030,10 +1032,14 @@ def run_spider_network(self):
     from core.tasks_spiders import _impl_run_spider_network
     return _impl_run_spider_network(self)
 @shared_task(ignore_result=True)
-def backfill_spider_embeddings(batch_size: int = 200):
+def backfill_spider_embeddings(batch_size: int = 50):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
     Session 394: Increased default batch size from 50 to 200 for faster processing.
+    Session 1083 (Rigby audit): Reduced 200→50 after observing 1.37GB memory
+    spike per run in celery telemetry (start=669MB → end=2042MB). Combined
+    with the .only() column filter in spider_semantic_search.backfill_embeddings,
+    this should keep the task's RSS delta under 300MB.
     Apr 2026: Removed hours=168 window — triage_spider_embeddings deduped the
     historical backlog so all remaining unembedded records are worth processing.
 
@@ -3873,10 +3879,11 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
     from core.models_unified_system import SpiderData
     from django.utils import timezone
     from django.db import connection
+    from datetime import timedelta  # Session 1083: was `timezone.timedelta` — doesn't exist
 
     now = timezone.now()
-    trim_cutoff = now - timezone.timedelta(days=trim_days)
-    delete_cutoff = now - timezone.timedelta(days=delete_days)
+    trim_cutoff = now - timedelta(days=trim_days)
+    delete_cutoff = now - timedelta(days=delete_days)
 
     stats = {'trimmed': 0, 'deleted': 0, 'bytes_before': 0, 'bytes_after': 0}
 
@@ -3885,8 +3892,11 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
         with connection.cursor() as c:
             c.execute("SELECT pg_total_relation_size('core_spiderdata')")
             stats['bytes_before'] = c.fetchone()[0]
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks.spider_data_retention: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     # Phase 1: DELETE rows older than delete_days
     try:
@@ -3934,8 +3944,11 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
         with connection.cursor() as c:
             c.execute("SELECT pg_total_relation_size('core_spiderdata')")
             stats['bytes_after'] = c.fetchone()[0]
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks.spider_data_retention: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     saved_mb = round((stats['bytes_before'] - stats['bytes_after']) / 1024 / 1024, 1)
     logger.info(
@@ -8873,7 +8886,11 @@ def _get_agent_class(agent_name: str):
         from core.agent_router import AgentRouter
         router = AgentRouter()
         return router.get_agent_class(agent_name)
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "tasks._get_agent_class: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 
@@ -11023,7 +11040,11 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
             import resource
             rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             return round(rss / (1024 * 1024), 1) if os.uname().sysname == 'Darwin' else round(rss / 1024, 1)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "tasks._get_rss_mb: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     # Stampede lock — skip if another rebuild is already running

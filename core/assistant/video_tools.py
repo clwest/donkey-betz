@@ -244,7 +244,11 @@ class VideoGenerationToolsMixin:
 
             return None
 
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "video_tools._resolve_image_url: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _tool_lip_sync(self, arguments: Dict[str, Any]) -> Dict[str, Any]:

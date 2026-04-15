@@ -67,7 +67,11 @@ def get_user_from_request(request):
         if not user:
             user = User.objects.first()
         return user
-    except Exception:
+    except Exception as _e:
+        logger.warning(
+            "views_business_ideas.get_user_from_request: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
         return None
 
 

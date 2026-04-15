@@ -173,7 +173,11 @@ class NervousService:
         try:
             status = self.get_status()
             return status.get('is_healthy', False)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "nervous.is_responsive: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def get_vitals(self) -> dict:

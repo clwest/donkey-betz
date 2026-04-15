@@ -145,8 +145,11 @@ def get_unified_intelligence_data(request):
         try:
             implemented_insights = redis_client.smembers('implemented_insights') or set()
             investigated_behaviors = redis_client.smembers('investigated_behaviors') or set()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_unified_intelligence.get_unified_intelligence_data: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Add status to insights
         insights_with_status = []
@@ -187,8 +190,11 @@ def get_unified_intelligence_data(request):
             for activity_json in redis_client.lrange('recent:activities', 0, 19):  # Get last 20 activities
                 try:
                     recent_activities.append(json.loads(activity_json))
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_unified_intelligence.get_unified_intelligence_data: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
         except Exception as e:
             logger.debug(f"Could not fetch recent activities: {e}")
 

@@ -317,8 +317,11 @@ class SecureEnvironmentManager:
             try:
                 base64.b64decode(value)
                 return True
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "security._looks_encrypted: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
         return False
     
     def mask_sensitive_value(self, key: str, value: Any) -> str:

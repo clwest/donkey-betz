@@ -234,8 +234,11 @@ class DomainContentContextBuilder:
                 for analysis in whale_analyses:
                     agent_name = analysis.agent.name if analysis.agent else "BlockchainAgent"
                     parts.append(f"- {agent_name} analysis completed")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_crypto_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         parts.extend([
             "",
@@ -294,8 +297,11 @@ class DomainContentContextBuilder:
                     for item in tech_data[:3]:
                         title = item.get('title', '')[:80]
                         parts.append(f"- {title}")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_ai_tech_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         parts.extend([
             "",
@@ -325,8 +331,11 @@ class DomainContentContextBuilder:
                         title = item.get('title', '')[:80]
                         source = item.get('source', 'Legal Source')
                         parts.append(f"- {title} (via {source})")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_legal_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         parts.extend([
             "",
@@ -361,8 +370,11 @@ class DomainContentContextBuilder:
                 if total > 0:
                     parts.append(f"- Interview rate: {(interviews/total)*100:.1f}%")
                     parts.append(f"- Offer rate: {(offers/total)*100:.1f}%")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_career_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Get job spider data
         try:
@@ -377,8 +389,11 @@ class DomainContentContextBuilder:
                     for item in job_data[:3]:
                         title = item.get('title', '')[:80]
                         parts.append(f"- {title}")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_career_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         parts.extend([
             "",
@@ -407,8 +422,11 @@ class DomainContentContextBuilder:
                     for item in health_data[:3]:
                         title = item.get('title', '')[:80]
                         parts.append(f"- {title}")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_health_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         parts.extend([
             "",
@@ -437,8 +455,11 @@ class DomainContentContextBuilder:
                     for item in edu_data[:3]:
                         title = item.get('title', '')[:80]
                         parts.append(f"- {title}")
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "domain_context._get_education_context: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         parts.extend([
             "",

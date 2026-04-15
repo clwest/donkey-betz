@@ -335,8 +335,11 @@ def _impl_run_spider_network(self):
         if gov_mode in ('freeze', 'safe_mode'):
             logger.info("🕷️ Spider network skipped — governance mode: %s", gov_mode)
             return {'skipped': True, 'reason': f'governance_mode={gov_mode}'}
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "tasks_spiders._impl_run_spider_network: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
 
@@ -447,20 +450,27 @@ def _impl_run_spider_network(self):
             category = config.get('category', spider_config.get('category', 'general'))
             results['all_topics'].append(category)
 
-            # Session 399: Publish spider completion event for real-time UI updates
-            try:
-                import redis
-                import json as json_lib
-                redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
-                redis_client.publish('spider:completion', json_lib.dumps({
-                    'spider_name': spider_name,
-                    'item_count': item_count,
-                    'category': config.get('category', spider_config.get('category', 'general')),
-                    'data_id': str(spider_data.id),
-                    'timestamp': timezone.now().isoformat()
-                }))
-            except Exception as redis_error:
-                logger.warning(f"Redis publish failed (non-critical): {redis_error}")
+            # Session 399: Publish spider completion event for real-time UI updates.
+            # Session 1083 (Rigby audit): only publish when a SpiderData row
+            # was actually created — previously unconditionally did
+            # `str(spider_data.id)` which AttributeError'd on every spider
+            # whose dedup dropped all items (spider_data = None at line 434).
+            # Fired as "Redis publish failed (non-critical)" WARNING on every
+            # dedup-empty spider run — surfaced in logs tonight.
+            if spider_data is not None:
+                try:
+                    import redis
+                    import json as json_lib
+                    redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
+                    redis_client.publish('spider:completion', json_lib.dumps({
+                        'spider_name': spider_name,
+                        'item_count': item_count,
+                        'category': config.get('category', spider_config.get('category', 'general')),
+                        'data_id': str(spider_data.id),
+                        'timestamp': timezone.now().isoformat()
+                    }))
+                except Exception as redis_error:
+                    logger.warning(f"Redis publish failed (non-critical): {redis_error}")
 
             # Session 484: Mark execution as successful
             execution_log.source_urls_attempted = source_urls if source_urls else [SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal']

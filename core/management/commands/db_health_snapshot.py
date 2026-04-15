@@ -17,6 +17,9 @@ from django.utils import timezone
 from django.apps import apps
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Command(BaseCommand):
     help = 'Output database health snapshot for environment comparison'
 
@@ -37,7 +40,11 @@ class Command(BaseCommand):
                 return None
             model = apps.get_model(app_label, model_name)
             return model.objects.count()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "db_health_snapshot._safe_count: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _safe_count_filter(self, model_path, **filters):
@@ -50,7 +57,11 @@ class Command(BaseCommand):
                 return None
             model = apps.get_model(app_label, model_name)
             return model.objects.filter(**filters).count()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "db_health_snapshot._safe_count_filter: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _safe_count_by_field(self, model_path, field):
@@ -67,7 +78,11 @@ class Command(BaseCommand):
                 key = item[field] if item[field] is not None else 'null'
                 result[str(key)] = item['count']
             return result
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "db_health_snapshot._safe_count_by_field: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return {}
 
     def _safe_count_recent(self, model_path, date_field, hours):
@@ -81,7 +96,11 @@ class Command(BaseCommand):
             model = apps.get_model(app_label, model_name)
             cutoff = timezone.now() - timedelta(hours=hours)
             return model.objects.filter(**{f'{date_field}__gte': cutoff}).count()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "db_health_snapshot._safe_count_recent: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def handle(self, *args, **options):

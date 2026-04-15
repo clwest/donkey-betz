@@ -97,7 +97,11 @@ class EmbeddingService:
             from django.core.cache import cache
             key = f'{self.CACHE_PREFIX}:{model}:{self._text_hash(text, model)}'
             return cache.get(key)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "embedding_service._cache_get: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _cache_set(self, text: str, model: str, embedding: List[float]) -> None:

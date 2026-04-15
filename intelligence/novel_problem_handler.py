@@ -14,6 +14,9 @@ from typing import Dict, Optional
 from intelligence.problem_solver import AgentProblemSolver
 
 # Redis URL for production compatibility
+import logging
+logger = logging.getLogger(__name__)
+
 _REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 _REDIS_URL_DB2 = _REDIS_URL.rsplit('/', 1)[0] + '/2' if '/' in _REDIS_URL else _REDIS_URL + '/2'
 
@@ -292,7 +295,11 @@ def solution(data):
     else:
         try:
             return float(data)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "novel_problem_handler.solution: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 '''
 

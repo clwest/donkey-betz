@@ -568,17 +568,23 @@ class SciFiIntegrationService:
 
             cutoff = timezone.now() - timedelta(days=7)
 
+            # Session 1083 (Rigby audit): AgentDream uses `dreamed_at`,
+            # not `created_at`. The old query raised FieldError on
+            # every agent_name lookup, surfaced in logs tonight as
+            # `Could not fetch dreams for EditorAgent: Cannot resolve
+            # keyword 'created_at'`. Sister bug to the content_voice_system
+            # drift in round 32.
             dreams = AgentDream.objects.filter(
                 agent__name=agent_name,
-                created_at__gte=cutoff
-            ).select_related('agent').order_by('-created_at')[:limit]
+                dreamed_at__gte=cutoff
+            ).select_related('agent').order_by('-dreamed_at')[:limit]
 
             # Fallback: try partial name match
             if not dreams.exists():
                 dreams = AgentDream.objects.filter(
                     agent__name__icontains=agent_name.replace('Agent', ''),
-                    created_at__gte=cutoff
-                ).select_related('agent').order_by('-created_at')[:limit]
+                    dreamed_at__gte=cutoff
+                ).select_related('agent').order_by('-dreamed_at')[:limit]
 
             result = []
             for dream in dreams:
@@ -588,7 +594,7 @@ class SciFiIntegrationService:
                     result.append({
                         'content': content[:200],
                         'dream_type': getattr(dream, 'dream_type', 'creative'),
-                        'created_at': dream.created_at.isoformat() if hasattr(dream, 'created_at') else '',
+                        'dreamed_at': dream.dreamed_at.isoformat() if getattr(dream, 'dreamed_at', None) else '',
                         'emotional_tone': getattr(dream, 'emotional_tone', 'neutral'),
                     })
 
@@ -598,7 +604,12 @@ class SciFiIntegrationService:
             return result
 
         except Exception as e:
-            logger.debug(f"Could not fetch dreams for {agent_name}: {e}")
+            # Upgraded from debug to warning so the next schema drift
+            # surfaces instead of being silent again.
+            logger.warning(
+                "scifi_integration._get_recent_dreams for %s: %s: %s",
+                agent_name, type(e).__name__, e,
+            )
             return []
 
     def get_collaboration_bonus(

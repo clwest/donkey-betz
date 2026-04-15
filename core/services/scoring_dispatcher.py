@@ -32,8 +32,11 @@ def _publish_scoring_event(spider_data, result, mode: str, latency_ms: float):
             ).first()
             if opportunity:
                 opportunity_id = str(opportunity.id)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "scoring_dispatcher._publish_scoring_event: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         publish_opportunity_scored_event(
             opportunity_id=opportunity_id,
@@ -391,7 +394,11 @@ class ScoringDispatcher:
         try:
             from core.models_unified_system import ScoringQueueItem
             return ScoringQueueItem.objects.filter(status='pending').count()
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "scoring_dispatcher._get_queue_depth: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
 
     def _estimate_wait_time(self, position: int) -> int:

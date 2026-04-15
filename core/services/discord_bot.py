@@ -1778,8 +1778,11 @@ class SpiderCommands(commands.Cog):
                         data = spider.fetch_data(sports=[sport], max_results=20, market_types=['outrights'])
                         futures = [d for d in data if d.get('data_type') == 'futures']
                         all_futures.extend(futures)
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "discord_bot.get_futures_data: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
                 return all_futures
 
@@ -6716,7 +6719,11 @@ class AgentAccessCommands(commands.Cog):
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             user = await get_linked_user(interaction.user.id)
@@ -7158,7 +7165,11 @@ class AgentAccessCommands(commands.Cog):
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             user = await get_linked_user(interaction.user.id)
@@ -7411,7 +7422,11 @@ Spoken response:"""
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             linked_user = await get_linked_user(interaction.user.id)
@@ -7511,8 +7526,11 @@ Spoken response:"""
             try:
                 import os
                 os.unlink(audio_path)
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "discord_bot.__init__: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             if not transcribed_text or len(transcribed_text.strip()) < 3:
                 await interaction.edit_original_response(
@@ -7952,7 +7970,11 @@ Keep the response concise but insightful (max 300 words)."""
             def get_linked_user(discord_id):
                 try:
                     return User.objects.filter(discord_id=str(discord_id)).first()
-                except Exception:
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_linked_user: swallowed (%s: %s) — returning default",
+                        type(_e).__name__, _e,
+                    )
                     return None
 
             user = await get_linked_user(interaction.user.id)
@@ -8233,8 +8255,11 @@ def get_content_for_message(message_id: int) -> Optional[Dict[str, Any]]:
         data = r.get(key)
         if data:
             return json.loads(data)
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "discord_bot.get_content_for_message: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return None
 
@@ -10687,15 +10712,21 @@ class ReviewCommands(commands.Cog):
                 try:
                     review = review_service.get_or_create_for_artifact(target_id)
                     return review
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_or_create_review: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 # Try as dream ID
                 try:
                     review = review_service.get_or_create_for_dream(target_id)
                     return review
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "discord_bot.get_or_create_review: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 return None
 

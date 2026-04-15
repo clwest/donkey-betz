@@ -44,8 +44,11 @@ def get_redis_url(db: Optional[int] = None) -> str:
         try:
             from django.conf import settings
             redis_url = getattr(settings, 'REDIS_URL', None)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "redis_helper.get_redis_url: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     if not redis_url:
         redis_url = DEFAULT_REDIS_URL

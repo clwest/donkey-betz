@@ -592,8 +592,11 @@ class SpiderConnectorOrchestrator:
                         if data_receiver and data_receiver.is_running:
                             metrics = data_receiver.get_processing_metrics()
                             total_data_flows += metrics.total_received
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "spider_connector_orchestrator._initialize_agent_configurations: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
                 self.metrics.total_data_flows = total_data_flows
 

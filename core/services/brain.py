@@ -184,7 +184,11 @@ class BrainService:
         try:
             vitals = self.get_vitals()
             return vitals.get('is_thinking', False)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "brain.is_thinking: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def get_vitals(self) -> Dict[str, Any]:

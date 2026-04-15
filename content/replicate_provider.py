@@ -608,8 +608,11 @@ class ReplicateProvider:
             for file_handle in opened_files:
                 try:
                     file_handle.close()
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "replicate_provider.generate_3d_from_images: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
 
     def check_3d_generation_status(self, prediction_id: str) -> Dict[str, Any]:

@@ -434,7 +434,11 @@ class ProactiveIntelligenceService:
                 'fired_at': event.fired_at.isoformat(),
                 'severity': 'info'
             }
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "proactive_intelligence._format_trigger_event: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def _generate_suggestions(

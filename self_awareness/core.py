@@ -402,7 +402,11 @@ class CodeIntrospector:
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 return len(f.readlines())
-        except:
+        except Exception as _e:
+            logger.warning(
+                "core._count_lines: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
             
     def _calculate_complexity(self, python_files: List[Path]) -> float:
@@ -472,7 +476,11 @@ class CodeIntrospector:
                             count += 1
                             
             return count
-        except:
+        except Exception as _e:
+            logger.warning(
+                "core._count_django_models: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
             
     def _count_django_views(self, file_path: Path) -> int:
@@ -491,7 +499,11 @@ class CodeIntrospector:
                         count += 1
                         
             return count
-        except:
+        except Exception as _e:
+            logger.warning(
+                "core._count_django_views: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0
             
     def _count_agents(self, file_path: Path) -> int:

@@ -45,6 +45,13 @@ from core.services.watermark_integration import save_watermarked_image
 # Session 769: Cost tracking for external APIs
 from core.services.api_cost_config import calculate_stability_cost
 
+# Session 1083 (Rigby audit): build_prompt_from_form and
+# generate_image_with_stability were referenced 6 times in this file
+# but never imported. Every image-workflow dispatch path was throwing
+# NameError at one of these lookups.
+from core.views_image_misc import build_prompt_from_form  # noqa: E402
+from core.views_image_generate import generate_image_with_stability  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 

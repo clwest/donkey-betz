@@ -8,6 +8,9 @@ from celery import Celery
 from celery.schedules import crontab
 
 # Set the default Django settings module for the 'celery' program.
+import logging
+logger = logging.getLogger(__name__)  # Session 1083
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 app = Celery('unified_donkey_betz_core')

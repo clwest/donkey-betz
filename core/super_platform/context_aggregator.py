@@ -318,8 +318,11 @@ class ContextAggregator:
                         'description': getattr(latest_mood, 'description', ''),
                         'intensity': getattr(latest_mood, 'intensity', 0.7),
                     }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "context_aggregator._get_mood_context: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # Get recent mood history
             mood_history = []
@@ -333,8 +336,11 @@ class ContextAggregator:
                     }
                     for h in history_qs
                 ]
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "context_aggregator._get_mood_context: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             return {
                 'current': current_mood,
@@ -442,8 +448,11 @@ class ContextAggregator:
                     }
                     for o in opp_qs
                 ]
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "context_aggregator._get_opportunity_context: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             # Get revenue summary
             revenue = {}
@@ -461,8 +470,11 @@ class ContextAggregator:
                     'last_30_days': float(revenue_qs.get('total') or 0),
                     'currency': 'USD',
                 }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "context_aggregator._get_opportunity_context: swallowed (%s: %s) — degraded",
+                    type(_e).__name__, _e,
+                )
 
             return {
                 'opportunities': opportunities,
@@ -495,8 +507,11 @@ class ContextAggregator:
                         }
                         for r in rels
                     ]
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "context_aggregator._get_agent_relationships: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 relationships[agent] = agent_rels
 
@@ -523,8 +538,11 @@ class ContextAggregator:
                 try:
                     trends = self.spider_service.get_trending_topics(hours=6)
                     context['trends'] = trends[:5] if trends else []
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "context_aggregator.get_quick_context: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
         return context
 

@@ -14,6 +14,8 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.conf import settings
 
+from django.db import models  # Session 1083
+
 logger = logging.getLogger(__name__)
 
 
@@ -1011,7 +1013,11 @@ class ControlConsumer(AsyncWebsocketConsumer):
             from django.core.cache import cache
             cache.set('redis_health_check', True, 1)
             return cache.get('redis_health_check', False)
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "orchestra_consumers.check_redis: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     async def handle_command(self, command, params):

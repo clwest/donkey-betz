@@ -1615,7 +1615,11 @@ Looking forward to discussing your project in detail.
         try:
             cleaned = str(budget_str).replace('$', '').replace(',', '').strip()
             return float(cleaned)
-        except:
+        except Exception as _e:
+            logger.warning(
+                "income_builder._parse_budget: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
     def _calculate_skill_match_simple(self, opportunity: Dict) -> str:

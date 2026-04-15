@@ -580,6 +580,15 @@ class ROIEnforcer:
                 'window_hours': window_hours,
             }
 
+        # Session 1083 (Rigby audit): compute_roi_scores used to bare-
+        # except every outcome/quality source and silently drop the
+        # missing data. When 2-3 sources were degraded simultaneously,
+        # every agent's ROI looked artificially low and the enforcer
+        # would issue throttle recommendations against perfectly healthy
+        # agents. Track degraded sources so callers can detect partial
+        # telemetry and skip throttle actions.
+        outcome_sources_degraded: list[str] = []
+
         # Outcome counts by agent: completed AgentExecutions
         agent_names = [a['agent_name'] for a in agent_spend]
         outcome_map = {}
@@ -597,8 +606,13 @@ class ROIEnforcer:
             )
             for o in outcomes:
                 outcome_map[o['agent__name']] = o['completed']
-        except Exception:
-            pass
+        except Exception as e:
+            outcome_sources_degraded.append('agent_executions')
+            logger.warning(
+                "compute_roi_scores: AgentExecution outcomes failed "
+                "(%s: %s) — per-agent completion counts will be zero",
+                type(e).__name__, e,
+            )
 
         # Content outcomes: published deliverables (content-producing agents)
         content_map = {}
@@ -615,8 +629,13 @@ class ROIEnforcer:
             for c in content_outcomes:
                 if c['agent_name']:
                     content_map[c['agent_name']] = c['published']
-        except Exception:
-            pass
+        except Exception as e:
+            outcome_sources_degraded.append('deliverables')
+            logger.warning(
+                "compute_roi_scores: Deliverable outcomes failed "
+                "(%s: %s) — published content counts will be zero",
+                type(e).__name__, e,
+            )
 
         # Session 1098: ImpactEvent outcomes — captures PA tool completions
         # and other impact-tracked events (wager profit, revenue, content actions)
@@ -634,26 +653,35 @@ class ROIEnforcer:
             for ie in impact_outcomes:
                 if ie['agent_name']:
                     impact_map[ie['agent_name']] = ie['impacts']
-        except Exception:
-            pass
+        except Exception as e:
+            outcome_sources_degraded.append('impact_events')
+            logger.warning(
+                "compute_roi_scores: ImpactEvent outcomes failed "
+                "(%s: %s) — PA tool / revenue attribution will be zero",
+                type(e).__name__, e,
+            )
 
-        # Deliberation outcomes: passed sessions
+        # Deliberation outcomes: passed sessions.
+        # Session 1083 (Rigby audit): this used to `.values('topic')`
+        # but the DeliberationSession model's field is `objective`, not
+        # `topic` — had been throwing FieldError silently on every
+        # compute_roi_scores call since the schema rename. The bare-pass
+        # swallowed it, so the enforcer had been missing deliberation
+        # outcomes entirely. Simplified to a plain count since the
+        # group-by was vestigial (result was summed immediately).
         delib_map = {}
         try:
             from core.models_deliberation import DeliberationSession
-            delib_outcomes = list(
-                DeliberationSession.objects.filter(
-                    created_at__gte=window_start,
-                    status='completed',
-                ).values('topic').annotate(
-                    passed=Count('id'),
-                )
+            delib_map['_total'] = DeliberationSession.objects.filter(
+                created_at__gte=window_start,
+                status='completed',
+            ).count()
+        except Exception as e:
+            outcome_sources_degraded.append('deliberation_outcomes')
+            logger.warning(
+                "compute_roi_scores: DeliberationSession outcomes failed "
+                "(%s: %s)", type(e).__name__, e,
             )
-            # We can't directly map topic→agent, so this contributes to
-            # 'content' task_type ROI globally
-            delib_map['_total'] = sum(d['passed'] for d in delib_outcomes)
-        except Exception:
-            pass
 
         # Quality signals: average quality_score from SelfBlogs (content pipeline)
         quality_map = {}  # agent_name → avg quality
@@ -678,8 +706,13 @@ class ROIEnforcer:
                 quality_map['_content_avg'] = float(bq.get('avg_quality') or 0)
                 quality_map['_content_published'] = bq.get('published', 0)
                 quality_map['_content_total'] = bq.get('total', 0)
-        except Exception:
-            pass
+        except Exception as e:
+            outcome_sources_degraded.append('selfblog_quality')
+            logger.warning(
+                "compute_roi_scores: SelfBlog quality_score query failed "
+                "(%s: %s) — content quality signals will be empty",
+                type(e).__name__, e,
+            )
 
         # Quality: Deliverable quality scores by agent
         deliverable_quality = {}
@@ -701,8 +734,12 @@ class ROIEnforcer:
                     deliverable_quality[d['agent_name']] = float(
                         d.get('avg_quality') or 0
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            outcome_sources_degraded.append('deliverable_quality')
+            logger.warning(
+                "compute_roi_scores: Deliverable quality aggregation "
+                "failed (%s: %s)", type(e).__name__, e,
+            )
 
         # Quality: Deliberation pass rate (completed vs total)
         delib_pass_rate = 0.5  # default
@@ -717,8 +754,13 @@ class ROIEnforcer:
             ).count()
             if total_delibs > 0:
                 delib_pass_rate = passed_delibs / total_delibs
-        except Exception:
-            pass
+        except Exception as e:
+            outcome_sources_degraded.append('delib_pass_rate')
+            logger.warning(
+                "compute_roi_scores: DeliberationSession pass-rate query "
+                "failed (%s: %s) — falling back to 0.5 default",
+                type(e).__name__, e,
+            )
 
         # Build per-agent ROI + QROI
         total_spend = 0
@@ -785,6 +827,7 @@ class ROIEnforcer:
             'total_outcomes': total_outcomes,
             'deliberation_passes': delib_map.get('_total', 0),
             'window_hours': window_hours,
+            'outcome_sources_degraded': outcome_sources_degraded,
         }
 
     def get_throttle_recommendations(self, now) -> list[dict]:
@@ -813,6 +856,21 @@ class ROIEnforcer:
 
         # Compute ROI scores (includes QROI)
         roi_data = self.compute_roi_scores(now, window_hours=24)
+
+        # Session 1083 (Rigby audit): if any outcome/quality source is
+        # degraded, our per-agent ROI is unreliable — throttling agents
+        # based on partial telemetry is worse than doing nothing. Fail
+        # closed by returning no recommendations.
+        degraded = roi_data.get('outcome_sources_degraded') or []
+        if degraded:
+            logger.warning(
+                "get_throttle_recommendations: skipping throttle decisions "
+                "because ROI telemetry is degraded (sources=%s). No "
+                "recommendations will be returned until next healthy cycle.",
+                degraded,
+            )
+            return []
+
         recommendations = []
 
         for agent in roi_data['agents']:
@@ -946,7 +1004,11 @@ class ROIEnforcer:
                 return None
 
             return entry
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "budget.check_throttle: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return None
 
     def get_roi_report(self, now) -> dict:
@@ -1225,8 +1287,16 @@ class BudgetAwareScheduler:
                 if override is not None:
                     result[param] = override
                     continue
-            except Exception:
-                pass
+            except Exception as e:
+                # Session 1083: was bare pass — runtime override lookup
+                # failure silently dropped operator-configured values in
+                # favor of hardcoded defaults. Log so Chris can see when
+                # scheduler knob overrides are being ignored.
+                logger.warning(
+                    "_get_knobs: override lookup for %s failed (%s: %s) — "
+                    "falling back to static default",
+                    override_key, type(e).__name__, e,
+                )
 
             # Use static default for the level
             result[param] = levels.get(level, levels.get('normal'))
@@ -1234,7 +1304,15 @@ class BudgetAwareScheduler:
         return result
 
     def _log_decision(self, task_name: str, decision: str, budget_pct: float):
-        """Log scheduling decision for audit trail."""
+        """Log scheduling decision for audit trail.
+
+        Session 1083: was `except Exception: pass` which silently dropped
+        every scheduler decision from the audit trail when AutopilotAction
+        writes failed. The decision itself still got applied downstream,
+        so Chris would see agents getting throttled / deferred with zero
+        audit trail — permanently unanalyzable in post-incident review.
+        Now logs ERROR so the failure surfaces loudly.
+        """
         try:
             AutopilotAction.objects.create(
                 action_type='config_tune',
@@ -1248,8 +1326,13 @@ class BudgetAwareScheduler:
                 },
                 result={'scheduled_action': decision},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                "_log_decision: failed to write AutopilotAction audit "
+                "row for task=%s decision=%s budget_pct=%.3f (%s: %s) — "
+                "audit trail will be missing this decision",
+                task_name, decision, budget_pct, type(e).__name__, e,
+            )
 
         logger.info(
             f"[BudgetAwareScheduler] {decision.upper()}: "
@@ -1279,7 +1362,12 @@ class BudgetAwareScheduler:
                     created_at__gte=cutoff,
                 ).values_list('evidence', flat=True)[:50]
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                "get_scheduler_report: recent decisions query failed "
+                "(%s: %s) — defers_24h / downscopes_24h will report 0",
+                type(e).__name__, e,
+            )
             recent = []
 
         defers = sum(1 for r in recent if r.get('decision') == 'defer')
@@ -1296,8 +1384,12 @@ class BudgetAwareScheduler:
             ).values('key', 'value')
             for e in entries:
                 overrides[e['key']] = e['value']
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "get_scheduler_report: active knob overrides query failed "
+                "(%s: %s) — report will show empty overrides map",
+                type(exc).__name__, exc,
+            )
 
         # Task tier summary
         tier_counts = {1: 0, 2: 0, 3: 0}

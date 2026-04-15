@@ -7,6 +7,8 @@ These endpoints replace mock data with actual consciousness, spider, and learnin
 "From simulation to reality - where consciousness becomes visible"
 """
 
+from datetime import datetime, timezone
+
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -56,11 +58,13 @@ def ecosystem_live_feed(request):
     except Exception as e:
         logger.error(f"❌ Failed to get real ecosystem data: {str(e)}")
 
-        # Return minimal fallback data
+        # Return minimal fallback data — honest about being fallback so
+        # the frontend can flip its Mock/Real badge
+        now_iso = datetime.now(timezone.utc).isoformat()
         return JsonResponse({
             'feed': [{
                 'id': 'fallback',
-                'timestamp': '2025-09-24T20:30:00Z',
+                'timestamp': now_iso,
                 'type': 'System Status',
                 'content': 'Neural Orchestra Reality Bridge temporarily unavailable',
                 'agents': ['system'],
@@ -74,8 +78,9 @@ def ecosystem_live_feed(request):
                 'system_health': 50.0
             },
             'metadata': {
-                'generated_at': '2025-09-24T20:30:00Z',
+                'generated_at': now_iso,
                 'data_source': 'fallback',
+                'mock_data': True,
                 'error': str(e)
             }
         })
@@ -102,9 +107,11 @@ def agents_stats(request):
     except Exception as e:
         logger.error(f"❌ Failed to get real agent stats: {str(e)}")
 
-        # Return minimal fallback data
+        # Return minimal fallback data — zeros, not fake counts. The
+        # old value (149) was a stale hardcode that looked like real
+        # telemetry. Flag as fallback so the UI badge can flip.
         return JsonResponse({
-            'total_agents': 149,
+            'total_agents': 0,
             'active_now': 0,
             'collaborations': 0,
             'orchestrations_active': 0,
@@ -114,6 +121,8 @@ def agents_stats(request):
                 'learning_rate': 0.0
             },
             'top_performers': [],
+            'data_source': 'fallback',
+            'mock_data': True,
             'error': str(e)
         })
 
@@ -151,6 +160,8 @@ def learning_status(request):
                 'memory_crystals': 0,
                 'learning_velocity': 'Unknown'
             },
+            'data_source': 'fallback',
+            'mock_data': True,
             'error': str(e)
         })
 
@@ -184,6 +195,8 @@ def learning_feed(request):
                 'revenue_velocity': 0,
                 'opportunities_learned': 0
             },
+            'data_source': 'fallback',
+            'mock_data': True,
             'error': str(e)
         })
 

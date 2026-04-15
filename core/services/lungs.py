@@ -660,7 +660,11 @@ class LungsCapacityService:
         try:
             count = LLMCallLog.objects.filter(created_at__gte=since).count()
             return count / 15.0  # Calls per minute
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "lungs._calculate_respiratory_rate: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return 0.0
 
     def _get_status_from_oxygen(self, oxygen_level: float) -> str:

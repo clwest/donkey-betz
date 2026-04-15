@@ -379,8 +379,11 @@ class AgentIntelligenceContextService:
                 participants = []
                 try:
                     participants = [p.name for p in conv.participants.all()[:4]]
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "agent_intelligence_context._get_conversation_insights: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
                 # Extract key points from conclusion if available
                 key_insights = []

@@ -495,8 +495,11 @@ def get_agent_conversations(request):
                         emoji = _get_agent_emoji(a.specialization)
                         participant_names.append({'name': a.name, 'emoji': emoji})
                         agent_name_map[a.name] = emoji
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_agent_learning.get_agent_conversations: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             # Session 435: Parse synthesis into individual messages
             # Format is "AgentName: message" on each paragraph
@@ -717,8 +720,11 @@ def get_agent_conversation_detail(request, conversation_id):
                         emoji = _get_agent_emoji(a.specialization)
                         participant_names.append({'name': a.name, 'emoji': emoji})
                         agent_name_map[a.name] = emoji
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "views_agent_learning.get_agent_conversation_detail: swallowed (%s: %s) — degraded",
+                        type(_e).__name__, _e,
+                    )
 
             # Parse messages from synthesis
             messages_data = []
@@ -1836,8 +1842,11 @@ def get_governance_stats(request):
                 ai_promoter_info['enabled'] = task.enabled
                 ai_promoter_info['last_run'] = task.last_run_at.isoformat() if task.last_run_at else None
                 ai_promoter_info['schedule'] = str(task.crontab) if task.crontab else str(task.interval)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_governance_stats: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         return JsonResponse({
             'success': True,
@@ -1904,8 +1913,11 @@ def get_celery_stats(request):
             # Get queue lengths
             for queue in ['celery', 'default', 'long_running', 'broadcast']:
                 queued_tasks += r.llen(queue) or 0
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_celery_stats: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Recent task executions
         recent_tasks = []
@@ -1971,8 +1983,11 @@ def get_system_health(request):
             r = redis.Redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379/0'))
             r.ping()
             services['redis'] = True
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_system_health: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Check PostgreSQL (if we got this far, it's working)
         try:
@@ -1980,8 +1995,11 @@ def get_system_health(request):
             with connection.cursor() as cursor:
                 cursor.execute('SELECT 1')
             services['postgres'] = True
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_system_health: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Check Celery (check for PID files indicating running workers)
         try:
@@ -2027,20 +2045,29 @@ def get_system_health(request):
             canonical = AgentDecisionSummary.objects.filter(is_canonical=True).count()
             canonical_rate = round((canonical / decisions_total * 100), 1) if decisions_total > 0 else 0
             ai_promoted = AgentDecisionSummary.objects.filter(promoted_by__icontains='AI').count()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_system_health: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         try:
             from ai_core.spiders.spider_registry import SpiderRegistry
             spider_stats = SpiderRegistry().get_spider_count()
             spiders_count = spider_stats.get('total', 0) if isinstance(spider_stats, dict) else spider_stats
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_system_health: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         try:
             scheduled_count = PeriodicTask.objects.filter(enabled=True).count()
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning.get_system_health: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
         # Overall health status
         healthy_services = sum(1 for v in services.values() if v)
@@ -4577,8 +4604,11 @@ def _get_full_extracted_metrics(exp):
                     # Preserve any other fields (kpi_history, target_history, etc.)
                     **{k: v for k, v in metrics.items() if k not in ['raw_content', 'source']}
                 }
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "views_agent_learning._get_full_extracted_metrics: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
 
     return metrics
 

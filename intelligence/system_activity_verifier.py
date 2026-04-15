@@ -16,6 +16,9 @@ from datetime import datetime
 from typing import Dict
 import random
 
+import logging
+logger = logging.getLogger(__name__)
+
 class SystemActivityVerifier:
     """
     Verifies system components are actually working without needing users
@@ -303,7 +306,11 @@ class SystemActivityVerifier:
         """Check if Redis is responsive"""
         try:
             return self.redis_client.ping()
-        except:
+        except Exception as _e:
+            logger.warning(
+                "system_activity_verifier._check_redis: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def _check_spiders(self) -> bool:

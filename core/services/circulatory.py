@@ -635,7 +635,11 @@ class CirculatorySystemService:
         try:
             blocked_count = FlowStatus.objects.filter(status='blocked').count()
             return blocked_count == 0
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "circulatory.is_flowing: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return False
 
     def get_vitals(self) -> Dict:

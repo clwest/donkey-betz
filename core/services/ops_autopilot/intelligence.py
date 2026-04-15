@@ -719,8 +719,11 @@ class GrowthEngine:
                     'already_exported': False,
                     'source': 'self_blog',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_candidates: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         candidates.sort(key=lambda x: x['rank_score'], reverse=True)
         candidates = candidates[:limit]
@@ -1190,15 +1193,26 @@ class CapacityEngine:
         )
         p95 = p95_vals[0] if p95_vals else 0
 
-        # Current governance mode
+        # Current governance mode.
+        # Session 1083 (Rigby audit): was `except Exception: pass` which
+        # silently returned 'normal' on any DB error. If real mode was
+        # 'freeze' or 'halt', the intelligence layer would still emit
+        # normal-mode recommendations while enforcement was clamped.
+        # Sibling fix: ops_autopilot/governance.get_tuning_recommendations.
         gov_mode = 'normal'
+        gov_mode_degraded = False
         try:
             from core.models_governance import GovernanceState
             gs = GovernanceState.objects.filter(scope='global').first()
             if gs:
                 gov_mode = gs.effective_mode
-        except Exception:
-            pass
+        except Exception as e:
+            gov_mode_degraded = True
+            logger.warning(
+                "ops_autopilot intelligence: GovernanceState lookup failed "
+                "(%s: %s) — recommendations will use 'normal' fallback",
+                type(e).__name__, e,
+            )
 
         # Generate recommendations
         recommendations = []
@@ -1285,8 +1299,16 @@ class CapacityEngine:
         # LLM spend if available
         spend = self._get_spend_projection(window, now, days * 24)
 
-        # Budget cap from config
+        # Budget cap from config.
+        # Session 1083 (Rigby audit): was `except Exception: pass` which
+        # silently fell back to the generous 5.0 default whenever the
+        # SystemConfiguration read failed. If the real cap was tighter
+        # (e.g. 1.0 during a cost incident), callers of this method would
+        # see the wrong cap and potentially approve spend over the real
+        # limit. Log loud + flag as degraded. Matches sibling fix in
+        # ops_autopilot/budget.py:get_budget_status.
         budget_cap = 5.0  # default
+        budget_cap_degraded = False
         try:
             from core.models.system import SystemConfiguration
             cap_entry = SystemConfiguration.objects.filter(
@@ -1298,8 +1320,14 @@ class CapacityEngine:
                     budget_cap = float(val.get('value', 5.0))
                 else:
                     budget_cap = float(val)
-        except Exception:
-            pass
+        except Exception as e:
+            budget_cap_degraded = True
+            logger.warning(
+                "ops_autopilot intelligence: BUDGET_DAILY_CAP_USD lookup "
+                "failed (%s: %s) — using fallback $%.2f, actual cap may "
+                "be different",
+                type(e).__name__, e, budget_cap,
+            )
 
         daily_spend = spend.get('daily_avg_usd', 0)
         projected_monthly = round(daily_spend * 30, 2)
@@ -1331,18 +1359,26 @@ class CapacityEngine:
             from django.db.models import Count, Sum
             from core.models_llm_routing import LLMCallLog
 
+            # Session 1083 (Rigby audit): fields were `cost_usd` /
+            # `model_name` which don't exist on LLMCallLog (real fields
+            # are `cost` and `model_id`). Every call was throwing
+            # FieldError and getting swallowed by the bare-pass, so
+            # ops_intelligence spend projection has been permanently
+            # reporting 0.0 for who knows how long. Second live bug
+            # surfaced by the audit pattern tonight (first was the
+            # DeliberationSession.topic drift in ops_autopilot/budget.py).
             calls = LLMCallLog.objects.filter(
                 created_at__gte=start,
                 created_at__lte=end,
             )
             total_cost = calls.aggregate(
-                total=Sum('cost_usd'),
+                total=Sum('cost'),
             )['total'] or 0
 
             by_model = list(
-                calls.values('model_name')
+                calls.values('model_id')
                 .annotate(
-                    cost=Sum('cost_usd'),
+                    cost=Sum('cost'),
                     count=Count('id'),
                 )
                 .order_by('-cost')[:10]
@@ -1352,14 +1388,17 @@ class CapacityEngine:
             result['total_usd'] = round(float(total_cost), 4)
             result['daily_avg_usd'] = round(float(total_cost) / days, 4)
             result['by_model'] = {
-                m['model_name']: {
+                m['model_id']: {
                     'cost_usd': round(float(m['cost'] or 0), 4),
                     'calls': m['count'],
                 }
                 for m in by_model
             }
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence._get_spend_projection: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return result
 
@@ -1412,8 +1451,11 @@ class CapacityEngine:
             daily_spend = spend.get('daily_avg_usd', 0)
             if daily_spend > 4.0:  # Near default cap
                 issues.append(f'Daily spend ${daily_spend:.2f} approaching cap')
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.evaluate: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'tasks_last_hour': total,
@@ -1499,8 +1541,11 @@ class SecurityEngine:
                     'severity': 'warning',
                     'detail': f'{config_count} config changes in {hours}h',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_permission_drift_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         try:
             from core.models_governance import GovernanceState
@@ -1513,8 +1558,11 @@ class SecurityEngine:
                     'severity': 'info',
                     'detail': f'{recent_gov} governance state changes in {hours}h',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_permission_drift_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         try:
             from core.models_governance import KillSwitch
@@ -1686,8 +1734,11 @@ class SecurityEngine:
                     'severity': 'info',
                     'executed': False,
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_containment_plan: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'dry_run': dry_run,
@@ -1766,8 +1817,11 @@ class SecurityEngine:
                             'redacted_samples': redacted[:3],
                             'severity': 'critical',
                         })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_secrets_scan: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'period_days': days,
@@ -1868,8 +1922,11 @@ class ComplianceEngine:
                             })
                 except Exception:
                     continue
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_pii_scan: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         # Scan SelfBlogs
         try:
@@ -1897,8 +1954,11 @@ class ComplianceEngine:
                             })
                 except Exception:
                     continue
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_pii_scan: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'period_days': days,
@@ -1930,8 +1990,11 @@ class ComplianceEngine:
                     'severity': 'warning' if old_count < 1000 else 'critical',
                     'recommendation': f'Review {old_count} records older than {self.RETENTION_THRESHOLDS["agent_execution"]} days',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_retention_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         # Check CockpitAuditLog retention
         try:
@@ -1948,8 +2011,11 @@ class ComplianceEngine:
                     'severity': 'warning' if old_count < 500 else 'critical',
                     'recommendation': f'Review {old_count} audit records older than {self.RETENTION_THRESHOLDS["audit_log"]} days',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_retention_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         # Check SpiderData retention
         try:
@@ -1966,8 +2032,11 @@ class ComplianceEngine:
                     'severity': 'info' if old_count < 5000 else 'warning',
                     'recommendation': f'Review {old_count} spider records older than {self.RETENTION_THRESHOLDS["spider_data"]} days',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_retention_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         # Check ConversationMemory retention
         try:
@@ -1984,8 +2053,11 @@ class ComplianceEngine:
                     'severity': 'info',
                     'recommendation': f'Review {old_count} conversation memories older than {self.RETENTION_THRESHOLDS["conversation_memory"]} days',
                 })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_retention_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'thresholds': self.RETENTION_THRESHOLDS,
@@ -2223,8 +2295,11 @@ class DataIntegrityEngine:
                         'detail': f"Volume dropped {abs(volume_change):.0%} ({total_prev} → {total_recent})",
                     })
 
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_quality_report: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'period_hours': hours,
@@ -2391,8 +2466,11 @@ class DataIntegrityEngine:
                 })
 
             scores.sort(key=lambda x: x['reliability_score'])
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_reliability_scores: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         avg_score = round(sum(s['reliability_score'] for s in scores) / len(scores), 3) if scores else 0
 
@@ -2625,8 +2703,11 @@ class ValueRealizationEngine:
                         'severity': 'critical' if fail_rate > 0.5 else 'warning',
                         'detail': f"{s['agent__name']}: {fail_rate:.0%} failure rate ({s['failed']}/{s['total']})",
                     })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_usage_gaps: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         # Deliverables with low quality scores
         try:
@@ -2646,8 +2727,11 @@ class ValueRealizationEngine:
                         'severity': 'warning',
                         'detail': f"{low_rate:.0%} of deliverables have quality < 0.3 ({low_quality}/{total_deliverables})",
                     })
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ops_intelligence.get_usage_gaps: swallowed (%s: %s) — report may be partial",
+                type(_e).__name__, _e,
+            )
 
         return {
             'period_days': days,

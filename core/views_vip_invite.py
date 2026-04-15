@@ -149,8 +149,11 @@ def vip_invite_exchange(request):
             entity_type='vip_invite',
             entity_id=str(invite.id),
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "views_vip_invite.vip_invite_exchange: swallowed (%s: %s) — degraded",
+            type(_e).__name__, _e,
+        )
 
     return Response({
         'api_key': api_token.key,

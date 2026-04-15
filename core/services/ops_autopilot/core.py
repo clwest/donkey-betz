@@ -372,7 +372,11 @@ class OpsAutopilot:
                 exp.policy_name: str(exp.id)
                 for exp in PolicyExperiment.objects.filter(status='active')
             }
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "core._get_active_experiment_map: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return {}
 
     @staticmethod

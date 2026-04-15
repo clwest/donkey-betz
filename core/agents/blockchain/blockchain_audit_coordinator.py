@@ -310,7 +310,11 @@ You have access to:
                                 'description': 'Unusual alert pattern detected'
                             })
             return anomalies
-        except Exception:
+        except Exception as _e:
+            logger.warning(
+                "blockchain_audit_coordinator._extract_anomalies_from_result: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
             return []
 
     def _assess_threat_level(self, ml_result) -> str:

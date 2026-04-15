@@ -115,15 +115,36 @@ Buttons render and appear clickable but show "Coming soon!" toast:
 ### Dream Reactions Don't Persist
 **File:** `frontend/src/pages/AgentsPage.tsx:3220`
 
-Comment: `// TODO: Call dreamsApi.react when implemented`
-Emoji reaction buttons render but only log to console.
+~~Comment: `// TODO: Call dreamsApi.react when implemented`~~
+~~Emoji reaction buttons render but only log to console.~~
+
+**STATUS: ALREADY DONE (Session 1083 audit):** `AgentsPage.tsx:3220` now calls
+`dreamsApi.react(selectedDream.id, emoji)` directly. The endpoint exists at
+`api.ts:236` and `DreamsPanel` / `DreamDetailModal` already use it. Stale TODO
+comment was removed in an earlier session.
 
 ### Governance Redirect Points to Wrong Tab
-`/governance` redirects to `/workspace?tab=boardroom` — should be `?tab=system`
+~~`/governance` redirects to `/workspace?tab=boardroom` — should be `?tab=system`~~
+
+**STATUS: ALREADY DONE (Session 1083 audit):** `App.tsx:103` already reads
+`<Route path="governance" element={<Navigate to="/workspace?tab=system" replace />}`.
+Audit was stale.
 
 ---
 
-## 5. Hidden Pages (14 routed but not in sidebar)
+## 5. Hidden Pages (14 routed but not in sidebar) — RESOLVED Session 1083
+
+**RESOLUTION (April 15, 2026):** Rigby adjudicated all 15 hidden routes via PA
+conversation `pa-00df63bcf289`.
+
+- **Exposed in sidebar:** `/content`, `/deliverables`, `/media`, `/analytics`,
+  `/advisors`, `/profile` — all added to `frontend/src/components/layout/Sidebar.tsx`.
+- **Kept hidden:** `/demo`, `/intelligence`, `/legal`, `/portfolio`,
+  `/neural-orchestra`, `/billing`, `/projects` (stubs, admin-ish, or still
+  mock-flagged — expose once real).
+- **Deleted/redirected:** `/dashboard` → redirect to Command Center (`/`).
+- **Deferred:** `/conversation-contract` pending link-check.
+
 
 These pages are fully functional but not accessible from the sidebar navigation:
 
@@ -150,20 +171,37 @@ These pages are fully functional but not accessible from the sidebar navigation:
 
 ## 6. Frontend Mock/Stale Data
 
-### Neural Orchestra Mock Data Badge
-**File:** `frontend/src/pages/NeuralOrchestraPage.tsx:881-886`
-- Page displays yellow "Mock Data" badge when backend returns `mock_data: true`
-- Indicates backend sometimes serves fake data
+### Neural Orchestra Mock Data Badge — FIXED (Session 1083)
+**File:** `core/views_neural_orchestra.py`
+- Root cause was that the fallback dicts on `ecosystem_live_feed`, `agents_stats`,
+  `learning_status`, and `learning_feed` returned plausible-looking fake values
+  (hardcoded `total_agents: 149`, frozen 2025-09-24 timestamp) but never set
+  `mock_data: true` — so the frontend badge only flipped when the health endpoint
+  failed, not when the data endpoints themselves degraded.
+- Fixed: all four fallbacks now return `data_source: 'fallback'` + `mock_data: true`,
+  zeroed telemetry, and `datetime.now(timezone.utc)` timestamps. Happy-path data is
+  still served by `get_neural_orchestra_bridge()` as before.
 
-### How It Works Page — Hardcoded Stats
-**File:** `frontend/src/pages/HowItWorksPage.tsx:56-62`
-- Static values: "218 Agents", "79 Spiders", "25 Advisors"
-- Never fetched from API — will be permanently stale
+### How It Works Page — Hardcoded Stats — FIXED (Session 1083)
+**File:** `frontend/src/pages/HowItWorksPage.tsx`
+- Page already fetched `total_agents`/`active_spiders` from `/api/ecosystem/stats/`
+  but the remaining three (Advisors, Body Systems, PA Tools) had empty `key` fields
+  and rendered the hardcoded DEFAULT_STATS forever.
+- Fixed: backend (`core/views_ecosystem.py`) now also returns `total_advisors`,
+  `body_systems` (constant 9), and `pa_tools` (`len(PA_TOOL_SCHEMAS)`). Frontend
+  DEFAULT_STATS entries now wire to those keys. Also fixed a dormant silent bug:
+  spider count was calling the nonexistent `SpiderRegistry.get_all_spiders()` and
+  silently falling through to the fallback `77` — corrected to `get_active_spiders()`
+  (real count: 80).
 
-### 25 Legacy Cockpit Pages
+### 25 Legacy Cockpit Pages — STALE, DO NOT DELETE
 **Directory:** `frontend/src/pages/cockpit/`
-- All redirected to workspace tabs — code still exists but routes are dead
-- ~25 .tsx files of dead code
+- Audit claimed ~25 files but directory only contains 8: AlertsPage, AuditLogPage,
+  AutopilotPage, ConfigPage, CostPage, InboxPage, IncidentsPage, QueuesPage.
+- All 8 are **actively imported** by `WorkspacePageNew.tsx:59-66` and rendered
+  inside the Workspace system tab sub-routes. They are not dead code.
+- The `/cockpit/*` top-level routes are dead (all redirected), but the page
+  components themselves are still live. Audit was conflating route and component.
 
 ---
 
