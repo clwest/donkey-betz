@@ -591,7 +591,11 @@ class InitiativeIntegrationService:
             health = 'blocked'
             health_issues.append(f'{status_counts["rejected"]} stage(s) rejected')
 
-        # Check if current stage is stuck (no document for > 7 days)
+        # Check if current stage is stuck (no document for > 7 days).
+        # Previously a DoesNotExist on the current stage was silently
+        # swallowed, which meant blocked initiatives with *missing* stage
+        # rows reported as healthy — false-green in the Pulse dashboard.
+        # Treat missing current stage as a blocker and name it explicitly.
         try:
             current_stage = initiative.stages.get(stage=initiative.current_stage)
             if not current_stage.document:
@@ -600,7 +604,16 @@ class InitiativeIntegrationService:
                     health = 'blocked'
                     health_issues.append(f'Stage {initiative.current_stage} needs document')
         except initiative.stages.model.DoesNotExist:
-            pass  # Stage not created yet
+            health = 'blocked'
+            health_issues.append(
+                f'Current stage {initiative.current_stage} has no stage row '
+                f'(initiative pipeline missing a step — was not auto-created)'
+            )
+            logger.warning(
+                "initiative_integration: initiative %s claims current_stage=%s "
+                "but no matching InitiativeStage row exists — marking blocked",
+                initiative.id, initiative.current_stage,
+            )
         except Exception as e:
             logger.warning(f"Initiative {initiative.id} stage health check failed: {e}")
 

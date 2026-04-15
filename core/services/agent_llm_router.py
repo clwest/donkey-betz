@@ -492,9 +492,28 @@ class AgentLLMRouter:
             except Exception as e:
                 logger.debug(f"LLM call tracking failed: {e}")
 
-            # Update agent config stats
+            # Update agent config stats — use update_or_create so the
+            # first call per agent actually persists telemetry instead of
+            # silently swallowing DoesNotExist and losing token/cost/
+            # latency numbers forever.
             try:
-                config = AgentLLMConfig.objects.get(agent_name=agent_name, is_active=True)
+                config, created = AgentLLMConfig.objects.get_or_create(
+                    agent_name=agent_name,
+                    is_active=True,
+                    defaults={
+                        'total_calls': 0,
+                        'successful_calls': 0,
+                        'total_tokens_used': 0,
+                        'total_cost': Decimal('0'),
+                        'avg_latency_ms': 0,
+                    },
+                )
+                if created:
+                    logger.info(
+                        "agent_llm_router: created AgentLLMConfig stub for new "
+                        "agent %s so usage telemetry is captured from the "
+                        "first call", agent_name,
+                    )
                 config.total_calls += 1
                 if response.success:
                     config.successful_calls += 1
@@ -514,10 +533,17 @@ class AgentLLMRouter:
                     'total_calls', 'successful_calls', 'total_tokens_used',
                     'total_cost', 'avg_latency_ms', 'updated_at'
                 ])
-            except AgentLLMConfig.DoesNotExist:
-                pass  # Config not created yet for this agent
             except Exception as e:
-                logger.debug(f"LLM config stats update failed for {agent_name}: {e}")
+                # Was 'except Exception as e: logger.debug(...)' which
+                # meant cost/token telemetry loss was debug-level and
+                # never showed up in monitoring. Upgraded to WARNING so
+                # we see it if AgentLLMConfig schema drifts or a DB
+                # write races.
+                logger.warning(
+                    "agent_llm_router: LLM config stats update failed for "
+                    "%s (%s: %s)",
+                    agent_name, type(e).__name__, e,
+                )
 
         except Exception as e:
             logger.warning(f"Failed to log LLM call: {e}")
