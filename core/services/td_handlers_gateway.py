@@ -209,17 +209,32 @@ class GatewayHandlersMixin:
                     return {'error': 'Search timed out (10s limit)'}
 
             elif action == 'git_info':
+                # Session 1103c: was 'except Exception: pass' on each
+                # git subprocess call, so any failure silently
+                # returned 'unknown' / [] / 0. Now logs the failure
+                # type so we know if git is missing, the cwd is wrong,
+                # or the subprocess is timing out.
+                import logging as _logging
+                _git_logger = _logging.getLogger(__name__)
                 result = {}
                 try:
                     r = subprocess.run(['git', 'branch', '--show-current'], capture_output=True, text=True, cwd=project_root, timeout=5)
                     result['branch'] = r.stdout.strip()
-                except Exception:
+                except Exception as e:
+                    _git_logger.warning(
+                        "repo_tool.git_info: git branch failed (%s: %s)",
+                        type(e).__name__, e,
+                    )
                     result['branch'] = 'unknown'
 
                 try:
                     r = subprocess.run(['git', 'log', '--oneline', '-10'], capture_output=True, text=True, cwd=project_root, timeout=5)
                     result['recent_commits'] = r.stdout.strip().split('\n')
-                except Exception:
+                except Exception as e:
+                    _git_logger.warning(
+                        "repo_tool.git_info: git log failed (%s: %s)",
+                        type(e).__name__, e,
+                    )
                     result['recent_commits'] = []
 
                 try:
@@ -227,7 +242,11 @@ class GatewayHandlersMixin:
                     lines = r.stdout.strip().split('\n') if r.stdout.strip() else []
                     result['modified_files'] = len(lines)
                     result['status'] = lines[:20]
-                except Exception:
+                except Exception as e:
+                    _git_logger.warning(
+                        "repo_tool.git_info: git status failed (%s: %s)",
+                        type(e).__name__, e,
+                    )
                     result['modified_files'] = 0
                     result['status'] = []
 
