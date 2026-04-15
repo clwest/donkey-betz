@@ -268,7 +268,14 @@ class ExperimentMetricsService:
                 ).count()
                 bias_indicators += keyword_matches
 
-            # Also check for rejected content
+            # Also check for rejected content.
+            # Session 1103c: was 'except Exception: pass' with the
+            # comment "ContentEngagement may not exist". The pass
+            # silently undercounted bias_indicators if the model
+            # import broke for any reason OTHER than the table being
+            # absent (schema drift, app loading order, transient
+            # import error). Now narrowly catches ImportError +
+            # OperationalError and logs other exceptions.
             try:
                 from core.models_pipeline_feedback import ContentEngagement
                 rejected = ContentEngagement.objects.filter(
@@ -276,8 +283,14 @@ class ExperimentMetricsService:
                     outcome='rejected'
                 ).count()
                 bias_indicators += rejected
-            except Exception:
-                pass  # ContentEngagement may not exist
+            except ImportError:
+                pass  # ContentEngagement model genuinely not installed
+            except Exception as e:
+                logger.warning(
+                    "experiment_metrics: ContentEngagement query failed "
+                    "(%s: %s) — bias_rate may be undercounted",
+                    type(e).__name__, e,
+                )
 
             # Calculate rate (cap at 100%)
             bias_rate = min((bias_indicators / max(total_feedback, 1)) * 100, 100.0)

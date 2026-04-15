@@ -464,11 +464,23 @@ class CongressSyncService:
     def _parse_date(self, val):
         if not val:
             return None
+        # Session 1103c: was 'except (ValueError, TypeError): pass'
+        # which silently dropped malformed dates from Congress.gov.
+        # If the upstream API ever changes its date format, every
+        # bill/vote silently gets None for its dates and nobody
+        # notices until the data audit catches it. Now logs the
+        # offending value at debug level (not warning, because
+        # garbage dates in upstream are common) so we have a
+        # visible trail for schema drift investigations.
         try:
             if isinstance(val, str):
                 return datetime.strptime(val[:10], '%Y-%m-%d').date()
-        except (ValueError, TypeError):
-            pass
+        except (ValueError, TypeError) as e:
+            logger.debug(
+                "congress_sync._parse_date: failed to parse %r as "
+                "YYYY-MM-DD (%s: %s)",
+                val, type(e).__name__, e,
+            )
         return None
 
     # ─── Roll Call Votes ─────────────────────────────────────
