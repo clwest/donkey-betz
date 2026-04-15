@@ -3210,6 +3210,40 @@ RESEARCH DATA:
             'triage_batch': 'get_triage_batch',
         }
 
+        # Session 1103c: plain 'stats' action — GPT-5.2 kept guessing
+        # this natural name and hitting 'Unknown action'. Bundled
+        # overview across boardroom inbox + decision stats + failure
+        # signatures + remediation tasks so one call answers
+        # 'governance status?' questions instead of forcing the model
+        # into a multi-step chain.
+        if action == 'stats':
+            bundled = {'gateway': 'governance_tool', 'action': 'stats'}
+            try:
+                inbox = self._handle_boardroom(
+                    'boardroom_tool', {'action': 'stats'}, user_id, trace_id,
+                )
+                bundled['inbox'] = inbox if isinstance(inbox, dict) else {'raw': inbox}
+            except Exception as e:
+                bundled['inbox'] = {'error': f'{type(e).__name__}: {e}'}
+            try:
+                decisions = self._handle_human_decisions(
+                    'human_decisions_tool', {'action': 'stats'}, user_id, trace_id,
+                )
+                bundled['decisions'] = decisions if isinstance(decisions, dict) else {'raw': decisions}
+            except Exception as e:
+                bundled['decisions'] = {'error': f'{type(e).__name__}: {e}'}
+            try:
+                from core.models_diagnostic_pipeline import FailureSignature
+                bundled['failure_signatures_total'] = FailureSignature.objects.count()
+            except Exception as e:
+                bundled['failure_signatures_total'] = {'error': f'{type(e).__name__}: {e}'}
+            try:
+                from core.models_audit_tracking import AuditRemediationTask
+                bundled['remediation_tasks_total'] = AuditRemediationTask.objects.count()
+            except Exception as e:
+                bundled['remediation_tasks_total'] = {'error': f'{type(e).__name__}: {e}'}
+            return bundled
+
         if action in BOARDROOM_MAP:
             br_payload = dict(payload)
             br_payload['action'] = BOARDROOM_MAP[action]
@@ -3281,7 +3315,7 @@ RESEARCH DATA:
             except Exception as e:
                 return {'gateway': 'governance_tool', 'action': action, 'error': str(e)}
 
-        extra_actions = ['failure_signatures', 'remediation_tasks']
+        extra_actions = ['failure_signatures', 'remediation_tasks', 'stats']
         all_actions = sorted(list(BOARDROOM_MAP) + list(DECISIONS_MAP) + extra_actions)
         return {'error': f'Unknown governance_tool action: {action}. Valid: {", ".join(all_actions)}'}
 

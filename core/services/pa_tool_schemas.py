@@ -2547,7 +2547,7 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": [
-                        "inbox",
+                        "inbox", "stats",
                         "attention_list", "attention_detail", "attention_approve", "attention_ignore", "attention_lookup",
                         "decision_list", "decision_promote", "decision_reject",
                         "decisions_list", "decisions_stats", "decision_create", "decision_decide",
@@ -2556,6 +2556,8 @@ PA_TOOL_SCHEMAS = [
                     ],
                     "description": (
                         "inbox: combined overview with counts + top items. "
+                        "stats: bundled governance snapshot (inbox + decisions + failure_signatures + remediation tasks counts) "
+                        "— use this for general 'governance status?' questions instead of chaining multiple calls. "
                         "attention_list: list pending attention items. "
                         "attention_detail: get full detail for an item by id. "
                         "attention_approve: approve an attention item by id. "
