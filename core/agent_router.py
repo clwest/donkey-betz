@@ -2475,11 +2475,25 @@ class AgentRouter:
                 # Session 744: Track token usage and cost
                 execution_record.tokens_used = tokens_used
                 execution_record.cost = cost
+                # Session 1084 round 48: Use update_fields to exclude
+                # last_heartbeat_at from this save(). Full-instance save()
+                # reads every field from the in-memory object and writes it
+                # back to the DB — including the stale last_heartbeat_at
+                # captured at create time. The heartbeat thread writes
+                # last_heartbeat_at via queryset update() from a daemon
+                # thread; those writes were being silently stomped here on
+                # completion. See round 40 / round 48 investigation.
+                _update_fields = [
+                    'status', 'execution_time_ms', 'completed_at',
+                    'tokens_used', 'cost',
+                ]
                 if output_data:
                     execution_record.output_data = output_data
+                    _update_fields.append('output_data')
                 if error_message:
                     execution_record.error_message = error_message[:500]
-                execution_record.save()
+                    _update_fields.append('error_message')
+                execution_record.save(update_fields=_update_fields)
 
             # Update agent stats
             Agent.objects.filter(name=agent_name).update(

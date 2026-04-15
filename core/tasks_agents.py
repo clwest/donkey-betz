@@ -1810,7 +1810,12 @@ self,
                 execution_record.status = 'completed'
                 execution_record.output_data = {'skipped': 'dedup', 'reason': 'Similar task ran in last 2h'}
                 execution_record.completed_at = timezone.now()
-                execution_record.save()
+                # Session 1084 round 48: update_fields excludes last_heartbeat_at
+                # so the heartbeat thread's queryset update() is not stomped
+                # by full-instance save(). See PR description for evidence.
+                execution_record.save(update_fields=[
+                    'status', 'output_data', 'completed_at',
+                ])
             return {
                 'success': True,
                 'agent_name': agent_name,
@@ -2050,14 +2055,22 @@ self,
                 execution_record.output_data = _json.loads(_json.dumps(_raw_output, default=str))
             except (TypeError, ValueError):
                 execution_record.output_data = {'content': str(result.content)[:5000] if result.content else None}
+            # Session 1084 round 48: build update_fields dynamically so
+            # last_heartbeat_at is excluded from save(). Prevents the
+            # heartbeat thread's queryset update() from being stomped by
+            # full-instance save() reading stale in-memory fields.
+            _update_fields = [
+                'status', 'execution_time_ms', 'output_data', 'completed_at',
+            ]
             if not result.success:
                 # Session 1068: Ensure error_message is never blank — fall back through
                 # error, message, then generic label
                 execution_record.error_message = (
                     result.error or result.message or 'Agent returned failure with no error details'
                 )[:2000]
+                _update_fields.append('error_message')
             execution_record.completed_at = timezone.now()
-            execution_record.save()
+            execution_record.save(update_fields=_update_fields)
 
             # Update agent metrics
             Agent.objects.filter(pk=agent_obj.pk).update(
@@ -2132,7 +2145,11 @@ self,
             execution_record.error_message = 'Celery soft_time_limit exceeded (60 min)'
             execution_record.execution_time_ms = execution_time_ms
             execution_record.completed_at = timezone.now()
-            execution_record.save()
+            # Session 1084 round 48: update_fields excludes last_heartbeat_at
+            # to avoid stomping the heartbeat thread's queryset update().
+            execution_record.save(update_fields=[
+                'status', 'error_message', 'execution_time_ms', 'completed_at',
+            ])
         return {
             'success': False,
             'agent_name': agent_name,
@@ -2153,7 +2170,11 @@ self,
             execution_record.error_message = str(e) or f'{type(e).__name__}: (no message)'
             execution_record.execution_time_ms = execution_time_ms
             execution_record.completed_at = timezone.now()
-            execution_record.save()
+            # Session 1084 round 48: update_fields excludes last_heartbeat_at
+            # to avoid stomping the heartbeat thread's queryset update().
+            execution_record.save(update_fields=[
+                'status', 'error_message', 'execution_time_ms', 'completed_at',
+            ])
 
         # Retry on certain errors
         if self.request.retries < self.max_retries:
