@@ -16,7 +16,6 @@ sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-import openai
 import logging
 from ai_core.agents.agent_llm_integration import agent_llm_integration
 
@@ -28,11 +27,14 @@ _REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 class RealJobExecutor:
     """
-    Executes real freelance jobs based on actual requirements
+    Executes real freelance jobs based on actual requirements.
+
+    All LLM calls route through ``agent_llm_integration.generate_for_agent``;
+    the raw OpenAI client previously held in ``self.client`` was dead code
+    (assigned but never read) and was removed in Session 1086 Tier 4 PR 2.
     """
 
     def __init__(self):
-        self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
 
     async def execute_job(self, opportunity: Dict[str, Any]) -> Optional[Dict[str, Any]]:

@@ -7,7 +7,6 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, Any, List
-from openai import OpenAI
 from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
@@ -21,10 +20,13 @@ class RealContentCreatorAgent:
     - Marketing copy
     - Social media content
     - Email templates
+
+    All LLM calls route through ``agent_llm_integration.generate_for_agent``;
+    the raw OpenAI client previously held in ``self.client`` was dead code
+    (assigned but never read) and was removed in Session 1086 Tier 4 PR 2.
     """
 
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.created_content = []
 
     async def create_blog_post(self, topic: str, keywords: List[str], word_count: int = 800) -> Dict[str, Any]:
