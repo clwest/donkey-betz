@@ -178,49 +178,9 @@ async def test_real_content_creator():
         return False
 
 
-async def test_job_orchestrator():
-    """Test job application orchestrator"""
-    from ai_core.agents.job_application_orchestrator import JobApplicationOrchestrator
-
-    print("\n" + "="*60)
-    print("🔍 TESTING JOB APPLICATION ORCHESTRATOR")
-    print("="*60)
-
-    orchestrator = JobApplicationOrchestrator()
-
-    job = {
-        'id': 'test-123',
-        'title': 'AI Engineer',
-        'company': 'StartupAI',
-        'description': 'Build cutting-edge AI systems',
-        'salary': '$130k-180k',
-        'required_skills': ['Python', 'TensorFlow', 'MLOps']
-    }
-
-    try:
-        # Test job matching
-        result = await orchestrator.find_best_agent_for_job(job)
-
-        if result['best_agent']:
-            print(f"✅ Found best agent: {result['best_agent']['name']}")
-            print(f"   Score: {result['score']:.2f}")
-            print(f"   Match reason: {result['match_reason'][:100]}...")
-
-            # Test if cover letter uses real AI
-            cover_letter = result.get('cover_letter', '')
-            if cover_letter and "exceptional match" not in cover_letter.lower():
-                print("   ✅ Using REAL AI for cover letters")
-                return True
-            else:
-                print("   ❌ Still using template for cover letters")
-                return False
-        else:
-            print("❌ No agent found for job")
-            return False
-
-    except Exception as e:
-        print(f"⚠️ Job Orchestrator error: {e}")
-        return False
+# test_job_orchestrator removed in Session 1086 PR 2:
+# ai_core.agents.job_application_orchestrator was deleted as confirmed-orphan
+# (zero production callers, stale core.agents.registry import path).
 
 
 async def test_ai_enforced_base():
@@ -283,7 +243,6 @@ async def main():
         'Job Application Agent': await test_job_application_agent(),
         'Content Marketplace Agent': await test_content_marketplace_agent(),
         'Real Content Creator': await test_real_content_creator(),
-        'Job Orchestrator': await test_job_orchestrator(),
         'AI Enforced Base': await test_ai_enforced_base()
     }
 
