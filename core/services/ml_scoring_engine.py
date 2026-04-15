@@ -281,6 +281,17 @@ class MLScoringEngine:
     ML_WEIGHT = 0.6
     RULE_WEIGHT = 0.4
 
+    # Session 1083 round 42: class-level lock serializes ANY
+    # MLScoringEngine instance's model load path. Round 41 only
+    # locked get_ml_scoring_engine() but XGBoostWrapper._load_model
+    # in model_registry.py instantiates MLScoringEngine(model_type=...)
+    # directly, bypassing the singleton. Without serialization the
+    # joblib.load + SHAP TreeExplainer init race against a parallel
+    # lightgbm load and hit Abseil RAW: Lock blocking.
+    import threading as _mlse_threading
+    _model_load_lock = _mlse_threading.Lock()
+    del _mlse_threading
+
     def __init__(self, model_type: str = None):
         """
         Initialize the ML scoring engine.
@@ -296,11 +307,17 @@ class MLScoringEngine:
         self._is_trained = False
         self._best_params = None  # Store optimized hyperparameters
 
-        # Try to load existing model
-        self._load_model()
+        # Try to load existing model — class-level lock serializes
+        # concurrent load paths (round 42)
+        with MLScoringEngine._model_load_lock:
+            self._load_model()
 
     def _load_model(self) -> bool:
-        """Load trained model from disk if available."""
+        """Load trained model from disk if available.
+
+        NOTE: callers must hold MLScoringEngine._model_load_lock if
+        they invoke this method outside of __init__. Round 42.
+        """
         # First check database for active model version
         try:
             from core.models_unified_system import MLModelVersion
