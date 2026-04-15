@@ -737,7 +737,9 @@ class AgentRouter:
         agent_name: str,
         task: str,
         context: Optional[Dict[str, Any]] = None,
-        pre_gathered_context: Optional[Dict[str, Any]] = None
+        pre_gathered_context: Optional[Dict[str, Any]] = None,
+        create_execution_record: bool = True,
+        existing_execution_record: Optional[Any] = None,
     ) -> AgentResult:
         """
         Route a task to the appropriate agent.
@@ -754,6 +756,18 @@ class AgentRouter:
             task: The task to perform in natural language
             context: Optional additional context (count, style, reference_id, etc.)
             pre_gathered_context: Session 769: Pre-gathered context to skip context gathering
+            create_execution_record: Session 1084 — when True (default), the
+                router creates its own AgentExecution row via
+                ``_create_execution_record()``. When False, the caller
+                is expected to pass ``existing_execution_record`` — used
+                to prevent duplicate row creation when the caller (e.g.
+                ``tasks_agents._impl_execute_agent_task``) already has
+                its own execution row.
+            existing_execution_record: Session 1084 — an AgentExecution
+                instance created by the caller. Used by the router for
+                status updates / completion tracking in place of a newly
+                created row. Only honored when
+                ``create_execution_record=False``.
 
         Returns:
             AgentResult from the agent execution
@@ -1221,10 +1235,33 @@ class AgentRouter:
         try:
             # Create execution record with context tracking
             # Session 841: Pass experiment_id for proper error rate scoping
+            # Session 1084: Honor create_execution_record / existing_execution_record
+            # kwargs to prevent duplicate-row creation when tasks_agents
+            # already wrote one. See PR #1887.
             experiment_id = context.get('experiment_id')
-            execution_record = self._create_execution_record(
-                agent_name, task, context_summary=context_summary, experiment_id=experiment_id
-            )
+            if create_execution_record:
+                execution_record = self._create_execution_record(
+                    agent_name, task, context_summary=context_summary, experiment_id=experiment_id
+                )
+                if execution_record is not None:
+                    logger.info(
+                        f"[execution_record_created_by=router] agent={agent_name} "
+                        f"execution_id={getattr(execution_record, 'id', None)}"
+                    )
+            else:
+                execution_record = existing_execution_record
+                if execution_record is not None:
+                    logger.info(
+                        f"[execution_record_created_by=caller] agent={agent_name} "
+                        f"execution_id={getattr(execution_record, 'id', None)}"
+                    )
+                else:
+                    logger.warning(
+                        f"[execution_record] route() called with "
+                        f"create_execution_record=False but no "
+                        f"existing_execution_record for agent={agent_name}. "
+                        f"Downstream completion tracking will be a no-op."
+                    )
 
             # Session 908: Use execute_with_workspace when workspace is available
             # This ensures all agent outputs are written to the SKIN layer workspace
@@ -2341,27 +2378,54 @@ class AgentRouter:
             # execution leaves 'in_progress'. Mirrors the thread in
             # tasks_agents._impl_execute_agent_task but self-terminates
             # so the caller doesn't need to manage thread lifetime.
+            # Session 1084: Hoisted imports out of thread body + replaced
+            # silent `except: return` with logger.exception so failures
+            # are diagnosable. See tasks_agents.py:1887 for rationale —
+            # C-level socket hangs can hold the Python import lock, and
+            # any thread-local import at tick time would block forever.
             try:
                 import threading as _hb_threading
                 import time as _hb_time
+                from django.db import close_old_connections as _hb_close
                 _execution_id = execution.id
+                _hb_agent_name = agent_name
 
                 def _router_heartbeat_loop():
-                    from django.db import close_old_connections as _close
-                    while True:
-                        _hb_time.sleep(120)
-                        try:
-                            _close()
-                            _cur_status = AgentExecution.objects.filter(
-                                id=_execution_id
-                            ).values_list('status', flat=True).first()
-                            if _cur_status != 'in_progress':
+                    logger.info(
+                        f"[router_heartbeat] thread start agent={_hb_agent_name} "
+                        f"execution_id={_execution_id} interval=120s"
+                    )
+                    tick_count = 0
+                    try:
+                        while True:
+                            _hb_time.sleep(120)
+                            try:
+                                _hb_close()
+                                _cur_status = AgentExecution.objects.filter(
+                                    id=_execution_id
+                                ).values_list('status', flat=True).first()
+                                if _cur_status != 'in_progress':
+                                    return
+                                AgentExecution.objects.filter(
+                                    id=_execution_id
+                                ).update(last_heartbeat_at=timezone.now())
+                                tick_count += 1
+                                if tick_count == 1 or tick_count % 5 == 0:
+                                    logger.info(
+                                        f"[router_heartbeat] tick agent={_hb_agent_name} "
+                                        f"execution_id={_execution_id} tick={tick_count}"
+                                    )
+                            except Exception as _tick_exc:
+                                logger.exception(
+                                    f"[router_heartbeat] tick failed agent={_hb_agent_name} "
+                                    f"execution_id={_execution_id}: {_tick_exc}"
+                                )
                                 return
-                            AgentExecution.objects.filter(
-                                id=_execution_id
-                            ).update(last_heartbeat_at=timezone.now())
-                        except Exception:
-                            return
+                    finally:
+                        logger.info(
+                            f"[router_heartbeat] thread exit agent={_hb_agent_name} "
+                            f"execution_id={_execution_id} total_ticks={tick_count}"
+                        )
 
                 _hb_thread = _hb_threading.Thread(
                     target=_router_heartbeat_loop,
@@ -2369,8 +2433,12 @@ class AgentRouter:
                     name=f"router_heartbeat_{agent_name}",
                 )
                 _hb_thread.start()
+                logger.info(
+                    f"[router_heartbeat] thread spawned agent={agent_name} "
+                    f"execution_id={execution.id} thread_name={_hb_thread.name}"
+                )
             except Exception as e:
-                logger.debug(f"Failed to start router heartbeat thread: {e}")
+                logger.exception(f"[router_heartbeat] Failed to start thread: {e}")
 
             return execution
         except Exception as e:

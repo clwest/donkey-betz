@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Try to import yfinance
 try:
     import yfinance as yf
+    from core.utils.yfinance_safe import make_timeout_session, fetch_with_timeout
     YFINANCE_AVAILABLE = True
 except ImportError:
     YFINANCE_AVAILABLE = False
@@ -116,11 +117,21 @@ class FinancialIntelligenceSpider:
         """Fetch real-time market data using yfinance."""
         items = []
 
+        # Session 1084: reuse one timeout-enforced session across the
+        # whole batch so HTTP connection pooling still works.
+        safe_session = make_timeout_session(timeout=30.0)
+
         for symbol in self.TRACKED_SYMBOLS[:8]:  # Limit to avoid rate limits
             try:
-                ticker = yf.Ticker(symbol)
-                info = ticker.info
-                hist = ticker.history(period="1d")
+                ticker = yf.Ticker(symbol, session=safe_session)
+                # Session 1084: wrap info + history in executor backstop —
+                # a single bad symbol shouldn't hang the batch for more
+                # than 45s even if the session timeout is somehow bypassed.
+                info = fetch_with_timeout(lambda t=ticker: t.info, timeout=45.0)
+                hist = fetch_with_timeout(
+                    lambda t=ticker: t.history(period="1d"),
+                    timeout=45.0,
+                )
 
                 if hist.empty:
                     continue
