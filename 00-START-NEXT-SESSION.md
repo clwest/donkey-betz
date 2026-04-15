@@ -1,13 +1,82 @@
 # Next Session — Start Here
 
-**Date:** April 14, 2026 (late)
-**Previous Session:** Focus Flow App Jam #1 shipped, Rigby tool verification + outreach list, local Celery MLEngine deadlock fixed (PR #1871)
-**PA Conversation:** Create a fresh one — start with local PA via `bash tools/pa_local.sh "..."`
-**Status:** 218 Agents | 79 Spiders | 25 Advisors | Local stack confirmed working end-to-end after ML fix
+**Date:** April 14, 2026 (very late)
+**Previous Session:** Half-Built Features Audit — Silent failures + Dead endpoints batches 1-5 + PA UX fixes (11 commits on `docs/session-end-ml-fix-plus-audit-pivot`, nothing pushed yet)
+**PA Conversation:** Last used `pa-00df63bcf289` (local). Rigby confirmed `work_tool(action='stats')` and `ops_tool(action='overview')` both work now.
+**Status:** Local 4-worker stack stable on solo pool (default + dedicated pa + long_running + broadcast). MLEngine deadlock permanently fixed via class-level state cache. 12 silent-failure fixes + 47 dead routes deleted + ~1,900 lines of dead view code removed.
 
 ---
 
-## 🚨 NEXT SESSION — PRIORITY 0: Half-Built Features Audit (Local-First with Rigby)
+## 🚨 RESUME HERE — What Was Accomplished This Session
+
+### 1. MLEngine mutex deadlock (permanently fixed)
+Root cause turned out to be that every new `MLEngine()` instance re-ran the full torch/sklearn/MLX initialization stack, and on macOS under any threaded worker pool the concurrent library globals would re-trip `mutex.cc` RAW Lock deadlocks. Four attempts narrowed it:
+  - `1a597722` SKIP_NLP_MODELS env var (still deadlocked)
+  - `eaa66a7f` per-instance threading.Lock (still deadlocked — each instance had its own lock)
+  - `f501d3b7` class-level lock (still deadlocked — new instances re-ran the heavy path)
+  - `0645c748` **class-level state cache** (first instance loads once, every subsequent `MLEngine()` copies from cached class attrs and skips `_initialize_ml_stack()` entirely). ALSO split the `pa` queue onto its own dedicated `--pool=solo` worker so Rigby is never blocked by long COOAgent runs.
+
+### 2. Silent-failure audit — 12 fixes across 3 batches
+- **Batch 1 `6b34f737`:** `agent_llm_router._economy_if_healthy` now fail-safes to 'premium' on tracker failure; `knowledge_first_router` spider freshness narrow-excepts and logs bad `found_at`; `track_generated_image/video` replaced with ducktyped module-level helpers in `core/epa_handlers_utility.py` that work on both EPA and PersonalAIAssistant cached objects.
+- **Batch 2 `9851adc3`:** `agent_monitoring` ImportError swallows replaced with WARNING logs; `agent_llm_router.log_llm_call` uses `get_or_create` so first-call-per-agent telemetry persists; `initiative_integration_service` missing current_stage row now marks initiative 'blocked' instead of reporting healthy; `experiment_learning_enhancer` risk-factor loop narrowed.
+- **Batch 3 `f939ab75`:** `unified_pa_entrypoint._get_user_workspace_id` logs when workspace scoping is dropped; strategic memory ImportError now loud; `tool_dispatcher.record_op` failures logged with tool name; `workflow_engine` collects + logs missing `ImageHistory` IDs; `conversation_initiative_pipeline` content_type fallback logged.
+
+### 3. PA UX papercuts — 2 fixes
+Rigby's GPT-5.2 kept guessing natural action names that didn't exist, hitting 'Unknown action' errors and burning conversations:
+- `50e57406` **`work_tool(action='stats')`**: added real stats action that returns aggregate counts (initiatives by status, action items, workflows, agent_conversations). Smoke test returned 248 initiatives / 34 workflows / 18,079 agent conversations.
+- `0c0eb2e1` **`ops_tool(action='overview')`**: added bundled snapshot (version + slo_status + failure_signatures + noise_metrics) so Rigby can answer 'how's production' in one call.
+
+### 4. Dead-endpoint cleanup — 47 routes deleted across 5 batches
+| Commit | Deleted | Impact |
+|---|---|---|
+| `2639bbfa` | 7 legacy `/api/unified/*` routes + 2 view files | −650 lines |
+| `1b7224f7` | 10 per-body-system `/api/*/status/` routes | superseded by `/api/body/vitals/` |
+| `0a3548ad` | 11 `/api/ab-testing/*` routes | kept goals import alive |
+| `ba3cf7ad` | 7 `/api/verify/*` + view file | −272 lines |
+| `4e3c83ac` | 12 `/monitoring/*` routes + view file | −985 lines |
+
+`python manage.py check` passes with 0 issues at every step.
+
+### 5. Local DB + config
+- Created `donkeyking` superuser on local DB (password `Crypto$donkey2026`). Previously only `admin` existed.
+- Makefile now launches 4 workers with `SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false` env vars.
+- Default worker is `--pool=solo` (eliminates all threading races at the cost of one-task-at-a-time execution).
+- Missing `core_failure_signature` table turned out to be a red herring — Django's `pg_tables` query was flaky, table actually exists.
+
+---
+
+## Next Session — PICK UP FROM HERE
+
+### Remaining from the audit
+- **~28 misc dead endpoints** still in `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` "Other Dead Endpoints" bucket (agent testing/debugging, spider diagnostics, partnership health, session status, dashboard health variants, learning status, interview status, LLM routing status, etc.). Same pattern applies — grep frontend, delete routes + view files, `manage.py check`, commit.
+- **30+ more `except: pass`** blocks in `core/services/`. Focused on the PA/tool-dispatch hot path so far; next candidates are content pipeline, workflow engine, evidence gatherer, decision extractor, claude_code_engineer.
+- **14 hidden pages** routed but not in sidebar nav — decide which should be promoted vs deleted.
+- **Frontend "Coming Soon" stubs** in `ContentPage.tsx` — remove or wire up.
+- **Neural Orchestra mock data** — audit flag, not yet touched.
+
+### Actually-real concerns Rigby flagged during session
+- **Spider / ingestion throughput**: only 135 SpiderData rows in last 24h despite 79 registered spiders (many producing 3-5/day). Not catastrophic but worth investigating why many spiders are near-silent.
+- **SignalCluster pipeline**: only **10 records total ever** — pipeline is producing but the aggregation layer has barely run. Likely a beat-schedule gap. Separate investigation.
+- **ResearchAgent**: 226 completed / 16 failed / 8 in-progress — actually healthy (92% success). Rigby's body-system vibes were alarmist.
+
+### Branch state
+- Branch: `docs/session-end-ml-fix-plus-audit-pivot`
+- 11 commits on top of `8347fbb2` — none pushed. Still local only. Decide whether to PR or continue grinding first.
+
+### Local stack commands
+```bash
+make start && make celery         # 4 workers + beat (solo default + pa, threads long_running + broadcast)
+.venv/bin/celery -A core inspect ping    # verify nodes
+open http://127.0.0.1:8000/ai-studio/    # UI (donkeyking / Crypto$donkey2026)
+
+# Talk to local Rigby
+PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
+  .venv/bin/python tools/pa_chat.py "message" --conversation pa-00df63bcf289
+```
+
+---
+
+## 🚨 ORIGINAL PRIORITY 0 (for reference) — Half-Built Features Audit
 
 **Before recording any more videos, work through `docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md` with Rigby running locally.** Chris wants the platform fully healthy locally before the next video, and THEN pick a new real-time-data demo.
 
