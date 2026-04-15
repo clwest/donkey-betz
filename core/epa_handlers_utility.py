@@ -2,6 +2,67 @@
 EnhancedPersonalAIAssistant EPAUtilityMixin — extracted handler methods.
 """
 
+
+def _ensure_assets_dict(assistant):
+    """Return the recently_generated_assets dict, creating it if missing.
+
+    Works on both EPA (mixin-bearing) and PersonalAIAssistant (no mixin)
+    cached assistant objects. Session 1103: track_generated_image/video
+    used to be called as methods on the cached assistant — but when the
+    cache returned a PersonalAIAssistant instead of the mixin class, the
+    call silently raised AttributeError inside a try/except and the
+    image/video chaining state never updated. The helpers below replace
+    those method calls with direct dict mutation so the tracking works
+    regardless of what class the cache returned.
+    """
+    existing = getattr(assistant, 'recently_generated_assets', None)
+    if not isinstance(existing, dict):
+        existing = {'images': [], 'videos': [], 'last_updated': None}
+        try:
+            setattr(assistant, 'recently_generated_assets', existing)
+        except Exception:
+            pass
+    existing.setdefault('images', [])
+    existing.setdefault('videos', [])
+    return existing
+
+
+def track_generated_image_on_assistant(assistant, image_id, image_url, prompt,
+                                       asset_type='logo'):
+    """Append a newly-generated image to the assistant's recent-assets state.
+
+    Kept in sync with EPAUtilityMixin.track_generated_image so both EPA
+    and PersonalAIAssistant objects can be tracked the same way.
+    """
+    from django.utils import timezone as _tz
+    assets = _ensure_assets_dict(assistant)
+    assets['images'].append({
+        'id': image_id,
+        'url': image_url,
+        'prompt': prompt,
+        'type': asset_type,
+        'timestamp': _tz.now().isoformat(),
+    })
+    assets['last_updated'] = _tz.now().isoformat()
+    assets['images'] = assets['images'][-10:]
+
+
+def track_generated_video_on_assistant(assistant, video_id, video_url, prompt,
+                                       source_image_id=None):
+    """Append a newly-generated video to the assistant's recent-assets state."""
+    from django.utils import timezone as _tz
+    assets = _ensure_assets_dict(assistant)
+    assets['videos'].append({
+        'id': video_id,
+        'url': video_url,
+        'prompt': prompt,
+        'source_image_id': source_image_id,
+        'timestamp': _tz.now().isoformat(),
+    })
+    assets['last_updated'] = _tz.now().isoformat()
+    assets['videos'] = assets['videos'][-10:]
+
+
 """
 Enhanced Personal AI Assistant with Database and System Access
 ===============================================================

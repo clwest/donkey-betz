@@ -213,13 +213,25 @@ class KnowledgeFirstRouter:
             )
 
             for result in results:
-                # Parse timestamp
-                try:
-                    if hasattr(result, 'found_at'):
-                        ts = datetime.fromisoformat(result.found_at.replace('Z', '+00:00'))
-                    else:
-                        ts = timezone.now() - timedelta(hours=24)  # Assume 1 day old
-                except:
+                # Parse timestamp — on any parse failure, log the value and
+                # fall back to a 24h-old default. Bare except previously hid
+                # bad found_at payloads so every parse error silently
+                # downranked fresh spider results to "1 day old."
+                ts = None
+                if hasattr(result, 'found_at'):
+                    try:
+                        ts = datetime.fromisoformat(
+                            result.found_at.replace('Z', '+00:00')
+                        )
+                    except (ValueError, TypeError, AttributeError) as e:
+                        logger.warning(
+                            "Spider freshness parse failed for found_at=%r "
+                            "(%s: %s) — defaulting to 24h old",
+                            getattr(result, 'found_at', None),
+                            type(e).__name__,
+                            e,
+                        )
+                if ts is None:
                     ts = timezone.now() - timedelta(hours=24)
 
                 freshness = self._calculate_freshness(ts, 'spider')
