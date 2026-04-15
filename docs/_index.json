@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-15T14:23:34.417267",
+  "generated_at": "2026-04-15T14:46:09.801076",
   "generator": "build_docs_index",
   "version": "2.2",
   "documents": [
@@ -232,7 +232,7 @@
           ]
         }
       ],
-      "inbound_links_count": 141
+      "inbound_links_count": 142
     },
     {
       "path": "docs/00-START-HERE/INDEX.md",
@@ -265,7 +265,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 5,
           "snippets": [
             "s.  ## Documents  - [README](README.md) - Getting started guide  ## R",
@@ -413,8 +413,8 @@
       "title": "Agent Output to UI Mapping",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -983,7 +983,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "s | | `resolve_node/README.md` | Server documentation |  --"
@@ -1312,8 +1312,8 @@
       "title": "External API Integrations",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [
@@ -1414,8 +1414,8 @@
       "title": "Frontend Integration Note - Session 699",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "active",
       "outbound_links": [],
@@ -1515,9 +1515,9 @@
       "filename": "INDEX.md",
       "folder": "docs",
       "lines": 364,
-      "size_bytes": 15095,
-      "modified_at": "2026-04-15T13:20:21.399144",
-      "created_at": "2026-04-15T13:20:21.399144",
+      "size_bytes": 15078,
+      "modified_at": "2026-04-15T14:28:13.178367",
+      "created_at": "2026-04-15T14:28:13.178367",
       "type": "documentation",
       "title": "Unified Donkey Betz - Documentation Index",
       "has_frontmatter": false,
@@ -1538,7 +1538,7 @@
           "snippets": [
             "|---------------| | [AGENTS.md](AGENTS.md) | 1,658 | 2026-02-08 | | [AGE",
             "--|-------------| | [AGENTS.md](AGENTS.md) | 74 agents + capabilities +",
-            "Handoffs | | `docs/AGENTS.md` | 50 | Agent Reference | | `"
+            "| AUDITS | | `docs/AGENTS.md` | 50 | Agent Reference | | `"
           ]
         },
         {
@@ -2076,21 +2076,21 @@
           "target": "docs/archive/old-structure/audits/README.md",
           "occurrences": 1,
           "snippets": [
-            "-structure/handoffs/README.md` | 60 | \ud83e\udd1d Session Handoffs |"
+            "on Entry Point | | `docs/archive/old-structure/audits/README.md` | 60 | AUDITS | | `docs/AGEN"
           ]
         },
         {
-          "target": "docs/archive/old-structure/handoffs/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
-            "on Entry Point | | `docs/archive/old-structure/handoffs/README.md` | 60 | \ud83e\udd1d Session Handoffs |"
+            "ld-structure/audits/README.md` | 60 | AUDITS | | `docs/AGEN"
           ]
         },
         {
           "target": "docs/audit-2026/HALF_BUILT_FEATURES_AUDIT.md",
           "occurrences": 1,
           "snippets": [
-            "-----|----------| | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 237 | 2026-04-"
+            "026-04-15 13:20 | | HALF_BUILT_FEATURES_AUDIT.md | audit-2026 | 237 | 2026-04-"
           ]
         },
         {
@@ -2261,11 +2261,11 @@
           "occurrences": 2,
           "snippets": [
             "---------| | 1083 | SESSION_1083_MARATHON.md | handoffs | 2026-04-15 | | 1",
-            "026-04-15 13:18 | | SESSION_1083_MARATHON.md | handoffs | 145 | 2026-04-15"
+            "-----|----------| | SESSION_1083_MARATHON.md | handoffs | 145 | 2026-04-15"
           ]
         }
       ],
-      "inbound_links_count": 43
+      "inbound_links_count": 44
     },
     {
       "path": "docs/INTELLIGENCE_SYSTEMS.md",
@@ -2475,7 +2475,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 4,
           "snippets": [
             "sive Disclosure** - README.md files provide high-level over",
@@ -2484,7 +2484,7 @@
           ]
         },
         {
-          "target": "docs/current/TROUBLESHOOTING.md",
+          "target": "docs/guides/TROUBLESHOOTING.md",
           "occurrences": 1,
           "snippets": [
             "hooting: 1. `guides/TROUBLESHOOTING.md` - Common issues 2. `sessions"
@@ -2603,8 +2603,8 @@
       "title": "Orchestration UI Audit & Integration Plan",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
+        "integration",
         "orchestration"
       ],
       "status": "active",
@@ -3273,8 +3273,8 @@
       "title": "Workspace (SKIN Layer) User Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "skin",
-        "frontend"
+        "frontend",
+        "skin"
       ],
       "status": "active",
       "outbound_links": [
@@ -3335,8 +3335,8 @@
       "title": "\ud83e\udd16 Complete Agent Ecosystem Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -3578,8 +3578,8 @@
       "title": "ElevenLabs - API Integration Reference",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [
@@ -3673,8 +3673,8 @@
       "title": "OpenAI - API Integration Reference",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -3692,8 +3692,8 @@
       "title": "API Integration References",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [
@@ -3768,8 +3768,8 @@
       "title": "Replicate - API Integration Reference",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -3787,8 +3787,8 @@
       "title": "Runway ML - API Integration Reference",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -3806,8 +3806,8 @@
       "title": "Stability AI - API Integration Reference",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -4001,10 +4001,10 @@
       "title": "GPT-5 Reasoning Models: The Right Way to Power AI Agents",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "agents",
         "frontend",
-        "database"
+        "database",
+        "agents",
+        "llm"
       ],
       "status": "active",
       "outbound_links": [],
@@ -4189,7 +4189,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "DE_SESSION_25.md) - [Readme](README.md) - [System Architecture Map](S",
@@ -4240,7 +4240,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "k Start:** `/mobile/README.md` - **Build Guide:** `/mobile/"
@@ -4386,8 +4386,8 @@
       "title": "\u26a1 Quick Fix Guide - GPT-5-mini Prompt Compatibility",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -4526,9 +4526,9 @@
       "title": "Workflow Orchestration Agent Architecture",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "workflow",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [
@@ -4642,17 +4642,17 @@
       "status": "superseded",
       "outbound_links": [
         {
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "k start guide 3. **`LETTER_TO_FUTURE_CLAUDE.md`** - Comprehensive handoff  #"
+          ]
+        },
+        {
           "target": "docs/archive/old-startup-files/START_HERE.md",
           "occurrences": 1,
           "snippets": [
             "ession's work 2. **`START_HERE.md`** - Quick start guide 3. **`"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
-          "occurrences": 1,
-          "snippets": [
-            "k start guide 3. **`LETTER_TO_FUTURE_CLAUDE.md`** - Comprehensive handoff  #"
           ]
         },
         {
@@ -4682,17 +4682,17 @@
       "status": "superseded",
       "outbound_links": [
         {
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "ck start guide - **`LETTER_TO_FUTURE_CLAUDE.md`** - Comprehensive handoff  #"
+          ]
+        },
+        {
           "target": "docs/archive/old-startup-files/START_HERE.md",
           "occurrences": 1,
           "snippets": [
             "e  ### Context - **`START_HERE.md`** - Quick start guide - **`L"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
-          "occurrences": 1,
-          "snippets": [
-            "ck start guide - **`LETTER_TO_FUTURE_CLAUDE.md`** - Comprehensive handoff  #"
           ]
         },
         {
@@ -4947,13 +4947,6 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/01_FIX_AGENT_ASYNC_EXECUTION.md",
-          "occurrences": 1,
-          "snippets": [
-            "minutes total) 3. **[Fix #1: Fix Agent Async Execution](./01_FIX_AGENT_ASYNC_EXECUTION.md)** - 30 mi"
-          ]
-        },
-        {
           "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/02_CREATE_ADVISOR_DATABASE_TABLES.md",
           "occurrences": 1,
           "snippets": [
@@ -4968,7 +4961,14 @@
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
+          "target": "docs/archive/old-structure/fixes/01_FIX_AGENT_ASYNC_EXECUTION.md",
+          "occurrences": 1,
+          "snippets": [
+            "minutes total) 3. **[Fix #1: Fix Agent Async Execution](./01_FIX_AGENT_ASYNC_EXECUTION.md)** - 30 mi"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/fixes/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
           "occurrences": 1,
           "snippets": [
             "* - 30 minutes 4. **[Fix #4: Fix WebSocket Frontend Updates](./04_FIX_WEBSOCKET_FRONTEND_UPDATES.md)"
@@ -4993,7 +4993,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 2
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/02_CREATE_ADVISOR_DATABASE_TABLES.md",
@@ -5048,7 +5048,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 2
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/AGENT_EXECUTOR_FIX.md",
@@ -5066,7 +5066,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 1
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/AUTONOMOUS_AI_IMPLEMENTATION_LOG.md",
@@ -5126,9 +5126,16 @@
           "snippets": [
             "tation Created  1. `BACKEND_FRONTEND_CONNECTION_MAP.md` - Complete technical mapping"
           ]
+        },
+        {
+          "target": "docs/archive/old-structure/fixes/BACKEND_FRONTEND_CONNECTION_SUMMARY.md",
+          "occurrences": 1,
+          "snippets": [
+            "chnical mapping 2. `BACKEND_FRONTEND_CONNECTION_SUMMARY.md` - This summary  ---  ## \ud83c\udfaf Mi"
+          ]
         }
       ],
-      "inbound_links_count": 2
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_INTEGRATION_PROGRESS.md",
@@ -5147,7 +5154,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 2
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/COMPLETE_INTEGRATION_DOCUMENTATION.md",
@@ -5161,14 +5168,14 @@
       "title": "\ud83d\ude80 Backend-Frontend Integration Implementation - Complete Documentation",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
+        "integration",
         "backend"
       ],
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_CLAUDE.md",
+          "target": "docs/archive/old-structure/fixes/HANDOFF_TO_NEXT_CLAUDE.md",
           "occurrences": 1,
           "snippets": [
             "tation ## Next: See HANDOFF_TO_NEXT_CLAUDE.md for remaining tasks"
@@ -5207,7 +5214,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 3
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_AI_NEXUS_COMPLETE.md",
@@ -5252,7 +5259,14 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "Session summary - `HANDOFF_TO_FUTURE_CLAUDE.md` - This document  ---  ## \ud83e\uddea Q"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "ntation Created: - `README.md` - System overview - `SYSTEM_"
@@ -5280,7 +5294,7 @@
           ]
         }
       ],
-      "inbound_links_count": 5
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_CLAUDE.md",
@@ -5298,7 +5312,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 3
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_SESSION_CLEANUP_COMPLETE.md",
@@ -5312,8 +5326,8 @@
       "title": "\ud83d\udccb Session Handoff: Major Cleanup Complete - Backend/Frontend Integration Next",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
+        "integration",
         "backend"
       ],
       "status": "superseded",
@@ -5356,7 +5370,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 2
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
@@ -5374,7 +5388,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 9
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE_AI_NEXUS.md",
@@ -5426,7 +5440,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 1
     },
     {
       "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/PROPOSAL_EXECUTION_DISCOVERY_AND_PLAN.md",
@@ -5642,8 +5656,8 @@
       "title": "\ud83d\udd0c INTEGRATION APIS - The Nervous System of AI",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -5714,7 +5728,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 20,
           "snippets": [
             "S OVERVIEW  ### 1\ufe0f\u20e3 [Core Intelligence System](./01_Core_Intelligence/README.md) - **Consciousness L",
@@ -6102,7 +6116,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "--|-----------| | **README.md** (this file) | Quick referen"
@@ -6398,7 +6412,7 @@
           ]
         }
       ],
-      "inbound_links_count": 3
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/experimental/the_future_of_ai/README.md",
@@ -6459,7 +6473,7 @@
           ]
         },
         {
-          "target": "docs/archive/experimental/the_future_of_ai/QUICK_REFERENCE.md",
+          "target": "docs/archive/superseded-docs/QUICK_REFERENCE.md",
           "occurrences": 9,
           "snippets": [
             "\ud83c\udfaf Start Here  **1. [QUICK_REFERENCE.md](QUICK_REFERENCE.md)** \u2b50 **START HERE!**    - Quic",
@@ -6482,8 +6496,8 @@
       "title": "\ud83d\udcec LETTER TO FUTURE CLAUDE - Session 36 Startup Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -6509,7 +6523,7 @@
           ]
         }
       ],
-      "inbound_links_count": 0
+      "inbound_links_count": 6
     },
     {
       "path": "docs/archive/letters/LETTER_TO_DOCUMENTATION_CLEANUP_CLAUDE.md",
@@ -6536,19 +6550,19 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
-          "occurrences": 2,
-          "snippets": [
-            "the root:  ### 1. `README.md` **Purpose**: First thing any",
-            "ly essential files (README.md, QUICK_START.md, SYSTEM_OVERV"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
           "occurrences": 2,
           "snippets": [
             "Likely Valuable) - `LETTER_TO_FUTURE_CLAUDE.md` - `MISSION_REALIGNMENT.md` -",
             "test results 4. **`LETTER_TO_FUTURE_CLAUDE.md`** - Context about the projec"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
+          "occurrences": 2,
+          "snippets": [
+            "the root:  ### 1. `README.md` **Purpose**: First thing any",
+            "ly essential files (README.md, QUICK_START.md, SYSTEM_OVERV"
           ]
         },
         {
@@ -6672,8 +6686,8 @@
       "title": "\ud83d\udcec LETTER TO FUTURE CLAUDE - IMPLEMENTATION GUIDE",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -6740,9 +6754,9 @@
       "title": "\ud83d\udcec Letter to Future Claude - Session 33 Integration Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
         "frontend",
-        "integration"
+        "integration",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -6766,7 +6780,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
           "occurrences": 1,
           "snippets": [
             "mentation - Update `HANDOFF_TO_FUTURE_CLAUDE.md` - Create success screenshots"
@@ -7147,8 +7161,8 @@
       "title": "\ud83c\udfac Session 43: Video Frontend Integration Complete",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -7735,7 +7749,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 6,
           "snippets": [
             "zation stress  **7. README.md** (in /docs/super_system/) -",
@@ -7941,8 +7955,8 @@
       "title": "Session 59: Phase B.4 Complete - Memory System Integration! \ud83e\udde0\u2728",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "memory"
+        "memory",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -8300,7 +8314,7 @@
           ]
         },
         {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
           "occurrences": 4,
           "snippets": [
             "GUIDE** **File**: `IMPLEMENTATION_ROADMAP.md` (42 pages)  **Use this when*",
@@ -8335,7 +8349,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 7,
           "snippets": [
             "*Getting Started:** [`../README.md`](../README.md)  ### For Continuing Work - **",
@@ -8673,7 +8687,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "docs/content-studio/README.md`  ---  ## \ud83d\udcda Related Documenta",
@@ -9197,7 +9211,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "**Main README:** `/README.md` (project root) - **Documenta"
@@ -9389,9 +9403,9 @@
       "title": "\ud83d\udd0c Backend API Reference for UI Fresh Start",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
         "frontend",
-        "backend"
+        "backend",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -9667,7 +9681,7 @@
           ]
         }
       ],
-      "inbound_links_count": 60
+      "inbound_links_count": 1
     },
     {
       "path": "docs/archive/old-structure/audits/ai-nexus-reality-audit.md",
@@ -9733,8 +9747,8 @@
       "title": "\ud83d\udd0d FRONTEND REALITY DEEP AUDIT - Instructions for Future Claude",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -9961,7 +9975,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 60
     },
     {
       "path": "docs/archive/old-structure/capabilities/09_Self_Awareness/README.md",
@@ -9991,8 +10005,8 @@
       "title": "\ud83d\udd0c INTEGRATION APIS - The Nervous System of AI",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -10126,7 +10140,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 20,
           "snippets": [
             "S OVERVIEW  ### 1\ufe0f\u20e3 [Core Intelligence System](./01_Core_Intelligence/README.md) - **Consciousness L",
@@ -10165,8 +10179,8 @@
       "title": "Spider \u2192 Agent Data Flow Map",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -10408,8 +10422,8 @@
       "title": "\ud83c\udf89 Session 9 Complete - Spider Data Learning Bridge Activated!",
       "has_frontmatter": false,
       "subsystems": [
-        "spiders",
-        "learning"
+        "learning",
+        "spiders"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -10499,7 +10513,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "This document 5. **README.md** - Updated with fix details"
@@ -10570,8 +10584,8 @@
       "title": "\ud83d\ude80 Job Search Solution - No API Keys Required!",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "frontend"
+        "frontend",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -10803,7 +10817,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "ed Documentation  - [Main README](../../README.md) - System overview - [Agent Sy",
@@ -10918,13 +10932,6 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/01_FIX_AGENT_ASYNC_EXECUTION.md",
-          "occurrences": 1,
-          "snippets": [
-            "minutes total) 3. **[Fix #1: Fix Agent Async Execution](./01_FIX_AGENT_ASYNC_EXECUTION.md)** - 30 mi"
-          ]
-        },
-        {
           "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/02_CREATE_ADVISOR_DATABASE_TABLES.md",
           "occurrences": 1,
           "snippets": [
@@ -10939,7 +10946,14 @@
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
+          "target": "docs/archive/old-structure/fixes/01_FIX_AGENT_ASYNC_EXECUTION.md",
+          "occurrences": 1,
+          "snippets": [
+            "minutes total) 3. **[Fix #1: Fix Agent Async Execution](./01_FIX_AGENT_ASYNC_EXECUTION.md)** - 30 mi"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/fixes/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
           "occurrences": 1,
           "snippets": [
             "* - 30 minutes 4. **[Fix #4: Fix WebSocket Frontend Updates](./04_FIX_WEBSOCKET_FRONTEND_UPDATES.md)"
@@ -10964,7 +10978,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 2
     },
     {
       "path": "docs/archive/old-structure/fixes/02_CREATE_ADVISOR_DATABASE_TABLES.md",
@@ -11019,7 +11033,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 2
     },
     {
       "path": "docs/archive/old-structure/fixes/AGENT_EXECUTOR_FIX.md",
@@ -11037,7 +11051,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 1
     },
     {
       "path": "docs/archive/old-structure/fixes/AUTONOMOUS_AI_IMPLEMENTATION_LOG.md",
@@ -11116,16 +11130,9 @@
           "snippets": [
             "tation Created  1. `BACKEND_FRONTEND_CONNECTION_MAP.md` - Complete technical mapping"
           ]
-        },
-        {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_FRONTEND_CONNECTION_SUMMARY.md",
-          "occurrences": 1,
-          "snippets": [
-            "chnical mapping 2. `BACKEND_FRONTEND_CONNECTION_SUMMARY.md` - This summary  ---  ## \ud83c\udfaf Mi"
-          ]
         }
       ],
-      "inbound_links_count": 0
+      "inbound_links_count": 2
     },
     {
       "path": "docs/archive/old-structure/fixes/BACKEND_INTEGRATION_PROGRESS.md",
@@ -11144,7 +11151,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 2
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/old-structure/fixes/COMPLETE_INTEGRATION_DOCUMENTATION.md",
@@ -11158,14 +11165,14 @@
       "title": "\ud83d\ude80 Backend-Frontend Integration Implementation - Complete Documentation",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
+        "integration",
         "backend"
       ],
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_CLAUDE.md",
+          "target": "docs/archive/old-structure/fixes/HANDOFF_TO_NEXT_CLAUDE.md",
           "occurrences": 1,
           "snippets": [
             "tation ## Next: See HANDOFF_TO_NEXT_CLAUDE.md for remaining tasks"
@@ -11204,7 +11211,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 3
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/old-structure/fixes/HANDOFF_AI_NEXUS_COMPLETE.md",
@@ -11249,14 +11256,14 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
           "occurrences": 1,
           "snippets": [
             "Session summary - `HANDOFF_TO_FUTURE_CLAUDE.md` - This document  ---  ## \ud83e\uddea Q"
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "ntation Created: - `README.md` - System overview - `SYSTEM_"
@@ -11302,7 +11309,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 3
     },
     {
       "path": "docs/archive/old-structure/fixes/HANDOFF_TO_NEXT_SESSION_CLEANUP_COMPLETE.md",
@@ -11316,8 +11323,8 @@
       "title": "\ud83d\udccb Session Handoff: Major Cleanup Complete - Backend/Frontend Integration Next",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
+        "integration",
         "backend"
       ],
       "status": "superseded",
@@ -11371,7 +11378,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 2
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/old-structure/fixes/INTELLIGENCE_HUB_WEBSOCKET_FIX.md",
@@ -11407,7 +11414,7 @@
       ],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 9
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE_AI_NEXUS.md",
@@ -11459,7 +11466,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 1
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/old-structure/fixes/PROPOSAL_EXECUTION_DISCOVERY_AND_PLAN.md",
@@ -11531,7 +11538,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "er creating archive/README.md to document what's there  ###"
@@ -11657,7 +11664,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "History limits 6. `README.md` - Documentation update  ###"
@@ -11694,8 +11701,8 @@
       "title": "\ud83e\udd16 MAKING MONEY WITH YOUR AGENT PLATFORM - Step by Step",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -11713,8 +11720,8 @@
       "title": "\ud83d\udd10 Authentication Integration Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -11771,8 +11778,8 @@
       "title": "\ud83d\ude80 Frontend API Configuration - COMPLETE SUMMARY",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "frontend"
+        "frontend",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -11844,8 +11851,8 @@
       "title": "\ud83d\ude80 Multi-Agent Frontend Rebuild System",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -11881,8 +11888,8 @@
       "title": "\ud83d\udce6 Makefile Integration for React Frontend",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -11961,8 +11968,8 @@
       "title": "\ud83e\udd1d Claude Collaboration Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -12572,7 +12579,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 1
+      "inbound_links_count": 0
     },
     {
       "path": "docs/archive/old-structure/handoffs/SESSION_10_HANDOFF_LEARNING_LIVE.md",
@@ -12718,8 +12725,8 @@
       "title": "Session 7 Handoff - Income Builder Authentication & Integration Fix",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -13611,10 +13618,10 @@
       "title": "\ud83d\udea8 URGENT: Backend-Frontend Integration Fixes Required",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "integration",
         "frontend",
-        "backend"
+        "integration",
+        "backend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -13650,8 +13657,8 @@
       "title": "\ud83c\udfaf BRIEFING FOR FUTURE CLAUDE - SYSTEM MASTERY GUIDE",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -13692,7 +13699,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/fixes/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
           "occurrences": 1,
           "snippets": [
             "ILES TO CHECK  1. **INTELLIGENCE_DATA_ANALYSIS_REPORT.md** - Full analysis I created 2"
@@ -13788,6 +13795,13 @@
           ]
         },
         {
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "e Claude (2 docs) - LETTER_TO_FUTURE_CLAUDE.md \u2192 `letters/letter-to-future-c"
+          ]
+        },
+        {
           "target": "docs/archive/old-startup-files/00-START-HERE.md",
           "occurrences": 1,
           "snippets": [
@@ -13802,19 +13816,12 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 5,
           "snippets": [
             "r `docs/` 2. Create README.md files for each category  ###",
             "3. Create category README.md files 4. Update main README.m",
             "iles 4. Update main README.md  ### Total Time: ~40 minutes"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
-          "occurrences": 1,
-          "snippets": [
-            "e Claude (2 docs) - LETTER_TO_FUTURE_CLAUDE.md \u2192 `letters/letter-to-future-c"
           ]
         },
         {
@@ -13977,7 +13984,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "morrow morning - **`README.md`** - Main project readme (upd"
@@ -14259,7 +14266,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "ss pressure  6. \u2705 **README.md** - Master index    - Quick r",
@@ -14484,8 +14491,8 @@
       "title": "Database Cleanup: Mock SpiderData Removal",
       "has_frontmatter": false,
       "subsystems": [
-        "spiders",
-        "database"
+        "database",
+        "spiders"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -14731,8 +14738,8 @@
       "title": "\ud83e\udde0 Self-Development-Agent Ingestion Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -14905,8 +14912,8 @@
       "title": "Session 13 Complete Summary - Sports Spider & Agent Expansion",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -15053,8 +15060,8 @@
       "title": "Session 16 Complete - Agent Creation & Spider Deployment \u2705",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -15073,7 +15080,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "ocs/session-reports/README.md` - Session index  ---  **Sess",
@@ -15416,7 +15423,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "### Updated: 11. `README.md` - Added overnight test secti"
@@ -15493,7 +15500,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "c  ### Updates: - **README.md** - Updated with overnight te"
@@ -15648,7 +15655,7 @@
           ]
         },
         {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
           "occurrences": 2,
           "snippets": [
             "es) **File**: `docs/IMPLEMENTATION_ROADMAP.md`  **Contents**: - 5-day imple",
@@ -15676,7 +15683,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "setup examples 3. `README.md` - Update features list with"
@@ -15832,7 +15839,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "INDEX.md notes `../README.md` is outdated    - Main projec",
@@ -16242,7 +16249,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "tes/unified_v2/` - `README.md` (explains archival)  ### 3.",
@@ -16324,8 +16331,8 @@
       "title": "Sports Betting Spider-Agent Connection Review",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -16545,15 +16552,6 @@
           ]
         },
         {
-          "target": "docs/archive/experimental/the_future_of_ai/QUICK_REFERENCE.md",
-          "occurrences": 4,
-          "snippets": [
-            "API status - `/docs/QUICK_REFERENCE.md` - One-page reference card -",
-            "API status - `/docs/QUICK_REFERENCE.md` - One-page reference - `/doc",
-            "d` - API status - `/docs/QUICK_REFERENCE.md` - One-page reference card -"
-          ]
-        },
-        {
           "target": "docs/archive/old-structure/letters/HANDOFF_SESSION_32_NOV_2_2025.md",
           "occurrences": 4,
           "snippets": [
@@ -16585,6 +16583,15 @@
             "-reports/2025-11-02/IMAGE_GENERATION_SUCCESS.md` - Test results - `/docs/sess",
             "ick start guide - `/docs/session-reports/2025-11-02/IMAGE_GENERATION_SUCCESS.md` - Test results - `/",
             "md` - This file - `/docs/session-reports/2025-11-02/IMAGE_GENERATION_SUCCESS.md` - Test results - `/"
+          ]
+        },
+        {
+          "target": "docs/archive/superseded-docs/QUICK_REFERENCE.md",
+          "occurrences": 4,
+          "snippets": [
+            "API status - `/docs/QUICK_REFERENCE.md` - One-page reference card -",
+            "API status - `/docs/QUICK_REFERENCE.md` - One-page reference - `/doc",
+            "d` - API status - `/docs/QUICK_REFERENCE.md` - One-page reference card -"
           ]
         }
       ],
@@ -16857,7 +16864,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "ntation Created  - `README.md` - Complete system overview -"
@@ -16898,7 +16905,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/fixes/BACKEND_INTEGRATION_PROGRESS.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_INTEGRATION_PROGRESS.md",
           "occurrences": 1,
           "snippets": [
             "ISCONNECT.md`    - `BACKEND_INTEGRATION_PROGRESS.md`    - `SESSION_COMPLETE_HANDO"
@@ -16939,7 +16946,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/fixes/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
           "occurrences": 1,
           "snippets": [
             "generation  4. **`/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md`** (400+ lines)    - Complete"
@@ -16963,7 +16970,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "Created/Updated: - README.md - Added latest fixes section"
@@ -17107,7 +17114,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "t system status 6. `README.md` - Updated with fix details 7"
@@ -17149,7 +17156,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "Quick reference - `README.md` - Updated with fix summary -"
@@ -17205,7 +17212,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "e)  **Updated:** - `README.md` (Added night session summary"
@@ -17229,7 +17236,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "contact info  3. **`README.md` (Updated)**    - Added tonig"
@@ -17355,7 +17362,14 @@
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "------|---------| | LETTER_TO_FUTURE_CLAUDE.md | 951 | Original letter | | L"
+          ]
+        },
+        {
+          "target": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
           "occurrences": 2,
           "snippets": [
             "ssion statement | | HANDOFF_TO_FUTURE_CLAUDE.md | 498 | General handoff | | L",
@@ -17435,19 +17449,12 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 4,
           "snippets": [
             "| **\u2705 KEEP** | | **README.md** | - | **\u2705 KEEP & UPDATE** |",
             "esting/` - \u2705 Update README.md to be primary entry point  --",
             "emporarily 3. Keep `README.md`, update it  ### Phase 3: Con"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
-          "occurrences": 1,
-          "snippets": [
-            "------|---------| | LETTER_TO_FUTURE_CLAUDE.md | 951 | Original letter | | L"
           ]
         },
         {
@@ -18027,13 +18034,6 @@
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/AGENT_EXECUTOR_FIX.md",
-          "occurrences": 1,
-          "snippets": [
-            "CONNECTION_MAP.md - AGENT_EXECUTOR_FIX.md - CRITICAL_HANDOFF_SERVER_DIS"
-          ]
-        },
-        {
           "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/AUTONOMOUS_AI_IMPLEMENTATION_LOG.md",
           "occurrences": 1,
           "snippets": [
@@ -18048,10 +18048,10 @@
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_FRONTEND_CONNECTION_SUMMARY.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_INTEGRATION_PROGRESS.md",
           "occurrences": 1,
           "snippets": [
-            "ATION_PROGRESS.md - BACKEND_FRONTEND_CONNECTION_SUMMARY.md - BACKEND_FRONTEND_CONNECTION"
+            "Keep/Consolidate) - BACKEND_INTEGRATION_PROGRESS.md - BACKEND_FRONTEND_CONNECTION"
           ]
         },
         {
@@ -18062,17 +18062,32 @@
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_FUTURE_CLAUDE.md",
-          "occurrences": 1,
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
+          "occurrences": 2,
           "snippets": [
-            "TO_NEXT_CLAUDE.md - HANDOFF_TO_FUTURE_CLAUDE.md - SESSION_HANDOFF_COMPLETE.md"
+            "architecture \u2705 4. **DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md** - Testing/debug guide \u2705 5.",
+            "**Extract from**: - DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md - UI_TEST_GUIDE.md - UI_TEST_"
           ]
         },
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_CLAUDE.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
           "occurrences": 1,
           "snippets": [
-            "NEXUS_COMPLETE.md - HANDOFF_TO_NEXT_CLAUDE.md - HANDOFF_TO_FUTURE_CLAUDE.md"
+            "score proof \u2705 6. **INTELLIGENCE_DATA_ANALYSIS_REPORT.md** - Data flow analysis \u2705  ###"
+          ]
+        },
+        {
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "E_FIXES_NEEDED.md - LETTER_TO_FUTURE_CLAUDE.md **Action**: Merge key points"
+          ]
+        },
+        {
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/PHASE_2_PRODUCTION_ROADMAP.md",
+          "occurrences": 1,
+          "snippets": [
+            "OVERY_AND_PLAN.md - PHASE_2_PRODUCTION_ROADMAP.md **Action**: Evaluate if still"
           ]
         },
         {
@@ -18097,17 +18112,31 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "TO_NEXT_CLAUDE.md - HANDOFF_TO_FUTURE_CLAUDE.md - SESSION_HANDOFF_COMPLETE.md"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "ssential Files 1. **README.md** - Project overview 2. **QUI"
           ]
         },
         {
-          "target": "docs/archive/old-structure/fixes/BACKEND_INTEGRATION_PROGRESS.md",
+          "target": "docs/archive/old-structure/fixes/AGENT_EXECUTOR_FIX.md",
           "occurrences": 1,
           "snippets": [
-            "Keep/Consolidate) - BACKEND_INTEGRATION_PROGRESS.md - BACKEND_FRONTEND_CONNECTION"
+            "CONNECTION_MAP.md - AGENT_EXECUTOR_FIX.md - CRITICAL_HANDOFF_SERVER_DIS"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/fixes/BACKEND_FRONTEND_CONNECTION_SUMMARY.md",
+          "occurrences": 1,
+          "snippets": [
+            "ATION_PROGRESS.md - BACKEND_FRONTEND_CONNECTION_SUMMARY.md - BACKEND_FRONTEND_CONNECTION"
           ]
         },
         {
@@ -18118,14 +18147,6 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/fixes/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
-          "occurrences": 2,
-          "snippets": [
-            "architecture \u2705 4. **DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md** - Testing/debug guide \u2705 5.",
-            "**Extract from**: - DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md - UI_TEST_GUIDE.md - UI_TEST_"
-          ]
-        },
-        {
           "target": "docs/archive/old-structure/fixes/HANDOFF_AI_NEXUS_COMPLETE.md",
           "occurrences": 1,
           "snippets": [
@@ -18133,24 +18154,17 @@
           ]
         },
         {
+          "target": "docs/archive/old-structure/fixes/HANDOFF_TO_NEXT_CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "NEXUS_COMPLETE.md - HANDOFF_TO_NEXT_CLAUDE.md - HANDOFF_TO_FUTURE_CLAUDE.md"
+          ]
+        },
+        {
           "target": "docs/archive/old-structure/fixes/HANDOFF_TO_NEXT_SESSION_CLEANUP_COMPLETE.md",
           "occurrences": 1,
           "snippets": [
             "es - Consolidate) - HANDOFF_TO_NEXT_SESSION_CLEANUP_COMPLETE.md - HANDOFF_AI_NEXUS_COMPLETE.m"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
-          "occurrences": 1,
-          "snippets": [
-            "score proof \u2705 6. **INTELLIGENCE_DATA_ANALYSIS_REPORT.md** - Data flow analysis \u2705  ###"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
-          "occurrences": 1,
-          "snippets": [
-            "E_FIXES_NEEDED.md - LETTER_TO_FUTURE_CLAUDE.md **Action**: Merge key points"
           ]
         },
         {
@@ -18165,13 +18179,6 @@
           "occurrences": 1,
           "snippets": [
             "LAUDE_AI_NEXUS.md - LETTER_TO_FUTURE_CLAUDE_FIXES_NEEDED.md - LETTER_TO_FUTURE_CLAUDE.md"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/PHASE_2_PRODUCTION_ROADMAP.md",
-          "occurrences": 1,
-          "snippets": [
-            "OVERY_AND_PLAN.md - PHASE_2_PRODUCTION_ROADMAP.md **Action**: Evaluate if still"
           ]
         },
         {
@@ -18575,7 +18582,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/fixes/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
           "occurrences": 1,
           "snippets": [
             "ssion summary    - `DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md` - API documentation    - `FI"
@@ -18889,7 +18896,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "Git exclusions 4. `README.md` - Project documentation 5. `"
@@ -18968,7 +18975,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "ntation - \u2705 `mobile/README.md` - Now references monorepo st",
@@ -19073,7 +19080,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 3,
           "snippets": [
             "ed Documentation  - [Resolve Node README](../resolve_node/README.md) - Complete setup and usage gu",
@@ -19507,8 +19514,8 @@
       "title": "Session 112: Donkey Cockpit Integration Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -20325,8 +20332,8 @@
       "title": "Session 129: GPT-5.1 Responses API Migration + Tool Calling Fixed! \ud83e\udd16\ud83d\udd27\u2728",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "llm"
+        "llm",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -20462,8 +20469,8 @@
       "title": "Session 131 Phase 3 - Agent Orchestrator Testing COMPLETE! \ud83e\udd16\u2705",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -21859,8 +21866,8 @@
       "title": "Session 17 Completion: Frontend Integration & Automated Retraining",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -21911,8 +21918,8 @@
       "title": "Session 17 Handoff: NHL Model Fixed - Ready for Frontend Integration",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
+        "integration",
         "database"
       ],
       "status": "superseded",
@@ -22207,8 +22214,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -22641,8 +22648,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -22723,8 +22730,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -22769,8 +22776,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -23050,8 +23057,8 @@
       "title": "\ud83c\udfaf SESSION 32 - User Profile Foundation for Personalized Agent Learning",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -23071,8 +23078,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -23100,8 +23107,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -23193,7 +23200,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
           "occurrences": 2,
           "snippets": [
             "y` (+243 lines) 3. `HANDOFF_TO_FUTURE_CLAUDE.md` (+700 lines) 4. `SESSION_35_",
@@ -23726,7 +23733,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
           "occurrences": 3,
           "snippets": [
             "emaining steps from LETTER_TO_FUTURE_CLAUDE.md  ---  ## \ud83d\udcca EXECUTIVE SUMMARY",
@@ -23767,7 +23774,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
           "occurrences": 2,
           "snippets": [
             "emaining steps from LETTER_TO_FUTURE_CLAUDE.md **Time**: ~1.5 hours **Result",
@@ -24168,8 +24175,8 @@
       "title": "\ud83e\udd16 Session 81 - Part 2: Agent Orchestration COMPLETE!",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -24214,8 +24221,8 @@
       "title": "\ud83e\udd16 Session 81 Part 2: Agent Orchestration System - COMPLETE!",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -24290,8 +24297,8 @@
       "title": "\ud83e\udd16 Session 82: Agent Orchestration System - 100% COMPLETE!",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -24688,7 +24695,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 14,
           "snippets": [
             "** 1. docs/features/README.md (280 lines) 2. docs/apis/READ",
@@ -24818,8 +24825,8 @@
       "title": "\ud83e\udd16 Session 90 - Complete Agent Ecosystem Built!",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -25017,8 +25024,8 @@
       "title": "Session 95 Part 2: Agent Workflow Testing - Session Report",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "workflow"
+        "workflow",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -25098,8 +25105,8 @@
       "title": "Session 95 Part 2: Agent Workflow Testing Plan",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "workflow"
+        "workflow",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -25554,7 +25561,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 6,
           "snippets": [
             "ocument:** `/mobile/README.md`  ---  #### 5. DaVinci Resolv",
@@ -25746,7 +25753,7 @@
       "subsystems": [],
       "status": "superseded",
       "outbound_links": [],
-      "inbound_links_count": 0
+      "inbound_links_count": 7
     },
     {
       "path": "docs/archive/sports-ai/MASTER_DOCUMENTATION.md",
@@ -25787,6 +25794,13 @@
       "status": "superseded",
       "outbound_links": [
         {
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
+          "occurrences": 1,
+          "snippets": [
+            "on (300+ lines) - **IMPLEMENTATION_ROADMAP.md**: Detailed development timel"
+          ]
+        },
+        {
           "target": "docs/archive/sports-ai/MASTER_DOCUMENTATION.md",
           "occurrences": 1,
           "snippets": [
@@ -25798,13 +25812,6 @@
           "occurrences": 1,
           "snippets": [
             "opment timeline - **TECH_DECISIONS.md**: Architecture and technolog"
-          ]
-        },
-        {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
-          "occurrences": 1,
-          "snippets": [
-            "on (300+ lines) - **IMPLEMENTATION_ROADMAP.md**: Detailed development timel"
           ]
         }
       ],
@@ -25920,8 +25927,8 @@
       "title": "AGENT INFRASTRUCTURE - QUICK REFERENCE GUIDE",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -25999,8 +26006,8 @@
       "title": "API Integration Map - Stability AI + Runway ML",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -26135,9 +26142,9 @@
       "title": "\ud83d\udd04 Complete Data Flow Analysis - Spider \u2192 Agent \u2192 Learning",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "spiders",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -26179,8 +26186,8 @@
       "title": "DaVinci Resolve Video Editing Integration Guide \ud83c\udfac\u2728",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -26262,7 +26269,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 12,
           "snippets": [
             "esult:** - \u2705 **Only README.md remains in root** - \u2705 **304 t",
@@ -26320,7 +26327,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 4,
           "snippets": [
             "t Stayed in Root - `README.md` (main project README - corre",
@@ -26522,9 +26529,9 @@
       "title": "API Endpoint Audit - Backend vs Frontend Connections",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
         "frontend",
-        "backend"
+        "backend",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -26542,8 +26549,8 @@
       "title": "\ud83c\udfa8 Frontend End-to-End Integration Plan",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -26631,21 +26638,21 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
-          "occurrences": 5,
-          "snippets": [
-            "s 1. Start with \u2192 [`README.md`](#readmemd) 2. Then read \u2192 [",
-            "\u2705 Current  ---  ### README.md **Purpose**: System overview",
-            "view Documents**: - README.md (system overview) - SOLUTION_"
-          ]
-        },
-        {
-          "target": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
+          "target": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
           "occurrences": 7,
           "snippets": [
             "s 1. Start with \u2192 [`LETTER_TO_FUTURE_CLAUDE.md`](#letter_to_future_claudemd)",
             "\u2705 Current  ---  ### LETTER_TO_FUTURE_CLAUDE.md **Purpose**: Comprehensive ha",
             "sting procedures) - LETTER_TO_FUTURE_CLAUDE.md (context preservation)  **Pro"
+          ]
+        },
+        {
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
+          "occurrences": 5,
+          "snippets": [
+            "s 1. Start with \u2192 [`README.md`](#readmemd) 2. Then read \u2192 [",
+            "\u2705 Current  ---  ### README.md **Purpose**: System overview",
+            "view Documents**: - README.md (system overview) - SOLUTION_"
           ]
         },
         {
@@ -26695,15 +26702,6 @@
           "snippets": [
             "- \u2705 Updated `/docs/INDEX.md` - This file  **Session 32 Ac",
             "card - \u2705 Updated `/docs/INDEX.md` - This file  **Session 32 Ac"
-          ]
-        },
-        {
-          "target": "docs/archive/experimental/the_future_of_ai/QUICK_REFERENCE.md",
-          "occurrences": 5,
-          "snippets": [
-            "** - API status - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - One-page reference card",
-            "I status - \u2705 `/docs/QUICK_REFERENCE.md` - One-page reference card -",
-            "* - API status - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - One-"
           ]
         },
         {
@@ -26811,7 +26809,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 5,
           "snippets": [
             "For New Users 1. **[README.md](../README.md)** - Project overview and quic",
@@ -26964,6 +26962,15 @@
           ]
         },
         {
+          "target": "docs/archive/superseded-docs/QUICK_REFERENCE.md",
+          "occurrences": 5,
+          "snippets": [
+            "** - API status - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - One-page reference card",
+            "I status - \u2705 `/docs/QUICK_REFERENCE.md` - One-page reference card -",
+            "* - API status - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - One-"
+          ]
+        },
+        {
           "target": "docs/archive/superseded-docs/SPIDER_DATA_QUALITY_AUDIT.md",
           "occurrences": 2,
           "snippets": [
@@ -27037,8 +27044,8 @@
       "title": "\ud83d\udc8c Letter to Future Claude - Session 22 UI Fresh Start",
       "has_frontmatter": false,
       "subsystems": [
-        "llm",
-        "frontend"
+        "frontend",
+        "llm"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -27058,19 +27065,19 @@
           ]
         },
         {
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
+          "occurrences": 2,
+          "snippets": [
+            "tecture  2. **`docs/IMPLEMENTATION_ROADMAP.md`** (updated with Content Stud",
+            "architecture  2. **`docs/IMPLEMENTATION_ROADMAP.md`** (updated with Content Stud"
+          ]
+        },
+        {
           "target": "docs/archive/superseded-docs/CLAUDE_CODE_SPEED_ADVANTAGE.md",
           "occurrences": 2,
           "snippets": [
             "pproach  4. **`docs/CLAUDE_CODE_SPEED_ADVANTAGE.md`**    - Why you can do this i",
             "ion approach  4. **`docs/CLAUDE_CODE_SPEED_ADVANTAGE.md`**    - Why you can do this i"
-          ]
-        },
-        {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
-          "occurrences": 2,
-          "snippets": [
-            "tecture  2. **`docs/IMPLEMENTATION_ROADMAP.md`** (updated with Content Stud",
-            "architecture  2. **`docs/IMPLEMENTATION_ROADMAP.md`** (updated with Content Stud"
           ]
         }
       ],
@@ -27101,6 +27108,14 @@
           ]
         },
         {
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
+          "occurrences": 2,
+          "snippets": [
+            "e overview 3. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide 4. `doc",
+            "mplete overview 3. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide 4. `doc"
+          ]
+        },
+        {
           "target": "docs/archive/superseded-docs/CLAUDE_CODE_SPEED_ADVANTAGE.md",
           "occurrences": 2,
           "snippets": [
@@ -27115,14 +27130,6 @@
             "e the plan in `docs/LETTER_TO_FUTURE_CLAUDE_SESSION_22.md`. That letter contains the co",
             "refer to: 1. `docs/LETTER_TO_FUTURE_CLAUDE_SESSION_22.md` - Original plan 2. `docs/00-",
             "xecute the plan in `docs/LETTER_TO_FUTURE_CLAUDE_SESSION_22.md`. That letter contains the co"
-          ]
-        },
-        {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
-          "occurrences": 2,
-          "snippets": [
-            "e overview 3. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide 4. `doc",
-            "mplete overview 3. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide 4. `doc"
           ]
         }
       ],
@@ -27153,6 +27160,14 @@
           ]
         },
         {
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
+          "occurrences": 2,
+          "snippets": [
+            "e overview 4. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide  ---  #",
+            "mplete overview 4. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide  ---  #"
+          ]
+        },
+        {
           "target": "docs/archive/superseded-docs/LETTER_TO_FUTURE_CLAUDE_SESSION_22.md",
           "occurrences": 2,
           "snippets": [
@@ -27166,14 +27181,6 @@
           "snippets": [
             "refer to: 1. `docs/LETTER_TO_FUTURE_CLAUDE_SESSION_23.md` - Phase 1 details 2. `docs/L",
             "tuck, refer to: 1. `docs/LETTER_TO_FUTURE_CLAUDE_SESSION_23.md` - Phase 1 details 2. `docs/L"
-          ]
-        },
-        {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
-          "occurrences": 2,
-          "snippets": [
-            "e overview 4. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide  ---  #",
-            "mplete overview 4. `docs/IMPLEMENTATION_ROADMAP.md` - Step-by-step guide  ---  #"
           ]
         }
       ],
@@ -27316,8 +27323,8 @@
       "title": "Quick Start Guide: Agent Execution System",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -27368,7 +27375,7 @@
           ]
         }
       ],
-      "inbound_links_count": 0
+      "inbound_links_count": 3
     },
     {
       "path": "docs/archive/superseded-docs/README.md",
@@ -27595,7 +27602,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "system changes: 1. `README.md` - High-level overview 2. `do",
@@ -27626,8 +27633,8 @@
       "title": "\ud83e\udd16\ud83d\udd77\ufe0f System Readiness Report - Agents & Spiders",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -29310,7 +29317,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 6,
           "snippets": [
             "86 | \u2705 Current | | `README.md` | 412 | Unknown | N/A | \u26a0\ufe0f N",
@@ -29788,8 +29795,8 @@
       "title": "UI Gaps: Complete System Frontend Audit",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -29954,8 +29961,8 @@
       "title": "Agent 2.5: Learning System Audit",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30028,8 +30035,8 @@
       "title": "Agent 2.2: Sci-Fi Features Audit",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "scifi"
+        "scifi",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30047,8 +30054,8 @@
       "title": "Agent 2.4: Spider Network Audit",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "spiders"
+        "spiders",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30084,9 +30091,9 @@
       "title": "Agent 2.12: Workflow Orchestration Audit",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "workflow",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30141,8 +30148,8 @@
       "title": "Agent 1.1: Backend Services Discovery",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "backend"
+        "backend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30160,8 +30167,8 @@
       "title": "Agent 1.5: Celery Tasks Discovery",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "celery"
+        "celery",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30179,8 +30186,8 @@
       "title": "Agent 1.3: Database Models Discovery",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "database"
+        "database",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30198,8 +30205,8 @@
       "title": "Agent 1.7: Discord Commands Discovery",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "discord"
+        "discord",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30236,8 +30243,8 @@
       "title": "Agent 1.6: Frontend Features Discovery",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -30584,7 +30591,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "s | | `resolve_node/README.md` | Server documentation |  --"
@@ -30692,8 +30699,8 @@
       "title": "External API Integrations Code Review Report",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -31183,7 +31190,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 4,
           "snippets": [
             "onftest.py`, `tests/README.md` | | 4.1 | Model Unit Tests |",
@@ -31502,8 +31509,8 @@
       "title": "Frontend Data Audit - Complete API Analysis",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "frontend"
+        "frontend",
+        "api"
       ],
       "status": "active",
       "outbound_links": [
@@ -31695,15 +31702,6 @@
           ]
         },
         {
-          "target": "docs/current/TROUBLESHOOTING.md",
-          "occurrences": 3,
-          "snippets": [
-            "em architecture | | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solutions",
-            "m architecture | | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common",
-            "TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solution"
-          ]
-        },
-        {
           "target": "docs/current/VIEWS.md",
           "occurrences": 3,
           "snippets": [
@@ -31719,6 +31717,15 @@
             "rators, routing | | [WEBSOCKETS.md](WEBSOCKETS.md) | Real-time WebSocket consume",
             "ators, routing | | [WEBSOCKETS.md](WEBSOCKETS.md) | Real-time W",
             "| | [WEBSOCKETS.md](WEBSOCKETS.md) | Real-time WebSocket consum"
+          ]
+        },
+        {
+          "target": "docs/guides/TROUBLESHOOTING.md",
+          "occurrences": 3,
+          "snippets": [
+            "em architecture | | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solutions",
+            "m architecture | | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common",
+            "TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solution"
           ]
         }
       ],
@@ -31819,7 +31826,7 @@
           ]
         },
         {
-          "target": "docs/current/TROUBLESHOOTING.md",
+          "target": "docs/guides/TROUBLESHOOTING.md",
           "occurrences": 3,
           "snippets": [
             "ed Documentation  - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues and solutions",
@@ -32040,8 +32047,8 @@
       "title": "System Integration Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "active",
       "outbound_links": [],
@@ -32098,7 +32105,7 @@
           ]
         }
       ],
-      "inbound_links_count": 5
+      "inbound_links_count": 0
     },
     {
       "path": "docs/current/VIEWS.md",
@@ -32507,7 +32514,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 8,
           "snippets": [
             "[docs/00-START-HERE/README.md](docs/00-START-HERE/README.md",
@@ -32531,15 +32538,6 @@
             "**Documentation:** [docs/SESSION_99_CO_LEADERSHIP_COMPLETE.md](docs/SESSION_99_CO_LEADERSHIP_COMPLET",
             "umentation:** [docs/SESSION_99_CO_LEADERSHIP_COMPLETE.md](docs/SESSION_99_CO_LEADERSHI",
             "P_COMPLETE.md](docs/SESSION_99_CO_LEADERSHIP_COMPLETE.md)  ### 5. **99.9% Reality Scor"
-          ]
-        },
-        {
-          "target": "docs/current/TROUBLESHOOTING.md",
-          "occurrences": 5,
-          "snippets": [
-            "*Troubleshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - **Session History:** [docs/",
-            "leshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - *",
-            "LESHOOTING.md](docs/TROUBLESHOOTING.md) - **Session History:** [docs"
           ]
         },
         {
@@ -32590,6 +32588,15 @@
             "pis/RUNWAY_ML.md) | [docs/features/VIDEO_GENERATION.md](docs/features/VIDEO_GENERATION.md)  ### What",
             "*\ud83d\udcd6 Documentation:** [docs/features/VIDEO_GENERATION.md](docs/features/VIDEO_GENERATION.md)  ### FFmp",
             "d) | [docs/features/VIDEO_GENERATION.md](docs/features/VIDEO_GENERATI"
+          ]
+        },
+        {
+          "target": "docs/guides/TROUBLESHOOTING.md",
+          "occurrences": 5,
+          "snippets": [
+            "*Troubleshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - **Session History:** [docs/",
+            "leshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - *",
+            "LESHOOTING.md](docs/TROUBLESHOOTING.md) - **Session History:** [docs"
           ]
         },
         {
@@ -32761,7 +32768,7 @@
       "status": "active",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "URE_REFERENCE.md) - [Readme](README.md) - [Runway Ml Complete Feature",
@@ -32911,8 +32918,8 @@
       "title": "Memory Palace - Agent Memory Visualization",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "memory"
+        "memory",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -33220,8 +33227,8 @@
       "title": "\ud83e\udd16 Agent Testing Guide - Personal Assistant",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -33375,14 +33382,6 @@
       "status": "active",
       "outbound_links": [
         {
-          "target": "docs/current/TROUBLESHOOTING.md",
-          "occurrences": 2,
-          "snippets": [
-            "N_SESSION_158.md) - [Troubleshooting](TROUBLESHOOTING.md) - [Video Production Workflows",
-            "- [Troubleshooting](TROUBLESHOOTING.md) - [Video Production Workflow"
-          ]
-        },
-        {
           "target": "docs/guides/00-READ-THIS-FIRST.md",
           "occurrences": 1,
           "snippets": [
@@ -33483,6 +33482,14 @@
           "snippets": [
             "READY_TO_TEST.md) - [Test Plan Session 158](TEST_PLAN_SESSION_158.md) - [Troubleshooting](TROUBLESH",
             "t Plan Session 158](TEST_PLAN_SESSION_158.md) - [Troubleshooting](TROUBLES"
+          ]
+        },
+        {
+          "target": "docs/guides/TROUBLESHOOTING.md",
+          "occurrences": 2,
+          "snippets": [
+            "N_SESSION_158.md) - [Troubleshooting](TROUBLESHOOTING.md) - [Video Production Workflows",
+            "- [Troubleshooting](TROUBLESHOOTING.md) - [Video Production Workflow"
           ]
         },
         {
@@ -33639,14 +33646,14 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "HERE](00-START-HERE/README.md)    - [Feature Guides](featur"
           ]
         }
       ],
-      "inbound_links_count": 0
+      "inbound_links_count": 5
     },
     {
       "path": "docs/guides/VIDEO_PRODUCTION_WORKFLOWS.md",
@@ -33803,7 +33810,7 @@
       "status": "active",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "/topics/](../topics/README.md).  ## By Subsystem (Sessions"
@@ -35344,6 +35351,40 @@
       "inbound_links_count": 2
     },
     {
+      "path": "docs/handoffs/SESSION_1084_HANG_CONTAINMENT.md",
+      "filename": "SESSION_1084_HANG_CONTAINMENT.md",
+      "folder": "docs/handoffs",
+      "lines": 326,
+      "size_bytes": 27196,
+      "modified_at": "2026-04-15T14:45:57.133271",
+      "created_at": "2026-04-15T14:45:57.133509",
+      "type": "handoff",
+      "session": 1084,
+      "title": "Session 1084 \u2014 Worker Wedge Hang Containment",
+      "has_frontmatter": false,
+      "subsystems": [],
+      "status": "active",
+      "outbound_links": [
+        {
+          "target": "CLAUDE.md",
+          "occurrences": 1,
+          "snippets": [
+            "s index regen | Per CLAUDE.md workflow rule \u2014 regen `docs/I"
+          ]
+        },
+        {
+          "target": "docs/INDEX.md",
+          "occurrences": 4,
+          "snippets": [
+            "rule \u2014 regen `docs/INDEX.md` + `docs/_index.json` after c",
+            "(PR #1889) - `docs/INDEX.md` + `docs/_index.json` \u2014 regen",
+            "kflow rule \u2014 regen `docs/INDEX.md` + `docs/_index.json` after c"
+          ]
+        }
+      ],
+      "inbound_links_count": 0
+    },
+    {
       "path": "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md",
       "filename": "SESSION_197_UI_CONSOLIDATION_PLAN.md",
       "folder": "docs/handoffs",
@@ -35583,7 +35624,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 2,
           "snippets": [
             "to CREATE 1. `docs/README.md` - Quick start guide 2. `docs",
@@ -35707,7 +35748,7 @@
       "status": "superseded",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "ation template | | `README.md` | Documentation |  ### Djang"
@@ -35862,9 +35903,9 @@
       "title": "Session 306: Legacy Agent Learning Expansion + Database Fix",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "database",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -35883,8 +35924,8 @@
       "title": "Session 307: Deprecated Agents Learning Expansion",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -35903,8 +35944,8 @@
       "title": "Session 308: High-Value Agent Learning Expansion",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -35950,8 +35991,8 @@
       "title": "Session 310: UI Fixes and Comprehensive Agent Testing",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -35989,8 +36030,8 @@
       "title": "Session 311: CreativeDirectorAgent Learning Hooks",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -36064,9 +36105,9 @@
       "title": "Session 314: GPT-5 Responses API Migration + UI Cleanup",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
         "frontend",
-        "llm"
+        "llm",
+        "api"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -36121,8 +36162,8 @@
       "title": "Session 316: Agent Learning System Verification",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -36277,8 +36318,8 @@
       "title": "SESSION 326: PROJECT-AGENT LEARNING BRIDGE",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -36887,8 +36928,8 @@
       "title": "Session 358: Enhanced Delta Detection for Agent Learning",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -36944,8 +36985,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "celery"
+        "celery",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37074,8 +37115,8 @@
       "title": "Session 368: Dream Validation UI + Agent Execution Engine",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37130,8 +37171,8 @@
       "title": "Session 371: Agent Tab UI Connections",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37203,8 +37244,8 @@
       "title": "Session 375: Multi-Agent Orchestration Fix",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37314,8 +37355,8 @@
       "title": "Session 380: Learning Hooks Added to All Agents",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37497,8 +37538,8 @@
       "title": "Session 393: Orchestrator BaseAgent Refactoring",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37601,8 +37642,8 @@
       "title": "Session 398 Handoff: Spider System Audit + Database Cleanup",
       "has_frontmatter": false,
       "subsystems": [
-        "spiders",
-        "database"
+        "database",
+        "spiders"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -37680,9 +37721,9 @@
       "title": "Session 400: Agent Knowledge Pipeline - Spider Data \u2192 Embeddings \u2192 Agent Learning \u2192 Knowledge Usage",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "spiders",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37840,8 +37881,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "legal",
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -37860,8 +37901,8 @@
       "title": "Session 405: Legal Assistant ChatGPT-Recommended Enhancements",
       "has_frontmatter": false,
       "subsystems": [
-        "legal",
-        "llm"
+        "llm",
+        "legal"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -38093,8 +38134,8 @@
       "title": "Session 413: Agent Conversation Fix + Reasoning Model Timeouts",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "database"
+        "database",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -38191,7 +38232,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "/docs/00-START-HERE/README.md` | Claims 99.9% for wrong pla"
@@ -38367,9 +38408,9 @@
       "title": "Session 420: Discord Boardroom + Agent Name Fix + Training Data Spider",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "spiders",
-        "discord"
+        "discord",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -38414,8 +38455,8 @@
       "title": "Session 423: Spider-to-Discord Pipeline",
       "has_frontmatter": false,
       "subsystems": [
-        "spiders",
-        "discord"
+        "discord",
+        "spiders"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -38743,8 +38784,8 @@
       "title": "Session 434: Discord-First Phase 5 - Full Agent Access",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "discord"
+        "discord",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -38991,8 +39032,8 @@
       "title": "Session 445: AISeriesWorkflowAgent Implementation",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "workflow"
+        "workflow",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -39011,9 +39052,9 @@
       "title": "Session 446-447: AISeriesWorkflowAgent Database Persistence Fixes",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "workflow",
-        "database"
+        "database",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -39033,8 +39074,8 @@
       "has_frontmatter": false,
       "subsystems": [
         "integration",
-        "agents",
-        "workflow"
+        "workflow",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -39584,8 +39625,8 @@
       "title": "Session 469: Discord Studio Fixes & Real Agent Debates",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "discord"
+        "discord",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -40090,8 +40131,8 @@
       "title": "Session 490: Memory Embedding Integration",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "memory"
+        "memory",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -40148,8 +40189,8 @@
       "title": "Session 491: Gumroad Frontend Integration",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -40549,8 +40590,8 @@
       "title": "Session 508 - Spider Fixes & Discord Command Limit",
       "has_frontmatter": false,
       "subsystems": [
-        "spiders",
-        "discord"
+        "discord",
+        "spiders"
       ],
       "status": "superseded",
       "outbound_links": [
@@ -40612,8 +40653,8 @@
       "title": "Session 513 - Campaign Orchestrator Agent",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -41067,8 +41108,8 @@
       "title": "Session 550: ThinkingAgent Expected Behavior + Celery Concurrency Fix",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "celery"
+        "celery",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -41825,8 +41866,8 @@
       "title": "Session 600: Complete Learning Loop - Real Metrics, Rollback, ThinkingAgent",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "superseded",
       "outbound_links": [],
@@ -42940,8 +42981,8 @@
       "title": "Session 676: Agent-Model Routing Architecture",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "database"
+        "database",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -42960,8 +43001,8 @@
       "title": "Session 677 - Agent-Model Router Phase 1 Complete",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "database"
+        "database",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [
@@ -43118,8 +43159,8 @@
       "title": "Session 687: UI Data Display Audit - Human Interface Integration",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43300,8 +43341,8 @@
       "title": "Session 696: SKIN Layer REST API",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "skin"
+        "skin",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43412,9 +43453,9 @@
       "title": "Session 702: HEART Service UI Integration",
       "has_frontmatter": false,
       "subsystems": [
+        "frontend",
         "integration",
-        "heart",
-        "frontend"
+        "heart"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43471,8 +43512,8 @@
       "title": "Session 704: SPINE - Central API Router",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "spine"
+        "spine",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43605,8 +43646,8 @@
       "title": "Session 709 Handoff: Brain \u2194 Body Connection",
       "has_frontmatter": false,
       "subsystems": [
-        "brain",
-        "body"
+        "body",
+        "brain"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43798,8 +43839,8 @@
       "title": "Session 722 - BRAIN System (8th Body System)",
       "has_frontmatter": false,
       "subsystems": [
-        "brain",
-        "body"
+        "body",
+        "brain"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43838,8 +43879,8 @@
       "title": "Session 724: NERVOUS Body System - WebSocket Communication Monitoring",
       "has_frontmatter": false,
       "subsystems": [
-        "body",
-        "websocket"
+        "websocket",
+        "body"
       ],
       "status": "active",
       "outbound_links": [],
@@ -43994,7 +44035,7 @@
       "status": "active",
       "outbound_links": [
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "DY_*.md files + new README.md | | Moved to `archive/` | 4 f"
@@ -44049,9 +44090,9 @@
       "title": "Session 740 - Agent Channels UI Verification + Backend Reference",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "frontend",
-        "backend"
+        "backend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [
@@ -44188,8 +44229,8 @@
       "title": "Session 745 Handoff - API-to-UI Coverage Audit",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "frontend"
+        "frontend",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -44208,8 +44249,8 @@
       "title": "Session 745: API-to-UI Coverage Audit - COMPLETE",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "frontend"
+        "frontend",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -44659,7 +44700,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             ".md`, `CLAUDE.md`, `README.md`  **Cleanup:** Moved old `NEX"
@@ -44840,8 +44881,8 @@
       "title": "Session 791: Learning System Bootstrap & Persona Agent Context Tracking",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -45487,8 +45528,8 @@
       "title": "Session 824: UI Integration Sprint",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
-        "frontend"
+        "frontend",
+        "integration"
       ],
       "status": "active",
       "outbound_links": [],
@@ -45837,8 +45878,8 @@
       "title": "Session 842: Agent Learning Tab Fixes",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -46254,9 +46295,9 @@
       "title": "Session 865: Podcast TTS + Voice Profile Integration + ConceptForge UI",
       "has_frontmatter": false,
       "subsystems": [
-        "integration",
         "frontend",
-        "podcast"
+        "podcast",
+        "integration"
       ],
       "status": "active",
       "outbound_links": [],
@@ -46782,9 +46823,9 @@
       "title": "Session 892 - WorkflowAgent Multi-Step Orchestration Fix",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
         "workflow",
-        "orchestration"
+        "orchestration",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -47852,8 +47893,8 @@
       "title": "Session 983 \u2014 Celery Observability Fix + Skin Health Scoring",
       "has_frontmatter": false,
       "subsystems": [
-        "skin",
-        "celery"
+        "celery",
+        "skin"
       ],
       "status": "active",
       "outbound_links": [],
@@ -48029,8 +48070,8 @@
       "title": "Session 991 - Wire ProactiveIntelligenceService + AgentLearningService",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "learning"
+        "learning",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [],
@@ -48453,9 +48494,9 @@
       "title": "Blender Python API (bpy) Integration Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
         "frontend",
-        "integration"
+        "integration",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -49279,8 +49320,8 @@
       "title": "Agent Creation Guide",
       "has_frontmatter": false,
       "subsystems": [
-        "agents",
-        "frontend"
+        "frontend",
+        "agents"
       ],
       "status": "active",
       "outbound_links": [
@@ -49924,7 +49965,7 @@
       "subsystems": [],
       "status": "active",
       "outbound_links": [],
-      "inbound_links_count": 7
+      "inbound_links_count": 0
     },
     {
       "path": "docs/reports/INDEX.md",
@@ -49940,6 +49981,14 @@
       "subsystems": [],
       "status": "active",
       "outbound_links": [
+        {
+          "target": "docs/archive/sports-ai/IMPLEMENTATION_ROADMAP.md",
+          "occurrences": 2,
+          "snippets": [
+            "TION_ANALYSIS.md) - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - [Login Logout Fix Summary]",
+            "ementation Roadmap](IMPLEMENTATION_ROADMAP.md) - [Login Logout Fix Summary]"
+          ]
+        },
         {
           "target": "docs/reports/3D_GENERATION_VERIFICATION_REPORT.md",
           "occurrences": 1,
@@ -50057,14 +50106,6 @@
           "snippets": [
             "REALITY_SCORE.md) - [Gpt5 Migration Analysis](GPT5_MIGRATION_ANALYSIS.md) - [Implementation Roadmap]",
             "Migration Analysis](GPT5_MIGRATION_ANALYSIS.md) - [Implementation Roadmap](I"
-          ]
-        },
-        {
-          "target": "docs/reports/IMPLEMENTATION_ROADMAP.md",
-          "occurrences": 2,
-          "snippets": [
-            "TION_ANALYSIS.md) - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - [Login Logout Fix Summary]",
-            "ementation Roadmap](IMPLEMENTATION_ROADMAP.md) - [Login Logout Fix Summary]"
           ]
         },
         {
@@ -50356,7 +50397,7 @@
           ]
         },
         {
-          "target": "docs/archive/old-structure/audits/README.md",
+          "target": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
           "occurrences": 1,
           "snippets": [
             "Documentation: - `/README.md` - Project overview - `/docs/"
@@ -51183,8 +51224,8 @@
       "title": "React + FastAPI Template \u2014 Canonical App Stack",
       "has_frontmatter": false,
       "subsystems": [
-        "api",
-        "frontend"
+        "frontend",
+        "api"
       ],
       "status": "active",
       "outbound_links": [],
@@ -52241,6 +52282,7 @@
       "docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md",
       "docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md",
       "docs/handoffs/SESSION_943_ARTIFACT_CLEANUP.md",
+      "docs/handoffs/SESSION_1084_HANG_CONTAINMENT.md",
       "docs/handoffs/SESSION_690_IMPLEMENTATION_PIPELINE.md",
       "docs/handoffs/SESSION_534_SPIDER_SYNC_CONVERSION.md",
       "docs/handoffs/SESSION_295_CUSTOMER_PAIN_POINTS.md",
@@ -53884,6 +53926,7 @@
       "docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md",
       "docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md",
       "docs/handoffs/SESSION_943_ARTIFACT_CLEANUP.md",
+      "docs/handoffs/SESSION_1084_HANG_CONTAINMENT.md",
       "docs/handoffs/SESSION_690_IMPLEMENTATION_PIPELINE.md",
       "docs/handoffs/SESSION_1043_BRAINSTORM_BULK_EXPORT.md",
       "docs/handoffs/SESSION_905_INITIATIVE_TITLE_GENERATOR.md",
@@ -57127,6 +57170,7 @@
     "750": "docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md",
     "1005": "docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md",
     "943": "docs/handoffs/SESSION_943_ARTIFACT_CLEANUP.md",
+    "1084": "docs/handoffs/SESSION_1084_HANG_CONTAINMENT.md",
     "690": "docs/handoffs/SESSION_690_IMPLEMENTATION_PIPELINE.md",
     "534": "docs/handoffs/SESSION_534_SPIDER_SYNC_CONVERSION.md",
     "295": "docs/handoffs/SESSION_295_CUSTOMER_PAIN_POINTS.md",
@@ -57139,17 +57183,17 @@
     "386": "docs/handoffs/SESSION_386_INTELLIGENCE_TAB_ENHANCEMENTS.md"
   },
   "graph": {
-    "total_links": 2231,
+    "total_links": 2234,
     "most_referenced": [
       {
         "path": "CLAUDE.md",
-        "count": 141,
+        "count": 142,
         "title": "CLAUDE - AI Session Entry Point"
       },
       {
-        "path": "docs/archive/old-structure/audits/README.md",
+        "path": "docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md",
         "count": 60,
-        "title": "AUDITS"
+        "title": "\ud83c\udfc6 SPORTS ANALYTICS PLATFORM - AI-Powered Betting Intelligence"
       },
       {
         "path": "docs/AGENTS.md",
@@ -57158,7 +57202,7 @@
       },
       {
         "path": "docs/INDEX.md",
-        "count": 43,
+        "count": 44,
         "title": "Unified Donkey Betz - Documentation Index"
       },
       {
@@ -57232,14 +57276,14 @@
         "title": "Runway ML - API Integration Reference"
       },
       {
+        "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+        "count": 9,
+        "title": "\ud83d\udc8c Letter to My Future Self (Next Claude Session)"
+      },
+      {
         "path": "docs/archive/proposals/LEARNING_LOOP_DISCOVERY_REPORT.md",
         "count": 9,
         "title": "LEARNING LOOP DISCOVERY & INTEGRATION ANALYSIS"
-      },
-      {
-        "path": "docs/archive/old-structure/fixes/LETTER_TO_FUTURE_CLAUDE.md",
-        "count": 9,
-        "title": "\ud83d\udc8c Letter to My Future Self (Next Claude Session)"
       }
     ],
     "orphan_docs": [
@@ -57289,10 +57333,10 @@
       "docs/archive/SYSTEM_CAPABILITIES-original/07_Neural_Visualization/README.md",
       "docs/archive/SYSTEM_CAPABILITIES-original/04_Agent_Orchestra/README.md",
       "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/CRITICAL_HANDOFF_SERVER_DISCONNECT.md",
-      "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_INTEGRATION_PROGRESS.md",
-      "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
+      "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
       "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE_AI_NEXUS.md",
-      "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md"
+      "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_CLAUDE.md",
+      "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE_FIXES_NEEDED.md"
     ],
     "broken_links": [
       {
