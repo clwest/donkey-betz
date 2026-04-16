@@ -828,15 +828,22 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             context['user_id'] = str(user_id)
 
         # Session 1090: EditorAgent requires 'content' in context.  When the
-        # PA dispatches it, the actual content to edit is typically embedded
-        # in the task text (GPT-5.2 doesn't populate context['content']).
-        # Package the task text as content so EditorAgent can process it.
+        # PA dispatches it, Rigby typically references other deliverables by
+        # name in the task text but doesn't include the actual content.
+        # Fix: gather recent deliverables from the workspace and concatenate
+        # them as the content to edit.
         if agent_name == 'EditorAgent' and 'content' not in context and 'blog_id' not in context:
-            context['content'] = {
-                'title': task_text[:120],
-                'full_text': task_text,
-                'sections': [],
-            }
+            workspace_id = context.get('workspace_id') or context.get('workspace')
+            gathered_content = self._gather_workspace_content_for_editor(workspace_id, task_text)
+            if gathered_content:
+                context['content'] = gathered_content
+            else:
+                # Last resort: use task text itself
+                context['content'] = {
+                    'title': task_text[:120],
+                    'full_text': task_text,
+                    'sections': [],
+                }
 
         # Session 1088: Route to long_running (matches CELERY_TASK_ROUTES).
         # Was 'agents' queue which no worker consumes.
@@ -851,6 +858,64 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 f'Use job_status to check progress.'
             ),
         }
+
+    def _gather_workspace_content_for_editor(
+        self,
+        workspace_id: Optional[str],
+        task_text: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Gather recent deliverables from a workspace as content for EditorAgent.
+
+        Session 1090: When Rigby dispatches EditorAgent, she references other
+        deliverables ("Incident Card + CTO brief + COO brief") but doesn't
+        include the actual text.  This method fetches the most recent
+        deliverables from the workspace and concatenates them into a
+        structured content dict that EditorAgent can process.
+        """
+        if not workspace_id:
+            return None
+        try:
+            from core.models_deliverables import Deliverable
+
+            deliverables = (
+                Deliverable.objects
+                .filter(workspace_id=workspace_id)
+                .exclude(title__startswith='EditorAgent:')  # Don't edit our own output
+                .order_by('-created_at')[:6]
+            )
+            if not deliverables:
+                return None
+
+            sections = []
+            titles = []
+            for d in deliverables:
+                body = d.content or ''
+                if not body.strip():
+                    continue
+                title = d.title or 'Untitled'
+                titles.append(title)
+                sections.append({
+                    'heading': title,
+                    'content': body[:3000],  # Cap per section to avoid prompt bloat
+                })
+
+            if not sections:
+                return None
+
+            logger.info(
+                "[EditorAgent dispatch] Gathered %d deliverables from workspace %s: %s",
+                len(sections), workspace_id, ', '.join(titles),
+            )
+            return {
+                'title': f"Executive Brief (synthesized from {len(sections)} sources)",
+                'intro': f"This brief synthesizes {len(sections)} workspace deliverables.",
+                'sections': sections,
+                'conclusion': '',
+            }
+        except Exception as e:
+            logger.warning("Failed to gather workspace content for EditorAgent: %s", e)
+            return None
+
 
 def _redact_secrets(text: str) -> str:
     """Redact API keys, tokens, and secrets from memory content."""
