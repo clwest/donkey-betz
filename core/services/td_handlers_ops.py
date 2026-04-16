@@ -1030,24 +1030,33 @@ class OpsHandlersMixin:
             }
 
         elif action == 'test_match':
-            # Stub until PR 2 delivers PriorityRouter.check(). Intentionally
-            # returns enough structure that PA chat consumers can already
-            # parse the response shape — PR 2 fills in the decision fields.
+            # Session 1086 PR 2: Wire through to the real PriorityRouter.
+            # Invalidate the cache first so a preview immediately after
+            # a set/update in the same PA turn reflects the fresh state.
+            from core.services.priority import PriorityRouter
+            PriorityRouter.invalidate_cache()
+
             agent_name = payload.get('agent_name', '')
             task = payload.get('task', '')
+            trigger_source = payload.get('trigger_source')  # optional
+            if not agent_name:
+                raise ValueError("agent_name required for 'test_match' action")
+
+            router = PriorityRouter()
+            decision = router.check(
+                agent_name=agent_name,
+                task=task,
+                context=None,
+                trigger_source=trigger_source,
+            )
             return {
                 'action': 'test_match',
-                'stub': True,
-                'note': (
-                    'test_match is stubbed in PR 1. PR 2 will wire this to '
-                    'PriorityRouter.check(agent_name, task, context, trigger_source) '
-                    'and return {matched, priority_name, throttle_class, '
-                    'recommended_queue, matched_via}.'
-                ),
                 'probe': {
                     'agent_name': agent_name,
                     'task': task[:200] if task else '',
+                    'trigger_source': trigger_source,
                 },
+                'decision': decision.to_dict(),
                 'active_priorities_count': len(ActivePriority.get_active_priorities()),
             }
 
