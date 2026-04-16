@@ -2383,6 +2383,24 @@ class UnifiedPAEntrypoint:
         ]):
             return ('system_health_check', 'ops_tool')
 
+        # Session 1088: Governor + mission priority patterns
+        if any(phrase in message_lower for phrase in [
+            'governor', 'governor status', 'governor tool',
+            'mission telemetry', 'mission status', 'mission budget',
+            'circuit breaker', 'tripped breaker', 'reset breaker',
+            'agent coverage', 'agent alignment',
+            'beat governor', 'execution budget',
+        ]):
+            return ('governance', 'governor_tool')
+
+        if any(phrase in message_lower for phrase in [
+            'active priorities', 'active priority', 'active missions',
+            'set priority', 'create priority', 'update priority',
+            'archive priority', 'priority list', 'priority rank',
+            'mission list', 'current missions',
+        ]):
+            return ('governance', 'active_priority_tool')
+
         # Session 970: Surgical moves / deliberation status patterns
         if any(phrase in message_lower for phrase in [
             'surgical moves', 'deliberation status', 'deliberation sessions',
