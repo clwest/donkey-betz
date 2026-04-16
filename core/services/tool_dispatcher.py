@@ -447,6 +447,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Session 1086: Active priority tool — priority-aware routing (initiative 2dcb79d7)
         self.register("active_priority_tool", self._handle_active_priority)
 
+        # Session 1088: Governor tool — mission alignment + circuit breaker status
+        self.register("governor_tool", self._handle_governor)
+
         # Session 1080: Ops Autopilot tool — status/history/run/config
         self.register("autopilot_tool", self._handle_autopilot)
         self.register("ops_digest_tool", self._handle_ops_digest)
