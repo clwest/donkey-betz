@@ -21,5 +21,13 @@ See ``00-START-NEXT-SESSION.md`` and the design review conversation
 
 from .priority_router import PriorityDecision, PriorityRouter
 from .enforce import check_priority, log_decision
+from .semaphore import acquire_for_decision, get_semaphore_stats
 
-__all__ = ["PriorityDecision", "PriorityRouter", "check_priority", "log_decision"]
+__all__ = [
+    "PriorityDecision",
+    "PriorityRouter",
+    "check_priority",
+    "log_decision",
+    "acquire_for_decision",
+    "get_semaphore_stats",
+]

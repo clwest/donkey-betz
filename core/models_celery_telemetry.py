@@ -44,6 +44,38 @@ class CeleryTaskEvent(models.Model):
     error_type = models.CharField(max_length=255, blank=True, default='')
     error_message = models.TextField(blank=True, default='')
 
+    # Session 1086 PR 3b: Priority-aware routing telemetry fields.
+    # All three are nullable so that NULL = "check not evaluated" — either
+    # the router gate was OFF (PRIORITY_ROUTER_ENABLED=false) or the task
+    # pre-dates the priority system. This lets dashboards distinguish
+    # "disabled" from "evaluated mismatched" without a backfill migration.
+    # See initiative 2dcb79d7 and the design review in conversation
+    # pa-ada44848ca6b for the NULL-vs-False distinction Rigby flagged.
+    priority_matched = models.BooleanField(
+        null=True, blank=True,
+        help_text=(
+            'Session 1086 PR 3b: Whether PriorityRouter.check() returned '
+            'matched=True. NULL means the router gate was OFF or the '
+            'task was not evaluated (pre-PR-3b rows).'
+        ),
+    )
+    priority_name = models.CharField(
+        max_length=120, null=True, blank=True,
+        help_text=(
+            'Name of the ActivePriority row that drove the decision '
+            '(whitelist/blacklist/tags/keyword match). NULL for '
+            'user_chat_exempt, fail_open, or no-match MISMATCH.'
+        ),
+    )
+    throttle_class = models.CharField(
+        max_length=16, null=True, blank=True,
+        choices=[('matched', 'Matched'), ('mismatched', 'Mismatched')],
+        help_text=(
+            'Which semaphore lane the dispatch ran in. NULL when the '
+            'router gate was OFF or the task was not evaluated.'
+        ),
+    )
+
     class Meta:
         app_label = 'core'
         ordering = ['-started_at']
