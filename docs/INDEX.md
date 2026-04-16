@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-16 17:30
+**Generated:** 2026-04-16 17:34
 **Current Session:** 1091
 **Total Documentation:** 1860 files | 631,583 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,238 |
+| Total cross-references | 2,235 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 60 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/agents/README.md` | 60 | Agent Documentation |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,7 +219,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-16 17:17 |
+| INDEX.md | docs | 363 | 2026-04-16 17:34 |
 | SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 16:00 |
 | SESSION_1090_DEMO_READINESS.md | handoffs | 122 | 2026-04-16 13:03 |
 | DEMO_HAPPY_PATH.md | playbooks | 158 | 2026-04-16 12:11 |
