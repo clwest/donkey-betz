@@ -52,17 +52,24 @@ PR_3A_ENFORCED_BYPASS_FILES = [
     "core/tasks.py",
 ]
 
-# ── Files PR 3b will migrate next ──────────────────────────────────────
+# ── Files PR 3c will migrate next ──────────────────────────────────────
 #
-# Rigby's Session 1086 design review prioritized these as the highest-
-# value PR 3b targets: the EPA legacy path + the refactored assistant
-# layer are both reachable in production (EPA via core/urls.py:2375,
-# assistant via UnifiedPAEntrypoint).
+# Rigby's Session 1086 design review originally scoped these as PR 3b
+# targets, but during PR 3b implementation the bypass inventory scan
+# revealed that these 6 files contain **32 ``agent.execute()`` sites
+# combined** — far more than the 12 originally estimated. Migrating all
+# 32 inside PR 3b (which already ships the semaphore + telemetry fields
+# + migration 0330) would risk indentation bugs on a PR that's already
+# touching runtime scheduling behavior.
 #
-# These fail the regex-based check TODAY. ``xfail(strict=True)`` flips
-# the assertion so the test PASSES while a file is unmigrated and FAILS
-# the moment it gets patched — at which point the PR 3b author must
-# move the file up to PR_3A_ENFORCED_BYPASS_FILES.
+# PR 3b therefore ships throttling + telemetry WITHOUT the bypass
+# migrations, and these 6 files are deferred to PR 3c. The xfail-strict
+# markers still enforce ledger discipline: CI fails the moment any of
+# these files gets patched without being moved out of the pending list.
+#
+# EPA legacy path is reachable in production via core/urls.py:2375,
+# refactored assistant layer via UnifiedPAEntrypoint. Both need
+# migration; the question is only when.
 
 PR_3B_PRIORITY_TARGETS = [
     "core/epa_handlers_agents.py",

@@ -1297,34 +1297,42 @@ class AgentRouter:
             has_workspace = workspace_context and workspace_context.get('has_workspace')
             write_to_workspace = context.get('write_to_workspace', True)  # Default to True
 
-            if has_workspace and write_to_workspace and hasattr(agent, 'execute_with_workspace'):
-                # Execute with workspace - outputs will be written to SKIN layer
-                logger.info(f"📁 [Session 908] Using execute_with_workspace for {agent_name}")
-                # Inject scifi_context and spider_context into context for execute_with_workspace
-                enriched_context = {
-                    **context,
-                    'scifi_context': scifi_context,
-                    'spider_context': spider_context,
-                }
-                result = agent.execute_with_workspace(
-                    task=task,
-                    context=enriched_context,
-                    user=self.user,
-                    write_to_workspace=True,
-                    base_path=context.get('workspace_base_path', '')
-                )
-            else:
-                # Standard execution without workspace write
-                if not has_workspace:
-                    logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
-                # Store execution context on agent for search strategy enhancement
-                agent._execution_context = context
-                result = agent.execute(
-                    task=task,
-                    context=context,
-                    scifi_context=scifi_context,
-                    spider_context=spider_context
-                )
+            # Session 1086 PR 3b: Wrap the execute() call in the priority
+            # semaphore. acquire_for_decision is a no-op when
+            # PRIORITY_THROTTLE_ENABLED is off OR when priority_decision is
+            # None (gate off) OR when trigger_source was 'user_chat'
+            # (user work is never throttled). See core/services/priority/
+            # semaphore.py for the acquire semantics.
+            from core.services.priority.semaphore import acquire_for_decision
+            with acquire_for_decision(priority_decision, agent_name):
+                if has_workspace and write_to_workspace and hasattr(agent, 'execute_with_workspace'):
+                    # Execute with workspace - outputs will be written to SKIN layer
+                    logger.info(f"📁 [Session 908] Using execute_with_workspace for {agent_name}")
+                    # Inject scifi_context and spider_context into context for execute_with_workspace
+                    enriched_context = {
+                        **context,
+                        'scifi_context': scifi_context,
+                        'spider_context': spider_context,
+                    }
+                    result = agent.execute_with_workspace(
+                        task=task,
+                        context=enriched_context,
+                        user=self.user,
+                        write_to_workspace=True,
+                        base_path=context.get('workspace_base_path', '')
+                    )
+                else:
+                    # Standard execution without workspace write
+                    if not has_workspace:
+                        logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
+                    # Store execution context on agent for search strategy enhancement
+                    agent._execution_context = context
+                    result = agent.execute(
+                        task=task,
+                        context=context,
+                        scifi_context=scifi_context,
+                        spider_context=spider_context
+                    )
 
             # Session 735: Inject accumulated cost/tokens from agent into result
             # This captures cost even if agent doesn't use _make_result() helper
