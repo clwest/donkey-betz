@@ -1,8 +1,20 @@
-# Demo Happy Path — "Cross-Domain Incident Room"
+# Demo Happy Path — "A Platform That Knows Itself"
 
 **Created:** Session 1090, April 16, 2026
+**Updated:** Session 1090 (pivoted from "Cross-Domain Incident Room" to platform self-awareness)
 **Recording environment:** Local (`DEMO_MODE=true`)
 **Time budget:** 3-5 minutes total
+
+## Narrative
+
+This isn't a demo of agents writing blog posts about random topics.
+This is a platform that can **audit itself, diagnose its own problems,
+propose fixes through specialized roles, make governed decisions, and
+ship operational artifacts** — all using real telemetry, real failure
+data, and real governance.
+
+Every piece of data on screen is live. Every agent is querying the actual
+database. Nothing is canned.
 
 ---
 
@@ -26,113 +38,98 @@ print(f'Allowlist: {s.get(\"demo_allowlist\", [])}')
 ```
 
 Open these tabs:
-- Intelligence Desk / Search
-- Governance / Decisions
-- Agents / Run Agent
-- Deliverables library
+- Command Center (PA chat)
+- Workspace (demo-testing)
+- Deliverables
+- Governance / Decisions (optional)
 
 ---
 
-## Step 1: Prove "real signal" (10-20s)
+## Step 1: Platform Self-Audit (PlatformAuditAgent, 30-60s)
 
-**Action:** Spider search for a live signal.
+**What you say:** "First, let's have the platform audit itself. This agent reads our docs, checks integrations, counts database records, and flags what's missing."
+
+**Prompt (via Rigby):**
+> Run a platform audit: check integration health, environment configuration, database model counts, and flag the top 5 risks and top 5 green checks.
+
+**What it proves:** The platform has self-awareness — it knows what's configured, what's missing, and what's healthy.
+
+---
+
+## Step 2: CTO Technical Analysis (CTOAgent, 30-45s)
+
+**What you say:** "Now the CTO agent — it pulls real failure signatures, agent execution stats, and SLO data from the database and gives a technical assessment."
 
 **Prompt:**
-> Search for a current signal about AI infrastructure demand, energy markets, or chip supply constraints. Return top 5 items with 1-line summary each.
+> As CTO, analyze our platform's current technical health. Pull failure signatures, identify the top reliability risks, and recommend concrete mitigations with telemetry to track.
 
-**What to say:** "We start with live signals — real scraped feeds, not a canned prompt."
-
-**Pick one result** that links AI infra to markets/energy.
+**What it proves:** The CTO agent is grounded via PlatformContextService — every claim traces to a real DB query, not hallucinated metrics.
 
 ---
 
-## Step 2: Signal → Incident Card (ContentWriterAgent, 45-75s)
+## Step 3: COO Execution Priorities (COOAgent, 30-45s)
 
-**Task prompt:**
-> Create an "Incident Card" for: [paste selected signal].
-> Format EXACTLY as:
-> 1) Title (max 12 words)
-> 2) What happened (3 bullets)
-> 3) Why it matters (3 bullets)
-> 4) Cross-domain impact map (Markets / Regulation / Tech / Ops) — 2 bullets each
-> 5) What we should do in the next 24 hours (5 bullets, each starts with a verb)
-> Keep it under 450 words.
+**What you say:** "Same data, different lens. The COO looks at execution priorities, stakeholder impact, and builds a 24-hour action timeline."
 
-**Context:** `content_type: article, tone: professional, word_count: 450`
+**Prompt:**
+> As COO, assess our platform's operational execution. Provide priority actions, assign owners, and build a 24-hour timeline based on current system state.
 
-**Say:** "This isn't just writing — this is a structured operating artifact."
-
----
-
-## Step 3: Command Staff Briefs (CTO + COO, 60-90s total)
-
-### 3A: CTO Brief (30-45s)
-
-**Task prompt:**
-> As CTO, assess technical implications and operational risks from this Incident Card.
-> Provide: Risks (3), Unknowns (3), Immediate mitigations (3), and "What telemetry to check" (5 items).
-
-### 3B: COO Brief (30-45s)
-
-**Task prompt:**
-> As COO, assess execution priorities and stakeholder impact from this Incident Card.
-> Provide: Priority actions (5), Owners/roles for each, and a 24-hour timeline.
-
-**Say:** "Same signal, two lenses — tech risk and operations execution."
+**What it proves:** Multi-role analysis from the same real data — tech risk vs. operational execution.
 
 ---
 
 ## Step 4: Governed Decision (20-40s)
 
-**Create a governance decision:**
+**What you say:** "The system doesn't just produce reports — it requests decisions. The governor controls which agents can run, enforces daily budgets, and requires approval for high-impact actions."
 
-**Title:** `Incident Response: Approve 24h monitoring + artifact ship for [Signal Title]`
+**Action:** Show the governor status (demo mode banner visible), then create a governance decision:
+
+**Title:** `Ops Decision: Approve reliability improvements from CTO + COO analysis`
 
 **Summary:**
-> Based on Incident Card + CTO/COO briefs:
-> - Approve immediate monitoring checklist
-> - Approve one publish-ready executive summary
-> - Defer outbound/publishing automations (demo-safe)
-> - Track: 3 KPIs for next 24h
+> Based on CTO and COO platform analysis:
+> - Approve heartbeat hardening + timeout ladder implementation
+> - Approve worker graceful shutdown improvements
+> - Defer outbound publishing (demo-safe)
+> - Track: agent timeout rate, zombie count, content success rate
 
 **Action:** Approve.
 
-**Say:** "The system doesn't just act. It requests a decision when it matters — governance is built in."
+---
+
+## Step 5: Executive Brief (EditorAgent, 45-75s)
+
+**What you say:** "EditorAgent takes everything — the audit, CTO analysis, COO priorities, and the decision — and synthesizes it into a publish-ready executive brief."
+
+**Prompt:**
+> Synthesize the Platform Audit, CTO Analysis, and COO Analysis into a publish-ready Executive Brief. Sections: Platform State, Key Risks, Recommended Actions, Decision Log, Next 24 Hours. Under 600 words, professional tone.
+
+**What it proves:** Multi-source synthesis — the editor works with real artifacts from real agents, not templates.
 
 ---
 
-## Step 5: Ship Executive Brief (EditorAgent, 45-75s)
+## Step 6: Content Generation (ContentWriterAgent, 45-75s)
 
-**Task prompt:**
-> Turn the Incident Card + CTO + COO briefs into a publish-ready Executive Brief.
-> Requirements:
-> - Strong hook headline + 2-sentence lead
-> - Sections: Situation, Impact, Decision, Next 24 Hours
-> - Make it skimmable (bullets, short paragraphs)
-> - Keep under 600 words
-> - Tone: professional, clear, actionable
+**What you say:** "And because this is also a content platform, we can turn any of this into publishable content — blog posts, newsletters, internal docs."
 
----
+**Prompt:**
+> Write a blog post titled "Why Our AI Platform Audits Itself" based on today's platform audit and CTO/COO analyses. Target audience: CTOs evaluating AI platforms. 800 words, professional tone.
 
-## Step 6: Platform Self-Audit (PlatformAuditAgent, 30-60s)
-
-**Task prompt:**
-> Quick demo audit: confirm DEMO_MODE is active, list allowlisted agents, and report any missing critical integrations. Output top 5 risks + 5 green checks.
-
-**Say:** "Before we automate anything, we audit the platform state."
+**What it proves:** The full loop — platform intelligence becomes published content, grounded in real data.
 
 ---
 
 ## Step 7: Final "Ship" Moment (10-20s)
 
-Open Deliverables and show all 5 artifacts:
-1. Incident Card
-2. CTO Brief
-3. COO Brief
-4. Executive Brief (publish-ready)
-5. Audit Snapshot
+**Action:** Open Deliverables in the demo-testing workspace and show all artifacts:
+1. Platform Audit (integration health, risks, green checks)
+2. CTO Analysis (failure signatures, reliability recommendations)
+3. COO Analysis (execution priorities, 24-hour timeline)
+4. Executive Brief (synthesized, publish-ready)
+5. Blog Post (publishable content from real data)
+6. Governance Decision (approved, logged)
 
-**Say:** "In about 3 minutes: signal → cross-domain analysis → governed decision → shipped artifacts. All real data, all governed."
+**What you say:** "In about 4 minutes: self-audit, multi-role analysis, governed decision, synthesized brief, publishable content. All from real data. All governed. That's what a platform that knows itself looks like."
 
 ---
 
@@ -140,10 +137,11 @@ Open Deliverables and show all 5 artifacts:
 
 | Failure | Pivot |
 |---------|-------|
-| ContentWriter fails | Use ResearchAgent for analysis instead, skip to CTO/COO |
-| CTO/COO hangs | Skip to EditorAgent on whatever content exists |
-| EditorAgent fails | Show raw Incident Card as the artifact |
-| Spider search empty | Use a pre-researched topic: "OpenAI GPT-5.2 infrastructure scaling" |
+| PlatformAuditAgent slow | Skip to CTO — it pulls its own data via PCS |
+| CTOAgent or COOAgent hangs | Show the one that completed, narrate the role split |
+| EditorAgent fails | Show the raw CTO + COO artifacts side by side |
+| ContentWriterAgent slow | Skip — the executive brief IS the artifact |
+| Governor status not showing | Run `get_governor_status()` in shell on camera |
 
 ## Agents to NEVER trigger on camera
 
@@ -151,3 +149,10 @@ Open Deliverables and show all 5 artifacts:
 - VideoAgent (slow, flaky)
 - AISeriesWorkflowAgent (3+ min, multi-step)
 - Any agent NOT in DEMO_AUTONOMY_ALLOWLIST
+
+## Key talking points
+
+- "218 agents, but governed — only 15 are allowed right now in demo mode"
+- "Every metric the CTO cites is a real database query, not a hallucination"
+- "The governor stopped $25/night in unsupervised spend — that's real cost control"
+- "Circuit breakers auto-disable agents that fail too much — the platform protects itself"
