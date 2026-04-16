@@ -896,37 +896,30 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
             # Session 1090: workspace_id from PA entrypoint may point to
             # System Autonomous Workspace (from AssistantProfile) rather
-            # than the user's active workspace.  Try the provided ID first,
-            # then fall back to the user's active workspace.
+            # than the user's active workspace.  Always prefer the user's
+            # active non-system workspace when one exists.
             target_ws = workspace_id
+            try:
+                from core.models_skin_layer import ProjectWorkspace
+                active_ws = ProjectWorkspace.objects.filter(
+                    is_active=True,
+                ).exclude(name__icontains='autonomous').exclude(name__icontains='system').first()
+                if active_ws:
+                    target_ws = str(active_ws.id)
+                    if target_ws != workspace_id:
+                        logger.info(
+                            "[agent dispatch] Using active workspace %s (%s) instead of injected %s",
+                            active_ws.name, target_ws, workspace_id,
+                        )
+            except Exception:
+                pass
+
             deliverables = (
                 Deliverable.objects
                 .filter(workspace_id=target_ws)
                 .exclude(title__startswith='EditorAgent:')
                 .order_by('-created_at')[:6]
             ) if target_ws else Deliverable.objects.none()
-
-            if not deliverables.exists() and target_ws:
-                # Fallback: try the user's active workspace
-                try:
-                    from core.models_skin_layer import ProjectWorkspace
-                    active_ws = ProjectWorkspace.objects.filter(
-                        is_active=True,
-                    ).exclude(name__icontains='autonomous').first()
-                    if active_ws and str(active_ws.id) != target_ws:
-                        target_ws = str(active_ws.id)
-                        deliverables = (
-                            Deliverable.objects
-                            .filter(workspace_id=target_ws)
-                            .exclude(title__startswith='EditorAgent:')
-                            .order_by('-created_at')[:6]
-                        )
-                        logger.info(
-                            "[EditorAgent dispatch] Fell back to active workspace %s (%s)",
-                            active_ws.name, target_ws,
-                        )
-                except Exception:
-                    pass
             if not deliverables:
                 return None
 
