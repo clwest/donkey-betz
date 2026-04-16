@@ -3883,7 +3883,7 @@ class AgentHandlersMixin:
             task = execute_agent_task.apply_async(
                 args=['ThinkingAgent', f'Brainstorm and discuss: {topic}',
                       {'user_id': str(user_id) if user_id else None, 'topic': topic}],
-                queue='agents',
+                queue='long_running',
             )
 
             return {
