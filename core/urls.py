@@ -1456,6 +1456,7 @@ from core.views_diagnostics import (
     cockpit_create_talking_video,  # Focus Cockpit: create talking video
     cockpit_job_status,     # Focus Cockpit: poll job status
     cockpit_ops_overview,   # Focus Cockpit: ops health overview
+    demo_mode_status,       # Session 1090: Demo mode banner API
     cockpit_resolve_node_health,  # Resolve node health proxy
     cockpit_resolve_node_render_start,  # Resolve node render start proxy
     cockpit_resolve_node_render_status,  # Resolve node render status proxy
@@ -2100,6 +2101,7 @@ urlpatterns = [
     # Session 1009: Removed agent-analytics endpoints (orphan cleanup)
     path('api/system-health/', system_health_check, name='system-health'),
     path('api/system/version/', system_version, name='system-version'),  # Session 1078
+    path('api/system/demo-status/', demo_mode_status, name='demo-mode-status'),  # Session 1090
     path('api/celery/status/', celery_status, name='celery-status'),  # Session 642: Celery monitoring
 
     # Session 417: Detail endpoints for conversations, decisions, dreams, hivemind
