@@ -7486,6 +7486,10 @@ def _execute_gate_repair(blog, repair_action: str) -> bool:
 
     try:
         agent = EditorAgent()
+        # Session 1086 PR 3a: Priority router consult (gated, observer-only)
+        from core.services.priority.enforce import check_priority, log_decision
+        _pd = check_priority('EditorAgent', task=f'Repair blog ({repair_action})', trigger_source='autonomous_beat')
+        log_decision(_pd, 'EditorAgent')
         result = agent.execute(
             task=f"Repair blog ({repair_action}): {blog.title[:80]}",
             context={
