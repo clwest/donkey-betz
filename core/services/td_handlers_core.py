@@ -2041,6 +2041,7 @@ RESEARCH DATA:
             'action_item_start': ('start_action_item', {}),
             'action_item_complete': ('complete_action_item', {}),
             'action_item_cleanup': ('cleanup_action_items', {}),
+            'bulk_cleanup': ('bulk_cleanup', {}),
         }
 
         # ── Session 1100: Direct data actions (not delegated to initiative_tool) ──

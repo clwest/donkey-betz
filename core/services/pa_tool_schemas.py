@@ -1951,7 +1951,7 @@ PA_TOOL_SCHEMAS = [
                         "initiative_list", "initiative_detail", "initiative_create",
                         "initiative_promote", "initiative_update_status",
                         "action_item_list", "action_item_start", "action_item_complete",
-                        "action_item_cleanup",
+                        "action_item_cleanup", "bulk_cleanup",
                         "agent_conversations", "workflows",
                         "stats",
                     ],
@@ -1965,6 +1965,7 @@ PA_TOOL_SCHEMAS = [
                         "action_item_start: mark an action item as in_progress. "
                         "action_item_complete: mark an action item as completed. "
                         "action_item_cleanup: find/cancel junk action items (dry_run default true). "
+                        "bulk_cleanup: archive stalled, noise, and duplicate initiatives (dry_run default true). "
                         "agent_conversations: browse multi-agent conversations. "
                         "workflows: recent workflow/orchestration executions. "
                         "stats: aggregate counts across initiatives, action items, "
