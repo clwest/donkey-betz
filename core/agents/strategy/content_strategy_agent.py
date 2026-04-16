@@ -515,13 +515,29 @@ the user should use ImageAgent, VideoAgent, etc."""
                     )
 
                     # Session 1006: Persist output to Deliverable
+                    # Session 1092: result.message is a 36-char summary like
+                    # "Generated 5 content recommendations" — below the
+                    # DeliverableFactory 300-char quality gate, which caused
+                    # canary v5 to produce zero Deliverables. Serialize the
+                    # actual recommendations so the persisted content has
+                    # real substance.
+                    deliverable_content = self._format_recommendations_as_markdown(
+                        task=task,
+                        recommendations=recommendations,
+                        tool_calls=tool_calls_made,
+                        summary=result.message,
+                    )
                     self._save_to_deliverable(
                         title=f"Content Strategy: {task[:80]}",
-                        content=result.message,
+                        content=deliverable_content,
                         deliverable_type='analysis',
                         category='Content Strategy',
                         tags=['content', 'strategy'],
-                        metadata={'task': task[:200]},
+                        metadata={
+                            'task': task[:200],
+                            'response_mode': 'tool_calls',
+                            'recommendation_count': len(recommendations),
+                        },
                     )
 
                     return result
@@ -593,6 +609,58 @@ the user should use ImageAgent, VideoAgent, etc."""
                 )
 
                 return result
+
+    def _format_recommendations_as_markdown(
+        self,
+        task: str,
+        recommendations: List[Dict[str, Any]],
+        tool_calls: List[Dict[str, Any]],
+        summary: str,
+    ) -> str:
+        """Session 1092: Serialize tool-call recommendations into a full
+        Deliverable body. The old code persisted only the short summary
+        string, which fell below the DeliverableFactory 300-char quality
+        gate and produced zero Deliverable rows. Rendering the full
+        recommendation payload as markdown gives the audit trail (and
+        downstream consumers) the actual strategy work.
+        """
+        lines: List[str] = []
+        lines.append(f"# Content Strategy: {task[:120]}")
+        lines.append("")
+        lines.append(f"*Summary:* {summary}")
+        lines.append("")
+
+        if recommendations:
+            lines.append("## Recommendations")
+            lines.append("")
+            for i, rec in enumerate(recommendations, 1):
+                if isinstance(rec, dict):
+                    title = rec.get('title') or rec.get('name') or rec.get('type') or f'Recommendation {i}'
+                    lines.append(f"### {i}. {title}")
+                    for k, v in rec.items():
+                        if k in ('title', 'name'):
+                            continue
+                        lines.append(f"- **{k}**: {v}")
+                    lines.append("")
+                else:
+                    lines.append(f"{i}. {rec}")
+                    lines.append("")
+        else:
+            lines.append("## Recommendations")
+            lines.append("")
+            lines.append("_No structured recommendations returned by the strategy tools._")
+            lines.append("")
+
+        if tool_calls:
+            lines.append("## Tool calls made")
+            lines.append("")
+            for tc in tool_calls:
+                tool_name = tc.get('tool', 'unknown')
+                args = tc.get('arguments') or {}
+                lines.append(f"- **{tool_name}** — args: `{args}`")
+            lines.append("")
+
+        return "\n".join(lines).strip()
 
     def _execute_tool_call(
         self,
