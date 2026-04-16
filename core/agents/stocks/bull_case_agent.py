@@ -474,7 +474,6 @@ Always acknowledge risks but emphasize potential rewards."""
     def _get_gpt_bull_analysis(self, ticker: str, stock_data: Dict, analysis: Dict) -> Dict:
         """Call GPT to generate intelligent bull case analysis."""
         try:
-            from openai import OpenAI
             import os
             import json
 

@@ -623,7 +623,6 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
     async def _call_llm(self, prompt: str) -> str:
         """Call the LLM to think about the context."""
-        from openai import OpenAI
         from django.conf import settings
 
         client = get_openai_client(api_key=settings.OPENAI_API_KEY)

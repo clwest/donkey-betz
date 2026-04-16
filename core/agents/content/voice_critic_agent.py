@@ -413,7 +413,6 @@ Output your analysis as structured JSON with scores and reasoning."""
         GPT-based deep analysis for nuanced scoring.
         """
         try:
-            from openai import OpenAI
             import os
 
             # Session 1084 round 51: custom 60s timeout dropped — factory enforces 90s read centrally

@@ -40,7 +40,6 @@ class IncomeActionService:
         """Lazy-load GPT client"""
         if self.gpt_client is None:
             try:
-                from openai import OpenAI
                 self.gpt_client = get_openai_client()
             except Exception as e:
                 logger.error(f"Failed to initialize GPT client: {e}")

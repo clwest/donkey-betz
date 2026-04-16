@@ -644,8 +644,6 @@ Be constructive and brief."""
         severity_threshold: str = "all"
     ) -> Dict[str, Any]:
         """Perform comprehensive code review."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         # Truncate very long files to avoid token limits
@@ -735,8 +733,6 @@ End with a summary score (1-10) and overall assessment."""
         compliance_standards: List[str] = None
     ) -> Dict[str, Any]:
         """Perform security audit."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         # Truncate very long files to avoid token limits
@@ -817,8 +813,6 @@ Also provide:
         check_types: List[str] = None
     ) -> Dict[str, Any]:
         """Analyze performance issues."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         context_text = f"Runtime context: {runtime_context}" if runtime_context else ""
@@ -891,8 +885,6 @@ Provide overall performance score and optimization priority list."""
         check_documentation: bool = True
     ) -> Dict[str, Any]:
         """Check code style and conventions."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         naming_text = "Check naming conventions for variables, functions, and classes." if check_naming else ""
@@ -967,8 +959,6 @@ End with style compliance percentage."""
         explain_changes: bool = True
     ) -> Dict[str, Any]:
         """Generate improved version of code."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         preserve_text = "IMPORTANT: Preserve exact functionality - no behavioral changes." if preserve_functionality else "You may change functionality if it improves the design."

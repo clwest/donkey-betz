@@ -283,8 +283,6 @@ Include counts, categorizations, and actionable findings."""
 
     def _call_openai_with_tools(self, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Call OpenAI and handle tool calls."""
-        from openai import OpenAI
-
         # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
         client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 

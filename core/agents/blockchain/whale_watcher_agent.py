@@ -444,7 +444,6 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 
     def _get_llm_client(self):
         """Get an OpenAI client with proper connection-level timeout."""
-        from openai import OpenAI
         return get_openai_client()
 
     def _monitor_large_transfers(

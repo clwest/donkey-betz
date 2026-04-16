@@ -7387,7 +7387,6 @@ Spoken response:"""
             from core.models_voice_marketplace import VoiceProfile
             from content.elevenlabs_provider import elevenlabs_provider
             from django.contrib.auth import get_user_model
-            from openai import OpenAI
             import io
 
             User = get_user_model()

@@ -551,8 +551,6 @@ Only use these tools when explicitly asked to generate configs. For questions or
         include_notifications: bool = True
     ) -> Dict[str, Any]:
         """Create CI/CD pipeline configuration."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         deploy_text = f"Deploy targets: {', '.join(deploy_targets)}" if deploy_targets else "No deployment stage"
@@ -615,8 +613,6 @@ Include detailed comments explaining each section."""
         include_healthcheck: bool = True
     ) -> Dict[str, Any]:
         """Generate Docker configuration."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         services = services or []
@@ -681,8 +677,6 @@ Include comments explaining optimization choices."""
         include_hpa: bool = True
     ) -> Dict[str, Any]:
         """Generate Kubernetes deployment manifests."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         resources = resources or {
@@ -759,8 +753,6 @@ Include namespace, labels, and annotations following Kubernetes best practices."
         include_state_backend: bool = True
     ) -> Dict[str, Any]:
         """Generate Terraform infrastructure code."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         region = region or self._get_default_region(cloud_provider)
@@ -830,8 +822,6 @@ Follow {cloud_provider} best practices for security and cost optimization."""
         log_aggregation: bool = True
     ) -> Dict[str, Any]:
         """Set up monitoring and alerting configuration."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         alert_channels = alert_channels or ["slack"]

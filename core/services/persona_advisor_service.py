@@ -328,7 +328,6 @@ class PersonaAdvisorService:
     def _generate_advice(self, prompt: str, agent) -> str:
         """Generate advice via LLM."""
         try:
-            from openai import OpenAI
             import os
 
             # Session 1084 round 51: custom 60s timeout dropped — factory enforces 90s read centrally

@@ -335,7 +335,6 @@ class DomainExtractionService:
 
         More accurate but slower than keyword extraction.
         """
-        from openai import OpenAI
         client = get_openai_client()
 
         domain_list = list(self.domains.keys())
