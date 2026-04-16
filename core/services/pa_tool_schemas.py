@@ -964,7 +964,27 @@ PA_TOOL_SCHEMAS = [
                     ),
                 },
                 "task": {"type": "string", "description": "Task description for the agent"},
-                "context": {"type": "object", "description": "Additional context"},
+                "workspace_id": {
+                    "type": "string",
+                    "description": (
+                        "UUID of the workspace this agent should operate in. "
+                        "Any deliverables the agent produces will be saved into "
+                        "this workspace. Pass this as a structured parameter — "
+                        "mentioning it inside the `task` text is not enough; "
+                        "the dispatcher only reads it from here or from "
+                        "`context.workspace_id`. When omitted, the router falls "
+                        "back to the user's active workspace, then to the "
+                        "System Autonomous Workspace (orphan-producing path)."
+                    ),
+                },
+                "context": {
+                    "type": "object",
+                    "description": (
+                        "Additional context. May include workspace_id (prefer "
+                        "the top-level param above instead), conversation_id, "
+                        "content_type, tone, blog_id, research, etc."
+                    ),
+                },
             },
             "required": ["agent_name", "task"],
         },
