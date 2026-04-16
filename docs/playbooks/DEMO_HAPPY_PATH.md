@@ -97,20 +97,33 @@ Open these tabs:
 
 ---
 
-## Step 5: Executive Brief (EditorAgent, 45-75s)
+## Step 5: Executive Brief (ContentWriterAgent, 45-75s)
 
-**What you say:** "EditorAgent takes everything — the audit, CTO analysis, COO priorities, and the decision — and synthesizes it into a publish-ready executive brief."
+**What you say:** "Now the writer agent synthesizes everything — audit, CTO analysis, COO priorities — into a publish-ready executive brief. It's creating new content from real data, not filling a template."
 
 **Prompt:**
-> Synthesize the Platform Audit, CTO Analysis, and COO Analysis into a publish-ready Executive Brief. Sections: Platform State, Key Risks, Recommended Actions, Decision Log, Next 24 Hours. Under 600 words, professional tone.
+> Write a concise Executive Brief synthesizing our platform's current state. Use the Platform Audit findings, CTO technical analysis, and COO execution priorities as source material. Sections: Platform State, Key Risks, Recommended Actions, Next 24 Hours. Under 600 words, professional tone.
 
-**What it proves:** Multi-source synthesis — the editor works with real artifacts from real agents, not templates.
+**Context:** `content_type: article, tone: professional, word_count: 600, topic: Platform Executive Brief`
+
+**What it proves:** Multi-source synthesis — the writer creates a coherent artifact from real agent outputs, grounded in actual telemetry.
 
 ---
 
-## Step 6: Content Generation (ContentWriterAgent, 45-75s)
+## Step 6: Polish & QA (EditorAgent, 30-45s)
 
-**What you say:** "And because this is also a content platform, we can turn any of this into publishable content — blog posts, newsletters, internal docs."
+**What you say:** "And now the editor agent reviews the generated brief against quality standards — checking hooks, structure, evidence quality, and audience alignment. This is the QA gate before anything gets published."
+
+**Prompt:**
+> Review and polish the Executive Brief for publishing readiness. Check: hook strength, structure clarity, evidence quality, audience alignment for CTOs.
+
+**What it proves:** Separation of concerns — writer creates, editor gates. Nothing ships without quality review.
+
+---
+
+## Step 7: Blog Post (ContentWriterAgent, 45-75s)
+
+**What you say:** "And because this is also a content platform, we can turn operational intelligence into publishable thought leadership."
 
 **Prompt:**
 > Write a blog post titled "Why Our AI Platform Audits Itself" based on today's platform audit and CTO/COO analyses. Target audience: CTOs evaluating AI platforms. 800 words, professional tone.
@@ -119,17 +132,18 @@ Open these tabs:
 
 ---
 
-## Step 7: Final "Ship" Moment (10-20s)
+## Step 8: Final "Ship" Moment (10-20s)
 
 **Action:** Open Deliverables in the demo-testing workspace and show all artifacts:
 1. Platform Audit (integration health, risks, green checks)
 2. CTO Analysis (failure signatures, reliability recommendations)
 3. COO Analysis (execution priorities, 24-hour timeline)
-4. Executive Brief (synthesized, publish-ready)
-5. Blog Post (publishable content from real data)
-6. Governance Decision (approved, logged)
+4. Governance Decision (approved, logged)
+5. Executive Brief (synthesized from all 3 analyses)
+6. Editor QA review (quality gate verdict)
+7. Blog Post (publishable thought leadership from real data)
 
-**What you say:** "In about 4 minutes: self-audit, multi-role analysis, governed decision, synthesized brief, publishable content. All from real data. All governed. That's what a platform that knows itself looks like."
+**What you say:** "In about 5 minutes: self-audit, multi-role analysis, governed decision, synthesized brief, quality gate, and published content. Seven agents, seven artifacts, all from real data. All governed. That's a platform that knows itself."
 
 ---
 
@@ -139,8 +153,8 @@ Open these tabs:
 |---------|-------|
 | PlatformAuditAgent slow | Skip to CTO — it pulls its own data via PCS |
 | CTOAgent or COOAgent hangs | Show the one that completed, narrate the role split |
-| EditorAgent fails | Show the raw CTO + COO artifacts side by side |
-| ContentWriterAgent slow | Skip — the executive brief IS the artifact |
+| ContentWriterAgent slow | Show CTO + COO artifacts as the synthesis |
+| EditorAgent fails | Skip QA — brief is already solid from ContentWriter |
 | Governor status not showing | Run `get_governor_status()` in shell on camera |
 
 ## Agents to NEVER trigger on camera
