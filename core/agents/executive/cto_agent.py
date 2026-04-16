@@ -84,76 +84,119 @@ IMPORTANT - Response Guidelines:
 - For questions: Direct answer in 2-3 sentences, then brief supporting points.
 - For analysis: Bullet points, not paragraphs. Max 5-7 key points.
 - Skip obvious context - assume the reader knows the basics.
+- EVERY factual claim MUST be backed by tool data. Never invent stats.
 
 Your job: Technical analysis, planning, and architectural guidance.
 READ-ONLY mode - analyze and plan, do NOT execute.
 
-Analysis areas:
-- Feature analysis: Requirements, complexity estimate
-- Architecture review: Design evaluation, improvements
-- Implementation planning: Step-by-step plans
-- Risk assessment: Risks and mitigations
+You have REAL-TIME platform tools:
+- get_platform_snapshot: Full system status (agents, SLOs, governor, costs, spiders, content, failures)
+- get_agent_health: Real execution stats for specific agents
+- get_cost_breakdown: Actual LLM spend by agent and model
+- get_failure_analysis: Real error patterns and failure signatures
+
+CRITICAL RULE: Always call get_platform_snapshot FIRST before making any claims
+about system state. Your analysis must cite the evidence returned by your tools.
+If a tool returns no data for a topic, say "no data available" — do NOT fabricate.
 
 You CANNOT execute code or make changes - only analyze and plan."""
 
+    # Session 1089: Tools backed by PlatformContextService — real data, not stubs.
+    # Initiative: "Agent Data Grounding: Facts Not Fiction" (111b5af1)
     tools = [
         {
             "type": "function",
             "function": {
-                "name": "analyze_feature",
-                "description": "Analyze a feature request and provide technical assessment",
+                "name": "get_platform_snapshot",
+                "description": (
+                    "Get a comprehensive, REAL-TIME platform snapshot with evidence. "
+                    "Returns: agent execution stats, SLO status, governor state, "
+                    "initiative progress, LLM costs, spider health, content pipeline, "
+                    "and failure signatures. ALL data is queried live from the database."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "feature_description": {
-                            "type": "string",
-                            "description": "Description of the feature to analyze"
+                        "hours_back": {
+                            "type": "integer",
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
                         },
-                        "scope": {
-                            "type": "string",
-                            "description": "Scope of analysis",
-                            "enum": ["quick", "detailed", "comprehensive"],
-                            "default": "detailed"
+                        "modules": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Which modules to include. Options: agent_exec, slo, governor, "
+                                "work, cost, spiders, content, failures. Default: all."
+                            )
                         }
                     },
-                    "required": ["feature_description"]
+                    "required": []
                 }
             }
         },
         {
             "type": "function",
             "function": {
-                "name": "plan_implementation",
-                "description": "Create an implementation plan for a feature or change",
+                "name": "get_agent_health",
+                "description": (
+                    "Get real execution stats for specific agents — success rates, "
+                    "failure counts, top errors. Use this when analyzing agent performance."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "feature": {
-                            "type": "string",
-                            "description": "Feature to plan"
+                        "agent_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Specific agents to check (null = all agents)"
                         },
-                        "approach": {
-                            "type": "string",
-                            "description": "Implementation approach",
-                            "enum": ["incremental", "big_bang", "parallel"]
+                        "hours_back": {
+                            "type": "integer",
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
                         }
                     },
-                    "required": ["feature"]
+                    "required": []
                 }
             }
         },
         {
             "type": "function",
             "function": {
-                "name": "review_architecture",
-                "description": "Review system architecture and provide recommendations",
+                "name": "get_cost_breakdown",
+                "description": (
+                    "Get real LLM spend data — total cost, cost by agent, cost by model, "
+                    "token usage. Use this for budget and cost analysis."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "area": {
-                            "type": "string",
-                            "description": "Area to review",
-                            "enum": ["agents", "database", "api", "frontend", "infrastructure", "overall"]
+                        "hours_back": {
+                            "type": "integer",
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_failure_analysis",
+                "description": (
+                    "Get real failure patterns — agent failures, LLM errors, timeout agents, "
+                    "error signatures. Use this for reliability and incident analysis."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "hours_back": {
+                            "type": "integer",
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
                         }
                     },
                     "required": []
@@ -357,106 +400,74 @@ You CANNOT execute code or make changes - only analyze and plan."""
         tool_name: str,
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute a CTO tool call."""
-        if tool_name == "analyze_feature":
-            return self._analyze_feature(
-                feature_description=arguments.get('feature_description', ''),
-                scope=arguments.get('scope', 'detailed')
-            )
+        """Execute a CTO tool call — all backed by PlatformContextService."""
+        from core.services.platform_context_service import PlatformContextService
+        pcs = PlatformContextService()
 
-        elif tool_name == "plan_implementation":
-            return self._plan_implementation(
-                feature=arguments.get('feature', ''),
-                approach=arguments.get('approach', 'incremental')
-            )
-
-        elif tool_name == "review_architecture":
-            return self._review_architecture(
-                area=arguments.get('area', 'overall')
-            )
+        if tool_name == "get_platform_snapshot":
+            return self._get_platform_snapshot(pcs, arguments)
+        elif tool_name == "get_agent_health":
+            return self._get_agent_health(pcs, arguments)
+        elif tool_name == "get_cost_breakdown":
+            return self._get_cost_breakdown(pcs, arguments)
+        elif tool_name == "get_failure_analysis":
+            return self._get_failure_analysis(pcs, arguments)
 
         return super()._execute_tool_call(tool_name, arguments)
 
-    def _analyze_feature(
-        self,
-        feature_description: str,
-        scope: str
-    ) -> Dict[str, Any]:
-        """Analyze a feature request."""
-        logger.info(f"Analyzing feature: {feature_description[:50]}")
+    def _get_platform_snapshot(self, pcs, arguments: Dict) -> Dict:
+        """Full platform snapshot — real data from every subsystem."""
+        hours_back = arguments.get('hours_back', 24)
+        modules = arguments.get('modules')
+        logger.info(f"CTOAgent: platform snapshot ({hours_back}h, modules={modules or 'all'})")
 
-        # Provide structured analysis
-        analysis = {
-            'feature': feature_description,
-            'scope': scope,
-            'complexity': 'medium',  # Would be computed in full implementation
-            'estimated_effort': 'TBD',
-            'dependencies': [],
-            'risks': [],
-            'recommendations': [
-                'Break into smaller tasks',
-                'Create unit tests first',
-                'Review with team before implementation'
-            ]
-        }
-
+        result = pcs.snapshot(hours_back=hours_back, modules=modules)
         return {
             'success': True,
-            'analysis': analysis
+            'snapshot': result['facts'],
+            'evidence_count': len(result['evidence']),
+            'evidence': result['evidence'],
+            'warnings': result['warnings'],
         }
 
-    def _plan_implementation(
-        self,
-        feature: str,
-        approach: str
-    ) -> Dict[str, Any]:
-        """Create an implementation plan."""
-        logger.info(f"Planning implementation for: {feature[:50]}")
+    def _get_agent_health(self, pcs, arguments: Dict) -> Dict:
+        """Agent execution stats — real success rates and failure patterns."""
+        hours_back = arguments.get('hours_back', 24)
+        agent_names = arguments.get('agent_names')
+        logger.info(f"CTOAgent: agent health ({hours_back}h, agents={agent_names or 'all'})")
 
-        plan = {
-            'feature': feature,
-            'approach': approach,
-            'phases': [
-                {'phase': 1, 'name': 'Research & Design', 'tasks': ['Analyze requirements', 'Design architecture']},
-                {'phase': 2, 'name': 'Implementation', 'tasks': ['Build core functionality', 'Write tests']},
-                {'phase': 3, 'name': 'Integration', 'tasks': ['Integrate with existing code', 'End-to-end testing']},
-                {'phase': 4, 'name': 'Deployment', 'tasks': ['Deploy to staging', 'Monitor & iterate']}
-            ],
-            'notes': 'This is a read-only plan - no execution'
-        }
-
+        result = pcs.agent_execution_stats(
+            hours_back=hours_back,
+            agent_names=agent_names,
+        )
         return {
             'success': True,
-            'plan': plan
+            'agent_stats': result['facts'],
+            'evidence': result['evidence'],
         }
 
-    def _review_architecture(self, area: str) -> Dict[str, Any]:
-        """Review system architecture."""
-        logger.info(f"Reviewing architecture area: {area}")
+    def _get_cost_breakdown(self, pcs, arguments: Dict) -> Dict:
+        """LLM cost analysis — real spend data."""
+        hours_back = arguments.get('hours_back', 24)
+        logger.info(f"CTOAgent: cost breakdown ({hours_back}h)")
 
-        review = {
-            'area': area,
-            'status': 'reviewed',
-            'strengths': [
-                'Clean separation of concerns',
-                'Well-defined agent boundaries',
-                'Good use of composition'
-            ],
-            'improvements': [
-                'Consider adding caching layer',
-                'Document API contracts',
-                'Add integration tests'
-            ],
-            'recommendations': [
-                'Continue with incremental refactoring',
-                'Prioritize test coverage',
-                'Document architectural decisions'
-            ]
-        }
-
+        result = pcs.cost_metrics(hours_back=hours_back)
         return {
             'success': True,
-            'review': review
+            'costs': result['facts'],
+            'evidence': result['evidence'],
+        }
+
+    def _get_failure_analysis(self, pcs, arguments: Dict) -> Dict:
+        """Failure pattern analysis — real error signatures."""
+        hours_back = arguments.get('hours_back', 24)
+        logger.info(f"CTOAgent: failure analysis ({hours_back}h)")
+
+        result = pcs.failure_signatures(hours_back=hours_back)
+        return {
+            'success': True,
+            'failures': result['facts'],
+            'evidence': result['evidence'],
         }
 
     def _validate_task(self, task: str) -> bool:
