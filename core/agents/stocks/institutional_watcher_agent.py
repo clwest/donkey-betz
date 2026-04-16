@@ -216,7 +216,6 @@ Focus on transactions that diverge from normal patterns."""
                 ]
 
                 # Session 761: Call LLM with tools enabled
-                from openai import OpenAI
                 client = get_openai_client()
 
                 response = client.chat.completions.create(

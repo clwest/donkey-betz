@@ -536,8 +536,6 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         include_internal: bool = True
     ) -> Dict[str, Any]:
         """Analyze a blockchain transaction."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         # Format transaction data for analysis
@@ -607,8 +605,6 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                 "requires": "List of transaction objects with hash, from, to, value, timestamp"
             }
 
-        from openai import OpenAI
-
         client = get_openai_client()
 
         patterns_to_check = target_patterns or list(SUSPICIOUS_PATTERNS.keys())
@@ -663,8 +659,6 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         min_value_eth: float = 0.1
     ) -> Dict[str, Any]:
         """Trace value flow through transactions."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         start_point = starting_address or starting_tx or "Not specified"
@@ -719,8 +713,6 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         check_sources: List[str] = None
     ) -> Dict[str, Any]:
         """Check address reputation and associations."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         sources = check_sources or ["etherscan_labels", "tornado", "known_attackers", "exchanges"]

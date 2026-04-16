@@ -774,7 +774,6 @@ Generate the complete document now:"""
     def _call_llm(self, messages: List[Dict]) -> Optional[str]:
         """Call the LLM to generate content."""
         try:
-            from openai import OpenAI
             from django.conf import settings
 
             client = get_openai_client(api_key=settings.OPENAI_API_KEY)

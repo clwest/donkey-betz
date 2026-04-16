@@ -182,7 +182,6 @@ class UnifiedContentPipeline:
     def _init_clients(self):
         """Initialize API clients"""
         try:
-            from openai import OpenAI
             self.openai_client = get_openai_client()
             logger.info("OpenAI client initialized")
         except Exception as e:

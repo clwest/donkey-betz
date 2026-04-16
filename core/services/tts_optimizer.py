@@ -62,7 +62,6 @@ class TTSTextOptimizer:
     def _get_openai_client(self):
         """Lazy load OpenAI client."""
         if self.openai_client is None:
-            from openai import OpenAI
             from django.conf import settings
             api_key = settings.EXTERNAL_API_KEYS.get('OPENAI_API_KEY', '')
             self.openai_client = get_openai_client(api_key=api_key)

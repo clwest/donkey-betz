@@ -475,7 +475,6 @@ Always acknowledge bull arguments but emphasize potential risks."""
     def _get_gpt_bear_analysis(self, ticker: str, stock_data: Dict, analysis: Dict) -> Dict:
         """Call GPT to generate intelligent bear case analysis."""
         try:
-            from openai import OpenAI
             import os
             import json
 

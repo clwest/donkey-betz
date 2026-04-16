@@ -394,7 +394,6 @@ class EvidenceGatherer:
             return None
 
         try:
-            from openai import OpenAI
             from django.conf import settings
 
             client = get_openai_client(api_key=settings.OPENAI_API_KEY)

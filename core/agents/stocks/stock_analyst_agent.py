@@ -319,7 +319,6 @@ Alert on:
             ]
 
             # Session 761: Call LLM with tools enabled
-            from openai import OpenAI
             client = get_openai_client()
 
             response = client.chat.completions.create(
@@ -704,7 +703,6 @@ Provide:
     def _get_llm_analysis(self, prompt: str) -> str:
         """Get LLM analysis."""
         try:
-            from openai import OpenAI
             import os
 
             client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))

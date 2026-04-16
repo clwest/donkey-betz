@@ -231,7 +231,6 @@ and only important ones should be promoted. Don't treat this as a crisis."""
                 ]
 
                 # Session 761: Call GPT with tools enabled for LLM-driven tool use
-                from openai import OpenAI
                 client = get_openai_client()
 
                 tool_calls_made = []

@@ -1332,7 +1332,6 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
     ) -> AgentResult:
         """Execute the coordinator task."""
         import time
-        from openai import OpenAI
         from django.conf import settings
 
         start_time = time.time()
