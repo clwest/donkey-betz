@@ -743,7 +743,7 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['ImageAgent', task_text, context], queue='agents',
+                args=['ImageAgent', task_text, context], queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -767,7 +767,7 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['VideoAgent', task_text, context], queue='agents',
+                args=['VideoAgent', task_text, context], queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -794,7 +794,7 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['TalkingCharacterAgent', task_text, context], queue='agents',
+                args=['TalkingCharacterAgent', task_text, context], queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -823,7 +823,7 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = create_talking_video_task.apply_async(
-                args=[image_prompt, script, context], queue='agents',
+                args=[image_prompt, script, context], queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -847,7 +847,7 @@ RESEARCH DATA:
             if user_id:
                 context['user_id'] = str(user_id)
             celery_task = execute_agent_task.apply_async(
-                args=['AudioAgent', task_text, context], queue='agents',
+                args=['AudioAgent', task_text, context], queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
