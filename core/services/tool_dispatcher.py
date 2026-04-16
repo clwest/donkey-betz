@@ -872,17 +872,42 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         deliverables from the workspace and concatenates them into a
         structured content dict that EditorAgent can process.
         """
-        if not workspace_id:
-            return None
         try:
             from core.models_deliverables import Deliverable
 
+            # Session 1090: workspace_id from PA entrypoint may point to
+            # System Autonomous Workspace (from AssistantProfile) rather
+            # than the user's active workspace.  Try the provided ID first,
+            # then fall back to the user's active workspace.
+            target_ws = workspace_id
             deliverables = (
                 Deliverable.objects
-                .filter(workspace_id=workspace_id)
-                .exclude(title__startswith='EditorAgent:')  # Don't edit our own output
+                .filter(workspace_id=target_ws)
+                .exclude(title__startswith='EditorAgent:')
                 .order_by('-created_at')[:6]
-            )
+            ) if target_ws else Deliverable.objects.none()
+
+            if not deliverables.exists() and target_ws:
+                # Fallback: try the user's active workspace
+                try:
+                    from core.models_skin_layer import ProjectWorkspace
+                    active_ws = ProjectWorkspace.objects.filter(
+                        is_active=True,
+                    ).exclude(name__icontains='autonomous').first()
+                    if active_ws and str(active_ws.id) != target_ws:
+                        target_ws = str(active_ws.id)
+                        deliverables = (
+                            Deliverable.objects
+                            .filter(workspace_id=target_ws)
+                            .exclude(title__startswith='EditorAgent:')
+                            .order_by('-created_at')[:6]
+                        )
+                        logger.info(
+                            "[EditorAgent dispatch] Fell back to active workspace %s (%s)",
+                            active_ws.name, target_ws,
+                        )
+                except Exception:
+                    pass
             if not deliverables:
                 return None
 
