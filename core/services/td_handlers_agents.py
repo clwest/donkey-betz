@@ -1754,6 +1754,31 @@ class AgentHandlersMixin:
                 .order_by('-count')
                 .values_list('agent_name', 'count')[:10]
             )
+            # Session 1091 Sprint B — workspace breakdown.
+            # NOTE: this handler's existing 'orphans' field counts
+            # user__isnull=True (system-created deliverables) — it has
+            # NOTHING to do with workspace assignment. Don't conflate.
+            # The workspace metrics below use distinct, prefixed names:
+            #   workspace_orphans  = workspace_id IS NULL (post-PR #1965 should be 0)
+            #   workspace_unassigned = lives in the "Unassigned" sentinel bucket
+            #   by_workspace = list of {workspace_id, workspace_name, count, is_orphan, is_unassigned}
+            by_workspace_rows = list(
+                base_qs.values('workspace_id', 'workspace__name')
+                .annotate(count=Count('id'))
+                .order_by('-count')
+            )
+            by_workspace = [
+                {
+                    'workspace_id': str(r['workspace_id']) if r['workspace_id'] else None,
+                    'workspace_name': r['workspace__name'] or 'Orphan (no workspace)',
+                    'count': r['count'],
+                    'is_orphan': r['workspace_id'] is None,
+                    'is_unassigned': r['workspace__name'] == 'Unassigned',
+                }
+                for r in by_workspace_rows
+            ]
+            workspace_orphans = base_qs.filter(workspace_id__isnull=True).count()
+            workspace_unassigned = base_qs.filter(workspace__name='Unassigned').count()
             # Count duplicate excess (exclude archived deliverables)
             active_qs = base_qs.exclude(status='archived')
             dupe_groups = list(
@@ -1774,6 +1799,9 @@ class AgentHandlersMixin:
                 'by_type': by_type,
                 'by_category': by_category,
                 'by_agent': by_agent,
+                'by_workspace': by_workspace,
+                'workspace_orphans': workspace_orphans,
+                'workspace_unassigned': workspace_unassigned,
                 'top_duplicates': [
                     {'title': d['title'][:100], 'count': d['count']}
                     for d in dupe_groups
