@@ -324,7 +324,23 @@ class MetricsActionTrigger:
             return False
 
     def _is_in_cooldown(self, rule_name: str, cooldown_hours: int) -> bool:
-        """Check if a rule is still in cooldown period."""
+        """Check if a rule is still in cooldown period.
+
+        Session 1090: Moved cooldown state to Django cache (Redis-backed)
+        so it survives worker recycling.  Previously used in-memory dict
+        which reset on every --max-tasks-per-child recycle, causing hourly
+        re-fires despite 6-hour cooldown settings.
+        """
+        # Check Redis-backed cache first (survives worker recycles)
+        try:
+            from django.core.cache import cache
+            cache_key = f"metrics_trigger:cooldown:{rule_name}"
+            if cache.get(cache_key):
+                return True
+        except Exception:
+            pass
+
+        # Fallback to in-memory (backwards compat)
         if rule_name not in self.last_triggered:
             return False
 
@@ -358,6 +374,23 @@ class MetricsActionTrigger:
                     result["message"] = f"Celery task not found: {action.target}"
 
             elif action.action_type == ActionType.AGENT_EXECUTION:
+                # Session 1090: Governor gate — metrics-triggered agent dispatches
+                # were bypassing should_dispatch() entirely, causing unsupervised
+                # spend (e.g., hourly SystemIntelligenceAgent runs).
+                try:
+                    from core.services.priority.governor import should_dispatch
+                    gov = should_dispatch(
+                        agent_name=action.target,
+                        trigger_source='schedule',
+                        task=action.kwargs.get('task', '') if action.kwargs else '',
+                    )
+                    if not gov.proceed:
+                        result["message"] = f"Governor blocked {action.target}: {gov.reason}"
+                        logger.info("[MetricsActionTrigger] Governor BLOCKED %s: %s", action.target, gov.reason)
+                        return result
+                except Exception:
+                    pass  # fail-open
+
                 # Execute via agent - queue for async execution
                 kwargs = action.kwargs or {}
                 task = kwargs.get("task", "Perform automated check")
@@ -443,6 +476,13 @@ class MetricsActionTrigger:
                     if action_result["success"]:
                         results["actions_triggered"] += 1
                         self.last_triggered[rule.condition.name] = timezone.now()
+                        # Session 1090: Persist cooldown to Redis so it survives worker recycles
+                        try:
+                            from django.core.cache import cache
+                            cache_key = f"metrics_trigger:cooldown:{rule.condition.name}"
+                            cache.set(cache_key, True, timeout=rule.condition.cooldown_hours * 3600)
+                        except Exception:
+                            pass
 
             except Exception as e:
                 results["errors"].append({
