@@ -918,6 +918,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 Deliverable.objects
                 .filter(workspace_id=target_ws)
                 .exclude(title__startswith='EditorAgent:')
+                .exclude(title__startswith='blog_post:')  # Exclude prior ContentWriter blog outputs
+                .exclude(deliverable_type='blog_post')
                 .order_by('-created_at')[:6]
             ) if target_ws else Deliverable.objects.none()
             if not deliverables:
