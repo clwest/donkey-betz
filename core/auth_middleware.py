@@ -187,6 +187,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 641: Agent Performance Dashboard APIs
         '/api/agent-analytics/',  # All agent analytics endpoints
         '/api/system-health/',  # System health check
+        '/api/system/demo-status/',  # Session 1090: Demo mode banner
         '/api/agents/test/',  # Test agent execution
 
         # Session 761: Agent Monitoring Dashboard APIs

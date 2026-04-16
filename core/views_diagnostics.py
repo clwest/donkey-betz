@@ -1479,6 +1479,32 @@ def system_version(request):
     })
 
 
+# ── Demo Mode Status (Session 1090) ──────────────────────────────────────────
+
+@require_http_methods(["GET"])
+def demo_mode_status(request):
+    """Return demo mode state for the global UI banner.
+
+    No auth required — this is non-sensitive runtime config metadata.
+    Polled by the frontend every 60s to show/hide the demo mode banner.
+    """
+    try:
+        from core.services.priority.governor import (
+            _demo_mode_enabled, _governor_enabled,
+            DEMO_AUTONOMY_ALLOWLIST, DEMO_MAX_EXECUTIONS_PER_HOUR,
+        )
+        demo = _demo_mode_enabled()
+        return JsonResponse({
+            'demo_mode': demo,
+            'governor_enabled': _governor_enabled(),
+            'allowlist_count': len(DEMO_AUTONOMY_ALLOWLIST) if demo else 0,
+            'allowlist': sorted(DEMO_AUTONOMY_ALLOWLIST) if demo else [],
+            'max_executions_per_hour': DEMO_MAX_EXECUTIONS_PER_HOUR if demo else None,
+        })
+    except Exception:
+        return JsonResponse({'demo_mode': False, 'error': 'unavailable'})
+
+
 # ── Focus Cockpit Ops endpoint ───────────────────────────────────────────────
 
 @require_http_methods(["GET"])
