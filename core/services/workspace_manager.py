@@ -1837,8 +1837,21 @@ class WorkspaceManager:
             workspace = ProjectWorkspace.objects.get(id=workspace_id)
         else:
             workspace = ProjectWorkspace.objects.get(id=workspace_id, user=self.user)
+
+        # Session 1089: Deactivate ALL other workspaces first, then activate
+        # the selected one. Previously only set is_active=True without
+        # deactivating others, causing multiple active workspaces in the UI.
+        # Keep system workspaces (codebase, System Autonomous) untouched.
+        ProjectWorkspace.objects.filter(is_active=True).exclude(
+            id=workspace_id
+        ).exclude(
+            workspace_type='codebase'
+        ).exclude(
+            name='System Autonomous Workspace'
+        ).update(is_active=False)
+
         workspace.is_active = True
-        workspace.save()  # This triggers deactivation of others via save()
+        workspace.save(update_fields=['is_active'])
 
         logger.info(f"🎯 Active workspace: {workspace.name} (by {self.user.username})")
         return workspace
