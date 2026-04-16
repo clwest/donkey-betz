@@ -2384,13 +2384,17 @@ class UnifiedPAEntrypoint:
             return ('system_health_check', 'ops_tool')
 
         # Session 1088: Governor + mission priority patterns
-        if any(phrase in message_lower for phrase in [
-            'governor', 'governor status', 'governor tool',
+        # Bare 'governor' is too greedy — matches blog topics about governance.
+        # Require either a governor-specific phrase or 'governor' with a command verb.
+        _governor_phrases = [
+            'governor status', 'governor tool', 'show governor',
             'mission telemetry', 'mission status', 'mission budget',
             'circuit breaker', 'tripped breaker', 'reset breaker',
             'agent coverage', 'agent alignment',
             'beat governor', 'execution budget',
-        ]):
+            'check the governor', 'governor report',
+        ]
+        if any(phrase in message_lower for phrase in _governor_phrases):
             return ('governance', 'governor_tool')
 
         if any(phrase in message_lower for phrase in [
