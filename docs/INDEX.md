@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-16 15:57
+**Generated:** 2026-04-16 16:25
 **Current Session:** 1091
 **Total Documentation:** 1860 files | 631,583 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,237 |
+| Total cross-references | 2,238 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/body/README.md` | 60 | Body Systems Documentation |
+| `docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md` | 60 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,9 +219,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 15:55 |
+| SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 16:00 |
+| INDEX.md | docs | 363 | 2026-04-16 16:00 |
 | SESSION_1090_DEMO_READINESS.md | handoffs | 122 | 2026-04-16 13:03 |
-| INDEX.md | docs | 363 | 2026-04-16 13:03 |
 | DEMO_HAPPY_PATH.md | playbooks | 158 | 2026-04-16 12:11 |
 | SESSION_1089_GOVERNOR_AND_GROUNDING.md | handoffs | 138 | 2026-04-16 09:04 |
 | USER_FEEDBACK_QUEUE.md | docs | 12 | 2026-04-15 20:26 |
