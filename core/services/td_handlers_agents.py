@@ -1485,6 +1485,11 @@ class AgentHandlersMixin:
                 'status': obj.status,
                 'tags': obj.tags or [],
                 'created_at': obj.created_at.isoformat() if obj.created_at else None,
+                # Session 1092: include workspace fields so _sanitize_deliverable
+                # can compute is_orphan correctly. Without these, every detail
+                # call returned is_orphan=true, breaking workspace-flow-canary.
+                'workspace_id': str(obj.workspace_id) if obj.workspace_id else None,
+                'workspace__name': obj.workspace.name if obj.workspace_id and getattr(obj, 'workspace', None) else None,
             })
 
         elif action == 'save':
