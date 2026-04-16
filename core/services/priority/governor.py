@@ -208,6 +208,98 @@ def _create_attention_item(agent_name: str, failure_rate: float) -> None:
         pass  # attention item creation must never break the governor
 
 
+# ── Per-Mission Telemetry (Redis counters) ────────────────────────────
+
+def _today_key() -> str:
+    """Return today's date string for daily counter keys."""
+    from datetime import date
+    return date.today().isoformat()
+
+
+def _safe_cache_key(mission_name: str) -> str:
+    """Sanitize mission name for use in Django cache keys."""
+    import re
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', mission_name)[:80]
+
+
+def record_mission_dispatch(mission_name: str) -> None:
+    """Increment the daily dispatch counter for a mission."""
+    try:
+        from django.core.cache import cache
+        key = f"gov:dispatches:{_safe_cache_key(mission_name)}:{_today_key()}"
+        val = cache.get(key, 0)
+        cache.set(key, val + 1, timeout=86400)  # expires in 24h
+    except Exception:
+        pass
+
+
+def record_mission_skip(mission_name: str, reason: str) -> None:
+    """Increment the daily skip counter for a mission."""
+    try:
+        from django.core.cache import cache
+        key = f"gov:skips:{_safe_cache_key(mission_name)}:{_today_key()}"
+        val = cache.get(key, 0)
+        cache.set(key, val + 1, timeout=86400)
+    except Exception:
+        pass
+
+
+def get_mission_daily_count(mission_name: str) -> int:
+    """Get today's dispatch count for a mission."""
+    try:
+        from django.core.cache import cache
+        key = f"gov:dispatches:{_safe_cache_key(mission_name)}:{_today_key()}"
+        return cache.get(key, 0)
+    except Exception:
+        return 0
+
+
+def check_mission_budget(mission_name: str, max_daily: Optional[int]) -> Optional[str]:
+    """
+    Check if a mission's daily execution budget is exhausted.
+    Returns None if OK, or a reason string if budget is spent.
+    """
+    if max_daily is None:
+        return None  # unlimited
+
+    current = get_mission_daily_count(mission_name)
+    if current >= max_daily:
+        return (
+            f"daily budget exhausted: {current}/{max_daily} executions today"
+        )
+    return None
+
+
+def get_mission_telemetry() -> dict:
+    """Get telemetry for all active missions — dispatches, skips, budget usage."""
+    try:
+        from django.core.cache import cache
+        from core.models_unified_system import ActivePriority
+
+        today = _today_key()
+        missions = []
+        for p in ActivePriority.objects.filter(status='active').order_by('priority_rank'):
+            safe_name = _safe_cache_key(p.name)
+            dispatches = cache.get(f"gov:dispatches:{safe_name}:{today}", 0)
+            skips = cache.get(f"gov:skips:{safe_name}:{today}", 0)
+            budget_used = None
+            if p.max_daily_executions:
+                budget_used = f"{dispatches}/{p.max_daily_executions}"
+            missions.append({
+                'name': p.name,
+                'enabled': p.enabled,
+                'rank': p.priority_rank,
+                'dispatches_today': dispatches,
+                'skips_today': skips,
+                'budget': budget_used,
+                'max_daily': p.max_daily_executions,
+                'tags': list(p.tags or []),
+            })
+        return {'date': today, 'missions': missions}
+    except Exception:
+        return {'date': _today_key(), 'missions': [], 'error': 'telemetry unavailable'}
+
+
 # ── Main Governor Check ───────────────────────────────────────────────
 
 def should_dispatch(
@@ -267,6 +359,33 @@ def should_dispatch(
         )
 
         if decision.matched:
+            mission_name = decision.priority_name or 'unknown'
+
+            # Layer 4: Check daily execution budget for this mission
+            # Find the mission's budget from the cached priorities
+            budget_limit = None
+            priorities = router._get_cached_priorities()
+            for p in priorities:
+                if p.get('name') == mission_name:
+                    budget_limit = p.get('max_daily_executions')
+                    break
+
+            budget_reason = check_mission_budget(mission_name, budget_limit)
+            if budget_reason:
+                logger.info(
+                    "[governor] SKIP %s: mission '%s' %s",
+                    agent_name, mission_name, budget_reason,
+                )
+                record_mission_skip(mission_name, 'budget_exhausted')
+                return GovernorDecision(
+                    proceed=False,
+                    reason='budget_exhausted',
+                    agent_name=agent_name,
+                    detail=f"mission '{mission_name}': {budget_reason}",
+                )
+
+            # All checks passed — record and proceed
+            record_mission_dispatch(mission_name)
             logger.debug(
                 "[governor] PROCEED %s: aligned (via=%s, priority=%s)",
                 agent_name, decision.matched_via, decision.priority_name,
@@ -282,6 +401,7 @@ def should_dispatch(
                 "[governor] SKIP %s: misaligned with active priorities",
                 agent_name,
             )
+            record_mission_skip('_unaligned', 'misaligned')
             return GovernorDecision(
                 proceed=False,
                 reason='misaligned_skip',
@@ -320,21 +440,35 @@ def get_governor_status() -> dict:
         priorities = ActivePriority.get_active_priorities()
 
         # Check which agents are in circuit breaker cooldown
-        # We can't enumerate all cache keys, so check the known agents
         tripped_agents = []
         try:
-            from core.agent_router import AGENT_MAP
-            for agent_name in AGENT_MAP:
+            from core.agent_router import AgentRouter
+            router = AgentRouter()
+            for agent_name in router.AGENT_MAP:
                 if cache.get(f"cb:cooldown:{agent_name}"):
                     tripped_agents.append(agent_name)
         except Exception:
             pass
 
+        # Include disabled missions for visibility
+        disabled_missions = []
+        try:
+            disabled = ActivePriority.objects.filter(
+                status='active', enabled=False
+            )
+            disabled_missions = [p.name for p in disabled]
+        except Exception:
+            pass
+
+        telemetry = get_mission_telemetry()
+
         return {
             "governor_enabled": _governor_enabled(),
             "active_priorities": len(priorities),
             "priority_names": [p["name"] for p in priorities],
+            "disabled_missions": disabled_missions,
             "circuit_breakers_tripped": tripped_agents,
+            "telemetry": telemetry,
             "config": {
                 "cb_window_size": CB_WINDOW_SIZE,
                 "cb_failure_threshold": CB_FAILURE_THRESHOLD,
