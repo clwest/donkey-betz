@@ -592,7 +592,14 @@ Format each file with:
 content
 ```"""
 
-        response = client.chat.completions.create(
+        # Session 1089: gpt-5-mini with 10k completion tokens for full-stack
+        # code generation regularly exceeds the factory's 90s read timeout.
+        # Use per-request timeout override (300s) to avoid SLO-impacting
+        # ToolCallRecord failures while keeping the global factory default tight.
+        import httpx
+        response = client.with_options(
+            timeout=httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=60.0)
+        ).chat.completions.create(
             model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a senior full-stack developer. Generate complete, production-ready code."},
