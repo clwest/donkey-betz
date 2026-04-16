@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-15 18:15
+**Generated:** 2026-04-15 18:42
 **Current Session:** 1086
 **Total Documentation:** 1856 files | 631,057 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 142 | CLAUDE - AI Session Entry Point |
-| `docs/body/README.md` | 60 | Body Systems Documentation |
+| `docs/archive/old-structure/capabilities/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,7 +219,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-15 18:05 |
+| INDEX.md | docs | 363 | 2026-04-15 18:16 |
 | SESSION_1084_HEARTBEAT_AND_FACTORIES.md | handoffs | 178 | 2026-04-15 16:18 |
 | SESSION_1084_HANG_CONTAINMENT.md | handoffs | 326 | 2026-04-15 14:47 |
 | SESSION_1083_MARATHON.md | handoffs | 145 | 2026-04-15 13:20 |
