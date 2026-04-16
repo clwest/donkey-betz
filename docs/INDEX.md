@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-16 17:01
+**Generated:** 2026-04-16 17:17
 **Current Session:** 1091
 **Total Documentation:** 1860 files | 631,583 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,236 |
+| Total cross-references | 2,231 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
+| `docs/00-START-HERE/README.md` | 60 | 🚀 START HERE - Unified Donkey Betz Platform |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,7 +219,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-16 16:41 |
+| INDEX.md | docs | 363 | 2026-04-16 17:03 |
 | SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 16:00 |
 | SESSION_1090_DEMO_READINESS.md | handoffs | 122 | 2026-04-16 13:03 |
 | DEMO_HAPPY_PATH.md | playbooks | 158 | 2026-04-16 12:11 |
