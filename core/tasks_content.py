@@ -430,6 +430,12 @@ Each episode should have: title, synopsis, images, script, voiceover, and video.
             context['ab_experiment_id'] = ab_test_style['experiment_id']
             context['ab_variant_id'] = ab_test_style['variant_id']
 
+        # Session 1086 PR 3a: Priority router consult (gated, observer-only).
+        # See initiative 2dcb79d7. Fail-open; no throttling until PR 3b.
+        from core.services.priority.enforce import check_priority, log_decision
+        _pd = check_priority('AISeriesWorkflowAgent', task=task, trigger_source='autonomous_beat')
+        log_decision(_pd, 'AISeriesWorkflowAgent')
+
         result = agent.execute(
             task=task,
             context=context,
@@ -727,6 +733,10 @@ Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coor
             def _run_debate_agent(agent_cls, agent_name, task_text):
                 try:
                     agent = agent_cls(user=channel.user)
+                    # Session 1086 PR 3a: Priority router consult (gated, observer-only)
+                    from core.services.priority.enforce import check_priority, log_decision
+                    _pd = check_priority(agent_name, task=task_text, trigger_source='autonomous_beat')
+                    log_decision(_pd, agent_name)
                     result = agent.execute(
                         task=task_text,
                         context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
@@ -2224,6 +2234,10 @@ and {spider_data_total:,} collected data points. Use this as credibility context
 
         # Generate blog
         agent = ContentWriterAgent(user=None)
+        # Session 1086 PR 3a: Priority router consult (gated, observer-only)
+        from core.services.priority.enforce import check_priority, log_decision
+        _pd = check_priority('ContentWriterAgent', task=blog_task, trigger_source='autonomous_beat')
+        log_decision(_pd, 'ContentWriterAgent')
         result = agent.execute(
             task=blog_task,
             context={
@@ -2712,6 +2726,10 @@ def _impl_run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_h
         thought.save()
 
         # Run the thinking process
+        # Session 1086 PR 3a: Priority router consult (gated, observer-only)
+        from core.services.priority.enforce import check_priority, log_decision
+        _pd = check_priority('ThinkingAgent', task='thinking cycle', trigger_source='autonomous_beat')
+        log_decision(_pd, 'ThinkingAgent')
         thinking_result = agent.execute(lookback_hours=lookback_hours)
 
         # Session 782: Fix - AgentResult is a dataclass, not a dict
@@ -3297,6 +3315,10 @@ def _impl_score_episode_voice(episode_id: str):
 
         # Score with VoiceCriticAgent
         agent = get_voice_critic_agent()
+        # Session 1086 PR 3a: Priority router consult (gated, observer-only)
+        from core.services.priority.enforce import check_priority, log_decision
+        _pd = check_priority('VoiceCriticAgent', task=f'Score voice quality for: {episode.title}', trigger_source='autonomous_beat')
+        log_decision(_pd, 'VoiceCriticAgent')
         result = agent.execute(
             task=f"Score voice quality for: {episode.title}",
             context={

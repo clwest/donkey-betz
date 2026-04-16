@@ -740,16 +740,18 @@ class AgentRouter:
         pre_gathered_context: Optional[Dict[str, Any]] = None,
         create_execution_record: bool = True,
         existing_execution_record: Optional[Any] = None,
+        trigger_source: Optional[str] = None,
     ) -> AgentResult:
         """
         Route a task to the appropriate agent.
 
         This is the main entry point. It:
         1. Validates the agent name
-        2. Instantiates the agent
-        3. Gathers sci-fi and spider context (unless pre_gathered_context provided)
-        4. Executes the agent
-        5. Returns the result
+        2. Consults the priority router (Session 1086 PR 3a, behind env gate)
+        3. Instantiates the agent
+        4. Gathers sci-fi and spider context (unless pre_gathered_context provided)
+        5. Executes the agent
+        6. Returns the result
 
         Args:
             agent_name: Name of the agent to route to (e.g., "ImageAgent")
@@ -768,6 +770,14 @@ class AgentRouter:
                 status updates / completion tracking in place of a newly
                 created row. Only honored when
                 ``create_execution_record=False``.
+            trigger_source: Session 1086 PR 3a — identifies where this
+                dispatch came from. The only value with behavioral meaning
+                right now is ``"user_chat"``, which exempts the dispatch
+                from throttling unconditionally (user-triggered work is
+                never throttled). Other values (``"autonomous_beat"``,
+                ``"direct_dispatch"``, ``None``) go through the full
+                matching pipeline. Back-compat: default ``None`` means
+                existing callers work unchanged.
 
         Returns:
             AgentResult from the agent execution
@@ -892,6 +902,25 @@ class AgentRouter:
                 success=False,
                 message=f'{agent_name} disabled on Railway (Session 1032)',
             )
+
+        # Session 1086 PR 3a: Priority-aware routing (observer-only, gated).
+        # Behind ``PRIORITY_ROUTER_ENABLED`` env var (default FALSE). When the
+        # gate is OFF this is a no-op and returns None. When ON, consults the
+        # active priority set and returns a PriorityDecision. PR 3a logs the
+        # decision but does NOT throttle — PR 3b wires the semaphore.
+        #
+        # Fail-open everywhere: the entire priority path is wrapped in
+        # try/except inside check_priority() so a bug here can never break
+        # the dispatch path. See initiative 2dcb79d7 and the design review
+        # in conversation pa-ba134ae68c21 for the locked contract.
+        from core.services.priority.enforce import check_priority, log_decision
+        priority_decision = check_priority(
+            agent_name=agent_name,
+            task=task,
+            context=context,
+            trigger_source=trigger_source,
+        )
+        log_decision(priority_decision, agent_name)
 
         # Instantiate the agent
         # Session 1038: DynamicPersonaAgent needs persona_name kwarg
