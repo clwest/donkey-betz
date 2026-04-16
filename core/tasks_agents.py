@@ -4754,7 +4754,25 @@ agent_name: str,
 
         # Determine topic - use provided or fall back to default
         actual_topic = topic or config['default_topic']
+        is_default_topic = (topic is None or topic == '') and actual_topic == config['default_topic']
         task_description = config['task_template'].format(topic=actual_topic)
+
+        # Session 1088: Skip default-topic scheduled runs entirely.
+        # When no real task exists, the agent gets generic prompts like
+        # "Research current trends in AI and technology innovation" which
+        # produce low-value deliverables. Only dispatch if there's a real
+        # topic (from initiative, user request, or conversation).
+        if is_default_topic and trigger in ('schedule', 'warmup'):
+            logger.info(
+                f"⏭️ [DEFAULT-TOPIC] Skipping {agent_name}: no real task, "
+                f"would use default_topic='{actual_topic}'"
+            )
+            return {
+                'success': False,
+                'skipped': True,
+                'reason': 'default_topic_skip',
+                'detail': f'No real task for {agent_name}, skipped generic default topic',
+            }
 
         # Dynamically import and instantiate agent
         agent_class = _get_agent_class(agent_name)
