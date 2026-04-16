@@ -127,73 +127,110 @@ def _clean_deliverable_title(title: str, agent_name: str, content: str) -> str:
     """
     Generate a human-readable title from raw prompt text.
 
-    The problem: deliverable titles are often the raw task prompt, e.g.
-    "Research: Summarize this insight into 3 concrete next-steps (one
-    sentence each). Do NOT do web research or too..."
-
-    This function extracts a meaningful title from the content or
-    cleans up the prompt-based title.
+    Fixes multiple issues:
+    1. Double-prefixing: "Research: Research current trends..." → "Research: current trends..."
+    2. Raw prompts as titles: "Summarize this insight into 3 concrete next-steps..."
+    3. Instruction leakage: "Do NOT do web research or tool calls..."
+    4. Overly long titles
     """
+    import re
+
     if not title:
         return f"{agent_name} Output"
 
-    # Strip common agent prefixes that get prepended
-    prefixes_to_strip = [
+    # Map of agent type prefixes used by _save_to_deliverable across agents.
+    # Each agent does title=f"Prefix: {task[:80]}" — and when the task text
+    # already starts with a similar word, you get "Research: Research..."
+    AGENT_PREFIXES = [
         'Research: ', 'Trend Analysis: ', 'Thinking Analysis: ',
         'Competitor Analysis: ', 'Contrarian Analysis: ',
         'Creative Direction: ', 'CTO Analysis: ', 'COO Analysis: ',
         'Brand Strategy: ', 'Performance Analysis: ',
         'Market Intelligence: ', 'System Intelligence Report: ',
-        'Topic Mining: ', 'blog_post: ',
+        'Topic Mining: ', 'blog_post: ', 'Generated Audio: ',
+        'Generated Images: ', 'Generated Video: ', 'Generated Code: ',
+        'Code Review: ', 'SEO Optimization: ', 'Full-Stack: ',
+        'Brand Identity: ', 'Meeting Coordination: ',
+        'Sharp Action: ', 'Social Media Strategy: ',
+        'Debate Advocacy: ', 'Debate Skepticism: ',
+        'Podcast Moderation: ', 'Market Movement: ',
+        'Whale Watch: ', 'Customer Research: ',
     ]
+
     clean = title
-    for prefix in prefixes_to_strip:
+
+    # Step 1: Strip the agent type prefix
+    stripped_prefix = None
+    for prefix in AGENT_PREFIXES:
         if clean.startswith(prefix):
+            stripped_prefix = prefix.rstrip(': ')
             clean = clean[len(prefix):]
             break
 
-    # If the title looks like a raw prompt (contains instruction words),
-    # try to extract the actual topic
-    prompt_indicators = [
-        'summarize this', 'do not do web', 'do not do research',
-        'use the run_agent tool', 'one sentence each',
-        'provide a', 'identify the', 'analyze the',
-        'as a participant in a strategic meeting about',
-        'challenge assumptions and suggest',
-        'find trending topics and opportunities in',
+    # Step 2: Strip duplicate verb prefixes from remaining text.
+    # After stripping "Research: ", if clean starts with "Research current..."
+    # or "Analyze competitor...", strip the redundant verb.
+    verb_prefixes = [
+        'Research ', 'Analyze ', 'Summarize ', 'Compile ', 'Extract ',
+        'Pull ', 'Collect ', 'Scan ', 'Audit ', 'Run the ', 'Use the ',
+        'Produce ', 'Identify ', 'Lead ', 'Investigate ',
+        'This insight into ', 'This insight ',
     ]
-    is_prompt = any(ind in clean.lower() for ind in prompt_indicators)
+    for vp in verb_prefixes:
+        if clean.startswith(vp):
+            clean = clean[len(vp):]
+            break
 
-    if is_prompt:
-        # Try to extract topic from "Insight: X" pattern in the title
-        import re
-        insight_match = re.search(r'Insight:\s*(.{10,80}?)(?:\n|Detail:|$)', title)
-        if insight_match:
-            return f"{agent_name}: {insight_match.group(1).strip()}"
+    # Step 3: Strip instruction fragments that leak into titles
+    instruction_patterns = [
+        r'\s*\(one sentence each\)\.?',
+        r'\s*Do NOT do web research.*$',
+        r'\s*Do NOT do research.*$',
+        r'\s*— just synthesize\.?.*$',
+        r'\s*Focus on trends and audience.*$',
+        r'\s*for a general audience.*$',
+        r'\s*Use workspace \w[\w-]*',
+    ]
+    for pattern in instruction_patterns:
+        clean = re.sub(pattern, '', clean, flags=re.IGNORECASE)
 
-        # Try to extract from "about X" pattern
-        about_match = re.search(r'about\s+"?(.{10,80}?)"?\s*(?:\n|$)', clean)
-        if about_match:
-            return f"{agent_name}: {about_match.group(1).strip()}"
+    # Step 4: If there's an "Insight: X" embedded, extract it as the topic
+    # Check both title and content (insight data may be in either)
+    insight_match = re.search(r'Insight:\s*(.{10,80}?)(?:\n|Detail:|$)', title)
+    if not insight_match and content:
+        insight_match = re.search(r'Insight:\s*(.{10,80}?)(?:\n|Detail:|$)', content)
+    if insight_match:
+        clean = insight_match.group(1).strip()
 
-        # Try first heading from content
-        if content:
-            heading_match = re.search(r'^##?\s+(.{10,80})$', content, re.MULTILINE)
-            if heading_match:
-                heading = heading_match.group(1).strip()
-                if 'executive summary' not in heading.lower():
-                    return f"{agent_name}: {heading}"
+    # Step 5: Strip "about" preambles
+    about_match = re.match(r'^(?:about\s+)"?(.+)"?$', clean, re.IGNORECASE)
+    if about_match:
+        clean = about_match.group(1).strip()
 
-        # Truncate the prompt to something reasonable
-        if len(clean) > 80:
-            clean = clean[:77] + '...'
-        return f"{agent_name}: {clean}"
+    # Step 6: If still empty or very short after cleanup, try content heading
+    if len(clean.strip()) < 10 and content:
+        heading_match = re.search(r'^##?\s+(.{10,80})$', content, re.MULTILINE)
+        if heading_match:
+            heading = heading_match.group(1).strip()
+            if 'executive summary' not in heading.lower():
+                clean = heading
 
-    # Title is already reasonable — just ensure it's not too long
-    if len(title) > 120:
-        return title[:117] + '...'
+    # Step 7: Capitalize first letter, truncate
+    clean = clean.strip()
+    if clean and clean[0].islower():
+        clean = clean[0].upper() + clean[1:]
+    if len(clean) > 100:
+        clean = clean[:97] + '...'
 
-    return title
+    # Reconstruct with prefix — but NEVER double-prefix.
+    # If clean already starts with an agent name or prefix, don't add another.
+    display_prefix = stripped_prefix or agent_name
+    if clean:
+        # Idempotency: if clean already starts with the prefix, skip
+        if clean.startswith(f"{display_prefix}:") or clean.startswith(f"{agent_name}:"):
+            return clean[:120]
+        return f"{display_prefix}: {clean}"[:120]
+    return f"{agent_name} Output"
 
 
 def create_deliverable(
