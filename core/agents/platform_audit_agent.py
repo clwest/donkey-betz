@@ -326,6 +326,20 @@ Include counts, categorizations, and actionable findings."""
                     "content": json.dumps(tool_result, default=str)
                 })
 
+            # Session 1090: Tell GPT to synthesize tool results into prose,
+            # not echo raw JSON.  Without this instruction, gpt-5-mini
+            # returns the tool call arguments verbatim.
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Now synthesize all the tool results above into a clear, "
+                    "readable audit report in markdown. Use sections with headers. "
+                    "Do NOT output raw JSON — write prose with bullet points. "
+                    "Include: Executive Summary, Integration Health, Configuration "
+                    "Status, Database Health, Top Risks, and Green Checks."
+                ),
+            })
+
             # Get final response after tool calls
             final_response = client.chat.completions.create(
                 model="gpt-5-mini",
