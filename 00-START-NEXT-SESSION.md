@@ -17,10 +17,10 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-**Date:** April 16, 2026 (end of Session 1090)
-**Previous session handoff:** [`docs/handoffs/SESSION_1090_DEMO_READINESS.md`](docs/handoffs/SESSION_1090_DEMO_READINESS.md)
-**Previous session PA conversation (LOCAL):** `pa-697ab48e2ffc` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
-**Status:** Demo readiness validated. 12 PRs shipped. 5 agents producing real artifacts. Fix list created by agents for Session 1091.
+**Date:** April 16, 2026 (end of Session 1091)
+**Previous session handoff:** [`docs/handoffs/SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md`](docs/handoffs/SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md)
+**Previous session PA conversation (LOCAL):** `pa-3966231ba0d140e7` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
+**Status:** Both Session-1090 SLO breaches closed at the source. Workspace/Deliverable flow verification sprint complete. 7 PRs merged (#1963–#1969). Post-merge soak GREEN locally. Railway auto-deploy in flight.
 
 ---
 
@@ -65,50 +65,68 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-## SESSION 1091 — PRIORITIES
+## SESSION 1091 — What Was Accomplished (7 PRs: #1963–#1969)
 
-### 1. Work Through Agent-Generated Fix List (P0 first)
-The agents found 14 real issues. Fix list is in demo-testing workspace as a deliverable.
+| PR | Title | Impact |
+|----|-------|--------|
+| **#1963** | Router wall-clock + heartbeat hardening | Closes the direct-router-bypass class of timeouts. Shared `core/services/agent_timeouts.py`. Heartbeat thread survives 3 transient DB errors instead of dying on first. |
+| **#1964** | build_feature timeout + gpt-5.2 | All 6 prior 24h PA-tool failures were APITimeoutError at ~271s. Bumped read to 600s, migrated to gpt-5.2. |
+| **#1965** | Close orphan paths + workspace_id observability | Three smoking guns closed: deliverable_tool list now exposes workspace_id/workspace__name/is_orphan, clone_deliverable inherits workspace + initiative, factory routes fallback to per-user "Unassigned" sentinel bucket. **Orphan rate now zero by construction.** |
+| **#1966** | PA schema orphans param + version-hash fix | `orphans=true` filter now in PA tool schema. Schema-version hash now includes parameter shape (was tool-names only) — schema changes auto-reload. |
+| **#1967** | UI workspace badges + Unassigned triage marker | Deliverables cards render workspace badge (red/amber/blue per state). WorkspaceSelectorModal sorts Unassigned to top with amber styling + "Triage" label. REST serializer extended to match. |
+| **#1968** | Alias workspace__name → workspace_name | Cross-channel field-name parity (PA tool used Django ORM .values double-underscore key, REST used dict-style). One-line alias in `_sanitize_deliverable`, backwards compatible. |
+| **#1969** | Per-workspace stats breakdown + UI card | Adds `by_workspace`/`orphan_count`/`unassigned_count` to both REST stats and PA tool stats. New "Workspace Breakdown" card in DeliverablesTab. Distinct metrics for orphan (regression alarm) vs unassigned (informational). |
 
-**P0 — Fix Before Demo Recording:**
-- Agent timeout rate 1.9% vs 0.2% SLO — top offenders need timeout ladder
-- DEBUG=True on production — must be False for Railway
-- PlatformAuditAgent model/schema mismatch in audit queries
+### Key infrastructure built / changed:
+- **`core/services/agent_timeouts.py`** — single source of truth for per-agent timeouts. `tasks_agents` and `agent_router` both import `get_agent_timeout()`.
+- **Unassigned sentinel workspace** — `_get_or_create_unassigned_workspace_id(user)` lazy-creates per-user `ProjectWorkspace` named `"Unassigned"` with `allow_autonomous_writes=True`. Orphans stop being possible.
+- **`router_wall_clock` failure signature class** — replaces `TIMEOUT_WATCHDOG_CLEANUP_*` for direct router callers. If a watchdog signature appears on a fresh execution, that means a dispatch path is bypassing both Celery wrapper AND router — investigate.
+- **Schema-version hash now includes parameters** — adding/changing PA tool params correctly bumps `SCHEMA_VERSION` and triggers `_get_live_tool_schemas` to reload without process restart.
 
-**P1 — Fix This Week:**
-- 87 pending action items, all unowned
-- 155 ACTIVE / 83 TRIAGE / 11 COMPLETED initiatives (WIP sprawl)
-- 315 stale suggestions >7 days
-- 130 gates active 74 days
-- AudioAgent blocked (ElevenLabs quota)
-- OpportunityPipelineAgent circuit breaker tripped
-- 1 unapplied migration (content.0046)
+### Deliverables saved (Donkey Betz workspace):
+- `ac87f650` — Session 1091 Follow-ups (six grooming-ready tickets)
+- `b71f14a4` — Deploy Broadcast (cutoff timestamp + agent-context guidance)
+- `a4b00a82` — SOP v1: Executability Verification Checklist (5-test pass/fail)
+- `0f018ec8` — UI Visibility Audit (closed with full Sprint A → A.5 → B → soak verification)
 
-**P2 — Next Sprint:**
-- 3 missing API keys (DeepSeek, Replicate, TheOdds)
-- Feature flags unset
-- No standardized failure taxonomy
-- ResearchAgent volume amplifying dependency instability
+---
 
-### 2. Clean End-to-End Demo Run
-After P0 fixes, run the full 7-step demo sequence and verify all artifacts are clean.
+## SESSION 1092 — PRIORITIES
 
-### 3. Record the Video
-Demo runbook: `docs/playbooks/DEMO_HAPPY_PATH.md`
-Workspace: demo-testing (active)
-- A "Demo Autonomy Mode" allowlist (NEEDS BUILD)
+### 1. Verify Railway prod parity (post-soak)
+Run the SOP v1 checklist (deliverable `a4b00a82`) against Railway prod URLs. The 7 PRs merged staggered between 20:21 UTC and 21:36 UTC; Railway auto-deploy should have settled by next session start. Specifically confirm:
+- `deliverable_tool.list` returns `workspace_id`, `workspace_name`, `workspace__name`, `is_orphan` per row
+- `deliverable_tool.list(orphans=true)` accepts the new param and returns expected count
+- `deliverable_tool.stats` returns `by_workspace`, `workspace_orphans`, `workspace_unassigned`
+- 24h SLOs trending green as the pre-merge zombie executions age out
+- New `TIMEOUT_ROUTER_WALL_CLOCK_*` signature class registers (and `TIMEOUT_WATCHDOG_CLEANUP_*` rate drops to ~0)
 
-### 5. Patent Portfolio
-- Fresh audit done (post-governance), 3 deliverables saved under initiative
-- Top candidate: "Governed Autonomy Control Plane"
-- Governance layer patent candidate needs full write-up
-- Workspace: "Patent Portfolio — 2026 Refresh" (deactivated, data preserved)
+### 2. Verify Railway/prod migration parity (Session 1091 follow-up #1)
+Local has 41 unapplied migrations from 0292+ through 0331 (`outreach_draft`, `close_pack`, `engagement_event`, `meeting`, `kill_switch`, `code_runner`, `vip_invite`, `llmcalllog_trace_id`, etc.). Run `db_health_tool.migrations` on Railway, compare. If prod has the same backlog, file separate remediation. If prod is current, document the local-only nature in a "no fake on prod" policy note.
 
-### 6. Brand & Business Strategy
-Chris wants to think beyond sports betting. The platform is a "governed intelligence OS" — not a GPT wrapper, not a betting app. The business model discussion is open:
-- Intelligence-as-a-Service (fastest to revenue)
-- Governed Agent Platform (platform play — CrewAI killer)
-- Vertical SaaS (pick a market once we find pull)
+### 3. Address Session 1091 follow-ups (medium priority, not blocking)
+From deliverable `ac87f650`:
+- Audit LLM client construction for explicit request timeouts (fail fast at socket layer)
+- Decompose `build_feature` into per-component subtasks (~1 day)
+- Governor budget gate for FullStackDeveloperAgent (block monster-prompt patterns)
+- Build `tool_calls_tool.list_failures` PA tool (avoid Django shell round-trips)
+
+### 4. Carryforward from Session 1090 (still open)
+Most of these are addressed or queued via above; remaining real blockers:
+- **DEBUG=True on production** — must be False for Railway (carryover P0; verify in `.env` on Railway)
+- **AudioAgent blocked** (ElevenLabs quota exhausted) — needs quota refresh or alternate provider
+- **OpportunityPipelineAgent** circuit breaker tripped — needs investigation
+- **CodeGeneratorAgent** stale block (1051.6h) — autopilot keeps surfacing it; either add TTL or unblock
+- **content.0046 migration** unapplied (one of the 41 above)
+
+### 5. Demo recording (deferred from Session 1090)
+Demo runbook: `docs/playbooks/DEMO_HAPPY_PATH.md`. Workspace: `demo-testing`. Pre-conditions for Session 1091 are now satisfied (timeout SLO closing, build_feature failures resolved).
+
+### 6. Patent Portfolio (carryover, no progress this session)
+Fresh audit done (post-governance, pre-Session-1091). Top candidate: "Governed Autonomy Control Plane." Governance-layer patent needs full write-up. Workspace: "Patent Portfolio — 2026 Refresh" (deactivated, data preserved).
+
+### 7. Brand & Business Strategy (carryover, no progress this session)
+Platform is a "governed intelligence OS" — not GPT wrapper, not betting app. Business model open: Intelligence-as-a-Service (fastest revenue), Governed Agent Platform (CrewAI killer), Vertical SaaS (pick a market once pull is found).
 
 ---
 
