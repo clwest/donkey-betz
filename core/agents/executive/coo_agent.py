@@ -82,61 +82,50 @@ IMPORTANT - Response Guidelines:
 - For questions: Direct answer, then 3-5 bullet point recommendations.
 - For planning: Timeline + key milestones only. Skip obvious steps.
 - For risks: Top 3 risks with one-line mitigations each.
+- EVERY factual claim MUST be backed by tool data. Never invent stats.
 
 Your job: Operational planning, sprint planning, and risk analysis.
 READ-ONLY mode - analyze and plan, do NOT execute.
 
-Planning areas:
-- Roadmap analysis: Timeline and priorities
-- Sprint planning: Work breakdown, capacity
-- Risk assessment: Blockers, dependencies, risks
+You have REAL-TIME operations tools:
+- get_operations_snapshot: Full ops view (initiatives, action items, SLOs, agent health, failures, costs)
+- get_work_status: Real initiative progress, action items, blockers
+- get_risk_assessment: Real failure patterns, SLO breaches, circuit breakers, cost overruns
+
+CRITICAL RULE: Always call get_operations_snapshot FIRST before making any claims
+about operational state. Your analysis must cite the evidence returned by your tools.
+If a tool returns no data for a topic, say "no data available" — do NOT fabricate.
 
 You CANNOT execute changes - only analyze and recommend."""
 
+    # Session 1089: Tools backed by PlatformContextService — real data, not stubs.
+    # Initiative: "Agent Data Grounding: Facts Not Fiction" (111b5af1)
     tools = [
         {
             "type": "function",
             "function": {
-                "name": "analyze_roadmap",
-                "description": "Analyze project roadmap and provide recommendations",
+                "name": "get_operations_snapshot",
+                "description": (
+                    "Get a comprehensive, REAL-TIME operations snapshot with evidence. "
+                    "Returns: initiative progress, action items, SLO status, agent execution "
+                    "stats, failure patterns, LLM costs, spider health, governor state. "
+                    "ALL data is queried live from the database."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "scope": {
-                            "type": "string",
-                            "description": "Scope of analysis",
-                            "enum": ["project", "feature", "platform"]
-                        },
-                        "timeframe": {
-                            "type": "string",
-                            "description": "Timeframe to analyze",
-                            "enum": ["week", "month", "quarter"]
-                        }
-                    },
-                    "required": []
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "plan_sprint",
-                "description": "Plan a development sprint",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "sprint_name": {
-                            "type": "string",
-                            "description": "Name or number of the sprint"
-                        },
-                        "duration_days": {
+                        "hours_back": {
                             "type": "integer",
-                            "description": "Sprint duration in days",
-                            "default": 14
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
                         },
-                        "focus_area": {
-                            "type": "string",
-                            "description": "Main focus area for the sprint"
+                        "modules": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Which modules to include. Options: agent_exec, slo, governor, "
+                                "work, cost, spiders, content, failures. Default: all."
+                            )
                         }
                     },
                     "required": []
@@ -146,15 +135,39 @@ You CANNOT execute changes - only analyze and recommend."""
         {
             "type": "function",
             "function": {
-                "name": "assess_risks",
-                "description": "Identify and assess project risks",
+                "name": "get_work_status",
+                "description": (
+                    "Get real initiative and action item progress — active initiatives, "
+                    "blockers, recently completed work, pending action items."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "area": {
-                            "type": "string",
-                            "description": "Area to assess",
-                            "enum": ["technical", "timeline", "resources", "dependencies", "all"]
+                        "hours_back": {
+                            "type": "integer",
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_risk_assessment",
+                "description": (
+                    "Get real operational risks — SLO breaches, failure signatures, "
+                    "circuit breakers tripped, cost overruns, agent timeout patterns."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "hours_back": {
+                            "type": "integer",
+                            "description": "Time window in hours (default 24)",
+                            "default": 24
                         }
                     },
                     "required": []
@@ -370,101 +383,72 @@ You CANNOT execute changes - only analyze and recommend."""
         tool_name: str,
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute a COO tool call."""
-        if tool_name == "analyze_roadmap":
-            return self._analyze_roadmap(
-                scope=arguments.get('scope', 'project'),
-                timeframe=arguments.get('timeframe', 'month')
-            )
+        """Execute a COO tool call — all backed by PlatformContextService."""
+        from core.services.platform_context_service import PlatformContextService
+        pcs = PlatformContextService()
 
-        elif tool_name == "plan_sprint":
-            return self._plan_sprint(
-                sprint_name=arguments.get('sprint_name', 'Next Sprint'),
-                duration_days=arguments.get('duration_days', 14),
-                focus_area=arguments.get('focus_area', 'General')
-            )
-
-        elif tool_name == "assess_risks":
-            return self._assess_risks(
-                area=arguments.get('area', 'all')
-            )
+        if tool_name == "get_operations_snapshot":
+            return self._get_operations_snapshot(pcs, arguments)
+        elif tool_name == "get_work_status":
+            return self._get_work_status(pcs, arguments)
+        elif tool_name == "get_risk_assessment":
+            return self._get_risk_assessment(pcs, arguments)
 
         return super()._execute_tool_call(tool_name, arguments)
 
-    def _analyze_roadmap(self, scope: str, timeframe: str) -> Dict[str, Any]:
-        """Analyze project roadmap."""
-        logger.info(f"Analyzing roadmap: scope={scope}, timeframe={timeframe}")
+    def _get_operations_snapshot(self, pcs, arguments: Dict) -> Dict:
+        """Full operations snapshot — real data from every subsystem."""
+        hours_back = arguments.get('hours_back', 24)
+        modules = arguments.get('modules')
+        logger.info(f"COOAgent: operations snapshot ({hours_back}h)")
 
-        analysis = {
-            'scope': scope,
-            'timeframe': timeframe,
-            'priorities': [
-                {'priority': 1, 'item': 'Complete current phase', 'status': 'in_progress'},
-                {'priority': 2, 'item': 'Testing and validation', 'status': 'pending'},
-                {'priority': 3, 'item': 'Documentation updates', 'status': 'pending'}
-            ],
-            'recommendations': [
-                'Focus on completing in-progress work',
-                'Plan for testing phase',
-                'Schedule documentation updates'
-            ]
+        result = pcs.snapshot(hours_back=hours_back, modules=modules)
+        return {
+            'success': True,
+            'snapshot': result['facts'],
+            'evidence_count': len(result['evidence']),
+            'evidence': result['evidence'],
+            'warnings': result['warnings'],
         }
+
+    def _get_work_status(self, pcs, arguments: Dict) -> Dict:
+        """Initiative and action item progress — real data."""
+        hours_back = arguments.get('hours_back', 24)
+        logger.info(f"COOAgent: work status ({hours_back}h)")
+
+        result = pcs.work_progress(hours_back=hours_back)
+        return {
+            'success': True,
+            'work': result['facts'],
+            'evidence': result['evidence'],
+        }
+
+    def _get_risk_assessment(self, pcs, arguments: Dict) -> Dict:
+        """Operational risk assessment from real failure/SLO/governor data."""
+        hours_back = arguments.get('hours_back', 24)
+        logger.info(f"COOAgent: risk assessment ({hours_back}h)")
+
+        # Combine failure signatures + SLO status + governor state for risk view
+        failures = pcs.failure_signatures(hours_back=hours_back)
+        slos = pcs.slo_status(hours_back=hours_back)
+        governor = pcs.governor_status()
+        costs = pcs.cost_metrics(hours_back=hours_back)
 
         return {
             'success': True,
-            'analysis': analysis
-        }
-
-    def _plan_sprint(
-        self,
-        sprint_name: str,
-        duration_days: int,
-        focus_area: str
-    ) -> Dict[str, Any]:
-        """Plan a development sprint."""
-        logger.info(f"Planning sprint: {sprint_name}")
-
-        plan = {
-            'sprint_name': sprint_name,
-            'duration_days': duration_days,
-            'focus_area': focus_area,
-            'suggested_tasks': [
-                {'task': f'Complete {focus_area} implementation', 'estimate': 'medium'},
-                {'task': f'Write tests for {focus_area}', 'estimate': 'small'},
-                {'task': 'Code review and refinement', 'estimate': 'small'},
-                {'task': 'Documentation', 'estimate': 'small'}
-            ],
-            'capacity_notes': 'Adjust based on team availability',
-            'notes': 'This is a read-only plan - no execution'
-        }
-
-        return {
-            'success': True,
-            'plan': plan
-        }
-
-    def _assess_risks(self, area: str) -> Dict[str, Any]:
-        """Assess project risks."""
-        logger.info(f"Assessing risks in area: {area}")
-
-        risks = {
-            'area': area,
-            'identified_risks': [
-                {'risk': 'Scope creep', 'severity': 'medium', 'mitigation': 'Clear requirements definition'},
-                {'risk': 'Technical debt', 'severity': 'low', 'mitigation': 'Regular refactoring'},
-                {'risk': 'Resource constraints', 'severity': 'low', 'mitigation': 'Realistic planning'}
-            ],
-            'overall_risk_level': 'low',
-            'recommendations': [
-                'Continue monitoring progress',
-                'Address technical debt incrementally',
-                'Maintain clear communication'
-            ]
-        }
-
-        return {
-            'success': True,
-            'assessment': risks
+            'risks': {
+                'slo_breaches': slos['facts'].get('breach_details', []),
+                'failure_signatures': failures['facts'],
+                'circuit_breakers_tripped': governor['facts'].get('circuit_breakers_tripped', []),
+                'cost_24h_usd': costs['facts'].get('total_cost_usd', 0),
+                'governor_enabled': governor['facts'].get('governor_enabled', False),
+            },
+            'evidence': (
+                failures.get('evidence', []) +
+                slos.get('evidence', []) +
+                governor.get('evidence', []) +
+                costs.get('evidence', [])
+            ),
         }
 
     def _validate_task(self, task: str) -> bool:
