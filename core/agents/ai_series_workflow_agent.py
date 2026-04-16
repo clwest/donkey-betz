@@ -36,6 +36,7 @@ Usage:
 import logging
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Dict, Any, List, Optional
 from decimal import Decimal
 
@@ -393,6 +394,48 @@ Available agents to delegate to:
             self._router = AgentRouter(user=self.user)
         return self._router
 
+    # Session 1090: Per-agent timeout caps (seconds).  Agents that hit external
+    # APIs (Stability AI, ElevenLabs, Runway) are capped aggressively so a
+    # blocked/hung provider doesn't zombie the whole workflow.
+    _AGENT_TIMEOUT: Dict[str, int] = {
+        'AudioAgent': 60,
+        'VideoAgent': 120,
+        'ImageAgent': 90,
+        'ResearchAgent': 90,
+    }
+    _DEFAULT_AGENT_TIMEOUT = 120  # seconds
+
+    def _route_with_timeout(
+        self,
+        agent_name: str,
+        task: str,
+        context: Dict[str, Any],
+    ) -> 'AgentResult':
+        """Route to an agent with a per-agent timeout cap.
+
+        Prevents any single downstream call from zombieing the workflow.
+        """
+        timeout = self._AGENT_TIMEOUT.get(agent_name, self._DEFAULT_AGENT_TIMEOUT)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                self.router.route,
+                agent_name=agent_name,
+                task=task,
+                context=context,
+            )
+            try:
+                return future.result(timeout=timeout)
+            except FuturesTimeoutError:
+                logger.error(
+                    "AISeriesWorkflowAgent: %s timed out after %ds — skipping",
+                    agent_name, timeout,
+                )
+                return AgentResult(
+                    success=False,
+                    error=f"{agent_name} timed out after {timeout}s",
+                    agent_name=agent_name,
+                )
+
     def _call_agent_with_retry(
         self,
         agent_name: str,
@@ -419,10 +462,10 @@ Available agents to delegate to:
         for attempt in range(1, max_retries + 1):
             logger.info(f"Calling {agent_name} (attempt {attempt}/{max_retries})")
 
-            result = self.router.route(
+            result = self._route_with_timeout(
                 agent_name=agent_name,
                 task=task,
-                context=context
+                context=context,
             )
 
             if result.success:
@@ -562,8 +605,19 @@ Start by researching the topic to understand trends and audience preferences.
                 conversation_history = []
                 max_iterations = 10  # More iterations for series workflow
                 workflow_results = []
+                # Session 1090: Overall workflow timeout — prevents zombie executions
+                workflow_deadline = time.time() + 300  # 5 minutes max
 
                 for iteration in range(max_iterations):
+                    # Session 1090: Bail if we've exceeded the overall deadline
+                    if time.time() > workflow_deadline:
+                        logger.warning(
+                            "AISeriesWorkflowAgent: hit 5-minute workflow deadline "
+                            "at iteration %d — finalizing with %d episodes",
+                            iteration, len(self._episode_results),
+                        )
+                        break
+
                     # Add previous results context
                     if workflow_results:
                         context_str = "\n\nPrevious Steps:\n"
@@ -831,10 +885,10 @@ Start by researching the topic to understand trends and audience preferences.
         subtask_context['characters'] = self._characters
 
         try:
-            result = self.router.route(
+            result = self._route_with_timeout(
                 agent_name=agent_name,
                 task=subtask,
-                context=subtask_context
+                context=subtask_context,
             )
 
             return {
@@ -1253,12 +1307,12 @@ Start by researching the topic to understand trends and audience preferences.
             voice_text = script[:500] if len(script) > 500 else script
             voice_task = f"Generate voiceover for episode '{title}': {voice_text}"
 
-            voice_result = self.router.route(
+            voice_result = self._route_with_timeout(
                 agent_name="AudioAgent",
                 task=voice_task,
                 context={
                     'voice_style': self._characters[0].get('voice_style', 'friendly') if self._characters else 'friendly'
-                }
+                },
             )
 
             if voice_result.success:
@@ -1290,13 +1344,13 @@ Start by researching the topic to understand trends and audience preferences.
 
             if image_id:
                 video_task = f"Animate the scene for episode '{title}' - create a 6 second video"
-                video_result = self.router.route(
+                video_result = self._route_with_timeout(
                     agent_name="VideoAgent",
                     task=video_task,
                     context={
                         'image_id': str(image_id),
                         'duration': 6
-                    }
+                    },
                 )
 
                 if video_result.success:

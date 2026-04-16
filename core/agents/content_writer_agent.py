@@ -861,18 +861,22 @@ For this {content_type}, ensure:
 
                 # Validate content type
                 if content_type not in CONTENT_TYPES:
+                    execution_time = int((time.time() - start_time) * 1000)
                     return AgentResult(
                         success=False,
                         error=f"Unknown content type: {content_type}. Available: {list(CONTENT_TYPES.keys())}",
-                        agent_name=self.name
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
                     )
 
                 # Validate we have research
                 if not research and not task:
+                    execution_time = int((time.time() - start_time) * 1000)
                     return AgentResult(
                         success=False,
                         error="No research or task provided. Need content to transform.",
-                        agent_name=self.name
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
                     )
 
                 self.record_decision(
@@ -946,10 +950,12 @@ For this {content_type}, ensure:
                 )
 
                 if not generated_content:
+                    execution_time = int((time.time() - start_time) * 1000)
                     return AgentResult(
                         success=False,
-                        error="Failed to generate content",
-                        agent_name=self.name
+                        error="LLM returned empty content (no exception raised)",
+                        agent_name=self.name,
+                        execution_time_ms=execution_time
                     )
 
                 execution_time = int((time.time() - start_time) * 1000)
@@ -1994,7 +2000,7 @@ CITATION RULES:
 
         except Exception as e:
             logger.error(f"GPT content generation error: {e}", exc_info=True)
-            return None
+            raise  # Let execute()'s outer handler capture timing + real error
 
     def _extract_full_text(self, content_data: Dict[str, Any], content_type: str) -> str:
         """Extract full text from structured content."""
