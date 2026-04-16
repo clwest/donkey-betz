@@ -97,53 +97,39 @@ Open these tabs:
 
 ---
 
-## Step 5: Executive Brief (ContentWriterAgent, 45-75s)
+## Step 5: Platform Status Synthesis (SystemIntelligenceAgent, 30-60s)
 
-**What you say:** "Now the writer agent synthesizes everything — audit, CTO analysis, COO priorities — into a publish-ready executive brief. It's creating new content from real data, not filling a template."
+**What you say:** "SystemIntelligenceAgent queries the platform's actual attention items, health state, and open issues — then produces a concise status brief. This is the agent that already runs hourly to monitor platform health."
 
 **Prompt:**
-> Write a concise Executive Brief synthesizing our platform's current state. Use the Platform Audit findings, CTO technical analysis, and COO execution priorities as source material. Sections: Platform State, Key Risks, Recommended Actions, Next 24 Hours. Under 600 words, professional tone.
+> Generate a platform status brief: what needs attention right now, top risks, and recommended actions. Focus on agent reliability, governance state, and operational health.
 
-**Context:** `content_type: article, tone: professional, word_count: 600, topic: Platform Executive Brief`
-
-**What it proves:** Multi-source synthesis — the writer creates a coherent artifact from real agent outputs, grounded in actual telemetry.
+**What it proves:** The platform monitors itself continuously. This isn't a report template — it queries live system state.
 
 ---
 
-## Step 6: Polish & QA (EditorAgent, 30-45s)
+## Step 6: Blog Post (ContentWriterAgent, 2-3min)
 
-**What you say:** "And now the editor agent reviews the generated brief against quality standards — checking hooks, structure, evidence quality, and audience alignment. This is the QA gate before anything gets published."
-
-**Prompt:**
-> Review and polish the Executive Brief for publishing readiness. Check: hook strength, structure clarity, evidence quality, audience alignment for CTOs.
-
-**What it proves:** Separation of concerns — writer creates, editor gates. Nothing ships without quality review.
-
----
-
-## Step 7: Blog Post (ContentWriterAgent, 45-75s)
-
-**What you say:** "And because this is also a content platform, we can turn operational intelligence into publishable thought leadership."
+**What you say:** "And because this is also a content platform, we can turn operational intelligence into publishable thought leadership. The writer agent uses the workspace deliverables as its source material."
 
 **Prompt:**
 > Write a blog post titled "Why Our AI Platform Audits Itself" based on today's platform audit and CTO/COO analyses. Target audience: CTOs evaluating AI platforms. 800 words, professional tone.
 
-**What it proves:** The full loop — platform intelligence becomes published content, grounded in real data.
+**What it proves:** The full loop — platform intelligence becomes published content, grounded in real data from real agents.
 
 ---
 
-## Step 8: Final "Ship" Moment (10-20s)
+## Step 7: Final "Ship" Moment (10-20s)
 
 **Action:** Open Deliverables in the demo-testing workspace and show all artifacts:
 1. Platform Audit (integration health, risks, green checks)
 2. CTO Analysis (failure signatures, reliability recommendations)
 3. COO Analysis (execution priorities, 24-hour timeline)
 4. Governance Decision (approved, logged)
-5. Executive Brief (synthesized from all 3 analyses)
-6. Editor QA review (quality gate verdict)
-7. Blog Post (publishable thought leadership from real data)
+5. System Status Brief (live platform health synthesis)
+6. Blog Post (publishable thought leadership from real data)
 
-**What you say:** "In about 5 minutes: self-audit, multi-role analysis, governed decision, synthesized brief, quality gate, and published content. Seven agents, seven artifacts, all from real data. All governed. That's a platform that knows itself."
+**What you say:** "In about 5 minutes: self-audit, multi-role analysis, governed decision, live status synthesis, and published content. Six agents, six artifacts, all from real data. All governed. That's a platform that knows itself."
 
 ---
 
