@@ -444,6 +444,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Session 1080: Agent control tool — block/unblock/list agents (DB-backed)
         self.register("agent_control_tool", self._handle_agent_control)
 
+        # Session 1086: Active priority tool — priority-aware routing (initiative 2dcb79d7)
+        self.register("active_priority_tool", self._handle_active_priority)
+
         # Session 1080: Ops Autopilot tool — status/history/run/config
         self.register("autopilot_tool", self._handle_autopilot)
         self.register("ops_digest_tool", self._handle_ops_digest)
