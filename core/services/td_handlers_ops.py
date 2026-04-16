@@ -852,6 +852,224 @@ class OpsHandlersMixin:
                 f"Valid: list, block, unblock, audit_log"
             )
 
+    # ── Session 1086: Active Priority Tool (initiative 2dcb79d7) ────────────
+
+    # TTL bounds locked in the design review: min 10min (anti-flap),
+    # max 7 days (anti-zombie), default 24h.
+    _PRIORITY_TTL_MIN_HOURS = 10 / 60
+    _PRIORITY_TTL_MAX_HOURS = 7 * 24
+    _PRIORITY_TTL_DEFAULT_HOURS = 24
+
+    def _clamp_priority_ttl(self, ttl_hours) -> float:
+        """Clamp TTL to [10min, 7d]; coerce None/invalid to default 24h."""
+        try:
+            ttl = float(ttl_hours) if ttl_hours is not None else self._PRIORITY_TTL_DEFAULT_HOURS
+        except (TypeError, ValueError):
+            ttl = self._PRIORITY_TTL_DEFAULT_HOURS
+        return max(self._PRIORITY_TTL_MIN_HOURS, min(self._PRIORITY_TTL_MAX_HOURS, ttl))
+
+    def _serialize_priority(self, p) -> Dict[str, Any]:
+        """Convert an ActivePriority ORM row to a JSON-friendly dict."""
+        return {
+            'id': str(p.id),
+            'name': p.name,
+            'description': p.description,
+            'tags': list(p.tags or []),
+            'agent_whitelist': list(p.agent_whitelist or []),
+            'agent_blacklist': list(p.agent_blacklist or []),
+            'enable_keyword_match': p.enable_keyword_match,
+            'priority_rank': p.priority_rank,
+            'owner': p.owner,
+            'status': p.status,
+            'activated_at': p.activated_at.isoformat() if p.activated_at else None,
+            'expires_at': p.expires_at.isoformat() if p.expires_at else None,
+            'is_expired': p.is_expired,
+            'updated_at': p.updated_at.isoformat() if p.updated_at else None,
+        }
+
+    def _handle_active_priority(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Session 1086 PR 1: Rigby's priority-aware routing — PA tool surface.
+
+        PR 1 delivers the schema + tool only; the PriorityRouter matching
+        logic ships in PR 2 and agent_router.route() integration + the
+        semaphore land in PR 3. test_match is a deliberate stub until PR 2
+        provides the actual match function.
+
+        See initiative 2dcb79d7-6f2b-4e67-a366-a54e96d7870f and the Session
+        1086 design review conversation for the full contract.
+        """
+        from core.models_unified_system import ActivePriority
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = payload.get('action', 'list')
+
+        if action == 'list':
+            # Active-only view. Triggers the TTL auto-expire side effect via
+            # get_active_priorities() so stale rows don't linger visible.
+            active_dicts = ActivePriority.get_active_priorities()
+            # Also fetch full rows for richer display
+            active_rows = list(
+                ActivePriority.objects
+                .filter(status=ActivePriority.STATUS_ACTIVE)
+                .order_by('priority_rank', '-activated_at')
+            )
+            return {
+                'action': 'list',
+                'count': len(active_rows),
+                'priorities': [self._serialize_priority(p) for p in active_rows],
+                'matching_cache_summary': active_dicts,  # shape PR 2 will consume
+            }
+
+        elif action == 'set':
+            name = (payload.get('name') or '').strip()
+            if not name:
+                raise ValueError("name required for 'set' action")
+
+            ttl_hours = self._clamp_priority_ttl(payload.get('ttl_hours'))
+            expires_at = timezone.now() + timedelta(hours=ttl_hours)
+
+            # Sanitize list inputs — accept list[str], drop anything else
+            def _as_str_list(val):
+                if not isinstance(val, list):
+                    return []
+                return [str(x) for x in val if isinstance(x, (str, int, float))]
+
+            priority = ActivePriority.objects.create(
+                name=name[:120],
+                description=str(payload.get('description', ''))[:10_000],
+                tags=_as_str_list(payload.get('tags')),
+                agent_whitelist=_as_str_list(payload.get('agent_whitelist')),
+                agent_blacklist=_as_str_list(payload.get('agent_blacklist')),
+                enable_keyword_match=bool(payload.get('enable_keyword_match', False)),
+                priority_rank=int(payload.get('priority_rank', 100)),
+                owner=str(payload.get('owner', 'rigby'))[:60],
+                status=ActivePriority.STATUS_ACTIVE,
+                expires_at=expires_at,
+            )
+            return {
+                'action': 'set',
+                'success': True,
+                'ttl_hours_applied': ttl_hours,
+                'priority': self._serialize_priority(priority),
+            }
+
+        elif action == 'update':
+            priority_id = payload.get('priority_id')
+            if not priority_id:
+                raise ValueError("priority_id required for 'update' action")
+            try:
+                priority = ActivePriority.objects.get(id=priority_id)
+            except ActivePriority.DoesNotExist:
+                return {
+                    'action': 'update',
+                    'success': False,
+                    'error': f'priority_id {priority_id} not found',
+                }
+
+            # Only touch fields present in payload — allows partial updates
+            updated_fields = []
+            if 'name' in payload:
+                priority.name = str(payload['name'])[:120]
+                updated_fields.append('name')
+            if 'description' in payload:
+                priority.description = str(payload['description'])[:10_000]
+                updated_fields.append('description')
+            if 'tags' in payload and isinstance(payload['tags'], list):
+                priority.tags = [str(x) for x in payload['tags']]
+                updated_fields.append('tags')
+            if 'agent_whitelist' in payload and isinstance(payload['agent_whitelist'], list):
+                priority.agent_whitelist = [str(x) for x in payload['agent_whitelist']]
+                updated_fields.append('agent_whitelist')
+            if 'agent_blacklist' in payload and isinstance(payload['agent_blacklist'], list):
+                priority.agent_blacklist = [str(x) for x in payload['agent_blacklist']]
+                updated_fields.append('agent_blacklist')
+            if 'enable_keyword_match' in payload:
+                priority.enable_keyword_match = bool(payload['enable_keyword_match'])
+                updated_fields.append('enable_keyword_match')
+            if 'priority_rank' in payload:
+                priority.priority_rank = int(payload['priority_rank'])
+                updated_fields.append('priority_rank')
+            if 'owner' in payload:
+                priority.owner = str(payload['owner'])[:60]
+                updated_fields.append('owner')
+            if 'ttl_hours' in payload:
+                ttl_hours = self._clamp_priority_ttl(payload['ttl_hours'])
+                priority.expires_at = timezone.now() + timedelta(hours=ttl_hours)
+                updated_fields.append('expires_at')
+
+            if updated_fields:
+                priority.save(update_fields=updated_fields + ['updated_at'])
+
+            return {
+                'action': 'update',
+                'success': True,
+                'updated_fields': updated_fields,
+                'priority': self._serialize_priority(priority),
+            }
+
+        elif action == 'archive':
+            priority_id = payload.get('priority_id')
+            if not priority_id:
+                raise ValueError("priority_id required for 'archive' action")
+            updated = ActivePriority.objects.filter(
+                id=priority_id
+            ).update(status=ActivePriority.STATUS_ARCHIVED)
+            return {
+                'action': 'archive',
+                'priority_id': str(priority_id),
+                'success': updated > 0,
+                'was_found': updated > 0,
+            }
+
+        elif action == 'test_match':
+            # Stub until PR 2 delivers PriorityRouter.check(). Intentionally
+            # returns enough structure that PA chat consumers can already
+            # parse the response shape — PR 2 fills in the decision fields.
+            agent_name = payload.get('agent_name', '')
+            task = payload.get('task', '')
+            return {
+                'action': 'test_match',
+                'stub': True,
+                'note': (
+                    'test_match is stubbed in PR 1. PR 2 will wire this to '
+                    'PriorityRouter.check(agent_name, task, context, trigger_source) '
+                    'and return {matched, priority_name, throttle_class, '
+                    'recommended_queue, matched_via}.'
+                ),
+                'probe': {
+                    'agent_name': agent_name,
+                    'task': task[:200] if task else '',
+                },
+                'active_priorities_count': len(ActivePriority.get_active_priorities()),
+            }
+
+        elif action == 'history':
+            limit = min(int(payload.get('limit', 30) or 30), 100)
+            rows = list(
+                ActivePriority.objects.all()
+                .order_by('-updated_at')[:limit]
+            )
+            return {
+                'action': 'history',
+                'count': len(rows),
+                'limit': limit,
+                'priorities': [self._serialize_priority(p) for p in rows],
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. "
+                f"Valid: list, set, update, archive, test_match, history"
+            )
+
     # ── Session 1080: Ops Autopilot Tool ──────────────────────────────────
 
     def _handle_autopilot(

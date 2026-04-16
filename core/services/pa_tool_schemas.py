@@ -2178,6 +2178,114 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1086: Active Priority Tool (initiative 2dcb79d7) ──────────────
+    {
+        "type": "function",
+        "name": "active_priority_tool",
+        "description": (
+            "Manage Rigby's active priorities for priority-aware routing. "
+            "Each active priority represents a current focus (e.g. 'Platform "
+            "hardening', 'Newsletter Issue 2 ship'); beat tasks and autonomous "
+            "dispatches will check alignment before running (PR 3). Use 'list' "
+            "to see current priorities. Use 'set' to create a new priority "
+            "with tags/whitelist/TTL. Use 'update' to edit an existing one. "
+            "Use 'archive' to soft-delete (kept for audit). Use 'test_match' "
+            "to preview whether a given agent would match (stubbed until PR 2). "
+            "Use 'history' for the full audit list including archived/expired. "
+            "TTL bounds enforced here: min 10min (anti-flap), max 7 days "
+            "(anti-zombie), default 24h."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "set", "update", "archive", "test_match", "history"],
+                    "description": (
+                        "list: show currently-active priorities (auto-expires TTL). "
+                        "set: create a new priority (requires name; optional tags, "
+                        "agent_whitelist, agent_blacklist, description, priority_rank, "
+                        "ttl_hours, enable_keyword_match, owner). "
+                        "update: edit an existing priority (requires priority_id; "
+                        "accepts any of the set fields). "
+                        "archive: soft-delete a priority (requires priority_id). "
+                        "test_match: preview match decision for (agent_name, task) — "
+                        "stubbed until PR 2 delivers PriorityRouter. "
+                        "history: full list including archived/expired (optional limit)."
+                    ),
+                },
+                "priority_id": {
+                    "type": "string",
+                    "description": "UUID of the priority row. Required for update/archive.",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Short human label (<=120 chars). Required for set.",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Free-form intent. What is this priority trying to accomplish?",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "List of tag strings matched against derived agent tags. "
+                        "Primary automatic matching mechanism. Example: "
+                        "['platform','ops','routing']."
+                    ),
+                },
+                "agent_whitelist": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Agent names that ALWAYS match (highest precedence).",
+                },
+                "agent_blacklist": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Agent names that NEVER match this priority.",
+                },
+                "enable_keyword_match": {
+                    "type": "boolean",
+                    "description": (
+                        "Opt-in substring keyword match. Off by default — "
+                        "keyword matching creates false positives, only enable "
+                        "when the tag list is explicitly narrow."
+                    ),
+                },
+                "priority_rank": {
+                    "type": "integer",
+                    "description": "Lower = higher priority. Default 100.",
+                },
+                "owner": {
+                    "type": "string",
+                    "description": "Who owns this priority ('rigby', 'chris', 'system'). Default 'rigby'.",
+                },
+                "ttl_hours": {
+                    "type": "number",
+                    "description": (
+                        "Hours until auto-expire. Default 24. Clamped to "
+                        "[10/60, 7*24] per design contract. Accepts floats "
+                        "(e.g. 0.5 for 30min)."
+                    ),
+                },
+                "agent_name": {
+                    "type": "string",
+                    "description": "For test_match: the agent to preview.",
+                },
+                "task": {
+                    "type": "string",
+                    "description": "For test_match: the task description to preview.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "For history: max entries to return (default 30, max 100).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1080: Ops Autopilot ──────────────────────────────────────────
     {
         "type": "function",
@@ -4023,6 +4131,7 @@ TOOL_ENRICHMENT_MAP = {
     'remember_tool': [],
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
     'agent_control_tool': [],
+    'active_priority_tool': [],
     'autopilot_tool': [],
     'ops_digest_tool': ['platform_briefing'],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
@@ -4124,6 +4233,7 @@ TOOL_TO_INTENT_MAP = {
     'remember_tool': 'memory',
     'ops_tool': 'system_overview',
     'agent_control_tool': 'system_overview',
+    'active_priority_tool': 'system_overview',
     'autopilot_tool': 'system_overview',
     'ops_digest_tool': 'system_overview',
     'work_tool': 'initiatives',
