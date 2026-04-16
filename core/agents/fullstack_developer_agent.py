@@ -592,15 +592,17 @@ Format each file with:
 content
 ```"""
 
-        # Session 1089: gpt-5-mini with 10k completion tokens for full-stack
-        # code generation regularly exceeds the factory's 90s read timeout.
-        # Use per-request timeout override (300s) to avoid SLO-impacting
-        # ToolCallRecord failures while keeping the global factory default tight.
+        # Session 1091: previous 300s read timeout was breaching for autonomous
+        # multi-component prompts (all 6 PA-tool failures in the prior 24h were
+        # APITimeoutError at ~271s — see ToolCallRecord). Raised to 600s. Also
+        # migrated model from gpt-5-mini to gpt-5.2 to match the platform-wide
+        # default established in PR #1961 (PlatformAuditAgent fix). Decomposing
+        # build_feature into per-component subtasks is tracked as a follow-up.
         import httpx
         response = client.with_options(
-            timeout=httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=60.0)
+            timeout=httpx.Timeout(connect=20.0, read=600.0, write=60.0, pool=60.0)
         ).chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are a senior full-stack developer. Generate complete, production-ready code."},
                 {"role": "user", "content": prompt}
