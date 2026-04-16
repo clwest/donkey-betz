@@ -17,10 +17,10 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-**Date:** April 16, 2026 (end of Session 1089)
-**Previous session handoff:** [`docs/handoffs/SESSION_1089_GOVERNOR_AND_GROUNDING.md`](docs/handoffs/SESSION_1089_GOVERNOR_AND_GROUNDING.md)
-**Previous session PA conversation (LOCAL):** `pa-cfc4198046a3` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
-**Status:** Governor live, agent grounding in progress, demo video prep underway.
+**Date:** April 16, 2026 (end of Session 1090)
+**Previous session handoff:** [`docs/handoffs/SESSION_1090_DEMO_READINESS.md`](docs/handoffs/SESSION_1090_DEMO_READINESS.md)
+**Previous session PA conversation (LOCAL):** `pa-697ab48e2ffc` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
+**Status:** Demo readiness validated. 12 PRs shipped. 5 agents producing real artifacts. Fix list created by agents for Session 1091.
 
 ---
 
@@ -43,26 +43,59 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-## SESSION 1090 — PRIORITIES
+## SESSION 1090 — What Was Accomplished (12 PRs: #1946–#1961)
 
-### 1. Fix ContentWriterAgent (64% success rate) — CRITICAL FOR VIDEO
-The content pipeline is the most visible product feature. 4 of 11 runs failed. Common causes: missing topic, citation enforcement failure, model timeouts. Fix: enforce "must have sources or claims pack" — otherwise generate draft-only (not counted as failure).
+| PR | Title | Impact |
+|----|-------|--------|
+| **#1946** | ContentWriter error propagation + AISeriesWorkflow timeout caps | Real errors visible, zombie executions eliminated |
+| **#1947** | Demo Autonomy Mode + EditorAgent brief fallback | 15-agent allowlist, 30/hr cap |
+| **#1948** | Demo mode banner + runbook + API | UI banner, `/api/system/demo-status/` |
+| **#1949** | PA payload context promotion | workspace_id/content_type/tone flow to agents |
+| **#1950-#1956** | EditorAgent + ContentWriter workspace plumbing (7 PRs) | Workspace content injection, active workspace fallback, blog exclusion |
+| **#1951** | MetricsActionTrigger governor gate + Redis cooldown | Stopped hourly SystemIntelligence spam |
+| **#1957** | Demo runbook v2 — correct agent roles | SystemIntelligenceAgent for status |
+| **#1958-#1961** | PlatformAuditAgent output quality (4 PRs) | Prose output, gpt-5.2, fallback formatter |
 
-### 2. Fix AISeriesWorkflowAgent (43% success rate)
-3 of 7 runs failed. Inspect failure signatures in AgentExecution, add input validation guards. If inputs are missing, skip gracefully with reason instead of failing.
+### Key accomplishments:
+- **Demo Autonomy Mode** — `DEMO_MODE=true` gates all agents to 15-item allowlist
+- **"A Platform That Knows Itself"** narrative validated — 5 agents producing real ops artifacts
+- **Agent role corrections** — right agent for each job (Writer writes, Editor QAs, SystemIntel synthesizes)
+- **14 real issues found by agents** — fix list created for Session 1091
+- **Full dry run passed** — PlatformAudit(20s) + CTO(32s) + COO(35s) + SystemIntel(61s) + ContentWriter(173s)
 
-### 3. Wire EditorAgent + PlatformAuditAgent (never executed)
-Both are high-value for the demo narrative but have never run. Add at least one intentional trigger each so they have real artifacts before filming.
+---
 
-### 4. Demo Video Prep — "Cross-Domain Incident Room"
-Concept: Rigby detects a real signal, traces cross-domain impact (tech → regulation → markets → hiring), makes a governed decision, ships an artifact. All live on camera.
+## SESSION 1091 — PRIORITIES
 
-Required for demo:
-- Spider search working (DONE)
-- Governor visible (DONE)
-- Agent dispatch + completion (DONE)
-- CTO/COO briefs grounded (DONE)
-- ContentWriterAgent reliable (NEEDS FIX)
+### 1. Work Through Agent-Generated Fix List (P0 first)
+The agents found 14 real issues. Fix list is in demo-testing workspace as a deliverable.
+
+**P0 — Fix Before Demo Recording:**
+- Agent timeout rate 1.9% vs 0.2% SLO — top offenders need timeout ladder
+- DEBUG=True on production — must be False for Railway
+- PlatformAuditAgent model/schema mismatch in audit queries
+
+**P1 — Fix This Week:**
+- 87 pending action items, all unowned
+- 155 ACTIVE / 83 TRIAGE / 11 COMPLETED initiatives (WIP sprawl)
+- 315 stale suggestions >7 days
+- 130 gates active 74 days
+- AudioAgent blocked (ElevenLabs quota)
+- OpportunityPipelineAgent circuit breaker tripped
+- 1 unapplied migration (content.0046)
+
+**P2 — Next Sprint:**
+- 3 missing API keys (DeepSeek, Replicate, TheOdds)
+- Feature flags unset
+- No standardized failure taxonomy
+- ResearchAgent volume amplifying dependency instability
+
+### 2. Clean End-to-End Demo Run
+After P0 fixes, run the full 7-step demo sequence and verify all artifacts are clean.
+
+### 3. Record the Video
+Demo runbook: `docs/playbooks/DEMO_HAPPY_PATH.md`
+Workspace: demo-testing (active)
 - A "Demo Autonomy Mode" allowlist (NEEDS BUILD)
 
 ### 5. Patent Portfolio
