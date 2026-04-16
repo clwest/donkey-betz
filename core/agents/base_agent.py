@@ -4040,6 +4040,14 @@ Consider this current data when formulating your response."""
                     )
                     return None
 
+            # Session 1088: Inject trigger_source into metadata from execution context
+            metadata = metadata or {}
+            if 'trigger_source' not in metadata:
+                exec_ctx = getattr(self, '_execution_context', {}) or {}
+                trigger = exec_ctx.get('trigger_source', '')
+                if trigger:
+                    metadata['trigger_source'] = trigger
+
             # Run content through persistence guard (scrub + provenance)
             guard_result = guard_persistence(
                 content=content,
