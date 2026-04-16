@@ -43,6 +43,60 @@ def _content_hash(title: str, content: str, agent_name: str) -> str:
     return hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:32]
 
 
+# ── Session 1088: Quality gate — prevent noise deliverables ───────────
+
+# Minimum content length for a deliverable to be worth persisting.
+# Media agents (image/video/audio) produce short stubs like "Generated 1 image(s)"
+# — those aren't useful deliverables. Smoke tests produce <200 char outputs.
+MIN_CONTENT_LENGTH = 300
+
+# Patterns that indicate the deliverable is a smoke test or diagnostic,
+# not real user-requested work. Checked against lowercased title.
+SMOKE_TEST_PATTERNS = [
+    'smoke test', 'smoke-test', 'sanity check', 'heartbeat',
+    'factory smoke', 'round 40', 'round 45', 'round 51',
+    'pr1887', 'pr #1887', 'pr1893', 'one sentence status',
+    'local ops smoke', 'dual-path test', 'direct router test',
+    'ping test', 'verification —',
+]
+
+# Media stub agents — their "deliverables" are just "Generated 1 image(s)"
+# stubs. The actual media is stored elsewhere (Cloudinary, etc.).
+MEDIA_STUB_AGENTS = {'ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent'}
+
+
+def _should_create_deliverable(
+    title: str,
+    content: str,
+    agent_name: str,
+    metadata: Optional[dict] = None,
+) -> tuple[bool, str]:
+    """
+    Quality gate: decide whether this deliverable is worth persisting.
+
+    Returns (should_create, reason). If should_create is False, the
+    factory logs the skip and returns None.
+    """
+    content_len = len(content or '')
+    title_lower = (title or '').lower()
+
+    # Gate 1: Media stubs — tiny content from media agents
+    if agent_name in MEDIA_STUB_AGENTS and content_len < MIN_CONTENT_LENGTH:
+        return False, f"media stub ({content_len} chars from {agent_name})"
+
+    # Gate 2: Smoke tests — diagnostic titles that shouldn't persist
+    if any(pattern in title_lower for pattern in SMOKE_TEST_PATTERNS):
+        return False, f"smoke test pattern in title"
+
+    # Gate 3: Minimum content length (skip for user-triggered work)
+    trigger = (metadata or {}).get('trigger_source', '')
+    if trigger not in ('user_request', 'pa_tool', 'user_chat', 'direct'):
+        if content_len < MIN_CONTENT_LENGTH:
+            return False, f"below minimum content length ({content_len} < {MIN_CONTENT_LENGTH})"
+
+    return True, "passed"
+
+
 def create_deliverable(
     title: str,
     content: str,
@@ -77,6 +131,17 @@ def create_deliverable(
     Returns the created Deliverable instance.
     """
     from core.models_deliverables import Deliverable
+
+    # --- Session 1088: Quality gate — reject noise before any DB work ---
+    should_create, gate_reason = _should_create_deliverable(
+        title=title, content=content, agent_name=agent_name, metadata=metadata,
+    )
+    if not should_create:
+        logger.info(
+            "[DeliverableFactory] GATE REJECT: %s — %s (title=%s)",
+            agent_name, gate_reason, title[:60],
+        )
+        return None
 
     # --- Provenance dedupe guard ---
     # If a parent_execution_id is provided, check for existing deliverable
@@ -165,6 +230,20 @@ def create_deliverable(
             "workspace. Caller should pass workspace_id explicitly.",
             agent_name, title[:80],
         )
+
+    # --- Session 1088: Auto-tag trigger_source in metadata ---
+    metadata = metadata or {}
+    if 'trigger_source' not in metadata:
+        # Infer trigger_source from available context
+        task_lower = (agent_task or '').lower()
+        if any(p in task_lower for p in SMOKE_TEST_PATTERNS):
+            metadata['trigger_source'] = 'smoke_test'
+        elif agent_name == 'PersonalAssistant':
+            metadata['trigger_source'] = 'user_request'
+        elif parent_execution_id:
+            metadata['trigger_source'] = 'agent_execution'
+        else:
+            metadata['trigger_source'] = 'beat_task'
 
     # Build preview
     preview = content[:500] if content else ''
