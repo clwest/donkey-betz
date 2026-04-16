@@ -586,6 +586,33 @@ def get_deliverable_stats(request):
             .order_by('-count')[:10]
         )
 
+        # Session 1091 Sprint B — workspace breakdown.
+        # `orphan` (workspace_id IS NULL) and `unassigned` (lives in the
+        # per-user "Unassigned" sentinel bucket) are tracked separately —
+        # they are different failure modes:
+        # - orphan_count > 0 means the factory's Unassigned-bucket fallback
+        #   leaked (regression of PR #1965).
+        # - unassigned_count > 0 just means agents are creating deliverables
+        #   without explicit workspace assignment, which is the current
+        #   designed-correct behavior; it surfaces volume worth triaging.
+        by_workspace_rows = list(
+            queryset.values('workspace_id', 'workspace__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        by_workspace = [
+            {
+                'workspace_id': str(r['workspace_id']) if r['workspace_id'] else None,
+                'workspace_name': r['workspace__name'] or 'Orphan (no workspace)',
+                'count': r['count'],
+                'is_orphan': r['workspace_id'] is None,
+                'is_unassigned': r['workspace__name'] == 'Unassigned',
+            }
+            for r in by_workspace_rows
+        ]
+        orphan_count = queryset.filter(workspace_id__isnull=True).count()
+        unassigned_count = queryset.filter(workspace__name='Unassigned').count()
+
         # Recent activity
         recent_count = queryset.filter(
             created_at__gte=timezone.now() - timedelta(days=7)
@@ -603,6 +630,9 @@ def get_deliverable_stats(request):
                 'by_type': by_type,
                 'by_category': by_category,
                 'by_agent': by_agent,
+                'by_workspace': by_workspace,
+                'orphan_count': orphan_count,
+                'unassigned_count': unassigned_count,
             }
         })
 

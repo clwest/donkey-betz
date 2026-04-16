@@ -89,6 +89,16 @@ interface DeliverableStats {
   by_type: Array<{ deliverable_type: string; count: number }>
   by_category: Array<{ category: string; count: number }>
   by_agent: Array<{ agent_name: string; count: number }>
+  // Session 1091 Sprint B — workspace breakdown
+  by_workspace?: Array<{
+    workspace_id: string | null
+    workspace_name: string
+    count: number
+    is_orphan: boolean
+    is_unassigned: boolean
+  }>
+  orphan_count?: number
+  unassigned_count?: number
 }
 
 interface DeliverableType {
@@ -567,6 +577,73 @@ export function DeliverablesTab() {
           <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-green-400">{stats.recent_7d}</div>
             <div className="text-xs text-gray-400">Last 7 days</div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 1091 Sprint B — Workspace breakdown card.
+          Surfaces per-workspace volume + dedicated orphan/unassigned counts so
+          Chris can see hygiene at a glance. orphan_count should always read 0
+          post-PR #1965; if it ever rises, the factory's Unassigned-bucket
+          fallback has regressed. unassigned_count is informational — it's
+          legitimate volume that landed in the triage bucket and may want
+          reassignment. */}
+      {stats?.by_workspace && stats.by_workspace.length > 0 && (
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-200">Workspace Breakdown</h4>
+            <div className="flex items-center gap-2 text-xs">
+              {typeof stats.orphan_count === 'number' && (
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded',
+                    stats.orphan_count > 0
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'bg-gray-700 text-gray-400'
+                  )}
+                  title="Deliverables with no workspace assignment (workspace_id IS NULL). Should always be 0 post-PR #1965; if it rises, the factory fallback regressed."
+                >
+                  Orphans: {stats.orphan_count}
+                </span>
+              )}
+              {typeof stats.unassigned_count === 'number' && stats.unassigned_count > 0 && (
+                <span
+                  className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300"
+                  title="Deliverables in the per-user 'Unassigned' triage bucket (created without explicit workspace assignment). Reassign as needed."
+                >
+                  Unassigned: {stats.unassigned_count}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {stats.by_workspace.slice(0, 10).map((row) => (
+              <div
+                key={row.workspace_id ?? 'orphan'}
+                className="flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span
+                    className={cn(
+                      'px-1.5 py-0.5 rounded truncate max-w-[200px]',
+                      row.is_orphan
+                        ? 'bg-red-500/20 text-red-300'
+                        : row.is_unassigned
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-blue-500/15 text-blue-300'
+                    )}
+                  >
+                    {row.workspace_name}
+                  </span>
+                </div>
+                <span className="text-gray-400 tabular-nums">{row.count}</span>
+              </div>
+            ))}
+            {stats.by_workspace.length > 10 && (
+              <div className="text-xs text-gray-500 pt-1">
+                +{stats.by_workspace.length - 10} more workspaces
+              </div>
+            )}
           </div>
         </div>
       )}
