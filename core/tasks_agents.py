@@ -1857,41 +1857,11 @@ self,
                     type(_e).__name__, _e,
                 )
 
-        # Session 1076: Per-agent-type wall-clock timeout.
-        # Media agents (AudioAgent, ImageAgent, etc.) should complete in <5min.
-        # Without this, hung tasks sit for 45min until the cleanup reaper fires.
-        _AGENT_TIMEOUT_SECONDS = {
-            # Media agents: fast, external API calls
-            'AudioAgent': 300,        # 5 min — 60s OpenAI + 60s ElevenLabs + context
-            'ImageAgent': 300,        # 5 min
-            'VideoAgent': 600,        # 10 min — video generation is slower
-            'ThreeDAgent': 300,       # 5 min
-            'ImageEditingAgent': 300,  # 5 min
-            'VideoEditingAgent': 600,  # 10 min
-            'TalkingCharacterAgent': 600,  # 10 min
-            'ResolveAgent': 600,      # 10 min
-            # Research/analysis agents: LLM + web search
-            # Session 1098: ResearchAgent, CustomerResearchAgent, WhaleWatcherAgent
-            # raised from 600→1500s — multi-source web research + LLM synthesis
-            # was breaching SLO (4.28% timeout rate, target 0.2%)
-            'ResearchAgent': 1500,            # 25 min (was 10 — too tight for multi-source research)
-            'SystemIntelligenceAgent': 600,   # 10 min
-            'MarketingStrategyAgent': 600,    # 10 min
-            'CustomerResearchAgent': 1500,    # 25 min (was 10 — top timeout offender: 5 in 24h)
-            'CharacterTrainingAgent': 600,    # 10 min
-            'ContentWriterAgent': 600,        # 10 min
-            'CompetitorAnalysisAgent': 600,   # 10 min
-            'BrandStrategyAgent': 600,        # 10 min
-            'ContentStrategyAgent': 600,      # 10 min
-            # Blockchain agents: whale tracking involves multi-chain scanning
-            'WhaleWatcherAgent': 1500,        # 25 min (was default 20 — hitting watchdog at 25)
-            # Thinking/brainstorm: usually completes in <2min, hang = dead
-            'ThinkingAgent': 300,             # 5 min (was default 20 — successful runs finish in ~75s)
-            # Orchestrators: may coordinate multiple agents
-            'StockAuditCoordinator': 900,     # 15 min
-            'WorkflowOrchestrationAgent': 900,  # 15 min
-        }
-        _wall_timeout = _AGENT_TIMEOUT_SECONDS.get(agent_name, 1200)  # default 20 min (down from 40)
+        # Session 1091: Per-agent wall-clock timeout moved to shared module
+        # core/services/agent_timeouts.py so the router path enforces the
+        # same ceilings as this Celery-task path. Edit values there, not here.
+        from core.services.agent_timeouts import get_agent_timeout
+        _wall_timeout = get_agent_timeout(agent_name)
 
         # Session 1087: Check for remediation-engine timeout overrides
         try:
