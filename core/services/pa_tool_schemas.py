@@ -2286,6 +2286,49 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1088: Governor Tool ───────────────────────────────────────────
+    {
+        "type": "function",
+        "name": "governor_tool",
+        "description": (
+            "Beat Task Governor — controls which autonomous agent dispatches "
+            "are allowed to run based on mission alignment and circuit breaker "
+            "state. Use 'status' to see governor state, active missions, and "
+            "tripped circuit breakers. Use 'test' to check if a specific agent "
+            "would be dispatched. Use 'reset_breaker' to manually clear a "
+            "tripped circuit breaker. Use 'coverage' to see all agents and "
+            "their alignment status."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "test", "reset_breaker", "coverage"],
+                    "description": (
+                        "status: governor state, missions, tripped breakers. "
+                        "test: check if agent_name would be dispatched (requires agent_name). "
+                        "reset_breaker: clear a tripped circuit breaker (requires agent_name). "
+                        "coverage: all agents and their alignment status."
+                    ),
+                },
+                "agent_name": {
+                    "type": "string",
+                    "description": "For test/reset_breaker: the agent name to check or reset.",
+                },
+                "trigger_source": {
+                    "type": "string",
+                    "description": "For test: simulate trigger source (default 'schedule').",
+                },
+                "task": {
+                    "type": "string",
+                    "description": "For test: optional task description for keyword matching.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1080: Ops Autopilot ──────────────────────────────────────────
     {
         "type": "function",
@@ -4132,6 +4175,7 @@ TOOL_ENRICHMENT_MAP = {
     'ops_tool': ['intelligence_enricher', 'platform_briefing'],
     'agent_control_tool': [],
     'active_priority_tool': [],
+    'governor_tool': [],
     'autopilot_tool': [],
     'ops_digest_tool': ['platform_briefing'],
     'work_tool': ['intelligence_enricher', 'strategic_memory'],
@@ -4234,6 +4278,7 @@ TOOL_TO_INTENT_MAP = {
     'ops_tool': 'system_overview',
     'agent_control_tool': 'system_overview',
     'active_priority_tool': 'system_overview',
+    'governor_tool': 'system_overview',
     'autopilot_tool': 'system_overview',
     'ops_digest_tool': 'system_overview',
     'work_tool': 'initiatives',

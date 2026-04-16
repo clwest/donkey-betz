@@ -1079,6 +1079,101 @@ class OpsHandlersMixin:
                 f"Valid: list, set, update, archive, test_match, history"
             )
 
+    # ── Session 1088: Governor Tool ─────────────────────────────────────
+
+    def _handle_governor(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """
+        Beat Task Governor — mission alignment + circuit breaker management.
+
+        Actions:
+          - status: overview of governor state, missions, tripped breakers
+          - test: check if a specific agent would be dispatched
+          - reset_breaker: manually reset a tripped circuit breaker
+          - coverage: show all agents and their alignment status
+        """
+        action = payload.get('action', 'status')
+
+        if action == 'status':
+            from core.services.priority.governor import get_governor_status
+            return {
+                'action': 'status',
+                **get_governor_status(),
+            }
+
+        elif action == 'test':
+            agent_name = payload.get('agent_name', '')
+            if not agent_name:
+                raise ValueError("agent_name required for 'test' action")
+
+            from core.services.priority.governor import should_dispatch
+            from core.services.priority.priority_router import PriorityRouter
+            PriorityRouter.invalidate_cache()
+
+            trigger = payload.get('trigger_source', 'schedule')
+            decision = should_dispatch(
+                agent_name=agent_name,
+                trigger_source=trigger,
+                task=payload.get('task'),
+            )
+            return {
+                'action': 'test',
+                'agent_name': agent_name,
+                'trigger_source': trigger,
+                **decision.to_dict(),
+            }
+
+        elif action == 'reset_breaker':
+            agent_name = payload.get('agent_name', '')
+            if not agent_name:
+                raise ValueError("agent_name required for 'reset_breaker' action")
+
+            from core.services.priority.governor import reset_circuit_breaker
+            success = reset_circuit_breaker(agent_name)
+            return {
+                'action': 'reset_breaker',
+                'agent_name': agent_name,
+                'success': success,
+            }
+
+        elif action == 'coverage':
+            from core.services.priority.governor import should_dispatch
+            from core.services.priority.priority_router import PriorityRouter
+            from core.agent_router import AgentRouter
+            PriorityRouter.invalidate_cache()
+
+            router = AgentRouter()
+            results = []
+            for name in sorted(router.AGENT_MAP.keys()):
+                d = should_dispatch(name, trigger_source='schedule')
+                results.append({
+                    'agent': name,
+                    'proceed': d.proceed,
+                    'reason': d.reason,
+                    'detail': d.detail,
+                })
+
+            aligned = sum(1 for r in results if r['proceed'])
+            return {
+                'action': 'coverage',
+                'total': len(results),
+                'aligned': aligned,
+                'misaligned': len(results) - aligned,
+                'coverage_pct': f"{aligned / len(results):.0%}" if results else '0%',
+                'agents': results,
+            }
+
+        else:
+            raise ValueError(
+                f"Unknown action: {action}. "
+                f"Valid: status, test, reset_breaker, coverage"
+            )
+
     # ── Session 1080: Ops Autopilot Tool ──────────────────────────────────
 
     def _handle_autopilot(
