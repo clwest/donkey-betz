@@ -291,8 +291,12 @@ Include counts, categorizations, and actionable findings."""
             {"role": "user", "content": task}
         ]
 
+        # Session 1090: Switched from gpt-5-mini to gpt-5.2 for reliable
+        # function calling.  gpt-5-mini (reasoning model) frequently simulates
+        # tool calls in text rather than using the tool_calls mechanism,
+        # producing raw JSON output instead of structured audit reports.
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5.2",
             messages=messages,
             tools=self.get_tools_with_delegation(),
             tool_choice="auto",
@@ -343,7 +347,7 @@ Include counts, categorizations, and actionable findings."""
 
             # Get final response after tool calls
             final_response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model="gpt-5.2",
                 messages=messages,
                 max_completion_tokens=4000,
             )
