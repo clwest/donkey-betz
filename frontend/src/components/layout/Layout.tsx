@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import GlobalAlertBanner, { useAlertBannerHeight } from '@/components/GlobalAlertBanner'
+import DemoModeBanner, { useDemoModeBannerHeight } from '@/components/DemoModeBanner'
 import GlobalPADock from '@/components/GlobalPADock'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useUnifiedStore } from '@/stores/unifiedStore'
@@ -14,6 +15,7 @@ export default function Layout() {
 
   const location = useLocation()
   const bannerHeight = useAlertBannerHeight()
+  const demoBannerHeight = useDemoModeBannerHeight()
 
   const hideGlobalDock = location.pathname === '/'
 
@@ -49,13 +51,15 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Session 1090: Demo Mode Banner (above health banner) */}
+      <DemoModeBanner />
       {/* Session 713: Global Body Health Alert Banner */}
       <GlobalAlertBanner />
 
       <Sidebar />
       <div
         className="flex flex-1 flex-col overflow-hidden transition-all duration-200"
-        style={{ paddingTop: bannerHeight > 0 ? `${bannerHeight}px` : undefined }}
+        style={{ paddingTop: (bannerHeight + demoBannerHeight) > 0 ? `${bannerHeight + demoBannerHeight}px` : undefined }}
       >
         <Header />
         <main className="flex-1 flex flex-col overflow-hidden p-6">
