@@ -122,6 +122,20 @@ class ArtifactExecutionService:
                 "data_allowed, and phase_approved."
             )
 
+        # Session 1088: Evidence pre-check for insight artifacts.
+        # Insights dispatched without relevant spider data produce BLOCKED
+        # deliverables ("missing domain evidence"). Verify evidence exists
+        # before wasting an agent execution + LLM call.
+        if artifact.artifact_type == 'insight':
+            has_evidence = self._check_evidence_exists(artifact)
+            if not has_evidence:
+                logger.info(
+                    "[ARTIFACT] Skipping insight %s — no spider evidence for topic '%s'. "
+                    "Will retry when data is available.",
+                    artifact.id, artifact.title[:60],
+                )
+                return None
+
         # Determine which agent should handle this
         agent_name = self._select_agent(artifact)
         task_description = self._build_task(artifact)
@@ -238,6 +252,62 @@ class ArtifactExecutionService:
             task += f"\nAdditional Details:\n"
             for key, value in artifact.details.items():
                 task += f"- {key}: {value}\n"
+
+        return task
+
+    def _check_evidence_exists(self, artifact, min_records: int = 3) -> bool:
+        """
+        Session 1088: Verify spider data has relevant evidence for this
+        insight before dispatching to an agent. Returns True if at least
+        min_records spider records match the topic keywords.
+        """
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone as tz
+            from datetime import timedelta
+            from django.db.models import Q
+
+            topic_text = f"{artifact.title} {artifact.description}".lower()
+
+            # Extract keywords (3+ char words, skip stop words)
+            stop_words = {
+                'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all',
+                'can', 'her', 'was', 'one', 'our', 'out', 'has', 'have',
+                'that', 'this', 'with', 'from', 'they', 'been', 'into',
+                'their', 'which', 'will', 'each', 'make', 'like',
+                'sentence', 'concrete', 'insight', 'detail', 'summarize',
+                'next', 'steps',
+            }
+            words = [
+                w for w in topic_text.split()
+                if len(w) >= 3 and w not in stop_words
+            ]
+
+            if not words:
+                return False
+
+            # Search spider data from last 72h for keyword matches
+            cutoff = tz.now() - timedelta(hours=72)
+            keywords = words[:5]  # Top 5 keywords
+
+            query = Q()
+            for kw in keywords:
+                query |= Q(raw_data__icontains=kw) | Q(embedding_text__icontains=kw)
+
+            count = SpiderData.objects.filter(
+                created_at__gte=cutoff,
+            ).filter(query).count()
+
+            logger.debug(
+                "[ARTIFACT] Evidence check for '%s': %d spider records match "
+                "keywords %s (need %d)",
+                artifact.title[:40], count, keywords, min_records,
+            )
+            return count >= min_records
+
+        except Exception as e:
+            logger.warning(f"[ARTIFACT] Evidence check failed: {e}")
+            return True  # Fail-open — don't block on check errors
 
         return task
 
