@@ -469,8 +469,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         # Round 3: Last resort broadening if still insufficient
         if not evaluation.get('sufficient') and len(attempts) < 3:
             from core.services.search_strategy_service import _extract_keywords
+            # Session 1092: keep keyword order from the cleaned seed text;
+            # alphabetical sort buried subject words (e.g. "stock") behind
+            # meta words ("concise", "important") in the canary repro.
             keywords = _extract_keywords(task)
-            broader = ' '.join(sorted(keywords)[:2])
+            broader = ' '.join(keywords[:2])
             broaden_queries = [
                 {'query': f"{broader} latest news 2026", 'strategy': 'broaden_last_resort'},
                 {'query': f"{broader} overview analysis", 'strategy': 'broaden_last_resort'},

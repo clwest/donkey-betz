@@ -42,6 +42,24 @@ STOPWORDS = frozenset([
     'how', 'what', 'when', 'where', 'which', 'who', 'why', 'most',
     'this', 'that', 'these', 'those', 'it', 'its', 'they', 'them',
     'never', 'get', 'past', 'about', 'just', 'more', 'very', 'too',
+    # Session 1092: instruction-meta words that pollute keyword extraction.
+    # Tasks like "Produce a concise one-paragraph summary of the most
+    # important stock market signals" front-load these words ahead of the
+    # actual subject matter. Without filtering, top-N keyword slicing
+    # picks "produce, concise, paragraph, summary, important" and buries
+    # "stock, market, signals" — which is what broke canary v2.
+    'produce', 'concise', 'detailed', 'thorough', 'comprehensive',
+    'summary', 'overview', 'analysis', 'report', 'paragraph',
+    'important', 'top', 'best', 'main', 'key', 'major',
+    'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
+    'first', 'second', 'third', 'last', 'recent', 'latest',
+    'create', 'generate', 'write', 'draft', 'compose', 'list',
+    'title', 'titled', 'deliverable', 'output', 'result',
+    'canary', 'test', 'verify', 'check',
+    'citation', 'citations', 'cite', 'reference', 'references',
+    'needed', 'required', 'optional', 'please',
+    'brief', 'short', 'long', 'quick', 'fast',
+    'hours', 'minutes', 'days', 'weeks', 'months', 'years',
 ])
 
 # Paraphrase templates — deterministic, no LLM needed
@@ -99,12 +117,14 @@ def generate_query_plan(
     else:
         clean_topic = extract_topic_from_task(seed_text)
 
-    # Extract keywords from the CLEAN topic (not the full task string)
+    # Extract keywords from the CLEAN topic (not the full task string).
+    # Session 1092: keep natural reading order so the actual subject words
+    # ("stock signals") rank ahead of meta words ("important", "produce").
     keywords = _extract_keywords(clean_topic)
-    topic_keywords = ' '.join(sorted(keywords)[:6])
+    topic_keywords = ' '.join(keywords[:6])
 
-    # Get broader topic (first 3-4 significant words)
-    broader_topic = ' '.join(sorted(keywords)[:3])
+    # Broader query — first 3 significant words in original order.
+    broader_topic = ' '.join(keywords[:3])
 
     # Get focus areas and audience from brief
     focus_areas = brief.get('focus_areas', [])
@@ -312,25 +332,57 @@ def extract_topic_from_task(task_text: str) -> str:
     return task_text[:200]
 
 
-def _extract_keywords(text: str) -> set:
-    """Extract meaningful keywords from text."""
-    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
-    return {w for w in words if w not in STOPWORDS}
+def _extract_keywords(text: str) -> list:
+    """Extract meaningful keywords from text.
+
+    Session 1092:
+    - Strip ResearchAgent's [User Context: ...] tail before extraction —
+      otherwise user-profile noise ("Alex Chen", "analytical", "balanced")
+      contaminates query generation (canary v2 produced "alex anal balanced
+      based" queries that hit marine biology / labor docs instead of stocks).
+    - Return a *list* preserving first-occurrence order rather than a set, so
+      callers using `sorted(...)[:N]` no longer reorder alphabetically and
+      drop the actual subject words.  Order-preserving means the literal
+      task wording dominates ranking, which is what callers actually want.
+    """
+    if not text:
+        return []
+    cleaned = re.sub(r'\s*\[User Context:.*$', '', text, flags=re.DOTALL)
+    cleaned = re.sub(
+        r'\s*\[Past research patterns:.*$', '', cleaned, flags=re.DOTALL
+    )
+    seen = set()
+    ordered = []
+    for raw in re.findall(r'\b[a-zA-Z]{3,}\b', cleaned.lower()):
+        if raw in STOPWORDS or raw in seen:
+            continue
+        seen.add(raw)
+        ordered.append(raw)
+    return ordered
 
 
 def _generate_broader_queries(seed_text: str) -> List[Dict[str, Any]]:
-    """Generate broader fallback queries."""
+    """Generate broader fallback queries.
+
+    Session 1092: keep keyword order from the cleaned seed text; alphabetical
+    sort buried subject words behind meta words like "concise", "important".
+    """
     keywords = _extract_keywords(seed_text)
-    broader = ' '.join(sorted(keywords)[:3])
+    broader = ' '.join(keywords[:3])
     return [
         {'query': f"{broader} overview trends", 'strategy': 'broaden_retry'},
         {'query': f"{broader} analysis 2026", 'strategy': 'broaden_retry'},
     ]
 
 
-def _generate_narrow_queries(seed_text: str, keywords: set) -> List[Dict[str, Any]]:
-    """Generate narrower retry queries."""
-    kw_list = sorted(keywords)
+def _generate_narrow_queries(seed_text: str, keywords: list) -> List[Dict[str, Any]]:
+    """Generate narrower retry queries.
+
+    Session 1092: keywords arrive as an ordered list (was a set). Use natural
+    order so retry queries reflect the literal task wording instead of
+    alphabetically-sorted noise.
+    """
+    kw_list = list(keywords)
     return [
         {'query': f'"{" ".join(kw_list[:4])}"', 'strategy': 'narrow_exact'},
         {'query': f"{' '.join(kw_list[:5])} solutions case study", 'strategy': 'narrow_specific'},
