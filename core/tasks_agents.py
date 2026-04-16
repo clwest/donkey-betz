@@ -1724,6 +1724,26 @@ self,
         except Exception as e:
             logger.warning(f"[execute_agent_task] Focus Mode check failed (proceeding): {e}")
 
+    # Session 1090: Demo mode gate — blocks non-allowlisted agents at the
+    # Celery execution layer.  The governor's should_dispatch() is called by
+    # callers *before* enqueueing, but PA tool dispatch + direct Celery calls
+    # bypass it.  This is the safety net.
+    try:
+        from core.services.priority.governor import _check_demo_mode
+        demo_block = _check_demo_mode(agent_name)
+        if demo_block is not None:
+            logger.info(
+                "[execute_agent_task] DEMO BLOCK: %s — %s",
+                agent_name, demo_block.detail,
+            )
+            return {
+                'status': 'blocked',
+                'agent': agent_name,
+                'reason': f'demo_mode:{demo_block.reason}',
+            }
+    except Exception:
+        pass  # fail-open
+
     logger.info(
         f"[execute_agent_task] Starting: {agent_name} <- '{task[:50]}...' "
         f"(conversation={conversation_id})"

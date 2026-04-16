@@ -261,6 +261,18 @@ The brief is your rubric. The draft is what you're grading."""
             if not isinstance(workspace_brief, dict):
                 workspace_brief = {}
 
+            # Session 1090: Default brief fallback — infer from content when
+            # no explicit brief is provided.  Without a brief, the 5 quality
+            # checks all return FAIL ("no Topic/Focus in brief"), making the
+            # agent useless for autonomous or demo dispatches.
+            if not workspace_brief.get('topic'):
+                title = content.get('title', '') if isinstance(content, dict) else ''
+                workspace_brief.setdefault('topic', title or task[:120])
+            if not workspace_brief.get('audience'):
+                workspace_brief.setdefault('audience', 'tech-savvy professionals and developers')
+            if not workspace_brief.get('tone'):
+                workspace_brief.setdefault('tone', 'professional, clear, actionable')
+
             # Build enhancement prompt with brief as rubric
             enhancement_prompt = self._build_enhancement_prompt(content, focus_areas, workspace_brief)
 
