@@ -4186,6 +4186,16 @@ def _impl_agent_workspace_status_report():
 
     logger.info("🖥️ [SKIN LAYER] Starting workspace status report generation...")
 
+    # Session 1089: Governor gate
+    try:
+        from core.services.priority.governor import should_dispatch
+        gov = should_dispatch('SystemIntelligenceAgent', trigger_source='workspace_autopilot', task='status_report')
+        if not gov.proceed:
+            logger.info(f"🛑 [SKIN LAYER] Governor BLOCKED status report: {gov.reason}")
+            return {'success': False, 'skipped': True, 'reason': f'governor_{gov.reason}'}
+    except Exception:
+        pass  # fail-open
+
     try:
         # Session 885: Use helper to find workspace (handles codebase workspace)
         user, workspace = _get_workspace_for_skin_layer()
@@ -4273,6 +4283,16 @@ def _impl_agent_research_to_workspace(topic: str = None):
     from core.agents.research_agent import ResearchAgent
 
     logger.info(f"🔬 [SKIN LAYER] Starting research task (topic: {topic or 'trending'})...")
+
+    # Session 1089: Governor gate
+    try:
+        from core.services.priority.governor import should_dispatch
+        gov = should_dispatch('ResearchAgent', trigger_source='workspace_autopilot', task=topic or 'trending')
+        if not gov.proceed:
+            logger.info(f"🛑 [SKIN LAYER] Governor BLOCKED research: {gov.reason}")
+            return {'success': False, 'skipped': True, 'reason': f'governor_{gov.reason}'}
+    except Exception:
+        pass  # fail-open
 
     try:
         # Session 885: Use helper to find workspace (handles codebase workspace)
@@ -4365,6 +4385,16 @@ def _impl_agent_content_to_workspace(content_type: str = 'blog', topic: str = No
     from core.agents.research_agent import ResearchAgent
 
     logger.info(f"✍️ [SKIN LAYER] Starting content generation ({content_type})...")
+
+    # Session 1089: Governor gate
+    try:
+        from core.services.priority.governor import should_dispatch
+        gov = should_dispatch('ContentWriterAgent', trigger_source='workspace_autopilot', task=topic or content_type)
+        if not gov.proceed:
+            logger.info(f"🛑 [SKIN LAYER] Governor BLOCKED content gen: {gov.reason}")
+            return {'success': False, 'skipped': True, 'reason': f'governor_{gov.reason}'}
+    except Exception:
+        pass  # fail-open
 
     try:
         # Session 885: Use helper to find workspace (handles codebase workspace)
@@ -5094,6 +5124,30 @@ budget_per_tick: int = 5,
                     f"Trigger type: {trigger.get_trigger_type_display()}",
                 ])
                 task_prompt = "\n".join(prompt_parts)
+
+                # Session 1089: Governor gate — check mission alignment + budget
+                # before executing any agent via autopilot. This path was
+                # bypassing the governor entirely, causing $17+ in unsupervised
+                # overnight LLM spend.
+                try:
+                    from core.services.priority.governor import should_dispatch
+                    gov_decision = should_dispatch(
+                        agent_name=agent_name,
+                        trigger_source='workspace_autopilot',
+                        task=trigger.title,
+                    )
+                    if not gov_decision.proceed:
+                        logger.info(
+                            f"🛑 [WORKSPACE AUTOPILOT] Governor BLOCKED {agent_name}: "
+                            f"{gov_decision.reason} ({gov_decision.detail})"
+                        )
+                        trigger.status = 'skipped'
+                        trigger.error_message = f'Governor: {gov_decision.reason}'
+                        trigger.save(update_fields=['status', 'error_message'])
+                        results['triggers_skipped'] += 1
+                        continue
+                except Exception as gov_err:
+                    logger.warning(f"[WORKSPACE AUTOPILOT] Governor fail-open: {gov_err}")
 
                 # Execute the agent
                 try:
