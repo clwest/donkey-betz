@@ -1350,6 +1350,16 @@ class AgentHandlersMixin:
             # can highlight unassigned deliverables without re-deriving the
             # check from a missing FK.
             d['is_orphan'] = d.get('workspace_id') is None
+            # Session 1091 follow-up — alias the Django ORM .values() join key
+            # `workspace__name` (double underscore) as `workspace_name` (single
+            # underscore) so PA-tool consumers and REST consumers see the same
+            # field shape. The REST serializer in core/views_deliverables.py
+            # already returns `workspace_name`; without this alias, anyone
+            # comparing the two surfaces would think the field is "missing"
+            # depending on which channel they look at. Keeps the original
+            # `workspace__name` for backwards compatibility.
+            if 'workspace_name' not in d and 'workspace__name' in d:
+                d['workspace_name'] = d.get('workspace__name')
             return d
 
         def _resolve_deliverable(qs, payload, action_name):
