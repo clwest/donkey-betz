@@ -359,7 +359,6 @@ Respond with ONLY valid JSON. No markdown, no explanation outside JSON.
 
     def _call_llm_for_decision(self, prompt: str) -> Dict[str, Any]:
         """Call the LLM to get a decision."""
-        from openai import OpenAI
         import os
 
         client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))

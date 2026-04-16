@@ -635,8 +635,6 @@ You have access to:
         time_range_hours: int = 24
     ) -> Dict[str, Any]:
         """Generate security status report."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         sections = include_sections or ["alerts", "whale_activity", "audits", "exploits"]

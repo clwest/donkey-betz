@@ -545,8 +545,6 @@ Provide complete, working code that can be directly used."""
         include_auth: bool = False
     ) -> Dict[str, Any]:
         """Build a complete full-stack feature."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         auth_section = """
@@ -627,8 +625,6 @@ content
         requires_auth: bool = False
     ) -> Dict[str, Any]:
         """Create a REST API endpoint."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         auth_note = "Include authentication decorator/middleware." if requires_auth else ""
@@ -676,8 +672,6 @@ Generate:
         include_loading_states: bool = True
     ) -> Dict[str, Any]:
         """Create a frontend component."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         api_integration = f"Integrate with API endpoints: {', '.join(api_endpoints)}" if api_endpoints else ""
@@ -726,8 +720,6 @@ Generate:
         include_soft_delete: bool = False
     ) -> Dict[str, Any]:
         """Design database schema."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         rel_text = '\n'.join(f"- {r}" for r in relationships) if relationships else "No explicit relationships specified"
@@ -777,8 +769,6 @@ Generate:
         use_react_query: bool = True
     ) -> Dict[str, Any]:
         """Create frontend-backend integration layer."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         query_note = "Use React Query for data fetching and caching." if use_react_query and frontend_framework == "react" else ""

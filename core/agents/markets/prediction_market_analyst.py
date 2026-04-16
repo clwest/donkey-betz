@@ -337,7 +337,6 @@ Remember: Markets are forward-looking. Look for what others are missing."""
                                    context: Dict) -> str:
         """Generate natural language analysis report using LLM."""
         try:
-            from openai import OpenAI
             import os
 
             client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))

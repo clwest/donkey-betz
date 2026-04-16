@@ -538,8 +538,6 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
         check_categories: List[str] = None
     ) -> Dict[str, Any]:
         """Perform comprehensive smart contract audit."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         # Quick pattern scan for known vulnerabilities
@@ -619,8 +617,6 @@ Provide a structured audit report with:
         focus_functions: List[str] = None
     ) -> Dict[str, Any]:
         """Deep reentrancy vulnerability analysis."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         focus_text = f"Focus on these functions: {', '.join(focus_functions)}" if focus_functions else ""
@@ -679,8 +675,6 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
         expected_roles: List[str] = None
     ) -> Dict[str, Any]:
         """Analyze access control patterns."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         roles = expected_roles or ["owner", "admin"]
@@ -737,8 +731,6 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
         solidity_version: str = None
     ) -> Dict[str, Any]:
         """Analyze for integer overflow/underflow."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         if not solidity_version:
@@ -800,8 +792,6 @@ Rate overall reentrancy risk: CRITICAL / HIGH / MEDIUM / LOW / SAFE"""
         contract_code: str
     ) -> Dict[str, Any]:
         """Generate proof-of-concept exploit code."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         prompt = f"""Generate a proof-of-concept exploit for this vulnerability:

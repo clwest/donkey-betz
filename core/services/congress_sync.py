@@ -704,7 +704,6 @@ class CongressSyncService:
             return stats
 
         try:
-            from openai import OpenAI
             client = get_openai_client()
             response = client.embeddings.create(
                 input=texts,

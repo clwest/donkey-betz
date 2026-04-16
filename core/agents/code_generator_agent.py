@@ -746,8 +746,6 @@ IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT 
 
         Session 881: Added target_file parameter to persist generated code.
         """
-        from openai import OpenAI
-
         client = get_openai_client()
 
         framework_context = f" using {framework}" if framework else ""
@@ -816,8 +814,6 @@ Return the code in a properly formatted code block."""
         include_ci: bool
     ) -> Dict[str, Any]:
         """Create a project structure with all necessary files."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         prompt = f"""Create a complete project structure for:
@@ -912,8 +908,6 @@ content
         language: str
     ) -> Dict[str, Any]:
         """Analyze code for various quality metrics."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         analysis_prompts = {
@@ -966,8 +960,6 @@ Provide:
         preserve_api: bool
     ) -> Dict[str, Any]:
         """Refactor code based on specified goals."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         api_note = "IMPORTANT: Preserve the public API/interface - only internal implementation should change." if preserve_api else "You may change the API if it improves the design."
@@ -1017,8 +1009,6 @@ Provide:
         include_mocks: bool
     ) -> Dict[str, Any]:
         """Generate tests for the given code."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         coverage_instructions = {

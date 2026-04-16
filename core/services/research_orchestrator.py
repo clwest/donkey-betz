@@ -207,7 +207,6 @@ class ResearchOrchestrator:
         """Lazy-load OpenAI client."""
         if self._openai_client is None:
             from django.conf import settings
-            from openai import OpenAI
             self._openai_client = get_openai_client(api_key=settings.OPENAI_API_KEY)
         return self._openai_client
 

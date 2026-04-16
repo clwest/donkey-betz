@@ -607,7 +607,6 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
         Session 918: Now includes provenance header in the report.
         """
         try:
-            from openai import OpenAI
             import os
 
             client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))

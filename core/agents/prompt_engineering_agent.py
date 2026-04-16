@@ -468,8 +468,6 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         complexity_level: str = "moderate"
     ) -> Dict[str, Any]:
         """Design a new prompt template."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         model_tips = {
@@ -550,8 +548,6 @@ Format your response as:
         issues_observed: str = ""
     ) -> Dict[str, Any]:
         """Optimize an existing prompt."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         prompt = f"""Optimize the following prompt:
@@ -599,8 +595,6 @@ Provide:
         target_model: str = "general"
     ) -> Dict[str, Any]:
         """Create a collection of related prompts."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         prompt = f"""Create a prompt library for the following domain:
@@ -647,8 +641,6 @@ Format as a structured library with clear sections for each use case."""
         sample_outputs: List[str] = None  # type: ignore
     ) -> Dict[str, Any]:
         """Analyze a prompt for effectiveness."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         analysis_prompt = f"""Analyze the following prompt:
@@ -704,8 +696,6 @@ Provide an overall effectiveness score (1-10) with justification."""
         output_style: str = ""
     ) -> Dict[str, Any]:
         """Generate a system prompt for an AI agent."""
-        from openai import OpenAI
-
         client = get_openai_client()
 
         prompt = f"""Create a comprehensive system prompt for an AI agent:
