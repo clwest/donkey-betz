@@ -261,7 +261,13 @@ Always prioritize:
                 logger.warning(f"Failed to record learning outcome: {le}")
 
             # Session 763: Create Mission Control attention item
-            self._maybe_create_attention_item(result, task, context)
+            # Session 1092: Skip when audit found nothing — empty audit ≠ attention-worthy
+            if unified_alerts:
+                self._maybe_create_attention_item(result, task, context)
+            else:
+                logger.debug(
+                    f"{self.name}: skipping attention item — 0 alerts generated"
+                )
 
             return result
 
