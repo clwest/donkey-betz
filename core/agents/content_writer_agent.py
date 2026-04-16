@@ -1441,8 +1441,8 @@ Lead with the hook. Cut off-topic sections. Add what's missing.
 This is the FINAL version — make it great."""
 
         try:
-            from openai import OpenAI
             import os
+            from core.services.openai_client_factory import get_openai_client
 
             # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
             client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
@@ -1593,8 +1593,8 @@ Use footnote citations [1] [2] with Sources at bottom.
         user_prompt = '\n'.join(user_prompt_parts)
 
         try:
-            from openai import OpenAI
             import os
+            from core.services.openai_client_factory import get_openai_client
 
             # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
             client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
@@ -1889,8 +1889,8 @@ CITATION RULES:
         Session 857: Added truncation detection and tracking.
         """
         try:
-            from openai import OpenAI
             import os
+            from core.services.openai_client_factory import get_openai_client
 
             # Session 767: timeout to OpenAI client to prevent hanging.
             # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally.
