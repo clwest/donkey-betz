@@ -347,8 +347,20 @@ Include counts, categorizations, and actionable findings."""
                 max_completion_tokens=4000,
             )
 
+            # Session 1090: gpt-5-mini (reasoning model) may put the
+            # synthesis in .output_text or nested content rather than
+            # .choices[0].message.content.  Try multiple paths.
+            final_msg = final_response.choices[0].message
+            synthesis = final_msg.content or ''
+            if not synthesis and hasattr(final_response, 'output_text'):
+                synthesis = final_response.output_text or ''
+            if not synthesis:
+                # Fallback: format tool results as markdown ourselves
+                synthesis = self._format_tool_results_as_markdown(tool_calls_made)
+                logger.warning("PlatformAuditAgent: GPT returned empty synthesis, using fallback formatter")
+
             return {
-                'message': final_response.choices[0].message.content,
+                'message': synthesis,
                 'data': {'tool_results': tool_calls_made},
                 'tool_calls': tool_calls_made
             }
@@ -358,6 +370,16 @@ Include counts, categorizations, and actionable findings."""
             'data': {},
             'tool_calls': []
         }
+
+    def _format_tool_results_as_markdown(self, tool_calls: list) -> str:
+        """Fallback: format raw tool results into readable markdown."""
+        parts = ["# Platform Audit Report\n"]
+        for tc in tool_calls:
+            tool = tc.get('tool', 'unknown')
+            result = tc.get('result_preview', '')
+            heading = tool.replace('_', ' ').title()
+            parts.append(f"## {heading}\n{result}\n")
+        return '\n'.join(parts)
 
     def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Execute a tool and return its result."""
