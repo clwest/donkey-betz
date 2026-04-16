@@ -118,7 +118,7 @@ class EmbeddingService:
     def client(self):
         """Lazy-load OpenAI client."""
         if self._client is None:
-            from openai import OpenAI
+            from core.services.openai_client_factory import get_openai_client
             self._client = get_openai_client(api_key=settings.OPENAI_API_KEY)
         return self._client
 
