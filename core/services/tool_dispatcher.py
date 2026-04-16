@@ -845,6 +845,25 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     'sections': [],
                 }
 
+        # Session 1090: ContentWriterAgent uses context['research'] as source
+        # material.  When Rigby dispatches it referencing workspace deliverables
+        # ("use the CTO analysis and COO priorities"), the actual content needs
+        # to be in the research field.  Gather workspace deliverables and inject
+        # as research so ContentWriter synthesizes from real artifacts.
+        if agent_name == 'ContentWriterAgent' and not context.get('research'):
+            workspace_id = context.get('workspace_id') or context.get('workspace')
+            gathered = self._gather_workspace_content_for_editor(workspace_id, task_text)
+            if gathered and gathered.get('sections'):
+                # Flatten sections into a research text block
+                research_parts = []
+                for section in gathered['sections']:
+                    research_parts.append(f"## {section['heading']}\n{section['content']}")
+                context['research'] = '\n\n---\n\n'.join(research_parts)
+                logger.info(
+                    "[ContentWriterAgent dispatch] Injected %d workspace deliverables as research (%d chars)",
+                    len(gathered['sections']), len(context['research']),
+                )
+
         # Session 1088: Route to long_running (matches CELERY_TASK_ROUTES).
         # Was 'agents' queue which no worker consumes.
         celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='long_running')
