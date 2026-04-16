@@ -66,6 +66,10 @@ interface Deliverable {
   source: 'user' | 'system'
   created_at: string
   updated_at: string
+  // Session 1091 — workspace assignment surfacing
+  workspace_id?: string | null
+  workspace_name?: string | null
+  is_orphan?: boolean
   // detail-only fields
   content?: string
   content_format?: string
@@ -788,6 +792,33 @@ export function DeliverablesTab() {
                         {d.agent_name}
                       </span>
                     )}
+                    {/* Session 1091 — workspace assignment surfacing.
+                        Orphans (workspace_id null) shouldn't happen post-fix
+                        but the badge shouts loudly when one slips through. */}
+                    {d.is_orphan ? (
+                      <span
+                        className="px-1.5 py-0.5 rounded text-xs bg-red-500/20 text-red-300 inline-flex items-center gap-1"
+                        title="No workspace assigned — needs triage"
+                      >
+                        Orphan
+                      </span>
+                    ) : d.workspace_name ? (
+                      <span
+                        className={cn(
+                          'px-1.5 py-0.5 rounded text-xs truncate max-w-[140px]',
+                          d.workspace_name === 'Unassigned'
+                            ? 'bg-amber-500/20 text-amber-300'
+                            : 'bg-blue-500/15 text-blue-300'
+                        )}
+                        title={
+                          d.workspace_name === 'Unassigned'
+                            ? 'Triage bucket — created without workspace; reassign as needed'
+                            : `Workspace: ${d.workspace_name}`
+                        }
+                      >
+                        {d.workspace_name}
+                      </span>
+                    ) : null}
                     {d.is_template && (
                       <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
                         template
