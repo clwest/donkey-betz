@@ -2237,6 +2237,52 @@ class UnifiedPAEntrypoint:
         """
         message_lower = message.lower()
 
+        # Session 1088: Claude Code coordination guard — MUST be checked FIRST.
+        # Messages from Claude Code are status updates, design proposals, and
+        # coordination requests. They frequently contain keywords like "dream",
+        # "legal", "pilot", "running", "opportunity", "bug", "pending" etc. in
+        # the context of discussing platform features, NOT as user intent to
+        # invoke those tools. Without this guard, a status update about the
+        # governor circuit-breaking an agent gets misrouted to dream_tool,
+        # legal_doc_drafter_agent, or logged as a bug report.
+        #
+        # Detection: messages that identify as Claude Code, or that are clearly
+        # multi-paragraph technical coordination (not user commands).
+        _claude_code_signals = [
+            'claude code',
+            "it's claude code",
+            "this is claude code",
+            'claude code reporting',
+            'claude code status',
+            'pr #',
+            'pr#',
+        ]
+        _coordination_signals = [
+            'here is what i found',
+            'here is the plan',
+            'here is my proposal',
+            'here is what shipped',
+            'i propose',
+            'my proposed',
+            'what do you think',
+            'what would you change',
+            'what gaps do you see',
+            'do you agree',
+            'let me synthesize',
+            'governor is live',
+            'governor is built',
+            'status update',
+        ]
+        if any(s in message_lower for s in _claude_code_signals):
+            return ('claude_code_coordination', None)
+        # Messages with coordination signals are design discussions, not tool
+        # invocations. For longer messages (>200 chars) any coordination signal
+        # is enough — short messages may legitimately contain these phrases as
+        # user commands. The 200-char threshold catches multi-sentence design
+        # proposals while letting through brief user queries.
+        if len(message) > 200 and any(s in message_lower for s in _coordination_signals):
+            return ('claude_code_coordination', None)
+
         # Session 1016: Media creation guard — MUST be checked FIRST.
         # "create a YouTube video", "make a video comparing...", "generate an image of..."
         # must route to creation intents even when other keywords like "project" are present.
@@ -2390,9 +2436,14 @@ class UnifiedPAEntrypoint:
             return ('predictions', 'predictions_tool')
 
         # Pilot/experiment patterns
-        if any(word in message_lower for word in [
-            'pilot', 'experiment', 'running', 'gates'
-        ]):
+        # Session 1088: Removed bare 'running' — too greedy, matches "running processes",
+        # "free-running agents", etc. Use phrase-level patterns instead.
+        _pilot_phrases = [
+            'pilot', 'experiment', 'gates',
+            'running pilot', 'running experiment',
+            'pilot status', 'experiment status',
+        ]
+        if any(word in message_lower for word in _pilot_phrases):
             if 'gate' in message_lower:
                 return ('gates', 'gates_tool')
             return ('pilots', 'pilots_tool')
