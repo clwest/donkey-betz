@@ -953,12 +953,34 @@ class AgentRouter:
         if not workspace_id:
             try:
                 from core.models_skin_layer import ProjectWorkspace
-                active_ws = ProjectWorkspace.objects.filter(is_active=True).first()
+                # Session 1088: Deterministic workspace fallback.
+                # 1. Prefer the dispatching user's own active workspace
+                # 2. Fall back to System Autonomous Workspace
+                # 3. Last resort: any active workspace owned by a superuser
+                # The old code was .filter(is_active=True).first() with no
+                # ordering or user filter, which randomly picked test user
+                # workspaces like mobile_test-personal.
+                active_ws = None
+                if self.user:
+                    active_ws = ProjectWorkspace.objects.filter(
+                        user=self.user, is_active=True
+                    ).order_by('-updated_at').first()
+                if not active_ws:
+                    active_ws = ProjectWorkspace.objects.filter(
+                        name='System Autonomous Workspace', is_active=True
+                    ).first()
+                if not active_ws:
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    superusers = User.objects.filter(is_superuser=True).values_list('id', flat=True)
+                    active_ws = ProjectWorkspace.objects.filter(
+                        user_id__in=superusers, is_active=True
+                    ).order_by('-updated_at').first()
                 if active_ws:
                     workspace_id = str(active_ws.id)
                 else:
                     logger.error(
-                        "agent_router: no is_active ProjectWorkspace exists "
+                        "agent_router: no suitable ProjectWorkspace found "
                         "— agent %s will run UNSCOPED and any deliverables "
                         "it produces will be orphaned",
                         agent_name,
