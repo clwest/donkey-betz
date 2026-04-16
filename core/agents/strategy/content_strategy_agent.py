@@ -551,6 +551,21 @@ the user should use ImageAgent, VideoAgent, etc."""
                         importance=0.6
                     )
 
+                    # Session 1092: Persist conversational output to Deliverable
+                    # too. Previously only the tool_calls branch above saved,
+                    # so when GPT responded conversationally (no tool calls)
+                    # the agent ran cleanly but produced no Deliverable
+                    # anywhere — the canary v3 failure mode.
+                    if result.message:
+                        self._save_to_deliverable(
+                            title=f"Content Strategy: {task[:80]}",
+                            content=result.message,
+                            deliverable_type='analysis',
+                            category='Content Strategy',
+                            tags=['content', 'strategy', 'conversational'],
+                            metadata={'task': task[:200], 'response_mode': 'conversation'},
+                        )
+
                     return result
 
             except Exception as e:
