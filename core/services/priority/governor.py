@@ -47,6 +47,81 @@ CB_WINDOW_SIZE = int(os.environ.get("CB_WINDOW_SIZE", "20"))  # last N execution
 CB_FAILURE_THRESHOLD = float(os.environ.get("CB_FAILURE_THRESHOLD", "0.40"))  # 40%
 CB_COOLDOWN_SECONDS = int(os.environ.get("CB_COOLDOWN_SECONDS", "3600"))  # 1 hour
 
+# ── Demo Autonomy Mode (Session 1090) ────────────────────────────────
+# When DEMO_MODE=true, ONLY allowlisted agents may execute — regardless
+# of trigger source.  This prevents random autonomous runs, cost spikes,
+# or irrelevant outputs during a live demo recording.
+#
+# The allowlist is intentionally short: read-only audits, content
+# pipeline (write → edit), a few visual wow-factor agents, and the
+# executive briefing agents.  Anything that can hang, spend heavily,
+# or publish/send outbound is excluded.
+DEMO_AUTONOMY_ALLOWLIST: frozenset = frozenset({
+    # ── Read-only / low-cost ──
+    'PlatformAuditAgent',
+    'SystemIntelligenceAgent',
+    'ResearchAgent',
+    'TrendAnalysisAgent',
+    'CompetitorAnalysisAgent',
+    'OpportunityScoringAgent',
+    # ── Content pipeline ──
+    'ContentWriterAgent',
+    'EditorAgent',
+    'ContentStrategyAgent',
+    'SEOOptimizerAgent',
+    # ── Visual wow-factor ──
+    'ImageAgent',
+    # ── Executive briefing (grounded via PCS) ──
+    'CTOAgent',
+    'COOAgent',
+    # ── Demo narrative agents ──
+    'ContentAuditAgent',
+    'PromptEngineeringAgent',
+})
+
+# Hard cap: max agent executions per hour in demo mode
+DEMO_MAX_EXECUTIONS_PER_HOUR = int(os.environ.get("DEMO_MAX_EXECUTIONS_PER_HOUR", "30"))
+
+
+def _demo_mode_enabled() -> bool:
+    raw = os.environ.get("DEMO_MODE", "").strip().lower()
+    return raw in ("true", "1", "yes", "on")
+
+
+def _check_demo_mode(agent_name: str) -> Optional[GovernorDecision]:
+    """If demo mode is on, only allowlisted agents may proceed.
+
+    Returns a BLOCK decision if the agent is not on the allowlist,
+    or None if demo mode is off or the agent is allowed.
+    """
+    if not _demo_mode_enabled():
+        return None
+
+    if agent_name in DEMO_AUTONOMY_ALLOWLIST:
+        # Check hourly execution cap
+        try:
+            from django.core.cache import cache
+            key = f"demo:hourly_count:{time.strftime('%Y%m%d%H')}"
+            count = cache.get(key, 0)
+            if count >= DEMO_MAX_EXECUTIONS_PER_HOUR:
+                return GovernorDecision(
+                    proceed=False,
+                    reason='demo_hourly_cap',
+                    agent_name=agent_name,
+                    detail=f"demo mode hourly cap reached: {count}/{DEMO_MAX_EXECUTIONS_PER_HOUR}",
+                )
+            cache.set(key, count + 1, timeout=3600)
+        except Exception:
+            pass  # fail-open on cache errors
+        return None  # allowed
+
+    return GovernorDecision(
+        proceed=False,
+        reason='demo_blocked',
+        agent_name=agent_name,
+        detail=f"agent not in DEMO_AUTONOMY_ALLOWLIST ({len(DEMO_AUTONOMY_ALLOWLIST)} allowed)",
+    )
+
 
 def _governor_enabled() -> bool:
     raw = os.environ.get(GOVERNOR_ENABLED_ENV, "").strip().lower()
@@ -318,6 +393,15 @@ def should_dispatch(
     proceeds — the governor only gates autonomous beat-task work.
     """
     try:
+        # Session 1090: Demo mode check — applies to ALL trigger sources.
+        # Must run before the user_triggers bypass.
+        demo_block = _check_demo_mode(agent_name)
+        if demo_block is not None:
+            logger.info(
+                "[governor] DEMO BLOCK %s: %s", agent_name, demo_block.detail,
+            )
+            return demo_block
+
         # User-triggered work is never gated
         user_triggers = {'user_chat', 'user', 'pa_tool', 'direct'}
         if trigger_source in user_triggers:
@@ -462,8 +546,9 @@ def get_governor_status() -> dict:
 
         telemetry = get_mission_telemetry()
 
-        return {
+        result = {
             "governor_enabled": _governor_enabled(),
+            "demo_mode": _demo_mode_enabled(),
             "active_priorities": len(priorities),
             "priority_names": [p["name"] for p in priorities],
             "disabled_missions": disabled_missions,
@@ -475,5 +560,9 @@ def get_governor_status() -> dict:
                 "cb_cooldown_seconds": CB_COOLDOWN_SECONDS,
             },
         }
+        if _demo_mode_enabled():
+            result["demo_allowlist"] = sorted(DEMO_AUTONOMY_ALLOWLIST)
+            result["demo_max_executions_per_hour"] = DEMO_MAX_EXECUTIONS_PER_HOUR
+        return result
     except Exception:
-        return {"governor_enabled": _governor_enabled(), "error": "status unavailable"}
+        return {"governor_enabled": _governor_enabled(), "demo_mode": _demo_mode_enabled(), "error": "status unavailable"}
