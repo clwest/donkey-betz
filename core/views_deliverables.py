@@ -661,6 +661,14 @@ def _serialize_deliverable(deliverable: Deliverable, include_content: bool = Fal
         'source': source,
         'created_at': deliverable.created_at.isoformat(),
         'updated_at': deliverable.updated_at.isoformat(),
+        # Session 1091 — surface workspace assignment for UI rendering.
+        # The PA tool (deliverable_tool.list) already returns these via
+        # td_handlers_agents._LIST_FIELDS; the REST endpoint that the
+        # React DeliverablesTab actually consumes was still missing them,
+        # so the workspace badge / orphan indicator had nothing to render.
+        'workspace_id': str(deliverable.workspace_id) if deliverable.workspace_id else None,
+        'workspace_name': deliverable.workspace.name if deliverable.workspace_id and deliverable.workspace else None,
+        'is_orphan': deliverable.workspace_id is None,
     }
 
     # Session 1077: Include initiative context if linked
