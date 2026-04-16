@@ -610,18 +610,38 @@ DEFAULT_TRIGGERS = [
         'priority': 80,
     },
     {
+        # Session 1092: Downgraded from high → medium and cooldown 60 → 720 (12h).
+        # Rationale: Every Fed-related news headline was firing as 'high' urgency,
+        # producing 5+ "Fed Alert" attention items per 24h with no actionable signal.
+        # Truly market-moving Fed events are now caught by 'FOMC Rate Decision' below.
         'name': 'Fed/Interest Rate News',
-        'description': 'Alert on Federal Reserve and interest rate news',
+        'description': 'Background signal on general Federal Reserve / interest rate news',
         'situation_type': 'stock_market',
         'trigger_type': 'breaking_news',
         'target_spiders': ['business_news', 'reuters_rss', 'google_news'],
         'target_field': 'title',
         'operator': 'contains',
         'threshold_value': 'fed |federal reserve|interest rate|rate hike|rate cut|powell|fomc',
-        'severity': 'high',
+        'severity': 'medium',
         'alert_title_template': 'Fed Alert: {matched_value}',
+        'cooldown_minutes': 720,
+        'priority': 60,
+    },
+    {
+        # Session 1092: Narrow high-severity trigger for actually-actionable Fed events.
+        # Keywords scoped to rate-decision artifacts and emergency actions.
+        'name': 'FOMC Rate Decision',
+        'description': 'High-priority alert on FOMC decisions, dot plots, and emergency Fed action',
+        'situation_type': 'stock_market',
+        'trigger_type': 'breaking_news',
+        'target_spiders': ['business_news', 'reuters_rss', 'google_news'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'fomc statement|fomc minutes|rate decision|basis points|dot plot|emergency meeting|inter-meeting|surprise cut|surprise hike|liquidity facility',
+        'severity': 'high',
+        'alert_title_template': 'FOMC: {matched_value}',
         'cooldown_minutes': 60,
-        'priority': 90,
+        'priority': 92,
     },
 
     # =========================================================================
