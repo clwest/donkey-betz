@@ -3722,7 +3722,7 @@ class ContentHandlersMixin:
             celery_task = execute_agent_task.apply_async(
                 args=['SharpActionDetector', 'Identify sharp betting action and stale lines',
                       {'user_id': str(user_id) if user_id else None, 'limit': limit}],
-                queue='agents',
+                queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -3737,7 +3737,7 @@ class ContentHandlersMixin:
             celery_task = execute_agent_task.apply_async(
                 args=['LineMovementAnalyzer', 'Detect sharp money line movements',
                       {'user_id': str(user_id) if user_id else None, 'limit': limit}],
-                queue='agents',
+                queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
@@ -3829,7 +3829,7 @@ class ContentHandlersMixin:
             celery_task = execute_agent_task.apply_async(
                 args=['GamePredictor', f'Generate a full betting brief ({action})',
                       {'user_id': str(user_id) if user_id else None, 'action': action}],
-                queue='agents',
+                queue='long_running',
             )
             return {
                 'task_id': str(celery_task.id),
