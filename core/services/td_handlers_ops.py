@@ -1114,6 +1114,9 @@ class OpsHandlersMixin:
           - coverage: show all agents and their alignment status
         """
         action = payload.get('action', 'status')
+        # LLM sometimes sends 'list' when it means 'status'
+        if action == 'list':
+            action = 'status'
 
         if action == 'status':
             from core.services.priority.governor import get_governor_status
