@@ -775,6 +775,17 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
     # TOOL HANDLERS
     # =========================================================================
 
+    # Session 1090: Fields that should be promoted from the top-level
+    # payload into context when GPT-5.2 puts them at the root level
+    # instead of nesting inside the 'context' key.  Also catches fields
+    # injected by the PA entrypoint (workspace_id, conversation_id).
+    _CONTEXT_PROMOTE_KEYS = {
+        'workspace_id', 'workspace', 'conversation_id',
+        'content_type', 'tone', 'target_audience', 'word_count',
+        'topic', 'keywords', 'blog_id', 'focus_areas',
+        'content', 'research', 'research_summary',
+    }
+
     def _handle_agent_tool(
         self,
         tool_name: str,
@@ -788,6 +799,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         async dispatch. All agent tools were timing out (30-60s) when called
         synchronously from the PA. Now returns task_id immediately.
 
+        Session 1090: Promotes known context fields from the top-level payload
+        into context['...'].  GPT-5.2 frequently puts structured data (content_type,
+        tone, blog_id, workspace_id) at the payload root rather than nesting it
+        inside the 'context' key.  The PA entrypoint also injects workspace_id
+        and conversation_id at the root.  Without this promotion step, agents
+        that rely on context fields (EditorAgent, ContentWriterAgent) fail with
+        "missing content/blog_id" even though the data was sent.
+
         Deliverable lookup happens in execute_agent_task after completion.
         PA user assignment is handled via context['user_id'].
         """
@@ -796,9 +815,28 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         agent_name = self._tool_to_agent_name(tool_name)
 
         task_text = payload.get('task') or payload.get('prompt') or payload.get('query', '')
-        context = payload.get('context', {})
+        context = payload.get('context') or {}
+        if not isinstance(context, dict):
+            context = {}
+
+        # Session 1090: Promote known fields from payload root into context.
+        for key in self._CONTEXT_PROMOTE_KEYS:
+            if key in payload and key not in context:
+                context[key] = payload[key]
+
         if user_id:
             context['user_id'] = str(user_id)
+
+        # Session 1090: EditorAgent requires 'content' in context.  When the
+        # PA dispatches it, the actual content to edit is typically embedded
+        # in the task text (GPT-5.2 doesn't populate context['content']).
+        # Package the task text as content so EditorAgent can process it.
+        if agent_name == 'EditorAgent' and 'content' not in context and 'blog_id' not in context:
+            context['content'] = {
+                'title': task_text[:120],
+                'full_text': task_text,
+                'sections': [],
+            }
 
         # Session 1088: Route to long_running (matches CELERY_TASK_ROUTES).
         # Was 'agents' queue which no worker consumes.
