@@ -2968,6 +2968,7 @@ PA_TOOL_SCHEMAS = [
                 "agent": {"type": "string", "description": "Filter by agent_name"},
                 "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for create/update"},
                 "workspace_id": {"type": "string", "description": "Workspace UUID to scope or link"},
+                "orphans": {"type": "boolean", "description": "For list: when true, return only deliverables with no workspace assignment (workspace_id IS NULL). Use for orphan triage; the response also surfaces is_orphan on every row."},
                 "full": {"type": "boolean", "description": "For detail: return full content without 8K cap"},
                 "content_offset": {"type": "integer", "description": "For detail: start reading from this char position"},
                 "content_limit": {"type": "integer", "description": "For detail: max chars to return"},
@@ -4336,9 +4337,29 @@ TOOL_TO_INTENT_MAP = {
 # Used by _run_agentic_loop to detect stale cached schemas and force reload.
 
 def _compute_schema_version() -> str:
-    """Hash of all tool names — changes when any tool is added or removed."""
-    names = sorted(s.get('name', '') for s in PA_TOOL_SCHEMAS if isinstance(s, dict))
-    return hashlib.md5('|'.join(names).encode()).hexdigest()[:12]
+    """Hash of all tool names AND parameter shapes.
+
+    Session 1091: Previously hashed only tool names, which meant adding,
+    removing, or changing parameters on an existing tool (e.g. adding the
+    new ``orphans`` filter to ``deliverable_tool``) did not bump the
+    version, so live workers kept serving stale schemas to GPT-5.2 until
+    something forced a process restart. Now includes a deterministic JSON
+    dump of each tool's parameters so any schema change triggers reload.
+    """
+    import json as _json
+    parts = []
+    for s in PA_TOOL_SCHEMAS:
+        if not isinstance(s, dict):
+            continue
+        name = s.get('name', '')
+        params = s.get('parameters', {})
+        try:
+            params_dump = _json.dumps(params, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            params_dump = repr(params)
+        parts.append(f"{name}::{params_dump}")
+    parts.sort()
+    return hashlib.md5('|'.join(parts).encode()).hexdigest()[:12]
 
 
 SCHEMA_VERSION = _compute_schema_version()
