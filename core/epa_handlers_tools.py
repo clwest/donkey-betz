@@ -251,6 +251,8 @@ class EPAToolHandlersMixin:
             agent = CreationAgent(user=self.user, project_id=project_id)
 
             # Execute generation with enriched prompt (Session 353)
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('CreationAgent', trigger_source='user_chat'); log_decision(_pd, 'CreationAgent')
             result = agent.execute(
                 prompt=enriched_prompt,
                 size=f"{width}x{height}",
@@ -304,6 +306,8 @@ class EPAToolHandlersMixin:
             agent = TrainedCreationAgent(user=self.user, project_id=project_id)
 
             # Execute generation with LoRA
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('TrainedCreationAgent', trigger_source='user_chat'); log_decision(_pd, 'TrainedCreationAgent')
             result = agent.execute(
                 prompt=prompt,
                 character_model_name=character_model_name,
@@ -1287,6 +1291,8 @@ class EPAToolHandlersMixin:
             # Session 293: Execute the agent with ALL required parameters
             # AgentResult requires: task, context, scifi_context, spider_context
             # Session 325: Now passing project_id for full context awareness
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('CompetitorAnalysisAgent', trigger_source='user_chat'); log_decision(_pd, 'CompetitorAnalysisAgent')
             result = agent.execute(
                 task=task,
                 context={
@@ -1399,6 +1405,8 @@ class EPAToolHandlersMixin:
             # Execute the agent
             # Session 324: Agent requires scifi_context and spider_context
             # Session 325: Now passing project_id for full context awareness
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('CustomerResearchAgent', trigger_source='user_chat'); log_decision(_pd, 'CustomerResearchAgent')
             result = agent.execute(
                 task=task,
                 context={
@@ -1504,6 +1512,8 @@ class EPAToolHandlersMixin:
             logger.info(f"🎨 Task: {task}")
 
             # Execute the agent
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('BrandStrategyAgent', trigger_source='user_chat'); log_decision(_pd, 'BrandStrategyAgent')
             result = agent.execute(
                 task=task,
                 context={
@@ -1608,6 +1618,8 @@ class EPAToolHandlersMixin:
 
             # Execute the agent
             # Session 339: BaseBusinessResearchAgent.execute() only takes task and context
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ContentStrategyAgent', trigger_source='user_chat'); log_decision(_pd, 'ContentStrategyAgent')
             result = agent.execute(
                 task=task,
                 context={
@@ -1729,6 +1741,8 @@ class EPAToolHandlersMixin:
 
             # Execute the agent
             # Session 339: BaseBusinessResearchAgent.execute() only takes task and context
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('MarketingStrategyAgent', trigger_source='user_chat'); log_decision(_pd, 'MarketingStrategyAgent')
             result = agent.execute(
                 task=task,
                 context={
@@ -2093,6 +2107,8 @@ class EPAToolHandlersMixin:
             from core.agents.training import TrainedCreationAgent
             agent = TrainedCreationAgent(user=self.user, project_id=getattr(self, 'project_id', None))
 
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('TrainedCreationAgent', trigger_source='user_chat'); log_decision(_pd, 'TrainedCreationAgent')
             result = agent.execute(
                 prompt=prompt,
                 character_model_name=character_model_name,
@@ -2564,6 +2580,8 @@ class EPAToolHandlersMixin:
                 logger.info(f"📊 Research context detected in user_message!")
 
             # Execute workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('WorkflowOrchestrationAgent', trigger_source='user_chat'); log_decision(_pd, 'WorkflowOrchestrationAgent')
             result = agent.execute(
                 task=user_message or topic,
                 context=context,
@@ -2727,6 +2745,8 @@ class EPAToolHandlersMixin:
                 logger.debug(f"Could not fetch scifi context: {e}")
 
             # Execute content writing
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ContentWriterAgent', trigger_source='user_chat'); log_decision(_pd, 'ContentWriterAgent')
             result = agent.execute(
                 task=task or f"Write {content_type}",
                 context=context,

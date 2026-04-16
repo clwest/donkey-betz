@@ -117,6 +117,8 @@ class AudioToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('AudioAgent', trigger_source='user_chat'); log_decision(_pd, 'AudioAgent')
             result = agent.execute(
                 operation='generate_voice',
                 text=text,
@@ -178,6 +180,8 @@ class AudioToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('AudioAgent', trigger_source='user_chat'); log_decision(_pd, 'AudioAgent')
             result = agent.execute(
                 operation='add_voiceover',
                 text=text,

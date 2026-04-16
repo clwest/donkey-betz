@@ -44,7 +44,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, Optional
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,82 @@ def log_decision(decision: Optional[Any], agent_name: str) -> None:
     # command, test harness). The fail-open guarantee still holds:
     # any exception in the recording path is swallowed, not propagated.
     _record_priority_telemetry(decision)
+
+
+@contextmanager
+def priority_guard(
+    agent_name: str,
+    task: Optional[str] = None,
+    context: Optional[Dict[str, Any]] = None,
+    trigger_source: Optional[str] = None,
+) -> Iterator[Optional[Any]]:
+    """
+    Session 1086 PR 3c: Single-line wrapper that combines the full
+    priority pipeline into one ``with`` statement. Replaces the 3-line
+    check + log + acquire pattern used in PR 3a/3b bypass sites.
+
+    Usage::
+
+        from core.services.priority.enforce import priority_guard
+
+        with priority_guard('SomeAgent', trigger_source='user_chat'):
+            result = agent.execute(...)
+
+    Equivalent to::
+
+        decision = check_priority('SomeAgent', trigger_source='user_chat')
+        log_decision(decision, 'SomeAgent')
+        with acquire_for_decision(decision, 'SomeAgent'):
+            result = agent.execute(...)
+
+    Yields the ``PriorityDecision`` (or ``None`` when the gate is off)
+    so callers that want to inspect the decision can bind it via
+    ``as _pd``. Most call sites won't need the binding — they just want
+    the implicit priority check + throttle behavior.
+
+    Fail-open everywhere: if any step raises, the context manager still
+    yields and the agent.execute() call proceeds. This is the
+    load-bearing property that lets PR 3c wrap 32 bypass sites without
+    worrying about cascading failures.
+
+    Intended for PR_3B_PRIORITY_TARGETS migrations (EPA + assistant tool
+    handlers). These are all user-triggered PA tool dispatches, so the
+    default ``trigger_source='user_chat'`` would be appropriate — but
+    the caller must pass it explicitly to avoid accidental throttling
+    of user work. The helper does NOT default it.
+    """
+    decision = None
+    try:
+        decision = check_priority(
+            agent_name=agent_name,
+            task=task,
+            context=context,
+            trigger_source=trigger_source,
+        )
+        log_decision(decision, agent_name)
+    except Exception:
+        _log_enforce_failure()
+        decision = None
+
+    # Lazy inline import to match the rest of this module's pattern
+    # and avoid pulling the semaphore module at module-top load time.
+    try:
+        from core.services.priority.semaphore import acquire_for_decision
+    except Exception:
+        acquire_for_decision = None  # type: ignore
+
+    if acquire_for_decision is None:
+        yield decision
+        return
+
+    try:
+        with acquire_for_decision(decision, agent_name):
+            yield decision
+    except Exception:
+        # Semaphore context manager itself raised — should be impossible
+        # given its own fail-open contract, but defensive-wrap anyway.
+        _log_enforce_failure()
+        yield decision
 
 
 def _record_priority_telemetry(decision: Any) -> None:

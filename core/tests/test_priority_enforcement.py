@@ -48,30 +48,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # ── Files locked in by PR 3a ────────────────────────────────────────────
 
 PR_3A_ENFORCED_BYPASS_FILES = [
+    # PR 3a (Bucket A — original strict enforcement)
     "core/tasks_content.py",
     "core/tasks.py",
-]
-
-# ── Files PR 3c will migrate next ──────────────────────────────────────
-#
-# Rigby's Session 1086 design review originally scoped these as PR 3b
-# targets, but during PR 3b implementation the bypass inventory scan
-# revealed that these 6 files contain **32 ``agent.execute()`` sites
-# combined** — far more than the 12 originally estimated. Migrating all
-# 32 inside PR 3b (which already ships the semaphore + telemetry fields
-# + migration 0330) would risk indentation bugs on a PR that's already
-# touching runtime scheduling behavior.
-#
-# PR 3b therefore ships throttling + telemetry WITHOUT the bypass
-# migrations, and these 6 files are deferred to PR 3c. The xfail-strict
-# markers still enforce ledger discipline: CI fails the moment any of
-# these files gets patched without being moved out of the pending list.
-#
-# EPA legacy path is reachable in production via core/urls.py:2375,
-# refactored assistant layer via UnifiedPAEntrypoint. Both need
-# migration; the question is only when.
-
-PR_3B_PRIORITY_TARGETS = [
+    # PR 3c (promoted from PR_3B_PRIORITY_TARGETS after mechanical migration)
     "core/epa_handlers_agents.py",
     "core/epa_handlers_tools.py",
     "core/epa_handlers_utility.py",
@@ -79,6 +59,24 @@ PR_3B_PRIORITY_TARGETS = [
     "core/assistant/audio_tools.py",
     "core/assistant/video_tools.py",
 ]
+
+# ── PR 3c: all former pending targets now strictly enforced ────────────
+#
+# As of PR 3c, the 6 files that were deferred from PR 3b have been
+# migrated via a one-shot script that injected ``check_priority`` +
+# ``log_decision`` calls before each ``agent.execute()`` site. All 32
+# sites across EPA handlers + assistant layer use
+# ``trigger_source='user_chat'`` since they're PA-tool-dispatched user
+# work — that bypasses the semaphore via the user_chat_exempt
+# short-circuit, so PR 3c is observer-only by design with zero
+# throttling behavior change.
+#
+# The files moved from here into PR_3A_ENFORCED_BYPASS_FILES above.
+# This list is now empty as a sentinel: a future PR 3d adding a new
+# bypass target should populate this list again as an xfail-strict
+# ledger, not silently migrate.
+
+PR_3B_PRIORITY_TARGETS: list = []
 
 
 # ── Regex: tight pattern that only matches idiomatic ``agent.execute(`` ─
