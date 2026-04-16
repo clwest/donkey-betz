@@ -259,6 +259,12 @@ class ActivePriority(models.Model):
         from django.utils import timezone
         return self.expires_at <= timezone.now()
 
+    # Rate-limit the fail-open error log so we can SEE silent DB failures
+    # without flooding logs when the whole table is unreachable. Mirrors the
+    # pattern we want for PriorityRouter in PR 2. Module-level state keyed
+    # on the class so subclasses don't share throttles.
+    _last_fail_open_log_ts: float = 0.0
+
     @classmethod
     def get_active_priorities(cls) -> list:
         """
@@ -274,7 +280,13 @@ class ActivePriority(models.Model):
         matching (id, name, tags, agent_whitelist, agent_blacklist,
         enable_keyword_match, priority_rank). Full row access is still
         available via the ORM for tools that need it.
+
+        Fail-open observability: exceptions are logged via ``logger.exception``
+        but rate-limited to once every 60 seconds to prevent log flooding in
+        a total-DB-outage scenario. This addresses Rigby's Session 1086 review
+        comment: fail-open without any observability can mask real errors.
         """
+        import time
         from django.utils import timezone
         try:
             now = timezone.now()
@@ -297,6 +309,18 @@ class ActivePriority(models.Model):
             return active
         except Exception:
             # DB unavailable / table missing / migration in flight → fail open
+            now_ts = time.monotonic()
+            if now_ts - cls._last_fail_open_log_ts > 60.0:
+                cls._last_fail_open_log_ts = now_ts
+                try:
+                    import logging
+                    logging.getLogger(__name__).exception(
+                        "ActivePriority.get_active_priorities() fail-open: "
+                        "DB error suppressed, routing without priorities "
+                        "until next successful read"
+                    )
+                except Exception:
+                    pass  # logging must never break fail-open
             return []
 
 
