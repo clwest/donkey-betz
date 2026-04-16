@@ -317,7 +317,8 @@ Include counts, categorizations, and actionable findings."""
                 tool_calls_made.append({
                     'tool': function_name,
                     'arguments': arguments,
-                    'result_preview': str(tool_result)[:200]
+                    'result_preview': str(tool_result)[:200],
+                    'result_full': tool_result,  # Session 1090: kept for fallback formatter
                 })
 
                 messages.append({
@@ -372,13 +373,71 @@ Include counts, categorizations, and actionable findings."""
         }
 
     def _format_tool_results_as_markdown(self, tool_calls: list) -> str:
-        """Fallback: format raw tool results into readable markdown."""
+        """Fallback: format raw tool results into readable markdown.
+
+        Session 1090: gpt-5-mini consistently returns empty synthesis,
+        so this formatter produces the deliverable content directly.
+        """
         parts = ["# Platform Audit Report\n"]
+
         for tc in tool_calls:
             tool = tc.get('tool', 'unknown')
-            result = tc.get('result_preview', '')
-            heading = tool.replace('_', ' ').title()
-            parts.append(f"## {heading}\n{result}\n")
+            data = tc.get('result_full', {})
+            if not isinstance(data, dict):
+                continue
+
+            if tool == 'inventory_integrations':
+                total = data.get('total', 0)
+                configured = data.get('configured', 0)
+                missing = data.get('missing', 0)
+                parts.append(f"## Integration Health\n")
+                parts.append(f"- **{configured}/{total}** integrations configured, **{missing}** missing\n")
+                for intg in data.get('integrations', []):
+                    status = 'configured' if intg.get('configured') else 'MISSING'
+                    parts.append(f"- {intg.get('name', '?')} ({intg.get('category', '?')}): **{status}**")
+                parts.append("")
+
+            elif tool == 'check_env_config':
+                parts.append("## Environment Configuration\n")
+                for category, keys in data.items():
+                    if isinstance(keys, dict):
+                        for key, info in keys.items():
+                            if isinstance(info, dict):
+                                status = 'Set' if info.get('configured') else 'MISSING'
+                                parts.append(f"- `{key}`: **{status}**")
+                            else:
+                                parts.append(f"- {key}: {str(info)[:80]}")
+                parts.append("")
+
+            elif tool == 'count_database_models':
+                parts.append("## Database Health\n")
+                for model, info in data.items():
+                    if isinstance(info, dict):
+                        if 'count' in info:
+                            parts.append(f"- **{model}**: {info['count']:,} records")
+                        elif 'error' in info:
+                            parts.append(f"- **{model}**: error — {info['error'][:60]}")
+                parts.append("")
+
+            elif tool == 'generate_audit_report':
+                report = data.get('report', data)
+                if isinstance(report, dict):
+                    summary = report.get('summary', '')
+                    if summary:
+                        parts.append(f"## Executive Summary\n{summary}\n")
+                    risks = report.get('risks', report.get('top_risks', []))
+                    if risks:
+                        parts.append("## Top Risks")
+                        for r in (risks[:5] if isinstance(risks, list) else []):
+                            parts.append(f"- {r}")
+                        parts.append("")
+                    green = report.get('green_checks', report.get('strengths', []))
+                    if green:
+                        parts.append("## Green Checks")
+                        for g in (green[:5] if isinstance(green, list) else []):
+                            parts.append(f"- {g}")
+                        parts.append("")
+
         return '\n'.join(parts)
 
     def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
