@@ -897,7 +897,6 @@ class AgentRouter:
                 f"[route] BLOCKED: {agent_name} disabled on Railway "
                 f"(task='{(task or '')[:50]}...')"
             )
-            from core.agents.base_agent import AgentResult
             return AgentResult(
                 success=False,
                 message=f'{agent_name} disabled on Railway (Session 1032)',
@@ -1402,16 +1401,7 @@ class AgentRouter:
                         logger.exception(
                             f"[router] timeout telemetry failed: {_telemetry_exc}"
                         )
-                    # NOTE: local re-import to sidestep a pre-existing Python
-                    # scoping footgun: the inline `from ... import AgentResult`
-                    # at ~line 900 (inside `if AgentControlEntry.is_blocked`)
-                    # makes AgentResult function-local for the whole route(),
-                    # so when that conditional isn't taken, `AgentResult(...)`
-                    # references an unbound local. Commit 2 of this PR removes
-                    # the shadow; keeping this workaround here so commit 1 is
-                    # independently safe to land.
-                    from core.agents.base_agent import AgentResult as _RouterAgentResult
-                    result = _RouterAgentResult(
+                    result = AgentResult(
                         success=False,
                         error=(
                             f'{agent_name} exceeded {_router_wall_timeout}s '
