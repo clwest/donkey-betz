@@ -97,6 +97,105 @@ def _should_create_deliverable(
     return True, "passed"
 
 
+# ── Session 1088: BLOCKED content detection ───────────────────────────
+
+def _detect_blocked_content(content: str) -> Optional[str]:
+    """
+    Detect if agent output contains BLOCKED warnings indicating
+    incomplete work due to missing evidence/data.
+
+    Returns the blocked reason string if found, None if content is clean.
+    """
+    import re
+    if not content:
+        return None
+
+    # Match patterns like "BLOCKED ON: missing domain evidence"
+    # or "**BLOCKED ON: missing source URL**"
+    match = re.search(
+        r'BLOCKED\s*(?:ON)?[:\s]*([^\n\*]{10,150})',
+        content,
+        re.IGNORECASE,
+    )
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+
+def _clean_deliverable_title(title: str, agent_name: str, content: str) -> str:
+    """
+    Generate a human-readable title from raw prompt text.
+
+    The problem: deliverable titles are often the raw task prompt, e.g.
+    "Research: Summarize this insight into 3 concrete next-steps (one
+    sentence each). Do NOT do web research or too..."
+
+    This function extracts a meaningful title from the content or
+    cleans up the prompt-based title.
+    """
+    if not title:
+        return f"{agent_name} Output"
+
+    # Strip common agent prefixes that get prepended
+    prefixes_to_strip = [
+        'Research: ', 'Trend Analysis: ', 'Thinking Analysis: ',
+        'Competitor Analysis: ', 'Contrarian Analysis: ',
+        'Creative Direction: ', 'CTO Analysis: ', 'COO Analysis: ',
+        'Brand Strategy: ', 'Performance Analysis: ',
+        'Market Intelligence: ', 'System Intelligence Report: ',
+        'Topic Mining: ', 'blog_post: ',
+    ]
+    clean = title
+    for prefix in prefixes_to_strip:
+        if clean.startswith(prefix):
+            clean = clean[len(prefix):]
+            break
+
+    # If the title looks like a raw prompt (contains instruction words),
+    # try to extract the actual topic
+    prompt_indicators = [
+        'summarize this', 'do not do web', 'do not do research',
+        'use the run_agent tool', 'one sentence each',
+        'provide a', 'identify the', 'analyze the',
+        'as a participant in a strategic meeting about',
+        'challenge assumptions and suggest',
+        'find trending topics and opportunities in',
+    ]
+    is_prompt = any(ind in clean.lower() for ind in prompt_indicators)
+
+    if is_prompt:
+        # Try to extract topic from "Insight: X" pattern in the title
+        import re
+        insight_match = re.search(r'Insight:\s*(.{10,80}?)(?:\n|Detail:|$)', title)
+        if insight_match:
+            return f"{agent_name}: {insight_match.group(1).strip()}"
+
+        # Try to extract from "about X" pattern
+        about_match = re.search(r'about\s+"?(.{10,80}?)"?\s*(?:\n|$)', clean)
+        if about_match:
+            return f"{agent_name}: {about_match.group(1).strip()}"
+
+        # Try first heading from content
+        if content:
+            heading_match = re.search(r'^##?\s+(.{10,80})$', content, re.MULTILINE)
+            if heading_match:
+                heading = heading_match.group(1).strip()
+                if 'executive summary' not in heading.lower():
+                    return f"{agent_name}: {heading}"
+
+        # Truncate the prompt to something reasonable
+        if len(clean) > 80:
+            clean = clean[:77] + '...'
+        return f"{agent_name}: {clean}"
+
+    # Title is already reasonable — just ensure it's not too long
+    if len(title) > 120:
+        return title[:117] + '...'
+
+    return title
+
+
 def create_deliverable(
     title: str,
     content: str,
@@ -245,6 +344,20 @@ def create_deliverable(
         else:
             metadata['trigger_source'] = 'beat_task'
 
+    # --- Session 1088: BLOCKED content detection ---
+    blocked_reason = _detect_blocked_content(content)
+    if blocked_reason:
+        status = 'blocked'
+        metadata['blocked_reason'] = blocked_reason
+        logger.info(
+            "[DeliverableFactory] BLOCKED content detected for %s: %s (title=%s)",
+            agent_name, blocked_reason[:80], title[:60],
+        )
+    # else status comes from the caller (default 'ready')
+
+    # --- Session 1088: Clean up prompt-as-title ---
+    title = _clean_deliverable_title(title, agent_name, content)
+
     # Build preview
     preview = content[:500] if content else ''
 
@@ -303,6 +416,10 @@ def create_deliverable(
 
     # Merge any extra fields (for backward compat with existing callers)
     kwargs.update(extra_fields)
+
+    # Session 1088: Override status if content is BLOCKED
+    if blocked_reason:
+        kwargs['status'] = 'blocked'
 
     try:
         deliverable = Deliverable.objects.create(**kwargs)
