@@ -34,6 +34,30 @@ middle layer of the 3-PR priority-aware routing MVP:
 6. Priorities exist but nothing matched → MISMATCH with
    ``matched_via=None``.
 
+## IMPORTANT: whitelist and blacklist are GLOBAL, not per-priority
+
+Whitelist and blacklist hits short-circuit across the *entire active
+priority set*, not just the priority that owns the list. Concrete
+consequences to remember:
+
+- If **any** active priority whitelists ``ImageAgent``, ``ImageAgent``
+  is MATCHED regardless of what every other priority says.
+- If **any** active priority blacklists ``ImageAgent`` AND no priority
+  whitelists it, ``ImageAgent`` is MISMATCHED globally — even if
+  another priority's ``tags`` list would otherwise overlap and match.
+- If a single agent appears in priority A's whitelist and priority
+  B's blacklist, the **whitelist wins** because rule 1 fires before
+  rule 2.
+
+This is **not** "this priority doesn't match, skip to the next one."
+Do not change the interpretation in PR 3 or any follow-up without
+bumping the contract and updating smoke test #3 (which locks the
+whitelist-beats-blacklist behavior). The alternative (per-priority
+blacklist) is more nuanced but forces us to decide how to pick
+``priority_name`` when multiple priorities match, and Rigby's
+Session 1086 design review deliberately picked the simpler global
+semantics for MVP.
+
 **Fail-open everywhere.** Empty priority set, all expired, DB error,
 matching helper exception — any of these return MATCH rather than
 blocking production traffic. Observability comes from rate-limited
