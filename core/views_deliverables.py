@@ -298,6 +298,10 @@ def clone_deliverable(request, deliverable_id):
         original = get_object_or_404(Deliverable, id=deliverable_id)
 
         # Create clone
+        # Session 1091 — explicitly inherit workspace + initiative from the
+        # original. Previously these were both omitted, so every clone became
+        # an orphan (workspace=NULL) regardless of where the original lived.
+        # Surfaced during the Workspace/Deliverable Flow Verification Sprint.
         clone = Deliverable.objects.create(
             title=f"Copy of {original.title}"[:255],
             deliverable_type=original.deliverable_type,
@@ -306,6 +310,8 @@ def clone_deliverable(request, deliverable_id):
             agent_name=original.agent_name,
             agent_task=original.agent_task,
             user=request.user,
+            workspace=original.workspace,
+            initiative=original.initiative,
             content=original.content,
             content_format=original.content_format,
             preview_content=original.preview_content,

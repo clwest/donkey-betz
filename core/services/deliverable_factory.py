@@ -360,12 +360,30 @@ def create_deliverable(
         workspace_id = _get_active_workspace_id(user)
 
     if not explicit_workspace and not workspace_id:
-        logger.warning(
-            "[DeliverableFactory] No eligible autonomous workspace for "
-            "agent=%s title=%r — deliverable will be created without "
-            "workspace. Caller should pass workspace_id explicitly.",
-            agent_name, title[:80],
-        )
+        # Session 1091 — fall back to a sentinel "Unassigned" workspace so the
+        # orphan rate is zero by construction. Previously the factory just
+        # logged a warning and created a deliverable with workspace=NULL,
+        # which then disappeared from every workspace-scoped UI view. The
+        # Unassigned bucket is auto-created on first use, marked
+        # allow_autonomous_writes=True (so it qualifies for future
+        # _get_active_workspace_id lookups too), and serves as a triage pile
+        # for callers that didn't pass workspace_id explicitly.
+        workspace_id = _get_or_create_unassigned_workspace_id(user)
+        if workspace_id:
+            logger.warning(
+                "[DeliverableFactory] No eligible autonomous workspace for "
+                "agent=%s title=%r — routing to Unassigned bucket (%s) for "
+                "triage. Caller should pass workspace_id explicitly.",
+                agent_name, title[:80], workspace_id,
+            )
+        else:
+            logger.error(
+                "[DeliverableFactory] No eligible autonomous workspace for "
+                "agent=%s title=%r AND Unassigned-bucket fallback failed; "
+                "deliverable will be orphaned. This should not happen — "
+                "check ProjectWorkspace creation permissions.",
+                agent_name, title[:80],
+            )
 
     # --- Session 1088: Auto-tag trigger_source in metadata ---
     metadata = metadata or {}
@@ -483,6 +501,52 @@ def _get_default_user():
     except Exception as _e:
         logger.warning(
             "deliverable_factory._get_default_user: swallowed (%s: %s) — returning default",
+            type(_e).__name__, _e,
+        )
+        return None
+
+
+UNASSIGNED_WORKSPACE_NAME = "Unassigned"
+
+
+def _get_or_create_unassigned_workspace_id(user) -> Optional[str]:
+    """Session 1091 — sentinel workspace bucket for orphan prevention.
+
+    Returns the id of the per-user "Unassigned" ProjectWorkspace, creating
+    it on demand. Marked ``allow_autonomous_writes=True`` so subsequent
+    factory calls without an explicit workspace land here too (and surface
+    in autonomous-workspace lookups). Treated as a triage pile — anything
+    here is by definition something an agent created without specifying a
+    home, and the right action is to reassign it to the workspace that
+    matches its content.
+    """
+    if not user:
+        return None
+    try:
+        from core.models_skin_layer import ProjectWorkspace
+        ws, _created = ProjectWorkspace.objects.get_or_create(
+            user=user,
+            name=UNASSIGNED_WORKSPACE_NAME,
+            defaults={
+                'description': (
+                    'Triage bucket for deliverables created by agents that '
+                    'did not pass workspace_id. Reassign each item to the '
+                    'workspace that matches its content. Auto-created by '
+                    'core/services/deliverable_factory.py (Session 1091).'
+                ),
+                'workspace_type': 'sandbox',
+                'root_path': '/tmp',
+                'is_active': False,
+                'allow_autonomous_writes': True,
+            },
+        )
+        return str(ws.id)
+    except Exception as _e:
+        # Log full traceback so this fallback failing isn't silent — losing
+        # the bucket means we'd silently orphan again, defeating the patch.
+        logger.exception(
+            "deliverable_factory._get_or_create_unassigned_workspace_id "
+            "failed (%s: %s) — returning None and orphans will leak",
             type(_e).__name__, _e,
         )
         return None
