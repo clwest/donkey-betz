@@ -960,7 +960,9 @@ class AgentHandlersMixin:
         if user_id:
             context['user_id'] = str(user_id)
 
-        celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='agents')
+        # Session 1088: Route to long_running (matches CELERY_TASK_ROUTES in settings).
+        # Was hardcoded to 'agents' queue which no worker consumes.
+        celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='long_running')
 
         return {
             'task_id': str(celery_task.id),
