@@ -236,6 +236,8 @@ class EPAAgentToolsMixin:
             logger.debug(f"Created agent with user: {agent.user.username}")
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ImageEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'ImageEditingAgent')
             result = agent.execute(
                 operation='variations',
                 image_id=image_id,
@@ -274,6 +276,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ImageEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'ImageEditingAgent')
             result = agent.execute(
                 operation='erase_object',
                 image_id=image_id,
@@ -312,6 +316,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ImageEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'ImageEditingAgent')
             result = agent.execute(
                 operation='recolor',
                 image_id=image_id,
@@ -353,6 +359,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ImageEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'ImageEditingAgent')
             result = agent.execute(
                 operation='refine',
                 image_id=image_id,
@@ -394,6 +402,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ImageEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'ImageEditingAgent')
             result = agent.execute(
                 operation='search_and_replace',
                 image_id=image_id,
@@ -435,6 +445,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ImageEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'ImageEditingAgent')
             result = agent.execute(
                 operation='creative_upscale',
                 image_id=image_id,
@@ -477,6 +489,8 @@ class EPAAgentToolsMixin:
             agent.project_id = str(current_project.id) if current_project else arguments.get('project_id')
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('VideoAgent', trigger_source='user_chat'); log_decision(_pd, 'VideoAgent')
             result = agent.execute(
                 prompt=prompt,
                 image_id=image_id,
@@ -875,6 +889,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('AudioAgent', trigger_source='user_chat'); log_decision(_pd, 'AudioAgent')
             result = agent.execute(
                 operation='generate_voice',
                 text=text,
@@ -910,6 +926,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('AudioAgent', trigger_source='user_chat'); log_decision(_pd, 'AudioAgent')
             result = agent.execute(
                 operation='add_voiceover',
                 text=text,
@@ -988,6 +1006,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('ThreeDGenerationAgent', trigger_source='user_chat'); log_decision(_pd, 'ThreeDGenerationAgent')
             result = agent.execute(
                 image_id=image_id,
                 style='toy',
@@ -1054,6 +1074,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('VideoEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'VideoEditingAgent')
             result = agent.execute(
                 operation='add_text_overlay',
                 video_id=video_id,
@@ -1092,6 +1114,8 @@ class EPAAgentToolsMixin:
             )
 
             # Execute agent workflow
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('VideoEditingAgent', trigger_source='user_chat'); log_decision(_pd, 'VideoEditingAgent')
             result = agent.execute(
                 operation='apply_color_grading',
                 video_id=video_id,

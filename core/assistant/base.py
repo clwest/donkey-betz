@@ -272,6 +272,8 @@ class EnhancedPersonalAIAssistant(
             from core.agents.creation_agent import CreationAgent
 
             agent = CreationAgent(user=self.user, project_id=project_id)
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('CreationAgent', trigger_source='user_chat'); log_decision(_pd, 'CreationAgent')
             result = agent.execute(
                 prompt=prompt,
                 size=f"{width}x{height}",
@@ -313,6 +315,8 @@ class EnhancedPersonalAIAssistant(
             from core.agents.training import TrainedCreationAgent
 
             agent = TrainedCreationAgent(user=self.user, project_id=project_id)
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('TrainedCreationAgent', trigger_source='user_chat'); log_decision(_pd, 'TrainedCreationAgent')
             result = agent.execute(
                 prompt=prompt,
                 character_model_name=character_model_name,
@@ -453,6 +457,8 @@ class EnhancedPersonalAIAssistant(
                     project_id=str(current_project.id) if current_project else project_id
                 )
 
+                from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+                _pd = check_priority('ThreeDGenerationAgent', trigger_source='user_chat'); log_decision(_pd, 'ThreeDGenerationAgent')
                 result = agent.execute(
                     image_id=image_id,
                     style='toy',
@@ -484,6 +490,8 @@ class EnhancedPersonalAIAssistant(
                 project_id=str(current_project.id) if current_project else project_id
             )
 
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('CharacterTrainingAgent', trigger_source='user_chat'); log_decision(_pd, 'CharacterTrainingAgent')
             result = agent.execute(operation=operation, **params)
             return result
 
@@ -502,6 +510,8 @@ class EnhancedPersonalAIAssistant(
             from coleadership.views import CoLeadershipAgent
 
             agent = CoLeadershipAgent(user=self.user)
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('CoLeadershipAgent', trigger_source='user_chat'); log_decision(_pd, 'CoLeadershipAgent')
             result = agent.execute(operation=operation, **params)
             return result
 

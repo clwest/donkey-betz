@@ -3455,6 +3455,8 @@ class EPAUtilityMixin:
                 # Trigger workflow orchestration
                 from core.agents import get_workflow_orchestration_agent
                 agent = get_workflow_orchestration_agent(user=self.user)
+                from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+                _pd = check_priority('WorkflowOrchestrationAgent', trigger_source='user_chat'); log_decision(_pd, 'WorkflowOrchestrationAgent')
                 return agent.execute(
                     task=action_params.get('task', 'Execute approved workflow'),
                     context={'consultation_approved': True}

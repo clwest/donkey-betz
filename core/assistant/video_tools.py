@@ -45,6 +45,8 @@ class VideoGenerationToolsMixin:
                 project_id=str(current_project.id) if current_project else arguments.get('project_id')
             )
 
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('VideoAgent', trigger_source='user_chat'); log_decision(_pd, 'VideoAgent')
             result = agent.execute(
                 prompt=prompt,
                 image_id=image_id,
@@ -192,6 +194,8 @@ class VideoGenerationToolsMixin:
             if not image_url:
                 return {'success': False, 'error': f'Could not resolve image {image_id}'}
 
+            from core.services.priority.enforce import check_priority, log_decision  # Session 1086 PR 3c
+            _pd = check_priority('VideoAgent', trigger_source='user_chat'); log_decision(_pd, 'VideoAgent')
             result = agent.execute(
                 prompt=motion_prompt,
                 image_id=image_id,
