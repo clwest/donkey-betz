@@ -22,6 +22,7 @@ See ``00-START-NEXT-SESSION.md`` and the design review conversation
 from .priority_router import PriorityDecision, PriorityRouter
 from .enforce import check_priority, log_decision, priority_guard
 from .semaphore import acquire_for_decision, get_semaphore_stats
+from .governor import should_dispatch, get_governor_status, reset_circuit_breaker
 
 __all__ = [
     "PriorityDecision",
@@ -31,4 +32,7 @@ __all__ = [
     "priority_guard",
     "acquire_for_decision",
     "get_semaphore_stats",
+    "should_dispatch",
+    "get_governor_status",
+    "reset_circuit_breaker",
 ]

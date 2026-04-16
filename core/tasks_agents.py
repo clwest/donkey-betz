@@ -4670,6 +4670,31 @@ agent_name: str,
         cache.set(dedup_key, True, timeout=600)  # 10-minute lock
 
     # ==========================================================================
+    # GOVERNOR GATE: Check mission alignment + circuit breaker before dispatch
+    # ==========================================================================
+    # Only gates autonomous beat-task work. User-triggered dispatches bypass.
+    try:
+        from core.services.priority.governor import should_dispatch
+        gov_decision = should_dispatch(
+            agent_name=agent_name,
+            trigger_source=trigger_source,
+            task=topic,
+        )
+        if not gov_decision.proceed:
+            logger.info(
+                f"🛑 [GOVERNOR] Skipping {agent_name}: {gov_decision.reason} "
+                f"({gov_decision.detail})"
+            )
+            return {
+                'success': False,
+                'skipped': True,
+                'reason': f'governor_{gov_decision.reason}',
+                'governor_detail': gov_decision.detail,
+            }
+    except Exception as e:
+        logger.warning(f"[GOVERNOR] fail-open for {agent_name}: {e}")
+
+    # ==========================================================================
     # SESSION 864 PHASE 0: DETERMINE RUN MODE
     # ==========================================================================
     # If no topic provided and not forced, this is a warmup run
