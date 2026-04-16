@@ -206,6 +206,28 @@ class ActivePriority(models.Model):
         ),
     )
 
+    # Session 1088: Per-mission governance controls
+    enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Per-mission pause toggle. When False, the governor treats this "
+            "mission as if it doesn't exist — agents that only match this "
+            "mission will be skipped. Allows pausing a mission without "
+            "archiving it (preserves config for re-enable)."
+        ),
+    )
+    max_daily_executions = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Optional daily execution budget for this mission. When set, "
+            "the governor tracks how many dispatches have been allowed today "
+            "for agents matching this mission. Once the cap is reached, "
+            "further dispatches are skipped until midnight reset. "
+            "NULL means unlimited."
+        ),
+    )
+
     # Ranking and ownership
     priority_rank = models.IntegerField(
         default=100,
@@ -296,6 +318,10 @@ class ActivePriority(models.Model):
                     entry.status = cls.STATUS_EXPIRED
                     entry.save(update_fields=['status', 'updated_at'])
                     continue
+                # Session 1088: Skip disabled missions — they still exist
+                # for config preservation but don't participate in matching.
+                if not entry.enabled:
+                    continue
                 active.append({
                     'id': str(entry.id),
                     'name': entry.name,
@@ -305,6 +331,8 @@ class ActivePriority(models.Model):
                     'enable_keyword_match': entry.enable_keyword_match,
                     'priority_rank': entry.priority_rank,
                     'expires_at': entry.expires_at.isoformat() if entry.expires_at else None,
+                    'enabled': entry.enabled,
+                    'max_daily_executions': entry.max_daily_executions,
                 })
             return active
         except Exception:

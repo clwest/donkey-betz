@@ -2281,6 +2281,22 @@ PA_TOOL_SCHEMAS = [
                     "type": "integer",
                     "description": "For history: max entries to return (default 30, max 100).",
                 },
+                "enabled": {
+                    "type": "boolean",
+                    "description": (
+                        "Per-mission pause toggle. When false, mission is paused "
+                        "(agents only matching this mission will be skipped). "
+                        "Used in set/update actions."
+                    ),
+                },
+                "max_daily_executions": {
+                    "type": "integer",
+                    "description": (
+                        "Daily execution budget for this mission. When set, "
+                        "the governor will skip dispatches once the cap is reached. "
+                        "NULL/omit for unlimited. Used in set/update actions."
+                    ),
+                },
             },
             "required": ["action"],
         },

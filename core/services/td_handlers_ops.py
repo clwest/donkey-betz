@@ -884,6 +884,8 @@ class OpsHandlersMixin:
             'activated_at': p.activated_at.isoformat() if p.activated_at else None,
             'expires_at': p.expires_at.isoformat() if p.expires_at else None,
             'is_expired': p.is_expired,
+            'enabled': p.enabled,
+            'max_daily_executions': p.max_daily_executions,
             'updated_at': p.updated_at.isoformat() if p.updated_at else None,
         }
 
@@ -942,7 +944,8 @@ class OpsHandlersMixin:
                     return []
                 return [str(x) for x in val if isinstance(x, (str, int, float))]
 
-            priority = ActivePriority.objects.create(
+            # Session 1088: Support enabled toggle and daily budget
+            create_kwargs = dict(
                 name=name[:120],
                 description=str(payload.get('description', ''))[:10_000],
                 tags=_as_str_list(payload.get('tags')),
@@ -954,6 +957,11 @@ class OpsHandlersMixin:
                 status=ActivePriority.STATUS_ACTIVE,
                 expires_at=expires_at,
             )
+            if 'enabled' in payload:
+                create_kwargs['enabled'] = bool(payload['enabled'])
+            if 'max_daily_executions' in payload and payload['max_daily_executions'] is not None:
+                create_kwargs['max_daily_executions'] = int(payload['max_daily_executions'])
+            priority = ActivePriority.objects.create(**create_kwargs)
             return {
                 'action': 'set',
                 'success': True,
@@ -1004,6 +1012,14 @@ class OpsHandlersMixin:
                 ttl_hours = self._clamp_priority_ttl(payload['ttl_hours'])
                 priority.expires_at = timezone.now() + timedelta(hours=ttl_hours)
                 updated_fields.append('expires_at')
+            # Session 1088: Per-mission governance fields
+            if 'enabled' in payload:
+                priority.enabled = bool(payload['enabled'])
+                updated_fields.append('enabled')
+            if 'max_daily_executions' in payload:
+                val = payload['max_daily_executions']
+                priority.max_daily_executions = int(val) if val is not None else None
+                updated_fields.append('max_daily_executions')
 
             if updated_fields:
                 priority.save(update_fields=updated_fields + ['updated_at'])
