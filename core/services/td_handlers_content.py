@@ -2532,23 +2532,59 @@ class ContentHandlersMixin:
                     'error': 'keyword is required for search',
                 }
 
-            # Session 989: Use actual SpiderData fields (embedding_text, raw_data)
-            from django.db.models import Q
+            # Session 1089: Search embedding_text, source_url, AND raw_data.
+            # ~72% of recent SpiderData has empty embedding_text, so searching
+            # only that field returned 0 results for most queries. raw_data
+            # contains the actual content (titles, descriptions, articles).
+            from django.db.models import Q, TextField
+            from django.db.models.functions import Cast
             qs = SpiderData.objects.filter(
-                Q(embedding_text__icontains=keyword) |
-                Q(source_url__icontains=keyword),
                 created_at__gte=cutoff
+            ).annotate(
+                raw_text=Cast('raw_data', TextField())
+            ).filter(
+                Q(embedding_text__icontains=keyword) |
+                Q(source_url__icontains=keyword) |
+                Q(raw_text__icontains=keyword)
             )
 
             if spider_name:
                 qs = qs.filter(spider_name__icontains=spider_name)
 
-            items = list(
-                qs.order_by('-relevance_score', '-created_at')[:limit].values(
-                    'id', 'spider_name', 'data_type', 'source_url',
-                    'embedding_text', 'relevance_score', 'created_at'
-                )
-            )
+            results = list(qs.order_by('-created_at')[:limit])
+
+            # Build items with a content preview extracted from raw_data
+            items = []
+            for s in results:
+                preview = (s.embedding_text or '')[:200]
+                if not preview:
+                    # Extract preview from raw_data items
+                    rd = s.raw_data or {}
+                    if isinstance(rd, dict):
+                        rd_items = rd.get('items', [])
+                        if isinstance(rd_items, list):
+                            for item in rd_items[:3]:
+                                if isinstance(item, dict):
+                                    title = item.get('title', '')
+                                    desc = item.get('description', item.get('summary', ''))
+                                    if title:
+                                        preview += f"{title}. "
+                                    if desc:
+                                        preview += f"{str(desc)[:100]} "
+                            preview = preview.strip()[:300]
+                        if not preview:
+                            # Fallback: stringify first 300 chars
+                            preview = str(rd)[:300]
+
+                items.append({
+                    'id': str(s.id),
+                    'spider_name': s.spider_name,
+                    'data_type': s.data_type,
+                    'source_url': s.source_url,
+                    'preview': preview,
+                    'relevance_score': s.relevance_score,
+                    'created_at': s.created_at.isoformat() if s.created_at else None,
+                })
 
             return {
                 'action': 'search',
