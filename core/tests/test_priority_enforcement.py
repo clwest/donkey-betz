@@ -307,10 +307,20 @@ def test_inventory_ledger_stays_in_sync():
             "Remove from PR_3A_KNOWN_BYPASS_INVENTORY."
         )
 
-    # Soft assertion: informational, doesn't block PR 3a.
-    # The strict enforcement lives in test_pr3a_enforced_bypass_files_*.
-    assert len(found) <= len(PR_3A_KNOWN_BYPASS_INVENTORY) + 5, (
-        f"Too many new bypass files added since PR 3a inventory snapshot: "
-        f"{len(new_files)} new. Update PR_3A_KNOWN_BYPASS_INVENTORY and "
-        f"triage each new site."
+    # Strict on additions (Rigby's Session 1086 PR 3a review refinement):
+    # legacy bypasses are grandfathered into the baseline, but ANY new bypass
+    # file must be triaged and explicitly moved into Bucket A (strict
+    # enforcement), Bucket B (xfail-strict PR 3b target), or added to this
+    # baseline with a deliberate ledger update. Zero-tolerance on additions
+    # is the core of "not best-effort" enforcement going forward.
+    assert not new_files, (
+        f"New agent.execute() bypass files not in PR_3A_KNOWN_BYPASS_INVENTORY: "
+        f"{sorted(new_files)}. Each new bypass must be EITHER:\n"
+        f"  (A) added to PR_3A_ENFORCED_BYPASS_FILES with matching "
+        f"check_priority() calls in the file, OR\n"
+        f"  (B) added to PR_3B_PRIORITY_TARGETS if it should be migrated "
+        f"in the next PR, OR\n"
+        f"  (C) added to PR_3A_KNOWN_BYPASS_INVENTORY as a deliberate "
+        f"grandfathered baseline entry.\n"
+        f"See core/services/priority/enforce.py for the helper API."
     )
