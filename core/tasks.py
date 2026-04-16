@@ -7486,25 +7486,27 @@ def _execute_gate_repair(blog, repair_action: str) -> bool:
 
     try:
         agent = EditorAgent()
-        # Session 1086 PR 3a: Priority router consult (gated, observer-only)
+        # Session 1086 PR 3a+3b: Priority router consult + semaphore throttle
         from core.services.priority.enforce import check_priority, log_decision
+        from core.services.priority.semaphore import acquire_for_decision
         _pd = check_priority('EditorAgent', task=f'Repair blog ({repair_action})', trigger_source='autonomous_beat')
         log_decision(_pd, 'EditorAgent')
-        result = agent.execute(
-            task=f"Repair blog ({repair_action}): {blog.title[:80]}",
-            context={
-                'blog_id': str(blog.id),
-                'focus_areas': focus_areas,
-                'gate_notes': (blog.gate_notes or '')[:300],
-                'repair_type': repair_action,
-                'save': True,
-                # Pin edited deliverable to the source blog's workspace so
-                # autonomous runs never inherit user.is_active as a default.
-                'workspace_id': str(blog.workspace_id) if blog.workspace_id else None,
-            },
-            scifi_context={},
-            spider_context={},
-        )
+        with acquire_for_decision(_pd, 'EditorAgent'):
+            result = agent.execute(
+                task=f"Repair blog ({repair_action}): {blog.title[:80]}",
+                context={
+                    'blog_id': str(blog.id),
+                    'focus_areas': focus_areas,
+                    'gate_notes': (blog.gate_notes or '')[:300],
+                    'repair_type': repair_action,
+                    'save': True,
+                    # Pin edited deliverable to the source blog's workspace so
+                    # autonomous runs never inherit user.is_active as a default.
+                    'workspace_id': str(blog.workspace_id) if blog.workspace_id else None,
+                },
+                scifi_context={},
+                spider_context={},
+            )
 
         if result.success:
             logger.info(

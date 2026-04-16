@@ -167,9 +167,12 @@ def check_priority(
 
 def log_decision(decision: Optional[Any], agent_name: str) -> None:
     """
-    Observer-mode logging for PR 3a. Call this right after
-    :func:`check_priority` to get a single log line per dispatch.
-    PR 3b will replace this with ``CeleryTaskEvent`` field recording.
+    Observer-mode logging + telemetry recording per dispatch.
+
+    Two actions, both fail-open:
+      1. Emit a single INFO log line describing the decision
+      2. Record the decision into the current task's :class:`CeleryTaskEvent`
+         row if one exists (PR 3b addition)
 
     No-ops when ``decision`` is ``None`` (gate OFF or fail-open).
     """
@@ -186,3 +189,61 @@ def log_decision(decision: Optional[Any], agent_name: str) -> None:
         )
     except Exception:
         pass  # logging must never break dispatch
+
+    # Session 1086 PR 3b: Record to CeleryTaskEvent so dashboards can
+    # query "what percentage of last-hour tasks matched priorities?".
+    # Uses celery.current_task to find the row; silently no-ops when
+    # called from outside a Celery worker (HTTP request path, management
+    # command, test harness). The fail-open guarantee still holds:
+    # any exception in the recording path is swallowed, not propagated.
+    _record_priority_telemetry(decision)
+
+
+def _record_priority_telemetry(decision: Any) -> None:
+    """
+    Update the current CeleryTaskEvent row with priority_matched,
+    priority_name, throttle_class. If the row doesn't exist yet (race
+    with task_prerun signal) or we're not in a Celery context, skip.
+
+    Only records the FIRST decision per task — subsequent dispatches
+    from the same task won't overwrite. Use ``update_fields`` to avoid
+    stomping other signal-handler updates (heartbeat thread, etc.).
+    """
+    try:
+        from celery import current_task
+        request = getattr(current_task, "request", None)
+        task_id = getattr(request, "id", None) if request is not None else None
+        if not task_id:
+            return  # not inside a Celery task — HTTP request, test, etc.
+
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        # Only write if no prior decision has been recorded for this
+        # task (first-dispatch-wins). Avoids thrash when a task runs
+        # multiple agents back-to-back.
+        event = CeleryTaskEvent.objects.filter(task_id=task_id).first()
+        if event is None:
+            return  # task_prerun signal hasn't fired yet — skip
+        if event.priority_matched is not None:
+            return  # already recorded — first-wins
+
+        event.priority_matched = bool(decision.matched)
+        event.priority_name = (
+            str(decision.priority_name)[:120]
+            if getattr(decision, "priority_name", None)
+            else None
+        )
+        event.throttle_class = (
+            str(decision.throttle_class)[:16]
+            if getattr(decision, "throttle_class", None)
+            else None
+        )
+        event.save(
+            update_fields=[
+                "priority_matched",
+                "priority_name",
+                "throttle_class",
+            ]
+        )
+    except Exception:
+        _log_enforce_failure()
