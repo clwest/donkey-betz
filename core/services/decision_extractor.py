@@ -35,12 +35,16 @@ def normalize_topic(topic: str) -> str:
     """
     Normalize a topic string for comparison.
     Session 551: Used for topic-based deduplication.
+    Session 1092: Strip Panel:, [Synthesis], [Conversation] prefixes too —
+    the conversation pipeline emits all three and the noise filter needs
+    to evaluate the post-prefix substance.
     """
     if not topic:
         return ''
-    # Remove common prefixes: [Learned], Discussion:, etc.
-    normalized = re.sub(r'\[Learned\]\s*', '', topic).strip()
-    normalized = re.sub(r'^Discussion:\s*', '', normalized, flags=re.IGNORECASE).strip()
+    # Remove bracketed labels: [Learned], [Synthesis], [Conversation], etc.
+    normalized = re.sub(r'\[[^\]]+\]\s*', '', topic).strip()
+    # Remove leading "<Word>:" labels (Discussion:, Panel:, etc.)
+    normalized = re.sub(r'^[A-Za-z][A-Za-z\s]{2,30}:\s*', '', normalized).strip()
     # Lowercase and remove special chars
     normalized = normalized.lower()
     normalized = re.sub(r'[^a-z0-9\s]', '', normalized).strip()
@@ -64,17 +68,36 @@ NOISE_TOPICS = {
     'debug',
 }
 
+# Session 1092: trailing dangling words that indicate a truncated topic.
+# A topic ending in one of these is mid-sentence, not a complete thought.
+DANGLING_TRAILING_WORDS = {
+    'and', 'or', 'but', 'the', 'a', 'an',
+    'to', 'for', 'with', 'of', 'in', 'on',
+    'at', 'by', 'from', 'as', 'is', 'are',
+    'was', 'were', 'be', 'this', 'that',
+}
+
+# Session 1092: per-decision-type pending cap. When the inbox already has this
+# many pending drafts of a given decision_type, skip new creations to prevent
+# unbounded backlog accumulation. Tuned for ~88 conversations/day baseline.
+PENDING_CAP_PER_TYPE = 25
+
 
 def is_noise_topic(topic: str) -> bool:
     """
     Session 586: Filter out noise topics that shouldn't become Boardroom decisions.
+    Session 1092: Reject truncated topics + tighten substantive-word minimum.
 
     Returns True if the topic is noise and should be filtered out.
 
     Noise criteria:
     1. Normalized topic is too short (< 5 chars)
     2. Normalized topic is a known noise word
-    3. Topic is just prefixes with no substance
+    3. Topic is a single generic word
+    4. (Session 1092) Topic ends in a dangling preposition/conjunction
+       (e.g. "Discussion: competitor activity and") — indicates truncation
+    5. (Session 1092) Topic has < 3 substantive words after prefix strip
+       (so "Discussion: AI work" still passes, "Panel: AI" does not)
     """
     if not topic:
         return True
@@ -91,12 +114,54 @@ def is_noise_topic(topic: str) -> bool:
         logger.debug(f"Noise filter: topic matches noise word: '{topic}' -> '{normalized}'")
         return True
 
-    # Just a single common word
     words = normalized.split()
+
+    # Just a single common word
     if len(words) == 1 and normalized in {'ai', 'ml', 'api', 'ui', 'ux', 'db', 'test'}:
         logger.debug(f"Noise filter: single generic word: '{topic}'")
         return True
 
+    # Session 1092: Dangling trailing word — topic was clearly truncated mid-sentence.
+    if words and words[-1] in DANGLING_TRAILING_WORDS:
+        logger.debug(
+            f"Noise filter: topic ends in dangling word '{words[-1]}': '{topic}'"
+        )
+        return True
+
+    # Session 1092: Need at least 3 substantive words after prefix strip.
+    # "Panel: AI" → ["ai"] = 1, reject. "Discussion: AI work" → ["ai", "work"] = 2, still reject.
+    # "Discussion: AI agent collaboration" → ["ai", "agent", "collaboration"] = 3, pass.
+    if len(words) < 3:
+        logger.debug(
+            f"Noise filter: topic has < 3 substantive words after prefix strip: '{topic}'"
+        )
+        return True
+
+    return False
+
+
+def _pending_quota_exceeded(decision_type: str) -> bool:
+    """Session 1092: True when pending draft count for this decision_type
+    is already at the cap. Prevents unbounded inbox accumulation.
+    """
+    if not decision_type:
+        return False
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+
+        pending = AgentDecisionSummary.objects.filter(
+            status='draft',
+            decision_type=decision_type,
+        ).count()
+        if pending >= PENDING_CAP_PER_TYPE:
+            logger.info(
+                f"Decision quota: {decision_type} has {pending} pending drafts "
+                f"(cap {PENDING_CAP_PER_TYPE}) — skipping new draft creation"
+            )
+            return True
+    except Exception as e:
+        # Don't block creation on a quota check error.
+        logger.warning(f"Pending quota check failed for {decision_type}: {e}")
     return False
 
 EXTRACTION_PROMPT = """
@@ -291,6 +356,10 @@ class DecisionExtractor:
         if not extracted:
             return None
 
+        # Session 1092: pending-quota gate to cap inbox accumulation
+        if _pending_quota_exceeded(extracted.get('decision_type', 'guideline')):
+            return None
+
         try:
             summary = AgentDecisionSummary.objects.create(
                 conversation=conversation,  # Legacy link
@@ -430,6 +499,10 @@ class DecisionExtractor:
 
         extracted = self.extract_decision_from_hive_session(session)
         if not extracted:
+            return None
+
+        # Session 1092: pending-quota gate to cap inbox accumulation
+        if _pending_quota_exceeded(extracted.get('decision_type', 'guideline')):
             return None
 
         try:
