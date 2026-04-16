@@ -947,9 +947,26 @@ class AgentHandlersMixin:
         if agent_name and '_' in agent_name:
             agent_name = self._tool_to_agent_name(agent_name)
 
+        # Session 1088: Validate agent name against AGENT_MAP and auto-extract
+        # from task text if the name is invalid (e.g. LLM sends 'RunAgent' or
+        # other hallucinated names via keyword routing without schema).
+        router = AgentRouter()
+        if agent_name and agent_name not in router.AGENT_MAP:
+            # Try to find actual agent name in the task text
+            extracted = None
+            for name in router.AGENT_MAP:
+                if name.lower() in task_text.lower():
+                    extracted = name
+                    break
+            if extracted:
+                logger.info(f"[run_agent] Corrected '{agent_name}' -> '{extracted}' from task text")
+                agent_name = extracted
+            else:
+                logger.warning(f"[run_agent] Unknown agent '{agent_name}', no match in task text, defaulting to ResearchAgent")
+                agent_name = 'ResearchAgent'
+
         # Auto-route to best agent when no name given
         if not agent_name:
-            router = AgentRouter()
             for name in router.AGENT_MAP:
                 if name.lower() in task_text.lower():
                     agent_name = name
