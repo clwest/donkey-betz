@@ -897,7 +897,6 @@ class AgentRouter:
                 f"[route] BLOCKED: {agent_name} disabled on Railway "
                 f"(task='{(task or '')[:50]}...')"
             )
-            from core.agents.base_agent import AgentResult
             return AgentResult(
                 success=False,
                 message=f'{agent_name} disabled on Railway (Session 1032)',
@@ -1326,35 +1325,98 @@ class AgentRouter:
             # (user work is never throttled). See core/services/priority/
             # semaphore.py for the acquire semantics.
             from core.services.priority.semaphore import acquire_for_decision
-            with acquire_for_decision(priority_decision, agent_name):
+            # Session 1091: Router-level wall-clock enforcement. Previously
+            # only tasks_agents._impl_execute_agent_task had a ceiling; any
+            # direct .route() caller (artifact_execution, test harnesses,
+            # orchestrator fallback paths) ran unbounded and was only
+            # reaped by the 60-min cleanup watchdog. Shared per-agent
+            # table lives in core/services/agent_timeouts.py.
+            import time as _router_time
+            from core.services.agent_timeouts import get_agent_timeout
+            from concurrent.futures import (
+                ThreadPoolExecutor as _RouterTPE,
+                TimeoutError as _RouterFuturesTimeout,
+            )
+            _router_wall_timeout = get_agent_timeout(agent_name)
+            _router_start = _router_time.time()
+
+            def _run_agent_execute():
                 if has_workspace and write_to_workspace and hasattr(agent, 'execute_with_workspace'):
-                    # Execute with workspace - outputs will be written to SKIN layer
                     logger.info(f"📁 [Session 908] Using execute_with_workspace for {agent_name}")
-                    # Inject scifi_context and spider_context into context for execute_with_workspace
                     enriched_context = {
                         **context,
                         'scifi_context': scifi_context,
                         'spider_context': spider_context,
                     }
-                    result = agent.execute_with_workspace(
+                    return agent.execute_with_workspace(
                         task=task,
                         context=enriched_context,
                         user=self.user,
                         write_to_workspace=True,
                         base_path=context.get('workspace_base_path', '')
                     )
-                else:
-                    # Standard execution without workspace write
-                    if not has_workspace:
-                        logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
-                    # Store execution context on agent for search strategy enhancement
-                    agent._execution_context = context
-                    result = agent.execute(
-                        task=task,
-                        context=context,
-                        scifi_context=scifi_context,
-                        spider_context=spider_context
+                if not has_workspace:
+                    logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
+                agent._execution_context = context
+                return agent.execute(
+                    task=task,
+                    context=context,
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
+
+            with acquire_for_decision(priority_decision, agent_name):
+                _router_pool = _RouterTPE(max_workers=1)
+                _router_future = _router_pool.submit(_run_agent_execute)
+                try:
+                    result = _router_future.result(timeout=_router_wall_timeout)
+                except _RouterFuturesTimeout:
+                    _router_elapsed = _router_time.time() - _router_start
+                    logger.error(
+                        f"[router] WALL-CLOCK TIMEOUT: {agent_name} exceeded "
+                        f"{_router_wall_timeout}s via direct .route() — killing"
                     )
+                    # Emit telemetry + release circuit breaker so downstream
+                    # ops signatures and throttling logic stay consistent
+                    # with the Celery-task path.
+                    try:
+                        from core.tasks import (
+                            _record_timeout_signature,
+                            _circuit_breaker_record_timeout,
+                            _circuit_breaker_release,
+                        )
+                        _record_timeout_signature(
+                            agent_name=agent_name,
+                            timeout_source='router_wall_clock',
+                            elapsed_seconds=_router_elapsed,
+                            execution_id=(
+                                execution_record.id if execution_record else None
+                            ),
+                            task_name='core.agent_router.AgentRouter.route',
+                        )
+                        _task_for_cb = {'id': getattr(execution_record, 'id', None)}
+                        _circuit_breaker_record_timeout(agent_name, _task_for_cb)
+                        _circuit_breaker_release(agent_name, _task_for_cb)
+                    except Exception as _telemetry_exc:
+                        logger.exception(
+                            f"[router] timeout telemetry failed: {_telemetry_exc}"
+                        )
+                    result = AgentResult(
+                        success=False,
+                        error=(
+                            f'{agent_name} exceeded {_router_wall_timeout}s '
+                            f'router wall-clock timeout'
+                        ),
+                        agent_name=agent_name,
+                        execution_time_ms=int(_router_elapsed * 1000),
+                    )
+                finally:
+                    # shutdown(wait=False) so we don't block on a hung
+                    # worker thread — same rationale as tasks_agents.py
+                    # (Session 1075). The hung thread will keep running
+                    # inside the process until the LLM socket / cleanup
+                    # eventually drops; the router just stops waiting.
+                    _router_pool.shutdown(wait=False)
 
             # Session 735: Inject accumulated cost/tokens from agent into result
             # This captures cost even if agent doesn't use _make_result() helper
@@ -2450,11 +2512,21 @@ class AgentRouter:
                 _hb_agent_name = agent_name
 
                 def _router_heartbeat_loop():
+                    # Session 1091: Tolerate transient DB errors. Previously a
+                    # single tick exception returned, killing the heartbeat
+                    # thread while the main thread kept running an LLM call.
+                    # The execution then flatlined and the 60-min watchdog
+                    # reaped it — matching the MarketIntel / AISeries /
+                    # BrandStrategy watchdog_cleanup signatures in Session
+                    # 1090 ops telemetry. Exit only after 3 consecutive
+                    # failures so one DB blip doesn't doom the heartbeat.
+                    _MAX_CONSECUTIVE_FAILURES = 3
                     logger.info(
                         f"[router_heartbeat] thread start agent={_hb_agent_name} "
                         f"execution_id={_execution_id} interval=120s"
                     )
                     tick_count = 0
+                    consecutive_failures = 0
                     try:
                         while True:
                             _hb_time.sleep(120)
@@ -2469,17 +2541,28 @@ class AgentRouter:
                                     id=_execution_id
                                 ).update(last_heartbeat_at=timezone.now())
                                 tick_count += 1
+                                consecutive_failures = 0
                                 if tick_count == 1 or tick_count % 5 == 0:
                                     logger.info(
                                         f"[router_heartbeat] tick agent={_hb_agent_name} "
                                         f"execution_id={_execution_id} tick={tick_count}"
                                     )
                             except Exception as _tick_exc:
+                                consecutive_failures += 1
                                 logger.exception(
                                     f"[router_heartbeat] tick failed agent={_hb_agent_name} "
-                                    f"execution_id={_execution_id}: {_tick_exc}"
+                                    f"execution_id={_execution_id} "
+                                    f"consecutive_failures={consecutive_failures}/"
+                                    f"{_MAX_CONSECUTIVE_FAILURES}: {_tick_exc}"
                                 )
-                                return
+                                if consecutive_failures >= _MAX_CONSECUTIVE_FAILURES:
+                                    logger.error(
+                                        f"[router_heartbeat] exiting after "
+                                        f"{consecutive_failures} consecutive failures "
+                                        f"agent={_hb_agent_name} "
+                                        f"execution_id={_execution_id}"
+                                    )
+                                    return
                     finally:
                         logger.info(
                             f"[router_heartbeat] thread exit agent={_hb_agent_name} "
