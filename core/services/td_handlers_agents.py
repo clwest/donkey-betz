@@ -1314,12 +1314,26 @@ class AgentHandlersMixin:
             ws_id = payload.get('workspace_id') or payload.get('workspace')
             if ws_id:
                 qs = qs.filter(workspace_id=ws_id)
+            # Session 1091 — orphan filter so Rigby can audit "show me
+            # deliverables with no workspace assignment". Accepts truthy
+            # values (true/True/1/"true"). When set, ignores any other
+            # workspace filter implied above (orphans by definition have
+            # no workspace_id, so a positive ws_id filter would zero out
+            # the result set anyway, but be explicit).
+            orphans_only = payload.get('orphans')
+            if orphans_only in (True, 'true', 'True', 1, '1'):
+                qs = qs.filter(workspace_id__isnull=True)
             return qs
 
+        # Session 1091 — surface workspace_id + workspace name in list responses.
+        # Previously the list payload omitted any workspace identifier, which
+        # made it impossible for Rigby to audit orphans through PA tools and
+        # forced Django-shell round-trips for any deliverable→workspace check.
         _LIST_FIELDS = (
             'id', 'title', 'deliverable_type', 'category',
             'agent_name', 'quality_score', 'is_saved', 'created_at',
             'initiative_id', 'initiative__name',
+            'workspace_id', 'workspace__name',
         )
 
         def _sanitize_deliverable(d: dict) -> dict:
@@ -1332,6 +1346,10 @@ class AgentHandlersMixin:
                 d['category'] = 'General'
             if not (d.get('deliverable_type') or '').strip():
                 d['deliverable_type'] = 'document'
+            # Session 1091 — explicit orphan marker so callers (PA tools, UI)
+            # can highlight unassigned deliverables without re-deriving the
+            # check from a missing FK.
+            d['is_orphan'] = d.get('workspace_id') is None
             return d
 
         def _resolve_deliverable(qs, payload, action_name):
