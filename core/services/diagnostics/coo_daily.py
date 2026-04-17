@@ -49,6 +49,13 @@ Gates (all env-tunable)
     REWORK_RATE_HIGH        backward status transitions in 24h >= 5
                             (Rigby's priority-1 signal: "moving fast but
                             leaking quality")
+    MYTHOLOGY_QUARANTINE_HIGH   pending critical+high unacknowledged
+                                 MythologyAlerts >= 10 (Rigby's #3 gate —
+                                 activated Session 1095 after confirming
+                                 Mythology Lab is in active use: 4541
+                                 events, 328 unacknowledged alerts)
+    MYTHOLOGY_QUARANTINE_CRIT  pending critical unacknowledged
+                                 MythologyAlerts >= 25
 
 Tunables (env vars)
 -------------------
@@ -67,6 +74,8 @@ Tunables (env vars)
     COO_DIAG_GATE_HANG_MIN             (10)    pending gate_stuck HAI count → HIGH
     COO_DIAG_GATE_HANG_NEW_MIN         (5)     new gate_stuck in 24h → HIGH surge
     COO_DIAG_REWORK_MIN                (5)     backward transitions in 24h → HIGH
+    COO_DIAG_MYTHOLOGY_MIN             (10)    pending critical+high mythology alerts → HIGH
+    COO_DIAG_MYTHOLOGY_CRIT            (25)    pending critical mythology alerts → CRITICAL
     COO_DIAG_STUCK_IGNORE_BEFORE       ("")    ISO date; initiatives updated
                                                before this cutoff are excluded
                                                from the stuck count. Use after
@@ -501,6 +510,59 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         'warming': warming,
     }
 
+    # ── Mythology quarantine health (Session 1095 — Rigby's priority-3 gate,
+    # activated after confirming Mythology Lab is in active use with 4541
+    # events + 328 unacknowledged alerts on local).
+    #
+    # Surfaces:
+    #   - Count of unacknowledged MythologyAlerts by severity (critical/high)
+    #   - Count of pending FlaggedHallucination rows by priority
+    #   - Top patterns firing (so operators see WHICH rules are noisiest —
+    #     important because over-broad patterns like `dangerous_myth` on
+    #     legal/medical research produce false-positive floods)
+    #
+    # Lazy import — mythology is a separate app, don't hard-require it.
+    mythology_quarantine: Dict[str, Any] = {
+        'enabled': False,
+        'unacked_critical': 0,
+        'unacked_high': 0,
+        'pending_flags_critical': 0,
+        'pending_flags_high': 0,
+        'top_patterns_24h': [],
+    }
+    try:
+        from mythology.models import MythologyAlert, FlaggedHallucination, MythologyEvent
+        from django.db.models import Count as _Count
+        from collections import Counter as _Counter
+
+        unacked_alerts = MythologyAlert.objects.filter(acknowledged=False)
+        pending_flags = FlaggedHallucination.objects.filter(verification_status='pending')
+
+        mythology_quarantine.update({
+            'enabled': True,
+            'unacked_critical': unacked_alerts.filter(severity='critical').count(),
+            'unacked_high': unacked_alerts.filter(severity='high').count(),
+            'pending_flags_critical': pending_flags.filter(priority='critical').count(),
+            'pending_flags_high': pending_flags.filter(priority='high').count(),
+        })
+
+        # Top patterns from recent events (24h window) — helps operators
+        # identify noisy/over-broad patterns producing false positives
+        pattern_counter: _Counter = _Counter()
+        recent_events = MythologyEvent.objects.filter(
+            created_at__gte=cutoff_24h
+        ).values_list('patterns_detected', flat=True)[:2000]
+        for patterns in recent_events:
+            for p in (patterns or []):
+                pattern_counter[p] += 1
+        mythology_quarantine['top_patterns_24h'] = [
+            {'pattern': p, 'count': c}
+            for p, c in pattern_counter.most_common(5)
+        ]
+    except Exception as e:
+        # Don't let mythology app issues break COO entirely. Log and move on.
+        logger.debug('[coo_daily] mythology module query failed: %s', e)
+
     return {
         'window_24h': {
             'since': cutoff_24h.isoformat(),
@@ -516,6 +578,7 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         'initiatives': initiatives,
         'gate_hang': gate_hang,
         'rework': rework,
+        'mythology_quarantine': mythology_quarantine,
     }
 
 
@@ -538,6 +601,8 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
     gate_hang_min = _env_int('COO_DIAG_GATE_HANG_MIN', 10)
     gate_hang_new_min = _env_int('COO_DIAG_GATE_HANG_NEW_MIN', 5)
     rework_min = _env_int('COO_DIAG_REWORK_MIN', 5)
+    mythology_min = _env_int('COO_DIAG_MYTHOLOGY_MIN', 10)
+    mythology_crit = _env_int('COO_DIAG_MYTHOLOGY_CRIT', 25)
 
     reasons: List[str] = []
     details: List[str] = []
@@ -549,6 +614,7 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
     init = metrics['initiatives']
     gate_hang = metrics.get('gate_hang', {})  # Session 1095 — tolerant to old metrics dicts
     rework = metrics.get('rework', {})
+    mythology = metrics.get('mythology_quarantine', {})
 
     # ── VELOCITY_DROP_HIGH: % drop AND absolute floor (per Rigby's feedback —
     #    % alone pages low-volume environments on tiny deltas)
@@ -682,6 +748,39 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
         )
         severities.append('high')
 
+    # ── MYTHOLOGY_QUARANTINE_HIGH / _CRIT (Session 1095 — Rigby's priority-3
+    # gate, activated once confirmed Mythology Lab is in active use).
+    # Skips entirely when mythology app is unavailable or has no data.
+    if mythology.get('enabled'):
+        unacked_crit = mythology.get('unacked_critical', 0)
+        unacked_high = mythology.get('unacked_high', 0)
+        unacked_total = unacked_crit + unacked_high
+        if unacked_crit >= mythology_crit:
+            reasons.append('MYTHOLOGY_QUARANTINE_CRIT')
+            top_pattern_text = ', '.join(
+                f'{p["pattern"]}({p["count"]})'
+                for p in mythology.get('top_patterns_24h', [])[:3]
+            ) or '(no 24h pattern detail)'
+            details.append(
+                f'{unacked_crit} unacknowledged CRITICAL mythology alerts '
+                f'(>= {mythology_crit}). Top patterns 24h: {top_pattern_text}. '
+                f'Review Mythology Lab for false-positive tuning.'
+            )
+            severities.append('critical')
+        elif unacked_total >= mythology_min:
+            reasons.append('MYTHOLOGY_QUARANTINE_HIGH')
+            top_pattern_text = ', '.join(
+                f'{p["pattern"]}({p["count"]})'
+                for p in mythology.get('top_patterns_24h', [])[:3]
+            ) or '(no 24h pattern detail)'
+            details.append(
+                f'{unacked_total} unacknowledged mythology alerts '
+                f'({unacked_crit} critical + {unacked_high} high, '
+                f'min {mythology_min} for HIGH). '
+                f'Top patterns 24h: {top_pattern_text}'
+            )
+            severities.append('high')
+
     if not reasons:
         return {
             'tripped': False,
@@ -739,6 +838,9 @@ def build_dedupe_payload(
         'gate_hang_new_24h': gate_hang.get('new_24h', 0),
         # Session 1095 — rework signal fingerprint
         'rework_backward_24h': metrics.get('rework', {}).get('backward_24h', 0),
+        # Session 1095 — mythology quarantine fingerprint
+        'mythology_unacked_critical': metrics.get('mythology_quarantine', {}).get('unacked_critical', 0),
+        'mythology_unacked_high': metrics.get('mythology_quarantine', {}).get('unacked_high', 0),
     }
 
 
@@ -871,6 +973,41 @@ def render_action_items(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[s
     return lines
 
 
+def render_mythology_quarantine(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
+    """Session 1095: Mythology Lab health section. Skipped when the app
+    is unavailable or has no pending work. Otherwise shows unacked alerts,
+    flagged content, and top firing patterns (critical for spotting
+    over-broad rules producing false-positive floods).
+    """
+    m = metrics.get('mythology_quarantine') or {}
+    if not m.get('enabled'):
+        return []
+    total_unacked = m.get('unacked_critical', 0) + m.get('unacked_high', 0)
+    pending_flags = m.get('pending_flags_critical', 0) + m.get('pending_flags_high', 0)
+    # Section only renders when there's something to see
+    if total_unacked == 0 and pending_flags == 0:
+        return []
+    lines = [
+        f'- Unacknowledged alerts: **{total_unacked}** '
+        f'({m["unacked_critical"]} critical + {m["unacked_high"]} high)',
+        f'- Pending flagged hallucinations: **{pending_flags}** '
+        f'({m["pending_flags_critical"]} critical + {m["pending_flags_high"]} high)',
+    ]
+    top = m.get('top_patterns_24h') or []
+    if top:
+        lines.append('')
+        lines.append('Top patterns firing (24h):')
+        for p in top:
+            lines.append(f'  - `{p["pattern"]}`: {p["count"]}')
+        lines.append('')
+        lines.append(
+            '> _Dominant patterns may indicate over-broad regex producing '
+            'false positives — e.g. `dangerous_myth` flagging legal/medical '
+            'research content. Audit the Mythology Lab for pattern tuning._'
+        )
+    return lines
+
+
 def render_rework(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
     """Session 1095: rework/bounce section.
 
@@ -990,6 +1127,7 @@ def build_config():
             ('Stuck Initiatives', render_stuck_initiatives),
             ('Gate Hang Health', render_gate_hang),
             ('Rework / Bounce Rate', render_rework),
+            ('Mythology Lab Backlog', render_mythology_quarantine),
         ],
         post_task_import_path='core.tasks:post_coo_daily_diagnostic',
         enabled_env='COO_DIAGNOSTIC_ENABLED',
