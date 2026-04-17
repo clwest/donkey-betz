@@ -17,9 +17,83 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
+## SESSION 1097 — START HERE (as of 2026-04-17 end of Session 1096)
+
+**Previous session PA conversation (LOCAL):** `pa-3c7ddc058db1` (continuous since Session 1094 — ask Chris if he wants a new one).
+
+### COO DIAGNOSTIC IS IN OBSERVATION MODE RIGHT NOW
+
+As of 2026-04-17, the `.env` file has:
+```
+COO_DIAGNOSTIC_ENABLED=true
+COO_DIAGNOSTIC_POSTING_ENABLED=false
+```
+
+The COO daily diagnostic fires at **7:30 AM MDT daily** (Celery beat `coo-daily-diagnostic` schedule). It runs through all 9 gates and dispatches COOAgent async, but creates ZERO attention items because POSTING is false. This is the 24h observation window Rigby called for before flipping POSTING.
+
+### First thing to do in Session 1097
+
+1. Read today's `celery-beat.log` and `celery.log` for `[COO-DIAG]` + `[COO-DIAG-POST]` lines. Target greps:
+   ```
+   grep -E "\[COO-DIAG\]|publish_intent distribution|CAP_EXCEEDED|ROLLUP|SUPPRESSED|ESCALATION" celery*.log
+   ```
+2. Report the findings to Rigby (conversation `pa-3c7ddc058db1`):
+   - What severity tripped
+   - Which gates fired
+   - Whether the suppressed counter accumulated any lateral moves
+   - publish_intent distribution (missing resolver mappings?)
+3. Rigby decides based on observation whether to:
+   - Tune thresholds via `COO_DIAG_*` env vars
+   - Flip `COO_DIAGNOSTIC_POSTING_ENABLED=true` → attention items begin
+
+### Current gate state on local (from 2026-04-17 manual trigger)
+
+8 gates tripping at CRITICAL severity — the "real operational state" baseline:
+- `PUBLISHING_JAM_CRIT` (published=0 in 24h + ready_count ≥ 10)
+- `REVIEW_AGE_HIGH` (reviews aging p95 > 24h)
+- `OLDEST_REVIEW_HIGH` (some items 44+ days old)
+- `ACTION_BACKLOG_CRIT` (37 critical HumanAttentionItems)
+- `STUCK_INITIATIVES_HIGH` (147 stuck > 72h)
+- `GATE_HANG_HIGH` / `GATE_HANG_NEW_HIGH` (25 pending gate_stuck HAIs)
+- `MYTHOLOGY_QUARANTINE_CRIT` (312 unacked critical mythology alerts)
+
+These are mostly historical sediment from pre-Session-1094 operations. The rollout path:
+1. Observation logs confirm the 9 gates fire correctly
+2. Chris/Rigby uses the cleanup tools already shipped:
+   - `python manage.py cleanup_stale_initiatives --older-than-days 30 --apply`
+   - `/api/mythology/bulk-review/` for dangerous_myth / spider_data_myth storms
+3. Threshold tuning via env vars for any still-noisy gates
+4. Then flip POSTING
+
+### Anti-spam safety rails are armed (COO cap=2)
+
+If POSTING flips on before thresholds are tuned, the anti-spam rails protect the inbox:
+- Max 2 posts per MT day for COO (conservative start; bump to 3 after a week)
+- Escalation rule: no lateral reposts within a day, only upward severity transitions
+- Rollup counter accumulates suppressed alerts, drains into next fired post
+- Anti-spam status header shows `N/M posts used today` so Chris sees the cap state
+
+See `project_session_1096_anti_spam_rails.md` in memory for full architecture.
+
+### Session 1096 completed (7 PRs merged)
+
+- `#1987` Rigby's 3-item plan (gate_hang + rework + publish_intent enum)
+- `#1988` Warming note
+- `#1989` Mythology Tier 0
+- `#1990` Mythology Tier 1 (feedback tuning + bulk API)
+- `#1991` Mythology Tier 1b (HAI bridge + frontend bulk button)
+- `#1992` Anti-spam safety rails
+- `#1993` Rigby refinements + 12-alert stress test
+- `#1994` COO cap=2 + MT midnight boundary test
+
+300+ tests, all passing.
+
+---
+
+## LEGACY CONTEXT (Sessions 1089-1093, kept for reference)
+
 **Date:** April 16, 2026 (end of Session 1093)
 **Previous session handoff:** [`docs/handoffs/SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md`](docs/handoffs/SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md)
-**Previous session PA conversation (LOCAL):** `pa-3966231ba0d140e7` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
 **Status:** PR #1983 (6 commits) closed all 4 priority items from Rigby's CTOAgent list. Operationalized CTOAgent as a daily Celery beat diagnostic (P0), locked output Template v1 with structurally-enforced Recommended Actions (P1), cross-checked attribution alignment (P2), wired code_review_agent in 3-place tool registry (P3), and refactored editor-dispatch gather to v2 relevance-scored selection (P4 — closes canary v8 finding). Both CTO_DIAGNOSTIC_* flags default OFF — zero behavior change until Chris flips them.
 
 ---
