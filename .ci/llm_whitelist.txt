@@ -49,11 +49,12 @@ core/llm_enforcer.py
 # (or the B-full plan doc if the issue tracker isn't in use yet)
 
 # Tier 1 — highest prod frequency
-# content_writer_agent.py: REMOVED Session 1098 (migrated to wrapper)
-# tasks_initiatives.py: REMOVED Session 1098 (migrated to wrapper)
-# market_intelligence_agent.py: REMOVED Session 1098 (migrated to wrapper)
-# code_review_agent.py: REMOVED Session 1098 (migrated to wrapper)
-core/agents/devops_agent.py
+# ALL TIER 1 REMEDIATED Session 1098:
+# content_writer_agent.py: REMOVED (migrated to wrapper)
+# tasks_initiatives.py: REMOVED (migrated to wrapper)
+# market_intelligence_agent.py: REMOVED (migrated to wrapper)
+# code_review_agent.py: REMOVED (migrated to wrapper)
+# devops_agent.py: REMOVED (migrated to wrapper)
 
 # Tier 2 — moderate frequency / narrower blast radius
 core/agents/fullstack_developer_agent.py
