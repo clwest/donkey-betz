@@ -830,6 +830,21 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         if user_id:
             context['user_id'] = str(user_id)
 
+        # Session 1098 Fix A: synthesis-intent reroute. LLM-generated
+        # next_steps often ask EditorAgent to "synthesize the CTO + COO
+        # briefs" — that's a multi-source generation task, not an edit
+        # task. Reroute to ContentWriterAgent before the gather fallback
+        # below so we don't waste gather work on a request that's going
+        # to fail inside EditorAgent anyway. See
+        # core/services/editor_dispatch_helpers.reroute_synthesis_to_content_writer
+        # for the reroute contract and feature flag.
+        from core.services.editor_dispatch_helpers import (
+            reroute_synthesis_to_content_writer,
+        )
+        agent_name, context = reroute_synthesis_to_content_writer(
+            agent_name, task_text, context,
+        )
+
         # Session 1090: EditorAgent requires 'content' in context.  When the
         # PA dispatches it, Rigby typically references other deliverables by
         # name in the task text but doesn't include the actual content.
