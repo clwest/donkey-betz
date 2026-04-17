@@ -84,6 +84,29 @@ class AgentControlEntry(models.Model):
     def __str__(self):
         return f"{self.agent_name}: {self.status}"
 
+    def save(self, *args, **kwargs):
+        """Session 1092: Auto-populate ``blocked_at`` when an entry first
+        transitions into the ``blocked`` state.
+
+        Forensics relied on ``blocked_at`` to answer "when was this block
+        originally set?" but writers (admin updates, ad-hoc shell calls)
+        often only flipped ``status`` and forgot the timestamp — leaving
+        rows like AudioAgent with ``status='blocked', blocked_at=None``,
+        which broke CTOAgent's reliability audit.
+
+        Behavior contract (locked with Rigby in Session 1092):
+        - Populate ``blocked_at`` ONLY on transition non-blocked → blocked.
+        - Do NOT overwrite an existing ``blocked_at`` value (preserves
+          historical first-block timestamp through repeated re-blocks).
+        - On blocked → enabled, ``blocked_at`` is left as historical.
+          Use ``updated_at`` for the unblock event.
+        """
+        from django.utils import timezone
+
+        if self.status == 'blocked' and self.blocked_at is None:
+            self.blocked_at = timezone.now()
+        super().save(*args, **kwargs)
+
     @classmethod
     def get_blocked_names(cls) -> frozenset:
         """Return frozenset of currently blocked agent names, respecting TTL."""
