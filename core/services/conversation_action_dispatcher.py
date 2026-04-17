@@ -468,6 +468,29 @@ class ConversationActionDispatcher:
                 and 'content' not in task_context
                 and 'blog_id' not in task_context
             ):
+                # Session 1097: blog_id often arrives in the task text
+                # (e.g. "Enhance the blog (blog_id=UUID)...") instead of
+                # task_context. Pre-extract it so EditorAgent receives
+                # the right hint and avoids the "No content provided"
+                # fail-loud fallback we otherwise hit on conversation
+                # action dispatches.
+                _blog_id_match = re.search(
+                    r'blog_id[=:"\'\s]+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})',
+                    task or '',
+                    flags=re.IGNORECASE,
+                )
+                if _blog_id_match:
+                    task_context['blog_id'] = _blog_id_match.group(1)
+                    logger.info(
+                        "[EditorAgent dispatch] Extracted blog_id=%s from task text",
+                        task_context['blog_id'],
+                    )
+
+            if (
+                agent_name == 'EditorAgent'
+                and 'content' not in task_context
+                and 'blog_id' not in task_context
+            ):
                 gathered = _gather_workspace_content_for_editor(
                     workspace_id=task_context.get('workspace_id')
                                   or task_context.get('workspace'),
