@@ -17,10 +17,10 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-**Date:** April 16, 2026 (end of Session 1092)
-**Previous session handoff:** [`docs/handoffs/SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md`](docs/handoffs/SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md)
+**Date:** April 16, 2026 (end of Session 1093)
+**Previous session handoff:** [`docs/handoffs/SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md`](docs/handoffs/SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md)
 **Previous session PA conversation (LOCAL):** `pa-3966231ba0d140e7` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
-**Status:** 11 PRs merged (#1972–#1981) covering governance noise reduction, full Rigby→Agent→Deliverable canary loop closure, and platform reliability (~9.7% → projected ~4% failure rate). Canary v8 step 1 was in flight at session boundary — verify first thing.
+**Status:** PR #1983 (6 commits) closed all 4 priority items from Rigby's CTOAgent list. Operationalized CTOAgent as a daily Celery beat diagnostic (P0), locked output Template v1 with structurally-enforced Recommended Actions (P1), cross-checked attribution alignment (P2), wired code_review_agent in 3-place tool registry (P3), and refactored editor-dispatch gather to v2 relevance-scored selection (P4 — closes canary v8 finding). Both CTO_DIAGNOSTIC_* flags default OFF — zero behavior change until Chris flips them.
 
 ---
 
@@ -131,7 +131,38 @@ CTOAgent queries live `AgentExecution` data and produces accurate platform analy
 
 ---
 
-## SESSION 1093 — PRIORITIES
+## SESSION 1094 — PRIORITIES
+
+### 1. Roll out CTO daily diagnostic (Chris to execute)
+After PR #1983 merges, set `CTO_DIAGNOSTIC_ENABLED=true` on local for 24 h, observe gate behavior in logs (look for `[CTO-DIAG]` log lines), tune thresholds via `CTO_DIAG_*` env vars if needed, then flip `CTO_DIAGNOSTIC_POSTING_ENABLED=true` → daily attention items begin landing in governance inbox. Full reference in `core/tasks_ops.py` module docstring above `_impl_run_cto_daily_diagnostic`.
+
+### 2. PA router misroute follow-up
+During Session 1093, when asked to dispatch EditorAgent via `run_agent`, the PA's GPT-5.2 router twice picked `content_tool.content_recent` instead. File a ticket: ensure `run_agent` always eligible in PA toolset + add deterministic override when message contains explicit `run_agent(...)` call signature + regression test.
+
+### 3. .env.example security hook follow-up
+Pre-commit security hook flagged `.env.example` because the pre-existing DATABASE_URL line uses a placeholder username:password pattern that the regex treats as real creds. Replace with a clearly-stub form (uppercase USER/PASSWORD/HOST tokens) so future PRs touching `.env.example` aren't blocked. Then add the `CTO_DIAGNOSTIC_*` flags from PR #1983 to `.env.example` for discoverability.
+
+### 4. Carryforward from Session 1092 (still open)
+- VoiceCriticAgent: `content` parameter not in PA tool schema — GPT-5.2 strips it. Add to schema (mirror #1974 pattern).
+- `base_agent.py:4100` accesses `deliverable.id` even when `create_deliverable` returned None — add None-check.
+- ThinkingAgent: if post-#1980 the `AgentResult` `UnboundLocalError` surfaces (was masked by `re` firing first), apply same one-line fix template.
+
+### 5. Apply Session 1092 ops commands on Railway after auto-deploy lands
+- `python manage.py tune_fed_alert_triggers`
+- `python manage.py backfill_agent_control_blocked_at`
+
+### 6. Verify Railway prod parity (Session 1091/1092/1093 carryforward — STILL OPEN)
+Auto-deploy was stuck on April 13 build at end of three sessions in a row. Verify Session 1093 commits (PR #1983 once merged) make it to Railway.
+
+### 7. Demo recording (deferred from Session 1090/1091/1092)
+Demo runbook: `docs/playbooks/DEMO_HAPPY_PATH.md`. Workspace: `demo-testing`. Pre-conditions for Session 1093 are now satisfied.
+
+### 8. Patent Portfolio + Brand Strategy (carryover, no progress)
+Top candidate: "Governed Autonomy Control Plane." Workspace: "Patent Portfolio — 2026 Refresh" (deactivated, data preserved).
+
+---
+
+## OBSOLETE — SESSION 1093 PRIORITIES (now archived in handoff — all closed by PR #1983)
 
 ### 1. Verify canary v8 (in-flight from Session 1092)
 ResearchAgent step 1 dispatched at 2026-04-17 01:28:57 UTC, execution_id `18f7a2eb-07e4-4c99-917c-bc567e4d385b`. Verify it completed cleanly and a deliverable landed in workspace-flow-canary (`af61c625-2cf1-4e70-82b2-d44e301f897e`). Then dispatch **Step 2 EditorAgent without content/blog_id in context** to prove the dispatcher-side workspace gather (#1979) auto-injects Step 1's deliverable. Acceptance: both deliverables status=ready, content_len>300, EditorAgent's content references ResearchAgent's findings.
