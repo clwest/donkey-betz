@@ -587,14 +587,25 @@ Generate:
 
 Include detailed comments explaining each section."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": f"You are a {platform} CI/CD expert. Generate production-ready pipeline configurations."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=6000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='DevOpsAgent',
+            metadata={'method': '_create_ci_pipeline', 'platform': platform},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": f"You are a {platform} CI/CD expert. Generate production-ready pipeline configurations."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=6000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -649,14 +660,25 @@ Generate:
 
 Include comments explaining optimization choices."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": "You are a Docker expert. Generate optimized, secure container configurations."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=5000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='DevOpsAgent',
+            metadata={'method': '_create_docker_config'},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": "You are a Docker expert. Generate optimized, secure container configurations."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=5000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -726,14 +748,25 @@ Generate:
 
 Include namespace, labels, and annotations following Kubernetes best practices."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": "You are a Kubernetes expert. Generate production-ready manifests following best practices."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=6000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='DevOpsAgent',
+            metadata={'method': '_create_k8s_deployment'},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": "You are a Kubernetes expert. Generate production-ready manifests following best practices."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=6000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -795,14 +828,25 @@ Generate:
 
 Follow {cloud_provider} best practices for security and cost optimization."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": f"You are a Terraform and {cloud_provider} infrastructure expert."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=6000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='DevOpsAgent',
+            metadata={'method': '_create_terraform_config', 'cloud_provider': cloud_provider},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": f"You are a Terraform and {cloud_provider} infrastructure expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=6000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -862,14 +906,25 @@ Generate:
 
 Include setup instructions and best practices."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": f"You are a {stack} monitoring expert. Create comprehensive observability configurations."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=6000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='DevOpsAgent',
+            metadata={'method': '_create_monitoring_config', 'stack': stack},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": f"You are a {stack} monitoring expert. Create comprehensive observability configurations."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=6000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
