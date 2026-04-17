@@ -4109,8 +4109,18 @@ def _cto_diag_dedupe_and_cooldown(severity: str, gate: dict, metrics: dict) -> d
 
     # Dedupe key: hash of (date_bucket, severity, reasons, rounded rates,
     # top_5 agents, top_5 signatures). Stable across small reordering.
+    # date_bucket uses Mountain Time so the dedupe boundary aligns with
+    # Chris's working day (rolls over at MT midnight, not UTC midnight).
+    try:
+        import zoneinfo as _zi
+        date_bucket = (
+            timezone.now().astimezone(_zi.ZoneInfo('America/Denver'))
+            .strftime('%Y-%m-%d')
+        )
+    except Exception:
+        date_bucket = timezone.now().strftime('%Y-%m-%d')
     dedupe_payload = {
-        'date_bucket': timezone.now().strftime('%Y-%m-%d'),
+        'date_bucket': date_bucket,
         'severity': severity,
         'gate_reasons': sorted(gate['reasons']),
         'fail_rate_24h': round(metrics['window_24h']['fail_rate'], 3),
@@ -4311,9 +4321,17 @@ def _impl_run_cto_daily_diagnostic():
 
     # ── 5. Build the title + structured payload now (no narrative yet — that's
     #     filled in by the follow-up post task once CTOAgent completes).
+    # Title date is in Mountain Time so the date matches Chris's working
+    # timezone (the beat fires at 7:15 AM MT, so the diagnostic is "today's
+    # report" from a MT perspective). Falls back to UTC if zoneinfo is missing.
+    try:
+        import zoneinfo as _zi
+        date_label = now.astimezone(_zi.ZoneInfo('America/Denver')).strftime('%Y-%m-%d')
+    except Exception:
+        date_label = now.strftime('%Y-%m-%d')
     title = (
         f'CTO Daily Diagnostic — '
-        f'{now.strftime("%Y-%m-%d")} — '
+        f'{date_label} — '
         f'{gate["severity"].upper()} — '
         f'fail24h {metrics["window_24h"]["fail_rate"] * 100:.1f}% '
         f'(Δ{metrics["delta_vs_7d"] * 100:+.1f}pp)'
