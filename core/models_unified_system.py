@@ -927,11 +927,14 @@ class AgentExecution(models.Model):
     )
 
     task = models.TextField()
+    # Session 1098 PR #3: 'cancelled' added for cooperative cancellation
+    # via CancelTokenRegistry. See core/services/cancel_registry.py.
     status = models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
     ], default='pending')
 
     # Execution details
