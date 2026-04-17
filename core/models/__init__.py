@@ -168,6 +168,9 @@ from ..models_celery_telemetry import CeleryTaskEvent
 # execution_id correlation; PR #1 of Rigby's boardroom-dispatch remediation)
 from ..models_llm_telemetry import LLMCallEvent
 
+# Import deliverable append records (Session 1098 Fix B-full)
+from ..models_deliverable_appends import DeliverableAppend
+
 # Import code artifact models (Session 1012 - Patch-First Workflow)
 from ..models_code_artifacts import CodeArtifact
 
