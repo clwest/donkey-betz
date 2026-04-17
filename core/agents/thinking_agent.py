@@ -209,9 +209,16 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         # Build the thinking prompt with context
         full_prompt = self._format_context_for_thinking(context)
 
+        # Session 1098: Thread execution_id from router context into the LLM
+        # wrapper so per-call LLMCallEvent rows correlate back to the
+        # owning AgentExecution. Router sets context['execution_id'] via
+        # _execution_context when present; falls back to None for detached
+        # callers (tests, dream loops without a persistent execution row).
+        execution_id = context.get('execution_id') if isinstance(context, dict) else None
+
         try:
             # Use the LLM to think
-            response = await self._call_llm(full_prompt)
+            response = await self._call_llm(full_prompt, execution_id=execution_id)
 
             # Parse the response
             thinking_result = self._parse_thinking_response(response)
@@ -621,9 +628,16 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
         return "".join(prompt_parts)
 
-    async def _call_llm(self, prompt: str) -> str:
-        """Call the LLM to think about the context."""
+    async def _call_llm(self, prompt: str, execution_id=None) -> str:
+        """Call the LLM to think about the context.
+
+        Session 1098: Routed through ``llm_call_async`` so every call
+        writes one LLMCallEvent row correlated to the owning
+        AgentExecution. See core/services/llm_call_wrapper.py and
+        conversation pa-3c7ddc058db1 for the broader PR plan.
+        """
         from django.conf import settings
+        from core.services.llm_call_wrapper import llm_call_async
 
         client = get_openai_client(api_key=settings.OPENAI_API_KEY)
 
@@ -646,14 +660,26 @@ EXAMPLES OF FORBIDDEN BEHAVIOR:
 
 If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, your response is INVALID."""
 
-        response = client.chat.completions.create(
+        # Session 1098: wrapper records one LLMCallEvent per call with
+        # provider/model, duration, tokens, error classification, and
+        # execution_id correlation. A failing telemetry save never masks
+        # the LLM response or exception — see wrapper docstring.
+        # ``model=`` below is forwarded to the OpenAI client; telemetry
+        # reads it from ``model_name=`` (see llm_call_wrapper docstring
+        # for why the wrapper kwarg is renamed).
+        response = await llm_call_async(
+            client.chat.completions.create,
             model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ],
             max_completion_tokens=8000,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            provider='openai',
+            model_name='gpt-5-mini',
+            execution_id=execution_id,
+            agent_name='ThinkingAgent',
         )
 
         return response.choices[0].message.content
