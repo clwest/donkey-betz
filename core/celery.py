@@ -178,40 +178,48 @@ app.conf.beat_schedule = {
     },
 
     # ── CTOAgent daily reliability diagnostic (Session 1093) ────────────────
-    # Fires once daily at 13:15 UTC = 7:15 AM MDT / 6:15 AM MST.
+    # Session 1096 fix: hour=7 NOT 13. django-celery-beat's DatabaseScheduler
+    # interprets CrontabSchedule.hour in the schedule's timezone (which defaults
+    # to `America/Denver` on this project — see Django TIME_ZONE). The prior
+    # `hour=13` was intended as UTC but got interpreted as 13:00 Denver time
+    # (19:00 UTC), so the diagnostic had literally never fired. Fixed now:
+    # hour=7 + Denver tz = 13:00 UTC during DST / 14:00 UTC during MST.
     # Task itself is gated by CTO_DIAGNOSTIC_ENABLED env flag — safe to leave
     # in the schedule even when the flag is off (returns immediately).
     # Governance posting is gated independently by CTO_DIAGNOSTIC_POSTING_ENABLED.
     'cto-daily-diagnostic': {
         'task': 'core.tasks.run_cto_daily_diagnostic',
-        'schedule': crontab(minute=15, hour=13),
+        'schedule': crontab(minute=15, hour=7),  # 7:15 AM Denver local
         'options': {'queue': 'long_running', 'expires': 7200},
     },
 
     # ── COOAgent daily operations diagnostic (Session 1094) ─────────────────
     # Second consumer of the scheduled_diagnostic_runner primitive. Fires at
-    # 13:30 UTC = 7:30 AM MDT / 6:30 AM MST — 15 minutes after the CTO
-    # diagnostic so the two don't hit the long_running queue simultaneously
-    # and so their narrative outputs are visually spaced in the attention
-    # inbox. Gated by COO_DIAGNOSTIC_ENABLED (default false); posting gated
+    # 7:30 AM Denver local = 13:30 UTC (DST) / 14:30 UTC (MST) — 15 minutes
+    # after CTO so the two don't hit long_running simultaneously and their
+    # outputs are visually spaced. See Session 1096 note on the CTO entry
+    # above for the hour=7 vs hour=13 fix history.
+    # Gated by COO_DIAGNOSTIC_ENABLED (default false); posting gated
     # independently by COO_DIAGNOSTIC_POSTING_ENABLED.
     'coo-daily-diagnostic': {
         'task': 'core.tasks.run_coo_daily_diagnostic',
-        'schedule': crontab(minute=30, hour=13),
+        'schedule': crontab(minute=30, hour=7),  # 7:30 AM Denver local
         'options': {'queue': 'long_running', 'expires': 7200},
     },
 
     # ── TrendAnalysisAgent daily anomaly diagnostic (Session 1094) ──────────
     # Third consumer of the scheduled_diagnostic_runner primitive. Fires at
-    # 13:45 UTC = 7:45 AM MDT / 6:45 AM MST — another 15 min after COO so
-    # the three diagnostics stagger and never hit long_running simultaneously.
-    # Metrics surface is distributional anomaly (volume deltas, coverage
-    # gaps, spider concentration, cluster velocity) — structurally different
-    # from CTO (counts) and COO (throughput+aging), validates primitive
-    # generality on non-SLA data per Rigby's Session 1094 recommendation.
+    # 7:45 AM Denver local = 13:45 UTC (DST) / 14:45 UTC (MST) — another 15
+    # min after COO so the three diagnostics stagger and never hit
+    # long_running simultaneously. Metrics surface is distributional anomaly
+    # (volume deltas, coverage gaps, spider concentration, cluster velocity)
+    # — structurally different from CTO (counts) and COO (throughput+aging),
+    # validates primitive generality on non-SLA data per Rigby's Session
+    # 1094 recommendation. See Session 1096 note on the CTO entry above
+    # for the hour=7 vs hour=13 fix history.
     'trend-daily-diagnostic': {
         'task': 'core.tasks.run_trend_daily_diagnostic',
-        'schedule': crontab(minute=45, hour=13),
+        'schedule': crontab(minute=45, hour=7),  # 7:45 AM Denver local
         'options': {'queue': 'long_running', 'expires': 7200},
     },
 
