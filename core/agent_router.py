@@ -1313,6 +1313,13 @@ class AgentRouter:
                         f"Downstream completion tracking will be a no-op."
                     )
 
+            # Session 1098: Inject execution_id into context so agents can
+            # correlate their LLMCallEvent rows (via llm_call_wrapper) back
+            # to the owning AgentExecution. Only set if not already present
+            # so upstream callers (tasks_agents) can pre-populate.
+            if execution_record is not None and 'execution_id' not in context:
+                context['execution_id'] = execution_record.id
+
             # Session 908: Use execute_with_workspace when workspace is available
             # This ensures all agent outputs are written to the SKIN layer workspace
             has_workspace = workspace_context and workspace_context.get('has_workspace')

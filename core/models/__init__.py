@@ -164,6 +164,10 @@ from .executor import ExecutionRun, Repo, CodeJobLog
 # Import Celery telemetry models (Session 983 - Celery Observability)
 from ..models_celery_telemetry import CeleryTaskEvent
 
+# Import LLM call telemetry (Session 1098 - per-LLM-call spans with
+# execution_id correlation; PR #1 of Rigby's boardroom-dispatch remediation)
+from ..models_llm_telemetry import LLMCallEvent
+
 # Import code artifact models (Session 1012 - Patch-First Workflow)
 from ..models_code_artifacts import CodeArtifact
 
