@@ -188,6 +188,33 @@ app.conf.beat_schedule = {
         'options': {'queue': 'long_running', 'expires': 7200},
     },
 
+    # ── COOAgent daily operations diagnostic (Session 1094) ─────────────────
+    # Second consumer of the scheduled_diagnostic_runner primitive. Fires at
+    # 13:30 UTC = 7:30 AM MDT / 6:30 AM MST — 15 minutes after the CTO
+    # diagnostic so the two don't hit the long_running queue simultaneously
+    # and so their narrative outputs are visually spaced in the attention
+    # inbox. Gated by COO_DIAGNOSTIC_ENABLED (default false); posting gated
+    # independently by COO_DIAGNOSTIC_POSTING_ENABLED.
+    'coo-daily-diagnostic': {
+        'task': 'core.tasks.run_coo_daily_diagnostic',
+        'schedule': crontab(minute=30, hour=13),
+        'options': {'queue': 'long_running', 'expires': 7200},
+    },
+
+    # ── TrendAnalysisAgent daily anomaly diagnostic (Session 1094) ──────────
+    # Third consumer of the scheduled_diagnostic_runner primitive. Fires at
+    # 13:45 UTC = 7:45 AM MDT / 6:45 AM MST — another 15 min after COO so
+    # the three diagnostics stagger and never hit long_running simultaneously.
+    # Metrics surface is distributional anomaly (volume deltas, coverage
+    # gaps, spider concentration, cluster velocity) — structurally different
+    # from CTO (counts) and COO (throughput+aging), validates primitive
+    # generality on non-SLA data per Rigby's Session 1094 recommendation.
+    'trend-daily-diagnostic': {
+        'task': 'core.tasks.run_trend_daily_diagnostic',
+        'schedule': crontab(minute=45, hour=13),
+        'options': {'queue': 'long_running', 'expires': 7200},
+    },
+
     # ── Spider Network (re-enabled) ────────────────────────────────────────
     # Core spider execution — crawl all registered spiders
     'run-spider-network': {

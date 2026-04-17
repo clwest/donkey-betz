@@ -942,6 +942,19 @@ class AgentHandlersMixin:
         task_text = payload.get('task', '')
         context = payload.get('context', {})
 
+        # Session 1094: promote top-level `content` and `workspace_id` params
+        # into context so they reach the agent. Schema exposes these as
+        # structured parameters (see pa_tool_schemas.py run_agent) because
+        # GPT-5.2 routing is unreliable about passing arbitrary fields inside
+        # the `context` blob. Top-level wins if both provided — caller's
+        # structured intent is more trustworthy than LLM-assembled context.
+        top_level_content = payload.get('content')
+        if top_level_content and 'content' not in context:
+            context['content'] = top_level_content
+        top_level_ws = payload.get('workspace_id')
+        if top_level_ws and 'workspace_id' not in context:
+            context['workspace_id'] = top_level_ws
+
         if not task_text:
             raise ValueError("task is required")
 

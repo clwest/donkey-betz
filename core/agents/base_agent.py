@@ -4211,6 +4211,18 @@ Consider this current data when formulating your response."""
                 status='ready',
             )
 
+            # Session 1094: `create_deliverable` returns None when the
+            # Session 1088 quality gate rejects the content (see
+            # deliverable_factory.py:280). Without this guard the next line
+            # crashes with AttributeError on NoneType.id.
+            if deliverable is None:
+                logger.info(
+                    f"[{self.name}] Deliverable not persisted — "
+                    f"rejected by quality gate (title={resolved_title[:60]!r}, "
+                    f"content_len={len(content or '')})"
+                )
+                return None
+
             logger.info(f"📦 Saved Deliverable {deliverable.id} - {resolved_title[:50]} | workspace={'yes' if resolved_ws_id else 'none'} | is_saved={should_save}")
 
             # Session 930: Trigger auto-learning from deliverable
