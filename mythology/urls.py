@@ -15,6 +15,9 @@ urlpatterns = [
     path('flagged-content/', views.flagged_content_list, name='flagged_content_list'),
     path('flagged-content/<uuid:content_id>/', views.flagged_content_detail, name='flagged_content_detail'),
     path('review/', views.submit_review, name='submit_review'),
+
+    # Session 1095 Tier 1: bulk review by pattern_type (unblocks FP backlog)
+    path('bulk-review/', views.bulk_review, name='bulk_review'),
     
     # Recent events for Neural Scan section
     path('recent-events/', views.recent_events, name='recent_events'),
