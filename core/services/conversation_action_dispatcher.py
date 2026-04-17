@@ -442,6 +442,9 @@ class ConversationActionDispatcher:
         try:
             from core.tasks import execute_agent_task
             from core.services.context_tracing import ContextTracer
+            from core.services.editor_dispatch_helpers import (
+                gather_workspace_content_for_editor as _gather_workspace_content_for_editor,
+            )
 
             task_context = {
                 'source': 'conversation_action_dispatch',
@@ -449,6 +452,33 @@ class ConversationActionDispatcher:
                 'participants': participants,
                 **(context or {})
             }
+
+            # Session 1092: When a conversation produces a next_step like
+            # "EditorAgent: Synthesize the Platform Audit + CTO + COO briefs",
+            # the LLM doesn't attach the actual artifact bodies — it just
+            # references them by name in the task text. EditorAgent then
+            # fails with "No content provided" because its job is to edit,
+            # not synthesize from thin air. Mirror the Session 1090
+            # workspace-gather fallback that lives in ToolDispatcher's
+            # _handle_agent_tool, so this dispatch path gets the same
+            # caller-side recovery instead of dropping 9 fails/day on
+            # CTOAgent's platform analysis.
+            if (
+                agent_name == 'EditorAgent'
+                and 'content' not in task_context
+                and 'blog_id' not in task_context
+            ):
+                gathered = _gather_workspace_content_for_editor(
+                    workspace_id=task_context.get('workspace_id')
+                                  or task_context.get('workspace'),
+                    task_text=task,
+                )
+                if gathered:
+                    task_context['content'] = gathered
+                    logger.info(
+                        f"[EditorAgent dispatch] Pre-injected workspace content "
+                        f"({len(gathered.get('sections') or [])} sections) before enqueue"
+                    )
 
             # Session 875: Log context at pre-enqueue stage (before Celery serializes it)
             tracer = ContextTracer(source=f"conversation_action_dispatch:{conversation_id}")
