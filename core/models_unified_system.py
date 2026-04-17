@@ -960,6 +960,13 @@ class AgentExecution(models.Model):
     # so the cleanup watchdog can distinguish "still alive" from "truly stuck".
     last_heartbeat_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
+    # Session 1098 PR #4: lineage for nested-dispatch cancel + budget.
+    # Parent = execution_id of the dispatch that spawned this run.
+    # Root = top-of-chain ancestor (self.id if no parent).
+    # Both NULL for pre-PR-4 rows. See core/services/cancel_registry.
+    parent_execution_id = models.UUIDField(null=True, blank=True, db_index=True)
+    root_execution_id = models.UUIDField(null=True, blank=True, db_index=True)
+
     class Meta:
         app_label = 'core'
 
