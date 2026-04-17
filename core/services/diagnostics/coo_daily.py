@@ -59,6 +59,32 @@ Tunables (env vars)
     COO_DIAG_ACTION_HIGH_MIN           (5)     pending high count → HIGH
     COO_DIAG_STUCK_HOURS               (72)    initiative stage staleness window
     COO_DIAG_STUCK_MIN                 (5)     stuck initiative count → HIGH
+    COO_DIAG_STUCK_IGNORE_BEFORE       ("")    ISO date; initiatives updated
+                                               before this cutoff are excluded
+                                               from the stuck count. Use after
+                                               a one-time sediment cleanup so
+                                               historical dead weight doesn't
+                                               trip the gate forever. Empty =
+                                               no filtering (default).
+    COO_DIAG_PUBLISHABLE_TYPES         ("")    CSV of deliverable_type values
+                                               that actually reach 'published'
+                                               status on this platform.
+                                               Session 1094 investigation:
+                                               only ~1 type (document, from
+                                               InitiativePipeline) is auto-
+                                               publishing. Most agent output
+                                               types (analysis, research,
+                                               report, code, etc.) are internal
+                                               artifacts that never publish.
+                                               When set, the velocity +
+                                               publishing_jam + review_age gates
+                                               scope to ONLY these types, so
+                                               the gates measure the actual
+                                               publishing workflow — not
+                                               internal-analysis noise that
+                                               permanently trips the jam gate.
+                                               Empty = all types counted
+                                               (default, back-compat).
 
 Feature flags
 -------------
@@ -74,13 +100,44 @@ Identical to CTO (Session 1093):
   2. COO_DIAGNOSTIC_ENABLED=true for 24h observation — check [COO-DIAG] logs
   3. Tune COO_DIAG_* thresholds per observed baseline
   4. COO_DIAGNOSTIC_POSTING_ENABLED=true → daily attention items begin
+
+Publishing pipeline investigation (Session 1094 follow-up)
+----------------------------------------------------------
+
+Investigation found that `Deliverable.status='published'` is only set by
+one code path (`content_tool.publish` manual PA action) and by one agent
+(InitiativePipeline, 10 publishes all-time). Meanwhile scheduled analysis
+agents (StockAnalyst / InstitutionalWatcher / MarketAnomaly / BearCase /
+BullCase / TechnicalDocument / etc.) produce 400+ `ready` deliverables
+per day that never publish — because they're **internal analyses, not
+publishable content**.
+
+Consequence: without `COO_DIAG_PUBLISHABLE_TYPES` set, the
+PUBLISHING_JAM_CRIT gate will ALWAYS trip because the denominator
+includes non-publishing types. Before enabling POSTING, operators
+should either:
+
+  (a) Set `COO_DIAG_PUBLISHABLE_TYPES=document,video,edited_content,blog`
+      (or whatever types actually flow through publish on your platform)
+      so the gate measures the real publishing funnel.
+
+  (b) Introduce an `is_internal` or `requires_publish` flag on the
+      Deliverable model and filter by it (larger refactor, cleanest
+      long-term answer).
+
+  (c) Migrate scheduled-analysis agents to land in a different status
+      (e.g. `completed` instead of `ready`) so they don't pollute the
+      publish-pending pile.
+
+This module supports (a) directly via the env var. (b) and (c) are
+architectural decisions for a later session.
 """
 from __future__ import annotations
 
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from statistics import quantiles
 from typing import Any, Dict, List
 
@@ -139,13 +196,30 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
     from core.models_human_interface import HumanAttentionItem
     from core.models import Initiative
 
+    # ── Publishable-type filter (Session 1094 investigation)
+    # When set, velocity + review_backlog + publishing_jam gates scope to
+    # only these deliverable_type values. Prevents the jam gate from
+    # permanently tripping on platforms where most agents produce internal
+    # analyses (never meant to publish) mixed with the tiny fraction of
+    # user-facing content that does. See module docstring.
+    publishable_types_raw = os.environ.get('COO_DIAG_PUBLISHABLE_TYPES', '').strip()
+    publishable_types: List[str] = [
+        t.strip() for t in publishable_types_raw.split(',') if t.strip()
+    ] if publishable_types_raw else []
+
+    def _deliverable_base_qs():
+        qs = Deliverable.objects.all()
+        if publishable_types:
+            qs = qs.filter(deliverable_type__in=publishable_types)
+        return qs
+
     # ── Velocity: created vs published, 24h vs 7d-avg-daily baseline
-    created_24h = Deliverable.objects.filter(created_at__gte=cutoff_24h).count()
-    published_24h = Deliverable.objects.filter(
+    created_24h = _deliverable_base_qs().filter(created_at__gte=cutoff_24h).count()
+    published_24h = _deliverable_base_qs().filter(
         updated_at__gte=cutoff_24h, status='published'
     ).count()
-    created_7d = Deliverable.objects.filter(created_at__gte=cutoff_7d).count()
-    published_7d = Deliverable.objects.filter(
+    created_7d = _deliverable_base_qs().filter(created_at__gte=cutoff_7d).count()
+    published_7d = _deliverable_base_qs().filter(
         updated_at__gte=cutoff_7d, status='published'
     ).count()
     created_7d_avg_daily = created_7d / 7.0
@@ -163,6 +237,7 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         'published_7d_avg_daily': round(published_7d_avg_daily, 2),
         'created_delta_pct': _delta_pct(created_24h, created_7d_avg_daily),
         'published_delta_pct': _delta_pct(published_24h, published_7d_avg_daily),
+        'publishable_types_filter': publishable_types or None,
     }
 
     # ── Review backlog: deliverables in 'ready' — haven't progressed to
@@ -172,7 +247,7 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
     ready_threshold_cutoff = now - timedelta(hours=review_age_hours_threshold)
 
     ready_rows = list(
-        Deliverable.objects.filter(status='ready').values('id', 'created_at', 'title')
+        _deliverable_base_qs().filter(status='ready').values('id', 'created_at', 'title')
     )
     ready_ages_hours = [
         (now - r['created_at']).total_seconds() / 3600.0
@@ -240,17 +315,47 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
     # ── Stuck initiatives: active initiatives whose current_stage hasn't
     #    changed in N hours. Proxy for "stage change" = updated_at since
     #    we don't have an explicit stage-change timestamp.
+    #
+    # Session 1094 follow-up: optional `COO_DIAG_STUCK_IGNORE_BEFORE` cutoff
+    # excludes historical sediment from the count. Chris's local has 147
+    # ACTIVE initiatives untouched for 30+ days (oldest 76d) — pure dead
+    # weight from earlier sessions. Setting this env var to an ISO date
+    # makes the gate ignore anything `updated_at < ignore_before`, so the
+    # count reflects current operational state not archaeology. Default
+    # empty = no filtering (back-compat). Recommended: clean sediment via
+    # `python manage.py cleanup_stale_initiatives --older-than-days 30 --apply`
+    # then leave this unset — or set it as a belt-and-suspenders fallback.
     stuck_hours = _env_int('COO_DIAG_STUCK_HOURS', 72)
     stuck_cutoff = now - timedelta(hours=stuck_hours)
     stuck_qs = Initiative.objects.filter(
         status='ACTIVE',
         updated_at__lte=stuck_cutoff,
     )
+
+    ignore_before_raw = os.environ.get('COO_DIAG_STUCK_IGNORE_BEFORE', '').strip()
+    ignore_before_applied = False
+    if ignore_before_raw:
+        try:
+            ignore_before_dt = datetime.fromisoformat(ignore_before_raw)
+            # Attach tzinfo if the env var was naive (assume UTC — this is
+            # an operator knob, not user input)
+            if ignore_before_dt.tzinfo is None:
+                ignore_before_dt = ignore_before_dt.replace(tzinfo=dt_timezone.utc)
+            stuck_qs = stuck_qs.filter(updated_at__gte=ignore_before_dt)
+            ignore_before_applied = True
+        except (TypeError, ValueError):
+            logger.warning(
+                'COO_DIAG_STUCK_IGNORE_BEFORE=%r could not be parsed as ISO date '
+                '(expected e.g. "2026-03-16" or "2026-03-16T12:00:00") — ignoring',
+                ignore_before_raw,
+            )
+
     stuck_rows = list(stuck_qs.values('name', 'current_stage', 'updated_at')[:20])
 
     initiatives = {
         'stuck_count': stuck_qs.count(),
         'stuck_hours_threshold': stuck_hours,
+        'ignore_before': ignore_before_raw if ignore_before_applied else None,
         'stuck_top': [
             {
                 'name': (r.get('name') or '')[:80],
