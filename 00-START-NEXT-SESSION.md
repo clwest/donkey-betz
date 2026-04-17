@@ -17,76 +17,84 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-## SESSION 1097 — START HERE (as of 2026-04-17 end of Session 1096)
+## SESSION 1098 — START HERE (as of 2026-04-17 end of Session 1097)
 
 **Previous session PA conversation (LOCAL):** `pa-3c7ddc058db1` (continuous since Session 1094 — ask Chris if he wants a new one).
 
-### COO DIAGNOSTIC IS IN OBSERVATION MODE RIGHT NOW
+### FIRST THING: read tomorrow's 7:30 AM MT COO observation
 
-As of 2026-04-17, the `.env` file has:
+The 24h COO observation window crossed into its second day. Re-run the same grep as Session 1097 did:
+```
+grep -E "\[COO-DIAG\]|publish_intent distribution|CAP_EXCEEDED|ROLLUP|SUPPRESSED|ESCALATION" celery-long-running.log
+```
+
+**Key deltas to look for (baseline set Session 1097):**
+- `mythology_quarantine.unacked_critical` should still be ≤ 1 (swept 314 → 1 yesterday)
+- `MYTHOLOGY_QUARANTINE_CRIT` gate should be **absent or HIGH** (not CRIT anymore)
+- `publish_intent` distribution (created_24h): expect ~95% `internal_only` / ~5% `publish_candidate` similar to yesterday's 473/19 split
+- Other 7 gates (PUBLISHING_JAM, REVIEW_AGE, OLDEST_REVIEW, ACTION_BACKLOG, STUCK_INITIATIVES, GATE_HANG_HIGH/NEW_HIGH) expected **to persist** — these are real operational workload per Rigby, not sediment
+- Pattern severity_weight tuning (dangerous_myth, spider_data_myth, time_myth all at 0.2) should reduce **new** critical alerts minted today
+
+Report findings to Rigby; she decides tune-vs-flip-POSTING.
+
+### QUEUED FROM RIGBY — Session 1098 code target: boardroom dispatch hang fix
+
+Rigby's triage found the 60-min COO/CTO "no heartbeat" timeouts (18 fails / 24h) are **boardroom/deliberation dispatch hangs** — agent stops heartbeating before the LLM call is recorded, so we can't attribute provider/model. Scope for Session 1098:
+
+1. **Hard timeout + cancellation** around the boardroom/deliberation LLM call (or whatever blocking step precedes it)
+2. **Heartbeat updates** during long-running deliberation steps (chunk work so heartbeats don't go quiet for >60 min)
+3. **Per-execution correlation** in LLM telemetry so provider/model is attributed next time
+
+Entry points to investigate:
+- `core/services/conversation_orchestrator.py` (boardroom coordinator entry)
+- `core/services/deliberation_*` modules
+- How COO/CTO agents get dispatched from strategic-meeting code paths (task text prefix: "As a participant in a strategic meeting about...")
+
+See memory: `project_session_1096_anti_spam_rails.md`.
+
+### Observation state (as of Session 1097 end)
+
+**COO diagnostic:**
 ```
 COO_DIAGNOSTIC_ENABLED=true
 COO_DIAGNOSTIC_POSTING_ENABLED=false
 ```
+Fires daily at 7:30 AM Denver local (beat schedule `coo-daily-diagnostic`). The `core/celery.py` source + DB CrontabSchedule now both have `hour=7` after the Session 1096/1097 timezone fix (PR #1996).
 
-The COO daily diagnostic fires at **7:30 AM MDT daily** (Celery beat `coo-daily-diagnostic` schedule). It runs through all 9 gates and dispatches COOAgent async, but creates ZERO attention items because POSTING is false. This is the 24h observation window Rigby called for before flipping POSTING.
+**Mythology sweep applied Session 1097 (Rigby-approved):**
+| Pattern | Prior FP | Action | Post-state |
+|---|---|---|---|
+| dangerous_myth | 312 FP / 0 true | bulk-FP + ack 314 critical alerts | sev 1.0 → 0.2 |
+| spider_data_myth | 11 FP / 0 true | bulk-FP pending | sev 1.0 → 0.2 |
+| time_myth | 4 FP / 0 true | bulk-FP pending | sev 1.0 → 0.2 |
 
-### First thing to do in Session 1097
+**Agent failure rate (last 24h before Session 1097 fixes):**
+- Total: 45/201 = 22.39% fail rate (vs 0.2% SLO)
+- EditorAgent 50% (9/18) — 2/9 addressed by PR #1997 blog_id extraction; 3/9 are synthesis-task misroutes (see queued item #1 below)
+- COOAgent 50% + CTOAgent 37% — boardroom dispatch hangs (Session 1098 target)
+- ThinkingAgent — 4 UnboundLocalError fixed by PR #1997; 3 router wall-clock timeouts remain
 
-1. Read today's `celery-beat.log` and `celery.log` for `[COO-DIAG]` + `[COO-DIAG-POST]` lines. Target greps:
-   ```
-   grep -E "\[COO-DIAG\]|publish_intent distribution|CAP_EXCEEDED|ROLLUP|SUPPRESSED|ESCALATION" celery*.log
-   ```
-2. Report the findings to Rigby (conversation `pa-3c7ddc058db1`):
-   - What severity tripped
-   - Which gates fired
-   - Whether the suppressed counter accumulated any lateral moves
-   - publish_intent distribution (missing resolver mappings?)
-3. Rigby decides based on observation whether to:
-   - Tune thresholds via `COO_DIAG_*` env vars
-   - Flip `COO_DIAGNOSTIC_POSTING_ENABLED=true` → attention items begin
+### Backlog — Rigby's ranking
 
-### Current gate state on local (from 2026-04-17 manual trigger)
+1. **Boardroom dispatch hang fix** (Session 1098 — above)
+2. **EditorAgent synthesis misroute**: dispatcher-layer reroute from EditorAgent → ContentWriterAgent when `task text implies synthesis/creation AND context.content empty`
+3. **ThinkingAgent 3s router timeout**: raise wall-clock budget or async-ify
 
-8 gates tripping at CRITICAL severity — the "real operational state" baseline:
-- `PUBLISHING_JAM_CRIT` (published=0 in 24h + ready_count ≥ 10)
-- `REVIEW_AGE_HIGH` (reviews aging p95 > 24h)
-- `OLDEST_REVIEW_HIGH` (some items 44+ days old)
-- `ACTION_BACKLOG_CRIT` (37 critical HumanAttentionItems)
-- `STUCK_INITIATIVES_HIGH` (147 stuck > 72h)
-- `GATE_HANG_HIGH` / `GATE_HANG_NEW_HIGH` (25 pending gate_stuck HAIs)
-- `MYTHOLOGY_QUARANTINE_CRIT` (312 unacked critical mythology alerts)
+Wait for tomorrow's COO observation before threshold tuning or POSTING flip.
 
-These are mostly historical sediment from pre-Session-1094 operations. The rollout path:
-1. Observation logs confirm the 9 gates fire correctly
-2. Chris/Rigby uses the cleanup tools already shipped:
-   - `python manage.py cleanup_stale_initiatives --older-than-days 30 --apply`
-   - `/api/mythology/bulk-review/` for dangerous_myth / spider_data_myth storms
-3. Threshold tuning via env vars for any still-noisy gates
-4. Then flip POSTING
+### Session 1097 completed (2 PRs merged)
 
-### Anti-spam safety rails are armed (COO cap=2)
+- `#1996` core/celery.py beat_schedule `hour=7` Denver (prevents drift on deploys)
+- `#1997` ThinkingAgent AgentResult lift-to-module + EditorAgent blog_id regex extraction
 
-If POSTING flips on before thresholds are tuned, the anti-spam rails protect the inbox:
-- Max 2 posts per MT day for COO (conservative start; bump to 3 after a week)
+### Anti-spam safety rails remain armed (COO cap=2)
+
+If POSTING flips on before thresholds are tuned, the anti-spam rails still protect the inbox:
+- Max 2 posts per MT day for COO (conservative start)
 - Escalation rule: no lateral reposts within a day, only upward severity transitions
 - Rollup counter accumulates suppressed alerts, drains into next fired post
-- Anti-spam status header shows `N/M posts used today` so Chris sees the cap state
 
 See `project_session_1096_anti_spam_rails.md` in memory for full architecture.
-
-### Session 1096 completed (7 PRs merged)
-
-- `#1987` Rigby's 3-item plan (gate_hang + rework + publish_intent enum)
-- `#1988` Warming note
-- `#1989` Mythology Tier 0
-- `#1990` Mythology Tier 1 (feedback tuning + bulk API)
-- `#1991` Mythology Tier 1b (HAI bridge + frontend bulk button)
-- `#1992` Anti-spam safety rails
-- `#1993` Rigby refinements + 12-alert stress test
-- `#1994` COO cap=2 + MT midnight boundary test
-
-300+ tests, all passing.
 
 ---
 
