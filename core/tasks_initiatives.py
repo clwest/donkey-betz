@@ -751,15 +751,30 @@ Guidelines:
                 try:
                     # Session 875: CRITICAL FIX - Increase tokens for reasoning models
                     # GPT-5-mini was returning empty content because reasoning consumed all 1000 tokens
-                    response = client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
-                        timeout=120,  # Session 413: 2 min timeout for reasoning model
-                    )
+                    # Session 1098: wrap in llm_call_span. execution_id=None
+                    # because this Celery task doesn't correspond to a
+                    # router-created AgentExecution row (it's a beat task
+                    # generating multiple dreams per agent). Telemetry
+                    # rows still get written; they're just detached from
+                    # any single execution record.
+                    from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+                    with _llm_call_span(
+                        provider='openai',
+                        model='gpt-5-mini',
+                        execution_id=None,
+                        agent_name=agent.name,
+                        metadata={'method': '_impl_generate_agent_dreams', 'step': 'dream_body'},
+                    ) as _span:
+                        response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                            model="gpt-5-mini",
+                            messages=[
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt}
+                            ],
+                            max_completion_tokens=4000,  # Session 875: 4x increase for reasoning headroom
+                            timeout=120,  # Session 413: 2 min timeout for reasoning model
+                        )
+                        _span.attach_response(response)
 
                     dream_content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
@@ -785,15 +800,24 @@ Guidelines:
 
                     # Session 317: Generate catchy title with adequate tokens for reasoning
                     # Session 413: Added timeout for reasoning model
-                    title_response = client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=[
-                            {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
-                            {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
-                        ],
-                        max_completion_tokens=500,  # Higher for GPT-5 reasoning (Session 317)
-                        timeout=60,  # Session 413: 1 min timeout for simple title
-                    )
+                    # Session 1098: wrapped for telemetry.
+                    with _llm_call_span(
+                        provider='openai',
+                        model='gpt-5-mini',
+                        execution_id=None,
+                        agent_name=agent.name,
+                        metadata={'method': '_impl_generate_agent_dreams', 'step': 'dream_title'},
+                    ) as _title_span:
+                        title_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                            model="gpt-5-mini",
+                            messages=[
+                                {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
+                                {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
+                            ],
+                            max_completion_tokens=500,  # Higher for GPT-5 reasoning (Session 317)
+                            timeout=60,  # Session 413: 1 min timeout for simple title
+                        )
+                        _title_span.attach_response(title_response)
 
                     title = title_response.choices[0].message.content.strip().strip('"\'')[:200] if title_response.choices[0].message.content else "Creative Thought"
 
@@ -1039,11 +1063,22 @@ Actionability means: Can this be implemented? Is it a concrete idea vs abstract 
 
 Respond with ONLY a number between 0.0 and 1.0, nothing else."""
 
-                actionability_response = client.chat.completions.create(
-                    model="gpt-5-mini",
-                    messages=[{"role": "user", "content": actionability_prompt}],
-                    max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
-                )
+                # Session 1098: wrapped for telemetry. execution_id None
+                # because this is a Celery task, not a router dispatch.
+                from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+                with _llm_call_span(
+                    provider='openai',
+                    model='gpt-5-mini',
+                    execution_id=None,
+                    agent_name='DreamScorer',
+                    metadata={'method': '_impl_score_and_promote_dreams', 'step': 'actionability'},
+                ) as _act_span:
+                    actionability_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                        model="gpt-5-mini",
+                        messages=[{"role": "user", "content": actionability_prompt}],
+                        max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
+                    )
+                    _act_span.attach_response(actionability_response)
 
                 actionability_text = actionability_response.choices[0].message.content.strip()
                 # Extract number from response
@@ -1073,11 +1108,20 @@ Respond with:
 Format: SCORE|PROJECT_NAME
 Example: 0.8|AI Content Studio"""
 
-                    relevance_response = client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=[{"role": "user", "content": relevance_prompt}],
-                        max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
-                    )
+                    # Session 1098: wrapped for telemetry.
+                    with _llm_call_span(
+                        provider='openai',
+                        model='gpt-5-mini',
+                        execution_id=None,
+                        agent_name='DreamScorer',
+                        metadata={'method': '_impl_score_and_promote_dreams', 'step': 'relevance'},
+                    ) as _rel_span:
+                        relevance_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                            model="gpt-5-mini",
+                            messages=[{"role": "user", "content": relevance_prompt}],
+                            max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
+                        )
+                        _rel_span.attach_response(relevance_response)
 
                     relevance_text = relevance_response.choices[0].message.content.strip()
                     if '|' in relevance_text:
@@ -1315,11 +1359,21 @@ Create a 3-5 step implementation plan. Be specific and actionable.
 Format: numbered list of steps."""
 
                     try:
-                        plan_response = client.chat.completions.create(
-                            model="gpt-5-mini",
-                            messages=[{"role": "user", "content": plan_prompt}],
-                            max_completion_tokens=800  # Higher for reasoning models
-                        )
+                        # Session 1098: wrapped for telemetry.
+                        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+                        with _llm_call_span(
+                            provider='openai',
+                            model='gpt-5-mini',
+                            execution_id=None,
+                            agent_name=assigned_agent.name if assigned_agent else 'DreamImplementer',
+                            metadata={'method': '_impl_process_approved_dreams', 'step': 'plan'},
+                        ) as _plan_span:
+                            plan_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                                model="gpt-5-mini",
+                                messages=[{"role": "user", "content": plan_prompt}],
+                                max_completion_tokens=800  # Higher for reasoning models
+                            )
+                            _plan_span.attach_response(plan_response)
 
                         plan = plan_response.choices[0].message.content.strip()
                         implementation.start_implementation(plan=plan)
