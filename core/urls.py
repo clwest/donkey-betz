@@ -2435,6 +2435,20 @@ urlpatterns = [
     path('api/v1/agents/monitoring/alerts/', views_agent_execution.monitoring_alerts, name='agent-monitoring-alerts'),
     path('api/v1/agents/monitoring/agent/<str:agent_name>/', views_agent_execution.monitoring_agent_detail, name='agent-monitoring-detail'),
 
+    # Session 1098 PR #3: cooperative cancellation of in-flight executions.
+    # POST writes to the CancelTokenRegistry; GET reads the observation
+    # record. See core/services/cancel_registry.py.
+    path(
+        'api/v1/agents/execution/<str:execution_id>/cancel/',
+        views_agent_execution.cancel_agent_execution,
+        name='agent-execution-cancel',
+    ),
+    path(
+        'api/v1/agents/execution/<str:execution_id>/cancel-state/',
+        views_agent_execution.get_agent_execution_cancel_state,
+        name='agent-execution-cancel-state',
+    ),
+
     # Advisor API Endpoints (Session 25)
     path('api/v1/advisors/consult/', advisor_consult, name='advisor-consult'),
     path('api/v1/advisors/list/', advisor_list, name='advisor-list'),
