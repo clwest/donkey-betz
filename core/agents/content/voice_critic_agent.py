@@ -307,9 +307,16 @@ Output your analysis as structured JSON with scores and reasoning."""
                 )
 
                 # Session 1006: Persist output to Deliverable
+                # Session 1092: render with shared helper — the raw message
+                # is a short score summary that fails the 300-char gate.
+                # Use result.data for the full score breakdown.
                 self._save_to_deliverable(
                     title=f"Voice Critique: {task[:80]}",
-                    content=result.message,
+                    content=self._render_agent_output_markdown(
+                        task=task,
+                        summary=result.message,
+                        sections=[{'heading': 'Scores', 'content': result.data or {}}] if result.data else None,
+                    ),
                     deliverable_type='analysis',
                     category='Voice Critique',
                     tags=['voice', 'critique'],

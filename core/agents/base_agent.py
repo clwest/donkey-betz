@@ -3971,6 +3971,120 @@ Consider this current data when formulating your response."""
 
         return title, content, list(set(tags))  # Dedupe tags
 
+    def _render_agent_output_markdown(
+        self,
+        task: str,
+        summary: str = '',
+        tool_calls: Optional[List[Dict[str, Any]]] = None,
+        sections: Optional[List[Dict[str, Any]]] = None,
+        extra: Optional[Dict[str, Any]] = None,
+        title_prefix: str = '',
+    ) -> str:
+        """Session 1092: Generic Deliverable content renderer.
+
+        Shared serializer for the MESSAGE-ONLY bug pattern: when an agent's
+        `result.message` is a short status string like "Generated N items"
+        or "Video trimmed: {id}", saving it directly as deliverable content
+        falls below the DeliverableFactory 300-char quality gate and the
+        row is silently rejected.  Use this helper to render the real work
+        (tool calls, sections, extra data) into a markdown document that
+        passes the gate and gives downstream consumers the full context.
+
+        Agents should call this right before `_save_to_deliverable` when
+        their `result.message` is a status line rather than the actual
+        output:
+
+            rendered = self._render_agent_output_markdown(
+                task=task,
+                summary=result.message,
+                tool_calls=tool_calls_made,
+                extra={'artifact_path': artifact.path, 'duration_s': 3.2},
+            )
+            self._save_to_deliverable(content=rendered, ...)
+
+        Args:
+            task: Original task string — becomes the H1.
+            summary: The agent's own short status message (becomes a
+                "Summary:" line near the top).
+            tool_calls: List of tool-call records (dicts with `tool`,
+                `arguments`, optional `result`).  Rendered as a bullet list.
+            sections: Optional list of `{heading, content}` dicts for
+                agent-specific structured output (e.g.  recommendations,
+                findings, variant outputs). Content may be a string or a
+                nested dict (rendered as `- **key**: value` bullets).
+            extra: Optional flat dict of key/value metadata to render as
+                a "Details" bullet list — good for artifact paths, IDs,
+                timings, provenance anchors.
+            title_prefix: Optional short prefix for the H1.  Helpful for
+                disambiguation when many agents share the same workspace.
+
+        Returns:
+            A markdown-formatted content string, typically 500+ chars for
+            any non-trivial agent output.
+        """
+        lines: List[str] = []
+        h1 = f"{title_prefix} {task}".strip() if title_prefix else task
+        lines.append(f"# {h1[:180]}")
+        lines.append("")
+
+        if summary:
+            lines.append(f"*Summary:* {summary}")
+            lines.append("")
+
+        if sections:
+            for section in sections:
+                if not isinstance(section, dict):
+                    continue
+                heading = section.get('heading') or 'Section'
+                body = section.get('content')
+                lines.append(f"## {heading}")
+                lines.append("")
+                if isinstance(body, str):
+                    lines.append(body)
+                elif isinstance(body, dict):
+                    for k, v in body.items():
+                        lines.append(f"- **{k}**: {v}")
+                elif isinstance(body, list):
+                    for i, item in enumerate(body, 1):
+                        if isinstance(item, dict):
+                            item_title = item.get('title') or item.get('name') or f'Item {i}'
+                            lines.append(f"### {i}. {item_title}")
+                            for k, v in item.items():
+                                if k in ('title', 'name'):
+                                    continue
+                                lines.append(f"- **{k}**: {v}")
+                            lines.append("")
+                        else:
+                            lines.append(f"{i}. {item}")
+                lines.append("")
+
+        if extra:
+            lines.append("## Details")
+            lines.append("")
+            for k, v in extra.items():
+                lines.append(f"- **{k}**: {v}")
+            lines.append("")
+
+        if tool_calls:
+            lines.append("## Tool calls made")
+            lines.append("")
+            for tc in tool_calls:
+                if not isinstance(tc, dict):
+                    continue
+                tool_name = tc.get('tool') or tc.get('name', 'unknown')
+                args = tc.get('arguments') or tc.get('args') or {}
+                lines.append(f"- **{tool_name}** — args: `{args}`")
+            lines.append("")
+
+        # Always include the raw task for provenance even when nothing else matches.
+        if not any([summary, sections, tool_calls, extra]):
+            lines.append("## Task")
+            lines.append("")
+            lines.append(task)
+            lines.append("")
+
+        return "\n".join(lines).strip()
+
     def _save_to_deliverable(
         self,
         title: str,

@@ -350,9 +350,15 @@ If asked to do something outside audio generation, politely explain you can only
                         )
 
                         # Session 1006: Persist output to Deliverable
+                        # Session 1092: render with shared helper for gate passing.
                         self._save_to_deliverable(
                             title=f"Generated Audio: {task[:80]}",
-                            content=result.message,
+                            content=self._render_agent_output_markdown(
+                                task=task,
+                                summary=result.message,
+                                tool_calls=tool_calls_made,
+                                extra={'tool_used': tool_used, 'voice': args.get('voice')},
+                            ),
                             deliverable_type='audio',
                             category='Audio Generation',
                             tags=['audio', tool_used],
