@@ -1449,18 +1449,31 @@ This is the FINAL version — make it great."""
         try:
             import os
             from core.services.openai_client_factory import get_openai_client
+            from core.services.llm_call_wrapper import llm_call_span
 
             # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
             client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
-            response = client.chat.completions.create(
-                model="gpt-5.2",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_completion_tokens=16000,
-            )
+            # Session 1098: LLM call routes through the telemetry wrapper.
+            # execution_id comes from the router via _execution_context;
+            # cancellation via CancelTokenRegistry observes at pre-call.
+            _exec_ctx = getattr(self, '_execution_context', {}) or {}
+            with llm_call_span(
+                provider='openai',
+                model='gpt-5.2',
+                execution_id=_exec_ctx.get('execution_id'),
+                agent_name='ContentWriterAgent',
+                metadata={'method': '_execute_rewrite'},
+            ) as _span:
+                response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                    model="gpt-5.2",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_completion_tokens=16000,
+                )
+                _span.attach_response(response)
 
             rewritten = response.choices[0].message.content or ''
             was_truncated = response.choices[0].finish_reason == 'length'
@@ -1601,18 +1614,29 @@ Use footnote citations [1] [2] with Sources at bottom.
         try:
             import os
             from core.services.openai_client_factory import get_openai_client
+            from core.services.llm_call_wrapper import llm_call_span
 
             # Session 1084 round 51: custom 120s timeout dropped — factory enforces 90s read centrally
             client = get_openai_client(api_key=os.getenv('OPENAI_API_KEY'))
 
-            response = client.chat.completions.create(
-                model="gpt-5.2",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_completion_tokens=16000,
-            )
+            # Session 1098: telemetry wrapper adoption.
+            _exec_ctx = getattr(self, '_execution_context', {}) or {}
+            with llm_call_span(
+                provider='openai',
+                model='gpt-5.2',
+                execution_id=_exec_ctx.get('execution_id'),
+                agent_name='ContentWriterAgent',
+                metadata={'method': '_execute_directed'},
+            ) as _span:
+                response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                    model="gpt-5.2",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_completion_tokens=16000,
+                )
+                _span.attach_response(response)
 
             content = response.choices[0].message.content or ''
             was_truncated = response.choices[0].finish_reason == 'length'
@@ -1917,15 +1941,26 @@ CITATION RULES:
 
             # Session 1103: Switched from gpt-4o-mini to gpt-5.2 for better
             # instruction following (evidence citations) and content quality
-            response = client.chat.completions.create(
-                model="gpt-5.2",
-                messages=[
-                    {"role": "system", "content": intelligent_system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                max_completion_tokens=16000,  # GPT-5.2: generous budget for full newsletter + JSON structure
-                timeout=120.0  # Session 767: Explicit request timeout
-            )
+            # Session 1098: telemetry wrapper adoption.
+            from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+            _exec_ctx = getattr(self, '_execution_context', {}) or {}
+            with _llm_call_span(
+                provider='openai',
+                model='gpt-5.2',
+                execution_id=_exec_ctx.get('execution_id'),
+                agent_name='ContentWriterAgent',
+                metadata={'method': '_generate_content', 'content_type': content_type},
+            ) as _span:
+                response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                    model="gpt-5.2",
+                    messages=[
+                        {"role": "system", "content": intelligent_system_prompt},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_completion_tokens=16000,  # GPT-5.2: generous budget for full newsletter + JSON structure
+                    timeout=120.0  # Session 767: Explicit request timeout
+                )
+                _span.attach_response(response)
 
             content_text = response.choices[0].message.content
             finish_reason = response.choices[0].finish_reason

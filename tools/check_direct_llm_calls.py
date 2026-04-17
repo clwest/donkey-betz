@@ -146,18 +146,47 @@ def scan(
 
             try:
                 with open(abs_path, "r", encoding="utf-8") as fh:
-                    for lineno, raw_line in enumerate(fh, start=1):
-                        # Skip comment-only lines to cut noise (matches like
-                        # the regex patterns inside this very script).
-                        stripped = raw_line.lstrip()
-                        if stripped.startswith("#"):
-                            continue
-                        for cre in patterns:
-                            if cre.search(raw_line):
-                                matches.append(
-                                    (rel_path, lineno, raw_line.rstrip("\n"))
-                                )
-                                break
+                    lines = fh.readlines()
+                # Session 1098: track which lines are inside a
+                # ``with llm_call_span(...)`` or ``llm_call_async(...)``
+                # context so wrapped SDK calls don't trigger the lint.
+                # A simple indent-tracking pass is enough — we flag a
+                # line as "inside wrapper" if the most-recent less-
+                # indented open-block was a wrapper call.
+                wrapper_stack: List[int] = []  # indents that opened a wrapper block
+                for lineno, raw_line in enumerate(lines, start=1):
+                    stripped = raw_line.lstrip()
+                    if stripped.startswith("#"):
+                        continue
+                    indent = len(raw_line) - len(stripped)
+
+                    # Pop any wrapper contexts we've outdented past.
+                    while wrapper_stack and indent <= wrapper_stack[-1]:
+                        wrapper_stack.pop()
+
+                    # Open a wrapper context on `with llm_call_span(` or
+                    # `= llm_call_async(` or `await llm_call_async(`.
+                    if (
+                        "llm_call_span(" in raw_line
+                        or "llm_call_async(" in raw_line
+                    ) and ("def " not in raw_line and "import " not in raw_line):
+                        wrapper_stack.append(indent)
+                        continue
+
+                    # Allow an explicit per-line suppression pragma.
+                    if "# noqa: direct-llm-call" in raw_line:
+                        continue
+
+                    # Skip if we're inside a wrapper block.
+                    if wrapper_stack:
+                        continue
+
+                    for cre in patterns:
+                        if cre.search(raw_line):
+                            matches.append(
+                                (rel_path, lineno, raw_line.rstrip("\n"))
+                            )
+                            break
             except (UnicodeDecodeError, OSError):
                 # Binary or permission issue — skip silently.
                 continue

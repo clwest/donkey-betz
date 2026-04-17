@@ -49,7 +49,7 @@ core/llm_enforcer.py
 # (or the B-full plan doc if the issue tracker isn't in use yet)
 
 # Tier 1 — highest prod frequency
-core/agents/content_writer_agent.py
+# content_writer_agent.py: REMOVED Session 1098 (migrated to wrapper)
 core/tasks_initiatives.py
 core/agents/analysis/market_intelligence_agent.py
 core/agents/code_review_agent.py
