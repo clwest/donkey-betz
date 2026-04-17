@@ -617,7 +617,13 @@ class UnifiedPAEntrypoint:
             else:
                 # ── Existing path: keyword routing ──────────────
                 # 2. Detect intent and route
-                detected_intent, routed_to = self._detect_intent_and_route(message)
+                # Session 1094: pass request source so Claude Code coordination
+                # messages bypass keyword-based misclassification (see
+                # _detect_intent_and_route docstring).
+                detected_intent, routed_to = self._detect_intent_and_route(
+                    message,
+                    source=context.get('source') if context else None,
+                )
                 intent = detected_intent or 'general'
                 logger.info(f"[{trace_id}] Step 2 intent={intent} routed_to={routed_to}")
 
@@ -2228,13 +2234,39 @@ class UnifiedPAEntrypoint:
 
         return stats
 
-    def _detect_intent_and_route(self, message: str) -> tuple[Optional[str], Optional[str]]:
+    def _detect_intent_and_route(
+        self,
+        message: str,
+        source: Optional[str] = None,
+    ) -> tuple[Optional[str], Optional[str]]:
         """
         Detect intent and determine routing.
+
+        Args:
+            message: user text
+            source: request source tag (e.g. 'claude-code', 'web', 'cli').
+                When 'claude-code' we deterministically short-circuit to
+                claude_code_coordination — Claude Code messages are design /
+                coordination traffic and must never be keyword-routed into
+                boardroom / system_health_check / etc. just because they
+                contain words like "attention" or "platform health".
 
         Returns:
             (intent, tool_name) - tool_name is None if no tool needed
         """
+        # Session 1094: deterministic short-circuit for Claude Code traffic.
+        # The pa_chat.py CLI and the 3-way chat view both set source='claude-code'
+        # (see tools/pa_chat.py, core/views_personal_assistant.py:465). These
+        # messages are status updates, design proposals, and back-and-forth
+        # coordination — they MUST bypass keyword routing entirely because they
+        # routinely contain ops/governance vocabulary in contexts that invert
+        # the keyword's usual meaning ("Ignore platform health" still contains
+        # "platform health"; "the governance_tool typo" still contains
+        # "governance_tool"). See SESSION_1094_RIGBY_CC_SOURCE_SHORT_CIRCUIT
+        # handoff for the hijack that motivated this.
+        if source == 'claude-code':
+            return ('claude_code_coordination', None)
+
         message_lower = message.lower()
 
         # Session 1088: Claude Code coordination guard — MUST be checked FIRST.

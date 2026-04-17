@@ -266,6 +266,61 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create system alert attention: {e}")
 
     # =========================================================================
+    # DIAGNOSTIC ALERTS (Session 1093 — CTOAgent + future scheduled diagnostics)
+    # =========================================================================
+
+    def create_diagnostic_alert(
+        self,
+        diagnostic_type: str,
+        source_agent: str,
+        title: str,
+        summary: str,
+        urgency: str = 'medium',
+        payload: dict = None,
+        user=None,
+    ):
+        """
+        Create attention item for scheduled diagnostic agents (CTOAgent
+        daily reliability report, etc.). Distinct from create_system_alert
+        because:
+          - source_agent is honored (not hardcoded)
+          - source_type is namespaced as `diagnostic:{diagnostic_type}`
+          - JSON serialization runs through _serialize_for_json so payloads
+            with datetime fields don't blow up at insert time
+
+        Args:
+            diagnostic_type: Diagnostic identifier (e.g., 'cto_daily_diagnostic')
+            source_agent: The agent that produced the analysis (e.g., 'CTOAgent')
+            title: Alert title (kept under 200 chars by caller)
+            summary: Markdown body, 2-8 KB recommended
+            urgency: critical, high, medium, low
+            payload: Structured payload (will be JSON-serialized; datetimes OK)
+            user: Target user; defaults to all staff/admin users
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+            safe_payload = _serialize_for_json(payload or {})
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type=f'diagnostic:{diagnostic_type}',
+                    source_agent=source_agent,
+                    item_type='alert',
+                    title=title,
+                    summary=summary,
+                    urgency=urgency,
+                    payload=safe_payload,
+                )
+                logger.info(
+                    f"Created diagnostic attention ({diagnostic_type}/{urgency}) "
+                    f"for user {getattr(target_user, 'username', target_user)}"
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create diagnostic attention: {e}")
+
+    # =========================================================================
     # CONTENT REVIEW
     # =========================================================================
 

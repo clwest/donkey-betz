@@ -3801,3 +3801,923 @@ def _impl_ops_control_loop():
 # =============================================================================
 
 
+# =============================================================================
+# CTOAgent Daily Diagnostic (Session 1093)
+# =============================================================================
+#
+# Daily Celery beat task that:
+#   1. Computes 24h failure metrics (+ 7d baseline) directly from
+#      CeleryTaskEvent + AgentExecution (same shape as ops_tool.slo_status to
+#      keep attribution honest — Rigby P2)
+#   2. Runs a multi-trigger threshold gate (global rate, delta vs 7d, agent
+#      spike, new failure signature, timeout spike)
+#   3. If anomalies detected, dispatches CTOAgent via execute_agent_task with
+#      a metrics bundle in the prompt and waits for the result
+#   4. Posts a structured attention item to the governance inbox (gated by
+#      separate POSTING flag, deduped + cooldown-protected via Redis cache)
+#
+# Feature flags (all default false / off):
+#   CTO_DIAGNOSTIC_ENABLED          — gates entire task
+#   CTO_DIAGNOSTIC_POSTING_ENABLED  — gates governance attention item creation
+#                                     (compute + dispatch still run for observation)
+#
+# Tunables (env vars, sensible defaults from Rigby's spec):
+#   CTO_DIAG_MIN_TOTAL_24H          (50)    denominator guard
+#   CTO_DIAG_FAILRATE_HIGH          (0.06)  global fail rate >= triggers HIGH
+#   CTO_DIAG_FAILRATE_CRIT          (0.10)  global fail rate >= triggers CRITICAL
+#   CTO_DIAG_DELTA_HIGH             (0.02)  Δ vs 7d >= +2pp triggers HIGH
+#   CTO_DIAG_NEW_SIG_COUNT          (5)     new signature count_24h >= triggers HIGH
+#   CTO_DIAG_AGENT_SPIKE_MIN        (5)     agent fail count_24h >= triggers
+#   CTO_DIAG_COOLDOWN_HOURS_HIGH    (20)    cooldown for high/medium severities
+#   CTO_DIAG_COOLDOWN_HOURS_CRIT    (6)     cooldown for critical severity
+#   CTO_DIAG_QUEUE                  (long_running)
+#   CTO_DIAG_WORKSPACE_ID           (None)  optional workspace for the deliverable
+
+
+def _cto_diag_get_env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _cto_diag_get_env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _cto_diag_collect_metrics(now, cutoff_24h, cutoff_7d):
+    """Collect 24h + 7d metrics from CeleryTaskEvent + AgentExecution.
+
+    Mirrors the query shapes in core/services/td_handlers_ops.py (slo_status
+    + failure_signatures) so this diagnostic stays attribution-aligned with
+    ops_tool. If you change one, change the other.
+    """
+    from core.models_celery_telemetry import CeleryTaskEvent
+    from core.models_unified_system import AgentExecution
+    from django.db.models import Count
+
+    # --- AgentExecution-based stats (the canonical "what's failing" source)
+    exec_24h_total = AgentExecution.objects.filter(
+        created_at__gte=cutoff_24h
+    ).count()
+    exec_24h_failed = AgentExecution.objects.filter(
+        created_at__gte=cutoff_24h, status='failed'
+    ).count()
+    exec_7d_total = AgentExecution.objects.filter(
+        created_at__gte=cutoff_7d
+    ).count()
+    exec_7d_failed = AgentExecution.objects.filter(
+        created_at__gte=cutoff_7d, status='failed'
+    ).count()
+
+    fail_rate_24h = (exec_24h_failed / exec_24h_total) if exec_24h_total else 0.0
+    fail_rate_7d = (exec_7d_failed / exec_7d_total) if exec_7d_total else 0.0
+    delta_vs_7d = fail_rate_24h - fail_rate_7d
+
+    top_failing_agents_24h = list(
+        AgentExecution.objects.filter(
+            created_at__gte=cutoff_24h, status='failed'
+        ).values('agent__name').annotate(count=Count('id')).order_by('-count')[:10]
+    )
+    # Per-agent 7d daily-average baseline for spike detection
+    agent_7d = dict(
+        (r['agent__name'], r['count'])
+        for r in AgentExecution.objects.filter(
+            created_at__gte=cutoff_7d, status='failed'
+        ).values('agent__name').annotate(count=Count('id'))
+    )
+
+    # --- Timeout subset (Rigby's optional gate)
+    timeout_24h = AgentExecution.objects.filter(
+        created_at__gte=cutoff_24h, status='failed',
+        error_message__icontains='timed out',
+    ).count()
+
+    # --- Failure signatures from CeleryTaskEvent (cheap proxy when the
+    #     diagnostic_pipeline FailureSignature table is sparse). Key on
+    #     (task_name, error_type) to match ops_tool.failure_signatures shape.
+    sig_24h = list(
+        CeleryTaskEvent.objects.filter(
+            started_at__gte=cutoff_24h, status='FAILURE'
+        ).values('task_name', 'error_type')
+        .annotate(count=Count('id')).order_by('-count')[:20]
+    )
+    # A signature is "new" if its (task_name, error_type) tuple was NOT
+    # seen in the 7d window PRIOR to the last 24h.
+    sig_prior_7d_keys = set(
+        (r['task_name'], r['error_type'])
+        for r in CeleryTaskEvent.objects.filter(
+            started_at__gte=cutoff_7d,
+            started_at__lt=cutoff_24h,
+            status='FAILURE',
+        ).values('task_name', 'error_type').annotate(count=Count('id'))
+    )
+    new_signatures = [
+        s for s in sig_24h
+        if (s['task_name'], s['error_type']) not in sig_prior_7d_keys
+    ]
+
+    return {
+        'window_24h': {
+            'since': cutoff_24h.isoformat(),
+            'until': now.isoformat(),
+            'total': exec_24h_total,
+            'failed': exec_24h_failed,
+            'fail_rate': round(fail_rate_24h, 6),
+            'timeout_failed': timeout_24h,
+        },
+        'window_7d': {
+            'since': cutoff_7d.isoformat(),
+            'until': now.isoformat(),
+            'total': exec_7d_total,
+            'failed': exec_7d_failed,
+            'fail_rate': round(fail_rate_7d, 6),
+        },
+        'delta_vs_7d': round(delta_vs_7d, 6),
+        'top_failing_agents_24h': top_failing_agents_24h,
+        'agent_7d_failed_counts': agent_7d,
+        'top_signatures_24h': sig_24h[:5],
+        'new_signatures_24h': new_signatures[:5],
+    }
+
+
+def _cto_diag_evaluate_gate(metrics: dict) -> dict:
+    """Evaluate threshold gates and return a structured gate result.
+
+    Returns:
+        {
+            'tripped': bool,
+            'severity': 'critical' | 'high' | 'medium' | None,
+            'reasons': [reason_code, ...],
+            'reason_details': [...],  # human readable
+        }
+    """
+    min_total = _cto_diag_get_env_int('CTO_DIAG_MIN_TOTAL_24H', 50)
+    failrate_high = _cto_diag_get_env_float('CTO_DIAG_FAILRATE_HIGH', 0.06)
+    failrate_crit = _cto_diag_get_env_float('CTO_DIAG_FAILRATE_CRIT', 0.10)
+    delta_high = _cto_diag_get_env_float('CTO_DIAG_DELTA_HIGH', 0.02)
+    new_sig_count = _cto_diag_get_env_int('CTO_DIAG_NEW_SIG_COUNT', 5)
+    agent_spike_min = _cto_diag_get_env_int('CTO_DIAG_AGENT_SPIKE_MIN', 5)
+
+    reasons = []
+    details = []
+    severities = []
+
+    w24 = metrics['window_24h']
+    total_24h = w24['total']
+    fail_rate_24h = w24['fail_rate']
+    delta = metrics['delta_vs_7d']
+
+    # Denominator guard — small samples are too noisy to alert on
+    if total_24h < min_total:
+        return {
+            'tripped': False,
+            'severity': None,
+            'reasons': ['INSUFFICIENT_DATA'],
+            'reason_details': [
+                f'Only {total_24h} executions in last 24h '
+                f'(min {min_total} required to evaluate global gates)'
+            ],
+        }
+
+    # Global fail-rate gates
+    if fail_rate_24h >= failrate_crit:
+        reasons.append('GLOBAL_FAILRATE_CRIT')
+        details.append(
+            f'Global failure rate {fail_rate_24h * 100:.1f}% >= '
+            f'critical threshold {failrate_crit * 100:.1f}% '
+            f'(n={total_24h})'
+        )
+        severities.append('critical')
+    elif fail_rate_24h >= failrate_high:
+        reasons.append('GLOBAL_FAILRATE_HIGH')
+        details.append(
+            f'Global failure rate {fail_rate_24h * 100:.1f}% >= '
+            f'high threshold {failrate_high * 100:.1f}% '
+            f'(n={total_24h})'
+        )
+        severities.append('high')
+
+    if delta >= delta_high:
+        reasons.append('DELTA_VS_7D_HIGH')
+        details.append(
+            f'Failure rate +{delta * 100:.1f}pp vs 7d baseline '
+            f'(24h {fail_rate_24h * 100:.1f}% vs '
+            f'7d {metrics["window_7d"]["fail_rate"] * 100:.1f}%)'
+        )
+        severities.append('high')
+
+    # Per-agent spike gate
+    agent_7d = metrics['agent_7d_failed_counts']
+    spiking_agents = []
+    total_failed_24h = w24['failed']
+    for row in metrics['top_failing_agents_24h']:
+        name = row['agent__name'] or 'Unknown'
+        cnt = row['count']
+        baseline_daily_avg = (agent_7d.get(name, 0) / 7.0) if agent_7d.get(name) else 0
+        spike_floor = max(3, 3 * baseline_daily_avg)
+        if cnt >= agent_spike_min and cnt >= spike_floor:
+            share_of_failures = (cnt / total_failed_24h) if total_failed_24h else 0
+            spiking_agents.append({
+                'agent': name,
+                'count_24h': cnt,
+                'baseline_daily_avg_7d': round(baseline_daily_avg, 2),
+                'share_of_failures': round(share_of_failures, 3),
+            })
+            sev = 'high' if share_of_failures >= 0.20 else 'medium'
+            severities.append(sev)
+    if spiking_agents:
+        reasons.append('AGENT_SPIKE')
+        details.append(
+            'Agent failure spikes: '
+            + ', '.join(
+                f'{a["agent"]}({a["count_24h"]}, '
+                f'{a["share_of_failures"] * 100:.0f}% of fails)'
+                for a in spiking_agents[:3]
+            )
+        )
+
+    # New signature gate
+    new_sigs_over_threshold = [
+        s for s in metrics['new_signatures_24h']
+        if s['count'] >= new_sig_count
+    ]
+    if len(new_sigs_over_threshold) >= 2:
+        reasons.append('NEW_SIGNATURE_CRIT')
+        details.append(
+            f'{len(new_sigs_over_threshold)} new failure signatures '
+            f'each >= {new_sig_count} occurrences in 24h: '
+            + ', '.join(
+                f'{s["task_name"]}/{s["error_type"]}({s["count"]})'
+                for s in new_sigs_over_threshold[:3]
+            )
+        )
+        severities.append('critical')
+    elif len(new_sigs_over_threshold) == 1:
+        s = new_sigs_over_threshold[0]
+        reasons.append('NEW_SIGNATURE_HIGH')
+        details.append(
+            f'New failure signature {s["task_name"]}/{s["error_type"]} '
+            f'with {s["count"]} occurrences in 24h '
+            f'(>= {new_sig_count} threshold)'
+        )
+        severities.append('high')
+
+    if not reasons:
+        return {
+            'tripped': False,
+            'severity': None,
+            'reasons': [],
+            'reason_details': ['All gates within thresholds'],
+        }
+
+    # Severity precedence: critical > high > medium
+    if 'critical' in severities:
+        severity = 'critical'
+    elif 'high' in severities:
+        severity = 'high'
+    else:
+        severity = 'medium'
+
+    return {
+        'tripped': True,
+        'severity': severity,
+        'reasons': reasons,
+        'reason_details': details,
+        'spiking_agents': spiking_agents,
+        'new_signatures': new_sigs_over_threshold,
+    }
+
+
+def _cto_diag_dedupe_and_cooldown(severity: str, gate: dict, metrics: dict) -> dict:
+    """Compute dedupe hash + check Redis for prior post within cooldown.
+
+    Returns {'should_post': bool, 'reason': str, 'dedupe_hash': str,
+             'dedupe_key': str, 'cooldown_key': str}
+    """
+    import hashlib
+    import json as _json
+    from django.core.cache import cache
+    from django.utils import timezone
+
+    cooldown_high_h = _cto_diag_get_env_int('CTO_DIAG_COOLDOWN_HOURS_HIGH', 20)
+    cooldown_crit_h = _cto_diag_get_env_int('CTO_DIAG_COOLDOWN_HOURS_CRIT', 6)
+    cooldown_h = cooldown_crit_h if severity == 'critical' else cooldown_high_h
+
+    # Dedupe key: hash of (date_bucket, severity, reasons, rounded rates,
+    # top_5 agents, top_5 signatures). Stable across small reordering.
+    # date_bucket uses Mountain Time so the dedupe boundary aligns with
+    # Chris's working day (rolls over at MT midnight, not UTC midnight).
+    try:
+        import zoneinfo as _zi
+        date_bucket = (
+            timezone.now().astimezone(_zi.ZoneInfo('America/Denver'))
+            .strftime('%Y-%m-%d')
+        )
+    except Exception:
+        date_bucket = timezone.now().strftime('%Y-%m-%d')
+    dedupe_payload = {
+        'date_bucket': date_bucket,
+        'severity': severity,
+        'gate_reasons': sorted(gate['reasons']),
+        'fail_rate_24h': round(metrics['window_24h']['fail_rate'], 3),
+        'delta_vs_7d': round(metrics['delta_vs_7d'], 3),
+        'top_agents': [
+            (r['agent__name'] or 'Unknown', r['count'])
+            for r in metrics['top_failing_agents_24h'][:5]
+        ],
+        'top_signatures': [
+            (s['task_name'], s['error_type'], s['count'])
+            for s in metrics['top_signatures_24h'][:5]
+        ],
+    }
+    dedupe_hash = hashlib.sha256(
+        _json.dumps(dedupe_payload, sort_keys=True, default=str).encode()
+    ).hexdigest()
+    dedupe_key = f'cto_diag:dedupe:{dedupe_payload["date_bucket"]}:{dedupe_hash[:12]}'
+    cooldown_key = f'cto_diag:cooldown:{severity}'
+
+    # 1. Dedupe: identical "problem shape" already posted today?
+    if cache.get(dedupe_key):
+        return {
+            'should_post': False,
+            'reason': f'dedupe_hit:{dedupe_hash[:12]}',
+            'dedupe_hash': dedupe_hash,
+            'dedupe_key': dedupe_key,
+            'cooldown_key': cooldown_key,
+            'cooldown_hours': cooldown_h,
+        }
+
+    # 2. Cooldown: too soon since last post at this severity?
+    if cache.get(cooldown_key):
+        return {
+            'should_post': False,
+            'reason': f'cooldown_active:{severity}:{cooldown_h}h',
+            'dedupe_hash': dedupe_hash,
+            'dedupe_key': dedupe_key,
+            'cooldown_key': cooldown_key,
+            'cooldown_hours': cooldown_h,
+        }
+
+    return {
+        'should_post': True,
+        'reason': 'gates_clear',
+        'dedupe_hash': dedupe_hash,
+        'dedupe_key': dedupe_key,
+        'cooldown_key': cooldown_key,
+        'cooldown_hours': cooldown_h,
+    }
+
+
+def _cto_diag_extract_recommended_actions(
+    narrative: str, max_actions: int = 3
+) -> list:
+    """Pull bullet items from a 'Recommended Actions' / 'Recommended actions'
+    section in the CTOAgent narrative and hard-cap at max_actions. The
+    CTOAgent prompt explicitly asks for this section, but the LLM
+    occasionally returns 4-5 bullets or wraps them in numbered lists —
+    this normalizes both shapes and enforces the cap.
+
+    Returns a list of action strings (no leading bullet/number markers).
+    Empty list if no recognizable section is found.
+    """
+    if not narrative:
+        return []
+    import re as _re
+    # Find a heading line matching either:
+    #   "**Recommended Actions:**" / "**Recommended actions:**"
+    #   "## Recommended Actions" / "### Recommended Actions"
+    #   "Recommended Actions:" (plain)
+    pattern = _re.compile(
+        r'(?:^|\n)\s*(?:#{1,4}\s*|\*\*)?\s*'
+        r'recommended\s+actions?'
+        r'(?:\s*\(.*?\))?'   # tolerate "(max 3)" suffix
+        # Closing punctuation is wildly variable: "**", ":**", "**:",
+        # ":", or nothing. Accept any combination ending at newline.
+        r'[:\*\s]*\n',
+        flags=_re.IGNORECASE,
+    )
+    m = pattern.search(narrative)
+    if not m:
+        return []
+    section = narrative[m.end():]
+    # Stop at the next heading or "## Confidence" / "Confidence:" since
+    # the prompt asks for that as the next/last section.
+    stop = _re.search(
+        r'\n\s*(?:#{1,4}\s*|\*\*)?\s*confidence\b',
+        section, flags=_re.IGNORECASE,
+    )
+    if stop:
+        section = section[:stop.start()]
+    # Also stop at the next markdown heading
+    next_heading = _re.search(r'\n\s*#{1,4}\s+\S', section)
+    if next_heading:
+        section = section[:next_heading.start()]
+    # Extract bullets — accept "- ", "* ", "1. ", "1) ", or numeric prefix
+    bullet_pattern = _re.compile(
+        r'^\s*(?:[-*]|\d+[.)])\s+(.+?)(?=\n\s*(?:[-*]|\d+[.)])\s+|\Z)',
+        flags=_re.MULTILINE | _re.DOTALL,
+    )
+    items = [m.group(1).strip() for m in bullet_pattern.finditer(section)]
+    # Clean: collapse internal whitespace, strip trailing periods we added
+    cleaned = []
+    for it in items:
+        normalized = ' '.join(it.split())
+        if normalized:
+            cleaned.append(normalized)
+    return cleaned[:max_actions]
+
+
+def _cto_diag_build_agent_prompt(metrics: dict, gate: dict) -> str:
+    """Build the prompt sent to CTOAgent. Compact metrics bundle + ask."""
+    import json as _json
+    bundle = {
+        'window_24h': metrics['window_24h'],
+        'window_7d': metrics['window_7d'],
+        'delta_vs_7d': metrics['delta_vs_7d'],
+        'top_failing_agents': metrics['top_failing_agents_24h'][:5],
+        'top_signatures_24h': metrics['top_signatures_24h'],
+        'new_signatures_24h': metrics['new_signatures_24h'],
+        'gate': {
+            'severity': gate['severity'],
+            'reasons': gate['reasons'],
+            'details': gate['reason_details'],
+        },
+    }
+    return (
+        'You are running the daily CTO platform reliability diagnostic. '
+        'The threshold gate has tripped — produce a structured incident report.\n\n'
+        'METRICS BUNDLE (live data, do not invent numbers):\n'
+        '```json\n'
+        f'{_json.dumps(bundle, indent=2, default=str)}\n'
+        '```\n\n'
+        'Output sections (markdown, in this order):\n'
+        '1. **Severity:** restate the gate severity\n'
+        '2. **Headline:** one-sentence summary of the most acute regression\n'
+        '3. **Top failure clusters:** bulleted list, root-cause hypothesis '
+        'for each (1-2 sentences max)\n'
+        '4. **Recommended actions:** max 3 concrete next steps with owner '
+        'hints (e.g., "investigate agent_router heartbeat", '
+        '"review CTOAgent timeout ladder")\n'
+        '5. **Confidence:** low/medium/high — how confident are you in the '
+        'root-cause hypotheses given only the bundle\n\n'
+        'Do not editorialize beyond the data. Cite the exact metric numbers '
+        'you reference. Do not exceed 600 words.'
+    )
+
+
+def _impl_run_cto_daily_diagnostic():
+    """Daily CTO platform reliability diagnostic — Session 1093.
+
+    Wired by `core.tasks.run_cto_daily_diagnostic` Celery beat task. See
+    module-level docstring above for full feature flag + threshold reference.
+    """
+    from django.conf import settings
+    from django.core.cache import cache
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+    from datetime import timedelta
+
+    enabled = str(
+        getattr(settings, 'CTO_DIAGNOSTIC_ENABLED',
+                os.environ.get('CTO_DIAGNOSTIC_ENABLED', 'false'))
+    ).lower() in ('1', 'true', 'yes', 'on')
+    if not enabled:
+        logger.info('[CTO-DIAG] CTO_DIAGNOSTIC_ENABLED=false — skipping')
+        return {'status': 'skipped', 'reason': 'disabled'}
+
+    posting_enabled = str(
+        getattr(settings, 'CTO_DIAGNOSTIC_POSTING_ENABLED',
+                os.environ.get('CTO_DIAGNOSTIC_POSTING_ENABLED', 'false'))
+    ).lower() in ('1', 'true', 'yes', 'on')
+
+    now = timezone.now()
+    cutoff_24h = now - timedelta(hours=24)
+    cutoff_7d = now - timedelta(days=7)
+
+    # ── 1. Collect metrics
+    try:
+        metrics = _cto_diag_collect_metrics(now, cutoff_24h, cutoff_7d)
+    except Exception as e:
+        logger.exception('[CTO-DIAG] metrics collection failed: %s', e)
+        return {'status': 'error', 'stage': 'collect_metrics', 'error': str(e)}
+
+    # ── 2. Run threshold gate
+    gate = _cto_diag_evaluate_gate(metrics)
+    logger.info(
+        '[CTO-DIAG] gate=%s reasons=%s 24h_total=%s 24h_failrate=%.3f delta=%.3f',
+        gate['tripped'], gate['reasons'],
+        metrics['window_24h']['total'],
+        metrics['window_24h']['fail_rate'],
+        metrics['delta_vs_7d'],
+    )
+    if not gate['tripped']:
+        return {
+            'status': 'clear',
+            'gate': gate,
+            'metrics_summary': {
+                'total_24h': metrics['window_24h']['total'],
+                'failed_24h': metrics['window_24h']['failed'],
+                'fail_rate_24h': metrics['window_24h']['fail_rate'],
+                'delta_vs_7d': metrics['delta_vs_7d'],
+            },
+        }
+
+    # ── 3. Dedupe + cooldown
+    dedupe_check = _cto_diag_dedupe_and_cooldown(gate['severity'], gate, metrics)
+    if not dedupe_check['should_post']:
+        logger.info(
+            '[CTO-DIAG] gate tripped (severity=%s) but skipping post: %s',
+            gate['severity'], dedupe_check['reason'],
+        )
+        return {
+            'status': 'gated_by_dedupe_or_cooldown',
+            'gate': gate,
+            'skip_reason': dedupe_check['reason'],
+            'dedupe_hash': dedupe_check['dedupe_hash'],
+        }
+
+    # ── 4. Dispatch CTOAgent for the narrative (async; no blocking .get())
+    #
+    # Session 1093 design note: we deliberately do NOT block on the
+    # CTOAgent result here. Blocking inside a Celery beat task ties up
+    # a worker slot for the duration of the LLM call (~60-180s) and
+    # makes the beat task's wall-clock behavior unpredictable. Instead,
+    # we kick off CTOAgent and enqueue a follow-up task with a delay
+    # long enough for CTOAgent to complete; the follow-up loads the
+    # execution result and creates the attention item.
+    cto_prompt = _cto_diag_build_agent_prompt(metrics, gate)
+    workspace_id = (
+        getattr(settings, 'CTO_DIAG_WORKSPACE_ID', None)
+        or os.environ.get('CTO_DIAG_WORKSPACE_ID')
+    )
+
+    cto_async_id = None
+    dispatch_error = None
+    try:
+        from core.tasks import execute_agent_task
+        async_result = execute_agent_task.apply_async(
+            kwargs={
+                'agent_name': 'CTOAgent',
+                'task': cto_prompt,
+                'context': {
+                    'source': 'cto_daily_diagnostic',
+                    'workspace_id': workspace_id,
+                    'severity': gate['severity'],
+                    'gate_reasons': gate['reasons'],
+                },
+            },
+            queue=os.environ.get('CTO_DIAG_QUEUE', 'long_running'),
+            expires=3600,
+        )
+        cto_async_id = async_result.id
+    except Exception as e:
+        dispatch_error = f'{type(e).__name__}: {e}'
+        logger.exception('[CTO-DIAG] CTOAgent dispatch failed: %s', dispatch_error)
+
+    # ── 5. Build the title + structured payload now (no narrative yet — that's
+    #     filled in by the follow-up post task once CTOAgent completes).
+    # Title date is in Mountain Time so the date matches Chris's working
+    # timezone (the beat fires at 7:15 AM MT, so the diagnostic is "today's
+    # report" from a MT perspective). Falls back to UTC if zoneinfo is missing.
+    try:
+        import zoneinfo as _zi
+        date_label = now.astimezone(_zi.ZoneInfo('America/Denver')).strftime('%Y-%m-%d')
+    except Exception:
+        date_label = now.strftime('%Y-%m-%d')
+    title = (
+        f'CTO Daily Diagnostic — '
+        f'{date_label} — '
+        f'{gate["severity"].upper()} — '
+        f'fail24h {metrics["window_24h"]["fail_rate"] * 100:.1f}% '
+        f'(Δ{metrics["delta_vs_7d"] * 100:+.1f}pp)'
+    )
+
+    structured_payload = {
+        'window_24h': metrics['window_24h'],
+        'window_7d': metrics['window_7d'],
+        'delta_vs_7d': metrics['delta_vs_7d'],
+        'gate_reasons': gate['reasons'],
+        'severity': gate['severity'],
+        'top_failing_agents': metrics['top_failing_agents_24h'][:10],
+        'top_signatures_24h': metrics['top_signatures_24h'],
+        'new_signatures_24h': metrics['new_signatures_24h'],
+        'spiking_agents': gate.get('spiking_agents', []),
+        'dedupe_hash': dedupe_check['dedupe_hash'],
+        'cto_async_task_id': cto_async_id,
+        'dispatch_error': dispatch_error,
+    }
+
+    # ── 6. Observation mode: log without enqueueing the post task.
+    if not posting_enabled:
+        logger.info(
+            '[CTO-DIAG] would post (POSTING_ENABLED=false): severity=%s '
+            'title=%r dedupe_hash=%s cto_async_id=%s',
+            gate['severity'], title, dedupe_check['dedupe_hash'], cto_async_id,
+        )
+        return {
+            'status': 'log_only',
+            'gate': gate,
+            'title': title,
+            'cto_async_task_id': cto_async_id,
+            'dispatch_error': dispatch_error,
+            'dedupe_hash': dedupe_check['dedupe_hash'],
+        }
+
+    # ── 7. Enqueue the follow-up post task with a countdown long enough
+    #     for CTOAgent to finish (180s LLM timeout + slack). Pre-set the
+    #     dedupe + cooldown keys NOW so two concurrent runs (e.g.,
+    #     manual + beat) can't double-post.
+    try:
+        from django.core.cache import cache as _cache
+        _cache.set(
+            dedupe_check['dedupe_key'], '1', timeout=36 * 3600,
+        )
+        _cache.set(
+            dedupe_check['cooldown_key'], now.isoformat(),
+            timeout=dedupe_check['cooldown_hours'] * 3600,
+        )
+    except Exception as e:
+        logger.warning('[CTO-DIAG] dedupe/cooldown set failed (non-fatal): %s', e)
+
+    try:
+        from core.tasks import post_cto_daily_diagnostic
+        post_async = post_cto_daily_diagnostic.apply_async(
+            kwargs={
+                'cto_async_task_id': cto_async_id,
+                'title': title,
+                'severity': gate['severity'],
+                'gate': gate,
+                'metrics': metrics,
+                'structured_payload': structured_payload,
+            },
+            countdown=240,  # 4 min — CTOAgent llm_timeout is 180s
+            queue=os.environ.get('CTO_DIAG_QUEUE', 'long_running'),
+            expires=3600,
+        )
+        logger.info(
+            '[CTO-DIAG] dispatched CTOAgent (async_id=%s) and queued '
+            'post follow-up (post_id=%s, countdown=240s)',
+            cto_async_id, post_async.id,
+        )
+        return {
+            'status': 'dispatched',
+            'gate': gate,
+            'title': title,
+            'cto_async_task_id': cto_async_id,
+            'post_async_task_id': post_async.id,
+            'dedupe_hash': dedupe_check['dedupe_hash'],
+        }
+    except Exception as e:
+        logger.exception('[CTO-DIAG] post follow-up enqueue failed: %s', e)
+        return {
+            'status': 'enqueue_failed',
+            'gate': gate,
+            'error': str(e),
+            'cto_async_task_id': cto_async_id,
+            'dedupe_hash': dedupe_check['dedupe_hash'],
+        }
+
+
+def _impl_post_cto_daily_diagnostic(
+    cto_async_task_id: str,
+    title: str,
+    severity: str,
+    gate: dict,
+    metrics: dict,
+    structured_payload: dict,
+):
+    """Follow-up task: load CTOAgent narrative + post the attention item.
+
+    Runs ~4 min after `_impl_run_cto_daily_diagnostic` dispatches
+    CTOAgent. Loads the agent execution result by task id, composes the
+    final attention item body (now with the narrative), and posts via
+    the human attention bridge. Dedupe + cooldown keys were already set
+    by the upstream task so two concurrent runs can't double-post.
+
+    Idempotent: a `posted` marker is set on first successful post.
+    Subsequent invocations (manual re-run, Celery retry) will short-circuit.
+    """
+    from django.core.cache import cache
+    from core.services.human_attention_bridge import attention_bridge
+
+    dedupe_hash = structured_payload.get('dedupe_hash', '')
+    posted_key = (
+        f'cto_diag:posted:{dedupe_hash[:12]}'
+        if dedupe_hash else 'cto_diag:posted:unknown'
+    )
+
+    # ── Idempotence guard: skip if we've already posted this exact diagnostic
+    if cache.get(posted_key):
+        logger.info(
+            '[CTO-DIAG-POST] already posted (key=%s) — skipping duplicate post',
+            posted_key,
+        )
+        return {
+            'status': 'already_posted',
+            'severity': severity,
+            'posted_key': posted_key,
+        }
+
+    cto_narrative = None
+    cto_error = structured_payload.get('dispatch_error')
+    cto_execution_id = None
+    cto_result_status = None
+
+    if cto_async_task_id:
+        try:
+            from celery.result import AsyncResult
+            ar = AsyncResult(cto_async_task_id)
+            if ar.ready():
+                cto_result = ar.get(propagate=False) or {}
+                if isinstance(cto_result, dict):
+                    cto_execution_id = cto_result.get('execution_id')
+                    cto_result_status = cto_result.get('status')
+                    cto_narrative = (
+                        cto_result.get('content')
+                        or cto_result.get('output')
+                        or cto_result.get('message')
+                        or ''
+                    )
+                    if cto_result_status == 'failed':
+                        cto_error = cto_error or (
+                            cto_result.get('error') or 'CTOAgent failed'
+                        )
+            else:
+                cto_error = cto_error or (
+                    f'CTOAgent task {cto_async_task_id} not ready '
+                    f'after countdown — narrative unavailable'
+                )
+        except Exception as e:
+            cto_error = cto_error or f'{type(e).__name__}: {e}'
+            logger.exception(
+                '[CTO-DIAG-POST] failed to load CTOAgent result %s: %s',
+                cto_async_task_id, cto_error,
+            )
+
+    # ── Compose body — Template v1 (locked headings/order, Session 1093 P1)
+    #
+    # Stable structure for human scannability:
+    #   ## Headline           (1 line — always first, gives the punchline)
+    #   ## Severity + Reasons (gate output)
+    #   ## 24h Metrics        (numbers)
+    #   ## Top Failing Agents (top 5)
+    #   ## Top Failure Signatures (top 5)
+    #   [## New Failure Signatures] (only if any)
+    #   ## CTOAgent Analysis  (LLM narrative — includes Recommended Actions)
+    #   ## Recommended Actions (max 3) — extracted/capped from CTO narrative
+    headline_reason = gate['reasons'][0] if gate['reasons'] else 'gate_tripped'
+    headline = (
+        f'{severity.upper()} — fail24h '
+        f'{metrics["window_24h"]["fail_rate"] * 100:.1f}% '
+        f'(Δ{metrics["delta_vs_7d"] * 100:+.1f}pp vs 7d) — '
+        f'primary trigger: `{headline_reason}`'
+    )
+    body_lines = [
+        '## Headline',
+        headline,
+        '',
+        '## Severity & Gate Reasons',
+        f'- **Severity:** {severity.upper()}',
+        *[
+            f'- `{r}` — {d}'
+            for r, d in zip(gate['reasons'], gate['reason_details'])
+        ],
+        '',
+        '## 24h Metrics',
+        f'- Total executions: {metrics["window_24h"]["total"]}',
+        f'- Failed: {metrics["window_24h"]["failed"]} '
+        f'({metrics["window_24h"]["fail_rate"] * 100:.2f}%)',
+        f'- Δ vs 7d baseline: '
+        f'{metrics["delta_vs_7d"] * 100:+.2f}pp '
+        f'(7d rate {metrics["window_7d"]["fail_rate"] * 100:.2f}%)',
+        f'- Timeout failures: {metrics["window_24h"]["timeout_failed"]}',
+        '',
+        '## Top Failing Agents (24h)',
+        *[
+            f'- {r["agent__name"] or "Unknown"}: {r["count"]}'
+            for r in metrics['top_failing_agents_24h'][:5]
+        ],
+        '',
+        '## Top Failure Signatures (24h)',
+        *[
+            f'- `{s["task_name"]}` / `{s["error_type"]}`: {s["count"]}'
+            for s in metrics['top_signatures_24h'][:5]
+        ],
+    ]
+    if metrics['new_signatures_24h']:
+        body_lines.extend([
+            '',
+            '## New Failure Signatures (24h)',
+            *[
+                f'- `{s["task_name"]}` / `{s["error_type"]}`: {s["count"]}'
+                for s in metrics['new_signatures_24h'][:5]
+            ],
+        ])
+    if cto_narrative:
+        body_lines.extend(['', '---', '', '## CTOAgent Analysis', '', cto_narrative])
+    elif cto_error:
+        body_lines.extend([
+            '', '---', '',
+            f'_CTOAgent narrative unavailable: {cto_error}_',
+        ])
+
+    # ── Recommended Actions (max 3) — extracted from CTO narrative + hard
+    #     capped. Lives at the BOTTOM (after the analysis) so a reader
+    #     scrolling for "what do I do" finds it last → "freshest in mind".
+    actions = _cto_diag_extract_recommended_actions(cto_narrative, max_actions=3)
+    body_lines.extend(['', '---', '', '## Recommended Actions (max 3)'])
+    if actions:
+        body_lines.extend(f'{i + 1}. {a}' for i, a in enumerate(actions))
+    else:
+        body_lines.append(
+            '_None extracted from CTOAgent narrative — review the analysis '
+            'above and the failing-agent breakdown for next steps._'
+        )
+
+    body = '\n'.join(body_lines)
+
+    # ── Augment payload with CTO follow-up data
+    final_payload = dict(structured_payload)
+    final_payload.update({
+        'cto_execution_id': cto_execution_id,
+        'cto_result_status': cto_result_status,
+        'cto_error': cto_error,
+        'narrative_present': bool(cto_narrative),
+    })
+
+    # ── Hard cap payload size at ~16 KB to avoid DB junk from long error
+    #     blobs / sample lists. Truncate string fields and trim list fields
+    #     to N entries; if still over budget, drop optional sections entirely.
+    MAX_PAYLOAD_BYTES = 16 * 1024
+    import json as _json
+
+    def _payload_size(p):
+        try:
+            return len(_json.dumps(p, default=str))
+        except Exception:
+            return MAX_PAYLOAD_BYTES + 1  # treat as over-budget
+
+    if _payload_size(final_payload) > MAX_PAYLOAD_BYTES:
+        # Trim list-typed fields to top entries
+        for k in ('top_failing_agents', 'top_signatures_24h',
+                  'new_signatures_24h', 'spiking_agents'):
+            if isinstance(final_payload.get(k), list):
+                final_payload[k] = final_payload[k][:5]
+        # Truncate string-typed fields
+        for k in ('cto_error', 'dispatch_error'):
+            v = final_payload.get(k)
+            if isinstance(v, str) and len(v) > 1024:
+                final_payload[k] = v[:1024] + '... [truncated]'
+        # Last resort: drop optional sections
+        if _payload_size(final_payload) > MAX_PAYLOAD_BYTES:
+            for k in ('new_signatures_24h', 'spiking_agents'):
+                final_payload.pop(k, None)
+            final_payload['_payload_truncated'] = True
+
+    # ── Post via canonical attention bridge
+    try:
+        attention_bridge.create_diagnostic_alert(
+            diagnostic_type='cto_daily_diagnostic',
+            source_agent='CTOAgent',
+            title=title[:200],
+            summary=body[:8000],
+            urgency=severity,
+            payload=final_payload,
+        )
+        # ── Set posted marker to make this task idempotent. TTL slightly
+        # longer than the dedupe key so two reasonable retry windows can't
+        # land between "posted" and "marker expired".
+        try:
+            cache.set(posted_key, '1', timeout=48 * 3600)
+        except Exception as e:
+            logger.warning(
+                '[CTO-DIAG-POST] posted marker set failed (non-fatal): %s', e
+            )
+        logger.info(
+            '[CTO-DIAG-POST] posted via attention_bridge: severity=%s title=%r '
+            'narrative_present=%s payload_bytes=%d',
+            severity, title, bool(cto_narrative), _payload_size(final_payload),
+        )
+        return {
+            'status': 'posted',
+            'severity': severity,
+            'title': title,
+            'cto_execution_id': cto_execution_id,
+            'narrative_present': bool(cto_narrative),
+            'cto_error': cto_error,
+            'posted_key': posted_key,
+        }
+    except Exception as e:
+        logger.exception('[CTO-DIAG-POST] attention_bridge call failed: %s', e)
+        return {
+            'status': 'post_failed',
+            'severity': severity,
+            'error': str(e),
+            'cto_execution_id': cto_execution_id,
+        }
+
+
