@@ -720,8 +720,13 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
             concern_text = str(concern.get('concern', '')).lower()
 
             # Check for hallucinated halted experiments
+            # Session 1092: removed redundant `import re` here — Python
+            # treated it as a local binding, shadowing the module-level
+            # `import re` (line 13). When this branch didn't fire but the
+            # next branch (line 736) did, `re` was unbound → 4 ThinkingAgent
+            # UnboundLocalError failures in 24h surfaced by CTOAgent's
+            # platform analysis.
             if 'halted' in concern_text and 'experiment' in concern_text:
-                import re
                 numbers = re.findall(r'\d+', concern_text)
                 for num in numbers:
                     if int(num) > 10 and int(num) != expected['halted_experiments']:
