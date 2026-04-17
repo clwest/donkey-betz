@@ -2468,13 +2468,21 @@ class AgentRouter:
             )
             return ''
 
-    def _create_execution_record(self, agent_name: str, task: str, context_summary: dict = None, experiment_id=None):
+    def _create_execution_record(
+        self, agent_name: str, task: str,
+        context_summary: dict = None, experiment_id=None,
+        parent_execution_id=None,
+    ):
         """
         Create an execution record for tracking.
         Session 641: Added for Agent Performance Dashboard.
         Session 758: Added context_summary for integration observability.
         Session 841: Added experiment_id for proper error rate scoping.
         Session 843: Added trace_id and project_id for orchestration contract.
+        Session 1098 PR #4: Added parent_execution_id — when a parent
+        agent dispatches a child, the child records the parent's
+        execution_id so cancel + budget checks can walk the ancestry.
+        ``root_execution_id`` is computed from the parent's root.
         """
         try:
             from core.models_unified_system import Agent, AgentExecution
@@ -2524,6 +2532,42 @@ class AgentRouter:
             # 23 fix) creates one record here AND nothing touches its
             # heartbeat. Graceful fall-back for envs that haven't run
             # migration 0301 yet.
+            # Session 1098 PR #4: resolve parent + root lineage for
+            # nested-dispatch cancel propagation. Caller passes
+            # parent_execution_id; we walk to the parent's root (or
+            # default to parent_execution_id if parent has no parent).
+            # Root defaults to self.id after create (set below) for
+            # root-of-tree executions.
+            resolved_parent_id = parent_execution_id or (
+                context.get('parent_execution_id')
+                or context.get('execution_id')  # inherit running exec context
+            )
+            resolved_root_id = None
+            if resolved_parent_id:
+                try:
+                    parent_row = AgentExecution.objects.filter(
+                        id=resolved_parent_id,
+                    ).values('root_execution_id', 'parent_execution_id').first()
+                    if parent_row:
+                        # Parent's root is the lineage root; fall back to
+                        # parent_id if parent has no recorded root yet
+                        # (pre-PR-4 data).
+                        resolved_root_id = (
+                            parent_row.get('root_execution_id')
+                            or resolved_parent_id
+                        )
+                    else:
+                        # Parent execution row unknown — still record the
+                        # intended lineage. Checks handle missing rows as
+                        # terminal (not cancelled).
+                        resolved_root_id = resolved_parent_id
+                except Exception as _lineage_exc:
+                    logger.debug(
+                        "[router] parent lineage resolution failed: %s",
+                        _lineage_exc,
+                    )
+                    resolved_root_id = resolved_parent_id
+
             _create_kwargs = dict(
                 agent=agent_record,
                 user=self.user,  # Can be None now
@@ -2538,13 +2582,33 @@ class AgentRouter:
                 parent_object_type=context.get('parent_object_type', ''),
                 parent_object_id=context.get('parent_object_id'),
                 last_heartbeat_at=timezone.now(),
+                # Session 1098 PR #4: lineage fields.
+                parent_execution_id=resolved_parent_id,
+                root_execution_id=resolved_root_id,
             )
             try:
                 execution = AgentExecution.objects.create(**_create_kwargs)
             except Exception:
-                # Migration 0301 not yet applied — retry without the field
+                # Migration 0301/0336 not yet applied — retry without the
+                # optional fields so older deploys keep working.
                 _create_kwargs.pop('last_heartbeat_at', None)
+                _create_kwargs.pop('parent_execution_id', None)
+                _create_kwargs.pop('root_execution_id', None)
                 execution = AgentExecution.objects.create(**_create_kwargs)
+
+            # Session 1098 PR #4: root-of-tree executions (no parent)
+            # have root_execution_id = self.id. Backfill now so every
+            # row has a queryable root pointer.
+            if resolved_parent_id is None and getattr(
+                execution, 'root_execution_id', None
+            ) is None:
+                try:
+                    AgentExecution.objects.filter(id=execution.id).update(
+                        root_execution_id=execution.id,
+                    )
+                    execution.root_execution_id = execution.id
+                except Exception:
+                    pass  # Migration 0336 not applied yet — safe to skip.
 
             # Session 1083 round 40: round-36 set last_heartbeat_at at
             # create but never updated it — after 60 min the cleanup
