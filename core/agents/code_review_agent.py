@@ -701,14 +701,25 @@ For each issue found:
 
 End with a summary score (1-10) and overall assessment."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": "You are a thorough, constructive code reviewer. Be specific and actionable."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=6000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='CodeReviewAgent',
+            metadata={'method': '_comprehensive_review', 'language': language},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": "You are a thorough, constructive code reviewer. Be specific and actionable."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=6000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -777,14 +788,25 @@ Also provide:
 - Quick wins vs long-term fixes"""
 
         try:
-            response = client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=[
-                    {"role": "system", "content": "You are a security expert. Be concise but thorough. Identify vulnerabilities and provide actionable fixes."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_completion_tokens=4000
-            )
+            # Session 1098: wrapped for telemetry + cancellation.
+            from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+            _exec_ctx = getattr(self, '_execution_context', {}) or {}
+            with _llm_call_span(
+                provider='openai',
+                model='gpt-5-mini',
+                execution_id=_exec_ctx.get('execution_id'),
+                agent_name='CodeReviewAgent',
+                metadata={'method': '_security_audit'},
+            ) as _span:
+                response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                    model="gpt-5-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a security expert. Be concise but thorough. Identify vulnerabilities and provide actionable fixes."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_completion_tokens=4000
+                )
+                _span.attach_response(response)
 
             audit_content = response.choices[0].message.content
             if not audit_content:
@@ -864,14 +886,25 @@ For each issue:
 
 Provide overall performance score and optimization priority list."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": "You are a performance optimization expert. Identify inefficiencies and provide optimized solutions."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=5000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='CodeReviewAgent',
+            metadata={'method': '_performance_review'},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": "You are a performance optimization expert. Identify inefficiencies and provide optimized solutions."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=5000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -938,14 +971,25 @@ List each violation with:
 
 End with style compliance percentage."""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": f"You are a {language} style expert familiar with {style_guide} conventions."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=4000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='CodeReviewAgent',
+            metadata={'method': '_style_check', 'language': language, 'style_guide': style_guide},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": f"You are a {language} style expert familiar with {style_guide} conventions."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=4000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
@@ -995,14 +1039,25 @@ Provide:
    - Trade-offs (if any)
    - Further improvements possible"""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": f"You are a {language} refactoring expert. Improve code while maintaining correctness."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=6000
-        )
+        # Session 1098: wrapped for telemetry + cancellation.
+        from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+        _exec_ctx = getattr(self, '_execution_context', {}) or {}
+        with _llm_call_span(
+            provider='openai',
+            model='gpt-5-mini',
+            execution_id=_exec_ctx.get('execution_id'),
+            agent_name='CodeReviewAgent',
+            metadata={'method': '_suggest_improvements', 'language': language},
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": f"You are a {language} refactoring expert. Improve code while maintaining correctness."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=6000
+            )
+            _span.attach_response(response)
 
         return {
             "success": True,
