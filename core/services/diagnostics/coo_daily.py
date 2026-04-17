@@ -269,6 +269,31 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         'publish_intents_filter': publish_intents or None,
     }
 
+    # Session 1096: publish_intent distribution debug log (Rigby's queued
+    # follow-up from #1987 review). Makes missing _PUBLISH_INTENT_BY_AGENT
+    # resolver mappings visible immediately — if a new agent starts producing
+    # publishable artifacts but isn't mapped, operators see the intent
+    # breakdown drift in the COO logs before the gate produces confusing
+    # numbers.
+    try:
+        from django.db.models import Count as _Count
+        intent_breakdown_24h = dict(
+            Deliverable.objects.filter(created_at__gte=cutoff_24h)
+            .values('publish_intent').annotate(c=_Count('id'))
+            .values_list('publish_intent', 'c')
+        )
+        intent_breakdown_ready = dict(
+            Deliverable.objects.filter(status='ready')
+            .values('publish_intent').annotate(c=_Count('id'))
+            .values_list('publish_intent', 'c')
+        )
+        logger.info(
+            '[COO-DIAG] publish_intent distribution — created_24h=%s ready_pool=%s',
+            intent_breakdown_24h, intent_breakdown_ready,
+        )
+    except Exception as e:
+        logger.debug('[COO-DIAG] publish_intent breakdown log skipped: %s', e)
+
     # ── Review backlog: deliverables in 'ready' — haven't progressed to
     #    published/completed/archived. Age measured from created_at since
     #    'ready' is the first status a deliverable lands in after work.
