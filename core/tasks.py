@@ -772,6 +772,7 @@ def post_cto_daily_diagnostic(
     gate: Dict[str, Any] = None,
     metrics: Dict[str, Any] = None,
     structured_payload: Dict[str, Any] = None,
+    agent_async_task_id: str = None,
 ):
     """Session 1093 — Follow-up to run_cto_daily_diagnostic.
 
@@ -779,10 +780,62 @@ def post_cto_daily_diagnostic(
     final attention item via the human attention bridge. Enqueued
     with countdown=240s by run_cto_daily_diagnostic so CTOAgent
     has time to finish (180s LLM timeout).
+
+    Session 1094: accepts generic `agent_async_task_id` kwarg (what the
+    refactored runner sends). Legacy `cto_async_task_id` kept for backwards
+    compatibility — if both are passed, `agent_async_task_id` wins.
     """
     from core.tasks_ops import _impl_post_cto_daily_diagnostic
+    effective_id = agent_async_task_id if agent_async_task_id else cto_async_task_id
     return _impl_post_cto_daily_diagnostic(
-        cto_async_task_id=cto_async_task_id,
+        cto_async_task_id=effective_id,
+        title=title,
+        severity=severity,
+        gate=gate or {},
+        metrics=metrics or {},
+        structured_payload=structured_payload or {},
+    )
+
+
+@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600)
+def run_coo_daily_diagnostic(self):
+    """Session 1094 — Daily COOAgent operations diagnostic.
+
+    Computes 24h operational metrics (deliverable velocity, review
+    backlog aging, action-item backlog by urgency, stuck initiatives),
+    evaluates threshold gates, and — if anomalies detected — dispatches
+    COOAgent async + enqueues `post_coo_daily_diagnostic` to publish
+    the attention item once the agent narrative is ready.
+
+    Second consumer of the scheduled_diagnostic_runner primitive.
+    Identical orchestration surface to CTO; completely different
+    metrics shape.
+    """
+    from core.services.scheduled_diagnostic_runner import run_diagnostic
+    from core.services.diagnostics.coo_daily import build_config
+    return run_diagnostic(build_config())
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300)
+def post_coo_daily_diagnostic(
+    self,
+    agent_async_task_id: str = None,
+    title: str = '',
+    severity: str = 'medium',
+    gate: Dict[str, Any] = None,
+    metrics: Dict[str, Any] = None,
+    structured_payload: Dict[str, Any] = None,
+):
+    """Session 1094 — Follow-up to run_coo_daily_diagnostic.
+
+    Loads COOAgent execution result and posts via attention bridge.
+    Enqueued with countdown=240s by run_coo_daily_diagnostic.
+    """
+    from core.services.scheduled_diagnostic_runner import post_diagnostic
+    from core.services.diagnostics.coo_daily import build_config
+    return post_diagnostic(
+        build_config(),
+        agent_async_task_id=agent_async_task_id,
         title=title,
         severity=severity,
         gate=gate or {},
