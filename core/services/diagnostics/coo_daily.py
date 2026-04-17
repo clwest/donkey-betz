@@ -462,10 +462,43 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         metadata__direction='backward',
     ).count()
 
+    # Session 1095 follow-up (per Rigby): the `status_transition` event_type
+    # didn't exist before migration 0332 landed. For the first 7 days after
+    # rollout the 7d baseline is structurally under-reported — operators
+    # could misread "backward_7d_avg_daily=0" as "no rework happening"
+    # when it really means "instrumentation hasn't accumulated yet."
+    #
+    # Surface this explicitly: find the earliest status_transition event
+    # and compute how long instrumentation has been live. The gate
+    # evaluator and section renderer use this to inject a warming-window
+    # note in their output.
+    from django.db.models import Min
+    earliest = DeliverableEvent.objects.filter(
+        event_type='status_transition'
+    ).aggregate(first=Min('created_at'))['first']
+
+    if earliest is None:
+        # No transition events at all — either brand-new rollout or the
+        # signal hasn't fired yet. Either way, baseline is warming.
+        warming = {
+            'active': True,
+            'first_event_at': None,
+            'days_since_rollout': 0.0,
+        }
+    else:
+        days_since = (now - earliest).total_seconds() / 86400.0
+        warming = {
+            # Warming until 7d of history accumulated
+            'active': days_since < 7.0,
+            'first_event_at': earliest.isoformat(),
+            'days_since_rollout': round(days_since, 1),
+        }
+
     rework = {
         'backward_24h': rework_count,
         'backward_7d_avg_daily': round(rework_7d_count / 7.0, 2),
         'top_transitions': top_pairs,
+        'warming': warming,
     }
 
     return {
@@ -627,11 +660,22 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
             f'{t["from"]}→{t["to"]}({t["count"]})'
             for t in rework.get('top_transitions', [])[:3]
         ) or '(no transition detail)'
-        baseline_text = (
-            f'vs 7d avg {rework.get("backward_7d_avg_daily", 0):.1f}/day'
-            if rework.get('backward_7d_avg_daily', 0) > 0
-            else '(no 7d baseline yet — signal may be new)'
-        )
+        # Baseline text honors the warming window explicitly (Session 1095
+        # follow-up): first 7d post-rollout the 7d baseline is structurally
+        # under-reported since the event stream started recently.
+        warming = rework.get('warming') or {}
+        if warming.get('active'):
+            first_at = warming.get('first_event_at')
+            days_in = warming.get('days_since_rollout', 0)
+            first_date = first_at[:10] if first_at else 'today'
+            baseline_text = (
+                f'(rework instrumentation live since {first_date} — '
+                f'baseline warming, {days_in:.1f}d/7d)'
+            )
+        elif rework.get('backward_7d_avg_daily', 0) > 0:
+            baseline_text = f'vs 7d avg {rework.get("backward_7d_avg_daily", 0):.1f}/day'
+        else:
+            baseline_text = '(no 7d baseline yet — signal may be new)'
         details.append(
             f'{rework_24h} backward status transitions in 24h '
             f'(min {rework_min}) {baseline_text}. Top: {top_text}'
@@ -828,17 +872,45 @@ def render_action_items(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[s
 
 
 def render_rework(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
-    """Session 1095: rework/bounce section. Returns [] (section omitted)
-    when there were zero backward transitions in 24h — most days this
-    section won't appear in the body.
+    """Session 1095: rework/bounce section.
+
+    Returns [] (section omitted) ONLY when there are zero backward
+    transitions AND instrumentation is NOT in the warming window. During
+    warming we always render the section with a note — even if the count
+    is 0 — so operators don't misread silence as "no rework" when really
+    the event stream is still accumulating.
     """
     r = metrics.get('rework') or {}
-    if r.get('backward_24h', 0) == 0:
+    backward = r.get('backward_24h', 0)
+    warming = r.get('warming') or {}
+
+    # Healthy steady state: no rework + past warming window → fully omit
+    if backward == 0 and not warming.get('active'):
         return []
-    lines = [
-        f'- Backward transitions (24h): **{r["backward_24h"]}**',
-        f'- 7d daily average: {r.get("backward_7d_avg_daily", 0):.1f}/day',
-    ]
+
+    lines: List[str] = []
+
+    # Warming note goes FIRST so operators see the caveat before the number
+    if warming.get('active'):
+        first_at = warming.get('first_event_at')
+        days_in = warming.get('days_since_rollout', 0)
+        if first_at:
+            lines.append(
+                f'> _Rework instrumentation live since **{first_at[:10]}** '
+                f'({days_in:.1f}d / 7d). 7d baseline stabilizes after '
+                f'7 full days — current values may under-report._'
+            )
+        else:
+            lines.append(
+                '> _Rework instrumentation armed but no transitions '
+                'recorded yet — baseline warming._'
+            )
+        lines.append('')
+
+    lines.append(f'- Backward transitions (24h): **{backward}**')
+    lines.append(
+        f'- 7d daily average: {r.get("backward_7d_avg_daily", 0):.1f}/day'
+    )
     if r.get('top_transitions'):
         lines.append('')
         lines.append('Top backward transitions:')
