@@ -51,7 +51,7 @@ core/llm_enforcer.py
 # Tier 1 — highest prod frequency
 # content_writer_agent.py: REMOVED Session 1098 (migrated to wrapper)
 # tasks_initiatives.py: REMOVED Session 1098 (migrated to wrapper)
-core/agents/analysis/market_intelligence_agent.py
+# market_intelligence_agent.py: REMOVED Session 1098 (migrated to wrapper)
 core/agents/code_review_agent.py
 core/agents/devops_agent.py
 
