@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-17 07:03
+**Generated:** 2026-04-17 08:01
 **Current Session:** 1097
 **Total Documentation:** 1862 files | 632,206 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,240 |
+| Total cross-references | 2,241 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/archive/sessions/README.md` | 60 | Session Documentation |
+| `docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md` | 60 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,7 +219,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-17 06:58 |
+| INDEX.md | docs | 363 | 2026-04-17 08:01 |
 | SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md | handoffs | 236 | 2026-04-16 22:23 |
 | SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md | handoffs | 169 | 2026-04-16 22:23 |
 | SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 16:00 |
