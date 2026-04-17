@@ -12,6 +12,7 @@ that can be displayed as product cards, saved to libraries, and exported.
 __all__ = [
     'DeliverableType',
     'ContentFormat',
+    'PublishIntent',
     'Deliverable',
     'DeliverableExport',
     'DeliverableCollection',
@@ -52,6 +53,32 @@ class ContentFormat(models.TextChoices):
     PYTHON = 'python', 'Python'
     TYPESCRIPT = 'typescript', 'TypeScript'
     JAVASCRIPT = 'javascript', 'JavaScript'
+
+
+class PublishIntent(models.TextChoices):
+    """Session 1095: publishing intent for a deliverable.
+
+    Separates workflow state (`status`) from artifact class. Rigby's
+    Session 1094 architectural guidance: "use an enum not a boolean —
+    you'll inevitably want 'completed but publish_candidate' or
+    'ready but internal'." See `feedback_publish_intent_enum.md`.
+
+    - `internal_only`: Agent analysis, diagnostic output, intermediate
+      artifacts. Will NEVER publish externally — internal reference only.
+      The default — safest assumption for any new deliverable.
+    - `publish_candidate`: Produced by a pipeline that may publish.
+      Subject to gates/review before actually becoming status='published'.
+    - `publish_required`: Must publish to complete the flow. Failure to
+      publish is itself an incident (e.g. commitments, time-sensitive
+      content, initiative-pipeline outputs with external commitments).
+
+    The COO diagnostic scopes publishing gates to
+    `{publish_candidate, publish_required}` so internal analysis noise
+    (400+/day on a busy platform) doesn't permanently trip the jam gate.
+    """
+    INTERNAL_ONLY = 'internal_only', 'Internal Only'
+    PUBLISH_CANDIDATE = 'publish_candidate', 'Publish Candidate'
+    PUBLISH_REQUIRED = 'publish_required', 'Publish Required'
 
 
 class Deliverable(models.Model):
@@ -95,6 +122,17 @@ class Deliverable(models.Model):
         choices=DeliverableType.choices,
         default=DeliverableType.DOCUMENT,
         db_index=True
+    )
+    # Session 1095: publishing intent — separates artifact class from
+    # workflow state. Defaults to internal_only (safest — most agent
+    # output is internal artifacts). Resolved per-agent in the creation
+    # helper (see deliverable_factory.resolve_publish_intent). See
+    # PublishIntent enum above for rationale.
+    publish_intent = models.CharField(
+        max_length=30,
+        choices=PublishIntent.choices,
+        default=PublishIntent.INTERNAL_ONLY,
+        db_index=True,
     )
     category = models.CharField(
         max_length=100,
@@ -498,6 +536,10 @@ class DeliverableEvent(models.Model):
         ('task_created', 'Task Created'),
         ('followup_created', 'Follow-up Created'),
         ('action_taken', 'Action Taken'),
+        # Session 1095: status transition events for COO rework/bounce gate.
+        # Written by core/signals/deliverable_status_signals.py on every
+        # Deliverable.status change; metadata captures {from, to, direction}.
+        ('status_transition', 'Status Transition'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

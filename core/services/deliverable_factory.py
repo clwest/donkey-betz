@@ -233,6 +233,46 @@ def _clean_deliverable_title(title: str, agent_name: str, content: str) -> str:
     return f"{agent_name} Output"
 
 
+# =============================================================================
+# Session 1095: publish_intent resolver
+# =============================================================================
+#
+# Rigby's Session 1094 architectural guidance: default `publish_intent` to
+# `internal_only` via the central creation helper, then override on the
+# specific pipelines that truly publish. Defaulting here (not per-agent)
+# means we have ONE place to tune as the platform learns which agents are
+# user-facing vs internal.
+#
+# When an agent is added that publishes, add its name here. When uncertain,
+# leave it out (default internal_only is safe).
+
+_PUBLISH_INTENT_BY_AGENT = {
+    # Initiative pipeline: the only agent that actually publishes today
+    # (10 document-type deliverables all-time per Session 1094 investigation)
+    'InitiativePipeline': 'publish_candidate',
+    # Content pipeline: produces publish candidates that land as SelfBlog
+    # or publish-candidate Deliverables. Gates still apply before publish.
+    'ContentWriterAgent': 'publish_candidate',
+    'BlogWriterAgent': 'publish_candidate',
+    # Editor outputs are meant for publish. Not yet observed in publish
+    # path on this platform, but the intent is clear from the name.
+    'EditorAgent': 'publish_candidate',
+}
+
+
+def resolve_publish_intent(agent_name: str, explicit: Optional[str] = None) -> str:
+    """Return the `publish_intent` value for a new Deliverable.
+
+    Precedence:
+      1. Explicit caller override (agent passed publish_intent=X)
+      2. Per-agent lookup (known-publishing agents)
+      3. Default: 'internal_only' (safest — most agent output is internal)
+    """
+    if explicit:
+        return explicit
+    return _PUBLISH_INTENT_BY_AGENT.get(agent_name or '', 'internal_only')
+
+
 def create_deliverable(
     title: str,
     content: str,
@@ -255,6 +295,7 @@ def create_deliverable(
     initiative_id: Optional[str] = None,
     dream_id: Optional[str] = None,
     source_operation_id: Optional[str] = None,
+    publish_intent: Optional[str] = None,  # Session 1095: explicit override
     # Pass-through for any additional model fields
     **extra_fields,
 ) -> Any:
@@ -439,6 +480,9 @@ def create_deliverable(
         'agent_task': agent_task,
         'tags': tags or [],
         'metadata': metadata or {},
+        # Session 1095: resolve publish_intent via explicit kwarg (if caller
+        # provided one) or per-agent default table. See resolve_publish_intent.
+        'publish_intent': resolve_publish_intent(agent_name, publish_intent),
     }
 
     # Optional foreign keys
