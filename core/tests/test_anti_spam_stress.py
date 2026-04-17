@@ -223,6 +223,58 @@ class TwelveAlertStressTests(SimpleTestCase):
         self.assertEqual(suppressed[0]['primary_gate'], 'LATE_CRIT')
 
     @override_settings(STRESS_ENABLED='true', STRESS_POSTING='true')
+    def test_mt_midnight_crossing_allows_new_day_post(self):
+        """Session 1096 (Rigby's last-scenario ask):
+
+        An alert at 11:59 PM MT (post allowed) followed by another at
+        12:01 AM MT (new date_bucket) should be allowed as 'first post
+        of day,' not suppressed by same-day rule.
+
+        The same-day rule is keyed on date_bucket, which rolls over at
+        MT midnight. This test verifies the key is correctly scoped so
+        yesterday's keys don't leak into today's decisions.
+        """
+        from datetime import datetime, timezone as dt_tz
+        import zoneinfo
+        from core.services.scheduled_diagnostic_runner import (
+            _dedupe_and_cooldown_check, _date_bucket,
+        )
+
+        mt = zoneinfo.ZoneInfo('America/Denver')
+        # Day 1: 11:59 PM MT → date_bucket = 2026-04-17
+        late_day_1 = datetime(2026, 4, 17, 23, 59, 0, tzinfo=mt)
+        # Day 2: 12:01 AM MT → date_bucket = 2026-04-18
+        early_day_2 = datetime(2026, 4, 18, 0, 1, 0, tzinfo=mt)
+
+        # Pre-assert: these are different buckets
+        bucket_1 = _date_bucket(late_day_1, 'America/Denver')
+        bucket_2 = _date_bucket(early_day_2, 'America/Denver')
+        self.assertNotEqual(bucket_1, bucket_2, 'midnight crossing must yield different buckets')
+
+        config = self._build_config('high', 'END_OF_DAY')
+
+        # First alert at 23:59 MT — allowed (first post of day 1)
+        result_1 = _dedupe_and_cooldown_check(config, late_day_1, {
+            'severity': 'high', 'reasons': ['END_OF_DAY'], 'reason_details': ['d'],
+        }, {})
+        self.assertTrue(result_1['should_post'])
+
+        # Simulate the cached state: set max_sev + posts_today for day 1
+        cache.set(f'{config.cache_key_prefix}:max_sev_today:{bucket_1}', 'high', timeout=3600)
+        cache.set(f'{config.cache_key_prefix}:posts_today:{bucket_1}', 1, timeout=3600)
+
+        # Second alert at 00:01 MT the NEXT day — should be allowed because
+        # date_bucket advanced and day 2's keys are empty
+        result_2 = _dedupe_and_cooldown_check(config, early_day_2, {
+            'severity': 'high', 'reasons': ['NEW_DAY'], 'reason_details': ['d'],
+        }, {})
+        self.assertTrue(
+            result_2['should_post'],
+            f'post at 12:01 AM MT should be allowed (new date_bucket). '
+            f'Got reason: {result_2.get("reason")}',
+        )
+
+    @override_settings(STRESS_ENABLED='true', STRESS_POSTING='true')
     def test_rollup_drains_on_next_fire_not_double_ride(self):
         """After draining into post A, a second allowed post B must NOT
         re-include those already-consumed suppressions."""
