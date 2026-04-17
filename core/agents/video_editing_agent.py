@@ -414,9 +414,16 @@ If asked to create something new, explain you can only edit existing videos."""
 
                         # Session 1006: Persist output to Deliverable
                         args = successful_calls[0].get('arguments', {})
+                        # Session 1092: render with shared helper so short status
+                        # messages don't fall below the 300-char gate.
                         self._save_to_deliverable(
                             title=f"Video Edit ({tool_used}): {task[:80]}",
-                            content=result.message,
+                            content=self._render_agent_output_markdown(
+                                task=task,
+                                summary=result.message,
+                                tool_calls=tool_calls_made,
+                                extra={'tool_used': tool_used, 'video_id': args.get('video_id')},
+                            ),
                             deliverable_type='video',
                             category='Video Editing',
                             tags=['video_edit', tool_used],
