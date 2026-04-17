@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-16 22:15
+**Generated:** 2026-04-16 22:57
 **Current Session:** 1093
 **Total Documentation:** 1862 files | 632,132 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,239 |
+| Total cross-references | 2,238 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/05_Spider_Networks/README.md` | 60 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
+| `docs/archive/old-structure/capabilities/README.md` | 59 | 🚀 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUME |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,9 +219,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-16 22:06 |
-| SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md | handoffs | 236 | 2026-04-16 20:48 |
-| SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md | handoffs | 169 | 2026-04-16 19:33 |
+| SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md | handoffs | 236 | 2026-04-16 22:23 |
+| SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md | handoffs | 169 | 2026-04-16 22:23 |
+| INDEX.md | docs | 363 | 2026-04-16 22:23 |
 | SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 16:00 |
 | SESSION_1090_DEMO_READINESS.md | handoffs | 122 | 2026-04-16 13:03 |
 | DEMO_HAPPY_PATH.md | playbooks | 158 | 2026-04-16 12:11 |
