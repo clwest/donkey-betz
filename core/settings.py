@@ -1414,3 +1414,25 @@ LEARNING_PROMPT_INJECTION_ENABLED = os.environ.get('LEARNING_PROMPT_INJECTION_EN
 RECORDING_MODE = os.environ.get('RECORDING_MODE', 'off').lower()
 if RECORDING_MODE not in ('off', 'on', 'public_safe'):
     RECORDING_MODE = 'off'
+
+# Session 1098: DeliverableAppend canary rollout (Fix B-full).
+#
+# When both flags permit, BaseAgent._save_to_deliverable routes writes
+# through core/services/deliverable_append_service.append_to_deliverable
+# for atomic + idempotent + race-protected appends. Default: OFF on all
+# paths (pre-PR behavior unchanged). See
+# docs/handoffs/SESSION_1098_ADDENDUM_2_TIER1_AND_BFULL.md for the
+# 3-step rollout plan + rollback.
+#
+# Rollback: set either env var empty / False → instant revert to
+# create_deliverable path. No code change required.
+DELIVERABLE_APPEND_ENABLED = (
+    os.environ.get('DELIVERABLE_APPEND_ENABLED', 'false').lower() == 'true'
+)
+DELIVERABLE_APPEND_CANARY_AGENTS = [
+    name.strip()
+    for name in os.environ.get(
+        'DELIVERABLE_APPEND_CANARY_AGENTS', ''
+    ).split(',')
+    if name.strip()
+]
