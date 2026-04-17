@@ -842,6 +842,48 @@ def post_coo_daily_diagnostic(
         metrics=metrics or {},
         structured_payload=structured_payload or {},
     )
+
+
+@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600)
+def run_trend_daily_diagnostic(self):
+    """Session 1094 — Daily TrendAnalysisAgent spider-intelligence anomaly diagnostic.
+
+    Third consumer of the scheduled_diagnostic_runner primitive. Metrics
+    surface is distributional anomaly (volume deltas, coverage gaps,
+    concentration, cluster velocity) — structurally different from CTO
+    (execution rollups) and COO (throughput + aging).
+    """
+    from core.services.scheduled_diagnostic_runner import run_diagnostic
+    from core.services.diagnostics.trend_analysis_daily import build_config
+    return run_diagnostic(build_config())
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300)
+def post_trend_daily_diagnostic(
+    self,
+    agent_async_task_id: str = None,
+    title: str = '',
+    severity: str = 'medium',
+    gate: Dict[str, Any] = None,
+    metrics: Dict[str, Any] = None,
+    structured_payload: Dict[str, Any] = None,
+):
+    """Session 1094 — Follow-up to run_trend_daily_diagnostic.
+
+    Loads TrendAnalysisAgent result and posts via attention bridge.
+    Enqueued with countdown=240s by run_trend_daily_diagnostic.
+    """
+    from core.services.scheduled_diagnostic_runner import post_diagnostic
+    from core.services.diagnostics.trend_analysis_daily import build_config
+    return post_diagnostic(
+        build_config(),
+        agent_async_task_id=agent_async_task_id,
+        title=title,
+        severity=severity,
+        gate=gate or {},
+        metrics=metrics or {},
+        structured_payload=structured_payload or {},
+    )
 @shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
 def execute_agent_task(
     self,
