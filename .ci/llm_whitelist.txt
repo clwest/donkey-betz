@@ -52,7 +52,7 @@ core/llm_enforcer.py
 # content_writer_agent.py: REMOVED Session 1098 (migrated to wrapper)
 # tasks_initiatives.py: REMOVED Session 1098 (migrated to wrapper)
 # market_intelligence_agent.py: REMOVED Session 1098 (migrated to wrapper)
-core/agents/code_review_agent.py
+# code_review_agent.py: REMOVED Session 1098 (migrated to wrapper)
 core/agents/devops_agent.py
 
 # Tier 2 — moderate frequency / narrower blast radius
