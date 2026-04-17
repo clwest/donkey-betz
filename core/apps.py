@@ -65,6 +65,14 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # ConceptForge signals not available
 
+        # Session 1095: Connect Deliverable status-transition signals
+        # for the COO rework/bounce gate.
+        try:
+            from core.signals import connect_deliverable_status_signals
+            connect_deliverable_status_signals()
+        except ImportError:
+            pass  # Deliverable status signals not available
+
         # Session 873: Connect experiment linker signals for halt system instrumentation
         try:
             from core.services.experiment_linker import connect_experiment_linker_signals

@@ -24,6 +24,7 @@ from core.services.diagnostics.coo_daily import (
     build_title,
     evaluate_gate,
     render_action_items,
+    render_gate_hang,
     render_review_backlog,
     render_stuck_initiatives,
     render_velocity,
@@ -57,7 +58,38 @@ def _metrics_healthy() -> dict:
         'initiatives': {
             'stuck_count': 0, 'stuck_hours_threshold': 72, 'stuck_top': [],
         },
+        'gate_hang': {
+            'pending_total': 0, 'new_24h': 0,
+            'oldest_pending_hours': 0.0, 'top_pipelines': [],
+        },
     }
+
+
+def _metrics_gate_hang_high() -> dict:
+    """gate_hang total >= 10 → GATE_HANG_HIGH."""
+    m = _metrics_healthy()
+    m['gate_hang'] = {
+        'pending_total': 12,
+        'new_24h': 2,
+        'oldest_pending_hours': 60.0,
+        'top_pipelines': [
+            {'pipeline': 'GateProgressionPipeline', 'count': 10},
+            {'pipeline': 'PanelCoordinator', 'count': 2},
+        ],
+    }
+    return m
+
+
+def _metrics_gate_hang_new_surge() -> dict:
+    """gate_hang new_24h >= 5 → GATE_HANG_NEW_HIGH (surge detector)."""
+    m = _metrics_healthy()
+    m['gate_hang'] = {
+        'pending_total': 6,
+        'new_24h': 6,  # all new
+        'oldest_pending_hours': 4.0,
+        'top_pipelines': [{'pipeline': 'GateProgressionPipeline', 'count': 6}],
+    }
+    return m
 
 
 def _metrics_velocity_drop() -> dict:
@@ -218,6 +250,44 @@ class EvaluateGateTests(SimpleTestCase):
         self.assertTrue(gate['tripped'])
         self.assertIn('STUCK_INITIATIVES_HIGH', gate['reasons'])
 
+    def test_gate_hang_high_trips_on_pending_total(self):
+        gate = evaluate_gate(_metrics_gate_hang_high())
+        self.assertTrue(gate['tripped'])
+        self.assertIn('GATE_HANG_HIGH', gate['reasons'])
+        self.assertEqual(gate['severity'], 'high')
+        # Gate reason detail should name the top pipeline
+        detail_text = ' '.join(gate['reason_details'])
+        self.assertIn('GateProgressionPipeline', detail_text)
+
+    def test_gate_hang_new_high_trips_on_surge(self):
+        """new_24h >= 5 trips the surge gate even when total is low."""
+        gate = evaluate_gate(_metrics_gate_hang_new_surge())
+        self.assertTrue(gate['tripped'])
+        self.assertIn('GATE_HANG_NEW_HIGH', gate['reasons'])
+
+    def test_gate_hang_below_threshold_no_trip(self):
+        """pending_total < 10 AND new_24h < 5 → no gate_hang reasons."""
+        m = _metrics_healthy()
+        m['gate_hang'] = {
+            'pending_total': 3, 'new_24h': 2,
+            'oldest_pending_hours': 2.0, 'top_pipelines': [],
+        }
+        gate = evaluate_gate(m)
+        self.assertNotIn('GATE_HANG_HIGH', gate.get('reasons', []))
+        self.assertNotIn('GATE_HANG_NEW_HIGH', gate.get('reasons', []))
+
+    def test_missing_gate_hang_key_backward_compat(self):
+        """Old callers that built metrics dicts before Session 1095 didn't
+        include gate_hang. Gate must not crash — just skip the gate_hang
+        branch gracefully.
+        """
+        m = _metrics_healthy()
+        del m['gate_hang']
+        gate = evaluate_gate(m)
+        # Should not raise, and gate_hang reasons should be absent
+        self.assertNotIn('GATE_HANG_HIGH', gate.get('reasons', []))
+        self.assertNotIn('GATE_HANG_NEW_HIGH', gate.get('reasons', []))
+
     def test_multiple_gates_severity_precedence_critical_over_high(self):
         """If any gate is critical, final severity is critical."""
         m = _metrics_action_backlog_crit()
@@ -285,6 +355,25 @@ class SectionRendererTests(SimpleTestCase):
         joined = '\n'.join(lines)
         self.assertIn('Top stuck:', joined)
         self.assertIn('Init A', joined)
+
+    def test_render_gate_hang_empty_when_zero(self):
+        """No pending gate_stuck → section fully omitted (empty list returned)."""
+        lines = render_gate_hang(_metrics_healthy(), {})
+        self.assertEqual(lines, [])
+
+    def test_render_gate_hang_shows_pipelines(self):
+        lines = render_gate_hang(_metrics_gate_hang_high(), {})
+        joined = '\n'.join(lines)
+        self.assertIn('Pending gate_stuck', joined)
+        self.assertIn('Top hanging pipelines:', joined)
+        self.assertIn('GateProgressionPipeline', joined)
+        self.assertIn('PanelCoordinator', joined)
+
+    def test_render_gate_hang_tolerates_missing_metric_key(self):
+        """Backward-compat: missing gate_hang key returns [] (no crash)."""
+        m = _metrics_healthy()
+        del m['gate_hang']
+        self.assertEqual(render_gate_hang(m, {}), [])
 
 
 # =============================================================================
@@ -376,6 +465,8 @@ class CooConfigTests(SimpleTestCase):
             'Review Backlog',
             'Action Items',
             'Stuck Initiatives',
+            'Gate Hang Health',           # Session 1095 (Rigby's #2 gate)
+            'Rework / Bounce Rate',       # Session 1095 (Rigby's #1 gate)
         ])
 
     def test_prompt_builder_coo_voice(self):
