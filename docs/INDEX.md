@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,241 |
+| Total cross-references | 2,242 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/agents/README.md` | 60 | Agent Documentation |
+| `docs/archive/experimental/the_future_of_ai/README.md` | 60 | 🚀 The Future of AI: Physical Products Documentatio |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,8 +219,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 363 | 2026-04-17 16:28 |
 | SESSION_1098_WRAP_CANARY_GREEN.md | handoffs | 131 | 2026-04-17 16:27 |
-| INDEX.md | docs | 363 | 2026-04-17 16:26 |
 | SESSION_1098_ADDENDUM_2_TIER1_AND_BFULL.md | handoffs | 203 | 2026-04-17 14:37 |
 | SESSION_1098_ADDENDUM_CANCEL_AND_LINT.md | handoffs | 91 | 2026-04-17 12:29 |
 | SESSION_1098_FIX_B_FULL_TICKET.md | plans | 318 | 2026-04-17 09:53 |
