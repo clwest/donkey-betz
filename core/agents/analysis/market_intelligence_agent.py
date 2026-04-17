@@ -302,13 +302,24 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                     {"role": "user", "content": task}
                 ]
 
-                response = self.client.chat.completions.create(
-                    model="gpt-5-mini",
-                    messages=messages,
-                    tools=self.get_tools_with_delegation(),
-                    tool_choice="auto",
-                    max_completion_tokens=4000
-                )
+                # Session 1098: wrapped for telemetry + cancellation.
+                from core.services.llm_call_wrapper import llm_call_span as _llm_call_span
+                _exec_ctx = getattr(self, '_execution_context', {}) or {}
+                with _llm_call_span(
+                    provider='openai',
+                    model='gpt-5-mini',
+                    execution_id=_exec_ctx.get('execution_id'),
+                    agent_name='MarketIntelligenceAgent',
+                    metadata={'step': 'tool_call_plan'},
+                ) as _span:
+                    response = self.client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                        model="gpt-5-mini",
+                        messages=messages,
+                        tools=self.get_tools_with_delegation(),
+                        tool_choice="auto",
+                        max_completion_tokens=4000
+                    )
+                    _span.attach_response(response)
 
                 # Process response
                 assistant_message = response.choices[0].message
@@ -350,11 +361,20 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                         })
 
                     # Get final analysis from GPT
-                    final_response = self.client.chat.completions.create(
-                        model="gpt-5-mini",
-                        messages=messages,
-                        max_completion_tokens=3000
-                    )
+                    # Session 1098: wrapped for telemetry + cancellation.
+                    with _llm_call_span(
+                        provider='openai',
+                        model='gpt-5-mini',
+                        execution_id=_exec_ctx.get('execution_id'),
+                        agent_name='MarketIntelligenceAgent',
+                        metadata={'step': 'final_analysis'},
+                    ) as _final_span:
+                        final_response = self.client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                            model="gpt-5-mini",
+                            messages=messages,
+                            max_completion_tokens=3000
+                        )
+                        _final_span.attach_response(final_response)
                     analysis = final_response.choices[0].message.content
                 else:
                     analysis = strip_simulated_tool_json(assistant_message.content)
