@@ -812,12 +812,26 @@ For this {content_type}, ensure:
                 original_draft = context.get('original_draft', '')
                 if review_feedback and original_draft:
                     logger.info("ContentWriterAgent: REWRITE MODE — skipping heavy context, using draft + feedback + brief")
+                    # Session 1098 canary wire: if the caller passed an
+                    # explicit append target, thread it through so the
+                    # rewrite appends to the existing Deliverable
+                    # (via the DELIVERABLE_APPEND canary gate in
+                    # BaseAgent._save_to_deliverable). Missing =
+                    # unchanged pre-canary behavior (no save).
                     return self._execute_rewrite(
                         original_draft=original_draft,
                         review_feedback=review_feedback,
                         workspace_brief=workspace_brief,
                         task=task,
                         start_time=start_time,
+                        append_to_deliverable_id=(
+                            context.get('append_to_deliverable_id') or None
+                        ),
+                        expected_initiative_id=(
+                            context.get('expected_initiative_id')
+                            or context.get('initiative_id')
+                            or None
+                        ),
                     )
 
                 # === DIRECTED MODE ===
@@ -1396,12 +1410,21 @@ Word Count: {word_count} words | Time: {execution_time_ms}ms
         workspace_brief: Dict[str, Any],
         task: str,
         start_time: float,
+        append_to_deliverable_id: Optional[str] = None,
+        expected_initiative_id: Optional[str] = None,
     ) -> 'AgentResult':
         """
         Focused rewrite mode — NO heavy context injection.
 
         Only receives: the original draft, editor + fact check feedback, and the brief.
         This prevents topic drift caused by spider data, platform context, mood, etc.
+
+        Session 1098 canary: when ``append_to_deliverable_id`` is set AND
+        ``DELIVERABLE_APPEND_ENABLED`` + the canary allowlist permit,
+        the rewrite output is appended to the target Deliverable via
+        ``append_to_deliverable`` (atomic + idempotent + race-protected).
+        When absent, behavior is unchanged (no save inside this method —
+        the caller/pipeline handles persistence).
         """
         brief = workspace_brief or {}
         topic = brief.get('topic', '')
@@ -1521,6 +1544,39 @@ This is the FINAL version — make it great."""
                 "ContentWriterAgent REWRITE completed: %d words, %dms",
                 word_count, execution_time,
             )
+
+            # Session 1098 canary: if the caller passed an explicit
+            # append target, route the rewrite output through the
+            # DELIVERABLE_APPEND canary gate in BaseAgent._save_to_deliverable.
+            # Gate enforces flag+allowlist — miss falls through to
+            # create_deliverable with no harm. append_chunk_index=0
+            # per Rigby's guardrail: rewrite is a single-shot overwrite,
+            # not streaming, so the chunk index is deterministic.
+            if append_to_deliverable_id:
+                try:
+                    self._save_to_deliverable(
+                        title=f"Rewrite: {title[:80]}",
+                        content=rewritten or '',
+                        deliverable_type='document',
+                        category='Content Writing',
+                        tags=['rewrite', 'blog_post'],
+                        metadata={
+                            'task': task[:200],
+                            'rewrite_mode': True,
+                            'word_count': word_count,
+                        },
+                        append_to_deliverable_id=append_to_deliverable_id,
+                        append_chunk_index=0,
+                        expected_initiative_id=expected_initiative_id,
+                    )
+                except Exception as save_exc:
+                    # Never fail the rewrite on save issues — result
+                    # still carries the rewritten text for the caller.
+                    logger.exception(
+                        "ContentWriterAgent rewrite: canary save "
+                        "failed (rewritten text still returned via "
+                        "AgentResult): %s", save_exc,
+                    )
 
             return result
 
