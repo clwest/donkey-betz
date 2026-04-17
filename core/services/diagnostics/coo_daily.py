@@ -44,6 +44,11 @@ Gates (all env-tunable)
     ACTION_BACKLOG_HIGH     pending critical >= 2 OR pending high >= 5
     ACTION_BACKLOG_CRIT     pending critical >= 5
     STUCK_INITIATIVES_HIGH  >= 5 initiatives unchanged > 72h in current_stage
+    GATE_HANG_HIGH          pending gate_stuck HAIs >= 10
+    GATE_HANG_NEW_HIGH      new gate_stuck HAIs in 24h >= 5 (surge detector)
+    REWORK_RATE_HIGH        backward status transitions in 24h >= 5
+                            (Rigby's priority-1 signal: "moving fast but
+                            leaking quality")
 
 Tunables (env vars)
 -------------------
@@ -59,6 +64,9 @@ Tunables (env vars)
     COO_DIAG_ACTION_HIGH_MIN           (5)     pending high count → HIGH
     COO_DIAG_STUCK_HOURS               (72)    initiative stage staleness window
     COO_DIAG_STUCK_MIN                 (5)     stuck initiative count → HIGH
+    COO_DIAG_GATE_HANG_MIN             (10)    pending gate_stuck HAI count → HIGH
+    COO_DIAG_GATE_HANG_NEW_MIN         (5)     new gate_stuck in 24h → HIGH surge
+    COO_DIAG_REWORK_MIN                (5)     backward transitions in 24h → HIGH
     COO_DIAG_STUCK_IGNORE_BEFORE       ("")    ISO date; initiatives updated
                                                before this cutoff are excluded
                                                from the stuck count. Use after
@@ -66,25 +74,25 @@ Tunables (env vars)
                                                historical dead weight doesn't
                                                trip the gate forever. Empty =
                                                no filtering (default).
-    COO_DIAG_PUBLISHABLE_TYPES         ("")    CSV of deliverable_type values
+    COO_DIAG_PUBLISHABLE_TYPES         ("")    DEPRECATED by Session 1095.
+                                               CSV of deliverable_type values
                                                that actually reach 'published'
-                                               status on this platform.
-                                               Session 1094 investigation:
-                                               only ~1 type (document, from
-                                               InitiativePipeline) is auto-
-                                               publishing. Most agent output
-                                               types (analysis, research,
-                                               report, code, etc.) are internal
-                                               artifacts that never publish.
-                                               When set, the velocity +
-                                               publishing_jam + review_age gates
-                                               scope to ONLY these types, so
-                                               the gates measure the actual
-                                               publishing workflow — not
-                                               internal-analysis noise that
-                                               permanently trips the jam gate.
-                                               Empty = all types counted
-                                               (default, back-compat).
+                                               status. Session 1094 bridge.
+                                               Prefer COO_DIAG_PUBLISH_INTENTS
+                                               (below) which filters on the
+                                               first-class publish_intent field
+                                               instead of deliverable_type.
+                                               When both env vars are set, the
+                                               filters AND — narrow to rows
+                                               matching both.
+    COO_DIAG_PUBLISH_INTENTS           ("")    Session 1095: CSV of publish_intent
+                                               values to scope the velocity +
+                                               publishing_jam + review_age gates.
+                                               Recommended:
+                                               `publish_candidate,publish_required`
+                                               — skips internal_only analyses.
+                                               Empty = no intent filtering
+                                               (legacy behavior).
 
 Feature flags
 -------------
@@ -196,12 +204,20 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
     from core.models_human_interface import HumanAttentionItem
     from core.models import Initiative
 
-    # ── Publishable-type filter (Session 1094 investigation)
-    # When set, velocity + review_backlog + publishing_jam gates scope to
-    # only these deliverable_type values. Prevents the jam gate from
-    # permanently tripping on platforms where most agents produce internal
-    # analyses (never meant to publish) mixed with the tiny fraction of
-    # user-facing content that does. See module docstring.
+    # ── Publishable-type / publish-intent filter
+    #
+    # Session 1095: prefer `publish_intent` (Rigby's architectural answer)
+    # when COO_DIAG_PUBLISH_INTENTS is set. Falls back to the legacy
+    # COO_DIAG_PUBLISHABLE_TYPES CSV (Session 1094 bridge) when the intent
+    # env var is unset. Both filters can be specified together (AND).
+    #
+    # When both are unset, all deliverables count — matches legacy
+    # behavior on platforms that haven't adopted the field yet.
+    publish_intents_raw = os.environ.get('COO_DIAG_PUBLISH_INTENTS', '').strip()
+    publish_intents: List[str] = [
+        t.strip() for t in publish_intents_raw.split(',') if t.strip()
+    ] if publish_intents_raw else []
+
     publishable_types_raw = os.environ.get('COO_DIAG_PUBLISHABLE_TYPES', '').strip()
     publishable_types: List[str] = [
         t.strip() for t in publishable_types_raw.split(',') if t.strip()
@@ -209,6 +225,8 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
 
     def _deliverable_base_qs():
         qs = Deliverable.objects.all()
+        if publish_intents:
+            qs = qs.filter(publish_intent__in=publish_intents)
         if publishable_types:
             qs = qs.filter(deliverable_type__in=publishable_types)
         return qs
@@ -238,6 +256,8 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         'created_delta_pct': _delta_pct(created_24h, created_7d_avg_daily),
         'published_delta_pct': _delta_pct(published_24h, published_7d_avg_daily),
         'publishable_types_filter': publishable_types or None,
+        # Session 1095: intent filter surfaced in metrics for transparency
+        'publish_intents_filter': publish_intents or None,
     }
 
     # ── Review backlog: deliverables in 'ready' — haven't progressed to
@@ -368,6 +388,86 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         ],
     }
 
+    # ── Gate hang health: pending `gate_stuck` HAIs by source_agent/pipeline
+    # (Session 1095 / Rigby future gate #2). Deliberations and panels that
+    # hang rather than terminate are surfaced by the GateProgressionPipeline
+    # as HumanAttentionItem(item_type='gate_stuck'). Aggregating these in
+    # COO makes the operational friction visible directly — upstream of
+    # them later becoming "generic critical backlog" in the action_items
+    # gate. Rigby's priority: ops teams feel gate hangs before anything else.
+    from django.db.models import Count as _Count
+    gate_stuck_qs = HumanAttentionItem.objects.filter(
+        item_type='gate_stuck', status='pending'
+    )
+    gate_stuck_total = gate_stuck_qs.count()
+    gate_stuck_new_24h = gate_stuck_qs.filter(created_at__gte=cutoff_24h).count()
+
+    # Top pipelines by hang count — answer "which pipeline is getting stuck?"
+    by_pipeline_rows = list(
+        gate_stuck_qs.values('source_agent')
+        .annotate(c=_Count('id')).order_by('-c')[:10]
+    )
+
+    # Oldest pending — age in hours
+    oldest_gate_stuck = gate_stuck_qs.order_by('created_at').first()
+    oldest_gate_hours = (
+        round((now - oldest_gate_stuck.created_at).total_seconds() / 3600.0, 1)
+        if oldest_gate_stuck and oldest_gate_stuck.created_at else 0.0
+    )
+
+    gate_hang = {
+        'pending_total': gate_stuck_total,
+        'new_24h': gate_stuck_new_24h,
+        'oldest_pending_hours': oldest_gate_hours,
+        'top_pipelines': [
+            {
+                'pipeline': r.get('source_agent') or '(unknown)',
+                'count': r['c'],
+            }
+            for r in by_pipeline_rows[:5]
+        ],
+    }
+
+    # ── Rework/bounce rate (Session 1095 — Rigby's priority-1 gate):
+    # Count backward Deliverable status transitions in last 24h. Populated
+    # by core/signals/deliverable_status_signals.py which writes
+    # DeliverableEvent(event_type='status_transition', metadata={direction,
+    # from, to}) on every save. Signal in place → rework gate has data.
+    # Before the signal landed these events didn't exist, so historical
+    # windows will under-report for the first 7d after rollout. Not a bug,
+    # inherent to new instrumentation.
+    from core.models_deliverables import DeliverableEvent
+    rework_qs = DeliverableEvent.objects.filter(
+        event_type='status_transition',
+        created_at__gte=cutoff_24h,
+        metadata__direction='backward',
+    )
+    rework_count = rework_qs.count()
+
+    # Top (from, to) transition pairs — tells us which bounces are happening
+    from collections import Counter
+    pair_counter: 'Counter' = Counter()
+    for ev in rework_qs.values('metadata')[:500]:  # cap to keep query cheap
+        m = ev.get('metadata') or {}
+        pair_counter[(m.get('from'), m.get('to'))] += 1
+    top_pairs = [
+        {'from': f, 'to': t, 'count': c}
+        for (f, t), c in pair_counter.most_common(5)
+    ]
+
+    # 7d baseline for trend context
+    rework_7d_count = DeliverableEvent.objects.filter(
+        event_type='status_transition',
+        created_at__gte=cutoff_7d,
+        metadata__direction='backward',
+    ).count()
+
+    rework = {
+        'backward_24h': rework_count,
+        'backward_7d_avg_daily': round(rework_7d_count / 7.0, 2),
+        'top_transitions': top_pairs,
+    }
+
     return {
         'window_24h': {
             'since': cutoff_24h.isoformat(),
@@ -381,6 +481,8 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
         'review_backlog': review_backlog,
         'action_items': action_items,
         'initiatives': initiatives,
+        'gate_hang': gate_hang,
+        'rework': rework,
     }
 
 
@@ -400,6 +502,9 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
     action_crit_crit = _env_int('COO_DIAG_ACTION_CRIT_CRIT', 5)
     action_high_min = _env_int('COO_DIAG_ACTION_HIGH_MIN', 5)
     stuck_min = _env_int('COO_DIAG_STUCK_MIN', 5)
+    gate_hang_min = _env_int('COO_DIAG_GATE_HANG_MIN', 10)
+    gate_hang_new_min = _env_int('COO_DIAG_GATE_HANG_NEW_MIN', 5)
+    rework_min = _env_int('COO_DIAG_REWORK_MIN', 5)
 
     reasons: List[str] = []
     details: List[str] = []
@@ -409,6 +514,8 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
     review = metrics['review_backlog']
     action = metrics['action_items']
     init = metrics['initiatives']
+    gate_hang = metrics.get('gate_hang', {})  # Session 1095 — tolerant to old metrics dicts
+    rework = metrics.get('rework', {})
 
     # ── VELOCITY_DROP_HIGH: % drop AND absolute floor (per Rigby's feedback —
     #    % alone pages low-volume environments on tiny deltas)
@@ -486,6 +593,51 @@ def evaluate_gate(metrics: Dict[str, Any]) -> Dict[str, Any]:
         )
         severities.append('high')
 
+    # ── GATE_HANG_HIGH / GATE_HANG_NEW_HIGH (Session 1095)
+    gate_hang_total = gate_hang.get('pending_total', 0)
+    gate_hang_new = gate_hang.get('new_24h', 0)
+    if gate_hang_total >= gate_hang_min:
+        reasons.append('GATE_HANG_HIGH')
+        top_line = ', '.join(
+            f'{p["pipeline"]}({p["count"]})'
+            for p in gate_hang.get('top_pipelines', [])[:3]
+        ) or '(unknown pipelines)'
+        details.append(
+            f'{gate_hang_total} gate_stuck deliberations/panels pending '
+            f'(min {gate_hang_min}). Top pipelines: {top_line}'
+        )
+        severities.append('high')
+    if gate_hang_new >= gate_hang_new_min:
+        reasons.append('GATE_HANG_NEW_HIGH')
+        details.append(
+            f'{gate_hang_new} new gate_stuck items in last 24h '
+            f'(min {gate_hang_new_min}) — pipeline hanging rate rising'
+        )
+        severities.append('high')
+
+    # ── REWORK_RATE_HIGH (Session 1095, Rigby's priority-1 gate):
+    # Backward status transitions in 24h. Signals "moving fast but leaking
+    # quality." Top-transitions breakdown tells operator which bounces are
+    # happening (ready→draft = reviewer bouncing, ready→blocked = gate
+    # rejecting, published→ready = unpublish-for-edit).
+    rework_24h = rework.get('backward_24h', 0)
+    if rework_24h >= rework_min:
+        reasons.append('REWORK_RATE_HIGH')
+        top_text = ', '.join(
+            f'{t["from"]}→{t["to"]}({t["count"]})'
+            for t in rework.get('top_transitions', [])[:3]
+        ) or '(no transition detail)'
+        baseline_text = (
+            f'vs 7d avg {rework.get("backward_7d_avg_daily", 0):.1f}/day'
+            if rework.get('backward_7d_avg_daily', 0) > 0
+            else '(no 7d baseline yet — signal may be new)'
+        )
+        details.append(
+            f'{rework_24h} backward status transitions in 24h '
+            f'(min {rework_min}) {baseline_text}. Top: {top_text}'
+        )
+        severities.append('high')
+
     if not reasons:
         return {
             'tripped': False,
@@ -523,6 +675,7 @@ def build_dedupe_payload(
     review = metrics.get('review_backlog', {})
     action = metrics.get('action_items', {})
     init = metrics.get('initiatives', {})
+    gate_hang = metrics.get('gate_hang', {})
     return {
         'date_bucket': date_bucket,
         'severity': gate.get('severity'),
@@ -537,6 +690,11 @@ def build_dedupe_payload(
         'pending_critical': action.get('pending_by_urgency', {}).get('critical', 0),
         'pending_high': action.get('pending_by_urgency', {}).get('high', 0),
         'stuck_count': init.get('stuck_count'),
+        # Session 1095 — gate hang signal fingerprint
+        'gate_hang_total': gate_hang.get('pending_total', 0),
+        'gate_hang_new_24h': gate_hang.get('new_24h', 0),
+        # Session 1095 — rework signal fingerprint
+        'rework_backward_24h': metrics.get('rework', {}).get('backward_24h', 0),
     }
 
 
@@ -669,6 +827,47 @@ def render_action_items(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[s
     return lines
 
 
+def render_rework(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
+    """Session 1095: rework/bounce section. Returns [] (section omitted)
+    when there were zero backward transitions in 24h — most days this
+    section won't appear in the body.
+    """
+    r = metrics.get('rework') or {}
+    if r.get('backward_24h', 0) == 0:
+        return []
+    lines = [
+        f'- Backward transitions (24h): **{r["backward_24h"]}**',
+        f'- 7d daily average: {r.get("backward_7d_avg_daily", 0):.1f}/day',
+    ]
+    if r.get('top_transitions'):
+        lines.append('')
+        lines.append('Top backward transitions:')
+        for t in r['top_transitions']:
+            lines.append(f'  - `{t["from"]}` → `{t["to"]}`: {t["count"]}')
+    return lines
+
+
+def render_gate_hang(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
+    """Session 1095: gate hang health section. Returns [] (section omitted)
+    when there are zero pending gate_stuck items — keeps the body clean on
+    healthy platforms.
+    """
+    g = metrics.get('gate_hang') or {}
+    if g.get('pending_total', 0) == 0:
+        return []
+    lines = [
+        f'- Pending gate_stuck: **{g["pending_total"]}**',
+        f'- New in 24h: **{g["new_24h"]}**',
+        f'- Oldest pending: {g["oldest_pending_hours"]:.1f}h',
+    ]
+    if g.get('top_pipelines'):
+        lines.append('')
+        lines.append('Top hanging pipelines:')
+        for p in g['top_pipelines']:
+            lines.append(f'  - `{p["pipeline"]}`: {p["count"]}')
+    return lines
+
+
 def render_stuck_initiatives(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
     i = metrics['initiatives']
     if i['stuck_count'] == 0:
@@ -717,6 +916,8 @@ def build_config():
             ('Review Backlog', render_review_backlog),
             ('Action Items', render_action_items),
             ('Stuck Initiatives', render_stuck_initiatives),
+            ('Gate Hang Health', render_gate_hang),
+            ('Rework / Bounce Rate', render_rework),
         ],
         post_task_import_path='core.tasks:post_coo_daily_diagnostic',
         enabled_env='COO_DIAGNOSTIC_ENABLED',

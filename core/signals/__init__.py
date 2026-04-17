@@ -28,6 +28,13 @@ from .conceptforge_signals import (
     connect_conceptforge_signals,
 )
 
+from .deliverable_status_signals import (
+    classify_transition,
+    stash_prior_status,
+    record_status_transition,
+    connect_deliverable_status_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -45,4 +52,9 @@ __all__ = [
     # ConceptForge signals (Session 863)
     'handle_selfblog_publish',
     'connect_conceptforge_signals',
+    # Deliverable status transition signals (Session 1095 — rework gate)
+    'classify_transition',
+    'stash_prior_status',
+    'record_status_transition',
+    'connect_deliverable_status_signals',
 ]
