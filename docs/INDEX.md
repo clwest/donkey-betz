@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-17 12:12
+**Generated:** 2026-04-17 12:09
 **Current Session:** 1098
 **Total Documentation:** 1864 files | 632,629 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,241 |
+| Total cross-references | 2,240 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/completions/README.md` | 60 | COMPLETIONS |
+| `docs/archive/experimental/the_future_of_ai/README.md` | 60 | 🚀 The Future of AI: Physical Products Documentatio |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,7 +219,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-17 12:11 |
+| INDEX.md | docs | 363 | 2026-04-17 12:05 |
 | SESSION_1098_FIX_B_FULL_TICKET.md | plans | 318 | 2026-04-17 09:53 |
 | SESSION_1097_MYTHOLOGY_SWEEP_AND_AGENT_FIXES.md | handoffs | 97 | 2026-04-17 08:26 |
 | SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md | handoffs | 236 | 2026-04-16 22:23 |

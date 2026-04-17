@@ -173,16 +173,46 @@ def request_execution_cancel(
 
 
 def is_execution_cancelled(execution_id: _ExecutionIdLike) -> bool:
-    """Return True if ``request_execution_cancel`` was called for this id.
+    """Return True if ``request_execution_cancel`` was called for this id
+    OR for any ancestor in the execution tree (Session 1098 PR #4).
 
-    Fast path: single Redis HGET or dict lookup. Returns False on any
-    infrastructure error — we never want a broken Redis to make the
-    system claim "cancelled" spuriously.
+    The ancestor walk reads ``AgentExecution.parent_execution_id``. A
+    cancel on the root execution cancels every child still running. The
+    walk is capped at ``_MAX_ANCESTOR_DEPTH`` to prevent infinite loops
+    on malformed lineage data; past the cap, we treat further ancestors
+    as "unknown" and return the self-only result.
+
+    Returns False on any infrastructure error — a broken Redis or
+    missing AgentExecution row must never make the system claim
+    "cancelled" spuriously.
     """
     exec_id = _coerce_execution_id(execution_id)
     if not exec_id:
         return False
 
+    # Self check — fast path, no DB read.
+    if _raw_is_cancelled(exec_id):
+        return True
+
+    # Ancestor walk — single DB query per ancestor, capped.
+    try:
+        return _any_ancestor_cancelled(exec_id)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.debug(
+            "[cancel_registry] ancestor walk failed: %s — returning False",
+            exc,
+        )
+        return False
+
+
+# Session 1098 PR #4: cap the ancestor walk so malformed lineage data
+# (self-reference, cycle) can't trap the check in a loop. 25 is far
+# deeper than any legitimate dispatch tree we've observed.
+_MAX_ANCESTOR_DEPTH = 25
+
+
+def _raw_is_cancelled(exec_id: str) -> bool:
+    """Check the registry for an exact execution_id. No ancestor walk."""
     r = _get_redis()
     if r is not None:
         try:
@@ -195,6 +225,69 @@ def is_execution_cancelled(execution_id: _ExecutionIdLike) -> bool:
 
     with _mem_lock:
         return _mem_registry.get(exec_id, {}).get("cancelled") == "1"
+
+
+def _any_ancestor_cancelled(exec_id: str) -> bool:
+    """Walk parent_execution_id chain and return True on the first
+    cancelled ancestor. Returns False past the depth cap."""
+    try:
+        from core.models_unified_system import AgentExecution
+    except Exception:
+        # Model unavailable (tests importing this module without Django
+        # fully configured). No ancestor walk possible; return False.
+        return False
+
+    visited: set = set()
+    current = exec_id
+    depth = 0
+
+    while depth < _MAX_ANCESTOR_DEPTH:
+        if current in visited:
+            # Cycle detected — lineage data is malformed. Stop walking;
+            # fall through to "no cancelled ancestor found".
+            logger.warning(
+                "[cancel_registry] cycle detected in ancestor chain "
+                "starting from %s at %s — aborting walk",
+                exec_id, current,
+            )
+            return False
+        visited.add(current)
+
+        try:
+            row = AgentExecution.objects.filter(
+                id=current,
+            ).values('parent_execution_id').first()
+        except Exception as exc:
+            logger.debug(
+                "[cancel_registry] AgentExecution lookup failed for %s: %s",
+                current, exc,
+            )
+            return False
+
+        if not row:
+            # Execution row unknown — no more ancestors to check.
+            return False
+        parent_id = row.get('parent_execution_id')
+        if not parent_id:
+            # Reached root. No cancelled ancestor.
+            return False
+        parent_id_str = str(parent_id)
+
+        if _raw_is_cancelled(parent_id_str):
+            return True
+
+        current = parent_id_str
+        depth += 1
+
+    # Exhausted depth cap — treat as inconclusive (False) rather than
+    # infinite loop. Rigby's spec: "mark as inconclusive rather than
+    # infinite loop."
+    logger.warning(
+        "[cancel_registry] ancestor walk exceeded depth cap (%s) "
+        "starting from %s — treating as not-cancelled",
+        _MAX_ANCESTOR_DEPTH, exec_id,
+    )
+    return False
 
 
 def mark_observed(
