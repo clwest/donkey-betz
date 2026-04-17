@@ -334,6 +334,12 @@ The brief is your rubric. The draft is what you're grading."""
             else:
                 deliverable_content = str(enhanced_content)
 
+            # Session 1098 PR-B: Thread canary append kwargs when the caller
+            # passes them (e.g. _execute_gate_repair in core/tasks.py). When
+            # DELIVERABLE_APPEND_ENABLED + allowlist include EditorAgent, this
+            # routes edits to append_to_deliverable instead of creating a new
+            # row per repair pass — keeping the target Deliverable as the
+            # living canonical record.
             self._save_to_deliverable(
                 title=f"Edited Content: {content.get('title', task[:80])}",
                 content=deliverable_content,
@@ -342,6 +348,9 @@ The brief is your rubric. The draft is what you're grading."""
                 tags=['editing'] + focus_areas[:3],
                 metadata={'task': task[:200], 'focus_areas': focus_areas, 'blog_id': str(blog_id) if blog_id else None},
                 workspace_id=workspace_id,
+                append_to_deliverable_id=context.get('append_to_deliverable_id'),
+                expected_initiative_id=context.get('expected_initiative_id'),
+                append_chunk_index=context.get('append_chunk_index', 0),
             )
 
             return AgentResult(

@@ -7622,6 +7622,19 @@ def _execute_gate_repair(blog, repair_action: str) -> bool:
         # Session 1086 PR 3a+3b: Priority router consult + semaphore throttle
         from core.services.priority.enforce import check_priority, log_decision
         from core.services.priority.semaphore import acquire_for_decision
+        # Session 1098 PR-B: Find the existing Deliverable for this blog (if any)
+        # so the repair pass appends to the canonical record instead of spawning
+        # a new one. Combined with DELIVERABLE_APPEND_ENABLED + EditorAgent on
+        # the allowlist, this is the organic canary trigger.
+        existing_deliverable_id = None
+        try:
+            existing_deliverable = blog.deliverables.order_by('-created_at').first()
+            if existing_deliverable:
+                existing_deliverable_id = str(existing_deliverable.id)
+        except Exception as _e:
+            logger.debug(
+                f"[CONTENT-AUTONOMY] No deliverable lookup for blog {blog.id}: {_e}"
+            )
         _pd = check_priority('EditorAgent', task=f'Repair blog ({repair_action})', trigger_source='autonomous_beat')
         log_decision(_pd, 'EditorAgent')
         with acquire_for_decision(_pd, 'EditorAgent'):
@@ -7636,6 +7649,10 @@ def _execute_gate_repair(blog, repair_action: str) -> bool:
                     # Pin edited deliverable to the source blog's workspace so
                     # autonomous runs never inherit user.is_active as a default.
                     'workspace_id': str(blog.workspace_id) if blog.workspace_id else None,
+                    # Canary append wiring (gated by DELIVERABLE_APPEND_ENABLED
+                    # + EditorAgent on DELIVERABLE_APPEND_CANARY_AGENTS).
+                    'append_to_deliverable_id': existing_deliverable_id,
+                    'expected_initiative_id': str(blog.initiative_id) if blog.initiative_id else None,
                 },
                 scifi_context={},
                 spider_context={},
