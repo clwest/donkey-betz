@@ -215,6 +215,14 @@ class DiagnosticConfig:
     # Optional workspace id for the attention item (None = unassigned).
     workspace_id_env: str = ''
 
+    # ── Session 1096: anti-spam safety rails (Rigby's queued priority) ─────
+    # Hard daily post cap regardless of severity. Default 3 (morning + one
+    # escalation + one late-day change per Rigby's sizing). Escalation
+    # cannot override this — if we're already at cap, even a new critical
+    # gets rolled up, not posted. Prevents runaway diagnostics from
+    # flooding the governance inbox.
+    daily_post_cap: int = 3
+
     def __post_init__(self) -> None:
         if not self.cache_key_prefix:
             self.cache_key_prefix = self.name
@@ -350,6 +358,78 @@ def _date_bucket(now: datetime, timezone_name: str) -> str:
 
 
 # =============================================================================
+# Severity ordering (Session 1096 — anti-spam escalation rule)
+# =============================================================================
+
+# Rank values are totally ordered. Higher = more urgent. Escalation rule:
+# new post allowed if `rank(new) > rank(highest_posted_today)`, regardless
+# of the per-severity cooldown.
+_SEVERITY_RANK = {
+    None: -1,
+    '': -1,
+    'unknown': -1,
+    'low': 0,
+    'medium': 1,
+    'high': 2,
+    'critical': 3,
+}
+
+
+def _is_escalation(new_severity: Optional[str], prior_severity: Optional[str]) -> bool:
+    """True when `new_severity` is strictly higher urgency than `prior_severity`.
+
+    Used by the anti-spam rule to allow upward transitions (high → critical)
+    to bypass the one-per-day cap. Lateral moves (high → high with different
+    gate reasons) return False and get folded into the rollup counter.
+    """
+    new_rank = _SEVERITY_RANK.get((new_severity or '').lower(), -1)
+    prior_rank = _SEVERITY_RANK.get((prior_severity or '').lower(), -1)
+    return new_rank > prior_rank
+
+
+def _record_suppressed_event(
+    config: DiagnosticConfig,
+    suppressed_key: str,
+    entry: Dict[str, Any],
+) -> None:
+    """Append a suppressed-alert entry to the per-day rollup list.
+
+    Session 1096: when the escalation rule or daily cap blocks a new
+    post, the diagnostic shouldn't just vanish — instead we accumulate
+    them so the NEXT successful post can include rollup metadata.
+    Operators see "N additional alerts suppressed today" as context.
+
+    Uses a simple JSON list in cache. Cap entries at 50 to keep the
+    payload bounded; if we suppress more than 50 in a day something
+    else is wrong anyway.
+    """
+    from django.core.cache import cache
+    existing = cache.get(suppressed_key) or []
+    if not isinstance(existing, list):
+        existing = []
+    if len(existing) < 50:
+        existing.append(entry)
+    cache.set(suppressed_key, existing, timeout=30 * 3600)
+
+
+def _consume_suppressed_rollup(suppressed_key: str) -> List[Dict[str, Any]]:
+    """Read + clear the suppressed-alerts list. Called from run_diagnostic
+    right before a post fires so the rollup attaches to that post.
+    """
+    from django.core.cache import cache
+    entries = cache.get(suppressed_key) or []
+    if not isinstance(entries, list):
+        entries = []
+    # Clear immediately so the rollup doesn't double-ride into the NEXT
+    # post if there's a race. If delete fails, set to empty list instead.
+    try:
+        cache.delete(suppressed_key)
+    except Exception:
+        cache.set(suppressed_key, [], timeout=1)
+    return entries
+
+
+# =============================================================================
 # Dedupe + cooldown
 # =============================================================================
 
@@ -391,36 +471,73 @@ def _dedupe_and_cooldown_check(
     dedupe_key = f'{prefix}:dedupe:{date_bucket}:{dedupe_hash[:12]}'
     cooldown_key = f'{prefix}:cooldown:{severity}'
 
-    if cache.get(dedupe_key):
-        return {
-            'should_post': False,
-            'reason': f'dedupe_hit:{dedupe_hash[:12]}',
-            'dedupe_hash': dedupe_hash,
-            'dedupe_key': dedupe_key,
-            'cooldown_key': cooldown_key,
-            'cooldown_hours': cooldown_h,
-            'date_bucket': date_bucket,
-        }
+    # Session 1096 anti-spam keys (Rigby's queued priority from 1095 wrap)
+    max_sev_key = f'{prefix}:max_sev_today:{date_bucket}'
+    posts_today_key = f'{prefix}:posts_today:{date_bucket}'
+    suppressed_key = f'{prefix}:suppressed_today:{date_bucket}'
 
-    if cache.get(cooldown_key):
-        return {
-            'should_post': False,
-            'reason': f'cooldown_active:{severity}:{cooldown_h}h',
-            'dedupe_hash': dedupe_hash,
-            'dedupe_key': dedupe_key,
-            'cooldown_key': cooldown_key,
-            'cooldown_hours': cooldown_h,
-            'date_bucket': date_bucket,
-        }
-
-    return {
-        'should_post': True,
-        'reason': 'gates_clear',
+    base_result = {
         'dedupe_hash': dedupe_hash,
         'dedupe_key': dedupe_key,
         'cooldown_key': cooldown_key,
         'cooldown_hours': cooldown_h,
         'date_bucket': date_bucket,
+        'max_sev_key': max_sev_key,
+        'posts_today_key': posts_today_key,
+        'suppressed_key': suppressed_key,
+    }
+
+    if cache.get(dedupe_key):
+        return {
+            **base_result,
+            'should_post': False,
+            'reason': f'dedupe_hit:{dedupe_hash[:12]}',
+        }
+
+    # Session 1096: daily post cap — hard limit that escalation cannot
+    # override. Even a critical escalation gets rolled up once we're at
+    # cap. Rigby's rationale: "the gating layer that turns all this great
+    # detection work into something you can actually live with."
+    posts_today = int(cache.get(posts_today_key) or 0)
+    if posts_today >= config.daily_post_cap:
+        return {
+            **base_result,
+            'should_post': False,
+            'reason': f'daily_cap_exceeded:{posts_today}>={config.daily_post_cap}',
+            'posts_today': posts_today,
+        }
+
+    # Session 1096: severity escalation rule — one post per MT date_bucket
+    # per diagnostic UNLESS severity escalates upward. Lateral moves
+    # (same severity, different reasons) get rolled up into next post.
+    # Rigby's explicit 1096 answer: "Escalation-only (upward severity)
+    # by default. Same-severity with different gate reasons should not
+    # bypass the 'one per MT day bucket' guard."
+    prior_max_severity = cache.get(max_sev_key)
+    if prior_max_severity and not _is_escalation(severity, prior_max_severity):
+        return {
+            **base_result,
+            'should_post': False,
+            'reason': f'same_day_already_posted:{prior_max_severity}→{severity}',
+            'prior_max_severity': prior_max_severity,
+        }
+
+    # Short-window concurrent-run safety — blocks if another run of this
+    # diagnostic fires within the severity's cooldown window. Less strict
+    # than the daily rule above, but protects against two beats colliding.
+    if cache.get(cooldown_key):
+        return {
+            **base_result,
+            'should_post': False,
+            'reason': f'cooldown_active:{severity}:{cooldown_h}h',
+        }
+
+    return {
+        **base_result,
+        'should_post': True,
+        'reason': 'gates_clear',
+        'is_escalation': bool(prior_max_severity) and _is_escalation(severity, prior_max_severity),
+        'prior_max_severity': prior_max_severity,
     }
 
 
@@ -434,21 +551,42 @@ def _compose_body(
     gate: Dict[str, Any],
     narrative: Optional[str],
     narrative_error: Optional[str],
+    structured_payload: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, List[str]]:
     """Compose the attention item body per Template v1.
+
+    Session 1096: `structured_payload` (optional, for back-compat) carries
+    `escalation` + `suppressed_rollup` metadata from the run phase. When
+    present, the rendered body includes escalation badge + rollup block
+    so operators see the anti-spam context inline, not only in payload.
 
     Returns (body_markdown, recommended_actions_list).
     """
     severity = (gate.get('severity') or 'UNKNOWN').upper()
     headline = config.headline_builder(metrics, gate)
+    payload = structured_payload or {}
 
     lines: List[str] = [
         '## Headline',
         headline,
         '',
+    ]
+
+    # Session 1096: escalation badge — prominent hint when this post
+    # represents a severity upgrade from earlier today.
+    escalation = payload.get('escalation') or {}
+    if escalation.get('from') and escalation.get('to'):
+        lines.append(
+            f'> **⚠ Escalation:** `{escalation["from"]}` → `{escalation["to"]}` '
+            f'today. Earlier alert was not re-posted due to same-day rule; '
+            f'this post fires because severity increased.'
+        )
+        lines.append('')
+
+    lines.extend([
         '## Severity & Gate Reasons',
         f'- **Severity:** {severity}',
-    ]
+    ])
     reasons = gate.get('reasons') or []
     details = gate.get('reason_details') or []
     # zip tolerates unequal lengths — pads missing detail with empty string.
@@ -488,6 +626,30 @@ def _compose_body(
             '',
             f'_{config.agent_name} narrative unavailable: {narrative_error}_',
         ])
+
+    # Session 1096: suppressed-alerts rollup block — when earlier alerts
+    # today were blocked by the anti-spam rule, include the rolled-up
+    # list here so operators see the context of "this post is one of
+    # several today" without it being spammy.
+    rollup = payload.get('suppressed_rollup') or {}
+    if rollup.get('count'):
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+        lines.append(f'## Anti-Spam Rollup — {rollup["count"]} suppressed alert(s) today')
+        lines.append(rollup.get('note', ''))
+        entries = rollup.get('entries') or []
+        if entries:
+            lines.append('')
+            lines.append('Suppressed alert details:')
+            for entry in entries:
+                ts = (entry.get('ts') or '')[:19]
+                reasons_list = entry.get('reasons') or []
+                reasons_str = ', '.join(str(r) for r in reasons_list[:3]) if reasons_list else '(no reasons)'
+                lines.append(
+                    f'  - `{ts}` severity={entry.get("severity", "?")} '
+                    f'reasons={reasons_str} [{entry.get("skip_reason", "")}]'
+                )
 
     # Recommended Actions — always last per Template v1.
     extractor = config.recommended_actions_extractor or default_extract_recommended_actions
@@ -602,17 +764,37 @@ def run_diagnostic(config: DiagnosticConfig) -> Dict[str, Any]:
     if not gate.get('tripped'):
         return {'status': 'clear', 'gate': gate, 'metrics_summary': _summary(metrics)}
 
-    # ── 3. Dedupe + cooldown
+    # ── 3. Dedupe + cooldown + Session 1096 anti-spam rails
     dedupe_check = _dedupe_and_cooldown_check(config, now, gate, metrics)
     if not dedupe_check['should_post']:
         logger.info(
             '[%s] gate tripped (severity=%s) but skipping: %s',
             prefix, gate.get('severity'), dedupe_check['reason'],
         )
+        # Session 1096: track suppressed alerts so the next successful
+        # post can include rollup metadata. Only increment on the anti-
+        # spam rules (same_day_already_posted / daily_cap_exceeded) —
+        # dedupe hits are "same shape twice" noise, not rollup-worthy.
+        skip_reason = dedupe_check['reason']
+        if skip_reason.startswith(('same_day_already_posted', 'daily_cap_exceeded')):
+            try:
+                rollup_entry = {
+                    'ts': now.isoformat(),
+                    'severity': gate.get('severity'),
+                    'reasons': gate.get('reasons', []),
+                    'skip_reason': skip_reason,
+                }
+                _record_suppressed_event(
+                    config,
+                    suppressed_key=dedupe_check['suppressed_key'],
+                    entry=rollup_entry,
+                )
+            except Exception as e:
+                logger.warning('[%s] rollup counter failed (non-fatal): %s', prefix, e)
         return {
             'status': 'gated_by_dedupe_or_cooldown',
             'gate': gate,
-            'skip_reason': dedupe_check['reason'],
+            'skip_reason': skip_reason,
             'dedupe_hash': dedupe_check['dedupe_hash'],
         }
 
@@ -649,6 +831,31 @@ def run_diagnostic(config: DiagnosticConfig) -> Dict[str, Any]:
         metrics, gate, dedupe_check['dedupe_hash'], agent_async_id, dispatch_error,
     )
 
+    # Session 1096: drain any suppressed alerts from today and attach
+    # them as rollup metadata. Consumed (deleted) at read time so they
+    # don't double-ride into the next fired post.
+    try:
+        suppressed = _consume_suppressed_rollup(dedupe_check['suppressed_key'])
+        if suppressed:
+            structured_payload['suppressed_rollup'] = {
+                'count': len(suppressed),
+                'entries': suppressed[:10],  # cap the payload
+                'note': (
+                    'Earlier alerts today were suppressed by the anti-spam '
+                    'rule (same-day already-posted or daily-cap). This post '
+                    f'carries {len(suppressed)} rolled-up suppressed events.'
+                ),
+            }
+    except Exception as e:
+        logger.warning('[%s] rollup consumption failed (non-fatal): %s', prefix, e)
+
+    # Surface escalation status for downstream templating
+    if dedupe_check.get('is_escalation'):
+        structured_payload['escalation'] = {
+            'from': dedupe_check.get('prior_max_severity'),
+            'to': gate.get('severity'),
+        }
+
     # ── 6. Observation mode
     if not posting_enabled:
         logger.info(
@@ -665,15 +872,32 @@ def run_diagnostic(config: DiagnosticConfig) -> Dict[str, Any]:
             'dedupe_hash': dedupe_check['dedupe_hash'],
         }
 
-    # ── 7. Set dedupe/cooldown NOW so concurrent runs can't double-post
+    # ── 7. Set dedupe/cooldown/anti-spam state NOW so concurrent runs
+    # and same-day reruns can't double-post. Session 1096 adds max_sev
+    # tracker + posts_today counter so the escalation + cap rules
+    # persist across beats within a day_bucket.
     try:
         cache.set(dedupe_check['dedupe_key'], '1', timeout=config.dedupe_ttl_hours * 3600)
         cache.set(
             dedupe_check['cooldown_key'], now.isoformat(),
             timeout=dedupe_check['cooldown_hours'] * 3600,
         )
+        # Session 1096: upgrade max_severity_today if this post is higher
+        # than the prior day's highest. TTL = 30h so it covers a full day
+        # bucket with some slack on either side.
+        sev = gate.get('severity') or 'unknown'
+        prior = cache.get(dedupe_check['max_sev_key'])
+        if prior is None or _is_escalation(sev, prior):
+            cache.set(dedupe_check['max_sev_key'], sev, timeout=30 * 3600)
+        # Session 1096: increment posts_today counter. Using incr() when
+        # available, falling back to get+set.
+        try:
+            cache.incr(dedupe_check['posts_today_key'])
+        except ValueError:
+            # Key didn't exist yet — initialize
+            cache.set(dedupe_check['posts_today_key'], 1, timeout=30 * 3600)
     except Exception as e:
-        logger.warning('[%s] dedupe/cooldown set failed (non-fatal): %s', prefix, e)
+        logger.warning('[%s] dedupe/cooldown/anti-spam set failed (non-fatal): %s', prefix, e)
 
     # ── 8. Enqueue post task
     if not config.post_task_import_path:
@@ -830,7 +1054,10 @@ def post_diagnostic(
         agent_async_task_id, structured_payload.get('dispatch_error'), prefix
     )
 
-    body, actions = _compose_body(config, metrics, gate, narrative, narrative_error)
+    body, actions = _compose_body(
+        config, metrics, gate, narrative, narrative_error,
+        structured_payload=structured_payload,
+    )
 
     # Final payload = structured_payload + agent follow-up data, size-capped
     final_payload = dict(structured_payload)
