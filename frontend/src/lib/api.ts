@@ -2324,6 +2324,15 @@ export const mythologyApi = {
   submitReview: (data: { content_id: string; decision: string; notes?: string }) =>
     api.post('/mythology/review/', data),
 
+  // Session 1095 Tier 1b: bulk-review by pattern_type — unblocks the
+  // FP backlog when a single over-broad pattern dominates the queue.
+  bulkReview: (data: {
+    pattern_type: string
+    action: 'approve' | 'remove' | 'flag_false_positive' | 'verified_safe' | 'verified_hallucination'
+    notes?: string
+    priority?: 'critical' | 'high' | 'medium' | 'low'
+  }) => api.post('/mythology/bulk-review/', data),
+
   // Recent events for Neural Scan section
   recentEvents: (params?: { limit?: number; severity?: string }) =>
     api.get('/mythology/recent-events/', { params }),

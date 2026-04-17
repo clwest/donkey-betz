@@ -73,6 +73,14 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Deliverable status signals not available
 
+        # Session 1095 Tier 1b: Connect MythologyAlert → HAI bridge so
+        # critical/high mythology alerts surface in the governance inbox.
+        try:
+            from core.signals import connect_mythology_alert_signals
+            connect_mythology_alert_signals()
+        except ImportError:
+            pass  # Mythology alert signals not available
+
         # Session 873: Connect experiment linker signals for halt system instrumentation
         try:
             from core.services.experiment_linker import connect_experiment_linker_signals
