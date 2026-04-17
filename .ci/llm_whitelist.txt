@@ -1,0 +1,176 @@
+# Session 1098 PR #A2 — llm_call_wrapper direct-call lint whitelist.
+#
+# Paths are relative to repo root. One entry per line. Entries ending in
+# `/` match everything under that directory; other entries match an exact
+# file or a prefix starting with `<entry>/`.
+#
+# Lines starting with `#` are comments.
+#
+# Every entry here is a path where direct provider-SDK calls are
+# intentionally allowed. The long-term target is to shrink this list to
+# just the wrapper, the provider registry, and tests.
+#
+# See tools/check_direct_llm_calls.py for the checker.
+# See docs/plans/SESSION_1098_FIX_B_FULL_TICKET.md for the broader plan.
+
+
+# ── Canonical LLM-call boundaries ──────────────────────────────────────
+# These are the ONLY places that should call provider SDKs directly.
+# Every other call site migrates through llm_call_wrapper.
+
+core/services/llm_call_wrapper.py
+core/services/llm_provider_registry.py
+
+
+# ── Test suites ────────────────────────────────────────────────────────
+# Tests may mock or directly invoke SDKs for isolation.
+
+core/tests/
+tests/
+
+
+# ── Tooling / scripts ──────────────────────────────────────────────────
+# The checker itself has to contain the regex patterns it searches for.
+
+tools/check_direct_llm_calls.py
+
+# LLM enforcer is the instrumentation harness that wraps the SDK; it
+# pre-dates the Session 1098 wrapper and is itself a boundary layer.
+
+core/llm_enforcer.py
+
+
+# ── Temporary hotspot exemptions (remediate in follow-up PRs) ──────────
+# These are the top direct-SDK call sites identified in the Session 1098
+# PR #1 scan. Remove each entry as it migrates to the wrapper. Do NOT
+# add new entries here; add a wrapper adoption instead.
+#
+# Tracking ticket: https://github.com/clwest/donkey-betz-platform/issues
+# (or the B-full plan doc if the issue tracker isn't in use yet)
+
+# Tier 1 — highest prod frequency
+core/agents/content_writer_agent.py
+core/tasks_initiatives.py
+core/agents/analysis/market_intelligence_agent.py
+core/agents/code_review_agent.py
+core/agents/devops_agent.py
+
+# Tier 2 — moderate frequency / narrower blast radius
+core/agents/fullstack_developer_agent.py
+core/agents/autonomous_content_studio_coordinator.py
+core/agents/technical_document_agent.py
+core/agents/ai_series_workflow_agent.py
+core/agents/blockchain/blockchain_audit_coordinator.py
+core/agents/blockchain/smart_contract_auditor_agent.py
+core/agents/markets/prediction_market_analyst.py
+core/agents/markets/sports_odds_analyst.py
+
+# Tier 3 — low frequency batch / script-adjacent
+core/tasks.py
+core/tasks_content.py
+core/views_image_helpers.py
+core/views_image_tools.py
+core/views_rag_embeddings.py
+core/views_time_capsules.py
+core/views_auto_fix.py
+core/models_unified_system.py
+core/super_platform/coordinator.py
+core/codejobs/implementation.py
+core/personal_ai_assistant.py
+core/personal_ai_assistant_enhanced.py
+
+# Tier 4 — management commands (run manually; remediate when touched)
+core/management/commands/sync_agent_learning.py
+core/management/commands/selfpatch.py
+core/management/commands/ragtest.py
+core/management/commands/full_system_demo.py
+core/management/commands/force_agent_cycle.py
+core/management/commands/fix_episode_titles.py
+core/management/commands/agent_introduction_party.py
+core/management/commands/backfill_decision_summaries.py
+
+
+# ── ai_core/ app — parallel agent tree (same migration strategy) ───────
+# These files were identified by the Session 1098 PR #1 scan but live in
+# the ai_core/ app rather than core/. Remediate with the same wrapper
+# adoption pattern.
+
+ai_core/agents/agent_llm_integration.py
+ai_core/api/freelance_api.py
+ai_core/intelligence/income_builder.py
+ai_core/intelligence/proposal_manager.py
+ai_core/llm_adapter_async.py
+
+
+# ── Other apps with direct SDK calls (remediate per tier) ──────────────
+
+coleadership/reflections.py
+content/ai_providers.py
+pipelines/services.py
+
+# intelligence/ app — agent executor & factory
+intelligence/agent_execution_pipeline.py
+intelligence/agent_executor.py
+intelligence/agent_factory.py
+intelligence/enhanced_problem_solver.py
+intelligence/real_agents.py
+
+
+# ── Additional core/ files surfaced in full scan ───────────────────────
+# Not in the PR #1 top-5, but still direct-SDK. Remediate with the wrapper.
+
+core/agent_slack_consumer.py
+core/agents/base_agent.py
+core/agents/blockchain/exploit_detector_agent.py
+core/agents/blockchain/transaction_monitor_agent.py
+core/agents/blockchain/whale_watcher_agent.py
+core/agents/business/base_business_research_agent.py
+core/agents/code_generator_agent.py
+core/agents/content/voice_critic_agent.py
+core/agents/decision_enforcer_agent.py
+core/agents/narrative/narrative_drift_coordinator.py
+core/agents/platform_audit_agent.py
+core/agents/prompt_engineering_agent.py
+core/agents/stocks/
+core/agents/system_intelligence_agent.py
+core/agents/thinking_agent.py
+core/channel_orchestrator.py
+core/conversation_orchestrator.py
+core/services/ai_decision_promoter.py
+core/services/artifact_extraction.py
+core/services/checklist_content_generator.py
+core/services/claude_code_agent.py
+core/services/claude_code_engineer.py
+core/services/content_pipeline.py
+core/services/decision_extractor.py
+core/services/discord_bot.py
+core/services/discord_voice.py
+core/services/domain_extraction_service.py
+core/services/evidence_gatherer.py
+core/services/income_action_service.py
+core/services/initiative_title_generator.py
+core/services/persona_advisor_service.py
+core/services/research_orchestrator.py
+core/services/review_document.py
+core/services/side_chat.py
+core/services/tts_optimizer.py
+core/services/weekly_synthesis.py
+core/tasks_conversations.py
+core/tasks_ops.py
+core/views_agent_training.py
+core/views_ai_learning_api.py
+core/views_image_workflow.py
+core/views_predictions.py
+core/views_project_intelligence.py
+
+
+# ── Testing scripts (manual/debug; remediate when touched) ─────────────
+
+scripts/spiders/
+scripts/testing/
+
+
+# ── Root-level utility scripts ─────────────────────────────────────────
+
+rag_docs.py
+style_memory/style_extractor.py
