@@ -715,14 +715,96 @@ def submit_review(request):
             review_notes=notes,
             confidence_rating=5  # Default confidence
         )
-        
+
+        # Session 1095 Tier 1: feed the review back to pattern quality tuning.
+        # Over-broad patterns that produce false positives gradually lose
+        # severity weight and eventually auto-disable. Correct catches
+        # reinforce the pattern.
+        tuning_result = {}
+        try:
+            from .feedback_tuning import tune_patterns_from_review
+            tuning_result = tune_patterns_from_review(flagged, action)
+        except Exception as e:
+            logger.warning(f"Pattern tuning failed for review {review.id}: {e}")
+
         return Response({
             'success': True,
-            'message': f'Content has been {action}d successfully'
+            'message': f'Content has been {action}d successfully',
+            'pattern_tuning': tuning_result,
         }, status=200)
     except Exception as e:
         logger.error(f"Submit review error: {e}")
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_review(request):
+    """Session 1095 Tier 1: bulk-review pending FlaggedHallucinations by pattern.
+
+    When an over-broad regex produces hundreds of false-positive flags,
+    operators shouldn't have to click through each one. This endpoint
+    marks all pending flags matching a `pattern_type` with a single
+    review action, and applies pattern tuning ONCE (not N times) to
+    avoid unfairly nuking a pattern's severity from one bulk action.
+
+    Request body:
+        {
+            "pattern_type": "dangerous_myth",
+            "action": "flag_false_positive",
+            "notes": "regex catches research content about legal topics",
+            "priority": "critical"  // optional filter
+        }
+
+    Response:
+        {
+            "success": true,
+            "reviewed_count": 312,
+            "new_status": "false_positive",
+            "pattern_tuning": {
+                "patterns_updated": 1,
+                "auto_disabled": [],
+                "action_class": "false_positive"
+            }
+        }
+    """
+    try:
+        pattern_type = request.data.get('pattern_type', '').strip()
+        action = request.data.get('action', '').strip()
+        notes = request.data.get('notes', '')
+        priority = request.data.get('priority', '').strip() or None
+
+        if not pattern_type or not action:
+            return Response({
+                'success': False,
+                'message': 'pattern_type and action are required',
+            }, status=400)
+
+        valid_actions = {
+            'approve', 'remove', 'flag_false_positive',
+            'verified_safe', 'verified_hallucination',
+        }
+        if action not in valid_actions:
+            return Response({
+                'success': False,
+                'message': f'Invalid action. Must be one of: {sorted(valid_actions)}',
+            }, status=400)
+
+        from .feedback_tuning import bulk_review_by_pattern
+        result = bulk_review_by_pattern(
+            pattern_type=pattern_type,
+            review_action=action,
+            reviewer=request.user,
+            notes=notes,
+            priority_filter=priority,
+        )
+        return Response({
+            'success': True,
+            **result,
+        }, status=200)
+    except Exception as e:
+        logger.exception(f"Bulk review error: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
 
 
 @api_view(['POST'])
