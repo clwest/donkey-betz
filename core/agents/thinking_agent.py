@@ -16,7 +16,7 @@ from typing import Dict, Any
 from django.utils import timezone
 from django.db.models import Count
 
-from .base_agent import BaseAgent
+from .base_agent import AgentResult, BaseAgent
 from ml.auto_selection import TaskType
 from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
 
@@ -1130,7 +1130,6 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
         """
         import asyncio
         import time
-        from .base_agent import AgentResult
 
         start_time = time.time()
 
