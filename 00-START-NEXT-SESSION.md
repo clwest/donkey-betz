@@ -133,7 +133,33 @@ CTOAgent queries live `AgentExecution` data and produces accurate platform analy
 
 ## SESSION 1094 — PRIORITIES
 
-### 1. Roll out CTO daily diagnostic (Chris to execute)
+### 1. Generalize the CTO diagnostic pattern across other agents (Chris's directive end of Session 1093)
+The CTOAgent daily diagnostic shipped in PR #1983 isn't really a CTO-specific feature — it's a reusable **scheduled-agent-as-monitor primitive**. The shape:
+1. Periodically gather facts from platform/domain state (DB queries, live signals)
+2. Score against thresholds (avoids spam)
+3. Dispatch the relevant agent for a narrative analysis
+4. Post structured attention item via `attention_bridge.create_diagnostic_alert(...)`
+5. Dedupe + cooldown prevent re-posting identical shapes
+
+Any agent whose output describes some aspect of platform/market/business state could plug into this pattern with config changes (gate thresholds, queries, prompt).
+
+**First-pass candidates to evaluate** (not exhaustive — Rigby + Chris should refine):
+
+| Cadence | Candidates | Sketch |
+|---|---|---|
+| Daily ops | COOAgent, PlatformAuditAgent, SystemIntelligenceAgent | workspace activity, deliverable throughput, decision velocity, broken pipelines |
+| Daily intel | TrendAnalysisAgent, MarketIntelligenceAgent, OpportunityScoringAgent | spider-data trends, top opportunities, signal anomalies |
+| Daily/weekly domain | StockAuditCoordinator, BlockchainAuditCoordinator, NarrativeDriftCoordinator, ContentDiversityOrchestrator | per-domain anomaly digests |
+| Weekly strategy | CompetitorAnalysisAgent, BrandStrategyAgent, ContentStrategyAgent | competitor moves, brand health, content performance |
+
+**First step (recommended approach):**
+- Extract the CTO diagnostic skeleton from `core/tasks_ops.py` into a generic `scheduled_diagnostic_runner(agent_name, metrics_collector, gate_evaluator, prompt_builder, ...)` so adding a new diagnostic is a config object, not a 580-line copy-paste.
+- Then enumerate which agents are well-suited (output is narrative/synthesis, has live data to gate on, value to read daily/weekly).
+- Add diagnostics one at a time, behind per-diagnostic feature flags, all default OFF.
+
+Full reference for the existing CTO diagnostic in `core/tasks_ops.py` module docstring above `_impl_run_cto_daily_diagnostic`.
+
+### 2. Roll out CTO daily diagnostic (Chris to execute)
 After PR #1983 merges, set `CTO_DIAGNOSTIC_ENABLED=true` on local for 24 h, observe gate behavior in logs (look for `[CTO-DIAG]` log lines), tune thresholds via `CTO_DIAG_*` env vars if needed, then flip `CTO_DIAGNOSTIC_POSTING_ENABLED=true` → daily attention items begin landing in governance inbox. Full reference in `core/tasks_ops.py` module docstring above `_impl_run_cto_daily_diagnostic`.
 
 ### 2. PA router misroute follow-up
