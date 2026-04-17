@@ -4109,18 +4109,8 @@ def _cto_diag_dedupe_and_cooldown(severity: str, gate: dict, metrics: dict) -> d
 
     # Dedupe key: hash of (date_bucket, severity, reasons, rounded rates,
     # top_5 agents, top_5 signatures). Stable across small reordering.
-    # date_bucket uses Mountain Time so the dedupe boundary aligns with
-    # Chris's working day (rolls over at MT midnight, not UTC midnight).
-    try:
-        import zoneinfo as _zi
-        date_bucket = (
-            timezone.now().astimezone(_zi.ZoneInfo('America/Denver'))
-            .strftime('%Y-%m-%d')
-        )
-    except Exception:
-        date_bucket = timezone.now().strftime('%Y-%m-%d')
     dedupe_payload = {
-        'date_bucket': date_bucket,
+        'date_bucket': timezone.now().strftime('%Y-%m-%d'),
         'severity': severity,
         'gate_reasons': sorted(gate['reasons']),
         'fail_rate_24h': round(metrics['window_24h']['fail_rate'], 3),
@@ -4170,65 +4160,6 @@ def _cto_diag_dedupe_and_cooldown(severity: str, gate: dict, metrics: dict) -> d
         'cooldown_key': cooldown_key,
         'cooldown_hours': cooldown_h,
     }
-
-
-def _cto_diag_extract_recommended_actions(
-    narrative: str, max_actions: int = 3
-) -> list:
-    """Pull bullet items from a 'Recommended Actions' / 'Recommended actions'
-    section in the CTOAgent narrative and hard-cap at max_actions. The
-    CTOAgent prompt explicitly asks for this section, but the LLM
-    occasionally returns 4-5 bullets or wraps them in numbered lists —
-    this normalizes both shapes and enforces the cap.
-
-    Returns a list of action strings (no leading bullet/number markers).
-    Empty list if no recognizable section is found.
-    """
-    if not narrative:
-        return []
-    import re as _re
-    # Find a heading line matching either:
-    #   "**Recommended Actions:**" / "**Recommended actions:**"
-    #   "## Recommended Actions" / "### Recommended Actions"
-    #   "Recommended Actions:" (plain)
-    pattern = _re.compile(
-        r'(?:^|\n)\s*(?:#{1,4}\s*|\*\*)?\s*'
-        r'recommended\s+actions?'
-        r'(?:\s*\(.*?\))?'   # tolerate "(max 3)" suffix
-        # Closing punctuation is wildly variable: "**", ":**", "**:",
-        # ":", or nothing. Accept any combination ending at newline.
-        r'[:\*\s]*\n',
-        flags=_re.IGNORECASE,
-    )
-    m = pattern.search(narrative)
-    if not m:
-        return []
-    section = narrative[m.end():]
-    # Stop at the next heading or "## Confidence" / "Confidence:" since
-    # the prompt asks for that as the next/last section.
-    stop = _re.search(
-        r'\n\s*(?:#{1,4}\s*|\*\*)?\s*confidence\b',
-        section, flags=_re.IGNORECASE,
-    )
-    if stop:
-        section = section[:stop.start()]
-    # Also stop at the next markdown heading
-    next_heading = _re.search(r'\n\s*#{1,4}\s+\S', section)
-    if next_heading:
-        section = section[:next_heading.start()]
-    # Extract bullets — accept "- ", "* ", "1. ", "1) ", or numeric prefix
-    bullet_pattern = _re.compile(
-        r'^\s*(?:[-*]|\d+[.)])\s+(.+?)(?=\n\s*(?:[-*]|\d+[.)])\s+|\Z)',
-        flags=_re.MULTILINE | _re.DOTALL,
-    )
-    items = [m.group(1).strip() for m in bullet_pattern.finditer(section)]
-    # Clean: collapse internal whitespace, strip trailing periods we added
-    cleaned = []
-    for it in items:
-        normalized = ' '.join(it.split())
-        if normalized:
-            cleaned.append(normalized)
-    return cleaned[:max_actions]
 
 
 def _cto_diag_build_agent_prompt(metrics: dict, gate: dict) -> str:
@@ -4380,17 +4311,9 @@ def _impl_run_cto_daily_diagnostic():
 
     # ── 5. Build the title + structured payload now (no narrative yet — that's
     #     filled in by the follow-up post task once CTOAgent completes).
-    # Title date is in Mountain Time so the date matches Chris's working
-    # timezone (the beat fires at 7:15 AM MT, so the diagnostic is "today's
-    # report" from a MT perspective). Falls back to UTC if zoneinfo is missing.
-    try:
-        import zoneinfo as _zi
-        date_label = now.astimezone(_zi.ZoneInfo('America/Denver')).strftime('%Y-%m-%d')
-    except Exception:
-        date_label = now.strftime('%Y-%m-%d')
     title = (
         f'CTO Daily Diagnostic — '
-        f'{date_label} — '
+        f'{now.strftime("%Y-%m-%d")} — '
         f'{gate["severity"].upper()} — '
         f'fail24h {metrics["window_24h"]["fail_rate"] * 100:.1f}% '
         f'(Δ{metrics["delta_vs_7d"] * 100:+.1f}pp)'
@@ -4558,36 +4481,17 @@ def _impl_post_cto_daily_diagnostic(
                 cto_async_task_id, cto_error,
             )
 
-    # ── Compose body — Template v1 (locked headings/order, Session 1093 P1)
-    #
-    # Stable structure for human scannability:
-    #   ## Headline           (1 line — always first, gives the punchline)
-    #   ## Severity + Reasons (gate output)
-    #   ## 24h Metrics        (numbers)
-    #   ## Top Failing Agents (top 5)
-    #   ## Top Failure Signatures (top 5)
-    #   [## New Failure Signatures] (only if any)
-    #   ## CTOAgent Analysis  (LLM narrative — includes Recommended Actions)
-    #   ## Recommended Actions (max 3) — extracted/capped from CTO narrative
-    headline_reason = gate['reasons'][0] if gate['reasons'] else 'gate_tripped'
-    headline = (
-        f'{severity.upper()} — fail24h '
-        f'{metrics["window_24h"]["fail_rate"] * 100:.1f}% '
-        f'(Δ{metrics["delta_vs_7d"] * 100:+.1f}pp vs 7d) — '
-        f'primary trigger: `{headline_reason}`'
-    )
+    # ── Compose body
     body_lines = [
-        '## Headline',
-        headline,
+        f'**Severity:** {severity.upper()}',
         '',
-        '## Severity & Gate Reasons',
-        f'- **Severity:** {severity.upper()}',
+        '**Gate reasons:**',
         *[
             f'- `{r}` — {d}'
             for r, d in zip(gate['reasons'], gate['reason_details'])
         ],
         '',
-        '## 24h Metrics',
+        '**24h metrics:**',
         f'- Total executions: {metrics["window_24h"]["total"]}',
         f'- Failed: {metrics["window_24h"]["failed"]} '
         f'({metrics["window_24h"]["fail_rate"] * 100:.2f}%)',
@@ -4596,13 +4500,13 @@ def _impl_post_cto_daily_diagnostic(
         f'(7d rate {metrics["window_7d"]["fail_rate"] * 100:.2f}%)',
         f'- Timeout failures: {metrics["window_24h"]["timeout_failed"]}',
         '',
-        '## Top Failing Agents (24h)',
+        '**Top failing agents (24h):**',
         *[
             f'- {r["agent__name"] or "Unknown"}: {r["count"]}'
             for r in metrics['top_failing_agents_24h'][:5]
         ],
         '',
-        '## Top Failure Signatures (24h)',
+        '**Top failure signatures (24h):**',
         *[
             f'- `{s["task_name"]}` / `{s["error_type"]}`: {s["count"]}'
             for s in metrics['top_signatures_24h'][:5]
@@ -4611,7 +4515,7 @@ def _impl_post_cto_daily_diagnostic(
     if metrics['new_signatures_24h']:
         body_lines.extend([
             '',
-            '## New Failure Signatures (24h)',
+            '**New failure signatures (24h):**',
             *[
                 f'- `{s["task_name"]}` / `{s["error_type"]}`: {s["count"]}'
                 for s in metrics['new_signatures_24h'][:5]
@@ -4624,19 +4528,6 @@ def _impl_post_cto_daily_diagnostic(
             '', '---', '',
             f'_CTOAgent narrative unavailable: {cto_error}_',
         ])
-
-    # ── Recommended Actions (max 3) — extracted from CTO narrative + hard
-    #     capped. Lives at the BOTTOM (after the analysis) so a reader
-    #     scrolling for "what do I do" finds it last → "freshest in mind".
-    actions = _cto_diag_extract_recommended_actions(cto_narrative, max_actions=3)
-    body_lines.extend(['', '---', '', '## Recommended Actions (max 3)'])
-    if actions:
-        body_lines.extend(f'{i + 1}. {a}' for i, a in enumerate(actions))
-    else:
-        body_lines.append(
-            '_None extracted from CTOAgent narrative — review the analysis '
-            'above and the failing-agent breakdown for next steps._'
-        )
 
     body = '\n'.join(body_lines)
 
