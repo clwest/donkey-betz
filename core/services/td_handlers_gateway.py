@@ -791,6 +791,11 @@ class GatewayHandlersMixin:
                     'core.tasks.check_content_diversity',
                     'core.tasks.run_body_system_check',
                     'core.tasks.backfill_deliverable_workspaces',
+                    # Session 1098 PR-C: on-demand canary priming via
+                    # DELIVERABLE_APPEND gate-repair path (EditorAgent).
+                    # Budget-preflight protected + idempotent under repeat
+                    # presses (lock + needs_enhancement queue shrinks).
+                    'core.tasks.content_autonomy_loop',
                 }
 
                 if task_name not in ALLOWED_TASKS:
