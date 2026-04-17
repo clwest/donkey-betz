@@ -17,10 +17,10 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-**Date:** April 16, 2026 (end of Session 1091)
-**Previous session handoff:** [`docs/handoffs/SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md`](docs/handoffs/SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md)
+**Date:** April 16, 2026 (end of Session 1092)
+**Previous session handoff:** [`docs/handoffs/SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md`](docs/handoffs/SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md)
 **Previous session PA conversation (LOCAL):** `pa-3966231ba0d140e7` — Chris creates a new one each session, so ask him for the new ID before your first Rigby message.
-**Status:** Both Session-1090 SLO breaches closed at the source. Workspace/Deliverable flow verification sprint complete. 7 PRs merged (#1963–#1969). Post-merge soak GREEN locally. Railway auto-deploy in flight.
+**Status:** 11 PRs merged (#1972–#1981) covering governance noise reduction, full Rigby→Agent→Deliverable canary loop closure, and platform reliability (~9.7% → projected ~4% failure rate). Canary v8 step 1 was in flight at session boundary — verify first thing.
 
 ---
 
@@ -65,6 +65,46 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
+## SESSION 1092 — What Was Accomplished (11 PRs: #1972–#1981)
+
+| PR | Title | Impact |
+|----|-------|--------|
+| **#1972** | Governance noise gates (StockAudit + Fed Alert) | Killed top 3 critical attention items + Fed Alert spam cluster |
+| **#1973** | `deliverable_tool.detail` workspace fields | `is_orphan` was always `true` because detail dropped `workspace_id`. workspace-flow-canary unblocked |
+| **#1974** | `run_agent` schema `workspace_id` param | Rigby can target workspaces structurally — closes the agent dispatch loop |
+| **#1975** | ResearchAgent keyword extraction (3 layered bugs) | Real research instead of "alex anal balanced based" garbage queries |
+| **#1976** | ContentStrategyAgent else-branch persistence | Conversational replies now persist (was silently dropping) |
+| **#1977** | ContentStrategyAgent content serialization | Tool_calls branch no longer fails 300-char gate |
+| **#1978** | Shared BaseAgent renderer + 10-agent migration | `_render_agent_output_markdown` covers VideoAgent, AudioAgent, ImageEditingAgent, etc. — systemic MESSAGE-ONLY fix |
+| **#1979** | EditorAgent dispatcher fallback | 8/9 EditorAgent fails recovered. **Editor only edits — fail-loud preserved** (Chris's framing) |
+| **#1980** | ThinkingAgent `re` shadowing | UnboundLocalError from in-function `import re` shadowing module-level. One-line removal |
+| **#1981** | `AgentControlEntry.blocked_at` hygiene + backfill | CTOAgent forensics unblocked. `save()` override + management command |
+
+### Key infrastructure built / changed:
+- **`core/services/editor_dispatch_helpers.py`** — shared `gather_workspace_content_for_editor()`. Used by both PA tool dispatch AND conversation action dispatch (was missing from the latter).
+- **`BaseAgent._render_agent_output_markdown(...)`** — generic content renderer that always produces >300 chars for non-trivial output. Replaces 10 agents' broken `content=result.message` pattern.
+- **`AgentControlEntry.save()` override** — auto-populates `blocked_at` on transition non-blocked → blocked. Plus backfill management command for legacy rows.
+- **Expanded STOPWORDS in `search_strategy_service.py`** — 40+ instruction-meta words filtered.
+- **`tune_fed_alert_triggers` management command** — idempotent. Apply on Railway after deploy.
+- **`backfill_agent_control_blocked_at` management command** — idempotent. Apply on Railway after deploy.
+
+### CTOAgent diagnostic primitive validated (queued for Session 1093):
+CTOAgent queries live `AgentExecution` data and produces accurate platform analyses. Verified within 2% on totals, success_rate, top-N agents. Chris: *"if these are real issues this might be the best way to address them."* Operationalize as scheduled diagnostic in Session 1093.
+
+### Platform failure rate trajectory:
+9.7% → ~6.5% (AudioAgent block aging out) → ~5.1% (post #1979) → ~4.4% (post #1980) → **~4% projected steady-state** (60% reduction from session start)
+
+### Tests added:
+8 new test files / ~50 tests, all passing. Full regression sweep clean.
+
+### Patterns learned worth carrying forward:
+- **EditorAgent fail-loud principle**: caller-side fixes only. Don't mask caller bugs at the agent layer.
+- **SAFE vs TRUE_BUG audit refinement**: pattern-grepping flags candidates; live runtime check confirms. (10 of 23 MESSAGE-ONLY were actually broken; 13 were fine.)
+- **In-function imports shadow module-level imports** for the whole function — even in never-taken branches. Watch for `UnboundLocalError` on a name that's already imported at the top.
+- **CTOAgent as scheduled diagnostic primitive** — agent that synthesizes from live DB is accurate and actionable.
+
+---
+
 ## SESSION 1091 — What Was Accomplished (7 PRs: #1963–#1969)
 
 | PR | Title | Impact |
@@ -91,7 +131,54 @@ PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
 
 ---
 
-## SESSION 1092 — PRIORITIES
+## SESSION 1093 — PRIORITIES
+
+### 1. Verify canary v8 (in-flight from Session 1092)
+ResearchAgent step 1 dispatched at 2026-04-17 01:28:57 UTC, execution_id `18f7a2eb-07e4-4c99-917c-bc567e4d385b`. Verify it completed cleanly and a deliverable landed in workspace-flow-canary (`af61c625-2cf1-4e70-82b2-d44e301f897e`). Then dispatch **Step 2 EditorAgent without content/blog_id in context** to prove the dispatcher-side workspace gather (#1979) auto-injects Step 1's deliverable. Acceptance: both deliverables status=ready, content_len>300, EditorAgent's content references ResearchAgent's findings.
+
+### 2. Operationalize CTOAgent as scheduled diagnostic (Chris's request)
+Wire CTOAgent as a daily Celery beat task. Agent already produces accurate platform analyses from live data (verified Session 1092 — within 2% on totals/success_rate/top-N). Files to touch: `core/tasks.py` (new beat task), use `execute_agent_task.delay`, post output to governance inbox via `attention_bridge` as `daily_reliability_report` attention item. Anomaly thresholds: only post when failure_rate >X% or top-N failure count exceeds Y. Don't spam — daily cadence + threshold-gated.
+
+### 3. Apply migrations + tune commands on Railway after auto-deploy lands
+Both pending until prod parity verified:
+- `python manage.py tune_fed_alert_triggers` (Session 1092 #1972)
+- `python manage.py backfill_agent_control_blocked_at` (Session 1092 #1981)
+
+### 4. Carryforward from Session 1092 (small follow-ups, ~30 min each)
+- VoiceCriticAgent: `content` parameter not in PA tool schema — GPT-5.2 strips it. Add to schema (mirror #1974 pattern).
+- `code_review_agent` PA tool registration gap — not in tool_dispatcher's `register()` calls.
+- `base_agent.py:4100` accesses `deliverable.id` even when create_deliverable returned None — add None-check.
+- ThinkingAgent: if post-#1980 the `AgentResult` UnboundLocalError surfaces (was masked by `re` firing first), apply same one-line fix template.
+
+### 5. Verify Railway prod parity (Session 1091 carryforward — STILL OPEN)
+Auto-deploy was stuck on April 13 build at end of Session 1091 and end of Session 1092. Both sessions' PR merges aren't on prod yet. Manual investigation in Railway dashboard needed: failed/queued/cancelled builds, GitHub→Railway webhook status, trial/billing.
+
+### 6. Verify Railway/prod migration parity
+Local has 41 unapplied migrations from 0292+ through 0331. Run `db_health_tool.migrations` on Railway, compare. Document local-only-state via "no fake on prod" policy note if same backlog.
+
+### 7. Address Session 1091 follow-ups (carryforward, medium priority)
+From deliverable `ac87f650`:
+- Audit LLM client construction for explicit request timeouts (fail fast at socket layer)
+- Decompose `build_feature` into per-component subtasks (~1 day)
+- Governor budget gate for FullStackDeveloperAgent (block monster-prompt patterns)
+- Build `tool_calls_tool.list_failures` PA tool (avoid Django shell round-trips)
+
+### 8. Carryforward from Session 1090 (still open)
+- DEBUG=False on Railway (P0 verify)
+- AudioAgent ElevenLabs quota refresh (Chris business decision)
+- OpportunityPipelineAgent circuit breaker investigation
+- CodeGeneratorAgent stale block (1051.6h) — autopilot keeps surfacing it; either add TTL or unblock
+- content.0046 migration unapplied
+
+### 9. Demo recording (deferred from Session 1090/1091)
+Demo runbook: `docs/playbooks/DEMO_HAPPY_PATH.md`. Workspace: `demo-testing`. Pre-conditions for Session 1091 are now satisfied (timeout SLO closing, build_feature failures resolved). Session 1092 added more polish (governance inbox quieter, agent persistence stable).
+
+### 10. Patent Portfolio + Brand Strategy (carryover, no progress this session)
+Top candidate: "Governed Autonomy Control Plane." Governance-layer patent needs full write-up. Workspace: "Patent Portfolio — 2026 Refresh" (deactivated, data preserved).
+
+---
+
+## OBSOLETE — SESSION 1092 PRIORITIES (now archived in handoff)
 
 ### 1. Verify Railway prod parity (post-soak)
 Run the SOP v1 checklist (deliverable `a4b00a82`) against Railway prod URLs. The 7 PRs merged staggered between 20:21 UTC and 21:36 UTC; Railway auto-deploy should have settled by next session start. Specifically confirm:
