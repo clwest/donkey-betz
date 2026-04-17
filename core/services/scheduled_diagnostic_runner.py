@@ -572,6 +572,16 @@ def _compose_body(
         '',
     ]
 
+    # Session 1096 refinement (Rigby): anti-spam status line in header.
+    # Tiny operator cue — "you're 2 of 3 today, one escalation slot left."
+    anti_spam = payload.get('anti_spam_status') or {}
+    if anti_spam.get('cap') is not None:
+        lines.append(
+            f'> _Anti-spam: **{anti_spam.get("posts_used", "?")}/{anti_spam["cap"]}** '
+            f'posts used today (resets at MT midnight; escalation may bypass daily cap only until cap reached)._'
+        )
+        lines.append('')
+
     # Session 1096: escalation badge — prominent hint when this post
     # represents a severity upgrade from earlier today.
     escalation = payload.get('escalation') or {}
@@ -646,8 +656,12 @@ def _compose_body(
                 ts = (entry.get('ts') or '')[:19]
                 reasons_list = entry.get('reasons') or []
                 reasons_str = ', '.join(str(r) for r in reasons_list[:3]) if reasons_list else '(no reasons)'
+                # Session 1096 refinement (Rigby): surface primary_gate
+                # so operators see "which gate would have posted" at-a-glance.
+                primary = entry.get('primary_gate')
+                primary_label = f' gate=`{primary}`' if primary else ''
                 lines.append(
-                    f'  - `{ts}` severity={entry.get("severity", "?")} '
+                    f'  - `{ts}` severity={entry.get("severity", "?")}{primary_label} '
                     f'reasons={reasons_str} [{entry.get("skip_reason", "")}]'
                 )
 
@@ -778,10 +792,15 @@ def run_diagnostic(config: DiagnosticConfig) -> Dict[str, Any]:
         skip_reason = dedupe_check['reason']
         if skip_reason.startswith(('same_day_already_posted', 'daily_cap_exceeded')):
             try:
+                # Session 1096 refinement (Rigby): include `primary_gate` so
+                # operators can see "which gate would have posted" without
+                # parsing the reasons list. Minimal — just reasons[0].
+                reasons_list = gate.get('reasons', []) or []
                 rollup_entry = {
                     'ts': now.isoformat(),
                     'severity': gate.get('severity'),
-                    'reasons': gate.get('reasons', []),
+                    'primary_gate': reasons_list[0] if reasons_list else None,
+                    'reasons': reasons_list,
                     'skip_reason': skip_reason,
                 }
                 _record_suppressed_event(
@@ -855,6 +874,21 @@ def run_diagnostic(config: DiagnosticConfig) -> Dict[str, Any]:
             'from': dedupe_check.get('prior_max_severity'),
             'to': gate.get('severity'),
         }
+
+    # Session 1096 refinement (Rigby): anti-spam status header — show
+    # "N/M posts used today" so operators know where this post falls
+    # within the daily cap. Pre-increment view (this post is the Nth),
+    # which is why we add 1 to the current counter.
+    try:
+        from django.core.cache import cache as _status_cache
+        posts_used_now = int(_status_cache.get(dedupe_check['posts_today_key']) or 0) + 1
+        structured_payload['anti_spam_status'] = {
+            'date_bucket': dedupe_check['date_bucket'],
+            'cap': config.daily_post_cap,
+            'posts_used': posts_used_now,
+        }
+    except Exception:
+        pass  # Header is cosmetic — never fail the post for it
 
     # ── 6. Observation mode
     if not posting_enabled:
