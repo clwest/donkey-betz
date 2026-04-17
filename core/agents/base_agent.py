@@ -4250,6 +4250,50 @@ Consider this current data when formulating your response."""
             logger.warning(f"Failed to save Deliverable for {self.name}: {e}")
             return None
 
+    def _check_cancel(self, checkpoint_name: str) -> None:
+        """Session 1098 PR #3: cooperative cancel checkpoint.
+
+        Agents that run multi-step workflows should call this between
+        steps (and inside long inner loops) so an orchestration-level
+        cancel signal can short-circuit the remaining work at a safe
+        boundary.
+
+        Reads execution_id from ``self._execution_context`` (set by the
+        router before ``execute()`` runs). If the CancelTokenRegistry
+        reports the execution cancelled, records the observation
+        location (``"<AgentName>:<checkpoint_name>"``) and raises
+        ``LLMCallCancelled``. The router converts that to a
+        ``status='cancelled'`` terminal state on the AgentExecution row.
+
+        If no execution_id is present (e.g., test harness), this is a
+        no-op — matches the "missing token == existing behavior"
+        contract Rigby specified in conversation ``pa-d19c1674b936``.
+        """
+        exec_ctx = getattr(self, '_execution_context', {}) or {}
+        execution_id = exec_ctx.get('execution_id')
+        if not execution_id:
+            return
+        try:
+            from core.services.cancel_registry import (
+                is_execution_cancelled,
+                mark_observed,
+            )
+            if is_execution_cancelled(execution_id):
+                location = f"{self.name}:{checkpoint_name}"
+                mark_observed(execution_id, location=location)
+                # Reuse LLMCallCancelled as the canonical cancellation
+                # exception so orchestration treats cancel-at-checkpoint
+                # and cancel-at-LLM-call identically.
+                from core.services.llm_call_wrapper import LLMCallCancelled
+                raise LLMCallCancelled(
+                    f"Execution cancelled at checkpoint "
+                    f"(execution_id={execution_id}, location={location})"
+                )
+        except ImportError:
+            # Service not yet available in this process — fail open
+            # rather than crash. Same defensive posture the wrapper uses.
+            return
+
     def _trigger_deliverable_learning(self, deliverable, user) -> None:
         """
         Session 930: Trigger learning services after deliverable creation.

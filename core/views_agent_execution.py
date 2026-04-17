@@ -935,3 +935,111 @@ def monitoring_agent_detail(request, agent_name):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ── Session 1098 PR #3: cooperative cancellation ────────────────────── #
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Auth TBD — follow same pattern as peers
+def cancel_agent_execution(request, execution_id: str):
+    """Signal cooperative cancellation for an in-flight AgentExecution.
+
+    Writes to the CancelTokenRegistry so every code path consulting the
+    registry by execution_id (LLM wrapper pre-call check, BaseAgent
+    checkpoints, router pre-dispatch) observes the signal at its next
+    safe checkpoint.
+
+    Idempotent — repeated calls return 200 with the existing record.
+    Missing / invalid execution_id returns 404.
+
+    Request body (optional)::
+
+        {
+            "reason": "user cancelled via Command Center",
+            "requested_by": "donkeyking"
+        }
+
+    Response::
+
+        {
+            "ok": true,
+            "execution_id": "...",
+            "cancel_state": {
+                "cancelled": "1",
+                "reason": "...",
+                "requested_at": "...",
+                "observed_at": "..." | null,
+                "observed_location": "..." | null
+            }
+        }
+    """
+    from core.services.cancel_registry import (
+        request_execution_cancel,
+        get_cancel_state,
+    )
+
+    reason = (request.data.get('reason') or '').strip()
+    requested_by = (request.data.get('requested_by') or '').strip()
+    if not requested_by and getattr(request.user, 'is_authenticated', False):
+        requested_by = request.user.username
+
+    # Confirm the execution actually exists. Cancel for an unknown
+    # execution_id is a caller bug, not a silent no-op.
+    try:
+        from core.models_unified_system import AgentExecution
+        exists = AgentExecution.objects.filter(id=execution_id).exists()
+    except Exception as exc:
+        logger.exception(
+            "cancel_agent_execution: AgentExecution lookup failed: %s", exc
+        )
+        return Response({
+            'ok': False,
+            'error': 'execution lookup failed',
+        }, status=500)
+
+    if not exists:
+        return Response({
+            'ok': False,
+            'error': 'execution_id not found',
+            'execution_id': execution_id,
+        }, status=404)
+
+    ok = request_execution_cancel(
+        execution_id,
+        reason=reason or 'cancel requested via API',
+        requested_by=requested_by,
+    )
+    if not ok:
+        return Response({
+            'ok': False,
+            'error': 'invalid execution_id format',
+        }, status=400)
+
+    state = get_cancel_state(execution_id)
+    logger.info(
+        "[cancel-api] execution_id=%s reason=%r by=%r state=%s",
+        execution_id, reason, requested_by, state,
+    )
+    return Response({
+        'ok': True,
+        'execution_id': execution_id,
+        'cancel_state': state,
+    }, status=200)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_agent_execution_cancel_state(request, execution_id: str):
+    """Return the CancelTokenRegistry entry for this execution, or null.
+
+    Used by dashboards / the Command Center to display "this run was
+    cancelled at step X" without hitting the AgentExecution model.
+    """
+    from core.services.cancel_registry import get_cancel_state
+    state = get_cancel_state(execution_id)
+    return Response({
+        'ok': True,
+        'execution_id': execution_id,
+        'cancel_state': state,
+    }, status=200)
