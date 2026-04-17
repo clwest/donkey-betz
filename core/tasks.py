@@ -751,6 +751,44 @@ def reconcile_experiment_status_outcome(dry_run: bool = False):
 def run_autonomy_cycle(user_id: int = None):
     from core.tasks_misc import _impl_run_autonomy_cycle
     return _impl_run_autonomy_cycle(user_id)
+@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600)
+def run_cto_daily_diagnostic(self):
+    """Session 1093 — Daily CTOAgent platform reliability diagnostic.
+
+    Computes 24h failure metrics, evaluates threshold gates, and
+    (if anomalies detected) dispatches CTOAgent async + enqueues
+    `post_cto_daily_diagnostic` to publish the attention item once
+    the agent narrative is ready. See module docstring in
+    core/tasks_ops.py for full feature flag + threshold reference.
+    """
+    from core.tasks_ops import _impl_run_cto_daily_diagnostic
+    return _impl_run_cto_daily_diagnostic()
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300)
+def post_cto_daily_diagnostic(
+    self,
+    cto_async_task_id: str = None,
+    title: str = '',
+    severity: str = 'medium',
+    gate: Dict[str, Any] = None,
+    metrics: Dict[str, Any] = None,
+    structured_payload: Dict[str, Any] = None,
+):
+    """Session 1093 — Follow-up to run_cto_daily_diagnostic.
+
+    Loads the CTOAgent execution result by task id and posts the
+    final attention item via the human attention bridge. Enqueued
+    with countdown=240s by run_cto_daily_diagnostic so CTOAgent
+    has time to finish (180s LLM timeout).
+    """
+    from core.tasks_ops import _impl_post_cto_daily_diagnostic
+    return _impl_post_cto_daily_diagnostic(
+        cto_async_task_id=cto_async_task_id,
+        title=title,
+        severity=severity,
+        gate=gate or {},
+        metrics=metrics or {},
+        structured_payload=structured_payload or {},
+    )
 @shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
 def execute_agent_task(
     self,
