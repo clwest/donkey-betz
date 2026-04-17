@@ -223,6 +223,17 @@ The brief is your rubric. The draft is what you're grading."""
             # source blog. Falls back to blog.workspace_id when loading from DB.
             workspace_id = context.get('workspace_id')
 
+            # Session 1092: Look in task text for "blog_id=<uuid>" when caller
+            # forgot to put it in context. Real-world failures showed callers
+            # writing "Enhance the blog (blog_id=9dee...) ..." in task and
+            # expecting the agent to parse it.
+            if not blog_id and not content and task:
+                import re as _re
+                m = _re.search(r'blog_id\s*=\s*([0-9a-f-]{32,36})', task, _re.IGNORECASE)
+                if m:
+                    blog_id = m.group(1)
+                    logger.info(f"[EditorAgent] Recovered blog_id from task text: {blog_id}")
+
             if blog_id and not content:
                 # Load from database
                 from core.models_unified_system import SelfBlog
@@ -246,6 +257,13 @@ The brief is your rubric. The draft is what you're grading."""
                     )
 
             if not content:
+                # EditorAgent's job is to EDIT, not generate. If the caller
+                # didn't pass content (or a resolvable blog_id), the caller
+                # is misusing the agent — we fail loudly so the caller bug
+                # is visible in the execution log instead of being masked
+                # by a workspace-gather fallback that turns Editor into
+                # Generator. (See CTOAgent platform analysis 24h window:
+                # 9 failures all from callers who didn't pass content.)
                 return AgentResult(
                     success=False,
                     message="No content provided. Include 'blog_id' or 'content' in context.",
