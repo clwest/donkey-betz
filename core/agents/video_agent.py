@@ -362,9 +362,16 @@ and call generate_video immediately. Do not delegate for research first."""
                         )
 
                         # Session 1006: Persist output to Deliverable
+                        # Session 1092: use shared renderer so the short
+                        # descriptive_msg doesn't fall below the gate.
                         self._save_to_deliverable(
                             title=f"Generated Video: {task[:80]}",
-                            content=result.message,
+                            content=self._render_agent_output_markdown(
+                                task=task,
+                                summary=result.message,
+                                tool_calls=tool_calls_made,
+                                extra={'tool_used': tool_used, 'duration': args.get('duration')},
+                            ),
                             deliverable_type='video',
                             category='Video Generation',
                             tags=['video', tool_used],

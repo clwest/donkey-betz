@@ -617,50 +617,17 @@ the user should use ImageAgent, VideoAgent, etc."""
         tool_calls: List[Dict[str, Any]],
         summary: str,
     ) -> str:
-        """Session 1092: Serialize tool-call recommendations into a full
-        Deliverable body. The old code persisted only the short summary
-        string, which fell below the DeliverableFactory 300-char quality
-        gate and produced zero Deliverable rows. Rendering the full
-        recommendation payload as markdown gives the audit trail (and
-        downstream consumers) the actual strategy work.
+        """Session 1092: Delegate to the shared BaseAgent renderer. Kept as
+        a thin wrapper so existing callers and tests don't break while the
+        10-agent migration is in flight.
         """
-        lines: List[str] = []
-        lines.append(f"# Content Strategy: {task[:120]}")
-        lines.append("")
-        lines.append(f"*Summary:* {summary}")
-        lines.append("")
-
-        if recommendations:
-            lines.append("## Recommendations")
-            lines.append("")
-            for i, rec in enumerate(recommendations, 1):
-                if isinstance(rec, dict):
-                    title = rec.get('title') or rec.get('name') or rec.get('type') or f'Recommendation {i}'
-                    lines.append(f"### {i}. {title}")
-                    for k, v in rec.items():
-                        if k in ('title', 'name'):
-                            continue
-                        lines.append(f"- **{k}**: {v}")
-                    lines.append("")
-                else:
-                    lines.append(f"{i}. {rec}")
-                    lines.append("")
-        else:
-            lines.append("## Recommendations")
-            lines.append("")
-            lines.append("_No structured recommendations returned by the strategy tools._")
-            lines.append("")
-
-        if tool_calls:
-            lines.append("## Tool calls made")
-            lines.append("")
-            for tc in tool_calls:
-                tool_name = tc.get('tool', 'unknown')
-                args = tc.get('arguments') or {}
-                lines.append(f"- **{tool_name}** — args: `{args}`")
-            lines.append("")
-
-        return "\n".join(lines).strip()
+        return self._render_agent_output_markdown(
+            task=task,
+            summary=summary,
+            tool_calls=tool_calls,
+            sections=[{'heading': 'Recommendations', 'content': recommendations}] if recommendations else None,
+            title_prefix='Content Strategy:',
+        )
 
     def _execute_tool_call(
         self,

@@ -626,11 +626,18 @@ IMPORTANT: You MUST use read_file and edit_file on these specific files. Do NOT 
                 )
 
                 # Session 1006: Persist output to Deliverable
+                # Session 1092: render with shared helper so short fallback
+                # messages ("Completed N tool calls") pass the gate.
                 if all_results:
                     tools_used = list(set(tc['tool'] for tc in tool_calls_made))
                     self._save_to_deliverable(
                         title=f"Generated Code: {task[:80]}",
-                        content=result.message,
+                        content=self._render_agent_output_markdown(
+                            task=task,
+                            summary=result.message,
+                            tool_calls=tool_calls_made,
+                            extra={'tools_used': tools_used, 'iterations': iteration},
+                        ),
                         deliverable_type='code',
                         category='Code Generation',
                         tags=['code'] + tools_used[:3],

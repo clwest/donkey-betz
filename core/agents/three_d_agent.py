@@ -234,9 +234,15 @@ If asked to do something outside 3D generation, politely explain you can only cr
                         )
 
                         # Session 1006: Persist output to Deliverable
+                        # Session 1092: render with shared helper for gate passing.
                         self._save_to_deliverable(
                             title=f"Generated 3D Model: {task[:80]}",
-                            content=result.message,
+                            content=self._render_agent_output_markdown(
+                                task=task,
+                                summary=result.message,
+                                tool_calls=tool_calls_made,
+                                extra={'output_format': args.get('output_format', 'glb')},
+                            ),
                             deliverable_type='3d_model',
                             category='3D Generation',
                             tags=['3d', args.get('output_format', 'glb')],

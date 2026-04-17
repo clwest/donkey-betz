@@ -510,9 +510,14 @@ Be constructive and brief."""
                         )
 
                         # Session 1006: Persist output to Deliverable
+                        # Session 1092: render with shared helper for gate passing.
                         self._save_to_deliverable(
                             title=f"Code Review: {task[:80]}",
-                            content=result.message,
+                            content=self._render_agent_output_markdown(
+                                task=task,
+                                summary=result.message,
+                                tool_calls=tool_calls_made,
+                            ),
                             deliverable_type='code_review',
                             category='Code Review',
                             tags=['code_review'],
