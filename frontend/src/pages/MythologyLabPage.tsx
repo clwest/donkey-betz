@@ -861,9 +861,50 @@ export default function MythologyLabPage() {
     },
   })
 
+  // Session 1095 Tier 1b: bulk-review by pattern_type mutation.
+  // Unblocks the FP backlog when an over-broad regex is flooding the
+  // queue. Response reports how many rows got reviewed + pattern tuning.
+  const bulkReviewMutation = useMutation({
+    mutationFn: async (args: { pattern_type: string; action: 'flag_false_positive' | 'remove'; priority?: string; notes?: string }) => {
+      const response = await mythologyApi.bulkReview({
+        pattern_type: args.pattern_type,
+        action: args.action,
+        priority: (args.priority as 'critical' | 'high' | 'medium' | 'low' | undefined),
+        notes: args.notes,
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mythology-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['mythology-events'] })
+      queryClient.invalidateQueries({ queryKey: ['mythology-quarantine'] })
+    },
+  })
+
   const stats = statsData
   const events: MythologyEvent[] = eventsData?.events || []
   const quarantineItems: QuarantineItem[] = quarantineData?.items || []
+
+  // Session 1095 Tier 1b: compute pattern-frequency histogram from
+  // recent events so we can surface "this one pattern is dominating"
+  // as a one-click bulk-clear target.
+  const patternFrequency = (() => {
+    const counts = new Map<string, number>()
+    for (const ev of events) {
+      for (const p of (ev.patterns_detected || [])) {
+        counts.set(p, (counts.get(p) || 0) + 1)
+      }
+    }
+    return Array.from(counts.entries())
+      .map(([pattern, count]) => ({ pattern, count }))
+      .sort((a, b) => b.count - a.count)
+  })()
+  const topPattern = patternFrequency[0]
+  const dominantPattern =
+    topPattern && topPattern.count >= 20 &&
+    (patternFrequency.length === 1 || topPattern.count >= (patternFrequency[1]?.count || 0) * 1.5)
+      ? topPattern
+      : null
 
   const isLoading = statsLoading || eventsLoading || quarantineLoading
 
@@ -932,6 +973,77 @@ export default function MythologyLabPage() {
             icon={CheckCircle2}
             color="text-green-400"
           />
+        </div>
+      )}
+
+      {/* Session 1095 Tier 1b: Bulk review panel — surfaces only when
+         a single pattern dominates recent events (likely FP flood from
+         an over-broad regex). One-click batch clear with pattern tuning. */}
+      {dominantPattern && (
+        <div className="rounded-lg border-2 border-amber-500/40 bg-amber-500/10 p-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-semibold text-amber-100 flex items-center gap-2">
+                  Pattern dominates recent events
+                </h3>
+                <p className="text-xs text-amber-200/80 mt-1">
+                  <code className="bg-amber-900/40 px-1.5 py-0.5 rounded">{dominantPattern.pattern}</code>
+                  {' '}fired <strong>{dominantPattern.count}</strong> times in recent events
+                  {patternFrequency[1] ? ` (vs ${patternFrequency[1].count} for next-most pattern)` : ''}.
+                  {' '}Likely over-broad regex producing false positives — review one sample, then bulk-clear the rest.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => {
+                  if (!confirm(`Mark all pending "${dominantPattern.pattern}" flags as FALSE POSITIVES?\n\nThis will clear the backlog and nudge the pattern's severity down. Undoable via admin.`)) return
+                  bulkReviewMutation.mutate({
+                    pattern_type: dominantPattern.pattern,
+                    action: 'flag_false_positive',
+                    notes: `Bulk clear — over-broad pattern dominating ${dominantPattern.count} of ${events.length} recent events`,
+                  })
+                }}
+                disabled={bulkReviewMutation.isPending}
+                className="px-3 py-1.5 text-xs font-medium bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkReviewMutation.isPending ? 'Processing...' : 'Bulk clear as FPs'}
+              </button>
+              <button
+                onClick={() => {
+                  if (!confirm(`Mark all pending "${dominantPattern.pattern}" flags as VERIFIED HALLUCINATIONS?\n\nOnly do this if you've confirmed this pattern catches real bad content.`)) return
+                  bulkReviewMutation.mutate({
+                    pattern_type: dominantPattern.pattern,
+                    action: 'remove',
+                    notes: `Bulk confirm — pattern catches real hallucinations`,
+                  })
+                }}
+                disabled={bulkReviewMutation.isPending}
+                className="px-3 py-1.5 text-xs font-medium bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirm as hallucinations
+              </button>
+            </div>
+          </div>
+          {bulkReviewMutation.isSuccess && bulkReviewMutation.data && (
+            <div className="mt-3 pt-3 border-t border-amber-500/30 text-xs text-amber-100">
+              <CheckCircle2 className="h-4 w-4 inline mr-1 text-green-400" />
+              Bulk-reviewed <strong>{(bulkReviewMutation.data as {reviewed_count?: number}).reviewed_count || 0}</strong> flags.
+              {(bulkReviewMutation.data as {pattern_tuning?: {auto_disabled?: string[]}}).pattern_tuning?.auto_disabled?.length ? (
+                <span className="ml-2 text-green-300">
+                  Auto-disabled pattern(s): {(bulkReviewMutation.data as {pattern_tuning?: {auto_disabled?: string[]}}).pattern_tuning?.auto_disabled?.join(', ')}
+                </span>
+              ) : null}
+            </div>
+          )}
+          {bulkReviewMutation.isError && (
+            <div className="mt-3 pt-3 border-t border-red-500/30 text-xs text-red-200">
+              <XCircle className="h-4 w-4 inline mr-1" />
+              Bulk review failed — check the API and retry.
+            </div>
+          )}
         </div>
       )}
 

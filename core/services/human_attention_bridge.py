@@ -321,6 +321,65 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create diagnostic attention: {e}")
 
     # =========================================================================
+    # MYTHOLOGY ALERT BRIDGE (Session 1095 Tier 1b)
+    # =========================================================================
+
+    def create_mythology_alert(
+        self,
+        mythology_alert_id: str,
+        alert_type: str,
+        title: str,
+        summary: str,
+        urgency: str = 'high',
+        payload: dict = None,
+        user=None,
+    ):
+        """
+        Surface a critical/high MythologyAlert into the operator governance
+        inbox as a HumanAttentionItem. Session 1095 audit found 312 critical
+        unacknowledged mythology alerts sitting silent because nobody was
+        looking at /mythology-lab — this bridge connects them to the inbox
+        operators already watch.
+
+        Args:
+            mythology_alert_id: UUID of the source MythologyAlert row
+                (used as source_id so the operator can jump back).
+            alert_type: MythologyAlert.alert_type (e.g. 'new_myth',
+                'wide_propagation', 'cleanup_needed').
+            title: Human-readable title.
+            summary: Markdown body.
+            urgency: critical | high | medium | low. Maps from
+                MythologyAlert.severity directly.
+            payload: Extra context (pattern types, event counts, etc.)
+            user: Target user; defaults to all staff/admin users.
+
+        item_type is fixed to `'mythology_alert'` so COO and the inbox UI
+        can count these distinctly from generic alerts.
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+            safe_payload = _serialize_for_json(payload or {})
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type=f'mythology:{alert_type}',
+                    source_id=str(mythology_alert_id),
+                    source_agent='MythologyDetectionService',
+                    item_type='mythology_alert',
+                    title=title[:200],
+                    summary=summary[:8000],
+                    urgency=urgency,
+                    payload=safe_payload,
+                )
+                logger.info(
+                    f"Created mythology attention ({alert_type}/{urgency}) "
+                    f"for user {getattr(target_user, 'username', target_user)}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to create mythology attention: {e}")
+
+    # =========================================================================
     # CONTENT REVIEW
     # =========================================================================
 
