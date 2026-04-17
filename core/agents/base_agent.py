@@ -4103,6 +4103,10 @@ Consider this current data when formulating your response."""
         workspace_id: str = None,
         force_ephemeral: bool = False,
         initiative_id: str = None,
+        append_to_deliverable_id: str = None,
+        expected_initiative_id: str = None,
+        append_call_id: str = None,
+        append_chunk_index: int = 0,
     ) -> Optional[Any]:
         """
         Session 861: Save agent output to Deliverable model for persistence.
@@ -4204,6 +4208,99 @@ Consider this current data when formulating your response."""
                 or exec_ctx.get('initiative_id')
                 or (metadata or {}).get('initiative_id')
             )
+
+            # Session 1098 Fix B-full CANARY: when caller opts in by
+            # passing append_to_deliverable_id AND the env flag +
+            # canary allowlist both permit, route the write through
+            # ``append_to_deliverable`` (atomic + idempotent +
+            # race-protected) instead of create_deliverable.
+            #
+            # Gate logic (all three conditions must hold):
+            #   1. caller passed explicit append_to_deliverable_id
+            #   2. settings.DELIVERABLE_APPEND_ENABLED is True
+            #   3. self.name is in settings.DELIVERABLE_APPEND_CANARY_AGENTS
+            #
+            # On miss, falls through to create_deliverable (unchanged
+            # pre-B-full behavior). Rollback: set either env var to
+            # empty/false — no code revert required.
+            #
+            # Agent-name source: ``self.name`` is the canonical identity
+            # for every agent (used in logs + metadata + AgentExecution).
+            # Do not substitute self.__class__.__name__ — it can drift
+            # from self.name for subclasses / dynamic persona agents.
+            from django.conf import settings as _canary_settings
+            if (
+                append_to_deliverable_id
+                and getattr(_canary_settings, 'DELIVERABLE_APPEND_ENABLED', False)
+                and self.name in getattr(
+                    _canary_settings, 'DELIVERABLE_APPEND_CANARY_AGENTS', []
+                )
+            ):
+                try:
+                    from core.services.deliverable_append_service import (
+                        append_to_deliverable,
+                        FeatureDisabledError,
+                    )
+                    from core.models_deliverables import Deliverable as _Deliverable
+                    import uuid as _uuid
+                    _call_id = append_call_id or str(_uuid.uuid4())
+                    _result = append_to_deliverable(
+                        deliverable_id=append_to_deliverable_id,
+                        call_id=_call_id,
+                        content=content or '',
+                        agent_name=self.name,
+                        execution_id=(
+                            str(parent_exec_id) if parent_exec_id else None
+                        ),
+                        expected_initiative_id=(
+                            expected_initiative_id
+                            or resolved_initiative_id
+                        ),
+                        chunk_index=append_chunk_index,
+                        routing_metadata={
+                            'title': resolved_title,
+                            'category': category,
+                            'tags': tags or [],
+                            'trigger_source': (metadata or {}).get(
+                                'trigger_source', ''
+                            ),
+                        },
+                    )
+                    logger.info(
+                        f'📎 [canary] Appended to Deliverable '
+                        f'{_result.deliverable_id} via '
+                        f'append_to_deliverable (status={_result.status}, '
+                        f'offset={_result.append_offset}, '
+                        f'agent={self.name})'
+                    )
+                    # Return the target deliverable (or fallback, when
+                    # superseded) so callers see a Deliverable-like
+                    # object identical to the create path.
+                    target_id = (
+                        _result.fallback_deliverable_id
+                        if _result.status == 'superseded'
+                        else _result.deliverable_id
+                    )
+                    try:
+                        return _Deliverable.objects.get(id=target_id)
+                    except _Deliverable.DoesNotExist:
+                        return None
+                except FeatureDisabledError:
+                    # Shouldn't happen — gate already checked the flag.
+                    # Fall through to create_deliverable defensively.
+                    logger.debug(
+                        '[canary] FeatureDisabledError after gate check; '
+                        'falling through to create_deliverable'
+                    )
+                except Exception as _append_exc:
+                    # Canary-path failure: log + fall through to create
+                    # so we don't lose the deliverable. The kill-switch
+                    # is DELIVERABLE_APPEND_CANARY_AGENTS=<empty>.
+                    logger.exception(
+                        f'[canary] append_to_deliverable failed, '
+                        f'falling through to create_deliverable: '
+                        f'{_append_exc}'
+                    )
 
             deliverable = create_deliverable(
                 title=resolved_title,

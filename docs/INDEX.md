@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-17 13:47
+**Generated:** 2026-04-17 14:54
 **Current Session:** 1098
 **Total Documentation:** 1866 files | 632,923 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/09_Self_Awareness/README.md` | 60 | 🔮 SELF-AWARENESS SYSTEMS - The AI That Knows Itsel |
+| `docs/archive/SYSTEM_CAPABILITIES-original/01_Core_Intelligence/README.md` | 60 | 🧠 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligenc |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,8 +219,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1098_ADDENDUM_2_TIER1_AND_BFULL.md | handoffs | 203 | 2026-04-17 13:47 |
-| INDEX.md | docs | 363 | 2026-04-17 13:29 |
+| SESSION_1098_ADDENDUM_2_TIER1_AND_BFULL.md | handoffs | 203 | 2026-04-17 14:37 |
+| INDEX.md | docs | 363 | 2026-04-17 14:37 |
 | SESSION_1098_ADDENDUM_CANCEL_AND_LINT.md | handoffs | 91 | 2026-04-17 12:29 |
 | SESSION_1098_FIX_B_FULL_TICKET.md | plans | 318 | 2026-04-17 09:53 |
 | SESSION_1097_MYTHOLOGY_SWEEP_AND_AGENT_FIXES.md | handoffs | 97 | 2026-04-17 08:26 |
