@@ -127,6 +127,8 @@ class AgentHandlersMixin:
             'content_executor_agent': 'ContentExecutorAgent',
             'ai_series_workflow_agent': 'AISeriesWorkflowAgent',
             'workflow_orchestration_agent': 'WorkflowAgent',
+            # ── Development (Session 1093 P3) ──
+            'code_review_agent': 'CodeReviewAgent',
             'create_brand_video': 'WorkflowAgent',
             'create_project_from_research': 'WorkflowAgent',
             'strategic_review': 'ContentStrategyAgent',  # Session 1068: StrategyAgent doesn't exist

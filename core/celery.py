@@ -177,6 +177,17 @@ app.conf.beat_schedule = {
         'options': {'queue': 'default', 'expires': 3600},
     },
 
+    # ── CTOAgent daily reliability diagnostic (Session 1093) ────────────────
+    # Fires once daily at 13:15 UTC = 7:15 AM MDT / 6:15 AM MST.
+    # Task itself is gated by CTO_DIAGNOSTIC_ENABLED env flag — safe to leave
+    # in the schedule even when the flag is off (returns immediately).
+    # Governance posting is gated independently by CTO_DIAGNOSTIC_POSTING_ENABLED.
+    'cto-daily-diagnostic': {
+        'task': 'core.tasks.run_cto_daily_diagnostic',
+        'schedule': crontab(minute=15, hour=13),
+        'options': {'queue': 'long_running', 'expires': 7200},
+    },
+
     # ── Spider Network (re-enabled) ────────────────────────────────────────
     # Core spider execution — crawl all registered spiders
     'run-spider-network': {

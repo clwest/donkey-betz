@@ -915,6 +915,8 @@ PA_TOOL_SCHEMAS = [
                         "system_intelligence_agent",
                         "strategic_review",
                         "create_brand_video", "create_project_from_research",
+                        # ── Development (Session 1093 P3) ──
+                        "code_review_agent",
                         # ── Stock & Markets ──
                         "stock_audit_coordinator", "stock_analyst_agent",
                         "market_movement_monitor_agent",
