@@ -25,6 +25,7 @@ from core.services.diagnostics.coo_daily import (
     evaluate_gate,
     render_action_items,
     render_gate_hang,
+    render_mythology_quarantine,
     render_review_backlog,
     render_stuck_initiatives,
     render_velocity,
@@ -62,7 +63,47 @@ def _metrics_healthy() -> dict:
             'pending_total': 0, 'new_24h': 0,
             'oldest_pending_hours': 0.0, 'top_pipelines': [],
         },
+        'mythology_quarantine': {
+            'enabled': False,
+            'unacked_critical': 0, 'unacked_high': 0,
+            'pending_flags_critical': 0, 'pending_flags_high': 0,
+            'top_patterns_24h': [],
+        },
     }
+
+
+def _metrics_mythology_high() -> dict:
+    """Unacked critical + high >= 10 AND < 25 → MYTHOLOGY_QUARANTINE_HIGH."""
+    m = _metrics_healthy()
+    m['mythology_quarantine'] = {
+        'enabled': True,
+        'unacked_critical': 8,
+        'unacked_high': 5,
+        'pending_flags_critical': 8,
+        'pending_flags_high': 5,
+        'top_patterns_24h': [
+            {'pattern': 'spider_data_myth', 'count': 100},
+            {'pattern': 'time_myth', 'count': 50},
+        ],
+    }
+    return m
+
+
+def _metrics_mythology_crit() -> dict:
+    """Unacked critical >= 25 → MYTHOLOGY_QUARANTINE_CRIT."""
+    m = _metrics_healthy()
+    m['mythology_quarantine'] = {
+        'enabled': True,
+        'unacked_critical': 312,
+        'unacked_high': 16,
+        'pending_flags_critical': 312,
+        'pending_flags_high': 16,
+        'top_patterns_24h': [
+            {'pattern': 'dangerous_myth', 'count': 3},
+            {'pattern': 'spider_data_myth', 'count': 272},
+        ],
+    }
+    return m
 
 
 def _metrics_gate_hang_high() -> dict:
@@ -265,6 +306,45 @@ class EvaluateGateTests(SimpleTestCase):
         self.assertTrue(gate['tripped'])
         self.assertIn('GATE_HANG_NEW_HIGH', gate['reasons'])
 
+    def test_mythology_quarantine_high_trips(self):
+        """Unacked critical+high >= 10 AND critical < 25 → HIGH."""
+        gate = evaluate_gate(_metrics_mythology_high())
+        self.assertTrue(gate['tripped'])
+        self.assertIn('MYTHOLOGY_QUARANTINE_HIGH', gate['reasons'])
+        self.assertEqual(gate['severity'], 'high')
+
+    def test_mythology_quarantine_critical_trips(self):
+        """Unacked critical >= 25 → CRITICAL."""
+        gate = evaluate_gate(_metrics_mythology_crit())
+        self.assertTrue(gate['tripped'])
+        self.assertIn('MYTHOLOGY_QUARANTINE_CRIT', gate['reasons'])
+        self.assertEqual(gate['severity'], 'critical')
+        # Mutually exclusive with HIGH at same severity tier
+        self.assertNotIn('MYTHOLOGY_QUARANTINE_HIGH', gate['reasons'])
+        detail = ' '.join(gate['reason_details'])
+        self.assertIn('spider_data_myth', detail)
+
+    def test_mythology_skipped_when_app_unavailable(self):
+        """When `mythology_quarantine.enabled=False`, gate is skipped
+        entirely — COO stays healthy even without the mythology app."""
+        m = _metrics_healthy()
+        m['mythology_quarantine']['enabled'] = False
+        m['mythology_quarantine']['unacked_critical'] = 999  # ignored because disabled
+        gate = evaluate_gate(m)
+        self.assertNotIn('MYTHOLOGY_QUARANTINE_HIGH', gate.get('reasons', []))
+        self.assertNotIn('MYTHOLOGY_QUARANTINE_CRIT', gate.get('reasons', []))
+
+    def test_mythology_below_threshold_no_trip(self):
+        m = _metrics_healthy()
+        m['mythology_quarantine'] = {
+            'enabled': True,
+            'unacked_critical': 3, 'unacked_high': 2,
+            'pending_flags_critical': 3, 'pending_flags_high': 2,
+            'top_patterns_24h': [],
+        }
+        gate = evaluate_gate(m)
+        self.assertNotIn('MYTHOLOGY_QUARANTINE_HIGH', gate.get('reasons', []))
+
     def test_gate_hang_below_threshold_no_trip(self):
         """pending_total < 10 AND new_24h < 5 → no gate_hang reasons."""
         m = _metrics_healthy()
@@ -375,6 +455,24 @@ class SectionRendererTests(SimpleTestCase):
         del m['gate_hang']
         self.assertEqual(render_gate_hang(m, {}), [])
 
+    def test_render_mythology_skipped_when_disabled(self):
+        """enabled=False → section fully omitted."""
+        self.assertEqual(render_mythology_quarantine(_metrics_healthy(), {}), [])
+
+    def test_render_mythology_shows_patterns_and_tuning_note(self):
+        lines = render_mythology_quarantine(_metrics_mythology_crit(), {})
+        joined = '\n'.join(lines)
+        self.assertIn('328', joined)  # total unacked
+        self.assertIn('spider_data_myth', joined)
+        # False-positive tuning hint must surface
+        self.assertIn('Audit the Mythology Lab for pattern tuning', joined)
+
+    def test_render_mythology_tolerates_missing_key(self):
+        """Backward-compat: missing mythology_quarantine key returns []."""
+        m = _metrics_healthy()
+        del m['mythology_quarantine']
+        self.assertEqual(render_mythology_quarantine(m, {}), [])
+
 
 # =============================================================================
 # Headline + title
@@ -467,6 +565,7 @@ class CooConfigTests(SimpleTestCase):
             'Stuck Initiatives',
             'Gate Hang Health',           # Session 1095 (Rigby's #2 gate)
             'Rework / Bounce Rate',       # Session 1095 (Rigby's #1 gate)
+            'Mythology Lab Backlog',      # Session 1095 (Rigby's #3 gate)
         ])
 
     def test_prompt_builder_coo_voice(self):
