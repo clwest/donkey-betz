@@ -224,6 +224,51 @@ class _Span:
 # ─────────────────────────── public API ────────────────────────────── #
 
 
+def _check_cancel(
+    *,
+    cancel_token: Optional[CancelToken],
+    execution_id: Optional[uuid.UUID],
+    location: str,
+    provider: str,
+    model: str,
+) -> None:
+    """Raise LLMCallCancelled if either the direct token OR the registry
+    (keyed by execution_id) reports cancellation.
+
+    Session 1098 PR #3: the registry is the single source of truth for
+    cooperative cancel. The direct ``cancel_token`` kwarg stays
+    supported for test harnesses + callers that don't have an
+    execution_id, but production code paths cancel by writing to the
+    registry via ``request_execution_cancel()``.
+    """
+    if cancel_token is not None and cancel_token.is_cancelled():
+        raise LLMCallCancelled(
+            f"LLM call cancelled before start (cancel_token; "
+            f"provider={provider}, model={model})"
+        )
+
+    if execution_id is not None:
+        try:
+            from core.services.cancel_registry import (
+                is_execution_cancelled,
+                mark_observed,
+            )
+            if is_execution_cancelled(execution_id):
+                mark_observed(execution_id, location=location)
+                raise LLMCallCancelled(
+                    f"LLM call cancelled via registry "
+                    f"(execution_id={execution_id}, location={location}, "
+                    f"provider={provider}, model={model})"
+                )
+        except LLMCallCancelled:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug(
+                "[llm_call_wrapper] registry check failed at %s: %s",
+                location, exc,
+            )
+
+
 @contextmanager
 def llm_call_span(
     *,
@@ -251,18 +296,26 @@ def llm_call_span(
     Exceptions (including ``LLMCallCancelled``) propagate. The span row
     is always finalized — success, failure, or cancellation.
 
+    PR #3 addition: before yielding to the caller, checks the global
+    ``cancel_registry`` by execution_id. If the registry reports the
+    execution cancelled, raises LLMCallCancelled immediately and
+    records the observation location. Orchestration-level cancel
+    signals reach in-flight LLM calls without threading a CancelToken.
+
     Note: the sync context manager uses ``model`` as its kwarg because
     there's no forwarding collision — the caller invokes the provider
     SDK themselves inside the block. The async wrapper, which *does*
     forward kwargs to the provider, uses ``model_name`` instead.
     """
-    if cancel_token is not None and cancel_token.is_cancelled():
-        raise LLMCallCancelled(
-            f"LLM call cancelled before start "
-            f"(provider={provider}, model={model})"
-        )
-
     exec_uuid = _coerce_execution_id(execution_id)
+
+    _check_cancel(
+        cancel_token=cancel_token,
+        execution_id=exec_uuid,
+        location=f"LLMCallWrapper.span:pre-call:{agent_name or 'unknown'}",
+        provider=provider,
+        model=model,
+    )
     call_id = uuid.uuid4()
     started_at = timezone.now()
     started_perf = time.perf_counter()
@@ -340,13 +393,17 @@ async def llm_call_async(
     """
     from asgiref.sync import sync_to_async
 
-    if cancel_token is not None and cancel_token.is_cancelled():
-        raise LLMCallCancelled(
-            f"LLM call cancelled before start "
-            f"(provider={provider}, model={model_name})"
-        )
-
     exec_uuid = _coerce_execution_id(execution_id)
+
+    # PR #3: registry + direct-token cancel check (see ``_check_cancel``).
+    _check_cancel(
+        cancel_token=cancel_token,
+        execution_id=exec_uuid,
+        location=f"LLMCallWrapper.async:pre-call:{agent_name or 'unknown'}",
+        provider=provider,
+        model=model_name,
+    )
+
     call_id = uuid.uuid4()
     started_at = timezone.now()
     started_perf = time.perf_counter()

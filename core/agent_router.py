@@ -1477,8 +1477,55 @@ class AgentRouter:
             return result
 
         except Exception as e:
-            # Track failed execution
+            # Session 1098 PR #3: LLMCallCancelled is a cooperative
+            # cancellation, not a failure. Mark the execution as
+            # 'cancelled' with the observation location in error_message
+            # so dashboards can distinguish cancelled-by-user runs from
+            # crashed runs.
+            try:
+                from core.services.llm_call_wrapper import LLMCallCancelled
+                is_cancel = isinstance(e, LLMCallCancelled)
+            except ImportError:
+                is_cancel = False
+
             execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
+
+            if is_cancel:
+                # Mark the AgentExecution row 'cancelled' rather than
+                # 'failed'. _complete_execution uses success=False+failed;
+                # we flip the status directly after to keep the record.
+                self._complete_execution(
+                    execution_record,
+                    agent_name,
+                    success=False,
+                    execution_time_ms=execution_time_ms,
+                    error_message=f"cancelled: {str(e)[:400]}",
+                )
+                if execution_record is not None:
+                    try:
+                        from core.models_unified_system import AgentExecution
+                        AgentExecution.objects.filter(id=execution_record.id).update(
+                            status='cancelled',
+                        )
+                    except Exception:
+                        # 'cancelled' may not be a valid choice on
+                        # legacy deploys; leave status=failed in that
+                        # case. error_message still flags the cancel.
+                        logger.debug(
+                            "[router-cancel] status=cancelled update failed; "
+                            "leaving row as failed with cancelled message"
+                        )
+                logger.info(
+                    f"Agent execution cancelled ({agent_name}): {e}"
+                )
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=agent_name,
+                    execution_time_ms=execution_time_ms,
+                )
+
+            # Track failed execution (non-cancel path).
             self._complete_execution(
                 execution_record,
                 agent_name,
