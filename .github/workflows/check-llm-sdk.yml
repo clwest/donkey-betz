@@ -1,0 +1,61 @@
+name: Check direct LLM SDK calls
+
+# Session 1098 PR #A2 — fail PRs that add direct provider-SDK calls
+# outside the Session 1098 wrapper (core/services/llm_call_wrapper.py).
+# See tools/check_direct_llm_calls.py and .ci/llm_whitelist.txt.
+
+on:
+  pull_request:
+    paths:
+      - '**/*.py'
+      - '.ci/llm_whitelist.txt'
+      - 'tools/check_direct_llm_calls.py'
+      - '.github/workflows/check-llm-sdk.yml'
+  push:
+    branches: [main]
+
+jobs:
+  check-llm-sdk:
+    name: Direct LLM SDK usage check
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Staged rollout — Session 1098 PR #A2 ships in --warn-only mode.
+      # The repo currently has ~60 legacy direct-SDK call sites; they will
+      # migrate to the wrapper over subsequent PRs. Once the violation
+      # count is under ~10 (just the whitelist tail), drop --warn-only
+      # and the job starts failing on new direct-SDK code.
+      #
+      # To switch to enforce mode:
+      #   1. Remove `--warn-only` below
+      #   2. Shrink .ci/llm_whitelist.txt to just the wrapper / tests /
+      #      legitimate adapter boundaries
+      #   3. Merge
+      - name: Run direct-LLM-call checker (warn-only staged rollout)
+        run: |
+          python tools/check_direct_llm_calls.py \
+            --root . \
+            --whitelist .ci/llm_whitelist.txt \
+            --warn-only
+
+      - name: Summarize violations in the job summary
+        if: always()
+        run: |
+          {
+            echo "## Direct LLM SDK call check"
+            echo ""
+            echo "Session 1098 PR #A2 — running in **warn-only** mode during staged rollout."
+            echo ""
+            echo "Every direct provider-SDK call should migrate to"
+            echo "\`core/services/llm_call_wrapper.py\` for telemetry + cancellation."
+            echo ""
+            echo "See \`.ci/llm_whitelist.txt\` for the tiered remediation list."
+          } >> "$GITHUB_STEP_SUMMARY"
