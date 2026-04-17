@@ -288,6 +288,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("content_executor_agent", self._handle_agent_tool)
         self.register("ai_series_workflow_agent", self._handle_agent_tool)
 
+        # Development agents (Session 1093 P3 — was missing from tool registry)
+        self.register("code_review_agent", self._handle_agent_tool)
+
         # Stock & Markets agents
         self.register("stock_audit_coordinator", self._handle_agent_tool)
         self.register("stock_analyst_agent", self._handle_agent_tool)
