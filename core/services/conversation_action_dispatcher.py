@@ -444,6 +444,7 @@ class ConversationActionDispatcher:
             from core.services.context_tracing import ContextTracer
             from core.services.editor_dispatch_helpers import (
                 gather_workspace_content_for_editor as _gather_workspace_content_for_editor,
+                reroute_synthesis_to_content_writer as _reroute_synthesis,
             )
 
             task_context = {
@@ -452,6 +453,17 @@ class ConversationActionDispatcher:
                 'participants': participants,
                 **(context or {})
             }
+
+            # Session 1098 Fix A: synthesis-intent reroute. If this
+            # next_step asks EditorAgent to synthesize multiple briefs,
+            # swap to ContentWriterAgent before the gather/blog_id
+            # fallback paths run. Mirrors the identical call in
+            # tool_dispatcher._handle_agent_tool so both dispatch paths
+            # honor the same routing rule. Feature flag:
+            # settings.EDITOR_SYNTHESIS_REROUTE_ENABLED (default True).
+            agent_name, task_context = _reroute_synthesis(
+                agent_name, task, task_context,
+            )
 
             # Session 1092: When a conversation produces a next_step like
             # "EditorAgent: Synthesize the Platform Audit + CTO + COO briefs",
