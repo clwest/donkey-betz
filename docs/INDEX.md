@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-16 20:11
+**Generated:** 2026-04-16 20:15
 **Current Session:** 1092
 **Total Documentation:** 1861 files | 631,839 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 143 | CLAUDE - AI Session Entry Point |
-| `docs/agents/README.md` | 60 | Agent Documentation |
+| `docs/archive/old-structure/capabilities/01_Core_Intelligence/README.md` | 60 | 🧠 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligenc |
 | `docs/AGENTS.md` | 50 | Agent Reference |
 | `docs/INDEX.md` | 44 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 35 | Platform Capabilities |
@@ -219,7 +219,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 363 | 2026-04-16 20:06 |
+| INDEX.md | docs | 363 | 2026-04-16 20:11 |
 | SESSION_1092_GOVERNANCE_NOISE_AND_AGENT_PERSISTENCE.md | handoffs | 169 | 2026-04-16 19:33 |
 | SESSION_1091_OPS_HARDENING_AND_WORKSPACE_FLOW.md | handoffs | 113 | 2026-04-16 16:00 |
 | SESSION_1090_DEMO_READINESS.md | handoffs | 122 | 2026-04-16 13:03 |
