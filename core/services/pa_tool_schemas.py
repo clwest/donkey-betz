@@ -979,6 +979,21 @@ PA_TOOL_SCHEMAS = [
                         "System Autonomous Workspace (orphan-producing path)."
                     ),
                 },
+                "content": {
+                    "type": "string",
+                    "description": (
+                        "Raw content the agent should operate on. Use for "
+                        "agents that score / critique / edit a blob of text "
+                        "(VoiceCriticAgent, EditorAgent, etc.) where the "
+                        "content itself is the subject, not a task "
+                        "description. Session 1094: added so Rigby can "
+                        "structurally pass content to critique/edit agents "
+                        "without packing it into `task` text where GPT-5.2 "
+                        "may strip or truncate it. Mirrors the #1974 "
+                        "workspace_id pattern. When provided, it is promoted "
+                        "to `context.content` before dispatch."
+                    ),
+                },
                 "context": {
                     "type": "object",
                     "description": (
