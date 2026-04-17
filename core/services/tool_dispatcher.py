@@ -883,77 +883,15 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         workspace_id: Optional[str],
         task_text: str,
     ) -> Optional[Dict[str, Any]]:
-        """Gather recent deliverables from a workspace as content for EditorAgent.
-
-        Session 1090: When Rigby dispatches EditorAgent, she references other
-        deliverables ("Incident Card + CTO brief + COO brief") but doesn't
-        include the actual text.  This method fetches the most recent
-        deliverables from the workspace and concatenates them into a
-        structured content dict that EditorAgent can process.
+        """Session 1090 fallback. Session 1092: extracted to a shared
+        module so the conversation_action_dispatcher path uses the same
+        logic. This method is now a thin wrapper kept for back-compat
+        with any external callers.
         """
-        try:
-            from core.models_deliverables import Deliverable
-
-            # Session 1090: workspace_id from PA entrypoint may point to
-            # System Autonomous Workspace (from AssistantProfile) rather
-            # than the user's active workspace.  Always prefer the user's
-            # active non-system workspace when one exists.
-            target_ws = workspace_id
-            try:
-                from core.models_skin_layer import ProjectWorkspace
-                active_ws = ProjectWorkspace.objects.filter(
-                    is_active=True,
-                ).exclude(name__icontains='autonomous').exclude(name__icontains='system').first()
-                if active_ws:
-                    target_ws = str(active_ws.id)
-                    if target_ws != workspace_id:
-                        logger.info(
-                            "[agent dispatch] Using active workspace %s (%s) instead of injected %s",
-                            active_ws.name, target_ws, workspace_id,
-                        )
-            except Exception:
-                pass
-
-            deliverables = (
-                Deliverable.objects
-                .filter(workspace_id=target_ws)
-                .exclude(title__startswith='EditorAgent:')
-                .exclude(title__startswith='blog_post:')  # Exclude prior ContentWriter blog outputs
-                .exclude(deliverable_type='blog_post')
-                .order_by('-created_at')[:6]
-            ) if target_ws else Deliverable.objects.none()
-            if not deliverables:
-                return None
-
-            sections = []
-            titles = []
-            for d in deliverables:
-                body = d.content or ''
-                if not body.strip():
-                    continue
-                title = d.title or 'Untitled'
-                titles.append(title)
-                sections.append({
-                    'heading': title,
-                    'content': body[:3000],  # Cap per section to avoid prompt bloat
-                })
-
-            if not sections:
-                return None
-
-            logger.info(
-                "[EditorAgent dispatch] Gathered %d deliverables from workspace %s: %s",
-                len(sections), workspace_id, ', '.join(titles),
-            )
-            return {
-                'title': f"Executive Brief (synthesized from {len(sections)} sources)",
-                'intro': f"This brief synthesizes {len(sections)} workspace deliverables.",
-                'sections': sections,
-                'conclusion': '',
-            }
-        except Exception as e:
-            logger.warning("Failed to gather workspace content for EditorAgent: %s", e)
-            return None
+        from core.services.editor_dispatch_helpers import (
+            gather_workspace_content_for_editor,
+        )
+        return gather_workspace_content_for_editor(workspace_id, task_text)
 
 
 def _redact_secrets(text: str) -> str:
