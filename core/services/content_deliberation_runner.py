@@ -303,11 +303,11 @@ class ContentDeliberationRunner:
 
         feedback_block = '\n'.join(f'- {line}' for line in feedback_lines)
 
-        task_str = (
-            f'Rewrite this blog post about: {topic}\n\n'
-            f'REVIEWER FEEDBACK TO ADDRESS:\n{feedback_block}\n\n'
-            f'ORIGINAL DRAFT:\n{draft_text[:4000]}'
-        )
+        task_str = f'Rewrite this blog post about: {topic}'
+        # Session 1098 PR-A: ContentWriterAgent detects REWRITE MODE via
+        # context['review_feedback'] + context['original_draft']. Previously
+        # both were stuffed into task_str, so _execute_rewrite never fired and
+        # rewrites went through the generic writer path. Pass them explicitly.
         context = {
             'research': research,
             'topic': topic,
@@ -315,6 +315,8 @@ class ContentDeliberationRunner:
             'target_audience': 'general',
             'word_count': 1500,
             'content_type': 'blog_post',
+            'original_draft': draft_text,
+            'review_feedback': feedback_block,
         }
 
         result = agent.execute(
