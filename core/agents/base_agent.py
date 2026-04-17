@@ -4102,6 +4102,7 @@ Consider this current data when formulating your response."""
         provenance: Dict[str, Any] = None,
         workspace_id: str = None,
         force_ephemeral: bool = False,
+        initiative_id: str = None,
     ) -> Optional[Any]:
         """
         Session 861: Save agent output to Deliverable model for persistence.
@@ -4190,6 +4191,20 @@ Consider this current data when formulating your response."""
             # Get parent execution ID for provenance dedupe
             parent_exec_id = getattr(self, '_current_execution_id', None)
 
+            # Session 1098 Fix B-minimal: resolve initiative_id from (in
+            # order) the explicit kwarg, the agent's execution context, or
+            # metadata['initiative_id']. Subagents that want their output
+            # linked to an initiative should set context['initiative_id']
+            # at dispatch time (router already threads execution_id;
+            # initiative_id follows the same pattern). Validated +
+            # fallback-routed inside create_deliverable.
+            exec_ctx = getattr(self, '_execution_context', {}) or {}
+            resolved_initiative_id = (
+                initiative_id
+                or exec_ctx.get('initiative_id')
+                or (metadata or {}).get('initiative_id')
+            )
+
             deliverable = create_deliverable(
                 title=resolved_title,
                 content=content or '',
@@ -4209,6 +4224,7 @@ Consider this current data when formulating your response."""
                 agent_task=getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else '',
                 metadata=metadata or {},
                 status='ready',
+                initiative_id=str(resolved_initiative_id) if resolved_initiative_id else None,
             )
 
             # Session 1094: `create_deliverable` returns None when the

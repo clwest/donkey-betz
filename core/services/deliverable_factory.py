@@ -503,7 +503,33 @@ def create_deliverable(
         kwargs['parent_object_type'] = parent_object_type or 'agent_execution'
         kwargs['parent_object_id'] = parent_execution_id
     if initiative_id:
-        kwargs['initiative_id'] = initiative_id
+        # Session 1098 Fix B-minimal: validate the initiative exists before
+        # we record the FK. If the caller passed an id that has since been
+        # deleted (or was never valid), we drop the link and log a
+        # structured warning so the deliverable lands in the workspace
+        # bucket instead of raising a FK error. Rigby's rollout plan
+        # (conversation pa-3c7ddc058db1) called this the "fallback
+        # routing" — the full target_stream_id append semantics are
+        # deferred to B-full (task #9 follow-up).
+        try:
+            from core.models import Initiative
+            if Initiative.objects.filter(id=initiative_id).exists():
+                kwargs['initiative_id'] = initiative_id
+            else:
+                logger.warning(
+                    "[DeliverableFactory] initiative_id=%s not found — "
+                    "dropping link and routing to workspace bucket. "
+                    "agent=%s title=%r",
+                    initiative_id, agent_name, title[:60],
+                )
+        except Exception as _init_lookup_exc:
+            # Defensive: never block a deliverable write on an
+            # initiative-lookup failure. Log and drop the link.
+            logger.exception(
+                "[DeliverableFactory] Initiative lookup failed (%s) — "
+                "dropping initiative_id=%s and continuing.",
+                _init_lookup_exc, initiative_id,
+            )
     if dream_id:
         kwargs['dream_id'] = dream_id
     if source_operation_id:
@@ -520,12 +546,22 @@ def create_deliverable(
     if blocked_reason:
         kwargs['status'] = 'blocked'
 
+    # Session 1098 Fix B-minimal: wrap the create in a transaction so a
+    # partial write (e.g., the row lands but a post-save signal raises)
+    # rolls back cleanly. Prevents half-initialized rows with the wrong
+    # initiative/workspace link from lingering in the DB. Full
+    # SELECT-FOR-UPDATE race protection lands in B-full (task #9
+    # follow-up) once the deliverable_appends table exists.
+    from django.db import transaction as _df_transaction
+
     try:
-        deliverable = Deliverable.objects.create(**kwargs)
+        with _df_transaction.atomic():
+            deliverable = Deliverable.objects.create(**kwargs)
         logger.info(
             f"[DeliverableFactory] Created: {deliverable.id} "
             f"'{title[:60]}' by {agent_name} "
-            f"(workspace={workspace_id or 'none'}, user={getattr(user, 'id', 'none')})"
+            f"(workspace={workspace_id or 'none'}, user={getattr(user, 'id', 'none')}, "
+            f"initiative={kwargs.get('initiative_id', 'none')})"
         )
         return deliverable
     except Exception as e:
