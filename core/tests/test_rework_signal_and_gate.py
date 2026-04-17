@@ -306,3 +306,142 @@ class CooReworkGateTests(TransactionTestCase):
         }
         gate = evaluate_gate(metrics)  # must not raise
         self.assertNotIn('REWORK_RATE_HIGH', gate.get('reasons', []))
+
+
+# =============================================================================
+# Warming-window note (Rigby's (c) follow-up)
+# =============================================================================
+
+class ReworkWarmingWindowTests(TransactionTestCase):
+    """When the status_transition event stream is < 7 days old, the rework
+    section and gate detail must surface the warming state explicitly —
+    operators must not mistake 'low rework' for 'no rework happening'."""
+
+    def _collect(self):
+        from core.services.diagnostics.coo_daily import collect_metrics
+        now = timezone.now()
+        return collect_metrics(now, now - timedelta(hours=24), now - timedelta(days=7))
+
+    def test_no_events_yet_warming_active(self):
+        """No DeliverableEvent rows → warming is active, no first_event_at."""
+        m = self._collect()
+        warming = m['rework']['warming']
+        self.assertTrue(warming['active'])
+        self.assertIsNone(warming['first_event_at'])
+        self.assertEqual(warming['days_since_rollout'], 0.0)
+
+    def test_recent_events_warming_active(self):
+        """Events < 7 days old → warming active, first_event_at populated."""
+        from core.models_deliverables import Deliverable, DeliverableEvent
+        d = Deliverable.objects.create(
+            title='t', content='x', agent_name='A', deliverable_type='document',
+        )
+        # Signal already wrote no events for a create. Write one directly
+        # to simulate a fresh rollout history.
+        DeliverableEvent.objects.create(
+            deliverable=d,
+            event_type='status_transition',
+            source='test',
+            metadata={'from': 'ready', 'to': 'draft', 'direction': 'backward'},
+        )
+        m = self._collect()
+        warming = m['rework']['warming']
+        self.assertTrue(warming['active'])
+        self.assertIsNotNone(warming['first_event_at'])
+        self.assertLess(warming['days_since_rollout'], 7)
+
+    def test_old_events_warming_inactive(self):
+        """Events >= 7 days old → warming is inactive (baseline is valid)."""
+        from core.models_deliverables import Deliverable, DeliverableEvent
+        d = Deliverable.objects.create(
+            title='t', content='x', agent_name='A', deliverable_type='document',
+        )
+        old_event = DeliverableEvent.objects.create(
+            deliverable=d,
+            event_type='status_transition',
+            source='test',
+            metadata={'from': 'ready', 'to': 'draft', 'direction': 'backward'},
+        )
+        # Force the event's created_at backward past 7 days. auto_now_add
+        # is respected by Django, so update with raw queryset.
+        DeliverableEvent.objects.filter(pk=old_event.pk).update(
+            created_at=timezone.now() - timedelta(days=10)
+        )
+        m = self._collect()
+        warming = m['rework']['warming']
+        self.assertFalse(warming['active'])
+        self.assertGreaterEqual(warming['days_since_rollout'], 7)
+
+    def test_renderer_shows_warming_note_when_active_with_events(self):
+        from core.models_deliverables import Deliverable, DeliverableEvent
+        from core.services.diagnostics.coo_daily import render_rework
+        d = Deliverable.objects.create(
+            title='t', content='x', agent_name='A', deliverable_type='document',
+        )
+        DeliverableEvent.objects.create(
+            deliverable=d,
+            event_type='status_transition',
+            source='test',
+            metadata={'from': 'ready', 'to': 'draft', 'direction': 'backward'},
+        )
+        m = self._collect()
+        lines = render_rework(m, {})
+        joined = '\n'.join(lines)
+        self.assertIn('Rework instrumentation live since', joined)
+        self.assertIn('baseline stabilizes after 7 full days', joined)
+
+    def test_renderer_shows_warming_note_even_with_zero_backward(self):
+        """Critical: warming state forces the section to render EVEN when
+        backward_24h=0. Otherwise operators misread silence as health."""
+        from core.services.diagnostics.coo_daily import render_rework
+        m = self._collect()
+        # No backward transitions in this test → backward_24h=0 BUT warming is active
+        self.assertEqual(m['rework']['backward_24h'], 0)
+        self.assertTrue(m['rework']['warming']['active'])
+        lines = render_rework(m, {})
+        self.assertGreater(len(lines), 0, 'Warming state must force section to render')
+        joined = '\n'.join(lines)
+        self.assertIn('baseline warming', joined)
+
+    def test_renderer_omits_section_when_healthy_and_not_warming(self):
+        """The only time the section is fully omitted: backward=0 AND warming over."""
+        from core.models_deliverables import Deliverable, DeliverableEvent
+        from core.services.diagnostics.coo_daily import render_rework
+        d = Deliverable.objects.create(
+            title='t', content='x', agent_name='A', deliverable_type='document',
+        )
+        old = DeliverableEvent.objects.create(
+            deliverable=d,
+            event_type='status_transition',
+            source='test',
+            metadata={'from': 'ready', 'to': 'ready', 'direction': 'forward'},
+        )
+        DeliverableEvent.objects.filter(pk=old.pk).update(
+            created_at=timezone.now() - timedelta(days=10)
+        )
+        m = self._collect()
+        # No backward events, warming inactive → section fully omitted
+        self.assertEqual(m['rework']['backward_24h'], 0)
+        self.assertFalse(m['rework']['warming']['active'])
+        self.assertEqual(render_rework(m, {}), [])
+
+    def test_gate_detail_uses_warming_phrasing_when_active(self):
+        """When rework gate trips during warming window, the detail line
+        uses the 'instrumentation live since' phrasing, not '7d avg'."""
+        from core.services.diagnostics.coo_daily import evaluate_gate
+        metrics = self._collect()
+        # Force backward_24h >= 5 to trip the gate
+        metrics['rework']['backward_24h'] = 6
+        metrics['rework']['top_transitions'] = [
+            {'from': 'ready', 'to': 'draft', 'count': 6}
+        ]
+        metrics['rework']['warming'] = {
+            'active': True,
+            'first_event_at': '2026-04-17T05:00:00+00:00',
+            'days_since_rollout': 2.5,
+        }
+        gate = evaluate_gate(metrics)
+        self.assertIn('REWORK_RATE_HIGH', gate['reasons'])
+        detail = ' '.join(gate['reason_details'])
+        self.assertIn('instrumentation live since 2026-04-17', detail)
+        self.assertIn('baseline warming', detail)
