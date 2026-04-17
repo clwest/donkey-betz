@@ -35,6 +35,11 @@ from .deliverable_status_signals import (
     connect_deliverable_status_signals,
 )
 
+from .mythology_alert_signals import (
+    bridge_mythology_alert_to_hai,
+    connect_mythology_alert_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -57,4 +62,7 @@ __all__ = [
     'stash_prior_status',
     'record_status_transition',
     'connect_deliverable_status_signals',
+    # Mythology alert → HAI bridge (Session 1095 Tier 1b)
+    'bridge_mythology_alert_to_hai',
+    'connect_mythology_alert_signals',
 ]
