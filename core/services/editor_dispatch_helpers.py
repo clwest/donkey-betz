@@ -26,9 +26,122 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+# ─────────────── Session 1098: Synthesis reroute (Fix A) ─────────────── #
+#
+# EditorAgent edits existing content; it does not generate from thin air.
+# But LLM-generated next_steps often ask EditorAgent to "synthesize the
+# Platform Audit + CTO + COO briefs into an Executive Brief" — that's a
+# generate-from-multiple-sources task, which belongs to ContentWriterAgent.
+#
+# The dispatcher layer (NOT the agent — editor_fail_loud memory rule) is
+# where we reroute. Detect synthesis-intent in the task text and swap the
+# agent. Gathered workspace sources go into ContentWriter's ``research``
+# context key (its expected source-material slot).
+#
+# Conservative pattern: require BOTH a synthesis verb AND a source-target
+# noun within 60 characters. Keeps false positives low — an "edit the
+# synthesis" instruction won't misfire because "synthesis" here is the
+# object, not the verb.
+
+SYNTHESIS_INTENT_PATTERN = re.compile(
+    r'\b(?:synthesiz|synthesis|combine|merge|consolidat|integrat)[a-z]*\b'
+    r'.{0,60}?'
+    r'\b(?:brief|briefs|analyses|analysis|report|reports|'
+    r'source|sources|deliverable|deliverables|finding|findings|'
+    r'memo|memos|doc|docs|document|documents)\b',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def detect_synthesis_intent(task_text: Optional[str]) -> bool:
+    """Return True when the task text reads as multi-source synthesis.
+
+    See SYNTHESIS_INTENT_PATTERN for the exact regex. Conservative by
+    design — we would rather miss a synthesis-intent case (falling back
+    to EditorAgent's fail-loud) than misroute a legitimate edit task to
+    ContentWriterAgent (which would then generate new content from a
+    draft that was supposed to be edited in place).
+    """
+    if not task_text:
+        return False
+    return bool(SYNTHESIS_INTENT_PATTERN.search(task_text))
+
+
+def reroute_synthesis_to_content_writer(
+    agent_name: str,
+    task_text: str,
+    context: Dict[str, Any],
+) -> Tuple[str, Dict[str, Any]]:
+    """Return (maybe-new-agent-name, maybe-enriched-context).
+
+    Rerouting rules (all must hold, else return unchanged):
+    1. ``EDITOR_SYNTHESIS_REROUTE_ENABLED`` setting is not disabled
+       (default ON; set to False via Django settings to turn off).
+    2. Input agent_name == 'EditorAgent'.
+    3. No explicit ``content`` or ``blog_id`` in context (those mean
+       the caller already knows what to edit — respect them).
+    4. ``detect_synthesis_intent(task_text)`` matches.
+
+    When rerouting, the helper:
+    - Gathers workspace sources via ``gather_workspace_content_for_editor``
+      and concatenates them into ``context['research']`` (the key
+      ContentWriterAgent reads). Skipped when no sources available.
+    - Adds ``routing_hint='synthesis_reroute_from_EditorAgent'`` for
+      downstream audit / dashboards.
+    - Logs a single INFO line with the pre/post agent, task preview,
+      and research char count.
+    """
+    from django.conf import settings
+
+    if not getattr(settings, 'EDITOR_SYNTHESIS_REROUTE_ENABLED', True):
+        return agent_name, context
+
+    if agent_name != 'EditorAgent':
+        return agent_name, context
+
+    if context.get('content') or context.get('blog_id'):
+        # Explicit target — edit it, don't reroute.
+        return agent_name, context
+
+    if not detect_synthesis_intent(task_text):
+        return agent_name, context
+
+    # Gather sources (reuse the Session 1090/1093 v2 logic). Safe when
+    # it returns None — ContentWriterAgent can still run without prior
+    # research, it just produces a from-task-text draft.
+    gathered = gather_workspace_content_for_editor(
+        context.get('workspace_id') or context.get('workspace'),
+        task_text,
+    )
+
+    new_context = dict(context)
+    research_chars = 0
+    if gathered and gathered.get('sources'):
+        research_parts = [
+            f"## {src.get('title', 'Untitled')}\n{src.get('content', '')}"
+            for src in gathered['sources']
+        ]
+        new_context['research'] = '\n\n---\n\n'.join(research_parts)
+        research_chars = len(new_context['research'])
+
+    new_context.setdefault('routing_hint', 'synthesis_reroute_from_EditorAgent')
+
+    logger.info(
+        "[editor-reroute] Synthesis task — rerouting EditorAgent -> "
+        "ContentWriterAgent. task='%s' research_chars=%d sources=%d",
+        (task_text or '')[:80],
+        research_chars,
+        len(gathered.get('sources', [])) if gathered else 0,
+    )
+    return 'ContentWriterAgent', new_context
+
+
+# ──────────────────────────────────────────────────────────────────────── #
 
 # Agents whose output is "source material" — we prefer these over
 # operational/diagnostic outputs when picking primary source for an editor.
