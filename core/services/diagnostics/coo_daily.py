@@ -1160,4 +1160,12 @@ def build_config():
         cache_key_prefix='coo_diag',
         workspace_id_env='COO_DIAG_WORKSPACE_ID',
         queue=os.environ.get('COO_DIAG_QUEUE', 'long_running'),
+        # Session 1096 — Rigby's conservative-start recommendation:
+        # override the primitive's default cap of 3 to start COO at 2.
+        # Rationale: "protects attention budget while the first week of
+        # real-world tuning happens. You can always bump to 3 after a
+        # few days once you see what kinds of days generate multiple
+        # legitimate escalations." Override is configurable via
+        # COO_DIAG_DAILY_POST_CAP env var for ops flexibility.
+        daily_post_cap=_env_int('COO_DIAG_DAILY_POST_CAP', 2),
     )
