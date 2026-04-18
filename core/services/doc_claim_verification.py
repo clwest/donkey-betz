@@ -2070,3 +2070,229 @@ def _current_models_count() -> ClaimResult:
             if severity != 'ok' else None
         ),
     )
+
+
+# =============================================================================
+# Tier-2 Round 9 — CLAUDE.md uncovered stats + code-level enum/choice constants
+# =============================================================================
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='llm_providers_6',
+    description="CLAUDE.md stats table: 'LLM Providers | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini'",
+)
+def _claude_llm_providers() -> ClaimResult:
+    """Count provider_classes entries in LLMProviderRegistry._initialize_providers()."""
+    import re
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent / 'llm_provider_registry.py').read_text()
+    m = re.search(r'provider_classes\s*=\s*\{(.*?)\}', src, re.DOTALL)
+    if not m:
+        return ClaimResult.build(
+            expected=6, actual=None, severity='error',
+            note='Could not parse provider_classes dict',
+        )
+    names = re.findall(r"'([^']+)'\s*:", m.group(1))
+    expected = 6
+    actual = len(names)
+    severity = 'ok' if actual == expected else ('low' if abs(actual - expected) == 1 else 'medium')
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"registered providers: {names}",
+        fix_suggestion=(
+            f"Update CLAUDE.md to '{actual} LLM Providers'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='services_135',
+    description="CLAUDE.md stats table: 'Services | 135'",
+)
+def _claude_services_count() -> ClaimResult:
+    """Same methodology as CAPABILITIES.md/SERVICES.md claims — Service-class count."""
+    import re
+    from pathlib import Path
+    services_dir = Path(__file__).resolve().parent
+    class_count = 0
+    for py in services_dir.rglob('*.py'):
+        if '__pycache__' in py.parts or py.name == '__init__.py':
+            continue
+        try:
+            src = py.read_text(errors='ignore')
+        except OSError:
+            continue
+        class_count += len(re.findall(r'^class\s+[A-Z]\w*Service\b', src, re.MULTILINE))
+    expected = 135
+    drift = abs(class_count - expected)
+    severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
+    return ClaimResult.build(
+        expected=expected,
+        actual=class_count,
+        severity=severity,
+        note=(
+            "Four doc sources contradict: CLAUDE 135, SERVICES.md 134, "
+            "CAPABILITIES 124, current/SERVICES 93+, current/INDEX 93+, "
+            "BACKEND_INVENTORY 167"
+        ),
+        fix_suggestion=(
+            f"Unify all docs to '{class_count}' Service classes"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='database_models_397',
+    description="CLAUDE.md stats table: 'Database Models | 397+'",
+)
+def _claude_db_models() -> ClaimResult:
+    from django.apps import apps
+    concrete = [m for m in apps.get_models() if not m._meta.abstract and not m._meta.proxy]
+    actual = len(concrete)
+    expected = 397
+    # Floor claim — OK if above
+    if actual < expected:
+        severity = 'high'
+    elif actual <= expected * 1.5:
+        severity = 'ok'
+    else:
+        severity = 'medium'
+    return ClaimResult.build(
+        expected=f">= {expected}",
+        actual=actual,
+        severity=severity,
+        note=(
+            "Five contradictions: current/INDEX 324+, MODELS 324+, "
+            "DATABASE_MODEL_REFERENCE 386+, infrastructure 386+, CLAUDE 397+, "
+            "BACKEND_INVENTORY 413"
+        ),
+        fix_suggestion=(
+            f"Unify all model count claims to '{actual}'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='agent_taxonomy_reconciliation',
+    description="CLAUDE.md stats: '84 AGENT_MAP (74 enabled, 8 rerouted, 2 blocked)'",
+)
+def _claude_agent_taxonomy() -> ClaimResult:
+    """Verify the reconciliation sum: fully_enabled + rerouted + blocked == AGENT_MAP."""
+    from core.agent_router import AgentRouter
+    from core.models_unified_system import AgentControlEntry
+    total = len(AgentRouter.AGENT_MAP)
+    blocked = list(AgentControlEntry.get_blocked_names())
+    # Same hardcoded set as td_handlers_ops.py:3618
+    non_specialist = {
+        'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+        'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+        'COOAgent', 'CTOAgent', 'AudioAgent',
+    }
+    rerouted = sorted(non_specialist - set(blocked))
+    fully_enabled = total - len(blocked) - len(rerouted)
+    expected_claim = "74 enabled + 8 rerouted + 2 blocked = 84"
+    actual_claim = f"{fully_enabled} enabled + {len(rerouted)} rerouted + {len(blocked)} blocked = {total}"
+    matches_74_8_2 = (fully_enabled == 74 and len(rerouted) == 8 and len(blocked) == 2)
+    severity = 'ok' if matches_74_8_2 else 'medium'
+    return ClaimResult.build(
+        expected=expected_claim,
+        actual=actual_claim,
+        severity=severity,
+        note=(
+            f"blocked (AgentControlEntry): {blocked}; "
+            f"rerouted (hardcoded _NON_SPECIALIST): {rerouted}"
+        ),
+        fix_suggestion=(
+            f"Update CLAUDE.md to '{fully_enabled} enabled, "
+            f"{len(rerouted)} rerouted, {len(blocked)} blocked'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='core/models_unified_system.py',
+    claim_id='agent_memory_types_7',
+    description="AgentMemory.MEMORY_TYPE_CHOICES: docstring/docs claim 7 types (success/failure/preference/technique/insight/interaction/feedback)",
+)
+def _agent_memory_type_choices() -> ClaimResult:
+    """Count MEMORY_TYPE_CHOICES on the AgentMemory model."""
+    from core.models_unified_system import AgentMemory
+    choices = getattr(AgentMemory, 'MEMORY_TYPE_CHOICES', [])
+    actual = len(choices)
+    expected = 7
+    severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 1 else 'medium')
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"types: {[c[0] for c in choices]}",
+        fix_suggestion=(
+            f"Sync docs — MEMORY_TYPE_CHOICES has {actual} entries"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='core/models_document_registry.py',
+    claim_id='initiative_pipeline_stages_5',
+    description="STAGE_TYPES: docs claim 'Stage 1..5 (research, planning, evaluation, specification, execution)'",
+)
+def _initiative_stage_types() -> ClaimResult:
+    from core.models_document_registry import STAGE_TYPES
+    actual = len(STAGE_TYPES)
+    expected = 5
+    severity = 'ok' if actual == expected else 'medium'
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"stage types: {dict(STAGE_TYPES)}",
+        fix_suggestion=(
+            f"Sync docs — STAGE_TYPES defines {actual} stages"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/topics/content-pipeline.md',
+    claim_id='reviewer_panel_always_two',
+    description="docs/topics/content-pipeline.md: '3-reviewer panel (Skeptic + FactCheck always; Domain conditional)'",
+)
+def _content_reviewer_panel() -> ClaimResult:
+    """Count reviewers invoked unconditionally in content_review_panel_v2.py."""
+    import re
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent / 'content_review_panel_v2.py').read_text()
+    always_matches = re.findall(
+        r"(?:_call_llm_reviewer|reviews\.append)\([^,]+,\s*[^,]+,\s*'(Skeptic|FactCheck)Reviewer'",
+        src,
+    )
+    actual_always = len(set(always_matches))
+    # Must have Skeptic + FactCheck both always
+    expected_always = 2
+    severity = 'ok' if actual_always == expected_always else 'medium'
+    return ClaimResult.build(
+        expected=f"{expected_always} always-run reviewers (Skeptic + FactCheck)",
+        actual=f"{actual_always} always-run: {sorted(set(always_matches))}",
+        severity=severity,
+        note=(
+            "DomainPersonaReviewer is conditional on domain confidence >= 0.2, "
+            "so 3-panel claim is a max; 2 always run"
+        ),
+        fix_suggestion=(
+            "Clarify docs/topics/content-pipeline.md: '2 always + 1 conditional'"
+            if severity != 'ok' else None
+        ),
+    )
