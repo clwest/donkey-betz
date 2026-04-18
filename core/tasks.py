@@ -9364,7 +9364,10 @@ def run_content_creation_agents():
     """
     agents = [
         'ImageAgent', 'VideoAgent',
-        'AudioAgent',  # Session 1088: Re-enabled (unblocked Session 1068, quota replenished)
+        # Session 1099: Re-disabled — ElevenLabs quota exhausted again (19/20 recent runs
+        # failed with quota_exceeded + paid_plan_required). Session 1088's "quota replenished"
+        # re-enable was premature. Re-add only when billing is confirmed fixed.
+        # 'AudioAgent',
         'ThreeDAgent',
         'ContentWriterAgent', 'ContentExecutorAgent',
         'ImageEditingAgent', 'VideoEditingAgent', 'ResolveAgent'
@@ -9540,16 +9543,26 @@ def run_executive_leadership_agents():
     """
     Session 787: Run executive and leadership agents every 6 hours.
 
-    Agents: CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent
+    Agents: CTOAgent, COOAgent, CreativeDirectorAgent
+    (Session 1099: Removed MeetingCoordinatorAgent — its execute() spawns sub-agent
+    perspective threads via router.route() with a 180s ThreadPoolExecutor timeout.
+    When sub-agents exceed 180s, the coordinator abandons them but Python threads
+    can't be killed, so the sub-agent LLM work keeps running for 60+ min,
+    accumulating hung `in_progress` AgentExecution rows that only die when the
+    60-min cleanup task catches them. Produces 2-3 stuck CTO/COO/CreativeDirector
+    executions per rotation × 4 rotations/day = the source of the current
+    CTO 40% / COO 50% circuit-breaker trips. Drop from rotation; CTO/COO still
+    reachable via PA/conversation_action_dispatch where they complete in 26-121s.
+    Deeper fix — threading.Event cancellation in MeetingCoordinator._get_agent_perspective
+    — is filed for future work.)
     """
-    agents = ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'MeetingCoordinatorAgent']
+    agents = ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent']
 
     def task_gen(agent):
         tasks = {
             'CTOAgent': 'Review technology strategy and provide executive recommendations',
             'COOAgent': 'Analyze operational efficiency and suggest improvements',
             'CreativeDirectorAgent': 'Review creative output quality and provide direction',
-            'MeetingCoordinatorAgent': 'Summarize key activities and prepare coordination notes',
         }
         return tasks.get(agent, f'Perform your primary function and report insights')
 
