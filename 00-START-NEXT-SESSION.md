@@ -109,6 +109,30 @@ Full writeup: `docs/handoffs/SESSION_1098_WRAP_CANARY_GREEN.md`
 
 ---
 
+## Queued investigation — stock agent rotation failures
+
+2026-04-17 18:46 rotation (`core.tasks.run_stock_financial_agents`): **4 of 5 agents failed**. Only StockAuditCoordinator succeeded (and wrote an audit with 0 alerts).
+
+Failing agents: StockAnalystAgent, BullCaseAgent, BearCaseAgent, MarketIntelligenceCoordinator (all `success=False, file=None`).
+
+Matches the `agent_noise` memory rule — scheduled rotation producing empty audits alongside systematic failures. Not blocking anything today, but worth a proper root-cause pass next session. Suggested start:
+
+```python
+from core.models import AgentExecution
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+for name in ['StockAnalystAgent', 'BullCaseAgent', 'BearCaseAgent', 'MarketIntelligenceCoordinator']:
+    rows = AgentExecution.objects.filter(agent__name=name, created_at__gte=since, status='failed')
+    print(f'{name}: {rows.count()} failures')
+    for r in rows.order_by('-created_at')[:3]:
+        print(f'  {r.created_at}  error={(r.error_message or "")[:120]}')
+```
+
+Either fix, disable the rotation and keep `run_stock_audit_cycle` as the single source of truth, or hand to Rigby for triage — Chris deferred the call.
+
+---
+
 ## COO 24h observation (parallel track — session 1096 wind-up)
 
 COO diagnostic still running with `COO_DIAGNOSTIC_ENABLED=true, COO_DIAGNOSTIC_POSTING_ENABLED=false`. No action needed from Session 1099 unless Chris wants to flip POSTING — that's a Rigby decision after she reviews her own observation data.
