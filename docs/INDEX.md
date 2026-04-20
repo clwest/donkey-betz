@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-20 14:16
+**Generated:** 2026-04-20 14:18
 **Current Session:** 1099
 **Total Documentation:** 1880 files | 637,161 lines
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 151 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/status/README.md` | 60 | STATUS |
+| `docs/archive/old-structure/session-reports/README.md` | 60 | 📊 Session Reports |
 | `docs/AGENTS.md` | 56 | AGENTS |
 | `docs/INDEX.md` | 48 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 38 | CAPABILITIES |
