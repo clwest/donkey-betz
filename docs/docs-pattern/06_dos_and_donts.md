@@ -9,7 +9,7 @@ Rules distilled from building `unified-donkey-betz` with an AI pair across ~1100
 
 ---
 
-## 10 DOs
+## 11 DOs
 
 ### DO 1: Use directories, never scatter .md files at the root of /docs/
 Flat `/docs/` becomes unmaintainable around ~20 files. The AI can't find anything, humans can't find anything, and nothing has a clear owner.
@@ -58,9 +58,14 @@ Honest drift beats hidden drift. The AI reading a doc with a "Known Issues" sect
 Embedded context lags behind code otherwise. On this platform there's a memory rule + pre-commit hook that enforces it.
 **Incident:** `INDEX.md` went 3 weeks out of date in Session 850-ish. Every PA answer was subtly wrong until it was rebuilt.
 
+### DO 11: Archive, never delete — your docs are primary-source material
+Stale handoffs, superseded topic docs, old audit dossiers — keep them. `git mv` into `docs/archive/`, prepend `status: superseded`, add a pointer header to the replacement. The corpus of 676+ session handoffs on this platform is the only record of *why* decisions were made. You can't reconstruct "we tried approach X but rejected it for reason Y" from code. One day the whole corpus might get distilled into a white paper or retrospective — you can't distill what you deleted.
+**Incident:** Chris explicitly flagged this (Session 1099 wrap, 2026-04-20): *"Let's not delete any documentation... one of these days those thousands of documents might be able to be turned into a white paper."* Prune-happy cleanup is a net loss even when the file looks like cruft.
+**Only exceptions:** regenerable auto-generated files (`INDEX.md`, `_index.json`) and accidentally-committed build artifacts (bytecode, `node_modules`).
+
 ---
 
-## 10 DON'Ts
+## 11 DON'Ts
 
 ### DON'T 1: Duplicate numbers across docs without an anchor
 Every duplicated number is a future contradiction. Either anchor one doc as canonical + pointer from others, or use a regenerable inventory.
@@ -83,7 +88,7 @@ The pointer to `PLATFORM_WHAT_IT_IS.md` goes at the **top** of `CLAUDE.md` and `
 
 ### DON'T 6: Create a new .md at the repo root for "just this one thing"
 "TODO.md", "NOTES.md", "REFACTOR_PLAN.md" — every one of these was "just this one thing" at some point. The repo root has one acceptable dynamic doc: `00-START-NEXT-SESSION.md`. Everything else goes in `/docs/<directory>/`.
-**Incident:** This platform had `CLEANUP.md`, `TODO.md`, `WORK_IN_PROGRESS.md` all at the root simultaneously. None were current. All were deleted in cleanup sessions.
+**Incident:** This platform had `CLEANUP.md`, `TODO.md`, `WORK_IN_PROGRESS.md` all at the root simultaneously. None were current — they should have been moved into `docs/archive/` or a `docs/scratchpad/` directory instead of sitting at the root confusing future sessions (see DO 11 — don't delete).
 
 ### DON'T 7: Trust timestamps on topic docs — trust the verifier
 A doc with `updated: 2026-03-01` at the top can still be wrong. Timestamps lie. The verifier tells you what's actually out of sync.
@@ -97,13 +102,16 @@ Zero exceptions across 1100 sessions. Every skipped handoff became a confused ne
 ### DON'T 10: Skip `build_docs_index` after doc changes
 The embedding layer is your AI's *eyes*. Not running `build_docs_index` is blindfolding it. Put it in a pre-commit hook.
 
+### DON'T 11: `rm` a doc to "clean up clutter"
+If a doc is stale, move it to `docs/archive/<year>/`. If it's been superseded, tag it `status: superseded` in frontmatter and add a pointer to the replacement. If it's a one-off note that never grew up, rename it with a `_DRAFT_` prefix. **The cost of keeping a stale doc is ~0. The cost of deleting a good one is irrecoverable.** The whole corpus, including the messy parts, is potential white-paper / retrospective material. See DO 11 for the full reasoning.
+
 ---
 
 ## Meta-Rule
 
 **If you catch yourself adding a new rule to this list, add it here the same day.** The pattern's value compounds when the lessons are captured while they're still raw. A week later, you'll have forgotten exactly which PR the incident happened in.
 
-The platform's failure modes are surprisingly few — ~20 rules covers most of them. Adding rule 21 means you've found a new one.
+The platform's failure modes are surprisingly few — ~22 rules covers most of them. Adding rule 23 means you've found a new one.
 
 ---
 
