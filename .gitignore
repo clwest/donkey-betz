@@ -316,3 +316,10 @@ income_builder_outputs/
 # Resolve Node artifacts (rendered videos & job configs)
 resolve_node/jobs/
 resolve_node/results/
+
+# Rigby-scheduled sports report artifacts (auto-generated, not source)
+/sports/arbitrage/
+/sports/odds/
+
+# Separate sub-repo workspace (has its own .git)
+/norman-handyman-mvp/
