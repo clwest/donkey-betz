@@ -1,6 +1,6 @@
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-04-20 13:54
+**Generated:** 2026-04-20 13:55
 **Current Session:** 1099
 **Total Documentation:** 1869 files | 635,564 lines
 
@@ -22,7 +22,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,301 |
+| Total cross-references | 2,300 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -31,7 +31,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 145 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/letters/README.md` | 60 | LETTERS |
+| `docs/architecture/README.md` | 60 | Architecture Documentation |
 | `docs/AGENTS.md` | 52 | AGENTS |
 | `docs/INDEX.md` | 45 | Unified Donkey Betz - Documentation Index |
 | `docs/CAPABILITIES.md` | 37 | CAPABILITIES |
@@ -221,6 +221,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 365 | 2026-04-20 13:54 |
 | personal-assistant.md | topics | 142 | 2026-04-20 13:54 |
 | initiative-pipeline.md | topics | 224 | 2026-04-20 13:54 |
 | infrastructure.md | topics | 79 | 2026-04-20 13:54 |
@@ -230,7 +231,6 @@
 | VIEWS.md | current | 493 | 2026-04-20 13:54 |
 | MODELS.md | current | 455 | 2026-04-20 13:54 |
 | MANAGEMENT_COMMANDS.md | current | 402 | 2026-04-20 13:54 |
-| INDEX.md | current | 290 | 2026-04-20 13:54 |
 
 ## Documentation by Subsystem
 
