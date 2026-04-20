@@ -71,14 +71,14 @@ Map<String, String> get _headers => {
 ```
 Username: mobile_test
 Password: test123
-Token: 2e63ae5a6eb6e506f757351f2e2f2db9021d3498
+Token: <mobile-test-token>
 User ID: 05af9610-4468-47fc-ac1d-9fa8a1e5fd43
 ```
 
 **6. Updated Mobile .env** ✅
 ```
 API_BASE_URL=http://10.0.0.108:8000
-AUTH_TOKEN=2e63ae5a6eb6e506f757351f2e2f2db9021d3498
+AUTH_TOKEN=<mobile-test-token>
 ```
 
 ---
@@ -88,7 +88,7 @@ AUTH_TOKEN=2e63ae5a6eb6e506f757351f2e2f2db9021d3498
 ### 1. Personal Assistant ✅
 ```bash
 curl -X POST 'http://localhost:8000/api/assistant/chat/' \
-  -H 'Authorization: Token 2e63ae5a6eb6e506f757351f2e2f2db9021d3498' \
+  -H 'Authorization: Token <mobile-test-token>' \
   -H 'Content-Type: application/json' \
   -d '{"message":"Test"}'
 
@@ -108,7 +108,7 @@ curl -X POST 'http://localhost:8000/api/assistant/chat/' \
 ### 2. Leadership Stats ✅
 ```bash
 curl -X GET 'http://localhost:8000/api/v1/coleadership/stats/' \
-  -H 'Authorization: Token 2e63ae5a6eb6e506f757351f2e2f2db9021d3498'
+  -H 'Authorization: Token <mobile-test-token>'
 
 # Response:
 {

@@ -1,15 +1,34 @@
 #!/usr/bin/env python3
 """
 PA Read-Only Tool Testing Script — Session 1062
+
 Tests 17 read-only Tier 3 PA tools on Railway.
+
+Usage:
+    export PA_API_TOKEN_TEST="<token>"
+    export PA_API_BASE_TEST="https://<railway-host>"  # optional, defaults to prod
+    python tests/one-off/test_pa_readonly_tools.py
 """
+import os
 import urllib.request
 import json
 import time
 import sys
 
-TOKEN = '43d46129f9d92d5f454c4f8fced36b744a53d248'
-BASE = 'https://donkey-betz-platform-production.up.railway.app'
+TOKEN = os.environ.get('PA_API_TOKEN_TEST', '')
+BASE = os.environ.get(
+    'PA_API_BASE_TEST',
+    'https://donkey-betz-platform-production.up.railway.app',
+)
+
+if not TOKEN:
+    print(
+        "ERROR: PA_API_TOKEN_TEST not set.\n"
+        "This script needs a DRF auth token to hit the PA API.\n"
+        "See docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md for how to obtain one.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 # 17 read-only tools with test prompts designed to trigger each one
 TESTS = [
