@@ -323,3 +323,19 @@ resolve_node/results/
 
 # Separate sub-repo workspace (has its own .git)
 /norman-handyman-mvp/
+
+# -----------------------------------------------------------------------------
+# Root-level organizational enforcement (Cleanup Phase 1, 2026-04-20)
+# See docs/cleanup/ROOT_CLEANUP_PLAN.md for the reasoning.
+#
+# *.log and nohup*.out are already globally ignored above — these root-level
+# rules are documentation for future maintainers. If a log appears at root
+# instead of logs/, it's a mistake; send it to logs/.
+#
+# PNGs at root are blocked so image artifacts from ad-hoc tests don't land
+# in the git-tracked set — put them under tests/artifacts/ or media/ instead.
+# -----------------------------------------------------------------------------
+
+# Keep image artifacts out of the repo root
+/*.png
+
