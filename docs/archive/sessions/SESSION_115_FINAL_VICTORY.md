@@ -161,7 +161,7 @@ Test server: http://localhost:8080 ✅ RUNNING
 ### Personal Assistant ✅
 ```bash
 curl -X POST 'http://localhost:8000/api/assistant/chat/' \
-  -H 'Authorization: Token 2e63ae5a6eb6e506f757351f2e2f2db9021d3498' \
+  -H 'Authorization: Token <mobile-test-token>' \
   -H 'Content-Type: application/json' \
   -d '{"message":"Test"}'
 
@@ -177,7 +177,7 @@ curl -X POST 'http://localhost:8000/api/assistant/chat/' \
 ### Leadership Stats ✅
 ```bash
 curl -X GET 'http://localhost:8000/api/v1/coleadership/stats/' \
-  -H 'Authorization: Token 2e63ae5a6eb6e506f757351f2e2f2db9021d3498'
+  -H 'Authorization: Token <mobile-test-token>'
 
 # Response:
 {
@@ -418,7 +418,7 @@ vercel
 ```
 Username: mobile_test
 Password: test123
-Token: 2e63ae5a6eb6e506f757351f2e2f2db9021d3498
+Token: <mobile-test-token>
 User ID: 05af9610-4468-47fc-ac1d-9fa8a1e5fd43
 ```
 

@@ -172,7 +172,7 @@ Together AI's factory migration dropped its read timeout from 120s to 90s. If la
 
 ## Collaboration notes
 
-- Local token: `19f3b711b2b1995255c5cc0e4182e085423c6557`
-- Local invocation: `PA_API_URL=http://localhost:8000 PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 .venv/bin/python tools/pa_chat.py "..." --conversation <id>`
+- Local token: `<local-donkeyking-token>` (value scrubbed from repo on 2026-04-20 per docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md)
+- Local invocation: `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-donkeyking-token> .venv/bin/python tools/pa_chat.py "..." --conversation <id>`
 - Local conversation from this session: `pa-272275b6e125`
 - Always verify `service_context: local` via `platform_config_tool overview` before real work. The prod-Rigby trap is still alive; `pa_chat.py:38` defaults to prod.
