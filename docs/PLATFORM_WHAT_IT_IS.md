@@ -22,7 +22,7 @@ companion_doc: PLATFORM_INVENTORY.md
 
 You've built an autonomous multi-agent intelligence platform that ingests real-time data from **80 spiders**, clusters it into signals, routes signals through **83 specialized AI agents** deliberating in multi-reviewer pipelines with full citation provenance, surfaces everything through a GPT-5.2-powered personal assistant (**Rigby**) with **101 tools** and **8 enrichment services**, monitors itself via a **9-system "body" health metaphor**, and audits its own documentation against runtime reality.
 
-**Scale:** 966,109 lines of Python. 570 database tables. 365 Celery tasks. One conversational interface to all of it.
+**Scale:** ~919K lines of app Python (core/ + ai_core/). 570 database tables. 365 Celery tasks. One conversational interface to all of it.
 
 ---
 
@@ -72,7 +72,7 @@ The platform can operate autonomously (scheduled Celery tasks continuously run s
 Each spider:
 - Runs on a schedule via Celery (or on-demand via orchestrators)
 - Writes rows into `SpiderData` (fields: `spider_name`, `source_url`, `data_type`, `raw_data`, `processed_data`, `embedding_text`)
-- Deduplicates via `SpiderItemHash` (63,657 hashes currently tracked)
+- Deduplicates via `SpiderItemHash` (~1.14M hashes tracked; live counter, grows continuously)
 - Gets embedded with OpenAI `text-embedding-3-small` and landed in pgvector
 
 **Registry:** `ai_core/spiders/spider_registry.py`.
@@ -110,13 +110,13 @@ Agent categories (partial): Creation, Editing, Research, Content Writing, Strate
 
 Every agent inherits from `BaseAgent` (`core/agents/base_agent.py`) which provides:
 
-- **Workspace file-write ability** (SKIN layer) — 22 agents are explicitly `WORKSPACE_AWARE_AGENTS` and can write to user workspaces with audit trail
+- **Workspace file-write ability** (SKIN layer) — 20 agents are explicitly `WORKSPACE_AWARE_AGENTS` and can write to user workspaces with audit trail
 - **Learned-knowledge injection** at prompt time — semantic search of `AgentKnowledgeSource`, fallback to keyword match
 - **Tool-call loop** — agents can invoke `delegate_to_specialist` (recursive routing), `web_search`, `spider_query`, and agent-specific tools
 - **Post-execution outcome recording** — `AgentExecution` (status/tokens/cost), `AgentMemory` (safety-classified memories), `AgentLearning` (XP + pattern detection), `AgentKnowledgeSource` (shared knowledge)
-- **Provenance tracking** — 26 agents explicitly wire `build_provenance()` into their output (data sources, timestamps, validation)
+- **Provenance tracking** — 29 agents explicitly wire `build_provenance()` into their output (data sources, timestamps, validation)
 
-Below the code agents: **~139 DB persona agents** via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **25 legendary advisors** (Warren Buffett-style, Cathie Wood-style, domain experts) accessible through `AdvisorContextBuilder`.
+Below the code agents: **223 DB persona agents** via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **32 advisors** (10 named figures — Warren Buffett, Cathie Wood, Ray Dalio, Sam Altman, Elon Musk, Gary Vaynerchuk, Mr Beast, Chris Voss, Billy Beane, Haralabos Voulgaris — and 22 domain specialists) accessible through `AdvisorContextBuilder`.
 
 **Router entry point:** `AgentRouter.route(agent_name, task, context)` performs parallel context gathering (11 workers × 10s timeout each) before dispatching to the agent. See `core/agent_router.py:738-1264`.
 
@@ -141,7 +141,7 @@ The single conversational entry point. `UnifiedPAEntrypoint` in `core/services/u
   | BlogPerformanceContextBuilder | content_tool |
   | DomainContentContextBuilder | 9 domains (finance, crypto, sports, betting, ai_tech, legal, career, health, education) |
   | SpiderContextBuilder | content/opportunities/predictions/intelligence |
-  | AdvisorContextBuilder | 25 advisors for opportunities + reasoning |
+  | AdvisorContextBuilder | 32 advisors (10 named + 22 domain) for opportunities + reasoning |
   | StrategicMemoryService | work_tool, governance_tool, reasoning |
   | ProactiveIntelligenceService | content, opportunities, intelligence, system_overview |
   | PlatformIntelligenceBriefingService | system_overview, execution_history |
@@ -233,7 +233,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 **Celery topology:**
 - 365 user-defined Celery tasks (excludes `celery.*` internals)
 - 305 `PeriodicTask` rows (258 enabled, 47 disabled — the 47 are agent-noise tasks disabled by Session 1089's beat governor)
-- 10 Procfile processes: `web`, `celery-worker`, `celery-pa`, `celery-content`, `celery-long-running`, `celery-long-running-2`, `celery-broadcast`, `celery-beat`, `code-worker`, `resolve-node`
+- 11 Procfile entries: `release` + `web`, `celery-worker`, `celery-pa`, `celery-content`, `celery-long-running`, `celery-long-running-2`, `celery-broadcast`, `celery-beat`, `code-worker`, `resolve-node`
 - Per-task RSS memory telemetry (`CeleryTaskEvent.rss_delta_mb` with `[MEMORY] SPIKE` log markers at 50/100 MB thresholds)
 - Dedicated `pa` queue for Personal Assistant workloads (300s time limit)
 
@@ -270,7 +270,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 
 ### Layer 9 — Frontend (React + TypeScript + Vite + Tailwind)
 
-**Routes** — 61 `<Route>` entries in `App.tsx`. Key routes:
+**Routes** — 60 `<Route>` entries in `App.tsx`. Key routes:
 - `/` — Command Center (home, PA chat)
 - `/workspace` — 5-tab modular workspace (home, work, build, intelligence, system)
 - `/stocks` — Stock Intelligence dashboard
@@ -293,7 +293,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 
 ### Layer 10 — Discord Integration
 
-- **96 `@*.command` decorators + 48 `@app_commands.command`** in `discord_bot.py` (14,486 lines)
+- **96 `@*.command` decorators + 48 `@app_commands.command`** in `discord_bot.py` (11,676 lines)
 - **25 Cog classes** grouping commands (Status, Agent, Spider, Interactive, Content, Voice, VoiceMarketplace, + 18 more)
 - **12 notification channels** (agent dreams, spider summaries, market/blockchain alerts)
 - Voice AI — TTS, STT, voice cloning, voice chat
@@ -331,7 +331,7 @@ Every factual statement in published content has a deterministic `C-xxxxxxxx` ID
 Every Initiative traces back to originating SpiderData rows via `HiveMindSession → AutoTopic → SignalCluster → SpiderData`. "Why does this project exist?" is a database query.
 
 ### 4. Learning Loop + XP Budget
-Agents track `AgentLearning`, accumulate XP, get performance feedback injected into their next prompt. `CoordinatorOutcome` has 17,026 rows locally. The platform gets smarter at specific agents over time.
+Agents track `AgentLearning`, accumulate XP, get performance feedback injected into their next prompt. `CoordinatorOutcome` has 17,500+ rows locally (live counter). The platform gets smarter at specific agents over time.
 
 ### 5. Self-Aware System (Session 1099)
 The doc-vs-reality verifier + `PLATFORM_INVENTORY.md` means the platform now knows when its docs disagree with its code. It can audit itself. 65 claims registered, 45 drifts currently tracked, one command to regenerate the inventory.
@@ -386,7 +386,7 @@ See `python manage.py verify_doc_claims --only-drift` for the live list.
 - **Session 1098 canary test artifacts**: Deliverable `c7f4c940` + blog `b8a2b6a3` intentionally live until 24h observation window closes.
 - **Phase-2 initiative guard test**: validate `expected_initiative_id` mismatch handling on a blog with an initiative.
 - **SpiderData embedding coverage**: only 20.1% of spider data is embedded (memory is 97.6%) — semantic search is partial for spider intelligence.
-- **149 dormant agents**: registered but never executed in the last 30 days. Either wire to real tasks or remove.
+- **171 dormant agents**: of 306 total registered (83 AGENT_MAP + 223 DB personas), 171 have zero executions in the last 30 days. Either wire to real tasks or remove.
 - **0 Initiatives completed**: pipeline creates but doesn't finish work items. Fast Track auto-progression stalls at Stage 2.
 
 ---
@@ -447,14 +447,14 @@ open http://localhost:8000/ai-studio/
 | **Advisor** | A "personality-infused" advisor (Warren Buffett-style, Cathie Wood-style, etc.) injected into prompts via `AdvisorContextBuilder`. 25 total. |
 | **AgentMemory** | A specific memory of one agent execution. Safety-classified (`test_only`/`exploratory`/`candidate`/`approved`). |
 | **AutoTopic** | A topic auto-generated from a signal cluster, ready to drive initiative creation. |
-| **BaseAgent** | The 5,154-line base class every code agent inherits from. |
+| **BaseAgent** | The 5,575-line base class every code agent inherits from. |
 | **Beat Governor** | Cost-governed Celery Beat dispatcher (Session 1089). |
 | **Body Systems** | 9 anatomical health monitors (HEART, LUNGS, BRAIN, etc.). |
 | **ClaimsPack** | A deduplicated, capped collection of factual claims (max 20) extracted from SpiderData + SignalClusters. |
-| **CoordinatorOutcome** | Record of a multi-agent debate/deliberation outcome. 17,026 locally. |
+| **CoordinatorOutcome** | Record of a multi-agent debate/deliberation outcome. 17,500+ rows locally (live counter). |
 | **Deliberation** | Multi-reviewer review of draft content. 3 reviewers. |
 | **DeliverableAppend** | Canary path (Session 1098) for appending agent output to an existing Deliverable instead of creating a new one. |
-| **DynamicPersonaAgent** | Fallback agent that hydrates a persona from a DB row. ~139 available. |
+| **DynamicPersonaAgent** | Fallback agent that hydrates a persona from a DB row. 223 available. |
 | **HiveMindSession** | A multi-agent debate session with full participant tracking. |
 | **Initiative** | A platform project. Has 5 stages + provenance back to signals. |
 | **LUNGS budget** | Per-provider/per-agent token budget tracking. |

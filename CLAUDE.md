@@ -1,6 +1,8 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** April 3, 2026
+**Last Updated:** April 20, 2026 (Session 1099 audit)
+
+> **Source of truth for numbers:** [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) (runtime-derived, regenerable). When this doc disagrees with either, PLATFORM_INVENTORY wins. Run `python manage.py verify_doc_claims --only-drift` to see which claims across all docs currently drift from reality.
 
 ## Working with Rigby (PA)
 
@@ -25,59 +27,68 @@ open http://localhost:8000/ai-studio/
 
 ## System Stats
 
+> Verified 2026-04-20 against code. See PLATFORM_WHAT_IT_IS.md for full breakdown + glossary.
+
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 218 | 84 AGENT_MAP (74 enabled, 8 rerouted, 2 blocked) + ~139 DB persona agents (via DynamicPersonaAgent), 26 provenance-tracked |
-| **Spiders** | 79 | 74 working, 5 need API keys |
-| **PA Tools** | 130+ | GPT-5.2 function calling, 130+ tool handlers, 85+ schemas, 8 enrichment services |
+| **Agents (total registered)** | 306 | 83 AGENT_MAP (73 enabled, 8 rerouted, 2 blocked) + 223 DB persona agents (via DynamicPersonaAgent); 171 dormant in last 30d; 29 provenance-tracked; 20 workspace-aware |
+| **Spiders** | 80 | Across 41 categories; ~1.14M SpiderItemHash rows tracked |
+| **PA Tools (Rigby)** | 101 schemas / 166 handlers | GPT-5.2 function calling, 6 gateway tools, 8 enrichment services, dedicated `pa` Celery queue |
 | **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
-| **Database Models** | 397+ | PostgreSQL + pgvector |
-| **Celery Tasks** | 269 | 9 worker processes (7 Celery + code-worker + web), dedicated PA queue |
-| **Services** | 135 | Signal aggregation, content scoring, content deliberation, auto-spawning |
-| **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
-| **Advisors** | 25 | Famous figures + domain experts |
-| **Frontend** | ~2,500 KB | 9 workspace tabs, 69 routes, 12-tab betting dashboard |
+| **Database Models** | 570 | Concrete Django models across 23 apps (PostgreSQL + pgvector) |
+| **Celery Tasks** | 365 / 305 | 365 user-defined `@task` + 305 PeriodicTask (258 enabled, 47 disabled by Session 1089 beat governor) |
+| **Procfile entries** | 11 | release + web + 7 celery workers (worker/pa/content/long-running/long-running-2/broadcast/beat) + code-worker + resolve-node |
+| **Services** | ~300 | Signal aggregation, content scoring, deliberation, enrichment, advisors |
+| **Body Systems** | 9 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN (+ BodyCoordinator autonomic reflex layer) |
+| **Advisors** | 32 | 10 named figures (Warren Buffett, Cathie Wood, Ray Dalio, Sam Altman, Elon Musk, Gary Vaynerchuk, Mr Beast, Chris Voss, Billy Beane, Haralabos Voulgaris) + 22 domain specialists |
+| **Signal pattern types** | 10 | demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, competitive_signal, market_movement, skill_demand, content_gap, user_need |
+| **Frontend** | 60 routes | `<Route>` entries in `frontend/src/App.tsx`; Command Center + 5-tab workspace; 9-tab betting dashboard |
+| **Discord bot** | 144 commands | 96 `@*.command` + 48 `@app_commands.command` across 25 Cog classes in `core/services/discord_bot.py` (11,676 lines) |
 
 ## Project Structure
 
 ### Key Directories
-- `core/agents/` - 84 AGENT_MAP agents with learning hooks
-- `core/services/` - 134 service classes
-- `ai_core/spiders/` - 77 spiders
-- `docs/topics/` - Embedding-optimized subsystem docs (current state)
-- `docs/handoffs/` - 641 session handoff documents (build history)
+- `core/agents/` — 83 AGENT_MAP agent classes with learning hooks; BaseAgent is 5,575 lines
+- `core/services/` — ~300 service modules
+- `ai_core/spiders/` — 80 registered spiders
+- `docs/topics/` — Embedding-optimized subsystem docs (current state)
+- `docs/handoffs/` — 676 session handoff documents (build history)
 
 ### Key Files
 | File | Purpose |
 |------|---------|
 | `00-START-NEXT-SESSION.md` | Current session priorities |
-| `core/agent_router.py` | Deterministic agent routing |
+| `docs/PLATFORM_WHAT_IT_IS.md` | Platform narrative + glossary (source of truth for numbers) |
+| `docs/PLATFORM_INVENTORY.md` | Runtime-derived inventory (regenerable) |
+| `core/agent_router.py` | Deterministic agent routing (AGENT_MAP lives here) |
 | `core/tasks.py` | Celery background tasks |
 | `core/conversation_orchestrator.py` | Multi-agent conversations |
 | `core/services/unified_pa_entrypoint.py` | PA: GPT-5.2 function calling agentic loop, enrichment pipeline |
-| `core/services/tool_dispatcher.py` | PA: 53 tool handlers |
-| `core/services/pa_tool_schemas.py` | PA: 50+ OpenAI function-calling tool schemas |
+| `core/services/tool_dispatcher.py` | PA: 166 tool handlers |
+| `core/services/pa_tool_schemas.py` | PA: 101 OpenAI function-calling tool schemas |
 | `core/services/signal_aggregation_service.py` | Signal clustering & auto-topic generation |
 | `core/services/content_scoring_service.py` | Rule-based reach/intent/replicability scoring |
 | `core/services/content_deliberation_runner.py` | v2 content pipeline |
-| `frontend/src/pages/WorkspacePageNew.tsx` | 9-tab modular workspace |
+| `core/services/doc_claim_verification.py` | Doc-vs-reality verifier (Session 1099) |
+| `core/epa_handlers_tools.py` | WORKSPACE_AWARE_AGENTS constant (20 agents) |
+| `frontend/src/pages/WorkspacePageNew.tsx` | 5-tab modular workspace |
 | `frontend/src/pages/CommandCenterPage.tsx` | Command Center with PA chat |
 
 ## Subsystem Documentation
 
-Detailed current-state docs for each subsystem (designed for embedding):
+Detailed current-state docs for each subsystem (designed for embedding). **Some per-topic stats tables drift from reality — trust PLATFORM_WHAT_IT_IS for totals.**
 
 | Topic File | Covers |
 |------------|--------|
-| [docs/topics/personal-assistant.md](docs/topics/personal-assistant.md) | PA GPT-5.2 function calling, 53 tools, enrichment, async flow |
+| [docs/topics/personal-assistant.md](docs/topics/personal-assistant.md) | PA GPT-5.2 function calling, tools, enrichment, async flow |
 | [docs/topics/content-pipeline.md](docs/topics/content-pipeline.md) | ClaimsPack, deliberation, reviewers, PublishGate |
-| [docs/topics/agent-system.md](docs/topics/agent-system.md) | 84 AGENT_MAP agents, routing, ToolCallRecord, provenance |
+| [docs/topics/agent-system.md](docs/topics/agent-system.md) | AGENT_MAP agents, routing, ToolCallRecord, provenance |
 | [docs/topics/initiative-pipeline.md](docs/topics/initiative-pipeline.md) | Dreams, 5-stage pipeline, signals, action items |
-| [docs/topics/celery-workers.md](docs/topics/celery-workers.md) | 9 worker processes, queues, memory management, observability |
+| [docs/topics/celery-workers.md](docs/topics/celery-workers.md) | Worker processes, queues, memory management, observability |
 | [docs/topics/body-systems.md](docs/topics/body-systems.md) | 9 health systems, coordinator, scoring |
-| [docs/topics/spider-network.md](docs/topics/spider-network.md) | 77 spiders, data types, signal aggregation |
+| [docs/topics/spider-network.md](docs/topics/spider-network.md) | Spiders, data types, signal aggregation |
 | [docs/topics/stock-intelligence.md](docs/topics/stock-intelligence.md) | Dashboard, briefs, alerts, predictions |
-| [docs/topics/frontend.md](docs/topics/frontend.md) | 9 workspace tabs, PA integration, telemetry |
+| [docs/topics/frontend.md](docs/topics/frontend.md) | Workspace tabs, PA integration, telemetry |
 | [docs/topics/infrastructure.md](docs/topics/infrastructure.md) | Django, Railway, Redis, PostgreSQL |
 
 ## GPT-5-mini Configuration
@@ -107,18 +118,21 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES celery -A core worker -l INFO --pool=sol
 
 | Doc | Purpose |
 |-----|---------|
+| [PLATFORM_WHAT_IT_IS.md](docs/PLATFORM_WHAT_IT_IS.md) | **Start here.** Platform narrative + glossary (source of truth) |
+| [PLATFORM_INVENTORY.md](docs/PLATFORM_INVENTORY.md) | Runtime-derived inventory (regenerable via `generate_platform_inventory`) |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
-| [AGENTS.md](docs/AGENTS.md) | Agent documentation |
-| [SPIDERS.md](docs/SPIDERS.md) | Spider network |
+| [AGENTS.md](docs/AGENTS.md) | Agent documentation (stats may drift — trust PLATFORM_WHAT_IT_IS) |
+| [SPIDERS.md](docs/SPIDERS.md) | Spider network (stats may drift — trust PLATFORM_WHAT_IT_IS) |
 | [SERVICES.md](docs/SERVICES.md) | Services layer |
 | [DATABASE_MODEL_REFERENCE.md](docs/DATABASE_MODEL_REFERENCE.md) | Which DB table for what |
 | [API_PATH_POLICY.md](docs/API_PATH_POLICY.md) | API path conventions |
 | [DREAM_INITIATIVE_WORKFLOW.md](docs/DREAM_INITIATIVE_WORKFLOW.md) | Initiative 5-stage pipeline |
-| [DISCORD_INTEGRATION.md](docs/DISCORD_INTEGRATION.md) | Discord bot: 112 commands |
+| [DISCORD_INTEGRATION.md](docs/DISCORD_INTEGRATION.md) | Discord bot: 144 commands across 25 Cogs |
 | [demo_mode.md](docs/demo_mode.md) | Resolve demo mode guardrails, demo clip generation |
 | [governance_redesign.md](docs/governance_redesign.md) | Governance UX redesign spec, 7 implementation tickets |
 
 **Documentation Index:** Run `python manage.py build_docs_index` to regenerate `docs/INDEX.md`
+**Doc verifier:** Run `python manage.py verify_doc_claims --only-drift` to see which claims drift from reality
 
 ---
 
