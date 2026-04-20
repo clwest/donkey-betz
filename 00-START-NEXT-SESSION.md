@@ -9,7 +9,7 @@
 ### The correct LOCAL invocation
 ```bash
 PA_API_URL=http://localhost:8000 \
-PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
+PA_API_TOKEN=<local-donkeyking-token>      \
 .venv/bin/python tools/pa_chat.py "message" --conversation <id>
 ```
 
@@ -145,7 +145,7 @@ Continuous since Session 1094: `pa-3c7ddc058db1`.
 
 ```bash
 PA_API_URL=http://localhost:8000 \
-PA_API_TOKEN=19f3b711b2b1995255c5cc0e4182e085423c6557 \
+PA_API_TOKEN=<local-donkeyking-token>      \
 .venv/bin/python tools/pa_chat.py "message" --conversation pa-3c7ddc058db1
 ```
 

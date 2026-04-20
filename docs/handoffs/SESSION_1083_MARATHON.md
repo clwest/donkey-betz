@@ -88,7 +88,7 @@ Production (Linux Railway) workers do NOT set `SKIP_NLP_MODELS=1` — they use M
 
 Mid-session Chris caught that every `pa_chat.py` call was going to production Rigby instead of local. `tools/pa_chat.py:38` has `DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"`. All the smoke test results Rigby had been giving me (826 deliverables, 10 signal clusters, ResearchAgent dispatches) were against PRODUCTION data, not local. Chris couldn't see our activity in his local ChatUI because our conversation was happening on prod.
 
-**Fix for next session:** the new `00-START-NEXT-SESSION.md` has a prominent warning at the very top with the correct LOCAL invocation. Always export `PA_API_URL=http://localhost:8000` and use token `19f3b711b2b1995255c5cc0e4182e085423c6557` (the .env has the PROD token, don't use it for local work).
+**Fix for next session:** the new `00-START-NEXT-SESSION.md` has a prominent warning at the very top with the correct LOCAL invocation. Always export `PA_API_URL=http://localhost:8000` and use token `<local-donkeyking-token>` (see docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md or .env.example for how to obtain) (the .env has the PROD token, don't use it for local work).
 
 ## Session-end state
 

@@ -1,18 +1,37 @@
 #!/usr/bin/env python3
 """
 PA Mutation Tool Testing Script — Session 1062
+
 Tests Tier 2 PA tools (mutations + LLM calls) on Railway.
 Phase 1: Read-only actions on mutation tools
 Phase 2: Actual mutations (safe ones only)
 Phase 3: run_agent + legal_doc_drafter_agent
+
+Usage:
+    export PA_API_TOKEN_TEST="<token>"
+    export PA_API_BASE_TEST="https://<railway-host>"  # optional, defaults to prod
+    python tests/one-off/test_pa_mutation_tools.py
 """
+import os
 import urllib.request
 import json
 import time
 import sys
 
-TOKEN = '43d46129f9d92d5f454c4f8fced36b744a53d248'
-BASE = 'https://donkey-betz-platform-production.up.railway.app'
+TOKEN = os.environ.get('PA_API_TOKEN_TEST', '')
+BASE = os.environ.get(
+    'PA_API_BASE_TEST',
+    'https://donkey-betz-platform-production.up.railway.app',
+)
+
+if not TOKEN:
+    print(
+        "ERROR: PA_API_TOKEN_TEST not set.\n"
+        "This script needs a DRF auth token to hit the PA API.\n"
+        "See docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md for how to obtain one.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 # Phase 1: Read-only actions on mutation-capable tools
 PHASE1_TESTS = [
