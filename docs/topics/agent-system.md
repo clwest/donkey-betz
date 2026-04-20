@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`../PLATFORM_WHAT_IT_IS.md`](/docs/PLATFORM_WHAT_IT_IS.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality (Session 1099 verifier).
+
 # Agent System
 
 84 agents in AGENT_MAP (+ ~139 DB persona agents via DynamicPersonaAgent), routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all 84 AGENT_MAP agents, media task guard blocks non-generative tasks.
