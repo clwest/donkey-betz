@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`../PLATFORM_WHAT_IT_IS.md`](/docs/PLATFORM_WHAT_IT_IS.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality (Session 1099 verifier).
+
 # Initiative Pipeline
 
 Initiatives are the platform's project management system — ideas flow from dreams through a 5-stage pipeline to deliverables, with signal intelligence providing the "why" behind each initiative.
