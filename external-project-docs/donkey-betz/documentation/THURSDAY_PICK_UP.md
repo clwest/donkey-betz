@@ -41,7 +41,7 @@
 
 ### 🔑 Working Test Token:
 ```bash
-curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://127.0.0.1:8000/api/content/list/
 ```
 
@@ -212,7 +212,7 @@ python manage.py runserver
 
 # Terminal 2: Test API
 curl -X POST http://localhost:8000/api/content/create/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "a majestic mountain",

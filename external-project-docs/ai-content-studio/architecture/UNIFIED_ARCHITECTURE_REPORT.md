@@ -310,20 +310,20 @@ curl -s http://localhost:8080/health || echo "❌ React Web App not accessible"
 
 # Test React Native compatibility  
 echo "2. Testing unified backend API..."
-curl -s -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -s -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://localhost:8001/api/health/ || echo "❌ Backend API not accessible"
 
 # Test agent orchestration
 echo "3. Testing agent orchestration..."
 curl -s -X POST \
-     -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+     -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      -H "Content-Type: application/json" \
      -d '{"agent_type":"research","task_description":"Test task"}' \
      http://localhost:8001/api/agents/execute/ || echo "❌ Agent execution failed"
 
 # Test sports betting integration
 echo "4. Testing sports betting..."
-curl -s -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -s -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://localhost:8001/api/sports/leagues/ || echo "❌ Sports API not accessible"
 
 # Test WebSocket connections

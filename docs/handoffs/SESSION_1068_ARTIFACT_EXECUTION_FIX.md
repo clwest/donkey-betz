@@ -108,6 +108,6 @@ Queried ToolCallRecord for failure details:
 
 ## Railway Auth
 
-- PA API token for `Donkeyking` user: `0cdc1c72dba99ea637485076ee952d571440aa30`
+- PA API token for `Donkeyking` user: `<redacted-0cdc1c72-2026-04-20>`
 - Endpoint: `POST /api/assistant/chat/` with `Authorization: Token <key>` and `Content-Type: application/json`
 - Body: `{"message": "..."}`

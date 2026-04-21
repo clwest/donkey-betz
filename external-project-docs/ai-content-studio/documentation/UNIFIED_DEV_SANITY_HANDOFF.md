@@ -138,7 +138,7 @@ make unified-platform # Start unified platform
 ### Test Endpoints
 ```bash
 # Test AI Studio API
-curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://localhost:8001/api/content/
 
 # Test DBAO API  
@@ -186,7 +186,7 @@ The environment will be considered fully operational when:
 - **Session History**: `/documentation/sessions/`
 - **Claude.md Instructions**: `/CLAUDE.md`
 - **Test Credentials**: `testuser` / `testpass123`
-- **Auth Token**: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- **Auth Token**: `<redacted-993f8273-2026-04-20>`
 
 ---
 

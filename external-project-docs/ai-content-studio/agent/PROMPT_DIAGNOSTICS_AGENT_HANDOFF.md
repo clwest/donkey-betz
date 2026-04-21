@@ -248,7 +248,7 @@ python manage.py optimize_prompts --file prompts.json --user testuser --verbose
 
 # 2. Test API endpoint
 curl -X POST http://localhost:8001/api/prompt-diagnostics/analyze/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Test prompt for analysis",
@@ -258,7 +258,7 @@ curl -X POST http://localhost:8001/api/prompt-diagnostics/analyze/ \
 
 # 3. View dashboard
 curl http://localhost:8001/api/prompt-diagnostics/dashboard/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 ```
 
 ## 📈 Next Steps & Recommendations
@@ -285,7 +285,7 @@ curl http://localhost:8001/api/prompt-diagnostics/dashboard/ \
 ## 🔑 Key Information for Next Agent
 
 ### Authentication
-- Use token: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- Use token: `<redacted-993f8273-2026-04-20>`
 - Test user: `testuser` / `testpass123`
 
 ### Database

@@ -17,7 +17,7 @@ load_dotenv()
 
 # Configuration
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
-AUTH_TOKEN = os.getenv('TEST_AUTH_TOKEN', '424a48280fa87d30f4997beda23ccad57418d7cb')
+AUTH_TOKEN = os.getenv('TEST_AUTH_TOKEN', '<redacted-424a4828-2026-04-20>')
 
 if not AUTH_TOKEN:
     print("WARNING: No TEST_AUTH_TOKEN found in environment.")

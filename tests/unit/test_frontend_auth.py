@@ -17,8 +17,8 @@ import json
 
 # Test configurations
 BASE_URL = "http://localhost:8000/api"
-VALID_TOKEN = "424a48280fa87d30f4997beda23ccad57418d7cb"  # Alice Writer's token
-INVALID_TOKEN = "e7d2ae96885384ad8c66cfcd094f4f193629f227"  # Chris's invalid token
+VALID_TOKEN = "<redacted-424a4828-2026-04-20>"  # Alice Writer's token
+INVALID_TOKEN = "<redacted-e7d2ae96-2026-04-20>"  # Chris's invalid token
 
 def test_token(token, description):
     """Test a specific token against various endpoints"""

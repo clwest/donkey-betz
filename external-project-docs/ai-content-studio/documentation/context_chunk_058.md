@@ -929,7 +929,7 @@ This session focused on resolving Content Studio authentication issues reported 
 
 3. **Backend Verification**
    - Confirmed backend URLs are correctly configured
-   - Verified authentication is working with token: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+   - Verified authentication is working with token: `<redacted-73d9b35d-2026-04-20>`
    - All pipeline endpoints require authentication as designed
 
 ### Files Created
@@ -967,7 +967,7 @@ The donkey-betz-frontend repository needs:
 - Backend is correctly configured and working
 - Frontend fixes have been documented but not applied (separate repository)
 - User has been provided with automated scripts and detailed guides
-- Authentication token confirmed working: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+- Authentication token confirmed working: `<redacted-73d9b35d-2026-04-20>`
 
 ### Next Steps
 

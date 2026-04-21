@@ -36,7 +36,7 @@ def test_endpoint(name: str, path: str, method: str = "GET", data: Dict[str, Any
     # Add authentication token if available
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Token 4b9facbb8006ac4dd7408fd45a6747105a6719fb"  # Admin token
+        "Authorization": "Token <redacted-4b9facbb-2026-04-20>"  # Admin token
     }
     
     try:

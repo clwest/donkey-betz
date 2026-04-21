@@ -9,7 +9,7 @@ import time
 
 # API configuration
 API_BASE = "http://localhost:8000/api/v1"
-AUTH_TOKEN = "993f8273f70877e23b5c7d2f92ed30562a089fe3"
+AUTH_TOKEN = "<redacted-993f8273-2026-04-20>"
 
 def test_agent_execution():
     """Test executing an agent with proper task description"""

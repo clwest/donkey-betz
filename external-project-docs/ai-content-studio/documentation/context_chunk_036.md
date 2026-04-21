@@ -1369,7 +1369,7 @@ After each fix, test with:
 ```bash
 # Test complete AI pipeline
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"message": "Testing system health"}'
 
@@ -1425,7 +1425,7 @@ curl -X POST http://localhost:8000/api/ai-partner/chat/ \
 python manage.py shell -c "
 import requests
 response = requests.post('http://localhost:8000/api/ai-partner/chat/', 
-  headers={'Authorization': 'Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3'},
+  headers={'Authorization': 'Token <redacted-8401e051-2026-04-20>'},
   json={'message': 'Testing system after fixes'}
 )
 print(f'Status: {response.status_code}')

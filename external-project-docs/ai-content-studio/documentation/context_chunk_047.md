@@ -518,7 +518,7 @@ cd donkey-betz-ui-fresh && npm run dev
 
 # Test campaign endpoint
 curl -X POST http://localhost:8000/api/content/pipeline/business-package/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"business_name": "Test Co", "industry": "Tech"}'
 
@@ -5440,7 +5440,7 @@ Now that campaigns are working, focus on:
 ## 💡 Important Notes for Next Session
 
 1. **Server must be running**: Use `make run-backend-ws-dual`
-2. **Test token works**: 8401e05142480ffd7635e1f7cf5708c6a8c965e3
+2. **Test token works**: <redacted-8401e051-2026-04-20>
 3. **Campaign endpoint**: `/api/content/campaigns/generate/`
 4. **Frontend already complete**: Don't modify CampaignCreator.tsx
 5. **Memory Palace working**: 267,000+ memories available

@@ -16,7 +16,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login/ \
 Response:
 ```json
 {
-  "token": "993f8273f70877e23b5c7d2f92ed30562a089fe3",
+  "token": "<redacted-993f8273-2026-04-20>",
   "user": {
     "id": "e7a146d3-6934-4819-a026-5af63806af87",
     "username": "chris",

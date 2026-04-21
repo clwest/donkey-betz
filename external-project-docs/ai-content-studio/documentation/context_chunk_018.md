@@ -1531,7 +1531,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Show me NVDA and INVALID_SYMBOL stock prices"}'
 ```
 **Result**: 200 OK, no concatenation errors, graceful invalid symbol handling
@@ -1967,7 +1967,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 **Result**: 200 OK, agent deployed successfully, no errors
@@ -4686,7 +4686,7 @@ if not isinstance(risk_factors, list):
 ### Chat Endpoint Test ✅
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 
@@ -4893,7 +4893,7 @@ return "\n".join(safe_parts)
 ```bash
 # Test with market query
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "What are the current stock prices for AAPL and INVALID_SYMBOL?"}'
 
 # Expected: No concatenation errors, graceful handling of invalid symbols
@@ -5065,7 +5065,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Show me NVDA and INVALID_SYMBOL stock prices"}'
 ```
 **Result**: 200 OK, no concatenation errors, graceful invalid symbol handling
@@ -5501,7 +5501,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 **Result**: 200 OK, agent deployed successfully, no errors

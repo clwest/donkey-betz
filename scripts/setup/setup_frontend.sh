@@ -101,7 +101,7 @@ if [ ! -f .env.local ]; then
     cat > .env.local << EOL
 REACT_APP_API_URL=http://localhost:8000
 REACT_APP_WS_URL=ws://localhost:8000
-REACT_APP_AUTH_TOKEN=0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97
+REACT_APP_AUTH_TOKEN=<redacted-0fb2390d-2026-04-20>
 EOL
     echo -e "${GREEN}✅ Environment file created${NC}"
 else

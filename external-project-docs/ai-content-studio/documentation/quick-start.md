@@ -27,7 +27,7 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/ \
   -d '{"username":"testuser","password":"testpass123"}'
 
 # Response:
-# {"user_id":2,"username":"testuser","token":"993f8273f70877e23b5c7d2f92ed30562a089fe3"}
+# {"user_id":2,"username":"testuser","token":"<redacted-993f8273-2026-04-20>"}
 ```
 
 ## 📝 Important Notes

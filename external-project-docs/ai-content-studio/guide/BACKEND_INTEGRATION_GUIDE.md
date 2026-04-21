@@ -6,7 +6,7 @@ This guide provides instructions for testing the fully integrated React Native m
 ## Prerequisites
 1. **Backend Server Running**: Ensure the Django backend is running on `http://localhost:8001`
 2. **Database Setup**: Make sure the PostgreSQL database is set up and migrations are applied
-3. **Auth Token**: Test user credentials or auth token `993f8273f70877e23b5c7d2f92ed30562a089fe3` should be available
+3. **Auth Token**: Test user credentials or auth token `<redacted-993f8273-2026-04-20>` should be available
 
 ## Running the Mobile App
 

@@ -45763,19 +45763,19 @@ Created new view file with all missing endpoints and registered them in the URL 
 python manage.py runserver 8001
 
 # Tested all endpoints
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/performance/summary/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/performance/summary/
 # Response: 200 OK - {"status":"success","data":{...}}
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/agents/active/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/agents/active/
 # Response: 200 OK - Returns 3 active agents
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/knowledge/summary/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/knowledge/summary/
 # Response: 200 OK - Shows 120 memories, 100% embedding coverage
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/insights/recent/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/insights/recent/
 # Response: 200 OK - Returns recent insights and patterns
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/insights/summary/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/insights/summary/
 # Response: 200 OK - Returns insight statistics
 ```
 
@@ -67245,7 +67245,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Show me NVDA and INVALID_SYMBOL stock prices"}'
 ```
 **Result**: 200 OK, no concatenation errors, graceful invalid symbol handling
@@ -67681,7 +67681,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 **Result**: 200 OK, agent deployed successfully, no errors
@@ -70156,7 +70156,7 @@ if not isinstance(risk_factors, list):
 ### Chat Endpoint Test ✅
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 
@@ -70363,7 +70363,7 @@ return "\n".join(safe_parts)
 ```bash
 # Test with market query
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "What are the current stock prices for AAPL and INVALID_SYMBOL?"}'
 
 # Expected: No concatenation errors, graceful handling of invalid symbols
@@ -115497,7 +115497,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Show me NVDA and INVALID_SYMBOL stock prices"}'
 ```
 **Result**: 200 OK, no concatenation errors, graceful invalid symbol handling
@@ -115933,7 +115933,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 **Result**: 200 OK, agent deployed successfully, no errors
@@ -118652,7 +118652,7 @@ if not isinstance(risk_factors, list):
 ### Chat Endpoint Test ✅
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 
@@ -118859,7 +118859,7 @@ return "\n".join(safe_parts)
 ```bash
 # Test with market query
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "What are the current stock prices for AAPL and INVALID_SYMBOL?"}'
 
 # Expected: No concatenation errors, graceful handling of invalid symbols
@@ -119031,7 +119031,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Show me NVDA and INVALID_SYMBOL stock prices"}'
 ```
 **Result**: 200 OK, no concatenation errors, graceful invalid symbol handling
@@ -119467,7 +119467,7 @@ Priority: 70
 ### ✅ Chat Endpoint Test
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 **Result**: 200 OK, agent deployed successfully, no errors
@@ -120686,7 +120686,7 @@ if not isinstance(risk_factors, list):
 ### Chat Endpoint Test ✅
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "Deploy a business analysis agent to analyze the drone delivery market"}'
 ```
 
@@ -120893,7 +120893,7 @@ return "\n".join(safe_parts)
 ```bash
 # Test with market query
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "What are the current stock prices for AAPL and INVALID_SYMBOL?"}'
 
 # Expected: No concatenation errors, graceful handling of invalid symbols
@@ -187003,7 +187003,7 @@ Priority: 65
 
 ### Working Test Token
 ```bash
-curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://127.0.0.1:8000/api/content/list/
 ```
 
@@ -237334,7 +237334,7 @@ After each fix, test with:
 ```bash
 # Test complete AI pipeline
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"message": "Testing system health"}'
 
@@ -237390,7 +237390,7 @@ curl -X POST http://localhost:8000/api/ai-partner/chat/ \
 python manage.py shell -c "
 import requests
 response = requests.post('http://localhost:8000/api/ai-partner/chat/', 
-  headers={'Authorization': 'Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3'},
+  headers={'Authorization': 'Token <redacted-8401e051-2026-04-20>'},
   json={'message': 'Testing system after fixes'}
 )
 print(f'Status: {response.status_code}')
@@ -244267,7 +244267,7 @@ By the end of Phase 10, the system should have:
 - Document performance impact of each change
 - Current session number is 142
 - Use format: ADVANCED-OPT-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Remember to work in `/documentation/` NOT `/backend/documentation/`
 - Build on the strong foundation from Phases 5-9
 
@@ -244502,11 +244502,11 @@ python test_cache_effectiveness.py
 
 # Check cache stats
 curl http://localhost:8000/api/monitoring/cache/stats/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3"
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>"
 
 # Test warming
 curl -X POST http://localhost:8000/api/monitoring/cache/warm/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3"
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>"
 ```
 
 ### Integration Points
@@ -276901,7 +276901,7 @@ curl http://localhost:8000/api/monitoring/background/queues/health/
 - Focus on user-facing improvements first
 - Current session number is 141
 - Use format: BACKGROUND-PROC-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Remember to work in `/documentation/` NOT `/backend/documentation/`
 
 ## Initial Steps
@@ -277199,7 +277199,7 @@ python manage.py migrate
 ```
 
 ## Critical Information
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Test user: `testuser`
 - All optimizations are backward compatible
 - No breaking changes made
@@ -277501,7 +277501,7 @@ redis-cli monitor | grep -E "GET|SET|DEL"
 - Consider creating a cache strategy guide
 - Current session number is 138
 - Use format: CACHE-ADV-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 
 ## Initial Steps
 
@@ -278123,7 +278123,7 @@ curl http://localhost:8000/api/monitoring/batch/stats/
 - Focus on the most impactful batch operations first
 - Current session number is 139
 - Use format: BATCH-PROC-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 
 ## Initial Steps
 
@@ -280313,7 +280313,7 @@ curl http://localhost:8000/api/monitoring/queries/stats/
 - Focus on the most impactful queries first
 - Current session number is 140
 - Use format: QUERY-OPT-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Remember to work in `/documentation/` NOT `/backend/documentation/`
 
 ## Initial Steps
@@ -301982,7 +301982,7 @@ python manage.py runserver 8001  # or 8000 if available
 ### Test API Endpoints
 ```bash
 # Use the test token from Session 143
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -302221,7 +302221,7 @@ cd backend
 python manage.py runserver
 
 # Test API endpoint
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8000/api/ai-partner/performance/summary/
 
 # Find API calls in frontend
@@ -306140,7 +306140,7 @@ cd donkey-betz-ui-fresh && npm run dev
 
 # Test campaign endpoint
 curl -X POST http://localhost:8000/api/content/pipeline/business-package/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"business_name": "Test Co", "industry": "Tech"}'
 
@@ -311062,7 +311062,7 @@ Now that campaigns are working, focus on:
 ## 💡 Important Notes for Next Session
 
 1. **Server must be running**: Use `make run-backend-ws-dual`
-2. **Test token works**: 8401e05142480ffd7635e1f7cf5708c6a8c965e3
+2. **Test token works**: <redacted-8401e051-2026-04-20>
 3. **Campaign endpoint**: `/api/content/campaigns/generate/`
 4. **Frontend already complete**: Don't modify CampaignCreator.tsx
 5. **Memory Palace working**: 267,000+ memories available
@@ -323908,7 +323908,7 @@ make run-backend-ws-dual
 
 # Test endpoints
 curl -X POST http://localhost:8000/api/content/advanced/presentation/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"topic": "AI Revolution", "slides": 10}'
 
@@ -327468,7 +327468,7 @@ npm run dev
 # Test endpoint
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "test"}'
 ```
 
@@ -332382,7 +332382,7 @@ curl -X POST http://localhost:8000/api/ai-partner/chat/ \
 # Authenticated Test  
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "hello"}'
 # Result: Processing pipeline, returns response ✅ Success
 ```
@@ -332493,7 +332493,7 @@ Session 121 was a critical success that resolved all major database issues block
 **Last Test Results** (August 9, 2025):
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "system status check"}'
 
 # Result: HTTP 200 + Full AI response about system agents
@@ -339568,7 +339568,7 @@ npm run dev
 # Test endpoint
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "test"}'
 ```
 
@@ -341267,7 +341267,7 @@ python manage.py runserver 8001  # or 8000 if available
 ### Test API Endpoints
 ```bash
 # Use the test token from Session 143
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -345336,17 +345336,17 @@ python test_query_optimization.py
 python test_query_performance.py --scale medium
 
 # Test monitoring endpoints
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8000/api/monitoring/queries/stats/
 
 # Profile a view
 curl -X POST http://localhost:8000/api/monitoring/queries/profile/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"view_name": "memory_timeline"}'
 
 # Get N+1 detection report
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8000/api/monitoring/queries/n1/
 ```
 
@@ -346577,7 +346577,7 @@ python manage.py shell
 
 # Test API endpoints
 curl -X POST http://localhost:8000/api/monitoring/batch/submit/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"job_type": "aggregations", "items": ["user_stats"], "priority": "high"}'
 ```
@@ -358202,7 +358202,7 @@ You are Session 145. Your goal is to:
 ## Technical Context from Previous Sessions
 
 ### Known Working Solutions
-- Test token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Test token: `<redacted-8401e051-2026-04-20>`
 - Server runs on port 8001
 - Use `quality_score` instead of `engagement_score`
 - Use `topics` instead of `topics_discussed`
@@ -358238,7 +358238,7 @@ python manage.py runserver 8001
 
 ### Test API Endpoints
 ```bash
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -381813,7 +381813,7 @@ This session focused on resolving Content Studio authentication issues reported 
 
 3. **Backend Verification**
    - Confirmed backend URLs are correctly configured
-   - Verified authentication is working with token: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+   - Verified authentication is working with token: `<redacted-73d9b35d-2026-04-20>`
    - All pipeline endpoints require authentication as designed
 
 ### Files Created
@@ -381851,7 +381851,7 @@ The donkey-betz-frontend repository needs:
 - Backend is correctly configured and working
 - Frontend fixes have been documented but not applied (separate repository)
 - User has been provided with automated scripts and detailed guides
-- Authentication token confirmed working: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+- Authentication token confirmed working: `<redacted-73d9b35d-2026-04-20>`
 
 ### Next Steps
 
@@ -390781,7 +390781,7 @@ You are Session 145. Your goal is to:
 ## Technical Context from Previous Sessions
 
 ### Known Working Solutions
-- Test token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Test token: `<redacted-8401e051-2026-04-20>`
 - Server runs on port 8001
 - Use `quality_score` instead of `engagement_score`
 - Use `topics` instead of `topics_discussed`
@@ -390817,7 +390817,7 @@ python manage.py runserver 8001
 
 ### Test API Endpoints
 ```bash
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -392857,7 +392857,7 @@ python test_phase4_integration.py
 ### Authentication Token
 ```
 Username: testuser
-Token: 8401e05142480ffd7635e1f7cf5708c6a8c965e3
+Token: <redacted-8401e051-2026-04-20>
 ```
 
 ### Working API Endpoints
@@ -426891,7 +426891,7 @@ Priority: 70
 
 ### 🔑 Working Test Token:
 ```bash
-curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://127.0.0.1:8000/api/content/list/
 ```
 
@@ -427062,7 +427062,7 @@ python manage.py runserver
 
 # Terminal 2: Test API
 curl -X POST http://localhost:8000/api/content/create/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "a majestic mountain",
@@ -430184,12 +430184,12 @@ Added URL redirects in the backend to transparently redirect business-network re
 ## Testing Performed
 ```bash
 # Test original endpoint (should redirect)
-curl -I -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -I -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/business-network/
 # Result: HTTP/1.1 302 Found, Location: /api/agent-orchestra/channels/
 
 # Test redirect follows correctly
-curl -L -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -L -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/business-network/
 # Result: Returns correct JSON from agent-orchestra endpoint
 ```
@@ -546865,12 +546865,12 @@ The `/api/ai-partner/learning/insights/` endpoint was returning 500 ERROR due to
 ## Testing Performed
 ```bash
 # Test endpoint before fix
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/ai-partner/learning/insights/
 # Response: 500 ERROR - "Cannot resolve keyword 'engagement_score' into field"
 
 # Test endpoint after fix
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/ai-partner/learning/insights/
 # Response: 200 OK - Returns valid JSON with learning insights
 ```
@@ -549707,16 +549707,16 @@ Authorization: Token <token_value>
 - Both require authentication via Token header
 
 ## Testing:
-Your authentication token is: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+Your authentication token is: `<redacted-73d9b35d-2026-04-20>`
 
 Test with curl:
 ```bash
 # Test pipeline endpoint
-curl -H "Authorization: Token 73d9b35d53b95e79de1537fc03b889ba37ad1c70" \
+curl -H "Authorization: Token <redacted-73d9b35d-2026-04-20>" \
      http://localhost:8000/api/pipeline/pipelines/
 
 # Test AI pipeline available content
-curl -H "Authorization: Token 73d9b35d53b95e79de1537fc03b889ba37ad1c70" \
+curl -H "Authorization: Token <redacted-73d9b35d-2026-04-20>" \
      http://localhost:8000/api/content/ai-pipeline/available_content/
 ```
 

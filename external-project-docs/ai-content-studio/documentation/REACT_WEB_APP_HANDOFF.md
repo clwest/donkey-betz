@@ -157,7 +157,7 @@ POST /api/character/collections/create/ # ✅ Create collections
 - **Primary App**: React web app at http://localhost:3001
 - **Backend**: Django at http://localhost:8001  
 - **Character Data**: 3 characters with real AI-generated images
-- **API Token**: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- **API Token**: `<redacted-993f8273-2026-04-20>`
 
 ### **What's Been Tested & Works**
 - ✅ Character creation with AI image generation

@@ -10,7 +10,7 @@
 - `/frontend/src/services/agentDiscovery.service.ts` - Updated to use correct API paths
 
 **Key Changes:**
-- ✅ Updated API token to: `0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97`
+- ✅ Updated API token to: `<redacted-0fb2390d-2026-04-20>`
 - ✅ Fixed API base URL: `http://localhost:8000`
 - ✅ Corrected agent endpoints to use `/api/v1/agents/`
 - ✅ Added proper WebSocket configuration
@@ -121,7 +121,7 @@ python test_frontend_connectivity.py
 fetch('/api/v1/agents/execute/', {
   method: 'POST',
   headers: {
-    'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97',
+    'Authorization': 'Token <redacted-0fb2390d-2026-04-20>',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -138,7 +138,7 @@ fetch('/api/v1/agents/execute/', {
 fetch('/api/v1/agents/discover/', {
   method: 'POST',
   headers: {
-    'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97',
+    'Authorization': 'Token <redacted-0fb2390d-2026-04-20>',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({

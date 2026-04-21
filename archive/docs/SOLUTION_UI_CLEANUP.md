@@ -144,7 +144,7 @@ tail -f frontend.log | grep -i error
 tail -f ai_core.log | grep -i websocket
 
 # Test API connectivity
-curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \
+curl -H "Authorization: Token <redacted-0fb2390d-2026-04-20>" \
      http://localhost:8000/api/v1/agents/
 
 # Force rebuild if needed

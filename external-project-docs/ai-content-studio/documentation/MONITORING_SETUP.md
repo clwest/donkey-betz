@@ -272,7 +272,7 @@ The system includes current pricing for:
 
 1. **"Connection Failed" in Dashboard**
    - Check Django server is running on port 8001
-   - Verify API token in localStorage: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+   - Verify API token in localStorage: `<redacted-993f8273-2026-04-20>`
    - Check CORS settings in Django
 
 2. **No Metrics Appearing**

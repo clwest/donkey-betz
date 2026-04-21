@@ -37,7 +37,7 @@ The frontend is trying to get the token from localStorage (`authToken`), but it 
 
 1. Ensure auth token is in localStorage:
 ```javascript
-localStorage.setItem('authToken', '993f8273f70877e23b5c7d2f92ed30562a089fe3');
+localStorage.setItem('authToken', '<redacted-993f8273-2026-04-20>');
 ```
 
 2. The WebSocket connection in the frontend should include the token properly.

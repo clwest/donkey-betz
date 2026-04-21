@@ -36,7 +36,7 @@ Create a new user account.
         "username": "johndoe",
         "email": "john@example.com"
     },
-    "token": "993f8273f70877e23b5c7d2f92ed30562a089fe3"
+    "token": "<redacted-993f8273-2026-04-20>"
 }
 ```
 
@@ -68,7 +68,7 @@ Authenticate and receive access token.
         "username": "johndoe",
         "email": "john@example.com"
     },
-    "token": "993f8273f70877e23b5c7d2f92ed30562a089fe3"
+    "token": "<redacted-993f8273-2026-04-20>"
 }
 ```
 

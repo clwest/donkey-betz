@@ -143,7 +143,7 @@ def test_generate_with_lora():
 
         # Use FLUX with the trained LoRA
         payload = {
-            "version": "85a7e01f60cf31fbb0d22c48f9719fa7f9f6ab8d",  # FLUX dev
+            "version": "<redacted-85a7e01f-2026-04-20>",  # FLUX dev
             "input": {
                 "prompt": "a professional logo design, modern and clean style",
                 "lora_weights": training.replicate_version_id,

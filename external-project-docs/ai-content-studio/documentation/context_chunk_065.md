@@ -1427,7 +1427,7 @@ Priority: 70
 
 ### 🔑 Working Test Token:
 ```bash
-curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://127.0.0.1:8000/api/content/list/
 ```
 
@@ -1598,7 +1598,7 @@ python manage.py runserver
 
 # Terminal 2: Test API
 curl -X POST http://localhost:8000/api/content/create/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "a majestic mountain",
@@ -4720,12 +4720,12 @@ Added URL redirects in the backend to transparently redirect business-network re
 ## Testing Performed
 ```bash
 # Test original endpoint (should redirect)
-curl -I -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -I -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/business-network/
 # Result: HTTP/1.1 302 Found, Location: /api/agent-orchestra/channels/
 
 # Test redirect follows correctly
-curl -L -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -L -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/business-network/
 # Result: Returns correct JSON from agent-orchestra endpoint
 ```

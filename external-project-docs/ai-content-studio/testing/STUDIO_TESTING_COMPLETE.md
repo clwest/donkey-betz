@@ -125,7 +125,7 @@ Once Studio section is 100% complete:
 ### Test Credentials
 - **Username**: testuser
 - **Password**: testpass123
-- **Token**: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+- **Token**: <redacted-993f8273-2026-04-20>
 
 ### Commands
 ```bash
@@ -141,7 +141,7 @@ tail -f /tmp/django.log
 
 # Test API directly
 curl -X POST http://localhost:8001/api/content/create/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "test", "content_type": "text"}'
 ```

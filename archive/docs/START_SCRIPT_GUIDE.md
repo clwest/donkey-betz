@@ -16,7 +16,7 @@ Your `start_ws_quick.sh` script has been **completely enhanced** with all the fi
 
 ### 2. **Starts Backend** 🔧
 - ✅ Uses Daphne for WebSocket support
-- ✅ Correct API token configured: `0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97`
+- ✅ Correct API token configured: `<redacted-0fb2390d-2026-04-20>`
 - ✅ Verifies backend is responding
 - ✅ Counts and displays available agents (should show 150!)
 - ✅ Logs output to `ai_core.log`

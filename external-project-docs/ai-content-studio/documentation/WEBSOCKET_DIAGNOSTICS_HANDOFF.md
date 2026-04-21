@@ -231,7 +231,7 @@ import asyncio
 import websockets
 
 async def test():
-    uri = 'ws://localhost:8001/ws/assistant/?token=993f8273f70877e23b5c7d2f92ed30562a089fe3'
+    uri = 'ws://localhost:8001/ws/assistant/?token=<redacted-993f8273-2026-04-20>'
     async with websockets.connect(uri) as ws:
         print('Connected successfully!')
         await ws.send('{\"type\": \"ping\"}')
@@ -246,7 +246,7 @@ asyncio.run(test())
 ```javascript
 // Run in browser DevTools console
 const testWebSocket = () => {
-    const token = localStorage.getItem('authToken') || '993f8273f70877e23b5c7d2f92ed30562a089fe3';
+    const token = localStorage.getItem('authToken') || '<redacted-993f8273-2026-04-20>';
     const ws = new WebSocket(`ws://localhost:8001/ws/assistant/?token=${token}`);
     
     ws.onopen = () => {
@@ -285,7 +285,7 @@ User = get_user_model()
 user = User.objects.get(username='testuser')
 token = Token.objects.get(user=user)
 print(f"Token: {token.key}")
-# Should output: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+# Should output: <redacted-993f8273-2026-04-20>
 ```
 
 ### 4. Monitor Logs

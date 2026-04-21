@@ -65,7 +65,7 @@ The React Web app and React Native app have **completely different API architect
 // File: /shared/api/config.ts
 export const API_CONFIG = {
   BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8001/api',
-  DEFAULT_TOKEN: '993f8273f70877e23b5c7d2f92ed30562a089fe3',
+  DEFAULT_TOKEN: '<redacted-993f8273-2026-04-20>',
   TIMEOUT: 30000,
 };
 

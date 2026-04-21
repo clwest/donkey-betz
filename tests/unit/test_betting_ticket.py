@@ -18,7 +18,7 @@ import sys
 import os
 
 BASE_URL = "http://localhost:8000/api"
-VALID_TOKEN = "424a48280fa87d30f4997beda23ccad57418d7cb"
+VALID_TOKEN = "<redacted-424a4828-2026-04-20>"
 FRONTEND_PATH = "/Users/donkeyking/development/unified-donkey-betz/frontend/src"
 
 def test_api_endpoint(endpoint, description):

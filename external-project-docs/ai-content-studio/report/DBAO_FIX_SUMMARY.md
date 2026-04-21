@@ -56,7 +56,7 @@ cd /Users/donkeyking/development/ai-content-studio/backend
 python manage.py shell -c "from rest_framework.authtoken.models import Token; print('Token:', Token.objects.first().key)"
 
 # Test endpoints (replace TOKEN with actual token)
-TOKEN="f6355675bdaec4b828b2ee73c8ed63fe7ea6c574"
+TOKEN="<redacted-f6355675-2026-04-20>"
 
 curl -H "Authorization: Token $TOKEN" http://localhost:8001/api/betting/live/
 curl -H "Authorization: Token $TOKEN" http://localhost:8001/api/betting/arbitrage/
@@ -100,7 +100,7 @@ curl -X OPTIONS \
 
 1. **DBAO Configuration**: Update DBAO to use the correct auth token:
    ```
-   Token: f6355675bdaec4b828b2ee73c8ed63fe7ea6c574
+   Token: <redacted-f6355675-2026-04-20>
    ```
 
 2. **WebSocket Authentication**: If needed, the agents consumer can be enhanced with authentication middleware

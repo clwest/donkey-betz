@@ -38,8 +38,8 @@
 #### 3. Authentication Issues
 **Fixed**: Frontend token mismatch
 - Updated `/frontend/.env` with correct admin token
-- Token: `0ef9dd74312961574231b1c573d8af0cba3ea0f4` (admin)
-- Token: `2447578c3bb5aca86100be7b2f1bbdb2f3535dfc` (chris)
+- Token: `<redacted-0ef9dd74-2026-04-20>` (admin)
+- Token: `<redacted-2447578c-2026-04-20>` (chris)
 
 ---
 
@@ -122,7 +122,7 @@ lsof -i :3000  # Should show node
 
 ### Test RAG System
 ```bash
-curl -H "Authorization: Token 2447578c3bb5aca86100be7b2f1bbdb2f3535dfc" \
+curl -H "Authorization: Token <redacted-2447578c-2026-04-20>" \
   http://localhost:8000/api/v1/dashboard/stats/
 ```
 

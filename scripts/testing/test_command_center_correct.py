@@ -205,6 +205,6 @@ if __name__ == "__main__":
 3. Your 134 agents are ready at the correct endpoints!
 
 Test with curl:
-curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \\
+curl -H "Authorization: Token <redacted-0fb2390d-2026-04-20>" \\
      http://localhost:8000/api/v1/agents/templates/
 """)

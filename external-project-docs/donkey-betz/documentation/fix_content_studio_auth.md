@@ -23,16 +23,16 @@ Authorization: Token <token_value>
 - Both require authentication via Token header
 
 ## Testing:
-Your authentication token is: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+Your authentication token is: `<redacted-73d9b35d-2026-04-20>`
 
 Test with curl:
 ```bash
 # Test pipeline endpoint
-curl -H "Authorization: Token 73d9b35d53b95e79de1537fc03b889ba37ad1c70" \
+curl -H "Authorization: Token <redacted-73d9b35d-2026-04-20>" \
      http://localhost:8000/api/pipeline/pipelines/
 
 # Test AI pipeline available content
-curl -H "Authorization: Token 73d9b35d53b95e79de1537fc03b889ba37ad1c70" \
+curl -H "Authorization: Token <redacted-73d9b35d-2026-04-20>" \
      http://localhost:8000/api/content/ai-pipeline/available_content/
 ```
 

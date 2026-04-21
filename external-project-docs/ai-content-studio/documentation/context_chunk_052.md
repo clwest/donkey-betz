@@ -1279,7 +1279,7 @@ python manage.py runserver 8001  # or 8000 if available
 ### Test API Endpoints
 ```bash
 # Use the test token from Session 143
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -5348,17 +5348,17 @@ python test_query_optimization.py
 python test_query_performance.py --scale medium
 
 # Test monitoring endpoints
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8000/api/monitoring/queries/stats/
 
 # Profile a view
 curl -X POST http://localhost:8000/api/monitoring/queries/profile/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"view_name": "memory_timeline"}'
 
 # Get N+1 detection report
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8000/api/monitoring/queries/n1/
 ```
 

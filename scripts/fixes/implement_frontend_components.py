@@ -26,7 +26,7 @@ function App() {
     // Test backend connection
     fetch('http://localhost:8000/api/v1/agents/templates/', {
       headers: {
-        'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97'
+        'Authorization': 'Token <redacted-0fb2390d-2026-04-20>'
       }
     })
     .then(res => res.json())
