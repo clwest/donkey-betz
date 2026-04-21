@@ -10,21 +10,21 @@ After implementing the unified memory sharing system, authentication needed to b
 - **Password**: `admin123`
 - **Email**: admin@example.com
 - **Permissions**: Superuser (full access)
-- **API Token**: `cd8023345521a198b2e56c6ec14809f844163d99`
+- **API Token**: `<redacted-cd802334-2026-04-20>`
 
 ### Test User
 - **Username**: `testuser`
 - **Password**: `test123`
 - **Email**: test@example.com
 - **Permissions**: Regular user
-- **API Token**: `c4ba8e9a9dc7baea61ee3063c3f74ce038a98502`
+- **API Token**: `<redacted-c4ba8e9a-2026-04-20>`
 
 ## Configuration Files Updated
 
 ### AI Content Studio Frontend
 **File**: `/ai-content-studio/ai-studio-web/.env`
 ```env
-VITE_AUTH_TOKEN=cd8023345521a198b2e56c6ec14809f844163d99
+VITE_AUTH_TOKEN=<redacted-cd802334-2026-04-20>
 ```
 
 ### Both Backend Systems
@@ -37,11 +37,11 @@ Users and tokens are synchronized in both:
 ### API Test
 ```bash
 # Test with admin token
-curl -H "Authorization: Token cd8023345521a198b2e56c6ec14809f844163d99" \
+curl -H "Authorization: Token <redacted-cd802334-2026-04-20>" \
   http://localhost:8000/api/dashboard/stats/
 
 # Test with test user token
-curl -H "Authorization: Token c4ba8e9a9dc7baea61ee3063c3f74ce038a98502" \
+curl -H "Authorization: Token <redacted-c4ba8e9a-2026-04-20>" \
   http://localhost:8000/api/dashboard/stats/
 ```
 

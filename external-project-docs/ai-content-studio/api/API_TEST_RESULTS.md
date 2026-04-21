@@ -97,7 +97,7 @@ The existing React web app continues to work with:
 ```javascript
 // Test environment
 API_URL: http://localhost:8001/api
-AUTH_TOKEN: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+AUTH_TOKEN: <redacted-993f8273-2026-04-20>
 Platform: Both Web and React Native
 ```
 

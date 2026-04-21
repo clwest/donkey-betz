@@ -83,7 +83,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 ### Generated Tokens (SAVE THESE):
 ```
-Regular User: b404479920c3590696ea5889047f3ed9949a8a40
+Regular User: <redacted-b4044799-2026-04-20>
 Admin User: 72d4396c791a32a481ccaeceaef7b35436fa8485
 ```
 
@@ -183,7 +183,7 @@ redis-cli SCARD active_spiders
 # Should return: 1790
 
 # Test API with token
-curl -H "Authorization: Token b404479920c3590696ea5889047f3ed9949a8a40" \
+curl -H "Authorization: Token <redacted-b4044799-2026-04-20>" \
      http://localhost:8000/api/v1/status/
 ```
 

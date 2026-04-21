@@ -57,7 +57,7 @@ Legend: ✅ Working | ❌ Broken | 🔄 Testing | ⏳ Pending | ⚠️ Partial
 - Backend URL: http://localhost:8001
 - Frontend URL: http://localhost:8081
 - Test User: testuser / testpass123
-- Auth Token: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+- Auth Token: <redacted-993f8273-2026-04-20>
 
 ---
 
@@ -163,7 +163,7 @@ tail -f /tmp/mobile.log   # React app
 
 # Test specific API
 curl -X POST http://localhost:8001/api/content/create/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "test", "content_type": "text"}'
 ```

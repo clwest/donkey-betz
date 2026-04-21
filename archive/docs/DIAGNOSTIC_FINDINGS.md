@@ -125,11 +125,11 @@ path('action-plan/', views.ActionPlanView.as_view(), name='action-plan'),
 ### Quick API Test
 ```bash
 # Test working endpoints
-curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \
+curl -H "Authorization: Token <redacted-0fb2390d-2026-04-20>" \
   http://localhost:8000/api/v1/agents/templates/ | python -m json.tool
 
 # Test missing endpoint (should return 404)
-curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \
+curl -H "Authorization: Token <redacted-0fb2390d-2026-04-20>" \
   http://localhost:8000/api/v1/intelligence/revenue/
 ```
 
@@ -137,7 +137,7 @@ curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \
 ```javascript
 // Run in browser console
 fetch('http://localhost:8000/api/v1/intelligence/real-income-builder/', {
-  headers: {'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97'}
+  headers: {'Authorization': 'Token <redacted-0fb2390d-2026-04-20>'}
 }).then(r => r.json()).then(console.log)
 ```
 

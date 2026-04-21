@@ -12,7 +12,7 @@ from datetime import datetime
 # Configuration
 API_BASE = "http://localhost:8000"
 FRONTEND_BASE = "http://localhost:3000"
-TOKEN = "0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97"
+TOKEN = "<redacted-0fb2390d-2026-04-20>"
 
 # Colors
 GREEN = '\033[92m'

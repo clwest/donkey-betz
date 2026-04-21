@@ -107,7 +107,7 @@
 
 1. **Authentication System** ✅
    ```json
-   POST /api/auth/login/ → Token: 2447578c3bb5aca86100be7b2f1bbdb2f3535dfc
+   POST /api/auth/login/ → Token: <redacted-2447578c-2026-04-20>
    ```
 
 2. **Analytics Dashboard** ✅

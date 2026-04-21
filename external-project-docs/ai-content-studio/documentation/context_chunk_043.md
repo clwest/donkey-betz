@@ -396,7 +396,7 @@ curl http://localhost:8000/api/monitoring/queries/stats/
 - Focus on the most impactful queries first
 - Current session number is 140
 - Use format: QUERY-OPT-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Remember to work in `/documentation/` NOT `/backend/documentation/`
 
 ## Initial Steps

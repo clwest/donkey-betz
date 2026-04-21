@@ -897,7 +897,7 @@ const usagePercentage = subscription.monthly_credits > 0
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8001';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('authToken') || '504406afbc117727c55cd1244ff77ecebe791cc0';
+  const token = localStorage.getItem('authToken') || '<redacted-504406af-2026-04-20>';
   return {
     'Authorization': `Token ${token}`,
     'Content-Type': 'application/json'

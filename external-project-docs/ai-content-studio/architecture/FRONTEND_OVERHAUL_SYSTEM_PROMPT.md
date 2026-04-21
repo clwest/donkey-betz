@@ -650,7 +650,7 @@ useEffect(() => {
 ## Important Notes
 
 1. **Preserve the backend** - It's working well, just needs a better frontend
-2. **Use the auth token**: `993f8273f70877e23b5c7d2f92ed30562a089fe3` for testing
+2. **Use the auth token**: `<redacted-993f8273-2026-04-20>` for testing
 3. **API Base URL**: `http://localhost:8001/api/`
 4. **Focus on UX**: Make it intuitive and delightful to use
 5. **Performance matters**: Users are generating lots of content

@@ -632,7 +632,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: defaultUser, // Development default
-      token: '504406afbc117727c55cd1244ff77ecebe791cc0',
+      token: '<redacted-504406af-2026-04-20>',
       isAuthenticated: true,
       isLoading: false,
 
@@ -670,7 +670,7 @@ export const useAuthStore = create<AuthState>()(
 #### Authentication Headers
 ```typescript
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('authToken') || '504406afbc117727c55cd1244ff77ecebe791cc0';
+  const token = localStorage.getItem('authToken') || '<redacted-504406af-2026-04-20>';
   return {
     'Authorization': `Token ${token}`,
     'Content-Type': 'application/json'
@@ -691,7 +691,7 @@ export const apiRequest = async (endpoint: string, data?: any, method = 'GET') =
 
 ### Development Authentication
 - **Default User:** chris@donkeybetz.com (User ID: 9)
-- **Default Token:** 504406afbc117727c55cd1244ff77ecebe791cc0
+- **Default Token:** <redacted-504406af-2026-04-20>
 - **Auto-login:** Enabled for development convenience
 - **Persistent Storage:** Zustand persist middleware stores auth state
 

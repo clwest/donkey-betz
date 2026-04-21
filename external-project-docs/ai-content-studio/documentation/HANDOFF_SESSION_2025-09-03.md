@@ -157,7 +157,7 @@ python check_embeddings.py quick
 
 # View uploaded documents
 curl -s http://localhost:8001/api/personal-knowledge/list/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   | python -m json.tool | grep total_entries
 ```
 
@@ -198,7 +198,7 @@ python backend/manage.py migrate
 ### Authentication Token
 Default test token for all API calls:
 ```
-993f8273f70877e23b5c7d2f92ed30562a089fe3
+<redacted-993f8273-2026-04-20>
 ```
 
 ---

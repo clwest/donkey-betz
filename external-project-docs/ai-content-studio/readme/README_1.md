@@ -109,7 +109,7 @@ documentation/
 - **Main Project**: [CLAUDE.md](../CLAUDE.md) - Project overview
 - **Backend Docs**: [backend/documentation/](../backend/documentation/)
 - **Test Suite**: Use `make test-all` for validation
-- **API Testing**: Auth token: `cff3e8441c4e2490e970de2f921f0064e7cc88a7`
+- **API Testing**: Auth token: `<redacted-cff3e844-2026-04-20>`
 
 ---
 

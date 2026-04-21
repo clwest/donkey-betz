@@ -3437,7 +3437,7 @@ You are Session 145. Your goal is to:
 ## Technical Context from Previous Sessions
 
 ### Known Working Solutions
-- Test token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Test token: `<redacted-8401e051-2026-04-20>`
 - Server runs on port 8001
 - Use `quality_score` instead of `engagement_score`
 - Use `topics` instead of `topics_discussed`
@@ -3473,7 +3473,7 @@ python manage.py runserver 8001
 
 ### Test API Endpoints
 ```bash
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -5513,7 +5513,7 @@ python test_phase4_integration.py
 ### Authentication Token
 ```
 Username: testuser
-Token: 8401e05142480ffd7635e1f7cf5708c6a8c965e3
+Token: <redacted-8401e051-2026-04-20>
 ```
 
 ### Working API Endpoints

@@ -5930,19 +5930,19 @@ Created new view file with all missing endpoints and registered them in the URL 
 python manage.py runserver 8001
 
 # Tested all endpoints
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/performance/summary/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/performance/summary/
 # Response: 200 OK - {"status":"success","data":{...}}
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/agents/active/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/agents/active/
 # Response: 200 OK - Returns 3 active agents
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/knowledge/summary/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/knowledge/summary/
 # Response: 200 OK - Shows 120 memories, 100% embedding coverage
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/insights/recent/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/insights/recent/
 # Response: 200 OK - Returns recent insights and patterns
 
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" http://localhost:8001/api/ai-partner/insights/summary/
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" http://localhost:8001/api/ai-partner/insights/summary/
 # Response: 200 OK - Returns insight statistics
 ```
 

@@ -74,14 +74,14 @@ Used production API with curl:
 ```bash
 # Send
 curl -s -X POST "https://donkey-betz-platform-production.up.railway.app/api/pa/chat/" \
-  -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30" \
+  -H "Authorization: Token <redacted-0cdc1c72-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"message":"show me the latest blogs"}'
 # Returns: {"task_id": "..."}
 
 # Poll
 curl -s "https://donkey-betz-platform-production.up.railway.app/api/pa/chat/status/<task_id>/" \
-  -H "Authorization: Token 0cdc1c72dba99ea637485076ee952d571440aa30"
+  -H "Authorization: Token <redacted-0cdc1c72-2026-04-20>"
 # Returns: {status, content, intent, latency_ms, ...}
 ```
 

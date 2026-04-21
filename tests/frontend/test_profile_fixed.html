@@ -42,7 +42,7 @@
     
     <div class="section">
         <h2>Test Configuration</h2>
-        <p>Token: Using Chris's token (993f8273f70877e23b5c7d2f92ed30562a089fe3)</p>
+        <p>Token: Using Chris's token (<redacted-993f8273-2026-04-20>)</p>
         <p>Endpoints:</p>
         <ul>
             <li>/api/profile/ - Should return {user, profile, statistics}</li>
@@ -62,7 +62,7 @@
 
     <script>
         const API_BASE = 'http://localhost:8000';
-        const os.environ["TOKEN"] = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
+        const os.environ["TOKEN"] = '<redacted-993f8273-2026-04-20>';
 
         async function testProfile() {
             const resultDiv = document.getElementById('profile-result');

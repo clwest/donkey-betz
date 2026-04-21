@@ -597,7 +597,7 @@ make d
 ### Test Batch Generation
 ```bash
 curl -X POST http://localhost:8000/api/content/batch/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "A serene mountain landscape",
@@ -610,7 +610,7 @@ curl -X POST http://localhost:8000/api/content/batch/ \
 ### Test Custom Style Creation
 ```bash
 curl -X POST http://localhost:8000/api/custom-styles/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "test_style",

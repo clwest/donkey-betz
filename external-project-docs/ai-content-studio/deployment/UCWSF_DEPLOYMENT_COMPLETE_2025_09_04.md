@@ -297,7 +297,7 @@ curl -X OPTIONS http://localhost:8001/api/content/create/ \
 
 # Test WebSocket
 wscat -c ws://localhost:8001/ws/assistant/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 ```
 
 ### **Emergency Rollback**
@@ -354,7 +354,7 @@ python manage.py runserver 8001
 2. **Priority Focus**: Implement WebSocket client in React web app first, then mobile app.
 
 3. **Testing Credentials**:
-   - Auth Token: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+   - Auth Token: `<redacted-993f8273-2026-04-20>`
    - Test User: `testuser` / `testpass123`
 
 4. **Known Limitations**:

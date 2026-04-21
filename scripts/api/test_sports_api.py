@@ -8,7 +8,7 @@ import requests
 import json
 
 BASE_URL = "http://localhost:8000/api"
-os.environ["TOKEN"] = "424a48280fa87d30f4997beda23ccad57418d7cb"
+os.environ["TOKEN"] = "<redacted-424a4828-2026-04-20>"
 
 def test_endpoint(endpoint, description):
     """Test a sports API endpoint"""

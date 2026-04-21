@@ -12,7 +12,7 @@ Testing the React Native Web app's Studio section to ensure end-to-end functiona
 - **Backend**: http://localhost:8001 ✅ Running
 - **React Native Web**: http://localhost:8081 ✅ Running
 - **Database**: SQLite (4.0M) ✅ Active
-- **Auth Token**: 993f8273f70877e23b5c7d2f92ed30562a089fe3 ✅ Valid
+- **Auth Token**: <redacted-993f8273-2026-04-20> ✅ Valid
 
 ---
 

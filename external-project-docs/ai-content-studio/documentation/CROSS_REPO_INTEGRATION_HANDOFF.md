@@ -123,7 +123,7 @@ export const getBackendUrl = () => {
 ### Test 1: Backend Connectivity
 ```bash
 # Should return 200 OK with stats data
-curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
      http://localhost:8001/api/dashboard/stats/
 ```
 
@@ -139,7 +139,7 @@ npm run dev
 ### Test 3: WebSocket Connection
 ```bash
 # Install wscat if needed: npm install -g wscat
-wscat -c "ws://localhost:8001/ws/assistant/?token=993f8273f70877e23b5c7d2f92ed30562a089fe3"
+wscat -c "ws://localhost:8001/ws/assistant/?token=<redacted-993f8273-2026-04-20>"
 # Should connect without errors
 ```
 
@@ -147,7 +147,7 @@ wscat -c "ws://localhost:8001/ws/assistant/?token=993f8273f70877e23b5c7d2f92ed30
 ```bash
 # Send 35 rapid requests to trigger rate limit
 for i in {1..35}; do 
-  curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  curl -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
        http://localhost:8001/api/assistant/chat/
 done
 # Should see 429 responses with retry-after headers
@@ -248,7 +248,7 @@ if (status === 429) {
 - **Backend Port**: 8001 (Django/DRF)
 - **Frontend Port**: 8080 (React/Vite)
 - **Mobile Port**: 8081 (React Native/Expo)
-- **Auth Token**: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- **Auth Token**: `<redacted-993f8273-2026-04-20>`
 - **Test User**: `testuser` / `testpass123`
 
 ---

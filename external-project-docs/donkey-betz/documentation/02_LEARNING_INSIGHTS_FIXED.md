@@ -24,12 +24,12 @@ The `/api/ai-partner/learning/insights/` endpoint was returning 500 ERROR due to
 ## Testing Performed
 ```bash
 # Test endpoint before fix
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/ai-partner/learning/insights/
 # Response: 500 ERROR - "Cannot resolve keyword 'engagement_score' into field"
 
 # Test endpoint after fix
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/ai-partner/learning/insights/
 # Response: 200 OK - Returns valid JSON with learning insights
 ```

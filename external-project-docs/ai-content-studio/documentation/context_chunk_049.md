@@ -3826,7 +3826,7 @@ make run-backend-ws-dual
 
 # Test endpoints
 curl -X POST http://localhost:8000/api/content/advanced/presentation/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"topic": "AI Revolution", "slides": 10}'
 

@@ -5745,7 +5745,7 @@ npm run dev
 # Test endpoint
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "test"}'
 ```
 

@@ -97,14 +97,14 @@ master_parts/
 ### Check Upload Status
 ```bash
 curl -s http://localhost:8001/api/personal-knowledge/list/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   | python -m json.tool | grep total_entries
 ```
 
 ### Test Search
 ```bash
 curl -X POST http://localhost:8001/api/personal-knowledge/search/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"query": "Django"}'
 ```
@@ -112,7 +112,7 @@ curl -X POST http://localhost:8001/api/personal-knowledge/search/ \
 ### Get AI Context
 ```bash
 curl "http://localhost:8001/api/personal-knowledge/context/?prompt=test&limit=5" \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 ```
 
 ## 🚀 Start-to-Finish Example
@@ -149,7 +149,7 @@ python trigger_indexing.py
 
 ## 🔑 Important Values
 
-- **API Token**: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- **API Token**: `<redacted-993f8273-2026-04-20>`
 - **Backend URL**: `http://localhost:8001`
 - **Frontend URL**: `http://localhost:8080`
 - **Personal Knowledge**: `http://localhost:8080/personal-knowledge`

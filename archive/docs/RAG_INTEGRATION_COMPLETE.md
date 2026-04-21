@@ -36,7 +36,7 @@ python manage.py runserver
 ### Test via API:
 ```bash
 curl -X POST http://localhost:8000/api/assistant/chat/ \
--H "Authorization: Token 4b9facbb8006ac4dd7408fd45a6747105a6719fb" \
+-H "Authorization: Token <redacted-4b9facbb-2026-04-20>" \
 -H "Content-Type: application/json" \
 -d '{"message": "Tell me about the agent orchestration system", "use_rag": true}'
 ```

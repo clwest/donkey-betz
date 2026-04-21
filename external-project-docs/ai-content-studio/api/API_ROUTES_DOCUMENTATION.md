@@ -474,7 +474,7 @@ Data is automatically filtered to show only the authenticated user's content.
 
 ### Authentication
 - All API endpoints require authentication token: `Authorization: Token <token>`
-- Test token (for testing only): `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- Test token (for testing only): `<redacted-993f8273-2026-04-20>`
 - Logout is handled client-side by removing the token from storage
 - Multi-tenancy: All data is automatically filtered by authenticated user
 
@@ -521,12 +521,12 @@ Data is automatically filtered to show only the authenticated user's content.
 ### Testing Endpoints
 ```bash
 # Test with curl
-curl -H "Authorization: Token 504406afbc117727c55cd1244ff77ecebe791cc0" \
+curl -H "Authorization: Token <redacted-504406af-2026-04-20>" \
      http://localhost:8001/api/endpoint/
 
 # Test with httpie
 http GET localhost:8001/api/endpoint/ \
-     "Authorization: Token 504406afbc117727c55cd1244ff77ecebe791cc0"
+     "Authorization: Token <redacted-504406af-2026-04-20>"
 ```
 
 ### Adding New Endpoints

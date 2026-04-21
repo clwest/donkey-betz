@@ -3,7 +3,7 @@
 
 export async function testBackendConnection() {
   const API_BASE = 'http://localhost:8000';
-  const TOKEN = localStorage.getItem('authToken') || '0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97';
+  const TOKEN = localStorage.getItem('authToken') || '<redacted-0fb2390d-2026-04-20>';
 
   const endpoints = [
     '/api/v1/agents/templates/',

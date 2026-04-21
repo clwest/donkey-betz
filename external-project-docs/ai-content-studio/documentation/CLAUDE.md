@@ -127,7 +127,7 @@ ai-content-studio/
 ```bash
 make api-test     # API endpoints
 make quick-test   # Platform health
-# Auth token: cff3e8441c4e2490e970de2f921f0064e7cc88a7
+# Auth token: <redacted-cff3e844-2026-04-20>
 ```
 
 ## 🔧 Common Issues
@@ -146,7 +146,7 @@ make quick-test   # Platform health
 - Documentation in `/documentation/` is source of truth
 - Use Makefile commands, React app is primary frontend
 - Ports: Backend 8001, React 8080, Mobile 8081
-- Auth token: `cff3e8441c4e2490e970de2f921f0064e7cc88a7`
+- Auth token: `<redacted-cff3e844-2026-04-20>`
 - Test user: `testuser` / `testpass123`
 
 ### Key API Endpoints

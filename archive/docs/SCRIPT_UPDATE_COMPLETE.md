@@ -28,7 +28,7 @@ chmod +x start_ws_quick.sh
 - **Verifies all services** (Redis, PostgreSQL, Backend, Frontend)
 - **Shows 150 agents** available
 - **Clears frontend cache** (ensures new UI loads)
-- **Correct API token** (`0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97`)
+- **Correct API token** (`<redacted-0fb2390d-2026-04-20>`)
 - **Beautiful status display** with colors
 - **Monitors services** and alerts if they crash
 - **Shows all URLs** you need to access
