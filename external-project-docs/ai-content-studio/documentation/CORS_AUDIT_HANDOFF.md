@@ -116,7 +116,7 @@ curl -X POST http://localhost:8001/api/assistant/chat/ \
   -H "Origin: http://localhost:8080" \
   -H "X-Orchestrator: DBAO-Frontend" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -d '{"message": "test"}' -v
 ```
 **Result**: ✅ CORS headers present (401 auth error expected with test token)
@@ -300,7 +300,7 @@ wscat -c ws://localhost:8001/ws/agents/ \
 - **Previous Work**: See `/documentation/UCWSF_PATCH_NOTES.md` for related fixes
 - **Frontend Code**: Check `ai-studio-web/src/services/agent-orchestra.service.ts`
 - **Backend Structure**: Review `backend/api/` for existing patterns
-- **Authentication**: Use token `993f8273f70877e23b5c7d2f92ed30562a089fe3` for testing
+- **Authentication**: Use token `<redacted-993f8273-2026-04-20>` for testing
 
 ---
 

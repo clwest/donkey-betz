@@ -25,7 +25,7 @@ EXPO_PUBLIC_DBAO_API_URL=http://localhost:8000
 EXPO_PUBLIC_DBAO_WS_URL=ws://localhost:8000
 
 # Authentication tokens
-EXPO_PUBLIC_AUTH_TOKEN=cff3e8441c4e2490e970de2f921f0064e7cc88a7
+EXPO_PUBLIC_AUTH_TOKEN=<redacted-cff3e844-2026-04-20>
 ```
 
 ## Core Components Implemented

@@ -36,7 +36,7 @@ def run_command(cmd, description, check=True):
         print(f"{RED}  ✗ Error: {e}{RESET}")
         return False, str(e)
 
-def test_api_endpoint(endpoint, token="0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97"):
+def test_api_endpoint(endpoint, token="<redacted-0fb2390d-2026-04-20>"):
     """Test an API endpoint"""
     url = f"http://localhost:8000{endpoint}"
     headers = {"Authorization": f"Token {token}"}
@@ -236,7 +236,7 @@ print("Quick fix views created!")
     
     <script>
         const API_BASE = 'http://localhost:8000';
-        const TOKEN = '0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97';
+        const TOKEN = '<redacted-0fb2390d-2026-04-20>';
         
         async function testConnection() {
             const results = document.getElementById('results');
@@ -344,12 +344,12 @@ CONNECTION SCRIPT COMPLETE!
    Open: file:///Users/donkeyking/development/unified-donkey-betz/test_connection.html
 
 2. Test from terminal:
-   curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \\
+   curl -H "Authorization: Token <redacted-0fb2390d-2026-04-20>" \\
      http://localhost:8000/api/v1/intelligence/real-income-builder/
 
 3. Test from frontend console:
    await fetch('http://localhost:8000/api/v1/intelligence/real-income-builder/', {{
-     headers: {{'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97'}}
+     headers: {{'Authorization': 'Token <redacted-0fb2390d-2026-04-20>'}}
    }}).then(r => r.json()).then(console.log)
 
 {YELLOW}If endpoints are still missing:{RESET}

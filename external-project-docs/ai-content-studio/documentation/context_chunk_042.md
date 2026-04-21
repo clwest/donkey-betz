@@ -3323,7 +3323,7 @@ curl http://localhost:8000/api/monitoring/background/queues/health/
 - Focus on user-facing improvements first
 - Current session number is 141
 - Use format: BACKGROUND-PROC-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Remember to work in `/documentation/` NOT `/backend/documentation/`
 
 ## Initial Steps
@@ -3621,7 +3621,7 @@ python manage.py migrate
 ```
 
 ## Critical Information
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Test user: `testuser`
 - All optimizations are backward compatible
 - No breaking changes made
@@ -3923,7 +3923,7 @@ redis-cli monitor | grep -E "GET|SET|DEL"
 - Consider creating a cache strategy guide
 - Current session number is 138
 - Use format: CACHE-ADV-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 
 ## Initial Steps
 
@@ -4545,7 +4545,7 @@ curl http://localhost:8000/api/monitoring/batch/stats/
 - Focus on the most impactful batch operations first
 - Current session number is 139
 - Use format: BATCH-PROC-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 
 ## Initial Steps
 

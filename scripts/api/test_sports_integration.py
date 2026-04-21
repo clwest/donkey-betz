@@ -237,7 +237,7 @@ def test_api_endpoints():
     
     base_url = "http://localhost:8000/api/v1"
     headers = {
-        'Authorization': 'Token c4ba8e9a9dc7baea61ee3063c3f74ce038a98502',
+        'Authorization': 'Token <redacted-c4ba8e9a-2026-04-20>',
         'Content-Type': 'application/json'
     }
     

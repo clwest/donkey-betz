@@ -29,7 +29,7 @@ from agents.executors.base_executor import BaseAgentExecutor
 from agents.platform_capabilities import get_platform_awareness_prompt
 
 # Configuration
-API_TOKEN = '0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97'
+API_TOKEN = '<redacted-0fb2390d-2026-04-20>'
 BASE_URL = 'http://localhost:8000'
 
 print("=" * 80)

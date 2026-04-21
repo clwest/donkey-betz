@@ -484,7 +484,7 @@ Advanced memory features:
 ### Critical Information for Next Agent
 - All new code is in `/backend/assistant/` and `/backend/memory/`
 - Server auto-reloads on file changes - check logs for errors
-- Test token: `993f8273f70877e23b5c7d2f92ed30562a089fe3` (currently invalid)
+- Test token: `<redacted-993f8273-2026-04-20>` (currently invalid)
 - Primary test user: `testuser` / `testpass123`
 - Redis must be running for shared memory sync
 

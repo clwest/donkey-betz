@@ -38,14 +38,14 @@ Tokens are obtained through two endpoints:
 
 Tokens are 40-character hexadecimal strings:
 ```
-993f8273f70877e23b5c7d2f92ed30562a089fe3
+<redacted-993f8273-2026-04-20>
 ```
 
 ### Using Tokens
 
 Include the token in the `Authorization` header for all authenticated requests:
 ```http
-Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3
+Authorization: Token <redacted-993f8273-2026-04-20>
 ```
 
 ## Security Best Practices
@@ -335,7 +335,7 @@ axios.interceptors.response.use(
 
 ```bash
 # Store token in variable
-TOKEN="993f8273f70877e23b5c7d2f92ed30562a089fe3"
+TOKEN="<redacted-993f8273-2026-04-20>"
 
 # Make authenticated request
 curl -H "Authorization: Token $TOKEN" \

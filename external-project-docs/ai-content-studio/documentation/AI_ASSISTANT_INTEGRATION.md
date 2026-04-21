@@ -308,7 +308,7 @@ python manage.py shell
 
 ## ✅ Handoff Complete
 
-**Test Token:** `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+**Test Token:** `<redacted-993f8273-2026-04-20>`
 
 The AI Assistant has been successfully integrated into ai-content-studio. The assistant is production-ready with:
 - Simplified architecture (removed complex dependencies)

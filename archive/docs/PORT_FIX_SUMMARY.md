@@ -27,12 +27,12 @@ Both endpoints are working correctly on port 8000:
 ```bash
 # Gallery endpoint ✅
 curl "http://localhost:8000/api/gallery/list/?limit=2" \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 # Returns: {"success": true, "images": [...]}
 
 # Content endpoint ✅
 curl "http://localhost:8000/api/content/list/?type=image&limit=2" \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 # Returns: {"success": true, "count": 50, "results": [...]}
 ```
 

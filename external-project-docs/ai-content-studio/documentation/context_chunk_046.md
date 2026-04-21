@@ -2891,7 +2891,7 @@ python manage.py runserver 8001  # or 8000 if available
 ### Test API Endpoints
 ```bash
 # Use the test token from Session 143
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/[endpoint-path]/
 ```
 
@@ -3130,7 +3130,7 @@ cd backend
 python manage.py runserver
 
 # Test API endpoint
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8000/api/ai-partner/performance/summary/
 
 # Find API calls in frontend

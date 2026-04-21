@@ -134,7 +134,7 @@
 
 **Authentication Verification:**
 ```json
-✅ Login: chris/testpass123 → Token: 2447578c3bb5aca86100be7b2f1bbdb2f3535dfc
+✅ Login: chris/testpass123 → Token: <redacted-2447578c-2026-04-20>
 ✅ Token Valid: All authenticated endpoints accessible
 ✅ Permission Classes: IsAuthenticated/AllowAny correctly configured
 ```

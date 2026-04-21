@@ -6,7 +6,7 @@ The frontend was using hardcoded authentication tokens that had expired, causing
 ## Solution Implemented
 
 ### 1. Updated Authentication Flow
-- **authStore.ts**: Updated to use chris user's actual database token (993f8273f70877e23b5c7d2f92ed30562a089fe3)
+- **authStore.ts**: Updated to use chris user's actual database token (<redacted-993f8273-2026-04-20>)
 - **assistant.service.ts**: Removed hardcoded token fallback
 - **api.config.ts**: Removed default hardcoded token
 - **PRESERVED CHRIS USER**: Chris user remains as the default user with valid token from database
@@ -14,7 +14,7 @@ The frontend was using hardcoded authentication tokens that had expired, causing
 ### 2. Primary User - Chris
 - **Username**: chris
 - **Email**: chris@donkeybetz.com
-- **Token**: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+- **Token**: <redacted-993f8273-2026-04-20>
 - **Status**: Active and working as default user
 
 ### 3. Additional Test Users
@@ -58,7 +58,7 @@ from rest_framework.authtoken.models import Token
 User = get_user_model()
 user = User.objects.create_user(
     username='newuser',
-    password='newpass123',
+    password='<set-a-real-password>',
     email='new@example.com'
 )
 token = Token.objects.create(user=user)

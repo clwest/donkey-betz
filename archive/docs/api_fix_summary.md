@@ -18,7 +18,7 @@
 
 ### 3. ✅ Authentication Token Issues
 - **Problem**: Invalid test token in environment
-- **Solution**: Created valid token for `alice_writer` user: `424a48280fa87d30f4997beda23ccad57418d7cb`
+- **Solution**: Created valid token for `alice_writer` user: `<redacted-424a4828-2026-04-20>`
 - Added to `.env.example` for future reference
 
 ### 4. ✅ Test Suite Updates
@@ -62,7 +62,7 @@ All API calls should follow this pattern:
 
 Run integration tests with:
 ```bash
-export TEST_AUTH_TOKEN=424a48280fa87d30f4997beda23ccad57418d7cb
+export TEST_AUTH_TOKEN=<redacted-424a4828-2026-04-20>
 python test_integration.py
 ```
 

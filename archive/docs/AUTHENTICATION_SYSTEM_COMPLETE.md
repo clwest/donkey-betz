@@ -71,7 +71,7 @@ The Unified Donkey Betz platform now has a comprehensive authentication system t
 ### Primary User - Chris (Your Main Data)
 - **Username**: chris
 - **Email**: chris@donkeybetz.com
-- **Token**: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+- **Token**: <redacted-993f8273-2026-04-20>
 - **Auto-login**: Yes (defaults to chris if no other auth)
 
 ### Test Users

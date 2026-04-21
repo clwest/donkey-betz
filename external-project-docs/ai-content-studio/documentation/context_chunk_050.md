@@ -206,7 +206,7 @@ npm run dev
 # Test endpoint
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "test"}'
 ```
 
@@ -5120,7 +5120,7 @@ curl -X POST http://localhost:8000/api/ai-partner/chat/ \
 # Authenticated Test  
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "hello"}'
 # Result: Processing pipeline, returns response ✅ Success
 ```
@@ -5231,7 +5231,7 @@ Session 121 was a critical success that resolved all major database issues block
 **Last Test Results** (August 9, 2025):
 ```bash
 curl -X POST http://localhost:8000/api/ai-partner/chat/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   -d '{"message": "system status check"}'
 
 # Result: HTTP 200 + Full AI response about system agents

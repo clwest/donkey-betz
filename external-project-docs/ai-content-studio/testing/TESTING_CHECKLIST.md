@@ -175,7 +175,7 @@
 ### Quick API Test
 ```bash
 curl -X POST http://localhost:8001/api/content/blog/generate/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>" \
   -H "Content-Type: application/json" \
   -d '{"topic": "Test Blog", "tone": "professional", "length": "short"}'
 ```
@@ -183,13 +183,13 @@ curl -X POST http://localhost:8001/api/content/blog/generate/ \
 ### Check Campaign Content
 ```bash
 curl http://localhost:8001/api/campaigns/2/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 ```
 
 ### View Library
 ```bash
 curl http://localhost:8001/api/content/library/ \
-  -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3"
+  -H "Authorization: Token <redacted-993f8273-2026-04-20>"
 ```
 
 ## 📊 Success Metrics

@@ -34,7 +34,7 @@ def check_ui():
         # Check backend
         try:
             api_response = requests.get('http://localhost:8000/api/v1/agents/',
-                                       headers={'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97'},
+                                       headers={'Authorization': 'Token <redacted-0fb2390d-2026-04-20>'},
                                        timeout=5)
             if api_response.status_code == 200:
                 agents = api_response.json()

@@ -51,7 +51,7 @@
 
 ### **Database & Authentication**
 - ✅ **User**: chris (ID: 3db7b025-c8fe-4b71-8b64-3d01bcac154e)
-- ✅ **Auth Token**: 2447578c3bb5aca86100be7b2f1bbdb2f3535dfc
+- ✅ **Auth Token**: <redacted-2447578c-2026-04-20>
 - ✅ **Subscription**: Pro tier with unified_user platform role
 - ✅ **Data Isolation**: All 98 agents scoped to chris user
 - ✅ **API Security**: Token authentication required for all endpoints

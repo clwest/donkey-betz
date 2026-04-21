@@ -4054,12 +4054,12 @@ The `/api/ai-partner/learning/insights/` endpoint was returning 500 ERROR due to
 ## Testing Performed
 ```bash
 # Test endpoint before fix
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/ai-partner/learning/insights/
 # Response: 500 ERROR - "Cannot resolve keyword 'engagement_score' into field"
 
 # Test endpoint after fix
-curl -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3" \
+curl -H "Authorization: Token <redacted-8401e051-2026-04-20>" \
   http://localhost:8001/api/ai-partner/learning/insights/
 # Response: 200 OK - Returns valid JSON with learning insights
 ```
@@ -6896,16 +6896,16 @@ Authorization: Token <token_value>
 - Both require authentication via Token header
 
 ## Testing:
-Your authentication token is: `73d9b35d53b95e79de1537fc03b889ba37ad1c70`
+Your authentication token is: `<redacted-73d9b35d-2026-04-20>`
 
 Test with curl:
 ```bash
 # Test pipeline endpoint
-curl -H "Authorization: Token 73d9b35d53b95e79de1537fc03b889ba37ad1c70" \
+curl -H "Authorization: Token <redacted-73d9b35d-2026-04-20>" \
      http://localhost:8000/api/pipeline/pipelines/
 
 # Test AI pipeline available content
-curl -H "Authorization: Token 73d9b35d53b95e79de1537fc03b889ba37ad1c70" \
+curl -H "Authorization: Token <redacted-73d9b35d-2026-04-20>" \
      http://localhost:8000/api/content/ai-pipeline/available_content/
 ```
 

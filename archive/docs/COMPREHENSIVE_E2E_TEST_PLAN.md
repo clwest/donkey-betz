@@ -40,7 +40,7 @@ curl http://localhost:3000  # Frontend
 import requests
 
 BASE_URL = "http://localhost:8000"
-TOKEN = "4b9facbb8006ac4dd7408fd45a6747105a6719fb"
+TOKEN = "<redacted-4b9facbb-2026-04-20>"
 headers = {"Authorization": f"Token {TOKEN}"}
 
 # Test various content types

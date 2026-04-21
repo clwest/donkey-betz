@@ -25,7 +25,7 @@ headers = {
 
 # Payload for FLUX with LoRA
 payload = {
-    "version": "85a7e01f60cf31fbb0d22c48f9719fa7f9f6ab8d",
+    "version": "<redacted-85a7e01f-2026-04-20>",
     "input": {
         "prompt": "test robot image",
         "lora_weights": "clwest/ai-content-generation-company-style:bae61384a7977e46ca0e5172c89d17f851009b8ae539a84b02b637f752fa05f7",

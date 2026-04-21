@@ -125,7 +125,7 @@ make status       # Verify all services running
 ### Test Credentials
 - **Username**: `testuser`
 - **Password**: `testpass123`
-- **API Token**: `993f8273f70877e23b5c7d2f92ed30562a089fe3`
+- **API Token**: `<redacted-993f8273-2026-04-20>`
 
 ### Pre-loaded Demo Content
 The platform includes sample content for immediate demonstration:

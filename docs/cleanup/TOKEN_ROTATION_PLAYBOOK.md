@@ -17,31 +17,45 @@ Prod was taken down by Chris on 2026-04-20 so rotation can happen without breaki
 
 ## Token inventory (as of 2026-04-20)
 
-### Scrubbed from HEAD in this session's PR
+### Scrubbed from HEAD (complete as of 2026-04-20)
 
-These literals have been replaced with placeholders or moved to env-var reads. Git history still contains the original values — **rotation is still required** to actually invalidate them.
+All 15 identified tokens have been replaced in HEAD with placeholders or moved to env-var reads. **Git history still contains the original values** — rotation in the production DB is the only way to actually invalidate them.
 
-| Token (first 8) | Owner / usage | Files scrubbed | Rotation priority |
+| Token (first 8) | Owner / usage | Scrub batch | Rotation priority |
 |---|---|---|---|
-| `43d46129...` | Production DRF token (prod Railway) | `tests/one-off/test_pa_readonly_tools.py`, `tests/one-off/test_pa_mutation_tools.py` | **HIGH** |
-| `19f3b711...` | Local `donkeyking` DRF token | `00-START-NEXT-SESSION.md`, 5 `docs/handoffs/` files, 3 `_archived/mobile/.env` files | LOW (localhost-only) |
-| `2e63ae5a...` | `mobile_test` DRF token (Session 115) | 2 `docs/archive/sessions/` files, the same 3 mobile .env files | LOW (localhost-only, retired user) |
+| `43d46129...` | Production DRF token (Railway) | PR #2033 — Part 1 | **HIGH** (still valid, prod currently offline) |
+| `19f3b711...` | Local `donkeyking` DRF token | PR #2033 — Part 1 | LOW (localhost-only) |
+| `2e63ae5a...` | `mobile_test` DRF token (Session 115) | PR #2033 — Part 1 | LOW (localhost-only, retired user) |
+| `0fb2390d...` | Early API token | Part 2 (this PR) — 31 files | MEDIUM |
+| `424a48280...` | `alice_writer` DRF token | Part 2 — 7 files (incl. `.env.example` — big no-no) | MEDIUM |
+| `993f8273...` | Generic auth token | Part 2 — 46 files (largest batch) | MEDIUM |
+| `c4ba8e9a...` | Auth token in `scripts/api/test_sports_integration.py` | Part 2 — 11 files | MEDIUM |
+| `0ef9dd74...` | Admin token | Part 2 — 1 file | LOW |
+| `2447578c...` | Django login API response token | Part 2 — 4 files | LOW |
+| `504406af...` | `external-project-docs/ai-content-studio/` token | Part 2 — 3 files | LOW |
+| `cff3e844...` | `external-project-docs/ai-content-studio/` token | Part 2 — 3 files | LOW |
+| `e7d2ae96...` | `tests/unit/test_frontend_auth.py` | Part 2 — 1 file | LOW |
+| `4b9facbb...` | Multiple — archive + `tests/api/` | Part 2 — 3 files | LOW |
+| `85a7e01f...` | `tests/one-off/test_replicate_*.py` + `test_trained_lora.py` | Part 2 — 2 files | LOW (Replicate API key) |
+| `f6355675...` | `external-project-docs/ai-content-studio/` token | Part 2 — 1 file | LOW |
 
-### Found in HEAD but NOT scrubbed in this session (follow-up work)
+All tracked-file occurrences replaced with `<redacted-<first8>-2026-04-20>` placeholder. Scrub sweep done via `git grep -l <token> | xargs sed -i '' "s/.../placeholder/g"` across tracked files only (gitignored `.env*` untouched).
 
-These need their own cleanup PR. Grep commands at the bottom of this doc will help locate each.
+### External API keys
 
-| Token (first 8) | Likely usage | File count | Priority |
-|---|---|---|---|
-| `ba6bd09c...` | **SERPER_API_KEY** (Google Search API, external billable service) | 20 files (incl. `.env` — gitignored) | **HIGH** if still valid |
-| `0fb2390d...` | Labeled as "API token configured" | 28 files | MEDIUM |
-| `424a48280...` | `alice_writer` user DRF token | 25 files | MEDIUM |
-| `993f8273...` | Generic "token" literal | 43 files | MEDIUM |
-| `c4ba8e9a...` | Authorization Token in `scripts/api/test_sports_integration.py` | 2 files | MEDIUM |
-| `0ef9dd74...` | Admin token | 1 file (`archive/docs/`) | LOW |
-| `2447578c...` | Django login API response token | 4 files | LOW |
-| `504406af...` | Enterprise features doc token | 3 files (in `external-project-docs/`) | LOW |
-| `cff3e844...` / `e7d2ae96...` / `4b9facbb...` / `85a7e01f...` / `f6355675...` | Unknown — each 1–3 files | 8 files total | LOW (per-case investigation) |
+| Key | Status | Action |
+|---|---|---|
+| **SERPER_API_KEY** (`ba6bd09c...`) | Only in gitignored `.env` + `generated_projects/*/.env` (not tracked in git) | Rotate at https://serper.dev if still valid, update local `.env`. No repo scrub needed. |
+
+### Pre-commit hook now blocks future leaks
+
+`.githooks/pre-commit` (tracked) adds a check for `TOKEN = 'hex40'` / `AUTH_TOKEN = 'hex40'` / `Authorization: Token hex40` patterns. Enable per-clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+See [`.githooks/README.md`](../../.githooks/README.md) for full docs.
 
 ## How to rotate a Django DRF token
 

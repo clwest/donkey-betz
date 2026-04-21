@@ -2008,7 +2008,7 @@ By the end of Phase 10, the system should have:
 - Document performance impact of each change
 - Current session number is 142
 - Use format: ADVANCED-OPT-20250810 for any session naming
-- Authentication token: `8401e05142480ffd7635e1f7cf5708c6a8c965e3`
+- Authentication token: `<redacted-8401e051-2026-04-20>`
 - Remember to work in `/documentation/` NOT `/backend/documentation/`
 - Build on the strong foundation from Phases 5-9
 
@@ -2243,11 +2243,11 @@ python test_cache_effectiveness.py
 
 # Check cache stats
 curl http://localhost:8000/api/monitoring/cache/stats/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3"
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>"
 
 # Test warming
 curl -X POST http://localhost:8000/api/monitoring/cache/warm/ \
-  -H "Authorization: Token 8401e05142480ffd7635e1f7cf5708c6a8c965e3"
+  -H "Authorization: Token <redacted-8401e051-2026-04-20>"
 ```
 
 ### Integration Points

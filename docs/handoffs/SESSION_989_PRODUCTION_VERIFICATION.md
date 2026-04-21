@@ -93,7 +93,7 @@
 
 4. **To verify code is live on a specific worker**, link to that service first: `railway service link celery-pa` then `railway logs`.
 
-5. **Auth token for production API:** `Token 0cdc1c72dba99ea637485076ee952d571440aa30` (User: Donkeyking)
+5. **Auth token for production API:** `Token <redacted-0cdc1c72-2026-04-20>` (User: Donkeyking)
 
 ---
 

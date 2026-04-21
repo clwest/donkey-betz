@@ -30,7 +30,7 @@ def fix_react_errors():
     # 2. Create proper .env file to disable react-refresh issue
     env_content = """REACT_APP_API_URL=http://localhost:8000
 REACT_APP_WS_URL=ws://localhost:8000
-REACT_APP_AUTH_TOKEN=0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97
+REACT_APP_AUTH_TOKEN=<redacted-0fb2390d-2026-04-20>
 SKIP_PREFLIGHT_CHECK=true
 DISABLE_ESLINT_PLUGIN=true"""
     

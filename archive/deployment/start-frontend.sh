@@ -20,7 +20,7 @@ if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/ | grep -q "
     echo -e "${GREEN}✅ Backend is running on port 8000${NC}"
     
     # Test with token
-    RESPONSE=$(curl -s -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" http://localhost:8000/api/v1/agents/templates/ | head -c 100)
+    RESPONSE=$(curl -s -H "Authorization: Token <redacted-0fb2390d-2026-04-20>" http://localhost:8000/api/v1/agents/templates/ | head -c 100)
     if [[ $RESPONSE == *"results"* ]] || [[ $RESPONSE == *"["* ]]; then
         echo -e "${GREEN}✅ API authentication working${NC}"
         echo -e "${GREEN}✅ 150 Agent templates available${NC}"

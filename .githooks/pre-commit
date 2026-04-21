@@ -1,0 +1,108 @@
+#!/bin/bash
+# Pre-commit Security Hook
+# Prevents commits of sensitive data and enforces security policies
+
+echo "🔒 Pre-commit Security Check..."
+
+# Check for hardcoded secrets (but allow safe patterns like os.environ.get, settings.VAR)
+staged_files=$(git diff --cached --name-only)
+violations_found=0
+
+for file in $staged_files; do
+    if [ -f "$file" ]; then
+        # Skip binary files (images, fonts, etc.) — grep on binary data causes false positives
+        # Skip minified frontend bundles — contain ://github.com, ://reactjs.org etc. that trigger false positives
+        # Skip the hook itself (.githooks/) — contains regex patterns for the checks, would self-match
+        # Skip .rag/corpus.jsonl — auto-generated RAG embedding corpus, chunked docs, high false-positive rate
+        case "$file" in
+            *.png|*.jpg|*.jpeg|*.gif|*.ico|*.webp|*.svg|*.woff|*.woff2|*.ttf|*.eot|*.otf|*.zip|*.tar|*.gz|*.pdf)
+                continue ;;
+            frontend/dist/assets/*)
+                continue ;;
+            .githooks/*|.git/hooks/*)
+                continue ;;
+            .rag/corpus.jsonl)
+                continue ;;
+        esac
+        # Check for hardcoded API keys (but skip safe patterns)
+        if grep -E "(api_key|secret_key|password)\s*=\s*['\"][a-zA-Z0-9_-]{10,}['\"]" "$file" 2>/dev/null | \
+           grep -vE "(os\.environ|settings\.|getenv|get\()" > /dev/null; then
+            echo "🚨 SECURITY VIOLATION: Hardcoded secret found in $file"
+            echo "   Found: $(grep -E "(api_key|secret_key|password)\s*=\s*['\"][a-zA-Z0-9_-]{10,}['\"]" "$file" | grep -vE "(os\.environ|settings\.|getenv|get\()" | head -1)"
+            echo "   ✅ SAFE: api_key=os.environ.get('KEY')"
+            echo "   ❌ UNSAFE: api_key='sk-abc123...'"
+            violations_found=1
+        fi
+
+        # Check for private keys
+        if grep -E "BEGIN.*PRIVATE.*KEY" "$file" 2>/dev/null; then
+            echo "🚨 SECURITY VIOLATION: Private key found in $file"
+            violations_found=1
+        fi
+
+        # Check for database URLs with credentials
+        # Allows: os.environ, settings., getenv, example.com, GitHub Actions secrets (${{ secrets.),
+        #         googleapis.com (fonts), and common placeholder patterns used in docs
+        # Placeholder patterns accepted (docs/examples only, not real credentials):
+        #   ://user:pass@ / ://user:password@ / ://admin:admin@
+        #   ://<USER>:<PASSWORD>@ / ://${DB_USER}:${DB_PASS}@
+        #   ://postgres:password@ / ://dbao_user:pass@ / ://moveyourazz_user:${DB_PASSWORD}@
+        if grep -E "://[^:]+:[^@]+@" "$file" 2>/dev/null \
+            | grep -vE "(os\.environ|settings\.|getenv|example\.com|\\\$\{\{|googleapis\.com|fonts\.)" \
+            | grep -vE "://[a-zA-Z_][a-zA-Z0-9_]*:(pass|password|admin|<[^>]+>|\\\$\{[^}]+\})[@:]" \
+            | grep -vE "://<[^>]*>:<[^>]*>@" \
+            | grep -vE "://\\\$\{[^}]+\}:\\\$\{[^}]+\}@" \
+            > /dev/null; then
+            echo "🚨 SECURITY VIOLATION: Database URL with credentials found in $file"
+            violations_found=1
+        fi
+
+        # Check for hardcoded 40-char hex auth tokens (DRF / API style).
+        # Cleanup Phase 4+ (2026-04-20). See docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md.
+        # Allows: commit SHA references in docs (not inside TOKEN=/Authorization: patterns),
+        # the audit docs at docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md + PHASE_2_EXECUTION_LOG.md,
+        # and any file inside .env* since those are gitignored.
+        case "$file" in
+            .env|.env.*|docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md|docs/cleanup/PHASE_2_EXECUTION_LOG.md)
+                ;;  # allowed — intentional references
+            *)
+                # Match patterns that imply the hex string is being used as a token:
+                #   TOKEN='abc...', AUTH_TOKEN="abc...", 'Authorization': 'Token abc...'
+                if grep -E "(TOKEN|AUTH_TOKEN|BEARER|API_KEY|SECRET)[^=]*=\s*['\"][0-9a-f]{40}['\"]" "$file" 2>/dev/null | \
+                   grep -vE "(os\.environ|settings\.|getenv|get\()" > /dev/null; then
+                    echo "🚨 SECURITY VIOLATION: Hardcoded 40-char hex token in $file"
+                    echo "   Pattern: TOKEN/AUTH_TOKEN/etc = '[40-char hex]'"
+                    echo "   ✅ SAFE: TOKEN = os.environ.get('PA_API_TOKEN_TEST', '')"
+                    echo "   ❌ UNSAFE: TOKEN = 'abc123def...'"
+                    echo "   See docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md"
+                    violations_found=1
+                fi
+                # Match Authorization: Token <hex40> pattern (curl, JS, etc.)
+                if grep -E "Authorization['\"]?\s*[:=]\s*['\"]Token [0-9a-f]{40}['\"]" "$file" 2>/dev/null > /dev/null; then
+                    echo "🚨 SECURITY VIOLATION: Hardcoded Authorization token in $file"
+                    echo "   Pattern: 'Authorization': 'Token abc...'"
+                    echo "   ✅ SAFE: f\"Token {os.environ['PA_API_TOKEN_TEST']}\""
+                    echo "   See docs/cleanup/TOKEN_ROTATION_PLAYBOOK.md"
+                    violations_found=1
+                fi
+                ;;
+        esac
+    fi
+done
+
+# Check if committing to protected branch
+current_branch=$(git branch --show-current)
+if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+    echo "🚨 ERROR: Direct commits to '$current_branch' branch are prohibited!"
+    echo "💡 Create a feature branch: git checkout -b feature/your-feature"
+    exit 1
+fi
+
+if [ $violations_found -eq 1 ]; then
+    echo "🚨 Commit blocked due to security violations!"
+    echo "🛡️  Remove sensitive data before committing"
+    exit 1
+fi
+
+echo "✅ Pre-commit security checks passed"
+exit 0
