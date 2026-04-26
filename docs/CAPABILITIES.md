@@ -7,23 +7,23 @@
 
 ---
 
-## System Overview (Session 858)
+## System Overview (refreshed Session 1100, 2026-04-26)
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Total Agents** | **74** | 49 routable, 25 sub-agents (5 coordinator teams) - ALL have workspace + user context |
-| **Total Spiders** | **77** | 72 working, 5 need API keys |
-| **PA Tools** | **86** | +workspace_tool, +body tools |
-| **Database Models** | **367+** | 37 categories (+SKIN, BRAIN, SPINE models) |
-| **Celery Tasks** | **235** | ALL body systems active |
-| **Services** | **124** | Business logic layer (+user context, diagnostic pipeline) |
-| **Discord Commands** | **112** | 29 Cog categories |
-| **Advisors** | **25** | Famous figures + domain experts |
+| **Total Agents** | **306** | 83 AGENT_MAP (73 enabled, 8 rerouted, 2 blocked) + 223 DB persona-eligible Agent rows |
+| **Total Spiders** | **80** | All working; 41 categories |
+| **PA Tools** | **101 schemas / 166 handlers** | 6 gateway tools, 8 enrichment services |
+| **Database Models** | **570** | Concrete Django models across 23 apps (PostgreSQL + pgvector) |
+| **Celery Tasks** | **365** | + 305 PeriodicTask rows (258 enabled, 47 disabled by Session 1089 governor) |
+| **Services** | **~300 modules / 112 classes** | Module-count vs `*Service` class-count |
+| **Discord Commands** | **144** | 96 `@*.command` + 48 `@app_commands.command` across 25 Cogs |
+| **Advisors** | **32** | 10 named figures + 22 domain specialists |
 | **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
 | **HEART Service** | **2 models** | HeartBeat, ComponentStatus - monitors 6 body parts |
 | **LUNGS Service** | **3 models** | Budget, BreathCycle, RespiratoryStatus - 6 default budgets |
 | **SKIN Layer** | **3 models** | ProjectWorkspace, WorkspaceOperation, WorkspaceContext |
-| **WORKSPACE_AWARE_AGENTS** | **22** | Development, Content, Strategy, Research, Analysis, Legal |
+| **WORKSPACE_AWARE_AGENTS** | **20** | Development, Content, Strategy, Research, Analysis, Legal |
 | **USER_CONTEXT_ENHANCED** | **4** | ContentWriter, Research, StockAnalyst, SportsOddsAnalyst (Session 858) |
 
 ---

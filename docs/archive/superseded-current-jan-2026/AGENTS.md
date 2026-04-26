@@ -1,3 +1,23 @@
+<!-- ARCHIVED-DOC-V1 -->
+> # ⛔ ARCHIVED — 2026-04-26 (Session 1100)
+>
+> This doc was retired during the Session 1099 → 1100 doc-drift cleanup
+> because its stats diverged materially from runtime reality. **Content
+> below is preserved unchanged for historical reference and potential
+> future book material** (Chris's "how I learned to work with AI to build
+> this platform").
+>
+> **What this used to be:** Agent inventory snapshot
+>
+> **Where to look now:**
+> - [docs/AGENTS.md](/docs/AGENTS.md)
+> - [docs/topics/agent-system.md](/docs/topics/agent-system.md)
+>
+> **Source of truth for live numbers:** `docs/PLATFORM_INVENTORY.md`
+> (regenerable via `python manage.py generate_platform_inventory`).
+
+---
+
 # Agents Documentation
 
 **Total Agents:** 71

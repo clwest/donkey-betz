@@ -3,7 +3,7 @@
 
 # Agent System
 
-84 agents in AGENT_MAP (+ ~139 DB persona agents via DynamicPersonaAgent), routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks run 21 agents daily. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all 84 AGENT_MAP agents, media task guard blocks non-generative tasks.
+83 agents in AGENT_MAP (+ 223 DB persona-eligible Agent rows via DynamicPersonaAgent), routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks defined; **only `run_market_intelligence_desk` (stocks) is currently scheduled** as a daily PeriodicTask — the other 3 (sports/blockchain/narrative) are on-demand only via `POST /api/home/trigger-desks/`. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all AGENT_MAP agents, media task guard blocks non-generative tasks.
 
 ## Agent Categories (84 in AGENT_MAP)
 
@@ -32,16 +32,21 @@
 
 **54 routable** (can be invoked directly) | **25 non-routable** (sub-agents/coordinators) | **26 provenance-tracked**
 
-## Intelligence Desks (Session 1000)
+## Intelligence Desks (Session 1000 — partial schedule, refreshed Session 1100)
 
-4 desk coordinators run daily at 6 AM via `run_all_desks_intelligence` Celery task. Each desk orchestrates sub-agents and caches briefs for 6 hours.
+4 desk coordinators are **defined**. Only the stocks desk is currently scheduled — the other three are on-demand only.
 
-| Desk | Coordinator | Agents Activated |
-|------|------------|-----------------|
-| Stocks | MarketIntelligenceCoordinator | 9 agents (bull/bear/audit/monitor/anomaly/scanner) |
-| Sports | SportsBettingCoordinator | 5 agents (predictor/odds/arbitrage/line/sharp) |
-| Blockchain | BlockchainAuditCoordinator | 5 agents (contract/transaction/whale/exploit) |
-| Narrative | NarrativeDriftCoordinator | 4 agents (historian/trend/cultural) |
+| Desk | Coordinator | Agents Activated | Schedule (verified Session 1100) |
+|------|------------|-----------------|---|
+| Stocks | MarketIntelligenceCoordinator | 9 agents (bull/bear/audit/monitor/anomaly/scanner) | **Daily** via `run_market_intelligence_desk` PeriodicTask |
+| Sports | SportsBettingCoordinator | 5 agents (predictor/odds/arbitrage/line/sharp) | **On-demand only** (no PeriodicTask) |
+| Blockchain | BlockchainAuditCoordinator | 5 agents (contract/transaction/whale/exploit) | **On-demand only** (no PeriodicTask) |
+| Narrative | NarrativeDriftCoordinator | 4 agents (historian/trend/cultural) | **On-demand only** (no PeriodicTask) |
+
+> The wrapper `run_all_desks_intelligence` exists as a Celery task function but
+> is **not registered as a beat schedule** (verified Session 1099 audit).
+> "Run All Desks" in the UI invokes it on-demand via `POST /api/home/trigger-desks/`.
+> To run all four daily, add a PeriodicTask for `run_all_desks_intelligence`.
 
 API: `GET /api/home/intelligence-desks/`, `POST /api/home/trigger-desks/`
 Cache keys: `desk:{stocks|sports|blockchain|narrative}:latest`
