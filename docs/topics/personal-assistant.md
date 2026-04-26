@@ -9,8 +9,8 @@ The PA is the platform's conversational interface — a single `UnifiedPAEntrypo
 
 Three files handle everything:
 - `core/services/unified_pa_entrypoint.py` — Agentic loop, context building, enrichment orchestration
-- `core/services/tool_dispatcher.py` — 120+ tool handlers with guaranteed structured responses (ToolResult)
-- `core/services/pa_tool_schemas.py` — OpenAI function-calling schemas for all tools + enrichment map
+- `core/services/tool_dispatcher.py` — 166 tool handlers with guaranteed structured responses (ToolResult)
+- `core/services/pa_tool_schemas.py` — 101 OpenAI function-calling tool schemas + enrichment map
 
 ### Flow (Function Calling — Active)
 

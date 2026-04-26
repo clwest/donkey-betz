@@ -3,11 +3,11 @@
 
 # Frontend & UI
 
-React + TypeScript single-page application with 9 workspace tabs, collapsible sidebar, Command Center hub, and PA chat integration. Bundle: ~2,500 KB.
+React + TypeScript single-page application with 5 primary workspace tabs (Session 1100 refresh — was 9 in Session 969b before consolidation), collapsible sidebar, Command Center hub, and PA chat integration. Bundle: ~2,500 KB.
 
 ## Workspace Architecture
 
-`WorkspacePageNew.tsx` orchestrates 9 modular tabs:
+`WorkspacePageNew.tsx` orchestrates 5 primary tabs (`home`, `work`, `build`, `intelligence`, `system`) — sub-areas below are nested under these primary tabs:
 
 | Tab | Sub-tabs | Purpose |
 |-----|----------|---------|
@@ -27,11 +27,11 @@ React + TypeScript single-page application with 9 workspace tabs, collapsible si
 
 ## Route Structure
 
-69 route definitions in App.tsx. Key routes:
+61 route definitions in App.tsx. Key routes:
 - `/` — Command Center (home, PA chat)
-- `/workspace` — 9-tab modular workspace
+- `/workspace` — 5-tab modular workspace (`home`, `work`, `build`, `intelligence`, `system`)
 - `/stocks` — Stock Intelligence dashboard
-- `/betting` — Betting Dashboard (12 tabs: Hub, Overview, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Bankroll, Wagers, Markets, AI Record). See Betting Dashboard section below.
+- `/betting` — Betting Dashboard (9 tabs: Hub, Games, Top Plays, Sharp, Arbitrage, Watching, Odds, Wagers, Records). See Betting Dashboard section below.
 - `/image-studio` — Image generation (DALL-E 3 / Flux, style picker, gallery)
 - `/video-studio` — Video generation (RunwayML, text/image-to-video, async polling, gallery)
 - `/documents` — Document management
@@ -68,9 +68,9 @@ All three use the same async flow: dispatch task → poll status → display res
 
 `usePageTracking()` hook fires fire-and-forget Redis counters via `POST /api/v1/telemetry/page-view/` on every page navigation.
 
-## Betting Dashboard (`/betting` — Session 1012)
+## Betting Dashboard (`/betting` — Session 1012, refreshed Session 1100)
 
-12 tabs with real data from TheOddsSpider, ESPN, PlacedWager, and MLPrediction models:
+9 tabs with real data from TheOddsSpider, ESPN, PlacedWager, and MLPrediction models:
 
 | Tab | Key Features |
 |-----|-------------|

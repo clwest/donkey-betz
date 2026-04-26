@@ -3,20 +3,22 @@
 
 # Spider Network Reference
 
-**Last Updated:** Session 567 (December 28, 2025) - Complete 77 Spider Audit
+**Last Updated:** Session 1100 (April 26, 2026 — count refresh; original Session 567 audit narrative below)
 
 ---
 
 ## Overview
 
-**Total Registered Spiders: 77** | **Working: 72** | **Need API Keys: 5**
+**Total Registered Spiders: 80** | **All Working** | **Categories: 41**
 
-The Spider Network collects real-time intelligence from 77 data sources across 20+ categories. All spiders are registered in `ai_core/spiders/spider_registry.py` and orchestrated via Celery tasks.
+The Spider Network collects real-time intelligence from 80 data sources across 41 categories. All spiders are registered in `ai_core/spiders/spider_registry.py` and orchestrated via Celery tasks.
+
+> Source of truth: `docs/PLATFORM_INVENTORY.md`. The "41 categories" figure flagged uncontrolled proliferation (the Session 567 audit promised "20+" as a floor); see `docs/topics/spider-network.md` for consolidation recommendations.
 
 ### Architecture
 
 ```
-SpiderRegistry (77 spiders)
+SpiderRegistry (80 spiders)
     ↓
 SpiderOrchestrator / SpiderArmyOrchestrator
     ↓
@@ -33,9 +35,9 @@ SpiderIntelligenceService (Query interface)
 
 | Metric | Count |
 |--------|-------|
-| **Total Registered** | **77** |
-| Working (no auth needed) | 72 |
-| Need API Keys | 5 |
+| **Total Registered** | **80** |
+| Working (no auth needed) | 80 |
+| Need API Keys | 0 (all currently configured) |
 | Playwright-Enabled | 2 |
 | Records in DB | ~20,712+ |
 | With Embeddings | ~88.1% |

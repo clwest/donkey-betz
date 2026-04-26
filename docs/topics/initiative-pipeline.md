@@ -52,7 +52,7 @@ SpiderData (raw, 72h)
 - Filter clusters below MIN_CLUSTER_SIZE (3)
 - Calculate metrics: strength (0-1), confidence (0-1), novelty (0-1)
 
-**7 Pattern Types:** demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, skill_demand, content_gap
+**10 Pattern Types** (PATTERN_TYPE_CHOICES): demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, competitive_signal, market_movement, skill_demand, content_gap, user_need
 
 **Topic Quality Gate (Session 1010):**
 - `_generate_topic_name()` filters stopwords (new, now, before, how to, want, need, etc.) from cluster keywords
