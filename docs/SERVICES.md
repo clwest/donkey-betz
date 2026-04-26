@@ -3,9 +3,9 @@
 
 # Services Reference
 
-**Last Updated:** Session 964 (February 7, 2026)
+**Last Updated:** Session 1100 (April 26, 2026 — count refresh)
 **Location:** `core/services/`
-**Total Services:** 134 service classes across 103 files
+**Total Services:** 112 `*Service` classes across 320 files
 
 ---
 

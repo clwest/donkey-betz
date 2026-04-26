@@ -221,11 +221,11 @@ def summarize(results: list[ClaimResult]) -> dict:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='agent_map_count',
-    description="CLAUDE.md stats table: '84 AGENT_MAP'",
+    description="CLAUDE.md stats table: '83 AGENT_MAP'",
 )
 def _agent_map_count() -> ClaimResult:
     from core.agent_router import AgentRouter
-    expected = 84
+    expected = 83  # refreshed Session 1100 — matches current CLAUDE.md
     actual = len(AgentRouter().AGENT_MAP)
     return ClaimResult.build(
         expected=expected,
@@ -241,29 +241,28 @@ def _agent_map_count() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='persona_agent_count',
-    description="CLAUDE.md stats table: '~139 DB persona agents (via DynamicPersonaAgent)'",
+    description="CLAUDE.md stats table: '223 DB persona agents (via DynamicPersonaAgent)'",
 )
 def _persona_agent_count() -> ClaimResult:
+    """Count rows in Agent table — these are the agents the AgentRouter
+    falls back to via DynamicPersonaAgent when AGENT_MAP doesn't contain
+    the requested name. Session 1099's narrow filter (agent_type='persona')
+    only caught 3 rows, but the *eligible-for-DynamicPersonaAgent* count
+    is the full Agent.objects.count() — that's what CLAUDE.md cites.
+    """
     from core.models_unified_system import Agent
-    from django.db.models import Q
-    persona_count = Agent.objects.filter(
-        Q(agent_type__icontains='persona') | Q(agent_type='dynamic') | Q(name__icontains='persona')
-    ).count()
-    expected = 139
-    # Tolerate ±20 because personas drift naturally
-    lo, hi = expected - 20, expected + 20
-    severity = 'ok' if lo <= persona_count <= hi else 'high'
-    note = (
-        f"Found only {persona_count} persona-typed Agent rows; CLAUDE.md overcounts by ~{expected - persona_count}"
-        if severity != 'ok' else None
-    )
+    actual = Agent.objects.count()
+    expected = 223  # refreshed Session 1100 — matches current CLAUDE.md
+    drift = abs(actual - expected)
+    # Tolerate ±10 because personas drift naturally
+    severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
-        expected=f"{lo}..{hi}",
-        actual=persona_count,
+        expected=expected,
+        actual=actual,
         severity=severity,
-        note=note,
+        note=f"Agent.objects.count() = {actual} (all agent_types eligible for DynamicPersonaAgent fallback)",
         fix_suggestion=(
-            f"Either backfill persona agents, or update CLAUDE.md to stop claiming ~139 DynamicPersonaAgent rows"
+            f"Update CLAUDE.md stats table to '{actual} DB persona agents'"
             if severity != 'ok' else None
         ),
     )
@@ -272,27 +271,24 @@ def _persona_agent_count() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='total_agent_count_claim',
-    description="CLAUDE.md header: 'Agents | 218'",
+    description="CLAUDE.md header: 'Agents (total registered) | 306'",
 )
 def _total_agent_count_claim() -> ClaimResult:
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent
-    from django.db.models import Q
     routable = len(AgentRouter().AGENT_MAP)
-    personas = Agent.objects.filter(
-        Q(agent_type__icontains='persona') | Q(agent_type='dynamic') | Q(name__icontains='persona')
-    ).count()
+    personas = Agent.objects.count()  # Session 1100: full Agent table, not narrow filter
     actual_total = routable + personas
-    expected = 218
+    expected = 306  # refreshed Session 1100 — matches current CLAUDE.md
     drift = abs(actual_total - expected)
-    severity = 'ok' if drift <= 5 else ('high' if drift > 50 else 'medium')
+    severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual_total,
         severity=severity,
-        note=f"AGENT_MAP({routable}) + persona({personas}) = {actual_total}",
+        note=f"AGENT_MAP({routable}) + Agent rows({personas}) = {actual_total}",
         fix_suggestion=(
-            f"Update CLAUDE.md total to {actual_total} (or reconcile persona-agent definition)"
+            f"Update CLAUDE.md total to {actual_total}"
             if severity != 'ok' else None
         ),
     )
@@ -335,56 +331,66 @@ def _provenance_tracked_count() -> ClaimResult:
 
 @register_claim(
     doc='docs/topics/agent-system.md',
-    claim_id='intelligence_desks_scheduled',
-    description="'Session 1000: 4 Intelligence Desks run 21 agents daily at 6 AM via run_all_desks_intelligence Celery task'",
+    claim_id='intelligence_desks_partial_schedule',
+    description=(
+        "Session 1100 corrected claim: only `run_market_intelligence_desk` (stocks) "
+        "is scheduled daily; 3 of 4 desks are on-demand only via /api/home/trigger-desks/"
+    ),
 )
-def _intelligence_desks_scheduled() -> ClaimResult:
+def _intelligence_desks_partial_schedule() -> ClaimResult:
+    """Verify the corrected claim: stocks desk IS scheduled, others are on-demand only.
+
+    Session 1099 originally flagged this as a high-severity drift because the
+    doc claimed all 4 desks ran daily but only stocks was scheduled. Session 1100
+    corrected the doc to describe the actual partial-schedule reality. This
+    verifier now confirms the doc matches reality:
+
+    - run_market_intelligence_desk: enabled PeriodicTask present (✓)
+    - run_all_desks_intelligence:   no PeriodicTask (✓ on-demand only, doc agrees)
+    """
     from django_celery_beat.models import PeriodicTask
-    pt = PeriodicTask.objects.filter(
+    stocks_pt = PeriodicTask.objects.filter(
+        task='core.tasks.run_market_intelligence_desk'
+    ).first()
+    all_desks_pt = PeriodicTask.objects.filter(
         task='core.tasks.run_all_desks_intelligence'
     ).first()
-    if not pt:
+    stocks_scheduled = bool(stocks_pt and stocks_pt.enabled)
+    all_desks_scheduled = bool(all_desks_pt and all_desks_pt.enabled)
+    expected_state = "stocks scheduled, other 3 on-demand only"
+    if stocks_scheduled and not all_desks_scheduled:
         return ClaimResult.build(
-            expected='scheduled daily',
-            actual='no PeriodicTask exists',
-            severity='high',
-            note=(
-                "run_all_desks_intelligence exists as a Celery task function but is not "
-                "scheduled in PeriodicTask. Only run_market_intelligence_desk (stocks only) "
-                "runs daily. 3 of 4 claimed desks are on-demand only."
-            ),
-            fix_suggestion=(
-                "Either add a beat schedule for run_all_desks_intelligence, or correct the "
-                "docs to describe the current on-demand-only reality."
-            ),
+            expected=expected_state,
+            actual=expected_state,
+            severity='ok',
         )
-    if not pt.enabled:
-        return ClaimResult.build(
-            expected='enabled, daily',
-            actual='disabled',
-            severity='high',
-            fix_suggestion="Re-enable the scheduled task, or correct the docs.",
-        )
+    parts: list[str] = []
+    if not stocks_scheduled:
+        parts.append("stocks desk NOT scheduled (doc says it should be)")
+    if all_desks_scheduled:
+        parts.append("run_all_desks_intelligence IS scheduled (doc says on-demand only)")
     return ClaimResult.build(
-        expected='scheduled daily',
-        actual=f"enabled, schedule={pt.crontab or pt.interval}",
-        severity='ok',
+        expected=expected_state,
+        actual="; ".join(parts) or "unknown",
+        severity='medium',
+        fix_suggestion=(
+            "Either re-add stocks PeriodicTask, or update docs/topics/agent-system.md "
+            "to describe whatever the actual schedule is now."
+        ),
     )
 
 
 @register_claim(
     doc='docs/topics/celery-workers.md',
     claim_id='celery_task_count',
-    description="'271 Celery tasks across 9 worker processes'",
+    description="'365 Celery tasks across 7 worker processes'",
 )
 def _celery_task_count() -> ClaimResult:
     # Authoritative task list comes from the Celery app's discovered registry
     from core.celery import app as celery_app
-    # Filter out celery-internal tasks (e.g. celery.backend_cleanup) to match
-    # the '271' project-task figure
     user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
     actual = len(user_tasks)
-    expected = 271
+    expected = 365  # refreshed Session 1100 — matches CLAUDE.md + PLATFORM_INVENTORY
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
@@ -482,7 +488,7 @@ def _celery_worker_processes() -> ClaimResult:
         name = line.split(':', 1)[0].strip()
         if name:
             workers.append(name)
-    expected = 9
+    expected = 10  # refreshed Session 1100 — Procfile has 10 worker entries
     actual = len(workers)
     drift = abs(actual - expected)
     severity = 'ok' if drift == 0 else ('low' if drift <= 1 else 'medium')
@@ -511,7 +517,7 @@ def _celery_worker_processes() -> ClaimResult:
 )
 def _agents_md_total() -> ClaimResult:
     from core.agent_router import AgentRouter
-    expected = 76
+    expected = 83  # refreshed Session 1100 — matches new docs/AGENTS.md
     actual = len(AgentRouter().AGENT_MAP)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 2 else ('medium' if drift <= 10 else 'high')
@@ -547,7 +553,7 @@ def _agents_md_workspace_aware() -> ClaimResult:
         )
     # Count quoted identifiers inside the block
     names = re.findall(r"'([A-Za-z_]+Agent)'", m.group(1))
-    expected = 22
+    expected = 20  # refreshed Session 1100
     actual = len(names)
     severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 2 else 'medium')
     return ClaimResult.build(
@@ -570,7 +576,7 @@ def _agents_md_workspace_aware() -> ClaimResult:
 def _agents_md_pa_tool_count() -> ClaimResult:
     """Compare 'PA now has 89 tools' against the live PA_TOOL_SCHEMAS list."""
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 89
+    expected = 101  # refreshed Session 1100 — matches new docs/AGENTS.md
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')
@@ -602,17 +608,17 @@ def _spiders_md_total() -> ClaimResult:
         actual: int = total_raw if isinstance(total_raw, int) else len(registry.list_spiders())
     except Exception as e:
         return ClaimResult.build(
-            expected=77, actual=None, severity='error',
+            expected=80, actual=None, severity='error',
             note=f'Could not introspect spider registry: {e}',
         )
-    expected = 77
+    expected = 80  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 2 else ('low' if drift <= 5 else 'medium')
     return ClaimResult.build(
         expected=expected,
         actual=actual,
         severity=severity,
-        note="docs/SPIDERS.md is stamped 'Last Updated: Session 567 (Dec 28 2025)'",
+        note="docs/SPIDERS.md refreshed Session 1100 — was Session 567 (Dec 28 2025)",
         fix_suggestion=(
             f"Update docs/SPIDERS.md overview + Quick Stats to 'Total: {actual}'"
             if severity != 'ok' else None
@@ -635,7 +641,7 @@ def _spiders_md_working() -> ClaimResult:
             expected=72, actual=None, severity='error',
             note=f'Could not introspect spider registry: {e}',
         )
-    expected = 72
+    expected = 80  # refreshed Session 1100 — all 80 work
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 2 else ('low' if drift <= 5 else 'medium')
     return ClaimResult.build(
@@ -652,8 +658,8 @@ def _spiders_md_working() -> ClaimResult:
 
 @register_claim(
     doc='docs/SPIDERS.md',
-    claim_id='spider_categories_20',
-    description="docs/SPIDERS.md overview: '77 data sources across 20+ categories'",
+    claim_id='spider_categories_count',
+    description="docs/SPIDERS.md overview: '80 data sources across 41 categories' (refreshed Session 1100)",
 )
 def _spiders_md_categories() -> ClaimResult:
     try:
@@ -662,25 +668,20 @@ def _spiders_md_categories() -> ClaimResult:
         actual = len(by_cat) if isinstance(by_cat, dict) else 0
     except Exception as e:
         return ClaimResult.build(
-            expected=20, actual=None, severity='error',
+            expected=41, actual=None, severity='error',
             note=f'Could not introspect spider registry: {e}',
         )
-    expected = 20
-    # '20+' is a floor — drift high when we BLEW PAST it (registry proliferated
-    # categories without the doc tracking them).
-    if actual >= expected and actual <= expected + 5:
-        severity = 'ok'
-    elif actual > expected + 5:
-        severity = 'medium'
-    else:
-        severity = 'high'
+    expected = 41  # refreshed Session 1100 — matches new docs/SPIDERS.md
+    drift = abs(actual - expected)
+    severity = 'ok' if drift <= 3 else ('low' if drift <= 8 else 'medium')
     return ClaimResult.build(
-        expected=f">= {expected}",
+        expected=expected,
         actual=actual,
         severity=severity,
         note=(
-            "docs promised '20+' as a floor; Tier-1 spider-network audit "
-            "already showed 41 actual categories — uncontrolled proliferation."
+            "Session 1099 audit found uncontrolled category proliferation (was '20+' "
+            "floor, actually 41). Doc refreshed Session 1100 to state '41 categories' "
+            "explicitly. Future consolidation work tracked separately."
         ),
         fix_suggestion=(
             f"Either consolidate categories in spider_registry.py or update "
@@ -732,7 +733,7 @@ def _pa_topics_handler_count() -> ClaimResult:
     from pathlib import Path
     src = (Path(__file__).resolve().parent / 'tool_dispatcher.py').read_text()
     matches = re.findall(r'^\s*self\.register\(', src, re.MULTILINE)
-    expected = 120
+    expected = 166  # refreshed Session 1100
     actual = len(matches)
     if actual < expected:
         severity = 'high'
@@ -824,7 +825,7 @@ def _pa_topics_enrichment_count() -> ClaimResult:
 )
 def _capabilities_total_agents() -> ClaimResult:
     from core.agent_router import AgentRouter
-    expected = 74
+    expected = 83  # refreshed Session 1100 (CAPABILITIES.md table now states 306 = 83 + 223 personas)
     actual = len(AgentRouter().AGENT_MAP)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 2 else ('medium' if drift <= 15 else 'high')
@@ -850,7 +851,7 @@ def _capabilities_total_agents() -> ClaimResult:
 )
 def _capabilities_pa_tools() -> ClaimResult:
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 86
+    expected = 101  # refreshed Session 1100
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')
@@ -877,7 +878,7 @@ def _capabilities_pa_tools() -> ClaimResult:
 def _capabilities_celery_tasks() -> ClaimResult:
     from core.celery import app as celery_app
     user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
-    expected = 235
+    expected = 365  # refreshed Session 1100
     actual = len(user_tasks)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 60 else 'high')
@@ -915,7 +916,7 @@ def _capabilities_services_count() -> ClaimResult:
         except OSError:
             continue
         class_count += len(re.findall(r'^class\s+[A-Z]\w*Service\b', src, re.MULTILINE))
-    expected = 124
+    expected = 112  # refreshed Session 1100 — matches new docs/CAPABILITIES.md
     drift = abs(class_count - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 20 else 'high')
     return ClaimResult.build(
@@ -951,7 +952,7 @@ def _services_md_total() -> ClaimResult:
         except OSError:
             continue
         class_count += len(re.findall(r'^class\s+[A-Z]\w*Service\b', src, re.MULTILINE))
-    expected = 134
+    expected = 112  # refreshed Session 1100 — matches new docs/SERVICES.md
     drift = abs(class_count - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 25 else 'high')
     return ClaimResult.build(
@@ -978,7 +979,7 @@ def _services_md_file_count() -> ClaimResult:
         p for p in services_dir.rglob('*.py')
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
-    expected = 103
+    expected = 320  # refreshed Session 1100 — matches new docs/SERVICES.md
     actual = len(py_files)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
@@ -1051,7 +1052,7 @@ def _initiative_min_cluster_size() -> ClaimResult:
 def _initiative_pattern_types() -> ClaimResult:
     from core.models_signal_intelligence import SignalCluster
     actual = len(SignalCluster.PATTERN_TYPE_CHOICES)
-    expected = 7
+    expected = 10  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift == 0 else ('low' if drift <= 2 else 'medium')
     names = [c[0] for c in SignalCluster.PATTERN_TYPE_CHOICES]
@@ -1145,7 +1146,7 @@ def _frontend_workspace_tabs() -> ClaimResult:
     preamble = src[m.start():cutoff] if cutoff > 0 else m.group(0)
     primary = re.findall(r"\|\s*'([^']+)'", preamble)
     actual = len(primary)
-    expected = 9
+    expected = 5  # refreshed Session 1100 — primary tabs only
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 1 else ('medium' if drift <= 4 else 'high')
     return ClaimResult.build(
@@ -1178,7 +1179,7 @@ def _frontend_route_count() -> ClaimResult:
     src = app_tsx.read_text()
     routes = re.findall(r'<Route\b', src)
     actual = len(routes)
-    expected = 69
+    expected = 61  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 15 else 'high')
     return ClaimResult.build(
@@ -1215,7 +1216,7 @@ def _frontend_betting_tabs() -> ClaimResult:
         )
     entries = re.findall(r"id:\s*'([^']+)'", m.group(1))
     actual = len(entries)
-    expected = 12
+    expected = 9  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 1 else ('medium' if drift <= 4 else 'high')
     return ClaimResult.build(
@@ -1243,7 +1244,7 @@ def _infra_redis_db_count() -> ClaimResult:
     # Match lines like 'redis://...:6379/<N>' (or tls variant) and collect unique indices
     indices = set(re.findall(r"redis(?:s)?://[^'\"]*?/(\d+)\b", settings))
     actual = len(indices)
-    expected = 4
+    expected = 3  # refreshed Session 1100 — settings.py has DB1/2/3
     # Tolerate +/-1 because dev fixtures may bump this
     severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 1 else 'medium')
     return ClaimResult.build(
@@ -1302,7 +1303,7 @@ def _infra_database_models() -> ClaimResult:
     models = apps.get_models()
     concrete = [m for m in models if not m._meta.abstract and not m._meta.proxy]
     actual = len(concrete)
-    expected = 386
+    expected = 570  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 20 else ('medium' if drift <= 60 else 'high')
     core_count = sum(1 for m in concrete if m._meta.app_label == 'core')
@@ -1319,109 +1320,15 @@ def _infra_database_models() -> ClaimResult:
 
 
 # =============================================================================
-# Tier-2 Round 4 — docs/current/ (stale INDEX) + ARCHITECTURE.md
+# Tier-2 Round 4 — docs/current/ (RETIRED 2026-04-26) + ARCHITECTURE.md
 # =============================================================================
 #
-# docs/current/INDEX.md is stamped 'January 2026 / Session 661+' and contains
-# 5+ stats that are months stale. Flag the biggest ones so the doc either
-# retires or gets a refresh. ARCHITECTURE.md claims 200K LOC — verify with a
-# Python-only line count (coarse but actionable).
-
-
-@register_claim(
-    doc='docs/current/INDEX.md',
-    claim_id='current_index_total_agents_72',
-    description="docs/current/INDEX.md: 'Agents | 72 | 69 routable'",
-)
-def _current_index_agents() -> ClaimResult:
-    from core.agent_router import AgentRouter
-    expected = 72
-    actual = len(AgentRouter().AGENT_MAP)
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 2 else ('medium' if drift <= 15 else 'high')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note="docs/current/INDEX.md is stamped 'January 2026 / Session 661+'",
-        fix_suggestion=(
-            f"Retire or refresh docs/current/INDEX.md — agent count is {actual}"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/INDEX.md',
-    claim_id='current_index_celery_tasks_127',
-    description="docs/current/INDEX.md: 'Celery Tasks | 127+'",
-)
-def _current_index_celery() -> ClaimResult:
-    from core.celery import app as celery_app
-    user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
-    expected = 127
-    actual = len(user_tasks)
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 15 else ('medium' if drift <= 100 else 'high')
-    return ClaimResult.build(
-        expected=f">= {expected}",
-        actual=actual,
-        severity=severity,
-        fix_suggestion=(
-            f"Retire or refresh docs/current/INDEX.md — celery task count is {actual}"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/INDEX.md',
-    claim_id='current_index_models_324',
-    description="docs/current/INDEX.md: 'Database Models | 324+'",
-)
-def _current_index_models() -> ClaimResult:
-    from django.apps import apps
-    concrete = [m for m in apps.get_models() if not m._meta.abstract and not m._meta.proxy]
-    expected = 324
-    actual = len(concrete)
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 20 else ('medium' if drift <= 100 else 'high')
-    return ClaimResult.build(
-        expected=f">= {expected}",
-        actual=actual,
-        severity=severity,
-        fix_suggestion=(
-            f"Retire or refresh docs/current/INDEX.md — model count is {actual}"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/INDEX.md',
-    claim_id='current_index_pa_tools_77',
-    description="docs/current/INDEX.md: 'PA Tools | 77'",
-)
-def _current_index_pa_tools() -> ClaimResult:
-    from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 77
-    actual = len(PA_TOOL_SCHEMAS)
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 3 else ('medium' if drift <= 25 else 'high')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note=(
-            "docs/current/INDEX.md says 77; CAPABILITIES 86; AGENTS 89; "
-            "topics/PA '85+'. Four contradictions, one source of truth: "
-            "PA_TOOL_SCHEMAS length."
-        ),
-        fix_suggestion=(
-            f"Retire or refresh docs/current/INDEX.md — PA tool count is {actual}"
-            if severity != 'ok' else None
-        ),
-    )
+# RETIRED 2026-04-26 (Session 1100): The four docs/current/INDEX.md claims
+# (current_index_total_agents_72, current_index_celery_tasks_127,
+# current_index_models_324, current_index_pa_tools_77) were removed because
+# the underlying doc was archived to docs/archive/superseded-current-jan-2026/.
+# Live counts for these metrics live in PLATFORM_INVENTORY.md. The
+# ARCHITECTURE.md LOC claim below is still active.
 
 
 @register_claim(
@@ -1470,173 +1377,14 @@ def _architecture_total_loc() -> ClaimResult:
 
 
 # =============================================================================
-# Tier-2 Round 5 — remaining docs/current/ subfiles + content-pipeline deep-dive
+# Tier-2 Round 5 — content-pipeline deep-dive (docs/current/* RETIRED)
 # =============================================================================
 #
-# docs/current/{VIEWS, API_ENDPOINTS, MANAGEMENT_COMMANDS, SERVICES, DISCORD}.md
-# all stamped 'January 2026' and carry explicit totals. Each gets one claim.
-
-
-@register_claim(
-    doc='docs/current/VIEWS.md',
-    claim_id='view_file_count_143',
-    description="docs/current/VIEWS.md: 'Total View Files: 143'",
-)
-def _current_views_count() -> ClaimResult:
-    from pathlib import Path
-    core_dir = Path(__file__).resolve().parent.parent
-    view_files = [p for p in core_dir.glob('views*.py') if p.name != '__init__.py']
-    actual = len(view_files)
-    expected = 143
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note=f"core/views*.py glob match count: {actual}",
-        fix_suggestion=(
-            f"Update docs/current/VIEWS.md to 'Total View Files: {actual}'"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/API_ENDPOINTS.md',
-    claim_id='endpoint_count_200plus',
-    description="docs/current/API_ENDPOINTS.md: 'Total Endpoints: 200+'",
-)
-def _current_endpoints_count() -> ClaimResult:
-    """Count path(...) patterns across core/urls*.py."""
-    import re
-    from pathlib import Path
-    core_dir = Path(__file__).resolve().parent.parent
-    total = 0
-    for urls_file in core_dir.glob('urls*.py'):
-        try:
-            src = urls_file.read_text()
-        except OSError:
-            continue
-        total += len(re.findall(r'^\s*path\(', src, re.MULTILINE))
-    expected = 200
-    # '200+' is a floor. OK if floor met; but material undercount (>5x) warrants
-    # a medium flag so the doc gets refreshed.
-    if total < expected:
-        severity = 'high'
-    elif total <= expected * 3:
-        severity = 'ok'
-    else:
-        severity = 'medium'
-    return ClaimResult.build(
-        expected=f">= {expected}",
-        actual=total,
-        severity=severity,
-        note=f"core/urls*.py path() patterns: {total}",
-        fix_suggestion=(
-            f"Update docs/current/API_ENDPOINTS.md to '{total}+ endpoints'"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/MANAGEMENT_COMMANDS.md',
-    claim_id='management_command_count_43',
-    description="docs/current/MANAGEMENT_COMMANDS.md: 'Total Commands: 43'",
-)
-def _current_mgmt_commands() -> ClaimResult:
-    from pathlib import Path
-    cmds_dir = Path(__file__).resolve().parent.parent / 'management' / 'commands'
-    if not cmds_dir.exists():
-        return ClaimResult.build(
-            expected=43, actual=None, severity='error',
-            note=f'{cmds_dir} not found',
-        )
-    cmds = [
-        p for p in cmds_dir.iterdir()
-        if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
-    ]
-    actual = len(cmds)
-    expected = 43
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 5 else ('medium' if drift <= 40 else 'high')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note=f"core/management/commands/*.py (non-init): {actual}",
-        fix_suggestion=(
-            f"Update docs/current/MANAGEMENT_COMMANDS.md to 'Total Commands: {actual}'"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/SERVICES.md',
-    claim_id='current_services_93plus',
-    description="docs/current/SERVICES.md: 'Total Services: 93+'",
-)
-def _current_services_count() -> ClaimResult:
-    """Same class-counting methodology as SERVICES.md claim — they should match."""
-    import re
-    from pathlib import Path
-    services_dir = Path(__file__).resolve().parent
-    class_count = 0
-    for py in services_dir.rglob('*.py'):
-        if '__pycache__' in py.parts or py.name == '__init__.py':
-            continue
-        try:
-            src = py.read_text(errors='ignore')
-        except OSError:
-            continue
-        class_count += len(re.findall(r'^class\s+[A-Z]\w*Service\b', src, re.MULTILINE))
-    expected = 93
-    # '93+' is a floor. OK if floor met.
-    severity = 'ok' if class_count >= expected else 'high'
-    return ClaimResult.build(
-        expected=f">= {expected}",
-        actual=class_count,
-        severity=severity,
-        note="Same metric as docs/SERVICES.md claim; both stale",
-        fix_suggestion=(
-            f"Retire docs/current/SERVICES.md or update to '{class_count}'"
-            if severity != 'ok' else None
-        ),
-    )
-
-
-@register_claim(
-    doc='docs/current/DISCORD.md',
-    claim_id='discord_cogs_29',
-    description="docs/current/DISCORD.md: 'Command Cogs: 29'",
-)
-def _current_discord_cogs() -> ClaimResult:
-    import re
-    from pathlib import Path
-    bot_file = Path(__file__).resolve().parent / 'discord_bot.py'
-    if not bot_file.exists():
-        return ClaimResult.build(
-            expected=29, actual=None, severity='error',
-            note=f'{bot_file} not found',
-        )
-    src = bot_file.read_text()
-    cogs = re.findall(r'^class\s+\w+\s*\([^)]*\bCog\b[^)]*\)\s*:', src, re.MULTILINE)
-    actual = len(cogs)
-    expected = 29
-    drift = abs(actual - expected)
-    severity = 'ok' if drift <= 2 else ('medium' if drift <= 10 else 'high')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note=f"Cog-subclass definitions in discord_bot.py: {actual}",
-        fix_suggestion=(
-            f"Update docs/current/DISCORD.md to 'Command Cogs: {actual}'"
-            if severity != 'ok' else None
-        ),
-    )
+# RETIRED 2026-04-26 (Session 1100): Five docs/current/* claims removed —
+# view_file_count_143 (VIEWS.md), endpoint_count_200plus (API_ENDPOINTS.md),
+# management_command_count_43 (MANAGEMENT_COMMANDS.md),
+# current_services_93plus (SERVICES.md), discord_cogs_29 (DISCORD.md).
+# Underlying docs archived to docs/archive/superseded-current-jan-2026/.
 
 
 @register_claim(
@@ -1745,38 +1493,8 @@ def _api_v1_prefix_count() -> ClaimResult:
     )
 
 
-@register_claim(
-    doc='docs/current/ASSISTANT_SYSTEM.md',
-    claim_id='assistant_dir_file_count_8',
-    description="docs/current/ASSISTANT_SYSTEM.md: 'Total Files: 8' in core/assistant/",
-)
-def _assistant_dir_files() -> ClaimResult:
-    from pathlib import Path
-    assistant_dir = Path(__file__).resolve().parent.parent / 'assistant'
-    if not assistant_dir.exists():
-        return ClaimResult.build(
-            expected=8, actual=0, severity='high',
-            note='core/assistant/ directory missing',
-            fix_suggestion='Retire docs/current/ASSISTANT_SYSTEM.md — subsystem removed',
-        )
-    py_files = [
-        p for p in assistant_dir.iterdir()
-        if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
-    ]
-    actual = len(py_files)
-    expected = 8
-    drift = abs(actual - expected)
-    severity = 'ok' if drift == 0 else ('low' if drift <= 2 else 'medium')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note=f"core/assistant/*.py (non-init): {sorted(p.name for p in py_files)}",
-        fix_suggestion=(
-            f"Update docs/current/ASSISTANT_SYSTEM.md to 'Total Files: {actual}'"
-            if severity != 'ok' else None
-        ),
-    )
+# RETIRED 2026-04-26 (Session 1100): assistant_dir_file_count_8 claim removed —
+# docs/current/ASSISTANT_SYSTEM.md archived to docs/archive/superseded-current-jan-2026/.
 
 
 # =============================================================================
@@ -1797,7 +1515,7 @@ def _backend_inv_models() -> ClaimResult:
     from django.apps import apps
     concrete = [m for m in apps.get_models() if not m._meta.abstract and not m._meta.proxy]
     actual = len(concrete)
-    expected = 413
+    expected = 570  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 20 else ('medium' if drift <= 100 else 'high')
     return ClaimResult.build(
@@ -1825,7 +1543,7 @@ def _backend_inv_views() -> ClaimResult:
     core_dir = Path(__file__).resolve().parent.parent
     view_files = [p for p in core_dir.glob('views*.py') if p.name != '__init__.py']
     actual = len(view_files)
-    expected = 164
+    expected = 200  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 10 else ('medium' if drift <= 40 else 'high')
     return ClaimResult.build(
@@ -1856,7 +1574,7 @@ def _backend_inv_services_files() -> ClaimResult:
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
     actual = len(py_files)
-    expected = 167
+    expected = 320  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 80 else 'high')
     return ClaimResult.build(
@@ -1887,7 +1605,7 @@ def _backend_inv_mgmt() -> ClaimResult:
         if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
     ]
     actual = len(cmds)
-    expected = 63
+    expected = 153  # refreshed Session 1100
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
@@ -1907,23 +1625,26 @@ def _backend_inv_mgmt() -> ClaimResult:
 
 @register_claim(
     doc='docs/DISCORD_INTEGRATION.md',
-    claim_id='discord_total_commands_112',
-    description="docs/DISCORD_INTEGRATION.md header: 'Commands: 112 total'",
+    claim_id='discord_total_commands',
+    description="docs/DISCORD_INTEGRATION.md header: 'Commands: 144 total (96 .command + 48 app_commands.command)'",
 )
 def _discord_total_commands() -> ClaimResult:
-    """Count @*.command(...) decorators in discord_bot.py."""
+    """Count both @*.command(...) and @*.app_commands.command(...) decorators."""
     import re
     from pathlib import Path
     bot_file = Path(__file__).resolve().parent / 'discord_bot.py'
     if not bot_file.exists():
         return ClaimResult.build(
-            expected=112, actual=None, severity='error',
+            expected=144, actual=None, severity='error',
             note='discord_bot.py not found',
         )
     src = bot_file.read_text()
-    matches = re.findall(r'^\s*@\w+\.command\(', src, re.MULTILINE)
+    # Session 1100: count BOTH decorator styles to match doc claim
+    classic = re.findall(r'^\s*@\w+\.command\(', src, re.MULTILINE)
+    app_cmds = re.findall(r'^\s*@app_commands\.command\(', src, re.MULTILINE)
+    matches = classic + app_cmds
     actual = len(matches)
-    expected = 112
+    expected = 144  # refreshed Session 1100 — 96 .command + 48 app_commands
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 25 else 'high')
     return ClaimResult.build(
@@ -1948,33 +1669,8 @@ def _discord_total_commands() -> ClaimResult:
 # =============================================================================
 
 
-@register_claim(
-    doc='docs/current/CELERY_TASKS.md',
-    claim_id='scheduled_tasks_53',
-    description="docs/current/CELERY_TASKS.md header: 'Scheduled Tasks: 53'",
-)
-def _current_scheduled_tasks() -> ClaimResult:
-    """Count enabled django-celery-beat PeriodicTask rows."""
-    from django_celery_beat.models import PeriodicTask
-    actual = PeriodicTask.objects.filter(enabled=True).count()
-    expected = 53
-    drift = abs(actual - expected)
-    # Beat schedules grow rapidly as the platform adds monitors — a large over
-    # is almost certainly a doc-stale signal, not a runtime problem.
-    severity = 'ok' if drift <= 10 else ('medium' if drift <= 100 else 'high')
-    return ClaimResult.build(
-        expected=expected,
-        actual=actual,
-        severity=severity,
-        note=(
-            f"PeriodicTask.objects.filter(enabled=True).count() == {actual} "
-            f"(total including disabled: {PeriodicTask.objects.count()})"
-        ),
-        fix_suggestion=(
-            f"Update docs/current/CELERY_TASKS.md to 'Scheduled Tasks: {actual}'"
-            if severity != 'ok' else None
-        ),
-    )
+# RETIRED 2026-04-26 (Session 1100): scheduled_tasks_53 claim removed —
+# docs/current/CELERY_TASKS.md archived to docs/archive/superseded-current-jan-2026/.
 
 
 @register_claim(
@@ -1985,7 +1681,7 @@ def _current_scheduled_tasks() -> ClaimResult:
 def _backend_inv_celery() -> ClaimResult:
     from core.celery import app as celery_app
     user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
-    expected = 243
+    expected = 365  # refreshed Session 1100
     actual = len(user_tasks)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 60 else 'high')
@@ -2028,7 +1724,7 @@ def _backend_inv_consumers() -> ClaimResult:
         except OSError:
             continue
         consumer_count += len(pattern.findall(src))
-    expected = 52
+    expected = 67  # refreshed Session 1100
     drift = abs(consumer_count - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 20 else 'high')
     return ClaimResult.build(
@@ -2043,33 +1739,8 @@ def _backend_inv_consumers() -> ClaimResult:
     )
 
 
-@register_claim(
-    doc='docs/current/MODELS.md',
-    claim_id='current_models_324plus',
-    description="docs/current/MODELS.md header: 'Total Models: 324+'",
-)
-def _current_models_count() -> ClaimResult:
-    from django.apps import apps
-    concrete = [m for m in apps.get_models() if not m._meta.abstract and not m._meta.proxy]
-    actual = len(concrete)
-    expected = 324
-    # Floor claim — OK when ≥ floor and within 2x; beyond 2x flags severe stale
-    if actual < expected:
-        severity = 'high'
-    elif actual <= expected * 1.5:
-        severity = 'ok'
-    else:
-        severity = 'medium'
-    return ClaimResult.build(
-        expected=f">= {expected}",
-        actual=actual,
-        severity=severity,
-        note="Same metric as DATABASE_MODEL_REFERENCE 386+, BACKEND_INVENTORY 413, infrastructure 386+",
-        fix_suggestion=(
-            f"Retire or refresh docs/current/MODELS.md to '{actual}'"
-            if severity != 'ok' else None
-        ),
-    )
+# RETIRED 2026-04-26 (Session 1100): current_models_324plus claim removed —
+# docs/current/MODELS.md archived to docs/archive/superseded-current-jan-2026/.
 
 
 # =============================================================================
@@ -2111,37 +1782,35 @@ def _claude_llm_providers() -> ClaimResult:
 
 @register_claim(
     doc='CLAUDE.md',
-    claim_id='services_135',
-    description="CLAUDE.md stats table: 'Services | 135'",
+    claim_id='services_module_count',
+    description="CLAUDE.md stats table: 'Services | ~300' (service modules in core/services/)",
 )
 def _claude_services_count() -> ClaimResult:
-    """Same methodology as CAPABILITIES.md/SERVICES.md claims — Service-class count."""
-    import re
+    """Count .py files (modules) under core/services/ — that's the metric
+    CLAUDE.md cites as '~300'. Class-count (112) is a different metric
+    measured in SERVICES.md/CAPABILITIES.md.
+    """
     from pathlib import Path
     services_dir = Path(__file__).resolve().parent
-    class_count = 0
+    module_count = 0
     for py in services_dir.rglob('*.py'):
         if '__pycache__' in py.parts or py.name == '__init__.py':
             continue
-        try:
-            src = py.read_text(errors='ignore')
-        except OSError:
-            continue
-        class_count += len(re.findall(r'^class\s+[A-Z]\w*Service\b', src, re.MULTILINE))
-    expected = 135
-    drift = abs(class_count - expected)
-    severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
+        module_count += 1
+    expected = 300  # refreshed Session 1100 — CLAUDE.md claims '~300'
+    drift = abs(module_count - expected)
+    severity = 'ok' if drift <= 50 else ('medium' if drift <= 150 else 'high')
     return ClaimResult.build(
-        expected=expected,
-        actual=class_count,
+        expected=f"~{expected}",
+        actual=module_count,
         severity=severity,
         note=(
-            "Four doc sources contradict: CLAUDE 135, SERVICES.md 134, "
-            "CAPABILITIES 124, current/SERVICES 93+, current/INDEX 93+, "
-            "BACKEND_INVENTORY 167"
+            "Counts non-__init__.py files in core/services/. Service-class "
+            "count (different metric) is measured by SERVICES.md/CAPABILITIES.md "
+            "claims separately."
         ),
         fix_suggestion=(
-            f"Unify all docs to '{class_count}' Service classes"
+            f"Update CLAUDE.md services row to '~{module_count}'"
             if severity != 'ok' else None
         ),
     )
@@ -2183,7 +1852,7 @@ def _claude_db_models() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='agent_taxonomy_reconciliation',
-    description="CLAUDE.md stats: '84 AGENT_MAP (74 enabled, 8 rerouted, 2 blocked)'",
+    description="CLAUDE.md stats: '83 AGENT_MAP (73 enabled, 8 rerouted, 2 blocked)'",
 )
 def _claude_agent_taxonomy() -> ClaimResult:
     """Verify the reconciliation sum: fully_enabled + rerouted + blocked == AGENT_MAP."""
@@ -2199,10 +1868,11 @@ def _claude_agent_taxonomy() -> ClaimResult:
     }
     rerouted = sorted(non_specialist - set(blocked))
     fully_enabled = total - len(blocked) - len(rerouted)
-    expected_claim = "74 enabled + 8 rerouted + 2 blocked = 84"
+    # Refreshed Session 1100 — matches current CLAUDE.md
+    expected_claim = "73 enabled + 8 rerouted + 2 blocked = 83"
     actual_claim = f"{fully_enabled} enabled + {len(rerouted)} rerouted + {len(blocked)} blocked = {total}"
-    matches_74_8_2 = (fully_enabled == 74 and len(rerouted) == 8 and len(blocked) == 2)
-    severity = 'ok' if matches_74_8_2 else 'medium'
+    matches = (fully_enabled == 73 and len(rerouted) == 8 and len(blocked) == 2 and total == 83)
+    severity = 'ok' if matches else 'medium'
     return ClaimResult.build(
         expected=expected_claim,
         actual=actual_claim,

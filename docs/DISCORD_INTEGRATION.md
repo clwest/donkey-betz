@@ -3,10 +3,10 @@
 
 # Discord Integration Rules & Command Reference
 
-**Last Updated:** Session 971b (February 8, 2026)
-**Commands:** 112 total | 20 categories
+**Last Updated:** Session 1100 (April 26, 2026 — count refresh)
+**Commands:** 144 total (96 `@*.command` + 48 `@app_commands.command`) across 25 Cogs
 **Notification Channels:** 12
-**Bot File:** `core/services/discord_bot.py` (14,486 lines)
+**Bot File:** `core/services/discord_bot.py` (11,676 lines)
 **Notifications:** `core/services/discord_notifications.py` (2,273 lines)
 **Voice:** `core/services/discord_voice.py` (871 lines)
 
