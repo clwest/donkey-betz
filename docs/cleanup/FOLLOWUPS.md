@@ -111,3 +111,86 @@ before the CI gate.
 - Inventory section that reports the drift count:
   `docs/PLATFORM_INVENTORY.md` — *Doc-vs-Reality Verifier State*
 - Verifier source: `core/services/doc_claim_verification.py`
+
+---
+
+## AUDIT-CAL-2026-04-28 — `"docs` "shell-artifact" finding was a false positive
+
+**Status:** Closed (calibration note only — no code change). Logged
+because the audit confidently flagged a non-issue and we want future
+audits not to repeat it.
+
+**Symptom.** `docs/audit/AUDIT_V1.md` § P1 #12 read:
+
+> 7,928 tracked files; one of them is literally `"docs` (with leading
+> quote) ... a directory or file whose name begins with a literal
+> double-quote, almost certainly a shell-redirection artifact.
+
+That claim was wrong. Confirmed during the Phase 2 dry-run: there is
+no such file or directory.
+
+**Root cause.** `git ls-files` quotes any filename containing
+characters outside its safe set (the project has many filenames with
+em-dashes, encoded as `\342\200\224`). The quoting wraps the *entire
+path string* in double-quotes — so a literal `git ls-files` row reads
+`"docs/archive/founder-toolkit-exports-2026-04/.../X — Full Business
+Plan.md"`. Splitting on `/` and taking field 1 produces the string
+`"docs` — that's the open-quote plus the first path component, not a
+real directory.
+
+`ls -d docs/archive/founder-toolkit-exports-2026-04/` works fine and
+shows the actual contents. There is no shell artifact.
+
+**Lesson for future audits.**
+- `git ls-files` output is not safe to split on `/` blindly. Use
+  `git ls-files -z` and split on NUL when scripting against it.
+- An `ls -d <path>` (or `git ls-tree`) cross-check should precede
+  any "this looks like a stray file" finding before it lands in an
+  audit.
+
+**Cross-references.**
+- Audit finding: `docs/audit/AUDIT_V1.md` § P1 #12 (treat as retracted)
+- Phase 2 plan task: `docs/audit/CLEANUP_PLAN.md` Phase 2 — the
+  "Investigate top-level entry `\"docs`" bullet is **dropped** from
+  Phase 2 execution scope and not replaced.
+
+---
+
+## AUDIT-CAL-2026-04-28b — Phase 2 success metric was unrealistic
+
+**Status:** Closed (target corrected). Same root cause as the calibration
+note above — over-confident estimate without sanity-checking against the
+actual hotpath surface.
+
+**Symptom.** `docs/audit/CLEANUP_PLAN.md` Phase 2 § "Confirm" bullet read:
+
+> Confirm: `context-kit hotpath` top-15 sum drops below 5 MB after
+> these untracks
+
+Reality: the top-15 sum is currently **74.01 MB**. With the safe-only
+Phase 2 cleanup (untrack `tests/artifacts/*.png` + `.pyright-after.txt`
++ optional `docs/_index.json`) the expected post-cleanup top-15 is
+~50 MB — still dominated by the 24 MB logo and 17.86 MB
+`master_context_all.md` neither of which are in the safe-only scope.
+Even after a full Phase 2 (logo resize + master_context split + venv_ml
+untrack) the realistic floor is ~5–10 MB, not <5 MB. The original target
+was off by an order of magnitude relative to the safe-only scope.
+
+**Corrected target (this PR).** First-pass success metric for the
+low-risk Phase 2 subset: **reduce `context-kit hotpath` top-15 sum by
+at least 25 MB**. The full <5 MB target stays as the *eventual* goal
+once venv_ml, the logo, and master_context_all.md all land in their
+respective focused PRs.
+
+**Lesson for future audits.**
+- Estimate targets against current hotpath output, not eyeballed sums.
+- Distinguish "first-pass safe target" from "phase-end ambition" in
+  the plan when scope is being staged across multiple PRs.
+
+**Cross-references.**
+- Audit finding: `docs/audit/AUDIT_V1.md` § P0 #6 (the 74 MB top-15
+  number that motivated the target)
+- Phase 2 plan: `docs/audit/CLEANUP_PLAN.md` Phase 2 — final bullet
+  (the "Confirm" line is the one being corrected)
+- Phase 2 dry-run note this entry pairs with: see this branch's
+  commit log (`chore/phase-2-low-risk-cleanup`)
