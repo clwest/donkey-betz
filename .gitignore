@@ -339,3 +339,6 @@ resolve_node/results/
 # Keep image artifacts out of the repo root
 /*.png
 
+
+# Pyright type-checker output dump — one-off debug artifact, never tracked
+.pyright-after.txt
