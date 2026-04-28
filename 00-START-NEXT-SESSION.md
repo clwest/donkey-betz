@@ -17,13 +17,34 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 ---
 
-## SESSION 1099 — START HERE (as of 2026-04-17 end of Session 1098)
+## SESSION 1101 — START HERE (as of 2026-04-28 end of Session 1100)
 
+**HEAD:** `9b5ce72e` (`chore(cleanup): Session 1100 doc-drift purge + auto-stat blocks (#2036)`).
 **Previous session PA conversation (LOCAL):** `pa-3c7ddc058db1` (continuous since Session 1094).
 
-### FIRST THING — 24h DeliverableAppend canary observation window
+### FIRST THING — confirm canary cleanup landed, then resume ROOT_CLEANUP_PLAN
 
-Session 1098 ended GREEN on a controlled canary injection. A test artifact is intentionally live in the DB while the observation window runs:
+The 24h DeliverableAppend canary observation window opened at the end of Session 1098 (2026-04-17) and has long since closed — ~11 days of real append traffic have run since the GREEN sign-off. Two questions to answer at the top of this session:
+
+1. **Did the Session 1098 canary cleanup (Step 2 below) actually run?** If the canary blog still has its `gate_notes` populated and the canary deliverable still lacks the `CANARY TEST —` title prefix, the cleanup snippet was never executed. Run it now.
+2. **Are append failures still ZERO across the observation window?** Re-run the Step 1 grep checks against the rotated celery logs since 2026-04-17. If anything red, that's the rollback trigger.
+
+After both are answered: continue `docs/cleanup/ROOT_CLEANUP_PLAN.md`. Phase 4.2 (commit `905886f6`) was the last cleanup phase to merge. Phases 4.1 and 5+ are pending.
+
+### Recent shipping (Sessions 1099–1100, abridged)
+
+- **Session 1100** — `9b5ce72e` doc-drift purge + auto-stat blocks (the `<!-- @inventory-block:backend-summary -->` block in `docs/BACKEND_INVENTORY.md` is the new pattern).
+- **Phase 4.2** — `905886f6` archived 21 orphan top-level dirs.
+- **Phase 3** — `5348a3db` archived all remaining one-off scripts (60 files).
+- **Phase 2** — `ecc62e4c` moved legacy test scripts out of root, then `72108aa8` scrubbed 17 tokens + installed shared pre-commit hook.
+- **Phase 1** — `6d41140d` moved zero-risk artifacts out of root, then `1ab29a6e` scrubbed 3 auth tokens + shipped rotation playbook.
+- **Session 1099** — `c52bf4b1` reconciliation + `docs-pattern/` teaching framework (4ab5ff27 added DO/DON'T 11).
+
+For the full session 1100 doc-drift purge details, the most recent handoff by mtime is `docs/handoffs/SESSION_1098_WRAP_CANARY_GREEN.md` (Sessions 1099/1100 shipped before their handoff files landed; check `git log` and PRs #2027–#2036 for details until those handoffs catch up).
+
+### Canary cleanup (Session 1098 — confirm this ran)
+
+Reference IDs from the canary injection:
 
 - **Blog:** `b8a2b6a3-4533-4b40-9675-0c55f569ba22` — "Why Most AI Teams Never Progress Beyond the Demo Stage"
 - **Deliverable:** `c7f4c940-647d-45d7-9c48-7c3ff61d8113` (655 → 1907 chars after trigger 1)
