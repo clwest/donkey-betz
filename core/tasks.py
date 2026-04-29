@@ -513,16 +513,6 @@ def _circuit_breaker_record_timeout(agent_name: str, task: str):
 # ==================== SESSION 835: STALE EXECUTION CLEANUP ====================
 
 
-@shared_task(bind=True, ignore_result=True, name="core.tasks.cleanup_stale_content")
-def cleanup_stale_content(
-    self,
-    cutoff_days: int = 7,
-    statuses: list = None,
-    protected_types: list = None,
-    cap: int = 500,
-):
-    from core.tasks_misc import _impl_cleanup_stale_content
-    return _impl_cleanup_stale_content(self, cutoff_days, statuses, protected_types, cap)
 @shared_task(name="core.tasks.reap_zombie_work")
 def reap_zombie_work(
     deliberation_stale_minutes: int = 60,
@@ -542,16 +532,6 @@ def cleanup_junk_initiatives(stale_days: int = 7):
 
 
 
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1900, name="core.tasks.execute_workspace_pipeline")
-def execute_workspace_pipeline(self, run_id: str):
-    """Execute a workspace pipeline run (dispatched from trigger_pipeline API)."""
-    from core.services.workspace_pipeline_runner import execute_pipeline_run
-    return execute_pipeline_run(run_id)
-@shared_task(bind=True, soft_time_limit=300, time_limit=330, name="core.tasks.execute_demo_pipeline_task")
-def execute_demo_pipeline_task(self, run_id: str, topic: str, user_id: int):
-    """Execute a demo pipeline for onboarding (fast, 3 stages)."""
-    from core.views_demo_pipeline import _execute_demo_pipeline
-    return _execute_demo_pipeline(run_id, topic, user_id)
 @shared_task(ignore_result=True, name="core.tasks.auto_process_extracted_artifacts")
 def auto_process_extracted_artifacts(
     stale_days: int = 7,
@@ -591,18 +571,6 @@ def create_talking_video_task(
 ) -> Dict[str, Any]:
     from core.tasks_media import _impl_create_talking_video_task
     return _impl_create_talking_video_task(self, image_prompt, script, context)
-@shared_task(bind=True, max_retries=1, default_retry_delay=120, name="core.tasks.produce_content_package")
-def produce_content_package(
-    self,
-    production_id: str,
-    content_type: str,
-    topic: str,
-    context: Dict[str, Any] = None,
-    skip_assets: list = None,
-    user_id: int = None
-) -> Dict[str, Any]:
-    from core.tasks_misc import _impl_produce_content_package
-    return _impl_produce_content_package(self, production_id, content_type, topic, context, skip_assets, user_id)
 def _create_spider_instance(spider_class, spider_name: str):
     """Create a spider instance, trying both constructor patterns."""
     try:
@@ -2454,10 +2422,6 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
 def trigger_spider_conversations(self, min_relevance: int = 70, max_conversations: int = 2):
     from core.tasks_conversations import _impl_trigger_spider_conversations
     return _impl_trigger_spider_conversations(self, min_relevance, max_conversations)
-@shared_task(bind=True, name="core.tasks.trigger_project_research")
-def trigger_project_research(self, max_projects: int = 3, max_spiders_per_project: int = 2):
-    from core.tasks_ops import _impl_trigger_project_research
-    return _impl_trigger_project_research(self, max_projects, max_spiders_per_project)
 @shared_task(bind=True, name="core.tasks.propagate_new_policies")
 def propagate_new_policies(self, hours_back: int = 2, max_actions: int = 3):
     """
@@ -3463,14 +3427,6 @@ def send_proactive_opportunity_alerts():
 def send_personalized_opportunity_alerts():
     from core.tasks_ops import _impl_send_personalized_opportunity_alerts
     return _impl_send_personalized_opportunity_alerts()
-@shared_task(bind=True, max_retries=3, name="core.tasks.generate_content_package")
-def generate_content_package(self, package_id: str):
-    from core.tasks_content import _impl_generate_content_package
-    return _impl_generate_content_package(self, package_id)
-@shared_task(bind=True, max_retries=3, name="core.tasks.generate_ai_series")
-def generate_ai_series(self, series_id: str):
-    from core.tasks_content import _impl_generate_ai_series
-    return _impl_generate_ai_series(self, series_id)
 @shared_task(name="core.tasks.assemble_chunked_upload")
 def assemble_chunked_upload(upload_id: str):
     from core.tasks_media import _impl_assemble_chunked_upload
@@ -3666,18 +3622,6 @@ def check_market_events_and_rerun():
 def track_prediction_outcomes():
     from core.tasks_financial import _impl_track_prediction_outcomes
     return _impl_track_prediction_outcomes()
-@shared_task(name="core.tasks.run_autonomous_content_studio")
-def run_autonomous_content_studio():
-    from core.tasks_content import _impl_run_autonomous_content_studio
-    return _impl_run_autonomous_content_studio()
-@shared_task(name='autonomous_studio.generate_content', soft_time_limit=600, time_limit=720)
-def generate_content_for_channel(channel_id):
-    from core.tasks_content import _impl_generate_content_for_channel
-    return _impl_generate_content_for_channel(channel_id)
-@shared_task(name="core.tasks.track_content_performance")
-def track_content_performance():
-    from core.tasks_content import _impl_track_content_performance
-    return _impl_track_content_performance()
 @shared_task(name="core.tasks.process_hitl_escalations")
 def process_hitl_escalations():
     """
@@ -3933,14 +3877,6 @@ def get_event_bus_stats():
 # "The system watches the world for story shifts"
 # =============================================================================
 
-@shared_task(name='narrative_drift.run_detector_cycle')
-def run_narrative_drift_cycle():
-    from core.tasks_content import _impl_run_narrative_drift_cycle
-    return _impl_run_narrative_drift_cycle()
-@shared_task(name='narrative_drift.update_narrative_statuses')
-def update_narrative_statuses():
-    from core.tasks_content import _impl_update_narrative_statuses
-    return _impl_update_narrative_statuses()
 def _send_narrative_alerts_to_discord(alerts: list):
     """Send narrative alerts to Discord."""
     try:
@@ -4005,10 +3941,6 @@ def _send_narrative_digest_to_discord(stats: dict):
 
 # ==================== SESSION 473: NARRATIVE DRIFT + CONTENT STUDIO INTEGRATION ====================
 
-@shared_task(name='narrative_drift.trigger_content_from_shift')
-def trigger_content_from_narrative_shift(shift_id: str):
-    from core.tasks_content import _impl_trigger_content_from_narrative_shift
-    return _impl_trigger_content_from_narrative_shift(shift_id)
 @shared_task(name='unified_pipeline.health_check')
 def unified_pipeline_health_check():
     from core.tasks_misc import _impl_unified_pipeline_health_check
@@ -4585,10 +4517,6 @@ def run_earnings_predictor(self):
 def run_skill_gap_analyzer(self):
     from core.tasks_ops import _impl_run_skill_gap_analyzer
     return _impl_run_skill_gap_analyzer(self)
-@shared_task(bind=True, name="core.tasks.generate_podcast_episode")
-def generate_podcast_episode(self, episode_id: str, topic: str, format_type: str, participants: int, generate_audio: bool):
-    from core.tasks_content import _impl_generate_podcast_episode
-    return _impl_generate_podcast_episode(self, episode_id, topic, format_type, participants, generate_audio)
 def _build_operational_context():
     """
     Query real telemetry models and return a markdown string the content writer
@@ -4723,81 +4651,12 @@ def _build_operational_context():
 # SESSION 543: SELF-BLOG GENERATION TASK
 # =============================================================================
 
-@shared_task(bind=True, name="core.tasks.generate_self_blog_task")
-def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
-    from core.tasks_content import _impl_generate_self_blog_task
-    return _impl_generate_self_blog_task(self, tone, word_count, topic_category)
-@shared_task(bind=True, soft_time_limit=240, time_limit=300, name="core.tasks.draft_legal_document_task")
-def draft_legal_document_task(self, task_description, context=None, user_id=None):
-    """
-    Session 1062: Async legal document drafting via LegalDocDrafterAgent.
-    Dispatched by PA legal_doc_drafter_agent handler to avoid PA tool timeout.
-    """
-    from core.agent_router import AgentRouter
-    from django.contrib.auth import get_user_model
-
-    user = None
-    if user_id:
-        User = get_user_model()
-        user = User.objects.filter(id=user_id).first()
-
-    router = AgentRouter(user=user)
-    result = router.route(
-        agent_name='LegalDocDrafterAgent',
-        task=task_description,
-        context=context or {},
-    )
-
-    output_text = ''
-    if result:
-        output_text = result.message or result.content or str(result)
-
-    return {
-        'agent': 'LegalDocDrafterAgent',
-        'output': output_text,
-        'success': bool(result and result.success),
-        'data': result.data if result else {},
-    }
 
 
-@shared_task(bind=True, name="core.tasks.generate_blog_with_topic_task")
-def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
-    """
-    Session 1057: Generate a blog for a specific topic via the deliberation pipeline.
-    Dispatched by PA generate_blog_tool when user provides a specific topic.
-    """
-    from core.services.content_deliberation_runner import ContentDeliberationRunner
-
-    logger.info(f"[Phase 4] Starting topic-specific deliberation blog: topic={topic}, tone={tone}")
-
-    runner = ContentDeliberationRunner()
-    result = runner.run_blog(topic, voice=tone)
-
-    status = result.get('status', 'unknown')
-    decision = result.get('decision', 'unknown')
-    selfblog_id = str(result['selfblog_id']) if result.get('selfblog_id') else None
-
-    logger.info(f"[Phase 4] Topic blog complete: topic={topic}, status={status}, decision={decision}, id={selfblog_id}")
-
-    return {
-        'status': status,
-        'decision': decision,
-        'selfblog_id': selfblog_id,
-        'topic': topic,
-    }
 
 
-@shared_task(bind=True, soft_time_limit=480, time_limit=540, name="core.tasks.generate_self_blog_deliberation_task")
-def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
-    from core.tasks_content import _impl_generate_self_blog_deliberation_task
-    return _impl_generate_self_blog_deliberation_task(self, tone, word_count, topic_category)
 
 
-@shared_task(bind=True, soft_time_limit=300, time_limit=360, name="core.tasks.generate_operator_edge_newsletter")
-def generate_operator_edge_newsletter(self, hours=72, cluster_limit=5, dry_run=False):
-    """Generate an Operator Edge newsletter from recent signal clusters."""
-    from core.tasks_content import _impl_generate_operator_edge_newsletter
-    return _impl_generate_operator_edge_newsletter(self, hours, cluster_limit, dry_run)
 
 
 @shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True, name="core.tasks.run_autonomous_thinking_cycle")
@@ -4919,14 +4778,6 @@ def execute_single_artifact(artifact_id: str):
         return {'success': False, 'error': str(e)}
 
 
-@shared_task(name="core.tasks.generate_weekly_synthesis")
-def generate_weekly_synthesis(days_back: int = 7):
-    from core.tasks_misc import _impl_generate_weekly_synthesis
-    return _impl_generate_weekly_synthesis(days_back)
-@shared_task(soft_time_limit=600, time_limit=660, name="core.tasks.generate_pending_reviews")
-def generate_pending_reviews():
-    from core.tasks_content import _impl_generate_pending_reviews
-    return _impl_generate_pending_reviews()
 @shared_task(name="core.tasks.collect_kalshi_prediction_markets")
 def collect_kalshi_prediction_markets():
     from core.tasks_financial import _impl_collect_kalshi_prediction_markets
@@ -5154,10 +5005,6 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
     return metrics
 
 
-@shared_task(name="core.tasks.generate_checklist_content_async")
-def generate_checklist_content_async(gate_id: str):
-    from core.tasks_misc import _impl_generate_checklist_content_async
-    return _impl_generate_checklist_content_async(gate_id)
 def _gather_experiment_metrics(experiment):
     """
     Session 599/600: Gather current metrics for an experiment.
@@ -6167,10 +6014,6 @@ def run_blockchain_monitoring_agents():
     return results
 
 
-@shared_task(name="core.tasks.check_content_diversity")
-def check_content_diversity():
-    from core.tasks_misc import _impl_check_content_diversity
-    return _impl_check_content_diversity()
 @shared_task(ignore_result=True, name="core.tasks.check_celery_health")
 def check_celery_health():
     from core.tasks_misc import _impl_check_celery_health
@@ -6356,17 +6199,6 @@ def execute_single_dream(dream_id: str):
 # Session 766: Gate Progression Pipeline Tasks
 # =============================================================================
 
-@shared_task(bind=True, name='core.tasks.process_content_ideas', max_retries=2, default_retry_delay=60)
-def process_content_ideas(
-    self,
-    dry_run: bool = False,
-    limit: int = 50,
-    include_dreams: bool = True,
-    include_conversations: bool = True,
-    days_lookback: int = 30,
-):
-    from core.tasks_misc import _impl_process_content_ideas
-    return _impl_process_content_ideas(self, dry_run, limit, include_dreams, include_conversations, days_lookback)
 
 
 @shared_task(name='core.tasks.maintain_knowledge_freshness')
@@ -6515,86 +6347,8 @@ def _get_workspace_for_skin_layer():
     return user, workspace
 
 
-@shared_task(name='core.tasks.enhance_blog')
-def enhance_blog_task(blog_id: str, focus_areas: list = None, save: bool = False):
-    from core.tasks_misc import _impl_enhance_blog_task
-    return _impl_enhance_blog_task(blog_id, focus_areas, save)
-@shared_task(name='core.tasks.evaluate_unscored_blogs')
-def evaluate_unscored_blogs(limit: int = 20):
-    """
-    Session 987: Batch-evaluate draft blogs that have no quality_score through PublishGate.
-
-    The v1 blog pipeline (99.7% of blogs) never called PublishGate, leaving all
-    blogs at quality_score=None, publish_ready=False. This task retroactively
-    evaluates them so the system can identify publishable content.
-
-    Args:
-        limit: Maximum blogs to evaluate per run (default 20)
-    """
-    from core.models_unified_system import SelfBlog
-    from core.services.publish_gate import PublishGate
-
-    blogs = SelfBlog.objects.filter(
-        quality_score__isnull=True,
-        status='draft',
-    ).order_by('-created_at')[:limit]
-
-    total = blogs.count()
-    if total == 0:
-        return {'processed': 0, 'message': 'No unscored blogs found'}
-
-    gate = PublishGate()
-    results = {'processed': 0, 'publish_ready': 0, 'errors': 0}
-
-    for blog in blogs:
-        try:
-            gate_result = gate.apply_to_blog(blog)
-            results['processed'] += 1
-            if blog.publish_ready:
-                results['publish_ready'] += 1
-            logger.info(
-                f"📝 [PUBLISH-GATE] Blog {blog.id}: "
-                f"decision={gate_result.decision}, quality={gate_result.quality_score}"
-            )
-        except Exception as e:
-            results['errors'] += 1
-            logger.warning(f"📝 [PUBLISH-GATE] Blog {blog.id} failed: {e}")
-
-    logger.info(
-        f"📝 [PUBLISH-GATE] Batch complete: {results['processed']} evaluated, "
-        f"{results['publish_ready']} publish-ready"
-    )
-    return results
 
 
-@shared_task(name='core.tasks.reevaluate_enhanced_blogs')
-def reevaluate_enhanced_blogs(limit: int = 50):
-    from core.tasks_misc import _impl_reevaluate_enhanced_blogs
-    return _impl_reevaluate_enhanced_blogs(limit)
-@shared_task(name='core.tasks.auto_publish_approved_blogs')
-def auto_publish_approved_blogs():
-    """
-    Session 1000C: Move approved blogs to published status.
-
-    Final step in the automation pipeline. Blogs that passed PublishGate
-    quality checks and were promoted to 'approved' get set to 'published'.
-    """
-    from core.models_unified_system import SelfBlog
-
-    blogs = SelfBlog.objects.filter(status='approved', publish_ready=True)
-    count = blogs.count()
-
-    if count == 0:
-        return {'published': 0, 'message': 'No approved blogs to publish'}
-
-    published_ids = []
-    for blog in blogs:
-        blog.status = 'published'
-        blog.save(update_fields=['status'])
-        published_ids.append(str(blog.id))
-        logger.info(f"[AUTO-PUBLISH] Published blog: {blog.title[:60]}")
-
-    return {'published': count, 'blog_ids': published_ids}
 
 
 @shared_task(name='core.tasks.verify_autopilot_action', ignore_result=True)
@@ -6616,10 +6370,6 @@ def verify_autopilot_action(action_id: int):
     return result
 
 
-@shared_task(name='core.tasks.content_autonomy_loop', ignore_result=True)
-def content_autonomy_loop():
-    from core.tasks_content import _impl_content_autonomy_loop
-    return _impl_content_autonomy_loop()
 def _route_gate_repair(blog) -> str | None:
     """Determine the best repair action based on gate_notes."""
     notes = (blog.gate_notes or '').lower()
@@ -6712,89 +6462,8 @@ def _execute_gate_repair(blog, repair_action: str) -> bool:
 # Session 1033: Content Finishing Loop + Deliverable Quality Scoring
 # =============================================================================
 
-@shared_task(name='core.tasks.auto_enhance_blogs')
-def auto_enhance_blogs(limit: int = 5):
-    from core.tasks_misc import _impl_auto_enhance_blogs
-    return _impl_auto_enhance_blogs(limit)
-@shared_task(name='core.tasks.score_unscored_deliverables')
-def score_unscored_deliverables(limit: int = 50):
-    """
-    Session 1033: Score deliverables that still have the default 0.7 quality score.
-
-    Uses heuristic scoring based on content characteristics to replace
-    the hardcoded default with a meaningful quality assessment.
-    """
-    from core.models_deliverables import Deliverable
-
-    deliverables = list(
-        Deliverable.objects.filter(quality_score=0.7)
-        .exclude(content__isnull=True)
-        .exclude(content='')
-        .order_by('-created_at')[:limit]
-    )
-
-    if not deliverables:
-        return {'scored': 0, 'message': 'No unscored deliverables'}
-
-    scored = 0
-    for d in deliverables:
-        try:
-            score = _calculate_deliverable_quality(d)
-            if score != 0.7:
-                d.quality_score = score
-                d.save(update_fields=['quality_score', 'updated_at'])
-                scored += 1
-        except Exception as e:
-            logger.warning(f"[SCORE] Error scoring deliverable {d.id}: {e}")
-
-    logger.info(f"[SCORE] Scored {scored}/{len(deliverables)} deliverables")
-    return {'scored': scored, 'total_checked': len(deliverables)}
 
 
-def _calculate_deliverable_quality(deliverable) -> float:
-    """
-    Session 1033: Heuristic quality scoring for deliverables.
-
-    Scores 0.1-1.0 based on:
-    - Content length (sweet spot 300-3000 words)
-    - Structure indicators (headers, lists, references)
-    - Agent confidence score
-    - Content format richness
-    """
-    score = 0.45
-    content = deliverable.content or ''
-    word_count = len(content.split())
-
-    # Content length scoring
-    if word_count >= 200:
-        score += 0.08
-    if word_count >= 500:
-        score += 0.07
-    if word_count >= 1000:
-        score += 0.05
-    if word_count > 5000:
-        score -= 0.05  # Penalize excessively long/unfocused
-
-    # Structure indicators
-    if '##' in content or '**' in content:
-        score += 0.05
-    if '\n- ' in content or '\n* ' in content or '\n1.' in content:
-        score += 0.05
-    if 'http://' in content or 'https://' in content:
-        score += 0.05
-
-    # Agent confidence
-    conf = deliverable.confidence_score or 0.0
-    if conf > 0.8:
-        score += 0.1
-    elif conf > 0.6:
-        score += 0.05
-
-    # Penalize very short content
-    if word_count < 50:
-        score = max(0.2, score - 0.2)
-
-    return round(min(1.0, max(0.1, score)), 2)
 
 
 AGENT_WORKSPACE_REGISTRY = {
@@ -8203,10 +7872,6 @@ def _get_next_task_for_agent(agent_name: str) -> dict | None:
 # SESSION 784: VOICE CRITIQUE SYSTEM
 # =============================================================================
 
-@shared_task(name='content_studio.score_episode_voice')
-def score_episode_voice(episode_id: str) -> dict:
-    from core.tasks_content import _impl_score_episode_voice
-    return _impl_score_episode_voice(episode_id)
 @shared_task(name='workspace.autopilot_tick')
 def workspace_autopilot_tick(
     budget_per_tick: int = 5,
@@ -8319,44 +7984,6 @@ def _track_group_contribution(agent_name: str, group_name: str, project_id: str,
         logger.warning(f"Could not track contribution for {agent_name}: {e}")
 
 
-@shared_task(name="core.tasks.run_content_creation_agents")
-def run_content_creation_agents():
-    """
-    Session 787: Run content creation agents every 3 hours.
-    Session 1027: Removed AudioAgent — ElevenLabs quota exceeded, 100% failure
-    rate ($0.41/day wasted). Re-add when quota is resolved.
-
-    Agents: ImageAgent, VideoAgent, ThreeDAgent,
-            ContentWriterAgent, ContentExecutorAgent,
-            ImageEditingAgent, VideoEditingAgent, ResolveAgent
-    """
-    agents = [
-        'ImageAgent', 'VideoAgent',
-        # Session 1099: Re-disabled — ElevenLabs quota exhausted again (19/20 recent runs
-        # failed with quota_exceeded + paid_plan_required). Session 1088's "quota replenished"
-        # re-enable was premature. Re-add only when billing is confirmed fixed.
-        # 'AudioAgent',
-        'ThreeDAgent',
-        'ContentWriterAgent', 'ContentExecutorAgent',
-        'ImageEditingAgent', 'VideoEditingAgent', 'ResolveAgent'
-    ]
-
-    def task_gen(agent):
-        tasks = {
-            'ImageAgent': 'Analyze recent trends and generate a creative image based on current popular topics',
-            'VideoAgent': 'Create a short video concept based on trending content',
-            # Session 957: Give ThreeDAgent a specific 3D task using its native generate_3d_scene tool
-            # instead of triggering research delegation that returns irrelevant generic tech trends
-            'ThreeDAgent': 'Generate a 3D scene: A modern minimalist product display pedestal with ambient lighting - style: realistic, format: glb',
-            'ContentWriterAgent': 'Write an article about recent trending topics from spider data',
-            'ContentExecutorAgent': 'Review pending content tasks and execute the highest priority one',
-            'ImageEditingAgent': 'Review recent images and suggest improvements or variations',
-            'VideoEditingAgent': 'Analyze recent videos and propose editing enhancements',
-            'ResolveAgent': 'Check for pending video projects and process the next one',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('CONTENT CREATION', agents, task_gen, '🎨')
 
 
 
@@ -8411,29 +8038,6 @@ def run_prediction_market_agents():
     return _run_agent_group('PREDICTION MARKETS', agents, task_gen, '🎯')
 
 
-@shared_task(name="core.tasks.run_narrative_culture_agents")
-def run_narrative_culture_agents():
-    """
-    Session 787: Run narrative and culture agents every 6 hours.
-
-    Agents: NarrativeDriftCoordinator, NarrativeHistorianAgent,
-            TrendBreakDetectorAgent, CulturalImpactAgent
-    """
-    agents = [
-        'NarrativeDriftCoordinator', 'NarrativeHistorianAgent',
-        'TrendBreakDetectorAgent', 'CulturalImpactAgent'
-    ]
-
-    def task_gen(agent):
-        tasks = {
-            'NarrativeDriftCoordinator': 'Analyze how narratives have shifted in recent news and social data',
-            'NarrativeHistorianAgent': 'Document significant narrative patterns from the past 24 hours',
-            'TrendBreakDetectorAgent': 'Identify any trend breaks or reversals in recent data',
-            'CulturalImpactAgent': 'Assess cultural impact of trending topics',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('NARRATIVE & CULTURE', agents, task_gen, '📖')
 
 
 
@@ -8442,29 +8046,6 @@ def run_narrative_culture_agents():
 
 
 
-@shared_task(name="core.tasks.auto_generate_podcast_episode")
-def auto_generate_podcast_episode():
-    from core.tasks_content import _impl_auto_generate_podcast_episode
-    return _impl_auto_generate_podcast_episode()
-@shared_task(name="core.tasks.run_content_studio_agents")
-def run_content_studio_agents():
-    """
-    Session 787: Run content studio agents every 4 hours.
-
-    Agents: TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
-    Note: AutonomousContentStudioCoordinator runs separately
-    """
-    agents = ['TopicMinerAgent', 'ContrarianAgent', 'PerformanceAnalystAgent']
-
-    def task_gen(agent):
-        tasks = {
-            'TopicMinerAgent': 'Mine spider data for high-potential content topics',
-            'ContrarianAgent': 'Identify contrarian perspectives on trending topics',
-            'PerformanceAnalystAgent': 'Analyze recent content performance metrics',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('CONTENT STUDIO', agents, task_gen, '🎬')
 
 
 
@@ -9877,10 +9458,6 @@ def enforce_db_retention():
 # to prevent SoftTimeLimitExceeded from ElevenLabs blocking the main PA path.
 
 
-@shared_task(bind=True, time_limit=120, soft_time_limit=100, name="core.tasks.generate_step_content")
-def generate_step_content(self, step_id):
-    from core.tasks_content import _impl_generate_step_content
-    return _impl_generate_step_content(self, step_id)
 @shared_task(name='core.tasks.run_all_desks_intelligence', soft_time_limit=1800, time_limit=1860)
 def run_all_desks_intelligence():
     """
@@ -10813,12 +10390,6 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
     return stats
 
 
-@shared_task(bind=True, soft_time_limit=300, time_limit=360, name="core.tasks.generate_competitor_comparison_task")
-def generate_competitor_comparison_task(self, comparison_id, source_document_id=None,
-                                        competitor_name='', focus_areas=None,
-                                        auto_research=True):
-    from core.tasks_misc import _impl_generate_competitor_comparison_task
-    return _impl_generate_competitor_comparison_task(self, comparison_id, source_document_id, competitor_name, focus_areas, auto_research)
 @shared_task(bind=True, soft_time_limit=900, time_limit=1080, ignore_result=True, name="core.tasks.run_source_pack_workflow")
 def run_source_pack_workflow(self, run_id):
     from core.tasks_content import _impl_run_source_pack_workflow
@@ -10994,4 +10565,68 @@ from core.tasks_agents import (  # noqa: F401
     # Media / TTS
     process_pa_tts_task,
 )
+
+
+# Phase 3 re-exports — content tasks now live in core/tasks_content.py.
+# IMPORTANT: this block MUST live at the bottom of the file, ABOVE the
+# agents re-export. tasks_content.py imports private helpers from core.tasks
+# at its module top, so triggering `from core.tasks_content import …`
+# before those helpers are defined produces a partially-initialized-module
+# ImportError. Same constraint as the agents re-export immediately below.
+#
+# Re-exported here so existing callers (`from core.tasks import X`,
+# settings.py task-routing dicts including the 5 non-standard names —
+# autonomous_studio.generate_content, narrative_drift.run_detector_cycle,
+# narrative_drift.update_narrative_statuses,
+# narrative_drift.trigger_content_from_shift,
+# content_studio.score_episode_voice — 14 PeriodicTask DB rows, the
+# `add_critical_celery_tasks` management-cmd string dispatcher, and
+# 22 Python imports across views/services/ops_autopilot/models) keep
+# working without modification.
+from core.tasks_content import (  # noqa: F401
+    # Pipelines & demos
+    cleanup_stale_content,
+    execute_workspace_pipeline,
+    execute_demo_pipeline_task,
+    produce_content_package,
+    trigger_project_research,
+    generate_content_package,
+    generate_ai_series,
+    run_autonomous_content_studio,
+    generate_content_for_channel,
+    track_content_performance,
+    # Narrative drift
+    run_narrative_drift_cycle,
+    update_narrative_statuses,
+    trigger_content_from_narrative_shift,
+    # Blog & podcast generation
+    generate_podcast_episode,
+    generate_self_blog_task,
+    draft_legal_document_task,
+    generate_blog_with_topic_task,
+    generate_self_blog_deliberation_task,
+    generate_operator_edge_newsletter,
+    generate_weekly_synthesis,
+    generate_pending_reviews,
+    generate_checklist_content_async,
+    auto_generate_podcast_episode,
+    generate_step_content,
+    generate_competitor_comparison_task,
+    # Content lifecycle / scoring
+    check_content_diversity,
+    process_content_ideas,
+    enhance_blog_task,
+    evaluate_unscored_blogs,
+    reevaluate_enhanced_blogs,
+    auto_publish_approved_blogs,
+    content_autonomy_loop,
+    auto_enhance_blogs,
+    score_unscored_deliverables,
+    score_episode_voice,
+    # Agent groups
+    run_content_creation_agents,
+    run_narrative_culture_agents,
+    run_content_studio_agents,
+)
+
 
