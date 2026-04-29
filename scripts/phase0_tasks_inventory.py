@@ -206,6 +206,14 @@ DOMAIN_RULES: list[tuple[str, str]] = [
         "tasks_agents.py",
     ),
 
+    # ---- Phase 0 follow-up: resolved NEEDS_REVIEW assignments (2026-04-29) ----
+    # Approved by team after the initial automated classification surfaced
+    # five ambiguous tasks. Captured here so the plan is self-contained and
+    # any future re-run produces zero NEEDS_REVIEW entries.
+    (r"^check_all_alerts$", "tasks_ops.py"),
+    (r"^send_pending_notifications$", "tasks_push_notifications.py"),
+    (r"^process_event_bus_(scoring|validation|analytics)_queue$", "tasks_ops.py"),
+
     # ---- Generic ops bucket — final catch-all for routine housekeeping ----
     (
         r"^(cleanup_|reap_|monitor_|expire_|claim_|enforce_|"

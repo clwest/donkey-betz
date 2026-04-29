@@ -1,6 +1,6 @@
 # Tasks Migration Plan — Phase 0 inventory
 
-**Generated:** 2026-04-29T04:58:49+00:00
+**Generated:** 2026-04-29T05:09:51+00:00
 **Source:** `core/tasks.py`
 **Generator:** `scripts/phase0_tasks_inventory.py`
 
@@ -15,13 +15,13 @@
 - **Tasks with custom time limits:** 49
 - **Tasks referenced in beat schedule:** 35
 - **Helpers in tasks.py (private + `validate_agent_output`):** 97
-- **Tasks needing review (no rule matched):** 5
+- **Tasks needing review (no rule matched):** 0
 
 ## Counts by proposed destination
 
 | Destination | Tasks |
 | --- | ---: |
-| `tasks_ops.py` | 130 |
+| `tasks_ops.py` | 134 |
 | `tasks_agents.py` | 45 |
 | `tasks_content.py` | 38 |
 | `tasks_financial.py` | 25 |
@@ -35,7 +35,7 @@
 | `tasks_diagnostics.py` | 8 |
 | `tasks_backfill.py` | 7 |
 | `tasks_experiments.py` | 7 |
-| `NEEDS_REVIEW` | 5 |
+| `tasks_push_notifications.py` | 1 |
 
 ## Per-destination task lists
 
@@ -301,7 +301,7 @@
 | 5251 | `run_thumbnail_optimizer` | `core.tasks.run_thumbnail_optimizer` | no | — | — | bind=True — uses self; tests must mock-bind, helpers must be method-safe<br>custom retry policy — preserve verbatim |
 | 10683 | `poll_processing_videos` | `core.tasks.poll_processing_videos` | no | — | — | — |
 
-### `tasks_ops.py` — 130 task(s)
+### `tasks_ops.py` — 134 task(s)
 
 | Line | Function | Registered name | Already pinned? | Beat? | Helpers | Risk notes |
 | ---: | --- | --- | :---: | :---: | --- | --- |
@@ -324,6 +324,7 @@
 | 2176 | `discover_success_patterns` | `core.tasks.discover_success_patterns` | no | — | — | — |
 | 2180 | `generate_user_insights` | `core.tasks.generate_user_insights` | no | — | — | — |
 | 2227 | `run_proactive_system_check` | `core.tasks.run_proactive_system_check` | no | — | — | — |
+| 2272 | `check_all_alerts` | `core.tasks.check_all_alerts` | no | — | — | — |
 | 2302 | `generate_smart_suggestions` | `core.tasks.generate_smart_suggestions` | no | — | — | — |
 | 2345 | `execute_scheduled_automations` | `core.tasks.execute_scheduled_automations` | no | — | — | — |
 | 2406 | `cleanup_old_notifications` | `core.tasks.cleanup_old_notifications` | no | yes | — | referenced by beat schedule — name pin is non-optional |
@@ -358,6 +359,9 @@
 | 4238 | `run_daily_intelligence_digest` | `core.tasks.run_daily_intelligence_digest` | no | — | — | — |
 | 4366 | `process_hitl_escalations` | `core.tasks.process_hitl_escalations` | no | — | — | — |
 | 4401 | `expire_overdue_validations` | `core.tasks.expire_overdue_validations` | no | — | — | — |
+| 4440 | `process_event_bus_scoring_queue` | `core.tasks.process_event_bus_scoring_queue` | no | — | — | — |
+| 4474 | `process_event_bus_validation_queue` | `core.tasks.process_event_bus_validation_queue` | no | — | — | — |
+| 4508 | `process_event_bus_analytics_queue` | `core.tasks.process_event_bus_analytics_queue` | no | — | — | — |
 | 4543 | `claim_stale_events` | `core.tasks.claim_stale_events` | no | — | — | — |
 | 4588 | `get_event_bus_stats` | `core.tasks.get_event_bus_stats` | no | — | — | — |
 | 4697 | `unified_pipeline_health_check` | `unified_pipeline.health_check` | yes | — | — | non-standard registered name `unified_pipeline.health_check` — preserve verbatim during move |
@@ -436,6 +440,12 @@
 | 12378 | `execute_code_job` | `core.tasks.execute_code_job` | yes | — | — | name= already pinned (no Phase 1 edit needed for this task)<br>bind=True — uses self; tests must mock-bind, helpers must be method-safe<br>custom time limits — production timing-critical; do not alter on move<br>custom retry policy — preserve verbatim |
 | 12386 | `rag_retrieval_canary` | `core.rag_retrieval_canary` | yes | — | — | non-standard registered name `core.rag_retrieval_canary` — preserve verbatim during move<br>ignore_result=True — result-backend interaction differs |
 
+### `tasks_push_notifications.py` — 1 task(s)
+
+| Line | Function | Registered name | Already pinned? | Beat? | Helpers | Risk notes |
+| ---: | --- | --- | :---: | :---: | --- | --- |
+| 2364 | `send_pending_notifications` | `core.tasks.send_pending_notifications` | no | — | — | — |
+
 ### `tasks_spiders.py` — 19 task(s)
 
 | Line | Function | Registered name | Already pinned? | Beat? | Helpers | Risk notes |
@@ -459,16 +469,6 @@
 | 4000 | `spider_data_retention` | `core.tasks.spider_data_retention` | yes | yes | — | name= already pinned (no Phase 1 edit needed for this task)<br>bind=True — uses self; tests must mock-bind, helpers must be method-safe<br>custom time limits — production timing-critical; do not alter on move<br>ignore_result=True — result-backend interaction differs<br>referenced by beat schedule — name pin is non-optional |
 | 6878 | `process_spider_actions` | `core.tasks.process_spider_actions` | yes | yes | — | name= already pinned (no Phase 1 edit needed for this task)<br>referenced by beat schedule — name pin is non-optional |
 | 10875 | `aggregate_spider_signals` | `aggregate_spider_signals` | yes | yes | — | non-standard registered name `aggregate_spider_signals` — preserve verbatim during move<br>bind=True — uses self; tests must mock-bind, helpers must be method-safe<br>referenced by beat schedule — name pin is non-optional |
-
-### `NEEDS_REVIEW` — 5 task(s)
-
-| Line | Function | Registered name | Already pinned? | Beat? | Helpers | Risk notes |
-| ---: | --- | --- | :---: | :---: | --- | --- |
-| 2272 | `check_all_alerts` | `core.tasks.check_all_alerts` | no | — | — | no domain rule matched — needs human classification |
-| 2364 | `send_pending_notifications` | `core.tasks.send_pending_notifications` | no | — | — | no domain rule matched — needs human classification |
-| 4440 | `process_event_bus_scoring_queue` | `core.tasks.process_event_bus_scoring_queue` | no | — | — | no domain rule matched — needs human classification |
-| 4474 | `process_event_bus_validation_queue` | `core.tasks.process_event_bus_validation_queue` | no | — | — | no domain rule matched — needs human classification |
-| 4508 | `process_event_bus_analytics_queue` | `core.tasks.process_event_bus_analytics_queue` | no | — | — | no domain rule matched — needs human classification |
 
 ## Helpers (candidates for `tasks_helpers.py`)
 
