@@ -11,6 +11,7 @@ import time  # noqa: F401
 from datetime import datetime, timedelta  # noqa: F401
 from typing import Any, Dict, List, Optional, Tuple, Union  # noqa: F401
 
+from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded  # noqa: F401
 from django.db import transaction  # noqa: F401
 from django.db.models import F, Count, Q  # noqa: F401
@@ -3876,3 +3877,372 @@ def _impl_post_cto_daily_diagnostic(
         metrics=metrics or {},
         structured_payload=structured_payload or {},
     )
+
+
+# =============================================================================
+# Phase 3 — Wave B migration from core/tasks.py (Sub-PR 1 of 9: ops cleanup)
+# =============================================================================
+# Tasks below were moved verbatim out of core/tasks.py. Registered Celery
+# names are unchanged (locked by Phase 1 name= kwargs), so 11 PeriodicTask
+# DB rows, 13 beat schedule entries (in core/celery.py — incl. the
+# non-standard `cleanup_expired_signals`), 6 settings.py task-routing
+# entries, and the 1 add_critical_celery_tasks management-cmd dispatcher
+# all continue to resolve. core/tasks.py keeps a re-export shim despite
+# zero current Python-import consumers — preserves the interface in case
+# future callers add them.
+#
+# Subsequent ops sub-PRs (2 through 9) will append additional sections
+# under their own Wave B migration headers.
+
+
+# -----------------------------------------------------------------------------
+# Cleanup tasks
+# -----------------------------------------------------------------------------
+@shared_task(name="core.tasks.reap_zombie_work")
+def reap_zombie_work(
+    deliberation_stale_minutes: int = 60,
+    pilot_stale_days: int = 7,
+):
+    from core.tasks_misc import _impl_reap_zombie_work
+    return _impl_reap_zombie_work(deliberation_stale_minutes, pilot_stale_days)
+
+@shared_task(name="core.tasks.expire_old_opportunities")
+def expire_old_opportunities():
+    from core.tasks_misc import _impl_expire_old_opportunities
+    return _impl_expire_old_opportunities()
+
+@shared_task(name="core.tasks.cleanup_old_notifications")
+def cleanup_old_notifications(days=30):
+    """
+    Clean up old read/dismissed notifications.
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_unified_system import ProactiveNotification
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        # Delete old read/dismissed notifications
+        deleted_count = ProactiveNotification.objects.filter(
+            created_at__lt=cutoff,
+            is_read=True,
+            is_dismissed=True
+        ).delete()[0]
+
+        # Mark expired notifications
+        expired_count = ProactiveNotification.objects.filter(
+            expires_at__lt=timezone.now(),
+            is_expired=False
+        ).update(is_expired=True)
+
+        logger.info(f"🧹 [CLEANUP] Deleted {deleted_count} old notifications, marked {expired_count} expired")
+        return {
+            'status': 'success',
+            'deleted': deleted_count,
+            'marked_expired': expired_count
+        }
+
+    except Exception as e:
+        logger.exception(f"🧹 [CLEANUP] Notification cleanup failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(name="core.tasks.expire_old_suggestions")
+def expire_old_suggestions(days=14):
+    """
+    Mark old pending suggestions as expired.
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models_unified_system import SmartSuggestion
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        expired_count = SmartSuggestion.objects.filter(
+            created_at__lt=cutoff,
+            status='pending',
+            is_still_relevant=True
+        ).update(status='expired', is_still_relevant=False)
+
+        logger.info(f"📋 [SUGGESTIONS] Expired {expired_count} old suggestions")
+        return {'status': 'success', 'expired_count': expired_count}
+
+    except Exception as e:
+        logger.exception(f"📋 [SUGGESTIONS] Expiration failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(bind=True, name="core.tasks.cleanup_stale_dreams")
+def cleanup_stale_dreams(self, max_age_hours: int = 72):
+    from core.tasks_initiatives import _impl_cleanup_stale_dreams
+    return _impl_cleanup_stale_dreams(self, max_age_hours)
+
+@shared_task(name="core.tasks.cleanup_celery_task_events")
+def cleanup_celery_task_events(days_to_keep: int = None):
+    """Delete CeleryTaskEvent records older than retention period."""
+    from django.conf import settings as django_settings
+    from core.models_celery_telemetry import CeleryTaskEvent
+    if days_to_keep is None:
+        days_to_keep = getattr(django_settings, 'CELERY_TASK_EVENT_RETENTION_DAYS', 30)
+    cutoff = timezone.now() - timedelta(days=days_to_keep)
+    count, _ = CeleryTaskEvent.objects.filter(started_at__lt=cutoff).delete()
+    logger.info(f"Cleaned up {count} CeleryTaskEvent records older than {days_to_keep} days")
+    return {'deleted': count, 'retention_days': days_to_keep}
+
+@shared_task(name="core.tasks.cleanup_llm_call_logs")
+def cleanup_llm_call_logs(days_to_keep: int = None):
+    """Delete LLMCallLog records older than retention period."""
+    from django.conf import settings as django_settings
+    from core.models_llm_routing import LLMCallLog
+    if days_to_keep is None:
+        days_to_keep = getattr(django_settings, 'LLM_CALL_LOG_RETENTION_DAYS', 30)
+    cutoff = timezone.now() - timedelta(days=days_to_keep)
+    count, _ = LLMCallLog.objects.filter(created_at__lt=cutoff).delete()
+    logger.info(f"Cleaned up {count} LLMCallLog records older than {days_to_keep} days")
+    return {'deleted': count, 'retention_days': days_to_keep}
+
+@shared_task(name="core.tasks.cleanup_expired_uploads")
+def cleanup_expired_uploads():
+    """
+    Clean up incomplete upload sessions older than expiry time.
+    Run hourly via Celery Beat.
+
+    Session 451: Automatic cleanup of abandoned uploads.
+    """
+    from content.models import UploadSession
+    from django.utils import timezone
+    from pathlib import Path
+    import shutil
+
+    logger.info("🧹 [SESSION 451] Starting upload cleanup task")
+
+    expired = UploadSession.objects.filter(
+        status__in=['pending', 'uploading'],
+        expires_at__lt=timezone.now()
+    )
+
+    cleaned = 0
+    for session in expired:
+        # Remove temp files
+        if session.temp_path:
+            temp_path = Path(session.temp_path)
+            if temp_path.exists():
+                shutil.rmtree(temp_path, ignore_errors=True)
+                logger.info(f"🧹 [SESSION 451] Cleaned temp files for upload {session.id}")
+
+        session.status = 'cancelled'
+        session.error_message = 'Upload session expired'
+        session.save()
+        cleaned += 1
+
+    logger.info(f"🧹 [SESSION 451] Cleaned up {cleaned} expired upload sessions")
+    return {'cleaned': cleaned}
+
+@shared_task(name="core.tasks.cleanup_old_resolve_jobs")
+def cleanup_old_resolve_jobs(days: int = 30):
+    """
+    Clean up old resolve render jobs from the database.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    Removes jobs older than specified days to keep the database clean.
+    Keeps jobs that have user ratings for learning purposes.
+
+    Args:
+        days: Number of days to retain jobs
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    logger.info(f"🎬 [RESOLVE] Cleaning up jobs older than {days} days...")
+
+    try:
+        from core.models_unified_system import ResolveRenderJob
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        # Only delete jobs without user ratings (preserve learning data)
+        old_jobs = ResolveRenderJob.objects.filter(
+            created_at__lt=cutoff,
+            user_rating__isnull=True
+        )
+
+        count = old_jobs.count()
+        old_jobs.delete()
+
+        logger.info(f"🎬 [RESOLVE] Cleaned up {count} old jobs")
+        return {'status': 'completed', 'deleted_count': count}
+
+    except Exception as e:
+        logger.error(f"🎬 [RESOLVE] Cleanup failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+@shared_task(name="core.tasks.cleanup_audio_cache")
+def cleanup_audio_cache():
+    from core.tasks_misc import _impl_cleanup_audio_cache
+    return _impl_cleanup_audio_cache()
+
+
+
+# -----------------------------------------------------------------------------
+# Retention enforcement
+# -----------------------------------------------------------------------------
+@shared_task(name="core.tasks.cleanup_resolved_signatures")
+def cleanup_resolved_signatures(days_old: int = 30):
+    """
+    Session 856: Archive old resolved failure signatures.
+
+    Signatures that have been resolved for more than `days_old` days
+    are marked as inactive/archived to keep the active list clean.
+
+    Called by Celery Beat daily.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_diagnostic_pipeline import FailureSignature
+
+    cutoff = timezone.now() - timedelta(days=days_old)
+
+    # Find resolved signatures older than cutoff
+    old_resolved = FailureSignature.objects.filter(
+        status=FailureSignature.Status.RESOLVED,
+        last_seen_at__lt=cutoff
+    )
+
+    count = old_resolved.count()
+
+    if count > 0:
+        # Archive them by setting status to IGNORED
+        old_resolved.update(status=FailureSignature.Status.IGNORED)
+        logger.info(f"🧹 [DIAGNOSTIC] Archived {count} old resolved signatures")
+    else:
+        logger.info("🧹 [DIAGNOSTIC] No old resolved signatures to archive")
+
+    return {'archived': count}
+
+@shared_task(soft_time_limit=120, time_limit=150, name="core.tasks.auto_archive_stale_deliverables")
+def auto_archive_stale_deliverables(days=3):
+    from core.tasks_misc import _impl_auto_archive_stale_deliverables
+    return _impl_auto_archive_stale_deliverables(days=days)
+
+@shared_task(soft_time_limit=600, time_limit=660, ignore_result=True, name="core.tasks.enforce_db_retention")
+def enforce_db_retention():
+    """Daily database retention — prevents disk exhaustion by cleaning old rows."""
+    from core.tasks_misc import _impl_enforce_db_retention
+    return _impl_enforce_db_retention()
+
+@shared_task(ignore_result=True, name="core.tasks.cleanup_expired_pa_insights")
+def cleanup_expired_pa_insights():
+    """Demote expired approved insights back to candidate (daily 3 AM)."""
+    from core.models_tool_calls import PAToolInsight
+
+    now = timezone.now()
+    demoted = PAToolInsight.objects.filter(
+        safety_class='approved',
+        expires_at__isnull=False,
+        expires_at__lte=now,
+    ).update(safety_class='candidate')
+
+    if demoted:
+        logger.info(f"[PA-LEARNING] Demoted {demoted} expired insights → candidate")
+    return {'demoted': demoted}
+
+@shared_task(ignore_result=True, name="core.tasks.enforce_data_retention")
+def enforce_data_retention():
+    """Nightly job: archive/delete artifacts by data_sensitivity + age.
+
+    - Pinned items (is_pinned=True) are always skipped.
+    - Deliverables: status → 'archived'
+    - Documents: status → 'archived'
+    """
+    from core.models_deliverables import Deliverable
+    from content.models import Document
+
+    now = timezone.now()
+    stats = {'deliverables_archived': 0, 'documents_archived': 0}
+
+    for sensitivity, max_days in _RETENTION_DAYS.items():
+        cutoff = now - timedelta(days=max_days)
+
+        # Archive old deliverables (skip pinned)
+        d_count = Deliverable.objects.filter(
+            data_sensitivity=sensitivity,
+            is_pinned=False,
+            created_at__lt=cutoff,
+            status__in=['draft', 'ready', 'published'],
+        ).update(status='archived')
+        stats['deliverables_archived'] += d_count
+
+        # Archive old documents (skip pinned)
+        doc_count = Document.objects.filter(
+            data_sensitivity=sensitivity,
+            is_pinned=False,
+            created_at__lt=cutoff,
+        ).exclude(
+            status__in=['archived', 'deleted'],
+        ).update(status='archived')
+        stats['documents_archived'] += doc_count
+
+    total = stats['deliverables_archived'] + stats['documents_archived']
+    if total:
+        logger.info(
+            f"[RETENTION] Archived {stats['deliverables_archived']} deliverables, "
+            f"{stats['documents_archived']} documents"
+        )
+    return stats
+
+
+
+# -----------------------------------------------------------------------------
+# Validation expiry
+# -----------------------------------------------------------------------------
+@shared_task(name="core.tasks.cleanup_stale_scoring_requests")
+def cleanup_stale_scoring_requests():
+    from core.tasks_misc import _impl_cleanup_stale_scoring_requests
+    return _impl_cleanup_stale_scoring_requests()
+
+@shared_task(name="core.tasks.expire_overdue_validations")
+def expire_overdue_validations():
+    """
+    Expire validation requests that are past deadline.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    Runs periodically to:
+    - Find items past their deadline
+    - Mark them as expired
+    - Record completion time
+
+    Schedule: Every hour
+    """
+    logger.info("👤 [HITL] Processing expired validations...")
+
+    try:
+        from core.services.hitl_validation import get_hitl_validation_service
+
+        hitl_service = get_hitl_validation_service()
+        result = hitl_service.expire_overdue()
+
+        if result.get('expired', 0) > 0:
+            logger.info(f"👤 [HITL] Expired {result['expired']} overdue validation requests")
+        else:
+            logger.debug("👤 [HITL] No items expired")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"👤 [HITL] Expiration processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(bind=True, name='cleanup_expired_signals')
+def cleanup_expired_signals(self):
+    from core.tasks_misc import _impl_cleanup_expired_signals
+    return _impl_cleanup_expired_signals(self)
+
+@shared_task(soft_time_limit=60, time_limit=90, name="core.tasks.check_orphan_deliverables")
+def check_orphan_deliverables():
+    from core.tasks_misc import _impl_check_orphan_deliverables
+    return _impl_check_orphan_deliverables()
+
