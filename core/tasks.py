@@ -3543,85 +3543,10 @@ def run_daily_intelligence_digest():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.check_sec_filings_alert")
-def check_sec_filings_alert():
-    """
-    Session 460: Quick SEC filing check task.
-
-    Runs more frequently (every 5 minutes during market hours)
-    to catch high-impact SEC filings quickly.
-
-    Only sends alerts for high-impact filings (material events,
-    earnings, M&A, leadership changes).
-    """
-    logger.info("📈 [SESSION 460] Checking for high-impact SEC filings...")
-
-    try:
-        from core.services.autonomous_loop import autonomous_loop
-
-        results = autonomous_loop.check_sec_filings()
-
-        if results.get('alerts_sent', 0) > 0:
-            logger.info(f"📈 [SESSION 460] Sent {results['alerts_sent']} SEC alerts!")
-        else:
-            logger.debug("📈 [SESSION 460] No high-impact filings found")
-
-        return results
-
-    except Exception as e:
-        logger.error(f"📈 [SESSION 460] SEC check failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.run_stock_audit_cycle")
-def run_stock_audit_cycle():
-    """
-    Session 461: Stock Audit Agent Group task.
-
-    Runs the full stock audit system:
-    - StockAnalystAgent: SEC filing analysis
-    - MarketMovementMonitorAgent: Price/volume monitoring
-    - InstitutionalWatcherAgent: Insider trading tracking
-    - MarketAnomalyDetectorAgent: Manipulation detection
-
-    Sends alerts to Discord for significant findings.
-    """
-    logger.info("📈 [SESSION 461] Starting Stock Audit Cycle...")
-
-    try:
-        from core.services.autonomous_loop import run_stock_audit
-
-        results = run_stock_audit()
-
-        total_alerts = results.get('total_alerts', 0)
-        critical = results.get('critical', 0)
-        high = results.get('high', 0)
-
-        if total_alerts > 0:
-            logger.info(f"📈 [SESSION 461] Stock audit found {total_alerts} alerts "
-                       f"({critical} critical, {high} high)")
-        else:
-            logger.debug("📈 [SESSION 461] No stock alerts generated")
-
-        return results
-
-    except Exception as e:
-        logger.error(f"📈 [SESSION 461] Stock audit failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name='core.tasks.run_market_intelligence_desk')
-def run_market_intelligence_desk():
-    from core.tasks_financial import _impl_run_market_intelligence_desk
-    return _impl_run_market_intelligence_desk()
-@shared_task(name='core.tasks.check_market_events_and_rerun')
-def check_market_events_and_rerun():
-    from core.tasks_financial import _impl_check_market_events_and_rerun
-    return _impl_check_market_events_and_rerun()
-@shared_task(name='learning_loop.track_prediction_outcomes')
-def track_prediction_outcomes():
-    from core.tasks_financial import _impl_track_prediction_outcomes
-    return _impl_track_prediction_outcomes()
 @shared_task(name="core.tasks.process_hitl_escalations")
 def process_hitl_escalations():
     """
@@ -4091,14 +4016,6 @@ def record_revenue_event(
 # Blockchain Security Monitoring + Stock Market Intelligence
 # Both send real alerts to Discord channels
 
-@shared_task(name='autonomous.blockchain_security_monitor')
-def run_blockchain_security_monitor():
-    from core.tasks_financial import _impl_run_blockchain_security_monitor
-    return _impl_run_blockchain_security_monitor()
-@shared_task(name="core.tasks.run_stock_market_intelligence")
-def run_stock_market_intelligence():
-    from core.tasks_financial import _impl_run_stock_market_intelligence
-    return _impl_run_stock_market_intelligence()
 @shared_task(name='triggers.process_trigger_events')
 def process_trigger_events(event_ids: list):
     from core.tasks_ops import _impl_process_trigger_events
@@ -4435,10 +4352,6 @@ def run_side_hustle_detector(self):
         return {'status': 'error', 'error': str(e)}
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_crypto_sentiment_monitor")
-def run_crypto_sentiment_monitor(self):
-    from core.tasks_misc import _impl_run_crypto_sentiment_monitor
-    return _impl_run_crypto_sentiment_monitor(self)
 @shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_tech_stack_tracker")
 def run_tech_stack_tracker(self):
     from core.tasks_misc import _impl_run_tech_stack_tracker
@@ -4505,14 +4418,6 @@ def run_thumbnail_optimizer(self):
 def run_freelance_opportunity_scout(self):
     from core.tasks_ops import _impl_run_freelance_opportunity_scout
     return _impl_run_freelance_opportunity_scout(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_sec_filing_analyzer")
-def run_sec_filing_analyzer(self):
-    from core.tasks_financial import _impl_run_sec_filing_analyzer
-    return _impl_run_sec_filing_analyzer(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_earnings_predictor")
-def run_earnings_predictor(self):
-    from core.tasks_financial import _impl_run_earnings_predictor
-    return _impl_run_earnings_predictor(self)
 @shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_skill_gap_analyzer")
 def run_skill_gap_analyzer(self):
     from core.tasks_ops import _impl_run_skill_gap_analyzer
@@ -4778,100 +4683,8 @@ def execute_single_artifact(artifact_id: str):
         return {'success': False, 'error': str(e)}
 
 
-@shared_task(name="core.tasks.collect_kalshi_prediction_markets")
-def collect_kalshi_prediction_markets():
-    from core.tasks_financial import _impl_collect_kalshi_prediction_markets
-    return _impl_collect_kalshi_prediction_markets()
-@shared_task(name="core.tasks.collect_kalshi_market_intelligence")
-def collect_kalshi_market_intelligence():
-    from core.tasks_financial import _impl_collect_kalshi_market_intelligence
-    return _impl_collect_kalshi_market_intelligence()
-@shared_task(name="core.tasks.collect_sports_odds")
-def collect_sports_odds():
-    from core.tasks_financial import _impl_collect_sports_odds
-    return _impl_collect_sports_odds()
-@shared_task(name="core.tasks.collect_sports_odds_intelligence")
-def collect_sports_odds_intelligence():
-    from core.tasks_financial import _impl_collect_sports_odds_intelligence
-    return _impl_collect_sports_odds_intelligence()
-@shared_task(name='core.tasks.daily_betting_digest')
-def daily_betting_digest():
-    from core.tasks_financial import _impl_daily_betting_digest
-    return _impl_daily_betting_digest()
-@shared_task(name='core.tasks.market_intelligence_scan')
-def market_intelligence_scan():
-    from core.tasks_financial import _impl_market_intelligence_scan
-    return _impl_market_intelligence_scan()
-@shared_task(name='core.tasks.market_movement_alerts')
-def market_movement_alerts():
-    from core.tasks_misc import _impl_market_movement_alerts
-    return _impl_market_movement_alerts()
-@shared_task(ignore_result=True, name="core.tasks.snapshot_odds_for_line_movement")
-def snapshot_odds_for_line_movement():
-    from core.tasks_financial import _impl_snapshot_odds_for_line_movement
-    return _impl_snapshot_odds_for_line_movement()
-@shared_task(name="core.tasks.scan_arbs_and_notify")
-def scan_arbs_and_notify():
-    from core.tasks_misc import _impl_scan_arbs_and_notify
-    return _impl_scan_arbs_and_notify()
-@shared_task(bind=True, max_retries=2, default_retry_delay=300, queue='default', name="core.tasks.verify_betting_outcomes")
-def verify_betting_outcomes(self):
-    """
-    Session 995: Verify betting outcomes, settle wagers, feed learning loop.
-
-    Fetches completed game scores from The Odds API, settles pending wagers,
-    verifies watched arbitrage items, and creates learning records.
-
-    Runs every 2 hours via Celery Beat. Idempotent — skips already-settled
-    wagers and already-verified items.
-    """
-    from core.services.betting_outcome_verifier import BettingOutcomeVerifier
-
-    logger.info("[OUTCOME-VERIFY] Starting betting outcome verification...")
-
-    try:
-        verifier = BettingOutcomeVerifier()
-        results = verifier.verify_all_pending()
-
-        # Update BettingStats for affected users if wagers were settled
-        if results.get('wagers_settled', 0) > 0:
-            try:
-                from core.models_betting import PlacedWager, BettingStats
-                # Get users with recently settled wagers
-                recently_settled = PlacedWager.objects.filter(
-                    settled_at__isnull=False,
-                    status__in=['won', 'lost', 'push'],
-                ).exclude(user__isnull=True).values_list('user_id', flat=True).distinct()
-
-                for user_id in recently_settled:
-                    stats, _ = BettingStats.objects.get_or_create(user_id=user_id)
-                    stats.recalculate()
-
-                logger.info(f"[OUTCOME-VERIFY] Updated BettingStats for {len(recently_settled)} users")
-            except Exception as e:
-                logger.warning(f"[OUTCOME-VERIFY] Could not update BettingStats: {e}")
-
-        logger.info(
-            f"[OUTCOME-VERIFY] Complete: "
-            f"{results.get('wagers_settled', 0)} settled, "
-            f"{results.get('arb_items_verified', 0)} verified, "
-            f"{results.get('learning_records', 0)} learning records"
-        )
-        return results
-
-    except Exception as e:
-        logger.error(f"[OUTCOME-VERIFY] Failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
 
 
-@shared_task(bind=True, max_retries=1, default_retry_delay=300, queue='default', name="core.tasks.generate_daily_betting_brief")
-def generate_daily_betting_brief(self):
-    from core.tasks_content import _impl_generate_daily_betting_brief
-    return _impl_generate_daily_betting_brief(self)
-@shared_task(bind=True, max_retries=1, default_retry_delay=600, queue='default', name="core.tasks.evaluate_ml_predictions")
-def evaluate_ml_predictions(self):
-    from core.tasks_financial import _impl_evaluate_ml_predictions
-    return _impl_evaluate_ml_predictions(self)
 @shared_task(name='core.tasks.maintain_dream_backlog')
 def maintain_dream_backlog():
     from core.tasks_initiatives import _impl_maintain_dream_backlog
@@ -5967,51 +5780,6 @@ def coordinate_body():
     return _impl_coordinate_body()
 
 
-@shared_task(name="core.tasks.run_blockchain_monitoring_agents")
-def run_blockchain_monitoring_agents():
-    """
-    Session 737: Run blockchain monitoring agents on schedule.
-    Session 944: Updated to use universal_agent_workspace_output for SKIN layer integration.
-
-    Exercises these dormant agents:
-    - BlockchainAuditCoordinator
-    - WhaleWatcherAgent
-    - ExploitDetectorAgent
-    - TransactionMonitorAgent
-    """
-    logger.info("🔗 [BLOCKCHAIN MONITOR] Starting blockchain monitoring agents...")
-
-    results = []
-
-    agents_to_run = [
-        ('WhaleWatcherAgent', 'Monitor for large crypto wallet movements and whale activity'),
-        ('ExploitDetectorAgent', 'Scan for potential smart contract exploits or vulnerabilities'),
-        ('TransactionMonitorAgent', 'Analyze recent blockchain transaction patterns'),
-        ('BlockchainAuditCoordinator', 'Coordinate a brief blockchain ecosystem health check'),
-    ]
-
-    for agent_name, task in agents_to_run:
-        try:
-            # Session 944: Use universal_agent_workspace_output to create WorkspaceOperations
-            result = universal_agent_workspace_output(
-                agent_name=agent_name,
-                topic=task,
-                trigger_source='schedule',
-                force_production=True
-            )
-            success = result.get('success', False) if isinstance(result, dict) else False
-            results.append({
-                'agent': agent_name,
-                'success': success,
-                'file': result.get('file') if isinstance(result, dict) else None,
-            })
-            logger.info(f"🔗 [BLOCKCHAIN MONITOR] {agent_name}: {'✅' if success else '❌'}")
-        except Exception as e:
-            logger.warning(f"🔗 [BLOCKCHAIN MONITOR] {agent_name} failed: {e}")
-            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
-
-    logger.info(f"🔗 [BLOCKCHAIN MONITOR] Complete: {len([r for r in results if r.get('success')])} / {len(results)} succeeded")
-    return results
 
 
 @shared_task(ignore_result=True, name="core.tasks.check_celery_health")
@@ -7990,52 +7758,8 @@ def _track_group_contribution(agent_name: str, group_name: str, project_id: str,
 
 
 
-@shared_task(name="core.tasks.run_stock_financial_agents")
-def run_stock_financial_agents():
-    """
-    Session 787: Run stock and financial analysis agents every 3 hours.
-
-    Agents: StockAnalystAgent, StockAuditCoordinator, BullCaseAgent, BearCaseAgent,
-            MarketIntelligenceCoordinator
-    """
-    agents = [
-        'StockAnalystAgent', 'StockAuditCoordinator',
-        'BullCaseAgent', 'BearCaseAgent', 'MarketIntelligenceCoordinator'
-    ]
-
-    def task_gen(agent):
-        # Session 957: StockAnalystAgent needs specific tickers to use its tools effectively
-        # Generic "market conditions" tasks should go to MarketIntelligenceCoordinator
-        tasks = {
-            'StockAnalystAgent': 'Analyze SPY, QQQ, NVDA, AAPL, MSFT - check valuations, recent SEC filings, and assess risk levels for each ticker',
-            'StockAuditCoordinator': 'Coordinate a brief market health check across all stock agents',
-            'BullCaseAgent': 'Identify the strongest bullish opportunities from current market data',
-            'BearCaseAgent': 'Identify key risks and bearish signals in current market data',
-            'MarketIntelligenceCoordinator': 'Synthesize market intelligence from all sources',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('STOCK & FINANCIAL', agents, task_gen, '📊')
 
 
-@shared_task(name="core.tasks.run_prediction_market_agents")
-def run_prediction_market_agents():
-    """
-    Session 787: Run prediction market agents every 2 hours.
-
-    Agents: PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
-    """
-    agents = ['PredictionMarketAnalyst', 'SportsOddsAnalyst', 'ArbitrageDetector']
-
-    def task_gen(agent):
-        tasks = {
-            'PredictionMarketAnalyst': 'Scan prediction markets for high-value opportunities',
-            'SportsOddsAnalyst': 'Analyze current sports odds and identify value bets',
-            'ArbitrageDetector': 'Scan for arbitrage opportunities across betting markets',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('PREDICTION MARKETS', agents, task_gen, '🎯')
 
 
 
@@ -10628,5 +10352,55 @@ from core.tasks_content import (  # noqa: F401
     run_narrative_culture_agents,
     run_content_studio_agents,
 )
+
+
+# Phase 3 re-exports — financial tasks now live in core/tasks_financial.py.
+# IMPORTANT: this block MUST live at the bottom of the file. tasks_financial.py
+# imports private helpers from core.tasks at its module top, so triggering
+# `from core.tasks_financial import …` before those helpers are defined produces
+# a partially-initialized-module ImportError. Same constraint as the content and
+# agents re-exports above.
+#
+# Re-exported here so existing callers (settings.py task-routing dicts including
+# the 2 non-standard names — learning_loop.track_prediction_outcomes,
+# autonomous.blockchain_security_monitor — 25 PeriodicTask DB rows, the
+# `add_critical_celery_tasks` management-cmd string dispatcher, and the
+# `views_autonomous_dashboard` celery_task config) keep working without
+# modification. No `from core.tasks import <name>` consumer sites exist for
+# the 25 financial tasks at the time of migration; the re-export shim is
+# preserved defensively in case future callers add them.
+from core.tasks_financial import (  # noqa: F401
+    # Stock & SEC
+    check_sec_filings_alert,
+    run_stock_audit_cycle,
+    run_market_intelligence_desk,
+    check_market_events_and_rerun,
+    run_stock_market_intelligence,
+    # Crypto / blockchain
+    track_prediction_outcomes,
+    run_blockchain_security_monitor,
+    run_crypto_sentiment_monitor,
+    # Predictions & analyzers
+    run_sec_filing_analyzer,
+    run_earnings_predictor,
+    evaluate_ml_predictions,
+    # Sports betting / Kalshi / odds
+    collect_kalshi_prediction_markets,
+    collect_kalshi_market_intelligence,
+    collect_sports_odds,
+    collect_sports_odds_intelligence,
+    daily_betting_digest,
+    market_intelligence_scan,
+    market_movement_alerts,
+    snapshot_odds_for_line_movement,
+    scan_arbs_and_notify,
+    verify_betting_outcomes,
+    generate_daily_betting_brief,
+    # Agent groups
+    run_blockchain_monitoring_agents,
+    run_stock_financial_agents,
+    run_prediction_market_agents,
+)
+
 
 
