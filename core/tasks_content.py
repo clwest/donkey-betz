@@ -25,7 +25,6 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _build_operational_context,
     _execute_gate_repair,
     _route_gate_repair,
-    _run_agent_group,
     _run_comparison_generation,
     _send_narrative_alerts_to_discord,
     # Session 1083 (Rigby audit): pyflakes surfaced these six as
@@ -41,6 +40,7 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     process_shutterstock_distribution,
     run_conceptforge_pipeline,
 )
+from core.tasks_runtime import _run_agent_group  # noqa: F401
 
 
 

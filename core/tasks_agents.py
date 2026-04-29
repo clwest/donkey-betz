@@ -46,12 +46,12 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _is_media_task_blocked,
     _preflight_check_agent_data,
     _record_timeout_signature,
-    _run_agent_group,
     _run_agent_warmup,
     _summarize_diff,
     _summarize_params,
     _upsert_insight,
 )
+from core.tasks_runtime import _run_agent_group  # noqa: F401
 
 
 
