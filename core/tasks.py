@@ -85,6 +85,28 @@ from core.tasks_experiments import (  # noqa: F401
     send_weekly_kpi_summary,
 )
 
+# Phase 3 re-exports — backfill tasks now live in core/tasks_backfill.py.
+# Imports preserved here so existing callers (`from core.tasks import X`,
+# `core.tasks.X.apply_async()`, settings.py task-routing dicts keyed by
+# the registered Celery name, PeriodicTask DB rows, the
+# `add_critical_celery_tasks` management-cmd string dispatcher, the
+# ops-autopilot budget cost dict, and `core.services.td_handlers_gateway`
+# string lookups) keep working without any modification. Tasks register
+# under the same Celery names regardless of which module defines them
+# — the two non-standard names (`backfill_signal_scores`,
+# `content_studio.backfill_voice_scores`) are locked by their `name=`
+# kwargs and survive the move verbatim.
+from core.tasks_backfill import (  # noqa: F401
+    backfill_spider_embeddings,
+    backfill_signal_scores,
+    backfill_memory_embeddings,
+    backfill_conversation_embeddings,
+    backfill_voice_scores,
+    backfill_stage_documents,
+    backfill_deliverable_workspaces,
+)
+
+
 
 
 
@@ -892,74 +914,8 @@ def process_core_spider_data():
 def run_spider_network(self):
     from core.tasks_spiders import _impl_run_spider_network
     return _impl_run_spider_network(self)
-@shared_task(ignore_result=True, name="core.tasks.backfill_spider_embeddings")
-def backfill_spider_embeddings(batch_size: int = 50):
-    """
-    Session 293: Generate embeddings for SpiderData entries that don't have them.
-    Session 394: Increased default batch size from 50 to 200 for faster processing.
-    Session 1083 (Rigby audit): Reduced 200→50 after observing 1.37GB memory
-    spike per run in celery telemetry (start=669MB → end=2042MB). Combined
-    with the .only() column filter in spider_semantic_search.backfill_embeddings,
-    this should keep the task's RSS delta under 300MB.
-    Apr 2026: Removed hours=168 window — triage_spider_embeddings deduped the
-    historical backlog so all remaining unembedded records are worth processing.
-
-    Runs every 15 minutes via Celery Beat to gradually build embedding coverage.
-    Uses the SpiderSemanticSearch service.
-
-    Now also marks entries with no items as 'empty' so they're skipped in future runs.
-    """
-    logger.info("🧠 Starting spider embedding backfill...")
-
-    try:
-        from core.services.spider_semantic_search import get_spider_semantic_search
-
-        search = get_spider_semantic_search()
-        stats = search.backfill_embeddings(batch_size=batch_size)
-
-        logger.info(
-            f"✅ Embedding backfill complete: "
-            f"{stats['processed']} processed, {stats['succeeded']} succeeded, "
-            f"{stats['failed']} failed, {stats['skipped']} skipped, "
-            f"{stats.get('marked_empty', 0)} marked empty"
-        )
-
-        # Get current coverage stats
-        coverage = search.get_embedding_stats()
-        logger.info(
-            f"📊 Embedding stats: {coverage['searchable']} searchable, "
-            f"{coverage.get('marked_empty', 0)} empty, {coverage.get('pending', 0)} pending "
-            f"({coverage['coverage_percent']:.1f}% coverage)"
-        )
-
-        return {
-            'success': True,
-            'batch_stats': stats,
-            'coverage': coverage
-        }
-
-    except Exception as e:
-        logger.error(f"❌ Embedding backfill failed: {e}")
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='backfill_signal_scores')
-def backfill_signal_scores():
-    """Session 1025: Score all existing SignalClusters that have default scores."""
-    from core.models_signal_intelligence import SignalCluster
-    from core.services.content_scoring_service import ContentScoringService
-
-    scorer = ContentScoringService()
-    clusters = SignalCluster.objects.filter(reach_score=0.0, intent_score=0.0)
-    updated = 0
-    for cluster in clusters.iterator():
-        scores = scorer.score_cluster(cluster)
-        for field, value in scores.items():
-            setattr(cluster, field, value)
-        cluster.save(update_fields=list(scores.keys()))
-        updated += 1
-    logger.info(f"Scored {updated} signal clusters")
-    return f"Scored {updated} clusters"
 
 
 @shared_task(name="core.tasks.execute_single_spider_lightweight")
@@ -3131,46 +3087,12 @@ def broadcast_hive_mind_status(session, status):
 def generate_memory_embedding(memory_id: str):
     from core.tasks_media import _impl_generate_memory_embedding
     return _impl_generate_memory_embedding(memory_id)
-@shared_task(bind=True, name='core.tasks.backfill_memory_embeddings')
-def backfill_memory_embeddings(self, batch_size: int = 50):
-    """
-    Session 490: Backfill embeddings for memories that don't have them.
-
-    Runs periodically to ensure all memories have embeddings for semantic search.
-    """
-    logger.info(f"🧠 [MEMORY BACKFILL] Starting backfill (batch_size={batch_size})")
-
-    try:
-        from core.services.memory_embedding_service import get_memory_embedding_service
-
-        service = get_memory_embedding_service()
-        stats = service.backfill_embeddings(batch_size=batch_size)
-
-        logger.info(
-            f"🧠 [MEMORY BACKFILL] Completed: "
-            f"{stats['succeeded']}/{stats['processed']} succeeded"
-        )
-
-        return {
-            'status': 'completed',
-            'processed': stats['processed'],
-            'succeeded': stats['succeeded'],
-            'failed': stats['failed']
-        }
-
-    except Exception as e:
-        logger.error(f"🧠 [MEMORY BACKFILL] Error: {e}")
-        return {'status': 'error', 'error': str(e)}
 
 
 # =============================================================================
 # Session 729: Conversation Memory Embedding Backfill Task
 # =============================================================================
 
-@shared_task(bind=True, name='core.tasks.backfill_conversation_embeddings')
-def backfill_conversation_embeddings(self, batch_size: int = 50):
-    from core.tasks_misc import _impl_backfill_conversation_embeddings
-    return _impl_backfill_conversation_embeddings(self, batch_size)
 @shared_task(name='core.tasks.update_agent_mood')
 def update_agent_mood(agent_id: str, mood: str, intensity: float = 0.7,
                       trigger_type: str = 'task_success', trigger_source: str = '',
@@ -8776,10 +8698,6 @@ def full_agent_rotation():
 def score_episode_voice(episode_id: str) -> dict:
     from core.tasks_content import _impl_score_episode_voice
     return _impl_score_episode_voice(episode_id)
-@shared_task(name='content_studio.backfill_voice_scores')
-def backfill_voice_scores(limit: int = 50, min_content_length: int = 100) -> dict:
-    from core.tasks_misc import _impl_backfill_voice_scores
-    return _impl_backfill_voice_scores(limit, min_content_length)
 @shared_task(name='workspace.autopilot_tick')
 def workspace_autopilot_tick(
     budget_per_tick: int = 5,
@@ -10552,10 +10470,6 @@ def _extract_agent_content(result) -> str:
 def generate_initiative_stage_document(self, initiative_id: str, stage_num: int):
     from core.tasks_initiatives import _impl_generate_initiative_stage_document
     return _impl_generate_initiative_stage_document(self, initiative_id, stage_num)
-@shared_task(bind=True, queue='default', name="core.tasks.backfill_stage_documents")
-def backfill_stage_documents(self, stage_num: int = 1, limit: int = 50):
-    from core.tasks_misc import _impl_backfill_stage_documents
-    return _impl_backfill_stage_documents(self, stage_num, limit)
 @shared_task(name="core.tasks.run_daily_priority_scan")
 def run_daily_priority_scan():
     """
@@ -11933,34 +11847,3 @@ def check_learning_loop_slo():
 
 
 # ── Backfill: deliverable workspaces ───────────────────────────────────────
-@shared_task(
-    name='core.tasks.backfill_deliverable_workspaces',
-    ignore_result=False,
-    queue='long_running',
-    soft_time_limit=300,
-    time_limit=360,
-)
-def backfill_deliverable_workspaces(workspace_name='Donkey Betz',
-                                    username=None,
-                                    include_archived=False,
-                                    dry_run=False):
-    """Backfill workspace_id on deliverables where it is NULL.
-
-    Triggerable by PA via cockpit_tool.trigger_task.
-    """
-    from django.core.management import call_command
-    from io import StringIO
-
-    out = StringIO()
-    args = ['backfill_deliverable_workspaces', '--workspace', workspace_name]
-    if username:
-        args.extend(['--username', username])
-    if include_archived:
-        args.append('--include-archived')
-    if dry_run:
-        args.append('--dry-run')
-
-    call_command(*args, stdout=out)
-    output = out.getvalue()
-    logger.info('[BACKFILL_WORKSPACES] %s', output)
-    return {'output': output}
