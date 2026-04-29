@@ -374,6 +374,66 @@ def _extract_beat_task_names(celery_src: str) -> set[str]:
 
 
 # ---------------------------------------------------------------------------
+# Pre-existing dead-string scanner — surfaces rename drift in known callers.
+# Read-only; informational only; does not block Phase 1.
+# ---------------------------------------------------------------------------
+
+# Each entry: (relative_path, regex_pattern, group_index_for_task_name).
+# The regex is matched against the file's full source. Captured strings are
+# cross-referenced against the registered-task set; mismatches are flagged.
+_DEAD_REF_SOURCES: list[tuple[str, str, int]] = [
+    # views_autonomous_dashboard.py — UI dispatcher's hardcoded info dict.
+    ("core/views_autonomous_dashboard.py", r"'celery_task':\s*'([^']+)'", 1),
+    # celery_health.py — RECOVERY_TASKS dict keyed by task name.
+    ("core/services/celery_health.py", r"'(core\.tasks\.[a-zA-Z_][a-zA-Z0-9_]*)'\s*:\s*timedelta", 1),
+]
+
+
+def _scan_dead_string_refs(project: Path, registered_names: set[str]) -> dict[str, list[tuple[int, str]]]:
+    """Scan known caller sites for string-based task references that don't
+    resolve to any registered task name. Returns a dict keyed by relative
+    file path with lists of (lineno, ref_string) for each dead ref."""
+    out: dict[str, list[tuple[int, str]]] = {}
+    for rel_path, pattern, group in _DEAD_REF_SOURCES:
+        path = project / rel_path
+        if not path.is_file():
+            continue
+        try:
+            src = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        dead: list[tuple[int, str]] = []
+        for match in re.finditer(pattern, src):
+            ref = match.group(group)
+            if ref and ref not in registered_names:
+                lineno = src[: match.start()].count("\n") + 1
+                dead.append((lineno, ref))
+        if dead:
+            out[rel_path] = dead
+    return out
+
+
+def _registered_task_names(tree: ast.Module) -> set[str]:
+    """Collect every registered task name from ``core/tasks.py``: the
+    explicit ``name=`` value when present, otherwise ``core.tasks.<func>``."""
+    names: set[str] = set()
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for d in node.decorator_list:
+            if not _is_celery_decorator(d):
+                continue
+            explicit = None
+            if isinstance(d, ast.Call):
+                kwargs = _decorator_kwargs(d)
+                if "name" in kwargs:
+                    explicit = _string_constant(kwargs["name"])
+            names.add(explicit if explicit is not None else f"core.tasks.{node.name}")
+            break
+    return names
+
+
+# ---------------------------------------------------------------------------
 # Domain proposal
 # ---------------------------------------------------------------------------
 
@@ -437,7 +497,8 @@ def _md_table_row(cells: list[str]) -> str:
 
 
 def _render_plan(*, tasks: list[dict], helpers: dict[str, ast.FunctionDef],
-                 beat_task_names: set[str]) -> str:
+                 beat_task_names: set[str],
+                 dead_refs: dict[str, list[tuple[int, str]]]) -> str:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     total = len(tasks)
     pinned = sum(1 for t in tasks if t["name_explicit"] is not None)
@@ -564,6 +625,18 @@ def _render_plan(*, tasks: list[dict], helpers: dict[str, ast.FunctionDef],
     lines.append("")
     lines.append(_PHASE_1_NARRATIVE)
     lines.append("")
+
+    # Phase 3 — module moves: forward-looking reviewer warnings
+    phase_3 = _render_phase_3_warning(tasks)
+    if phase_3:
+        lines.append(phase_3)
+        lines.append("")
+
+    # Pre-existing dead task-string refs (informational only)
+    dead_refs_section = _render_dead_refs_section(dead_refs)
+    if dead_refs_section:
+        lines.append(dead_refs_section)
+        lines.append("")
 
     # Footer
     lines.append("---")
@@ -695,19 +768,144 @@ def _phase_1_safety_paragraph(*, tasks: list[dict]) -> str:
         f"`name=\"core.tasks.<func>\"` kwarg added to their decorator. "
         f"This edit is mechanical: a script can produce the diff, the "
         f"runtime behaviour is identical (Celery already auto-registers "
-        f"under that name), and tests pass without modification.",
+        f"under that name), and tests pass without modification."
     ]
     if nonstandard:
-        names = ", ".join(f"`{t['name']}`" for t in nonstandard)
         parts.append(
-            f"\n\n**One special case** ({len(nonstandard)} task(s)): "
-            f"{names} carry a non-standard registered name (no "
-            f"`core.tasks.` prefix). Phase 1 must preserve these "
-            f"verbatim — do not 'normalize' them. Migrating these tasks "
-            f"to a sibling file requires the same `name=...` they "
-            f"currently use."
+            f"\n\n**{len(nonstandard)} task(s) already carry a "
+            f"non-standard registered name** (no `core.tasks.` prefix). "
+            f"Phase 1 skips them — they're already pinned. **Phase 3 "
+            f"(module moves) MUST preserve every existing `name=` value "
+            f"verbatim**; see the Phase 3 warning section below for the "
+            f"full list grouped by prefix."
         )
     return "".join(parts)
+
+
+def _render_phase_3_warning(tasks: list[dict]) -> str:
+    """Render the forward-looking Phase 3 reviewer warning section.
+
+    Lists every non-standard registered name in the file, grouped by
+    prefix. Bare-name tasks (no prefix at all) are surfaced separately
+    because they're the highest collision risk during module moves."""
+    nonstandard = [
+        t for t in tasks
+        if t["name_explicit"] is not None
+        and not t["name_explicit"].startswith("core.tasks.")
+    ]
+    if not nonstandard:
+        return ""
+
+    buckets: dict[str, list[dict]] = defaultdict(list)
+    bare: list[dict] = []
+    for t in nonstandard:
+        name = t["name_explicit"]
+        if "." not in name:
+            bare.append(t)
+            continue
+        prefix = name.split(".", 1)[0] + ".*"
+        buckets[prefix].append(t)
+
+    lines: list[str] = []
+    lines.append("## Phase 3 — module moves: reviewer warnings")
+    lines.append("")
+    lines.append(
+        f"**{len(nonstandard)} task(s) carry non-standard registered "
+        "names** that don't follow the `core.tasks.<func>` convention. "
+        "Every one of these names is a runtime contract: it appears in "
+        "beat schedules, `PeriodicTask` rows, `send_task()` callers, or "
+        "code that hasn't been audited. **During module moves (Phase "
+        "3+), preserve each `name=` kwarg verbatim** — do not "
+        "\"normalize\" them, do not drop the existing prefix, do not "
+        "rewrite to match the destination module's path."
+    )
+    lines.append("")
+
+    if bare:
+        lines.append(f"### Bare names ({len(bare)}) — highest collision risk")
+        lines.append("")
+        lines.append(
+            "These tasks register with no prefix at all, so their "
+            "registered name lives in Celery's global namespace and can "
+            "collide with names from any other module. Treat each move "
+            "as a security-sensitive change."
+        )
+        lines.append("")
+        lines.append(_md_table_row(["Line", "Function", "Registered name"]))
+        lines.append(_md_table_row(["---:", "---", "---"]))
+        for t in sorted(bare, key=lambda x: x["lineno"]):
+            lines.append(_md_table_row([
+                str(t["lineno"]),
+                f"`{t['name']}`",
+                f"`{t['name_explicit']}`",
+            ]))
+        lines.append("")
+
+    if buckets:
+        lines.append(f"### Prefixed names ({sum(len(v) for v in buckets.values())})")
+        lines.append("")
+        for prefix in sorted(buckets):
+            ts = buckets[prefix]
+            lines.append(f"#### `{prefix}` — {len(ts)} task(s)")
+            lines.append("")
+            lines.append(_md_table_row(["Line", "Function", "Registered name"]))
+            lines.append(_md_table_row(["---:", "---", "---"]))
+            for t in sorted(ts, key=lambda x: x["lineno"]):
+                lines.append(_md_table_row([
+                    str(t["lineno"]),
+                    f"`{t['name']}`",
+                    f"`{t['name_explicit']}`",
+                ]))
+            lines.append("")
+
+    lines.append(
+        "**Reviewer checklist for each Phase 3 module move:** before "
+        "approving, grep the moved task's `name=` value against the "
+        "current `core/tasks.py` and confirm character-for-character "
+        "match. Any normalization, prefix change, or rename — even "
+        "well-intentioned — silently breaks every existing caller."
+    )
+    return "\n".join(lines)
+
+
+def _render_dead_refs_section(dead_refs: dict[str, list[tuple[int, str]]]) -> str:
+    """Render the pre-existing-dead-string-refs section. Informational
+    only; not blocking Phase 1."""
+    if not dead_refs:
+        return ""
+    total = sum(len(v) for v in dead_refs.values())
+    lines: list[str] = []
+    lines.append("## Pre-existing dead task-string references (rename-drift sweep)")
+    lines.append("")
+    lines.append(
+        f"**{total} string-based task reference(s) across "
+        f"{len(dead_refs)} file(s) point at task names that don't "
+        "resolve to any registered task in `core/tasks.py`.** These are "
+        "pre-existing rename-drift bugs — calls / lookups that would "
+        "already fail today if invoked. Phase 1 does not introduce "
+        "them, does not depend on them, and does not fix them. "
+        "**Treat as a separate follow-up sweep, not a blocker for "
+        "Phase 1.**"
+    )
+    lines.append("")
+    for rel_path in sorted(dead_refs):
+        refs = dead_refs[rel_path]
+        lines.append(f"### `{rel_path}` — {len(refs)} dead reference(s)")
+        lines.append("")
+        lines.append(_md_table_row(["Line", "Referenced task name"]))
+        lines.append(_md_table_row(["---:", "---"]))
+        for lineno, ref in sorted(refs):
+            lines.append(_md_table_row([str(lineno), f"`{ref}`"]))
+        lines.append("")
+    lines.append(
+        "**Suggested follow-up:** open a separate issue for the "
+        "rename-drift sweep. For each dead reference, either rename "
+        "the call site to match the actual registered task name, or "
+        "delete the dead caller entirely if the feature is no longer "
+        "wired up. This sweep should land independently of the Wave B "
+        "tasks refactor."
+    )
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -796,7 +994,15 @@ def main() -> int:
     ]
     tasks.sort(key=lambda t: t["lineno"])
 
-    plan = _render_plan(tasks=tasks, helpers=helpers, beat_task_names=beat_task_names)
+    registered = _registered_task_names(tree)
+    dead_refs = _scan_dead_string_refs(PROJECT, registered)
+
+    plan = _render_plan(
+        tasks=tasks,
+        helpers=helpers,
+        beat_task_names=beat_task_names,
+        dead_refs=dead_refs,
+    )
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(plan, encoding="utf-8")
@@ -811,6 +1017,15 @@ def main() -> int:
     print(f"  needs Phase 1:  {len(tasks) - pinned}")
     needs_review = sum(1 for t in tasks if t["destination"] == NEEDS_REVIEW)
     print(f"  needs review:   {needs_review}")
+    nonstandard_count = sum(
+        1 for t in tasks
+        if t["name_explicit"] is not None
+        and not t["name_explicit"].startswith("core.tasks.")
+    )
+    print(f"  non-standard:   {nonstandard_count} (Phase 3 must preserve verbatim)")
+    dead_total = sum(len(v) for v in dead_refs.values())
+    if dead_total:
+        print(f"  dead refs:      {dead_total} pre-existing rename-drift bugs (info only)")
     return 0
 
 
