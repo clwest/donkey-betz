@@ -5991,3 +5991,253 @@ def record_revenue_event(
         logger.error(f"Failed to record revenue: {e}")
         return {'success': False, 'error': str(e)}
 
+
+
+
+# =============================================================================
+# Phase 3 — Wave B migration from core/tasks.py (Sub-PR 5 of 9: ops workflows)
+# =============================================================================
+# Tasks below were moved verbatim out of core/tasks.py. Registered Celery
+# names are unchanged (locked by Phase 1 name= kwargs), so 8 PeriodicTask
+# DB rows (all enabled — no disabled state), 10 settings.py task-routing
+# entries (including 2 non-standard `triggers.*` names + 1 pre-existing
+# duplicate for `generate_smart_suggestions`), and 4 lazy Python-import
+# consumer sites across 4 modules (signals.trigger_signals, tasks_misc,
+# views_workflow_run, services.td_handlers_core) all continue to resolve.
+#
+# `execute_scheduled_workflow` is dispatched via `.delay(...)` from
+# `tasks_misc._impl_check_workflow_schedules` (line 603) after a lazy
+# `from core.tasks import execute_scheduled_workflow`. The shim re-export
+# preserves that import path; the registered Celery name is unchanged;
+# the dispatch survives this move with no changes to tasks_misc.
+#
+# 7 of the 12 tasks are thin (3-line) delegators to existing _impl_*
+# helpers. 4 of those _impl_* live in tasks_ops itself (after this move
+# the imports become harmless function-local self-imports). 3 cross-
+# sibling _impl_* references remain unchanged: _impl_check_workflow_schedules
+# (tasks_misc), _impl_generate_human_attention_items (tasks_agents),
+# and _impl_run_source_pack_workflow (tasks_content). All function-local
+# imports — zero module-load-time coupling.
+
+
+
+# -----------------------------------------------------------------------------
+# Workflows & automations
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, max_retries=3, name="core.tasks.execute_scheduled_workflow")
+def execute_scheduled_workflow(self, schedule_id: str):
+    from core.tasks_ops import _impl_execute_scheduled_workflow
+    return _impl_execute_scheduled_workflow(self, schedule_id)
+
+@shared_task(name="core.tasks.sync_workflow_schedules")
+def sync_workflow_schedules():
+    from core.tasks_ops import _impl_sync_workflow_schedules
+    return _impl_sync_workflow_schedules()
+
+@shared_task(
+    autoretry_for=(ConnectionError, OSError),
+    retry_backoff=10,
+    retry_backoff_max=60,
+    retry_jitter=True,
+    max_retries=2,
+    name="core.tasks.check_workflow_schedules",
+)
+def check_workflow_schedules():
+    from core.tasks_misc import _impl_check_workflow_schedules
+    return _impl_check_workflow_schedules()
+
+@shared_task(name="core.tasks.execute_scheduled_automations")
+def execute_scheduled_automations():
+    """
+    Execute all scheduled automated actions that are due.
+    """
+    try:
+        from core.proactive_engine import AutomationEngine
+
+        engine = AutomationEngine()
+        executed = engine.check_scheduled_actions()
+
+        logger.info(f"⚙️ [AUTOMATIONS] Executed {len(executed)} scheduled actions")
+        return {'status': 'success', 'actions_executed': len(executed), 'details': executed}
+
+    except Exception as e:
+        logger.exception(f"⚙️ [AUTOMATIONS] Scheduled execution failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(bind=True, soft_time_limit=900, time_limit=1080, ignore_result=True, name="core.tasks.run_source_pack_workflow")
+def run_source_pack_workflow(self, run_id):
+    from core.tasks_content import _impl_run_source_pack_workflow
+    return _impl_run_source_pack_workflow(self, run_id)
+
+
+
+
+# -----------------------------------------------------------------------------
+# Smart suggestions
+# -----------------------------------------------------------------------------
+@shared_task(name="core.tasks.generate_smart_suggestions")
+def generate_smart_suggestions(user_id=None, max_suggestions=5):
+    """
+    Generate smart suggestions for users based on their data.
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        from core.proactive_engine import SuggestionEngine
+
+        User = get_user_model()
+
+        total_generated = 0
+
+        if user_id:
+            users = User.objects.filter(id=user_id)
+        else:
+            users = User.objects.filter(is_active=True)
+
+        for user in users:
+            try:
+                # Check pending suggestions count
+                from core.models_unified_system import SmartSuggestion
+                pending = SmartSuggestion.objects.filter(
+                    user=user,
+                    status='pending'
+                ).count()
+
+                if pending < 20:
+                    engine = SuggestionEngine(user)
+                    suggestions = engine.generate_suggestions(user, max_suggestions=max_suggestions)
+                    total_generated += len(suggestions)
+
+            except Exception as e:
+                logger.error(f"💡 [SUGGESTIONS] Error for user {user.id}: {e}")
+
+        logger.info(f"💡 [SUGGESTIONS] Generated {total_generated} suggestions")
+        return {'status': 'success', 'suggestions_generated': total_generated}
+
+    except Exception as e:
+        logger.exception(f"💡 [SUGGESTIONS] Generation failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+
+
+# -----------------------------------------------------------------------------
+# Triggers (non-standard registered names: triggers.*)
+# -----------------------------------------------------------------------------
+@shared_task(name='triggers.process_trigger_events')
+def process_trigger_events(event_ids: list):
+    from core.tasks_ops import _impl_process_trigger_events
+    return _impl_process_trigger_events(event_ids)
+
+@shared_task(name='triggers.create_default_triggers')
+def create_default_triggers():
+    """
+    Create the default situation triggers.
+
+    Run this task once to populate the trigger table with
+    sensible defaults for blockchain and stock market monitoring.
+    """
+    from core.models_situation_triggers import SituationTrigger, DEFAULT_TRIGGERS
+
+    logger.info("Creating default situation triggers...")
+
+    created_count = 0
+    for trigger_data in DEFAULT_TRIGGERS:
+        # Check if trigger already exists by name
+        if not SituationTrigger.objects.filter(name=trigger_data['name']).exists():
+            SituationTrigger.objects.create(**trigger_data)
+            created_count += 1
+            logger.info(f"  Created: {trigger_data['name']}")
+        else:
+            logger.info(f"  Skipped (exists): {trigger_data['name']}")
+
+    logger.info(f"✅ Created {created_count} default triggers")
+    return {'success': True, 'created': created_count}
+
+
+
+
+# -----------------------------------------------------------------------------
+# Human attention & HITL
+# -----------------------------------------------------------------------------
+@shared_task(name="core.tasks.process_hitl_escalations")
+def process_hitl_escalations():
+    """
+    Process validation requests that need escalation.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    Runs periodically to:
+    - Find items past their escalation time
+    - Increase priority
+    - Extend deadlines
+    - Unassign for reassignment
+
+    Schedule: Every 15 minutes
+    """
+    logger.info("👤 [HITL] Processing escalations...")
+
+    try:
+        from core.services.hitl_validation import get_hitl_validation_service
+
+        hitl_service = get_hitl_validation_service()
+        result = hitl_service.process_escalations()
+
+        if result.get('escalated', 0) > 0:
+            logger.info(f"👤 [HITL] Escalated {result['escalated']} validation requests")
+        else:
+            logger.debug("👤 [HITL] No items needed escalation")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"👤 [HITL] Escalation processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(name="core.tasks.scan_concerns_for_human_action")
+def scan_concerns_for_human_action():
+    from core.tasks_ops import _impl_scan_concerns_for_human_action
+    return _impl_scan_concerns_for_human_action()
+
+@shared_task(name="core.tasks.generate_human_attention_items")
+def generate_human_attention_items():
+    from core.tasks_agents import _impl_generate_human_attention_items
+    return _impl_generate_human_attention_items()
+
+@shared_task(name='core.tasks.process_human_attention_lifecycle')
+def process_human_attention_lifecycle():
+    """
+    Session 766: Process Human Attention Item lifecycle events.
+
+    This task runs periodically to:
+    1. Expire items past their expires_at deadline
+    2. Auto-dismiss stale items that have been pending too long
+    3. Auto-escalate aging items (bump urgency for old pending items)
+    4. Auto-approve low-risk items based on user preferences
+    5. Trigger orchestration workflows for approved items
+
+    Solves Dead End #6: 992 items with only 1.3% acted upon.
+
+    Schedule: Every 10 minutes (via Celery Beat)
+    """
+    from core.services.human_attention_lifecycle import attention_lifecycle
+
+    logger.info("🧑 [LIFECYCLE] Starting Human Attention lifecycle processing")
+
+    try:
+        stats = attention_lifecycle.process_lifecycle()
+
+        total = sum(stats.values()) - stats.get('errors', 0)
+        logger.info(f"🧑 [LIFECYCLE] Complete: {total} items processed - {stats}")
+
+        return {
+            'status': 'completed',
+            **stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [LIFECYCLE] Processing failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
