@@ -1871,10 +1871,6 @@ def send_pending_notifications():
 # This is the heart of the collective intelligence system
 # =============================================================================
 
-@shared_task(name="core.tasks.validate_knowledge_sources")
-def validate_knowledge_sources():
-    from core.tasks_agents import _impl_validate_knowledge_sources
-    return _impl_validate_knowledge_sources()
 def _conversation_temporal_context():
     """
     Return a temporal awareness block for conversation system prompts.
@@ -2777,37 +2773,6 @@ def generate_memory_embedding(memory_id: str):
 
 
 
-@shared_task(name="core.tasks.sync_project_knowledge")
-def sync_project_knowledge():
-    """
-    Sync BusinessResearchResult to AgentKnowledgeSource.
-    Runs every 30 minutes via Celery Beat.
-
-    Session 326: Project-Agent Learning Bridge
-
-    This task:
-    - Finds unprocessed research results
-    - Converts them to agent knowledge
-    - Links knowledge to source project
-    """
-    from core.services.project_research_bridge import get_project_research_bridge
-
-    logger.info("🔗 [SESSION 326] Starting project knowledge sync...")
-
-    try:
-        bridge = get_project_research_bridge()
-        result = bridge.sync_all_research_to_knowledge(limit=50)
-
-        logger.info(
-            f"🔗 [SESSION 326] Knowledge sync complete: "
-            f"{result['processed_research']} research → {result['knowledge_created']} knowledge"
-        )
-
-        return result
-
-    except Exception as e:
-        logger.exception(f"🔗 [SESSION 326] Knowledge sync failed: {e}")
-        return {'error': str(e)}
 
 
 @shared_task(name="core.tasks.recalculate_spider_priorities")
@@ -2846,40 +2811,6 @@ def recalculate_spider_priorities():
         return {'error': str(e)}
 
 
-@shared_task(name="core.tasks.process_research_feedback")
-def process_research_feedback(feedback_id: str):
-    """
-    Process a single research feedback submission.
-
-    Session 326: Project-Agent Learning Bridge
-
-    This task:
-    - Loads the feedback entry
-    - Applies confidence adjustments to related knowledge
-    - Updates spider priorities if needed
-    """
-    from core.services.project_research_bridge import get_project_research_bridge
-
-    logger.info(f"📝 [SESSION 326] Processing feedback {feedback_id}...")
-
-    try:
-        bridge = get_project_research_bridge()
-        from uuid import UUID as _UUID
-        result = bridge.apply_feedback(_UUID(feedback_id) if isinstance(feedback_id, str) else feedback_id)
-
-        if result.get('status') == 'applied':
-            logger.info(
-                f"📝 [SESSION 326] Feedback applied: "
-                f"{result['feedback_type']} → {result['updated_count']} knowledge entries"
-            )
-        else:
-            logger.info(f"📝 [SESSION 326] Feedback status: {result.get('status', 'unknown')}")
-
-        return result
-
-    except Exception as e:
-        logger.exception(f"📝 [SESSION 326] Feedback processing failed: {e}")
-        return {'error': str(e)}
 
 
 @shared_task(name="core.tasks.update_project_spider_priorities")
@@ -3048,10 +2979,6 @@ def _create_learning_notification(project, deltas):
 # ==================== SESSION 373: AUTO-RESOLVE KNOWLEDGE GAPS ====================
 
 
-@shared_task(bind=True, max_retries=2, name="core.tasks.auto_resolve_knowledge_gaps")
-def auto_resolve_knowledge_gaps(self):
-    from core.tasks_misc import _impl_auto_resolve_knowledge_gaps
-    return _impl_auto_resolve_knowledge_gaps(self)
 @shared_task(bind=True, max_retries=3, name="core.tasks.process_document_async")
 def process_document_async(self, document_id: int, generate_embeddings: bool = True, embedding_model: str = 'openai_text_embedding_3_small'):
     from core.tasks_misc import _impl_process_document_async
@@ -5245,83 +5172,8 @@ def execute_single_dream(dream_id: str):
 
 
 
-@shared_task(name='core.tasks.maintain_knowledge_freshness')
-def maintain_knowledge_freshness():
-    """
-    Session 767: Maintain knowledge source freshness.
-
-    Decays freshness scores based on age, deactivates stale sources,
-    and identifies agents needing knowledge refresh.
-
-    Run daily to keep knowledge sources properly aged.
-
-    Returns:
-        Maintenance statistics
-    """
-    from core.services.learning_pattern_engine import get_learning_pattern_engine
-
-    logger.info("🔄 [FRESHNESS] Starting knowledge freshness maintenance...")
-
-    try:
-        engine = get_learning_pattern_engine()
-        result = engine.maintain_knowledge_freshness()
-
-        logger.info(
-            f"🔄 [FRESHNESS] Complete: "
-            f"{result.get('sources_decayed', 0)} decayed, "
-            f"{result.get('sources_deactivated', 0)} deactivated, "
-            f"{result.get('total_active', 0)} active"
-        )
-
-        return {
-            'success': True,
-            **result
-        }
-
-    except Exception as e:
-        logger.error(f"🔄 [FRESHNESS] Failed: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='core.tasks.promote_to_shared_knowledge')
-def promote_to_shared_knowledge(min_confidence: float = 0.7):
-    """
-    Session 767: Promote high-confidence knowledge to SharedKnowledge.
-
-    Scans AgentKnowledgeSource and KnowledgeTransfer for well-validated
-    knowledge and promotes it to the shared repository.
-
-    Run weekly to grow the shared knowledge base.
-
-    Args:
-        min_confidence: Minimum confidence for promotion (default 0.7)
-
-    Returns:
-        Promotion statistics
-    """
-    from core.services.learning_pattern_engine import get_learning_pattern_engine
-
-    logger.info(f"🚀 [KNOWLEDGE PROMOTION] Starting (min_confidence={min_confidence})...")
-
-    try:
-        engine = get_learning_pattern_engine()
-        result = engine.promote_to_shared_knowledge(min_confidence=min_confidence)
-
-        logger.info(
-            f"🚀 [KNOWLEDGE PROMOTION] Complete: "
-            f"{result.get('promoted_from_sources', 0)} from sources, "
-            f"{result.get('promoted_from_transfers', 0)} from transfers, "
-            f"{result.get('total_shared_knowledge', 0)} total"
-        )
-
-        return {
-            'success': True,
-            **result
-        }
-
-    except Exception as e:
-        logger.error(f"🚀 [KNOWLEDGE PROMOTION] Failed: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
 
 
 # ==================== SESSION 776: SKIN LAYER AGENT INTEGRATION ====================
@@ -6963,39 +6815,6 @@ def workspace_autopilot_tick(
 # Session 819: Mythology System Tasks
 # =============================================================================
 
-@shared_task(name="core.tasks.update_mythology_pattern_statistics")
-def update_mythology_pattern_statistics():
-    """
-    Session 819: Update MythPattern frequency counts and prevention rates.
-
-    Runs daily at 4am to aggregate statistics from MythologyEvents.
-    """
-    from mythology.models import MythPattern, MythologyEvent
-    from django.db.models import Count
-
-    logger.info("🛡️ Updating mythology pattern statistics...")
-
-    try:
-        # Get event counts by pattern type
-        event_counts = MythologyEvent.objects.values('event_type').annotate(
-            count=Count('id')
-        )
-
-        updated = 0
-        for item in event_counts:
-            pattern = MythPattern.objects.filter(pattern_type=item['event_type']).first()
-            if pattern:
-                pattern.frequency_count = item['count']
-                pattern.last_seen = timezone.now()
-                pattern.save(update_fields=['frequency_count', 'last_seen', 'updated_at'])
-                updated += 1
-
-        logger.info(f"✅ Updated {updated} mythology patterns with statistics")
-        return {'updated_patterns': updated}
-
-    except Exception as e:
-        logger.error(f"❌ Error updating mythology pattern statistics: {e}")
-        return {'error': str(e)}
 
 
 # =============================================================================
@@ -7286,171 +7105,16 @@ def _format_metrics_for_audit(metrics: dict) -> str:
 # Session 823: Metrics Action Trigger - Self-Execution Engine
 # =============================================================================
 
-@shared_task(name="core.tasks.run_system_self_audit")
-def run_system_self_audit():
-    from core.tasks_agents import _impl_run_system_self_audit
-    return _impl_run_system_self_audit()
-@shared_task(name="core.tasks.discover_and_import_audits")
-def discover_and_import_audits():
-    """
-    Session 820: Automatically discover and import new audit files.
-    Session 1031: DISABLED — audit import creates AuditFindings that feed
-    garbage tasks to agents via remediation pipeline.  The audit_tracker
-    regex still produces too many false-positive findings from markdown tables.
-    Re-enable after audit_tracker parsing is reliable.
-    """
-    logger.warning(
-        "🚫 [AUTO-REMEDIATE] discover_and_import_audits BLOCKED — "
-        "audit parsing produces garbage findings (Session 1031)"
-    )
-    return {'blocked': True, 'reason': 'Audit parsing unreliable'}
 
 
-@shared_task(name="core.tasks.assign_open_findings_to_agents")
-def assign_open_findings_to_agents():
-    """
-    Session 820: Auto-assign open findings to appropriate agents.
-    Session 1031: DISABLED — all 4 execution paths blocked, assignment
-    just creates fuel for unknown 5th dispatch path that still fires
-    CodeGeneratorAgent.  Re-enable when execution paths are safe.
-    """
-    logger.warning(
-        "🚫 [AUTO-REMEDIATE] assign_open_findings_to_agents BLOCKED — "
-        "execution paths disabled since Session 1026"
-    )
-    return {'blocked': True, 'reason': 'All execution paths disabled'}
 
 
-@shared_task(name="core.tasks.execute_remediation_tasks")
-def execute_remediation_tasks():
-    """
-    Session 820: Execute assigned remediation tasks via agents.
-
-    Runs each assigned task through the AgentRouter. Limits to 3 tasks
-    per cycle to avoid overwhelming the system. Runs every 4 hours.
-
-    Session 1031: DISABLED — execution burns $9/day running agents on
-    garbage audit findings (markdown table fragments parsed as tasks).
-    Disabled in Beat (Session 1026) but mystery trigger still dispatches
-    this task ~20x/day. Hard-block here until trigger is identified.
-    """
-    logger.warning(
-        "🚫 [AUTO-REMEDIATE] execute_remediation_tasks BLOCKED — "
-        "disabled since Session 1026, mystery trigger still dispatching. "
-        "Use 'python manage.py auto_remediate --execute' for manual runs."
-    )
-    return {'blocked': True, 'reason': 'Execution disabled since Session 1026'}
-
-    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
-
-    logger.info("🔧 [AUTO-REMEDIATE] Executing remediation tasks...")
-
-    try:
-        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=3)
-        results = orchestrator.execute_assigned_tasks()
-
-        logger.info(
-            f"✅ [AUTO-REMEDIATE] Executed {results.get('attempted', 0)} tasks, "
-            f"{results.get('succeeded', 0)} succeeded"
-        )
-        return results
-
-    except Exception as e:
-        logger.error(f"❌ [AUTO-REMEDIATE] Task execution failed: {e}")
-        return {'error': str(e)}
 
 
-@shared_task(name="core.tasks.verify_completed_fixes")
-def verify_completed_fixes():
-    """
-    Session 820: Verify that completed fixes actually worked.
-
-    Runs verification checks on 'fixed' findings. Reopens findings
-    where verification fails. Runs every 6 hours.
-    """
-    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
-
-    logger.info("🔬 [AUTO-REMEDIATE] Verifying completed fixes...")
-
-    try:
-        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=5)
-        results = orchestrator.verify_completed_fixes()
-
-        logger.info(
-            f"✅ [AUTO-REMEDIATE] Verified {results.get('verified', 0)} fixes, "
-            f"{results.get('failed', 0)} failed verification"
-        )
-        return results
-
-    except Exception as e:
-        logger.error(f"❌ [AUTO-REMEDIATE] Verification failed: {e}")
-        return {'error': str(e)}
 
 
-@shared_task(name="core.tasks.run_autonomous_remediation_cycle")
-def run_autonomous_remediation_cycle():
-    """
-    Session 820: Run a complete autonomous remediation cycle.
-
-    Orchestrates all phases: discover → assign → execute → verify.
-    This is the main entry point for the self-healing system.
-    Runs daily at 2am after the audit discovery at midnight.
-
-    Session 840: Updated to include P2 findings since all P0/P1 are resolved.
-    Session 1031: DISABLED — same issue as execute_remediation_tasks.
-    """
-    logger.warning(
-        "🚫 [AUTO-REMEDIATE] run_autonomous_remediation_cycle BLOCKED — "
-        "disabled since Session 1026. Use management command for manual runs."
-    )
-    return {'blocked': True, 'reason': 'Cycle disabled since Session 1026'}
-
-    from core.services.autonomous_remediation_orchestrator import get_remediation_orchestrator
-
-    logger.info("🔄 [AUTO-REMEDIATE] Starting full remediation cycle...")
-
-    try:
-        orchestrator = get_remediation_orchestrator(max_tasks_per_cycle=5)
-        # Session 840: Include P2 findings now that P0/P1 are resolved
-        results = orchestrator.run_remediation_cycle(priority_filter=['P0', 'P1', 'P2'])
-
-        # Log summary
-        summary = results.get('summary', {})
-        state = summary.get('findings_state', {})
-
-        logger.info(
-            f"✅ [AUTO-REMEDIATE] Cycle complete! "
-            f"Open P0: {state.get('open_p0', 0)}, "
-            f"Open P1: {state.get('open_p1', 0)}, "
-            f"Verified: {state.get('verified', 0)}"
-        )
-
-        # Log alerts
-        for alert in summary.get('alerts', []):
-            logger.warning(f"[AUTO-REMEDIATE] {alert}")
-
-        return results
-
-    except Exception as e:
-        logger.error(f"❌ [AUTO-REMEDIATE] Remediation cycle failed: {e}")
-        return {'error': str(e)}
 
 
-@shared_task(name="core.tasks.assign_and_execute_remediation")
-def assign_and_execute_remediation(limit: int = 20, write_files: bool = True):
-    """
-    Session 833: Combined task that assigns findings then executes remediation.
-
-    Session 1031: DISABLED — execution phase blocked. Assignment-only still
-    runs via assign_open_findings_to_agents. This combined task would re-enable
-    execution through run_agent_remediation_batch, bypassing the hard-block
-    on execute_remediation_tasks.
-    """
-    logger.warning(
-        "🚫 [ASSIGN-AND-EXECUTE] BLOCKED — execution phase disabled since "
-        "Session 1026. Use assign_open_findings_to_agents for assignment only."
-    )
-    return {'blocked': True, 'reason': 'Execution disabled since Session 1026'}
 
 
 def _assign_and_execute_remediation_DISABLED(limit: int = 20, write_files: bool = True):
@@ -9052,6 +8716,40 @@ def execute_code_job(self, run_id: str):
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
     return _impl_rag_retrieval_canary()
+
+
+
+# Phase 3 re-exports — ops audit / remediation / knowledge tasks now live in core/tasks_ops.py.
+# IMPORTANT: this block MUST live at the bottom of the file. tasks_ops.py
+# imports private helpers from core.tasks at module top, so triggering
+# `from core.tasks_ops import …` before those helpers are defined produces
+# a partially-initialized-module ImportError. Same constraint as the ops
+# desks, ops health, ops cleanup, agents, content, and financial re-exports below.
+#
+# Re-exported here so 11 PeriodicTask DB rows (all enabled), 0 beat schedule
+# entries (DB-driven), 3 settings.py task-routing entries, 3
+# `add_critical_celery_tasks` management-cmd dispatchers, and 4 lazy
+# Python-import consumer sites (views_research_feedback.py:52,275,
+# views_platform_command.py:2074,2252) keep resolving.
+from core.tasks_ops import (  # noqa: F401
+    # Self-audit & remediation cycle
+    run_system_self_audit,
+    discover_and_import_audits,
+    assign_open_findings_to_agents,
+    execute_remediation_tasks,
+    verify_completed_fixes,
+    run_autonomous_remediation_cycle,
+    assign_and_execute_remediation,
+    # Knowledge management
+    validate_knowledge_sources,
+    sync_project_knowledge,
+    process_research_feedback,
+    auto_resolve_knowledge_gaps,
+    maintain_knowledge_freshness,
+    promote_to_shared_knowledge,
+    # Mythology
+    update_mythology_pattern_statistics,
+)
 
 
 
