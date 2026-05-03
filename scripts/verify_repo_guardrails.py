@@ -152,9 +152,9 @@ def git_ls_files(patterns: Iterable[str]) -> list[str]:
     return [line for line in proc.stdout.splitlines() if line.strip()]
 
 
-def git_short_head() -> str:
+def git_short_head(ref: str = "HEAD") -> str:
     proc = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
+        ["git", "rev-parse", "--short", ref],
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,
@@ -163,6 +163,42 @@ def git_short_head() -> str:
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or "git rev-parse failed")
     return proc.stdout.strip()
+
+
+def git_commit_files(ref: str = "HEAD") -> list[str]:
+    proc = subprocess.run(
+        ["git", "show", "--name-only", "--format=", "--no-renames", ref],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or "git show failed")
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def classify_platform_inventory_freshness(
+    recorded_head: str,
+    current_head: str,
+    current_commit_files: list[str],
+    parent_head: str | None,
+) -> tuple[bool, str]:
+    if recorded_head == current_head:
+        return True, f"inventory head matches repo head {current_head}"
+
+    if (
+        parent_head
+        and recorded_head == parent_head
+        and current_commit_files == ["docs/PLATFORM_INVENTORY.md"]
+    ):
+        return (
+            True,
+            "inventory reflects parent HEAD; current HEAD is inventory-only "
+            f"({current_head})",
+        )
+
+    return False, f"inventory head {recorded_head} != repo head {current_head}"
 
 
 def check_platform_inventory_freshness() -> tuple[bool, str]:
@@ -176,9 +212,18 @@ def check_platform_inventory_freshness() -> tuple[bool, str]:
 
     recorded_head = match.group(1).strip()
     current_head = git_short_head()
-    if recorded_head != current_head:
-        return False, f"inventory head {recorded_head} != repo head {current_head}"
-    return True, f"inventory head matches repo head {current_head}"
+    parent_head = None
+    try:
+        parent_head = git_short_head("HEAD^")
+    except RuntimeError:
+        parent_head = None
+    current_commit_files = git_commit_files("HEAD")
+    return classify_platform_inventory_freshness(
+        recorded_head=recorded_head,
+        current_head=current_head,
+        current_commit_files=current_commit_files,
+        parent_head=parent_head,
+    )
 
 
 def main() -> int:
