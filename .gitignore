@@ -46,6 +46,7 @@ MANIFEST
 # Virtual Environments
 .venv/
 venv/
+venv_ml/
 ENV/
 env/
 .env/
@@ -119,6 +120,10 @@ dist/
 # BUT: Allow React frontend build for deployment
 !frontend/dist/
 !frontend/dist/**
+frontend/dist/
+
+# Local verification output
+.pyright-after.txt
 
 # React/Vite specific
 .vite/
@@ -338,4 +343,3 @@ resolve_node/results/
 
 # Keep image artifacts out of the repo root
 /*.png
-
