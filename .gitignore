@@ -205,9 +205,11 @@ htmlcov/
 .coverage.*
 .pytest_cache/
 cover/
+tests/artifacts/*.png
 
 # Documentation
 docs/_build/
+docs/_index.json
 
 # System Intelligence & Embeddings
 embeddings/
