@@ -144,6 +144,7 @@ All agents feature:
 | Index | Contents |
 |-------|----------|
 | [docs/handoffs/INDEX.md](docs/handoffs/INDEX.md) | 448 session handoffs |
+| [docs/audit/README.md](docs/audit/README.md) | Current active audit workspace |
 | [docs/audits/INDEX.md](docs/audits/INDEX.md) | 57 system audits |
 | [docs/architecture/INDEX.md](docs/architecture/INDEX.md) | 23 architecture docs |
 
