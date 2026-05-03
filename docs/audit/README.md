@@ -16,3 +16,15 @@ Do not delete either historical workspace just because it is older. A file
 inside one of those folders can still be authoritative if that file says it is
 current, but the default assumption is that `docs/audit/` is the active entry
 point for new work.
+
+## Guardrails
+
+Run the non-blocking repository drift check manually with:
+
+```bash
+python scripts/verify_repo_guardrails.py
+```
+
+It prints the current `context-kit` inspection, the `context-kit verify --json`
+summary, and warnings for tracked generated paths. Phase 4B can tighten the
+selected warnings into blocking checks once the repo is ready.
