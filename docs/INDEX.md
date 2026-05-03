@@ -92,8 +92,9 @@
 | `docs/apis/` | 8 | External API documentation |
 | `docs/architecture/` | 24 | Architecture deep-dives |
 | `docs/archive/` | 806 | Archived/historical documentation |
-| `docs/audit-2026/` | 14 |  |
-| `docs/audits/` | 71 | System audits - reality checks and gap analysis |
+| `docs/audit/` | 3 | Active current audit workspace |
+| `docs/audits/` | 71 | Historical audit material - reality checks and gap analysis |
+| `docs/audit-2026/` | 14 | Legacy / time-bounded audit material |
 | `docs/body/` | 6 | Body system documentation |
 | `docs/canon/` | 2 |  |
 | `docs/cleanup/` | 6 |  |
