@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Non-blocking repository guardrails for drift visibility.
+"""Repository guardrails for drift visibility.
 
 TODO(Phase 4B): selected checks in this script can become blocking once the
 repo is ready for stricter enforcement.
@@ -7,6 +7,7 @@ repo is ready for stricter enforcement.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -94,6 +95,50 @@ def summarize_json(output: str) -> str:
     return f"JSON value type: {type(payload).__name__}"
 
 
+def parse_findings(output: str) -> tuple[int, int, list[str], str]:
+    if not output.strip():
+        return 0, 0, [], "(no JSON output)"
+    try:
+        payload = json.loads(output)
+    except json.JSONDecodeError:
+        return 0, 0, [], output.rstrip()
+
+    if not isinstance(payload, dict):
+        return 0, 0, [], f"JSON value type: {type(payload).__name__}"
+
+    findings = payload.get("findings")
+    conflict_count = 0
+    doc_only_count = 0
+    messages: list[str] = []
+    if isinstance(findings, list):
+        for item in findings:
+            if not isinstance(item, dict):
+                continue
+            severity = str(
+                item.get("severity")
+                or item.get("level")
+                or item.get("status")
+                or item.get("kind")
+                or "unknown"
+            ).upper()
+            message = (
+                item.get("message")
+                or item.get("summary")
+                or item.get("title")
+                or item.get("name")
+                or severity
+            )
+            if severity == "CONFLICT":
+                conflict_count += 1
+                messages.append(f"CONFLICT: {message}")
+            elif severity == "DOC_ONLY":
+                doc_only_count += 1
+                messages.append(f"DOC_ONLY: {message}")
+            else:
+                messages.append(f"{severity}: {message}")
+    return conflict_count, doc_only_count, messages, summarize_json(output)
+
+
 def git_ls_files(patterns: Iterable[str]) -> list[str]:
     proc = subprocess.run(
         ["git", "ls-files", "--", *patterns],
@@ -137,7 +182,24 @@ def check_platform_inventory_freshness() -> tuple[bool, str]:
 
 
 def main() -> int:
-    print("Repository guardrails (non-blocking)")
+    parser = argparse.ArgumentParser(description="Run repository guardrails")
+    strict_group = parser.add_mutually_exclusive_group()
+    strict_group.add_argument(
+        "--strict",
+        dest="strict",
+        action="store_true",
+        default=True,
+        help="Fail on stale inventory, tracked generated files, and CONFLICT findings (default).",
+    )
+    strict_group.add_argument(
+        "--no-strict",
+        dest="strict",
+        action="store_false",
+        help="Warn only, matching the Phase 4A behavior.",
+    )
+    args = parser.parse_args()
+
+    print(f"Repository guardrails (strict={'on' if args.strict else 'off'})")
     print(f"Repository: {REPO_ROOT}")
 
     inspect_result = run_command(["context-kit", "inspect"], "context-kit inspect")
@@ -146,13 +208,16 @@ def main() -> int:
         print(f"WARNING: {inspect_result.label} exited with {inspect_result.returncode}")
 
     verify_result = run_command(["context-kit", "verify", "--json"], "context-kit verify --json")
+    conflict_count, doc_only_count, finding_messages, verify_summary = parse_findings(verify_result.stdout)
     print_block(
         verify_result.label,
-        summarize_json(verify_result.stdout)
+        verify_summary
         + (f"\n[stderr]\n{verify_result.stderr.rstrip()}" if verify_result.stderr.strip() else ""),
     )
     if verify_result.returncode != 0:
         print(f"WARNING: {verify_result.label} exited with {verify_result.returncode}")
+    if finding_messages:
+        print_block("context-kit verify findings", "\n".join(finding_messages))
 
     tracked = git_ls_files(FORBIDDEN_PATHS)
     print_block(
@@ -166,24 +231,55 @@ def main() -> int:
         inventory_message,
     )
 
+    tracked_blocking = bool(tracked)
     if tracked:
         print("WARNING: tracked generated paths were found.")
     else:
         print("OK: no tracked generated paths found in the scoped checks.")
 
+    inventory_blocking = not inventory_fresh
     if not inventory_fresh:
         print("WARNING: platform inventory freshness check failed.")
     else:
         print("OK: platform inventory matches the current repo head.")
+
+    conflict_blocking = conflict_count > 0
+    if conflict_count:
+        print(f"WARNING: context-kit reported {conflict_count} CONFLICT finding(s).")
+    if doc_only_count:
+        print(f"WARNING: context-kit reported {doc_only_count} DOC_ONLY finding(s) (advisory).")
+
+    failures: list[str] = []
+    if args.strict and tracked_blocking:
+        failures.append("tracked generated paths are present")
+    if args.strict and inventory_blocking:
+        failures.append("platform inventory is stale")
+    if args.strict and conflict_blocking:
+        failures.append("context-kit has CONFLICT findings")
+
+    pass_fail = "FAIL" if failures else "PASS"
+    print(f"\n{pass_fail} summary")
+    if failures:
+        for failure in failures:
+            print(f"- {failure}")
+        print("Next step: regenerate the inventory, remove tracked generated artifacts, and clear doc/runtime conflicts before re-running.")
+    else:
+        print("- No blocking guardrail rules were triggered.")
+        if doc_only_count:
+            print("- DOC_ONLY findings remain advisory.")
+        if not args.strict:
+            print("- Strict mode is disabled, so blocking rules were reported as warnings only.")
 
     print("\nSummary")
     print(f"- context-kit inspect exit: {inspect_result.returncode}")
     print(f"- context-kit verify --json exit: {verify_result.returncode}")
     print(f"- tracked generated paths: {len(tracked)}")
     print(f"- platform inventory fresh: {inventory_fresh}")
-    print("- This script is intentionally non-blocking in Phase 4A.")
-    print("- Phase 4B can promote selected warnings to failures once the repo is ready.")
-    return 0
+    print(f"- context-kit CONFLICT findings: {conflict_count}")
+    print(f"- context-kit DOC_ONLY findings: {doc_only_count}")
+    print(f"- strict mode: {'on' if args.strict else 'off'}")
+    print("- Phase 4B keeps strict mode on by default and leaves DOC_ONLY/inspect/large-file checks advisory.")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

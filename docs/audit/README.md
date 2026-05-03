@@ -25,6 +25,24 @@ Run the non-blocking repository drift check manually with:
 python scripts/verify_repo_guardrails.py
 ```
 
-It prints the current `context-kit` inspection, the `context-kit verify --json`
-summary, and warnings for tracked generated paths. Phase 4B can tighten the
-selected warnings into blocking checks once the repo is ready.
+By default the script runs in strict mode and exits non-zero when any of these
+rules fail:
+
+- `docs/PLATFORM_INVENTORY.md` is stale relative to the current `git HEAD`
+- tracked generated paths are present
+- `context-kit verify --json` reports any `CONFLICT` findings
+
+The following remain advisory and do not fail the script:
+
+- `context-kit inspect` warnings
+- `DOC_ONLY` findings from `context-kit verify --json`
+- large-file warnings surfaced by `context-kit inspect`
+
+If you need the Phase 4A warning-only behavior locally, run:
+
+```bash
+python scripts/verify_repo_guardrails.py --no-strict
+```
+
+Phase 4B keeps strict mode on by default while leaving the advisory warnings
+non-blocking.
