@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-03 15:36:10
-**Git HEAD:** `53e7adf3`
+**Generated:** 2026-05-03 15:42:56
+**Git HEAD:** `e6c7a39b`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -63,7 +63,7 @@
 
 **Code location:** `core/agent_router.py AGENT_MAP`
 
-**Notes:** AGENT_MAP total = 83 (73 enabled + 8 rerouted + 2 blocked). DB Agent rows = 223. Top agent_type breakdown: creative=22, content=20, income=20, clean_architecture=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, marketing=10. Blocked: ['CodeGeneratorAgent', 'AudioAgent']. Rerouted: ['COOAgent', 'CTOAgent', 'CodeReviewAgent', 'ContentDistributionAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
+**Notes:** AGENT_MAP total = 83 (73 enabled + 8 rerouted + 2 blocked). DB Agent rows = 223. Top agent_type breakdown: creative=22, content=20, income=20, clean_architecture=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, marketing=10. Blocked: ['AudioAgent', 'CodeGeneratorAgent']. Rerouted: ['COOAgent', 'CTOAgent', 'CodeReviewAgent', 'ContentDistributionAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
 
 | Name | Module | Status |
 |---|---|---|
