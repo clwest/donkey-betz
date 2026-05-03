@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-04-17 23:00:20
-**Git HEAD:** `1f252cbb`
+**Generated:** 2026-05-03 12:30:07
+**Git HEAD:** `ba03c3d0`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -10,16 +10,24 @@
 
 | Subsystem | Headline |
 |---|---|
-| [Agents](#agents) | 83 agents in AGENT_MAP (73 enabled, 8 rerouted, 2 blocked); 223 rows in Agent table. |
+| [Collector Error](#error) | OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+ |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
 | [Services](#services) | 112 `*Service` classes across 320 files in core/services/ |
 | [Celery Tasks](#celery-tasks) | 365 user-defined Celery tasks (excludes celery.* internals) |
-| [Celery Beat — Scheduled Tasks](#beat-schedule) | 258 enabled + 47 disabled = 305 PeriodicTask rows |
+| [Collector Error](#error) | OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+ |
 | [Personal Assistant (PA) Tools](#pa-tools) | 101 tool schemas + 166 registered handlers; 8 enrichment services |
 | [Database Models](#database-models) | 570 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1841 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 200 files matching core/views*.py |
-| [Django Management Commands](#management-commands) | 153 management commands in core/management/commands/ |
+| [Django Management Commands](#management-commands) | 154 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
 | [LLM Providers](#llm-providers) | 6 providers registered in LLMProviderRegistry |
@@ -29,16 +37,16 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 1,949 Python files, 966,109 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 65 registered claims across 30 docs: 20 OK, 45 drifts |
+| [Code Statistics](#code-stats) | 1,951 Python files, 966,078 lines across core/ + ai_core/ + intelligence/ |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 53 registered claims across 21 docs: 48 OK, 1 drifts |
 
 ## Table of Contents
 
-- [Agents](#agents)
+- [Collector Error](#error)
 - [Spiders](#spiders)
 - [Services](#services)
 - [Celery Tasks](#celery-tasks)
-- [Celery Beat — Scheduled Tasks](#beat-schedule)
+- [Collector Error](#error)
 - [Personal Assistant (PA) Tools](#pa-tools)
 - [Database Models](#database-models)
 - [URL Routes](#url-routes)
@@ -56,100 +64,50 @@
 - [Code Statistics](#code-stats)
 - [Doc-vs-Reality Verifier State](#verifier-state)
 
-<a id="agents"></a>
-## Agents
+<a id="error"></a>
+## Collector Error
 
-**Headline:** 83 agents in AGENT_MAP (73 enabled, 8 rerouted, 2 blocked); 223 rows in Agent table.
+**Headline:** OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
 
-**Code location:** `core/agent_router.py AGENT_MAP`
 
-**Notes:** AGENT_MAP total = 83 (73 enabled + 8 rerouted + 2 blocked). DB Agent rows = 223. Top agent_type breakdown: creative=22, content=20, income=20, clean_architecture=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, marketing=10. Blocked: ['CodeGeneratorAgent', 'AudioAgent']. Rerouted: ['COOAgent', 'CTOAgent', 'CodeReviewAgent', 'ContentDistributionAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
+```
+Traceback (most recent call last):
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/db/backends/base/base.py", line 275, in ensure_connection
+    self.connect()
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
 
-| Name | Module | Status |
-|---|---|---|
-| AISeriesWorkflowAgent | core.agents.ai_series_workflow_agent | enabled |
-| ArbitrageDetector | core.agents.markets.arbitrage_detector | enabled |
-| AudioAgent | core.agents.audio_agent | blocked |
-| AutonomousContentStudioCoordinator | core.agents.autonomous_content_studio_coordinator | enabled |
-| BearCaseAgent | core.agents.stocks.bear_case_agent | enabled |
-| BlockchainAuditCoordinator | core.agents.blockchain.blockchain_audit_coordinator | enabled |
-| BookmakerAgent | core.agents.bookmaker_agent | enabled |
-| BrandIdentityAgent | core.agents.strategy.brand_identity_agent | enabled |
-| BrandStrategyAgent | core.agents.business.brand_strategy_agent | enabled |
-| BullCaseAgent | core.agents.stocks.bull_case_agent | enabled |
-| COOAgent | core.agents.executive.coo_agent | rerouted |
-| CTOAgent | core.agents.executive.cto_agent | rerouted |
-| CampaignOrchestratorAgent | core.agents.campaign_orchestrator_agent | enabled |
-| CharacterTrainingAgent | core.agents.training.character_training_agent | enabled |
-| CodeGeneratorAgent | core.agents.code_generator_agent | blocked |
-| CodeReviewAgent | core.agents.code_review_agent | rerouted |
-| CompetitorAnalysisAgent | core.agents.business.competitor_analysis_agent | enabled |
-| ContentAuditAgent | core.agents.security.content_audit_agent | enabled |
-| ContentDiversityOrchestrator | core.agents.content_diversity_orchestrator | enabled |
-| ContentExecutorAgent | core.agents.content_executor_agent | enabled |
-| ContentStrategyAgent | core.agents.strategy.content_strategy_agent | enabled |
-| ContentWriterAgent | core.agents.content_writer_agent | enabled |
-| ContrarianAgent | core.agents.content.contrarian_agent | enabled |
-| CreativeDirectorAgent | core.agents.executive.creative_director_agent | enabled |
-| CulturalImpactAgent | core.agents.narrative.cultural_impact_agent | enabled |
-| CustomerResearchAgent | core.agents.business.customer_research_agent | enabled |
-| DebateAdvocateAgent | core.agents.podcast.debate_advocate_agent | enabled |
-| DebateSkepticAgent | core.agents.podcast.debate_skeptic_agent | enabled |
-| DecisionEnforcerAgent | core.agents.decision_enforcer_agent | enabled |
-| DevOpsAgent | core.agents.devops_agent | rerouted |
-| DistributionAgent | core.agents.distribution_agent | enabled |
-| EditorAgent | core.agents.editor_agent | enabled |
-| ExploitDetectorAgent | core.agents.blockchain.exploit_detector_agent | enabled |
-| FullStackDeveloperAgent | core.agents.fullstack_developer_agent | rerouted |
-| GamePredictor | core.agents.markets.game_predictor | enabled |
-| ImageAgent | core.agents.image_agent | enabled |
-| ImageEditingAgent | core.agents.image_editing_agent | enabled |
-| InstitutionalWatcherAgent | core.agents.stocks.institutional_watcher_agent | enabled |
-| LegalDocDrafterAgent | core.agents.legal.legal_doc_drafter_agent | enabled |
-| LineMovementAnalyzer | core.agents.markets.line_movement_analyzer | enabled |
-| MarketAnomalyDetectorAgent | core.agents.stocks.market_anomaly_detector_agent | enabled |
-| MarketIntelligenceAgent | core.agents.analysis.market_intelligence_agent | enabled |
-| MarketIntelligenceCoordinator | core.agents.stocks.market_intelligence_coordinator | enabled |
-| MarketMovementMonitorAgent | core.agents.stocks.market_movement_monitor_agent | enabled |
-| MarketingStrategyAgent | core.agents.business.marketing_strategy_agent | enabled |
-| MeetingCoordinatorAgent | core.agents.executive.meeting_coordinator_agent | enabled |
-| MemoryIsolationAgent | core.agents.security.memory_isolation_agent | enabled |
-| ModeratorAgent | core.agents.podcast.moderator_agent | enabled |
-| NarrativeDriftCoordinator | core.agents.narrative.narrative_drift_coordinator | enabled |
-| NarrativeHistorianAgent | core.agents.narrative.narrative_historian_agent | enabled |
-| OpportunityPipelineAgent | core.agents.opportunity_pipeline_agent | enabled |
-| OpportunityScoringAgent | core.agents.analysis.opportunity_scoring_agent | enabled |
-| PerformanceAnalystAgent | core.agents.content.performance_analyst_agent | enabled |
-| PlatformAuditAgent | core.agents.platform_audit_agent | enabled |
-| PodcastCoordinatorAgent | core.agents.podcast.podcast_coordinator_agent | enabled |
-| PredictionMarketAnalyst | core.agents.markets.prediction_market_analyst | enabled |
-| PromptEngineeringAgent | core.agents.prompt_engineering_agent | enabled |
-| ResearchAgent | core.agents.research_agent | enabled |
-| ResolveAgent | core.agents.resolve_agent | enabled |
-| SEOOptimizerAgent | core.agents.strategy.seo_optimizer_agent | enabled |
-| SharpActionDetector | core.agents.markets.sharp_action_detector | enabled |
-| SignalScannerAgent | core.agents.stocks.signal_scanner_agent | enabled |
-| SmartContractAuditorAgent | core.agents.blockchain.smart_contract_auditor_agent | enabled |
-| SocialMediaAgent | core.agents.strategy.social_media_agent | enabled |
-| SportsOddsAnalyst | core.agents.markets.sports_odds_analyst | enabled |
-| StockAnalystAgent | core.agents.stocks.stock_analyst_agent | enabled |
-| StockAuditCoordinator | core.agents.stocks.stock_audit_coordinator | enabled |
-| SystemIntelligenceAgent | core.agents.system_intelligence_agent | enabled |
-| TalkingCharacterAgent | core.agents.talking_character_agent | enabled |
-| TechnicalDocumentAgent | core.agents.technical_document_agent | enabled |
-| ThinkingAgent | core.agents.thinking_agent | enabled |
-| ThreeDAgent | core.agents.three_d_agent | enabled |
-| TopicMinerAgent | core.agents.content.topic_miner_agent | enabled |
-| TrainedCreationAgent | core.agents.training.trained_creation_agent | enabled |
-| TransactionMonitorAgent | core.agents.blockchain.transaction_monitor_agent | enabled |
-| TrendAnalysisAgent | core.agents.analysis.trend_analysis_agent | enabled |
-| TrendBreakDetectorAgent | core.agents.narrative.trend_break_detector_agent | enabled |
-| VideoAgent | core.agents.video_agent | rerouted |
-| VideoEditingAgent | core.agents.video_editing_agent | enabled |
-| VoiceCriticAgent | core.agents.content.voice_critic_agent | enabled |
-| WhaleWatcherAgent | core.agents.blockchain.whale_watcher_agent | enabled |
-| WorkflowAgent | core.agents.workflow_agent | rerouted |
-| WorkflowOrchestrationAgent | core.agents.workflow_orchestration_agent | enabled |
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/donkeyking/development/unified-donkey-betz/core/services/platform_inventory.py", line 62, in _safe
+    return fn()
+           ^^^^
+  File "/Users/donkeyking/development/unified-donkey-betz/core/services/platform_inventory.py", line 102, in collect_agents
+    db_total = Agent.objects.count()
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+```
 
 <a id="spiders"></a>
 ## Spiders
@@ -742,320 +700,50 @@
 |  |
 |  |
 
-<a id="beat-schedule"></a>
-## Celery Beat — Scheduled Tasks
+<a id="error"></a>
+## Collector Error
 
-**Headline:** 258 enabled + 47 disabled = 305 PeriodicTask rows
+**Headline:** OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
 
-**Code location:** `django_celery_beat.PeriodicTask + core/tasks_schedule.py`
 
-| Name | Task | Enabled | Queue |
-|---|---|---|---|
-| Workspace Autopilot Conductor | workspace.autopilot_tick | no | (default) |
-| advance-initiative-pipeline | core.tasks.advance_initiative_pipeline | no | (default) |
-| agent-category-assistant | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-blockchain | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-content | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-coordination | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-development | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-executive | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-financial | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-media | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-narrative | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-podcast | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-predictions | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-research | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-security | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-strategy | core.tasks.agent_category_rotation | no | long_running |
-| agent-category-system | core.tasks.agent_category_rotation | no | long_running |
-| agent-content-to-workspace | core.tasks.agent_content_to_workspace | no | long_running |
-| agent-conversation-cycle | core.tasks.run_agent_conversation | no | (default) |
-| agent-daily-summary | core.tasks.agent_daily_summary | yes | default |
-| agent-dream-cycle | core.tasks.generate_agent_dreams | no | (default) |
-| agent-full-rotation-weekly | core.tasks.full_agent_rotation | yes | long_running |
-| agent-learning-cycle | core.tasks.run_agent_learning_cycle | yes | default |
-| agent-research-to-workspace | core.tasks.agent_research_to_workspace | no | long_running |
-| agent-think-synthesize | core.tasks.agent_think_and_synthesize | yes | default |
-| agent-workspace-status-report | core.tasks.agent_workspace_status_report | no | long_running |
-| aggregate-roi-metrics-daily | core.tasks.aggregate_roi_metrics_daily | yes | (default) |
-| aggregate-spider-signals | aggregate_spider_signals | yes | long_running |
-| ai-model-monitor | core.tasks.run_ai_model_monitor | yes | (default) |
-| ai-promote-decisions | core.tasks.ai_promote_decisions | yes | (default) |
-| apply-mood-rules | core.tasks.apply_mood_trigger_rules | yes | default |
-| assign-open-findings-to-agents | core.tasks.assign_open_findings_to_agents | yes | (default) |
-| auto-archive-stale-deliverables | core.tasks.auto_archive_stale_deliverables | yes | default |
-| auto-complete-pilots | core.tasks.auto_complete_pilots | yes | default |
-| auto-promote-decisions | core.tasks.auto_promote_decisions | yes | (default) |
-| auto-promote-low-risk-decisions | core.tasks.auto_promote_low_risk_decisions | yes | (default) |
-| auto-resolve-knowledge-gaps | core.tasks.auto_resolve_knowledge_gaps | yes | default |
-| autonomous-ai-model-monitor | core.tasks.run_ai_model_monitor | yes | (default) |
-| autonomous-blockchain-security-monitor | autonomous.blockchain_security_monitor | yes | (default) |
-| autonomous-case-law-monitor | core.tasks.run_case_law_monitor | yes | (default) |
-| autonomous-content-studio-loop | autonomous_studio.run_main_loop | no | (default) |
-| autonomous-crypto-sentiment-monitor | core.tasks.run_crypto_sentiment_monitor | yes | (default) |
-| autonomous-design-trends-monitor | core.tasks.run_design_trends_monitor | yes | (default) |
-| autonomous-earnings-predictor | core.tasks.run_earnings_surprise_predictor | yes | (default) |
-| autonomous-freelance-scout | core.tasks.run_freelance_opportunity_scout | yes | (default) |
-| autonomous-intelligence-loop | core.tasks.run_autonomous_intelligence_loop | no | default |
-| autonomous-job-match-intelligence | core.tasks.run_job_match_intelligence | yes | (default) |
-| autonomous-regulatory-detector | core.tasks.run_regulatory_change_detector | yes | (default) |
-| autonomous-sec-filing-analyzer | core.tasks.run_sec_filing_analyzer | yes | (default) |
-| autonomous-side-hustle-detector | core.tasks.run_side_hustle_detector | yes | (default) |
-| autonomous-skill-gap-analyzer | core.tasks.run_skill_gap_analyzer | yes | (default) |
-| autonomous-stock-market-intelligence | autonomous.stock_market_intelligence | yes | (default) |
-| autonomous-tech-stack-tracker | core.tasks.run_tech_stack_tracker | yes | (default) |
-| autonomous-thinking-cycle | core.tasks.run_autonomous_thinking_cycle | no | default |
-| autonomous-thumbnail-optimizer | core.tasks.run_thumbnail_optimizer | yes | (default) |
-| autonomous-viral-content-predictor | core.tasks.run_viral_content_predictor | no | (default) |
-| backfill-conversation-embeddings | core.tasks.backfill_conversation_embeddings | no | default |
-| backfill-memory-embeddings | core.tasks.backfill_memory_embeddings | yes | default |
-| backfill-spider-embeddings | core.tasks.backfill_spider_embeddings | yes | ml |
-| backfill-stage-documents | core.tasks.backfill_stage_documents | yes | (default) |
-| batch-extract-artifacts | core.tasks.batch_extract_artifacts | yes | (default) |
-| body-coordinator-check | core.tasks.coordinate_body | yes | broadcast |
-| brain-system-check | core.tasks.check_brain | yes | broadcast |
-| broadcast-conversation-status | core.tasks.broadcast_conversation_status | no | (default) |
-| broadcast-dream-journal | core.tasks.broadcast_dream_journal | no | (default) |
-| broadcast-evolution-status | core.tasks.broadcast_evolution_status | yes | broadcast |
-| broadcast-learning-status | core.tasks.broadcast_learning_status | yes | (default) |
-| broadcast-relationship-status | core.tasks.broadcast_relationship_status | yes | broadcast |
-| calculate-agent-accuracy | learning_loop.calculate_agent_accuracy | yes | (default) |
-| calculate-daily-revenue-metrics | intelligence.tasks.calculate_daily_revenue_metrics | yes | (default) |
-| case-law-monitor | core.tasks.run_case_law_monitor | yes | (default) |
-| celery.backend_cleanup | celery.backend_cleanup | yes | (default) |
-| check-all-alerts | core.tasks.check_all_alerts | yes | (default) |
-| check-blocked-research | core.tasks.check_blocked_research_for_unblock | yes | (default) |
-| check-celery-health | core.tasks.check_celery_health | yes | broadcast |
-| check-content-diversity | core.tasks.check_content_diversity | yes | (default) |
-| check-kpi-alerts | core.tasks.check_kpi_alerts | yes | (default) |
-| check-level-milestones | core.tasks.check_level_milestones | yes | default |
-| check-market-events | core.tasks.check_market_events_and_rerun | yes | (default) |
-| check-mood-expirations | core.tasks.check_mood_expirations | yes | default |
-| check-orchestration-auto-approvals | core.tasks.check_orchestration_auto_approvals | yes | default |
-| check-orchestration-timeouts | core.tasks.check_orchestration_timeouts | yes | default |
-| check-retraining-needed | ml.check_retraining_needed | yes | (default) |
-| check-workflow-schedules | core.tasks.check_workflow_schedules | yes | (default) |
-| circulatory-system-pulse | core.tasks.check_circulation | yes | broadcast |
-| claim-stale-events | core.tasks.claim_stale_events | yes | (default) |
-| clean-stale-data | ai_core.tasks.clean_stale_data | yes | default |
-| cleanup-audio-cache | core.tasks.cleanup_audio_cache | yes | default |
-| cleanup-boardroom-junk | core.tasks.cleanup_boardroom_junk | yes | default |
-| cleanup-celery-task-events | core.tasks.cleanup_celery_task_events | yes | default |
-| cleanup-conversation-duplicates | core.tasks.cleanup_conversation_duplicates_task | no | default |
-| cleanup-expired-pa-insights | core.tasks.cleanup_expired_pa_insights | yes | default |
-| cleanup-expired-signals | cleanup_expired_signals | yes | default |
-| cleanup-expired-uploads | core.tasks.cleanup_expired_uploads | yes | default |
-| cleanup-junk-initiatives | core.tasks.cleanup_junk_initiatives | yes | default |
-| cleanup-learning-readback | core.tasks.cleanup_learning_readback_events | yes | default |
-| cleanup-llm-call-logs | core.tasks.cleanup_llm_call_logs | yes | default |
-| cleanup-old-model-files | ml.cleanup_old_model_files | yes | default |
-| cleanup-old-notifications | core.tasks.cleanup_old_notifications | yes | default |
-| cleanup-old-predictions | sports.cleanup_old_predictions | yes | default |
-| cleanup-old-resolve-jobs | core.tasks.cleanup_old_resolve_jobs | yes | default |
-| cleanup-opportunities-daily | intelligence.tasks.cleanup_old_opportunities | yes | default |
-| cleanup-resolved-signatures | core.tasks.cleanup_resolved_signatures | yes | default |
-| cleanup-spider-item-hashes | core.tasks.cleanup_spider_item_hashes | yes | default |
-| cleanup-stale-agent-executions | core.tasks.cleanup_stale_agent_executions | yes | (default) |
-| cleanup-stale-content | core.tasks.cleanup_stale_content | yes | default |
-| cleanup-stale-dreams | core.tasks.cleanup_stale_dreams | yes | default |
-| cleanup-stale-running-experiments | core.tasks.cleanup_stale_running_experiments | yes | long_running |
-| cleanup-stale-scoring-requests | core.tasks.cleanup_stale_scoring_requests | yes | (default) |
-| cleanup-stale-trainings | content.tasks.cleanup_stale_trainings | yes | (default) |
-| cleanup-stuck-agent-executions | core.tasks.cleanup_stale_agent_executions | yes | broadcast |
-| collect-kalshi-market-intelligence | core.tasks.collect_kalshi_market_intelligence | yes | default |
-| collect-kalshi-prediction-markets | core.tasks.collect_kalshi_prediction_markets | yes | default |
-| collect-real-opportunities | ai_core.tasks.collect_real_opportunities | yes | long_running |
-| collect-spider-data | core.tasks.collect_spider_data | yes | long_running |
-| collect-sports-odds | core.tasks.collect_sports_odds | yes | (default) |
-| collect-sports-odds-intelligence | core.tasks.collect_sports_odds_intelligence | yes | (default) |
-| collect-training-data-daily | core.tasks.collect_training_data | yes | (default) |
-| collect-training-data-weekly-full | core.tasks.collect_training_data_full | yes | (default) |
-| coo-daily-diagnostic | core.tasks.run_coo_daily_diagnostic | yes | long_running |
-| crypto-sentiment-monitor | core.tasks.run_crypto_sentiment_monitor | yes | (default) |
-| cto-daily-diagnostic | core.tasks.run_cto_daily_diagnostic | yes | long_running |
-| daily-betting-digest | core.tasks.daily_betting_digest | yes | (default) |
-| daily-intelligence-digest | core.tasks.run_daily_intelligence_digest | yes | (default) |
-| daily-learning-pipeline | core.tasks.run_daily_learning_pipeline | yes | default |
-| decay-learning-patterns | core.tasks.decay_learning_patterns | yes | default |
-| design-trends-monitor | core.tasks.run_design_trends_monitor | yes | (default) |
-| digestive-system-check | core.tasks.check_digestion | yes | broadcast |
-| discover-and-import-audits | core.tasks.discover_and_import_audits | yes | (default) |
-| discover-success-patterns | core.tasks.discover_success_patterns | yes | (default) |
-| dream-auto-triage | core.tasks.auto_triage_dreams | no | default |
-| dream-daily-surfacing | core.tasks.surface_top_dreams | no | default |
-| dream-execution-cycle | core.tasks.execute_dream_implementations | no | default |
-| dream-implementation-cycle | core.tasks.process_approved_dreams | no | default |
-| dream-productization-cycle | core.tasks.score_and_promote_dreams | no | default |
-| earnings-predictor | core.tasks.run_earnings_predictor | yes | (default) |
-| embed-agent-activity | core.tasks.embed_agent_activity | yes | default |
-| embed-daily-agent-learning | core.tasks.embed_daily_agent_learning | yes | default |
-| enforce-data-retention | core.tasks.enforce_data_retention | yes | default |
-| enforce-db-retention-daily | core.tasks.enforce_db_retention | yes | long_running |
-| enhance-content-daily | core.tasks.enhance_all_blogs_task | yes | (default) |
-| evaluate-and-complete-pilots | core.tasks.evaluate_and_complete_pilots | yes | default |
-| evaluate-completed-predictions | sports.evaluate_completed_predictions | yes | (default) |
-| evaluate-pilots-smart | core.tasks.evaluate_pilots_with_thinking_agent | yes | default |
-| event-bus-stats | core.tasks.get_event_bus_stats | yes | (default) |
-| evolve-agent-relationships | core.tasks.evolve_agent_relationships | yes | default |
-| execute-action-plans | intelligence.tasks.process_pending_action_plans | yes | (default) |
-| execute-approved-artifacts | core.tasks.execute_approved_artifacts | yes | (default) |
-| execute-approved-dreams-via-orchestration | core.tasks.execute_approved_dreams_via_orchestration | no | default |
-| execute-opportunity-tasks | core.tasks.execute_pending_opportunity_tasks | yes | (default) |
-| execute-pilot-implementations | core.tasks.execute_pilot_implementations | yes | default |
-| execute-remediation-tasks | core.tasks.execute_remediation_tasks | yes | (default) |
-| execute-scheduled-automations | core.tasks.execute_scheduled_automations | yes | (default) |
-| exercise-all-dormant-agents | core.tasks.exercise_all_dormant_agents | yes | (default) |
-| expire-old-opportunities | core.tasks.expire_old_opportunities | yes | (default) |
-| expire-old-suggestions | core.tasks.expire_old_suggestions | yes | (default) |
-| expire-overdue-validations | core.tasks.expire_overdue_validations | yes | (default) |
-| fetch-all-opportunities | intelligence.tasks.fetch_all_opportunities | yes | (default) |
-| fetch-opportunities-hourly | intelligence.tasks.fetch_all_opportunities | yes | (default) |
-| freelance-opportunity-scout | core.tasks.run_freelance_opportunity_scout | yes | (default) |
-| gate-auto-approval | core.tasks.auto_approve_low_risk_gates | yes | default |
-| generate-accuracy-report | sports.generate_accuracy_report | yes | (default) |
-| generate-human-attention-items | core.tasks.generate_human_attention_items | yes | (default) |
-| generate-operator-edge-newsletter | core.tasks.generate_operator_edge_newsletter | yes | content |
-| generate-opportunity-report | core.tasks.generate_opportunity_report | yes | (default) |
-| generate-pending-reviews | core.tasks.generate_pending_reviews | yes | (default) |
-| generate-self-blog | core.tasks.generate_self_blog_task | yes | (default) |
-| generate-smart-suggestions | core.tasks.generate_smart_suggestions | yes | (default) |
-| generate-user-insights | core.tasks.generate_user_insights | yes | (default) |
-| generate-weekly-intelligence-brief | core.tasks.generate_weekly_intelligence_brief | yes | (default) |
-| generate-weekly-synthesis | core.tasks.generate_weekly_synthesis | yes | (default) |
-| heart-service-heartbeat | core.tasks.run_heartbeat | yes | broadcast |
-| immune-system-scan | core.tasks.immune_scan | yes | broadcast |
-| job-match-intelligence | core.tasks.run_job_match_intelligence | yes | (default) |
-| lungs-daily-forecast | core.tasks.daily_cost_forecast | yes | default |
-| lungs-daily-reset | core.tasks.reset_daily_respiratory_stats | yes | default |
-| lungs-service-breathing | core.tasks.check_breathing | yes | default |
-| maintain-dream-backlog | core.tasks.maintain_dream_backlog | yes | (default) |
-| maintain-knowledge-freshness | core.tasks.maintain_knowledge_freshness | yes | (default) |
-| market-intelligence-desk | core.tasks.run_market_intelligence_desk | yes | default |
-| market-intelligence-scan | core.tasks.market_intelligence_scan | yes | default |
-| market-movement-alerts | core.tasks.market_movement_alerts | yes | default |
-| mine-learning-patterns | core.tasks.mine_learning_patterns | yes | (default) |
-| ml-scoring-evaluate-performance | core.tasks.evaluate_ml_model_performance | yes | (default) |
-| ml-scoring-weekly-retrain | core.tasks.train_ml_scoring_model | yes | (default) |
-| monitor-and-process-opportunities | intelligence.tasks.monitor_and_process_opportunities | yes | (default) |
-| monitor-celery-health | core.tasks.monitor_celery_health | yes | broadcast |
-| monitor-experiment-halt-conditions | core.tasks.monitor_running_experiments | yes | default |
-| multi-agent-panel-cycle | core.tasks.run_multi_agent_conversation | no | (default) |
-| muscular-system-check | core.tasks.check_muscular | yes | broadcast |
-| narrative-daily-digest | narrative_drift.send_daily_digest | yes | (default) |
-| narrative-drift-detector-cycle | narrative_drift.run_detector_cycle | yes | (default) |
-| narrative-process-spider-data | narrative_drift.process_spider_data | yes | (default) |
-| narrative-shifts-to-content | narrative_drift.process_shifts_for_content | yes | (default) |
-| narrative-update-statuses | narrative_drift.update_narrative_statuses | yes | (default) |
-| nervous-system-check | core.tasks.check_nervous | yes | broadcast |
-| personalized-opportunity-alerts | core.tasks.send_personalized_opportunity_alerts | yes | (default) |
-| poll-pending-3d-models | core.tasks.poll_pending_3d_models | yes | (default) |
-| poll-pending-trainings | content.tasks.poll_pending_trainings | yes | (default) |
-| poll-processing-videos | core.tasks.poll_processing_videos | yes | (default) |
-| proactive-opportunity-alerts | core.tasks.send_proactive_opportunity_alerts | no | (default) |
-| proactive-system-check | core.tasks.run_proactive_system_check | no | default |
-| process-agent-activity-xp | core.tasks.process_agent_activity_xp | yes | default |
-| process-batch-scoring-queue | core.tasks.process_batch_scoring_queue | yes | (default) |
-| process-content-ideas | core.tasks.process_content_ideas | yes | (default) |
-| process-core-spider-data | core.tasks.process_core_spider_data | yes | long_running |
-| process-event-bus-analytics-queue | core.tasks.process_event_bus_analytics_queue | yes | (default) |
-| process-event-bus-scoring-queue | core.tasks.process_event_bus_scoring_queue | yes | (default) |
-| process-event-bus-validation-queue | core.tasks.process_event_bus_validation_queue | yes | (default) |
-| process-gate-progression | core.tasks.process_gate_progression | yes | default |
-| process-gates-and-deploy-pilots | core.tasks.process_gates_and_deploy_pilots | yes | default |
-| process-high-scoring-opportunities | core.tasks.process_high_scoring_opportunities | yes | (default) |
-| process-hitl-escalations | core.tasks.process_hitl_escalations | yes | (default) |
-| process-hivemind-sessions | core.tasks.process_hivemind_sessions | no | (default) |
-| process-human-attention-lifecycle | core.tasks.process_human_attention_lifecycle | yes | (default) |
-| process-initiative-auto-progression | core.tasks.process_initiative_auto_progression | no | (default) |
-| process-pending-auto-topics | process_pending_auto_topics | no | (default) |
-| process-realtime-scoring-queue | core.tasks.process_realtime_scoring_queue | yes | (default) |
-| process-spider-actions | core.tasks.process_spider_actions | yes | long_running |
-| process-spider-data-automatic | core.tasks.process_spider_data_automatic | yes | default |
-| project-learning-cycle | core.tasks.run_project_learning_cycle | yes | default |
-| promote-to-shared-knowledge | core.tasks.promote_to_shared_knowledge | yes | (default) |
-| propagate-new-policies | core.tasks.propagate_new_policies | no | (default) |
-| recalculate-spider-priorities | core.tasks.recalculate_spider_priorities | yes | default |
-| reconcile-experiment-status-outcome | core.tasks.reconcile_experiment_status_outcome | yes | long_running |
-| record-style-evolution | core.tasks.record_all_user_style_evolution | yes | (default) |
-| refresh-ai-opportunities | ai_core.tasks.refresh_ai_content_opportunities | yes | (default) |
-| refresh-system-state-cache | core.tasks.refresh_system_state_cache | yes | default |
-| regulatory-change-detector | core.tasks.run_regulatory_change_detector | yes | (default) |
-| report-pending-review-metrics | core.tasks.report_pending_review_metrics | yes | (default) |
-| retrain-all-models-weekly | ml.retrain_all_models | yes | (default) |
-| roi-metrics-daily-aggregation | roi_metrics.aggregate_daily | yes | (default) |
-| roi-metrics-weekly-brief | roi_metrics.generate_weekly_brief | yes | (default) |
-| run-agent-learning-cycle | core.tasks.run_agent_learning_cycle | yes | (default) |
-| run-autonomous-remediation-cycle | core.tasks.run_autonomous_remediation_cycle | yes | (default) |
-| run-autonomy-cycle | core.tasks.run_autonomy_cycle | yes | long_running |
-| run-blockchain-monitoring-agents | core.tasks.run_blockchain_monitoring_agents | yes | (default) |
-| run-blockchain-security-monitor | core.tasks.run_blockchain_security_monitor | yes | (default) |
-| run-business-strategy-agents | core.tasks.run_business_strategy_agents | yes | (default) |
-| run-campaign-series-agents | core.tasks.run_campaign_series_agents | yes | (default) |
-| run-content-creation-agents | core.tasks.run_content_creation_agents | yes | (default) |
-| run-content-studio-agents | core.tasks.run_content_studio_agents | yes | (default) |
-| run-development-tech-agents | core.tasks.run_development_tech_agents | yes | (default) |
-| run-diagnostic-pipeline | core.tasks.run_diagnostic_pipeline_task | yes | (default) |
-| run-executive-leadership-agents | core.tasks.run_executive_leadership_agents | yes | (default) |
-| run-market-intelligence-desk | core.tasks.run_market_intelligence_desk | yes | (default) |
-| run-market-monitoring-agents | core.tasks.run_market_monitoring_agents | yes | (default) |
-| run-metrics-action-check | core.tasks.run_metrics_action_check | yes | (default) |
-| run-narrative-culture-agents | core.tasks.run_narrative_culture_agents | yes | (default) |
-| run-narrative-drift-cycle | core.tasks.run_narrative_drift_cycle | yes | (default) |
-| run-podcast-debate-agents | core.tasks.run_podcast_debate_agents | no | (default) |
-| run-prediction-market-agents | core.tasks.run_prediction_market_agents | yes | (default) |
-| run-quality-audit-agents | core.tasks.run_quality_audit_agents | yes | (default) |
-| run-research-analysis-agents | core.tasks.run_research_analysis_agents | yes | (default) |
-| run-specialty-agents | core.tasks.run_specialty_agents | yes | (default) |
-| run-spider-network | core.tasks.run_spider_network | yes | long_running |
-| run-stock-financial-agents | core.tasks.run_stock_financial_agents | no | (default) |
-| run-stock-market-intelligence | core.tasks.run_stock_market_intelligence | yes | long_running |
-| run-strategy-marketing-agents | core.tasks.run_strategy_marketing_agents | yes | (default) |
-| run-system-orchestration-agents | core.tasks.run_system_orchestration_agents | yes | (default) |
-| run-system-self-audit | core.tasks.run_system_self_audit | yes | (default) |
-| run-unified-intelligence-pipeline | core.tasks.run_unified_intelligence_pipeline | yes | (default) |
-| scan-arbs-and-notify | core.tasks.scan_arbs_and_notify | yes | (default) |
-| scan-human-action-notifications | core.tasks.scan_concerns_for_human_action | yes | (default) |
-| scan-spider-opportunities | intelligence.tasks.scan_spider_opportunities | yes | long_running |
-| score-opportunities-hourly | core.tasks.score_opportunities_from_spider_data | yes | (default) |
-| sec-filing-analyzer | core.tasks.run_sec_filing_analyzer | yes | (default) |
-| sec-filings-quick-check | core.tasks.check_sec_filings_alert | yes | (default) |
-| send-narrative-daily-digest | core.tasks.send_narrative_daily_digest | yes | (default) |
-| send-pending-notifications | core.tasks.send_pending_notifications | yes | (default) |
-| settle-user-bets | sports.settle_user_bets | yes | (default) |
-| side-hustle-detector | core.tasks.run_side_hustle_detector | yes | (default) |
-| skill-gap-analyzer | core.tasks.run_skill_gap_analyzer | yes | (default) |
-| skin-system-check | core.tasks.check_skin | yes | broadcast |
-| snapshot-odds-for-line-movement | core.tasks.snapshot_odds_for_line_movement | yes | (default) |
-| spider-data-retention | core.tasks.spider_data_retention | yes | long_running |
-| spine-alignment-check | core.tasks.check_spine_alignment | yes | broadcast |
-| stock-audit-cycle | core.tasks.run_stock_audit_cycle | yes | default |
-| sync-pipeline-to-collective | core.tasks.sync_pipeline_insights_to_collective | yes | (default) |
-| sync-project-knowledge | core.tasks.sync_project_knowledge | yes | default |
-| sync-revenue-metrics | ai_core.tasks.sync_revenue_metrics | yes | (default) |
-| sync-shared-memory | intelligence.shared_memory.sync_all_entity_memories | yes | (default) |
-| sync-workflow-schedules | core.tasks.sync_workflow_schedules | yes | (default) |
-| tech-stack-tracker | core.tasks.run_tech_stack_tracker | yes | (default) |
-| thumbnail-optimizer | core.tasks.run_thumbnail_optimizer | yes | (default) |
-| track-content-performance | core.tasks.track_content_performance | yes | (default) |
-| track-content-performance-daily | autonomous_studio.track_performance | yes | (default) |
-| track-prediction-outcomes | learning_loop.track_prediction_outcomes | yes | (default) |
-| trend-daily-diagnostic | core.tasks.run_trend_daily_diagnostic | yes | long_running |
-| trigger-project-research | core.tasks.trigger_project_research | yes | (default) |
-| trigger-spider-conversations | core.tasks.trigger_spider_conversations | no | (default) |
-| unified-pipeline-complete-cycle | unified_pipeline.run_complete_cycle | yes | (default) |
-| unified-pipeline-health-check | core.tasks.unified_pipeline_health_check | yes | (default) |
-| update-agent-effectiveness | core.tasks.update_agent_effectiveness_from_learning | yes | default |
-| update-agent-performance | agents.update_agent_performance | yes | default |
-| update-alliance-strengths | core.tasks.update_alliance_strengths | yes | default |
-| update-experiment-kpis | core.tasks.update_experiment_kpis | yes | default |
-| update-learning-profiles | core.tasks.update_learning_profiles | yes | default |
-| update-ml-model-feedback | intelligence.tasks.update_ml_model_with_feedback | yes | (default) |
-| validate-knowledge-sources | core.tasks.validate_knowledge_sources | yes | default |
-| verify-completed-fixes | core.tasks.verify_completed_fixes | yes | (default) |
-| viral-content-predictor | core.tasks.run_viral_content_predictor | no | (default) |
-| warm-up-spiders | ai_core.tasks.warm_up_spider_network | yes | long_running |
-| weekly-kpi-summary | core.tasks.send_weekly_kpi_summary | yes | (default) |
-| weekly-opportunity-digest | core.tasks.generate_weekly_opportunity_digest | yes | (default) |
+```
+Traceback (most recent call last):
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/db/backends/base/base.py", line 275, in ensure_connection
+    self.connect()
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/db/backends/base/base.py", line 256, in connect
+    self.connection = self.get_new_connection(conn_params)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/donkeyking/development/unified-donkey-betz/core/services/platform_inventory.py", line 62, in _safe
+    return fn()
+           ^^^^
+  File "/Users/donkeyking/development/unified-donkey-betz/core/services/platform_inventory.py", line 217, in collect_beat_schedule
+    enabled = PeriodicTask.objects.filter(enabled=True).count()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/donkeyking/development/unified-donkey-betz/.venv/lib/python3.11/site-packages/django/db/models/query.py", line 620, in count
+    return self.query.get_count(using=self.db)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+```
 
 <a id="pa-tools"></a>
 ## Personal Assistant (PA) Tools
@@ -1862,7 +1550,7 @@
 <a id="management-commands"></a>
 ## Django Management Commands
 
-**Headline:** 153 management commands in core/management/commands/
+**Headline:** 154 management commands in core/management/commands/
 
 **Code location:** `core/management/commands/`
 
@@ -1967,6 +1655,7 @@
 | python manage.py produce_content |
 | python manage.py ragtest |
 | python manage.py reality_check |
+| python manage.py refresh_doc_inventory_blocks |
 | python manage.py regenerate_pilots |
 | python manage.py register_coo_agent |
 | python manage.py register_creative_agents |
@@ -2189,55 +1878,46 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 1,949 Python files, 966,109 lines across core/ + ai_core/ + intelligence/
+**Headline:** 1,951 Python files, 966,078 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1543 | 800088 |
+| core | 1545 | 800057 |
 | ai_core | 295 | 119551 |
 | intelligence | 111 | 46470 |
-| TOTAL (python) | 1949 | 966109 |
+| TOTAL (python) | 1951 | 966078 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 65 registered claims across 30 docs: 20 OK, 45 drifts
+**Headline:** 53 registered claims across 21 docs: 48 OK, 1 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=20, low=5, medium=24, high=16, error=0. Top drifting docs: CLAUDE.md, docs/BACKEND_INVENTORY.md, docs/CAPABILITIES.md, docs/current/INDEX.md, docs/AGENTS.md.
+**Notes:** Severity rollup: ok=48, low=0, medium=1, high=0, error=4. Top drifting docs: CLAUDE.md.
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
-| CLAUDE.md | 2 | 6 | 0 |
+| CLAUDE.md | 5 | 1 | 2 |
 | core/models_document_registry.py | 1 | 0 | 0 |
 | core/models_unified_system.py | 1 | 0 | 0 |
-| core/services/priority/governor.py | 0 | 1 | 0 |
-| docs/AGENTS.md | 0 | 3 | 0 |
+| core/services/priority/governor.py | 0 | 0 | 1 |
+| docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
-| docs/BACKEND_INVENTORY.md | 0 | 6 | 0 |
-| docs/CAPABILITIES.md | 0 | 4 | 0 |
-| docs/DISCORD_INTEGRATION.md | 0 | 1 | 0 |
-| docs/SERVICES.md | 0 | 2 | 0 |
-| docs/SPIDERS.md | 0 | 3 | 0 |
-| docs/current/API_ENDPOINTS.md | 0 | 1 | 0 |
-| docs/current/ASSISTANT_SYSTEM.md | 1 | 0 | 0 |
-| docs/current/CELERY_TASKS.md | 0 | 1 | 0 |
-| docs/current/DISCORD.md | 0 | 1 | 0 |
-| docs/current/INDEX.md | 0 | 4 | 0 |
-| docs/current/MANAGEMENT_COMMANDS.md | 0 | 1 | 0 |
-| docs/current/MODELS.md | 0 | 1 | 0 |
-| docs/current/SERVICES.md | 1 | 0 | 0 |
-| docs/current/VIEWS.md | 0 | 1 | 0 |
-| docs/topics/agent-system.md | 1 | 1 | 0 |
+| docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
+| docs/CAPABILITIES.md | 4 | 0 | 0 |
+| docs/DISCORD_INTEGRATION.md | 1 | 0 | 0 |
+| docs/SERVICES.md | 2 | 0 | 0 |
+| docs/SPIDERS.md | 3 | 0 | 0 |
+| docs/topics/agent-system.md | 1 | 0 | 1 |
 | docs/topics/body-systems.md | 1 | 0 | 0 |
-| docs/topics/celery-workers.md | 0 | 1 | 0 |
+| docs/topics/celery-workers.md | 1 | 0 | 0 |
 | docs/topics/content-pipeline.md | 3 | 0 | 0 |
-| docs/topics/frontend.md | 0 | 3 | 0 |
-| docs/topics/infrastructure.md | 1 | 2 | 0 |
-| docs/topics/initiative-pipeline.md | 1 | 1 | 0 |
-| docs/topics/personal-assistant.md | 3 | 1 | 0 |
+| docs/topics/frontend.md | 3 | 0 | 0 |
+| docs/topics/infrastructure.md | 3 | 0 | 0 |
+| docs/topics/initiative-pipeline.md | 2 | 0 | 0 |
+| docs/topics/personal-assistant.md | 4 | 0 | 0 |
 | docs/topics/spider-network.md | 1 | 0 | 0 |
 
 ---
