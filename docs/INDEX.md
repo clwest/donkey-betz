@@ -264,7 +264,7 @@
 | podcast | 11 |  |
 | scifi | 6 |  |
 | skin | 11 |  |
-| spiders | 69 | Data collection spiders |
+| spiders | 80 | Data collection spiders |
 | spine | 1 |  |
 | websocket | 7 |  |
 | workflow | 41 |  |
