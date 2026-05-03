@@ -9439,29 +9439,15 @@ def run_research_analysis_agents():
 @shared_task
 def run_stock_financial_agents():
     """
-    Session 787: Run stock and financial analysis agents every 3 hours.
+    Session 787: Compatibility entrypoint for stock/financial automation.
 
-    Agents: StockAnalystAgent, StockAuditCoordinator, BullCaseAgent, BearCaseAgent,
-            MarketIntelligenceCoordinator
+    Session 1099: The individual stock-financial rotation was producing noisy
+    failures while `run_stock_audit_cycle()` remained the stable source of truth.
+    Keep this task as a thin wrapper so existing schedules and callers still work,
+    but route execution through the audit cycle only.
     """
-    agents = [
-        'StockAnalystAgent', 'StockAuditCoordinator',
-        'BullCaseAgent', 'BearCaseAgent', 'MarketIntelligenceCoordinator'
-    ]
-
-    def task_gen(agent):
-        # Session 957: StockAnalystAgent needs specific tickers to use its tools effectively
-        # Generic "market conditions" tasks should go to MarketIntelligenceCoordinator
-        tasks = {
-            'StockAnalystAgent': 'Analyze SPY, QQQ, NVDA, AAPL, MSFT - check valuations, recent SEC filings, and assess risk levels for each ticker',
-            'StockAuditCoordinator': 'Coordinate a brief market health check across all stock agents',
-            'BullCaseAgent': 'Identify the strongest bullish opportunities from current market data',
-            'BearCaseAgent': 'Identify key risks and bearish signals in current market data',
-            'MarketIntelligenceCoordinator': 'Synthesize market intelligence from all sources',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('STOCK & FINANCIAL', agents, task_gen, '📊')
+    logger.info("📊 [STOCK & FINANCIAL] Delegating to stock audit cycle")
+    return run_stock_audit_cycle()
 
 
 @shared_task
