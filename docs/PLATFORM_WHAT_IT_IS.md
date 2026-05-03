@@ -42,7 +42,7 @@ You've built an autonomous multi-agent intelligence platform that ingests real-t
 At its core, this is a **multi-agent autonomous intelligence platform** that combines six distinct capabilities:
 
 1. **A real-time data gathering network** — 80 spiders
-2. **A reasoning layer** — 83 code agents + 223 DB persona agents + 6 LLM providers
+2. **A reasoning layer** — 83 code agents plus DB persona rows + 6 LLM providers
 3. **A workflow pipeline** — initiatives, content deliberation, publishing
 4. **A single conversational interface** — Rigby, the Personal Assistant
 5. **A health-monitoring nervous system** — modeled on human anatomy
@@ -116,7 +116,7 @@ Every agent inherits from `BaseAgent` (`core/agents/base_agent.py`) which provid
 - **Post-execution outcome recording** — `AgentExecution` (status/tokens/cost), `AgentMemory` (safety-classified memories), `AgentLearning` (XP + pattern detection), `AgentKnowledgeSource` (shared knowledge)
 - **Provenance tracking** — 29 agents explicitly wire `build_provenance()` into their output (data sources, timestamps, validation)
 
-Below the code agents: **223 DB persona agents** via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **32 advisors** (10 named figures — Warren Buffett, Cathie Wood, Ray Dalio, Sam Altman, Elon Musk, Gary Vaynerchuk, Mr Beast, Chris Voss, Billy Beane, Haralabos Voulgaris — and 22 domain specialists) accessible through `AdvisorContextBuilder`.
+Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **32 advisors** (10 named figures — Warren Buffett, Cathie Wood, Ray Dalio, Sam Altman, Elon Musk, Gary Vaynerchuk, Mr Beast, Chris Voss, Billy Beane, Haralabos Voulgaris — and 22 domain specialists) accessible through `AdvisorContextBuilder`.
 
 **Router entry point:** `AgentRouter.route(agent_name, task, context)` performs parallel context gathering (11 workers × 10s timeout each) before dispatching to the agent. See `core/agent_router.py:738-1264`.
 
@@ -387,7 +387,7 @@ See `python manage.py verify_doc_claims --only-drift` for the live list.
 - **Session 1098 canary test artifacts**: Deliverable `c7f4c940` + blog `b8a2b6a3` intentionally live until 24h observation window closes.
 - **Phase-2 initiative guard test**: validate `expected_initiative_id` mismatch handling on a blog with an initiative.
 - **SpiderData embedding coverage**: only 20.1% of spider data is embedded (memory is 97.6%) — semantic search is partial for spider intelligence.
-- **171 dormant agents**: of 306 total registered (83 AGENT_MAP + 223 DB personas), 171 have zero executions in the last 30 days. Either wire to real tasks or remove.
+- **Dormant agents**: many agent records have zero executions in the last 30 days. Either wire them to real tasks or remove.
 - **0 Initiatives completed**: pipeline creates but doesn't finish work items. Fast Track auto-progression stalls at Stage 2.
 
 ---
@@ -455,7 +455,7 @@ open http://localhost:8000/ai-studio/
 | **CoordinatorOutcome** | Record of a multi-agent debate/deliberation outcome. 17,500+ rows locally (live counter). |
 | **Deliberation** | Multi-reviewer review of draft content. 3 reviewers. |
 | **DeliverableAppend** | Canary path (Session 1098) for appending agent output to an existing Deliverable instead of creating a new one. |
-| **DynamicPersonaAgent** | Fallback agent that hydrates a persona from a DB row. 223 available. |
+| **DynamicPersonaAgent** | Fallback agent that hydrates a persona from a DB row. Available as DB-backed persona rows. |
 | **HiveMindSession** | A multi-agent debate session with full participant tracking. |
 | **Initiative** | A platform project. Has 5 stages + provenance back to signals. |
 | **LUNGS budget** | Per-provider/per-agent token budget tracking. |

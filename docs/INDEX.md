@@ -283,8 +283,8 @@
 
 | Document | Description |
 |----------|-------------|
-| [AGENTS.md](AGENTS.md) | 74 agents + capabilities + routing |
-| [SPIDERS.md](SPIDERS.md) | 77 spiders, data collection |
+| [AGENTS.md](AGENTS.md) | 83 agents + capabilities + routing |
+| [SPIDERS.md](SPIDERS.md) | 80 spiders, data collection |
 | [SERVICES.md](SERVICES.md) | 114 services across the platform |
 | [SCIFI_FEATURES.md](SCIFI_FEATURES.md) | 14 advanced AI features |
 

@@ -3,9 +3,9 @@
 
 # Agent System
 
-83 agents in AGENT_MAP (+ 223 DB persona-eligible Agent rows via DynamicPersonaAgent), routed deterministically via dictionary lookup, with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks defined; **only `run_market_intelligence_desk` (stocks) is currently scheduled** as a daily PeriodicTask — the other 3 (sports/blockchain/narrative) are on-demand only via `POST /api/home/trigger-desks/`. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all AGENT_MAP agents, media task guard blocks non-generative tasks.
+83 agents in AGENT_MAP, with DB persona rows available via DynamicPersonaAgent fallback, routed deterministically via dictionary lookup with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks defined; **only `run_market_intelligence_desk` (stocks) is currently scheduled** as a daily PeriodicTask — the other 3 (sports/blockchain/narrative) are on-demand only via `POST /api/home/trigger-desks/`. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all AGENT_MAP agents, media task guard blocks non-generative tasks.
 
-## Agent Categories (84 in AGENT_MAP)
+## Agent Categories (83 in AGENT_MAP)
 
 | Category | Count | Agents |
 |----------|-------|--------|
@@ -91,7 +91,7 @@ Every agent automatically receives 3 shared tools in its LLM tool schema via `Ba
 |------|---------|---------|
 | `web_search` | `BaseAgent._execute_tool_call()` | Real-time web search via Tavily |
 | `spider_query` | `BaseAgent._execute_tool_call()` | Query SpiderData via `SpiderIntelligenceService` |
-| `delegate_to_specialist` | `BaseAgent._execute_tool_call()` | Route sub-tasks to any of 84 discoverable agents |
+| `delegate_to_specialist` | `BaseAgent._execute_tool_call()` | Route sub-tasks to discoverable agents |
 
 **Injection paths:**
 - `_call_openai()` / `_call_llm_with_tools()` — automatic via `_get_tools_with_shared()`
