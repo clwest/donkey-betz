@@ -488,12 +488,12 @@ All 9 critical security tasks completed successfully. Django check passes.
 **Task:** Credential Rotation Documentation
 **Duration:** ~15 min
 **Changes:**
-- Created `.env.template` with placeholder values for all 40+ credentials
+- Updated `.env.example` with placeholder values for all 40+ credentials
 - Created `docs/code-review/remediation/CREDENTIAL-ROTATION-CHECKLIST.md` with prioritized rotation instructions
 
 **Verification:**
 - [x] All credentials documented
-- [x] .env.template has no real values
+- [x] .env.example has no real values
 - [x] Checklist includes rotation URLs and verification steps
 
 **Notes:**
