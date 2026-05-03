@@ -76,9 +76,9 @@ Why this matters:
 - That creates avoidable onboarding friction and misdiagnosis
 - The mismatch is especially dangerous because it looks authoritative
 
-### 3. Contradictory Celery documentation vs runtime config
+### 3. Celery ownership had to be reconciled
 
-`docs/topics/celery-workers.md` claimed the schedule in `core/celery.py` was effectively dead code, while `core/settings.py` explicitly says the opposite: `core/celery.py` is authoritative and the settings copy was removed.
+The active Celery docs now agree on the current model: `core/celery.py` is the primary static beat definition source, `django-celery-beat` owns the runtime `PeriodicTask` rows, and sync/bootstrap commands materialize or repair selected rows. `core.settings` only carries Celery routing and scheduler configuration.
 
 Why this matters:
 

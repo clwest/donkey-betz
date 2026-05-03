@@ -232,7 +232,8 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 
 **Celery topology:**
 - 365 user-defined Celery tasks (excludes `celery.*` internals)
-- 305 `PeriodicTask` rows (258 enabled, 47 disabled — the 47 are agent-noise tasks disabled by Session 1089's beat governor)
+- `core/celery.py` is the primary static source of beat definitions; `django-celery-beat` stores the 305 runtime `PeriodicTask` rows (258 enabled, 47 disabled)
+- `sync_celery_schedules`, `sync_celery_beat`, `add_critical_celery_tasks`, `setup_workspace_autopilot`, and `sync_task_queues` bridge or repair those definitions into database-backed runtime state
 - 11 Procfile entries: `release` + `web`, `celery-worker`, `celery-pa`, `celery-content`, `celery-long-running`, `celery-long-running-2`, `celery-broadcast`, `celery-beat`, `code-worker`, `resolve-node`
 - Per-task RSS memory telemetry (`CeleryTaskEvent.rss_delta_mb` with `[MEMORY] SPIKE` log markers at 50/100 MB thresholds)
 - Dedicated `pa` queue for Personal Assistant workloads (300s time limit)
@@ -358,7 +359,7 @@ Session 1087/1089 added a cost-governed dispatcher that throttles low-priority t
 ### Working well (as of Session 1099)
 
 - Personal Assistant (Rigby) — 101 tools, GPT-5.2 function calling, local + prod both operational
-- Celery beat governor — 47 noise tasks disabled, budget gating live
+- Celery beat governor — 47 noise tasks disabled, budget gating live; schedule definitions primarily live in `core/celery.py` and are materialized or repaired into `PeriodicTask` rows by sync/bootstrap commands
 - DeliverableAppend canary (Session 1098) — green after Plan A injection, 24h observation window in progress
 - Content autonomy loop with EditorAgent repairs
 - Body systems monitoring — Railway health at 90-100%

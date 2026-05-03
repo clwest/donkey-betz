@@ -644,7 +644,7 @@ SELF-RENEWAL
 | `core/models_situation_triggers.py` | Trigger system (~950 lines) |
 | `core/services/autonomous_loop.py` | Main conductor |
 | `core/services/proactive_intelligence.py` | Intelligence injection |
-| `core/celery.py` | 44 scheduled tasks |
+| `core/celery.py` | Static beat schedule definitions; runtime rows live in `django-celery-beat` |
 | `core/agents/autonomous_content_studio_coordinator.py` | Studio brain |
 
 ---
