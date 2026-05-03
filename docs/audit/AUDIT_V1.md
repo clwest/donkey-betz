@@ -83,7 +83,8 @@ Real repo issue.
   - `core/celery.py`
   - `core/wsgi.py`
   - `manage.py`
-- `.env.example:9` still declares `DJANGO_SETTINGS_MODULE=backend.settings`.
+- `.env.example:13` declares `DJANGO_SETTINGS_MODULE=core.settings`, matching
+  runtime entrypoints.
 - The doc/config surface should converge on the actual runtime module
   (`core.settings`) instead of preserving an older module path in the
   example env file.

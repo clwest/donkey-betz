@@ -68,7 +68,7 @@ Why this matters:
 
 ### 2. Incorrect `DJANGO_SETTINGS_MODULE` in `.env.example`
 
-`[.env.example](/Users/donkeyking/development/unified-donkey-betz/.env.example)` set `DJANGO_SETTINGS_MODULE=backend.settings`, but the runtime uses `core.settings` in `manage.py`, `core/asgi.py`, `core/wsgi.py`, and `core/celery.py`.
+`[.env.example](/Users/donkeyking/development/unified-donkey-betz/.env.example)` sets `DJANGO_SETTINGS_MODULE=core.settings`, matching the runtime in `manage.py`, `core/asgi.py`, `core/wsgi.py`, and `core/celery.py`.
 
 Why this matters:
 
