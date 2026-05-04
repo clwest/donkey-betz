@@ -360,7 +360,10 @@ def _impl_run_spider_network(self):
         'items_collected': 0,
         'errors': 0,
         'spider_results': [],
-        'all_topics': []  # Session 423: Track topics for summary
+        'all_topics': [],  # Session 423: Track topics for summary
+        'partial_failure': False,
+        'failure_count': 0,
+        'failed_spiders': [],
     }
 
     for spider_name, spider_config in all_spiders.items():
@@ -526,6 +529,15 @@ def _impl_run_spider_network(self):
 
     # Get top topics (most common)
     from collections import Counter
+    failed_spiders = [
+        entry['spider']
+        for entry in results['spider_results']
+        if not entry.get('success', False)
+    ]
+    results['failed_spiders'] = failed_spiders
+    results['failure_count'] = len(failed_spiders)
+    results['partial_failure'] = bool(failed_spiders)
+
     topic_counts = Counter(results.get('all_topics', []))
     top_topics = [topic for topic, _ in topic_counts.most_common(8)]
 
@@ -895,4 +907,3 @@ def _impl_aggregate_spider_signals(self, lookback_hours: int = 6):
             'status': 'error',
             'error': str(e),
         }
-
