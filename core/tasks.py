@@ -11340,7 +11340,12 @@ def process_pa_tts_task(self, user_id, text, conversation_id=None, trace_id=None
             logger.info(f"[PA_TTS] Audio saved: {audio_url[:80]}...")
 
     except Exception as e:
-        logger.warning(f"[PA_TTS] Background TTS failed: {e}")
+        logger.exception(f"[PA_TTS] Background TTS failed: {e}")
+        return {
+            'status': 'failed',
+            'reason': 'tts_generation_failed',
+            'error': str(e) or type(e).__name__,
+        }
 
 
 @shared_task(bind=True, time_limit=120, soft_time_limit=100)
