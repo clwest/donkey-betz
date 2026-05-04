@@ -507,3 +507,42 @@ class RegistryResolutionVisibilityTests(SimpleTestCase):
         self.assertEqual(result["agent_name"], "ResearchAgent")
         self.assertIn("execution exploded", result["error"])
         self.assertEqual(result["resolution_metadata"]["fallback_type"], "registry_error")
+
+    def test_find_best_agent_no_candidates_returns_structured_failure(self):
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+
+        with patch.object(registry, "list_agents", return_value=[]):
+            result = registry.find_best_agent("inspect something")
+
+        self.assertIsInstance(result, dict)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failure_type"], "no_match")
+        self.assertEqual(result["candidate_count"], 0)
+
+    def test_find_best_agent_exception_returns_structured_failure(self):
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+
+        with patch.object(registry, "list_agents", side_effect=RuntimeError("selection exploded")):
+            result = registry.find_best_agent("inspect something")
+
+        self.assertIsInstance(result, dict)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failure_type"], "selection_error")
+        self.assertIn("selection exploded", result["error"])
+
+    def test_find_best_agent_success_is_unchanged(self):
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+
+        agents = [
+            {"name": "AgentA", "specialization": "general", "capabilities": ["research"], "routing_keywords": ["inspect"], "is_verified": True, "performance_metrics": {"success_rate": 0.8}},
+            {"name": "AgentB", "specialization": "research", "capabilities": ["analysis"], "routing_keywords": ["other"], "is_verified": False, "performance_metrics": {"success_rate": 0.6}},
+        ]
+
+        with patch.object(registry, "list_agents", return_value=agents):
+            result = registry.find_best_agent("inspect something", required_capabilities=["research"])
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["name"], "AgentA")

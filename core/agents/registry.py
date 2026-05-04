@@ -201,7 +201,12 @@ class AgentRegistry:
             agents = self.list_agents()
 
             if not agents:
-                return None
+                return {
+                    'success': False,
+                    'failure_type': 'no_match',
+                    'error': 'No agents available',
+                    'candidate_count': 0,
+                }
 
             scored_agents = []
 
@@ -213,7 +218,12 @@ class AgentRegistry:
                     scored_agents.append((agent, score))
 
             if not scored_agents:
-                return None
+                return {
+                    'success': False,
+                    'failure_type': 'no_match',
+                    'error': 'No matching agents found',
+                    'candidate_count': len(agents),
+                }
 
             # Sort by score (descending) and return best match
             scored_agents.sort(key=lambda x: x[1], reverse=True)
@@ -228,7 +238,12 @@ class AgentRegistry:
 
         except Exception as e:
             self.logger.error(f"Error finding best agent: {e}")
-            return None
+            return {
+                'success': False,
+                'failure_type': 'selection_error',
+                'error': str(e),
+                'candidate_count': len(locals().get('agents', []) or []),
+            }
 
     def _calculate_agent_score(self,
                              agent: Dict[str, Any],
