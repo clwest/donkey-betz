@@ -436,3 +436,74 @@ class RegistryResolutionVisibilityTests(SimpleTestCase):
         self.assertEqual(execution_id, "exec-99")
         self.assertEqual(execution_manager.calls[0]["input_data"]["_resolution_metadata"]["fallback_used"], True)
         self.assertEqual(execution_manager.calls[0]["input_data"]["_resolution_metadata"]["fallback_type"], "registry_error")
+
+    def test_execute_agent_missing_template_returns_structured_failure(self):
+        from core.models.agents_registry import UnifiedAgentTemplate as ModelTemplate
+
+        class FakeAgentTemplateManager:
+            def get(self, *args, **kwargs):
+                raise ModelTemplate.DoesNotExist("missing")
+
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+        registry._last_resolution_metadata = {
+            "fallback_used": False,
+            "fallback_type": None,
+            "resolution_error": None,
+            "resolution_source": "init",
+        }
+
+        with patch("core.models.agents_registry.UnifiedAgentTemplate.objects", FakeAgentTemplateManager()):
+            result = registry.execute_agent("ResearchAgent", {"task": "inspect"})
+
+        self.assertIsInstance(result, dict)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failure_type"], "missing_template")
+        self.assertEqual(result["agent_name"], "ResearchAgent")
+        self.assertEqual(result["resolution_error"], "UnifiedAgentTemplate.DoesNotExist")
+        self.assertEqual(result["resolution_metadata"]["fallback_type"], "registry_miss")
+
+    def test_execute_agent_execution_error_returns_structured_failure(self):
+        class FakeTemplate:
+            llm_provider = "openai"
+            llm_model = "gpt-5-mini"
+            llm_config = {}
+            capabilities = []
+            required_tools = []
+            specialization = "general"
+            name = "ResearchAgent"
+
+            def update_metrics(self, *args, **kwargs):
+                return None
+
+        class FakeExecutionManager:
+            def __init__(self):
+                self.calls = []
+
+            def create(self, **kwargs):
+                raise RuntimeError("execution exploded")
+
+        class FakeAgentTemplateManager:
+            def get(self, *args, **kwargs):
+                return FakeTemplate()
+
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+        registry._last_resolution_metadata = {
+            "fallback_used": False,
+            "fallback_type": None,
+            "resolution_error": None,
+            "resolution_source": "init",
+        }
+
+        with patch("core.models.agents_registry.UnifiedAgentTemplate.objects", FakeAgentTemplateManager()), \
+             patch("core.models.agents_registry.AgentExecution.objects", FakeExecutionManager()), \
+             patch("core.services.context_tracking.build_context_tracking", return_value={"injected": True}):
+            result = registry.execute_agent("ResearchAgent", {"task": "inspect"})
+
+        self.assertIsInstance(result, dict)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failure_type"], "execution_error")
+        self.assertEqual(result["agent_name"], "ResearchAgent")
+        self.assertIn("execution exploded", result["error"])
+        self.assertEqual(result["resolution_metadata"]["fallback_type"], "registry_error")

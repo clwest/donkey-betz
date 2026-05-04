@@ -363,7 +363,15 @@ class AgentRegistry:
                 "Registry execution lookup miss: %s",
                 {**self._last_resolution_metadata, 'agent_name': agent_name},
             )
-            return None
+            return {
+                'success': False,
+                'error': f"Unknown agent template: {agent_name}",
+                'resolution_error': 'UnifiedAgentTemplate.DoesNotExist',
+                'failure_type': 'missing_template',
+                'agent_name': agent_name,
+                'agent_id': None,
+                'resolution_metadata': dict(self._last_resolution_metadata),
+            }
         except Exception as e:
             self._last_resolution_metadata = {
                 'fallback_used': False,
@@ -375,7 +383,15 @@ class AgentRegistry:
                 "Registry execution failed: %s",
                 {**self._last_resolution_metadata, 'agent_name': agent_name},
             )
-            return None
+            return {
+                'success': False,
+                'error': str(e),
+                'resolution_error': f"{type(e).__name__}: {e}",
+                'failure_type': 'execution_error',
+                'agent_name': agent_name,
+                'agent_id': None,
+                'resolution_metadata': dict(self._last_resolution_metadata),
+            }
 
     def get_execution_status(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """Get status of an agent execution"""
