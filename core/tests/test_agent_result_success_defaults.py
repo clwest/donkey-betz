@@ -546,3 +546,34 @@ class RegistryResolutionVisibilityTests(SimpleTestCase):
 
         self.assertIsInstance(result, dict)
         self.assertEqual(result["name"], "AgentA")
+
+    def test_list_agents_exception_returns_structured_failure(self):
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+
+        with patch("core.agents.registry.cache.get", side_effect=RuntimeError("listing exploded")):
+            result = registry.list_agents()
+
+        self.assertIsInstance(result, dict)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failure_type"], "list_agents_error")
+        self.assertIn("listing exploded", result["error"])
+        self.assertEqual(result["agents"], [])
+
+    def test_find_best_agent_treats_list_agents_failure_as_selection_error(self):
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+
+        with patch.object(registry, "list_agents", return_value={
+            "success": False,
+            "failure_type": "list_agents_error",
+            "error": "listing exploded",
+            "agents": [],
+        }):
+            result = registry.find_best_agent("inspect something")
+
+        self.assertIsInstance(result, dict)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failure_type"], "selection_error")
+        self.assertIn("listing exploded", result["error"])
+        self.assertEqual(result["candidate_count"], 0)

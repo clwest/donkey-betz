@@ -190,7 +190,12 @@ class AgentRegistry:
 
         except Exception as e:
             self.logger.error(f"Error listing agents: {e}")
-            return []
+            return {
+                'success': False,
+                'failure_type': 'list_agents_error',
+                'error': str(e),
+                'agents': [],
+            }
 
     def find_best_agent(self,
                        task_description: str,
@@ -199,6 +204,14 @@ class AgentRegistry:
         """Find the best agent for a given task using intelligent routing"""
         try:
             agents = self.list_agents()
+
+            if isinstance(agents, dict) and agents.get('failure_type') == 'list_agents_error':
+                return {
+                    'success': False,
+                    'failure_type': 'selection_error',
+                    'error': agents.get('error', 'Agent listing failed'),
+                    'candidate_count': len(agents.get('agents', []) or []),
+                }
 
             if not agents:
                 return {
