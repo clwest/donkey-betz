@@ -872,15 +872,44 @@ class BaseAgent(ABC, TimeTravelMixin):
             self._record_delegation(specialist_agent, task, result)
 
             # Format response
+            malformed_result_error = None
             if hasattr(result, 'to_dict'):
                 result_data = result.to_dict()
+                if not isinstance(result_data, dict):
+                    malformed_result_error = (
+                        f"Malformed specialist result from {specialist_agent}: "
+                        "to_dict() did not return a dict"
+                    )
+                    result_data = {}
             elif isinstance(result, dict):
                 result_data = result
             else:
+                malformed_result_error = (
+                    f"Malformed specialist result from {specialist_agent}: "
+                    f"unsupported result type {type(result).__name__}"
+                )
                 result_data = {'result': str(result)}
 
+            if malformed_result_error is None and 'success' not in result_data:
+                malformed_result_error = (
+                    f"Malformed specialist result from {specialist_agent}: "
+                    "missing success field"
+                )
+
+            if malformed_result_error:
+                logger.warning(malformed_result_error)
+                return {
+                    'success': False,
+                    'error': malformed_result_error,
+                    'specialist': specialist_agent,
+                    'delegating_agent': self.name,
+                    'specialist_response': result_data.get('message', ''),
+                    'specialist_data': result_data.get('data', {}),
+                    'delegation_depth': delegation_depth + 1
+                }
+
             return {
-                'success': result_data.get('success', True),
+                'success': bool(result_data.get('success', False)),
                 'specialist': specialist_agent,
                 'delegating_agent': self.name,
                 'specialist_response': result_data.get('message', ''),
@@ -922,11 +951,11 @@ class BaseAgent(ABC, TimeTravelMixin):
 
             # Determine success from result
             if hasattr(result, 'success'):
-                success = result.success
+                success = bool(result.success)
             elif isinstance(result, dict):
-                success = result.get('success', True)
+                success = bool(result.get('success', False))
             else:
-                success = True
+                success = False
 
             # Get or create a solution for this delegation
             # AgentSolution requires: agent (FK), title, description, solution_type
