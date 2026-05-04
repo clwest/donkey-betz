@@ -880,7 +880,7 @@ class BaseAgent(ABC, TimeTravelMixin):
             )
 
             # Record cross-agent collaboration for learning
-            self._record_delegation(specialist_agent, task, result)
+            learning_record_metadata = self._record_delegation(specialist_agent, task, result)
 
             # Format response
             malformed_result_error = None
@@ -921,6 +921,7 @@ class BaseAgent(ABC, TimeTravelMixin):
                     resolution_error=resolution_error,
                     specialist_response=result_data.get('message', ''),
                     specialist_data=result_data.get('data', {}),
+                    learning_record_metadata=learning_record_metadata,
                     delegation_depth=delegation_depth + 1,
                 )
 
@@ -930,6 +931,7 @@ class BaseAgent(ABC, TimeTravelMixin):
                 'delegating_agent': self.name,
                 'specialist_response': result_data.get('message', ''),
                 'specialist_data': result_data.get('data', {}),
+                'learning_record_metadata': learning_record_metadata,
                 'delegation_depth': delegation_depth + 1
             }
 
@@ -945,7 +947,7 @@ class BaseAgent(ABC, TimeTravelMixin):
         specialist_agent: str,
         task: str,
         result: Any
-    ) -> None:
+    ) -> Dict[str, Any]:
         """
         Session 744: Record cross-agent delegation for learning.
 
@@ -955,13 +957,26 @@ class BaseAgent(ABC, TimeTravelMixin):
         try:
             from core.models_unified_system import Agent, AgentLearning, AgentSolution
 
+            metadata = {
+                'learning_record_persisted': False,
+                'learning_record_error': None,
+                'learning_record_error_type': None,
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+            }
+
             # Get both agent models
             teacher_model = Agent.objects.filter(name=specialist_agent).first()
             student_model = self.agent_model
 
             if not teacher_model or not student_model:
-                logger.debug(f"Could not record delegation: missing agent models")
-                return
+                logger.debug(
+                    "Could not record delegation: missing agent models "
+                    f"(delegating_agent={self.name}, specialist={specialist_agent})"
+                )
+                metadata['learning_record_error'] = 'missing_agent_models'
+                metadata['learning_record_error_type'] = 'LookupError'
+                return metadata
 
             # Determine success from result
             if hasattr(result, 'success'):
@@ -994,9 +1009,21 @@ class BaseAgent(ABC, TimeTravelMixin):
             logger.debug(
                 f"Recorded delegation: {self.name} -> {specialist_agent}"
             )
+            metadata['learning_record_persisted'] = True
+            return metadata
 
         except Exception as e:
-            logger.debug(f"Could not record delegation learning: {e}")
+            logger.exception(
+                "Could not record delegation learning "
+                f"(delegating_agent={self.name}, specialist={specialist_agent}, task={task[:80]!r})"
+            )
+            return {
+                'learning_record_persisted': False,
+                'learning_record_error': str(e),
+                'learning_record_error_type': type(e).__name__,
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+            }
 
     def get_tools_with_delegation(self) -> List[Dict[str, Any]]:
         """

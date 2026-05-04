@@ -80,6 +80,42 @@ class DelegateSpecialistResultTests(SimpleTestCase):
         self.assertFalse(result["fallback_used"])
         self.assertIsNone(result["fallback_type"])
 
+
+class DelegationLearningRecordVisibilityTests(SimpleTestCase):
+    def test_record_delegation_failure_returns_learning_metadata(self):
+        agent = MinimalDelegatingAgent()
+
+        class FakeTeacherModel:
+            pass
+
+        class FakeQuerySet:
+            def first(self):
+                return FakeTeacherModel()
+
+        class FakeStudentModel:
+            pass
+
+        class ExplodingSolutionManager:
+            def get_or_create(self, *args, **kwargs):
+                raise RuntimeError("learning write failed")
+
+        with patch("core.models_unified_system.Agent.objects.filter", return_value=FakeQuerySet()), \
+             patch("core.models_unified_system.AgentSolution.objects.get_or_create", side_effect=RuntimeError("learning write failed")), \
+             patch.object(BaseAgent, "agent_model", new_callable=PropertyMock, return_value=FakeStudentModel()), \
+             patch("core.agents.base_agent.logger.exception") as exception_mock:
+            metadata = agent._record_delegation(
+                "ResearchAgent",
+                "analyze the market",
+                {"success": True},
+            )
+
+        self.assertFalse(metadata["learning_record_persisted"])
+        self.assertEqual(metadata["learning_record_error"], "learning write failed")
+        self.assertEqual(metadata["learning_record_error_type"], "RuntimeError")
+        self.assertEqual(metadata["specialist"], "ResearchAgent")
+        self.assertEqual(metadata["delegating_agent"], agent.name)
+        self.assertTrue(exception_mock.called)
+
     def test_explicit_success_is_preserved(self):
         agent = MinimalDelegatingAgent()
 
