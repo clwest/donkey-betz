@@ -1706,13 +1706,31 @@ def _collect_legal_platform(spider_name: str) -> list:
                         'type': 'court_opinion'
                     })
             else:
+                logger.warning(
+                    "[LEGAL] CourtListener request returned %s; marking spider degraded",
+                    resp.status_code,
+                )
                 items.append({
-                    'message': 'CourtListener spider ready',
+                    'status': 'degraded',
+                    'reason': 'courtlistener_http_failure',
+                    'error': f'HTTP {resp.status_code}',
+                    'message': 'CourtListener spider degraded',
                     'data_types': ['opinions', 'dockets', 'oral_arguments'],
-                    'type': 'legal_research'
+                    'type': 'legal_research',
                 })
-        except Exception:
-            items.append({'message': 'CourtListener spider ready', 'type': 'legal_research'})
+        except Exception as e:
+            logger.exception(
+                "[LEGAL] CourtListener request failed; marking spider degraded: %s",
+                e,
+            )
+            items.append({
+                'status': 'degraded',
+                'reason': 'courtlistener_request_failed',
+                'error': type(e).__name__,
+                'message': 'CourtListener spider degraded',
+                'data_types': ['opinions', 'dockets', 'oral_arguments'],
+                'type': 'legal_research',
+            })
 
     elif spider_name == 'justia':
         items.append({
