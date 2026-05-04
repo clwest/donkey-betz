@@ -181,6 +181,8 @@ class AgentResolutionVisibilityTests(SimpleTestCase):
         route_mock.assert_called_once()
         self.assertTrue(result.data["resolution_metadata"]["fallback_used"])
         self.assertEqual(result.data["resolution_metadata"]["fallback_type"], "thinking_agent")
+        self.assertEqual(result.data["resolution_metadata"]["fallback_reason"], "unknown_agent")
+        self.assertEqual(result.data["resolution_metadata"]["confidence"], 0.1)
         self.assertEqual(result.data["resolution_metadata"]["resolution_error"], "semantic_router_suggested_unknown_agent")
 
     def test_route_attaches_dynamic_persona_fallback_metadata(self):
@@ -271,6 +273,7 @@ class AgentResolutionVisibilityTests(SimpleTestCase):
 
         self.assertTrue(result.data["resolution_metadata"]["fallback_used"])
         self.assertEqual(result.data["resolution_metadata"]["fallback_type"], "dynamic_persona")
+        self.assertEqual(result.data["resolution_metadata"]["fallback_reason"], "db_persona")
         self.assertEqual(result.data["resolution_metadata"]["resolution_error"], "agent_not_in_agent_map")
 
 

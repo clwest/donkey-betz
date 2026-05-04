@@ -576,11 +576,13 @@ class AgentRouter:
                 resolution_metadata = {
                     'fallback_used': True,
                     'fallback_type': 'thinking_agent',
+                    'fallback_reason': 'unknown_agent',
+                    'confidence': routing_result.confidence,
                     'resolution_error': 'semantic_router_suggested_unknown_agent',
                 }
                 logger.warning(
-                    f"Semantic router suggested unknown agent: {routing_result.agent_name}, "
-                    f"falling back to {fallback_agent}"
+                    f"Semantic router suggested unknown agent: {routing_result.agent_name} "
+                    f"(reason=unknown_agent), falling back to {fallback_agent}"
                 )
                 fallback_context = dict(context or {})
                 fallback_context['_resolution_metadata'] = resolution_metadata
@@ -600,11 +602,13 @@ class AgentRouter:
                 resolution_metadata = {
                     'fallback_used': True,
                     'fallback_type': 'thinking_agent',
+                    'fallback_reason': 'low_confidence',
+                    'confidence': routing_result.confidence,
                     'resolution_error': 'semantic_confidence_below_threshold',
                 }
                 logger.info(
-                    f"Semantic confidence too low ({routing_result.confidence:.2f} < {SEMANTIC_CONFIDENCE_THRESHOLD}), "
-                    f"using fallback: {fallback_agent}"
+                    f"Semantic confidence too low ({routing_result.confidence:.2f} < {SEMANTIC_CONFIDENCE_THRESHOLD}) "
+                    f"(reason=low_confidence), using fallback: {fallback_agent}"
                 )
                 fallback_context = dict(context or {})
                 fallback_context['_resolution_metadata'] = resolution_metadata
@@ -617,9 +621,14 @@ class AgentRouter:
             resolution_metadata = {
                 'fallback_used': True,
                 'fallback_type': 'thinking_agent',
+                'fallback_reason': 'routing_exception',
+                'confidence': None,
                 'resolution_error': f"{type(e).__name__}: {e}",
             }
-            logger.error(f"Semantic routing failed: {e}, using fallback: {fallback_agent}")
+            logger.error(
+                f"Semantic routing failed (reason=routing_exception): {e}, "
+                f"using fallback: {fallback_agent}"
+            )
             fallback_context = dict(context or {})
             fallback_context['_resolution_metadata'] = resolution_metadata
             return self._attach_resolution_metadata(
@@ -861,12 +870,17 @@ class AgentRouter:
             try:
                 from core.models_unified_system import Agent as AgentModel
                 if AgentModel.objects.filter(name=agent_name, is_active=True).exists():
-                    logger.info(f"[routing] '{agent_name}' not in AGENT_MAP, using DynamicPersonaAgent")
+                    logger.info(
+                        f"[routing] '{agent_name}' not in AGENT_MAP "
+                        f"(reason=db_persona), using DynamicPersonaAgent"
+                    )
                     agent_class = DynamicPersonaAgent
                     context.setdefault('_resolution_metadata', {
                         'fallback_used': True,
                         'fallback_type': 'dynamic_persona',
+                        'fallback_reason': 'db_persona',
                         'resolution_error': 'agent_not_in_agent_map',
+                        'confidence': None,
                     })
                 else:
                     available = ", ".join(self.AGENT_MAP.keys())
@@ -876,7 +890,10 @@ class AgentRouter:
             except AgentNotFoundError:
                 raise
             except Exception as e:
-                logger.warning(f"[routing] DynamicPersonaAgent fallback failed for '{agent_name}': {e}")
+                logger.warning(
+                    f"[routing] DynamicPersonaAgent fallback failed for '{agent_name}' "
+                    f"(reason=db_persona): {e}"
+                )
                 available = ", ".join(self.AGENT_MAP.keys())
                 raise AgentNotFoundError(
                     f"Unknown agent: '{agent_name}'. Available agents: {available}"
