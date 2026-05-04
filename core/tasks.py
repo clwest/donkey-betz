@@ -12155,6 +12155,8 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
     stats = {
         'urls_found': 0, 'docs_ingested': 0, 'docs_embedded': 0,
         'skipped_existing': 0, 'skipped_timeout': 0, 'errors': 0,
+        'search_failures': 0, 'embedding_failures': 0,
+        'partial_failure': False,
         'elapsed_seconds': 0,
     }
 
@@ -12199,7 +12201,15 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
                     'query': q,
                 }
         except Exception as e:
-            logger.warning(f"[AUTO-RESEARCH] Search failed for '{q}': {e}")
+            stats['search_failures'] += 1
+            stats['errors'] += 1
+            stats['partial_failure'] = True
+            logger.warning(
+                "[AUTO-RESEARCH] Search failed for '%s' (%s): %s",
+                q,
+                type(e).__name__,
+                e,
+            )
 
     stats['urls_found'] = len(collected_urls)
     if not collected_urls:
@@ -12234,8 +12244,19 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
             if existing:
                 # Ensure it's embedded
                 if not DocumentEmbedding.objects.filter(document_id=existing.id).exists():
-                    rag_system.process_document_for_rag_sync(existing)
-                    stats['docs_embedded'] += 1
+                    try:
+                        rag_system.process_document_for_rag_sync(existing)
+                        stats['docs_embedded'] += 1
+                    except Exception as emb_err:
+                        stats['embedding_failures'] += 1
+                        stats['errors'] += 1
+                        stats['partial_failure'] = True
+                        logger.warning(
+                            "[AUTO-RESEARCH] Embed failed for existing doc %s (%s): %s",
+                            existing.id,
+                            type(emb_err).__name__,
+                            emb_err,
+                        )
                 stats['skipped_existing'] += 1
                 continue
 
@@ -12279,17 +12300,34 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
                     rag_system.process_document_for_rag_sync(doc)
                     stats['docs_embedded'] += 1
                 except Exception as emb_err:
-                    logger.warning(f"[AUTO-RESEARCH] Embed failed for {url[:60]}: {emb_err}")
+                    stats['embedding_failures'] += 1
+                    stats['errors'] += 1
+                    stats['partial_failure'] = True
+                    logger.warning(
+                        "[AUTO-RESEARCH] Embed failed for %s (%s): %s",
+                        url[:60],
+                        type(emb_err).__name__,
+                        emb_err,
+                    )
 
         except Exception as e:
-            logger.warning(f"[AUTO-RESEARCH] Ingest error for {url[:60]}: {e}")
             stats['errors'] += 1
+            stats['partial_failure'] = True
+            logger.warning(
+                "[AUTO-RESEARCH] Ingest error for %s (%s): %s",
+                url[:60],
+                type(e).__name__,
+                e,
+            )
 
     stats['elapsed_seconds'] = round(time.time() - t0, 1)
+    if stats['search_failures'] or stats['embedding_failures']:
+        stats['partial_failure'] = True
     logger.info(
         f"[AUTO-RESEARCH] '{competitor_name}' done in {stats['elapsed_seconds']}s — "
         f"found={stats['urls_found']} ingested={stats['docs_ingested']} "
-        f"embedded={stats['docs_embedded']} errors={stats['errors']}"
+        f"embedded={stats['docs_embedded']} errors={stats['errors']} "
+        f"search_failures={stats['search_failures']} embedding_failures={stats['embedding_failures']}"
     )
     return stats
 
