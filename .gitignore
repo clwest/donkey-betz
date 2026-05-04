@@ -345,3 +345,8 @@ resolve_node/results/
 
 # Keep image artifacts out of the repo root
 /*.png
+
+# Truth propagation phase artifacts
+coverage-*.json
+verify-report.json
+behavior-*.json
