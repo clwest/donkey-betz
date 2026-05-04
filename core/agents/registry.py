@@ -80,6 +80,12 @@ class AgentRegistry:
         self.logger = logging.getLogger(__name__)
         self._performance_cache: Dict[str, AgentPerformanceStats] = {}
         self._last_cache_refresh = datetime.now()
+        self._last_resolution_metadata = {
+            'fallback_used': False,
+            'fallback_type': None,
+            'resolution_error': None,
+            'resolution_source': 'init',
+        }
 
         # Initialize registry
         self._refresh_agent_cache()
@@ -123,16 +129,37 @@ class AgentRegistry:
             agent_data = cache.get('agent_registry_data', {})
 
             if agent_name in agent_data:
+                self._last_resolution_metadata = {
+                    'fallback_used': False,
+                    'fallback_type': None,
+                    'resolution_error': None,
+                    'resolution_source': 'cache_hit',
+                }
                 return agent_data[agent_name]
 
             # Cache miss - refresh and try again
             self._refresh_agent_cache()
             agent_data = cache.get('agent_registry_data', {})
 
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': None,
+                'resolution_error': None,
+                'resolution_source': 'cache_refresh',
+            }
             return agent_data.get(agent_name)
 
         except Exception as e:
-            self.logger.error(f"Error retrieving agent {agent_name}: {e}")
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': 'registry_error',
+                'resolution_error': f"{type(e).__name__}: {e}",
+                'resolution_source': 'error',
+            }
+            self.logger.debug(
+                "Agent registry lookup failed: %s",
+                {**self._last_resolution_metadata, 'agent_name': agent_name},
+            )
             return None
 
     def list_agents(self,
@@ -282,6 +309,21 @@ class AgentRegistry:
         """Execute an agent with given task data"""
         try:
             agent_template = UnifiedAgentTemplate.objects.get(name=agent_name, is_active=True)
+            task_data = dict(task_data or {})
+            task_data['_resolution_metadata'] = getattr(
+                self,
+                '_last_resolution_metadata',
+                {
+                    'fallback_used': False,
+                    'fallback_type': None,
+                    'resolution_error': None,
+                    'resolution_source': 'registry_execute',
+                }
+            )
+            self.logger.debug(
+                "Registry execution resolution metadata: %s",
+                {**task_data['_resolution_metadata'], 'agent_name': agent_name},
+            )
 
             # Session 758: Build context tracking for Integration Health observability
             try:
@@ -311,10 +353,28 @@ class AgentRegistry:
             return execution_id_str
 
         except UnifiedAgentTemplate.DoesNotExist:
-            self.logger.error(f"Agent {agent_name} not found")
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': 'registry_miss',
+                'resolution_error': 'UnifiedAgentTemplate.DoesNotExist',
+                'resolution_source': 'missing_template',
+            }
+            self.logger.debug(
+                "Registry execution lookup miss: %s",
+                {**self._last_resolution_metadata, 'agent_name': agent_name},
+            )
             return None
         except Exception as e:
-            self.logger.error(f"Failed to execute agent {agent_name}: {e}")
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': 'registry_error',
+                'resolution_error': f"{type(e).__name__}: {e}",
+                'resolution_source': 'execution_error',
+            }
+            self.logger.debug(
+                "Registry execution failed: %s",
+                {**self._last_resolution_metadata, 'agent_name': agent_name},
+            )
             return None
 
     def get_execution_status(self, execution_id: str) -> Optional[Dict[str, Any]]:

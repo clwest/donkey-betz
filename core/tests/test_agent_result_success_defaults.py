@@ -1,9 +1,13 @@
+import logging
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
 
 from core.agents.base_agent import AgentResult, BaseAgent
+from core.agent_router import AgentRouter
+from core.agents.registry import AgentRegistry
+from core.tasks import _run_agent_warmup
 from core.tasks_agents import _impl_workspace_autopilot_tick
 
 
@@ -53,6 +57,144 @@ class DelegateSpecialistResultTests(SimpleTestCase):
 
         self.assertTrue(result["success"])
         self.assertEqual(result["specialist_response"], "ok")
+
+
+class AgentResolutionVisibilityTests(SimpleTestCase):
+    def test_warmup_exposes_router_fallback_metadata(self):
+        class WarmupAgent:
+            pass
+
+        def fake_get_agent_class(agent_name):
+            fake_get_agent_class.last_resolution_metadata = {
+                "fallback_used": True,
+                "fallback_type": "router_lookup",
+                "resolution_error": None,
+                "resolution_source": "router_lookup",
+            }
+            return WarmupAgent
+
+        fake_get_agent_class.last_resolution_metadata = {
+            "fallback_used": True,
+            "fallback_type": "router_lookup",
+            "resolution_error": None,
+            "resolution_source": "router_lookup",
+        }
+
+        with patch("core.tasks._get_agent_class", new=fake_get_agent_class):
+            result = _run_agent_warmup("ResearchAgent")
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["resolution_metadata"]["fallback_used"])
+        self.assertEqual(result["resolution_metadata"]["fallback_type"], "router_lookup")
+        self.assertEqual(result["resolution_metadata"]["resolution_source"], "router_lookup")
+
+    def test_route_by_query_attaches_thinking_fallback_metadata(self):
+        router = AgentRouter()
+        router._semantic_router = SimpleNamespace(
+            route_query=lambda query: SimpleNamespace(
+                agent_name="UnknownAgent",
+                confidence=0.1,
+                method="semantic",
+            )
+        )
+
+        with patch.object(router, "route", return_value=AgentResult(success=True, message="ok", data={"value": 1})) as route_mock:
+            result = router.route_by_query("find something", context={"foo": "bar"})
+
+        route_mock.assert_called_once()
+        self.assertTrue(result.data["resolution_metadata"]["fallback_used"])
+        self.assertEqual(result.data["resolution_metadata"]["fallback_type"], "thinking_agent")
+        self.assertEqual(result.data["resolution_metadata"]["resolution_error"], "semantic_router_suggested_unknown_agent")
+
+    def test_route_attaches_dynamic_persona_fallback_metadata(self):
+        class FakeAgentModelManager:
+            def filter(self, *args, **kwargs):
+                return self
+
+            def exists(self):
+                return True
+
+        class FakeAgentModel:
+            objects = FakeAgentModelManager()
+
+        class FakeControlEntry:
+            @staticmethod
+            def is_blocked(agent_name):
+                return False
+
+        class FakePersonaAgent:
+            def __init__(self, persona_name="", user=None, health_check_mode=False):
+                self.name = persona_name
+                self.user = user
+                self.health_check_mode = health_check_mode
+
+            def execute(self, task, context, scifi_context, spider_context):
+                return AgentResult(success=True, message="persona ok", data={"summary": "done"}, agent_name=self.name)
+
+        class NoOpPriorityDecision:
+            matched = False
+            matched_via = "none"
+            priority_name = None
+
+        def noop(*args, **kwargs):
+            return None
+
+        from contextlib import contextmanager
+
+        @contextmanager
+        def noop_ctx(*args, **kwargs):
+            yield
+
+        router = AgentRouter()
+        router._complete_execution = noop
+        router._record_user_learning = noop
+        router._record_agent_learning_interaction = noop
+
+        pre_gathered = {
+            "gathered": True,
+            "scifi_context": {},
+            "spider_context": {},
+            "learning_context": {},
+            "advisor_context": {},
+            "feedback_context": {},
+            "knowledge_context": {},
+            "workspace_context": {},
+            "docs_context": {},
+            "user_context": {},
+            "risk_context": {},
+            "user_docs_context": {},
+        }
+
+        with patch("core.models_unified_system.Agent", FakeAgentModel), \
+             patch("core.models_unified_system.AgentControlEntry", FakeControlEntry), \
+             patch("core.agents.dynamic_persona_agent.DynamicPersonaAgent", FakePersonaAgent), \
+             patch("core.services.priority.enforce.check_priority", return_value=NoOpPriorityDecision()), \
+             patch("core.services.priority.enforce.log_decision", return_value=None), \
+             patch("core.services.priority.semaphore.acquire_for_decision", noop_ctx), \
+             patch.object(router, "_create_execution_record", return_value=SimpleNamespace(id="exec-1")), \
+             patch.object(router, "_get_scifi_context", return_value={}), \
+             patch.object(router, "_get_spider_context", return_value={}), \
+             patch.object(router, "_get_learning_context", return_value={}), \
+             patch.object(router, "_get_advisor_context", return_value={}), \
+             patch.object(router, "_get_feedback_context", return_value={}), \
+             patch.object(router, "_get_knowledge_context", return_value={}), \
+             patch.object(router, "_get_workspace_context", return_value={}), \
+             patch.object(router, "_get_docs_context", return_value={}), \
+             patch.object(router, "_get_user_context", return_value={}), \
+             patch.object(router, "_get_risk_aware_context", return_value={}), \
+             patch.object(router, "_get_user_documents_context", return_value={}):
+            result = router.route(
+                "HiddenPersonaAgent",
+                "do something",
+                context={},
+                pre_gathered_context=pre_gathered,
+                create_execution_record=False,
+                existing_execution_record=SimpleNamespace(id="exec-1"),
+            )
+
+        self.assertTrue(result.data["resolution_metadata"]["fallback_used"])
+        self.assertEqual(result.data["resolution_metadata"]["fallback_type"], "dynamic_persona")
+        self.assertEqual(result.data["resolution_metadata"]["resolution_error"], "agent_not_in_agent_map")
 
 
 class WorkspaceAutopilotResultTests(SimpleTestCase):
@@ -156,3 +298,61 @@ class WorkspaceAutopilotResultTests(SimpleTestCase):
         self.assertEqual(results["triggers_succeeded"], 0)
         self.assertEqual(results["executions"][0]["success"], False)
         self.assertIn("missing success field", FakeTrigger.instances[0].error_message)
+
+
+class RegistryResolutionVisibilityTests(SimpleTestCase):
+    def test_execute_agent_injects_resolution_metadata(self):
+        class FakeTemplate:
+            llm_provider = "openai"
+            llm_model = "gpt-5-mini"
+            llm_config = {}
+            capabilities = []
+            required_tools = []
+            specialization = "general"
+            name = "ResearchAgent"
+
+            def update_metrics(self, *args, **kwargs):
+                return None
+
+        class FakeExecution:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+                self.id = "exec-99"
+                self.status = None
+                self.save_calls = 0
+
+            def save(self):
+                self.save_calls += 1
+
+        class FakeAgentTemplateManager:
+            def get(self, *args, **kwargs):
+                return FakeTemplate()
+
+        class FakeExecutionManager:
+            def __init__(self):
+                self.calls = []
+
+            def create(self, **kwargs):
+                self.calls.append(kwargs)
+                return FakeExecution(**kwargs)
+
+        registry = AgentRegistry.__new__(AgentRegistry)
+        registry.logger = logging.getLogger(__name__)
+        registry._last_resolution_metadata = {
+            "fallback_used": True,
+            "fallback_type": "registry_error",
+            "resolution_error": "RuntimeError: lookup failed",
+            "resolution_source": "error",
+        }
+
+        agent_template_manager = FakeAgentTemplateManager()
+        execution_manager = FakeExecutionManager()
+
+        with patch("core.models.agents_registry.UnifiedAgentTemplate.objects", agent_template_manager), \
+             patch("core.models.agents_registry.AgentExecution.objects", execution_manager), \
+             patch("core.services.context_tracking.build_context_tracking", return_value={"injected": True}):
+            execution_id = registry.execute_agent("ResearchAgent", {"task": "inspect"})
+
+        self.assertEqual(execution_id, "exec-99")
+        self.assertEqual(execution_manager.calls[0]["input_data"]["_resolution_metadata"]["fallback_used"], True)
+        self.assertEqual(execution_manager.calls[0]["input_data"]["_resolution_metadata"]["fallback_type"], "registry_error")

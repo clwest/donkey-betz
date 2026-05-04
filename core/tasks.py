@@ -9041,6 +9041,13 @@ def _get_agent_class(agent_name: str):
     import importlib
     import re
 
+    resolution_meta = {
+        'fallback_used': False,
+        'fallback_type': None,
+        'resolution_error': None,
+        'resolution_source': 'direct_import',
+    }
+
     # Try common module patterns
     module_patterns = [
         f"core.agents.{agent_name.lower().replace('agent', '_agent')}",
@@ -9057,6 +9064,10 @@ def _get_agent_class(agent_name: str):
         try:
             module = importlib.import_module(module_path)
             if hasattr(module, agent_name):
+                _get_agent_class.last_resolution_metadata = {
+                    **resolution_meta,
+                    'module_path': module_path,
+                }
                 return getattr(module, agent_name)
         except (ImportError, ModuleNotFoundError):
             continue
@@ -9065,13 +9076,44 @@ def _get_agent_class(agent_name: str):
     try:
         from core.agent_router import AgentRouter
         router = AgentRouter()
-        return router.get_agent_class(agent_name)
+        agent_class = router.get_agent_class(agent_name)
+        resolution_meta.update({
+            'fallback_used': True,
+            'fallback_type': 'router_lookup',
+            'resolution_source': 'router_lookup',
+            'resolution_error': None if agent_class else 'agent_not_found',
+        })
+        logger.debug(
+            "tasks._get_agent_class fallback: %s",
+            {**resolution_meta, 'agent_name': agent_name},
+        )
+        _get_agent_class.last_resolution_metadata = resolution_meta
+        return agent_class
     except Exception as _e:
+        resolution_meta.update({
+            'fallback_used': True,
+            'fallback_type': 'router_lookup',
+            'resolution_source': 'router_lookup',
+            'resolution_error': f"{type(_e).__name__}: {_e}",
+        })
         logger.warning(
             "tasks._get_agent_class: swallowed (%s: %s) — returning default",
             type(_e).__name__, _e,
         )
+        logger.debug(
+            "tasks._get_agent_class resolution metadata: %s",
+            {**resolution_meta, 'agent_name': agent_name},
+        )
+        _get_agent_class.last_resolution_metadata = resolution_meta
         return None
+
+
+_get_agent_class.last_resolution_metadata = {
+    'fallback_used': False,
+    'fallback_type': None,
+    'resolution_error': None,
+    'resolution_source': 'direct_import',
+}
 
 
 def _run_agent_warmup(agent_name: str) -> dict:
@@ -9093,13 +9135,15 @@ def _run_agent_warmup(agent_name: str) -> dict:
     try:
         # 1. Verify agent class exists
         agent_class = _get_agent_class(agent_name)
+        resolution_metadata = getattr(_get_agent_class, 'last_resolution_metadata', {})
         if not agent_class:
             return {
                 'success': False,
                 'agent': agent_name,
                 'run_mode': 'warmup',
                 'check': 'class_load',
-                'error': 'Agent class not found'
+                'error': 'Agent class not found',
+                'resolution_metadata': resolution_metadata,
             }
 
         # 2. Verify agent can be instantiated
@@ -9112,6 +9156,8 @@ def _run_agent_warmup(agent_name: str) -> dict:
                 'run_mode': 'warmup',
                 'check': 'instantiation',
                 'error': str(e)
+                ,
+                'resolution_metadata': resolution_metadata,
             }
 
         # 3. Check if agent has required methods
@@ -9130,6 +9176,7 @@ def _run_agent_warmup(agent_name: str) -> dict:
             'success': True,
             'agent': agent_name,
             'run_mode': 'warmup',
+            'resolution_metadata': resolution_metadata,
             'checks': {
                 'class_load': True,
                 'instantiation': True,
@@ -9146,7 +9193,8 @@ def _run_agent_warmup(agent_name: str) -> dict:
             'success': False,
             'agent': agent_name,
             'run_mode': 'warmup',
-            'error': str(e)
+            'error': str(e),
+            'resolution_metadata': getattr(_get_agent_class, 'last_resolution_metadata', {}),
         }
 
 
