@@ -336,10 +336,15 @@ def _impl_run_spider_network(self):
             logger.info("🕷️ Spider network skipped — governance mode: %s", gov_mode)
             return {'skipped': True, 'reason': f'governance_mode={gov_mode}'}
     except Exception as _e:
-        logger.warning(
-            "tasks_spiders._impl_run_spider_network: swallowed (%s: %s) — degraded",
-            type(_e).__name__, _e,
+        logger.exception(
+            "tasks_spiders._impl_run_spider_network: governance lookup failed; "
+            "skipping spider network to fail closed"
         )
+        return {
+            'skipped': True,
+            'reason': 'governance_lookup_failed',
+            'error': type(_e).__name__,
+        }
 
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
 
@@ -881,6 +886,5 @@ def _impl_aggregate_spider_signals(self, lookback_hours: int = 6):
             'status': 'error',
             'error': str(e),
         }
-
 
 
