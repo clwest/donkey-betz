@@ -5839,8 +5839,10 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         ).count()
         metrics['concerns_during_pilot'] = concerns
         
-    except Exception:
+    except Exception as e:
+        logger.exception("[PILOT_METRICS] concerns_during_pilot query failed: %s", e)
         metrics['concerns_during_pilot'] = 0
+        metrics['concerns_during_pilot_error'] = str(e) or type(e).__name__
     
     try:
         # Check agent activity during pilot
@@ -5850,8 +5852,10 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         ).defer('embedding').count()
         metrics['agent_memories_created'] = memories
         
-    except Exception:
+    except Exception as e:
+        logger.exception("[PILOT_METRICS] agent_memories_created query failed: %s", e)
         metrics['agent_memories_created'] = 0
+        metrics['agent_memories_created_error'] = str(e) or type(e).__name__
     
     try:
         # Check for any errors/failures in system
@@ -5861,8 +5865,10 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         ).count()
         metrics['conversations_during_pilot'] = convos
         
-    except Exception:
+    except Exception as e:
+        logger.exception("[PILOT_METRICS] conversations_during_pilot query failed: %s", e)
         metrics['conversations_during_pilot'] = 0
+        metrics['conversations_during_pilot_error'] = str(e) or type(e).__name__
     
     # Decision-type specific metrics
     if decision.impact_area == 'security':
