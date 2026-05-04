@@ -4894,6 +4894,8 @@ Consider this current data when formulating your response."""
         if not manager:
             artifacts = self._capture_files_as_artifacts(files, base_path)
             return {
+                'success': False,
+                'partial_failure': False,
                 'written': False,
                 'reason': 'WorkspaceManager not available',
                 'files_generated': len(files),
@@ -4905,6 +4907,8 @@ Consider this current data when formulating your response."""
         if not workspace:
             artifacts = self._capture_files_as_artifacts(files, base_path)
             return {
+                'success': False,
+                'partial_failure': False,
                 'written': False,
                 'reason': 'No active workspace. Register a workspace first.',
                 'files_generated': len(files),
@@ -4916,6 +4920,8 @@ Consider this current data when formulating your response."""
         if not workspace.allow_file_write:
             artifacts = self._capture_files_as_artifacts(files, base_path)
             return {
+                'success': False,
+                'partial_failure': False,
                 'written': False,
                 'reason': 'Workspace does not allow file writes',
                 'workspace': workspace.name,
@@ -4959,16 +4965,25 @@ Consider this current data when formulating your response."""
                     })
                     operations.append(str(operation.id))
                 else:
+                    logger.warning(
+                        "Workspace write failed for %s (agent=%s, workspace=%s): %s",
+                        file_path,
+                        self.name,
+                        workspace.name,
+                        operation.error_message,
+                    )
                     failed_files.append({
                         'path': file_path,
-                        'error': operation.error_message
+                        'error': operation.error_message,
+                        'error_type': 'WorkspaceWriteFailed',
                     })
 
             except Exception as e:
-                logger.error(f"Failed to write {file_path}: {e}")
+                logger.exception(f"Failed to write {file_path}: {e}")
                 failed_files.append({
                     'path': file_path,
-                    'error': str(e)
+                    'error': str(e),
+                    'error_type': type(e).__name__,
                 })
 
         # Capture failed files as artifacts so content isn't lost
@@ -4984,11 +4999,15 @@ Consider this current data when formulating your response."""
                     self._capture_single_file_artifact(fp, content)
 
         return {
+            'success': len(failed_files) == 0,
+            'partial_failure': len(failed_files) > 0,
             'written': len(written_files) > 0,
             'workspace': workspace.name,
             'workspace_path': workspace.root_path,
             'files_written': written_files,
             'files_failed': failed_files,
+            'file_write_failures': len(failed_files),
+            'file_write_errors': failed_files[:5],
             'operations': operations,
             'total_written': len(written_files),
             'total_failed': len(failed_files)
@@ -5228,6 +5247,9 @@ Consider this current data when formulating your response."""
                 result.data = {}
 
             result.data['workspace_write'] = write_result
+            result.data['partial_failure'] = bool(write_result.get('partial_failure', False))
+            result.data['file_write_failures'] = write_result.get('file_write_failures', 0)
+            result.data['file_write_errors'] = write_result.get('file_write_errors', [])
 
             # Update message to include write status
             if write_result.get('written'):
@@ -5237,6 +5259,12 @@ Consider this current data when formulating your response."""
                 )
                 if write_result.get('total_failed', 0) > 0:
                     result.message += f" ({write_result['total_failed']} failed)"
+            elif write_result.get('partial_failure'):
+                result.message = (
+                    f"{result.message}\n\n"
+                    f"📁 Workspace write partially failed: {write_result['total_failed']} of "
+                    f"{write_result['files_generated']} files failed"
+                )
 
         return result
 
