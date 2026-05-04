@@ -5373,6 +5373,8 @@ Consider this current data when formulating your response."""
                 if full_path.name != '00-START-NEXT-SESSION.md':
                     return {
                         'success': False,
+                        'error_type': 'AccessDenied',
+                        'reason': 'docs_directory_only',
                         'error': f"Access denied: Can only write to docs/ directory",
                         'path': doc_path,
                     }
@@ -5412,7 +5414,9 @@ Consider this current data when formulating your response."""
                         )
                         logger.info(f"📋 [Session 962] DocVersion v{next_version} saved for {rel_path}")
                 except Exception as e:
-                    logger.warning(f"[Session 962] DocVersion creation failed: {e}")
+                    logger.exception(
+                        f"[Session 962] DocVersion creation failed for {doc_path}"
+                    )
 
             # Write the new content
             full_path.write_text(content, encoding='utf-8')
@@ -5429,9 +5433,11 @@ Consider this current data when formulating your response."""
             }
 
         except Exception as e:
-            logger.error(f"📝 [Session 798] {self.name} failed to write doc {doc_path}: {e}")
+            logger.exception(f"📝 [Session 798] {self.name} failed to write doc {doc_path}: {e}")
             return {
                 'success': False,
+                'error_type': type(e).__name__,
+                'reason': 'doc_write_failed',
                 'error': str(e),
                 'path': doc_path,
             }
