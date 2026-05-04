@@ -399,12 +399,17 @@ def _impl_run_spider_network(self):
                             'source': spider_name,
                             'items': [],
                             'error': str(spider_error),
+                            'error_type': type(spider_error).__name__,
+                            'failure_type': 'adapter_failure',
                             'timestamp': timezone.now().isoformat()
                         }
                 else:
                     data = {
                         'source': spider_name,
                         'items': [],
+                        'error': f'Spider class not found: {spider_name}',
+                        'error_type': 'MissingSpiderClass',
+                        'failure_type': 'missing_spider',
                         'timestamp': timezone.now().isoformat()
                     }
                 # Handle both list and dict formats
@@ -439,16 +444,20 @@ def _impl_run_spider_network(self):
                 spider_data = None
                 item_count = 0
 
-            results['spiders_run'] += 1
+            spider_success = not data.get('failure_type') if isinstance(data, dict) else True
+            results['spiders_run'] += 1 if spider_success else 0
             if spider_data:
                 results['data_collected'] += 1
             results['items_collected'] += item_count
             results['spider_results'].append({
                 'spider': spider_name,
-                'success': True,
+                'success': spider_success,
                 'item_count': item_count,
                 'data_id': str(spider_data.id) if spider_data else None,
-                'dedup_stats': dedup_stats
+                'dedup_stats': dedup_stats,
+                'failure_type': data.get('failure_type') if isinstance(data, dict) else None,
+                'error': data.get('error') if isinstance(data, dict) else None,
+                'error_type': data.get('error_type') if isinstance(data, dict) else None,
             })
 
             # Session 423: Track topics for summary notification
@@ -886,5 +895,4 @@ def _impl_aggregate_spider_signals(self, lookback_hours: int = 6):
             'status': 'error',
             'error': str(e),
         }
-
 
