@@ -811,6 +811,19 @@ class BaseAgent(ABC, TimeTravelMixin):
         Returns:
             Dict with the specialist's response
         """
+        def _failure_payload(error: str, resolution_error: str, **extra: Any) -> Dict[str, Any]:
+            payload = {
+                'success': False,
+                'error': error,
+                'resolution_error': resolution_error,
+                'fallback_used': False,
+                'fallback_type': None,
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+            }
+            payload.update(extra)
+            return payload
+
         try:
             # Check recursion depth to prevent infinite loops
             if delegation_context is None:
@@ -824,12 +837,11 @@ class BaseAgent(ABC, TimeTravelMixin):
                     f"🚫 [Session 744] Delegation depth limit ({max_depth}) reached. "
                     f"{self.name} cannot delegate to {specialist_agent}"
                 )
-                return {
-                    'success': False,
-                    'error': f'Maximum delegation depth ({max_depth}) reached',
-                    'specialist': specialist_agent,
-                    'delegating_agent': self.name
-                }
+                return _failure_payload(
+                    error=f'Maximum delegation depth ({max_depth}) reached',
+                    resolution_error='delegation_depth_limit',
+                    delegation_depth=delegation_depth,
+                )
 
             # Validate specialist exists
             if specialist_agent not in self.AVAILABLE_SPECIALISTS:
@@ -838,11 +850,10 @@ class BaseAgent(ABC, TimeTravelMixin):
 
             # Get router
             if not self.agent_router:
-                return {
-                    'success': False,
-                    'error': 'AgentRouter not available for delegation',
-                    'specialist': specialist_agent
-                }
+                return _failure_payload(
+                    error='AgentRouter not available for delegation',
+                    resolution_error='router_unavailable',
+                )
 
             logger.info(
                 f"🤝 [Session 744] {self.name} delegating to {specialist_agent}: "
@@ -898,15 +909,20 @@ class BaseAgent(ABC, TimeTravelMixin):
 
             if malformed_result_error:
                 logger.warning(malformed_result_error)
-                return {
-                    'success': False,
-                    'error': malformed_result_error,
-                    'specialist': specialist_agent,
-                    'delegating_agent': self.name,
-                    'specialist_response': result_data.get('message', ''),
-                    'specialist_data': result_data.get('data', {}),
-                    'delegation_depth': delegation_depth + 1
-                }
+                resolution_error = (
+                    'missing_success_field'
+                    if 'missing success field' in malformed_result_error
+                    else 'unsupported_result_type'
+                    if 'unsupported result type' in malformed_result_error
+                    else 'malformed_specialist_result'
+                )
+                return _failure_payload(
+                    error=malformed_result_error,
+                    resolution_error=resolution_error,
+                    specialist_response=result_data.get('message', ''),
+                    specialist_data=result_data.get('data', {}),
+                    delegation_depth=delegation_depth + 1,
+                )
 
             return {
                 'success': bool(result_data.get('success', False)),
@@ -918,13 +934,11 @@ class BaseAgent(ABC, TimeTravelMixin):
             }
 
         except Exception as e:
-            logger.error(f"Delegation to {specialist_agent} failed: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'specialist': specialist_agent,
-                'delegating_agent': self.name
-            }
+            logger.exception(f"Delegation to {specialist_agent} failed: {e}")
+            return _failure_payload(
+                error=str(e),
+                resolution_error=type(e).__name__,
+            )
 
     def _record_delegation(
         self,

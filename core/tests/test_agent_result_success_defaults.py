@@ -1,6 +1,6 @@
 import logging
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, PropertyMock
 
 from django.test import SimpleTestCase
 
@@ -38,6 +38,47 @@ class DelegateSpecialistResultTests(SimpleTestCase):
         self.assertFalse(result["success"])
         self.assertIn("missing success field", result["error"])
         self.assertEqual(result["specialist"], "ResearchAgent")
+        self.assertFalse(result["fallback_used"])
+        self.assertIsNone(result["fallback_type"])
+        self.assertEqual(result["resolution_error"], "missing_success_field")
+
+    def test_router_unavailable_returns_resolution_metadata(self):
+        agent = MinimalDelegatingAgent()
+
+        with patch.object(BaseAgent, "agent_router", new_callable=PropertyMock, return_value=None):
+            result = agent._handle_delegate_to_specialist(
+                "ResearchAgent",
+                "analyze the market",
+                delegation_context={"spider_context": {}, "scifi_context": {}},
+            )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["error"], "AgentRouter not available for delegation")
+        self.assertEqual(result["resolution_error"], "router_unavailable")
+        self.assertFalse(result["fallback_used"])
+        self.assertIsNone(result["fallback_type"])
+
+    def test_dispatch_exception_returns_resolution_metadata(self):
+        agent = MinimalDelegatingAgent()
+
+        class ExplodingRouter:
+            def route(self, specialist_agent, task, context=None):
+                raise RuntimeError("dispatch exploded")
+
+        agent._agent_router = ExplodingRouter()
+
+        with patch.object(agent, "_record_delegation", return_value=None):
+            result = agent._handle_delegate_to_specialist(
+                "ResearchAgent",
+                "analyze the market",
+                delegation_context={"spider_context": {}, "scifi_context": {}},
+            )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["error"], "dispatch exploded")
+        self.assertEqual(result["resolution_error"], "RuntimeError")
+        self.assertFalse(result["fallback_used"])
+        self.assertIsNone(result["fallback_type"])
 
     def test_explicit_success_is_preserved(self):
         agent = MinimalDelegatingAgent()
