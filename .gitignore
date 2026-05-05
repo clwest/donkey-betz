@@ -125,6 +125,15 @@ frontend/dist/
 # Local verification output
 .pyright-after.txt
 
+# context-kit scratch output
+.context-kit/
+connections-report.json
+context-coverage.json
+context-doctor.json
+context-hotpath.txt
+context-inspect-core.json
+context-inspect.json
+
 # React/Vite specific
 .vite/
 .turbo/
