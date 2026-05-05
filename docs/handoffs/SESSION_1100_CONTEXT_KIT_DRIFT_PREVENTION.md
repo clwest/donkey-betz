@@ -14,6 +14,15 @@ previous_handoff: ../SESSION_1098_WRAP_CANARY_GREEN.md
 - **What's blocking next:** Nothing code-side. The only thing left open is doc drift that still needs periodic verifier attention, especially the spider count conflict if it persists after the next inventory refresh.
 - **What's in a weird state:** Historical docs still exist by design and some legacy assistant route examples remain in archive or compatibility context only. They are intentionally preserved, not deleted.
 
+## Session Addendum
+
+- **Commits from this session:** `e6440bb4` and `ca67d4c4`
+- **Workspace state:** Rigby mode is restored and the Workspace Files tab is connected again.
+- **Docs state:** The context-kit orientation/docs were refreshed, and the agent taxonomy drift was corrected in the instruction docs.
+- **Verification state:** Remaining verifier issues are runtime/env/data-related, not doc text regressions.
+- **Uncommitted work:** `docker-compose.yml` is still modified and intentionally left uncommitted.
+- **Next step:** Hold off on more expensive API-backed checks until credits are available, unless the next work is local-only cleanup.
+
 ---
 
 ## What Shipped
