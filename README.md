@@ -5,6 +5,9 @@
 **Status:** 95% Integrated | 83 Agents | 80 Spiders | 9 Body Systems | 14 Sci-Fi Features
 **Session:** 786 | **Last Updated:** January 20, 2026
 
+> **Canonical truth:** [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) + [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md). Runtime and inventory win over stale prose.
+> **Rigby chat:** `POST /api/pa/chat/` is canonical. `/api/assistant/chat/` and `/api/v1/assistant/chat/` are compatibility-only.
+
 ---
 
 ## Quick Start
@@ -36,6 +39,8 @@ An **AI-powered mega-platform** built over 786 collaborative sessions combining:
 | **9 Body Systems** | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN |
 | **14 Sci-Fi Features** | Dreams, Evolution, Memory Palace, Time Travel, Social Network, and more |
 | **45 Frontend Pages** | React-based UI with real-time WebSocket updates |
+
+Current runtime detail lives in the canonical inventory. This README is a human-facing overview, not the source of truth.
 
 ---
 
@@ -89,6 +94,8 @@ All agents feature:
 - SKIN Layer for real workspace file writes
 - Cross-agent delegation with 3-level chain support
 - Integration with 6 LLM providers (OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini)
+
+Rigby now has explicit `global` and `workspace` modes. Workspace mode activates from explicit workspace context, not guesswork. The Workspace Files tab now supports preview, edit/save, and file history on top of the workspace-scoped file APIs.
 
 ### Spider Network (80 Spiders)
 

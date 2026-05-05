@@ -96,6 +96,32 @@ class FileWriter:
 
         return file_path
 
+    def _resolve_workspace_path(
+        self,
+        workspace: ProjectWorkspace,
+        file_path: str,
+    ) -> tuple[str, Path, Path]:
+        """
+        Return a validated path inside the workspace root.
+
+        Raises ValueError if the resolved path escapes the workspace root.
+        """
+        if not file_path:
+            raise ValueError("file_path is required")
+
+        sanitized = self._sanitize_file_path(file_path)
+        root = Path(workspace.root_path).resolve(strict=False)
+        full_path = (root / sanitized).resolve(strict=False)
+
+        try:
+            full_path.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(
+                f"Path escapes workspace root: {file_path}"
+            ) from exc
+
+        return sanitized, full_path, root
+
     def write_file(
         self,
         workspace: ProjectWorkspace,
@@ -119,10 +145,13 @@ class FileWriter:
         """
         start_time = time.time()
 
-        # Session 918: Sanitize file path to prevent absolute path issues
-        file_path = self._sanitize_file_path(file_path)
-
-        full_path = Path(workspace.root_path) / file_path
+        try:
+            file_path, full_path, _root = self._resolve_workspace_path(workspace, file_path)
+        except ValueError as e:
+            return self._create_failed_operation(
+                workspace, agent_name, agent_task, operation_type,
+                file_path, str(e)
+            )
 
         # Capture before state for rollback
         content_before = ''
@@ -205,7 +234,13 @@ class FileWriter:
             )
 
         start_time = time.time()
-        full_path = Path(workspace.root_path) / file_path
+        try:
+            file_path, full_path, _root = self._resolve_workspace_path(workspace, file_path)
+        except ValueError as e:
+            return self._create_failed_operation(
+                workspace, agent_name, agent_task, 'file_delete',
+                file_path, str(e)
+            )
 
         # Capture before state
         content_before = ''
@@ -273,7 +308,7 @@ class FileWriter:
             raise ValueError("This operation has already been rolled back")
 
         workspace = operation.workspace
-        full_path = Path(workspace.root_path) / operation.file_path
+        _, full_path, _root = self._resolve_workspace_path(workspace, operation.file_path)
 
         try:
             if operation.operation_type == 'file_create':
@@ -2015,9 +2050,11 @@ class WorkspaceManager:
 
     def read_file(self, workspace: ProjectWorkspace, file_path: str) -> Optional[str]:
         """Read a file from the workspace."""
-        # Session 918: Sanitize file path to prevent absolute path issues
-        file_path = self.file_writer._sanitize_file_path(file_path)
-        full_path = Path(workspace.root_path) / file_path
+        try:
+            file_path, full_path, _root = self.file_writer._resolve_workspace_path(workspace, file_path)
+        except ValueError as e:
+            logger.warning("Workspace read rejected for %s: %s", file_path, e)
+            return None
         if full_path.exists():
             try:
                 return full_path.read_text(encoding='utf-8')

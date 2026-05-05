@@ -1007,6 +1007,45 @@ class AgentHandlersMixin:
             ),
         }
 
+    def _serialize_workspace(self, workspace) -> Dict[str, Any]:
+        """Return a compact workspace summary for tool responses."""
+        return {
+            'id': str(workspace.id),
+            'name': workspace.name,
+            'description': workspace.description or '',
+            'workspace_type': workspace.workspace_type,
+            'root_path': workspace.root_path,
+            'is_active': workspace.is_active,
+            'current_branch': workspace.current_branch or '',
+            'total_operations': workspace.total_operations,
+            'total_files_written': workspace.total_files_written,
+            'last_operation_at': workspace.last_operation_at.isoformat() if workspace.last_operation_at else None,
+        }
+
+    def _resolve_workspace_for_payload(
+        self,
+        manager,
+        user_id: Optional[int],
+        payload: Dict[str, Any],
+        allow_active_fallback: bool = True,
+    ):
+        """Resolve the workspace to operate on, favoring an explicit workspace_id."""
+        from core.models_skin_layer import ProjectWorkspace
+
+        workspace_id = str(payload.get('workspace_id') or payload.get('workspace') or '').strip()
+        if workspace_id:
+            workspace = ProjectWorkspace.objects.filter(user_id=user_id, id=workspace_id).first()
+            if workspace:
+                return workspace, None
+            return None, f'Workspace not found: {workspace_id}'
+
+        if allow_active_fallback:
+            workspace = manager.get_active_workspace()
+            if workspace:
+                return workspace, None
+
+        return None, 'No active workspace'
+
     def _handle_workspace(
         self,
         tool_name: str,
@@ -1072,9 +1111,9 @@ class AgentHandlersMixin:
 
             ws = None
             if workspace_id:
-                ws = ProjectWorkspace.objects.filter(id=workspace_id).first()
+                ws = ProjectWorkspace.objects.filter(user_id=user_id, id=workspace_id).first()
             elif workspace_name:
-                ws = ProjectWorkspace.objects.filter(name__icontains=workspace_name).first()
+                ws = ProjectWorkspace.objects.filter(user_id=user_id, name__icontains=workspace_name).first()
 
             if not ws:
                 return {'action': 'get', 'error': f'Workspace not found: {workspace_id or workspace_name}'}
@@ -1082,11 +1121,7 @@ class AgentHandlersMixin:
             config = getattr(ws, 'config', None)
             result = {
                 'action': 'get',
-                'id': str(ws.id),
-                'name': ws.name,
-                'description': ws.description or '',
-                'workspace_type': ws.workspace_type,
-                'is_active': ws.is_active,
+                **self._serialize_workspace(ws),
             }
             if config:
                 result['template'] = config.template.name if config.template else None
@@ -1117,12 +1152,7 @@ class AgentHandlersMixin:
             return {
                 'action': 'status',
                 'total_workspaces': len(workspaces),
-                'active_workspace': {
-                    'id': str(active[0].id),
-                    'name': active[0].name,
-                    'root_path': active[0].root_path,
-                    'current_branch': active[0].current_branch or '',
-                } if active else None,
+                'active_workspace': self._serialize_workspace(active[0]) if active else None,
             }
 
         elif action == 'create':
@@ -1169,6 +1199,226 @@ class AgentHandlersMixin:
                 'message': f"Created workspace '{name}'",
             }
 
+        elif action == 'scan':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'scan', 'success': False, 'error': error}
+
+            context = manager.rescan_workspace(workspace)
+            return {
+                'action': 'scan',
+                'success': True,
+                'message': f"Scanned workspace: {workspace.name}",
+                'workspace': self._serialize_workspace(workspace),
+                'stats': {
+                    'total_files': context.total_files,
+                    'total_directories': context.total_directories,
+                    'total_lines_of_code': context.total_lines_of_code,
+                    'file_types': context.file_type_counts,
+                    'scan_duration_ms': context.scan_duration_ms,
+                },
+                'context': {
+                    'workspace_name': context.workspace_name,
+                    'root_path': context.root_path,
+                    'tech_stack': context.tech_stack,
+                    'key_files': context.key_files,
+                    'total_files': context.total_files,
+                    'total_directories': context.total_directories,
+                },
+            }
+
+        elif action == 'read':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'read', 'success': False, 'error': error}
+
+            path = payload.get('path', '').strip()
+            if not path:
+                return {'action': 'read', 'success': False, 'error': 'path is required for read action'}
+
+            try:
+                manager.file_writer._resolve_workspace_path(workspace, path)
+            except ValueError as e:
+                return {'action': 'read', 'success': False, 'error': str(e)}
+
+            content = manager.read_file(workspace, path)
+            if content is None:
+                return {'action': 'read', 'success': False, 'error': f'File not found: {path}'}
+
+            max_chars = min(int(payload.get('max_chars', 50000)), 50000)
+            return {
+                'action': 'read',
+                'success': True,
+                'workspace': self._serialize_workspace(workspace),
+                'file_path': path,
+                'content': content[:max_chars],
+                'truncated': len(content) > max_chars,
+            }
+
+        elif action == 'write':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'write', 'success': False, 'error': error}
+
+            path = payload.get('path', '').strip()
+            content = payload.get('content')
+            agent_name = payload.get('agent_name', 'PersonalAssistant')
+            agent_task = payload.get('task', '') or payload.get('message', '')
+
+            if not path:
+                return {'action': 'write', 'success': False, 'error': 'path is required for write action'}
+            if content is None:
+                return {'action': 'write', 'success': False, 'error': 'content is required for write action'}
+
+            try:
+                manager.file_writer._resolve_workspace_path(workspace, path)
+            except ValueError as e:
+                return {'action': 'write', 'success': False, 'error': str(e)}
+
+            operation = manager.write_file(workspace, path, content, agent_name, agent_task)
+            return {
+                'action': 'write',
+                'success': operation.success,
+                'message': f"{'Wrote' if operation.success else 'Failed to write'} {path}",
+                'workspace': self._serialize_workspace(workspace),
+                'operation_id': str(operation.id),
+                'file_path': operation.file_path,
+                'error': operation.error_message if not operation.success else None,
+            }
+
+        elif action == 'git_status':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'git_status', 'success': False, 'error': error}
+
+            status = manager.git_status(workspace)
+            return {
+                'action': 'git_status',
+                'success': True,
+                'workspace': self._serialize_workspace(workspace),
+                'git_status': status,
+            }
+
+        elif action == 'git_commit':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'git_commit', 'success': False, 'error': error}
+
+            message = payload.get('message', '').strip()
+            agent_name = payload.get('agent_name', 'PersonalAssistant')
+            if not message:
+                return {'action': 'git_commit', 'success': False, 'error': 'message is required for git_commit'}
+
+            operation = manager.git_commit(workspace, message, agent_name)
+            return {
+                'action': 'git_commit',
+                'success': operation.success,
+                'message': f"{'Committed' if operation.success else 'Failed to commit'}: {message[:50]}...",
+                'workspace': self._serialize_workspace(workspace),
+                'operation_id': str(operation.id),
+                'error': operation.error_message if not operation.success else None,
+            }
+
+        elif action == 'git_branch':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'git_branch', 'success': False, 'error': error}
+
+            branch_name = payload.get('branch_name', '').strip()
+            agent_name = payload.get('agent_name', 'PersonalAssistant')
+            if not branch_name:
+                return {'action': 'git_branch', 'success': False, 'error': 'branch_name is required'}
+
+            operation = manager.git_create_branch(workspace, branch_name)
+            return {
+                'action': 'git_branch',
+                'success': operation.success,
+                'message': f"{'Created branch' if operation.success else 'Failed'}: {branch_name}",
+                'workspace': self._serialize_workspace(workspace),
+                'operation_id': str(operation.id),
+                'error': operation.error_message if not operation.success else None,
+                'agent_name': agent_name,
+            }
+
+        elif action == 'operations':
+            workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
+            if error:
+                return {'action': 'operations', 'success': False, 'error': error}
+
+            limit = min(int(payload.get('limit', 10)), 100)
+            offset = max(int(payload.get('offset', 0)), 0)
+
+            ops_qs = WorkspaceOperation.objects.filter(workspace=workspace).order_by('-created_at')
+            total = ops_qs.count()
+            ops = ops_qs[offset:offset + limit]
+
+            return {
+                'action': 'operations',
+                'success': True,
+                'workspace': self._serialize_workspace(workspace),
+                'operations': [
+                    {
+                        'id': str(op.id),
+                        'type': op.operation_type,
+                        'agent': op.agent_name,
+                        'file_path': op.file_path,
+                        'success': op.success,
+                        'created_at': op.created_at.isoformat(),
+                        'can_rollback': op.can_rollback and not op.rolled_back,
+                        'rolled_back': op.rolled_back,
+                        'requires_review': op.requires_review,
+                        'reviewed_by_human': op.reviewed_by_human,
+                    }
+                    for op in ops
+                ],
+                'count': len(ops),
+                'total': total,
+                'offset': offset,
+                'limit': limit,
+                'has_more': offset + limit < total,
+            }
+
+        elif action == 'rollback':
+            workspace, error = self._resolve_workspace_for_payload(
+                manager, user_id, payload, allow_active_fallback=False
+            )
+            if error:
+                return {'action': 'rollback', 'success': False, 'error': error}
+
+            confirm_rollback = payload.get('confirm_rollback')
+            if confirm_rollback not in (True, 'true', 'True', 1, '1'):
+                return {
+                    'action': 'rollback',
+                    'success': False,
+                    'error': 'confirm_rollback=true is required before rolling back an operation',
+                }
+
+            operation_id = str(payload.get('operation_id', '')).strip()
+            if not operation_id:
+                return {'action': 'rollback', 'success': False, 'error': 'operation_id is required for rollback'}
+
+            operation = WorkspaceOperation.objects.filter(id=operation_id, user_id=user_id).first()
+            if not operation:
+                return {'action': 'rollback', 'success': False, 'error': f'Operation not found: {operation_id}'}
+
+            if operation.workspace_id != workspace.id:
+                return {
+                    'action': 'rollback',
+                    'success': False,
+                    'error': 'Operation does not belong to the active workspace',
+                }
+
+            rollback_op = manager.rollback_operation(operation)
+            return {
+                'action': 'rollback',
+                'success': rollback_op.success,
+                'message': f"{'Rolled back' if rollback_op.success else 'Failed to rollback'} operation",
+                'workspace': self._serialize_workspace(workspace),
+                'original_operation_id': str(operation.id),
+                'rollback_operation_id': str(rollback_op.id),
+                'error': rollback_op.error_message if not rollback_op.success else None,
+            }
+
         elif action == 'delete':
             from core.models_skin_layer import ProjectWorkspace
 
@@ -1176,7 +1426,7 @@ class AgentHandlersMixin:
             if not ws_id:
                 raise ValueError("'id' is required for delete action")
 
-            ws = ProjectWorkspace.objects.filter(id=ws_id).first()
+            ws = ProjectWorkspace.objects.filter(user_id=user_id, id=ws_id).first()
             if not ws:
                 return {'action': 'delete', 'success': False, 'error': f'Workspace {ws_id} not found'}
 
@@ -1191,7 +1441,11 @@ class AgentHandlersMixin:
             return {'action': 'delete', 'success': True, 'name': name, 'message': f"Deleted workspace '{name}'"}
 
         else:
-            raise ValueError(f"Unknown action: {action}. Valid actions: list, status, create, delete")
+            raise ValueError(
+                f"Unknown action: {action}. Valid actions: "
+                "list, get, status, create, delete, scan, read, write, "
+                "git_status, git_commit, git_branch, operations, rollback"
+            )
 
     def _handle_deliverables(
         self,
@@ -4046,4 +4300,3 @@ class AgentHandlersMixin:
         except Exception as e:
             logger.error(f"[bpaas_tool] Error: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
-

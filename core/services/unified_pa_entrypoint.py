@@ -963,8 +963,93 @@ class UnifiedPAEntrypoint:
             logger.debug(f"[PA] AssistantProfile lookup failed: {e}")
             return None
 
+    def _extract_workspace_id_from_context(self, user_context: Optional[Dict[str, Any]]) -> Optional[str]:
+        """Extract a workspace_id from request context, if one is present."""
+        if not isinstance(user_context, dict):
+            return None
+
+        workspace_id = user_context.get('workspace_id')
+        if workspace_id:
+            return str(workspace_id)
+
+        workspace = user_context.get('workspace')
+        if isinstance(workspace, dict):
+            for key in ('workspace_id', 'id'):
+                value = workspace.get(key)
+                if value:
+                    return str(value)
+
+        workspace_context = user_context.get('workspace_context')
+        if isinstance(workspace_context, dict):
+            for key in ('workspace_id', 'id'):
+                value = workspace_context.get(key)
+                if value:
+                    return str(value)
+
+        return None
+
+    async def _resolve_workspace_scope(
+        self,
+        user_context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Resolve whether Rigby should operate in global or workspace mode."""
+        scope = {
+            'assistant_mode': 'global',
+            'workspace_id': None,
+            'workspace_name': None,
+            'workspace_type': None,
+            'workspace_root_path': None,
+            'workspace_source': None,
+            'workspace_is_active': None,
+        }
+
+        if not self.user:
+            return scope
+
+        try:
+            from core.models_assistant_profile import AssistantProfile
+            from core.models_skin_layer import ProjectWorkspace
+            requested_workspace_id = self._extract_workspace_id_from_context(user_context)
+
+            workspace = None
+            source = None
+
+            if requested_workspace_id:
+                workspace = await asyncio.to_thread(
+                    lambda: ProjectWorkspace.objects.filter(
+                        user=self.user,
+                        id=requested_workspace_id,
+                    ).first()
+                )
+                if workspace:
+                    source = 'request'
+
+            if workspace is None:
+                profile = await asyncio.to_thread(
+                    lambda: AssistantProfile.objects.select_related('workspace').filter(user=self.user).first()
+                )
+                if profile and profile.workspace:
+                    workspace = profile.workspace
+                    source = 'profile'
+
+            if workspace:
+                scope.update({
+                    'assistant_mode': 'workspace',
+                    'workspace_id': str(workspace.id),
+                    'workspace_name': workspace.name,
+                    'workspace_type': workspace.workspace_type,
+                    'workspace_root_path': workspace.root_path,
+                    'workspace_source': source or 'unknown',
+                    'workspace_is_active': bool(workspace.is_active),
+                })
+
+        except Exception as e:
+            logger.debug(f"[PA] Workspace scope resolution failed: {e}")
+
+        return scope
+
     def _get_user_workspace_id(self):
-        """Return workspace_id from the user's AssistantProfile, if set.
+        """Legacy fallback: return workspace_id from the user's AssistantProfile, if set.
 
         Used to auto-scope tool calls (e.g. deliverable_tool) to the user's workspace.
         Returns None for admin users or users without workspace scoping.
@@ -1425,13 +1510,24 @@ class UnifiedPAEntrypoint:
                 # Per-user workspace scoping — auto-inject workspace_id
                 # so tools like deliverable_tool only return workspace data
                 if isinstance(arguments, dict) and not arguments.get('workspace_id'):
-                    ws_id = self._get_user_workspace_id()
+                    workspace_scope = await self._resolve_workspace_scope(arguments)
+                    ws_id = workspace_scope.get('workspace_id')
                     if ws_id:
                         arguments['workspace_id'] = ws_id
                         arguments['workspace'] = ws_id
-                        logger.info(f"[PA] Injected workspace_id={ws_id} into {actual_tool_name} args")
+                        arguments['workspace_mode'] = workspace_scope.get('assistant_mode')
+                        logger.info(
+                            "[PA] Injected workspace_id=%s into %s args (source=%s)",
+                            ws_id,
+                            actual_tool_name,
+                            workspace_scope.get('workspace_source'),
+                        )
                     else:
-                        logger.info(f"[PA] No workspace_id to inject for {actual_tool_name} (user={self.user})")
+                        logger.info(
+                            "[PA] No workspace_id to inject for %s (user=%s)",
+                            actual_tool_name,
+                            self.user,
+                        )
 
                 tool_result = await self.tool_dispatcher.execute(
                     tool_name=actual_tool_name,
@@ -1899,6 +1995,25 @@ class UnifiedPAEntrypoint:
             "Call tools when you need data. Do NOT guess or fabricate data.",
             "You can call multiple tools in sequence if needed.",
             "",
+        ]
+
+        workspace_mode = context.get('assistant_mode', 'global')
+        workspace_scope = context.get('workspace_scope', {})
+        if workspace_mode == 'workspace' and workspace_scope:
+            workspace_name = workspace_scope.get('workspace_name') or 'the active workspace'
+            prompt_parts.extend([
+                "WORKSPACE MODE:",
+                (
+                    f"You are currently scoped to workspace '{workspace_name}'. "
+                    "Stay inside this workspace unless the user explicitly asks for a global platform answer."
+                ),
+                (
+                    "Use workspace-aware tools and workspace context only; do not mix in unrelated workspaces."
+                ),
+                "",
+            ])
+
+        prompt_parts.extend([
             "PARALLEL TOOL CALLS — IMPORTANT:",
             "When you need to call multiple tools at once, emit each one as a SEPARATE",
             "top-level function_call output item. The OpenAI Responses API natively",
@@ -1952,7 +2067,7 @@ class UnifiedPAEntrypoint:
             "",
             "PLATFORM STATS:",
             f"- {agent_count} Agents | {spider_count} Spiders | 25 Advisors",
-        ]
+        ])
 
         # Session 1100: Inject conversation lane context
         if self._lane_policy:
@@ -2184,13 +2299,33 @@ class UnifiedPAEntrypoint:
 
         # Workspace context (codebase structure from SKIN layer)
         try:
-            from core.services.workspace_manager import get_workspace_manager
-            manager = get_workspace_manager(self.user)
-            workspace = await asyncio.wait_for(
-                asyncio.to_thread(manager.get_active_workspace),
+            workspace_scope = await asyncio.wait_for(
+                self._resolve_workspace_scope(user_context),
                 timeout=3.0,
             )
+            context['assistant_mode'] = workspace_scope.get('assistant_mode', 'global')
+            context['workspace_mode'] = workspace_scope.get('assistant_mode') == 'workspace'
+            context['workspace_scope'] = {
+                key: value
+                for key, value in workspace_scope.items()
+                if value is not None
+            }
+
+            from core.models_skin_layer import ProjectWorkspace
+            from core.services.workspace_manager import get_workspace_manager
+
+            workspace = None
+            workspace_id = workspace_scope.get('workspace_id')
+            if workspace_id:
+                workspace = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        lambda: ProjectWorkspace.objects.filter(user=self.user, id=workspace_id).first()
+                    ),
+                    timeout=3.0,
+                )
+
             if workspace:
+                manager = get_workspace_manager(self.user)
                 ws_ctx = await asyncio.wait_for(
                     asyncio.to_thread(
                         manager.get_workspace_context_for_agent,
@@ -2208,6 +2343,11 @@ class UnifiedPAEntrypoint:
 
         # Merge user-provided context
         context.update(user_context)
+
+        # Keep the resolved mode visible even if user_context added overlapping keys.
+        if 'assistant_mode' not in context:
+            context['assistant_mode'] = 'global'
+        context.setdefault('workspace_mode', context.get('assistant_mode') == 'workspace')
 
         return context
 

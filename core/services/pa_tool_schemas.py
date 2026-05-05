@@ -642,29 +642,49 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "workspace_tool",
         "description": (
-            "Manage workspaces: list all, search by name, get details, check status, create, or delete. "
-            "Use 'get' with name to find a specific workspace. Use 'list' with name filter to search. "
-            "Each workspace can be a business unit with pipeline, agents, and deliverables."
+            "Manage workspaces and workspace-scoped operations. "
+            "Use it to list, look up, activate, create, or delete workspaces, and to scan, read, write, "
+            "inspect git status, create branches/commits, review operations, and roll back changes. "
+            "Workspace file actions are always scoped to the active workspace or an explicit workspace_id."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "get", "status", "create", "delete"],
+                    "enum": [
+                        "list", "get", "status", "create", "delete",
+                        "scan", "read", "write", "git_status", "git_commit", "git_branch",
+                        "operations", "rollback",
+                    ],
                     "description": (
                         "list: list all workspaces (optional name filter). "
-                        "get: get full details for a workspace by ID or name (includes pipeline runs, deliverable count, brief). "
+                        "get: get workspace details by ID or name. "
                         "status: quick status of active workspace. "
                         "create: make a new workspace. "
-                        "delete: remove a sandbox workspace."
+                        "delete: remove a sandbox workspace. "
+                        "scan: rescan workspace structure and stats. "
+                        "read: read a file within the workspace root. "
+                        "write: write a file within the workspace root. "
+                        "git_status: inspect git status for the workspace. "
+                        "git_commit: create a git commit. "
+                        "git_branch: create a git branch. "
+                        "operations: list recent workspace operations. "
+                        "rollback: roll back an operation (requires confirm_rollback=true)."
                     ),
                 },
-                "workspace_id": {"type": "string", "description": "UUID of workspace (for get/delete)"},
-                "name": {"type": "string", "description": "Workspace name — for search (list), lookup (get), or creation (create)"},
-                "description": {"type": "string", "description": "Description/notes (for create)"},
-                "offset": {"type": "integer", "description": "Pagination offset for list action (default 0)"},
-                "limit": {"type": "integer", "description": "Max items for list action (default 50). Use with offset for pagination."},
+                "workspace_id": {"type": "string", "description": "Workspace UUID (preferred for workspace-scoped actions, get, delete, scan, read, write, git, operations, rollback)"},
+                "name": {"type": "string", "description": "Workspace name — for search (list), lookup (get/set_active), creation (create/register), or delete"},
+                "description": {"type": "string", "description": "Description/notes (for create/register)"},
+                "path": {"type": "string", "description": "For scan/register/read/write: project root path or file path, depending on action"},
+                "content": {"type": "string", "description": "For write: file content to save"},
+                "message": {"type": "string", "description": "For git_commit: commit message"},
+                "branch_name": {"type": "string", "description": "For git_branch: branch name"},
+                "operation_id": {"type": "string", "description": "For rollback: workspace operation UUID"},
+                "confirm_rollback": {"type": "boolean", "description": "For rollback: must be true to confirm the destructive revert"},
+                "agent_name": {"type": "string", "description": "Optional agent name for audit trail"},
+                "offset": {"type": "integer", "description": "Pagination offset for list/operations (default 0)"},
+                "limit": {"type": "integer", "description": "Max items for list/operations (default 50). Use with offset for pagination."},
             },
             "required": ["action"],
         },
