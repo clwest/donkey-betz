@@ -10,7 +10,7 @@
 
 | Subsystem | Headline |
 |---|---|
-| [Agents](#agents) | 83 agents in AGENT_MAP (73 enabled, 9 rerouted, 1 blocked); 223 rows in Agent table. |
+| [Agents](#agents) | 83 agents in AGENT_MAP (73 enabled, 8 rerouted, 2 blocked); 223 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
 | [Services](#services) | 112 `*Service` classes across 320 files in core/services/ |
 | [Celery Tasks](#celery-tasks) | 365 user-defined Celery tasks (excludes celery.* internals) |
@@ -59,7 +59,7 @@
 <a id="agents"></a>
 ## Agents
 
-**Headline:** 83 agents in AGENT_MAP (73 enabled, 9 rerouted, 1 blocked); 223 rows in Agent table.
+**Headline:** 83 agents in AGENT_MAP (73 enabled, 8 rerouted, 2 blocked); 223 rows in Agent table.
 
 **Code location:** `core/agent_router.py AGENT_MAP`
 
