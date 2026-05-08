@@ -1,0 +1,20 @@
+canonical_docs:
+  - 00-START-NEXT-SESSION.md
+  - README.md
+  - CLAUDE.md
+  - docs/PLATFORM_INVENTORY.md
+  - docs/PLATFORM_WHAT_IT_IS.md
+active_doc_roots:
+  - docs/
+  - .claude/
+historical_roots:
+  - archive/
+  - docs/archive/
+  - external-project-docs/
+generated_artifact_roots:
+  - frontend/dist/
+  - dist/
+  - build/
+  - venv/
+  - .venv/
+  - venv_ml/

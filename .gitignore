@@ -126,7 +126,16 @@ frontend/dist/
 .pyright-after.txt
 
 # context-kit scratch output
-.context-kit/
+# Note: ignore *contents* (`.context-kit/*`) rather than the directory
+# (`.context-kit/`). Git cannot re-include a file with `!path` if its
+# parent directory is ignored, so the directory-form would silently
+# defeat the verify.yaml allowlist below.
+.context-kit/*
+# BUT: track verify.yaml — it's the canonical-docs config that drives
+# `context-kit verify`, not scratch. Without it CI's verifier falls
+# through to active-docs scoring and misclassifies legitimate
+# DOC_ONLY findings as CONFLICT (see PR #2059 investigation).
+!.context-kit/verify.yaml
 connections-report.json
 context-coverage.json
 context-doctor.json

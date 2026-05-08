@@ -268,6 +268,41 @@ def check_platform_inventory_freshness() -> tuple[bool, str]:
     )
 
 
+def classify_failures(
+    *,
+    strict: bool,
+    inventory_advisory: bool,
+    tracked_blocking: bool,
+    inventory_blocking: bool,
+    autogen_blocking: bool,
+    conflict_blocking: bool,
+) -> list[str]:
+    """Return the strict-mode failure list given the per-check booleans.
+
+    Pure function so tests can exercise the decision matrix without
+    spinning up ``main()`` or running the underlying checks.
+
+    ``inventory_advisory`` only carves out the inventory-freshness
+    check: when set, a stale inventory does not fail strict mode but
+    is still surfaced in the report (the caller still prints the
+    WARNING line). Every other strict check is unaffected — the goal
+    is to enforce gates that CI can actually verify (tracked-paths,
+    autogen marker, CONFLICT findings) while letting freshness, which
+    is DB-gated and unsatisfiable from a CI runner without DB access,
+    remain reportable but non-blocking.
+    """
+    failures: list[str] = []
+    if strict and tracked_blocking:
+        failures.append("tracked generated paths are present")
+    if strict and inventory_blocking and not inventory_advisory:
+        failures.append("platform inventory is stale")
+    if strict and autogen_blocking:
+        failures.append("docs/INDEX.md is missing the DOC-AUTOGEN marker")
+    if strict and conflict_blocking:
+        failures.append("context-kit has CONFLICT findings")
+    return failures
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run repository guardrails")
     strict_group = parser.add_mutually_exclusive_group()
@@ -283,6 +318,19 @@ def main() -> int:
         dest="strict",
         action="store_false",
         help="Warn only, matching the Phase 4A behavior.",
+    )
+    parser.add_argument(
+        "--inventory-advisory",
+        action="store_true",
+        help=(
+            "Treat platform-inventory freshness as advisory (never blocks) "
+            "even in strict mode. Other strict checks (tracked-paths, "
+            "DOC-AUTOGEN marker, CONFLICT findings) continue to block. "
+            "Intended for PR-time CI where the inventory regenerator "
+            "(`python manage.py generate_platform_inventory`) needs DB "
+            "access that the runner does not have. Local strict runs "
+            "should not need this flag."
+        ),
     )
     args = parser.parse_args()
 
@@ -332,7 +380,13 @@ def main() -> int:
 
     inventory_blocking = not inventory_fresh
     if not inventory_fresh:
-        print("WARNING: platform inventory freshness check failed.")
+        if args.strict and args.inventory_advisory:
+            print(
+                "WARNING: platform inventory freshness check failed "
+                "(advisory under --inventory-advisory; will not fail strict mode)."
+            )
+        else:
+            print("WARNING: platform inventory freshness check failed.")
     else:
         print("OK: platform inventory matches the current repo head.")
 
@@ -348,15 +402,14 @@ def main() -> int:
     if doc_only_count:
         print(f"WARNING: context-kit reported {doc_only_count} DOC_ONLY finding(s) (advisory).")
 
-    failures: list[str] = []
-    if args.strict and tracked_blocking:
-        failures.append("tracked generated paths are present")
-    if args.strict and inventory_blocking:
-        failures.append("platform inventory is stale")
-    if args.strict and autogen_blocking:
-        failures.append("docs/INDEX.md is missing the DOC-AUTOGEN marker")
-    if args.strict and conflict_blocking:
-        failures.append("context-kit has CONFLICT findings")
+    failures = classify_failures(
+        strict=args.strict,
+        inventory_advisory=args.inventory_advisory,
+        tracked_blocking=tracked_blocking,
+        inventory_blocking=inventory_blocking,
+        autogen_blocking=autogen_blocking,
+        conflict_blocking=conflict_blocking,
+    )
 
     pass_fail = "FAIL" if failures else "PASS"
     print(f"\n{pass_fail} summary")
@@ -375,7 +428,7 @@ def main() -> int:
     print(f"- context-kit inspect exit: {inspect_result.returncode}")
     print(f"- context-kit verify --json exit: {verify_result.returncode}")
     print(f"- tracked generated paths: {len(tracked)}")
-    print(f"- platform inventory fresh: {inventory_fresh}")
+    print(f"- platform inventory fresh: {inventory_fresh}{' (advisory)' if args.inventory_advisory else ''}")
     print(f"- docs/INDEX.md autogen marker: {autogen_ok}")
     print(f"- context-kit CONFLICT findings: {conflict_count}")
     print(f"- context-kit DOC_ONLY findings: {doc_only_count}")
