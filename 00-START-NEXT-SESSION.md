@@ -51,23 +51,25 @@ Rule: edit the source command or the underlying docs, then **regenerate**. Hand-
 
 ---
 
-## SESSION 1102+ — CURRENT AUDIT / CLEANUP ENTRY POINT
+## SESSION 1104+ — CURRENT AUDIT / CLEANUP ENTRY POINT
 
-Phase 1 (Session 1101) closed the spider-count `CONFLICT` and reconciled
-active docs. Phase 2B (Session 1102) fixed the CLAUDE.md taxonomy drift
-(`73/8/2` → `73/9/1`), added a `<!-- DOC-AUTOGEN -->` header to the
-generated `docs/INDEX.md`, and regenerated the index. Verifier reports
+Phase 1 (Session 1101) closed the spider-count `CONFLICT`. Phase 2B
+(Session 1102) fixed the CLAUDE.md taxonomy drift (`73/8/2` → `73/9/1`),
+added a `<!-- DOC-AUTOGEN -->` header to `docs/INDEX.md`, and regenerated
+the index. Phase 2C-prep (Session 1103) installed the DOC-AUTOGEN
+guardrail in `scripts/verify_repo_guardrails.py`. Phase 2C (Session 1104)
+**removed the unused 24 MB `core/static/images/donkey-logo.png`** after a
+deep source-side scan confirmed zero consumers. Verifier reports
 `CONFLICT: 0`.
 
-Phase 2A investigation found that `core/rag.py:top_k()` is **dormant in
-production** — only consumed by local Ollama dev tools. Production PA RAG
-goes through `Document` model + pgvector via
-`sync_docs_index_to_documents`. `.rag/corpus.jsonl` is **orphaned** (no
-in-repo producer); cleanup decision queued for the next session.
+`.rag/corpus.jsonl` remains **deferred and production-dormant** —
+`core/rag.py:top_k()` only feeds local Ollama dev tools; production PA
+RAG goes through `Document` + pgvector via
+`sync_docs_index_to_documents`. Cleanup decision (untrack vs. add
+`build_rag_corpus`) still queued.
 
-Remaining cleanup: H4 (donkey-logo replacement), `.rag/` decision
-(untrack vs. add `build_rag_corpus`), platform-inventory refresh, and
-CI guardrail wiring.
+Remaining cleanup: `.rag/` decision, platform-inventory refresh
+(needs DB access), and CI guardrail wiring.
 
 Start with the current audit artifacts, not the older Session 1099 canary
 window:
@@ -87,9 +89,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1102_PHASE2B_TAXONOMY_AUTOGEN.md`](docs/handoffs/SESSION_1102_PHASE2B_TAXONOMY_AUTOGEN.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md`](docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md`](docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md)
+- Previous handoff: [`docs/handoffs/SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md`](docs/handoffs/SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
