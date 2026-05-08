@@ -359,3 +359,8 @@ resolve_node/results/
 coverage-*.json
 verify-report.json
 behavior-*.json
+
+# Vendored convenience snapshot from another project (Session 1106 untrack).
+# 18 MB; only consumed by ad-hoc scripts with graceful fail-fast.
+# Local copy preserved for those scripts; not tracked in git.
+external-project-docs/ai-content-studio/documentation/master_context_all.md

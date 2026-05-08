@@ -51,7 +51,7 @@ Rule: edit the source command or the underlying docs, then **regenerate**. Hand-
 
 ---
 
-## SESSION 1105+ — CURRENT AUDIT / CLEANUP ENTRY POINT
+## SESSION 1106+ — CURRENT AUDIT / CLEANUP ENTRY POINT
 
 Phase 1 (Session 1101) closed the spider-count `CONFLICT`. Phase 2B
 (Session 1102) fixed the CLAUDE.md taxonomy drift (`73/8/2` → `73/9/1`),
@@ -64,7 +64,11 @@ deep source-side scan confirmed zero consumers. Phase 2D (Session 1105)
 fragment causing duplicate-key parse error) and narrowly extended the
 pre-commit hook's database-URL placeholder allowlist to accept
 `secure_password`. Local subnet override (172.20→172.21) preserved as
-named git stash. Verifier reports `CONFLICT: 0`.
+named git stash. Phase 2E (Session 1106) **untracked the 18 MB
+`external-project-docs/.../master_context_all.md`** vendored convenience
+snapshot — only ad-hoc scripts (with graceful fail-fast) reference it,
+zero runtime/CI consumers. Local copy preserved; path added to
+`.gitignore`. Verifier reports `CONFLICT: 0`.
 
 `.rag/corpus.jsonl` remains **deferred and production-dormant** —
 `core/rag.py:top_k()` only feeds local Ollama dev tools; production PA
@@ -93,9 +97,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md`](docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1106_MASTER_CONTEXT_UNTRACK.md`](docs/handoffs/SESSION_1106_MASTER_CONTEXT_UNTRACK.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md`](docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md)
+- Previous handoff: [`docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md`](docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
