@@ -229,6 +229,10 @@ tests/artifacts/*.png
 docs/_build/
 docs/_index.json
 
+# Local-only Ollama askdocs corpus (regenerable via `python manage.py build_rag_corpus`).
+# Production PA RAG uses pgvector via core.rag_integration and is unaffected.
+.rag/
+
 # System Intelligence & Embeddings
 embeddings/
 code_embeddings/
