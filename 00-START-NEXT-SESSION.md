@@ -39,13 +39,23 @@ If you're unsure which doc to trust, read INVENTORY first, then WHAT_IT_IS.
 
 ---
 
-## SESSION 1101+ — CURRENT AUDIT / CLEANUP ENTRY POINT
+## SESSION 1102+ — CURRENT AUDIT / CLEANUP ENTRY POINT
 
-Phase 1 cleanup pass for `docs/audit/CLEANUP_PLAN.md` is **in progress**:
-Session 1101 closed the live spider-count `CONFLICT` and reconciled active
-docs (H1, H3, H2, M1, M2). Verifier currently reports `CONFLICT: 0`.
-Remaining cleanup work is H4 (donkey-logo replacement) and H5 (.rag corpus
-untrack), both deferred to a follow-up session.
+Phase 1 (Session 1101) closed the spider-count `CONFLICT` and reconciled
+active docs. Phase 2B (Session 1102) fixed the CLAUDE.md taxonomy drift
+(`73/8/2` → `73/9/1`), added a `<!-- DOC-AUTOGEN -->` header to the
+generated `docs/INDEX.md`, and regenerated the index. Verifier reports
+`CONFLICT: 0`.
+
+Phase 2A investigation found that `core/rag.py:top_k()` is **dormant in
+production** — only consumed by local Ollama dev tools. Production PA RAG
+goes through `Document` model + pgvector via
+`sync_docs_index_to_documents`. `.rag/corpus.jsonl` is **orphaned** (no
+in-repo producer); cleanup decision queued for the next session.
+
+Remaining cleanup: H4 (donkey-logo replacement), `.rag/` decision
+(untrack vs. add `build_rag_corpus`), platform-inventory refresh, and
+CI guardrail wiring.
 
 Start with the current audit artifacts, not the older Session 1099 canary
 window:
@@ -65,9 +75,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md`](docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1102_PHASE2B_TAXONOMY_AUTOGEN.md`](docs/handoffs/SESSION_1102_PHASE2B_TAXONOMY_AUTOGEN.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1100_CONTEXT_KIT_DRIFT_PREVENTION.md`](docs/handoffs/SESSION_1100_CONTEXT_KIT_DRIFT_PREVENTION.md)
+- Previous handoff: [`docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md`](docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
