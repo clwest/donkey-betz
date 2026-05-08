@@ -5,6 +5,15 @@ This module handles actual agent execution and displays their generated outputs.
 Now supports both demo mode (fast, pre-generated) and real mode (LLM-powered).
 """
 
+# PARTIAL — Session 1113 review (Session 1111 PR-B/PR-E queue).
+# Classification: built but not URL-mounted.
+# Why: views are reached only via `agents/urls_deployment.py`, which is
+# never included from any active URLConf. The module also lazy-imports
+# `views_deployment_execute_improved.execute_agents_improved` (also
+# partial, see that module). No active runtime caller.
+# Decision pending: same as `agents/urls_deployment.py`.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import os
 from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt

@@ -2,6 +2,13 @@
 Simple view to list all available agents without complex database queries
 """
 
+# PARTIAL — Session 1113 review (Session 1111 PR-B/PR-E queue).
+# Classification: built but not URL-mounted.
+# Why: imported by `agents/urls_deployment.py`, which is itself dark
+# (never `include()`-d). No active runtime caller.
+# Decision pending: same as `agents/urls_deployment.py`.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods

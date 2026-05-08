@@ -127,8 +127,24 @@ Untracked 23 verified zero-reader artifact files across
 `frontend/components/generated/`, `reports/*.json`, `frontend/nohup.out`,
 `templates/frontend_index.html`, and `templates/{agents,content,invoices}/.gitkeep`.
 Local copies preserved; `.gitignore` extended with three new rules.
-Guardrails still report `0 blocking, 0 CONFLICT`. PR-B (defensive
-banners) and PR-C (archive-candidate banners) remain next on the queue.
+Guardrails still report `0 blocking, 0 CONFLICT`.
+
+Session 1113 shipped **PR-B + PR-C** off the same queue:
+[`docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md`](docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md).
+Annotation-only labels added to 13 files across the agent-deploy bundle,
+`sports_betting/`, `intelligence/urls_ai_jobs.py`, the broken
+`ai_core/intelligence/{monitoring_dashboard,testing_suite}.py` family,
+`ai_core/intelligence/orchestration.py`, `revenue/models.py`, and a docs
+note in `ml_pipeline/__init__.py` for the missing `ml_pipeline.pipeline`
+shim. Classification labels: PARTIAL, ARCHIVE-CANDIDATE,
+BROKEN-BUT-UNREACHABLE, ACTIVE-COMPANION-PARTIAL. No runtime behavior
+changes. Smoke imports for every banner-touched module match the
+documented classification exactly. `docs/audit/CLEANUP_PLAN.md` now
+carries a Phase 6 section with the full label table. **PR-D** (docs for
+the active-but-undocumented modules) is unblocked and independent;
+**PR-E** (decisions: revive `ml_pipeline.pipeline` shim, wire
+`agents/urls_deployment.py`, rehome `revenue/models.py`) remains
+Rigby-gated.
 
 Remaining cleanup: platform-inventory refresh (needs DB access),
 `BACKEND_INVENTORY.md` hygiene reassessment, and CI inventory regen
@@ -152,9 +168,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md`](docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md`](docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md)
+- Previous handoff: [`docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)

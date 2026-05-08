@@ -5,6 +5,22 @@ Provides comprehensive monitoring of the intelligence platform including
 agent performance, workflow execution, system health, and learning metrics.
 """
 
+# BROKEN-BUT-UNREACHABLE — Session 1113 review (Session 1111 PR-C queue).
+# Classification: import-broken module, no active runtime caller.
+# Why: top-of-file `from orchestration import orchestrator` resolves at
+# import time as a bare top-level package — no such top-level package
+# exists in the repo (the actual module is `ai_core.intelligence.orchestration`),
+# so any import of this module raises ModuleNotFoundError immediately.
+# It also imports `from ml_pipeline.pipeline import MLPipeline`, but
+# `ml_pipeline.pipeline` doesn't exist either — see `ml_pipeline/__init__.py`
+# note. Both failures are pre-Django; smoke import never reaches the body.
+# No active importer found in the repo (the only reference is the
+# Session 1111 audit + this banner).
+# Decision pending: archive once the deeper-review queue confirms no
+# revival path. Sits in the same family as `orchestration.py` and
+# `testing_suite.py` — treat consistently.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import asyncio
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field

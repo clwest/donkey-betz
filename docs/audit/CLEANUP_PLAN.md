@@ -62,6 +62,41 @@ plan for follow-on work. It does not delete historical docs.
   - `docs/`
   - `archive/`
 
+## Phase 6 - Label dormant / partial / broken-but-unreachable code (Session 1113)
+
+Annotation-only follow-up to the deeper-review map. Each touched file
+gained a top-of-file banner classifying it as **PARTIAL**,
+**ARCHIVE-CANDIDATE**, **BROKEN-BUT-UNREACHABLE**, or
+**ACTIVE-COMPANION-PARTIAL**. No runtime behavior changes, no
+deletions, no archival moves, no route wiring, no model migrations.
+
+Banners point at `docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md` for
+the full classification rationale, and they exist precisely so the
+next contributor (human or agent) doesn't re-run the audit.
+
+| Path | Label | Decision pending |
+|---|---|---|
+| `agents/urls_deployment.py` | PARTIAL | Wire into `core/urls.py` or treat as dormant (PR-E) |
+| `agents/views_deployment.py` | PARTIAL | Same as `urls_deployment.py` |
+| `agents/views_deployment_execute.py` | PARTIAL | Same |
+| `agents/views_deployment_execute_improved.py` | PARTIAL | Same; only external consumer is `tests/spiders/test_agent_modes.py` |
+| `agents/views_all_agents.py` | PARTIAL | Same |
+| `agents/views_all_agents_simple.py` | PARTIAL | Same |
+| `sports_betting/__init__.py` | ARCHIVE-CANDIDATE | Future surface or abandoned experiment? |
+| `intelligence/urls_ai_jobs.py` | BROKEN-BUT-UNREACHABLE | Archive after revival check |
+| `ai_core/intelligence/monitoring_dashboard.py` | BROKEN-BUT-UNREACHABLE | Archive (with the rest of the family) |
+| `ai_core/intelligence/testing_suite.py` | BROKEN-BUT-UNREACHABLE | Archive (same family) |
+| `revenue/models.py` | ACTIVE-COMPANION-PARTIAL | Rehome models in installed app or accept verifier as Redis-only |
+| `ai_core/intelligence/orchestration.py` | PARTIAL | Revive (`MLPipeline = EnhancedMLPipeline` shim) or mark dormant |
+| `ml_pipeline/__init__.py` | (note only) | Documents the missing `ml_pipeline.pipeline` shim consumed by the three `ai_core/intelligence/*` modules above |
+
+Verification snapshot at the time of this phase:
+
+- `python manage.py check` → `System check identified no issues (0 silenced)`
+- Smoke imports for every banner-touched module match their classifications: PARTIAL/note/archive-candidate import cleanly, BROKEN-BUT-UNREACHABLE fail with the exact errors documented in the banner text, ACTIVE-COMPANION-PARTIAL raises the documented `RuntimeError`.
+- `python scripts/verify_repo_guardrails.py --inventory-advisory` → 0 blocking, 4 DOC_ONLY (advisory), 2 VERIFIED.
+- `context-kit verify --json` → CONFLICT 0.
+
 ## Notes
 - Do not delete historical docs just because they are old.
 - Prefer untracking generated artifacts over rewriting historical memory.

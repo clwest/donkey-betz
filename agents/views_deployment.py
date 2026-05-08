@@ -5,6 +5,14 @@ This module provides API endpoints for the agent deployment system
 integrated with the AI Building Products interface.
 """
 
+# PARTIAL — Session 1113 review (Session 1111 PR-B/PR-E queue).
+# Classification: built but not URL-mounted.
+# Why: every view in this module is reachable only through
+# `agents/urls_deployment.py`, which is itself never `include()`-d from
+# any active URLConf. Module imports cleanly; routes are dark.
+# Decision pending: same as `agents/urls_deployment.py`.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt

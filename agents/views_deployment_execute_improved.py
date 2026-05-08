@@ -6,6 +6,15 @@ This module provides both demo mode (fast, pre-generated) and real mode
 (actual agent execution with LLM calls).
 """
 
+# PARTIAL — Session 1113 review (Session 1111 PR-B/PR-E queue).
+# Classification: built but not URL-mounted.
+# Why: reached only via `views_deployment_execute.execute_deployed_agents`
+# (lazy import) and `tests/spiders/test_agent_modes.py` (single test
+# import of `execute_agents_improved`). The view itself is not registered
+# in any URLConf — `agents/urls_deployment.py` is dark.
+# Decision pending: same as `agents/urls_deployment.py`.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import os
 import json
 from typing import Dict, Any

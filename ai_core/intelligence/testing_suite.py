@@ -5,6 +5,20 @@ Comprehensive testing of multi-agent collaboration, advisor consultations,
 ML pipeline integration, and workflow orchestration.
 """
 
+# BROKEN-BUT-UNREACHABLE — Session 1113 review (Session 1111 PR-C queue).
+# Classification: import-broken module, no active runtime caller.
+# Why: top-of-file `from orchestration import orchestrator` references a
+# bare top-level `orchestration` package that does not exist in this
+# repo (actual path is `ai_core.intelligence.orchestration`), so any
+# import of this module fails with ModuleNotFoundError before any code
+# can run. Also imports `from ml_pipeline.pipeline import MLPipeline`,
+# which is a missing submodule — see `ml_pipeline/__init__.py` note.
+# No active importer found.
+# Decision pending: archive once the deeper-review queue confirms no
+# revival path. Sits in the same family as `orchestration.py` and
+# `monitoring_dashboard.py` — treat consistently.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import asyncio
 import json
 from typing import Dict, List, Any
