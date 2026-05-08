@@ -83,14 +83,16 @@ snapshot — only ad-hoc scripts (with graceful fail-fast) reference it,
 zero runtime/CI consumers. Local copy preserved; path added to
 `.gitignore`. Verifier reports `CONFLICT: 0`.
 
-`.rag/corpus.jsonl` remains **deferred and production-dormant** —
-`core/rag.py:top_k()` only feeds local Ollama dev tools; production PA
-RAG goes through `Document` + pgvector via
-`sync_docs_index_to_documents`. Cleanup decision (untrack vs. add
-`build_rag_corpus`) still queued.
+`.rag/corpus.jsonl` is now **regenerable** — Session 1108 shipped
+`python manage.py build_rag_corpus` (PR 1 of the Option B plan). The
+producer walks `docs/_index.json` and emits the JSONL shape
+`core/rag.py:top_k()` reads. **Production PA RAG is unaffected** — it goes
+through `Document` + pgvector via `sync_docs_index_to_documents`. PR 2 will
+untrack `.rag/` (and `.rag/embedding_refs.txt`) and add `.rag/` to
+`.gitignore`. See [`docs/topics/local-askdocs.md`](docs/topics/local-askdocs.md).
 
-Remaining cleanup: `.rag/` decision, platform-inventory refresh
-(needs DB access), and CI guardrail wiring.
+Remaining cleanup: `.rag/` untrack (PR 2), platform-inventory refresh
+(needs DB access), and CI inventory regen (long-term).
 
 Start with the current audit artifacts, not the older Session 1099 canary
 window:
@@ -110,9 +112,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1106_MASTER_CONTEXT_UNTRACK.md`](docs/handoffs/SESSION_1106_MASTER_CONTEXT_UNTRACK.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1108_BUILD_RAG_CORPUS.md`](docs/handoffs/SESSION_1108_BUILD_RAG_CORPUS.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md`](docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md)
+- Previous handoff: [`docs/handoffs/SESSION_1107_CI_GUARDRAIL_WIRING.md`](docs/handoffs/SESSION_1107_CI_GUARDRAIL_WIRING.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
