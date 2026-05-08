@@ -14,11 +14,17 @@ For current verified counts, use [`docs/PLATFORM_INVENTORY.md`](PLATFORM_INVENTO
 This document keeps historical notes and backend structure, but it no longer
 repeats the live summary table so it cannot drift independently.
 
-### Manual Snapshot (history)
+### Historical Snapshot (Jan–Apr 2026)
 
-| Metric | Count |
+> **Do not cite as current truth.** This table is preserved as build history only.
+> For live counts use [`PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) (regenerate via `python manage.py generate_platform_inventory`).
+
+<details>
+<summary>Click to expand — Jan/Apr 2026 manual snapshot (historical)</summary>
+
+| Metric | Count (historical) |
 |--------|-------|
-| **Total Python Lines** | 1,029,692 (Jan 2026 snapshot — line counts not re-verified Session 1100) |
+| **Total Python Lines** | 1,029,692 (Jan 2026 snapshot — not re-verified) |
 | **Lines (excl. migrations)** | 956,014 (Jan 2026 snapshot) |
 | **Django Apps** | 23 |
 | **Django Models** | 570 |
@@ -33,6 +39,8 @@ repeats the live summary table so it cannot drift independently.
 | **Discord Commands** | 144 (96 `@*.command` + 48 `@app_commands.command`) |
 | **Script Files** | 311 (Jan 2026 snapshot) |
 | **Test Files** | 87+ (Jan 2026 snapshot) |
+
+</details>
 
 ---
 

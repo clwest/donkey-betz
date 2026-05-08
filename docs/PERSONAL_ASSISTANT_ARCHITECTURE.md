@@ -1,11 +1,20 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL DESIGN DOC.** Captured at Session 931 during a fragmented-PA gap analysis. The current PA is `UnifiedPAEntrypoint` (single, not "3–4 overlapping"). For current PA reality see [`docs/topics/personal-assistant.md`](topics/personal-assistant.md) and [`docs/PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md).
+>
+> **Canonical route:** `POST /api/pa/chat/`. `POST /api/assistant/chat/` and `POST /api/v1/assistant/chat/` referenced anywhere below are **legacy compatibility shims only** — do not use for new work.
+>
+> **Canonical counts:** 83 agents, 80 spiders, 32 advisors, 9 body systems (PLATFORM_INVENTORY).
+
+---
+
 # Personal Assistant (PA) Architecture
 
-**Last Updated:** Session 931
-**Status:** Gap Analysis Complete | Refactor Planned
+**Last Updated:** Session 931 — narrative preserved as historical gap-analysis; counts/routes superseded
+**Status:** Gap Analysis Complete | Refactor Planned (the refactor shipped — see UnifiedPAEntrypoint)
 
 ## Overview
 
-The Personal Assistant is the "brain" of the platform - the central interface that routes user requests to 74 agents, 77 spiders, 25 advisors, and 9 body systems.
+The Personal Assistant is the "brain" of the platform - the central interface that routes user requests to 74 agents, 77 spiders, 25 advisors, and 9 body systems. <sub>(Session 931 snapshot; canonical = 83 agents / 80 spiders / 32 advisors)</sub>
 
 ## Current State: Fragmented Architecture
 
@@ -269,8 +278,9 @@ On failure:
 **REST API Endpoints:**
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/assistant/chat/` | Original endpoint, now routes through UnifiedPA |
-| `POST /api/pa/chat/` | Dedicated UnifiedPA endpoint (no fallback) |
+| `POST /api/pa/chat/` | **Canonical** UnifiedPA endpoint |
+| `POST /api/assistant/chat/` | Legacy compatibility shim (routes through UnifiedPA) |
+| `POST /api/v1/assistant/chat/` | Legacy compatibility shim |
 | `GET /api/pa/context/` | Get PA context info |
 
 ### Phase 4: Learning Loop (Future)

@@ -5,15 +5,15 @@ This file is partly auto-generated. Everything between the markers below is rege
 # Verification Report
 
 - Repo: `/Users/donkeyking/development/unified-donkey-betz`
-- Generated at: `2026-05-03T21:26:19+00:00`
+- Generated at: `2026-05-07T23:50:08+00:00`
 - Config: `.context-kit/verify.yaml`
 - Canonical docs used: `true`
 
 ## Summary
 
 - VERIFIED: 2
-- DOC_ONLY: 3
-- CONFLICT: 1
+- DOC_ONLY: 4
+- CONFLICT: 0
 - UNKNOWN: 0
 
 ## VERIFIED
@@ -25,10 +25,10 @@ This file is partly auto-generated. Everything between the markers below is rege
   - Primary evidence:
     - [runtime] archive/scripts/celery_app.py:36
     - [runtime] core/celery.py:27
-    - [runtime] core/management/commands/add_critical_celery_tasks.py:23
-    - [runtime] core/management/commands/add_critical_celery_tasks.py:630
-    - [runtime] core/management/commands/add_critical_celery_tasks.py:655
-    - +322 more primary matches
+    - [runtime] core/management/commands/add_critical_celery_tasks.py:24
+    - [runtime] core/management/commands/add_critical_celery_tasks.py:633
+    - [runtime] core/management/commands/add_critical_celery_tasks.py:659
+    - +330 more primary matches
   - Historical drift:
     - [historical_docs] archive/docs/test_plan.md:26
     - [historical_docs] docs/archive/2025-09/handoff-2025-09-30.md:170
@@ -36,7 +36,7 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [historical_docs] docs/archive/REALITY_FIXES_IMPLEMENTATION-original/SPIDER_ARMY_DEPLOYMENT_GUIDE.md:679
     - [historical_docs] docs/archive/REALITY_FIXES_IMPLEMENTATION-original/SPIDER_ARMY_DEPLOYMENT_GUIDE.md:725
     - +773 more historical matches
-- Details: Docs/env describe split Celery ownership and runtime evidence supports a static schedule source, DB store, bridge command, and routing/config owner. Static schedule source: ['/Users/donkeyking/development/unified-donkey-betz/archive/scripts/celery_app.py', '/Users/donkeyking/development/unified-donkey-betz/core/celery.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/system_health_check.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/contract_monitor.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/pa_tool_schemas.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_gateway.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_ops.py', '/Users/donkeyking/development/unified-donkey-betz/core/settings.py', '/Users/donkeyking/development/unified-donkey-betz/core/tests/test_coo_daily_diagnostic.py', '/Users/donkeyking/development/unified-donkey-betz/core/tests/test_trend_daily_diagnostic.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_agent_analytics.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_platform_command.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/one-off/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/testing/test_real_system.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/verify/verify_market_intelligence_desk.py', '/Users/donkeyking/development/unified-donkey-betz/tests/one-off/test_learning_loop.py', '/Users/donkeyking/development/unified-donkey-betz/tests/one-off/test_learning_loop_quick.py', '/Users/donkeyking/development/unified-donkey-betz/tests/one-off/test_learning_loop_session_464.py']. DB store: ['/Users/donkeyking/development/unified-donkey-betz/core/management/commands/add_critical_celery_tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/db_health_snapshot.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/setup_workspace_autopilot.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_beat.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_task_queues.py', '/Users/donkeyking/development/unified-donkey-betz/core/migrations/0302_throttle_polling_tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/migrations/0328_schedule_experiment_cleanup_tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/celery_health.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/doc_claim_verification.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/platform_inventory.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/system_reality_checker.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_gateway.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_ops.py', '/Users/donkeyking/development/unified-donkey-betz/core/tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/tasks_ops.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_agent_learning.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_ecosystem.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_platform_command.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_status_api.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/one-off/sync_celery_schedules.py']. Bridge/bootstrap: ['/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/one-off/sync_celery_schedules.py']. Routing/config: ['/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_task_queues.py', '/Users/donkeyking/development/unified-donkey-betz/core/settings.py'].
+- Details: Docs/env describe split Celery ownership and runtime evidence supports a static schedule source, DB store, bridge command, and routing/config owner. Static schedule source: ['/Users/donkeyking/development/unified-donkey-betz/archive/scripts/celery_app.py', '/Users/donkeyking/development/unified-donkey-betz/core/celery.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/system_health_check.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/contract_monitor.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/pa_tool_schemas.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_gateway.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_ops.py', '/Users/donkeyking/development/unified-donkey-betz/core/settings.py', '/Users/donkeyking/development/unified-donkey-betz/core/tests/test_coo_daily_diagnostic.py', '/Users/donkeyking/development/unified-donkey-betz/core/tests/test_trend_daily_diagnostic.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_agent_analytics.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_platform_command.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/one-off/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/testing/test_real_system.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/verify/verify_market_intelligence_desk.py', '/Users/donkeyking/development/unified-donkey-betz/tests/one-off/test_learning_loop.py', '/Users/donkeyking/development/unified-donkey-betz/tests/one-off/test_learning_loop_quick.py', '/Users/donkeyking/development/unified-donkey-betz/tests/one-off/test_learning_loop_session_464.py']. DB store: ['/Users/donkeyking/development/unified-donkey-betz/core/management/commands/add_critical_celery_tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/db_health_snapshot.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/setup_workspace_autopilot.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_beat.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_task_queues.py', '/Users/donkeyking/development/unified-donkey-betz/core/migrations/0302_throttle_polling_tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/migrations/0328_schedule_experiment_cleanup_tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/celery_health.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/doc_claim_verification.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/platform_inventory.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/system_reality_checker.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_gateway.py', '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_ops.py', '/Users/donkeyking/development/unified-donkey-betz/core/tasks.py', '/Users/donkeyking/development/unified-donkey-betz/core/tasks_ops.py', '/Users/donkeyking/development/unified-donkey-betz/core/tests/test_celery_sync_commands.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_agent_learning.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_ecosystem.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_platform_command.py', '/Users/donkeyking/development/unified-donkey-betz/core/views_status_api.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/one-off/sync_celery_schedules.py']. Bridge/bootstrap: ['/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_celery_schedules.py', '/Users/donkeyking/development/unified-donkey-betz/core/tests/test_celery_sync_commands.py', '/Users/donkeyking/development/unified-donkey-betz/scripts/one-off/sync_celery_schedules.py']. Routing/config: ['/Users/donkeyking/development/unified-donkey-betz/core/management/commands/sync_task_queues.py', '/Users/donkeyking/development/unified-donkey-betz/core/settings.py'].
 - Recommended next action: Keep the split ownership model documented and re-run verify if the balance changes.
 
 ### Django settings module
@@ -67,19 +67,19 @@ This file is partly auto-generated. Everything between the markers below is rege
 - Category: `documentation claim`
 - Evidence:
   - Canonical evidence:
-    - [canonical_docs] CLAUDE.md:39
-    - [canonical_docs] CLAUDE.md:59
-    - [canonical_docs] CLAUDE.md:60
+    - [canonical_docs] CLAUDE.md:101
+    - [canonical_docs] CLAUDE.md:42
     - [canonical_docs] CLAUDE.md:62
     - [canonical_docs] CLAUDE.md:63
+    - [canonical_docs] CLAUDE.md:65
     - +201 more canonical matches
   - Supporting drift:
     - [supporting_docs] .claude/agents/system-completion-orchestrator.md:166
     - [supporting_docs] .claude/agents/system-completion-orchestrator.md:362
-    - [supporting_docs] ai_core/spiders/README.md:230
+    - [supporting_docs] ai_core/spiders/README.md:242
     - [supporting_docs] analysis/trends/trendanalysis_analysis_2026-04-16_10-26.md:105
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-18_11-03.md:9927
-    - +2555 more supporting matches
+    - +2563 more supporting matches
   - Historical drift:
     - [historical_docs] archive/docs/ACTION_PLAN_TO_ADVISOR_SYSTEM.md:164
     - [historical_docs] archive/docs/ADVICE_FOR_FUTURE_SELF.md:12
@@ -87,7 +87,7 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [historical_docs] archive/docs/ADVICE_FOR_FUTURE_SELF.md:5
     - [historical_docs] archive/docs/ADVISOR_HANDOFF_SYSTEM.md:90
     - +8325 more historical matches
-- Details: Canonical docs mention `83`, while supporting docs drift to ['0', '1', '8', '10', '20', '25', '42', '53', '55', '57', '58', '60', '74', '83', '84', '149', '196', '213', '218', '263', '266', '410'].
+- Details: Canonical docs mention `83`, while supporting docs drift to ['1', '7', '8', '20', '25', '53', '55', '57', '58', '74', '83', '84', '149', '196', '213', '218', '263', '266', '410'].
 - Recommended next action: Treat the `83` claim as documentation-only until a runtime source is added.
 
 ### Apis count claims
@@ -95,11 +95,11 @@ This file is partly auto-generated. Everything between the markers below is rege
 - Category: `documentation claim`
 - Evidence:
   - Canonical evidence:
-    - [canonical_docs] CLAUDE.md:59
-    - [canonical_docs] CLAUDE.md:60
     - [canonical_docs] CLAUDE.md:62
     - [canonical_docs] CLAUDE.md:63
     - [canonical_docs] CLAUDE.md:65
+    - [canonical_docs] CLAUDE.md:66
+    - [canonical_docs] CLAUDE.md:68
     - +190 more canonical matches
   - Supporting drift:
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:1160
@@ -107,7 +107,7 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:614
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:615
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:616
-    - +2368 more supporting matches
+    - +2376 more supporting matches
   - Historical drift:
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:320
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:321
@@ -115,19 +115,19 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:323
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:324
     - +5731 more historical matches
-- Details: Canonical docs mention `83`, while supporting docs drift to ['0', '42', '51', '60'].
-- Recommended next action: Treat the `83` claim as documentation-only until a runtime source is added.
+- Details: Supporting docs mention `11`; canonical docs did not claim this total.
+- Recommended next action: Treat the `11` claim as documentation-only until a runtime source is added.
 
 ### Frontend Pages count claims
 - Status: `DOC_ONLY`
 - Category: `documentation claim`
 - Evidence:
   - Canonical evidence:
-    - [canonical_docs] CLAUDE.md:59
-    - [canonical_docs] CLAUDE.md:60
     - [canonical_docs] CLAUDE.md:62
     - [canonical_docs] CLAUDE.md:63
     - [canonical_docs] CLAUDE.md:65
+    - [canonical_docs] CLAUDE.md:66
+    - [canonical_docs] CLAUDE.md:68
     - +191 more canonical matches
   - Supporting drift:
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:1160
@@ -135,7 +135,7 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:614
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:615
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-19_00-25.md:616
-    - +2345 more supporting matches
+    - +2353 more supporting matches
   - Historical drift:
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:320
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:321
@@ -143,29 +143,27 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:323
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:324
     - +5265 more historical matches
-- Details: Canonical docs mention `83`, while supporting docs drift to ['42', '44', '60'].
-- Recommended next action: Treat the `83` claim as documentation-only until a runtime source is added.
-
-## CONFLICT
+- Details: Supporting docs mention `1`; canonical docs did not claim this total.
+- Recommended next action: Treat the `1` claim as documentation-only until a runtime source is added.
 
 ### Spiders count claims
-- Status: `CONFLICT`
+- Status: `DOC_ONLY`
 - Category: `documentation claim`
 - Evidence:
   - Canonical evidence:
-    - [canonical_docs] CLAUDE.md:40
-    - [canonical_docs] CLAUDE.md:59
-    - [canonical_docs] CLAUDE.md:60
+    - [canonical_docs] CLAUDE.md:43
     - [canonical_docs] CLAUDE.md:62
     - [canonical_docs] CLAUDE.md:63
+    - [canonical_docs] CLAUDE.md:65
+    - [canonical_docs] CLAUDE.md:66
     - +198 more canonical matches
   - Supporting drift:
-    - [supporting_docs] ai_core/spiders/README.md:17
-    - [supporting_docs] ai_core/spiders/README.md:228
-    - [supporting_docs] ai_core/spiders/README.md:76
+    - [supporting_docs] ai_core/spiders/README.md:240
+    - [supporting_docs] ai_core/spiders/README.md:29
+    - [supporting_docs] ai_core/spiders/README.md:88
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-18_11-03.md:6733
     - [supporting_docs] development/reviews/review_Analyze_recent_code_patterns_a_2026-04-18_11-03.md:7578
-    - +2455 more supporting matches
+    - +2462 more supporting matches
   - Historical drift:
     - [historical_docs] archive/docs/ADVISOR_HANDOFF_SYSTEM.md:178
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:320
@@ -173,8 +171,12 @@ This file is partly auto-generated. Everything between the markers below is rege
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:322
     - [historical_docs] archive/docs/AGENT_SYSTEM_DOCUMENTATION.md:323
     - +5842 more historical matches
-- Details: Docs claim multiple spiders total counts: ['1', '7', '20', '27', '28', '29', '31', '36', '39', '40', '41', '42', '46', '48', '53', '60', '62', '64', '67', '71', '72', '77', '80', '83', '102', '154', '177', '206', '321', '368', '382', '391', '424', '550', '568', '770'].
-- Recommended next action: Pick one spiders count, update stale docs, and keep the strongest source of truth in a single place.
+- Details: Canonical docs mention `80`, while supporting docs drift to ['10', '11', '15', '20', '25', '31', '32', '40', '46', '48', '62', '65', '67', '69', '72', '77', '78', '79', '86', '102', '150', '200', '300', '350', '362', '400', '403', '420', '500', '766', '770', '948', '979', '989'].
+- Recommended next action: Treat the `80` claim as documentation-only until a runtime source is added.
+
+## CONFLICT
+
+_No findings._
 
 ## UNKNOWN
 

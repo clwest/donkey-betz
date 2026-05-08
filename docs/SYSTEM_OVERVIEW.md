@@ -1,6 +1,9 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_WHAT_IT_IS.md`](/docs/PLATFORM_WHAT_IT_IS.md) and [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+
 # Unified AI Platform - Complete System Overview
 
-**Last Updated:** January 28, 2026 (Session 858)
+**Last Updated:** January 28, 2026 (Session 858) — narrative preserved; counts may drift
 **Status:** Production-Ready | 100% Reality Score
 **Focus:** Autonomous Intelligence, Content Creation, Revenue Generation, **User Personalization**
 
@@ -10,8 +13,8 @@
 
 This is a comprehensive AI platform that goes **far beyond content creation**. While content generation (images, videos, audio, 3D) was the starting point, the platform has evolved into a sophisticated **Autonomous Intelligence System** with:
 
-- **74 Specialized Agents** across 19 categories - **ALL with user context injection (Session 858)**
-- **77 Production Spiders** collecting real-time data from 31+ sources
+- **74 Specialized Agents** across 19 categories - **ALL with user context injection (Session 858 snapshot; canonical AGENT_MAP = 83 — see PLATFORM_INVENTORY)**
+- **77 Production Spiders** collecting real-time data from 31+ sources (Session 858 snapshot; canonical = 80 across 41 categories — see PLATFORM_INVENTORY)
 - **19 Autonomous Situations** with event-driven triggers
 - **14 Active Sci-Fi Features** (emotional AI, agent evolution, memory systems)
 - **Complete RAG Pipeline** with semantic search and anti-hallucination

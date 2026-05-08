@@ -17,13 +17,17 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 ## SOURCE OF TRUTH
 
-When stats in any doc disagree:
-1. **`docs/PLATFORM_WHAT_IT_IS.md`** — narrative, conceptual ground truth
-2. **`docs/PLATFORM_INVENTORY.md`** — runtime-derived, regenerable via `python manage.py generate_platform_inventory`
+This is **precedence**, not enumeration order. When docs disagree:
 
-Live drift report: `python manage.py verify_doc_claims --only-drift`
+1. **`docs/PLATFORM_INVENTORY.md` wins for runtime facts** — counts, schedules, tasks, agents, spiders, models, routes. Runtime-derived; regenerate with `python manage.py generate_platform_inventory`.
+2. **`docs/PLATFORM_WHAT_IT_IS.md` is the narrative anchor** — what each subsystem is, why it exists, how it fits together. Use it for conceptual context, not for current numbers.
+3. **Archive and handoff docs are historical** unless explicitly promoted by [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) or this file. Their numbers and route examples may be stale by design — banners on those docs say so.
 
-If you're unsure which doc to trust, read these two first.
+Live drift checks:
+- `python manage.py verify_doc_claims --only-drift` (Django-side)
+- [`docs/verification/VERIFY_REPORT.md`](docs/verification/VERIFY_REPORT.md) (context-kit, regenerated via `context-kit verify --write`)
+
+If you're unsure which doc to trust, read INVENTORY first, then WHAT_IT_IS.
 
 ## CANONICAL PA / WORKSPACE NOTES
 
@@ -35,9 +39,14 @@ If you're unsure which doc to trust, read these two first.
 
 ---
 
-## SESSION 1100+ — CURRENT AUDIT / CLEANUP ENTRY POINT
+## SESSION 1101+ — CURRENT AUDIT / CLEANUP ENTRY POINT
 
-This repo is now in the Phase 1 cleanup pass for `docs/audit/CLEANUP_PLAN.md`.
+Phase 1 cleanup pass for `docs/audit/CLEANUP_PLAN.md` is **in progress**:
+Session 1101 closed the live spider-count `CONFLICT` and reconciled active
+docs (H1, H3, H2, M1, M2). Verifier currently reports `CONFLICT: 0`.
+Remaining cleanup work is H4 (donkey-logo replacement) and H5 (.rag corpus
+untrack), both deferred to a follow-up session.
+
 Start with the current audit artifacts, not the older Session 1099 canary
 window:
 
@@ -56,8 +65,10 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1100_CONTEXT_KIT_DRIFT_PREVENTION.md`](docs/handoffs/SESSION_1100_CONTEXT_KIT_DRIFT_PREVENTION.md)
-- Previous handoff: [`docs/handoffs/SESSION_1098_WRAP_CANARY_GREEN.md`](docs/handoffs/SESSION_1098_WRAP_CANARY_GREEN.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md`](docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md)
+- Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
+- Previous handoff: [`docs/handoffs/SESSION_1100_CONTEXT_KIT_DRIFT_PREVENTION.md`](docs/handoffs/SESSION_1100_CONTEXT_KIT_DRIFT_PREVENTION.md)
+- Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
 

@@ -1,7 +1,10 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_WHAT_IT_IS.md`](/docs/PLATFORM_WHAT_IT_IS.md) and [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+
 # Autonomous Systems - Situations, Triggers & Self-Running Intelligence
 
-**Last Updated:** December 17, 2025 (Session 484)
-**Status:** Production-Ready | 19 Situations | 35 Triggers | 44 Celery Tasks
+**Last Updated:** December 17, 2025 (Session 484) — narrative preserved; counts may drift
+**Status:** Production-Ready | 19 Situations | 35 Triggers | 44 Celery Tasks (Session 484 snapshot — canonical Celery task count = 365; see PLATFORM_INVENTORY)
 
 ---
 

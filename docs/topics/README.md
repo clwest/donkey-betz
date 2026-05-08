@@ -10,11 +10,11 @@ These files describe the **current state** of each subsystem. They are designed 
 |------|-----------|-------------------|
 | [personal-assistant.md](personal-assistant.md) | PA routing, tools, enrichment, async | UnifiedPAEntrypoint, ToolDispatcher |
 | [content-pipeline.md](content-pipeline.md) | Blog generation, deliberation, quality gating | ContentDeliberationRunner, ClaimsPackBuilder, PublishGate |
-| [agent-system.md](agent-system.md) | 76 agents, routing, provenance, voice | AgentRouter, BaseAgent, AutoSpawnerService |
+| [agent-system.md](agent-system.md) | 83 agents, routing, provenance, voice | AgentRouter, BaseAgent, AutoSpawnerService |
 | [initiative-pipeline.md](initiative-pipeline.md) | Dreams, initiatives, stages, signals | Initiative, SignalAggregationService |
 | [celery-workers.md](celery-workers.md) | Task queue, workers, observability | CeleryTaskEvent, process_pa_chat_task |
 | [body-systems.md](body-systems.md) | 9 health monitoring systems | BodyCoordinator, HeartBeat, ComponentStatus |
-| [spider-network.md](spider-network.md) | 77 spiders, data types, signal aggregation | SpiderData, SignalCluster, AutoTopic |
+| [spider-network.md](spider-network.md) | 80 spiders, data types, signal aggregation | SpiderData, SignalCluster, AutoTopic |
 | [stock-intelligence.md](stock-intelligence.md) | Stock dashboard, briefs, alerts, predictions | MarketIntelligenceBrief, StockMarketAlert |
 | [frontend.md](frontend.md) | React UI, workspace tabs, PA integration | WorkspacePageNew, GlobalPADock |
 | [infrastructure.md](infrastructure.md) | Django, Railway, Redis, PostgreSQL | core.settings, Procfile |
