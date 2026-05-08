@@ -4,6 +4,7 @@ import unittest
 
 from scripts.verify_repo_guardrails import (
     classify_docs_index_autogen,
+    classify_failures,
     classify_platform_inventory_freshness,
 )
 
@@ -74,6 +75,128 @@ class DocsIndexAutogenMarkerTests(unittest.TestCase):
 
         self.assertFalse(ok)
         self.assertIn("DOC-AUTOGEN marker", message)
+
+
+class ClassifyFailuresStrictModeTests(unittest.TestCase):
+    """Default strict mode: every blocker should produce a failure entry."""
+
+    def _kwargs(self, **overrides):
+        base = dict(
+            strict=True,
+            inventory_advisory=False,
+            tracked_blocking=False,
+            inventory_blocking=False,
+            autogen_blocking=False,
+            conflict_blocking=False,
+        )
+        base.update(overrides)
+        return base
+
+    def test_no_blockers_returns_empty(self):
+        self.assertEqual(classify_failures(**self._kwargs()), [])
+
+    def test_strict_fails_on_stale_inventory(self):
+        failures = classify_failures(**self._kwargs(inventory_blocking=True))
+        self.assertEqual(failures, ["platform inventory is stale"])
+
+    def test_strict_fails_on_tracked_paths(self):
+        failures = classify_failures(**self._kwargs(tracked_blocking=True))
+        self.assertEqual(failures, ["tracked generated paths are present"])
+
+    def test_strict_fails_on_missing_autogen_marker(self):
+        failures = classify_failures(**self._kwargs(autogen_blocking=True))
+        self.assertEqual(
+            failures,
+            ["docs/INDEX.md is missing the DOC-AUTOGEN marker"],
+        )
+
+    def test_strict_fails_on_conflict_findings(self):
+        failures = classify_failures(**self._kwargs(conflict_blocking=True))
+        self.assertEqual(failures, ["context-kit has CONFLICT findings"])
+
+    def test_strict_aggregates_multiple_blockers(self):
+        failures = classify_failures(
+            **self._kwargs(
+                tracked_blocking=True,
+                inventory_blocking=True,
+                autogen_blocking=True,
+                conflict_blocking=True,
+            )
+        )
+        self.assertIn("tracked generated paths are present", failures)
+        self.assertIn("platform inventory is stale", failures)
+        self.assertIn("docs/INDEX.md is missing the DOC-AUTOGEN marker", failures)
+        self.assertIn("context-kit has CONFLICT findings", failures)
+        self.assertEqual(len(failures), 4)
+
+
+class ClassifyFailuresInventoryAdvisoryTests(unittest.TestCase):
+    """``--inventory-advisory`` carves out only the freshness check.
+
+    Every other strict gate continues to block. Intended for PR-time CI
+    where ``generate_platform_inventory`` needs DB access the runner
+    does not have.
+    """
+
+    def _kwargs(self, **overrides):
+        base = dict(
+            strict=True,
+            inventory_advisory=True,
+            tracked_blocking=False,
+            inventory_blocking=False,
+            autogen_blocking=False,
+            conflict_blocking=False,
+        )
+        base.update(overrides)
+        return base
+
+    def test_stale_inventory_does_not_block_with_advisory(self):
+        failures = classify_failures(**self._kwargs(inventory_blocking=True))
+        self.assertEqual(failures, [])
+
+    def test_tracked_paths_still_block_under_advisory(self):
+        failures = classify_failures(
+            **self._kwargs(tracked_blocking=True, inventory_blocking=True)
+        )
+        self.assertEqual(failures, ["tracked generated paths are present"])
+
+    def test_autogen_still_blocks_under_advisory(self):
+        failures = classify_failures(
+            **self._kwargs(autogen_blocking=True, inventory_blocking=True)
+        )
+        self.assertEqual(
+            failures,
+            ["docs/INDEX.md is missing the DOC-AUTOGEN marker"],
+        )
+
+    def test_conflict_still_blocks_under_advisory(self):
+        failures = classify_failures(
+            **self._kwargs(conflict_blocking=True, inventory_blocking=True)
+        )
+        self.assertEqual(failures, ["context-kit has CONFLICT findings"])
+
+    def test_advisory_does_not_revive_no_strict(self):
+        # --no-strict + --inventory-advisory: nothing blocks regardless,
+        # because strict=False already suppresses every gate.
+        failures = classify_failures(
+            **self._kwargs(strict=False, inventory_blocking=True)
+        )
+        self.assertEqual(failures, [])
+
+
+class ClassifyFailuresNoStrictTests(unittest.TestCase):
+    """``--no-strict`` disables every gate; nothing should ever block."""
+
+    def test_no_strict_never_blocks(self):
+        failures = classify_failures(
+            strict=False,
+            inventory_advisory=False,
+            tracked_blocking=True,
+            inventory_blocking=True,
+            autogen_blocking=True,
+            conflict_blocking=True,
+        )
+        self.assertEqual(failures, [])
 
 
 if __name__ == "__main__":

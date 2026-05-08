@@ -2,9 +2,9 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest handoff:** [`SESSION_1106_MASTER_CONTEXT_UNTRACK.md`](SESSION_1106_MASTER_CONTEXT_UNTRACK.md)
+**Latest handoff:** [`SESSION_1107_CI_GUARDRAIL_WIRING.md`](SESSION_1107_CI_GUARDRAIL_WIRING.md)
 
-**Previous:** [`SESSION_1105_DOCKER_COMPOSE_SPLIT.md`](SESSION_1105_DOCKER_COMPOSE_SPLIT.md)
+**Previous:** [`SESSION_1106_MASTER_CONTEXT_UNTRACK.md`](SESSION_1106_MASTER_CONTEXT_UNTRACK.md)
 
 ## How to update
 
