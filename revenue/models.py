@@ -5,6 +5,25 @@ This module provides comprehensive revenue tracking and verification models
 to prove that real money is being generated, tracked, and attributed correctly.
 """
 
+# ACTIVE-COMPANION-PARTIAL — Session 1113 review (Session 1111 PR-E queue).
+# Classification: persistence layer drafted but never wired.
+# Why: this module defines 4 Django models that pair with the active
+# `revenue/revenue_verifier.py:RevenueRealityVerifier`. However:
+#   1. `revenue` is NOT in `core.settings.INSTALLED_APPS`.
+#   2. The models do not declare `app_label` in Meta and the app has no
+#      `apps.py`, so `import revenue.models` raises:
+#        RuntimeError: Model class revenue.models.<X> doesn't declare an
+#        explicit app_label and isn't in an application in INSTALLED_APPS.
+#   3. No migrations were ever produced for these models.
+#   4. Zero importers in the active codebase — the verifier itself runs
+#      Redis-only and never touches `revenue.models`.
+# Decision pending: rehome these models in a real installed app
+# (e.g., `core/models_revenue.py`) and run migrations, OR delete the
+# file and accept the verifier as Redis-only. Needs a product call —
+# see PR-E in the deeper-review queue. The verifier is security-relevant,
+# so this companion is preserved untouched until that call.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import uuid
 from django.db import models
 from django.utils import timezone

@@ -2,6 +2,18 @@
 URLs for Agent Deployment System
 """
 
+# PARTIAL — Session 1113 review (Session 1111 PR-B/PR-E queue).
+# Classification: built but not URL-mounted.
+# Why: this URLConf is fully implemented (8 deployment endpoints + execute,
+# outputs, downloads, live stream, plus all-agents listings) but is NOT
+# included from any active urls.py — `core/urls.py` and `core/urls_unified.py`
+# do not `include('agents.urls_deployment')`. Imports work; the URLs simply
+# never reach the request router.
+# Decision pending: Rigby/Chris call on whether to wire this in (the
+# "deploy a stack of agents to a project" feature is ~80% done) or treat
+# it as dormant. See PR-E in the deeper-review queue.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 from django.urls import path
 from agents.views_deployment import (
     list_available_agents,

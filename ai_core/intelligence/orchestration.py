@@ -5,6 +5,25 @@ Coordinates complex workflows involving multiple agents working together
 to solve sophisticated problems through collaborative intelligence.
 """
 
+# PARTIAL — Session 1113 review (Session 1111 PR-E queue).
+# Classification: built with defensive mock fallbacks; disconnected
+# from real ML pipeline; no active runtime caller.
+# Why: this module imports `from ml_pipeline.pipeline import MLPipeline`
+# inside a `try/except ImportError` that falls back to a `MockMLPipeline`
+# stub — and the real `ml_pipeline.pipeline` submodule does not exist
+# (only `ml_pipeline.enhanced_ml_pipeline.EnhancedMLPipeline` is shipped),
+# so this layer is permanently running on the no-op mock. The only
+# importer in the entire repo is `archive/scripts/verify_llm_integration.py`,
+# which itself lives under `archive/`. The active learning loop
+# (`ai_core/intelligence/learning_loop.py`) goes to `EnhancedMLPipeline`,
+# not through this orchestrator.
+# Decision pending: revive by adding `MLPipeline = EnhancedMLPipeline` to
+# `ml_pipeline/__init__.py` (one-line shim, would restore real-code
+# behavior) OR mark dormant alongside `monitoring_dashboard.py` and
+# `testing_suite.py`. Pair this call with the `ml_pipeline/__init__.py`
+# decision — see PR-E in the deeper-review queue.
+# See: docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md
+
 import asyncio
 from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, field
