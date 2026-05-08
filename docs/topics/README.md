@@ -18,6 +18,7 @@ These files describe the **current state** of each subsystem. They are designed 
 | [stock-intelligence.md](stock-intelligence.md) | Stock dashboard, briefs, alerts, predictions | MarketIntelligenceBrief, StockMarketAlert |
 | [frontend.md](frontend.md) | React UI, workspace tabs, PA integration | WorkspacePageNew, GlobalPADock |
 | [infrastructure.md](infrastructure.md) | Django, Railway, Redis, PostgreSQL | core.settings, Procfile |
+| [active-module-ownership-map.md](active-module-ownership-map.md) | Active-but-underdocumented modules with confusing look-alikes (Session 1114, PR-D from Session 1111) | RevenueRealityVerifier, AdvisorRegistry, llm/ vs agent_llm_router, core.tasks_*.py indirection, urls.py vs urls_unified.py |
 
 ## Embedding Strategy
 
