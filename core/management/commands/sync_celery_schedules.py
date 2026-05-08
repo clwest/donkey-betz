@@ -18,10 +18,13 @@ Usage:
 import json
 import os
 import re
-from django.core.management.base import BaseCommand
+import logging
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
 from celery.schedules import crontab
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -245,7 +248,8 @@ class Command(BaseCommand):
                     errors.append(f"{name}: Unknown schedule type: {type(schedule)}")
 
             except Exception as e:
-                errors.append(f"{name}: {str(e)}")
+                logger.exception("[CELERY_SYNC] Failed to sync %s", name)
+                errors.append(f"{name}: {type(e).__name__}: {str(e)}")
 
         # Summary
         self.stdout.write(f"\n=== Summary ===")
@@ -259,6 +263,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"\nErrors ({len(errors)}):"))
             for error in errors:
                 self.stdout.write(self.style.WARNING(f"  - {error}"))
+            if not dry_run:
+                raise CommandError(
+                    f"Failed to sync {len(errors)} Celery schedule(s); "
+                    f"see logs for tracebacks"
+                )
 
         # Final count
         if not dry_run:

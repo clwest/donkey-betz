@@ -4,6 +4,8 @@
 **Status:** Complete Documentation
 **Purpose:** Document the complete flow from user input to AI response
 
+> Historical note: this document predates Rigby unification. The live route is `POST /api/pa/chat/`. `/api/assistant/chat/` and `/api/v1/assistant/chat/` are compatibility-only shims.
+
 ---
 
 ## Table of Contents
@@ -60,7 +62,7 @@ The system uses a **GPT-5.1 as orchestrator** pattern:
 │                    └─────────────┬─────────────┘                        │
 └──────────────────────────────────┼──────────────────────────────────────┘
                                    │
-                        fetch('/api/assistant/chat/')
+                        fetch('/api/pa/chat/')
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -159,7 +161,7 @@ User types message in #tabAssistantInput
     → Enter key or Send button click
     → AIAssistant.sendMessage('tab')
     → Builds request body with message, conversation_history, context
-    → authenticatedFetch('/api/assistant/chat/', { method: 'POST', body: JSON.stringify(requestBody) })
+    → authenticatedFetch('/api/pa/chat/', { method: 'POST', body: JSON.stringify(requestBody) })
     → Receives response with message and/or tool_calls
     → If tool_calls: executeTools() → formatToolResults() → display
     → If message: display in chat
@@ -167,7 +169,7 @@ User types message in #tabAssistantInput
 
 **Key Code:**
 - `ai_image_studio.html:21920` - `sendMessage()` method
-- `ai_image_studio.html:22965` - `callAI()` method (calls `/api/assistant/chat/`)
+- `ai_image_studio.html:22965` - `callAI()` method (calls `/api/pa/chat/`)
 
 ### 2. Image Generation Form
 
@@ -491,7 +493,7 @@ User Style Preferences (Session 169 - Personalized Generation):
 
 **Project ID flows through:**
 1. Frontend stores `activeProjectId`
-2. Sent in request body to `/api/assistant/chat/`
+2. Sent in request body to `/api/pa/chat/`
 3. Backend resolves to `CreativeProject` object
 4. Passed to agent tool calls
 5. Generated assets linked to project

@@ -46,12 +46,12 @@ The code review found 40+ live API credentials exposed in the .env file. These n
 
 ## Your Task
 1. First, read the current .env file to inventory all credentials
-2. Create a NEW file `.env.template` with placeholder values showing what's needed
+2. Use `.env.example` as the placeholder template showing what's needed
 3. Create documentation listing each service that needs credential rotation
 4. DO NOT generate new credentials - just document what needs rotation
 
 ## Files to Modify
-- Create: `.env.template` (with placeholder values)
+- Use: `.env.example` (with placeholder values)
 - Create: `docs/code-review/remediation/CREDENTIAL-ROTATION-CHECKLIST.md`
 
 ## Important
@@ -60,7 +60,7 @@ The code review found 40+ live API credentials exposed in the .env file. These n
 - Create a checklist the user can follow to rotate each credential manually
 
 ## Output Expected
-1. .env.template with all required environment variables (no real values)
+1. `.env.example` with all required environment variables (no real values)
 2. CREDENTIAL-ROTATION-CHECKLIST.md with:
    - List of all services needing rotation
    - Links to each service's credential management page
@@ -85,7 +85,7 @@ make start
 ```
 
 ### Completion Sign-off
-- [ ] .env.template created
+- [ ] .env.example reviewed
 - [ ] CREDENTIAL-ROTATION-CHECKLIST.md created
 - [ ] All credentials rotated manually
 - [ ] All integrations tested
@@ -110,12 +110,12 @@ The Django SECRET_KEY needs to be regenerated with a cryptographically secure va
 ## Your Task
 1. Read the current settings.py to understand how SECRET_KEY is loaded
 2. Generate a new secure SECRET_KEY (50+ characters, cryptographically random)
-3. Update .env.template to show the SECRET_KEY format
+3. Update `.env.example` to show the SECRET_KEY format
 4. Add validation in settings.py to ensure SECRET_KEY meets security requirements
 
 ## Files to Modify
 - `core/settings.py` - Add SECRET_KEY validation
-- `.env.template` - Add SECRET_KEY placeholder with format note
+- `.env.example` - Add SECRET_KEY placeholder with format note
 
 ## Security Requirements
 - Minimum 50 characters
@@ -151,7 +151,7 @@ make start
 
 ### Completion Sign-off
 - [ ] settings.py updated with SECRET_KEY validation
-- [ ] .env.template updated
+- [ ] .env.example updated
 - [ ] New SECRET_KEY generated and set in .env
 - [ ] Django check passes
 
@@ -178,7 +178,7 @@ ALLOWED_HOSTS is set to '*' which allows requests from any host, enabling host h
 
 ## Files to Modify
 - `core/settings.py`
-- `.env.template`
+- `.env.example`
 
 ## Implementation
 ```python
@@ -191,7 +191,7 @@ if not DEBUG and '*' in ALLOWED_HOSTS:
     raise ValueError("ALLOWED_HOSTS cannot contain '*' in production (DEBUG=False)")
 ```
 
-## .env.template addition
+## .env.example addition
 ```
 # Comma-separated list of allowed hosts (no wildcards in production)
 ALLOWED_HOSTS=localhost,127.0.0.1
@@ -210,7 +210,7 @@ curl -H "Host: evil.com" http://localhost:8000/  # Should fail
 ### Completion Sign-off
 - [ ] ALLOWED_HOSTS updated in settings.py
 - [ ] Validation added for production
-- [ ] .env.template updated
+- [ ] `.env.example` updated
 - [ ] Host header attack test fails as expected
 
 ---

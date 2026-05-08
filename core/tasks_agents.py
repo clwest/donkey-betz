@@ -5169,17 +5169,47 @@ budget_per_tick: int = 5,
 
                     # Agent's execute() creates its own AgentExecution record
                     # Extract success and summary from result
-                    success = result.success if hasattr(result, 'success') else True
+                    result_error = None
+                    if hasattr(result, 'success'):
+                        success = bool(result.success)
+                    elif isinstance(result, dict):
+                        if 'success' in result:
+                            success = bool(result.get('success'))
+                        else:
+                            success = False
+                            result_error = (
+                                f"Malformed agent result from {agent_name}: "
+                                "missing success field"
+                            )
+                    else:
+                        success = False
+                        result_error = (
+                            f"Malformed agent result from {agent_name}: "
+                            f"unsupported result type {type(result).__name__}"
+                        )
+
                     summary = ''
                     if hasattr(result, 'data') and isinstance(result.data, dict):
                         summary = str(result.data.get('summary', result.data.get('content', '')))[:500]
                     elif hasattr(result, 'data'):
                         summary = str(result.data)[:500]
+                    elif isinstance(result, dict):
+                        summary = str(result.get('summary', result.get('content', '')))[:500]
+
+                    if not success and not result_error:
+                        if hasattr(result, 'error'):
+                            result_error = getattr(result, 'error', None)
+                        elif isinstance(result, dict):
+                            result_error = result.get('error')
+                        if not result_error:
+                            result_error = f"Agent {agent_name} reported failure"
 
                     execution_result = {
                         'success': success,
                         'summary': summary
                     }
+                    if not success:
+                        execution_result['error'] = str(result_error)[:1000]
 
                 except Exception as agent_error:
                     logger.error(f"🤖 [WORKSPACE AUTOPILOT] Agent execution failed: {agent_error}")
@@ -5588,6 +5618,5 @@ def _impl_analyze_pa_tool_patterns():
         f"{created} new insights, {updated} updated"
     )
     return {'status': 'ok', 'records': total, 'created': created, 'updated': updated}
-
 
 

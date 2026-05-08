@@ -19,8 +19,11 @@ Usage:
 """
 
 import json
-from django.core.management.base import BaseCommand
+import logging
+from django.core.management.base import BaseCommand, CommandError
 from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
+
+logger = logging.getLogger(__name__)
 
 
 # Critical tasks that MUST be running
@@ -634,6 +637,7 @@ class Command(BaseCommand):
         created = 0
         updated = 0
         skipped = 0
+        errors = []
 
         for name, config in CRITICAL_TASKS.items():
             task_name = config['task']
@@ -690,7 +694,9 @@ class Command(BaseCommand):
                     self.stdout.write(f"  ↻ Updated: {name}")
 
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"  ✗ Error with {name}: {e}"))
+                logger.exception("[CELERY_SYNC] Failed to ensure critical task %s", name)
+                self.stdout.write(self.style.ERROR(f"  ✗ Error with {name}: {type(e).__name__}: {e}"))
+                errors.append(f"{name}: {type(e).__name__}: {e}")
 
         # Summary
         self.stdout.write(f"\n{'='*60}")
@@ -708,6 +714,11 @@ class Command(BaseCommand):
 
             final_count = PeriodicTask.objects.filter(enabled=True).count()
             self.stdout.write(f"\nTotal enabled tasks in database: {final_count}")
+            if errors:
+                raise CommandError(
+                    f"Failed to ensure {len(errors)} critical Celery task(s); "
+                    f"see logs for tracebacks"
+                )
 
         # Show body system status
         self.stdout.write(f"\n{'='*60}")

@@ -348,6 +348,37 @@ class APIRequestManager:
     def __init__(self, vault: APIKeyVault):
         self.vault = vault
         self.fallback_apis = self._configure_fallbacks()
+        self.last_request_metadata: Dict[str, Any] = {}
+        self.last_fallback_metadata: Dict[str, Any] = {}
+
+    def _reset_request_metadata(self, service: str) -> Dict[str, Any]:
+        metadata = {
+            'success': False,
+            'service': service,
+            'failure_type': None,
+            'error': None,
+            'error_type': None,
+            'http_status': None,
+            'quota_blocked': False,
+            'rate_limited': False,
+            'wait_seconds': 0.0,
+        }
+        self.last_request_metadata = metadata
+        return metadata
+
+    def _reset_fallback_metadata(self, service_type: str) -> Dict[str, Any]:
+        metadata = {
+            'success': False,
+            'service_type': service_type,
+            'fallback_used': False,
+            'attempted_services': [],
+            'failed_services': [],
+            'failure_type': None,
+            'last_error': None,
+            'last_error_type': None,
+        }
+        self.last_fallback_metadata = metadata
+        return metadata
 
     def _configure_fallbacks(self) -> Dict[str, List[str]]:
         """Configure fallback APIs for each service type"""
@@ -369,10 +400,22 @@ class APIRequestManager:
         data: Optional[Any] = None
     ) -> Optional[Dict]:
         """Make authenticated API request with rate limiting and error handling"""
+        metadata = self._reset_request_metadata(service)
 
         # Check if we can make the request
         if not await self.vault.can_make_request(service):
             logger.warning(f"Cannot make request to {service}: rate limit or quota exceeded")
+            quota = self.vault.quotas.get(service)
+            if quota and quota.is_exhausted:
+                metadata['failure_type'] = 'quota_blocked'
+                metadata['quota_blocked'] = True
+                metadata['error'] = f"Quota exhausted for {service}"
+                metadata['error_type'] = 'QuotaExceeded'
+            else:
+                metadata['failure_type'] = 'rate_limited'
+                metadata['rate_limited'] = True
+                metadata['error'] = f"Rate limited for {service}"
+                metadata['error_type'] = 'RateLimited'
             return None
 
         # Get API key
@@ -380,6 +423,9 @@ class APIRequestManager:
         if not api_key and self._requires_auth(service):
             logger.error(f"No API key configured for {service}")
             self.vault.record_request(service, success=False, error="No API key")
+            metadata['failure_type'] = 'missing_auth'
+            metadata['error'] = "No API key"
+            metadata['error_type'] = 'MissingAuth'
             return None
 
         # Prepare headers with authentication
@@ -407,16 +453,34 @@ class APIRequestManager:
             # Check response
             if response['status'] == 200:
                 self.vault.record_request(service, success=True)
+                metadata.update({
+                    'success': True,
+                    'failure_type': None,
+                    'http_status': response['status'],
+                    'error': None,
+                    'error_type': None,
+                })
                 return response
             else:
                 error_msg = f"HTTP {response['status']}"
                 self.vault.record_request(service, success=False, error=error_msg)
                 logger.error(f"API request to {service} failed: {error_msg}")
+                metadata.update({
+                    'failure_type': 'http_error',
+                    'http_status': response['status'],
+                    'error': error_msg,
+                    'error_type': 'HTTPError',
+                })
                 return None
 
         except Exception as e:
             self.vault.record_request(service, success=False, error=str(e))
             logger.error(f"Error making request to {service}: {e}")
+            metadata.update({
+                'failure_type': 'exception',
+                'error': str(e),
+                'error_type': type(e).__name__,
+            })
             return None
 
     def _requires_auth(self, service: str) -> bool:
@@ -471,28 +535,67 @@ class APIRequestManager:
         **kwargs
     ) -> Optional[Dict]:
         """Make request with automatic fallback to alternative APIs"""
+        metadata = self._reset_fallback_metadata(service_type)
 
         if service_type not in self.fallback_apis:
             logger.error(f"Unknown service type: {service_type}")
+            metadata.update({
+                'failure_type': 'unknown_service_type',
+                'last_error': f"Unknown service type: {service_type}",
+                'last_error_type': 'UnknownServiceType',
+            })
             return None
 
         fallback_services = self.fallback_apis[service_type]
 
         for service in fallback_services:
+            metadata['attempted_services'].append(service)
             # Check if service is healthy
             health = self.vault.health.get(service)
             if health and not health.is_healthy:
                 logger.debug(f"Skipping unhealthy service: {service}")
+                failed_entry = {
+                    'service': service,
+                    'failure_type': 'unhealthy_service',
+                    'error': 'Service marked unhealthy',
+                    'error_type': 'UnhealthyService',
+                }
+                metadata['failed_services'].append(failed_entry)
+                metadata['last_error'] = failed_entry['error']
+                metadata['last_error_type'] = failed_entry['error_type']
                 continue
 
             # Try the request
             result = await request_func(service, **kwargs)
             if result:
+                metadata.update({
+                    'success': True,
+                    'fallback_used': len(metadata['attempted_services']) > 1,
+                    'failure_type': None,
+                    'last_error': None,
+                    'last_error_type': None,
+                })
                 return result
 
+            request_metadata = getattr(self, 'last_request_metadata', {}) or {}
+            failed_entry = {
+                'service': service,
+                'failure_type': request_metadata.get('failure_type') or 'request_failed',
+                'error': request_metadata.get('error'),
+                'error_type': request_metadata.get('error_type'),
+                'http_status': request_metadata.get('http_status'),
+            }
+            metadata['failed_services'].append(failed_entry)
+            metadata['last_error'] = failed_entry['error']
+            metadata['last_error_type'] = failed_entry['error_type']
             logger.warning(f"Request to {service} failed, trying fallback...")
 
         logger.error(f"All fallback services failed for {service_type}")
+        metadata.update({
+            'failure_type': 'fallback_exhausted',
+            'fallback_used': len(metadata['attempted_services']) > 1,
+            'success': False,
+        })
         return None
 
 

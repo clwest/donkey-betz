@@ -13,6 +13,8 @@
 
 The **WorkspacePage** is the **SKIN Layer** - the boundary where AI agents interact with real project workspaces. It's the "hands" of the AI system, enabling agents to write code to actual projects on disk.
 
+Current note: the live workspace file surface is now richer than the Session 776 snapshot below. `frontend/src/pages/workspace/tabs/FilesTab.tsx` now provides inline file preview, edit/save, and file history on the active workspace surface.
+
 ### Human Body Metaphor
 
 ```
@@ -40,7 +42,7 @@ WorkspacePage.tsx (1,732 lines)
 │   └── Scan button
 ├── Tabs
 │   ├── Overview - Stats, context summary, tech stack, body health
-│   ├── Files - Browseable file tree with history button
+│   ├── Files - Browseable file tree with inline preview/editor/history
 │   ├── Git - Status, commit, & branch creation
 │   ├── Operations - Audit trail with diffs, execution times, errors
 │   └── Reviews - Pending human approvals with approve/reject
@@ -58,7 +60,7 @@ WorkspacePage.tsx (1,732 lines)
 | Tab | Purpose | Data Source |
 |-----|---------|-------------|
 | **Overview** | Workspace stats, context summary, body health status | `useStats()`, `useActiveWorkspace()` |
-| **Files** | Browseable file tree with expandable directories | `useFiles()` |
+| **Files** | Browseable file tree with inline preview/edit/history | `useFiles()`, `useFile()`, `workspace file history` |
 | **Git** | Git status, staged/unstaged files, commit creation | `useGitStatus()` |
 | **Operations** | Audit trail of all agent file operations with diffs | `useOperations()` |
 | **Reviews** | Pending human approvals for operations | `useOperations({ pending_review: true })` |

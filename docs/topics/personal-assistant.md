@@ -3,7 +3,7 @@
 
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** The LLM now sees 85+ tool schemas (Session 1035-W2: added 11 gateway tools from 75+) and decides what to call, enabling multi-tool turns and natural follow-ups. Session 1100: `run_agent` expanded to 77 agents across 12 domains; added `cockpit_tool` (Celery ops) and `narrative_tool` (drift analysis); expanded intelligence/work/content/governance gateways. Session 1035-W2: added proactive_tool, distribution_tool, calendar_tool, experiment_tool, podcast_tool, campaign_tool, audit_tool, conceptforge_tool, profile_tool, self_awareness_tool, ats_tool.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** The LLM now sees **101 tool schemas** and **166 registered handlers**, enabling multi-tool turns and natural follow-ups. The current runtime inventory is the source of truth for counts. Session 1100: `run_agent` expanded to 77 agents across 12 domains; added `cockpit_tool` (Celery ops) and `narrative_tool` (drift analysis); expanded intelligence/work/content/governance gateways. Session 1035-W2: added proactive_tool, distribution_tool, calendar_tool, experiment_tool, podcast_tool, campaign_tool, audit_tool, conceptforge_tool, profile_tool, self_awareness_tool, ats_tool.
 
 ## Architecture
 
@@ -12,12 +12,14 @@ Three files handle everything:
 - `core/services/tool_dispatcher.py` — 166 tool handlers with guaranteed structured responses (ToolResult)
 - `core/services/pa_tool_schemas.py` — 101 OpenAI function-calling tool schemas + enrichment map
 
+Rigby now has explicit `global` and `workspace` modes. Workspace mode activates only from explicit workspace context (`workspace_id`, `AssistantProfile.workspace`, or workspace-aware UI context). Do not infer workspace scope from the message text alone.
+
 ### Flow (Function Calling — Active)
 
 ```
 message -> _build_context() [profile, knowledge, stats, docs — each with 5s timeout]
         -> _build_messages_array() [system prompt + conversation history + user msg]
-        -> GPT-5.2 Responses API with 85+ tool schemas
+        -> GPT-5.2 Responses API with 101 tool schemas
            -> if tool_call(s): execute via ToolDispatcher -> feed result back -> loop (max 5 iterations)
            -> if text response: done
         -> enrichment (intent inferred from tool names via TOOL_TO_INTENT_MAP)
@@ -99,9 +101,13 @@ PA queries run asynchronously to avoid Railway's ~30s proxy timeout:
 
 **Production latency (function calling):** Single tool ~6s, 5-tool operator report ~16s, multi-turn follow-up ~6s (cached input discount).
 
+**Compatibility note:** `POST /api/pa/chat/` is the canonical web entrypoint. `/api/assistant/chat/` and `/api/v1/assistant/chat/` are legacy compatibility shims only.
+
 ## Conversation History
 
 `ChatConversation` model with `conversation_id`, `session_title`, auto-title generation via LLM on first message.
+
+Workspace context is injected explicitly, not guessed. When workspace mode is active, `workspace_id` is promoted into the PA request context so workspace-scoped tools and history stay aligned with the selected workspace.
 
 **Session 1030: DB-backed memory.** `_load_conversation_history_from_db()` loads last 10 `ChatConversation` rows on PA init, so conversation context survives Celery worker recycling (`max_tasks_per_child`).
 

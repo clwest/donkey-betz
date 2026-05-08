@@ -1,6 +1,6 @@
 # Spider Network
 
-79 spiders across 18 categories collect real-time data that feeds agents, signals, and content. 74 working, 5 need API keys.
+80 spiders across 18 categories collect real-time data that feeds agents, signals, and content. 74 working, 5 need API keys.
 
 ## Spider Categories
 

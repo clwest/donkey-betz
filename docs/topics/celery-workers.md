@@ -26,9 +26,9 @@
 
 **Memory budget:** Parent ~200MB + 1 child at 200MB = ~400MB (safe for Railway 512MB limit).
 
-## Task Routing (settings.py CELERY_TASK_ROUTES)
+## Task Routing (core.settings CELERY_TASK_ROUTES)
 
-108 beat schedule entries in `CELERY_BEAT_SCHEDULE` (settings.py) have NO explicit `options.queue` — routing is entirely driven by `CELERY_TASK_ROUTES`:
+108 beat schedule entries in `core/celery.py` are materialized into runtime `PeriodicTask` rows. Queue routing is still driven by `CELERY_TASK_ROUTES`:
 
 | Queue | # Tasks | Categories |
 |-------|---------|------------|
@@ -41,7 +41,7 @@
 | pa | 2 | process_pa_chat_task, draft_legal_document_task |
 | agents | ~18 | Agent exercise groups, autonomous situations, market desk, alert checks |
 
-**Important:** `CELERY_BEAT_SCHEDULE` in settings.py overrides `app.conf.beat_schedule` in celery.py (lazy `config_from_object`). The celery.py beat schedule is effectively dead code — all beat entries live in settings.py.
+**Important:** `core/celery.py` is the primary static source of beat definitions. `django-celery-beat` owns the runtime `PeriodicTask` rows, and the sync/bootstrap commands (`sync_celery_schedules`, `sync_celery_beat`, `add_critical_celery_tasks`, `setup_workspace_autopilot`) bridge or repair those definitions in the database. `core.settings` owns Celery routing/config, not the schedule source of truth.
 
 ### OOM Fix — Heavy Tasks Rerouted (Session 1029, PR #1282)
 
@@ -104,6 +104,12 @@ Critical discovery: `core.tasks_agents.*` (6 tasks including `execute_agent`, `e
 
 ### PeriodicTask Queue Sync (Session 1064)
 
+**Ownership model:** `core/celery.py` is the primary static schedule source of truth.
+`django-celery-beat` owns the runtime `PeriodicTask` rows, and the sync /
+bootstrap commands (`sync_celery_schedules`, `sync_celery_beat`,
+`add_critical_celery_tasks`, `sync_task_queues`, `setup_workspace_autopilot`)
+materialize, bootstrap, or keep those rows aligned with the code.
+
 **Problem:** 179 `PeriodicTask` records had wrong or missing `queue` values (`'default'` or NULL). `sync_celery_beat` never sets the `queue` field when creating tasks. When `PeriodicTask.queue` is set, it **overrides** `CELERY_TASK_ROUTES`, causing heavy tasks to land on the 200MB celery-worker.
 
 **Solution:** New management command `sync_task_queues` reads `CELERY_TASK_ROUTES`, resolves intended queue per task (explicit routes first, then glob patterns), and updates mismatches.
@@ -121,7 +127,7 @@ release: ... && python manage.py sync_celery_beat ... && python manage.py sync_t
 
 Result: 179 fixed, 36 already correct, 68 no route (left as-is).
 
-**Critical gotcha:** `django_celery_beat`'s `DatabaseScheduler.update_from_dict()` resets `PeriodicTask.queue` to NULL on every celery-beat restart (for entries without explicit `options.queue`). Fix: `QueuePreservingScheduler` in `core/schedulers.py` — subclasses `ModelEntry` to omit `queue` from `update_or_create` defaults when not explicitly set. Configured via `CELERY_BEAT_SCHEDULER = 'core.schedulers:QueuePreservingScheduler'` in settings.py.
+**Critical gotcha:** celery-beat restarts can reset `PeriodicTask.queue` to NULL for entries without an explicit `options.queue`. Fix: `QueuePreservingScheduler` in `core/schedulers.py` preserves the existing DB queue values when the schedule entry does not specify one. Configured via `CELERY_BEAT_SCHEDULER = 'core.schedulers:QueuePreservingScheduler'` in `core.settings`.
 
 ### Disabled Schedules (Sessions 1027, 1029)
 

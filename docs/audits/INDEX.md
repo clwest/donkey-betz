@@ -1,4 +1,7 @@
-# System Audits Index
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL ARCHIVE.** This directory holds pre-2026 session-numbered audits. The **current** audit workspace is [`docs/audit/`](../audit/) (see [`docs/AUDIT_INDEX.md`](../AUDIT_INDEX.md)). Route examples below (e.g., `/api/assistant/chat/`) predate the canonical `POST /api/pa/chat/` convention — treat them as legacy compatibility references. Counts in these audits are runtime snapshots from earlier sessions; for current numbers see [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md).
+
+# System Audits Index <sub>(historical)</sub>
 
 This directory contains audit documents that analyze system components, identify issues, and track improvements.
 

@@ -58,6 +58,8 @@ Collapsible 4-card grid below Now Hub showing intelligence desk status:
 
 **GlobalPADock:** Floating PA chat overlay, accessible from any page. Includes PAConversationSidebar overlay for conversation history.
 
+Rigby chat uses `POST /api/pa/chat/` everywhere. Workspace-aware UI surfaces pass explicit workspace context into the shared assistant context store, and Rigby resolves `global` vs `workspace` mode from that explicit context rather than guessing from prompt text.
+
 **CommandCenterPage:** Full-width PA chat with sidebar for conversation list.
 
 **AssistantPage:** Dedicated PA page.
@@ -93,5 +95,6 @@ All three use the same async flow: dispatch task → poll status → display res
 
 - **Zustand stores:** paStore (conversations, sidebar state), workspaceStore (active tab/sub-tab)
 - **Delegate pattern:** Content Studio sub-tabs use delegate components for Dossiers, Voices, Files
+- **Workspace Files tab:** `FilesTab.tsx` now supports file preview, inline edit/save, and file history on the live workspace surface.
 - **controlledSubTab prop:** 4 original tabs suppress inner navigation when parent drives sub-tab selection
 - **Bundle optimization:** 2,253 KB (down from 3,062 KB, -26.5%)

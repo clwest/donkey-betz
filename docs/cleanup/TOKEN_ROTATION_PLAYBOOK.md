@@ -110,10 +110,10 @@ For the **local `donkeyking` token** (`19f3b711...`):
 
 ```bash
 # Local
-curl -H "Authorization: Token <new-token>" http://localhost:8000/api/assistant/chat/ -X GET
+curl -H "Authorization: Token <new-token>" http://localhost:8000/api/pa/chat/ -X GET
 
 # Production (once prod is back up)
-curl -H "Authorization: Token <new-token>" https://donkey-betz-platform-production.up.railway.app/api/assistant/chat/ -X GET
+curl -H "Authorization: Token <new-token>" https://donkey-betz-platform-production.up.railway.app/api/pa/chat/ -X GET
 ```
 
 Expect 200 or a 405 (method not allowed). A 401 means the token wasn't recognized.
@@ -121,7 +121,7 @@ Expect 200 or a 405 (method not allowed). A 401 means the token wasn't recognize
 ### Step 5 — Verify old token is dead
 
 ```bash
-curl -H "Authorization: Token <old-token>" http://localhost:8000/api/assistant/chat/ -X GET
+curl -H "Authorization: Token <old-token>" http://localhost:8000/api/pa/chat/ -X GET
 # Expect: 401 Unauthorized
 ```
 

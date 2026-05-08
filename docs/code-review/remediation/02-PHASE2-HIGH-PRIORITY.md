@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL REMEDIATION DRAFT.** Examples below predate the canonical PA route convention. The canonical PA endpoint is `POST /api/pa/chat/`; any `/api/assistant/chat/` or `/api/v1/assistant/chat/` example is a legacy compatibility shim. See [`docs/topics/personal-assistant.md`](../../topics/personal-assistant.md).
+
 # Phase 2: High Priority Fixes (P1)
 
 **Execution Mode:** MIXED (See dependency groups)
