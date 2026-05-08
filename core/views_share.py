@@ -8,7 +8,7 @@ Handles creating, viewing, and managing public share links for projects.
 import logging
 from datetime import timedelta
 
-from django.shortcuts import render
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -25,6 +25,49 @@ from content.models import (
 from core.views_image import calculate_project_stats
 
 logger = logging.getLogger(__name__)
+
+
+# Session 1110 (PR fix/mounted-broken-route-fallbacks):
+# The legacy share_*.html templates (share_expired, share_password,
+# public_project_view, share_not_found, share_error) are gone — the public
+# share surface never made it through the SPA migration. Until a React
+# equivalent exists, we return minimal inline HTML fallbacks that preserve
+# the original status codes and error semantics so /share/<token>/ stops
+# 500-ing on TemplateDoesNotExist.
+def _share_fallback_html(*, title: str, body: str) -> str:
+    return (
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        f"<title>{title}</title>"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,"
+        "Helvetica,Arial,sans-serif;background:#0b0f17;color:#e7eaf0;"
+        "display:flex;align-items:center;justify-content:center;"
+        "min-height:100vh;margin:0;padding:24px}"
+        ".card{max-width:560px;width:100%;background:#141a26;border-radius:12px;"
+        "padding:32px;box-shadow:0 8px 32px rgba(0,0,0,.4)}"
+        "h1{margin:0 0 12px;font-size:20px}p{margin:0 0 16px;line-height:1.55;color:#aab2c0}"
+        "a{color:#7cc4ff;text-decoration:none}a:hover{text-decoration:underline}"
+        "</style></head><body><div class=\"card\">"
+        f"<h1>{title}</h1>{body}"
+        "<p><a href=\"/\">Return to Donkey Betz</a></p>"
+        "</div></body></html>"
+    )
+
+
+def _share_password_form(share_token: str, error: str | None = None) -> str:
+    error_html = f"<p style=\"color:#ff6b7a\">{error}</p>" if error else ""
+    body = (
+        "<p>This share link is password protected.</p>"
+        f"{error_html}"
+        f"<form method=\"post\" action=\"/share/{share_token}/\">"
+        "<input type=\"password\" name=\"password\" placeholder=\"Password\" "
+        "style=\"width:100%;padding:10px;border-radius:8px;border:1px solid #2a3243;"
+        "background:#0b0f17;color:#e7eaf0;margin-bottom:12px\">"
+        "<button type=\"submit\" style=\"padding:10px 16px;border-radius:8px;"
+        "border:0;background:#3b82f6;color:white;cursor:pointer\">View shared project</button>"
+        "</form>"
+    )
+    return _share_fallback_html(title="Password required", body=body)
 
 
 @api_view(['POST'])
@@ -138,9 +181,13 @@ def view_shared_project(request, share_token):
 
             logger.warning(f"⛔ Share access denied: {message} (token: {share_token[:8]}...)")
 
-            return render(request, 'share_expired.html', {
-                'message': message
-            }, status=status.HTTP_410_GONE)
+            return HttpResponse(
+                _share_fallback_html(
+                    title="Share unavailable",
+                    body=f"<p>{message}.</p>",
+                ),
+                status=status.HTTP_410_GONE,
+            )
 
         # Check password
         if share.password_hash:
@@ -149,48 +196,61 @@ def view_shared_project(request, share_token):
             if not password:
                 # Show password prompt
                 logger.info(f"🔒 Password prompt for share {share_token[:8]}...")
-                return render(request, 'share_password.html', {
-                    'share_token': share_token
-                })
+                return HttpResponse(_share_password_form(share_token))
 
             if not share.check_password(password):
                 # Wrong password
                 logger.warning(f"❌ Wrong password for share {share_token[:8]}...")
-                return render(request, 'share_password.html', {
-                    'share_token': share_token,
-                    'error': 'Incorrect password. Please try again.'
-                })
+                return HttpResponse(
+                    _share_password_form(
+                        share_token,
+                        error='Incorrect password. Please try again.',
+                    ),
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
 
         # Increment view count
         share.increment_view_count()
         logger.info(f"👁️ Share viewed (count: {share.view_count}): {share.project.name} ({share_token[:8]}...)")
 
-        # Get project and content
+        # Get project and content (preserved for view-count + side effects)
         project = share.project
-        images = ImageHistory.objects.filter(project=project).order_by('-created_at')
-        videos = VideoHistory.objects.filter(project=project).order_by('-created_at')
-        models = MiniFigAsset.objects.filter(project=project).order_by('-created_at')
+        _images = ImageHistory.objects.filter(project=project).order_by('-created_at')
+        _videos = VideoHistory.objects.filter(project=project).order_by('-created_at')
+        _models = MiniFigAsset.objects.filter(project=project).order_by('-created_at')
+        _stats = calculate_project_stats(project.id, project.user)
 
-        # Calculate stats
-        stats = calculate_project_stats(project.id, project.user)
-
-        return render(request, 'public_project_view.html', {
-            'project': project,
-            'images': images,
-            'videos': videos,
-            'models': models,
-            'stats': stats,
-            'share': share
-        })
+        # Session 1110: public_project_view.html no longer exists. Until a
+        # React equivalent ships, return a minimal landing fallback that
+        # confirms the share is valid and points users back to the app.
+        body = (
+            f"<p><strong>{project.name}</strong> has been shared with you.</p>"
+            "<p>The public viewer is being rebuilt as part of the SPA migration. "
+            "If you have an account, sign in to view the full project.</p>"
+        )
+        return HttpResponse(
+            _share_fallback_html(title="Shared project", body=body)
+        )
 
     except ProjectShare.DoesNotExist:
         logger.error(f"❌ Share not found: {share_token[:8]}...")
-        return render(request, 'share_not_found.html', status=status.HTTP_404_NOT_FOUND)
+        return HttpResponse(
+            _share_fallback_html(
+                title="Share not found",
+                body="<p>This share link does not exist or has been removed.</p>",
+            ),
+            status=status.HTTP_404_NOT_FOUND,
+        )
     except Exception as e:
         logger.error(f"❌ View share error for {share_token[:8]}...: {e}")
-        return render(request, 'share_error.html', {
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return HttpResponse(
+            _share_fallback_html(
+                title="Something went wrong",
+                body="<p>We hit an unexpected error loading this share. "
+                     "Please try again later.</p>",
+            ),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(['POST'])

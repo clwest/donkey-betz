@@ -4,7 +4,6 @@ Views for Unified Intelligence Dashboard
 Combines activity monitoring and consciousness bridge into a single unified dashboard.
 """
 
-from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -82,8 +81,16 @@ def _check_websocket_status():
 
 @login_required
 def unified_intelligence_dashboard(request):
-    """Render the unified intelligence dashboard page"""
-    return render(request, 'unified_intelligence_dashboard.html')
+    """Serve the React SPA shell for /nexus/ and /intelligence/.
+
+    Session 1110 (PR fix/mounted-broken-route-fallbacks):
+    unified_intelligence_dashboard.html no longer exists; the dashboard
+    surface lives in the React SPA at the /intelligence route. We delegate
+    to the SPA entrypoint so React Router takes over and the URL is
+    preserved (no redirect loop, no 500 on TemplateDoesNotExist).
+    """
+    from core.views_react import react_app
+    return react_app(request)
 
 
 @csrf_exempt
