@@ -1,40 +1,28 @@
 """
-Views for serving the AI agents visualization
+Views for serving the AI agents visualization.
+
+Session 1110 (PR fix/mounted-broken-route-fallbacks):
+The legacy Django templates (visualization.html, activity_monitor_enhanced.html,
+ai_building_products_with_agents.html) are gone — the surfaces moved to the
+React SPA. These views now redirect to their closest SPA equivalents instead
+of 500-ing on TemplateDoesNotExist.
 """
 
-from django.shortcuts import render
-from django.views.decorators.cache import cache_page
+from django.shortcuts import redirect
 from django.views.decorators.http import require_GET
 
-# Removed csrf_exempt for security - CSRF tokens now properly handled
-# Removed xframe_options_exempt for clickjacking protection
-# Temporarily removed login_required to avoid authentication issues
 
 @require_GET
-@cache_page(60 * 5)  # Cache for 5 minutes
 def ai_agents_visualization(request):
-    """Serve the AI agents learning visualization"""
-    context = {
-        'user': request.user if request.user.is_authenticated else None,
-        'is_authenticated': request.user.is_authenticated,
-    }
-    return render(request, 'visualization.html', context)
+    """Redirect legacy /visualization/ to the React Neural Orchestra page."""
+    return redirect('/neural-orchestra')
 
 
 def activity_monitor(request):
-    """Serve the activity monitor page for learning and infrastructure"""
-    context = {
-        'user': request.user if request.user.is_authenticated else None,
-        'is_authenticated': request.user.is_authenticated,
-        'websocket_url': 'ws://localhost:8000/ws/ai-training/',
-    }
-    return render(request, 'activity_monitor_enhanced.html', context)
+    """Redirect legacy activity monitor (defensive — no current URL mount)."""
+    return redirect('/')
 
 
 def ai_building_products(request):
-    """Serve the AI Building Products page"""
-    context = {
-        'user': request.user if request.user.is_authenticated else None,
-        'is_authenticated': request.user.is_authenticated,
-    }
-    return render(request, 'ai_building_products_with_agents.html', context)
+    """Redirect legacy /ai-building-products/ to the React Agents page."""
+    return redirect('/agents')

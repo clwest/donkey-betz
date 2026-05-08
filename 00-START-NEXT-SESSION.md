@@ -92,6 +92,26 @@ on demand. **Production PA RAG remains unaffected** — it goes through
 pre-commit hook in the same PR. See
 [`docs/topics/local-askdocs.md`](docs/topics/local-askdocs.md).
 
+Session 1110 (PR `fix/mounted-broken-route-fallbacks`) closed the four
+mounted Django routes that were guaranteed to 500 because their legacy
+templates were gone:
+
+- `/visualization/` → 302 to `/neural-orchestra`
+- `/ai-building-products/` → 302 to `/agents`
+- `/share/<token>/` → inline HTML fallbacks per state (status codes preserved)
+- `/nexus/` and `/intelligence/` → React SPA shell (URL preserved, no
+  redirect loop). `@login_required` gate kept; unauth'd callers still
+  get the existing 302 to login.
+
+No view deletions, no URL pattern removals. The deeper-review dormant
+list (`sports_betting/`, `agents/urls_deployment.py`,
+`intelligence/urls_ai_jobs.py`, `revenue/models.py`,
+`ai_core/intelligence/{monitoring_dashboard,testing_suite}.py`,
+`frontend/components/generated/`, stale `reports/*.json`,
+`templates/*/.gitkeep` orphans) is **deliberately untouched** —
+those remain pending PR 2 (artifact untracks) and PR 3 (annotation
+banners).
+
 Remaining cleanup: platform-inventory refresh (needs DB access),
 `BACKEND_INVENTORY.md` hygiene reassessment, and CI inventory regen
 (long-term).
@@ -114,9 +134,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1109_UNTRACK_RAG.md`](docs/handoffs/SESSION_1109_UNTRACK_RAG.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md`](docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1108_BUILD_RAG_CORPUS.md`](docs/handoffs/SESSION_1108_BUILD_RAG_CORPUS.md)
+- Previous handoff: [`docs/handoffs/SESSION_1109_UNTRACK_RAG.md`](docs/handoffs/SESSION_1109_UNTRACK_RAG.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)

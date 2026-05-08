@@ -5,7 +5,6 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_GET
-from django.shortcuts import render
 from datetime import datetime
 import random
 # Simple ecosystem views - no database dependencies
@@ -165,9 +164,13 @@ def ecosystem_live_feed(request):
         })
 
 def ai_building_products(request):
-    """Render the AI Building Products page"""
-    # Use version with full agent deployment system (149+ agents)
-    return render(request, 'ai_building_products_with_agents.html')
+    """Redirect legacy /ai-building-products/ to the React Agents page.
+
+    Session 1110: ai_building_products_with_agents.html no longer exists.
+    The agent deployment surface lives at /agents in the SPA.
+    """
+    from django.shortcuts import redirect
+    return redirect('/agents')
 
 @csrf_exempt
 @require_GET
