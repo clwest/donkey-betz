@@ -2,9 +2,9 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest handoff:** [`SESSION_1104_PHASE2C_LOGO_REMOVAL.md`](SESSION_1104_PHASE2C_LOGO_REMOVAL.md)
+**Latest handoff:** [`SESSION_1105_DOCKER_COMPOSE_SPLIT.md`](SESSION_1105_DOCKER_COMPOSE_SPLIT.md)
 
-**Previous:** [`SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md`](SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md)
+**Previous:** [`SESSION_1104_PHASE2C_LOGO_REMOVAL.md`](SESSION_1104_PHASE2C_LOGO_REMOVAL.md)
 
 ## How to update
 

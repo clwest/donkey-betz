@@ -51,7 +51,7 @@ Rule: edit the source command or the underlying docs, then **regenerate**. Hand-
 
 ---
 
-## SESSION 1104+ — CURRENT AUDIT / CLEANUP ENTRY POINT
+## SESSION 1105+ — CURRENT AUDIT / CLEANUP ENTRY POINT
 
 Phase 1 (Session 1101) closed the spider-count `CONFLICT`. Phase 2B
 (Session 1102) fixed the CLAUDE.md taxonomy drift (`73/8/2` → `73/9/1`),
@@ -59,8 +59,12 @@ added a `<!-- DOC-AUTOGEN -->` header to `docs/INDEX.md`, and regenerated
 the index. Phase 2C-prep (Session 1103) installed the DOC-AUTOGEN
 guardrail in `scripts/verify_repo_guardrails.py`. Phase 2C (Session 1104)
 **removed the unused 24 MB `core/static/images/donkey-logo.png`** after a
-deep source-side scan confirmed zero consumers. Verifier reports
-`CONFLICT: 0`.
+deep source-side scan confirmed zero consumers. Phase 2D (Session 1105)
+**fixed broken YAML in `docker-compose.yml`** (orphaned mobile-service
+fragment causing duplicate-key parse error) and narrowly extended the
+pre-commit hook's database-URL placeholder allowlist to accept
+`secure_password`. Local subnet override (172.20→172.21) preserved as
+named git stash. Verifier reports `CONFLICT: 0`.
 
 `.rag/corpus.jsonl` remains **deferred and production-dormant** —
 `core/rag.py:top_k()` only feeds local Ollama dev tools; production PA
@@ -89,9 +93,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md`](docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md`](docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md`](docs/handoffs/SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md)
+- Previous handoff: [`docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md`](docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
