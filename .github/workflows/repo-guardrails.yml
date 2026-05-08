@@ -1,0 +1,66 @@
+name: Repo Guardrails
+
+# Wires `scripts/verify_repo_guardrails.py` into PR-time CI so drift
+# becomes visible before a merge instead of only after a manual local
+# run. Strict mode is enabled (the default) with one carve-out:
+# `--inventory-advisory` makes the platform-inventory freshness check
+# advisory. The freshness check requires `python manage.py
+# generate_platform_inventory`, which reads from a live PostgreSQL
+# instance the runner does not have. The remaining strict checks
+# (tracked generated paths, missing DOC-AUTOGEN marker on
+# `docs/INDEX.md`, and any `context-kit verify` CONFLICT findings)
+# continue to block.
+#
+# Local strict runs (`python scripts/verify_repo_guardrails.py`) keep
+# their stronger behavior: a stale inventory still fails, prompting the
+# author to regenerate before opening the PR. The CI carve-out only
+# fires when invoked here.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  repo-guardrails:
+    name: Repo Guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need real history for `git ls-files` and the freshness
+          # check's `git rev-parse HEAD^`.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install context-kit
+        env:
+          # Fine-grained PAT with Contents: Read-only on clwest/context-kit.
+          # Stored as a repository secret on clwest/donkey-betz-platform.
+          # The default GITHUB_TOKEN does not have cross-repo access, so an
+          # explicit credential is required to clone the (private) sibling
+          # repo. If context-kit is later made public or published to PyPI,
+          # this step can drop the env block and inline the URL or switch
+          # to `pip install context-kit`.
+          TOKEN: ${{ secrets.CONTEXT_KIT_REPO_TOKEN }}
+        run: |
+          python -m pip install --upgrade pip
+          # The guardrail script shells out to `context-kit inspect`
+          # and `context-kit verify --json`. context-kit is not yet
+          # published to PyPI under the name `context-kit`, so install
+          # directly from the (private) GitHub source. This pulls the
+          # current `main` of the sibling repo, which includes the
+          # orient / canonical_docs fix from clwest/context-kit#1 and
+          # the runtime-state section from clwest/context-kit#2.
+          pip install "git+https://${TOKEN}@github.com/clwest/context-kit.git@main"
+
+      - name: Run repo guardrails (strict, inventory-advisory)
+        run: python scripts/verify_repo_guardrails.py --inventory-advisory
