@@ -28,6 +28,10 @@ FORBIDDEN_PATHS = [
 ]
 
 PLATFORM_INVENTORY = REPO_ROOT / "docs" / "PLATFORM_INVENTORY.md"
+DOCS_INDEX = REPO_ROOT / "docs" / "INDEX.md"
+DOCS_INDEX_AUTOGEN_PATTERN = re.compile(
+    r"<!--\s*DOC-AUTOGEN:.*build_docs_index", re.IGNORECASE
+)
 
 
 @dataclass
@@ -201,6 +205,44 @@ def classify_platform_inventory_freshness(
     return False, f"inventory head {recorded_head} != repo head {current_head}"
 
 
+def classify_docs_index_autogen(first_nonblank_line: str) -> tuple[bool, str]:
+    """Return (ok, message) given the first non-blank line of docs/INDEX.md.
+
+    Pure function so tests can exercise it without filesystem access.
+    Tolerant of minor wording drift: matches any HTML comment line that
+    contains both ``DOC-AUTOGEN`` and ``build_docs_index``.
+    """
+    line = first_nonblank_line.strip()
+    if not line:
+        return False, (
+            "docs/INDEX.md is empty or its first non-blank line is missing "
+            "the DOC-AUTOGEN marker (fix: python manage.py build_docs_index)"
+        )
+    if DOCS_INDEX_AUTOGEN_PATTERN.search(line):
+        return True, "docs/INDEX.md carries the DOC-AUTOGEN marker"
+    return (
+        False,
+        "docs/INDEX.md is missing the DOC-AUTOGEN marker on its first "
+        "non-blank line (fix: python manage.py build_docs_index)",
+    )
+
+
+def check_docs_index_autogen_marker() -> tuple[bool, str]:
+    if not DOCS_INDEX.exists():
+        return False, (
+            "docs/INDEX.md is missing "
+            "(fix: python manage.py build_docs_index)"
+        )
+    first_line = ""
+    with DOCS_INDEX.open("r", encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            stripped = raw.strip()
+            if stripped:
+                first_line = stripped
+                break
+    return classify_docs_index_autogen(first_line)
+
+
 def check_platform_inventory_freshness() -> tuple[bool, str]:
     if not PLATFORM_INVENTORY.exists():
         return False, "docs/PLATFORM_INVENTORY.md is missing"
@@ -276,6 +318,12 @@ def main() -> int:
         inventory_message,
     )
 
+    autogen_ok, autogen_message = check_docs_index_autogen_marker()
+    print_block(
+        "docs/INDEX.md autogen marker",
+        autogen_message,
+    )
+
     tracked_blocking = bool(tracked)
     if tracked:
         print("WARNING: tracked generated paths were found.")
@@ -288,6 +336,12 @@ def main() -> int:
     else:
         print("OK: platform inventory matches the current repo head.")
 
+    autogen_blocking = not autogen_ok
+    if not autogen_ok:
+        print("WARNING: docs/INDEX.md is missing or has lost its DOC-AUTOGEN marker.")
+    else:
+        print("OK: docs/INDEX.md carries the DOC-AUTOGEN marker.")
+
     conflict_blocking = conflict_count > 0
     if conflict_count:
         print(f"WARNING: context-kit reported {conflict_count} CONFLICT finding(s).")
@@ -299,6 +353,8 @@ def main() -> int:
         failures.append("tracked generated paths are present")
     if args.strict and inventory_blocking:
         failures.append("platform inventory is stale")
+    if args.strict and autogen_blocking:
+        failures.append("docs/INDEX.md is missing the DOC-AUTOGEN marker")
     if args.strict and conflict_blocking:
         failures.append("context-kit has CONFLICT findings")
 
@@ -320,6 +376,7 @@ def main() -> int:
     print(f"- context-kit verify --json exit: {verify_result.returncode}")
     print(f"- tracked generated paths: {len(tracked)}")
     print(f"- platform inventory fresh: {inventory_fresh}")
+    print(f"- docs/INDEX.md autogen marker: {autogen_ok}")
     print(f"- context-kit CONFLICT findings: {conflict_count}")
     print(f"- context-kit DOC_ONLY findings: {doc_only_count}")
     print(f"- strict mode: {'on' if args.strict else 'off'}")
