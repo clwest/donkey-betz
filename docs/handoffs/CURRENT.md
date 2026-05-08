@@ -2,9 +2,9 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest handoff:** [`SESSION_1113_DORMANT_PARTIAL_LABELS.md`](SESSION_1113_DORMANT_PARTIAL_LABELS.md)
+**Latest handoff:** [`SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md`](SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md)
 
-**Previous:** [`SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](SESSION_1112_SAFE_ARTIFACT_CLEANUP.md)
+**Previous:** [`SESSION_1113_DORMANT_PARTIAL_LABELS.md`](SESSION_1113_DORMANT_PARTIAL_LABELS.md)
 
 ## How to update
 

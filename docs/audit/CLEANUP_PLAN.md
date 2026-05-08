@@ -97,6 +97,28 @@ Verification snapshot at the time of this phase:
 - `python scripts/verify_repo_guardrails.py --inventory-advisory` → 0 blocking, 4 DOC_ONLY (advisory), 2 VERIFIED.
 - `context-kit verify --json` → CONFLICT 0.
 
+## Phase 7 - Document active-but-underdocumented modules (Session 1114, PR-D)
+
+PR-D from the Session 1111 deeper-review queue. Docs-only — no code
+changes. New topic doc:
+[`docs/topics/active-module-ownership-map.md`](../topics/active-module-ownership-map.md)
+covers all five Session 1111 PR-D items in one cohesive map:
+
+| Subsystem | Doc section |
+|---|---|
+| `revenue/revenue_verifier.py` (active Redis-only verifier) | §1 — including failure semantics + relationship to the Session 1113 `revenue/models.py` companion banner |
+| `advisors/registry.py` + `advisors/llm_advisor_system.py` | §2 — corrects the Session 1111 namespace-package claim (real `__init__.py` exists), enumerates 16+ active importers, advises against relocation |
+| Top-level `llm/` (52 LOC Ollama helper) | §3 — explicitly contrasts with `core/services/agent_llm_router.py`, `core/services/llm_provider_registry.py`, `core/services/llm_call_wrapper.py` |
+| `core/tasks_*.py` (12 modules, ~31.7k LOC) | §4 — documents the `_impl_*` lazy-import wrapper pattern in `core/tasks.py` and why only `core.tasks_agents` is in `app.conf.imports` |
+| `core/urls.py` (4,750 LOC) vs `core/urls_unified.py` (118 LOC) | §5 — corrects Session 1111's swap; `core/urls.py` is the entrypoint *and* the monolith |
+
+`docs/topics/README.md` updated with a new row pointing at the file so
+the embedding pipeline picks it up alongside the other topic docs.
+
+PR-D status: **complete**. PR-E (decisions: revive `ml_pipeline.pipeline`
+shim, wire `agents/urls_deployment.py`, rehome `revenue/models.py`)
+remains gated on Rigby/Chris.
+
 ## Notes
 - Do not delete historical docs just because they are old.
 - Prefer untracking generated artifacts over rewriting historical memory.

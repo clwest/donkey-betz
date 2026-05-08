@@ -140,11 +140,26 @@ shim. Classification labels: PARTIAL, ARCHIVE-CANDIDATE,
 BROKEN-BUT-UNREACHABLE, ACTIVE-COMPANION-PARTIAL. No runtime behavior
 changes. Smoke imports for every banner-touched module match the
 documented classification exactly. `docs/audit/CLEANUP_PLAN.md` now
-carries a Phase 6 section with the full label table. **PR-D** (docs for
-the active-but-undocumented modules) is unblocked and independent;
-**PR-E** (decisions: revive `ml_pipeline.pipeline` shim, wire
-`agents/urls_deployment.py`, rehome `revenue/models.py`) remains
-Rigby-gated.
+carries a Phase 6 section with the full label table.
+
+Session 1114 shipped **PR-D** off the same queue:
+[`docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md`](docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md).
+Docs-only — no code changes. New topic file
+[`docs/topics/active-module-ownership-map.md`](docs/topics/active-module-ownership-map.md)
+covers all five active-but-underdocumented runtime modules in one
+cohesive map: `revenue/revenue_verifier.py` (Redis-only verifier with
+fail-silent semantics), `advisors/` registry + LLM advisor system
+(corrects Session 1111's namespace-package claim — real `__init__.py`
+exists), top-level `llm/` (52 LOC direct-Ollama helper, distinct from
+the production `core/services/agent_llm_router.py` and
+`LLMProviderRegistry`), `core/tasks_*.py` lazy `_impl_*` wrapper pattern
+behind `core/tasks.py`, and `core/urls.py` (4,750 LOC entrypoint AND
+monolith) vs `core/urls_unified.py` (118 LOC redirect helper). Two
+Session 1111 PR-D claims corrected by this pass. `docs/topics/README.md`
+updated; `docs/audit/CLEANUP_PLAN.md` now carries Phase 7. **PR-E**
+(decisions: revive `ml_pipeline.pipeline` shim, wire
+`agents/urls_deployment.py`, rehome `revenue/models.py`) remains the
+only unfinished item, Rigby-gated.
 
 Remaining cleanup: platform-inventory refresh (needs DB access),
 `BACKEND_INVENTORY.md` hygiene reassessment, and CI inventory regen
@@ -168,9 +183,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md`](docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md`](docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md)
+- Previous handoff: [`docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md`](docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
