@@ -377,3 +377,16 @@ behavior-*.json
 # 18 MB; only consumed by ad-hoc scripts with graceful fail-fast.
 # Local copy preserved for those scripts; not tracked in git.
 external-project-docs/ai-content-studio/documentation/master_context_all.md
+
+# Session 1112: untrack safe generated artifacts
+# Generator output dir for ai_core/intelligence/proposal_manager.py — written
+# at runtime, not source. Local copies preserved; not tracked in git.
+frontend/components/generated/
+
+# Orphan template stubs at repo root. Django TEMPLATES DIRS does not include
+# this directory (see core/settings.py: only frontend/dist, ai_core/templates,
+# core/templates are loaded). Session 1111 audit confirmed zero references.
+/templates/frontend_index.html
+/templates/agents/
+/templates/content/
+/templates/invoices/
