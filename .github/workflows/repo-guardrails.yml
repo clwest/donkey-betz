@@ -45,9 +45,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # The guardrail script shells out to `context-kit inspect`
-          # and `context-kit verify --json`. Install the published
-          # package; mirrors how local dev environments run it.
-          pip install context-kit
+          # and `context-kit verify --json`. context-kit is not yet
+          # published to PyPI under the name `context-kit`, so install
+          # directly from the GitHub source. This pulls the current
+          # `main` of the sibling repo, which includes the orient /
+          # canonical_docs fix shipped in clwest/context-kit#1 and the
+          # runtime-state section shipped in clwest/context-kit#2.
+          pip install "git+https://github.com/clwest/context-kit.git@main"
 
       - name: Run repo guardrails (strict, inventory-advisory)
         run: python scripts/verify_repo_guardrails.py --inventory-advisory
