@@ -2,9 +2,9 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest handoff:** [`SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md`](SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md)
+**Latest handoff:** [`SESSION_1111_DEEPER_REVIEW_MAP.md`](SESSION_1111_DEEPER_REVIEW_MAP.md)
 
-**Previous:** [`SESSION_1109_UNTRACK_RAG.md`](SESSION_1109_UNTRACK_RAG.md)
+**Previous:** [`SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md`](SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md)
 
 ## How to update
 

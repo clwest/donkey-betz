@@ -112,6 +112,15 @@ list (`sports_betting/`, `agents/urls_deployment.py`,
 those remain pending PR 2 (artifact untracks) and PR 3 (annotation
 banners).
 
+Session 1111 recorded the structured deeper-review map as a docs-only
+continuity handoff. The next-5-PRs queue (PR-A through PR-E) lives in
+[`docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md`](docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md):
+artifact untracks first, then defensive banners, then archive-candidate
+banners, then docs for the active-but-undocumented modules
+(`revenue/revenue_verifier.py`, `advisors/`, top-level `llm/`,
+`core/tasks_*.py` indirection, `core/urls.py` vs `urls_unified.py`),
+then a Rigby-gated decision PR on the partial systems.
+
 Remaining cleanup: platform-inventory refresh (needs DB access),
 `BACKEND_INVENTORY.md` hygiene reassessment, and CI inventory regen
 (long-term).
@@ -134,9 +143,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md`](docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md`](docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1109_UNTRACK_RAG.md`](docs/handoffs/SESSION_1109_UNTRACK_RAG.md)
+- Previous handoff: [`docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md`](docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
