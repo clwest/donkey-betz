@@ -121,6 +121,15 @@ banners, then docs for the active-but-undocumented modules
 `core/tasks_*.py` indirection, `core/urls.py` vs `urls_unified.py`),
 then a Rigby-gated decision PR on the partial systems.
 
+Session 1112 shipped **PR-A** off that queue:
+[`docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md).
+Untracked 23 verified zero-reader artifact files across
+`frontend/components/generated/`, `reports/*.json`, `frontend/nohup.out`,
+`templates/frontend_index.html`, and `templates/{agents,content,invoices}/.gitkeep`.
+Local copies preserved; `.gitignore` extended with three new rules.
+Guardrails still report `0 blocking, 0 CONFLICT`. PR-B (defensive
+banners) and PR-C (archive-candidate banners) remain next on the queue.
+
 Remaining cleanup: platform-inventory refresh (needs DB access),
 `BACKEND_INVENTORY.md` hygiene reassessment, and CI inventory regen
 (long-term).
@@ -143,9 +152,9 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md`](docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md`](docs/handoffs/SESSION_1110_MOUNTED_ROUTE_FALLBACKS.md)
+- Previous handoff: [`docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md`](docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
