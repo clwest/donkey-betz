@@ -94,7 +94,16 @@ For all of those, use `core.rag_integration` and the pgvector pipeline.
 
 ## Tracking note
 
-`.rag/corpus.jsonl` is currently tracked in git (~6.5 MB). Now that there is
-an in-repo producer, a follow-up PR can untrack it and add `.rag/` to
-`.gitignore`. That step is intentionally **not** included in this PR — the
-producer ships first so the untrack is non-breaking.
+As of Session 1109, `.rag/` is **untracked and gitignored**. The two former
+artifacts (`corpus.jsonl`, `embedding_refs.txt`) were removed from the index
+in PR 2 of the Option B plan. Local working copies are preserved on disk and
+can be regenerated at any time via:
+
+```bash
+python manage.py build_docs_index --json-only
+python manage.py build_rag_corpus
+```
+
+If `.rag/corpus.jsonl` is missing, `core/rag.py:top_k()` returns an empty
+list and `python manage.py askdocs <q>` reports
+`No matching /docs context found.` — regenerate to restore.

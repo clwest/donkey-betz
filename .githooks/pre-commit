@@ -5,7 +5,10 @@
 echo "🔒 Pre-commit Security Check..."
 
 # Check for hardcoded secrets (but allow safe patterns like os.environ.get, settings.VAR)
-staged_files=$(git diff --cached --name-only)
+# `--diff-filter=d` excludes deletions: the file may still be on disk for unrelated reasons
+# (e.g. `git rm --cached` preserves the working copy), and scanning its content for a
+# delete-only commit yields false positives against material that's leaving the index.
+staged_files=$(git diff --cached --name-only --diff-filter=d)
 violations_found=0
 
 for file in $staged_files; do
@@ -13,15 +16,12 @@ for file in $staged_files; do
         # Skip binary files (images, fonts, etc.) — grep on binary data causes false positives
         # Skip minified frontend bundles — contain ://github.com, ://reactjs.org etc. that trigger false positives
         # Skip the hook itself (.githooks/) — contains regex patterns for the checks, would self-match
-        # Skip .rag/corpus.jsonl — auto-generated RAG embedding corpus, chunked docs, high false-positive rate
         case "$file" in
             *.png|*.jpg|*.jpeg|*.gif|*.ico|*.webp|*.svg|*.woff|*.woff2|*.ttf|*.eot|*.otf|*.zip|*.tar|*.gz|*.pdf)
                 continue ;;
             frontend/dist/assets/*)
                 continue ;;
             .githooks/*|.git/hooks/*)
-                continue ;;
-            .rag/corpus.jsonl)
                 continue ;;
         esac
         # Check for hardcoded API keys (but skip safe patterns)
