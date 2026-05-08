@@ -783,7 +783,7 @@ fashion, food, architecture, nature, studio
 
 ---
 
-## Spider Network (70 Spiders)
+## Spider Network (historical detail — canonical = 80; see PLATFORM_INVENTORY)
 
 ### Data Sources by Category
 

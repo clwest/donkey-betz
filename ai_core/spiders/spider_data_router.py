@@ -75,6 +75,9 @@ class RouterMetrics:
     active_connections: int = 0
     messages_routed: int = 0
     failed_routes: int = 0
+    router_loop_errors: int = 0
+    malformed_message_count: int = 0
+    delivery_failure_count: int = 0
     avg_latency_ms: float = 0.0
     top_producers: List[str] = field(default_factory=list)
     top_consumers: List[str] = field(default_factory=list)
@@ -110,12 +113,68 @@ class SpiderDataRouter:
         # Performance tracking
         self.metrics = RouterMetrics()
         self.connection_history: List[RouterMetrics] = []
+        self.route_outcomes: List[Dict[str, Any]] = []
+        self.last_route_outcome: Optional[Dict[str, Any]] = None
+        self.router_loop_errors = 0
+        self.last_router_error = None
+        self.last_router_error_type = None
+        self.malformed_message_count = 0
+        self.filter_rejection_reasons: Dict[str, int] = {}
+        self.delivery_failure_count = 0
+        self.last_delivery_failure = None
+        self.metrics_stale = False
 
         # Executor for parallel operations
         self.executor = ThreadPoolExecutor(max_workers=20)
 
         self.logger = logging.getLogger(__name__)
         self.is_running = False
+
+    def _record_route_outcome(self, outcome: Dict[str, Any]):
+        """Record a bounded history of route outcomes for observability."""
+        self.last_route_outcome = outcome
+        self.route_outcomes.append(outcome)
+        if len(self.route_outcomes) > 50:
+            self.route_outcomes = self.route_outcomes[-50:]
+
+    def _get_filter_rejection_reason(self, data: Dict[str, Any], mapping: ConnectionMapping) -> Optional[str]:
+        """Return a reason code for why a consumer filter rejected a message."""
+        try:
+            filters = mapping.filters
+
+            min_quality = filters.get('min_quality_score', 0.0)
+            if data.get('quality_score', 0.0) < min_quality:
+                return 'low_quality'
+
+            content_text = json.dumps(data.get('content', {})).lower()
+
+            required_keywords = filters.get('keywords', [])
+            if required_keywords and not any(keyword.lower() in content_text for keyword in required_keywords):
+                return 'keyword_miss'
+
+            excluded_keywords = filters.get('exclude_keywords', [])
+            if excluded_keywords and any(keyword.lower() in content_text for keyword in excluded_keywords):
+                return 'excluded_keyword'
+
+            if mapping.data_types and data.get('data_type') and data['data_type'] not in mapping.data_types:
+                return 'data_type_mismatch'
+
+            data_freshness_hours = filters.get('data_freshness_hours')
+            if data_freshness_hours:
+                raw_ts = data.get('timestamp', '')
+                try:
+                    from core.utils.time import normalize_timestamp
+                    timestamp = normalize_timestamp(raw_ts) or datetime.now(timezone.utc)
+                except Exception:
+                    timestamp = datetime.fromisoformat(str(raw_ts).replace('Z', '+00:00'))
+                age_hours = (datetime.now(timezone.utc) - timestamp).total_seconds() / 3600
+                if age_hours > data_freshness_hours:
+                    return 'stale_data'
+
+            return None
+        except Exception as e:
+            self.logger.error(f"Error checking consumer filters: {e}")
+            return 'filter_parse_error'
 
     async def initialize_router_infrastructure(self):
         """Initialize the complete routing infrastructure"""
@@ -482,90 +541,124 @@ class SpiderDataRouter:
 
             except Exception as e:
                 self.logger.error(f"Error in message router: {e}")
+                self.router_loop_errors += 1
+                self.last_router_error = str(e)
+                self.last_router_error_type = type(e).__name__
+                self.metrics.router_loop_errors += 1
                 await asyncio.sleep(1)
 
     async def _route_spider_message(self, redis_message: Dict[str, Any]):
         """Route a spider intelligence message to appropriate consumers"""
+        route_outcome = {
+            'route_status': 'unknown',
+            'failure_type': None,
+            'spider_id': None,
+            'channel': None,
+            'consumer_count': 0,
+            'delivery_failure_count': 0,
+            'delivery_failures': [],
+        }
         try:
             # Parse message
             channel = redis_message['channel'].decode('utf-8')
+            route_outcome['channel'] = channel
             data = json.loads(redis_message['data'])
+            if not isinstance(data, dict):
+                raise ValueError('Malformed spider message payload')
 
             # Extract spider ID from channel or data
             spider_id = data.get('spider_id', 'unknown')
+            route_outcome['spider_id'] = spider_id
 
             # Find connection mappings for this spider
             relevant_mappings = [
                 mapping for mapping_id, mapping in self.connection_mappings.items()
                 if mapping.spider_id == spider_id and mapping.status == ConnectionStatus.ACTIVE
             ]
+            route_outcome['consumer_count'] = len(relevant_mappings)
+
+            if not relevant_mappings:
+                route_outcome['route_status'] = 'no_active_consumers'
+                route_outcome['failure_type'] = 'no_active_consumers'
+                self._record_route_outcome(route_outcome)
+                return route_outcome
 
             # Route to each connected consumer
             routing_tasks = []
+            filtered_out = 0
             for mapping in relevant_mappings:
-                if self._passes_consumer_filters(data, mapping):
+                rejection_reason = self._get_filter_rejection_reason(data, mapping)
+                if rejection_reason is None:
                     task = asyncio.create_task(
                         self._deliver_to_consumer(data, mapping)
                     )
                     routing_tasks.append(task)
+                else:
+                    filtered_out += 1
+                    self.filter_rejection_reasons[rejection_reason] = self.filter_rejection_reasons.get(rejection_reason, 0) + 1
+
+            if not routing_tasks:
+                route_outcome['route_status'] = 'filtered_out'
+                route_outcome['failure_type'] = 'filter_rejection'
+                self._record_route_outcome(route_outcome)
+                return route_outcome
 
             # Execute routing tasks
             if routing_tasks:
-                await asyncio.gather(*routing_tasks, return_exceptions=True)
+                delivery_results = await asyncio.gather(*routing_tasks, return_exceptions=True)
                 self.metrics.messages_routed += len(routing_tasks)
+                for delivery_result in delivery_results:
+                    if isinstance(delivery_result, Exception):
+                        route_outcome['delivery_failure_count'] += 1
+                        route_outcome['delivery_failures'].append({
+                            'error': str(delivery_result),
+                            'error_type': type(delivery_result).__name__,
+                        })
+                    elif isinstance(delivery_result, dict) and not delivery_result.get('success', True):
+                        route_outcome['delivery_failure_count'] += 1
+                        route_outcome['delivery_failures'].append(delivery_result)
+
+                self.delivery_failure_count += route_outcome['delivery_failure_count']
+                self.metrics.delivery_failure_count += route_outcome['delivery_failure_count']
+                if route_outcome['delivery_failures']:
+                    self.last_delivery_failure = route_outcome['delivery_failures'][-1]
+
+                if route_outcome['delivery_failure_count']:
+                    route_outcome['route_status'] = 'partial_failure'
+                    route_outcome['failure_type'] = 'delivery_failure'
+                else:
+                    route_outcome['route_status'] = 'routed'
+
+            if filtered_out and route_outcome['route_status'] == 'routed':
+                route_outcome['route_status'] = 'routed_with_filters'
 
         except Exception as e:
             self.logger.error(f"Error routing spider message: {e}")
             self.metrics.failed_routes += 1
+            if route_outcome['spider_id'] is None:
+                self.malformed_message_count += 1
+                self.metrics.malformed_message_count += 1
+                route_outcome['route_status'] = 'malformed_message'
+                route_outcome['failure_type'] = 'malformed_message'
+            else:
+                route_outcome['route_status'] = 'route_error'
+                route_outcome['failure_type'] = 'route_error'
+            route_outcome['error'] = str(e)
+            route_outcome['error_type'] = type(e).__name__
+            self.last_router_error = str(e)
+            self.last_router_error_type = type(e).__name__
+            self._record_route_outcome(route_outcome)
+            return route_outcome
+
+        if route_outcome['route_status'] == 'unknown':
+            route_outcome['route_status'] = 'routed'
+
+        self._record_route_outcome(route_outcome)
+        return route_outcome
 
     def _passes_consumer_filters(self, data: Dict[str, Any], mapping: ConnectionMapping) -> bool:
         """Check if message passes consumer-specific filters"""
-        try:
-            filters = mapping.filters
-
-            # Quality score filter
-            min_quality = filters.get('min_quality_score', 0.0)
-            if data.get('quality_score', 0.0) < min_quality:
-                return False
-
-            # Keyword filters
-            content_text = json.dumps(data.get('content', {})).lower()
-
-            # Required keywords
-            required_keywords = filters.get('keywords', [])
-            if required_keywords:
-                if not any(keyword.lower() in content_text for keyword in required_keywords):
-                    return False
-
-            # Excluded keywords
-            excluded_keywords = filters.get('exclude_keywords', [])
-            if excluded_keywords:
-                if any(keyword.lower() in content_text for keyword in excluded_keywords):
-                    return False
-
-            # Data type filter
-            if mapping.data_types and data.get('data_type'):
-                if data['data_type'] not in mapping.data_types:
-                    return False
-
-            # Freshness filter
-            data_freshness_hours = filters.get('data_freshness_hours')
-            if data_freshness_hours:
-                raw_ts = data.get('timestamp', '')
-                try:
-                    from core.utils.time import normalize_timestamp
-                    timestamp = normalize_timestamp(raw_ts) or datetime.now(timezone.utc)
-                except Exception:
-                    timestamp = datetime.fromisoformat(str(raw_ts).replace('Z', '+00:00'))
-                age_hours = (datetime.now(timezone.utc) - timestamp).total_seconds() / 3600
-                if age_hours > data_freshness_hours:
-                    return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error checking consumer filters: {e}")
-            return False
+        return self._get_filter_rejection_reason(data, mapping) is None
 
     async def _deliver_to_consumer(self, data: Dict[str, Any], mapping: ConnectionMapping):
         """Deliver intelligence data to specific consumer"""
@@ -597,10 +690,24 @@ class SpiderDataRouter:
             history_key = f"consumer_history:{mapping.consumer_type}:{mapping.consumer_id}"
             await self.redis_async.lpush(history_key, json.dumps(delivery_payload))
             await self.redis_async.ltrim(history_key, 0, 999)  # Keep last 1000 messages
+            return {
+                'success': True,
+                'consumer_id': mapping.consumer_id,
+                'consumer_type': mapping.consumer_type,
+                'failure_type': None,
+            }
 
         except Exception as e:
             self.logger.error(f"Error delivering to consumer {mapping.consumer_id}: {e}")
             mapping.error_count += 1
+            return {
+                'success': False,
+                'consumer_id': mapping.consumer_id,
+                'consumer_type': mapping.consumer_type,
+                'failure_type': 'delivery_failure',
+                'error': str(e),
+                'error_type': type(e).__name__,
+            }
 
     async def _connection_monitor(self):
         """Monitor connection health and status"""
@@ -687,6 +794,7 @@ class SpiderDataRouter:
 
             except Exception as e:
                 self.logger.error(f"Error in performance tracker: {e}")
+                self.metrics_stale = True
 
     async def _health_checker(self):
         """Monitor overall system health"""
@@ -721,9 +829,11 @@ class SpiderDataRouter:
                     300,
                     json.dumps(health_status)
                 )
+                self.metrics_stale = False
 
             except Exception as e:
                 self.logger.error(f"Error in health checker: {e}")
+                self.metrics_stale = True
 
     async def _load_balancer(self):
         """Balance load across consumers"""
@@ -761,6 +871,7 @@ class SpiderDataRouter:
 
     def get_router_status(self) -> Dict[str, Any]:
         """Get comprehensive router status"""
+        metrics_age_seconds = (datetime.now(timezone.utc) - self.metrics.last_updated).total_seconds()
         return {
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'is_running': self.is_running,
@@ -769,9 +880,22 @@ class SpiderDataRouter:
                 'active_connections': self.metrics.active_connections,
                 'messages_routed': self.metrics.messages_routed,
                 'failed_routes': self.metrics.failed_routes,
+                'router_loop_errors': self.router_loop_errors,
+                'malformed_message_count': self.malformed_message_count,
+                'delivery_failure_count': self.delivery_failure_count,
                 'connection_health': self.metrics.connection_health,
                 'avg_latency_ms': self.metrics.avg_latency_ms
             },
+            'router_loop_errors': self.router_loop_errors,
+            'last_router_error': self.last_router_error,
+            'last_router_error_type': self.last_router_error_type,
+            'malformed_message_count': self.malformed_message_count,
+            'filter_rejection_reasons': dict(self.filter_rejection_reasons),
+            'delivery_failure_count': self.delivery_failure_count,
+            'last_delivery_failure': self.last_delivery_failure,
+            'metrics_stale': self.metrics_stale or metrics_age_seconds > 300,
+            'last_route_outcome': self.last_route_outcome,
+            'recent_route_outcomes': self.route_outcomes[-10:],
             'routing_tables': {
                 swarm_id: len(consumers)
                 for swarm_id, consumers in self.routing_tables.items()

@@ -171,6 +171,14 @@ class AssistantProfile(UnifiedBaseModel):
 
         return base
 
+    def get_workspace_mode(self) -> str:
+        """Return the assistant mode implied by this profile."""
+        return 'workspace' if self.workspace_id else 'global'
+
+    def has_workspace_scope(self) -> bool:
+        """Whether this profile is pinned to a specific workspace."""
+        return bool(self.workspace_id)
+
     def _load_prospect_context(self):
         """Load prospect profile content from the linked VIPInvite."""
         try:

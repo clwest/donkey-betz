@@ -44,12 +44,12 @@ for file in $staged_files; do
         # Allows: os.environ, settings., getenv, example.com, GitHub Actions secrets (${{ secrets.),
         #         googleapis.com (fonts), and common placeholder patterns used in docs
         # Placeholder patterns accepted (docs/examples only, not real credentials):
-        #   ://user:pass@ / ://user:password@ / ://admin:admin@
+        #   ://user:pass@ / ://user:password@ / ://user:secure_password@ / ://admin:admin@
         #   ://<USER>:<PASSWORD>@ / ://${DB_USER}:${DB_PASS}@
         #   ://postgres:password@ / ://dbao_user:pass@ / ://moveyourazz_user:${DB_PASSWORD}@
         if grep -E "://[^:]+:[^@]+@" "$file" 2>/dev/null \
             | grep -vE "(os\.environ|settings\.|getenv|example\.com|\\\$\{\{|googleapis\.com|fonts\.)" \
-            | grep -vE "://[a-zA-Z_][a-zA-Z0-9_]*:(pass|password|admin|<[^>]+>|\\\$\{[^}]+\})[@:]" \
+            | grep -vE "://[a-zA-Z_][a-zA-Z0-9_]*:(pass|password|secure_password|admin|<[^>]+>|\\\$\{[^}]+\})[@:]" \
             | grep -vE "://<[^>]*>:<[^>]*>@" \
             | grep -vE "://\\\$\{[^}]+\}:\\\$\{[^}]+\}@" \
             > /dev/null; then

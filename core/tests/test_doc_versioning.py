@@ -14,8 +14,6 @@ from django.test import TestCase
 from django.conf import settings
 
 from core.models_deliberation import DocVersion, DeliberationSession
-
-
 class TestDocVersionModel(TestCase):
     """Direct model tests for DocVersion."""
 

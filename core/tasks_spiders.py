@@ -336,10 +336,15 @@ def _impl_run_spider_network(self):
             logger.info("🕷️ Spider network skipped — governance mode: %s", gov_mode)
             return {'skipped': True, 'reason': f'governance_mode={gov_mode}'}
     except Exception as _e:
-        logger.warning(
-            "tasks_spiders._impl_run_spider_network: swallowed (%s: %s) — degraded",
-            type(_e).__name__, _e,
+        logger.exception(
+            "tasks_spiders._impl_run_spider_network: governance lookup failed; "
+            "skipping spider network to fail closed"
         )
+        return {
+            'skipped': True,
+            'reason': 'governance_lookup_failed',
+            'error': type(_e).__name__,
+        }
 
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
 
@@ -355,7 +360,10 @@ def _impl_run_spider_network(self):
         'items_collected': 0,
         'errors': 0,
         'spider_results': [],
-        'all_topics': []  # Session 423: Track topics for summary
+        'all_topics': [],  # Session 423: Track topics for summary
+        'partial_failure': False,
+        'failure_count': 0,
+        'failed_spiders': [],
     }
 
     for spider_name, spider_config in all_spiders.items():
@@ -394,12 +402,17 @@ def _impl_run_spider_network(self):
                             'source': spider_name,
                             'items': [],
                             'error': str(spider_error),
+                            'error_type': type(spider_error).__name__,
+                            'failure_type': 'adapter_failure',
                             'timestamp': timezone.now().isoformat()
                         }
                 else:
                     data = {
                         'source': spider_name,
                         'items': [],
+                        'error': f'Spider class not found: {spider_name}',
+                        'error_type': 'MissingSpiderClass',
+                        'failure_type': 'missing_spider',
                         'timestamp': timezone.now().isoformat()
                     }
                 # Handle both list and dict formats
@@ -434,16 +447,20 @@ def _impl_run_spider_network(self):
                 spider_data = None
                 item_count = 0
 
-            results['spiders_run'] += 1
+            spider_success = not data.get('failure_type') if isinstance(data, dict) else True
+            results['spiders_run'] += 1 if spider_success else 0
             if spider_data:
                 results['data_collected'] += 1
             results['items_collected'] += item_count
             results['spider_results'].append({
                 'spider': spider_name,
-                'success': True,
+                'success': spider_success,
                 'item_count': item_count,
                 'data_id': str(spider_data.id) if spider_data else None,
-                'dedup_stats': dedup_stats
+                'dedup_stats': dedup_stats,
+                'failure_type': data.get('failure_type') if isinstance(data, dict) else None,
+                'error': data.get('error') if isinstance(data, dict) else None,
+                'error_type': data.get('error_type') if isinstance(data, dict) else None,
             })
 
             # Session 423: Track topics for summary notification
@@ -512,6 +529,15 @@ def _impl_run_spider_network(self):
 
     # Get top topics (most common)
     from collections import Counter
+    failed_spiders = [
+        entry['spider']
+        for entry in results['spider_results']
+        if not entry.get('success', False)
+    ]
+    results['failed_spiders'] = failed_spiders
+    results['failure_count'] = len(failed_spiders)
+    results['partial_failure'] = bool(failed_spiders)
+
     topic_counts = Counter(results.get('all_topics', []))
     top_topics = [topic for topic, _ in topic_counts.most_common(8)]
 
@@ -881,6 +907,3 @@ def _impl_aggregate_spider_signals(self, lookback_hours: int = 6):
             'status': 'error',
             'error': str(e),
         }
-
-
-

@@ -80,6 +80,12 @@ class AgentRegistry:
         self.logger = logging.getLogger(__name__)
         self._performance_cache: Dict[str, AgentPerformanceStats] = {}
         self._last_cache_refresh = datetime.now()
+        self._last_resolution_metadata = {
+            'fallback_used': False,
+            'fallback_type': None,
+            'resolution_error': None,
+            'resolution_source': 'init',
+        }
 
         # Initialize registry
         self._refresh_agent_cache()
@@ -123,16 +129,37 @@ class AgentRegistry:
             agent_data = cache.get('agent_registry_data', {})
 
             if agent_name in agent_data:
+                self._last_resolution_metadata = {
+                    'fallback_used': False,
+                    'fallback_type': None,
+                    'resolution_error': None,
+                    'resolution_source': 'cache_hit',
+                }
                 return agent_data[agent_name]
 
             # Cache miss - refresh and try again
             self._refresh_agent_cache()
             agent_data = cache.get('agent_registry_data', {})
 
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': None,
+                'resolution_error': None,
+                'resolution_source': 'cache_refresh',
+            }
             return agent_data.get(agent_name)
 
         except Exception as e:
-            self.logger.error(f"Error retrieving agent {agent_name}: {e}")
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': 'registry_error',
+                'resolution_error': f"{type(e).__name__}: {e}",
+                'resolution_source': 'error',
+            }
+            self.logger.debug(
+                "Agent registry lookup failed: %s",
+                {**self._last_resolution_metadata, 'agent_name': agent_name},
+            )
             return None
 
     def list_agents(self,
@@ -163,7 +190,12 @@ class AgentRegistry:
 
         except Exception as e:
             self.logger.error(f"Error listing agents: {e}")
-            return []
+            return {
+                'success': False,
+                'failure_type': 'list_agents_error',
+                'error': str(e),
+                'agents': [],
+            }
 
     def find_best_agent(self,
                        task_description: str,
@@ -173,8 +205,21 @@ class AgentRegistry:
         try:
             agents = self.list_agents()
 
+            if isinstance(agents, dict) and agents.get('failure_type') == 'list_agents_error':
+                return {
+                    'success': False,
+                    'failure_type': 'selection_error',
+                    'error': agents.get('error', 'Agent listing failed'),
+                    'candidate_count': len(agents.get('agents', []) or []),
+                }
+
             if not agents:
-                return None
+                return {
+                    'success': False,
+                    'failure_type': 'no_match',
+                    'error': 'No agents available',
+                    'candidate_count': 0,
+                }
 
             scored_agents = []
 
@@ -186,7 +231,12 @@ class AgentRegistry:
                     scored_agents.append((agent, score))
 
             if not scored_agents:
-                return None
+                return {
+                    'success': False,
+                    'failure_type': 'no_match',
+                    'error': 'No matching agents found',
+                    'candidate_count': len(agents),
+                }
 
             # Sort by score (descending) and return best match
             scored_agents.sort(key=lambda x: x[1], reverse=True)
@@ -201,7 +251,12 @@ class AgentRegistry:
 
         except Exception as e:
             self.logger.error(f"Error finding best agent: {e}")
-            return None
+            return {
+                'success': False,
+                'failure_type': 'selection_error',
+                'error': str(e),
+                'candidate_count': len(locals().get('agents', []) or []),
+            }
 
     def _calculate_agent_score(self,
                              agent: Dict[str, Any],
@@ -282,6 +337,21 @@ class AgentRegistry:
         """Execute an agent with given task data"""
         try:
             agent_template = UnifiedAgentTemplate.objects.get(name=agent_name, is_active=True)
+            task_data = dict(task_data or {})
+            task_data['_resolution_metadata'] = getattr(
+                self,
+                '_last_resolution_metadata',
+                {
+                    'fallback_used': False,
+                    'fallback_type': None,
+                    'resolution_error': None,
+                    'resolution_source': 'registry_execute',
+                }
+            )
+            self.logger.debug(
+                "Registry execution resolution metadata: %s",
+                {**task_data['_resolution_metadata'], 'agent_name': agent_name},
+            )
 
             # Session 758: Build context tracking for Integration Health observability
             try:
@@ -311,11 +381,45 @@ class AgentRegistry:
             return execution_id_str
 
         except UnifiedAgentTemplate.DoesNotExist:
-            self.logger.error(f"Agent {agent_name} not found")
-            return None
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': 'registry_miss',
+                'resolution_error': 'UnifiedAgentTemplate.DoesNotExist',
+                'resolution_source': 'missing_template',
+            }
+            self.logger.debug(
+                "Registry execution lookup miss: %s",
+                {**self._last_resolution_metadata, 'agent_name': agent_name},
+            )
+            return {
+                'success': False,
+                'error': f"Unknown agent template: {agent_name}",
+                'resolution_error': 'UnifiedAgentTemplate.DoesNotExist',
+                'failure_type': 'missing_template',
+                'agent_name': agent_name,
+                'agent_id': None,
+                'resolution_metadata': dict(self._last_resolution_metadata),
+            }
         except Exception as e:
-            self.logger.error(f"Failed to execute agent {agent_name}: {e}")
-            return None
+            self._last_resolution_metadata = {
+                'fallback_used': False,
+                'fallback_type': 'registry_error',
+                'resolution_error': f"{type(e).__name__}: {e}",
+                'resolution_source': 'execution_error',
+            }
+            self.logger.debug(
+                "Registry execution failed: %s",
+                {**self._last_resolution_metadata, 'agent_name': agent_name},
+            )
+            return {
+                'success': False,
+                'error': str(e),
+                'resolution_error': f"{type(e).__name__}: {e}",
+                'failure_type': 'execution_error',
+                'agent_name': agent_name,
+                'agent_id': None,
+                'resolution_metadata': dict(self._last_resolution_metadata),
+            }
 
     def get_execution_status(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """Get status of an agent execution"""

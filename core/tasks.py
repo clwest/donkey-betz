@@ -1706,13 +1706,31 @@ def _collect_legal_platform(spider_name: str) -> list:
                         'type': 'court_opinion'
                     })
             else:
+                logger.warning(
+                    "[LEGAL] CourtListener request returned %s; marking spider degraded",
+                    resp.status_code,
+                )
                 items.append({
-                    'message': 'CourtListener spider ready',
+                    'status': 'degraded',
+                    'reason': 'courtlistener_http_failure',
+                    'error': f'HTTP {resp.status_code}',
+                    'message': 'CourtListener spider degraded',
                     'data_types': ['opinions', 'dockets', 'oral_arguments'],
-                    'type': 'legal_research'
+                    'type': 'legal_research',
                 })
-        except Exception:
-            items.append({'message': 'CourtListener spider ready', 'type': 'legal_research'})
+        except Exception as e:
+            logger.exception(
+                "[LEGAL] CourtListener request failed; marking spider degraded: %s",
+                e,
+            )
+            items.append({
+                'status': 'degraded',
+                'reason': 'courtlistener_request_failed',
+                'error': type(e).__name__,
+                'message': 'CourtListener spider degraded',
+                'data_types': ['opinions', 'dockets', 'oral_arguments'],
+                'type': 'legal_research',
+            })
 
     elif spider_name == 'justia':
         items.append({
@@ -5821,8 +5839,10 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         ).count()
         metrics['concerns_during_pilot'] = concerns
         
-    except Exception:
+    except Exception as e:
+        logger.exception("[PILOT_METRICS] concerns_during_pilot query failed: %s", e)
         metrics['concerns_during_pilot'] = 0
+        metrics['concerns_during_pilot_error'] = str(e) or type(e).__name__
     
     try:
         # Check agent activity during pilot
@@ -5832,8 +5852,10 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         ).defer('embedding').count()
         metrics['agent_memories_created'] = memories
         
-    except Exception:
+    except Exception as e:
+        logger.exception("[PILOT_METRICS] agent_memories_created query failed: %s", e)
         metrics['agent_memories_created'] = 0
+        metrics['agent_memories_created_error'] = str(e) or type(e).__name__
     
     try:
         # Check for any errors/failures in system
@@ -5843,8 +5865,10 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         ).count()
         metrics['conversations_during_pilot'] = convos
         
-    except Exception:
+    except Exception as e:
+        logger.exception("[PILOT_METRICS] conversations_during_pilot query failed: %s", e)
         metrics['conversations_during_pilot'] = 0
+        metrics['conversations_during_pilot_error'] = str(e) or type(e).__name__
     
     # Decision-type specific metrics
     if decision.impact_area == 'security':
@@ -9017,6 +9041,13 @@ def _get_agent_class(agent_name: str):
     import importlib
     import re
 
+    resolution_meta = {
+        'fallback_used': False,
+        'fallback_type': None,
+        'resolution_error': None,
+        'resolution_source': 'direct_import',
+    }
+
     # Try common module patterns
     module_patterns = [
         f"core.agents.{agent_name.lower().replace('agent', '_agent')}",
@@ -9033,6 +9064,10 @@ def _get_agent_class(agent_name: str):
         try:
             module = importlib.import_module(module_path)
             if hasattr(module, agent_name):
+                _get_agent_class.last_resolution_metadata = {
+                    **resolution_meta,
+                    'module_path': module_path,
+                }
                 return getattr(module, agent_name)
         except (ImportError, ModuleNotFoundError):
             continue
@@ -9041,13 +9076,44 @@ def _get_agent_class(agent_name: str):
     try:
         from core.agent_router import AgentRouter
         router = AgentRouter()
-        return router.get_agent_class(agent_name)
+        agent_class = router.get_agent_class(agent_name)
+        resolution_meta.update({
+            'fallback_used': True,
+            'fallback_type': 'router_lookup',
+            'resolution_source': 'router_lookup',
+            'resolution_error': None if agent_class else 'agent_not_found',
+        })
+        logger.debug(
+            "tasks._get_agent_class fallback: %s",
+            {**resolution_meta, 'agent_name': agent_name},
+        )
+        _get_agent_class.last_resolution_metadata = resolution_meta
+        return agent_class
     except Exception as _e:
+        resolution_meta.update({
+            'fallback_used': True,
+            'fallback_type': 'router_lookup',
+            'resolution_source': 'router_lookup',
+            'resolution_error': f"{type(_e).__name__}: {_e}",
+        })
         logger.warning(
             "tasks._get_agent_class: swallowed (%s: %s) — returning default",
             type(_e).__name__, _e,
         )
+        logger.debug(
+            "tasks._get_agent_class resolution metadata: %s",
+            {**resolution_meta, 'agent_name': agent_name},
+        )
+        _get_agent_class.last_resolution_metadata = resolution_meta
         return None
+
+
+_get_agent_class.last_resolution_metadata = {
+    'fallback_used': False,
+    'fallback_type': None,
+    'resolution_error': None,
+    'resolution_source': 'direct_import',
+}
 
 
 def _run_agent_warmup(agent_name: str) -> dict:
@@ -9069,13 +9135,15 @@ def _run_agent_warmup(agent_name: str) -> dict:
     try:
         # 1. Verify agent class exists
         agent_class = _get_agent_class(agent_name)
+        resolution_metadata = getattr(_get_agent_class, 'last_resolution_metadata', {})
         if not agent_class:
             return {
                 'success': False,
                 'agent': agent_name,
                 'run_mode': 'warmup',
                 'check': 'class_load',
-                'error': 'Agent class not found'
+                'error': 'Agent class not found',
+                'resolution_metadata': resolution_metadata,
             }
 
         # 2. Verify agent can be instantiated
@@ -9088,6 +9156,8 @@ def _run_agent_warmup(agent_name: str) -> dict:
                 'run_mode': 'warmup',
                 'check': 'instantiation',
                 'error': str(e)
+                ,
+                'resolution_metadata': resolution_metadata,
             }
 
         # 3. Check if agent has required methods
@@ -9106,6 +9176,7 @@ def _run_agent_warmup(agent_name: str) -> dict:
             'success': True,
             'agent': agent_name,
             'run_mode': 'warmup',
+            'resolution_metadata': resolution_metadata,
             'checks': {
                 'class_load': True,
                 'instantiation': True,
@@ -9122,7 +9193,8 @@ def _run_agent_warmup(agent_name: str) -> dict:
             'success': False,
             'agent': agent_name,
             'run_mode': 'warmup',
-            'error': str(e)
+            'error': str(e),
+            'resolution_metadata': getattr(_get_agent_class, 'last_resolution_metadata', {}),
         }
 
 
@@ -9439,29 +9511,15 @@ def run_research_analysis_agents():
 @shared_task
 def run_stock_financial_agents():
     """
-    Session 787: Run stock and financial analysis agents every 3 hours.
+    Session 787: Compatibility entrypoint for stock/financial automation.
 
-    Agents: StockAnalystAgent, StockAuditCoordinator, BullCaseAgent, BearCaseAgent,
-            MarketIntelligenceCoordinator
+    Session 1099: The individual stock-financial rotation was producing noisy
+    failures while `run_stock_audit_cycle()` remained the stable source of truth.
+    Keep this task as a thin wrapper so existing schedules and callers still work,
+    but route execution through the audit cycle only.
     """
-    agents = [
-        'StockAnalystAgent', 'StockAuditCoordinator',
-        'BullCaseAgent', 'BearCaseAgent', 'MarketIntelligenceCoordinator'
-    ]
-
-    def task_gen(agent):
-        # Session 957: StockAnalystAgent needs specific tickers to use its tools effectively
-        # Generic "market conditions" tasks should go to MarketIntelligenceCoordinator
-        tasks = {
-            'StockAnalystAgent': 'Analyze SPY, QQQ, NVDA, AAPL, MSFT - check valuations, recent SEC filings, and assess risk levels for each ticker',
-            'StockAuditCoordinator': 'Coordinate a brief market health check across all stock agents',
-            'BullCaseAgent': 'Identify the strongest bullish opportunities from current market data',
-            'BearCaseAgent': 'Identify key risks and bearish signals in current market data',
-            'MarketIntelligenceCoordinator': 'Synthesize market intelligence from all sources',
-        }
-        return tasks.get(agent, f'Perform your primary function and report insights')
-
-    return _run_agent_group('STOCK & FINANCIAL', agents, task_gen, '📊')
+    logger.info("📊 [STOCK & FINANCIAL] Delegating to stock audit cycle")
+    return run_stock_audit_cycle()
 
 
 @shared_task
@@ -11336,7 +11394,12 @@ def process_pa_tts_task(self, user_id, text, conversation_id=None, trace_id=None
             logger.info(f"[PA_TTS] Audio saved: {audio_url[:80]}...")
 
     except Exception as e:
-        logger.warning(f"[PA_TTS] Background TTS failed: {e}")
+        logger.exception(f"[PA_TTS] Background TTS failed: {e}")
+        return {
+            'status': 'failed',
+            'reason': 'tts_generation_failed',
+            'error': str(e) or type(e).__name__,
+        }
 
 
 @shared_task(bind=True, time_limit=120, soft_time_limit=100)
@@ -12140,6 +12203,8 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
     stats = {
         'urls_found': 0, 'docs_ingested': 0, 'docs_embedded': 0,
         'skipped_existing': 0, 'skipped_timeout': 0, 'errors': 0,
+        'search_failures': 0, 'embedding_failures': 0,
+        'partial_failure': False,
         'elapsed_seconds': 0,
     }
 
@@ -12184,7 +12249,15 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
                     'query': q,
                 }
         except Exception as e:
-            logger.warning(f"[AUTO-RESEARCH] Search failed for '{q}': {e}")
+            stats['search_failures'] += 1
+            stats['errors'] += 1
+            stats['partial_failure'] = True
+            logger.warning(
+                "[AUTO-RESEARCH] Search failed for '%s' (%s): %s",
+                q,
+                type(e).__name__,
+                e,
+            )
 
     stats['urls_found'] = len(collected_urls)
     if not collected_urls:
@@ -12219,8 +12292,19 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
             if existing:
                 # Ensure it's embedded
                 if not DocumentEmbedding.objects.filter(document_id=existing.id).exists():
-                    rag_system.process_document_for_rag_sync(existing)
-                    stats['docs_embedded'] += 1
+                    try:
+                        rag_system.process_document_for_rag_sync(existing)
+                        stats['docs_embedded'] += 1
+                    except Exception as emb_err:
+                        stats['embedding_failures'] += 1
+                        stats['errors'] += 1
+                        stats['partial_failure'] = True
+                        logger.warning(
+                            "[AUTO-RESEARCH] Embed failed for existing doc %s (%s): %s",
+                            existing.id,
+                            type(emb_err).__name__,
+                            emb_err,
+                        )
                 stats['skipped_existing'] += 1
                 continue
 
@@ -12264,17 +12348,34 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
                     rag_system.process_document_for_rag_sync(doc)
                     stats['docs_embedded'] += 1
                 except Exception as emb_err:
-                    logger.warning(f"[AUTO-RESEARCH] Embed failed for {url[:60]}: {emb_err}")
+                    stats['embedding_failures'] += 1
+                    stats['errors'] += 1
+                    stats['partial_failure'] = True
+                    logger.warning(
+                        "[AUTO-RESEARCH] Embed failed for %s (%s): %s",
+                        url[:60],
+                        type(emb_err).__name__,
+                        emb_err,
+                    )
 
         except Exception as e:
-            logger.warning(f"[AUTO-RESEARCH] Ingest error for {url[:60]}: {e}")
             stats['errors'] += 1
+            stats['partial_failure'] = True
+            logger.warning(
+                "[AUTO-RESEARCH] Ingest error for %s (%s): %s",
+                url[:60],
+                type(e).__name__,
+                e,
+            )
 
     stats['elapsed_seconds'] = round(time.time() - t0, 1)
+    if stats['search_failures'] or stats['embedding_failures']:
+        stats['partial_failure'] = True
     logger.info(
         f"[AUTO-RESEARCH] '{competitor_name}' done in {stats['elapsed_seconds']}s — "
         f"found={stats['urls_found']} ingested={stats['docs_ingested']} "
-        f"embedded={stats['docs_embedded']} errors={stats['errors']}"
+        f"embedded={stats['docs_embedded']} errors={stats['errors']} "
+        f"search_failures={stats['search_failures']} embedding_failures={stats['embedding_failures']}"
     )
     return stats
 

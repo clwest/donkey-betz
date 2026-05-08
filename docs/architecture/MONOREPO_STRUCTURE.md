@@ -229,7 +229,7 @@ git push
 # Django
 SECRET_KEY=...
 DEBUG=True
-DJANGO_SETTINGS_MODULE=unified_donkey_betz.settings
+DJANGO_SETTINGS_MODULE=core.settings
 
 # Database
 DATABASE_URL=postgresql://...

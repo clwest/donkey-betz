@@ -1,20 +1,22 @@
 # Dossier #8: Personal Assistant (Rigby)
 
 **Audited:** April 6, 2026
-**Status:** WORKING — 103 tool schemas, 162 handlers, GPT-5.2 function calling live
+**Status:** WORKING — 101 tool schemas, 166 handlers, GPT-5.2 function calling live
 
 ---
 
 ## 1. Purpose
 
-Rigby is the platform's primary user interface — a GPT-5.2-powered personal assistant with 103 tool schemas and 162 tool handlers that can execute any platform action. She detects intent from natural language, selects and executes tools, enriches responses with real-time intelligence, and maintains conversation context across sessions.
+Rigby is the platform's primary user interface — a GPT-5.2-powered personal assistant with 101 tool schemas and 166 tool handlers that can execute any platform action. She detects intent from natural language, selects and executes tools, enriches responses with real-time intelligence, and maintains conversation context across sessions.
+
+Rigby now runs in explicit `global` and `workspace` modes. Workspace mode activates only from explicit workspace context (`workspace_id`, `AssistantProfile.workspace`, or workspace-aware UI context). Legacy `/api/assistant/chat/` and `/api/v1/assistant/chat/` routes are compatibility-only; the canonical web route is `POST /api/pa/chat/`.
 
 ## 2. Runtime Evidence
 
 - **6,993 lines** in unified_pa_entrypoint.py (core orchestration)
-- **103 tool schemas** in pa_tool_schemas.py (OpenAI function calling format)
-- **162 tool handlers** across 8 mixin categories in tool_dispatcher.py
-- **7 enrichment services** fire per intent
+- **101 tool schemas** in pa_tool_schemas.py (OpenAI function calling format)
+- **166 tool handlers** across 8 mixin categories in tool_dispatcher.py
+- **8 enrichment services** fire per intent
 - **ChatConversation** records persist history (20-turn window)
 - **Celery PA queue** dedicated worker for non-blocking execution
 - Verified working locally and on production
@@ -54,7 +56,7 @@ User message arrives
   │
   ├─ 3. TOOL SCHEMA SELECTION
   │     unified_pa_entrypoint.py:1105
-  │     From 103 schemas, filter by:
+  │     From 101 schemas, filter by:
   │       Message intent relevance
   │       User role/permissions (AssistantProfile)
   │       Schema version (live-reload)
@@ -90,7 +92,7 @@ User message arrives
         Returns conversational response to user
 ```
 
-## 5. Tool Categories (162 Handlers)
+## 5. Tool Categories (166 Handlers)
 
 | Category | Handler Count | Examples |
 |----------|--------------|---------|
@@ -142,10 +144,10 @@ User message arrives
 ## 9. Current Status: WORKING
 
 **Fully operational:**
-- 103 tool schemas registered and selectable
-- 162 tool handlers dispatching across 8 mixin categories
+- 101 tool schemas registered and selectable
+- 166 tool handlers dispatching across 8 mixin categories
 - GPT-5.2 function calling loop (max 8 iterations)
-- 7 enrichment services firing per intent
+- 8 enrichment services firing per intent
 - Conversation history persisted (20-turn window)
 - Dedicated Celery PA queue
 - PII/secrets scrubbing on all results
@@ -181,7 +183,7 @@ User message arrives
 
 ## Key Patent Claims (Personal Assistant)
 
-1. **Intent-driven tool orchestration** — deterministic intent detection selects from 103 tool schemas without LLM overhead
+1. **Intent-driven tool orchestration** — deterministic intent detection selects from 101 tool schemas without LLM overhead
 2. **Multi-iteration function calling loop** — up to 8 LLM iterations with tool execution, loop detection, and forced text summary on final iteration
 3. **Per-intent enrichment pipeline** — 7 intelligence services selectively fire based on detected intent, enriching tool results with real-time spider data, advisor principles, and domain expertise
 4. **162-handler tool dispatch** — single PA interface can execute any platform action (creation, analysis, governance, code execution, deployment)

@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-04-17 23:00:20
-**Git HEAD:** `1f252cbb`
+**Generated:** 2026-05-03 15:42:56
+**Git HEAD:** `e6c7a39b`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -19,7 +19,7 @@
 | [Database Models](#database-models) | 570 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1841 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 200 files matching core/views*.py |
-| [Django Management Commands](#management-commands) | 153 management commands in core/management/commands/ |
+| [Django Management Commands](#management-commands) | 154 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
 | [LLM Providers](#llm-providers) | 6 providers registered in LLMProviderRegistry |
@@ -29,8 +29,8 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 1,949 Python files, 966,109 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 65 registered claims across 30 docs: 20 OK, 45 drifts |
+| [Code Statistics](#code-stats) | 1,951 Python files, 966,078 lines across core/ + ai_core/ + intelligence/ |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 53 registered claims across 21 docs: 53 OK, 0 drifts |
 
 ## Table of Contents
 
@@ -63,7 +63,7 @@
 
 **Code location:** `core/agent_router.py AGENT_MAP`
 
-**Notes:** AGENT_MAP total = 83 (73 enabled + 8 rerouted + 2 blocked). DB Agent rows = 223. Top agent_type breakdown: creative=22, content=20, income=20, clean_architecture=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, marketing=10. Blocked: ['CodeGeneratorAgent', 'AudioAgent']. Rerouted: ['COOAgent', 'CTOAgent', 'CodeReviewAgent', 'ContentDistributionAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
+**Notes:** AGENT_MAP total = 83 (73 enabled + 9 rerouted + 1 blocked). DB Agent rows = 223. Top agent_type breakdown: creative=22, content=20, income=20, clean_architecture=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, marketing=10. Blocked: ['CodeGeneratorAgent']. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeReviewAgent', 'ContentDistributionAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
 
 | Name | Module | Status |
 |---|---|---|
@@ -1862,7 +1862,7 @@
 <a id="management-commands"></a>
 ## Django Management Commands
 
-**Headline:** 153 management commands in core/management/commands/
+**Headline:** 154 management commands in core/management/commands/
 
 **Code location:** `core/management/commands/`
 
@@ -1967,6 +1967,7 @@
 | python manage.py produce_content |
 | python manage.py ragtest |
 | python manage.py reality_check |
+| python manage.py refresh_doc_inventory_blocks |
 | python manage.py regenerate_pilots |
 | python manage.py register_coo_agent |
 | python manage.py register_creative_agents |
@@ -2189,55 +2190,46 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 1,949 Python files, 966,109 lines across core/ + ai_core/ + intelligence/
+**Headline:** 1,951 Python files, 966,078 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1543 | 800088 |
+| core | 1545 | 800057 |
 | ai_core | 295 | 119551 |
 | intelligence | 111 | 46470 |
-| TOTAL (python) | 1949 | 966109 |
+| TOTAL (python) | 1951 | 966078 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 65 registered claims across 30 docs: 20 OK, 45 drifts
+**Headline:** 53 registered claims across 21 docs: 53 OK, 0 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=20, low=5, medium=24, high=16, error=0. Top drifting docs: CLAUDE.md, docs/BACKEND_INVENTORY.md, docs/CAPABILITIES.md, docs/current/INDEX.md, docs/AGENTS.md.
+**Notes:** Severity rollup: ok=53, low=0, medium=0, high=0, error=0. Top drifting docs: .
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
-| CLAUDE.md | 2 | 6 | 0 |
+| CLAUDE.md | 8 | 0 | 0 |
 | core/models_document_registry.py | 1 | 0 | 0 |
 | core/models_unified_system.py | 1 | 0 | 0 |
-| core/services/priority/governor.py | 0 | 1 | 0 |
-| docs/AGENTS.md | 0 | 3 | 0 |
+| core/services/priority/governor.py | 1 | 0 | 0 |
+| docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
-| docs/BACKEND_INVENTORY.md | 0 | 6 | 0 |
-| docs/CAPABILITIES.md | 0 | 4 | 0 |
-| docs/DISCORD_INTEGRATION.md | 0 | 1 | 0 |
-| docs/SERVICES.md | 0 | 2 | 0 |
-| docs/SPIDERS.md | 0 | 3 | 0 |
-| docs/current/API_ENDPOINTS.md | 0 | 1 | 0 |
-| docs/current/ASSISTANT_SYSTEM.md | 1 | 0 | 0 |
-| docs/current/CELERY_TASKS.md | 0 | 1 | 0 |
-| docs/current/DISCORD.md | 0 | 1 | 0 |
-| docs/current/INDEX.md | 0 | 4 | 0 |
-| docs/current/MANAGEMENT_COMMANDS.md | 0 | 1 | 0 |
-| docs/current/MODELS.md | 0 | 1 | 0 |
-| docs/current/SERVICES.md | 1 | 0 | 0 |
-| docs/current/VIEWS.md | 0 | 1 | 0 |
-| docs/topics/agent-system.md | 1 | 1 | 0 |
+| docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
+| docs/CAPABILITIES.md | 4 | 0 | 0 |
+| docs/DISCORD_INTEGRATION.md | 1 | 0 | 0 |
+| docs/SERVICES.md | 2 | 0 | 0 |
+| docs/SPIDERS.md | 3 | 0 | 0 |
+| docs/topics/agent-system.md | 2 | 0 | 0 |
 | docs/topics/body-systems.md | 1 | 0 | 0 |
-| docs/topics/celery-workers.md | 0 | 1 | 0 |
+| docs/topics/celery-workers.md | 1 | 0 | 0 |
 | docs/topics/content-pipeline.md | 3 | 0 | 0 |
-| docs/topics/frontend.md | 0 | 3 | 0 |
-| docs/topics/infrastructure.md | 1 | 2 | 0 |
-| docs/topics/initiative-pipeline.md | 1 | 1 | 0 |
-| docs/topics/personal-assistant.md | 3 | 1 | 0 |
+| docs/topics/frontend.md | 3 | 0 | 0 |
+| docs/topics/infrastructure.md | 3 | 0 | 0 |
+| docs/topics/initiative-pipeline.md | 2 | 0 | 0 |
+| docs/topics/personal-assistant.md | 4 | 0 | 0 |
 | docs/topics/spider-network.md | 1 | 0 | 0 |
 
 ---

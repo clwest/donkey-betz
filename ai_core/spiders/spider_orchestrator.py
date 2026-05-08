@@ -1216,6 +1216,7 @@ async def _activate_job_spiders_async(user_profile=None):
         ]
 
         opportunities_collected = []
+        fallback_events = []
 
         for spider_name in job_spiders:
             try:
@@ -1255,17 +1256,38 @@ async def _activate_job_spiders_async(user_profile=None):
                             mock_opportunities = await generate_mock_job_opportunities(spider_name)
                             opportunities_collected.extend(mock_opportunities)
                             logger.info(f"Using mock data for {spider_name} (no real data available)")
+                            fallback_events.append({
+                                'spider': spider_name,
+                                'fallback_type': 'mock_opportunities',
+                                'real_data_failed': True,
+                                'collection_error': 'no_real_data',
+                                'error_type': 'no_real_data',
+                            })
                     else:
                         # Fall back to mock data if spider doesn't have data collection method
                         mock_opportunities = await generate_mock_job_opportunities(spider_name)
                         opportunities_collected.extend(mock_opportunities)
                         logger.info(f"Using mock data for {spider_name} (spider lacks get_collected_data method)")
+                        fallback_events.append({
+                            'spider': spider_name,
+                            'fallback_type': 'mock_opportunities',
+                            'real_data_failed': True,
+                            'collection_error': 'missing_get_collected_data',
+                            'error_type': 'missing_get_collected_data',
+                        })
 
                 except Exception as spider_error:
                     logger.warning(f"Spider {spider_name} real data collection failed: {spider_error}")
                     # Fall back to mock data on any error
                     mock_opportunities = await generate_mock_job_opportunities(spider_name)
                     opportunities_collected.extend(mock_opportunities)
+                    fallback_events.append({
+                        'spider': spider_name,
+                        'fallback_type': 'mock_opportunities',
+                        'real_data_failed': True,
+                        'collection_error': str(spider_error),
+                        'error_type': type(spider_error).__name__,
+                    })
 
                 # Send opportunities through WebSocket to Decision Command
                 current_opportunities = [opp for opp in opportunities_collected if opp.get('platform') == spider_name]
@@ -1286,11 +1308,19 @@ async def _activate_job_spiders_async(user_profile=None):
                 continue
 
         logger.info(f"✅ Job spiders activated! Collected {len(opportunities_collected)} opportunities")
+        fallback_used = bool(fallback_events)
         return {
             'success': True,
             'spiders_activated': len(job_spiders),
             'opportunities_collected': len(opportunities_collected),
-            'opportunities': opportunities_collected
+            'opportunities': opportunities_collected,
+            'fallback_used': fallback_used,
+            'fallback_type': 'mock_opportunities' if fallback_used else None,
+            'real_data_failed': fallback_used,
+            'collection_error': fallback_events[0]['collection_error'] if fallback_events else None,
+            'error_type': fallback_events[0]['error_type'] if fallback_events else None,
+            'partial_failure': fallback_used,
+            'collection_errors': fallback_events,
         }
 
     except Exception as e:

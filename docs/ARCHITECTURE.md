@@ -1,8 +1,11 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_WHAT_IT_IS.md`](/docs/PLATFORM_WHAT_IT_IS.md) and [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+
 # System Architecture
 
 **Platform:** Unified Donkey Betz - AI Content Creation Empire
-**Last Updated:** February 8, 2026 (Session 969b)
-**Total Lines of Code:** 200,000+
+**Last Updated:** February 8, 2026 (Session 969b) — narrative preserved; counts may drift
+**Total Lines of Code:** 200,000+ (Session 969b snapshot — see PLATFORM_INVENTORY for current)
 
 ---
 
@@ -221,7 +224,7 @@ def route(agent_name: str, task: str, context: dict) -> AgentResult:
 **Registry:** `ai_core/spiders/spider_registry.py`
 
 ```
-Spider Network (64 spiders)
+Spider Network (80 spiders — Session 1100 refresh; canonical: PLATFORM_INVENTORY)
     │
     ▼
 Celery Beat (every 30 minutes)

@@ -223,29 +223,8 @@ services:
   # - http://localhost:8000/ai-production-hub/
   # - http://localhost:8000/ai-nexus/
   # - http://localhost:8000/intelligence/
-    volumes:
-      - ./mobile:/app
-      - node_modules_mobile:/app/node_modules
-    ports:
-      - "8081:8081"  # Metro bundler
-      - "19000:19000"  # Expo dev tools
-      - "19001:19001"  # Expo dev tools
-      - "19002:19002"  # Expo dev tools
-      - "19006:19006"  # Web port
-    networks:
-      unified-donkey-betz:
-        ipv4_address: 172.20.0.31
-    depends_on:
-      - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:19002"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
-    stdin_open: true
-    tty: true
+  # Orphaned mobile-service fragment removed; the mobile service is no longer
+  # part of this compose file.
 
   # ---------------------------------------------------------------------------
   # DEVELOPMENT TOOLS

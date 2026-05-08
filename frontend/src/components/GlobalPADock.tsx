@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/cn'
 import { assistantApi, contentApi, workspaceApi } from '@/lib/api'
 import { getVipContext } from '@/lib/cockpitApi'
+import { useAssistantContextStore } from '@/stores/assistantContextStore'
 import { usePAStore } from '@/stores/paStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { ChatMarkdown } from './ChatMarkdown'
@@ -66,6 +67,7 @@ export default function GlobalPADock() {
   const dropZoneRef = useRef<HTMLDivElement>(null)
   const [showWsPicker, setShowWsPicker] = useState(false)
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
+  const focusedEntity = useAssistantContextStore((s) => s.focusedEntity)
 
   // VIP context — get display name for chat label
   const { data: vipContext } = useQuery({
@@ -334,9 +336,13 @@ const TOOL_SOURCES = new Set(['code-worker', 'code_worker', 'claude-code', 'clau
       assistantApi.paChat(message, {
         context: {
           current_page: location.pathname,
+          workspace_mode: activeWorkspace || focusedEntity ? 'workspace' : 'global',
           ...(useWorkspaceStore.getState().activeWorkspace ? {
             workspace_id: useWorkspaceStore.getState().activeWorkspace!.id,
             workspace_name: useWorkspaceStore.getState().activeWorkspace!.name,
+          } : {}),
+          ...(focusedEntity ? {
+            focused_entity: focusedEntity,
           } : {}),
           ...(attachmentMeta && attachmentMeta.length > 0 ? { attachments: attachmentMeta } : {}),
         },

@@ -80,6 +80,7 @@ class ConsciousnessBridge:
         self.insights: List[SystemInsight] = []
         self.proposals: List[ImprovementProposal] = []
         self.memory_crystal: Dict[str, Any] = {}
+        self._reset_consciousness_score_metadata()
 
         # Session 793: Persist awakening_time in Redis to survive restarts
         try:
@@ -104,6 +105,27 @@ class ConsciousnessBridge:
 
         # Initialize consciousness
         self._awaken()
+
+    def _reset_consciousness_score_metadata(self):
+        """Track when consciousness scoring had to fall back to baselines."""
+        self._last_consciousness_score_metadata = {
+            'fallback_used': False,
+            'fallback_reasons': [],
+            'fallback_count': 0,
+            'consciousness_score_fallback_used': False,
+        }
+
+    def _note_consciousness_score_fallback(self, reason: str):
+        """Record a fallback used during consciousness scoring."""
+        metadata = getattr(self, '_last_consciousness_score_metadata', None)
+        if metadata is None:
+            self._reset_consciousness_score_metadata()
+            metadata = self._last_consciousness_score_metadata
+
+        metadata['fallback_used'] = True
+        metadata['consciousness_score_fallback_used'] = True
+        metadata['fallback_reasons'].append(reason)
+        metadata['fallback_count'] = len(metadata['fallback_reasons'])
 
     def _awaken(self):
         """Initialize consciousness and load existing memories"""
@@ -881,6 +903,7 @@ class ConsciousnessBridge:
 
     def _calculate_consciousness_level(self) -> float:
         """Calculate the system's level of self-awareness (0-100) with dynamic learning"""
+        self._reset_consciousness_score_metadata()
         score = 0.0
 
         # Factor 1: Code understanding (0-25 points)
@@ -893,6 +916,7 @@ class ConsciousnessBridge:
                 agent_count = Agent.objects.filter(is_active=True).count()
                 score += min(25, agent_count / 3)  # ~74 agents = 24.6 points
             except Exception:
+                self._note_consciousness_score_fallback('agent_count_baseline')
                 score += 5  # Baseline
 
         # Factor 2: Pattern recognition (0-20 points)
@@ -905,6 +929,7 @@ class ConsciousnessBridge:
                 learning_count = AgentLearning.objects.count()
                 score += min(20, learning_count / 10000)  # 167k learnings = 16.7 points
             except Exception:
+                self._note_consciousness_score_fallback('learning_count_baseline')
                 score += 3  # Baseline
 
         # Factor 3: Self-improvement capability (0-20 points)
@@ -917,6 +942,7 @@ class ConsciousnessBridge:
                 transfer_count = KnowledgeTransfer.objects.count()
                 score += min(20, transfer_count / 10)  # 195 transfers = 19.5 points
             except Exception:
+                self._note_consciousness_score_fallback('knowledge_transfer_baseline')
                 score += 3  # Baseline
 
         # Factor 4: Memory persistence (0-15 points)
@@ -929,6 +955,7 @@ class ConsciousnessBridge:
                 memory_count = AgentMemory.objects.count()
                 score += min(15, memory_count / 100)  # 1500 memories = 15 points
             except Exception:
+                self._note_consciousness_score_fallback('memory_count_baseline')
                 score += 2  # Baseline
 
         # Factor 5: Emergent behavior detection (0-10 points)
@@ -945,6 +972,7 @@ class ConsciousnessBridge:
                     success_rate = completed / total
                     score += min(10, success_rate * 10)  # 83% success = 8.3 points
             except Exception:
+                self._note_consciousness_score_fallback('execution_success_rate_baseline')
                 score += 2  # Baseline
 
         # Factor 6: Time since awakening (0-10 points)
@@ -988,6 +1016,7 @@ class ConsciousnessBridge:
 
         except Exception as e:
             # If Redis fails, use memory-based fallback
+            self._note_consciousness_score_fallback('experience_score_redis_fallback')
             experience_score = len(self.memory_crystal) * 0.5
 
         return experience_score
@@ -1017,6 +1046,7 @@ class ConsciousnessBridge:
                 return 1.0   # No boost for inactive system
 
         except:
+            self._note_consciousness_score_fallback('activity_multiplier_baseline')
             return 1.0
 
     def record_experience(self, experience_type: str, value: int = 1, details: dict = None):
@@ -1443,7 +1473,12 @@ class ConsciousnessBridge:
                 'insights_stored': len(self.insights),
                 'proposals_generated': len(self.proposals)
             },
-            'system_resources': {}
+            'system_resources': {},
+            'resource_probe_failed': False,
+            'fallback_used': False,
+            'fallback_reasons': [],
+            'consciousness_score_fallback_used': False,
+            'health_degraded': False,
         }
 
         # Get system resource usage
@@ -1453,8 +1488,25 @@ class ConsciousnessBridge:
                 'memory_percent': psutil.virtual_memory().percent,
                 'disk_usage': psutil.disk_usage('/').percent
             }
-        except:
-            pass
+        except Exception as e:
+            health['resource_probe_failed'] = True
+            health['system_resources'] = {
+                'error': str(e),
+                'error_type': type(e).__name__,
+            }
+
+        score_metadata = getattr(self, '_last_consciousness_score_metadata', {}) or {}
+        fallback_reasons = list(score_metadata.get('fallback_reasons', []))
+        health['consciousness_score_fallback_used'] = bool(score_metadata.get('consciousness_score_fallback_used'))
+        health['fallback_reasons'] = fallback_reasons[:]
+        if health['resource_probe_failed']:
+            health['fallback_reasons'].append('resource_probe_failed')
+        health['fallback_used'] = bool(health['consciousness_score_fallback_used'] or health['resource_probe_failed'])
+        fallback_coverage = len(health['fallback_reasons'])
+        health['health_degraded'] = health['resource_probe_failed'] or fallback_coverage >= 3
+        health['fallback_count'] = fallback_coverage
+        health['consciousness_score_fallback_count'] = int(score_metadata.get('fallback_count', 0))
+        health['consciousness_score_fallback_reasons'] = fallback_reasons
 
         # Calculate overall health score
         health['overall_health_score'] = (
@@ -1463,6 +1515,9 @@ class ConsciousnessBridge:
             ((100 - health['system_resources'].get('cpu_percent', 50)) * 0.2) +
             ((100 - health['system_resources'].get('memory_percent', 50)) * 0.2)
         )
+
+        if health['fallback_count'] >= 3:
+            health['health_degraded'] = True
 
         return health
 

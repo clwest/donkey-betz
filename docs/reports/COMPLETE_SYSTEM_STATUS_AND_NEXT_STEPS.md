@@ -90,7 +90,7 @@
 **Tasks**:
 1. **Environment Setup**:
    ```bash
-   # Create production .env from .env.sample
+   # Copy .env.railway for deployment or .env.example for local setup
    # Set production database credentials
    # Configure production Redis
    # Set production API keys (OpenAI, Stripe, etc.)
@@ -198,7 +198,8 @@ tail -f logs/revenue.log
 - `/agents/executors/` - Agent execution implementations
 
 ### Configuration:
-- `.env.sample` - Environment variables template
+- `.env.example` - Canonical local environment template
+- `.env.railway` - Canonical Railway deployment template
 - `/config/executor_config.json` - Agent executor configuration
 - `/ai_core/settings.py` - Django settings
 

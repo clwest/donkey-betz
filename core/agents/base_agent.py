@@ -811,6 +811,19 @@ class BaseAgent(ABC, TimeTravelMixin):
         Returns:
             Dict with the specialist's response
         """
+        def _failure_payload(error: str, resolution_error: str, **extra: Any) -> Dict[str, Any]:
+            payload = {
+                'success': False,
+                'error': error,
+                'resolution_error': resolution_error,
+                'fallback_used': False,
+                'fallback_type': None,
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+            }
+            payload.update(extra)
+            return payload
+
         try:
             # Check recursion depth to prevent infinite loops
             if delegation_context is None:
@@ -824,12 +837,11 @@ class BaseAgent(ABC, TimeTravelMixin):
                     f"🚫 [Session 744] Delegation depth limit ({max_depth}) reached. "
                     f"{self.name} cannot delegate to {specialist_agent}"
                 )
-                return {
-                    'success': False,
-                    'error': f'Maximum delegation depth ({max_depth}) reached',
-                    'specialist': specialist_agent,
-                    'delegating_agent': self.name
-                }
+                return _failure_payload(
+                    error=f'Maximum delegation depth ({max_depth}) reached',
+                    resolution_error='delegation_depth_limit',
+                    delegation_depth=delegation_depth,
+                )
 
             # Validate specialist exists
             if specialist_agent not in self.AVAILABLE_SPECIALISTS:
@@ -838,11 +850,10 @@ class BaseAgent(ABC, TimeTravelMixin):
 
             # Get router
             if not self.agent_router:
-                return {
-                    'success': False,
-                    'error': 'AgentRouter not available for delegation',
-                    'specialist': specialist_agent
-                }
+                return _failure_payload(
+                    error='AgentRouter not available for delegation',
+                    resolution_error='router_unavailable',
+                )
 
             logger.info(
                 f"🤝 [Session 744] {self.name} delegating to {specialist_agent}: "
@@ -869,40 +880,74 @@ class BaseAgent(ABC, TimeTravelMixin):
             )
 
             # Record cross-agent collaboration for learning
-            self._record_delegation(specialist_agent, task, result)
+            learning_record_metadata = self._record_delegation(specialist_agent, task, result)
 
             # Format response
+            malformed_result_error = None
             if hasattr(result, 'to_dict'):
                 result_data = result.to_dict()
+                if not isinstance(result_data, dict):
+                    malformed_result_error = (
+                        f"Malformed specialist result from {specialist_agent}: "
+                        "to_dict() did not return a dict"
+                    )
+                    result_data = {}
             elif isinstance(result, dict):
                 result_data = result
             else:
+                malformed_result_error = (
+                    f"Malformed specialist result from {specialist_agent}: "
+                    f"unsupported result type {type(result).__name__}"
+                )
                 result_data = {'result': str(result)}
 
+            if malformed_result_error is None and 'success' not in result_data:
+                malformed_result_error = (
+                    f"Malformed specialist result from {specialist_agent}: "
+                    "missing success field"
+                )
+
+            if malformed_result_error:
+                logger.warning(malformed_result_error)
+                resolution_error = (
+                    'missing_success_field'
+                    if 'missing success field' in malformed_result_error
+                    else 'unsupported_result_type'
+                    if 'unsupported result type' in malformed_result_error
+                    else 'malformed_specialist_result'
+                )
+                return _failure_payload(
+                    error=malformed_result_error,
+                    resolution_error=resolution_error,
+                    specialist_response=result_data.get('message', ''),
+                    specialist_data=result_data.get('data', {}),
+                    learning_record_metadata=learning_record_metadata,
+                    delegation_depth=delegation_depth + 1,
+                )
+
             return {
-                'success': result_data.get('success', True),
+                'success': bool(result_data.get('success', False)),
                 'specialist': specialist_agent,
                 'delegating_agent': self.name,
                 'specialist_response': result_data.get('message', ''),
                 'specialist_data': result_data.get('data', {}),
+                'learning_record_metadata': learning_record_metadata,
                 'delegation_depth': delegation_depth + 1
             }
 
         except Exception as e:
-            logger.error(f"Delegation to {specialist_agent} failed: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'specialist': specialist_agent,
-                'delegating_agent': self.name
-            }
+            logger.exception(f"Delegation to {specialist_agent} failed: {e}")
+            return _failure_payload(
+                error=str(e),
+                resolution_error=type(e).__name__,
+            )
 
     def _record_delegation(
         self,
         specialist_agent: str,
         task: str,
         result: Any
-    ) -> None:
+    ) -> Dict[str, Any]:
         """
         Session 744: Record cross-agent delegation for learning.
 
@@ -912,21 +957,34 @@ class BaseAgent(ABC, TimeTravelMixin):
         try:
             from core.models_unified_system import Agent, AgentLearning, AgentSolution
 
+            metadata = {
+                'learning_record_persisted': False,
+                'learning_record_error': None,
+                'learning_record_error_type': None,
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+            }
+
             # Get both agent models
             teacher_model = Agent.objects.filter(name=specialist_agent).first()
             student_model = self.agent_model
 
             if not teacher_model or not student_model:
-                logger.debug(f"Could not record delegation: missing agent models")
-                return
+                logger.debug(
+                    "Could not record delegation: missing agent models "
+                    f"(delegating_agent={self.name}, specialist={specialist_agent})"
+                )
+                metadata['learning_record_error'] = 'missing_agent_models'
+                metadata['learning_record_error_type'] = 'LookupError'
+                return metadata
 
             # Determine success from result
             if hasattr(result, 'success'):
-                success = result.success
+                success = bool(result.success)
             elif isinstance(result, dict):
-                success = result.get('success', True)
+                success = bool(result.get('success', False))
             else:
-                success = True
+                success = False
 
             # Get or create a solution for this delegation
             # AgentSolution requires: agent (FK), title, description, solution_type
@@ -951,9 +1009,21 @@ class BaseAgent(ABC, TimeTravelMixin):
             logger.debug(
                 f"Recorded delegation: {self.name} -> {specialist_agent}"
             )
+            metadata['learning_record_persisted'] = True
+            return metadata
 
         except Exception as e:
-            logger.debug(f"Could not record delegation learning: {e}")
+            logger.exception(
+                "Could not record delegation learning "
+                f"(delegating_agent={self.name}, specialist={specialist_agent}, task={task[:80]!r})"
+            )
+            return {
+                'learning_record_persisted': False,
+                'learning_record_error': str(e),
+                'learning_record_error_type': type(e).__name__,
+                'specialist': specialist_agent,
+                'delegating_agent': self.name,
+            }
 
     def get_tools_with_delegation(self) -> List[Dict[str, Any]]:
         """
@@ -4824,6 +4894,8 @@ Consider this current data when formulating your response."""
         if not manager:
             artifacts = self._capture_files_as_artifacts(files, base_path)
             return {
+                'success': False,
+                'partial_failure': False,
                 'written': False,
                 'reason': 'WorkspaceManager not available',
                 'files_generated': len(files),
@@ -4835,6 +4907,8 @@ Consider this current data when formulating your response."""
         if not workspace:
             artifacts = self._capture_files_as_artifacts(files, base_path)
             return {
+                'success': False,
+                'partial_failure': False,
                 'written': False,
                 'reason': 'No active workspace. Register a workspace first.',
                 'files_generated': len(files),
@@ -4846,6 +4920,8 @@ Consider this current data when formulating your response."""
         if not workspace.allow_file_write:
             artifacts = self._capture_files_as_artifacts(files, base_path)
             return {
+                'success': False,
+                'partial_failure': False,
                 'written': False,
                 'reason': 'Workspace does not allow file writes',
                 'workspace': workspace.name,
@@ -4889,16 +4965,25 @@ Consider this current data when formulating your response."""
                     })
                     operations.append(str(operation.id))
                 else:
+                    logger.warning(
+                        "Workspace write failed for %s (agent=%s, workspace=%s): %s",
+                        file_path,
+                        self.name,
+                        workspace.name,
+                        operation.error_message,
+                    )
                     failed_files.append({
                         'path': file_path,
-                        'error': operation.error_message
+                        'error': operation.error_message,
+                        'error_type': 'WorkspaceWriteFailed',
                     })
 
             except Exception as e:
-                logger.error(f"Failed to write {file_path}: {e}")
+                logger.exception(f"Failed to write {file_path}: {e}")
                 failed_files.append({
                     'path': file_path,
-                    'error': str(e)
+                    'error': str(e),
+                    'error_type': type(e).__name__,
                 })
 
         # Capture failed files as artifacts so content isn't lost
@@ -4914,11 +4999,15 @@ Consider this current data when formulating your response."""
                     self._capture_single_file_artifact(fp, content)
 
         return {
+            'success': len(failed_files) == 0,
+            'partial_failure': len(failed_files) > 0,
             'written': len(written_files) > 0,
             'workspace': workspace.name,
             'workspace_path': workspace.root_path,
             'files_written': written_files,
             'files_failed': failed_files,
+            'file_write_failures': len(failed_files),
+            'file_write_errors': failed_files[:5],
             'operations': operations,
             'total_written': len(written_files),
             'total_failed': len(failed_files)
@@ -5158,6 +5247,9 @@ Consider this current data when formulating your response."""
                 result.data = {}
 
             result.data['workspace_write'] = write_result
+            result.data['partial_failure'] = bool(write_result.get('partial_failure', False))
+            result.data['file_write_failures'] = write_result.get('file_write_failures', 0)
+            result.data['file_write_errors'] = write_result.get('file_write_errors', [])
 
             # Update message to include write status
             if write_result.get('written'):
@@ -5167,6 +5259,12 @@ Consider this current data when formulating your response."""
                 )
                 if write_result.get('total_failed', 0) > 0:
                     result.message += f" ({write_result['total_failed']} failed)"
+            elif write_result.get('partial_failure'):
+                result.message = (
+                    f"{result.message}\n\n"
+                    f"📁 Workspace write partially failed: {write_result['total_failed']} of "
+                    f"{write_result['files_generated']} files failed"
+                )
 
         return result
 
@@ -5275,6 +5373,8 @@ Consider this current data when formulating your response."""
                 if full_path.name != '00-START-NEXT-SESSION.md':
                     return {
                         'success': False,
+                        'error_type': 'AccessDenied',
+                        'reason': 'docs_directory_only',
                         'error': f"Access denied: Can only write to docs/ directory",
                         'path': doc_path,
                     }
@@ -5314,7 +5414,9 @@ Consider this current data when formulating your response."""
                         )
                         logger.info(f"📋 [Session 962] DocVersion v{next_version} saved for {rel_path}")
                 except Exception as e:
-                    logger.warning(f"[Session 962] DocVersion creation failed: {e}")
+                    logger.exception(
+                        f"[Session 962] DocVersion creation failed for {doc_path}"
+                    )
 
             # Write the new content
             full_path.write_text(content, encoding='utf-8')
@@ -5331,9 +5433,11 @@ Consider this current data when formulating your response."""
             }
 
         except Exception as e:
-            logger.error(f"📝 [Session 798] {self.name} failed to write doc {doc_path}: {e}")
+            logger.exception(f"📝 [Session 798] {self.name} failed to write doc {doc_path}: {e}")
             return {
                 'success': False,
+                'error_type': type(e).__name__,
+                'reason': 'doc_write_failed',
                 'error': str(e),
                 'path': doc_path,
             }

@@ -1,8 +1,20 @@
-# 🕷️ Spider Army Supreme Intelligence Network 🕸️
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL / ASPIRATIONAL DOCUMENT.** The "1,770 spiders" / "149 agents" figures below describe an **earlier aspirational plan**, not the current runtime.
+>
+> **Canonical current counts** (from [`docs/PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md)):
+> - **80 spiders** across 41 categories (registered in `spider_registry.py`)
+> - **83 agents** in AGENT_MAP (73 enabled, 8 rerouted, 2 blocked)
+> - **32 advisors** (10 named figures + 22 domain specialists)
+>
+> Run `python manage.py verify_doc_claims --only-drift` for the live drift report. The narrative below is preserved as build history; do not cite its numbers as current state.
 
-**The Most Advanced Distributed Web Intelligence System Ever Built**
+---
 
-This system deploys and coordinates **1,770 specialized spiders** that feed real-time intelligence to **149 agents** and **25 legendary advisors** including Warren Buffett, Cathie Wood, Ray Dalio, Peter Thiel, and Paul Graham.
+# 🕷️ Spider Army Supreme Intelligence Network 🕸️ <sub>(historical plan)</sub>
+
+**The Most Advanced Distributed Web Intelligence System Ever Built** <sub>(aspirational framing — see canonical inventory above)</sub>
+
+This system [originally planned to deploy] **1,770 specialized spiders** that feed real-time intelligence to **149 agents** and **25 legendary advisors** including Warren Buffett, Cathie Wood, Ray Dalio, Peter Thiel, and Paul Graham. Actual runtime: 80 spiders / 83 agents / 32 advisors — see banner above.
 
 ## 🎯 System Overview
 

@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL REMEDIATION CHECKLIST.** curl examples below predate the canonical PA route convention. The canonical PA endpoint is `POST /api/pa/chat/`; `/api/assistant/chat/` and `/api/v1/assistant/chat/` are legacy compatibility shims only. See [`docs/topics/personal-assistant.md`](../../topics/personal-assistant.md).
+
 # Final Verification Checklist
 
 Use this checklist after completing all remediation phases to verify the fixes are working correctly.

@@ -1,4 +1,7 @@
-# Platform Reality Audit — April 2026
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL DOSSIER SERIES (April 2026).** This 13-file series is preserved as a time-bounded subsystem snapshot. The **current** audit workspace is [`docs/audit/`](../audit/) (see [`docs/AUDIT_INDEX.md`](../AUDIT_INDEX.md)). For current numbers always check [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md).
+
+# Platform Reality Audit — April 2026 <sub>(historical)</sub>
 
 **Purpose:** Document exactly how every subsystem works (not how we designed it) so Chris can hand this to a patent lawyer and explain to investors what the platform does.
 

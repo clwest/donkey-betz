@@ -297,6 +297,19 @@ Be constructive and brief."""
         tool_calls_made = []
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
+        review_tool_names = {
+            'security_audit',
+            'comprehensive_review',
+            'performance_review',
+            'style_check',
+            'suggest_improvements',
+        }
+        review_evidence = {
+            'file_read_success': False,
+            'review_tool_attempted': False,
+            'review_tool_success': False,
+            'review_tool_failures': [],
+        }
 
         with self.time_travel_session("code_review", task, input_data=context):
             try:
@@ -331,6 +344,18 @@ Be constructive and brief."""
                             'result': tool_result
                         })
 
+                        if tool_name == "read_file" and tool_result.get('success'):
+                            review_evidence['file_read_success'] = True
+                        elif tool_name in review_tool_names:
+                            review_evidence['review_tool_attempted'] = True
+                            if tool_result.get('success'):
+                                review_evidence['review_tool_success'] = True
+                            else:
+                                review_evidence['review_tool_failures'].append({
+                                    'tool': tool_name,
+                                    'error': tool_result.get('error', f'{tool_name} failed')
+                                })
+
                         if tool_result.get('success'):
                             all_results.append({
                                 'source': tool_name,
@@ -350,7 +375,7 @@ Be constructive and brief."""
 
                     # AUTO-CHAIN: If we read a file but no review tool was called, do the review
                     if file_content_for_review and not any(
-                        tc['tool'] in ['security_audit', 'comprehensive_review', 'performance_review', 'style_check']
+                        tc['tool'] in review_tool_names
                         for tc in tool_calls_made
                     ):
                         # Determine review type from task
@@ -427,6 +452,7 @@ Be constructive and brief."""
                             language = tool_data.get('language', 'unknown')
                             lines = tool_data.get('lines_reviewed', tool_data.get('lines_analyzed', 0))
                             review_type = tool_data.get('review_type', tool_used.replace('_', ' '))
+                            partial_failure = bool(review_evidence['review_tool_failures'])
 
                             if tool_used == 'comprehensive_review':
                                 descriptive_msg = f"Comprehensive code review completed: {lines} lines of {language} analyzed"
@@ -471,28 +497,87 @@ Be constructive and brief."""
                                         logger.warning(f"⚠️ [CodeReviewAgent] Could not write improvements: {workspace_write_result.get('reason')}")
                             else:
                                 descriptive_msg = f"Code review '{tool_used}' completed for {language}"
-                        else:
-                            tool_used = all_results[0]['source']
-                            descriptive_msg = f"Code review task completed using {len(all_results)} tool(s)"
-                            tool_data = all_results[0].get('data', {})
-                            language = tool_data.get('language', 'unknown')
-                            lines = 0
 
-                        # Enrich result data for content review
-                        file_path = file_result.get('data', {}).get('file_path', '') if file_result else ''
+                            # Enrich result data for content review
+                            file_path = file_result.get('data', {}).get('file_path', '') if file_result else ''
+                            result_data = {
+                                'results': all_results,
+                                'query': task,
+                                'tool_used': tool_used,
+                                'language': language,
+                                'review_type': tool_used.replace('_', ' '),
+                                'file_path': file_path,
+                                'lines_reviewed': lines,
+                                'file_read_success': review_evidence['file_read_success'],
+                                'review_tool_attempted': review_evidence['review_tool_attempted'],
+                                'review_tool_success': review_evidence['review_tool_success'],
+                                'review_tool_failures': review_evidence['review_tool_failures'],
+                                'partial_failure': partial_failure,
+                            }
+
+                            result = AgentResult(
+                                success=True,
+                                message=descriptive_msg + (" (partial review failure)" if partial_failure else ""),
+                                data=result_data,
+                                agent_name=self.name,
+                                execution_time_ms=execution_time,
+                                decisions_made=self._tt_decision_count,
+                                tool_calls=tool_calls_made,
+                                knowledge_attribution=knowledge_attribution
+                            )
+
+                            self._record_learning_outcome(
+                                result=result,
+                                task=task,
+                                context=context,
+                                spider_data_used=False,
+                                scifi_context_used=bool(scifi_context)
+                            )
+
+                            # Session 1006: Persist output to Deliverable
+                            # Session 1092: render with shared helper for gate passing.
+                            self._save_to_deliverable(
+                                title=f"Code Review: {task[:80]}",
+                                content=self._render_agent_output_markdown(
+                                    task=task,
+                                    summary=result.message,
+                                    tool_calls=tool_calls_made,
+                                ),
+                                deliverable_type='code_review',
+                                category='Code Review',
+                                tags=['code_review'],
+                                metadata={'task': task[:200]},
+                            )
+
+                            return result
+
+                        failure_reason = None
+                        if review_evidence['review_tool_attempted'] and review_evidence['review_tool_failures']:
+                            failure_reason = "Code review failed after a review tool error"
+                        elif review_evidence['file_read_success']:
+                            failure_reason = "File was read but no review tool completed successfully"
+                        else:
+                            failure_reason = "No code inspection or review completed"
+
                         result_data = {
                             'results': all_results,
                             'query': task,
-                            'tool_used': tool_used,
-                            'language': language,
-                            'review_type': tool_used.replace('_', ' '),
-                            'file_path': file_path,
-                            'lines_reviewed': lines
+                            'tool_used': file_result['source'] if file_result else '',
+                            'language': file_language or 'unknown',
+                            'review_type': 'incomplete_review',
+                            'file_path': file_result.get('data', {}).get('file_path', '') if file_result else '',
+                            'lines_reviewed': 0,
+                            'file_read_success': review_evidence['file_read_success'],
+                            'review_tool_attempted': review_evidence['review_tool_attempted'],
+                            'review_tool_success': review_evidence['review_tool_success'],
+                            'review_tool_failures': review_evidence['review_tool_failures'],
+                            'partial_failure': bool(review_evidence['file_read_success'] or review_evidence['review_tool_failures']),
                         }
 
                         result = AgentResult(
-                            success=True,
-                            message=descriptive_msg,
+                            success=False,
+                            message=failure_reason,
+                            error=failure_reason,
                             data=result_data,
                             agent_name=self.name,
                             execution_time_ms=execution_time,
@@ -506,33 +591,34 @@ Be constructive and brief."""
                             task=task,
                             context=context,
                             spider_data_used=False,
-                            scifi_context_used=bool(scifi_context)
-                        )
-
-                        # Session 1006: Persist output to Deliverable
-                        # Session 1092: render with shared helper for gate passing.
-                        self._save_to_deliverable(
-                            title=f"Code Review: {task[:80]}",
-                            content=self._render_agent_output_markdown(
-                                task=task,
-                                summary=result.message,
-                                tool_calls=tool_calls_made,
-                            ),
-                            deliverable_type='code_review',
-                            category='Code Review',
-                            tags=['code_review'],
-                            metadata={'task': task[:200]},
+                            scifi_context_used=bool(scifi_context),
+                            success=False,
                         )
 
                         return result
 
                 # No tool calls - return GPT content directly
-                content = gpt_response.get('content', 'I can help review code. Please provide the code you\'d like me to review.')
                 execution_time = int((time.time() - start_time) * 1000)
+                failure_reason = "No code inspection or review completed"
 
                 result = AgentResult(
-                    success=True,
-                    message=content,
+                    success=False,
+                    message=failure_reason,
+                    error=failure_reason,
+                    data={
+                        'results': [],
+                        'query': task,
+                        'tool_used': '',
+                        'language': 'unknown',
+                        'review_type': 'incomplete_review',
+                        'file_path': '',
+                        'lines_reviewed': 0,
+                        'file_read_success': False,
+                        'review_tool_attempted': False,
+                        'review_tool_success': False,
+                        'review_tool_failures': [],
+                        'partial_failure': False,
+                    },
                     agent_name=self.name,
                     execution_time_ms=execution_time
                 )

@@ -1,7 +1,11 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_WHAT_IT_IS.md`](/docs/PLATFORM_WHAT_IT_IS.md) and [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+
 # Backend Reference Guide
 
-**Last Updated:** January 9, 2026 - Session 739
+**Last Updated:** January 9, 2026 - Session 739 — narrative preserved; counts may drift
 **Purpose:** Complete reference of all backend systems, APIs, models, and services with detailed explanations
+**Canonical counts:** Always check [`PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) — Session 739 numbers below are a historical snapshot.
 
 ---
 
@@ -13,7 +17,7 @@
 4. [Services](#4-services-144-total)
 5. [Celery Tasks](#5-celery-tasks)
 6. [Body Systems](#6-body-systems-9-systems)
-7. [Spider Network](#7-spider-network-77-spiders)
+7. [Spider Network](#7-spider-network-77-spiders) <!-- canonical = 80; see PLATFORM_INVENTORY -->
 8. [ML Models](#8-ml-models)
 9. [Agents](#9-agents-72-total)
 10. [Advisors](#10-advisors-25-total)

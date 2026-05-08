@@ -46,6 +46,7 @@ MANIFEST
 # Virtual Environments
 .venv/
 venv/
+venv_ml/
 ENV/
 env/
 .env/
@@ -119,6 +120,19 @@ dist/
 # BUT: Allow React frontend build for deployment
 !frontend/dist/
 !frontend/dist/**
+frontend/dist/
+
+# Local verification output
+.pyright-after.txt
+
+# context-kit scratch output
+.context-kit/
+connections-report.json
+context-coverage.json
+context-doctor.json
+context-hotpath.txt
+context-inspect-core.json
+context-inspect.json
 
 # React/Vite specific
 .vite/
@@ -200,9 +214,11 @@ htmlcov/
 .coverage.*
 .pytest_cache/
 cover/
+tests/artifacts/*.png
 
 # Documentation
 docs/_build/
+docs/_index.json
 
 # System Intelligence & Embeddings
 embeddings/
@@ -339,3 +355,12 @@ resolve_node/results/
 # Keep image artifacts out of the repo root
 /*.png
 
+# Truth propagation phase artifacts
+coverage-*.json
+verify-report.json
+behavior-*.json
+
+# Vendored convenience snapshot from another project (Session 1106 untrack).
+# 18 MB; only consumed by ad-hoc scripts with graceful fail-fast.
+# Local copy preserved for those scripts; not tracked in git.
+external-project-docs/ai-content-studio/documentation/master_context_all.md

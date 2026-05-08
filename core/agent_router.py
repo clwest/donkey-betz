@@ -522,6 +522,27 @@ class AgentRouter:
         """
         return self.AGENT_MAP.get(agent_name)
 
+    def _attach_resolution_metadata(self, result: Any, metadata: Optional[Dict[str, Any]]) -> Any:
+        """Attach agent-resolution metadata to a result object or dict."""
+        if not metadata:
+            return result
+
+        logger.debug("[routing] resolution metadata: %s", metadata)
+
+        if hasattr(result, 'data') and isinstance(getattr(result, 'data', None), dict):
+            current = result.data.get('resolution_metadata')
+            merged = {**current, **metadata} if isinstance(current, dict) else dict(metadata)
+            result.data['resolution_metadata'] = merged
+            return result
+
+        if isinstance(result, dict):
+            current = result.get('resolution_metadata')
+            merged = {**current, **metadata} if isinstance(current, dict) else dict(metadata)
+            result['resolution_metadata'] = merged
+            return result
+
+        return result
+
     def route_by_query(
         self,
         query: str,
@@ -552,11 +573,23 @@ class AgentRouter:
 
             # Check if agent exists in our map
             if routing_result.agent_name not in self.AGENT_MAP:
+                resolution_metadata = {
+                    'fallback_used': True,
+                    'fallback_type': 'thinking_agent',
+                    'fallback_reason': 'unknown_agent',
+                    'confidence': routing_result.confidence,
+                    'resolution_error': 'semantic_router_suggested_unknown_agent',
+                }
                 logger.warning(
-                    f"Semantic router suggested unknown agent: {routing_result.agent_name}, "
-                    f"falling back to {fallback_agent}"
+                    f"Semantic router suggested unknown agent: {routing_result.agent_name} "
+                    f"(reason=unknown_agent), falling back to {fallback_agent}"
                 )
-                return self.route(fallback_agent, query, context)
+                fallback_context = dict(context or {})
+                fallback_context['_resolution_metadata'] = resolution_metadata
+                return self._attach_resolution_metadata(
+                    self.route(fallback_agent, query, fallback_context),
+                    resolution_metadata,
+                )
 
             # Use semantic result if confidence is high enough
             if routing_result.confidence >= SEMANTIC_CONFIDENCE_THRESHOLD:
@@ -566,15 +599,42 @@ class AgentRouter:
                 )
                 return self.route(routing_result.agent_name, query, context)
             else:
+                resolution_metadata = {
+                    'fallback_used': True,
+                    'fallback_type': 'thinking_agent',
+                    'fallback_reason': 'low_confidence',
+                    'confidence': routing_result.confidence,
+                    'resolution_error': 'semantic_confidence_below_threshold',
+                }
                 logger.info(
-                    f"Semantic confidence too low ({routing_result.confidence:.2f} < {SEMANTIC_CONFIDENCE_THRESHOLD}), "
-                    f"using fallback: {fallback_agent}"
+                    f"Semantic confidence too low ({routing_result.confidence:.2f} < {SEMANTIC_CONFIDENCE_THRESHOLD}) "
+                    f"(reason=low_confidence), using fallback: {fallback_agent}"
                 )
-                return self.route(fallback_agent, query, context)
+                fallback_context = dict(context or {})
+                fallback_context['_resolution_metadata'] = resolution_metadata
+                return self._attach_resolution_metadata(
+                    self.route(fallback_agent, query, fallback_context),
+                    resolution_metadata,
+                )
 
         except Exception as e:
-            logger.error(f"Semantic routing failed: {e}, using fallback: {fallback_agent}")
-            return self.route(fallback_agent, query, context)
+            resolution_metadata = {
+                'fallback_used': True,
+                'fallback_type': 'thinking_agent',
+                'fallback_reason': 'routing_exception',
+                'confidence': None,
+                'resolution_error': f"{type(e).__name__}: {e}",
+            }
+            logger.error(
+                f"Semantic routing failed (reason=routing_exception): {e}, "
+                f"using fallback: {fallback_agent}"
+            )
+            fallback_context = dict(context or {})
+            fallback_context['_resolution_metadata'] = resolution_metadata
+            return self._attach_resolution_metadata(
+                self.route(fallback_agent, query, fallback_context),
+                resolution_metadata,
+            )
 
     def get_semantic_suggestion(self, query: str) -> Dict[str, Any]:
         """
@@ -810,8 +870,18 @@ class AgentRouter:
             try:
                 from core.models_unified_system import Agent as AgentModel
                 if AgentModel.objects.filter(name=agent_name, is_active=True).exists():
-                    logger.info(f"[routing] '{agent_name}' not in AGENT_MAP, using DynamicPersonaAgent")
+                    logger.info(
+                        f"[routing] '{agent_name}' not in AGENT_MAP "
+                        f"(reason=db_persona), using DynamicPersonaAgent"
+                    )
                     agent_class = DynamicPersonaAgent
+                    context.setdefault('_resolution_metadata', {
+                        'fallback_used': True,
+                        'fallback_type': 'dynamic_persona',
+                        'fallback_reason': 'db_persona',
+                        'resolution_error': 'agent_not_in_agent_map',
+                        'confidence': None,
+                    })
                 else:
                     available = ", ".join(self.AGENT_MAP.keys())
                     raise AgentNotFoundError(
@@ -820,7 +890,10 @@ class AgentRouter:
             except AgentNotFoundError:
                 raise
             except Exception as e:
-                logger.warning(f"[routing] DynamicPersonaAgent fallback failed for '{agent_name}': {e}")
+                logger.warning(
+                    f"[routing] DynamicPersonaAgent fallback failed for '{agent_name}' "
+                    f"(reason=db_persona): {e}"
+                )
                 available = ", ".join(self.AGENT_MAP.keys())
                 raise AgentNotFoundError(
                     f"Unknown agent: '{agent_name}'. Available agents: {available}"
@@ -1465,6 +1538,11 @@ class AgentRouter:
             logger.info(
                 f"{agent_name} completed: success={result.success}, "
                 f"time={result.execution_time_ms}ms, execution_id={result.execution_id}"
+            )
+
+            result = self._attach_resolution_metadata(
+                result,
+                context.get('_resolution_metadata'),
             )
 
             # Session 858: Record success for user learning feedback loop
