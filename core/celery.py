@@ -294,6 +294,102 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=13, minute=0, day_of_week='friday'),  # Friday 6 AM MST = 13:00 UTC
         'options': {'queue': 'content', 'expires': 3600},
     },
+
+    # ────────────────────────────────────────────────────────────────────────
+    # Session 1115 batch-3 — DB hygiene + metrics tasks that were defined but
+    # never wired. All entries below are safe by inspection:
+    #   - no LLM/embedding calls (Chris is out of OpenAI credits)
+    #   - no agent dispatch (per agent noise rule)
+    #   - pure database hygiene, telemetry, or metric computation
+    # Behavior-changing tasks (auto_approve_*, auto_promote_*, run_ops_autopilot,
+    # post_ops_digest, send_weekly_kpi_summary, rag_retrieval_canary) are
+    # deferred for explicit green-light — see AUDIT_FINDINGS.md #12.
+    # ────────────────────────────────────────────────────────────────────────
+
+    # Expire old opportunities past their relevance window
+    'expire-old-opportunities': {
+        'task': 'core.tasks.expire_old_opportunities',
+        'schedule': crontab(hour=2, minute=30),  # 2:30 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Mark old pending suggestions as expired
+    'expire-old-suggestions': {
+        'task': 'core.tasks.expire_old_suggestions',
+        'schedule': crontab(hour=2, minute=45),  # 2:45 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # HITL validations past deadline → expired (docstring: "Every hour")
+    'expire-overdue-validations': {
+        'task': 'core.tasks.expire_overdue_validations',
+        'schedule': crontab(minute=0),  # Top of every hour
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Reclaim Redis-stream events stuck in consumer groups (docstring: "Every 5 minutes")
+    'claim-stale-events': {
+        'task': 'core.tasks.claim_stale_events',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default', 'expires': 300},
+    },
+    # Cleanup auto-generated Discussion-prefixed conversation artifacts
+    'cleanup-automated-conversation-artifacts': {
+        'task': 'core.tasks.cleanup_automated_conversation_artifacts',
+        'schedule': crontab(hour=3, minute=0),  # 3:00 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Cleanup boardroom items past retention (default 7 days)
+    'cleanup-expired-boardroom-items': {
+        'task': 'core.tasks.cleanup_expired_boardroom_items',
+        'schedule': crontab(hour=3, minute=15),  # 3:15 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Cleanup halted experiments past retention
+    'cleanup-halted-experiments': {
+        'task': 'core.tasks.cleanup_halted_experiments',
+        'schedule': crontab(hour=3, minute=30),  # 3:30 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Cleanup stale scoring requests (high-frequency queue hygiene)
+    'cleanup-stale-scoring-requests': {
+        'task': 'core.tasks.cleanup_stale_scoring_requests',
+        'schedule': crontab(minute='*/30'),
+        'options': {'queue': 'default', 'expires': 1800},
+    },
+    # Reap zombie deliberation + pilot work
+    'reap-zombie-work': {
+        'task': 'core.tasks.reap_zombie_work',
+        'schedule': crontab(minute=15),  # 15 min past every hour
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Mark due scheduled notifications as delivered (in-app only, no email)
+    'send-pending-notifications': {
+        'task': 'core.tasks.send_pending_notifications',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default', 'expires': 300},
+    },
+    # Daily SLO check: learning loop usage_rate >= 5% over 24h (read-only)
+    'check-learning-loop-slo': {
+        'task': 'core.check_learning_loop_slo',
+        'schedule': crontab(hour=9, minute=0),  # 9 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Hourly LLM cost-spike detector (read-only aggregate on LLMCallLog)
+    'check-llm-cost-spike': {
+        'task': 'core.tasks.check_llm_cost_spike',
+        'schedule': crontab(minute=5),  # 5 min past every hour
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Daily ROI metrics aggregation (docstring: "every day at 2:00 AM")
+    'aggregate-roi-metrics-daily': {
+        'task': 'core.tasks.aggregate_roi_metrics_daily',
+        'schedule': crontab(hour=2, minute=0),  # 2:00 AM Denver
+        'options': {'queue': 'default', 'expires': 7200},
+    },
+    # Daily revenue metrics (docstring: "Runs daily at midnight")
+    'calculate-daily-revenue-metrics': {
+        'task': 'intelligence.tasks.calculate_daily_revenue_metrics',
+        'schedule': crontab(hour=0, minute=15),  # 12:15 AM Denver
+        'options': {'queue': 'default', 'expires': 7200},
+    },
 }
 
 # Task routing configuration

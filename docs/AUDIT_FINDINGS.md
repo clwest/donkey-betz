@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 58 orphan Celery tasks** — batches 1 & 2: detection upgraded twice; remaining 58 triaged | medium-high | partial · 79% reduction; final wiring deferred | per-task wire-up |
+| 12 | **272 → 41 orphan Celery tasks** — batches 1-3: detection upgraded 3x, 14 safe DB-hygiene + metrics tasks wired into beat schedule | medium-high | partial · 85% reduction; behavior-changing wiring deferred | per-task wire-up |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,62 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 58 orphan Celery tasks — batches 1 & 2 closed
+## 12. 272 → 41 orphan Celery tasks — batches 1-3 closed
+
+### Batch 3 outcome (Session 1115)
+
+Two parallel improvements:
+
+**1) Detector now catches importlib-style `'module.path:func'` dispatch.**
+The `scheduled_diagnostic_runner` and similar dispatchers resolve target
+tasks at runtime from a path string like `'core.tasks:post_cto_daily_diagnostic'`.
+The batch-2 quoted-token scan used `[[:alnum:]_.]+` for the token character
+class which excludes `:`, so these paths weren't matched. Added a second
+grep pass with `[[:alnum:]_.]+:[[:alnum:]_]+` plus a Python regex that
+parses the module/func separator. **3 fewer false orphans** —
+`post_coo_daily_diagnostic`, `post_cto_daily_diagnostic`,
+`post_trend_daily_diagnostic` are now correctly attributed to the
+`diagnostics/*.py` config files that reference them.
+
+**2) Wired 14 safe DB-hygiene + metrics tasks** into `app.conf.beat_schedule`.
+Every entry below was verified to (a) make no LLM/embedding calls,
+(b) dispatch no agents, (c) perform only DB queryset filters or in-app
+state changes. These are the kinds of tasks Chris meant by "should this
+do something and got forgotten about" — they were defined with explicit
+schedule hints in docstrings (e.g. *"Every hour"*, *"daily at midnight"*)
+but never added to the schedule.
+
+| Task | Cadence | What it does |
+|---|---|---|
+| `expire_old_opportunities` | daily 02:30 Denver | Mark expired opps |
+| `expire_old_suggestions` | daily 02:45 Denver | Mark expired SmartSuggestions |
+| `expire_overdue_validations` | hourly :00 | HITL deadline expiry |
+| `claim_stale_events` | every 5 min | Reclaim stuck Redis-stream events |
+| `cleanup_automated_conversation_artifacts` | daily 03:00 | Discussion-prefix conversation cleanup |
+| `cleanup_expired_boardroom_items` | daily 03:15 | Boardroom retention |
+| `cleanup_halted_experiments` | daily 03:30 | Experiment retention |
+| `cleanup_stale_scoring_requests` | every 30 min | Scoring queue hygiene |
+| `reap_zombie_work` | hourly :15 | Stuck deliberation + pilot work |
+| `send_pending_notifications` | every 5 min | In-app notification delivery |
+| `check_learning_loop_slo` | daily 09:00 | 24h usage_rate SLO check |
+| `check_llm_cost_spike` | hourly :05 | LLM spend rate aggregate |
+| `aggregate_roi_metrics_daily` | daily 02:00 | ROI metric rollup |
+| `calculate_daily_revenue_metrics` | daily 00:15 | RevenueMetrics row |
+
+**Orphan count drop in batch 3:** 58 → **41** (3 detector + 14 wired).
+Cumulative across batches 1+2+3: **272 → 41 (85% reduction).**
+
+### Remaining 41 — explicit triage
+
+| Category | Approx count | Action needed |
+|---|---:|---|
+| **Intentionally orphan** (`debug_task`) | 1 | None — by design |
+| **Behavior-changing scheduled** | ~10 | Needs Chris green-light — `auto_approve_boardroom_items`, `auto_promote_low_risk_decisions`, `propagate_new_policies`, `promote_to_shared_knowledge`, `verify_completed_fixes`, `assign_open_findings_to_agents`, `discover_and_import_audits`, `update_distribution_analytics`, `update_mythology_pattern_statistics`, `rescan_active_workspaces` |
+| **LLM-cost scheduled** | ~5 | Deferred until OpenAI credits replenished — `rag_retrieval_canary` (embeddings), `send_weekly_kpi_summary` (Discord post), `post_ops_digest`, `run_ops_autopilot` (takes actions), `maintain_knowledge_freshness` (LLM scoring) |
+| **Triggered by external events** | ~15 | None — fire on webhook/escalation/HITL events that the detector can't grep for |
+| **Dormant utilities** | ~9 | Per-task — mgmt-command wrap or leave with comment |
+
+Verifier baseline locked at **41**.
 
 ### Batch 2 outcome (Session 1115)
 
