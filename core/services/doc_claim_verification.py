@@ -2371,6 +2371,117 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/CELERY_AUDIT.md',
+    claim_id='celery_orphan_count_baseline',
+    description="Orphan Celery task count (no caller + not scheduled) tracked against Session 1115 baseline of 245",
+)
+def _celery_orphan_count_baseline() -> ClaimResult:
+    """Track the Celery orphan count over time.
+
+    Session 1115 baseline: 245 orphans of 365 tasks (67%). Caused by
+    leftover task definitions from prior sessions whose callers got
+    refactored away. The number should trend DOWN as orphans get
+    deleted, or stay roughly stable if intentionally-kept-warm.
+
+    Going significantly UP means new orphans got introduced — worth
+    catching.
+
+    The audit's caller detection covers `.delay()`, `.apply_async()`,
+    `.s()`, `.si()`, and `send_task('full.path')`. Tasks invoked via
+    more exotic paths (signature composition, name-based dispatch) may
+    be false-flagged. Not a hard failure — `low` severity drift bands.
+    """
+    import subprocess
+    import re as _re
+    from pathlib import Path
+    from core.celery import app as celery_app
+
+    registry = {
+        t for t in celery_app.tasks.keys() if not t.startswith('celery.')
+    }
+    scheduled = {
+        (entry or {}).get('task', '') or ''
+        for entry in (celery_app.conf.beat_schedule or {}).values()
+    }
+    scheduled.discard('')
+
+    repo_root = Path(__file__).resolve().parents[2]
+    short_names = {t.rsplit('.', 1)[-1] for t in registry}
+
+    method_callers: set[str] = set()
+    try:
+        r1 = subprocess.run(
+            ['grep', '-rEon', r'\b\w+\.(delay|apply_async|s|si)\s*\(',
+             str(repo_root), '--include=*.py',
+             '--exclude-dir=.venv', '--exclude-dir=archive',
+             '--exclude-dir=__pycache__', '--exclude-dir=node_modules'],
+            capture_output=True, text=True, timeout=60,
+        )
+        for line in r1.stdout.splitlines():
+            m = _re.search(r'(\w+)\.(?:delay|apply_async|s|si)\s*\(', line)
+            if m and m.group(1) in short_names:
+                method_callers.add(m.group(1))
+    except subprocess.TimeoutExpired:
+        pass
+
+    dynamic_callers: set[str] = set()
+    try:
+        r2 = subprocess.run(
+            ['grep', '-rEon', r'send_task\s*\(\s*[\'"][^\'"]+[\'"]',
+             str(repo_root), '--include=*.py',
+             '--exclude-dir=.venv', '--exclude-dir=archive',
+             '--exclude-dir=__pycache__', '--exclude-dir=node_modules'],
+            capture_output=True, text=True, timeout=30,
+        )
+        for line in r2.stdout.splitlines():
+            m = _re.search(r'send_task\s*\(\s*[\'"]([^\'"]+)[\'"]', line)
+            if m and m.group(1) in registry:
+                dynamic_callers.add(m.group(1))
+    except subprocess.TimeoutExpired:
+        pass
+
+    orphans = 0
+    for name in registry:
+        short = name.rsplit('.', 1)[-1]
+        if name in scheduled:
+            continue
+        if short in method_callers:
+            continue
+        if name in dynamic_callers:
+            continue
+        orphans += 1
+
+    baseline = 245
+    drift = orphans - baseline
+    if abs(drift) <= 10:
+        severity = 'ok'
+    elif drift > 30:
+        severity = 'medium'
+    elif drift > 0:
+        severity = 'low'
+    else:
+        severity = 'ok' if drift >= -30 else 'low'
+    return ClaimResult.build(
+        expected=f"{baseline} (Session 1115 baseline)",
+        actual=orphans,
+        severity=severity,
+        note=(
+            f"{len(registry)} total tasks, "
+            f"{len(scheduled & registry)} scheduled, "
+            f"{len(method_callers & short_names)} short-name callers, "
+            f"{len(dynamic_callers)} dynamic callers"
+        ),
+        fix_suggestion=(
+            f"Orphan count drifted by {drift} from Session 1115 baseline (245). "
+            f"If orphans went up, audit recent commits for unwired "
+            f"`@shared_task` decorators. If orphans went down significantly, "
+            f"update the baseline in `_celery_orphan_count_baseline`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/ML_AUDIT.md',
     claim_id='ml_capability_dirs_present',
     description="All 9 ML capability subdirectories exist under ml/ (anomaly_detection, auto_selection, automation, core, graph_neural_network, integrations, reinforcement_learning, time_series, training)",
