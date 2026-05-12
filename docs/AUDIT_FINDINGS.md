@@ -40,6 +40,8 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 5 | CLAUDE.md said `144` Discord commands; actual is `96` (double-count) | medium | **✅ fixed Session 1115** | — |
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
+| 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 164 | medium | open | doc refresh |
+| 9 | Learning bridge naming inconsistency (`LearningLoop` × 7 vs `LearningBridge` × 1) | informational | open | cosmetic |
 
 ---
 
@@ -251,6 +253,52 @@ c. **Leave them.** If they're known future work and other code branches
 
 **Risk:** (a) and (c) are zero-risk. (b) only safe if no calling code
 mentions them by name — grep first.
+
+---
+
+## 8. `BACKEND_INVENTORY.md` undercounts management commands (63 → 164)
+
+**Status:** open · medium severity · doc refresh.
+
+**Verifier doc:** `docs/BACKEND_INVENTORY.md`
+**Verifier claim:** `backend_inventory_mgmt_commands_63`
+
+**What:** `docs/BACKEND_INVENTORY.md` claims 63 Django management commands;
+the filesystem has 164 under `core/management/commands/`. Session 1115
+added 9 new audit-builder commands which made the drift more visible, but
+the underlying doc has been stale for many sessions before.
+
+**Fix:** refresh `docs/BACKEND_INVENTORY.md`'s management-commands line to
+say 164 (or whatever the count is at fix time), or — better — regenerate
+the doc from runtime as part of a future `build_backend_inventory` audit.
+Worth noting the same kind of pattern as the Session 1115 audits: build a
+DOC-AUTOGEN command that walks `core/management/commands/`, pulls each
+command's `help` and arg signatures, writes a runtime-derived
+`docs/MANAGEMENT_COMMAND_AUDIT.md`.
+
+**Risk:** zero — pure doc change.
+
+---
+
+## 9. Learning bridge naming inconsistency
+
+**Status:** open · informational · cosmetic.
+
+**Verifier doc:** `docs/LEARNING_BRIDGE_AUDIT.md` (Findings section)
+
+**What:** Seven of the 9 learning-loop classes under `core/learning_bridges/`
+end in the suffix `LearningLoop` (`AgentExecutionLearningLoop`,
+`ApplicationOutcomeLearningLoop`, etc.). One ends in `LearningBridge`
+(`SportsBettingLearningBridge`). Same concept, two naming conventions.
+
+**Fix:** rename `SportsBettingLearningBridge` → `SportsBettingLearningLoop`
+(or rename the rest the other way) in `core/learning_bridges/sports_betting_bridge.py`,
+update the corresponding `core/learning_bridges/__init__.py` export, and
+grep the codebase for any references.
+
+**Risk:** small — has a public export in `core/learning_bridges/__init__.py`,
+so callers that imported the old name would break. `git grep
+SportsBettingLearningBridge` before renaming.
 
 ---
 
