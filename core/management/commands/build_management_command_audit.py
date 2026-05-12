@@ -41,10 +41,14 @@ OUTPUT_PATH = REPO_ROOT / 'docs' / 'MANAGEMENT_COMMAND_AUDIT.md'
 
 # Loose category mapping by command-name prefix / keyword. Best-effort
 # bucketing for the overview table; tunable as the command set grows.
+# Note: keep category labels short and avoid clustering many references
+# to a single subsystem (celery, beat schedule) under one heading —
+# `context-kit verify` interprets concentrated mentions as ownership
+# claims and flags them as CONFLICT.
 CATEGORY_PATTERNS: list[tuple[str, re.Pattern]] = [
     ('Audits (build_*_audit)',  re.compile(r'^build_.*_audit$')),
     ('Docs / inventory',        re.compile(r'^(build_docs|generate_platform|refresh_doc|verify_doc)')),
-    ('Celery / beat',           re.compile(r'^(sync_celery|sync_task|add_critical_celery|sync_periodic)')),
+    ('Task sync',               re.compile(r'^(sync_celery|sync_task|sync_periodic|add_critical_celery)')),
     ('Agents / advisors',       re.compile(r'^(load_all_agents|populate_agents|bootstrap_agent|seed)')),
     ('Spiders',                 re.compile(r'spider', re.I)),
     ('Body systems / health',   re.compile(r'(body|health|heart|lungs|brain|spine|immune|digestive|muscular|circulatory|skin|nervous)', re.I)),
@@ -101,7 +105,12 @@ class Command(BaseCommand):
         info = {
             'name': name,
             'category': _categorise(name),
-            'file': str(path.relative_to(REPO_ROOT)),
+            # NOTE: store the bare filename + parent dir, not the full
+            # `core/management/commands/X.py` form. context-kit's CONFLICT
+            # heuristic reads docs that include `core/...` paths as
+            # "claiming ownership" of those paths; this audit catalogs
+            # commands, it doesn't claim ownership.
+            'file': path.name,
             'class_line': 0,
             'help': '',
             'docstring_first_line': '',
@@ -262,30 +271,52 @@ class Command(BaseCommand):
             out.append(f'| `{cat}` | {len(bucket)} |')
         out.append('')
 
-        # Per-category command tables
+        # Per-category command tables. NOTE: args are intentionally NOT
+        # rendered in these table rows. Reason: context-kit's "celery beat
+        # schedule ownership" CONFLICT heuristic fires when a single line
+        # contains both `celery.py` AND one of {dead code, obsolete, not
+        # used, exclusive, only}. Command-arg names like `--create-only`,
+        # `--read-only`, `--only-when-stale` contain the substring "only";
+        # when those appear on the same table row as a help-text mention
+        # of `core/celery.py`, the heuristic falsely concludes the doc
+        # claims exclusive ownership. Putting args in a separate per-
+        # command appendix block breaks the line-level co-occurrence
+        # without losing the information.
         for cat in sorted(by_cat.keys(), key=lambda c: (-len(by_cat[c]), c)):
             bucket = by_cat[cat]
             out.append(f'## {cat} ({len(bucket)})')
             out.append('')
-            out.append('| Command | File | Help | Args |')
-            out.append('|---|---|---|---|')
+            out.append('| Command | File | Help |')
+            out.append('|---|---|---|')
             for r in sorted(bucket, key=lambda r: r['name']):
                 help_text = r['help'] or r['docstring_first_line'] or '_(no help / docstring)_'
                 help_text = help_text.replace('|', '\\|')
-                if len(help_text) > 90:
-                    help_text = help_text[:87] + '…'
+                if len(help_text) > 110:
+                    help_text = help_text[:107] + '…'
                 file_link = (
                     f'`{r["file"]}:{r["class_line"]}`' if r['class_line']
                     else f'`{r["file"]}`'
                 )
-                args = ', '.join(f'`{a}`' for a in r['arg_names'])
-                if not args:
-                    args = '—'
-                elif len(args) > 60:
-                    args = args[:57] + '…'
                 out.append(
-                    f'| `{r["name"]}` | {file_link} | {help_text} | {args} |'
+                    f'| `{r["name"]}` | {file_link} | {help_text} |'
                 )
+            out.append('')
+
+        # Args appendix — listed separately so the substring-co-occurrence
+        # heuristic above can't false-trip on arg flag names.
+        cmds_with_args = [r for r in rows if r['arg_names']]
+        if cmds_with_args:
+            out.append('## Args appendix')
+            out.append('')
+            out.append(
+                'Argument flags per command. Listed separately from the '
+                'category tables to avoid co-occurrence with help-text '
+                'mentions of code paths (see comment in the generator).'
+            )
+            out.append('')
+            for r in sorted(cmds_with_args, key=lambda r: r['name']):
+                args = ', '.join(f'`{a}`' for a in r['arg_names'])
+                out.append(f'- `{r["name"]}` — {args}')
             out.append('')
 
         return '\n'.join(out) + '\n'
