@@ -304,6 +304,49 @@ class Command(BaseCommand):
                 elif val in short_names_set:
                     callers_by_short.setdefault(val, []).append(f'{rel}:{lineno}')
 
+        # 7) Importlib-style path scan: `'module.path:task_name'`. Used by
+        #    `scheduled_diagnostic_runner` and similar dispatchers that
+        #    resolve a task via importlib at runtime. These are correctly
+        #    wired callers — the runner enqueues the task with
+        #    apply_async(countdown=240) — but the path string uses `:` as
+        #    the module/func separator, which the standard quoted-token
+        #    scan above doesn't catch (`:` isn't in [[:alnum:]_.]).
+        try:
+            r4 = subprocess.run(
+                ['grep', '-rEon',
+                 r"['\"][[:alnum:]_.]+:[[:alnum:]_]+['\"]",
+                 str(REPO_ROOT),
+                 '--include=*.py',
+                 '--exclude-dir=.venv',
+                 '--exclude-dir=__pycache__',
+                 '--exclude-dir=node_modules',
+                 '--exclude-dir=archive',
+                ],
+                capture_output=True, text=True, timeout=60,
+            )
+        except subprocess.TimeoutExpired:
+            r4 = None
+        importlib_pattern = re.compile(r'[\'"]([\w.]+):(\w+)[\'"]')
+        for line in (r4.stdout.splitlines() if r4 else []):
+            pm = prefix_pattern.match(line)
+            if not pm:
+                continue
+            file_, lineno, rest = pm.group(1), pm.group(2), pm.group(3)
+            try:
+                rel = str(Path(file_).resolve().relative_to(REPO_ROOT))
+            except ValueError:
+                rel = file_
+            if rel in skip_files:
+                continue
+            for path_match in importlib_pattern.finditer(rest):
+                module_path = path_match.group(1)
+                func_name = path_match.group(2)
+                full = f'{module_path}.{func_name}'
+                if full in registry:
+                    callers_by_full.setdefault(full, []).append(f'{rel}:{lineno}')
+                elif func_name in short_names_set:
+                    callers_by_short.setdefault(func_name, []).append(f'{rel}:{lineno}')
+
         return callers_by_short, callers_by_full
 
     def _inspect(

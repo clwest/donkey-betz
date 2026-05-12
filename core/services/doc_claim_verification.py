@@ -2536,6 +2536,45 @@ def _celery_orphan_count_baseline() -> ClaimResult:
                 elif val in short_names:
                     literal_short_callers.add(val)
 
+    # Session 1115 batch-3 prep: importlib-style `'module.path:func'`
+    # dispatch detection. The `scheduled_diagnostic_runner` and similar
+    # dispatchers resolve target tasks via importlib at runtime; the path
+    # uses `:` as separator which the batch-2 quoted-token scan
+    # (`[[:alnum:]_.]+`) doesn't catch.
+    importlib_full_callers: set[str] = set()
+    importlib_short_callers: set[str] = set()
+    try:
+        r4 = subprocess.run(
+            ['grep', '-rEon', r"['\"][[:alnum:]_.]+:[[:alnum:]_]+['\"]",
+             str(repo_root), '--include=*.py',
+             '--exclude-dir=.venv', '--exclude-dir=__pycache__',
+             '--exclude-dir=node_modules', '--exclude-dir=archive'],
+            capture_output=True, text=True, timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        r4 = None
+    if r4 is not None:
+        importlib_pattern = _re.compile(r'[\'"]([\w.]+):(\w+)[\'"]')
+        for line in r4.stdout.splitlines():
+            pm = _re.match(r'^([^:]+):(\d+):(.*)$', line)
+            if not pm:
+                continue
+            file_, _ln, rest = pm.group(1), pm.group(2), pm.group(3)
+            try:
+                rel = str(Path(file_).resolve().relative_to(repo_root))
+            except ValueError:
+                rel = file_
+            if rel == 'core/tasks.py':
+                continue
+            for path_match in importlib_pattern.finditer(rest):
+                module_path = path_match.group(1)
+                func_name = path_match.group(2)
+                full = f'{module_path}.{func_name}'
+                if full in registry:
+                    importlib_full_callers.add(full)
+                elif func_name in short_names:
+                    importlib_short_callers.add(func_name)
+
     orphans = 0
     for name in registry:
         short = name.rsplit('.', 1)[-1]
@@ -2555,17 +2594,27 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         if short in literal_short_callers:
             continue
+        if name in importlib_full_callers:
+            continue
+        if short in importlib_short_callers:
+            continue
         orphans += 1
 
-    # Session 1115 batch-2 baseline: detection upgraded again to catch
-    # string-literal task names anywhere in the codebase (the dispatch
-    # patterns in `tasks_ops.py`, `discord_bot.py`, `views_autonomous_dashboard.py`
-    # all pass task names as strings to dynamic dispatchers). Orphan count
-    # dropped 188 → 58. The remaining 58 are either intentionally orphan
-    # (debug_task), dormant utilities, or "should-be-scheduled but the
-    # schedule was never wired" — see AUDIT_FINDINGS.md #12 for the
-    # per-task triage.
-    baseline = 58
+    # Session 1115 batch-3 baseline: 14 safe DB-hygiene + metrics tasks wired
+    # into the beat schedule (cleanup_*, expire_*, claim_stale_events,
+    # check_*_slo, aggregate_roi_metrics_daily, calculate_daily_revenue_metrics,
+    # etc.). Detector also catches importlib-style `'module.path:func'`
+    # dispatch (post_*_daily_diagnostic). Orphan count 58 → 41 across three
+    # passes. The remaining 41 split into:
+    #   - ~10 behavior-changing scheduled (auto_approve/auto_promote, etc.) —
+    #     needs Chris green-light
+    #   - ~6 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
+    #     etc.) — deferred until OpenAI credits replenished
+    #   - ~15 event-triggered (signals, webhooks, chains)
+    #   - ~9 dormant utilities (per-task decision)
+    #   - 1 intentionally orphan (debug_task)
+    # See AUDIT_FINDINGS.md #12.
+    baseline = 41
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'
