@@ -49,6 +49,7 @@ AUDIT_AUTOGEN_FILES: list[tuple[Path, str]] = [
     (REPO_ROOT / "docs" / "ML_AUDIT.md", "build_ml_audit"),
     (REPO_ROOT / "docs" / "CELERY_AUDIT.md", "build_celery_audit"),
     (REPO_ROOT / "docs" / "RUNTIME_AUDIT.md", "build_runtime_audit"),
+    (REPO_ROOT / "docs" / "MANAGEMENT_COMMAND_AUDIT.md", "build_management_command_audit"),
 ]
 AUDIT_AUTOGEN_PATTERN = re.compile(r"<!--\s*DOC-AUTOGEN", re.IGNORECASE)
 
