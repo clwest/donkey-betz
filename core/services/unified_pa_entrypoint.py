@@ -669,7 +669,9 @@ class UnifiedPAEntrypoint:
                         tool_name=routed_to,
                         payload=self._build_tool_payload(message, intent, context),
                         user_id=self.user.id,  # type: ignore[attr-defined]
-                        timeout=tool_timeout
+                        timeout=tool_timeout,
+                        agent_name='PersonalAssistant',
+                        conversation_id=self.conversation_id,
                     )
                     logger.info(f"[{trace_id}] Step 3a tool_dispatch: {int((time.time()-t1)*1000)}ms ok={tool_result.ok}")
                     tool_runs.append(tool_result.to_dict())
@@ -1534,6 +1536,12 @@ class UnifiedPAEntrypoint:
                     payload=arguments,
                     user_id=self.user.id,  # type: ignore[attr-defined]
                     timeout=tool_timeout,
+                    # Session 1115 finding 17: dispatcher writes the
+                    # ToolCallRecord row directly so direct-dispatch callers
+                    # (not just PA) get logged. Pass PA context here so the
+                    # row has the right agent_name + conversation_id.
+                    agent_name='PersonalAssistant',
+                    conversation_id=self.conversation_id,
                 )
 
                 # Session 1077: Auto-retry when gateway returns wrong action.
@@ -1559,24 +1567,19 @@ class UnifiedPAEntrypoint:
                         payload=retry_payload,
                         user_id=self.user.id,  # type: ignore[attr-defined]
                         timeout=tool_timeout,
+                        agent_name='PersonalAssistant',
+                        conversation_id=self.conversation_id,
                     )
 
                 tool_runs.append(tool_result.to_dict())
 
-                # Session 1060: Record tool call in ToolCallRecord for observability.
-                # Session 1061: Must use asyncio.to_thread — we're in an async
-                # coroutine, so synchronous ORM raises SynchronousOnlyOperation.
-                try:
-                    await asyncio.to_thread(
-                        self._record_tool_call,
-                        trace_id=trace_id,
-                        tool_name=actual_tool_name,
-                        arguments=arguments,
-                        tool_result=tool_result,
-                        task_summary=message[:200],
-                    )
-                except Exception as rec_err:
-                    logger.warning(f"[{trace_id}] ToolCallRecord save failed (non-fatal): {rec_err}")
+                # Session 1115 finding 17 closure: ToolCallRecord is now
+                # written from inside `ToolDispatcher.execute()` for every
+                # caller (including direct execute_sync calls). PA no longer
+                # has to write its own row here — the dispatcher handles it.
+                # The legacy `_record_tool_call` method on this class is kept
+                # for callers that still invoke it directly; tagged as
+                # deprecated in its docstring.
 
                 # Capture GPT function call metadata for persistence/multi-turn
                 fc_metadata.append({
@@ -1839,6 +1842,14 @@ class UnifiedPAEntrypoint:
         Previously PA had zero records — impossible to debug what tools were
         called, what succeeded/failed. This runs synchronously but is fast
         (single INSERT).
+
+        DEPRECATED Session 1115 (finding 17 closure): the canonical write
+        path is now `ToolDispatcher.execute(...)` itself — every dispatch
+        through the dispatcher (PA or direct) logs its own ToolCallRecord
+        with the right `agent_name` / `conversation_id` passed as kwargs.
+        The internal PA loop no longer calls this method. Kept in place
+        for any out-of-tree callers that import and use it directly; safe
+        to delete once a grep confirms zero external uses.
         """
         import hashlib
         from core.models_tool_calls import ToolCallRecord
