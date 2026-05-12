@@ -2713,9 +2713,13 @@ def _advisor_count_matches_doc() -> ClaimResult:
     n_total = len(rows)
     n_named = sum(1 for r in rows if '(AI Model)' in (r.name or ''))
     n_specialists = n_total - n_named
-    expected_total = 25
-    expected_named = 14
-    expected_specialists = 11
+    # Session 1115 post-finding-4: 5 advisors added to fill previously-
+    # unfulfilled AdvisorDomain enum values. 2 named figures (Tim Cook,
+    # Andrew Ng), 3 fictional personas (Priya Raman / IP, Marcus Whitfield /
+    # leadership, Eleanor Park / compliance).
+    expected_total = 30
+    expected_named = 16
+    expected_specialists = 14
     matches = (
         n_total == expected_total
         and n_named == expected_named
@@ -2731,6 +2735,75 @@ def _advisor_count_matches_doc() -> ClaimResult:
         fix_suggestion=(
             f"Update CLAUDE.md (Advisors row) + docs/ADVISOR_AUDIT.md to "
             f"'{n_total} ({n_named} named + {n_specialists} specialists)'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='core/services/advisor_context_builder.py',
+    claim_id='task_domain_routing_resolves',
+    description="Every AGENT_ADVISOR_MAPPINGS routing entry in advisor_context_builder.py should resolve to at least one registered advisor",
+)
+def _task_domain_routing_resolves() -> ClaimResult:
+    """Guard against the Session 1115 finding 4 pattern: a domain is named
+    as a routing destination but no advisor fills it.
+
+    The AGENT_ADVISOR_MAPPINGS map in `core/services/advisor_context_builder.py`
+    keys each agent kind to a list of preferred advisor domains. For
+    every (task, domains) pair, at least one of the listed domains must
+    have a registered advisor — otherwise the routing falls all the way
+    through to the default mapping and silently degrades.
+
+    Session 1115 baseline: all task entries resolve (after adding 5
+    advisors to fill the previously-unfulfilled domains).
+    """
+    from core.services.advisor_context_builder import (
+        AdvisorContextBuilder,
+    )
+    from advisors.registry import advisor_registry
+    # Pull the AGENT_ADVISOR_MAPPINGS map off the class. It's a class attribute
+    # on the builder.
+    task_map = getattr(AdvisorContextBuilder, 'AGENT_ADVISOR_MAPPINGS', {}) or {}
+    if not task_map:
+        return ClaimResult.build(
+            expected="AGENT_ADVISOR_MAPPINGS map exists with mappings",
+            actual="not found or empty",
+            severity='medium',
+            note="couldn't introspect AGENT_ADVISOR_MAPPINGS — class attr renamed?",
+        )
+
+    used_domains: set[str] = set()
+    for advisor in advisor_registry.advisors.values():
+        d = advisor.domain
+        used_domains.add(d.value if hasattr(d, 'value') else str(d))
+
+    unfulfilled: list[tuple[str, list[str]]] = []
+    for task_kind, domains in task_map.items():
+        if not isinstance(domains, list):
+            continue
+        if not any(d in used_domains for d in domains):
+            unfulfilled.append((task_kind, list(domains)))
+
+    if not unfulfilled:
+        return ClaimResult.build(
+            expected="every task kind resolves to >=1 registered advisor",
+            actual="all resolve",
+            severity='ok',
+            note=f"{len(task_map)} task kinds, all covered by registered advisor domains",
+        )
+
+    severity = 'low' if len(unfulfilled) <= 2 else 'medium'
+    return ClaimResult.build(
+        expected="every task kind resolves to >=1 registered advisor",
+        actual=f"{len(unfulfilled)} task kind(s) have no matching advisor",
+        severity=severity,
+        note=f"unfulfilled: {unfulfilled}",
+        fix_suggestion=(
+            "Either add an advisor in one of the listed domains (see "
+            "`advisors/registry.py::_initialize_advisor_network`) or "
+            "update `AGENT_ADVISOR_MAPPINGS` in `advisor_context_builder.py` to "
+            "route to a domain that has coverage."
             if severity != 'ok' else None
         ),
     )

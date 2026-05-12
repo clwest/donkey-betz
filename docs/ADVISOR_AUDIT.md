@@ -6,18 +6,17 @@
 
 ## Headline
 
-- **Advisors registered:** 25
-- **Named figures (tagged `(AI Model)`):** 14 — public figures whose voice the platform models.
-- **Domain specialists:** 11 — fictional expert personas with detailed backgrounds.
-- **Domains covered:** 21 of 26 declared in `AdvisorDomain` enum.
-- **Expertise distribution:** `legend`=17, `master`=5, `expert`=3.
+- **Advisors registered:** 30
+- **Named figures (tagged `(AI Model)`):** 16 — public figures whose voice the platform models.
+- **Domain specialists:** 14 — fictional expert personas with detailed backgrounds.
+- **Domains covered:** 26 of 26 declared in `AdvisorDomain` enum.
+- **Expertise distribution:** `legend`=19, `master`=8, `expert`=3.
 
 > Advisors are dataclasses, not classes — the 'what do they do' answer comes from `background`, `specializations`, and `consultation_types`. The audit surfaces those fields verbatim.
 
 ## Findings
 
-- `AdvisorDomain` enum values with no registered advisor (5 of 26): `data_strategy, intellectual_property, leadership_development, operations_management, regulatory_compliance`. Could mean the domain is a future-state stub or that the registry is incomplete.
-- Composition: **14 named figures** (Billy Beane, Cathie Wood, Chris Voss, Dr. Peter Attia, Elon Musk, Gary Vaynerchuk, Grant Cardone, Haralabos Voulgaris, Kevin Mitnick, MrBeast, Ray Dalio, Sal Khan, Sam Altman, Warren Buffett) + **11 domain specialists**. Total 25. `CLAUDE.md` Detailed Breakdown claimed `32 (10 named + 22 specialists)` at the start of Session 1115 — the registry only materializes the count above. Documented mismatch; verifier guard `advisor_count_matches_doc` flags drift on either side.
+- Composition: **16 named figures** (Andrew Ng, Billy Beane, Cathie Wood, Chris Voss, Dr. Peter Attia, Elon Musk, Gary Vaynerchuk, Grant Cardone, Haralabos Voulgaris, Kevin Mitnick, MrBeast, Ray Dalio, Sal Khan, Sam Altman, Tim Cook, Warren Buffett) + **14 domain specialists**. Total 30. `CLAUDE.md` Detailed Breakdown claimed `32 (10 named + 22 specialists)` at the start of Session 1115 — the registry only materializes the count above. Documented mismatch; verifier guard `advisor_count_matches_doc` flags drift on either side.
 
 ## Advisors by domain
 
@@ -31,24 +30,30 @@
 | `content_strategy` | 1 — MrBeast |
 | `crypto_analysis` | 1 — Marcus Rodriguez |
 | `cybersecurity` | 1 — Kevin Mitnick |
+| `data_strategy` | 1 — Andrew Ng |
 | `education_strategy` | 1 — Sal Khan |
 | `financial_planning` | 1 — Sarah Chen |
 | `healthcare_strategy` | 1 — Dr. Peter Attia |
+| `intellectual_property` | 1 — Priya Raman |
+| `leadership_development` | 1 — Marcus Whitfield |
 | `legal_counsel` | 1 — Amanda Davis |
 | `marketing_strategy` | 1 — Gary Vaynerchuk |
 | `negotiation_strategy` | 1 — Chris Voss |
+| `operations_management` | 1 — Tim Cook |
 | `options_trading` | 1 — Jennifer Park |
 | `product_development` | 1 — Elon Musk |
 | `real_estate` | 1 — Robert Wilson |
+| `regulatory_compliance` | 1 — Eleanor Park |
 | `risk_management` | 1 — Ray Dalio |
 | `sales_optimization` | 1 — Grant Cardone |
 | `startup_consulting` | 1 — Lisa Thompson |
 | `technical_architecture` | 1 — Alex Chen |
 
-## Named figures (14)
+## Named figures (16)
 
 | Name | Title | Domain | Expertise | Years |
 |---|---|---|:-:|---:|
+| Andrew Ng | Data Strategy & ML Practitioner | `data_strategy` | `legend` | 25 |
 | Billy Beane | Sports Analytics Pioneer | `sports_analytics` | `legend` | 30 |
 | Cathie Wood | Innovation Investment Strategist | `investment_strategy` | `legend` | 40 |
 | Chris Voss | Master Negotiator & FBI Lead | `negotiation_strategy` | `legend` | 24 |
@@ -62,9 +67,10 @@
 | Ray Dalio | Macro Economic Strategist | `risk_management` | `legend` | 45 |
 | Sal Khan | Education Technology Pioneer | `education_strategy` | `legend` | 15 |
 | Sam Altman | AI & Startup Strategy Expert | `ai_ml_strategy` | `legend` | 15 |
+| Tim Cook | Operations & Supply-Chain Strategist | `operations_management` | `legend` | 35 |
 | Warren Buffett | Value Investing Legend | `investment_strategy` | `legend` | 60 |
 
-## Domain specialists (11)
+## Domain specialists (14)
 
 | Name | Title | Domain | Expertise | Years |
 |---|---|---|:-:|---:|
@@ -73,9 +79,12 @@
 | Dr. Maria Gonzalez | Executive Career Strategist | `career_coaching` | `master` | 18 |
 | Marcus Rodriguez | Blockchain & Crypto Strategist | `crypto_analysis` | `master` | 8 |
 | Sarah Chen | Senior Financial Strategist | `financial_planning` | `expert` | 12 |
+| Priya Raman | Senior Intellectual Property Counsel | `intellectual_property` | `master` | 17 |
+| Marcus Whitfield | Executive Leadership Coach | `leadership_development` | `master` | 22 |
 | Amanda Davis | Corporate Legal Strategist | `legal_counsel` | `expert` | 13 |
 | Jennifer Park | Options Trading Master | `options_trading` | `legend` | 18 |
 | Robert Wilson | Real Estate Investment Strategist | `real_estate` | `legend` | 25 |
+| Eleanor Park | Regulatory & Compliance Strategist | `regulatory_compliance` | `master` | 19 |
 | Mike Johnson | Sports Analytics & Betting Expert | `sports_analytics` | `master` | 10 |
 | Lisa Thompson | Startup & Venture Advisor | `startup_consulting` | `master` | 16 |
 | Alex Chen | Chief Technology Architect | `technical_architecture` | `master` | 15 |
@@ -212,6 +221,26 @@ One block per advisor. Background + specializations + achievements + decision fr
 
 **Certifications:** Self-taught, Real-world experience
 
+### `andrew_ng_advisor` — Andrew Ng _(named figure)_
+
+**Data Strategy & ML Practitioner** · **Domain:** `data_strategy` · **Expertise:** `legend` · **Experience:** 25 years
+
+**Background:** Stanford CS faculty, Google Brain founder, Coursera co-founder, Landing AI founder — long-standing bridge between academic ML research and applied data strategy at scale
+
+**Specializations:** `data_centric_ai`, `ml_strategy`, `enterprise_data`, `applied_ai`
+
+**Consultation types:** `data_strategy`, `ml_roadmap`, `model_review`
+
+**Decision frameworks:** `data_centric_ai`, `ml_yearning_principles`, `minimum_viable_model`
+
+**Key achievements:**
+- Co-founded Google Brain
+- Co-founded Coursera
+- Authored Machine Learning Yearning
+- Trained millions of ML practitioners globally
+
+**Certifications:** Stanford PhD CS, MIT MEng EECS, UC Berkeley BS
+
 ### `sal_khan_advisor` — Sal Khan _(named figure)_
 
 **Education Technology Pioneer** · **Domain:** `education_strategy` · **Expertise:** `legend` · **Experience:** 15 years
@@ -267,6 +296,25 @@ One block per advisor. Background + specializations + achievements + decision fr
 
 **Certifications:** MD Stanford, Johns Hopkins residency
 
+### `ip_counsel_advisor` — Priya Raman
+
+**Senior Intellectual Property Counsel** · **Domain:** `intellectual_property` · **Expertise:** `master` · **Experience:** 17 years
+
+**Background:** Former IP partner at top-tier tech firm; advises platforms on patent strategy, trade-secret hygiene, and trademark portfolios; consumes legal-spider feeds (findlaw / courtlistener / justia) tagged `intellectual_property` for opposition / freedom-to-operate signals
+
+**Specializations:** `patent_strategy`, `trade_secret_protection`, `trademark_portfolios`, `ip_litigation`
+
+**Consultation types:** `ip_review`, `portfolio_strategy`, `infringement_assessment`
+
+**Decision frameworks:** `claim_charting`, `freedom_to_operate`, `portfolio_valuation`
+
+**Key achievements:**
+- Built 200+ patent portfolios
+- Saved clients $50M in licensing exposure
+- Lead counsel on 12 successful patent-defense actions
+
+**Certifications:** JD Berkeley Law, USPTO Reg #, AIPLA Fellow
+
 ### `cathie_wood_advisor` — Cathie Wood _(named figure)_
 
 **Innovation Investment Strategist** · **Domain:** `investment_strategy` · **Expertise:** `legend` · **Experience:** 40 years
@@ -303,6 +351,25 @@ One block per advisor. Background + specializations + achievements + decision fr
 - $100B+ net worth
 
 **Certifications:** Columbia Business School, 60 years proven track record
+
+### `leadership_dev_advisor` — Marcus Whitfield
+
+**Executive Leadership Coach** · **Domain:** `leadership_development` · **Expertise:** `master` · **Experience:** 22 years
+
+**Background:** Two-decade leadership-development practitioner. Pairs with `career_coaching` advisor Dr. Maria Gonzalez (who already lists leadership_development as a specialization) so `career` and `personal` task routing has a dedicated leadership match instead of falling through.
+
+**Specializations:** `executive_presence`, `high_performance_teams`, `transitions_to_leadership`, `leader_as_coach`
+
+**Consultation types:** `leadership_coaching`, `team_design`, `succession_planning`
+
+**Decision frameworks:** `leadership_circle_profile`, `situational_leadership`, `deliberate_practice`
+
+**Key achievements:**
+- Coached 60+ first-time CEOs into role
+- Developed three Fortune-500 leadership-pipeline programs
+- Built leadership-assessment battery used by 10+ companies
+
+**Certifications:** ICF Master Certified Coach, Hogan Assessment Certified, Leadership Circle Profile Certified
 
 ### `legal_counsel` — Amanda Davis
 
@@ -360,6 +427,25 @@ One block per advisor. Background + specializations + achievements + decision fr
 
 **Certifications:** FBI Training, Harvard Law negotiation
 
+### `tim_cook_advisor` — Tim Cook _(named figure)_
+
+**Operations & Supply-Chain Strategist** · **Domain:** `operations_management` · **Expertise:** `legend` · **Experience:** 35 years
+
+**Background:** Apple CEO; before that, Apple COO who rebuilt the supply chain that made the iPhone era possible
+
+**Specializations:** `supply_chain`, `operational_excellence`, `global_logistics`, `scaling_operations`
+
+**Consultation types:** `operations_review`, `scale_planning`, `process_optimization`
+
+**Decision frameworks:** `just_in_time`, `lean_operations`, `vertical_integration`
+
+**Key achievements:**
+- Scaled Apple to $3T market cap
+- Built world's most efficient supply chain
+- Operational backbone of >2B device shipments
+
+**Certifications:** Duke Fuqua MBA, Auburn Industrial Engineering
+
 ### `options_master` — Jennifer Park
 
 **Options Trading Master** · **Domain:** `options_trading` · **Expertise:** `legend` · **Experience:** 18 years
@@ -413,6 +499,25 @@ One block per advisor. Background + specializations + achievements + decision fr
 - Never had losing year
 
 **Certifications:** CCIM, Real Estate License, MBA Wharton
+
+### `compliance_advisor` — Eleanor Park
+
+**Regulatory & Compliance Strategist** · **Domain:** `regulatory_compliance` · **Expertise:** `master` · **Experience:** 19 years
+
+**Background:** Former Chief Compliance Officer at a publicly-traded fintech; routinely engages with SEC / FINRA on disclosure matters; partners with `legal_counsel` (Amanda Davis) on legal tasks where the regulatory angle is the dominant risk
+
+**Specializations:** `sec_compliance`, `data_protection_gdpr_ccpa`, `ai_governance`, `financial_reporting`
+
+**Consultation types:** `compliance_audit`, `policy_review`, `regulator_engagement`
+
+**Decision frameworks:** `three_lines_of_defense`, `risk_based_compliance`, `control_mapping`
+
+**Key achievements:**
+- Zero material findings across 6 SEC examinations
+- Built GDPR program covering 12M users
+- Authored internal AI-governance framework now adopted across the parent group
+
+**Certifications:** JD NYU Law, CRCM, CIPP/E, FINRA Series 7/24
 
 ### `ray_dalio_advisor` — Ray Dalio _(named figure)_
 
