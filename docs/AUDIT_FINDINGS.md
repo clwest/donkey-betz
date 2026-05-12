@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 41 orphan Celery tasks** — batches 1-3: detection upgraded 3x, 14 safe DB-hygiene + metrics tasks wired into beat schedule | medium-high | partial · 85% reduction; behavior-changing wiring deferred | per-task wire-up |
+| 12 | **272 → 24 orphan Celery tasks** — batches 1-4: detection upgraded 3x, 31 tasks wired into beat schedule (DB hygiene + metrics + behavior-changing DB-only) | medium-high | partial · 91% reduction; LLM-cost + agent-dispatch chains deferred | per-task wire-up |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,52 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 41 orphan Celery tasks — batches 1-3 closed
+## 12. 272 → 24 orphan Celery tasks — batches 1-4 closed
+
+### Batch 4 outcome (Session 1115)
+
+Wired 17 more **behavior-changing DB-only** tasks into `app.conf.beat_schedule`.
+Each was verified by inspection to make no LLM calls, dispatch no agents, and
+perform only DB queryset updates / file reads / in-app state changes.
+These are "behavior-changing" only in that they update DB state (auto-approve,
+auto-promote, archive, etc.) — same lens as Chris's "should this do something
+and got forgotten about" reframe.
+
+| Task | Cadence | What it does |
+|---|---|---|
+| `auto_approve_boardroom_items` | every 30 min | DB-only HumanAttentionItem aging-based auto-approve |
+| `auto_promote_low_risk_decisions` | every 2 hours | Tier-1 AgentDecisionSummary aging promotion (governance-respecting) |
+| `verify_completed_fixes` | every 6 hours | AuditFinding verification (file reads + regex, no subprocess) |
+| `promote_to_shared_knowledge` | Mon 04:00 | High-confidence AgentKnowledgeSource → SharedKnowledge |
+| `update_distribution_analytics` | daily 04:00 | ContentDistribution daily aggregation |
+| `monitor_isolation_progress` | daily 04:30 | Document namespace tagging snapshot |
+| `update_mythology_pattern_statistics` | daily 04:00 | MythPattern frequency rollup |
+| `sync_pipeline_insights_to_collective` | every 6 hours | Style/voice insights → collective intelligence |
+| `process_hitl_escalations` | every 15 min | HITL priority bumps + deadline extensions (no LLM) |
+| `scan_concerns_for_human_action` | hourly :30 | TrackedConcern → ProactiveNotification |
+| `maintain_dream_backlog` | daily 04:30 | Archive low-score AgentDreams (composite_score-based) |
+| `report_pending_review_metrics` | daily 09:00 | Pending-review metrics log (read-only) |
+| `process_human_attention_lifecycle` | every 10 min | DB lifecycle state machine — expire/dismiss/escalate/approve |
+| `poll_pending_3d_models` | every 5 min | Replicate poll (no-op when no pending) |
+| `detect_duplicate_initiatives` | daily 04:15 | Similarity-based dedup (no LLM) |
+| `check_operating_rhythm_status` | daily 09:15 | Operating rhythm health (read-only) |
+| `rescan_active_workspaces` | every 4 hours | WorkspaceContext refresh (no LLM) |
+
+**Orphan count drop in batch 4:** 41 → **24** (17 tasks wired).
+Cumulative across batches 1-4: **272 → 24 (91% reduction).**
+
+### Remaining 24 — final triage
+
+| Category | Count | Action |
+|---|---:|---|
+| **LLM-cost scheduled** (deferred until credits) | ~5 | `rag_retrieval_canary`, `send_weekly_kpi_summary` (Discord), `run_ops_autopilot` (takes actions), `post_ops_digest`, `maintain_knowledge_freshness` |
+| **Agent-dispatch chains** (deferred) | ~4 | `check_blocked_research_for_unblock` (→ retry_blocked_research), `process_pending_action_plans` (→ execute_action_plan), `trigger_market_scan`, `update_ml_model_with_feedback` |
+| **Session 1031 hard-blocked** | ~3 | `discover_and_import_audits`, `assign_open_findings_to_agents`, `execute_remediation_tasks` — all `return {'blocked': True}` immediately |
+| **Event-triggered** (no action needed) | ~10 | `start_intelligence_engine`, `start_resolve_render`, `submit_proposal_automatically`, `submit_follow_up`, `handle_client_response`, `check_proposal_responses`, `trigger_content_from_shift`, `get_live_opportunities`, `get_live_predictions`, `process_document_async` |
+| **Deprecated** | 1 | `propagate_new_policies` — Session 659 deprecation; PolicyContextService handles injection automatically |
+| **Intentionally orphan** | 1 | `debug_task` |
+
+Verifier baseline locked at **24**.
 
 ### Batch 3 outcome (Session 1115)
 
