@@ -2329,6 +2329,88 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/PA_TOOL_AUDIT.md',
+    claim_id='pa_schemas_have_descriptions',
+    description="Every PA tool schema needs a `description` — the LLM uses it as the routing signal",
+)
+def _pa_schemas_have_descriptions() -> ClaimResult:
+    """Schema description is the LLM's routing signal at function-call time.
+
+    A schema with no description still appears in the function list, but
+    the LLM has nothing to base its choice on — effectively invisible. The
+    audit (`docs/PA_TOOL_AUDIT.md`) treats this as a hard finding.
+    """
+    from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+    missing = sorted(
+        s.get('name', '<unnamed>')
+        for s in PA_TOOL_SCHEMAS
+        if not (s.get('description', '') or '').strip()
+    )
+    total = len(PA_TOOL_SCHEMAS)
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected='all PA schemas have a description',
+        actual=f"{total - len(missing)} / {total} have descriptions",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            "Add a description to the schema(s) in `note`. "
+            "The LLM cannot route to a description-less tool."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/PA_TOOL_AUDIT.md',
+    claim_id='pa_handlers_reachable',
+    description="Registered tool handlers should be reachable: either via a schema or `run_agent`",
+)
+def _pa_handlers_reachable() -> ClaimResult:
+    """Catches handlers that the LLM has no way to invoke.
+
+    A handler is reachable if:
+      (a) a schema exists with the same name, OR
+      (b) the handler's name is listed in `run_agent.agent_name.enum`.
+
+    Anything else is a dead registration — the handler runs at startup but
+    the LLM never calls it because it doesn't know it exists. Surfaces real
+    drift (Session 1115 caught `distribution_agent` in this state).
+    """
+    from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+    from core.services.tool_dispatcher import ToolDispatcher
+    td = ToolDispatcher()
+    schema_names = {s.get('name', '') for s in PA_TOOL_SCHEMAS if s.get('name')}
+    run_agent_schema = next(
+        (s for s in PA_TOOL_SCHEMAS if s.get('name') == 'run_agent'), {}
+    )
+    params = (run_agent_schema or {}).get('parameters', {}) or {}
+    props = params.get('properties', {}) or {}
+    run_agent_targets = set(
+        (props.get('agent_name') or {}).get('enum', []) or []
+    )
+    handlers = set(td._tool_handlers.keys())  # noqa: SLF001
+    orphans = sorted(handlers - schema_names - run_agent_targets)
+    severity = 'ok' if not orphans else 'low'
+    return ClaimResult.build(
+        expected='no handler-only registrations outside run_agent.agent_name enum',
+        actual=orphans or 'none',
+        severity=severity,
+        note=(
+            f"{len(handlers)} handlers · {len(schema_names)} schemas · "
+            f"{len(run_agent_targets)} agents reachable via run_agent meta-tool"
+        ),
+        fix_suggestion=(
+            "Either add the orphan(s) to `run_agent.agent_name.enum` in "
+            "`core/services/pa_tool_schemas.py`, give them their own schema, "
+            "or remove the `self.register(...)` call from "
+            "`core/services/tool_dispatcher.py`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/CAPABILITY_AUDIT.md',
     claim_id='agent_map_key_matches_class_name',
     description="Each AGENT_MAP key should match the agent class's `name` class attribute",
