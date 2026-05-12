@@ -2329,6 +2329,57 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/BEAT_AUDIT.md',
+    claim_id='beat_schedule_task_refs_resolve',
+    description="Every static beat entry's `task` ref should resolve in the Celery task registry",
+)
+def _beat_schedule_task_refs_resolve() -> ClaimResult:
+    """Catch scheduled tasks that fail at dispatch time.
+
+    Each entry in `app.conf.beat_schedule` declares a task path. If that
+    path isn't in `app.tasks` at worker start (autodiscover misses it, or
+    the path is a typo), the schedule fires but Celery can't dispatch.
+    Silent failure unless monitored.
+
+    Session 1115 audit caught 7 of these in `core/celery.py`:
+    `ai_core.tasks.{clean_stale_data, collect_real_opportunities,
+    warm_up_spider_network}`, `ml.cleanup_old_model_files`,
+    `sports.cleanup_old_predictions`,
+    `intelligence.tasks.{cleanup_old_opportunities, scan_spider_opportunities}`.
+    The underlying functions exist; Celery autodiscover isn't picking up
+    those modules. Fix is to add them to `app.conf.imports` in
+    `core/celery.py:317` or to ensure the apps' `tasks.py` modules import
+    cleanly at boot.
+    """
+    from core.celery import app as celery_app
+    registry = set(celery_app.tasks.keys())
+    schedule = dict(celery_app.conf.beat_schedule or {})
+    broken = sorted(
+        f"{name} -> {(entry or {}).get('task', '<no task>')}"
+        for name, entry in schedule.items()
+        if (entry or {}).get('task') not in registry
+    )
+    severity = 'ok' if not broken else 'medium'
+    return ClaimResult.build(
+        expected='no broken task refs in app.conf.beat_schedule',
+        actual=f"{len(broken)} broken" if broken else 'none',
+        severity=severity,
+        note=(
+            f"{len(schedule)} static beat entries · "
+            f"{len(registry)} registered tasks · broken: {broken[:8]}"
+            + ('…' if len(broken) > 8 else '')
+        ),
+        fix_suggestion=(
+            "For each broken ref: confirm the task function exists, then "
+            "either add the parent app's `tasks` module to `app.conf.imports` "
+            "in `core/celery.py:317`, or fix the dotted path in "
+            "`app.conf.beat_schedule`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/PA_TOOL_AUDIT.md',
     claim_id='pa_schemas_have_descriptions',
     description="Every PA tool schema needs a `description` — the LLM uses it as the routing signal",
