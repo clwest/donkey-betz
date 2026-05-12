@@ -239,6 +239,71 @@ class Command(BaseCommand):
                     f'core/management/commands/{stem}.py'
                 )
 
+        # 6) Generic string-literal scan. Some dispatch sites pass task names
+        #    via dict entries like `'task': 'run_foo'` or string maps like
+        #    `{'foo': 'run_foo'}`. Session 1115 batch-2 surfaced this pattern
+        #    in `tasks_ops.py`, `discord_bot.py`, and `views_autonomous_dashboard.py`.
+        #
+        #    Strategy: grep for any quoted string that exactly matches one of
+        #    the registered task short-names or full paths. Filter out the
+        #    task's own definition file. Conservative — only counts EXACT
+        #    matches with surrounding quotes, so noise like substrings in
+        #    docstrings is excluded.
+        # NOTE: BSD grep / POSIX ERE doesn't understand `\w` shorthand, so
+        # use an explicit `[[:alnum:]_]` character class. Python's re module
+        # below does understand `\w`, so the token_pattern can stay terse.
+        try:
+            r3 = subprocess.run(
+                ['grep', '-rEon', r"['\"][[:alnum:]_.]+['\"]",
+                 str(REPO_ROOT),
+                 '--include=*.py',
+                 '--exclude-dir=.venv',
+                 '--exclude-dir=__pycache__',
+                 '--exclude-dir=node_modules',
+                 '--exclude-dir=archive',
+                ],
+                capture_output=True, text=True, timeout=180,
+            )
+        except subprocess.TimeoutExpired:
+            r3 = None
+        # Build sets of names we care about
+        # (these need to come from `_inspect` — but at the point this method
+        #  runs, we don't have the registry. Pull from the task dispatcher.)
+        from core.celery import app as celery_app
+        registry = {
+            t for t in celery_app.tasks.keys() if not t.startswith('celery.')
+        }
+        short_names_set = {t.rsplit('.', 1)[-1] for t in registry}
+        # Match the file:line prefix then capture ALL quoted strings on the
+        # line. Earlier version only captured the first quoted string per
+        # line, which missed dict-VALUE positions like
+        # `'job_matching': 'run_foo_task'` (key matched, value lost).
+        prefix_pattern = re.compile(r'^([^:]+):(\d+):(.*)$')
+        token_pattern = re.compile(r'[\'"]([\w.]+)[\'"]')
+        # Files to skip entirely — these are task DEFINITION files where the
+        # `@shared_task(name='X')` decorator names the task but isn't a
+        # caller of it. Specifically core/tasks.py + tasks_*.py adjacent
+        # modules. Other tasks.py files in different apps (intelligence,
+        # ai_core, etc.) CAN be legitimate callers of core tasks.
+        skip_files = {'core/tasks.py'}
+        for line in (r3.stdout.splitlines() if r3 else []):
+            pm = prefix_pattern.match(line)
+            if not pm:
+                continue
+            file_, lineno, rest = pm.group(1), pm.group(2), pm.group(3)
+            try:
+                rel = str(Path(file_).resolve().relative_to(REPO_ROOT))
+            except ValueError:
+                rel = file_
+            if rel in skip_files:
+                continue
+            for val_match in token_pattern.finditer(rest):
+                val = val_match.group(1)
+                if val in registry:
+                    callers_by_full.setdefault(val, []).append(f'{rel}:{lineno}')
+                elif val in short_names_set:
+                    callers_by_short.setdefault(val, []).append(f'{rel}:{lineno}')
+
         return callers_by_short, callers_by_full
 
     def _inspect(
