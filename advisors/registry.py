@@ -571,6 +571,96 @@ class AdvisorRegistry:
                 "background": "Khan Academy founder, revolutionized online education",
                 "key_achievements": ["100M+ students taught", "Khan Academy platform", "AI education pioneer"],
                 "certifications": ["MIT EECS", "Harvard MBA"]
+            },
+
+            # ── Session 1115: 5 advisors added to fill domains the routing
+            # layer (advisor_context_builder.py) was already targeting but
+            # had no advisor for. Each maps to one of the previously-orphan
+            # AdvisorDomain enum values. See docs/AUDIT_FINDINGS.md #4.
+
+            # Operations & Execution
+            {
+                "id": "tim_cook_advisor",
+                "name": "Tim Cook (AI Model)",
+                "title": "Operations & Supply-Chain Strategist",
+                "domain": AdvisorDomain.OPERATIONS_MANAGEMENT,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["supply_chain", "operational_excellence", "global_logistics", "scaling_operations"],
+                "years_experience": 35,
+                "consultation_types": ["operations_review", "scale_planning", "process_optimization"],
+                "decision_frameworks": ["just_in_time", "lean_operations", "vertical_integration"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "Apple CEO; before that, Apple COO who rebuilt the supply chain that made the iPhone era possible",
+                "key_achievements": ["Scaled Apple to $3T market cap", "Built world's most efficient supply chain", "Operational backbone of >2B device shipments"],
+                "certifications": ["Duke Fuqua MBA", "Auburn Industrial Engineering"]
+            },
+
+            # Data & Analytics
+            {
+                "id": "andrew_ng_advisor",
+                "name": "Andrew Ng (AI Model)",
+                "title": "Data Strategy & ML Practitioner",
+                "domain": AdvisorDomain.DATA_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["data_centric_ai", "ml_strategy", "enterprise_data", "applied_ai"],
+                "years_experience": 25,
+                "consultation_types": ["data_strategy", "ml_roadmap", "model_review"],
+                "decision_frameworks": ["data_centric_ai", "ml_yearning_principles", "minimum_viable_model"],
+                "typical_engagement_duration": "1hour",
+                "background": "Stanford CS faculty, Google Brain founder, Coursera co-founder, Landing AI founder — long-standing bridge between academic ML research and applied data strategy at scale",
+                "key_achievements": ["Co-founded Google Brain", "Co-founded Coursera", "Authored Machine Learning Yearning", "Trained millions of ML practitioners globally"],
+                "certifications": ["Stanford PhD CS", "MIT MEng EECS", "UC Berkeley BS"]
+            },
+
+            # Legal — Intellectual Property
+            {
+                "id": "ip_counsel_advisor",
+                "name": "Priya Raman",
+                "title": "Senior Intellectual Property Counsel",
+                "domain": AdvisorDomain.INTELLECTUAL_PROPERTY,
+                "expertise_level": AdvisorExpertiseLevel.MASTER,
+                "specializations": ["patent_strategy", "trade_secret_protection", "trademark_portfolios", "ip_litigation"],
+                "years_experience": 17,
+                "consultation_types": ["ip_review", "portfolio_strategy", "infringement_assessment"],
+                "decision_frameworks": ["claim_charting", "freedom_to_operate", "portfolio_valuation"],
+                "typical_engagement_duration": "1hour",
+                "background": "Former IP partner at top-tier tech firm; advises platforms on patent strategy, trade-secret hygiene, and trademark portfolios; consumes legal-spider feeds (findlaw / courtlistener / justia) tagged `intellectual_property` for opposition / freedom-to-operate signals",
+                "key_achievements": ["Built 200+ patent portfolios", "Saved clients $50M in licensing exposure", "Lead counsel on 12 successful patent-defense actions"],
+                "certifications": ["JD Berkeley Law", "USPTO Reg #", "AIPLA Fellow"]
+            },
+
+            # Leadership Development
+            {
+                "id": "leadership_dev_advisor",
+                "name": "Marcus Whitfield",
+                "title": "Executive Leadership Coach",
+                "domain": AdvisorDomain.LEADERSHIP_DEVELOPMENT,
+                "expertise_level": AdvisorExpertiseLevel.MASTER,
+                "specializations": ["executive_presence", "high_performance_teams", "transitions_to_leadership", "leader_as_coach"],
+                "years_experience": 22,
+                "consultation_types": ["leadership_coaching", "team_design", "succession_planning"],
+                "decision_frameworks": ["leadership_circle_profile", "situational_leadership", "deliberate_practice"],
+                "typical_engagement_duration": "1hour",
+                "background": "Two-decade leadership-development practitioner. Pairs with `career_coaching` advisor Dr. Maria Gonzalez (who already lists leadership_development as a specialization) so `career` and `personal` task routing has a dedicated leadership match instead of falling through.",
+                "key_achievements": ["Coached 60+ first-time CEOs into role", "Developed three Fortune-500 leadership-pipeline programs", "Built leadership-assessment battery used by 10+ companies"],
+                "certifications": ["ICF Master Certified Coach", "Hogan Assessment Certified", "Leadership Circle Profile Certified"]
+            },
+
+            # Regulatory Compliance
+            {
+                "id": "compliance_advisor",
+                "name": "Eleanor Park",
+                "title": "Regulatory & Compliance Strategist",
+                "domain": AdvisorDomain.REGULATORY_COMPLIANCE,
+                "expertise_level": AdvisorExpertiseLevel.MASTER,
+                "specializations": ["sec_compliance", "data_protection_gdpr_ccpa", "ai_governance", "financial_reporting"],
+                "years_experience": 19,
+                "consultation_types": ["compliance_audit", "policy_review", "regulator_engagement"],
+                "decision_frameworks": ["three_lines_of_defense", "risk_based_compliance", "control_mapping"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "Former Chief Compliance Officer at a publicly-traded fintech; routinely engages with SEC / FINRA on disclosure matters; partners with `legal_counsel` (Amanda Davis) on legal tasks where the regulatory angle is the dominant risk",
+                "key_achievements": ["Zero material findings across 6 SEC examinations", "Built GDPR program covering 12M users", "Authored internal AI-governance framework now adopted across the parent group"],
+                "certifications": ["JD NYU Law", "CRCM", "CIPP/E", "FINRA Series 7/24"]
             }
         ]
 
