@@ -2,8 +2,10 @@
 
 **AI-Powered Intelligence, Execution, and Revenue Generation System**
 
-**Status:** 95% Integrated | 83 Agents | 80 Spiders | 9 Body Systems | 14 Sci-Fi Features
-**Session:** 786 | **Last Updated:** January 20, 2026
+**Status:** Cleanup arc — see [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md) | 83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked) | 80 Spiders | 9 Body Systems
+**Session:** 1115 | **Last Updated:** May 12, 2026
+
+> Numbers above can drift. The runtime-derived [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) is canonical for counts; run `python manage.py verify_doc_claims --only-drift` for live diffs.
 
 > **Canonical truth:** [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) + [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md). Runtime and inventory win over stale prose.
 > **Rigby chat:** `POST /api/pa/chat/` is canonical. `/api/assistant/chat/` and `/api/v1/assistant/chat/` are compatibility-only.

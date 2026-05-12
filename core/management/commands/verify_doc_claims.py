@@ -37,6 +37,7 @@ from django.core.management.base import BaseCommand
 
 SEVERITY_ICONS = {
     'ok': '✓',
+    'skipped': '∼',
     'low': '·',
     'medium': '●',
     'high': '▲',
@@ -88,9 +89,13 @@ class Command(BaseCommand):
             self._render_text(results, summary)
 
         if opts['fail_on_drift']:
-            non_ok = summary['by_severity'].get('ok', 0)
+            # Drift = anything that isn't ok or skipped. `error` still counts
+            # as drift (something's broken even if not a content mismatch);
+            # `skipped` does not (claim simply wasn't evaluated).
+            by_sev = summary['by_severity']
+            informational = by_sev.get('ok', 0) + by_sev.get('skipped', 0)
             total = summary['total']
-            if total > 0 and non_ok < total:
+            if total > 0 and informational < total:
                 sys.exit(1)
 
     # ---- renderers ---------------------------------------------------------
@@ -125,6 +130,7 @@ class Command(BaseCommand):
                 icon = SEVERITY_ICONS.get(r.severity, '·')
                 style = (
                     self.style.SUCCESS if r.severity == 'ok'
+                    else self.style.NOTICE if r.severity == 'skipped'
                     else self.style.ERROR if r.severity in ('high', 'critical', 'error')
                     else self.style.WARNING
                 )
@@ -133,7 +139,7 @@ class Command(BaseCommand):
                 ))
                 if r.description:
                     self.stdout.write(f"      claim: {r.description.strip().splitlines()[0][:100]}")
-                if r.severity != 'ok':
+                if r.severity not in ('ok', 'skipped'):
                     self.stdout.write(f"      expected: {r.expected}")
                     self.stdout.write(f"      actual:   {r.actual}")
                 if r.note:
@@ -147,7 +153,7 @@ class Command(BaseCommand):
         self.stdout.write('')
         self.stdout.write(self.style.NOTICE("── Summary ──"))
         self.stdout.write(f"  total: {summary['total']}")
-        for sev in ('ok', 'low', 'medium', 'high', 'critical', 'error'):
+        for sev in ('ok', 'skipped', 'low', 'medium', 'high', 'critical', 'error'):
             n = summary['by_severity'].get(sev, 0)
             if n > 0:
                 self.stdout.write(f"  {sev:>8}: {n}")
@@ -155,5 +161,5 @@ class Command(BaseCommand):
         self.stdout.write("  by doc:")
         for doc, d in sorted(summary['by_doc'].items()):
             self.stdout.write(
-                f"    {doc:40} ok={d['ok']:>2}  drift={d['drift']:>2}  error={d['error']:>2}"
+                f"    {doc:40} ok={d['ok']:>2}  drift={d['drift']:>2}  error={d['error']:>2}  skipped={d.get('skipped', 0):>2}"
             )
