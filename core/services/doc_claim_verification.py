@@ -1852,7 +1852,7 @@ def _claude_db_models() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='agent_taxonomy_reconciliation',
-    description="CLAUDE.md stats: '83 AGENT_MAP (73 enabled, 8 rerouted, 2 blocked)'",
+    description="CLAUDE.md stats: '83 AGENT_MAP (73 enabled, 9 rerouted, 1 blocked)'",
 )
 def _claude_agent_taxonomy() -> ClaimResult:
     """Verify the reconciliation sum: fully_enabled + rerouted + blocked == AGENT_MAP."""
@@ -1868,10 +1868,10 @@ def _claude_agent_taxonomy() -> ClaimResult:
     }
     rerouted = sorted(non_specialist - set(blocked))
     fully_enabled = total - len(blocked) - len(rerouted)
-    # Refreshed Session 1100 — matches current CLAUDE.md
-    expected_claim = "73 enabled + 8 rerouted + 2 blocked = 83"
+    # Refreshed Session 1115 — matches current CLAUDE.md (73/9/1)
+    expected_claim = "73 enabled + 9 rerouted + 1 blocked = 83"
     actual_claim = f"{fully_enabled} enabled + {len(rerouted)} rerouted + {len(blocked)} blocked = {total}"
-    matches = (fully_enabled == 73 and len(rerouted) == 8 and len(blocked) == 2 and total == 83)
+    matches = (fully_enabled == 73 and len(rerouted) == 9 and len(blocked) == 1 and total == 83)
     severity = 'ok' if matches else 'medium'
     return ClaimResult.build(
         expected=expected_claim,
@@ -1963,6 +1963,124 @@ def _content_reviewer_panel() -> ClaimResult:
         ),
         fix_suggestion=(
             "Clarify docs/topics/content-pipeline.md: '2 always + 1 conditional'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Session 1115 — forward-drift guards (DB-free; safe in CI without Postgres).
+# These exist so that future hand-edits / inventory-block refreshes that
+# diverge from runtime get flagged without needing the autoblock pipeline.
+# ---------------------------------------------------------------------------
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='frontend_route_count',
+    description="CLAUDE.md stats table: 'Frontend | 61 routes' in frontend/src/App.tsx",
+)
+def _claude_frontend_routes() -> ClaimResult:
+    """Count `<Route ` declarations in App.tsx."""
+    import re
+    from pathlib import Path
+    app = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'App.tsx'
+    if not app.exists():
+        return ClaimResult.build(
+            expected=61, actual=None, severity='error',
+            note=f"App.tsx not at {app}",
+        )
+    actual = len(re.findall(r'<Route\s', app.read_text()))
+    expected = 61
+    severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 2 else 'medium')
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note="counts top-level `<Route ` JSX tags",
+        fix_suggestion=(
+            f"Update CLAUDE.md frontend row to '{actual} routes'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='procfile_entry_count',
+    description="CLAUDE.md stats table: 'Procfile entries | 11' (release + web + 7 celery + code-worker + resolve-node)",
+)
+def _claude_procfile_entries() -> ClaimResult:
+    """Count non-comment, non-blank lines in Procfile that look like `name: cmd`."""
+    from pathlib import Path
+    p = Path(__file__).resolve().parents[2] / 'Procfile'
+    if not p.exists():
+        return ClaimResult.build(
+            expected=11, actual=None, severity='error', note='Procfile missing'
+        )
+    entries = [
+        l for l in p.read_text().splitlines()
+        if l.strip() and not l.lstrip().startswith('#') and ':' in l
+    ]
+    actual = len(entries)
+    expected = 11
+    severity = 'ok' if actual == expected else 'medium'
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"names: {[l.split(':',1)[0] for l in entries]}",
+        fix_suggestion=(
+            f"Update CLAUDE.md Procfile row to '{actual}'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='signal_pattern_type_count',
+    description="CLAUDE.md stats: '10 SignalCluster pattern types' (demand_spike, trend_emergence, …)",
+)
+def _claude_signal_pattern_types() -> ClaimResult:
+    """Read SignalCluster.pattern_type choices."""
+    from core.models import SignalCluster
+    f = SignalCluster._meta.get_field('pattern_type')
+    raw_choices = getattr(f, 'choices', None) or []
+    choices = [c[0] for c in raw_choices]
+    actual = len(choices)
+    expected = 10
+    severity = 'ok' if actual == expected else 'medium'
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"types: {choices}",
+        fix_suggestion=(
+            f"Update CLAUDE.md signal pattern types row to '{actual}'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='spider_registry_count',
+    description="CLAUDE.md stats table: '80 spiders across 41 categories'",
+)
+def _claude_spider_count() -> ClaimResult:
+    """Count registered spider classes via the module-level singleton."""
+    from ai_core.spiders.spider_registry import get_spider_registry
+    actual = len(get_spider_registry().list_spiders())
+    expected = 80
+    severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 2 else 'medium')
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note='spider count comes from SpiderRegistry import-time registration',
+        fix_suggestion=(
+            f"Update CLAUDE.md spider row to '{actual} spiders'"
             if severity != 'ok' else None
         ),
     )
