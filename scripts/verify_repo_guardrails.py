@@ -45,6 +45,7 @@ AUDIT_AUTOGEN_FILES: list[tuple[Path, str]] = [
     (REPO_ROOT / "docs" / "ADVISOR_AUDIT.md",     "build_advisor_audit"),
     (REPO_ROOT / "docs" / "DISCORD_AUDIT.md",     "build_discord_audit"),
     (REPO_ROOT / "docs" / "BODY_SYSTEM_AUDIT.md", "build_body_system_audit"),
+    (REPO_ROOT / "docs" / "LEARNING_BRIDGE_AUDIT.md", "build_learning_bridge_audit"),
 ]
 AUDIT_AUTOGEN_PATTERN = re.compile(r"<!--\s*DOC-AUTOGEN", re.IGNORECASE)
 
