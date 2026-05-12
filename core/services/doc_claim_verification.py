@@ -2329,6 +2329,78 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/ADVISOR_AUDIT.md',
+    claim_id='advisor_count_matches_doc',
+    description="advisors.registry.advisor_registry materializes the documented 25 advisors (14 named + 11 specialists)",
+)
+def _advisor_count_matches_doc() -> ClaimResult:
+    """Compare the live AdvisorProfile registry against the documented total.
+
+    The audit (Session 1115) caught CLAUDE.md claiming `32 (10 named + 22
+    specialists)` while the registry only materializes 25 (14 named + 11
+    specialists). Aligned in the same session; this claim catches future
+    drift on either side.
+    """
+    from advisors.registry import advisor_registry
+    rows = list(advisor_registry.advisors.values())
+    n_total = len(rows)
+    n_named = sum(1 for r in rows if '(AI Model)' in (r.name or ''))
+    n_specialists = n_total - n_named
+    expected_total = 25
+    expected_named = 14
+    expected_specialists = 11
+    matches = (
+        n_total == expected_total
+        and n_named == expected_named
+        and n_specialists == expected_specialists
+    )
+    severity = 'ok' if matches else 'medium'
+    return ClaimResult.build(
+        expected=f"{expected_total} total ({expected_named} named + "
+                 f"{expected_specialists} specialists)",
+        actual=f"{n_total} total ({n_named} named + {n_specialists} specialists)",
+        severity=severity,
+        note='from advisor_registry.advisors',
+        fix_suggestion=(
+            f"Update CLAUDE.md (Advisors row) + docs/ADVISOR_AUDIT.md to "
+            f"'{n_total} ({n_named} named + {n_specialists} specialists)'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/ADVISOR_AUDIT.md',
+    claim_id='all_advisors_have_background',
+    description="Every AdvisorProfile should have a `background` text (drives ADVISOR_AUDIT.md per-advisor description)",
+)
+def _all_advisors_have_background() -> ClaimResult:
+    """Background is the primary description shown for each advisor.
+
+    Missing one makes the advisor effectively undescribed in the capability
+    audit.
+    """
+    from advisors.registry import advisor_registry
+    missing = sorted(
+        (r.name or r.id) for r in advisor_registry.advisors.values()
+        if not (r.background or '').strip()
+    )
+    total = len(advisor_registry.advisors)
+    severity = 'ok' if not missing else 'low'
+    return ClaimResult.build(
+        expected='all advisors have a background',
+        actual=f"{total - len(missing)} / {total}",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            f"Add a `background` to the advisor(s) in `note`. "
+            f"Edit `advisors/registry.py::_initialize_advisor_network`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/BEAT_AUDIT.md',
     claim_id='beat_schedule_task_refs_resolve',
     description="Every static beat entry's `task` ref should resolve in the Celery task registry",
