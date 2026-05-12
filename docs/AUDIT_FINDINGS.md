@@ -35,7 +35,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 |---|---|:-:|:-:|---|
 | 1 | Phantom `ContentDistributionAgent` in `_NON_SPECIALIST` routing whitelist | low | open | Rigby-gated |
 | 2 | Orphaned `distribution_agent` handler — unreachable from LLM | low | open | Rigby-gated |
-| 3 | 7 broken beat task refs — silent autodiscover misses | medium | open | Chris/Rigby green-light |
+| 3 | 7 broken beat task refs — silent autodiscover misses | medium | **✅ fixed Session 1115** | `on_after_finalize` hook in `core/celery.py` |
 | 4 | 5 `AdvisorDomain` enum values with no advisors | low | open | informational |
 | 5 | CLAUDE.md said `144` Discord commands; actual is `96` (double-count) | medium | **✅ fixed Session 1115** | — |
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
@@ -152,7 +152,7 @@ quietly dormant — sanity-check the underlying class's behaviour first.
 
 ## 3. 7 broken beat task references — autodiscover misses
 
-**Status:** open · medium severity · **Chris/Rigby green-light needed**.
+**Status:** ✅ fixed Session 1115 — `on_after_finalize` hook in `core/celery.py`.
 
 **Verifier doc:** `docs/BEAT_AUDIT.md`
 **Verifier claim:** `beat_schedule_task_refs_resolve`
@@ -221,6 +221,37 @@ DB cleanup work that has been silently building up while not running.
 
 **Risk:** behaviour-changing. Three active-work schedules resume.
 Memory + outbound API risk if they've drifted from when they last ran.
+
+---
+
+**Fix landed (Session 1115):**
+
+Two-part fix in `core/celery.py`:
+
+1. Added `ai_core.tasks`, `ml.tasks`, `sports.tasks`, `intelligence.tasks`
+   to `app.conf.imports` (canonical worker-boot mechanism).
+2. Added an `@app.on_after_finalize.connect` hook that eagerly imports
+   the same four modules. This is necessary because `app.conf.imports`
+   only fires at worker boot — verifier / audit code reads `app.tasks`
+   at finalize time, before any worker runs. The hook ensures the
+   registry is correct at both audit-time and worker-time.
+
+Eager-import-at-module-level was attempted first but failed
+(`AppRegistryNotReady` — Django apps not loaded when celery.py runs at
+module-load). The `on_after_finalize` signal fires AFTER Django apps
+are ready, which is the right hook.
+
+**Verified post-fix:**
+- `beat_schedule_task_refs_resolve` → ok (0 broken refs)
+- Task registry: 365 → 402 (the 4 modules contribute 37 tasks)
+- 27 of those 37 new tasks are orphans → orphan baseline bumped 245 → 272
+- All other claims still pass; no regressions introduced
+
+**Behavior change documented in CHANGELOG / handoff:**
+The seven previously-silent schedules now actually fire. The 3 active-
+work tasks (`collect-real-opportunities`, `scan-spider-opportunities`,
+`warm-up-spiders`) will start producing real spider activity once a
+worker boots with this version. Watch logs for the first 24h.
 
 ---
 

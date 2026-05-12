@@ -480,7 +480,7 @@ def _celery_task_count() -> ClaimResult:
     from core.celery import app as celery_app
     user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
     actual = len(user_tasks)
-    expected = 365  # refreshed Session 1100 — matches CLAUDE.md + PLATFORM_INVENTORY
+    expected = 402  # refreshed Session 1115 (post-PR #2072: 4 modules now eager-imported) — matches CLAUDE.md + PLATFORM_INVENTORY
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
@@ -969,7 +969,7 @@ def _capabilities_pa_tools() -> ClaimResult:
 def _capabilities_celery_tasks() -> ClaimResult:
     from core.celery import app as celery_app
     user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
-    expected = 365  # refreshed Session 1100
+    expected = 402  # refreshed Session 1115 (post-PR #2072: 4 modules now eager-imported)
     actual = len(user_tasks)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 60 else 'high')
@@ -1796,7 +1796,7 @@ def _discord_total_commands() -> ClaimResult:
 def _backend_inv_celery() -> ClaimResult:
     from core.celery import app as celery_app
     user_tasks = [t for t in celery_app.tasks.keys() if not t.startswith('celery.')]
-    expected = 365  # refreshed Session 1100
+    expected = 402  # refreshed Session 1115 (post-PR #2072: 4 modules now eager-imported)
     actual = len(user_tasks)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 60 else 'high')
@@ -2451,7 +2451,7 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         orphans += 1
 
-    baseline = 245
+    baseline = 272  # Session 1115 post-fix baseline (was 245 before the 4-module eager-import added 27 more known-orphan tasks)
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'
