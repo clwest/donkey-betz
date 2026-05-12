@@ -47,7 +47,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` takes 32s** and **`check_celery_health` takes 31s** — long for "every 10 min" infrastructure tasks (3× the interval) | medium | open | perf investigation |
-| 15 | **`core_skin_status.total_files_tracked` column missing** — code queries it but migration didn't add it; `get_skin_service().get_vitals()` errors | high | open | schema fix |
+| 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
 | 16 | **`muscular` reports "paralyzed"** (no agent execution telemetry) and **`digestive` reports "sluggish"** on fresh DB — body systems express their dependency on real activity | informational | open | known cold-start state |
 | 17 | **`ToolCallRecord` only writes from PA entrypoint** — direct `ToolDispatcher.execute_sync()` calls don't log. Telemetry blind spot for non-PA tool invocations. | low-medium | open | observability gap |
 
@@ -502,41 +502,63 @@ intervals without checking what reads from `HeartBeat` model.
 
 ---
 
-## 15. `core_skin_status` schema drift — missing `total_files_tracked` column
+## 15. `core_skin_status` + `core_skin_pulses` schema drift — ✅ fixed Session 1115
 
-**Status:** open · high severity · schema fix.
+**Status:** ✅ fixed Session 1115 (migrations 0338 + 0339).
 
-**Verifier doc:** `docs/BODY_SYSTEM_AUDIT.md` (would surface as
-`body_systems_fully_wired` if the audit gained DB-state coverage)
+**Root cause:** migration `0185_fix_body_system_tables.py:141` used raw
+`CREATE TABLE IF NOT EXISTS` with an inline column list that predated
+several model additions. On long-lived DBs the prior CREATE+ALTER
+history had already added those columns, so `IF NOT EXISTS` was a no-op
+and they survived. On freshly-bootstrapped DBs (like this session's
+local Postgres) the table got re-created without them, and any read
+that selects those columns fails with
+`ProgrammingError: column ... does not exist`.
 
-**What:** When `get_skin_service().get_vitals()` runs against the fresh
-Session 1115 local DB, it raises:
+**Diff revealed 15 missing columns** when a comprehensive model-vs-DB
+comparison was run during the fix:
 
-```
-django.db.utils.ProgrammingError: column core_skin_status.total_files_tracked does not exist
-```
+`core_skin_status` (6 missing — added in 0338 + 0339):
+- `total_files_tracked` (IntegerField default=0) — first to fail
+- `total_operations_all_time` (IntegerField default=0)
+- `avg_operation_time_ms` (FloatField default=0)
+- `error_rate_24h` (FloatField default=0)
+- `last_error_at` (DateTimeField null=True)
+- `last_successful_operation_at` (DateTimeField null=True)
+- `operations_per_hour` (FloatField default=0)
+- `pending_reviews` (IntegerField default=0)
 
-The code in `core/services/skin.py` queries a column that no migration
-created. This is a real schema-vs-code drift. Production has presumably
-been running this query against a DB that DOES have the column — but
-new local bootstraps (or recreated production DBs) will fail at the
-skin vitals step.
+`core_skin_pulses` (9 missing — added in 0339):
+- `agent_operation_counts` (JSONField default=`{}`)
+- `avg_operation_time_ms` (FloatField default=0)
+- `commands_executed_24h` (IntegerField default=0)
+- `git_operations_24h` (IntegerField default=0)
+- `lines_changed_24h` (IntegerField default=0)
+- `most_active_agent` (CharField max_length=100, default=`''`)
+- `pending_reviews` (IntegerField default=0)
+- `permission_denials` (IntegerField default=0)
+- `rollbacks_performed_24h` (IntegerField default=0)
 
-**Fix path:**
+**Fix landed:**
 
-1. Find the most recent migration that should have added the column:
-   `git log --all -p -S 'total_files_tracked' core/migrations/`
-2. If a migration exists but wasn't applied, run it.
-3. If no migration exists for the field, create one:
-   `python manage.py makemigrations core` — it should detect the model
-   field has no DB column.
-4. Apply with `python manage.py migrate`.
+- `core/migrations/0338_skin_status_missing_columns.py` — addresses the
+  two initially-failing columns.
+- `core/migrations/0339_skin_body_columns_comprehensive.py` — addresses
+  the remaining 13.
 
-**Risk:** low — adding a column with a default value is non-destructive.
+Both use `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` so they're
+idempotent — safe on any prior DB state (no-op on DBs where the
+columns already exist).
 
-This finding only became visible because we bootstrapped local Postgres
-from scratch. The runtime audit framework doesn't catch schema drift
-directly; the body-system call surfaced it.
+**Verified post-fix:** `get_skin_service().get_vitals()` returns
+`status=healthy, score=100.0` on fresh local DB. All 9 body systems
+respond cleanly.
+
+**Forward guard:** the audit's body-system schema drift catcher (the
+script that lives at `/tmp/check_body_columns3.py` during the session)
+should be promoted to a recurring verifier claim — `body_system_schema_drift`
+that walks every body-system model and compares its `_meta.get_fields()`
+column set against `information_schema.columns`. **TODO Session 1116.**
 
 ---
 
