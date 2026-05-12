@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 24 orphan Celery tasks** — batches 1-4: detection upgraded 3x, 31 tasks wired into beat schedule (DB hygiene + metrics + behavior-changing DB-only) | medium-high | partial · 91% reduction; LLM-cost + agent-dispatch chains deferred | per-task wire-up |
+| 12 | **272 → 19 orphan Celery tasks** — batches 1-5: detection upgraded 4x, 31 tasks wired, intra-file dispatch bug fixed | medium-high | partial · 93% reduction; LLM-cost + agent-dispatch chains deferred | per-task wire-up |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,63 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 24 orphan Celery tasks — batches 1-4 closed
+## 12. 272 → 19 orphan Celery tasks — batches 1-5 closed
+
+### Batch 5 outcome (Session 1115) — intra-file dispatch bug
+
+Found a long-standing detector bug in `_inspect()`: the audit's caller
+cross-reference excluded **all** callers in the task's own definition
+file, not just the definition line. The intent was to filter out the
+`@shared_task` decorator line itself (which can look like a self-match),
+but the effect was to drop legitimate intra-file parent→child task chains.
+
+Example: `intelligence/tasks.py:1192` has `submit_proposal_automatically.delay(...)`
+chaining into the task defined at `intelligence/tasks.py:1209`. Both lines
+live in the same file but the dispatch is real — `process_pending_action_plans`
+(line 67) chains to `execute_action_plan` chains to `submit_proposal_automatically`
+chains to `check_proposal_responses` chains to `handle_client_response`
+chains to `submit_follow_up` and `update_ml_model_with_feedback`. This
+proposal/response workflow lives entirely inside `intelligence/tasks.py`.
+
+Fix: filter only the exact `file_path:line_no` of the task's definition
+instead of the whole file. **5 fewer false orphans** —
+`submit_proposal_automatically`, `submit_follow_up`, `handle_client_response`,
+`check_proposal_responses`, `update_ml_model_with_feedback` now correctly
+attributed to their intra-file chains.
+
+The verifier's `celery_orphan_count_baseline` was always using simple
+set-membership without the own-file filter, so its logic was correct —
+the baseline of 24 just tracked the audit's miscount. Updated to 19.
+
+**Orphan count drop in batch 5:** 24 → **19** (detector fix, no new
+wiring). Cumulative across batches 1-5: **272 → 19 (93% reduction).**
+
+### Remaining 19 — final triage
+
+| Category | Count | Examples |
+|---|---:|---|
+| **LLM-cost scheduled** (deferred until credits) | ~5 | `rag_retrieval_canary` (embeddings), `send_weekly_kpi_summary` (Discord), `run_ops_autopilot` (takes actions), `post_ops_digest`, `maintain_knowledge_freshness` |
+| **Agent-dispatch chain** (deferred for green-light) | ~2 | `check_blocked_research_for_unblock` (→ retry_blocked_research), `process_pending_action_plans` (→ execute_action_plan) |
+| **Session 1031 hard-blocked** | ~3 | `discover_and_import_audits`, `assign_open_findings_to_agents`, execute_remediation_tasks — all `return {'blocked': True}` immediately |
+| **Truly forgotten — needs wire-up decision** | ~7 | `start_resolve_render` (video render trigger), `scan_income_spider_orchestrator`, `start_intelligence_engine`, `trigger_market_scan`, `trigger_content_from_shift` (signal wiring needed), `process_document_async` (Document save signal needed), `get_live_opportunities`, `get_live_predictions` (API-only — could remove `@shared_task` decorator) |
+| **Deprecated** | 1 | `propagate_new_policies` — Session 659; PolicyContextService handles injection automatically |
+| **Intentionally orphan** | 1 | `debug_task` |
+
+The "truly forgotten" 7 are the most interesting set. Most likely fixes:
+
+- `trigger_content_from_shift` — wire to a Django signal on
+  `SignalCluster` save when `pattern_type='narrative_shift'`
+- `process_document_async` — wire to a `post_save` signal on `Document`
+  when `status='pending'` and a file_path exists
+- `get_live_opportunities`, `get_live_predictions` — these are simple
+  read functions that don't need to be Celery tasks; remove the
+  `@shared_task` decorator (they're already called by URL handlers
+  in `core/urls.py`)
+- `start_resolve_render`, `scan_income_spider_orchestrator`,
+  `start_intelligence_engine`, `trigger_market_scan` — manual-trigger
+  tasks that should be wrapped in management commands
+
+Verifier baseline locked at **19**.
 
 ### Batch 4 outcome (Session 1115)
 
