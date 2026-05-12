@@ -1981,9 +1981,12 @@ def _claude_agent_taxonomy() -> ClaimResult:
     # exist in AGENT_MAP (Session 1115 audit caught ContentDistributionAgent
     # in this state). Counting must intersect with AGENT_MAP, otherwise
     # `fully_enabled` undercounts and the totals don't add to `total`.
+    # Session 1115 follow-up: ContentDistributionAgent removed from the
+    # routing layer (td_handlers_ops.py + agent_router.py) — kept this
+    # mirror in sync.
     non_specialist = {
         'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
-        'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+        'FullStackDeveloperAgent', 'CodeReviewAgent',
         'COOAgent', 'CTOAgent', 'AudioAgent',
     }
     rerouted = sorted(non_specialist & agent_map_keys - set(blocked))
@@ -2035,8 +2038,10 @@ def _non_specialist_phantom_entries() -> ClaimResult:
     from core.agent_router import AgentRouter
     agent_map_keys = set(AgentRouter.AGENT_MAP.keys())
     non_specialist = {
+        # Session 1115 follow-up: ContentDistributionAgent removed —
+        # kept in sync with td_handlers_ops.py + agent_router.py.
         'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
-        'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+        'FullStackDeveloperAgent', 'CodeReviewAgent',
         'COOAgent', 'CTOAgent', 'AudioAgent',
     }
     phantom = sorted(non_specialist - agent_map_keys)

@@ -914,8 +914,10 @@ class AgentRouter:
             (_re.compile(r'market(ing)?\s+(strategy|plan|recommendation)', _re.I), 'MarketingStrategyAgent'),
         ]
         _NON_SPECIALIST = frozenset({
+            # Session 1115: removed `ContentDistributionAgent` — phantom entry,
+            # no class exists, AGENT_MAP doesn't reference it.
             'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
-            'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+            'FullStackDeveloperAgent', 'CodeReviewAgent',
             'COOAgent', 'CTOAgent', 'AudioAgent',
         })
         for pattern, correct_agent in _ROUTING_OVERRIDES:

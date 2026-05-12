@@ -44,8 +44,10 @@ OUTPUT_PATH = REPO_ROOT / 'docs' / 'CAPABILITY_AUDIT.md'
 # Same hardcoded set as `core/epa_handlers/td_handlers_ops.py:3618` and
 # `core/services/doc_claim_verification.py::_claude_agent_taxonomy`.
 _NON_SPECIALIST = frozenset({
+    # Session 1115 follow-up: ContentDistributionAgent removed —
+    # kept in sync with td_handlers_ops.py + agent_router.py.
     'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
-    'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+    'FullStackDeveloperAgent', 'CodeReviewAgent',
     'COOAgent', 'CTOAgent', 'AudioAgent',
 })
 
