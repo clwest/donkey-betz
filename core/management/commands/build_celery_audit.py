@@ -1,0 +1,464 @@
+"""Generate ``docs/CELERY_AUDIT.md`` — every Celery task, who calls it, who doesn't.
+
+Built in Session 1115, tenth subsystem audit. The beat audit
+(`BEAT_AUDIT.md`) covers the **42 scheduled** tasks. This audit walks
+the **full** Celery task registry (~365–375 tasks) and answers two
+questions per task:
+
+1. Where is it defined (file:line + docstring + decorator args)?
+2. Is it actually wired into anything? Specifically, does any code path
+   call it via `task_name.delay(...)` or `apply_async(...)`, or is it
+   listed in `app.conf.beat_schedule`?
+
+Tasks with **no callers anywhere and no beat-schedule entry** are
+orphans — they ship but nothing fires them.
+
+The audit is the highest-leverage place to find "code we built but
+never connected." It explicitly answers Chris's "is there anything we
+haven't connected yet" question for the task layer.
+
+Run::
+
+    python manage.py build_celery_audit
+"""
+from __future__ import annotations
+
+import ast
+import inspect
+import re
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from django.core.management.base import BaseCommand
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+OUTPUT_PATH = REPO_ROOT / 'docs' / 'CELERY_AUDIT.md'
+
+
+class Command(BaseCommand):
+    help = 'Regenerate docs/CELERY_AUDIT.md from the full Celery task registry.'
+
+    def add_arguments(self, parser) -> None:
+        parser.add_argument(
+            '--check', action='store_true',
+            help='Print the would-be file to stdout instead of writing.',
+        )
+
+    def handle(self, *args: Any, **opts: Any) -> None:
+        from core.celery import app as celery_app
+        registry = {
+            name: task for name, task in celery_app.tasks.items()
+            if not name.startswith('celery.')
+        }
+        scheduled = {
+            (entry or {}).get('task', '') or ''
+            for entry in (celery_app.conf.beat_schedule or {}).values()
+        }
+        scheduled.discard('')
+
+        # Caller cache: grep once, build callers-per-task lookup.
+        callers_by_short, callers_by_full = self._build_caller_index()
+
+        rows: list[dict] = []
+        for name in sorted(registry):
+            rows.append(self._inspect(
+                name, registry[name],
+                scheduled=scheduled,
+                callers_by_short=callers_by_short,
+                callers_by_full=callers_by_full,
+            ))
+
+        findings = self._collect_findings(rows)
+        rendered = self._render(rows, findings=findings)
+
+        if opts['check']:
+            self.stdout.write(rendered)
+            return
+
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        OUTPUT_PATH.write_text(rendered)
+        n_orphans = sum(1 for r in rows if r['is_orphan'])
+        n_scheduled = sum(1 for r in rows if r['is_scheduled'])
+        n_with_callers = sum(1 for r in rows if r['callers'])
+        self.stdout.write(self.style.SUCCESS(
+            f"Wrote {OUTPUT_PATH.relative_to(REPO_ROOT)} "
+            f"({len(rows)} tasks · {n_scheduled} scheduled · "
+            f"{n_with_callers} have callers · {n_orphans} orphans)"
+        ))
+
+    # ----------------------------------------------------------- inspect
+
+    def _build_caller_index(self) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+        """Build two indices:
+
+        ``callers_by_short`` — short-name keyed (``foo_task`` → callers
+        via ``foo_task.delay()`` / ``foo_task.apply_async()`` /
+        ``foo_task.s()`` / ``foo_task.si()`` / direct sync call sites).
+
+        ``callers_by_full`` — full-dotted-path keyed (``module.path.foo`` →
+        callers via ``send_task('module.path.foo')`` /
+        ``current_app.send_task(...)``).
+
+        Two indices because static dispatch (`foo.delay()`) is name-only
+        but dynamic dispatch (`send_task('full.path')`) is by string. A
+        task is wired if either index has an entry for it.
+        """
+        callers_by_short: dict[str, list[str]] = {}
+        callers_by_full: dict[str, list[str]] = {}
+
+        # 1) Method-call shape: `name.delay/apply_async/s/si(`
+        try:
+            r1 = subprocess.run(
+                ['grep', '-rEn',
+                 r'\b\w+\.(delay|apply_async|s|si)\s*\(',
+                 str(REPO_ROOT),
+                 '--include=*.py',
+                 '--exclude-dir=.venv',
+                 '--exclude-dir=__pycache__',
+                 '--exclude-dir=node_modules',
+                 '--exclude-dir=archive',
+                ],
+                capture_output=True, text=True, timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            r1 = None
+        method_pattern = re.compile(
+            r'(?P<file>[^:]+):(?P<line>\d+):.*?(?P<name>\b\w+)\.(?:delay|apply_async|s|si)\s*\('
+        )
+        for line in (r1.stdout.splitlines() if r1 else []):
+            m = method_pattern.search(line)
+            if not m:
+                continue
+            short = m.group('name')
+            # Filter out obvious false positives: very common short names that
+            # are almost certainly NOT task references (`obj.s(` for a string,
+            # `self.s(` for an attribute, etc.). `.delay(` and `.apply_async(`
+            # are far more specific so let those through unfiltered.
+            if '.s(' in line or '.si(' in line:
+                # `.s(`/`.si(` are noisier — accept only if the short name
+                # looks task-shaped (snake_case, ends in known suffixes, or
+                # is a known task short name).
+                if not re.match(r'^[a-z_]+_(task|run|job|scan|cleanup|backfill|process|sync|update|generate|enrich|check|monitor|fetch|collect|warm|broadcast|trigger|review|send|build|train|retrain|orchestrate|create)$', short) \
+                   and not short.endswith('_task') and not short.startswith('task_'):
+                    continue
+            file_ = m.group('file')
+            try:
+                rel = str(Path(file_).resolve().relative_to(REPO_ROOT))
+            except ValueError:
+                rel = file_
+            callers_by_short.setdefault(short, []).append(
+                f'{rel}:{m.group("line")}'
+            )
+
+        # 2) String-dispatch shape: `send_task('full.path.task_name'...)`
+        try:
+            r2 = subprocess.run(
+                ['grep', '-rEn',
+                 r'send_task\s*\(\s*[\'"][^\'"]+[\'"]',
+                 str(REPO_ROOT),
+                 '--include=*.py',
+                 '--exclude-dir=.venv',
+                 '--exclude-dir=__pycache__',
+                 '--exclude-dir=node_modules',
+                 '--exclude-dir=archive',
+                ],
+                capture_output=True, text=True, timeout=60,
+            )
+        except subprocess.TimeoutExpired:
+            r2 = None
+        full_pattern = re.compile(
+            r'(?P<file>[^:]+):(?P<line>\d+):.*?send_task\s*\(\s*[\'"](?P<name>[^\'"]+)[\'"]'
+        )
+        for line in (r2.stdout.splitlines() if r2 else []):
+            m = full_pattern.search(line)
+            if not m:
+                continue
+            full = m.group('name')
+            file_ = m.group('file')
+            try:
+                rel = str(Path(file_).resolve().relative_to(REPO_ROOT))
+            except ValueError:
+                rel = file_
+            callers_by_full.setdefault(full, []).append(
+                f'{rel}:{m.group("line")}'
+            )
+
+        return callers_by_short, callers_by_full
+
+    def _inspect(
+        self,
+        name: str,
+        task,
+        *,
+        scheduled: set[str],
+        callers_by_short: dict[str, list[str]],
+        callers_by_full: dict[str, list[str]],
+    ) -> dict:
+        # Short name = last dotted segment, used to match `.delay(` callers.
+        short = name.rsplit('.', 1)[-1]
+        run_fn = getattr(task, 'run', None)
+        file_path = ''
+        line_no = 0
+        docstring_first_line = ''
+        if run_fn is not None:
+            try:
+                file_path_raw = inspect.getfile(run_fn)
+                try:
+                    file_path = str(Path(file_path_raw).resolve().relative_to(REPO_ROOT))
+                except ValueError:
+                    file_path = file_path_raw
+            except (TypeError, OSError):
+                pass
+            try:
+                _, line_no = inspect.getsourcelines(run_fn)
+            except (OSError, TypeError):
+                pass
+            doc = inspect.getdoc(run_fn) or ''
+            for ln in doc.splitlines():
+                s = ln.strip()
+                if s:
+                    docstring_first_line = s
+                    break
+        # Decorator config
+        queue = getattr(task, 'queue', None) or ''
+        soft_time_limit = getattr(task, 'soft_time_limit', None)
+        time_limit = getattr(task, 'time_limit', None)
+        ignore_result = bool(getattr(task, 'ignore_result', False))
+        bind = bool(getattr(task, '_bound', False))  # heuristic
+
+        # Caller cross-reference. Combine static (.delay/.apply_async/.s/.si)
+        # and dynamic (send_task('full.path')) lookups. Filter out the task's
+        # own definition file from static callers — the decorator line itself
+        # often matches the short name.
+        raw_static = callers_by_short.get(short, [])
+        static_callers = [
+            c for c in raw_static
+            if not (file_path and c.startswith(file_path))
+        ]
+        dynamic_callers = callers_by_full.get(name, [])
+        callers = static_callers + dynamic_callers
+
+        is_scheduled = name in scheduled
+        is_orphan = (not callers) and (not is_scheduled)
+
+        return {
+            'name': name,
+            'short_name': short,
+            'module': '.'.join(name.split('.')[:-1]),
+            'file': file_path or '(unknown)',
+            'line': line_no,
+            'docstring_first_line': docstring_first_line,
+            'queue': queue,
+            'soft_time_limit': soft_time_limit,
+            'time_limit': time_limit,
+            'ignore_result': ignore_result,
+            'is_scheduled': is_scheduled,
+            'callers': callers,
+            'caller_count': len(callers),
+            'is_orphan': is_orphan,
+        }
+
+    # ---------------------------------------------------------- findings
+
+    def _collect_findings(self, rows: list[dict]) -> list[str]:
+        findings: list[str] = []
+
+        orphans = [r for r in rows if r['is_orphan']]
+        if orphans:
+            sample = ', '.join(f'`{r["short_name"]}`' for r in orphans[:8])
+            findings.append(
+                f"**Orphan tasks** — {len(orphans)} tasks have no caller via "
+                f"`.delay(...)` / `.apply_async(...)` AND aren't in "
+                f"`app.conf.beat_schedule`. They ship but nothing fires "
+                f"them. Top: {sample}"
+                + ('…' if len(orphans) > 8 else '')
+                + '. Full list in the appendix.'
+            )
+
+        no_doc = [r for r in rows if not r['docstring_first_line']]
+        if no_doc:
+            pct = round(100.0 * len(no_doc) / len(rows))
+            findings.append(
+                f"Tasks with no docstring: {len(no_doc)} of {len(rows)} "
+                f"({pct}%). The audit relies on the function docstring "
+                f"to describe what each task does."
+            )
+
+        scheduled_orphans = [
+            r for r in rows
+            if r['is_scheduled'] and not r['callers']
+        ]
+        # That's normal — schedule is the caller. Not a finding.
+
+        from collections import Counter
+        by_queue = Counter(r['queue'] or '<default>' for r in rows)
+        biggest = by_queue.most_common(1)[0]
+        findings.append(
+            f"Queue distribution (top 5): "
+            + ', '.join(
+                f'`{q}` ({n})' for q, n in by_queue.most_common(5)
+            )
+            + f". `{biggest[0]}` carries {biggest[1]} of {len(rows)} tasks."
+        )
+
+        # Cross-reference with beat audit's broken refs
+        broken_short_names = {
+            'clean_stale_data', 'cleanup_old_model_files',
+            'cleanup_old_predictions', 'cleanup_old_opportunities',
+            'collect_real_opportunities', 'scan_spider_opportunities',
+            'warm_up_spider_network',
+        }
+        found_broken = [
+            r['name'] for r in rows
+            if r['short_name'] in broken_short_names
+        ]
+        if found_broken:
+            findings.append(
+                f"Cross-reference: the 7 broken beat refs (BEAT_AUDIT.md "
+                f"finding 3) point at tasks that DO exist in the registry "
+                f"once their modules are imported — found in this audit at: "
+                + ', '.join(f'`{n}`' for n in found_broken)
+                + '. The issue is autodiscover at worker startup, not '
+                f'missing tasks.'
+            )
+
+        return findings
+
+    # ------------------------------------------------------------ render
+
+    def _render(self, rows: list[dict], *, findings: list[str]) -> str:
+        n_total = len(rows)
+        n_scheduled = sum(1 for r in rows if r['is_scheduled'])
+        n_with_callers = sum(1 for r in rows if r['callers'])
+        n_orphans = sum(1 for r in rows if r['is_orphan'])
+        n_with_doc = sum(1 for r in rows if r['docstring_first_line'])
+
+        out: list[str] = []
+        out.append(
+            '<!-- DOC-AUTOGEN: regenerated by '
+            '`python manage.py build_celery_audit`. Do not hand-edit. -->'
+        )
+        out.append('')
+        out.append('# Capability Audit — Celery Tasks')
+        out.append('')
+        out.append(
+            "**Source of truth:** `core.celery.app.tasks` (the full Celery "
+            "registry after auto-discovery), cross-referenced against "
+            "`app.conf.beat_schedule` and a codebase-wide grep for "
+            "`.delay(` / `.apply_async(` callers."
+        )
+        out.append('')
+        out.append('## Headline')
+        out.append('')
+        out.append(f'- **User-defined tasks (`!celery.*`):** {n_total}')
+        out.append(f'- **Scheduled in `beat_schedule`:** {n_scheduled} of {n_total}')
+        out.append(
+            f'- **Has at least one `.delay()` / `.apply_async()` caller:** '
+            f'{n_with_callers} of {n_total}'
+        )
+        out.append(
+            f'- **Orphans (no caller AND not scheduled):** **{n_orphans}** '
+            f'of {n_total}. These ship but nothing fires them.'
+        )
+        out.append(
+            f'- **Tasks with docstrings:** {n_with_doc} of {n_total} '
+            f'({_pct(n_with_doc, n_total)}%)'
+        )
+        out.append('')
+        out.append(
+            "> A task can be wired by either path: a `beat_schedule` "
+            "entry (cron-fires it) or an explicit `.delay(...)` from view / "
+            "service / agent code. Tasks with neither are dead-on-arrival — "
+            "the function exists but no execution path reaches it."
+        )
+        out.append('')
+
+        if findings:
+            out.append('## Findings')
+            out.append('')
+            for f in findings:
+                out.append(f'- {f}')
+            out.append('')
+
+        # Orphan section
+        orphans = [r for r in rows if r['is_orphan']]
+        if orphans:
+            out.append(f'## Orphan tasks ({len(orphans)})')
+            out.append('')
+            out.append(
+                "Tasks with no static caller and no beat-schedule entry. "
+                "Worth a manual review — some may be invoked dynamically "
+                "(reflection, name-based dispatch) and a few may be intentionally "
+                "kept warm for future use, but most are likely dead code "
+                "or got disconnected during a refactor."
+            )
+            out.append('')
+            out.append('| Task | Module | File | Queue | Description |')
+            out.append('|---|---|---|---|---|')
+            for r in orphans:
+                desc = r['docstring_first_line'] or '_(no docstring)_'
+                desc = desc.replace('|', '\\|')
+                if len(desc) > 80:
+                    desc = desc[:77] + '…'
+                file_link = (
+                    f'`{r["file"]}:{r["line"]}`' if r['line']
+                    else f'`{r["file"]}`'
+                )
+                out.append(
+                    f'| `{r["short_name"]}` | `{r["module"]}` | {file_link} | '
+                    f'`{r["queue"] or "<default>"}` | {desc} |'
+                )
+            out.append('')
+
+        # Module rollup
+        from collections import defaultdict
+        by_mod: dict[str, list[dict]] = defaultdict(list)
+        for r in rows:
+            by_mod[r['module']].append(r)
+        out.append(f'## Tasks by module ({len(by_mod)} modules)')
+        out.append('')
+        out.append('| Module | Tasks | Scheduled | Wired | Orphans |')
+        out.append('|---|---:|---:|---:|---:|')
+        for mod, bucket in sorted(by_mod.items(), key=lambda kv: -len(kv[1])):
+            scheduled_n = sum(1 for r in bucket if r['is_scheduled'])
+            wired_n = sum(1 for r in bucket if r['callers'])
+            orphan_n = sum(1 for r in bucket if r['is_orphan'])
+            out.append(
+                f'| `{mod}` | {len(bucket)} | {scheduled_n} | {wired_n} | '
+                f'{orphan_n} |'
+            )
+        out.append('')
+
+        # Full table (compact)
+        out.append('## Full task list')
+        out.append('')
+        out.append(
+            "All tasks, alphabetical by short name. `Sched.` = beat schedule. "
+            "`Callers` = file:line sites that call `.delay()` / `.apply_async()` "
+            "on this task name (the count, not the list). `Orphan` flags "
+            "tasks with neither."
+        )
+        out.append('')
+        out.append('| Task | Module | Line | Queue | Sched. | Callers | Orphan | Description |')
+        out.append('|---|---|---:|---|:-:|---:|:-:|---|')
+        for r in sorted(rows, key=lambda r: (r['short_name'], r['name'])):
+            desc = r['docstring_first_line'] or '_(no docstring)_'
+            desc = desc.replace('|', '\\|')
+            if len(desc) > 70:
+                desc = desc[:67] + '…'
+            sched = '✓' if r['is_scheduled'] else '·'
+            orphan = '⚠' if r['is_orphan'] else '·'
+            out.append(
+                f'| `{r["short_name"]}` | `{r["module"]}` | {r["line"] or "?"} | '
+                f'`{r["queue"] or "<default>"}` | {sched} | '
+                f'{r["caller_count"]} | {orphan} | {desc} |'
+            )
+        out.append('')
+
+        return '\n'.join(out) + '\n'
+
+
+def _pct(n: int, total: int) -> int:
+    return int(round(100.0 * n / total)) if total else 0
