@@ -238,17 +238,81 @@ acted on from u-d-b this session.
 
 ---
 
+## Capability audit — first subsystem (agents)
+
+The numbers-honest pass exposed the real question: "what does each agent
+*do*?" Build_docs_index lists 1900+ files; CLAUDE.md cites totals; nothing
+told you what any individual agent's job actually is. So we built it.
+
+**New command:** `python manage.py build_capability_audit` introspects every
+`AgentRouter.AGENT_MAP` entry and writes
+[`docs/CAPABILITY_AUDIT.md`](../CAPABILITY_AUDIT.md) (DOC-AUTOGEN, so the
+guardrail catches hand-edits). For each agent: class file:line, first-line
+of class docstring, declared `tools` count + function names, status bucket
+(enabled / rerouted / blocked).
+
+**Coverage on the first run:**
+- 83 / 83 agents have a class docstring (100%).
+- 51 / 83 (61%) declare an explicit `tools` list; the rest run via
+  `BaseAgent` fallback tools or direct LLM calls.
+
+**Real finding from the audit:** `_NON_SPECIALIST` (the routing whitelist in
+`core/epa_handlers/td_handlers_ops.py:3618`) lists
+`ContentDistributionAgent` — but no class with that name exists, and
+AGENT_MAP doesn't reference it. The verifier and `platform_inventory.py`
+both counted this phantom as "rerouted," producing the long-running
+`83 = 73 enabled + 9 rerouted + 1 blocked` taxonomy that doesn't actually
+add up against AGENT_MAP-strict reality.
+
+**Fix:**
+- `core/services/platform_inventory.py:84` — `rerouted` now intersects with
+  AGENT_MAP keys, so the autoblock will refresh to 74/8/1 on next run.
+- `core/services/doc_claim_verification.py::_claude_agent_taxonomy` —
+  same fix to the verifier; expected counts bumped to 74/8/1; phantom
+  surfaced in the result `note`.
+- New verifier claim `non_specialist_phantom_entries` that flags any
+  `_NON_SPECIALIST` name not present in AGENT_MAP as `severity='low'`.
+  Currently reports the one known phantom. The routing layer's
+  `_NON_SPECIALIST` constant in `td_handlers_ops.py` is **not** changed —
+  it's fail-soft (router never matches it) and behavior-changing it is
+  out of scope. The audit treats it as a documented oddity.
+- `CLAUDE.md` autoblock + Detailed Breakdown + README all hand-corrected
+  to 74/8/1.
+
+**New forward-drift guards for capability audit:**
+- `all_agents_have_docstrings` — fails `medium` if any AGENT_MAP class
+  is missing a docstring (would make the audit silently lose coverage).
+- `agent_map_key_matches_class_name` — fails `low` if a class declares
+  `name = "X"` but is registered in AGENT_MAP under key `Y` (causes
+  confusing telemetry).
+
+Both pass at session end. The pattern carries forward to the next subsystems
+(spiders, PA tools, beat schedule, ML pipelines).
+
+**Verifier state:** total 60 · ok 55 · skipped 4 · low 1 (the documented
+phantom).
+
 ## Touched files
 
-- `core/services/doc_claim_verification.py` — verifier taxonomy fix (3 lines)
-  + four new forward-drift claims (`frontend_route_count`,
-  `procfile_entry_count`, `signal_pattern_type_count`, `spider_registry_count`)
-  + new `db_required=True` flag on `@register_claim(...)` and matching
-  `severity='skipped'` bucket in `run_one()` / `summarize()`; four pre-existing
-  DB-blocked claims now flagged.
+- `core/services/doc_claim_verification.py` — verifier taxonomy fix
+  (now 74/8/1 + AGENT_MAP-strict counting) + four DB-free forward-drift
+  claims (`frontend_route_count`, `procfile_entry_count`,
+  `signal_pattern_type_count`, `spider_registry_count`) + new
+  `db_required=True` flag on `@register_claim(...)` + `severity='skipped'`
+  bucket in `run_one()` / `summarize()` + new claims for the capability
+  audit (`non_specialist_phantom_entries`, `all_agents_have_docstrings`,
+  `agent_map_key_matches_class_name`).
 - `core/management/commands/verify_doc_claims.py` — render `skipped`
   neutrally, include it in the severity footer + per-doc summary, and stop
   `--fail-on-drift` from tripping on it.
+- `core/management/commands/build_capability_audit.py` (new) — regenerates
+  `docs/CAPABILITY_AUDIT.md` from AGENT_MAP introspection. DOC-AUTOGEN
+  marker so hand-edits get caught by `verify_repo_guardrails.py`.
+- `core/services/platform_inventory.py` — `rerouted` now intersects with
+  AGENT_MAP keys so the agent autoblock self-heals to 74/8/1 on next refresh.
+- `docs/CAPABILITY_AUDIT.md` (new, autogen) — first subsystem capability
+  audit (agents). Header + per-status overview tables + per-agent detail
+  appendix with full first-paragraph docstring and named tool list.
 - `README.md` — session/last-updated header refresh + PLATFORM_INVENTORY pointer.
 - `CLAUDE.md` — `Last Updated` line + Detailed Breakdown frontend row 60→61.
 - `docs/handoffs/SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md` — this file.

@@ -1925,38 +1925,95 @@ def _claude_db_models() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='agent_taxonomy_reconciliation',
-    description="CLAUDE.md stats: '83 AGENT_MAP (73 enabled, 9 rerouted, 1 blocked)'",
+    description="CLAUDE.md stats: '83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked)'",
 )
 def _claude_agent_taxonomy() -> ClaimResult:
     """Verify the reconciliation sum: fully_enabled + rerouted + blocked == AGENT_MAP."""
     from core.agent_router import AgentRouter
     from core.models_unified_system import AgentControlEntry
-    total = len(AgentRouter.AGENT_MAP)
+    agent_map_keys = set(AgentRouter.AGENT_MAP.keys())
+    total = len(agent_map_keys)
     blocked = list(AgentControlEntry.get_blocked_names())
-    # Same hardcoded set as td_handlers_ops.py:3618
+    # Same hardcoded set as td_handlers_ops.py:3618. Note: this set is the
+    # *routing* whitelist, and may include legacy names that no longer
+    # exist in AGENT_MAP (Session 1115 audit caught ContentDistributionAgent
+    # in this state). Counting must intersect with AGENT_MAP, otherwise
+    # `fully_enabled` undercounts and the totals don't add to `total`.
     non_specialist = {
         'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
         'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
         'COOAgent', 'CTOAgent', 'AudioAgent',
     }
-    rerouted = sorted(non_specialist - set(blocked))
+    rerouted = sorted(non_specialist & agent_map_keys - set(blocked))
     fully_enabled = total - len(blocked) - len(rerouted)
-    # Refreshed Session 1115 — matches current CLAUDE.md (73/9/1)
-    expected_claim = "73 enabled + 9 rerouted + 1 blocked = 83"
+    phantom = sorted(non_specialist - agent_map_keys)
+    # Refreshed Session 1115 — matches AGENT_MAP-strict reality (74/8/1)
+    expected_claim = "74 enabled + 8 rerouted + 1 blocked = 83"
     actual_claim = f"{fully_enabled} enabled + {len(rerouted)} rerouted + {len(blocked)} blocked = {total}"
-    matches = (fully_enabled == 73 and len(rerouted) == 9 and len(blocked) == 1 and total == 83)
+    matches = (fully_enabled == 74 and len(rerouted) == 8 and len(blocked) == 1 and total == 83)
     severity = 'ok' if matches else 'medium'
+    note_parts = [
+        f"blocked (AgentControlEntry): {blocked}",
+        f"rerouted (in AGENT_MAP ∩ _NON_SPECIALIST): {rerouted}",
+    ]
+    if phantom:
+        note_parts.append(
+            f"phantom _NON_SPECIALIST entries (not in AGENT_MAP): {phantom}"
+        )
     return ClaimResult.build(
         expected=expected_claim,
         actual=actual_claim,
         severity=severity,
-        note=(
-            f"blocked (AgentControlEntry): {blocked}; "
-            f"rerouted (hardcoded _NON_SPECIALIST): {rerouted}"
-        ),
+        note='; '.join(note_parts),
         fix_suggestion=(
             f"Update CLAUDE.md to '{fully_enabled} enabled, "
             f"{len(rerouted)} rerouted, {len(blocked)} blocked'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='core/epa_handlers/td_handlers_ops.py',
+    claim_id='non_specialist_phantom_entries',
+    description="`_NON_SPECIALIST` route set should not contain names that aren't in AGENT_MAP",
+)
+def _non_specialist_phantom_entries() -> ClaimResult:
+    """Surface any `_NON_SPECIALIST` entries that don't resolve to an AGENT_MAP key.
+
+    Session 1115 audit caught ``ContentDistributionAgent`` in this state: it
+    was being counted as "rerouted" in the agent taxonomy and shown as such
+    in CLAUDE.md, but no class with that name exists and AGENT_MAP doesn't
+    reference it. The routing whitelist and the agent registry drifted apart.
+
+    A phantom entry is fail-soft (the router never matches it) but it
+    pollutes counts and is a sign that the routing layer hasn't been cleaned
+    up after agent removals.
+    """
+    from core.agent_router import AgentRouter
+    agent_map_keys = set(AgentRouter.AGENT_MAP.keys())
+    non_specialist = {
+        'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+        'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+        'COOAgent', 'CTOAgent', 'AudioAgent',
+    }
+    phantom = sorted(non_specialist - agent_map_keys)
+    severity = 'ok' if not phantom else 'low'
+    return ClaimResult.build(
+        expected='no _NON_SPECIALIST entries outside AGENT_MAP',
+        actual=phantom or 'none',
+        severity=severity,
+        note=(
+            f"_NON_SPECIALIST has {len(non_specialist)} entries; "
+            f"{len(non_specialist & agent_map_keys)} resolve to AGENT_MAP"
+        ),
+        fix_suggestion=(
+            "Remove the phantom name(s) from `_NON_SPECIALIST` in "
+            "`core/epa_handlers/td_handlers_ops.py`, "
+            "`core/services/platform_inventory.py`, and "
+            "`core/services/doc_claim_verification.py` (kept in sync). "
+            "If a legacy class is intentionally being kept on the reroute "
+            "whitelist, document why with a comment."
             if severity != 'ok' else None
         ),
     )
@@ -2154,6 +2211,86 @@ def _claude_spider_count() -> ClaimResult:
         note='spider count comes from SpiderRegistry import-time registration',
         fix_suggestion=(
             f"Update CLAUDE.md spider row to '{actual} spiders'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Session 1115 — capability audit guards.
+# These back the `docs/CAPABILITY_AUDIT.md` generator: if these regress,
+# the audit doc silently loses information.
+# ---------------------------------------------------------------------------
+
+
+@register_claim(
+    doc='docs/CAPABILITY_AUDIT.md',
+    claim_id='all_agents_have_docstrings',
+    description="Every AGENT_MAP class should have a class docstring (drives capability audit)",
+)
+def _all_agents_have_docstrings() -> ClaimResult:
+    """Every class in AGENT_MAP must have a docstring.
+
+    The capability audit (`docs/CAPABILITY_AUDIT.md`) uses class docstrings
+    as the canonical "what does this agent do" string. An agent without one
+    becomes invisible in the audit and Chris's "what is this thing capable of"
+    answer.
+    """
+    import inspect as _inspect
+    from core.agent_router import AgentRouter
+    missing = sorted(
+        name for name, cls in AgentRouter.AGENT_MAP.items()
+        if not (_inspect.getdoc(cls) or '').strip()
+    )
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected='all 83 agents have a class docstring',
+        actual=f"{len(AgentRouter.AGENT_MAP) - len(missing)} / "
+               f"{len(AgentRouter.AGENT_MAP)} have docstrings",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            f"Add a class docstring to the {len(missing)} agent(s) listed in `note`. "
+            f"First non-empty line of the docstring is what shows up in "
+            f"`docs/CAPABILITY_AUDIT.md`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/CAPABILITY_AUDIT.md',
+    claim_id='agent_map_key_matches_class_name',
+    description="Each AGENT_MAP key should match the agent class's `name` class attribute",
+)
+def _agent_map_key_matches_class_name() -> ClaimResult:
+    """The AGENT_MAP key is what callers use to route; the class `name`
+    attribute is what the agent reports about itself in execution metadata.
+
+    Mismatches cause confusing telemetry — an agent named ``Foo`` in
+    AGENT_MAP shows up as ``Bar`` in AgentExecution rows. Worth catching.
+    Agents that don't declare a `name` attribute at all are skipped (some
+    base classes leave it unset).
+    """
+    from core.agent_router import AgentRouter
+    mismatched = []
+    for name, cls in AgentRouter.AGENT_MAP.items():
+        declared = getattr(cls, 'name', None)
+        if declared and declared != name:
+            mismatched.append((name, declared))
+    severity = 'ok' if not mismatched else 'low'
+    return ClaimResult.build(
+        expected='AGENT_MAP key == cls.name on every entry that declares one',
+        actual=f"{len(mismatched)} mismatch(es)",
+        severity=severity,
+        note=(
+            'mismatches: '
+            + ', '.join(f'{k}->declares "{v}"' for k, v in mismatched)
+            if mismatched else 'all matched'
+        ),
+        fix_suggestion=(
+            "Update either the AGENT_MAP key or the class `name` attribute "
+            "so they agree."
             if severity != 'ok' else None
         ),
     )
