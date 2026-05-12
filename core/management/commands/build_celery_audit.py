@@ -91,19 +91,31 @@ class Command(BaseCommand):
     # ----------------------------------------------------------- inspect
 
     def _build_caller_index(self) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
-        """Build two indices:
+        """Build two indices of "who calls this task":
 
         ``callers_by_short`` — short-name keyed (``foo_task`` → callers
         via ``foo_task.delay()`` / ``foo_task.apply_async()`` /
-        ``foo_task.s()`` / ``foo_task.si()`` / direct sync call sites).
+        ``foo_task.s()`` / ``foo_task.si()``).
 
-        ``callers_by_full`` — full-dotted-path keyed (``module.path.foo`` →
-        callers via ``send_task('module.path.foo')`` /
-        ``current_app.send_task(...)``).
+        ``callers_by_full`` — full-dotted-path keyed (``module.path.foo``).
+        Caller sources cross-checked:
 
-        Two indices because static dispatch (`foo.delay()`) is name-only
-        but dynamic dispatch (`send_task('full.path')`) is by string. A
-        task is wired if either index has an entry for it.
+          - ``send_task('module.path.foo')`` / ``current_app.send_task(...)``
+            dynamic dispatch.
+          - ``add_critical_celery_tasks.py`` task dict — a *second*
+            scheduler source that creates `PeriodicTask` rows separate
+            from `app.conf.beat_schedule`. Session 1115 batch-1 audit
+            of #12 surfaced this as a major missing caller path.
+          - ``ops_autopilot/budget.py`` task-budget dict — the autopilot
+            dispatches these tasks within daily budgets.
+          - Same-name `core/management/commands/<short>.py` — when a
+            management command exists matching the task short-name, it's
+            a real public caller path. Session 1115 batch-1 confirmed
+            several "orphans" are CLI-only.
+
+        Each indirect path appends a marker entry (e.g.
+        `[add_critical_celery_tasks:LINE]`) so the audit's per-task
+        caller list shows which kind of caller found it.
         """
         callers_by_short: dict[str, list[str]] = {}
         callers_by_full: dict[str, list[str]] = {}
@@ -184,6 +196,48 @@ class Command(BaseCommand):
             callers_by_full.setdefault(full, []).append(
                 f'{rel}:{m.group("line")}'
             )
+
+        # 3) `add_critical_celery_tasks.py` task dict — second scheduler source.
+        cct = REPO_ROOT / 'core' / 'management' / 'commands' / 'add_critical_celery_tasks.py'
+        if cct.exists():
+            try:
+                src = cct.read_text(errors='ignore')
+                for i, line in enumerate(src.splitlines(), start=1):
+                    m = re.search(r"'task':\s*'([\w.]+)'", line)
+                    if m:
+                        callers_by_full.setdefault(m.group(1), []).append(
+                            f'core/management/commands/add_critical_celery_tasks.py:{i}'
+                        )
+            except OSError:
+                pass
+
+        # 4) ops_autopilot/budget.py task-budget dict — autopilot caller path.
+        autop = REPO_ROOT / 'core' / 'services' / 'ops_autopilot' / 'budget.py'
+        if autop.exists():
+            try:
+                src = autop.read_text(errors='ignore')
+                for i, line in enumerate(src.splitlines(), start=1):
+                    # Match lines like `'core.tasks.foo': 2,`
+                    m = re.search(r"'(core\.tasks\.[\w.]+|[a-z_]+\.[a-z_.]+)'\s*:\s*\d+", line)
+                    if m:
+                        callers_by_full.setdefault(m.group(1), []).append(
+                            f'core/services/ops_autopilot/budget.py:{i}'
+                        )
+            except OSError:
+                pass
+
+        # 5) Same-name management command — if `core/management/commands/<short>.py`
+        #    exists for a registered task, the CLI is a real public caller.
+        cmd_dir = REPO_ROOT / 'core' / 'management' / 'commands'
+        if cmd_dir.exists():
+            cmd_stems = {
+                p.stem for p in cmd_dir.glob('*.py') if p.name != '__init__.py'
+            }
+            for stem in cmd_stems:
+                # If a task short-name matches, register the .py as a caller.
+                callers_by_short.setdefault(stem, []).append(
+                    f'core/management/commands/{stem}.py'
+                )
 
         return callers_by_short, callers_by_full
 
