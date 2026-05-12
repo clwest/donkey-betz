@@ -7,15 +7,14 @@
 ## Headline
 
 - **Static beat entries:** 42
-- **Task refs resolve in Celery registry:** 35 / 42 (83%)
-- **Underlying tasks with docstrings:** 19 / 35
-- **Total user-defined Celery tasks (registry):** 365 — many run on demand, not on schedule.
+- **Task refs resolve in Celery registry:** 42 / 42 (100%)
+- **Underlying tasks with docstrings:** 26 / 42
+- **Total user-defined Celery tasks (registry):** 402 — many run on demand, not on schedule.
 
 > What this audit doesn't cover: ad-hoc `PeriodicTask` rows in the DB (django-celery-beat). Operators can add those at runtime; the static schedule here is what the codebase intends. DB rows are tracked separately by the `db_required` claims that surface as `skipped` without a live Postgres.
 
 ## Findings
 
-- Beat entries whose `task` reference doesn't resolve in the Celery task registry — these will fail at dispatch time: `clean-stale-data` → `ai_core.tasks.clean_stale_data`, `cleanup-old-model-files` → `ml.cleanup_old_model_files`, `cleanup-old-predictions` → `sports.cleanup_old_predictions`, `cleanup-opportunities-daily` → `intelligence.tasks.cleanup_old_opportunities`, `collect-real-opportunities` → `ai_core.tasks.collect_real_opportunities`, `scan-spider-opportunities` → `intelligence.tasks.scan_spider_opportunities`, `warm-up-spiders` → `ai_core.tasks.warm_up_spider_network`.
 - Beat entries whose underlying task has no docstring — fine for stable infrastructure tasks, worth annotating for anything domain-specific: 16 entries (`aggregate-spider-signals`, `auto-archive-stale-deliverables`, `check-celery-health`, `cleanup-audio-cache`, `cleanup-boardroom-junk`, `cleanup-expired-signals`…)
 - Single queue carries the majority of scheduled work: `default` runs 24 of 42 entries. If that worker drops, half the platform stops ticking.
 
@@ -37,7 +36,7 @@
 | `auto-archive-stale-deliverables` | `core.tasks.auto_archive_stale_deliverables` ([src](core/tasks.py#L11208)) | `0 12 * * *` | `default` | ✓ |
 | `backfill-spider-embeddings` | `core.tasks.backfill_spider_embeddings` ([src](core/tasks.py#L1167)) | `*/15 * * * *` | `ml` | ✓ |
 | `check-celery-health` | `core.tasks.check_celery_health` ([src](core/tasks.py#L7097)) | `every 10m` | `broadcast` | ✓ |
-| `clean-stale-data` | `ai_core.tasks.clean_stale_data` | `0 2 * * *` | `default` | ✗ |
+| `clean-stale-data` | `ai_core.tasks.clean_stale_data` ([src](ai_core/tasks.py#L156)) | `0 2 * * *` | `default` | ✓ |
 | `cleanup-audio-cache` | `core.tasks.cleanup_audio_cache` ([src](core/tasks.py#L11201)) | `0 3 * * *` | `default` | ✓ |
 | `cleanup-boardroom-junk` | `core.tasks.cleanup_boardroom_junk` ([src](core/tasks.py#L505)) | `30 4 * * *` | `default` | ✓ |
 | `cleanup-celery-task-events` | `core.tasks.cleanup_celery_task_events` ([src](core/tasks.py#L4126)) | `0 4 * * sunday` | `default` | ✓ |
@@ -48,17 +47,17 @@
 | `cleanup-junk-initiatives` | `core.tasks.cleanup_junk_initiatives` ([src](core/tasks.py#L421)) | `0 4 * * *` | `default` | ✓ |
 | `cleanup-learning-readback` | `core.tasks.cleanup_learning_readback_events` ([src](core/tasks.py#L483)) | `0 4 * * *` | `default` | ✓ |
 | `cleanup-llm-call-logs` | `core.tasks.cleanup_llm_call_logs` ([src](core/tasks.py#L4139)) | `15 4 * * sunday` | `default` | ✓ |
-| `cleanup-old-model-files` | `ml.cleanup_old_model_files` | `0 1 * * 1` | `default` | ✗ |
+| `cleanup-old-model-files` | `ml.cleanup_old_model_files` ([src](ml/tasks.py#L142)) | `0 1 * * 1` | `default` | ✓ |
 | `cleanup-old-notifications` | `core.tasks.cleanup_old_notifications` ([src](core/tasks.py#L2423)) | `30 3 * * *` | `default` | ✓ |
-| `cleanup-old-predictions` | `sports.cleanup_old_predictions` | `0 3 * * 1` | `default` | ✗ |
+| `cleanup-old-predictions` | `sports.cleanup_old_predictions` ([src](sports/tasks.py#L343)) | `0 3 * * 1` | `default` | ✓ |
 | `cleanup-old-resolve-jobs` | `core.tasks.cleanup_old_resolve_jobs` ([src](core/tasks.py#L5058)) | `0 4 * * *` | `default` | ✓ |
-| `cleanup-opportunities-daily` | `intelligence.tasks.cleanup_old_opportunities` | `0 3 * * *` | `default` | ✗ |
+| `cleanup-opportunities-daily` | `intelligence.tasks.cleanup_old_opportunities` ([src](intelligence/tasks.py#L1802)) | `0 3 * * *` | `default` | ✓ |
 | `cleanup-resolved-signatures` | `core.tasks.cleanup_resolved_signatures` ([src](core/tasks.py#L10681)) | `45 4 * * *` | `default` | ✓ |
 | `cleanup-spider-item-hashes` | `core.tasks.cleanup_spider_item_hashes` ([src](core/tasks.py#L3978)) | `30 3 * * *` | `default` | ✓ |
 | `cleanup-stale-content` | `core.tasks.cleanup_stale_content` ([src](core/tasks.py#L404)) | `5 10 * * *` | `default` | ✓ |
 | `cleanup-stale-dreams` | `core.tasks.cleanup_stale_dreams` ([src](core/tasks.py#L3006)) | `0 6 * * *` | `default` | ✓ |
 | `cleanup-stuck-agent-executions` | `core.tasks.cleanup_stale_agent_executions` ([src](core/tasks.py#L400)) | `*/10 * * * *` | `broadcast` | ✓ |
-| `collect-real-opportunities` | `ai_core.tasks.collect_real_opportunities` | `*/30 * * * *` | `long_running` | ✗ |
+| `collect-real-opportunities` | `ai_core.tasks.collect_real_opportunities` ([src](ai_core/tasks.py#L17)) | `*/30 * * * *` | `long_running` | ✓ |
 | `coo-daily-diagnostic` | `core.tasks.run_coo_daily_diagnostic` ([src](core/tasks.py#L800)) | `30 7 * * *` | `long_running` | ✓ |
 | `cto-daily-diagnostic` | `core.tasks.run_cto_daily_diagnostic` ([src](core/tasks.py#L754)) | `15 7 * * *` | `long_running` | ✓ |
 | `decay-learning-patterns` | `core.tasks.decay_learning_patterns` ([src](core/tasks.py#L496)) | `0 5 * * 0` | `default` | ✓ |
@@ -71,10 +70,10 @@
 | `process-core-spider-data` | `core.tasks.process_core_spider_data` ([src](core/tasks.py#L1159)) | `*/5 * * * *` | `long_running` | ✓ |
 | `process-spider-actions` | `core.tasks.process_spider_actions` ([src](core/tasks.py#L6901)) | `*/30 * * * *` | `long_running` | ✓ |
 | `run-spider-network` | `core.tasks.run_spider_network` ([src](core/tasks.py#L1163)) | `*/30 * * * *` | `long_running` | ✓ |
-| `scan-spider-opportunities` | `intelligence.tasks.scan_spider_opportunities` | `*/30 * * * *` | `long_running` | ✗ |
+| `scan-spider-opportunities` | `intelligence.tasks.scan_spider_opportunities` ([src](intelligence/tasks.py#L1563)) | `*/30 * * * *` | `long_running` | ✓ |
 | `spider-data-retention` | `core.tasks.spider_data_retention` ([src](core/tasks.py#L4010)) | `0 4 * * *` | `long_running` | ✓ |
 | `trend-daily-diagnostic` | `core.tasks.run_trend_daily_diagnostic` ([src](core/tasks.py#L847)) | `45 7 * * *` | `long_running` | ✓ |
-| `warm-up-spiders` | `ai_core.tasks.warm_up_spider_network` | `0 */6 * * *` | `long_running` | ✗ |
+| `warm-up-spiders` | `ai_core.tasks.warm_up_spider_network` ([src](ai_core/tasks.py#L192)) | `0 */6 * * *` | `long_running` | ✓ |
 
 ## Detail appendix
 
@@ -122,7 +121,9 @@ _Source: `core/tasks.py:7097`_
 
 **Task:** `ai_core.tasks.clean_stale_data` · **Schedule:** `0 2 * * *` · **Queue:** `default` · **Expires:** 3600s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+Clean up stale data from cache and database. Runs daily at 2 AM.
+
+_Source: `ai_core/tasks.py:156`_
 
 ### `cleanup-audio-cache`
 
@@ -209,7 +210,9 @@ _Source: `core/tasks.py:4139`_
 
 **Task:** `ml.cleanup_old_model_files` · **Schedule:** `0 1 * * 1` · **Queue:** `default` · **Expires:** 3600s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+Clean up old model files (keep only recent versions)
+
+_Source: `ml/tasks.py:142`_
 
 ### `cleanup-old-notifications`
 
@@ -223,7 +226,9 @@ _Source: `core/tasks.py:2423`_
 
 **Task:** `sports.cleanup_old_predictions` · **Schedule:** `0 3 * * 1` · **Queue:** `default` · **Expires:** 3600s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+Clean up old prediction data
+
+_Source: `sports/tasks.py:343`_
 
 ### `cleanup-old-resolve-jobs`
 
@@ -237,7 +242,9 @@ _Source: `core/tasks.py:5058`_
 
 **Task:** `intelligence.tasks.cleanup_old_opportunities` · **Schedule:** `0 3 * * *` · **Queue:** `default` · **Expires:** 3600s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+Mark old opportunities as expired - runs daily
+
+_Source: `intelligence/tasks.py:1802`_
 
 ### `cleanup-resolved-signatures`
 
@@ -286,7 +293,11 @@ _Source: `core/tasks.py:400`_
 
 **Task:** `ai_core.tasks.collect_real_opportunities` · **Schedule:** `*/30 * * * *` · **Queue:** `long_running` · **Expires:** 1800s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+Main task to collect real opportunities from all spider sources. Runs every 15 minutes
+to keep data fresh. soft_time_limit=120s, time_limit=180s prevents hanging HTTP requests
+from blocking the worker indefinitely (Session 1005 fix).
+
+_Source: `ai_core/tasks.py:17`_
 
 ### `coo-daily-diagnostic`
 
@@ -388,7 +399,10 @@ _Source: `core/tasks.py:1163`_
 
 **Task:** `intelligence.tasks.scan_spider_opportunities` · **Schedule:** `*/30 * * * *` · **Queue:** `long_running` · **Expires:** 1800s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+CRITICAL FIX: Scheduled task to scan spider network for opportunities and save them to
+database. This is the missing cron job!
+
+_Source: `intelligence/tasks.py:1563`_
 
 ### `spider-data-retention`
 
@@ -410,5 +424,7 @@ _Source: `core/tasks.py:847`_
 
 **Task:** `ai_core.tasks.warm_up_spider_network` · **Schedule:** `0 */6 * * *` · **Queue:** `long_running` · **Expires:** 21600s
 
-_(task reference does NOT resolve in the Celery registry — broken)_
+Warm up spider network to ensure fast response times. Runs every 4 hours.
+
+_Source: `ai_core/tasks.py:192`_
 
