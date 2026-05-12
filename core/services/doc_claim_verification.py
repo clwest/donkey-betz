@@ -1699,39 +1699,63 @@ def _backend_inv_mgmt() -> ClaimResult:
 @register_claim(
     doc='docs/DISCORD_INTEGRATION.md',
     claim_id='discord_total_commands',
-    description="docs/DISCORD_INTEGRATION.md header: 'Commands: 144 total (96 .command + 48 app_commands.command)'",
+    description="docs/DISCORD_AUDIT.md header: '96 total commands (48 slash + 48 prefix)' in discord_bot.py",
 )
 def _discord_total_commands() -> ClaimResult:
-    """Count both @*.command(...) and @*.app_commands.command(...) decorators."""
-    import re
+    """Count Discord command decorators via AST — Session 1115 corrected the
+    long-standing regex double-count.
+
+    The previous version (Session 1100) added two regex match lists:
+      classic = `^\\s*@\\w+\\.command\\(`         # matches @app_commands.command too
+      app_cmds = `^\\s*@app_commands\\.command\\(`
+      total = len(classic) + len(app_cmds)  # double-counts the 48 slash commands
+
+    `@\\w+\\.command` already matches `@app_commands.command` (because
+    `app_commands` is `\\w+`). Adding `app_cmds` again inflates by 48.
+    Real total is `len(classic)` = 96 (48 slash + 48 prefix). Audited via
+    AST in `core/management/commands/build_discord_audit.py`.
+    """
+    import ast
     from pathlib import Path
     bot_file = Path(__file__).resolve().parent / 'discord_bot.py'
     if not bot_file.exists():
         return ClaimResult.build(
-            expected=144, actual=None, severity='error',
+            expected=96, actual=None, severity='error',
             note='discord_bot.py not found',
         )
-    src = bot_file.read_text()
-    # Session 1100: count BOTH decorator styles to match doc claim
-    classic = re.findall(r'^\s*@\w+\.command\(', src, re.MULTILINE)
-    app_cmds = re.findall(r'^\s*@app_commands\.command\(', src, re.MULTILINE)
-    matches = classic + app_cmds
-    actual = len(matches)
-    expected = 144  # refreshed Session 1100 — 96 .command + 48 app_commands
+    try:
+        tree = ast.parse(bot_file.read_text(errors='ignore'))
+    except SyntaxError as e:
+        return ClaimResult.build(
+            expected=96, actual=None, severity='error',
+            note=f'discord_bot.py would not parse: {e}',
+        )
+    n_slash = n_prefix = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for dec in node.decorator_list:
+            if not isinstance(dec, ast.Call):
+                continue
+            text = ast.unparse(dec.func) if hasattr(ast, 'unparse') else ''
+            if 'app_commands.command' in text:
+                n_slash += 1
+                break
+            if text.endswith('.command'):
+                n_prefix += 1
+                break
+    actual = n_slash + n_prefix
+    expected = 96  # 48 slash + 48 prefix per Session 1115 audit
     drift = abs(actual - expected)
-    severity = 'ok' if drift <= 5 else ('medium' if drift <= 25 else 'high')
+    severity = 'ok' if drift <= 2 else ('medium' if drift <= 10 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual,
         severity=severity,
-        note=(
-            "Multiple docs contradict on this: DISCORD_COMMANDS.md 112/25 Cogs; "
-            "DISCORD_INTEGRATION.md 112/20 cats; current/DISCORD.md 112/29 Cogs; "
-            "CAPABILITIES.md 112; BACKEND_INVENTORY.md 231. Counting "
-            "@*.command decorators in discord_bot.py."
-        ),
+        note=f"{n_slash} slash + {n_prefix} prefix (AST-counted)",
         fix_suggestion=(
-            f"Reconcile Discord command count to '{actual}' across all docs"
+            f"Update CLAUDE.md Discord row + docs/DISCORD_AUDIT.md headline "
+            f"to '{actual} commands ({n_slash} slash + {n_prefix} prefix)'"
             if severity != 'ok' else None
         ),
     )
