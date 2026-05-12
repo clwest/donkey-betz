@@ -308,58 +308,76 @@ def _agent_map_count() -> ClaimResult:
 
 
 @register_claim(
-    doc='CLAUDE.md',
+    doc='core/management/commands/load_all_agents_advisors.py',
     claim_id='persona_agent_count',
-    description="CLAUDE.md stats table: '223 DB persona agents (via DynamicPersonaAgent)'",
+    description="Agent table row count after `load_all_agents_advisors` runs",
     db_required=True,
 )
 def _persona_agent_count() -> ClaimResult:
     """Count rows in Agent table — these are the agents the AgentRouter
     falls back to via DynamicPersonaAgent when AGENT_MAP doesn't contain
-    the requested name. Session 1099's narrow filter (agent_type='persona')
-    only caught 3 rows, but the *eligible-for-DynamicPersonaAgent* count
-    is the full Agent.objects.count() — that's what CLAUDE.md cites.
+    the requested name.
+
+    Session 1100 hardcoded `223` as expected — but that number doesn't
+    appear in current CLAUDE.md and didn't match any code path. Session
+    1115 (with local Postgres bootstrapped) confirmed the canonical seed
+    is `load_all_agents_advisors`, which creates 148 Agent rows. Re-pegged
+    expected to 148; production may have additional rows loaded by other
+    paths, which surfaces here as drift if it diverges meaningfully.
     """
     from core.models_unified_system import Agent
     actual = Agent.objects.count()
-    expected = 223  # refreshed Session 1100 — matches current CLAUDE.md
+    expected = 148  # canonical seed from load_all_agents_advisors (Session 1115)
     drift = abs(actual - expected)
-    # Tolerate ±10 because personas drift naturally
-    severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
+    # Tolerate ±5 from the seed baseline; >5 means agents were added/removed.
+    severity = 'ok' if drift <= 5 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual,
         severity=severity,
-        note=f"Agent.objects.count() = {actual} (all agent_types eligible for DynamicPersonaAgent fallback)",
+        note=(
+            f"Agent.objects.count() = {actual}. Canonical seed: "
+            f"`python manage.py load_all_agents_advisors` "
+            f"(148 agents declared in the script)."
+        ),
         fix_suggestion=(
-            f"Update CLAUDE.md stats table to '{actual} DB persona agents'"
+            f"If {actual} is the new canonical seed count, update "
+            f"`load_all_agents_advisors.py` + bump `expected` here. "
+            f"If rows are missing, run the seed command."
             if severity != 'ok' else None
         ),
     )
 
 
 @register_claim(
-    doc='CLAUDE.md',
+    doc='core/management/commands/load_all_agents_advisors.py',
     claim_id='total_agent_count_claim',
-    description="CLAUDE.md header: 'Agents (total registered) | 306'",
+    description="AGENT_MAP (routable) + Agent table (persona-fallback) total",
     db_required=True,
 )
 def _total_agent_count_claim() -> ClaimResult:
+    """Total agent count = code-routable (AGENT_MAP) + DB persona rows.
+
+    Session 1100 hardcoded `306` against a CLAUDE.md value that no longer
+    exists. Session 1115 re-pegged to the seed-driven baseline:
+    AGENT_MAP(83) + Agent rows from `load_all_agents_advisors`(148) = 231.
+    """
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent
     routable = len(AgentRouter().AGENT_MAP)
-    personas = Agent.objects.count()  # Session 1100: full Agent table, not narrow filter
+    personas = Agent.objects.count()
     actual_total = routable + personas
-    expected = 306  # refreshed Session 1100 — matches current CLAUDE.md
+    expected = 231  # AGENT_MAP(83) + canonical seed Agent rows(148)
     drift = abs(actual_total - expected)
-    severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
+    severity = 'ok' if drift <= 5 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual_total,
         severity=severity,
         note=f"AGENT_MAP({routable}) + Agent rows({personas}) = {actual_total}",
         fix_suggestion=(
-            f"Update CLAUDE.md total to {actual_total}"
+            f"Either re-run `load_all_agents_advisors` or update the "
+            f"expected baseline if the seed has changed."
             if severity != 'ok' else None
         ),
     )
