@@ -41,7 +41,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
 | 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 167 | medium | **✅ fixed Session 1115** | new `build_management_command_audit` + inline refresh |
-| 9 | Learning bridge naming inconsistency (`LearningLoop` × 7 vs `LearningBridge` × 1) | informational | open | cosmetic |
+| 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
 | 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
@@ -368,25 +368,78 @@ underlying doc had been stale for many sessions before.
 
 ---
 
-## 9. Learning bridge naming inconsistency
+## 9. Unused `LearningBridge` ABC — naming inconsistency is the symptom
 
-**Status:** open · informational · cosmetic.
+**Status:** partial fix Session 1115 — forward-drift guard added; full
+refactor deferred to a follow-up session.
 
-**Verifier doc:** `docs/LEARNING_BRIDGE_AUDIT.md` (Findings section)
+**Verifier doc:** `docs/LEARNING_BRIDGE_AUDIT.md`
+**Verifier claim:** `learning_bridges_inherit_base` (added Session 1115).
 
-**What:** Seven of the 9 learning-loop classes under `core/learning_bridges/`
-end in the suffix `LearningLoop` (`AgentExecutionLearningLoop`,
-`ApplicationOutcomeLearningLoop`, etc.). One ends in `LearningBridge`
-(`SportsBettingLearningBridge`). Same concept, two naming conventions.
+**Reframed finding** (after closer investigation):
 
-**Fix:** rename `SportsBettingLearningBridge` → `SportsBettingLearningLoop`
-(or rename the rest the other way) in `core/learning_bridges/sports_betting_bridge.py`,
-update the corresponding `core/learning_bridges/__init__.py` export, and
-grep the codebase for any references.
+The visible symptom is naming: 7 classes use `*LearningLoop` suffix,
+1 uses `*LearningBridge`. But the deeper issue is that **nobody
+inherits from the abstract base class `LearningBridge`** at
+`core/learning_bridges/base.py:13`.
 
-**Risk:** small — has a public export in `core/learning_bridges/__init__.py`,
-so callers that imported the old name would break. `git grep
-SportsBettingLearningBridge` before renaming.
+The original design intent was clear:
+
+- Directory name: `core/learning_bridges/`
+- AppConfig class: `LearningBridgesConfig`
+- Abstract base: `LearningBridge(ABC)` — declares 4 abstract methods
+  (`process_event`, `_extract_patterns`, `_update_learning`,
+  `_generate_insights`) and provides observability helpers
+  (`event_count`, `success_count`, `log_event`, `log_success`,
+  `log_error`, `get_statistics`).
+
+What actually happened: **every concrete bridge reinvents its own
+structure independently.** None inherit from the ABC. None get the
+unified observability for free. Two naming conventions emerged
+because there was no contract to anchor on.
+
+| Class | Suffix | Inherits `LearningBridge`? |
+|---|---|---|
+| `AgentExecutionLearningLoop` | LearningLoop | ✗ |
+| `AdvisorFeedbackLearningLoop` | LearningLoop | ✗ |
+| `AutoConsultationLearningLoop` | LearningLoop | ✗ |
+| `ApplicationOutcomeLearningLoop` | LearningLoop | ✗ |
+| `CollaborationLearningLoop` | LearningLoop | ✗ |
+| `PersonalizationFeedbackLoop` | FeedbackLoop | ✗ |
+| `RevenueAttributionLearningLoop` | LearningLoop | ✗ |
+| `SpiderDataLearningLoop` | LearningLoop | ✗ |
+| `SportsBettingLearningBridge` | LearningBridge | ✗ |
+
+Renaming `SportsBettingLearningBridge` → `*LearningLoop` would lock
+in the *deviation* from intent rather than fix it. The real fix is a
+multi-PR refactor to make all 9 inherit from the ABC and unify the
+process-event shape.
+
+**Session 1115 partial fix (low-risk):**
+
+1. Added verifier claim `learning_bridges_inherit_base` that walks
+   every learning-loop class under `core/learning_bridges/` and flags
+   any that don't inherit from `LearningBridge`. Currently surfaces
+   all 9 as drift — but at `low` severity, since none have inherited
+   historically (zero regression). The claim is the watchpoint: any
+   NEW bridge added without inheriting now fails the check.
+2. Updated `docs/LEARNING_BRIDGE_AUDIT.md` Findings section to
+   highlight the ABC-orphan-pattern.
+
+**Deferred to follow-up session:**
+
+- Multi-PR refactor: make each of the 9 concrete classes inherit
+  from `LearningBridge`, implement the 4 abstract methods, drop
+  any private re-implementations of the observability helpers
+  (`event_count` / `success_count` / `log_*`).
+- Once all 9 inherit, bump the verifier severity from `low` to
+  `medium` so the guard is teeth-on.
+
+**Risk of the deferred refactor:** medium. Each bridge has slightly
+different `process_event` signatures and pattern-extraction shapes.
+The refactor is mechanical-ish but needs care to preserve existing
+signal-emission behavior. Best done one bridge at a time with the
+verifier confirming each step.
 
 ---
 

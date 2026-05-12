@@ -2620,6 +2620,103 @@ def _learning_bridges_documented() -> ClaimResult:
 
 
 @register_claim(
+    doc='core/learning_bridges/base.py',
+    claim_id='learning_bridges_inherit_base',
+    description=(
+        "Every concrete learning-bridge class should inherit from the "
+        "abstract base `LearningBridge` (currently nobody does — see "
+        "AUDIT_FINDINGS.md finding 9 for the deferred refactor)."
+    ),
+)
+def _learning_bridges_inherit_base() -> ClaimResult:
+    """Forward-drift guard: catches new learning-bridge classes that don't
+    inherit from the abstract base.
+
+    Session 1115 reframing of finding 9: the visible "naming
+    inconsistency" (`*LearningLoop` x7 vs `*LearningBridge` x1) is a
+    symptom of a deeper issue — the abstract base class `LearningBridge`
+    at `core/learning_bridges/base.py:13` declares a 4-method contract
+    plus observability helpers, but ZERO concrete classes inherit from
+    it. Every bridge reinvents its own shape.
+
+    This guard reports `low` severity for now (the 9 existing
+    non-inheriting classes are pre-existing) but ensures any NEW bridge
+    added without inheriting from the ABC surfaces immediately. When
+    the deferred multi-PR refactor lands and all 9 inherit, the
+    severity can be bumped to `medium` to make it teeth-on.
+    """
+    import ast
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    bridges_dir = repo_root / 'core' / 'learning_bridges'
+    if not bridges_dir.exists():
+        return ClaimResult.build(
+            expected='core/learning_bridges/ exists',
+            actual='missing',
+            severity='high',
+        )
+    orphans: list[str] = []
+    total_classes = 0
+    for path in sorted(bridges_dir.glob('*_bridge.py')):
+        try:
+            tree = ast.parse(path.read_text(errors='ignore'))
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            # Skip Django models if present.
+            base_text = ' '.join(
+                ast.unparse(b) if hasattr(ast, 'unparse') else ''
+                for b in node.bases
+            )
+            if 'models.Model' in base_text:
+                continue
+            # Looking for learning-bridge-shaped classes: end in
+            # `LearningLoop`, `LearningBridge`, or `FeedbackLoop`.
+            name = node.name
+            if not (
+                name.endswith('LearningLoop')
+                or name.endswith('LearningBridge')
+                or name.endswith('FeedbackLoop')
+            ):
+                continue
+            total_classes += 1
+            if 'LearningBridge' not in base_text:
+                orphans.append(f'{path.name}::{name}')
+
+    # Session 1115 baseline: 9 orphans (every concrete bridge). When the
+    # multi-PR refactor lands, baseline drops to 0 and severity = medium.
+    baseline = 9
+    if not orphans:
+        return ClaimResult.build(
+            expected="all concrete bridges inherit from LearningBridge ABC",
+            actual="all inherit",
+            severity='ok',
+            note=f"{total_classes} bridge classes scanned",
+        )
+    severity = 'ok' if len(orphans) == baseline else (
+        'medium' if len(orphans) > baseline else 'low'
+    )
+    return ClaimResult.build(
+        expected=(
+            f"all bridges inherit from LearningBridge "
+            f"(Session 1115 baseline tolerates {baseline} known orphans)"
+        ),
+        actual=f"{len(orphans)} of {total_classes} don't inherit",
+        severity=severity,
+        note=f"orphans: {orphans}",
+        fix_suggestion=(
+            "If you ADDED a new bridge: make it inherit from "
+            "`LearningBridge` in `core/learning_bridges/base.py`. "
+            "If you started the refactor and reduced the count: "
+            "lower the `baseline` constant in `_learning_bridges_inherit_base`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/BODY_SYSTEM_AUDIT.md',
     claim_id='body_systems_fully_wired',
     description="All 9 body systems in run_all_systems_scan resolve to a service module with a docstring + get_vitals()",

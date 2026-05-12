@@ -143,7 +143,28 @@ class Command(BaseCommand):
                 f"shows up in the bridge audit's class table."
             )
 
-        # Naming-consistency observation (not a bug per se).
+        # Session 1115 reframing of finding 9: the naming inconsistency
+        # (LearningLoop x7 vs LearningBridge x1) is a symptom of a deeper
+        # issue — the abstract base class `LearningBridge` declares a
+        # 4-method contract but nobody inherits from it. Surface that
+        # explicitly in the audit.
+        from pathlib import Path
+        base_file = Path(__file__).resolve().parents[3] / 'core' / 'learning_bridges' / 'base.py'
+        if base_file.exists():
+            findings.append(
+                "**Abstract base `LearningBridge` is unused** "
+                "(`core/learning_bridges/base.py:13`). It declares a "
+                "4-method contract (`process_event`, `_extract_patterns`, "
+                "`_update_learning`, `_generate_insights`) plus "
+                "observability helpers (event_count, success_count, "
+                "log_event, get_statistics). Zero concrete bridges "
+                "inherit from it — each reinvents its own shape. The "
+                "two naming styles below (`*LearningLoop` x7 vs "
+                "`*LearningBridge` x1) are downstream of this missing "
+                "contract. See `docs/AUDIT_FINDINGS.md` finding 9 for "
+                "the deferred refactor."
+            )
+
         loops = sum(
             1 for r in rows for c in r['classes']
             if c['name'].endswith('LearningLoop')
@@ -155,8 +176,10 @@ class Command(BaseCommand):
         if loops and bridges:
             findings.append(
                 f"Naming inconsistency: {loops} classes end in `LearningLoop`, "
-                f"{bridges} end in `LearningBridge`. Same concept, different "
-                f"suffix. Pick one in a future cleanup pass."
+                f"{bridges} end in `LearningBridge`. Surface symptom of the "
+                f"unused-ABC finding above; resolves when all bridges "
+                f"inherit from `LearningBridge` and the suffix convention "
+                f"matches the dir / AppConfig / base-class vocabulary."
             )
 
         return findings
