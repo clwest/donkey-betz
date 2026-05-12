@@ -49,7 +49,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 14 | **`run_heartbeat` takes 32s** and **`check_celery_health` takes 31s** — long for "every 10 min" infrastructure tasks (3× the interval) | medium | open | perf investigation |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
 | 16 | **`muscular` reports "paralyzed"** (no agent execution telemetry) and **`digestive` reports "sluggish"** on fresh DB — body systems express their dependency on real activity | informational | open | known cold-start state |
-| 17 | **`ToolCallRecord` only writes from PA entrypoint** — direct `ToolDispatcher.execute_sync()` calls don't log. Telemetry blind spot for non-PA tool invocations. | low-medium | open | observability gap |
+| 17 | **`ToolCallRecord` only writes from PA entrypoint** — direct `ToolDispatcher.execute_sync()` calls don't log. Telemetry blind spot for non-PA tool invocations. | low-medium | **✅ fixed Session 1115** | dispatcher writes on all return paths |
 
 ---
 
@@ -746,30 +746,58 @@ specific states are expected on cold-start.
 
 ---
 
-## 17. `ToolCallRecord` blind spot for non-PA dispatch
+## 17. `ToolCallRecord` blind spot for non-PA dispatch — ✅ fixed
 
-**Status:** open · low-medium severity · observability gap.
+**Status:** ✅ fixed Session 1115 — dispatcher writes on all return paths.
 
-**What:** `ToolCallRecord` rows are only written by
-`core/services/unified_pa_entrypoint.py:1849`. When `ToolDispatcher`
-gets invoked by any other path (direct `execute_sync()` calls,
-agent-to-tool delegation, internal tool composition), nothing logs
-the call.
+**Fix landed in `core/services/tool_dispatcher.py`:**
 
-This was surfaced when Session 1115's local test invoked 20 PA tools
-via `td.execute_sync(...)` and `ToolCallRecord.count() == 0` afterward.
+`execute()` gained 3 new kwargs:
+- `agent_name: str = 'Direct'` — caller identity recorded on the row
+- `conversation_id: Optional[Any] = None` — chat-session linkage
+- `record_telemetry: bool = True` — escape hatch for callers that want
+  exclusive write control
 
-**Implication:** the runtime audit's `tools never executed` set is an
-under-count of "tools that fired"; specifically, any tool fired
-outside a PA chat conversation is invisible to the audit.
+Two helpers added on `ToolDispatcher`:
+- `_record_tool_call_async()` — async wrapper that schedules the ORM
+  write on a worker thread via `asyncio.to_thread`. Fire-and-forget;
+  failures logged at WARNING and swallowed.
+- `_record_tool_call_sync()` — the actual `ToolCallRecord.objects.create(...)`
+  write. Single INSERT.
 
-**Fix path:** add the same `ToolCallRecord.objects.create(...)` block
-inside `ToolDispatcher.execute()` so EVERY dispatch logs telemetry,
-regardless of caller. PA entrypoint would either keep its own log or
-defer to the dispatcher's.
+The helper is called from **all five `execute()` return paths**:
+1. Permission denied (`AssistantProfile` blocks the tool).
+2. Tool not found (`tool_name not in self._tool_handlers`).
+3. Success (handler returns a result).
+4. Timeout (`asyncio.TimeoutError`).
+5. Exception (anything else from the handler).
 
-**Risk:** small — adds 1 DB write per tool call. Match the existing
-column schema; the PA path already does this.
+So every dispatch — PA, direct `execute_sync`, agent-to-tool delegation,
+internal composition — produces a `ToolCallRecord` row.
+
+**PA side:**
+- All 3 PA-loop `execute(...)` call sites now pass
+  `agent_name='PersonalAssistant'` and `conversation_id=self.conversation_id`
+  so the dispatcher's row reflects PA context.
+- The manual `_record_tool_call` block in the PA loop was **removed**
+  (the dispatcher now handles it).
+- `_record_tool_call` method on `UnifiedPersonalAssistant` is marked
+  **deprecated** in its docstring; kept for external callers that
+  imported it directly. Safe to delete once a grep confirms zero
+  external uses.
+
+**Verified live (Session 1115 local):**
+
+```
+Before: 0 ToolCallRecord rows
+3 direct execute_sync calls (analytics_tool, audit_tool, nonexistent_tool)
+After: 3 rows · agent=Direct · including the TOOL_NOT_FOUND failure path
+```
+
+**Risk:** small — adds 1 DB write per tool call, on a thread (no
+blocking on the async loop). Schema already exists. PA pipeline's row
+count stays at exactly 1 per dispatch (the dispatcher now owns it, PA
+no longer double-writes).
 
 ---
 
