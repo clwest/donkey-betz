@@ -2353,6 +2353,82 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/BODY_SYSTEM_AUDIT.md',
+    claim_id='body_systems_fully_wired',
+    description="All 9 body systems in run_all_systems_scan resolve to a service module with a docstring + get_vitals()",
+)
+def _body_systems_fully_wired() -> ClaimResult:
+    """Catch regressions in the body-system wiring.
+
+    Each body system listed in `body_systems = [...]` inside
+    `core/tasks.py::run_all_systems_scan` must:
+      (a) have a module at `core/services/<name>.py`,
+      (b) define a primary class with a docstring,
+      (c) expose a `get_vitals()` method on that class.
+
+    If any of those break, `run_all_systems_scan` will degrade — either
+    raising an ImportError or skipping the system in its `if system == X`
+    chain. Audit (Session 1115) confirms 9/9 wired; this claim catches
+    future regressions.
+    """
+    import ast
+    import re as _re
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    src = (repo_root / 'core' / 'tasks.py').read_text(errors='ignore')
+    m = _re.search(r"body_systems\s*=\s*\[([^\]]+)\]", src)
+    systems = _re.findall(r"'([^']+)'", m.group(1)) if m else []
+    problems: list[str] = []
+    for name in systems:
+        mod_path = repo_root / 'core' / 'services' / f'{name}.py'
+        if not mod_path.exists():
+            problems.append(f'{name}: missing module {mod_path.name}')
+            continue
+        try:
+            tree = ast.parse(mod_path.read_text(errors='ignore'))
+        except SyntaxError as e:
+            problems.append(f'{name}: parse error {e}')
+            continue
+        primary_class = None
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and (
+                node.name.endswith('Service')
+                or node.name.endswith('Monitor')
+                or node.name.endswith('Coordinator')
+                or node.name.endswith('System')
+            ):
+                primary_class = node
+                break
+        if primary_class is None:
+            problems.append(f'{name}: no Service/Monitor class')
+            continue
+        if not (ast.get_docstring(primary_class) or '').strip():
+            problems.append(f'{name}: class missing docstring')
+        has_vitals = any(
+            isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and s.name == 'get_vitals'
+            for s in primary_class.body
+        )
+        if not has_vitals:
+            problems.append(f'{name}: no get_vitals()')
+    severity = 'ok' if not problems else 'medium'
+    return ClaimResult.build(
+        expected=f'all {len(systems)} body systems fully wired',
+        actual=(
+            f'{len(systems) - sum(1 for _ in problems)} fully wired'
+            if problems else f'{len(systems)}/{len(systems)} wired'
+        ),
+        severity=severity,
+        note=f"systems: {systems}; problems: {problems}",
+        fix_suggestion=(
+            "Address each `<name>: <issue>` entry in `note` — restore the "
+            "missing module, class docstring, or `get_vitals()` method."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/ADVISOR_AUDIT.md',
     claim_id='advisor_count_matches_doc',
     description="advisors.registry.advisor_registry materializes the documented 25 advisors (14 named + 11 specialists)",
