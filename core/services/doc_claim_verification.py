@@ -2493,6 +2493,49 @@ def _celery_orphan_count_baseline() -> ClaimResult:
         cmd_stems = {p.stem for p in cmd_dir.glob('*.py') if p.name != '__init__.py'}
         cmd_stem_callers = cmd_stems & short_names
 
+    # Session 1115 batch-2: generic string-literal scan. Many dispatch
+    # sites pass task names via dict entries (`'task': 'run_foo'`) or
+    # string maps consumed by dynamic dispatchers in tasks_ops.py,
+    # discord_bot.py, views_autonomous_dashboard.py, etc. The audit
+    # detector matches the same logic — mirror it here so the verifier
+    # baseline stays in lockstep with the audit doc.
+    #
+    # BSD grep needs `[[:alnum:]_]` not `\w` in the ERE pattern. The
+    # Python regex below understands `\w` fine.
+    literal_full_callers: set[str] = set()
+    literal_short_callers: set[str] = set()
+    try:
+        r3 = subprocess.run(
+            ['grep', '-rEon', r"['\"][[:alnum:]_.]+['\"]",
+             str(repo_root), '--include=*.py',
+             '--exclude-dir=.venv', '--exclude-dir=__pycache__',
+             '--exclude-dir=node_modules', '--exclude-dir=archive'],
+            capture_output=True, text=True, timeout=180,
+        )
+    except subprocess.TimeoutExpired:
+        r3 = None
+    if r3 is not None:
+        prefix_pattern = _re.compile(r'^([^:]+):(\d+):(.*)$')
+        token_pattern = _re.compile(r'[\'"]([\w.]+)[\'"]')
+        skip_files = {'core/tasks.py'}
+        for line in r3.stdout.splitlines():
+            pm = prefix_pattern.match(line)
+            if not pm:
+                continue
+            file_, _ln, rest = pm.group(1), pm.group(2), pm.group(3)
+            try:
+                rel = str(Path(file_).resolve().relative_to(repo_root))
+            except ValueError:
+                rel = file_
+            if rel in skip_files:
+                continue
+            for val_match in token_pattern.finditer(rest):
+                val = val_match.group(1)
+                if val in registry:
+                    literal_full_callers.add(val)
+                elif val in short_names:
+                    literal_short_callers.add(val)
+
     orphans = 0
     for name in registry:
         short = name.rsplit('.', 1)[-1]
@@ -2508,13 +2551,21 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         if short in cmd_stem_callers:
             continue
+        if name in literal_full_callers:
+            continue
+        if short in literal_short_callers:
+            continue
         orphans += 1
 
-    # Session 1115 batch-1 baseline: detection upgraded to catch indirect
-    # callers (CLI commands, add_critical_celery_tasks, ops_autopilot
-    # budget). Orphan count dropped 272 → 188 because 84 "orphans" were
-    # really invoked via paths the original detector missed.
-    baseline = 188
+    # Session 1115 batch-2 baseline: detection upgraded again to catch
+    # string-literal task names anywhere in the codebase (the dispatch
+    # patterns in `tasks_ops.py`, `discord_bot.py`, `views_autonomous_dashboard.py`
+    # all pass task names as strings to dynamic dispatchers). Orphan count
+    # dropped 188 → 58. The remaining 58 are either intentionally orphan
+    # (debug_task), dormant utilities, or "should-be-scheduled but the
+    # schedule was never wired" — see AUDIT_FINDINGS.md #12 for the
+    # per-task triage.
+    baseline = 58
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'

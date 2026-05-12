@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 188 orphan Celery tasks** — batch 1: detection upgraded to find 3 missed caller paths (84 false-orphans reclaimed) | medium-high | partial · batch 1 closed; more batches needed | per-module review |
+| 12 | **272 → 58 orphan Celery tasks** — batches 1 & 2: detection upgraded twice; remaining 58 triaged | medium-high | partial · 79% reduction; final wiring deferred | per-task wire-up |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,68 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 188 orphan Celery tasks — batch 1 closed
+## 12. 272 → 58 orphan Celery tasks — batches 1 & 2 closed
+
+### Batch 2 outcome (Session 1115)
+
+After batch 1 brought orphans from 272 → 188 by catching 3 missed
+caller paths (CLI / `add_critical_celery_tasks` / autopilot budget),
+batch 2 added one more: **string-literal task names anywhere in the
+codebase.** Examples surfaced when walking the `run_*` family:
+
+- `core/services/tasks_ops.py` maps situation slugs to task names
+  via dict-value strings.
+- `core/services/discord_bot.py` references task names in slash-command
+  handlers.
+- `core/views_autonomous_dashboard.py::run_situation_now` dispatches
+  situations by task name from URL kwargs.
+
+These dispatch patterns pass task names as plain strings to dynamic
+dispatchers (`current_app.send_task(name)`, etc.). The original
+detector didn't grep for the strings themselves; it only looked for
+`.delay()` / `send_task(...)` patterns directly.
+
+Implementation note: the BSD `grep -E` regex didn't accept `\w`
+shorthand — using `[[:alnum:]_]` instead made the difference. The
+"first commit didn't change the count" mystery in this branch's
+history was that regex problem (the grep returned 0 matches under
+the original `\w`-using version).
+
+**Orphan count drop in batch 2:** 188 → **58**. 130 more false-orphans
+reclaimed. Cumulative across batches 1 + 2: **272 → 58 (79% reduction).**
+
+### Final triage of the remaining 58
+
+The 58 split into categories that need different handling:
+
+| Category | Approx count | Action needed |
+|---|---:|---|
+| **Intentionally orphan** (debug-only) | 1 | None — `debug_task` is by design |
+| **Should-be-scheduled but never wired** | ~20 | **Wire schedules** — these have docstrings like "Every 10 min" or "daily" but no entry in `app.conf.beat_schedule` or `add_critical_celery_tasks` |
+| **Triggered by external events** | ~15 | None — these fire on webhook/escalation/HITL events that the detector can't grep for (e.g. `handle_client_response`, `submit_proposal_automatically`) |
+| **Dormant utilities** | ~20 | Per-task — could wrap in mgmt commands or leave with `dormant utility` comment |
+
+The biggest category of "real find" is **~20 tasks that were
+designed for a schedule but the schedule entry was never added.**
+The most explicit examples:
+
+- `run_ops_autopilot` — docstring: *"Every 10 min: evaluate ops policies and take allowed automatic actions."* No schedule.
+- `post_coo_daily_diagnostic`, `post_cto_daily_diagnostic`, `post_trend_daily_diagnostic` — 3 daily diagnostics, no schedule.
+- `aggregate_roi_metrics_daily`, `calculate_daily_revenue_metrics`, `send_weekly_kpi_summary` — metrics rollups, no schedule.
+- `check_learning_loop_slo`, `rag_retrieval_canary` — SLO/quality checks, no schedule.
+- `claim_stale_events`, `expire_old_opportunities`, `expire_old_suggestions`, `expire_overdue_validations`, `maintain_dream_backlog`, `maintain_knowledge_freshness` — maintenance tasks, no schedule.
+
+**Deferred:** wiring these schedules. Same caution as finding #3's
+broken beat refs — this is behavior-changing (re-enabling tasks
+that have been dormant). Best done in a focused follow-up session
+where each task gets a green-light decision: does it actually need
+to fire? at what cadence? what queue?
+
+The verifier baseline is now **58** so this drop is locked in;
+future regressions surface immediately.
+
+### Batch 1 outcome (kept for history)
+### 12-batch-1. Detection upgrade (272 → 188 orphans)
 
 **Batch 1 outcome (Session 1115):** the detection itself was the
 biggest fix. Walking the `backfill_*` family (6 tasks) showed most
