@@ -391,13 +391,18 @@ class Command(BaseCommand):
         bind = bool(getattr(task, '_bound', False))  # heuristic
 
         # Caller cross-reference. Combine static (.delay/.apply_async/.s/.si)
-        # and dynamic (send_task('full.path')) lookups. Filter out the task's
-        # own definition file from static callers — the decorator line itself
-        # often matches the short name.
+        # and dynamic (send_task('full.path')) lookups. Filter out only the
+        # task's own definition LINE from static callers. The original filter
+        # excluded the whole definition file, which dropped legitimate
+        # intra-file parent→child chains (e.g. `intelligence/tasks.py` has
+        # `submit_proposal_automatically.delay(...)` at line 1192 chaining
+        # into the task defined at line 1209 — both lines live in the same
+        # file but the dispatch is real). Session 1115 batch-5 fix.
         raw_static = callers_by_short.get(short, [])
+        own_marker = f'{file_path}:{line_no}' if file_path and line_no else None
         static_callers = [
             c for c in raw_static
-            if not (file_path and c.startswith(file_path))
+            if own_marker is None or c != own_marker
         ]
         dynamic_callers = callers_by_full.get(name, [])
         callers = static_callers + dynamic_callers

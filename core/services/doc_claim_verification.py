@@ -2600,33 +2600,35 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         orphans += 1
 
-    # Session 1115 batch-4 baseline: 17 more behavior-changing DB-only tasks
-    # wired into beat_schedule (auto_approve_boardroom_items,
-    # auto_promote_low_risk_decisions, verify_completed_fixes,
-    # promote_to_shared_knowledge, update_distribution_analytics,
-    # monitor_isolation_progress, update_mythology_pattern_statistics,
-    # sync_pipeline_insights_to_collective, process_hitl_escalations,
-    # scan_concerns_for_human_action, maintain_dream_backlog,
-    # report_pending_review_metrics, process_human_attention_lifecycle,
-    # poll_pending_3d_models, detect_duplicate_initiatives,
-    # check_operating_rhythm_status, rescan_active_workspaces).
-    # Each verified by inspection: no LLM, no agent dispatch, no external
-    # API beyond Replicate poll (no-op when no pending).
+    # Session 1115 batch-5 baseline: detector bug fix — `_inspect()` was
+    # excluding ALL callers in the task's own definition file (intended to
+    # filter the @shared_task decorator line). This dropped legitimate
+    # intra-file parent→child task chains: `submit_proposal_automatically`,
+    # `submit_follow_up`, `handle_client_response`, `check_proposal_responses`,
+    # `update_ml_model_with_feedback` are all dispatched via `.delay()` from
+    # within `intelligence/tasks.py` (caller and callee in the same module).
+    # Filter now only excludes the exact file:line of the task's definition.
+    # 5 fewer false orphans (24 → 19). Verifier's logic was always correct
+    # — only the audit-doc had the bug, but the verifier baseline was
+    # tracking the audit's miscount.
     #
-    # Cumulative across batches 1-4: 272 → 24 (91% reduction).
+    # Cumulative across batches 1-5: 272 → 19 (93% reduction).
     #
-    # Remaining 24 split into:
+    # Remaining 19 split into:
     #   - ~5 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
     #     run_ops_autopilot, post_ops_digest, maintain_knowledge_freshness)
-    #   - ~4 agent-dispatch chain (check_blocked_research_for_unblock,
-    #     process_pending_action_plans, etc.)
+    #   - ~2 agent-dispatch chain (check_blocked_research_for_unblock,
+    #     process_pending_action_plans)
     #   - ~3 Session 1031 blocked (discover_and_import_audits,
-    #     assign_open_findings_to_agents, execute_remediation_tasks)
-    #   - ~10 event-triggered (signals, webhooks, chains)
-    #   - 1 deprecated (propagate_new_policies — returns immediately)
+    #     assign_open_findings_to_agents, ~execute_remediation_tasks)
+    #   - ~7 truly forgotten / event-needs-wiring (start_resolve_render,
+    #     scan_income_spider_orchestrator, start_intelligence_engine,
+    #     trigger_market_scan, trigger_content_from_shift,
+    #     process_document_async, get_live_opportunities, get_live_predictions)
+    #   - 1 deprecated (propagate_new_policies)
     #   - 1 intentionally orphan (debug_task)
     # See AUDIT_FINDINGS.md #12.
-    baseline = 24
+    baseline = 19
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'
