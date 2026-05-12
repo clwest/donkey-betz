@@ -36,7 +36,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 1 | Phantom `ContentDistributionAgent` in `_NON_SPECIALIST` routing whitelist | low | **✅ fixed Session 1115** | removed from all 4 mirror sets |
 | 2 | Orphaned `distribution_agent` handler — unreachable from LLM | low | **✅ fixed Session 1115** | added to `run_agent.agent_name.enum` |
 | 3 | 7 broken beat task refs — silent autodiscover misses | medium | **✅ fixed Session 1115** | `on_after_finalize` hook in `core/celery.py` |
-| 4 | 5 `AdvisorDomain` enum values with no advisors | low | open | informational |
+| 4 | 5 `AdvisorDomain` enum values with no advisors — routing intent + spider tagging both expected them | low → high (reframed) | **✅ fixed Session 1115** | 5 new advisors added; routing now resolves end-to-end |
 | 5 | CLAUDE.md said `144` Discord commands; actual is `96` (double-count) | medium | **✅ fixed Session 1115** | — |
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
@@ -284,43 +284,56 @@ worker boots with this version. Watch logs for the first 24h.
 
 ---
 
-## 4. 5 `AdvisorDomain` enum values with no registered advisor
+## 4. 5 `AdvisorDomain` enum values with no advisors — **fixed**
 
-**Status:** open · informational (no verifier severity).
+**Status:** ✅ fixed Session 1115. Reframed from "informational" to "real
+finding" after investigation showed routing intent + spider tagging
+were both wired to these domains; only the advisor registrations were
+missing.
 
-**Verifier doc:** `docs/ADVISOR_AUDIT.md` (Findings section)
+**What investigation revealed:**
 
-**What:** `advisors/registry.py:25` declares 26 `AdvisorDomain` enum
-values, but `_initialize_advisor_network` only registers advisors in 21
-of them. The unused 5:
+The 5 "unused" domains aren't dead — they're **referenced as routing
+destinations** in `core/services/advisor_context_builder.py`'s
+`TASK_TO_DOMAINS` map:
 
-- `data_strategy`
-- `intellectual_property`
-- `leadership_development`
-- `operations_management`
-- `regulatory_compliance`
+| Domain | Used in routing for | Side evidence |
+|---|---|---|
+| `operations_management` | `coo` tasks → fell back to David Kim | — |
+| `data_strategy` | `research`, `trend_analysis` → fell back to Sam Altman | — |
+| `intellectual_property` | `legal` tasks → fell back to legal_counsel only | Tagged by findlaw, courtlistener, justia spiders — data was flowing in for nobody |
+| `leadership_development` | `career`, `personal` → fell back to career_coaching | Already declared as a specialization on Dr. Maria Gonzalez |
+| `regulatory_compliance` | `legal` → fell back to legal_counsel only | — |
 
-**Why it might matter:** `find_best_advisor(topic, domain=X)` requires
-an existing advisor in that domain — calling it with one of these
-returns nothing. Could be a future-state stub (these domains were
-planned but never staffed) or an oversight.
+So the system was silently degrading across 5 capability domains — not
+broken, just operating below its declared intent.
 
-**Fix path:**
+**Fix landed (Option A from the runbook):** added 5 new advisors,
+filling every previously-orphan domain.
 
-a. **Add advisors.** Drop 1-5 new entries into `_initialize_advisor_network`
-   for the missing domains. Each needs a name, title, expertise level,
-   specializations, background, achievements, certifications. See
-   `advisors/registry.py:160+` for the pattern.
+| Domain | Advisor added | Type |
+|---|---|---|
+| `operations_management` | **Tim Cook (AI Model)** | named figure |
+| `data_strategy` | **Andrew Ng (AI Model)** | named figure |
+| `intellectual_property` | Priya Raman, Senior IP Counsel | domain specialist |
+| `leadership_development` | Marcus Whitfield, Executive Leadership Coach | domain specialist |
+| `regulatory_compliance` | Eleanor Park, Regulatory & Compliance Strategist | domain specialist |
 
-b. **Remove the enum values.** If these domains were aspirational and
-   nothing in the rest of the codebase references them, delete them
-   from the `AdvisorDomain` enum.
+**Forward guard:** new verifier claim `task_domain_routing_resolves` —
+checks that every `TASK_TO_DOMAINS` key has at least one matching
+advisor in the registry. Currently passes for all task kinds. Future
+"declared but not filled" drift surfaces here automatically.
 
-c. **Leave them.** If they're known future work and other code branches
-   on the enum, leave them and document that.
+**Headcount drift:**
 
-**Risk:** (a) and (c) are zero-risk. (b) only safe if no calling code
-mentions them by name — grep first.
+| Doc | Before | After |
+|---|---:|---:|
+| Total advisors | 25 | 30 |
+| Named figures | 14 | 16 (added Tim Cook + Andrew Ng) |
+| Domain specialists | 11 | 14 (added Priya Raman, Marcus Whitfield, Eleanor Park) |
+| Domains covered | 21 / 26 | 26 / 26 |
+
+CLAUDE.md Advisor row + ADVISOR_AUDIT.md regenerated to reflect.
 
 ---
 
