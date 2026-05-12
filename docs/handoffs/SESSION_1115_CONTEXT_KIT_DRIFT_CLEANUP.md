@@ -238,6 +238,60 @@ acted on from u-d-b this session.
 
 ---
 
+## Capability audit — four subsystems
+
+By the end of Session 1115 we had four code-derived audit docs covering
+the parts of Donkey Betz that have clean registries. Same pattern in each
+case: management command introspects code → writes a DOC-AUTOGEN doc →
+forward-drift guards added to the verifier registry → real findings
+surface where they exist.
+
+| Subsystem | Command | Doc | Lines | Headline |
+|---|---|---|---:|---|
+| Agents | `build_capability_audit` | `docs/CAPABILITY_AUDIT.md` | 1063 | 83 agents · 83/83 docstrings · 51/83 explicit tools · taxonomy 74/8/1 |
+| Spiders | `build_spider_audit` | `docs/SPIDER_AUDIT.md` | 1217 | 80 entries · 41 categories · 80/80 docstrings · 139 targets |
+| PA tools | `build_pa_tool_audit` | `docs/PA_TOOL_AUDIT.md` | 2106 | 167 names · 101 schemas · 166 handlers · 100 wired both ways |
+| Beat schedule | `build_beat_audit` | `docs/BEAT_AUDIT.md` | 414 | 42 entries · 35/42 task refs resolve · 5 queues |
+
+Three real findings surfaced (recorded in the verifier registry as
+forward-drift guards so they can't silently regress):
+
+1. **`ContentDistributionAgent` is a phantom in `_NON_SPECIALIST`** —
+   listed in the routing whitelist but no class exists, AGENT_MAP doesn't
+   reference it. Verifier + `platform_inventory.py` counting was including
+   it as "rerouted," producing the long-standing `73/9/1` taxonomy that
+   never actually added up against AGENT_MAP-strict reality. Fixed in
+   counting (now `74/8/1`); routing whitelist left alone (fail-soft).
+   Guard: `non_specialist_phantom_entries`.
+
+2. **`distribution_agent` handler is orphaned from the LLM.** Registered
+   in `tool_dispatcher.py:332` via `self.register(...)`, no PA schema, not
+   in `run_agent.agent_name.enum`. Handler runs at startup but Rigby has
+   no way to invoke it. Either dead registration or missed addition.
+   Guard: `pa_handlers_reachable`.
+
+3. **7 scheduled beat entries reference unresolvable tasks** —
+   `clean-stale-data`, `cleanup-old-model-files`, `cleanup-old-predictions`,
+   `cleanup-opportunities-daily`, `collect-real-opportunities`,
+   `scan-spider-opportunities`, `warm-up-spiders`. The underlying
+   `@shared_task` functions all exist (in `ai_core.tasks`, `ml.tasks`,
+   `sports.tasks`, `intelligence.tasks`) and import cleanly when probed
+   directly. Celery's `autodiscover_tasks()` isn't picking them up at
+   worker startup. **Fix is a 4-line addition to `app.conf.imports` in
+   `core/celery.py:317`** — but behavior-changing: it re-enables 3
+   active-work schedules (`collect-real-opportunities` every 15min,
+   `scan-spider-opportunities`, `warm-up-spiders`). Per the
+   `agent_noise` rule, deferred for Chris/Rigby's call. Guard:
+   `beat_schedule_task_refs_resolve`.
+
+**Fifth subsystem (ML pipelines) deferred.** ML doesn't have a single
+registry — it's a federation of `ml/anomaly_detection/`,
+`ml/time_series/`, `ml/graph_neural_network/`, `ml/training/`, plus
+`ai_core/intelligence/` services. Single audit doc would either be huge
+or miss the structure. Best handled in a follow-up session as a different
+pattern (probably: enumerate ML *consumers* — which agents/tasks call ML
+predictions — rather than ML *providers*).
+
 ## Capability audit — first subsystem (agents)
 
 The numbers-honest pass exposed the real question: "what does each agent
