@@ -12,16 +12,14 @@
 
 > This audit is only as informative as the DB it runs against. Fresh local DBs show ~all-zero (nothing has executed yet). Run against a production-mirror to see what's actually live vs dead. The **never-executed** set is the answer to 'declared but not connected'.
 
-**Telemetry row counts:** AgentExecution=0, CeleryTaskEvent=0, ToolCallRecord=0 (total 0).
-
-> ⚠ All three telemetry tables are empty. This audit is showing the framework, not real activity. The numbers below are guaranteed to read "0 of N executed ever" until agents / tasks / tools actually start logging telemetry. For meaningful output, re-run against a DB with real execution history.
+**Telemetry row counts:** AgentExecution=0, CeleryTaskEvent=19, ToolCallRecord=0 (total 19).
 
 ## Headline
 
 | Registry | Registered | Executed ever | Executed (≤30d) | Never executed |
 |---|---:|---:|---:|---:|
 | **Agents** (`AGENT_MAP` ∪ DB) | 222 | 0 | 0 | 222 |
-| **Celery tasks** | 365 | 0 | 0 | 365 |
+| **Celery tasks** | 365 | 18 | 18 | 347 |
 | **PA tools** | 101 | 0 | 0 | 101 |
 
 ## Agents
@@ -92,16 +90,15 @@ These are routable in code but have never produced an execution record. Subset o
 ## Celery tasks
 
 - Registered tasks: 365
-- Executed at least once in the last 30 days: 0 / 365
-- Executed at any time on record: 0 / 365
-- **Never executed**: 365
+- Executed at least once in the last 30 days: 18 / 365
+- Executed at any time on record: 18 / 365
+- **Never executed**: 347
 
 ### Tasks with zero CeleryTaskEvent rows
 
-**365 of 365** tasks have never been recorded as executing. Cross-reference with `docs/CELERY_AUDIT.md` orphans list — tasks that are both **orphan** (no caller) AND **never executed** are the highest-confidence dead code.
+**347 of 365** tasks have never been recorded as executing. Cross-reference with `docs/CELERY_AUDIT.md` orphans list — tasks that are both **orphan** (no caller) AND **never executed** are the highest-confidence dead code.
 
 - `agents.update_agent_performance`
-- `aggregate_spider_signals`
 - `autonomous.blockchain_security_monitor`
 - `autonomous_studio.generate_content`
 - `backfill_signal_scores`
@@ -128,7 +125,6 @@ These are routable in code but have never produced an execution record. Subset o
 - `core.tasks.assign_open_findings_to_agents`
 - `core.tasks.auto_approve_boardroom_items`
 - `core.tasks.auto_approve_low_risk_gates`
-- `core.tasks.auto_archive_stale_deliverables`
 - `core.tasks.auto_complete_pilots`
 - `core.tasks.auto_enhance_blogs`
 - `core.tasks.auto_generate_podcast_episode`
@@ -150,7 +146,9 @@ These are routable in code but have never produced an execution record. Subset o
 - `core.tasks.broadcast_evolution_status`
 - `core.tasks.broadcast_learning_status`
 - `core.tasks.broadcast_relationship_status`
-- … (+315 more — see full list with `python manage.py build_runtime_audit --check` and grep)
+- `core.tasks.check_all_alerts`
+- `core.tasks.check_blocked_research_for_unblock`
+- … (+297 more — see full list with `python manage.py build_runtime_audit --check` and grep)
 
 ## PA tools (Rigby)
 
