@@ -34,7 +34,7 @@ repeats the live summary table so it cannot drift independently.
 | **Services** | 320 files / 112 `*Service` classes |
 | **Spiders** | 80 (172 files including management) |
 | **Views Files** | 200 |
-| **Management Commands** | 153 |
+| **Management Commands** | 167 (see [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md)) |
 | **WebSocket Consumers** | 67 |
 | **Discord Commands** | 144 (96 `@*.command` + 48 `@app_commands.command`) |
 | **Script Files** | 311 (Jan 2026 snapshot) |
@@ -365,7 +365,13 @@ repeats the live summary table so it cannot drift independently.
 
 ---
 
-## Management Commands (63)
+## Management Commands (167)
+
+> The full per-command catalog (with `help=` text, args, and category)
+> lives in [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md),
+> which auto-regenerates from the filesystem via
+> `python manage.py build_management_command_audit`. The category overview
+> below is hand-curated narrative and may drift — trust the audit for counts.
 
 ### Command Categories
 
@@ -473,7 +479,7 @@ unified-donkey-betz/
 │   ├── tasks*.py                  # Celery tasks (243)
 │   ├── consumers*.py              # WebSocket consumers (52)
 │   ├── urls.py                    # URL routing (1,578 endpoints)
-│   ├── management/commands/       # 63 management commands
+│   ├── management/commands/       # 167 management commands
 │   ├── prompts/                   # Prompt templates
 │   ├── learning_bridges/          # 9 learning bridges
 │   └── ...

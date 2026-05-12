@@ -420,52 +420,58 @@ def _provenance_tracked_count() -> ClaimResult:
 
 @register_claim(
     doc='docs/topics/agent-system.md',
-    claim_id='intelligence_desks_partial_schedule',
+    claim_id='intelligence_desks_on_demand_only',
     description=(
-        "Session 1100 corrected claim: only `run_market_intelligence_desk` (stocks) "
-        "is scheduled daily; 3 of 4 desks are on-demand only via /api/home/trigger-desks/"
+        "Session 1115 corrected claim: all 4 Intelligence Desks are on-demand only; "
+        "no PeriodicTask schedules any of them (the Session 1000-era "
+        "run_market_intelligence_desk daily schedule was removed in commit a88fb8e7)."
     ),
     db_required=True,
 )
-def _intelligence_desks_partial_schedule() -> ClaimResult:
-    """Verify the corrected claim: stocks desk IS scheduled, others are on-demand only.
+def _intelligence_desks_on_demand_only() -> ClaimResult:
+    """Verify that no Intelligence Desk task is scheduled as a PeriodicTask.
 
-    Session 1099 originally flagged this as a high-severity drift because the
-    doc claimed all 4 desks ran daily but only stocks was scheduled. Session 1100
-    corrected the doc to describe the actual partial-schedule reality. This
-    verifier now confirms the doc matches reality:
+    History:
+      - Session 1000 added a daily `run_market_intelligence_desk` PeriodicTask
+        ("Tier 1 Autonomous Situation, 8am Mon-Fri").
+      - Commit `a88fb8e7` ("minimal beat schedule" cleanup) removed it from
+        `app.conf.beat_schedule`.
+      - Session 1100's doc-drift purge updated the topic doc to say "only
+        stocks is scheduled" — but that was already wrong; the schedule had
+        already been removed.
+      - Session 1115 audited and updated the doc to say "all 4 on-demand only,"
+        which matches the actual state.
 
-    - run_market_intelligence_desk: enabled PeriodicTask present (✓)
-    - run_all_desks_intelligence:   no PeriodicTask (✓ on-demand only, doc agrees)
+    This verifier now confirms the doc matches reality:
+    no PeriodicTask references any of the desk task paths.
     """
     from django_celery_beat.models import PeriodicTask
-    stocks_pt = PeriodicTask.objects.filter(
-        task='core.tasks.run_market_intelligence_desk'
-    ).first()
-    all_desks_pt = PeriodicTask.objects.filter(
-        task='core.tasks.run_all_desks_intelligence'
-    ).first()
-    stocks_scheduled = bool(stocks_pt and stocks_pt.enabled)
-    all_desks_scheduled = bool(all_desks_pt and all_desks_pt.enabled)
-    expected_state = "stocks scheduled, other 3 on-demand only"
-    if stocks_scheduled and not all_desks_scheduled:
+    desk_task_paths = [
+        'core.tasks.run_market_intelligence_desk',
+        'core.tasks.run_sports_intelligence_desk',
+        'core.tasks.run_blockchain_intelligence_desk',
+        'core.tasks.run_narrative_intelligence_desk',
+        'core.tasks.run_all_desks_intelligence',
+    ]
+    enabled = sorted(
+        PeriodicTask.objects.filter(task__in=desk_task_paths, enabled=True)
+        .values_list('task', flat=True)
+    )
+    if not enabled:
         return ClaimResult.build(
-            expected=expected_state,
-            actual=expected_state,
+            expected="no desk PeriodicTask scheduled (all 4 on-demand only)",
+            actual="no desk PeriodicTask scheduled",
             severity='ok',
+            note="doc says on-demand only; DB agrees",
         )
-    parts: list[str] = []
-    if not stocks_scheduled:
-        parts.append("stocks desk NOT scheduled (doc says it should be)")
-    if all_desks_scheduled:
-        parts.append("run_all_desks_intelligence IS scheduled (doc says on-demand only)")
     return ClaimResult.build(
-        expected=expected_state,
-        actual="; ".join(parts) or "unknown",
+        expected="no desk PeriodicTask scheduled (all 4 on-demand only)",
+        actual=f"scheduled: {enabled}",
         severity='medium',
         fix_suggestion=(
-            "Either re-add stocks PeriodicTask, or update docs/topics/agent-system.md "
-            "to describe whatever the actual schedule is now."
+            "Either disable / delete the PeriodicTask(s) listed in `actual`, "
+            "or update `docs/topics/agent-system.md` to reflect the new "
+            "schedule. The audit-doc claim should match runtime state."
         ),
     )
 
@@ -1685,10 +1691,18 @@ def _backend_inv_services_files() -> ClaimResult:
 
 @register_claim(
     doc='docs/BACKEND_INVENTORY.md',
-    claim_id='backend_inventory_mgmt_cmds_63',
-    description="docs/BACKEND_INVENTORY.md summary: 'Management Commands | 63'",
+    claim_id='backend_inventory_mgmt_cmds_count',
+    description="docs/BACKEND_INVENTORY.md 'Management Commands | 167' matches filesystem count",
 )
 def _backend_inv_mgmt() -> ClaimResult:
+    """Track count of files under `core/management/commands/`.
+
+    Session 1115: re-pegged from a Session 1100 baseline of 153 to the
+    current count of 167 after a model-vs-filesystem audit. The new
+    `build_management_command_audit` command (Session 1115) regenerates
+    `docs/MANAGEMENT_COMMAND_AUDIT.md` from the same filesystem read, so
+    future drift between the two surfaces here.
+    """
     from pathlib import Path
     cmds_dir = Path(__file__).resolve().parent.parent / 'management' / 'commands'
     cmds = [
@@ -1696,19 +1710,20 @@ def _backend_inv_mgmt() -> ClaimResult:
         if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
     ]
     actual = len(cmds)
-    expected = 153  # refreshed Session 1100
+    expected = 167  # Session 1115 baseline post-audit-doc additions
     drift = abs(actual - expected)
-    severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
+    severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual,
         severity=severity,
         note=(
-            "docs/current/MANAGEMENT_COMMANDS.md says 43; "
-            "BACKEND_INVENTORY.md says 63; actual files in management/commands/"
+            f"{actual} files in core/management/commands/; "
+            f"docs/MANAGEMENT_COMMAND_AUDIT.md regenerates from the same source"
         ),
         fix_suggestion=(
-            f"Reconcile to '{actual}'"
+            f"Update BACKEND_INVENTORY.md to '{actual}' and bump the "
+            f"baseline in `_backend_inv_mgmt` if growth is intentional."
             if severity != 'ok' else None
         ),
     )
