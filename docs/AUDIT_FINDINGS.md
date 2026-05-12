@@ -44,6 +44,8 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency (`LearningLoop` × 7 vs `LearningBridge` × 1) | informational | open | cosmetic |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc says it should be scheduled daily | medium | open | doc-or-schedule decision |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
+| 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
+| 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 
 ---
 
@@ -377,6 +379,88 @@ Production may have additional Agent rows loaded by other paths (older
 sessions referenced `223 persona agents` which suggests a prod-time
 snapshot). When the verifier runs against prod, prod-side drift surfaces
 as a normal `medium` finding — that's the right behavior.
+
+---
+
+## 12. 245 orphan Celery tasks (67% of registry)
+
+**Status:** open · medium-high severity · dead-code review.
+
+**Verifier doc:** `docs/CELERY_AUDIT.md`
+**Verifier claim:** `celery_orphan_count_baseline`
+
+```bash
+python manage.py verify_doc_claims --doc docs/CELERY_AUDIT.md
+```
+
+**What:** the new Celery audit walked the full task registry (365 tasks
+post-autodiscover) and cross-referenced each name against:
+
+- `app.conf.beat_schedule` (cron-scheduled callers)
+- A codebase-wide grep for `task.delay(...)` / `task.apply_async(...)` /
+  `task.s(...)` / `task.si(...)` (static method-style callers)
+- A grep for `send_task('module.path.task')` (dynamic-dispatch callers)
+
+**245 of 365 tasks have NONE of those.** They exist as `@shared_task`
+or `@app.task` decorated functions but nothing fires them. The full
+list is the "Orphan tasks" section of `docs/CELERY_AUDIT.md`.
+
+**Caveats:**
+
+- Some orphans may be invoked through more exotic paths (`signature()`
+  composition, `chord`/`chain` constructors, name-based dispatch via
+  `current_app.tasks[name]`). The audit doesn't catch those.
+- Some are intentionally kept warm for future use (`debug_task` is one).
+
+**Suggested next step:** the orphan list is too long for a single
+sweeping fix. The Celery audit prints orphans in a per-module rollup
+under "Tasks by module" — start with the modules where the orphan
+rate is highest (most likely candidates: `core/tasks.py` subsections
+related to deprecated features). For each:
+
+1. Confirm the task is truly unused (`git grep <task_name>` for unusual
+   call patterns).
+2. If unused: delete the function, or `git log` it to see when the last
+   caller was removed and why.
+3. If used via dynamic dispatch: leave it but add an explicit comment
+   in the docstring noting the call site so future audits don't flag.
+
+**Risk:** medium-high — these tasks may be loaded into production
+workers' memory at boot for no reason. Removing them frees memory and
+reduces audit noise. Deleting one that's actually called dynamically
+breaks production.
+
+---
+
+## 13. Runtime telemetry audit framework added
+
+**Status:** open (informational) · run against prod for real findings.
+
+**Audit doc:** `docs/RUNTIME_AUDIT.md`
+**Command:** `python manage.py build_runtime_audit`
+
+**What:** new audit that cross-references the three telemetry tables
+(`AgentExecution`, `CeleryTaskEvent`, `ToolCallRecord`) against the
+three primary registries (`AGENT_MAP` + DB Agent rows, `app.tasks`,
+`PA_TOOL_SCHEMAS`). For each registry it reports:
+
+- Total registered
+- Total with ≥1 execution in last 30 days (window configurable)
+- Total executed ever
+- **Never executed** — the headline finding
+
+**Why it's informational, not a drift finding yet:** the local DB used
+for Session 1115 has 0 telemetry rows (fresh seed). On a
+production-mirror DB the audit will surface "agents declared but never
+invoked," "tools declared but never called," etc. — combined with the
+Celery audit's static orphan list, this gives you two angles on
+"declared but not connected."
+
+**Suggested next step:** run against production (or a recent prod-dump
+in a sandbox) and treat the never-executed sets as evidence-based dead
+code candidates. The intersection of Celery orphans (static) +
+never-executed Celery tasks (runtime) is the highest-confidence dead
+code; same applies for agents and tools.
 
 ---
 
