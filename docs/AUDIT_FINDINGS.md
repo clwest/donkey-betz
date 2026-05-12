@@ -40,9 +40,9 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 5 | CLAUDE.md said `144` Discord commands; actual is `96` (double-count) | medium | **✅ fixed Session 1115** | — |
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
-| 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 164 | medium | open | doc refresh |
+| 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 167 | medium | **✅ fixed Session 1115** | new `build_management_command_audit` + inline refresh |
 | 9 | Learning bridge naming inconsistency (`LearningLoop` × 7 vs `LearningBridge` × 1) | informational | open | cosmetic |
-| 10 | `run_market_intelligence_desk` PeriodicTask absent — doc says it should be scheduled daily | medium | open | doc-or-schedule decision |
+| 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
 | 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
@@ -324,27 +324,34 @@ mentions them by name — grep first.
 
 ---
 
-## 8. `BACKEND_INVENTORY.md` undercounts management commands (63 → 164)
+## 8. `BACKEND_INVENTORY.md` undercounts management commands
 
-**Status:** open · medium severity · doc refresh.
+**Status:** ✅ fixed Session 1115 — new audit doc + inline refresh.
 
-**Verifier doc:** `docs/BACKEND_INVENTORY.md`
-**Verifier claim:** `backend_inventory_mgmt_commands_63`
+**Verifier claim:** `backend_inventory_mgmt_cmds_count`
 
-**What:** `docs/BACKEND_INVENTORY.md` claims 63 Django management commands;
-the filesystem has 164 under `core/management/commands/`. Session 1115
-added 9 new audit-builder commands which made the drift more visible, but
-the underlying doc has been stale for many sessions before.
+**What:** `docs/BACKEND_INVENTORY.md` had claimed 63 / 153 (across three
+inconsistent inline places) while the filesystem had 167. The
+Session-1115 audit-doc additions made the drift more visible but the
+underlying doc had been stale for many sessions before.
 
-**Fix:** refresh `docs/BACKEND_INVENTORY.md`'s management-commands line to
-say 164 (or whatever the count is at fix time), or — better — regenerate
-the doc from runtime as part of a future `build_backend_inventory` audit.
-Worth noting the same kind of pattern as the Session 1115 audits: build a
-DOC-AUTOGEN command that walks `core/management/commands/`, pulls each
-command's `help` and arg signatures, writes a runtime-derived
-`docs/MANAGEMENT_COMMAND_AUDIT.md`.
+**Fix landed (sustainable):**
 
-**Risk:** zero — pure doc change.
+1. **New audit doc** at `docs/MANAGEMENT_COMMAND_AUDIT.md` — auto-regenerates
+   from the filesystem via `python manage.py build_management_command_audit`.
+   Pulls each Command class's `help=` text, AST-parses `add_arguments`,
+   buckets by heuristic category. Same DOC-AUTOGEN pattern as the 11
+   other audits.
+2. **`BACKEND_INVENTORY.md` inline numbers** updated (three places) and
+   pointed at the new audit doc as the runtime-derived source.
+3. **Verifier claim** renamed from `backend_inventory_mgmt_cmds_63` to
+   `backend_inventory_mgmt_cmds_count`, expected baseline bumped from
+   153 → 167, drift bands tightened. Future filesystem additions /
+   removals surface here as `low` (≤30 drift) or `medium` (>30).
+4. **`scripts/verify_repo_guardrails.py`** protected-file list extended
+   so hand-edits to the new audit doc fail strict mode.
+
+**Risk:** zero — pure doc-and-tooling change.
 
 ---
 
@@ -372,7 +379,36 @@ SportsBettingLearningBridge` before renaming.
 
 ## 10. `run_market_intelligence_desk` no longer scheduled
 
-**Status:** open · medium severity · doc-or-schedule decision needed.
+**Status:** ✅ fixed Session 1115 — doc-stale, updated to reflect reality.
+
+**Verifier claim:** `intelligence_desks_on_demand_only` (was
+`intelligence_desks_partial_schedule`).
+
+**What:** `docs/topics/agent-system.md` said "only stocks is currently
+scheduled" but the verifier found no PeriodicTask matching
+`run_market_intelligence_desk` after the local DB was bootstrapped.
+
+**Investigation:** `git log -S "run_market_intelligence_desk"` showed
+the schedule was deliberately removed in commit `a88fb8e7` ("minimal
+beat schedule" cleanup), but the topic doc was never updated to match.
+A Session 1100 "doc-drift purge" updated the doc, but the schedule was
+already gone — so the Session 1100 update was incorrect too.
+
+**Decision: doc is stale, schedule was intentionally removed.** All 4
+intelligence desks (stocks, sports, blockchain, narrative) are now
+on-demand only via `POST /api/home/trigger-desks/`. The underlying
+task function `run_market_intelligence_desk` still exists at
+`core/tasks.py:4356` and can be re-scheduled later if needed.
+
+**Fix landed:**
+
+1. `docs/topics/agent-system.md` updated — header narrative, schedule
+   table, and inline note all say "on-demand only" with reference to
+   commit `a88fb8e7`.
+2. Verifier claim rewritten as `intelligence_desks_on_demand_only`
+   that confirms no desk task has an enabled PeriodicTask.
+
+**Risk:** zero — doc-only change reflecting existing system state.
 
 **Verifier doc:** `docs/topics/agent-system.md`
 **Verifier claim:** `intelligence_desks_partial_schedule`

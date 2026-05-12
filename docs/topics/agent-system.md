@@ -3,7 +3,7 @@
 
 # Agent System
 
-83 agents in AGENT_MAP, with DB persona rows available via DynamicPersonaAgent fallback, routed deterministically via dictionary lookup with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks defined; **only `run_market_intelligence_desk` (stocks) is currently scheduled** as a daily PeriodicTask — the other 3 (sports/blockchain/narrative) are on-demand only via `POST /api/home/trigger-desks/`. Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all AGENT_MAP agents, media task guard blocks non-generative tasks.
+83 agents in AGENT_MAP, with DB persona rows available via DynamicPersonaAgent fallback, routed deterministically via dictionary lookup with automatic tool call recording and provenance tracking. Session 1000: 4 Intelligence Desks defined; Session 1115 confirmed **all 4 desks are on-demand only** via `POST /api/home/trigger-desks/` (the previously-claimed daily `run_market_intelligence_desk` PeriodicTask was removed in commit `a88fb8e7` "minimal beat schedule" cleanup, but this doc lagged until Session 1115). Session 1029: Agent health audit — 35 thriving, 6 bounded, 3 waste paths closed. Session 1034: RAG user documents wired into all AGENT_MAP agents, media task guard blocks non-generative tasks.
 
 ## Agent Categories (83 in AGENT_MAP)
 
@@ -32,21 +32,26 @@
 
 **54 routable** (can be invoked directly) | **25 non-routable** (sub-agents/coordinators) | **26 provenance-tracked**
 
-## Intelligence Desks (Session 1000 — partial schedule, refreshed Session 1100)
+## Intelligence Desks (Session 1000 — on-demand only, refreshed Session 1115)
 
-4 desk coordinators are **defined**. Only the stocks desk is currently scheduled — the other three are on-demand only.
+4 desk coordinators are **defined**. All four are **on-demand only** — none are scheduled.
 
-| Desk | Coordinator | Agents Activated | Schedule (verified Session 1100) |
+| Desk | Coordinator | Agents Activated | Schedule (verified Session 1115) |
 |------|------------|-----------------|---|
-| Stocks | MarketIntelligenceCoordinator | 9 agents (bull/bear/audit/monitor/anomaly/scanner) | **Daily** via `run_market_intelligence_desk` PeriodicTask |
+| Stocks | MarketIntelligenceCoordinator | 9 agents (bull/bear/audit/monitor/anomaly/scanner) | **On-demand only** (no PeriodicTask — `run_market_intelligence_desk` task fn at `core/tasks.py:4356` still exists; can be re-scheduled if needed) |
 | Sports | SportsBettingCoordinator | 5 agents (predictor/odds/arbitrage/line/sharp) | **On-demand only** (no PeriodicTask) |
 | Blockchain | BlockchainAuditCoordinator | 5 agents (contract/transaction/whale/exploit) | **On-demand only** (no PeriodicTask) |
 | Narrative | NarrativeDriftCoordinator | 4 agents (historian/trend/cultural) | **On-demand only** (no PeriodicTask) |
 
-> The wrapper `run_all_desks_intelligence` exists as a Celery task function but
-> is **not registered as a beat schedule** (verified Session 1099 audit).
-> "Run All Desks" in the UI invokes it on-demand via `POST /api/home/trigger-desks/`.
-> To run all four daily, add a PeriodicTask for `run_all_desks_intelligence`.
+> Both the individual-desk tasks (`run_market_intelligence_desk`,
+> `run_sports_intelligence_desk`, etc.) and the wrapper
+> `run_all_desks_intelligence` exist as Celery task functions but **none
+> are registered as a beat schedule** (verified Session 1115 audit, after
+> the Session 1000-era `run_market_intelligence_desk` daily schedule was
+> removed in commit `a88fb8e7`). "Run All Desks" in the UI invokes the
+> wrapper on-demand via `POST /api/home/trigger-desks/`. To resume
+> automated runs, add a PeriodicTask for the desk(s) of interest in
+> `core/celery.py`.
 
 API: `GET /api/home/intelligence-desks/`, `POST /api/home/trigger-desks/`
 Cache keys: `desk:{stocks|sports|blockchain|narrative}:latest`
