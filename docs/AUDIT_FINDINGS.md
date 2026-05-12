@@ -46,7 +46,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
 | 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
-| 14 | **`run_heartbeat` takes 32s** and **`check_celery_health` takes 31s** — long for "every 10 min" infrastructure tasks (3× the interval) | medium | open | perf investigation |
+| 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
 | 16 | **`muscular` reports "paralyzed"** (no agent execution telemetry) and **`digestive` reports "sluggish"** on fresh DB — body systems express their dependency on real activity | informational | open | known cold-start state |
 | 17 | **`ToolCallRecord` only writes from PA entrypoint** — direct `ToolDispatcher.execute_sync()` calls don't log. Telemetry blind spot for non-PA tool invocations. | low-medium | **✅ fixed Session 1115** | dispatcher writes on all return paths |
@@ -630,37 +630,69 @@ code; same applies for agents and tools.
 
 ---
 
-## 14. `run_heartbeat` and `check_celery_health` take >30 seconds each
+## 14. `run_heartbeat` and `check_celery_health` take >30 seconds — ✅ fixed
 
-**Status:** open · medium severity · perf investigation.
+**Status:** ✅ fixed Session 1115 — timeout cap + no-worker short-circuit.
 
 **Verifier doc:** `docs/RUNTIME_AUDIT.md` (telemetry-driven)
 
-**What:** During the Session 1115 local full-stack run (12 min of
-Celery worker + beat), 19 `CeleryTaskEvent` rows were captured. Two
-infrastructure tasks stood out:
+**Before / after wall times** (measured locally with `cProfile`):
 
-- `core.tasks.run_heartbeat`: 32.36s (scheduled every 10 min)
-- `core.tasks.check_celery_health`: 31.58s (scheduled every 10 min)
+| Task | Before | After | Speedup |
+|---|---:|---:|---:|
+| `run_heartbeat` | 34.01s | **1.50s** | **22×** |
+| `check_celery_health` | 31.39s | **0.04s** | **800×** |
 
-Every other task in the sample ran in 0.02–0.50s. A 32-second
-heartbeat that fires every 10 minutes is 5% of wall-clock spent on
-the heartbeat alone. Both tasks may be sequentially polling all
-body-system services + each Celery worker for vitals — the slow
-path is probably the introspection.
+### Root cause
 
-**Fix path:**
+`cProfile` showed both tasks spent 30+ of their 31-34 seconds inside
+`core/services/celery_health.py::_check_workers`, which calls three
+worker-introspection methods sequentially:
 
-1. Profile `run_heartbeat` and `check_celery_health` to find the slow
-   step. Likely candidate: synchronous calls to each `*Service.get_vitals()`
-   over network sockets (Redis / DB connection pool).
-2. Add an `inspect.ping` timeout cap, or parallelize the vital fetches.
-3. Consider degrading to a 5-minute interval if the heartbeat is meant to
-   be quick.
+```python
+inspect = self._app.control.inspect(timeout=10.0)
+active = inspect.active() or {}
+stats = inspect.stats() or {}
+ping_response = inspect.ping() or {}
+```
 
-**Risk:** medium — the heartbeat tasks themselves are infrastructure
-and may have established SLO expectations elsewhere. Don't change
-intervals without checking what reads from `HeartBeat` model.
+Each call uses Celery's `broadcast` mechanism: send a control message
+to all workers, poll for replies until timeout. With the inspector
+configured for a 10-second timeout, three sequential broadcasts ate
+~30 seconds when no workers responded (local DB, no live workers).
+
+### Fix landed
+
+Two changes in `core/services/celery_health.py::_check_workers`:
+
+1. **Drop per-call timeout from 10.0s → 1.0s.** Responsive workers
+   reply in <100ms; non-responsive ones aren't going to answer at 10s
+   either, so the extra wait is pure dead time.
+2. **Short-circuit when zero worker processes exist on the host.**
+   `_check_worker_processes()` (a cheap `ps`-grep) tells us
+   immediately when there's nobody to broadcast to. Skip the three
+   broadcasts entirely in that case.
+
+### Cost when workers ARE running
+
+Worst case after the fix is 3 × 1.0s = 3s in `_check_workers`,
+plus the ~1.5s spent in body-system vital fetches. Total per
+heartbeat: ~4.5s. Down from ~34s. Easily within the 600s (10-min)
+schedule budget.
+
+### Risk
+
+Low. The heartbeat tasks still produce the same data; they just
+stop blocking on broadcasts to workers that won't reply. Any caller
+relying on the longer timeout was already getting timeout-default
+data (empty dict) anyway.
+
+### Verifier impact
+
+No new claim registered for this fix — speed is operational, not
+something the static-verifier framework tracks. Future runs of
+`build_runtime_audit` will show the lower task durations in
+`CeleryTaskEvent` aggregations.
 
 ---
 
