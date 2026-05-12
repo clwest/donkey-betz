@@ -2,7 +2,7 @@
 
 **AI-Powered Intelligence, Execution, and Revenue Generation System**
 
-**Status:** Cleanup arc — see [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md) | 83 AGENT_MAP (73 enabled, 9 rerouted, 1 blocked) | 80 Spiders | 9 Body Systems
+**Status:** Cleanup arc — see [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md) | 83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked) | 80 Spiders | 9 Body Systems
 **Session:** 1115 | **Last Updated:** May 12, 2026
 
 > Numbers above can drift. The runtime-derived [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) is canonical for counts; run `python manage.py verify_doc_claims --only-drift` for live diffs.
