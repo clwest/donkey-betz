@@ -6,32 +6,35 @@
 
 ## Headline
 
-- **User-defined tasks (`!celery.*`):** 365
-- **Scheduled in `beat_schedule`:** 35 of 365
-- **Has at least one `.delay()` / `.apply_async()` caller:** 89 of 365
-- **Orphans (no caller AND not scheduled):** **245** of 365. These ship but nothing fires them.
-- **Tasks with docstrings:** 145 of 365 (40%)
+- **User-defined tasks (`!celery.*`):** 402
+- **Scheduled in `beat_schedule`:** 42 of 402
+- **Has at least one `.delay()` / `.apply_async()` caller:** 93 of 402
+- **Orphans (no caller AND not scheduled):** **272** of 402. These ship but nothing fires them.
+- **Tasks with docstrings:** 182 of 402 (45%)
 
 > A task can be wired by either path: a `beat_schedule` entry (cron-fires it) or an explicit `.delay(...)` from view / service / agent code. Tasks with neither are dead-on-arrival — the function exists but no execution path reaches it.
 
 ## Findings
 
-- **Orphan tasks** — 245 tasks have no caller via `.delay(...)` / `.apply_async(...)` AND aren't in `app.conf.beat_schedule`. They ship but nothing fires them. Top: `update_agent_performance`, `blockchain_security_monitor`, `generate_content`, `backfill_signal_scores`, `backfill_voice_scores`, `debug_task`, `check_learning_loop_slo`, `rag_retrieval_canary`…. Full list in the appendix.
-- Tasks with no docstring: 220 of 365 (60%). The audit relies on the function docstring to describe what each task does.
-- Queue distribution (top 5): `<default>` (348), `default` (10), `long_running` (5), `code_jobs` (1), `pa` (1). `<default>` carries 348 of 365 tasks.
+- **Orphan tasks** — 272 tasks have no caller via `.delay(...)` / `.apply_async(...)` AND aren't in `app.conf.beat_schedule`. They ship but nothing fires them. Top: `update_agent_performance`, `refresh_ai_content_opportunities`, `sync_revenue_metrics`, `blockchain_security_monitor`, `generate_content`, `backfill_signal_scores`, `backfill_voice_scores`, `debug_task`…. Full list in the appendix.
+- Tasks with no docstring: 220 of 402 (55%). The audit relies on the function docstring to describe what each task does.
+- Queue distribution (top 5): `<default>` (385), `default` (10), `long_running` (5), `code_jobs` (1), `pa` (1). `<default>` carries 385 of 402 tasks.
+- Cross-reference: the 7 broken beat refs (BEAT_AUDIT.md finding 3) point at tasks that DO exist in the registry once their modules are imported — found in this audit at: `ai_core.tasks.clean_stale_data`, `ai_core.tasks.collect_real_opportunities`, `ai_core.tasks.warm_up_spider_network`, `intelligence.tasks.cleanup_old_opportunities`, `intelligence.tasks.scan_spider_opportunities`, `ml.cleanup_old_model_files`, `sports.cleanup_old_predictions`. The issue is autodiscover at worker startup, not missing tasks.
 
-## Orphan tasks (245)
+## Orphan tasks (272)
 
 Tasks with no static caller and no beat-schedule entry. Worth a manual review — some may be invoked dynamically (reflection, name-based dispatch) and a few may be intentionally kept warm for future use, but most are likely dead code or got disconnected during a refactor.
 
 | Task | Module | File | Queue | Description |
 |---|---|---|---|---|
 | `update_agent_performance` | `agents` | `core/tasks_agents.py:1064` | `<default>` | Update agent performance metrics from evaluated predictions |
+| `refresh_ai_content_opportunities` | `ai_core.tasks` | `ai_core/tasks.py:80` | `<default>` | Generate fresh AI-powered income opportunities. |
+| `sync_revenue_metrics` | `ai_core.tasks` | `ai_core/tasks.py:109` | `<default>` | Sync revenue metrics across all components. |
 | `blockchain_security_monitor` | `autonomous` | `core/tasks.py:4862` | `<default>` | _(no docstring)_ |
 | `generate_content` | `autonomous_studio` | `core/tasks.py:4375` | `<default>` | _(no docstring)_ |
 | `backfill_signal_scores` | `` | `core/tasks.py:1218` | `<default>` | Session 1025: Score all existing SignalClusters that have default scores. |
 | `backfill_voice_scores` | `content_studio` | `core/tasks.py:9316` | `<default>` | _(no docstring)_ |
-| `debug_task` | `core.celery` | `core/celery.py:329` | `<default>` | Debug task to test Celery configuration. |
+| `debug_task` | `core.celery` | `core/celery.py:378` | `<default>` | Debug task to test Celery configuration. |
 | `check_learning_loop_slo` | `core` | `core/tasks.py:12492` | `<default>` | Daily SLO check: learning loop usage_rate should be >= 5% over 24h. |
 | `rag_retrieval_canary` | `core` | `core/tasks.py:12486` | `<default>` | _(no docstring)_ |
 | `agent_content_to_workspace` | `core.tasks` | `core/tasks.py:7501` | `<default>` | _(no docstring)_ |
@@ -260,25 +263,54 @@ Tasks with no static caller and no beat-schedule entry. Worth a manual review �
 | `cleanup_old_executions` | `core.tasks_agents` | `core/tasks_agents.py:417` | `<default>` | Clean up old agent executions to prevent database bloat. |
 | `execute_agent_async` | `core.tasks_agents` | `core/tasks_agents.py:387` | `<default>` | Execute an agent asynchronously with timeout. |
 | `execute_sports_orchestration` | `core.tasks_agents` | `core/tasks_agents.py:940` | `<default>` | Execute sports betting agent orchestration asynchronously. |
+| `sync_all_entity_memories` | `intelligence.shared_memory` | `intelligence/shared_memory.py:539` | `<default>` | Periodic task to sync memories across all entities. |
+| `calculate_daily_revenue_metrics` | `intelligence.tasks` | `intelligence/tasks.py:1458` | `<default>` | Calculate and store daily revenue metrics |
+| `check_proposal_responses` | `intelligence.tasks` | `intelligence/tasks.py:1248` | `<default>` | Check platforms for responses to submitted proposals |
+| `fetch_all_opportunities` | `intelligence.tasks` | `intelligence/tasks.py:1721` | `<default>` | Fetch opportunities from all spiders - runs hourly |
+| `get_live_opportunities` | `intelligence.tasks` | `intelligence/tasks.py:34` | `<default>` | Get current live opportunities |
+| `get_live_predictions` | `intelligence.tasks` | `intelligence/tasks.py:44` | `<default>` | Get current live predictions |
+| `handle_client_response` | `intelligence.tasks` | `intelligence/tasks.py:1314` | `<default>` | Handle client responses and trigger appropriate follow-up actions |
+| `monitor_and_process_opportunities` | `intelligence.tasks` | `intelligence/tasks.py:1125` | `<default>` | Continuously monitor platforms and process new opportunities. |
+| `process_pending_action_plans` | `intelligence.tasks` | `intelligence/tasks.py:66` | `<default>` | Session 799: Process all pending action plans. |
+| `scan_income_spider_orchestrator` | `intelligence.tasks` | `intelligence/tasks.py:1649` | `<default>` | CRITICAL FIX: Scheduled task for Income Spider Orchestrator |
+| `start_intelligence_engine` | `intelligence.tasks` | `intelligence/tasks.py:19` | `<default>` | 🚀 Start the Real-Time Intelligence Engine |
+| `submit_follow_up` | `intelligence.tasks` | `intelligence/tasks.py:1384` | `<default>` | Submit follow-up communication to clients |
+| `submit_proposal_automatically` | `intelligence.tasks` | `intelligence/tasks.py:1209` | `<default>` | Automatically submit high-confidence proposals to platforms |
+| `trigger_market_scan` | `intelligence.tasks` | `intelligence/tasks.py:54` | `<default>` | Trigger an immediate market scan |
+| `update_ml_model_with_feedback` | `intelligence.tasks` | `intelligence/tasks.py:1418` | `<default>` | Update ML model with outcome feedback for continuous improvement |
 | `calculate_agent_accuracy` | `learning_loop` | `core/tasks.py:4367` | `<default>` | _(no docstring)_ |
 | `track_prediction_outcomes` | `learning_loop` | `core/tasks.py:4363` | `<default>` | _(no docstring)_ |
+| `check_retraining_needed` | `ml` | `ml/tasks.py:13` | `<default>` | Check all sports to see if retraining needed |
+| `get_model_stats` | `ml` | `ml/tasks.py:204` | `<default>` | Get statistics for all active models |
+| `retrain_all_models` | `ml` | `ml/tasks.py:99` | `<default>` | Retrain all sport models |
 | `run_detector_cycle` | `narrative_drift` | `core/tasks.py:4638` | `<default>` | _(no docstring)_ |
 | `trigger_content_from_shift` | `narrative_drift` | `core/tasks.py:4710` | `<default>` | _(no docstring)_ |
 | `update_narrative_statuses` | `narrative_drift` | `core/tasks.py:4642` | `<default>` | _(no docstring)_ |
 | `process_pending_auto_topics` | `` | `core/tasks.py:10940` | `<default>` | _(no docstring)_ |
 | `record_revenue` | `roi_metrics` | `core/tasks.py:4821` | `<default>` | [SESSION 475] Record revenue from an opportunity. |
+| `evaluate_completed_predictions` | `sports` | `sports/tasks.py:13` | `<default>` | Evaluate predictions for games that have completed |
+| `generate_accuracy_report` | `sports` | `sports/tasks.py:278` | `<default>` | Generate accuracy report for all models and sports |
+| `generate_game_predictions` | `sports` | `sports/tasks.py:378` | `<default>` | Run GamePredictor to generate MLPrediction rows from current odds. |
+| `run_market_analysis` | `sports` | `sports/tasks.py:444` | `<default>` | Session 1088: Run LineMovementAnalyzer and SharpActionDetector to detect |
+| `settle_user_bets` | `sports` | `sports/tasks.py:106` | `<default>` | Settle user bets for games that have completed |
+| `update_game_scores` | `sports` | `sports/tasks.py:181` | `<default>` | Fetch final scores from The Odds API and update Game rows. |
+| `verify_betting_outcomes` | `sports` | `sports/tasks.py:414` | `<default>` | Verify outcomes for pending PlacedWager legs and watching arb items. |
 | `trigger_signal_driven_conversation` | `` | `core/tasks.py:10936` | `<default>` | _(no docstring)_ |
 | `create_default_triggers` | `triggers` | `core/tasks.py:5014` | `<default>` | Create the default situation triggers. |
 | `health_check` | `unified_pipeline` | `core/tasks.py:4714` | `<default>` | _(no docstring)_ |
 | `autopilot_tick` | `workspace` | `core/tasks.py:9320` | `<default>` | _(no docstring)_ |
 
-## Tasks by module (16 modules)
+## Tasks by module (21 modules)
 
 | Module | Tasks | Scheduled | Wired | Orphans |
 |---|---:|---:|---:|---:|
 | `core.tasks` | 332 | 33 | 81 | 222 |
+| `intelligence.tasks` | 18 | 2 | 2 | 14 |
+| `sports` | 8 | 1 | 0 | 7 |
 | `core.tasks_agents` | 6 | 0 | 2 | 4 |
 | `` | 5 | 2 | 0 | 3 |
+| `ai_core.tasks` | 5 | 3 | 1 | 2 |
+| `ml` | 5 | 1 | 1 | 3 |
 | `roi_metrics` | 4 | 0 | 3 | 1 |
 | `narrative_drift` | 3 | 0 | 0 | 3 |
 | `content_studio` | 2 | 0 | 1 | 1 |
@@ -290,6 +322,7 @@ Tasks with no static caller and no beat-schedule entry. Worth a manual review �
 | `autonomous_studio` | 1 | 0 | 0 | 1 |
 | `core.celery` | 1 | 0 | 0 | 1 |
 | `intelligence.agent_execution_pipeline` | 1 | 0 | 1 | 0 |
+| `intelligence.shared_memory` | 1 | 0 | 0 | 1 |
 | `unified_pipeline` | 1 | 0 | 0 | 1 |
 | `workspace` | 1 | 0 | 0 | 1 |
 
@@ -344,6 +377,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `broadcast_learning_status` | `core.tasks` | 2505 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `broadcast_relationship_status` | `core.tasks` | 3565 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `calculate_agent_accuracy` | `learning_loop` | 4367 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `calculate_daily_revenue_metrics` | `intelligence.tasks` | 1458 | `<default>` | · | 0 | ⚠ | Calculate and store daily revenue metrics |
 | `check_all_alerts` | `core.tasks` | 2289 | `<default>` | · | 0 | ⚠ | Check all active alerts for all users. |
 | `check_blocked_research_for_unblock` | `core.tasks` | 11000 | `default` | · | 0 | ⚠ | Session 905: Periodic task to check all blocked research and trigge… |
 | `check_brain` | `core.tasks` | 6973 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
@@ -364,6 +398,8 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `check_orchestration_auto_approvals` | `core.tasks` | 7155 | `<default>` | · | 0 | ⚠ | Session 764: Check for auto-approvals on expired approval gates. |
 | `check_orchestration_timeouts` | `core.tasks` | 7151 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `check_orphan_deliverables` | `core.tasks` | 11215 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `check_proposal_responses` | `intelligence.tasks` | 1248 | `<default>` | · | 0 | ⚠ | Check platforms for responses to submitted proposals |
+| `check_retraining_needed` | `ml` | 13 | `<default>` | · | 0 | ⚠ | Check all sports to see if retraining needed |
 | `check_sec_filings_alert` | `core.tasks` | 4288 | `<default>` | · | 0 | ⚠ | Session 460: Quick SEC filing check task. |
 | `check_skin` | `core.tasks` | 6977 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `check_spine_alignment` | `core.tasks` | 6957 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
@@ -372,6 +408,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `claim_stale_events` | `core.tasks` | 4560 | `<default>` | · | 0 | ⚠ | Claim and reprocess stale events from all consumer groups. |
 | `claude_code_agent_respond` | `core.tasks` | 11235 | `<default>` | · | 2 | · | Autonomous Claude Code agent — responds when addressed in a convers… |
 | `claude_code_engineer_task` | `core.tasks` | 11228 | `<default>` | · | 1 | · | Autonomous Claude Code engineering session — reads files, writes co… |
+| `clean_stale_data` | `ai_core.tasks` | 156 | `<default>` | ✓ | 0 | · | Clean up stale data from cache and database. |
 | `cleanup_audio_cache` | `core.tasks` | 11201 | `<default>` | ✓ | 0 | · | _(no docstring)_ |
 | `cleanup_automated_conversation_artifacts` | `core.tasks` | 536 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `cleanup_boardroom_junk` | `core.tasks` | 505 | `<default>` | ✓ | 0 | · | _(no docstring)_ |
@@ -387,7 +424,10 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `cleanup_learning_readback_events` | `core.tasks` | 483 | `<default>` | ✓ | 0 | · | Delete LearningReadbackEvent rows older than retention_days. |
 | `cleanup_llm_call_logs` | `core.tasks` | 4139 | `<default>` | ✓ | 0 | · | Delete LLMCallLog records older than retention period. |
 | `cleanup_old_executions` | `core.tasks_agents` | 417 | `<default>` | · | 0 | ⚠ | Clean up old agent executions to prevent database bloat. |
+| `cleanup_old_model_files` | `ml` | 142 | `<default>` | ✓ | 0 | · | Clean up old model files (keep only recent versions) |
 | `cleanup_old_notifications` | `core.tasks` | 2423 | `<default>` | ✓ | 0 | · | Clean up old read/dismissed notifications. |
+| `cleanup_old_opportunities` | `intelligence.tasks` | 1802 | `<default>` | ✓ | 0 | · | Mark old opportunities as expired - runs daily |
+| `cleanup_old_predictions` | `sports` | 343 | `<default>` | ✓ | 0 | · | Clean up old prediction data |
 | `cleanup_old_resolve_jobs` | `core.tasks` | 5058 | `<default>` | ✓ | 0 | · | Clean up old resolve render jobs from the database. |
 | `cleanup_resolved_signatures` | `core.tasks` | 10681 | `<default>` | ✓ | 0 | · | Session 856: Archive old resolved failure signatures. |
 | `cleanup_spider_item_hashes` | `core.tasks` | 3978 | `<default>` | ✓ | 0 | · | Session 616: Clean up old spider item hashes to prevent table bloat. |
@@ -398,6 +438,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `cleanup_stale_scoring_requests` | `core.tasks` | 1997 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `collect_kalshi_market_intelligence` | `core.tasks` | 5634 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `collect_kalshi_prediction_markets` | `core.tasks` | 5630 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `collect_real_opportunities` | `ai_core.tasks` | 17 | `<default>` | ✓ | 3 | · | Main task to collect real opportunities from all spider sources. |
 | `collect_spider_data` | `core.tasks` | 1102 | `<default>` | · | 0 | ⚠ | DEPRECATED: Mock spider data collection - replaced by run_spider_ne… |
 | `collect_sports_odds` | `core.tasks` | 5638 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `collect_sports_odds_intelligence` | `core.tasks` | 5642 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
@@ -409,7 +450,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `create_talking_video_task` | `core.tasks` | 896 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `daily_betting_digest` | `core.tasks` | 5646 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `daily_cost_forecast` | `core.tasks` | 6917 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
-| `debug_task` | `core.celery` | 329 | `<default>` | · | 0 | ⚠ | Debug task to test Celery configuration. |
+| `debug_task` | `core.celery` | 378 | `<default>` | · | 0 | ⚠ | Debug task to test Celery configuration. |
 | `decay_learning_patterns` | `core.tasks` | 496 | `<default>` | ✓ | 0 | · | Session 1085: Weekly decay of stale/ineffective learning patterns. |
 | `detect_duplicate_initiatives` | `core.tasks` | 11042 | `default` | · | 0 | ⚠ | _(no docstring)_ |
 | `detect_failure_task` | `core.tasks` | 10715 | `<default>` | · | 2 | · | _(no docstring)_ |
@@ -424,14 +465,17 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `enhance_blog` | `core.tasks` | 7505 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `enrich_boardroom_ml_predictions` | `core.tasks` | 6797 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `evaluate_and_complete_pilots` | `core.tasks` | 6082 | `<default>` | · | 1 | · | _(no docstring)_ |
+| `evaluate_completed_predictions` | `sports` | 13 | `<default>` | · | 0 | ⚠ | Evaluate predictions for games that have completed |
 | `evaluate_ml_model_performance` | `core.tasks` | 1939 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `evaluate_ml_predictions` | `core.tasks` | 5720 | `default` | · | 0 | ⚠ | _(no docstring)_ |
 | `evaluate_pilots_with_thinking_agent` | `core.tasks` | 5804 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `evaluate_unscored_blogs` | `core.tasks` | 7509 | `<default>` | · | 0 | ⚠ | Session 987: Batch-evaluate draft blogs that have no quality_score … |
 | `evolve_agent_relationships` | `core.tasks` | 3503 | `<default>` | · | 0 | ⚠ | Session 253: Periodically evolve agent relationships based on activ… |
+| `execute_action_plan` | `intelligence.tasks` | 98 | `<default>` | · | 3 | · | Execute an action plan using real agents |
 | `execute_agent` | `core.tasks_agents` | 99 | `<default>` | · | 1 | · | Main task for executing an agent. |
 | `execute_agent_async` | `core.tasks_agents` | 387 | `<default>` | · | 0 | ⚠ | Execute an agent asynchronously with timeout. |
 | `execute_agent_task` | `core.tasks` | 887 | `<default>` | · | 26 | · | _(no docstring)_ |
+| `execute_agent_task` | `intelligence.tasks` | 1495 | `<default>` | · | 26 | · | Execute an agent task asynchronously |
 | `execute_approved_artifacts` | `core.tasks` | 5554 | `<default>` | · | 0 | ⚠ | Fan-out dispatcher: find approved artifacts and dispatch each as it… |
 | `execute_approved_dreams_via_orchestration` | `core.tasks` | 7183 | `<default>` | · | 0 | ⚠ | Session 766: Execute approved dreams through the Orchestration Layer. |
 | `execute_code_job` | `core.tasks` | 12471 | `code_jobs` | · | 2 | · | _(no docstring)_ |
@@ -458,7 +502,9 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `expire_overdue_validations` | `core.tasks` | 4418 | `<default>` | · | 0 | ⚠ | Expire validation requests that are past deadline. |
 | `explore_dream_topic` | `core.tasks` | 3394 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `extract_action_items_from_session` | `core.tasks` | 10948 | `default` | · | 1 | · | Session 903: Auto-extract action items when a HiveMind session comp… |
+| `fetch_all_opportunities` | `intelligence.tasks` | 1721 | `<default>` | · | 0 | ⚠ | Fetch opportunities from all spiders - runs hourly |
 | `full_agent_rotation` | `core.tasks` | 9261 | `<default>` | · | 0 | ⚠ | Session 777: Execute ALL agents in the registry and write outputs t… |
+| `generate_accuracy_report` | `sports` | 278 | `<default>` | · | 0 | ⚠ | Generate accuracy report for all models and sports |
 | `generate_agent_dreams` | `core.tasks` | 2990 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `generate_ai_series` | `core.tasks` | 4168 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `generate_blog_with_topic_task` | `core.tasks` | 5463 | `<default>` | · | 1 | · | Session 1057: Generate a blog for a specific topic via the delibera… |
@@ -468,6 +514,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `generate_content_package` | `core.tasks` | 4164 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `generate_daily_betting_brief` | `core.tasks` | 5716 | `default` | · | 0 | ⚠ | _(no docstring)_ |
 | `generate_document_embeddings` | `core.tasks` | 3948 | `<default>` | · | 4 | · | _(no docstring)_ |
+| `generate_game_predictions` | `sports` | 378 | `<default>` | · | 0 | ⚠ | Run GamePredictor to generate MLPrediction rows from current odds. |
 | `generate_human_attention_items` | `core.tasks` | 6750 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `generate_initiative_stage_document` | `core.tasks` | 11116 | `default` | · | 8 | · | _(no docstring)_ |
 | `generate_memory_embedding` | `core.tasks` | 3445 | `<default>` | · | 2 | · | _(no docstring)_ |
@@ -485,6 +532,10 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `generate_weekly_opportunity_digest` | `core.tasks` | 4152 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `generate_weekly_synthesis` | `core.tasks` | 5622 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `get_event_bus_stats` | `core.tasks` | 4605 | `<default>` | · | 0 | ⚠ | Get event bus statistics. |
+| `get_live_opportunities` | `intelligence.tasks` | 34 | `<default>` | · | 0 | ⚠ | Get current live opportunities |
+| `get_live_predictions` | `intelligence.tasks` | 44 | `<default>` | · | 0 | ⚠ | Get current live predictions |
+| `get_model_stats` | `ml` | 204 | `<default>` | · | 0 | ⚠ | Get statistics for all active models |
+| `handle_client_response` | `intelligence.tasks` | 1314 | `<default>` | · | 0 | ⚠ | Handle client responses and trigger appropriate follow-up actions |
 | `health_check` | `unified_pipeline` | 4714 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `immune_scan` | `core.tasks` | 6961 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `ingest_video_task` | `core.tasks` | 3962 | `<default>` | · | 1 | · | _(no docstring)_ |
@@ -494,6 +545,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `market_intelligence_scan` | `core.tasks` | 5650 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `market_movement_alerts` | `core.tasks` | 5654 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `mine_learning_patterns` | `core.tasks` | 7303 | `<default>` | · | 0 | ⚠ | Session 767: Mine AgentLearning records to discover patterns. |
+| `monitor_and_process_opportunities` | `intelligence.tasks` | 1125 | `<default>` | · | 0 | ⚠ | Continuously monitor platforms and process new opportunities. |
 | `monitor_celery_health` | `core.tasks` | 5954 | `<default>` | ✓ | 0 | · | _(no docstring)_ |
 | `monitor_isolation_progress` | `core.tasks` | 1009 | `<default>` | · | 0 | ⚠ | Monitoring task to check overall isolation progress |
 | `monitor_running_experiments` | `core.tasks` | 5895 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
@@ -524,6 +576,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `process_initiative_auto_progression` | `core.tasks` | 11038 | `default` | · | 1 | · | _(no docstring)_ |
 | `process_pa_chat_task` | `core.tasks` | 11242 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `process_pa_tts_task` | `core.tasks` | 11364 | `<default>` | · | 1 | · | Generate TTS audio in background and update the conversation record. |
+| `process_pending_action_plans` | `intelligence.tasks` | 66 | `<default>` | · | 0 | ⚠ | Session 799: Process all pending action plans. |
 | `process_pending_auto_topics` | `` | 10940 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `process_realtime_scoring_queue` | `core.tasks` | 1943 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `process_research_feedback` | `core.tasks` | 3683 | `<default>` | · | 1 | · | Process a single research feedback submission. |
@@ -546,10 +599,13 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `record_resolve_outcome` | `core.tasks` | 5054 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `record_revenue` | `roi_metrics` | 4821 | `<default>` | · | 0 | ⚠ | [SESSION 475] Record revenue from an opportunity. |
 | `reevaluate_enhanced_blogs` | `core.tasks` | 7557 | `<default>` | · | 1 | · | _(no docstring)_ |
+| `refresh_ai_content_opportunities` | `ai_core.tasks` | 80 | `<default>` | · | 0 | ⚠ | Generate fresh AI-powered income opportunities. |
 | `refresh_system_state_cache` | `core.tasks` | 5728 | `<default>` | · | 0 | ⚠ | Session 573: Refresh the system state aggregator cache. |
 | `report_pending_review_metrics` | `core.tasks` | 5792 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `rescan_active_workspaces` | `core.tasks` | 11658 | `<default>` | · | 0 | ⚠ | Session 1055: Periodic rescan of active workspaces with stale or mi… |
 | `reset_daily_respiratory_stats` | `core.tasks` | 6921 | `<default>` | · | 0 | ⚠ | Session 702: LUNGS Service - Reset daily respiratory stats at midni… |
+| `retrain_all_models` | `ml` | 99 | `<default>` | · | 0 | ⚠ | Retrain all sport models |
+| `retrain_sport_model` | `ml` | 57 | `<default>` | · | 1 | · | Retrain model for specific sport |
 | `retry_blocked_research` | `core.tasks` | 10996 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `run_agent_conversation` | `core.tasks` | 2905 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `run_agent_health_rotation` | `core.tasks` | 10101 | `<default>` | · | 1 | · | _(no docstring)_ |
@@ -586,6 +642,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `run_hive_mind_session` | `core.tasks` | 3398 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `run_job_match_intelligence` | `core.tasks` | 5112 | `<default>` | · | 0 | ⚠ | Situation #9: Job Match Intelligence - Monitors jobs and scores mat… |
 | `run_learning_loop_cycle` | `core.tasks` | 425 | `<default>` | · | 0 | ⚠ | Session 945: Run the learning loop cycle to extract patterns from e… |
+| `run_market_analysis` | `sports` | 444 | `<default>` | · | 0 | ⚠ | Session 1088: Run LineMovementAnalyzer and SharpActionDetector to d… |
 | `run_market_intelligence_desk` | `core.tasks` | 4355 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `run_market_monitoring_agents` | `core.tasks` | 6989 | `<default>` | · | 0 | ⚠ | Session 737: Run market monitoring agents on schedule. |
 | `run_metrics_action_check` | `core.tasks` | 10097 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
@@ -621,6 +678,8 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `run_viral_content_predictor` | `core.tasks` | 5108 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `scan_arbs_and_notify` | `core.tasks` | 5662 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `scan_concerns_for_human_action` | `core.tasks` | 5507 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `scan_income_spider_orchestrator` | `intelligence.tasks` | 1649 | `<default>` | · | 0 | ⚠ | CRITICAL FIX: Scheduled task for Income Spider Orchestrator |
+| `scan_spider_opportunities` | `intelligence.tasks` | 1563 | `<default>` | ✓ | 0 | · | CRITICAL FIX: Scheduled task to scan spider network for opportunities |
 | `score_and_promote_dreams` | `core.tasks` | 2998 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `score_episode_voice` | `content_studio` | 9312 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `score_opportunities_from_spider_data` | `core.tasks` | 1877 | `<default>` | · | 0 | ⚠ | Score spider data and create opportunities. |
@@ -630,21 +689,28 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `send_personalized_opportunity_alerts` | `core.tasks` | 4160 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `send_proactive_opportunity_alerts` | `core.tasks` | 4156 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `send_weekly_kpi_summary` | `core.tasks` | 6078 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `settle_user_bets` | `sports` | 106 | `<default>` | · | 0 | ⚠ | Settle user bets for games that have completed |
 | `snapshot_odds_for_line_movement` | `core.tasks` | 5658 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `spider_data_retention` | `core.tasks` | 4010 | `long_running` | ✓ | 0 | · | Apr 2026: Prevent SpiderData table from filling the database. |
+| `start_intelligence_engine` | `intelligence.tasks` | 19 | `<default>` | · | 0 | ⚠ | 🚀 Start the Real-Time Intelligence Engine |
 | `start_resolve_render` | `core.tasks` | 5045 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `submit_follow_up` | `intelligence.tasks` | 1384 | `<default>` | · | 0 | ⚠ | Submit follow-up communication to clients |
+| `submit_proposal_automatically` | `intelligence.tasks` | 1209 | `<default>` | · | 0 | ⚠ | Automatically submit high-confidence proposals to platforms |
 | `summarize_conversation_task` | `core.tasks` | 12393 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `summarize_learning_readback` | `core.tasks` | 460 | `<default>` | · | 0 | ⚠ | Summarize learning readback telemetry — logs how often the feedback… |
 | `surface_top_dreams` | `core.tasks` | 11636 | `<default>` | ✓ | 0 | · | _(no docstring)_ |
+| `sync_all_entity_memories` | `intelligence.shared_memory` | 539 | `<default>` | · | 0 | ⚠ | Periodic task to sync memories across all entities. |
 | `sync_congress_data` | `core.tasks` | 12435 | `long_running` | · | 0 | ⚠ | Periodic sync of congress members, bills, and embeddings. |
 | `sync_pipeline_insights_to_collective` | `core.tasks` | 4218 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `sync_project_knowledge` | `core.tasks` | 3614 | `<default>` | · | 1 | · | Sync BusinessResearchResult to AgentKnowledgeSource. |
+| `sync_revenue_metrics` | `ai_core.tasks` | 109 | `<default>` | · | 0 | ⚠ | Sync revenue metrics across all components. |
 | `sync_workflow_schedules` | `core.tasks` | 1863 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `track_content_performance` | `core.tasks` | 4379 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `track_prediction_outcomes` | `learning_loop` | 4363 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `train_ml_scoring_model` | `core.tasks` | 1935 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `transcribe_video_task` | `core.tasks` | 3952 | `long_running` | · | 2 | · | _(no docstring)_ |
 | `trigger_content_from_shift` | `narrative_drift` | 4710 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `trigger_market_scan` | `intelligence.tasks` | 54 | `<default>` | · | 0 | ⚠ | Trigger an immediate market scan |
 | `trigger_project_research` | `core.tasks` | 2949 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `trigger_signal_driven_conversation` | `` | 10936 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `trigger_spider_conversations` | `core.tasks` | 2945 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
@@ -655,13 +721,17 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `update_alliance_strengths` | `core.tasks` | 3551 | `<default>` | · | 0 | ⚠ | Session 253: Update combined strength for all active alliances. |
 | `update_distribution_analytics` | `core.tasks` | 2189 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `update_experiment_kpis` | `core.tasks` | 5958 | `<default>` | · | 0 | ⚠ | Session 609: Automatically update KPIs for all running experiments. |
+| `update_game_scores` | `sports` | 181 | `<default>` | · | 0 | ⚠ | Fetch final scores from The Odds API and update Game rows. |
 | `update_learning_profiles` | `core.tasks` | 2201 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `update_ml_model_with_feedback` | `intelligence.tasks` | 1418 | `<default>` | · | 0 | ⚠ | Update ML model with outcome feedback for continuous improvement |
 | `update_mythology_pattern_statistics` | `core.tasks` | 9774 | `<default>` | · | 0 | ⚠ | Session 819: Update MythPattern frequency counts and prevention rates. |
 | `update_narrative_statuses` | `narrative_drift` | 4642 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `update_project_spider_priorities` | `core.tasks` | 3719 | `<default>` | · | 1 | · | Update spider priorities for a specific project. |
 | `validate_knowledge_sources` | `core.tasks` | 2509 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
 | `verify_autopilot_action` | `core.tasks` | 7587 | `<default>` | · | 3 | · | Deferred verification of an autopilot action. |
 | `verify_betting_outcomes` | `core.tasks` | 5666 | `default` | · | 0 | ⚠ | Session 995: Verify betting outcomes, settle wagers, feed learning … |
+| `verify_betting_outcomes` | `sports` | 414 | `<default>` | · | 0 | ⚠ | Verify outcomes for pending PlacedWager legs and watching arb items. |
 | `verify_completed_fixes` | `core.tasks` | 10179 | `<default>` | · | 0 | ⚠ | Session 820: Verify that completed fixes actually worked. |
+| `warm_up_spider_network` | `ai_core.tasks` | 192 | `<default>` | ✓ | 0 | · | Warm up spider network to ensure fast response times. |
 | `youtube_whisper_task` | `core.tasks` | 3966 | `<default>` | · | 1 | · | _(no docstring)_ |
 
