@@ -2353,6 +2353,59 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/ML_AUDIT.md',
+    claim_id='ml_capability_dirs_present',
+    description="All 9 ML capability subdirectories exist under ml/ (anomaly_detection, auto_selection, automation, core, graph_neural_network, integrations, reinforcement_learning, time_series, training)",
+)
+def _ml_capability_dirs_present() -> ClaimResult:
+    """Catch ML capability subdirs being removed or renamed.
+
+    The ML audit (`docs/ML_AUDIT.md`) is federated — it walks each named
+    capability subdirectory under `ml/`. If a subdir disappears the audit
+    silently drops that capability from its overview. This claim catches
+    that.
+
+    Session 1115 baseline: 9 capability subdirs.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    ml_dir = repo_root / 'ml'
+    expected = {
+        'anomaly_detection', 'auto_selection', 'automation', 'core',
+        'graph_neural_network', 'integrations', 'reinforcement_learning',
+        'time_series', 'training',
+    }
+    if not ml_dir.exists():
+        return ClaimResult.build(
+            expected=f"{len(expected)} ML capability dirs present",
+            actual='ml/ missing',
+            severity='high',
+        )
+    present = {p.name for p in ml_dir.iterdir() if p.is_dir() and not p.name.startswith('_')}
+    missing = sorted(expected - present)
+    extra = sorted(present - expected - {'data', 'logs', 'management', 'migrations'})
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected=f"all of: {sorted(expected)}",
+        actual=f"present: {sorted(expected & present)}; missing: {missing}",
+        severity=severity,
+        note=(
+            f"missing: {missing}; "
+            f"extra (not in expected): {extra}"
+            if missing or extra else 'all good'
+        ),
+        fix_suggestion=(
+            f"Restore the missing capability subdir(s) under ml/, or "
+            f"update the expected set in `_ml_capability_dirs_present`. "
+            f"If a new capability has been added (in `extra`), update the "
+            f"expected set + add its primary class(es) to ML_AUDIT.md by "
+            f"regenerating with `python manage.py build_ml_audit`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/LEARNING_BRIDGE_AUDIT.md',
     claim_id='learning_bridges_documented',
     description="Every learning bridge module under core/learning_bridges/ has a module docstring + at least one learning-loop class",
