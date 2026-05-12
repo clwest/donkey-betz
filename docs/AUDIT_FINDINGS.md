@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
+| 12 | **272 → 188 orphan Celery tasks** — batch 1: detection upgraded to find 3 missed caller paths (84 false-orphans reclaimed) | medium-high | partial · batch 1 closed; more batches needed | per-module review |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,54 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 245 orphan Celery tasks (67% of registry)
+## 12. 272 → 188 orphan Celery tasks — batch 1 closed
+
+**Batch 1 outcome (Session 1115):** the detection itself was the
+biggest fix. Walking the `backfill_*` family (6 tasks) showed most
+"orphans" weren't dead — they were invoked through paths the original
+detector didn't see:
+
+| Task | Real caller path |
+|---|---|
+| `backfill_voice_scores` | Same-name CLI: `python manage.py backfill_voice_scores` |
+| `backfill_deliverable_workspaces` | PA dynamic dispatch via `cockpit_tool.trigger_task` + same-name CLI |
+| `backfill_conversation_embeddings` | `add_critical_celery_tasks.py` second-scheduler dict + ops_autopilot budget |
+| `backfill_memory_embeddings` | `add_critical_celery_tasks.py` + ops_autopilot budget |
+| `backfill_stage_documents` | `add_critical_celery_tasks.py` second-scheduler dict |
+| `backfill_signal_scores` | **Genuinely orphan** — Session 1025 one-shot scorer, only ref is queue routing in settings.py |
+
+Detection upgraded in `build_celery_audit.py` + verifier
+`celery_orphan_count_baseline` to recognize three new caller patterns:
+
+1. **`add_critical_celery_tasks.py` task dict** — a separate scheduler
+   source that creates `PeriodicTask` rows distinct from
+   `app.conf.beat_schedule`.
+2. **`ops_autopilot/budget.py` budget dict** — autopilot dispatches
+   these within daily budgets.
+3. **Same-name management commands** — when `core/management/commands/<short>.py`
+   matches a task's short name, the CLI is a real public caller.
+
+Verifier baseline bumped: **272 → 188 orphans.** Three claim values
+documented in the verifier comments + AUDIT_FINDINGS entry below.
+
+**The one genuine orphan in batch 1** (`backfill_signal_scores`) is a
+dormant utility — fine to keep, since it's a manual-recovery tool for
+re-scoring SignalClusters if scoring gets disabled then re-enabled.
+Could be wrapped in a management command in a follow-up batch so the
+audit shows it as wired.
+
+**Remaining 188 orphans:** still need per-batch walking. Next batches
+should pick families with highest payoff (likely `run_*` at 49
+orphans, `check_*` at 22, `process_*` at 16). Each batch will likely
+follow the same pattern: surface another caller path the detector
+missed, then identify a small set of truly-dormant tasks for
+case-by-case decision (delete / mgmt-command-wrap / leave with
+comment).
+
+---
+
+### Original framing — pre-batch-1 (kept for history)
+### 12-orig. 245 orphan Celery tasks (67% of registry)
 
 **Status:** open · medium-high severity · dead-code review.
 
