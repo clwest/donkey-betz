@@ -42,6 +42,8 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
 | 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 164 | medium | open | doc refresh |
 | 9 | Learning bridge naming inconsistency (`LearningLoop` × 7 vs `LearningBridge` × 1) | informational | open | cosmetic |
+| 10 | `run_market_intelligence_desk` PeriodicTask absent — doc says it should be scheduled daily | medium | open | doc-or-schedule decision |
+| 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
 
 ---
 
@@ -299,6 +301,82 @@ grep the codebase for any references.
 **Risk:** small — has a public export in `core/learning_bridges/__init__.py`,
 so callers that imported the old name would break. `git grep
 SportsBettingLearningBridge` before renaming.
+
+---
+
+## 10. `run_market_intelligence_desk` no longer scheduled
+
+**Status:** open · medium severity · doc-or-schedule decision needed.
+
+**Verifier doc:** `docs/topics/agent-system.md`
+**Verifier claim:** `intelligence_desks_partial_schedule`
+
+```bash
+DATABASE_URL="postgresql://unified_user:secure_password@localhost:5432/ai_unified_platform" \
+  python manage.py verify_doc_claims --doc docs/topics/agent-system.md
+```
+
+**What:** `docs/topics/agent-system.md` says (per Session 1100): "only
+`run_market_intelligence_desk` (stocks) is scheduled daily; 3 of 4 desks
+are on-demand only." But:
+
+- `run_market_intelligence_desk` no longer appears in
+  `app.conf.beat_schedule` in `core/celery.py`.
+- After `python manage.py sync_celery_beat --apply`, no PeriodicTask
+  with that task path exists.
+
+So the stocks desk is neither in the static schedule nor in the DB
+periodic-task list. Either it was intentionally removed (and the doc is
+stale) or it was dropped by accident (and the schedule needs restoring).
+
+**Decision points:**
+
+a. **Doc is stale.** If `run_market_intelligence_desk` is genuinely
+   on-demand-only now (like the other 3 desks), update
+   `docs/topics/agent-system.md` to say so. Lowest-risk fix.
+
+b. **Schedule should be restored.** If the stocks desk *should* run
+   daily, add an entry back to `app.conf.beat_schedule` in
+   `core/celery.py` (likely a crontab pattern matching the previous
+   schedule before removal). Then re-run `sync_celery_beat --apply`.
+
+**Risk:** (a) is zero-risk. (b) re-enables a scheduled job that runs the
+stocks intelligence pipeline daily — make sure the underlying task is
+still healthy and budgeted appropriately first.
+
+This finding only became visible after Session 1115's local-Postgres
+bootstrap, which let the `db_required=True` claim actually evaluate.
+
+---
+
+## 11. CLAUDE.md persona/total agent counts re-pegged from `223/306` to seed baseline
+
+**Status:** ✅ fixed Session 1115.
+
+The verifier had hardcoded `expected = 223` for persona agents and
+`expected = 306` for total agent count, both labelled "refreshed Session
+1100 — matches current CLAUDE.md". But:
+
+- Current CLAUDE.md doesn't actually contain `223` or `306` anywhere
+  (those values would have been from an earlier doc version).
+- `load_all_agents_advisors` is the canonical seed for Agent rows; it
+  creates 148 (its docstring claims 149 but the actual loaded count is
+  148).
+- After running the seed: `AGENT_MAP(83) + Agent rows(148) = 231 total`.
+
+Verifier rewritten to:
+- Reference the seed script as the source of truth (the claim's `doc`
+  field now points at `core/management/commands/load_all_agents_advisors.py`,
+  not `CLAUDE.md`).
+- Expected baselines: `persona_agent_count = 148`,
+  `total_agent_count_claim = 231`.
+- Note tells future-you the seed command + how to bump the baseline if
+  the canonical count changes.
+
+Production may have additional Agent rows loaded by other paths (older
+sessions referenced `223 persona agents` which suggests a prod-time
+snapshot). When the verifier runs against prod, prod-side drift surfaces
+as a normal `medium` finding — that's the right behavior.
 
 ---
 
