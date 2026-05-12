@@ -2460,6 +2460,39 @@ def _celery_orphan_count_baseline() -> ClaimResult:
     except subprocess.TimeoutExpired:
         pass
 
+    # Session 1115 batch-1 of #12: also count indirect callers that the
+    # original detector missed — `add_critical_celery_tasks.py` (a second
+    # scheduler source), `ops_autopilot/budget.py` (autopilot dispatch),
+    # and same-named management commands. These reduced false-orphans
+    # from 272 to 188 in the audit.
+    cct_callers: set[str] = set()
+    cct_file = repo_root / 'core' / 'management' / 'commands' / 'add_critical_celery_tasks.py'
+    if cct_file.exists():
+        try:
+            for line in cct_file.read_text(errors='ignore').splitlines():
+                m = _re.search(r"'task':\s*'([\w.]+)'", line)
+                if m and m.group(1) in registry:
+                    cct_callers.add(m.group(1))
+        except OSError:
+            pass
+
+    budget_callers: set[str] = set()
+    budget_file = repo_root / 'core' / 'services' / 'ops_autopilot' / 'budget.py'
+    if budget_file.exists():
+        try:
+            for line in budget_file.read_text(errors='ignore').splitlines():
+                m = _re.search(r"'(core\.tasks\.[\w.]+|[a-z_]+\.[a-z_.]+)'\s*:\s*\d+", line)
+                if m and m.group(1) in registry:
+                    budget_callers.add(m.group(1))
+        except OSError:
+            pass
+
+    cmd_stem_callers: set[str] = set()
+    cmd_dir = repo_root / 'core' / 'management' / 'commands'
+    if cmd_dir.exists():
+        cmd_stems = {p.stem for p in cmd_dir.glob('*.py') if p.name != '__init__.py'}
+        cmd_stem_callers = cmd_stems & short_names
+
     orphans = 0
     for name in registry:
         short = name.rsplit('.', 1)[-1]
@@ -2469,9 +2502,19 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         if name in dynamic_callers:
             continue
+        if name in cct_callers:
+            continue
+        if name in budget_callers:
+            continue
+        if short in cmd_stem_callers:
+            continue
         orphans += 1
 
-    baseline = 272  # Session 1115 post-fix baseline (was 245 before the 4-module eager-import added 27 more known-orphan tasks)
+    # Session 1115 batch-1 baseline: detection upgraded to catch indirect
+    # callers (CLI commands, add_critical_celery_tasks, ops_autopilot
+    # budget). Orphan count dropped 272 → 188 because 84 "orphans" were
+    # really invoked via paths the original detector missed.
+    baseline = 188
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'
