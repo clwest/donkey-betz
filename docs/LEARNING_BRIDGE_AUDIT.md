@@ -14,7 +14,8 @@
 
 ## Findings
 
-- Naming inconsistency: 7 classes end in `LearningLoop`, 1 end in `LearningBridge`. Same concept, different suffix. Pick one in a future cleanup pass.
+- **Abstract base `LearningBridge` is unused** (`core/learning_bridges/base.py:13`). It declares a 4-method contract (`process_event`, `_extract_patterns`, `_update_learning`, `_generate_insights`) plus observability helpers (event_count, success_count, log_event, get_statistics). Zero concrete bridges inherit from it — each reinvents its own shape. The two naming styles below (`*LearningLoop` x7 vs `*LearningBridge` x1) are downstream of this missing contract. See `docs/AUDIT_FINDINGS.md` finding 9 for the deferred refactor.
+- Naming inconsistency: 7 classes end in `LearningLoop`, 1 end in `LearningBridge`. Surface symptom of the unused-ABC finding above; resolves when all bridges inherit from `LearningBridge` and the suffix convention matches the dir / AppConfig / base-class vocabulary.
 
 ## Bridges overview
 
