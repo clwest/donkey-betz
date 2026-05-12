@@ -314,9 +314,58 @@ app.autodiscover_tasks()
 # Session 919: Explicitly include task modules with non-standard names.
 # autodiscover_tasks() only finds tasks.py, not tasks_agents.py
 # Using app.conf.imports ensures workers import these modules at startup.
+#
+# Session 1115: added four more app tasks modules to close the broken-beat-refs
+# finding (AUDIT_FINDINGS.md #3). All four files were registered in INSTALLED_APPS
+# with `@shared_task` decorated functions that beat_schedule references, but
+# autodiscover_tasks() wasn't picking them up reliably at worker boot. As a
+# result, seven scheduled tasks were firing into a registry that had no handler
+# and silently no-op'ing — see docs/BEAT_AUDIT.md and docs/CELERY_AUDIT.md.
+#
+# Re-enabling these makes the following schedules go live:
+#   `clean-stale-data`           (daily 02:00) — DB cleanup, low risk
+#   `cleanup-old-model-files`    (Mon 01:00)   — file cleanup, low risk
+#   `cleanup-old-predictions`    (Mon 03:00)   — DB cleanup, low risk
+#   `cleanup-opportunities-daily`(daily 03:00) — DB cleanup, low risk
+#   `collect-real-opportunities` (every 30m)   — ACTIVE WORK: external job
+#                                                scrapes + writes ActionPlan rows
+#   `scan-spider-opportunities`  (every 30m)   — ACTIVE WORK: scans cached
+#                                                spider data, creates opportunities
+#   `warm-up-spiders`            (every 6h)    — ACTIVE WORK: spider connection
+#                                                warming, lightweight HTTP probes
 app.conf.imports = (
-    'core.tasks_agents',  # Agent execution tasks (execute_agent, execute_orchestration)
+    'core.tasks_agents',
+    'ai_core.tasks',
+    'ml.tasks',
+    'sports.tasks',
+    'intelligence.tasks',
 )
+
+
+@app.on_after_finalize.connect
+def _eager_import_session1115_modules(sender, **kwargs):
+    """Force-import task modules that `autodiscover_tasks()` doesn't always
+    pick up before the registry is read.
+
+    Session 1115: the build_celery_audit + beat_schedule_task_refs_resolve
+    verifier read `app.tasks` at app-finalize time, which is before any
+    worker boot. Without this eager-import hook, the four extra modules
+    listed in `app.conf.imports` only get imported when a worker actually
+    starts — and the audit/verifier flags 7 beat refs as broken even
+    though `app.conf.imports` would have eventually loaded them.
+
+    Hooking into `on_after_finalize` (fired exactly once when the Celery
+    app is fully configured, AFTER Django apps are loaded) gives us a
+    deterministic moment to trigger the imports. The `import` side-effect
+    registers each module's `@shared_task` functions in the global
+    registry.
+    """
+    import importlib
+    for mod in ('ai_core.tasks', 'ml.tasks', 'sports.tasks', 'intelligence.tasks'):
+        try:
+            importlib.import_module(mod)
+        except Exception as e:
+            logger.warning(f"Eager-import of {mod} failed: {e}")
 
 
 # Session 983: Connect Celery task telemetry signals.
