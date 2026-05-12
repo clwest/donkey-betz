@@ -390,6 +390,127 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=0, minute=15),  # 12:15 AM Denver
         'options': {'queue': 'default', 'expires': 7200},
     },
+
+    # ────────────────────────────────────────────────────────────────────────
+    # Session 1115 batch-4 — behavior-changing DB tasks that were defined but
+    # never wired. All entries below were verified by inspection to:
+    #   - make NO LLM/embedding calls (Chris is out of OpenAI credits)
+    #   - dispatch NO agents (per agent noise rule)
+    #   - perform only DB queryset updates, file reads, or in-app state changes
+    # These are "behavior-changing" only in that they update DB state (auto-
+    # approve, auto-promote, archive, etc.) — not in that they call external
+    # services or burn credits.
+    #
+    # Deferred for separate green-light:
+    #   - run_ops_autopilot, post_ops_digest, send_weekly_kpi_summary (Discord/external)
+    #   - rag_retrieval_canary, maintain_knowledge_freshness (OpenAI cost)
+    #   - check_blocked_research_for_unblock, process_pending_action_plans (chain into agent dispatch)
+    #   - discover_and_import_audits, assign_open_findings_to_agents (Session 1031 blocked)
+    # ────────────────────────────────────────────────────────────────────────
+
+    # Auto-approve low-risk HumanAttentionItems + auto-promote experiment/pipeline decisions
+    'auto-approve-boardroom-items': {
+        'task': 'core.tasks.auto_approve_boardroom_items',
+        'schedule': crontab(minute='*/30'),  # Every 30 min
+        'options': {'queue': 'default', 'expires': 1800},
+    },
+    # Auto-promote tier-1 (low-risk) AgentDecisionSummary rows after aging window
+    'auto-promote-low-risk-decisions': {
+        'task': 'core.tasks.auto_promote_low_risk_decisions',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+        'options': {'queue': 'default', 'expires': 7200},
+    },
+    # Verify completed audit fixes (file existence + regex checks; no subprocess)
+    'verify-completed-fixes': {
+        'task': 'core.tasks.verify_completed_fixes',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+        'options': {'queue': 'default', 'expires': 21600},
+    },
+    # Weekly: promote high-confidence AgentKnowledgeSource → SharedKnowledge
+    'promote-to-shared-knowledge': {
+        'task': 'core.tasks.promote_to_shared_knowledge',
+        'schedule': crontab(hour=4, minute=0, day_of_week='monday'),  # Mon 04:00 Denver
+        'options': {'queue': 'default', 'expires': 7200},
+    },
+    # Daily ContentDistribution analytics aggregation
+    'update-distribution-analytics': {
+        'task': 'core.tasks.update_distribution_analytics',
+        'schedule': crontab(hour=4, minute=0),  # 04:00 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Daily document namespace isolation progress snapshot
+    'monitor-isolation-progress': {
+        'task': 'core.tasks.monitor_isolation_progress',
+        'schedule': crontab(hour=4, minute=30),  # 04:30 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Daily MythPattern frequency rollup (docstring: "Runs daily at 4am")
+    'update-mythology-pattern-statistics': {
+        'task': 'core.tasks.update_mythology_pattern_statistics',
+        'schedule': crontab(hour=4, minute=0),  # 04:00 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Sync style/voice performance insights to collective intelligence (docstring: "every 6 hours")
+    'sync-pipeline-insights-to-collective': {
+        'task': 'core.tasks.sync_pipeline_insights_to_collective',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+        'options': {'queue': 'default', 'expires': 21600},
+    },
+    # HITL escalations: bump priority, extend deadlines, unassign (docstring: "Every 15 minutes")
+    'process-hitl-escalations': {
+        'task': 'core.tasks.process_hitl_escalations',
+        'schedule': crontab(minute='*/15'),
+        'options': {'queue': 'default', 'expires': 900},
+    },
+    # Scan TrackedConcerns + create action-required ProactiveNotifications
+    'scan-concerns-for-human-action': {
+        'task': 'core.tasks.scan_concerns_for_human_action',
+        'schedule': crontab(minute=30),  # 30 min past every hour
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Archive low-score AgentDreams (composite_score < 0.3 after 7d, < 0.5 after 14d)
+    'maintain-dream-backlog': {
+        'task': 'core.tasks.maintain_dream_backlog',
+        'schedule': crontab(hour=4, minute=30),  # 04:30 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Daily pending-review metrics log (Session 589)
+    'report-pending-review-metrics': {
+        'task': 'core.tasks.report_pending_review_metrics',
+        'schedule': crontab(hour=9, minute=0),  # 09:00 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # HumanAttentionItem lifecycle: expire, auto-dismiss, auto-escalate, auto-approve
+    # (docstring: "Every 10 minutes")
+    'process-human-attention-lifecycle': {
+        'task': 'core.tasks.process_human_attention_lifecycle',
+        'schedule': crontab(minute='*/10'),
+        'options': {'queue': 'default', 'expires': 600},
+    },
+    # Poll Replicate for pending 3D model status (no-op when no pending)
+    'poll-pending-3d-models': {
+        'task': 'core.tasks.poll_pending_3d_models',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default', 'expires': 300},
+    },
+    # Daily duplicate-initiative detection (similarity-based; no LLM)
+    'detect-duplicate-initiatives': {
+        'task': 'core.tasks.detect_duplicate_initiatives',
+        'schedule': crontab(hour=4, minute=15),  # 04:15 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Operating rhythm health check (read-only) — Session 914.7
+    'check-operating-rhythm-status': {
+        'task': 'core.tasks.check_operating_rhythm_status',
+        'schedule': crontab(hour=9, minute=15),  # 09:15 Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    # Rescan active workspaces with stale WorkspaceContext (Session 1055)
+    'rescan-active-workspaces': {
+        'task': 'core.tasks.rescan_active_workspaces',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
+        'options': {'queue': 'default', 'expires': 14400},
+    },
 }
 
 # Task routing configuration

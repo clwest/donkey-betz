@@ -2600,21 +2600,33 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         orphans += 1
 
-    # Session 1115 batch-3 baseline: 14 safe DB-hygiene + metrics tasks wired
-    # into the beat schedule (cleanup_*, expire_*, claim_stale_events,
-    # check_*_slo, aggregate_roi_metrics_daily, calculate_daily_revenue_metrics,
-    # etc.). Detector also catches importlib-style `'module.path:func'`
-    # dispatch (post_*_daily_diagnostic). Orphan count 58 → 41 across three
-    # passes. The remaining 41 split into:
-    #   - ~10 behavior-changing scheduled (auto_approve/auto_promote, etc.) —
-    #     needs Chris green-light
-    #   - ~6 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
-    #     etc.) — deferred until OpenAI credits replenished
-    #   - ~15 event-triggered (signals, webhooks, chains)
-    #   - ~9 dormant utilities (per-task decision)
+    # Session 1115 batch-4 baseline: 17 more behavior-changing DB-only tasks
+    # wired into beat_schedule (auto_approve_boardroom_items,
+    # auto_promote_low_risk_decisions, verify_completed_fixes,
+    # promote_to_shared_knowledge, update_distribution_analytics,
+    # monitor_isolation_progress, update_mythology_pattern_statistics,
+    # sync_pipeline_insights_to_collective, process_hitl_escalations,
+    # scan_concerns_for_human_action, maintain_dream_backlog,
+    # report_pending_review_metrics, process_human_attention_lifecycle,
+    # poll_pending_3d_models, detect_duplicate_initiatives,
+    # check_operating_rhythm_status, rescan_active_workspaces).
+    # Each verified by inspection: no LLM, no agent dispatch, no external
+    # API beyond Replicate poll (no-op when no pending).
+    #
+    # Cumulative across batches 1-4: 272 → 24 (91% reduction).
+    #
+    # Remaining 24 split into:
+    #   - ~5 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
+    #     run_ops_autopilot, post_ops_digest, maintain_knowledge_freshness)
+    #   - ~4 agent-dispatch chain (check_blocked_research_for_unblock,
+    #     process_pending_action_plans, etc.)
+    #   - ~3 Session 1031 blocked (discover_and_import_audits,
+    #     assign_open_findings_to_agents, execute_remediation_tasks)
+    #   - ~10 event-triggered (signals, webhooks, chains)
+    #   - 1 deprecated (propagate_new_policies — returns immediately)
     #   - 1 intentionally orphan (debug_task)
     # See AUDIT_FINDINGS.md #12.
-    baseline = 41
+    baseline = 24
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'
