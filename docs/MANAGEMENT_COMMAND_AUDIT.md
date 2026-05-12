@@ -31,228 +31,386 @@
 | `Body systems / health` | 8 |
 | `Diagnostics` | 8 |
 | `Spiders` | 7 |
-| `Celery / beat` | 4 |
 | `Docs / inventory` | 4 |
+| `Task sync` | 4 |
 
 ## Uncategorised (68)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `achieve_95_reality` | `core/management/commands/achieve_95_reality.py:13` | Achieve 95%+ reality score by integrating all platform components | `--component`, `--validate-only` |
-| `agent_introduction_party` | `core/management/commands/agent_introduction_party.py:19` | Host an Agent Introduction Party where agents meet and greet each other | `--agents`, `--verbose`, `--dry-run` |
-| `apply_publish_gate` | `core/management/commands/apply_publish_gate.py:12` | Apply PublishGate quality evaluation to SelfBlog entries | `--blog-id`, `--all`, `--drafts-only`, `--dry-run`, `--re… |
-| `askdocs` | `core/management/commands/askdocs.py:9` | Ask a question using the /docs RAG system | `question` |
-| `assign_agent_voices` | `core/management/commands/assign_agent_voices.py:19` | Assign TTS voices to agents based on their category/specialization | `--apply`, `--force`, `--agent` |
-| `assign_memories_to_rooms` | `core/management/commands/assign_memories_to_rooms.py:15` | Assign unassigned memories to Memory Palace rooms based on memory_type | `--dry-run`, `--agent` |
-| `audit_database` | `core/management/commands/audit_database.py:26` | Audit database schema to ensure all models have corresponding tables | `--verbose`, `--fix`, `--output`, `--fail-on-error`, `--app` |
-| `auto_remediate` | `core/management/commands/auto_remediate.py:30` | Run autonomous remediation cycle - self-healing for audit findings | `--dry-run`, `--discover`, `--validate`, `--assign`, `--e… |
-| `boardroom_approval` | `core/management/commands/boardroom_approval.py:30` | Manage boardroom approval for initiatives | `--list-pending`, `--approve`, `--by`, `--notes`, `--revo… |
-| `build_rag_corpus` | `core/management/commands/build_rag_corpus.py:89` | Regenerate .rag/corpus.jsonl from docs/_index.json for the local-only askdocs / Ollama … | `--index`, `--output`, `--chunk-size`, `--dry-run` |
-| `calibrate_halt_thresholds` | `core/management/commands/calibrate_halt_thresholds.py:18` | Calibrate experiment halt thresholds using historical data | `--days`, `--cost-fn`, `--apply`, `--profile` |
-| `celery_inspect_report` | `core/management/commands/celery_inspect_report.py:19` | Inspects Celery workers and generates a report of active queues, ping status, and stats | `--json-only`, `--timeout`, `--output-dir` |
-| `classify_docs_for_rag` | `core/management/commands/classify_docs_for_rag.py:20` | Auto-classify documents for risk-aware RAG retrieval | `--dry-run` |
-| `connect_all_agents` | `core/management/commands/connect_all_agents.py:14` | Connect all 146 remaining agents with real solutions | — |
-| `create_test_token` | `core/management/commands/create_test_token.py:12` | Creates or retrieves an authentication token for testing | `username` |
-| `create_workflow_templates` | `core/management/commands/create_workflow_templates.py:18` | Create built-in workflow templates for orchestration | `--force` |
-| `daily_priorities` | `core/management/commands/daily_priorities.py:30` | Manage daily initiative priorities | `--scan`, `--list`, `--summary`, `--set-priority`, `--ran… |
-| `deploy_platform_unification` | `core/management/commands/deploy_platform_unification.py:28` | Deploy and initialize the Platform Unification Orchestrator | `--start-immediately`, `--config-file`, `--test-mode`, `-… |
-| `discover_learning_cohorts` | `core/management/commands/discover_learning_cohorts.py:15` | Discover learning cohorts and propagate high-confidence learnings between similar users | `--min-confidence`, `--min-similarity`, `--dry-run` |
-| `embed_documents` | `core/management/commands/embed_documents.py:14` | Generate embeddings for specified documents | `document_ids`, `--all-unembedded`, `--type`, `--model`, … |
-| `enrich_boardroom_ml` | `core/management/commands/enrich_boardroom_ml.py:16` | Backfill ML predictions for boardroom attention items | `--pending`, `--all`, `--stats`, `--user`, `--limit` |
-| `ensure_enhanced_profiles` | `core/management/commands/ensure_enhanced_profiles.py:18` | Ensure all users have an EnhancedUserProfile | `--dry-run`, `--verbose` |
-| `fetch_training_data` | `core/management/commands/fetch_training_data.py:15` | Fetch conversation training data from HuggingFace datasets for agent learning | `--dry-run`, `--source`, `--save-to-db`, `--create-knowle… |
-| `fix_episode_titles` | `core/management/commands/fix_episode_titles.py:14` | Fix generic episode titles by generating unique titles from script content | `--dry-run`, `--channel`, `--limit` |
-| `fix_evolution_levels` | `core/management/commands/fix_evolution_levels.py:21` | Fix evolution levels and grant missing abilities based on XP | `--dry-run` |
-| `fix_pilot_started_at` | `core/management/commands/fix_pilot_started_at.py:16` | Fix pilots with NULL started_at to unblock experiment evaluation pipeline | `--dry-run` |
-| `fix_selfblog_categories` | `core/management/commands/fix_selfblog_categories.py:16` | Fix mislabeled SelfBlog categories based on title patterns | `--dry-run` |
-| `force_agent_cycle` | `core/management/commands/force_agent_cycle.py:20` | Force ALL agents through one complete activity cycle (dreams, conversations, learning) | `--dry-run`, `--dreams-only`, `--conversations-only`, `--… |
-| `full_system_demo` | `core/management/commands/full_system_demo.py:21` | Run a full system demonstration - agents research, learn, and create content about the … | `--skip-dreams`, `--skip-conversations`, `--content-only` |
-| `generate_ironwood_sprites` | `core/management/commands/generate_ironwood_sprites.py:211` | Generate 15 Ironwood Protocol sprites via Stability AI | `--dry-run`, `--only`, `--model`, `--user`, `--output` |
-| `generate_sample_data` | `core/management/commands/generate_sample_data.py:19` | Generate sample data to demonstrate the complete system | — |
-| `import_patent_disclosures` | `core/management/commands/import_patent_disclosures.py:113` | Import patent disclosure documents from docs/patents/ as Deliverable records | `--workspace`, `--dry-run`, `--force` |
-| `ingest_codebase` | `core/management/commands/ingest_codebase.py:12` | Ingest the codebase into embeddings for self-awareness | `--force` |
-| `normalize_evolution_data` | `core/management/commands/normalize_evolution_data.py:25` | Normalize evolution data - fix levels, XP, and xp_to_next_level | `--dry-run` |
-| `operating_rhythm` | `core/management/commands/operating_rhythm.py:31` | Manage operating rhythm (daily priorities, weekly reports) | `--set-priorities`, `--status`, `--weekly-report`, `--fee… |
-| `ops_verify` | `core/management/commands/ops_verify.py:14` | Run ops verification checks (deploy_verify, pa_tools_smoke, DB, error summary) | `--env`, `--json` |
-| `produce_content` | `core/management/commands/produce_content.py:35` | Produce complete content packages with automatic asset creation | `content_type`, `topic`, `--tone`, `--audience`, `--skip`… |
-| `ragtest` | `core/management/commands/ragtest.py:53` | Local RAG test using Ollama via OpenAI-compatible API (no GPT-5-minis touched). | `question`, `--docs`, `--k`, `--fresh`, `--debug` |
-| `regenerate_pilots` | `core/management/commands/regenerate_pilots.py:19` | Regenerate pilot infrastructure from canonical decisions | `--dry-run`, `--limit` |
-| `register_coo_agent` | `core/management/commands/register_coo_agent.py:24` | Register COO Agent (Phase 1: Read-Only Planning) in the database | — |
-| `register_creative_agents` | `core/management/commands/register_creative_agents.py:28` | Register all creative workflow agents in the database | — |
-| `register_cto_agent` | `core/management/commands/register_cto_agent.py:25` | Register CTO Agent (Phase 1: Read-Only Analysis) in the database | — |
-| `repo_knowledge_audit` | `core/management/commands/repo_knowledge_audit.py:28` | Audit repo knowledge: markdown files, docs index, document models, embeddings | `--json`, `--output` |
-| `rescore_opportunities` | `core/management/commands/rescore_opportunities.py:21` | Re-score opportunities using unified type-aware scoring | `--apply`, `--retype`, `--batch-size`, `--score`, `--all` |
-| `run_code_agent` | `core/management/commands/run_code_agent.py:27` | Execute a code-agent task within a workspace-restricted sandbox | `--workspace`, `--mode`, `--task`, `--run-id` |
-| `run_discord_bot` | `core/management/commands/run_discord_bot.py:20` | Run the Discord bot with slash commands | `--check` |
-| `selfpatch` | `core/management/commands/selfpatch.py:159` | Self-patching helper: propose patches with LLM, or apply patches/diffs safely. | `--desc`, `--paths`, `--k`, `--temperature`, `--max_token… |
-| `set_founder_intent` | `core/management/commands/set_founder_intent.py:27` | Set founder intent on initiatives to enable auto-progression | `--initiative-id`, `--all-pending`, `--list`, `--interact… |
-| `show_remediation_findings` | `core/management/commands/show_remediation_findings.py:23` | Show open remediation findings for Claude Code sessions to act on | `--priority`, `--category`, `--limit`, `--verbose` |
-| `start_bridge` | `core/management/commands/start_bridge.py:23` | Start the System Integration Bridge - The Unified Nervous System | `--debug` |
-| `start_learning_demo` | `core/management/commands/start_learning_demo.py:11` | Start the live learning demonstration | `--project-type`, `--agents`, `--iterations` |
-| `sync_agent_learning` | `core/management/commands/sync_agent_learning.py:227` | Sync agent learning system: populate knowledge from spiders and create agent connections | `--dry-run`, `--knowledge-only`, `--connections-only`, `-… |
-| `sync_agent_tools` | `core/management/commands/sync_agent_tools.py:21` | Sync utility tools from code definitions to database (excludes agent wrappers) | — |
-| `sync_docs_index_to_documents` | `core/management/commands/sync_docs_index_to_documents.py:55` | Sync documents from docs/_index.json to the Document model | `--dry-run`, `--active-only`, `--embed`, `--limit` |
-| `sync_orchestrations` | `core/management/commands/sync_orchestrations.py:121` | Sync agent orchestrations based on coordinator agents | — |
-| `sync_persona_learning` | `core/management/commands/sync_persona_learning.py:78` | Sync persona agents with the learning system | `--dry-run`, `--knowledge-only`, `--connections-only` |
-| `test_agent_scenarios` | `core/management/commands/test_agent_scenarios.py:79` | Run business research agents against test scenarios | `--list`, `--scenario`, `--agent`, `--verbose`, `--report… |
-| `test_all_agents` | `core/management/commands/test_all_agents.py:13` | Test all 73 agents and report their status | `--quick`, `--agent`, `--limit` |
-| `test_prompt_layer` | `core/management/commands/test_prompt_layer.py:37` | Test prompt injection layers by running agents with/without specific layers | `--agent`, `--task`, `--disable`, `--all-layers`, `--list… |
-| `trigger_pilot_evaluation` | `core/management/commands/trigger_pilot_evaluation.py:7` | Trigger the pilot evaluation task to process eligible pilots | `--sync` |
-| `trigger_stage2_generation` | `core/management/commands/trigger_stage2_generation.py:21` | Trigger Stage 2 (Prototype Plan) document generation for initiatives | `--run`, `--sync`, `--limit` |
-| `tune_fed_alert_triggers` | `core/management/commands/tune_fed_alert_triggers.py:21` | Tune Fed Alert situation triggers (Session 1092 noise reduction). | `--dry-run` |
-| `update_experiment_thresholds` | `core/management/commands/update_experiment_thresholds.py:22` | Update experiment halt condition thresholds to prevent premature auto-halts | `--dry-run`, `--running-only` |
-| `validate_data_integrity` | `core/management/commands/validate_data_integrity.py:20` | Validate data integrity and relationships across the unified platform | `--fix-issues`, `--verbose`, `--component` |
-| `validate_section` | `core/management/commands/validate_section.py:27` | Run section validation agents to verify platform health | `--section`, `--all`, `--list`, `--json`, `--user` |
-| `validate_security` | `core/management/commands/validate_security.py:11` | Validate platform security configuration | `--format`, `--fix`, `--strict` |
-| `verify_surgical_moves` | `core/management/commands/verify_surgical_moves.py:24` | Verify Surgical Moves Phase 0-3 end-to-end | `--mode`, `--session-id` |
-| `write_self_blog` | `core/management/commands/write_self_blog.py:27` | Have the system write a blog post about itself using ContentWriterAgent | `--tone`, `--word-count`, `--dry-run`, `--flagship`, `--n… |
+| Command | File | Help |
+|---|---|---|
+| `achieve_95_reality` | `achieve_95_reality.py:13` | Achieve 95%+ reality score by integrating all platform components |
+| `agent_introduction_party` | `agent_introduction_party.py:19` | Host an Agent Introduction Party where agents meet and greet each other |
+| `apply_publish_gate` | `apply_publish_gate.py:12` | Apply PublishGate quality evaluation to SelfBlog entries |
+| `askdocs` | `askdocs.py:9` | Ask a question using the /docs RAG system |
+| `assign_agent_voices` | `assign_agent_voices.py:19` | Assign TTS voices to agents based on their category/specialization |
+| `assign_memories_to_rooms` | `assign_memories_to_rooms.py:15` | Assign unassigned memories to Memory Palace rooms based on memory_type |
+| `audit_database` | `audit_database.py:26` | Audit database schema to ensure all models have corresponding tables |
+| `auto_remediate` | `auto_remediate.py:30` | Run autonomous remediation cycle - self-healing for audit findings |
+| `boardroom_approval` | `boardroom_approval.py:30` | Manage boardroom approval for initiatives |
+| `build_rag_corpus` | `build_rag_corpus.py:89` | Regenerate .rag/corpus.jsonl from docs/_index.json for the local-only askdocs / Ollama RAG lane. Production… |
+| `calibrate_halt_thresholds` | `calibrate_halt_thresholds.py:18` | Calibrate experiment halt thresholds using historical data |
+| `celery_inspect_report` | `celery_inspect_report.py:19` | Inspects Celery workers and generates a report of active queues, ping status, and stats |
+| `classify_docs_for_rag` | `classify_docs_for_rag.py:20` | Auto-classify documents for risk-aware RAG retrieval |
+| `connect_all_agents` | `connect_all_agents.py:14` | Connect all 146 remaining agents with real solutions |
+| `create_test_token` | `create_test_token.py:12` | Creates or retrieves an authentication token for testing |
+| `create_workflow_templates` | `create_workflow_templates.py:18` | Create built-in workflow templates for orchestration |
+| `daily_priorities` | `daily_priorities.py:30` | Manage daily initiative priorities |
+| `deploy_platform_unification` | `deploy_platform_unification.py:28` | Deploy and initialize the Platform Unification Orchestrator |
+| `discover_learning_cohorts` | `discover_learning_cohorts.py:15` | Discover learning cohorts and propagate high-confidence learnings between similar users |
+| `embed_documents` | `embed_documents.py:14` | Generate embeddings for specified documents |
+| `enrich_boardroom_ml` | `enrich_boardroom_ml.py:16` | Backfill ML predictions for boardroom attention items |
+| `ensure_enhanced_profiles` | `ensure_enhanced_profiles.py:18` | Ensure all users have an EnhancedUserProfile |
+| `fetch_training_data` | `fetch_training_data.py:15` | Fetch conversation training data from HuggingFace datasets for agent learning |
+| `fix_episode_titles` | `fix_episode_titles.py:14` | Fix generic episode titles by generating unique titles from script content |
+| `fix_evolution_levels` | `fix_evolution_levels.py:21` | Fix evolution levels and grant missing abilities based on XP |
+| `fix_pilot_started_at` | `fix_pilot_started_at.py:16` | Fix pilots with NULL started_at to unblock experiment evaluation pipeline |
+| `fix_selfblog_categories` | `fix_selfblog_categories.py:16` | Fix mislabeled SelfBlog categories based on title patterns |
+| `force_agent_cycle` | `force_agent_cycle.py:20` | Force ALL agents through one complete activity cycle (dreams, conversations, learning) |
+| `full_system_demo` | `full_system_demo.py:21` | Run a full system demonstration - agents research, learn, and create content about the platform |
+| `generate_ironwood_sprites` | `generate_ironwood_sprites.py:211` | Generate 15 Ironwood Protocol sprites via Stability AI |
+| `generate_sample_data` | `generate_sample_data.py:19` | Generate sample data to demonstrate the complete system |
+| `import_patent_disclosures` | `import_patent_disclosures.py:113` | Import patent disclosure documents from docs/patents/ as Deliverable records |
+| `ingest_codebase` | `ingest_codebase.py:12` | Ingest the codebase into embeddings for self-awareness |
+| `normalize_evolution_data` | `normalize_evolution_data.py:25` | Normalize evolution data - fix levels, XP, and xp_to_next_level |
+| `operating_rhythm` | `operating_rhythm.py:31` | Manage operating rhythm (daily priorities, weekly reports) |
+| `ops_verify` | `ops_verify.py:14` | Run ops verification checks (deploy_verify, pa_tools_smoke, DB, error summary) |
+| `produce_content` | `produce_content.py:35` | Produce complete content packages with automatic asset creation |
+| `ragtest` | `ragtest.py:53` | Local RAG test using Ollama via OpenAI-compatible API (no GPT-5-minis touched). |
+| `regenerate_pilots` | `regenerate_pilots.py:19` | Regenerate pilot infrastructure from canonical decisions |
+| `register_coo_agent` | `register_coo_agent.py:24` | Register COO Agent (Phase 1: Read-Only Planning) in the database |
+| `register_creative_agents` | `register_creative_agents.py:28` | Register all creative workflow agents in the database |
+| `register_cto_agent` | `register_cto_agent.py:25` | Register CTO Agent (Phase 1: Read-Only Analysis) in the database |
+| `repo_knowledge_audit` | `repo_knowledge_audit.py:28` | Audit repo knowledge: markdown files, docs index, document models, embeddings |
+| `rescore_opportunities` | `rescore_opportunities.py:21` | Re-score opportunities using unified type-aware scoring |
+| `run_code_agent` | `run_code_agent.py:27` | Execute a code-agent task within a workspace-restricted sandbox |
+| `run_discord_bot` | `run_discord_bot.py:20` | Run the Discord bot with slash commands |
+| `selfpatch` | `selfpatch.py:159` | Self-patching helper: propose patches with LLM, or apply patches/diffs safely. |
+| `set_founder_intent` | `set_founder_intent.py:27` | Set founder intent on initiatives to enable auto-progression |
+| `show_remediation_findings` | `show_remediation_findings.py:23` | Show open remediation findings for Claude Code sessions to act on |
+| `start_bridge` | `start_bridge.py:23` | Start the System Integration Bridge - The Unified Nervous System |
+| `start_learning_demo` | `start_learning_demo.py:11` | Start the live learning demonstration |
+| `sync_agent_learning` | `sync_agent_learning.py:227` | Sync agent learning system: populate knowledge from spiders and create agent connections |
+| `sync_agent_tools` | `sync_agent_tools.py:21` | Sync utility tools from code definitions to database (excludes agent wrappers) |
+| `sync_docs_index_to_documents` | `sync_docs_index_to_documents.py:55` | Sync documents from docs/_index.json to the Document model |
+| `sync_orchestrations` | `sync_orchestrations.py:121` | Sync agent orchestrations based on coordinator agents |
+| `sync_persona_learning` | `sync_persona_learning.py:78` | Sync persona agents with the learning system |
+| `test_agent_scenarios` | `test_agent_scenarios.py:79` | Run business research agents against test scenarios |
+| `test_all_agents` | `test_all_agents.py:13` | Test all 73 agents and report their status |
+| `test_prompt_layer` | `test_prompt_layer.py:37` | Test prompt injection layers by running agents with/without specific layers |
+| `trigger_pilot_evaluation` | `trigger_pilot_evaluation.py:7` | Trigger the pilot evaluation task to process eligible pilots |
+| `trigger_stage2_generation` | `trigger_stage2_generation.py:21` | Trigger Stage 2 (Prototype Plan) document generation for initiatives |
+| `tune_fed_alert_triggers` | `tune_fed_alert_triggers.py:21` | Tune Fed Alert situation triggers (Session 1092 noise reduction). |
+| `update_experiment_thresholds` | `update_experiment_thresholds.py:22` | Update experiment halt condition thresholds to prevent premature auto-halts |
+| `validate_data_integrity` | `validate_data_integrity.py:20` | Validate data integrity and relationships across the unified platform |
+| `validate_section` | `validate_section.py:27` | Run section validation agents to verify platform health |
+| `validate_security` | `validate_security.py:11` | Validate platform security configuration |
+| `verify_surgical_moves` | `verify_surgical_moves.py:24` | Verify Surgical Moves Phase 0-3 end-to-end |
+| `write_self_blog` | `write_self_blog.py:27` | Have the system write a blog post about itself using ContentWriterAgent |
 
 ## Cleanup (25)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `backfill_agent_control_blocked_at` | `core/management/commands/backfill_agent_control_blocked_at.py:17` | Populate AgentControlEntry.blocked_at from updated_at for blocked rows missing the time… | `--dry-run` |
-| `backfill_blog_attention` | `core/management/commands/backfill_blog_attention.py:19` | Backfill attention items for existing SelfBlog records | `--limit`, `--dry-run`, `--quality-score`, `--max-age-day… |
-| `backfill_blog_attention_items` | `core/management/commands/backfill_blog_attention_items.py:22` | Backfill HumanAttentionItem entries for existing SelfBlogs | `--dry-run`, `--limit`, `--days` |
-| `backfill_contributions` | `core/management/commands/backfill_contributions.py:16` | Backfill AgentContribution records from existing ImageHistory and VideoHistory | `--dry-run`, `--limit`, `--content-type` |
-| `backfill_decision_summaries` | `core/management/commands/backfill_decision_summaries.py:25` | Backfill DecisionSummary blocks for existing conversations | `--limit`, `--dry-run`, `--type` |
-| `backfill_decisions` | `core/management/commands/backfill_decisions.py:20` | Backfill decision summaries from existing agent conversations and hive sessions | `--limit`, `--dry-run`, `--verbose`, `--source` |
-| `backfill_dream_origins` | `core/management/commands/backfill_dream_origins.py:22` | Backfill existing dreams with origin classification based on content analysis | `--dry-run`, `--verbose`, `--limit`, `--recalculate-scores` |
-| `backfill_evolution_xp` | `core/management/commands/backfill_evolution_xp.py:20` | Backfill XP for historical agent activity (conversations, dreams, learning) | `--dry-run`, `--days` |
-| `backfill_experiment_learnings` | `core/management/commands/backfill_experiment_learnings.py:22` | Backfill ExperimentLearning records for experiments missing learnings | `--dry-run`, `--halted-only`, `--limit` |
-| `backfill_initiative_owners` | `core/management/commands/backfill_initiative_owners.py:12` | Backfill owner_agent on unowned initiatives using PROGRAM_OWNER_MAP | `--dry-run` |
-| `backfill_initiative_signals` | `core/management/commands/backfill_initiative_signals.py:21` | Backfill Initiative signal_cluster and auto_topic links | `--dry-run`, `--fix`, `--limit` |
-| `backfill_research_brief_links` | `core/management/commands/backfill_research_brief_links.py:25` | Backfill links between SelfBlog research briefs and InitiativeStages | `--fix`, `--limit` |
-| `backfill_stage_documents` | `core/management/commands/backfill_stage_documents.py:22` | Backfill missing stage documents for initiatives | `--dry-run`, `--stage`, `--limit`, `--initiative-id` |
-| `backfill_voice_scores` | `core/management/commands/backfill_voice_scores.py:37` | Backfill voice critique scores for existing ChannelEpisodes | `--limit`, `--all`, `--min-length`, `--dry-run`, `--chann… |
-| `cleanup_agent_solutions` | `core/management/commands/cleanup_agent_solutions.py:21` | Clean up bloated AgentSolution code_snippet fields to reclaim disk space | `--dry-run`, `--batch-size`, `--min-snippet-size`, `--old… |
-| `cleanup_agents` | `core/management/commands/cleanup_agents.py:26` | Clean up placeholder agents and keep only real implementations | `--dry-run` |
-| `cleanup_content_quality` | `core/management/commands/cleanup_content_quality.py:18` | Session 770: Clean up content quality issues - add blacklist entries and remove pollute… | `--dry-run`, `--skip-blacklist`, `--skip-cleanup` |
-| `cleanup_conversation_duplicates` | `core/management/commands/cleanup_conversation_duplicates.py:29` | Detect and clean up fuzzy-duplicate AgentConversation records | `--fix`, `--threshold`, `--hours` |
-| `cleanup_empty_tables` | `core/management/commands/cleanup_empty_tables.py:15` | Clean up empty tables that are consuming disk space | `--dry-run`, `--min-size-mb` |
-| `cleanup_orphan_documents` | `core/management/commands/cleanup_orphan_documents.py:29` | Clean up orphan research brief documents not linked to any InitiativeStage | `--delete`, `--pattern`, `--limit`, `--keep-newest` |
-| `cleanup_single_letter_docs` | `core/management/commands/cleanup_single_letter_docs.py:15` | Delete SelfBlog documents with single-letter titles (Session 893 bug fix) | `--dry-run`, `--include-orphaned` |
-| `cleanup_stale_initiatives` | `core/management/commands/cleanup_stale_initiatives.py:40` | Archive ACTIVE initiatives whose updated_at is older than N days. Preserves rows; trans… | `--older-than-days`, `--apply`, `--only-stage`, `--limit` |
-| `cleanup_stuck_executions` | `core/management/commands/cleanup_stuck_executions.py:19` | Mark stuck in_progress AgentExecutions as failed | `--apply`, `--hours`, `--delete-cleaned` |
-| `cleanup_stuck_tasks` | `core/management/commands/cleanup_stuck_tasks.py:20` | Clean up stuck agent executions that have been running too long | `--hours`, `--dry-run` |
-| `fix_orphan_initiative_tracking` | `core/management/commands/fix_orphan_initiative_tracking.py:31` | Fix orphan initiatives by creating HiveMindSession and AgentExecution tracking records | `--fix`, `--limit`, `--initiative-id` |
+| Command | File | Help |
+|---|---|---|
+| `backfill_agent_control_blocked_at` | `backfill_agent_control_blocked_at.py:17` | Populate AgentControlEntry.blocked_at from updated_at for blocked rows missing the timestamp. |
+| `backfill_blog_attention` | `backfill_blog_attention.py:19` | Backfill attention items for existing SelfBlog records |
+| `backfill_blog_attention_items` | `backfill_blog_attention_items.py:22` | Backfill HumanAttentionItem entries for existing SelfBlogs |
+| `backfill_contributions` | `backfill_contributions.py:16` | Backfill AgentContribution records from existing ImageHistory and VideoHistory |
+| `backfill_decision_summaries` | `backfill_decision_summaries.py:25` | Backfill DecisionSummary blocks for existing conversations |
+| `backfill_decisions` | `backfill_decisions.py:20` | Backfill decision summaries from existing agent conversations and hive sessions |
+| `backfill_dream_origins` | `backfill_dream_origins.py:22` | Backfill existing dreams with origin classification based on content analysis |
+| `backfill_evolution_xp` | `backfill_evolution_xp.py:20` | Backfill XP for historical agent activity (conversations, dreams, learning) |
+| `backfill_experiment_learnings` | `backfill_experiment_learnings.py:22` | Backfill ExperimentLearning records for experiments missing learnings |
+| `backfill_initiative_owners` | `backfill_initiative_owners.py:12` | Backfill owner_agent on unowned initiatives using PROGRAM_OWNER_MAP |
+| `backfill_initiative_signals` | `backfill_initiative_signals.py:21` | Backfill Initiative signal_cluster and auto_topic links |
+| `backfill_research_brief_links` | `backfill_research_brief_links.py:25` | Backfill links between SelfBlog research briefs and InitiativeStages |
+| `backfill_stage_documents` | `backfill_stage_documents.py:22` | Backfill missing stage documents for initiatives |
+| `backfill_voice_scores` | `backfill_voice_scores.py:37` | Backfill voice critique scores for existing ChannelEpisodes |
+| `cleanup_agent_solutions` | `cleanup_agent_solutions.py:21` | Clean up bloated AgentSolution code_snippet fields to reclaim disk space |
+| `cleanup_agents` | `cleanup_agents.py:26` | Clean up placeholder agents and keep only real implementations |
+| `cleanup_content_quality` | `cleanup_content_quality.py:18` | Session 770: Clean up content quality issues - add blacklist entries and remove polluted data |
+| `cleanup_conversation_duplicates` | `cleanup_conversation_duplicates.py:29` | Detect and clean up fuzzy-duplicate AgentConversation records |
+| `cleanup_empty_tables` | `cleanup_empty_tables.py:15` | Clean up empty tables that are consuming disk space |
+| `cleanup_orphan_documents` | `cleanup_orphan_documents.py:29` | Clean up orphan research brief documents not linked to any InitiativeStage |
+| `cleanup_single_letter_docs` | `cleanup_single_letter_docs.py:15` | Delete SelfBlog documents with single-letter titles (Session 893 bug fix) |
+| `cleanup_stale_initiatives` | `cleanup_stale_initiatives.py:40` | Archive ACTIVE initiatives whose updated_at is older than N days. Preserves rows; transitions status='ACTIV… |
+| `cleanup_stuck_executions` | `cleanup_stuck_executions.py:19` | Mark stuck in_progress AgentExecutions as failed |
+| `cleanup_stuck_tasks` | `cleanup_stuck_tasks.py:20` | Clean up stuck agent executions that have been running too long |
+| `fix_orphan_initiative_tracking` | `fix_orphan_initiative_tracking.py:31` | Fix orphan initiatives by creating HiveMindSession and AgentExecution tracking records |
 
 ## Migration / setup (13)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `bootstrap_learning_system` | `core/management/commands/bootstrap_learning_system.py:28` | Bootstrap the learning system with seed data for fresh deployments | `--dry-run`, `--executions`, `--skip-mining` |
-| `clean_initiative_names` | `core/management/commands/clean_initiative_names.py:148` | Clean up initiative names that look like technical descriptions | `--fix`, `--limit`, `--min-length` |
-| `consolidate_duplicate_initiatives` | `core/management/commands/consolidate_duplicate_initiatives.py:124` | Detect and consolidate duplicate initiatives | `--fix`, `--threshold`, `--limit`, `--snapshot` |
-| `fix_initiative_stages` | `core/management/commands/fix_initiative_stages.py:24` | Fix initiatives with inconsistent stage completion | `--dry-run`, `--id` |
-| `fix_initiative_titles` | `core/management/commands/fix_initiative_titles.py:23` | Fix messy initiative titles using smart title generation | `--fix`, `--ids`, `--limit` |
-| `fix_stuck_initiatives` | `core/management/commands/fix_stuck_initiatives.py:24` | Fix stuck initiative documents that have contradictory data status markers | `--dry-run`, `--fix`, `--verbose` |
-| `init_platform` | `core/management/commands/init_platform.py:15` | Initialize the Unified Donkey Betz Platform with default settings | `--reset`, `--create-superuser` |
-| `initiative_rate_limit` | `core/management/commands/initiative_rate_limit.py:27` | View and manage initiative progression rate limits | `--status`, `--reset`, `--set-limit`, `--history` |
-| `migrate_images_to_cloudinary` | `core/management/commands/migrate_images_to_cloudinary.py:30` | Migrate locally-stored images to Cloudinary for reduced egress costs | `--batch-size`, `--dry-run`, `--skip-existing`, `--user`,… |
-| `migrate_pa_identity` | `core/management/commands/migrate_pa_identity.py:79` | Audit and normalize PA identity variants across all models | `--apply`, `--verbose` |
-| `setup_llm_routing` | `core/management/commands/setup_llm_routing.py:29` | Setup LLM routing with default providers, models, and agent configs | `--check`, `--clear`, `--mode` |
-| `setup_pa_service_account` | `core/management/commands/setup_pa_service_account.py:15` | Create the PA service account (idempotent) | — |
-| `test_initiatives_perf` | `core/management/commands/test_initiatives_perf.py:8` | Test initiatives API query performance | — |
+| Command | File | Help |
+|---|---|---|
+| `bootstrap_learning_system` | `bootstrap_learning_system.py:28` | Bootstrap the learning system with seed data for fresh deployments |
+| `clean_initiative_names` | `clean_initiative_names.py:148` | Clean up initiative names that look like technical descriptions |
+| `consolidate_duplicate_initiatives` | `consolidate_duplicate_initiatives.py:124` | Detect and consolidate duplicate initiatives |
+| `fix_initiative_stages` | `fix_initiative_stages.py:24` | Fix initiatives with inconsistent stage completion |
+| `fix_initiative_titles` | `fix_initiative_titles.py:23` | Fix messy initiative titles using smart title generation |
+| `fix_stuck_initiatives` | `fix_stuck_initiatives.py:24` | Fix stuck initiative documents that have contradictory data status markers |
+| `init_platform` | `init_platform.py:15` | Initialize the Unified Donkey Betz Platform with default settings |
+| `initiative_rate_limit` | `initiative_rate_limit.py:27` | View and manage initiative progression rate limits |
+| `migrate_images_to_cloudinary` | `migrate_images_to_cloudinary.py:30` | Migrate locally-stored images to Cloudinary for reduced egress costs |
+| `migrate_pa_identity` | `migrate_pa_identity.py:79` | Audit and normalize PA identity variants across all models |
+| `setup_llm_routing` | `setup_llm_routing.py:29` | Setup LLM routing with default providers, models, and agent configs |
+| `setup_pa_service_account` | `setup_pa_service_account.py:15` | Create the PA service account (idempotent) |
+| `test_initiatives_perf` | `test_initiatives_perf.py:8` | Test initiatives API query performance |
 
 ## Audits (build_*_audit) (12)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `build_advisor_audit` | `core/management/commands/build_advisor_audit.py:29` | Regenerate docs/ADVISOR_AUDIT.md from advisor registry introspection. | `--check` |
-| `build_beat_audit` | `core/management/commands/build_beat_audit.py:32` | Regenerate docs/BEAT_AUDIT.md from app.conf.beat_schedule introspection. | `--check` |
-| `build_body_system_audit` | `core/management/commands/build_body_system_audit.py:39` | Regenerate docs/BODY_SYSTEM_AUDIT.md from body system service introspection. | `--check` |
-| `build_capability_audit` | `core/management/commands/build_capability_audit.py:55` | Regenerate docs/CAPABILITY_AUDIT.md from AGENT_MAP introspection. | `--check` |
-| `build_celery_audit` | `core/management/commands/build_celery_audit.py:40` | Regenerate docs/CELERY_AUDIT.md from the full Celery task registry. | `--check` |
-| `build_discord_audit` | `core/management/commands/build_discord_audit.py:37` | Regenerate docs/DISCORD_AUDIT.md from discord_bot.py AST. | `--check` |
-| `build_learning_bridge_audit` | `core/management/commands/build_learning_bridge_audit.py:30` | Regenerate docs/LEARNING_BRIDGE_AUDIT.md from learning_bridges/ AST. | `--check` |
-| `build_management_command_audit` | `core/management/commands/build_management_command_audit.py:66` | Regenerate docs/MANAGEMENT_COMMAND_AUDIT.md from core/management/commands/ AST. | `--check` |
-| `build_ml_audit` | `core/management/commands/build_ml_audit.py:53` | Regenerate docs/ML_AUDIT.md from ml/ subdirectory introspection. | `--check` |
-| `build_pa_tool_audit` | `core/management/commands/build_pa_tool_audit.py:35` | Regenerate docs/PA_TOOL_AUDIT.md from PA schema + dispatcher introspection. | `--check` |
-| `build_runtime_audit` | `core/management/commands/build_runtime_audit.py:49` | Regenerate docs/RUNTIME_AUDIT.md from telemetry tables vs code registries. | `--check`, `--window-days` |
-| `build_spider_audit` | `core/management/commands/build_spider_audit.py:35` | Regenerate docs/SPIDER_AUDIT.md from spider registry introspection. | `--check` |
+| Command | File | Help |
+|---|---|---|
+| `build_advisor_audit` | `build_advisor_audit.py:29` | Regenerate docs/ADVISOR_AUDIT.md from advisor registry introspection. |
+| `build_beat_audit` | `build_beat_audit.py:32` | Regenerate docs/BEAT_AUDIT.md from app.conf.beat_schedule introspection. |
+| `build_body_system_audit` | `build_body_system_audit.py:39` | Regenerate docs/BODY_SYSTEM_AUDIT.md from body system service introspection. |
+| `build_capability_audit` | `build_capability_audit.py:55` | Regenerate docs/CAPABILITY_AUDIT.md from AGENT_MAP introspection. |
+| `build_celery_audit` | `build_celery_audit.py:40` | Regenerate docs/CELERY_AUDIT.md from the full Celery task registry. |
+| `build_discord_audit` | `build_discord_audit.py:37` | Regenerate docs/DISCORD_AUDIT.md from discord_bot.py AST. |
+| `build_learning_bridge_audit` | `build_learning_bridge_audit.py:30` | Regenerate docs/LEARNING_BRIDGE_AUDIT.md from learning_bridges/ AST. |
+| `build_management_command_audit` | `build_management_command_audit.py:70` | Regenerate docs/MANAGEMENT_COMMAND_AUDIT.md from core/management/commands/ AST. |
+| `build_ml_audit` | `build_ml_audit.py:53` | Regenerate docs/ML_AUDIT.md from ml/ subdirectory introspection. |
+| `build_pa_tool_audit` | `build_pa_tool_audit.py:35` | Regenerate docs/PA_TOOL_AUDIT.md from PA schema + dispatcher introspection. |
+| `build_runtime_audit` | `build_runtime_audit.py:49` | Regenerate docs/RUNTIME_AUDIT.md from telemetry tables vs code registries. |
+| `build_spider_audit` | `build_spider_audit.py:35` | Regenerate docs/SPIDER_AUDIT.md from spider registry introspection. |
 
 ## Workspace / projects (10)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `backfill_deliverable_workspaces` | `core/management/commands/backfill_deliverable_workspaces.py:29` | Backfill workspace_id on Deliverables where it is NULL | `--workspace`, `--username`, `--include-archived`, `--dry… |
-| `backfill_deliverables` | `core/management/commands/backfill_deliverables.py:26` | Backfill Deliverable objects from existing WorkspaceOperations | `--dry-run`, `--limit`, `--agent`, `--since-days`, `--ski… |
-| `backfill_media_workspaces` | `core/management/commands/backfill_media_workspaces.py:18` | Backfill workspace FK on media models (ImageHistory, VideoHistory, AudioHistory) | `--apply` |
-| `consolidate_workspaces` | `core/management/commands/consolidate_workspaces.py:40` | Consolidate duplicate workspaces and assign orphans | `--dry-run` |
-| `fix_workspace_deliverables` | `core/management/commands/fix_workspace_deliverables.py:35` | Fix specific workspace deliverable issues from audit | `--dry-run` |
-| `fix_workspace_permissions` | `core/management/commands/fix_workspace_permissions.py:16` | Fix workspace permissions and paths | `--list`, `--fix` |
-| `fix_workspace_visibility` | `core/management/commands/fix_workspace_visibility.py:45` | Fix workspace visibility and deliverable assignment | `--dry-run` |
-| `setup_codebase_workspace` | `core/management/commands/setup_codebase_workspace.py:33` | Setup a codebase workspace for code maintenance operations | `--path`, `--name`, `--dry-run`, `--force`, `--read-only` |
-| `setup_production_workspace` | `core/management/commands/setup_production_workspace.py:25` | Setup a production workspace for the SKIN layer | `--path`, `--name`, `--type`, `--git-url`, `--dry-run`, `… |
-| `setup_workspace_autopilot` | `core/management/commands/setup_workspace_autopilot.py:20` | Setup the Workspace Autopilot conductor task in Celery Beat database | `--interval`, `--budget`, `--seed-configs`, `--dry-run`, … |
+| Command | File | Help |
+|---|---|---|
+| `backfill_deliverable_workspaces` | `backfill_deliverable_workspaces.py:29` | Backfill workspace_id on Deliverables where it is NULL |
+| `backfill_deliverables` | `backfill_deliverables.py:26` | Backfill Deliverable objects from existing WorkspaceOperations |
+| `backfill_media_workspaces` | `backfill_media_workspaces.py:18` | Backfill workspace FK on media models (ImageHistory, VideoHistory, AudioHistory) |
+| `consolidate_workspaces` | `consolidate_workspaces.py:40` | Consolidate duplicate workspaces and assign orphans |
+| `fix_workspace_deliverables` | `fix_workspace_deliverables.py:35` | Fix specific workspace deliverable issues from audit |
+| `fix_workspace_permissions` | `fix_workspace_permissions.py:16` | Fix workspace permissions and paths |
+| `fix_workspace_visibility` | `fix_workspace_visibility.py:45` | Fix workspace visibility and deliverable assignment |
+| `setup_codebase_workspace` | `setup_codebase_workspace.py:33` | Setup a codebase workspace for code maintenance operations |
+| `setup_production_workspace` | `setup_production_workspace.py:25` | Setup a production workspace for the SKIN layer |
+| `setup_workspace_autopilot` | `setup_workspace_autopilot.py:20` | Setup the Workspace Autopilot conductor task in Celery Beat database |
 
 ## Agents / advisors (8)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `bootstrap_agent_relationships` | `core/management/commands/bootstrap_agent_relationships.py:93` | Bootstrap agent relationships between agents | `--dry-run`, `--clear` |
-| `load_all_agents_advisors` | `core/management/commands/load_all_agents_advisors.py:10` | Load all 149 agents and 25 advisors into the unified system | — |
-| `populate_agents` | `core/management/commands/populate_agents.py:20` | Populate all core agents from AGENT_MAP into the database | — |
-| `seed_golden_path_demo` | `core/management/commands/seed_golden_path_demo.py:31` | Seed demo data for Golden Path demonstrations | `--username` |
-| `seed_learning_journeys` | `core/management/commands/seed_learning_journeys.py:293` | Seed learning journey templates and achievements | `--force` |
-| `seed_mythology` | `core/management/commands/seed_mythology.py:20` | Seed MythPattern and MythologyGuard tables for mythology detection | `--dry-run`, `--patterns-only`, `--guards-only` |
-| `seed_production` | `core/management/commands/seed_production.py:22` | Seed production database with essential infrastructure | `--dry-run`, `--skip-channels`, `--skip-agents` |
-| `seed_test_scenarios` | `core/management/commands/seed_test_scenarios.py:40` | Seed test scenarios as PartnershipProjects for agent testing | `--industry`, `--scenario`, `--list`, `--cleanup`, `--use… |
+| Command | File | Help |
+|---|---|---|
+| `bootstrap_agent_relationships` | `bootstrap_agent_relationships.py:93` | Bootstrap agent relationships between agents |
+| `load_all_agents_advisors` | `load_all_agents_advisors.py:10` | Load all 149 agents and 25 advisors into the unified system |
+| `populate_agents` | `populate_agents.py:20` | Populate all core agents from AGENT_MAP into the database |
+| `seed_golden_path_demo` | `seed_golden_path_demo.py:31` | Seed demo data for Golden Path demonstrations |
+| `seed_learning_journeys` | `seed_learning_journeys.py:293` | Seed learning journey templates and achievements |
+| `seed_mythology` | `seed_mythology.py:20` | Seed MythPattern and MythologyGuard tables for mythology detection |
+| `seed_production` | `seed_production.py:22` | Seed production database with essential infrastructure |
+| `seed_test_scenarios` | `seed_test_scenarios.py:40` | Seed test scenarios as PartnershipProjects for agent testing |
 
 ## Body systems / health (8)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `db_health_snapshot` | `core/management/commands/db_health_snapshot.py:23` | Output database health snapshot for environment comparison | `--json` |
-| `heart_check` | `core/management/commands/heart_check.py:17` | HEART Service - Check system health (the central heartbeat of the AI body) | `component`, `--json`, `--watch`, `--history`, `--hours` |
-| `immune_check` | `core/management/commands/immune_check.py:33` | Check IMMUNE (security & threat detection) system health | `--json`, `--patterns`, `--threats`, `--quarantine`, `--c… |
-| `lungs_check` | `core/management/commands/lungs_check.py:20` | LUNGS Service - Check resource and capacity status (the breathing of the AI body) | `--json`, `--oxygen`, `--forecast`, `--watch`, `--history… |
-| `muscular_check` | `core/management/commands/muscular_check.py:32` | Check MUSCULAR (agent work execution) system health | `--json`, `--groups`, `--weak`, `--overworked`, `--histor… |
-| `spine_check` | `core/management/commands/spine_check.py:32` | Check SPINE (central API router) health and alignment | `--json`, `--patterns`, `--categories`, `--pattern`, `--c… |
-| `system_health_check` | `core/management/commands/system_health_check.py:22` | Comprehensive system health check for all platform components | `--fix`, `--verbose` |
-| `warmup_body_systems` | `core/management/commands/warmup_body_systems.py:23` | Warm up body systems by triggering activity | `--muscular`, `--digestive`, `--spine`, `--all`, `--dry-run` |
+| Command | File | Help |
+|---|---|---|
+| `db_health_snapshot` | `db_health_snapshot.py:23` | Output database health snapshot for environment comparison |
+| `heart_check` | `heart_check.py:17` | HEART Service - Check system health (the central heartbeat of the AI body) |
+| `immune_check` | `immune_check.py:33` | Check IMMUNE (security & threat detection) system health |
+| `lungs_check` | `lungs_check.py:20` | LUNGS Service - Check resource and capacity status (the breathing of the AI body) |
+| `muscular_check` | `muscular_check.py:32` | Check MUSCULAR (agent work execution) system health |
+| `spine_check` | `spine_check.py:32` | Check SPINE (central API router) health and alignment |
+| `system_health_check` | `system_health_check.py:22` | Comprehensive system health check for all platform components |
+| `warmup_body_systems` | `warmup_body_systems.py:23` | Warm up body systems by triggering activity |
 
 ## Diagnostics (8)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `check_experiment_status` | `core/management/commands/check_experiment_status.py:10` | Check experiment and pilot status distribution | — |
-| `check_initiative_drift` | `core/management/commands/check_initiative_drift.py:30` | Check and manage semantic drift on initiatives | `--initiative-id`, `--all`, `--list-flagged`, `--stage`, … |
-| `circulation_check` | `core/management/commands/circulation_check.py:25` | Check data flow health - the CIRCULATORY SYSTEM of the AI body | `--json`, `--routes`, `--bottlenecks`, `--velocity`, `--w… |
-| `digestion_check` | `core/management/commands/digestion_check.py:33` | Check DIGESTIVE (data ingestion & processing) system health | `--json`, `--routes`, `--bottlenecks`, `--metabolism`, `-… |
-| `reality_check` | `core/management/commands/reality_check.py:27` | Check platform reality status and generate reports | `--all`, `--component`, `--report`, `--dashboard`, `--tra… |
-| `run_smoke_tests` | `core/management/commands/run_smoke_tests.py:14` | Run deploy verification checks against a running server | `--base-url`, `--token` |
-| `run_ui_smoke` | `core/management/commands/run_ui_smoke.py:23` | Run UI smoke tests against frontend routes using Playwright | `--base-url`, `--token`, `--routes`, `--screenshot-dir` |
-| `system_reality_check` | `core/management/commands/system_reality_check.py:22` | Verify all autonomous systems are functioning as designed | `--verbose`, `--output`, `--fail-on-error`, `--lookback` |
+| Command | File | Help |
+|---|---|---|
+| `check_experiment_status` | `check_experiment_status.py:10` | Check experiment and pilot status distribution |
+| `check_initiative_drift` | `check_initiative_drift.py:30` | Check and manage semantic drift on initiatives |
+| `circulation_check` | `circulation_check.py:25` | Check data flow health - the CIRCULATORY SYSTEM of the AI body |
+| `digestion_check` | `digestion_check.py:33` | Check DIGESTIVE (data ingestion & processing) system health |
+| `reality_check` | `reality_check.py:27` | Check platform reality status and generate reports |
+| `run_smoke_tests` | `run_smoke_tests.py:14` | Run deploy verification checks against a running server |
+| `run_ui_smoke` | `run_ui_smoke.py:23` | Run UI smoke tests against frontend routes using Playwright |
+| `system_reality_check` | `system_reality_check.py:22` | Verify all autonomous systems are functioning as designed |
 
 ## Spiders (7)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `activate_spiders` | `core/management/commands/activate_spiders.py:13` | Activate spider network to collect data and route to agents | `--simulate`, `--process`, `--limit` |
-| `boost_spiders` | `core/management/commands/boost_spiders.py:12` | Boost spider data collection for all spiders | — |
-| `bulk_embed_spiders` | `core/management/commands/bulk_embed_spiders.py:27` | Bulk generate embeddings for spider data entries | `--batch`, `--hours`, `--dry-run`, `--mark-empty` |
-| `process_spider_data` | `core/management/commands/process_spider_data.py:9` | Process unprocessed spider data | — |
-| `sync_spider_agents` | `core/management/commands/sync_spider_agents.py:16` | Sync spider categories and connect them to appropriate agents | `--dry-run` |
-| `triage_spider_embeddings` | `core/management/commands/triage_spider_embeddings.py:43` | Triage spider embedding backlog: mark noise/dupes as [NO_ITEMS], keep best record per s… | `--apply` |
-| `wire_agents_to_spiders` | `core/management/commands/wire_agents_to_spiders.py:10` | Wire all agents to appropriate spider categories for data integration | `--dry-run`, `--force` |
-
-## Celery / beat (4)
-
-| Command | File | Help | Args |
-|---|---|---|---|
-| `add_critical_celery_tasks` | `core/management/commands/add_critical_celery_tasks.py:583` | Add critical missing Celery Beat tasks to database | `--dry-run`, `--force` |
-| `sync_celery_beat` | `core/management/commands/sync_celery_beat.py:18` | Sync Celery Beat database with core/celery.py task definitions | `--apply`, `--verbose`, `--disable-missing`, `--create-only` |
-| `sync_celery_schedules` | `core/management/commands/sync_celery_schedules.py:30` | Sync Celery Beat schedules from celery.py to DatabaseScheduler | `--dry-run`, `--list`, `--force`, `--source` |
-| `sync_task_queues` | `core/management/commands/sync_task_queues.py:23` | Sync PeriodicTask.queue fields to match CELERY_TASK_ROUTES | `--apply`, `--verbose` |
+| Command | File | Help |
+|---|---|---|
+| `activate_spiders` | `activate_spiders.py:13` | Activate spider network to collect data and route to agents |
+| `boost_spiders` | `boost_spiders.py:12` | Boost spider data collection for all spiders |
+| `bulk_embed_spiders` | `bulk_embed_spiders.py:27` | Bulk generate embeddings for spider data entries |
+| `process_spider_data` | `process_spider_data.py:9` | Process unprocessed spider data |
+| `sync_spider_agents` | `sync_spider_agents.py:16` | Sync spider categories and connect them to appropriate agents |
+| `triage_spider_embeddings` | `triage_spider_embeddings.py:43` | Triage spider embedding backlog: mark noise/dupes as [NO_ITEMS], keep best record per spider-day |
+| `wire_agents_to_spiders` | `wire_agents_to_spiders.py:10` | Wire all agents to appropriate spider categories for data integration |
 
 ## Docs / inventory (4)
 
-| Command | File | Help | Args |
-|---|---|---|---|
-| `build_docs_index` | `core/management/commands/build_docs_index.py:46` | Generate docs/INDEX.md and docs/_index.json by scanning all documentation files | `--dry-run`, `--json-only` |
-| `generate_platform_inventory` | `core/management/commands/generate_platform_inventory.py:24` | Generate docs/PLATFORM_INVENTORY.md — runtime-derived master platform snapshot | `--output`, `--stdout`, `--json` |
-| `refresh_doc_inventory_blocks` | `core/management/commands/refresh_doc_inventory_blocks.py:47` | Refresh <!-- @inventory-block:NAME --> regions in registered docs using runtime-derived… | `--doc`, `--check`, `--list-blocks` |
-| `verify_doc_claims` | `core/management/commands/verify_doc_claims.py:49` | Verify claims in authoritative docs against runtime reality. | `--doc`, `--only-drift`, `--format`, `--list`, `--fail-on… |
+| Command | File | Help |
+|---|---|---|
+| `build_docs_index` | `build_docs_index.py:46` | Generate docs/INDEX.md and docs/_index.json by scanning all documentation files |
+| `generate_platform_inventory` | `generate_platform_inventory.py:24` | Generate docs/PLATFORM_INVENTORY.md — runtime-derived master platform snapshot |
+| `refresh_doc_inventory_blocks` | `refresh_doc_inventory_blocks.py:47` | Refresh <!-- @inventory-block:NAME --> regions in registered docs using runtime-derived data from gather_in… |
+| `verify_doc_claims` | `verify_doc_claims.py:49` | Verify claims in authoritative docs against runtime reality. |
+
+## Task sync (4)
+
+| Command | File | Help |
+|---|---|---|
+| `add_critical_celery_tasks` | `add_critical_celery_tasks.py:583` | Add critical missing Celery Beat tasks to database |
+| `sync_celery_beat` | `sync_celery_beat.py:18` | Sync Celery Beat database with core/celery.py task definitions |
+| `sync_celery_schedules` | `sync_celery_schedules.py:30` | Sync Celery Beat schedules from celery.py to DatabaseScheduler |
+| `sync_task_queues` | `sync_task_queues.py:23` | Sync PeriodicTask.queue fields to match CELERY_TASK_ROUTES |
+
+## Args appendix
+
+Argument flags per command. Listed separately from the category tables to avoid co-occurrence with help-text mentions of code paths (see comment in the generator).
+
+- `achieve_95_reality` — `--component`, `--validate-only`
+- `activate_spiders` — `--simulate`, `--process`, `--limit`
+- `add_critical_celery_tasks` — `--dry-run`, `--force`
+- `agent_introduction_party` — `--agents`, `--verbose`, `--dry-run`
+- `apply_publish_gate` — `--blog-id`, `--all`, `--drafts-only`, `--dry-run`, `--reclassify`, `--summary`
+- `askdocs` — `question`
+- `assign_agent_voices` — `--apply`, `--force`, `--agent`
+- `assign_memories_to_rooms` — `--dry-run`, `--agent`
+- `audit_database` — `--verbose`, `--fix`, `--output`, `--fail-on-error`, `--app`
+- `auto_remediate` — `--dry-run`, `--discover`, `--validate`, `--assign`, `--execute`, `--verify`, `--status`, `--limit`, `--verbose`, `--no-commit`, `--no-pr`
+- `backfill_agent_control_blocked_at` — `--dry-run`
+- `backfill_blog_attention` — `--limit`, `--dry-run`, `--quality-score`, `--max-age-days`, `--all-time`
+- `backfill_blog_attention_items` — `--dry-run`, `--limit`, `--days`
+- `backfill_contributions` — `--dry-run`, `--limit`, `--content-type`
+- `backfill_decision_summaries` — `--limit`, `--dry-run`, `--type`
+- `backfill_decisions` — `--limit`, `--dry-run`, `--verbose`, `--source`
+- `backfill_deliverable_workspaces` — `--workspace`, `--username`, `--include-archived`, `--dry-run`
+- `backfill_deliverables` — `--dry-run`, `--limit`, `--agent`, `--since-days`, `--skip-existing`
+- `backfill_dream_origins` — `--dry-run`, `--verbose`, `--limit`, `--recalculate-scores`
+- `backfill_evolution_xp` — `--dry-run`, `--days`
+- `backfill_experiment_learnings` — `--dry-run`, `--halted-only`, `--limit`
+- `backfill_initiative_owners` — `--dry-run`
+- `backfill_initiative_signals` — `--dry-run`, `--fix`, `--limit`
+- `backfill_media_workspaces` — `--apply`
+- `backfill_research_brief_links` — `--fix`, `--limit`
+- `backfill_stage_documents` — `--dry-run`, `--stage`, `--limit`, `--initiative-id`
+- `backfill_voice_scores` — `--limit`, `--all`, `--min-length`, `--dry-run`, `--channel-id`
+- `boardroom_approval` — `--list-pending`, `--approve`, `--by`, `--notes`, `--revoke`, `--reason`, `--status`, `--auto-approve-with-intent`, `--dry-run`
+- `bootstrap_agent_relationships` — `--dry-run`, `--clear`
+- `bootstrap_learning_system` — `--dry-run`, `--executions`, `--skip-mining`
+- `build_advisor_audit` — `--check`
+- `build_beat_audit` — `--check`
+- `build_body_system_audit` — `--check`
+- `build_capability_audit` — `--check`
+- `build_celery_audit` — `--check`
+- `build_discord_audit` — `--check`
+- `build_docs_index` — `--dry-run`, `--json-only`
+- `build_learning_bridge_audit` — `--check`
+- `build_management_command_audit` — `--check`
+- `build_ml_audit` — `--check`
+- `build_pa_tool_audit` — `--check`
+- `build_rag_corpus` — `--index`, `--output`, `--chunk-size`, `--dry-run`
+- `build_runtime_audit` — `--check`, `--window-days`
+- `build_spider_audit` — `--check`
+- `bulk_embed_spiders` — `--batch`, `--hours`, `--dry-run`, `--mark-empty`
+- `calibrate_halt_thresholds` — `--days`, `--cost-fn`, `--apply`, `--profile`
+- `celery_inspect_report` — `--json-only`, `--timeout`, `--output-dir`
+- `check_initiative_drift` — `--initiative-id`, `--all`, `--list-flagged`, `--stage`, `--override`, `--reason`, `--set-threshold`, `--disable-drift`, `--enable-drift`, `--dry-run`
+- `circulation_check` — `--json`, `--routes`, `--bottlenecks`, `--velocity`, `--watch`, `--history`, `--hours`, `--route`, `--limit`
+- `classify_docs_for_rag` — `--dry-run`
+- `clean_initiative_names` — `--fix`, `--limit`, `--min-length`
+- `cleanup_agent_solutions` — `--dry-run`, `--batch-size`, `--min-snippet-size`, `--older-than-days`
+- `cleanup_agents` — `--dry-run`
+- `cleanup_content_quality` — `--dry-run`, `--skip-blacklist`, `--skip-cleanup`
+- `cleanup_conversation_duplicates` — `--fix`, `--threshold`, `--hours`
+- `cleanup_empty_tables` — `--dry-run`, `--min-size-mb`
+- `cleanup_orphan_documents` — `--delete`, `--pattern`, `--limit`, `--keep-newest`
+- `cleanup_single_letter_docs` — `--dry-run`, `--include-orphaned`
+- `cleanup_stale_initiatives` — `--older-than-days`, `--apply`, `--only-stage`, `--limit`
+- `cleanup_stuck_executions` — `--apply`, `--hours`, `--delete-cleaned`
+- `cleanup_stuck_tasks` — `--hours`, `--dry-run`
+- `consolidate_duplicate_initiatives` — `--fix`, `--threshold`, `--limit`, `--snapshot`
+- `consolidate_workspaces` — `--dry-run`
+- `create_test_token` — `username`
+- `create_workflow_templates` — `--force`
+- `daily_priorities` — `--scan`, `--list`, `--summary`, `--set-priority`, `--rank`, `--reason`, `--clear-priority`, `--focus-count`
+- `db_health_snapshot` — `--json`
+- `deploy_platform_unification` — `--start-immediately`, `--config-file`, `--test-mode`, `--verbose`, `--component`
+- `digestion_check` — `--json`, `--routes`, `--bottlenecks`, `--metabolism`, `--history`, `--stage`, `--watch`, `--hours`, `--force`
+- `discover_learning_cohorts` — `--min-confidence`, `--min-similarity`, `--dry-run`
+- `embed_documents` — `document_ids`, `--all-unembedded`, `--type`, `--model`, `--async`
+- `enrich_boardroom_ml` — `--pending`, `--all`, `--stats`, `--user`, `--limit`
+- `ensure_enhanced_profiles` — `--dry-run`, `--verbose`
+- `fetch_training_data` — `--dry-run`, `--source`, `--save-to-db`, `--create-knowledge`, `--limit`
+- `fix_episode_titles` — `--dry-run`, `--channel`, `--limit`
+- `fix_evolution_levels` — `--dry-run`
+- `fix_initiative_stages` — `--dry-run`, `--id`
+- `fix_initiative_titles` — `--fix`, `--ids`, `--limit`
+- `fix_orphan_initiative_tracking` — `--fix`, `--limit`, `--initiative-id`
+- `fix_pilot_started_at` — `--dry-run`
+- `fix_selfblog_categories` — `--dry-run`
+- `fix_stuck_initiatives` — `--dry-run`, `--fix`, `--verbose`
+- `fix_workspace_deliverables` — `--dry-run`
+- `fix_workspace_permissions` — `--list`, `--fix`
+- `fix_workspace_visibility` — `--dry-run`
+- `force_agent_cycle` — `--dry-run`, `--dreams-only`, `--conversations-only`, `--learning-only`, `--dreams-per-agent`
+- `full_system_demo` — `--skip-dreams`, `--skip-conversations`, `--content-only`
+- `generate_ironwood_sprites` — `--dry-run`, `--only`, `--model`, `--user`, `--output`
+- `generate_platform_inventory` — `--output`, `--stdout`, `--json`
+- `heart_check` — `component`, `--json`, `--watch`, `--history`, `--hours`
+- `immune_check` — `--json`, `--patterns`, `--threats`, `--quarantine`, `--categories`, `--watch`, `--hours`, `--force`
+- `import_patent_disclosures` — `--workspace`, `--dry-run`, `--force`
+- `ingest_codebase` — `--force`
+- `init_platform` — `--reset`, `--create-superuser`
+- `initiative_rate_limit` — `--status`, `--reset`, `--set-limit`, `--history`
+- `lungs_check` — `--json`, `--oxygen`, `--forecast`, `--watch`, `--history`, `--hours`, `--provider`, `--agent`, `--budgets`, `--velocity`
+- `migrate_images_to_cloudinary` — `--batch-size`, `--dry-run`, `--skip-existing`, `--user`, `--limit`
+- `migrate_pa_identity` — `--apply`, `--verbose`
+- `muscular_check` — `--json`, `--groups`, `--weak`, `--overworked`, `--history`, `--group`, `--watch`, `--hours`, `--force`
+- `normalize_evolution_data` — `--dry-run`
+- `operating_rhythm` — `--set-priorities`, `--status`, `--weekly-report`, `--feedback`, `--map-initiative`, `--priority`, `--history`
+- `ops_verify` — `--env`, `--json`
+- `produce_content` — `content_type`, `topic`, `--tone`, `--audience`, `--skip`, `--async`, `--list`, `--json`
+- `ragtest` — `question`, `--docs`, `--k`, `--fresh`, `--debug`
+- `reality_check` — `--all`, `--component`, `--report`, `--dashboard`, `--trace`, `--flow`, `--output`, `--format`, `--open`, `--verbose`
+- `refresh_doc_inventory_blocks` — `--doc`, `--check`, `--list-blocks`
+- `regenerate_pilots` — `--dry-run`, `--limit`
+- `repo_knowledge_audit` — `--json`, `--output`
+- `rescore_opportunities` — `--apply`, `--retype`, `--batch-size`, `--score`, `--all`
+- `run_code_agent` — `--workspace`, `--mode`, `--task`, `--run-id`
+- `run_discord_bot` — `--check`
+- `run_smoke_tests` — `--base-url`, `--token`
+- `run_ui_smoke` — `--base-url`, `--token`, `--routes`, `--screenshot-dir`
+- `seed_golden_path_demo` — `--username`
+- `seed_learning_journeys` — `--force`
+- `seed_mythology` — `--dry-run`, `--patterns-only`, `--guards-only`
+- `seed_production` — `--dry-run`, `--skip-channels`, `--skip-agents`
+- `seed_test_scenarios` — `--industry`, `--scenario`, `--list`, `--cleanup`, `--user`, `--dry-run`
+- `selfpatch` — `--desc`, `--paths`, `--k`, `--temperature`, `--max_tokens`, `--raw`, `--from-file`, `--stdin`, `--dry-run`, `--no-manage-check`, `--no-pycompile`, `--pytest`, `--commit`, `--commit-msg`
+- `set_founder_intent` — `--initiative-id`, `--all-pending`, `--list`, `--interactive`, `--speed`, `--risk`, `--engineering-hours`, `--llm-spend`, `--stop-rule`, `--boardroom`, `--track`, `--auto-detect-track`, `--content-flags`, `--approve-stage`, `--complete-compliance`, `--dry-run`
+- `setup_codebase_workspace` — `--path`, `--name`, `--dry-run`, `--force`, `--read-only`
+- `setup_llm_routing` — `--check`, `--clear`, `--mode`
+- `setup_production_workspace` — `--path`, `--name`, `--type`, `--git-url`, `--dry-run`, `--force`
+- `setup_workspace_autopilot` — `--interval`, `--budget`, `--seed-configs`, `--dry-run`, `--disable`
+- `show_remediation_findings` — `--priority`, `--category`, `--limit`, `--verbose`
+- `spine_check` — `--json`, `--patterns`, `--categories`, `--pattern`, `--can-route`, `--watch`, `--history`, `--hours`
+- `start_bridge` — `--debug`
+- `start_learning_demo` — `--project-type`, `--agents`, `--iterations`
+- `sync_agent_learning` — `--dry-run`, `--knowledge-only`, `--connections-only`, `--use-llm`, `--refresh`
+- `sync_celery_beat` — `--apply`, `--verbose`, `--disable-missing`, `--create-only`
+- `sync_celery_schedules` — `--dry-run`, `--list`, `--force`, `--source`
+- `sync_docs_index_to_documents` — `--dry-run`, `--active-only`, `--embed`, `--limit`
+- `sync_persona_learning` — `--dry-run`, `--knowledge-only`, `--connections-only`
+- `sync_spider_agents` — `--dry-run`
+- `sync_task_queues` — `--apply`, `--verbose`
+- `system_health_check` — `--fix`, `--verbose`
+- `system_reality_check` — `--verbose`, `--output`, `--fail-on-error`, `--lookback`
+- `test_agent_scenarios` — `--list`, `--scenario`, `--agent`, `--verbose`, `--report`, `--report-file`, `--user`, `--max-scenarios`
+- `test_all_agents` — `--quick`, `--agent`, `--limit`
+- `test_prompt_layer` — `--agent`, `--task`, `--disable`, `--all-layers`, `--list-layers`, `--dry-run`
+- `triage_spider_embeddings` — `--apply`
+- `trigger_pilot_evaluation` — `--sync`
+- `trigger_stage2_generation` — `--run`, `--sync`, `--limit`
+- `tune_fed_alert_triggers` — `--dry-run`
+- `update_experiment_thresholds` — `--dry-run`, `--running-only`
+- `validate_data_integrity` — `--fix-issues`, `--verbose`, `--component`
+- `validate_section` — `--section`, `--all`, `--list`, `--json`, `--user`
+- `validate_security` — `--format`, `--fix`, `--strict`
+- `verify_doc_claims` — `--doc`, `--only-drift`, `--format`, `--list`, `--fail-on-drift`
+- `verify_surgical_moves` — `--mode`, `--session-id`
+- `warmup_body_systems` — `--muscular`, `--digestive`, `--spine`, `--all`, `--dry-run`
+- `wire_agents_to_spiders` — `--dry-run`, `--force`
+- `write_self_blog` — `--tone`, `--word-count`, `--dry-run`, `--flagship`, `--no-flagship`, `--cta-type`
 
