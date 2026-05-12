@@ -33,8 +33,8 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 
 | # | Finding | Severity | Status | Owner |
 |---|---|:-:|:-:|---|
-| 1 | Phantom `ContentDistributionAgent` in `_NON_SPECIALIST` routing whitelist | low | open | Rigby-gated |
-| 2 | Orphaned `distribution_agent` handler — unreachable from LLM | low | open | Rigby-gated |
+| 1 | Phantom `ContentDistributionAgent` in `_NON_SPECIALIST` routing whitelist | low | **✅ fixed Session 1115** | removed from all 4 mirror sets |
+| 2 | Orphaned `distribution_agent` handler — unreachable from LLM | low | **✅ fixed Session 1115** | added to `run_agent.agent_name.enum` |
 | 3 | 7 broken beat task refs — silent autodiscover misses | medium | **✅ fixed Session 1115** | `on_after_finalize` hook in `core/celery.py` |
 | 4 | 5 `AdvisorDomain` enum values with no advisors | low | open | informational |
 | 5 | CLAUDE.md said `144` Discord commands; actual is `96` (double-count) | medium | **✅ fixed Session 1115** | — |
@@ -55,7 +55,20 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 
 ## 1. Phantom `ContentDistributionAgent` in `_NON_SPECIALIST`
 
-**Status:** open · low severity · Rigby-gated (behavior change).
+**Status:** ✅ fixed Session 1115 — removed from all 4 mirror sets.
+
+The phantom name lived in four kept-in-sync `_NON_SPECIALIST` literals:
+
+- `core/services/td_handlers_ops.py:3618` (the routing-layer source of truth) — plus its `_REROUTE_REASON` companion entry.
+- `core/agent_router.py:916` (the override-check mirror).
+- `core/services/platform_inventory.py:80` (the inventory autoblock counting mirror).
+- `core/services/doc_claim_verification.py` (two copies: the taxonomy-counting claim + the phantom-detection claim — both kept in sync per their docstring comments).
+- `core/management/commands/build_capability_audit.py:46` (the audit-doc generator).
+
+All five were updated in the same PR. Zero behavior change — the
+phantom never matched any real routing decision (no `ContentDistributionAgent`
+class exists in the codebase). The fix removes the bookkeeping
+confusion only.
 
 **Verifier doc:** `core/epa_handlers/td_handlers_ops.py`
 **Verifier claim:** `non_specialist_phantom_entries`
@@ -107,7 +120,23 @@ after the edit; expect `low → ok`.
 
 ## 2. Orphaned `distribution_agent` handler
 
-**Status:** open · low severity.
+**Status:** ✅ fixed Session 1115 — added to `run_agent.agent_name.enum`.
+
+The `DistributionAgent` class (the engagement-optimization agent
+defined at `core/agents/distribution_agent.py:70` and registered in
+`AGENT_MAP`) had a corresponding `self.register("distribution_agent",
+self._handle_agent_tool)` entry in `tool_dispatcher.py:332` — but no
+PA schema and no membership in `run_agent.agent_name.enum`. The
+runtime handler existed but the LLM had no way to invoke it.
+
+Fix: added `"distribution_agent"` to the `agent_name` enum on
+`run_agent` in `core/services/pa_tool_schemas.py` (the agent now
+appears in the Content Studio group alongside `topic_miner_agent`,
+`contrarian_agent`, etc.). The LLM can now route to it via
+`run_agent(agent_name="distribution_agent")`.
+
+Verifier `pa_handlers_reachable` now passes (the previously orphaned
+handler is reachable through the meta-tool).
 
 **Verifier doc:** `docs/PA_TOOL_AUDIT.md`
 **Verifier claim:** `pa_handlers_reachable`

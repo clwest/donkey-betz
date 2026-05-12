@@ -3616,8 +3616,10 @@ class OpsHandlersMixin:
                 _BLOCKED = AgentControlEntry.get_blocked_names()
                 # Non-specialist: tasks get rerouted to specialist agents
                 _NON_SPECIALIST = frozenset({
+                    # Session 1115: removed `ContentDistributionAgent` — phantom
+                    # entry, no class exists, AGENT_MAP doesn't reference it.
                     'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
-                    'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+                    'FullStackDeveloperAgent', 'CodeReviewAgent',
                     'COOAgent', 'CTOAgent', 'AudioAgent',
                 })
                 # Make disjoint: rerouted = non_specialist minus blocked
@@ -3628,7 +3630,6 @@ class OpsHandlersMixin:
                     'DevOpsAgent': 'Infra agent — tasks rerouted to relevant domain agent',
                     'FullStackDeveloperAgent': 'Dev agent — tasks rerouted to specialist',
                     'CodeReviewAgent': 'Code agent — tasks rerouted to specialist',
-                    'ContentDistributionAgent': 'Distribution agent — tasks rerouted to content pipeline',
                     'COOAgent': 'Executive agent — tasks rerouted to operational agents',
                     'CTOAgent': 'Executive agent — tasks rerouted to technical agents',
                     'AudioAgent': 'Media agent — tasks rerouted to content specialists',

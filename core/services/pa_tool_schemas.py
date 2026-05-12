@@ -964,6 +964,7 @@ PA_TOOL_SCHEMAS = [
                         "topic_miner_agent", "contrarian_agent",
                         "performance_analyst_agent", "voice_critic_agent",
                         "content_diversity_orchestrator",
+                        "distribution_agent",  # Session 1115: closes orphan-handler finding 2
                         # ── Podcast ──
                         "podcast_coordinator_agent",
                         "debate_advocate_agent", "debate_skeptic_agent",
