@@ -46,6 +46,10 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
 | 12 | **245 orphan Celery tasks** (67% of 365) — defined but no caller and no beat-schedule entry | medium-high | open | dead-code review |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
+| 14 | **`run_heartbeat` takes 32s** and **`check_celery_health` takes 31s** — long for "every 10 min" infrastructure tasks (3× the interval) | medium | open | perf investigation |
+| 15 | **`core_skin_status.total_files_tracked` column missing** — code queries it but migration didn't add it; `get_skin_service().get_vitals()` errors | high | open | schema fix |
+| 16 | **`muscular` reports "paralyzed"** (no agent execution telemetry) and **`digestive` reports "sluggish"** on fresh DB — body systems express their dependency on real activity | informational | open | known cold-start state |
+| 17 | **`ToolCallRecord` only writes from PA entrypoint** — direct `ToolDispatcher.execute_sync()` calls don't log. Telemetry blind spot for non-PA tool invocations. | low-medium | open | observability gap |
 
 ---
 
@@ -461,6 +465,127 @@ in a sandbox) and treat the never-executed sets as evidence-based dead
 code candidates. The intersection of Celery orphans (static) +
 never-executed Celery tasks (runtime) is the highest-confidence dead
 code; same applies for agents and tools.
+
+---
+
+## 14. `run_heartbeat` and `check_celery_health` take >30 seconds each
+
+**Status:** open · medium severity · perf investigation.
+
+**Verifier doc:** `docs/RUNTIME_AUDIT.md` (telemetry-driven)
+
+**What:** During the Session 1115 local full-stack run (12 min of
+Celery worker + beat), 19 `CeleryTaskEvent` rows were captured. Two
+infrastructure tasks stood out:
+
+- `core.tasks.run_heartbeat`: 32.36s (scheduled every 10 min)
+- `core.tasks.check_celery_health`: 31.58s (scheduled every 10 min)
+
+Every other task in the sample ran in 0.02–0.50s. A 32-second
+heartbeat that fires every 10 minutes is 5% of wall-clock spent on
+the heartbeat alone. Both tasks may be sequentially polling all
+body-system services + each Celery worker for vitals — the slow
+path is probably the introspection.
+
+**Fix path:**
+
+1. Profile `run_heartbeat` and `check_celery_health` to find the slow
+   step. Likely candidate: synchronous calls to each `*Service.get_vitals()`
+   over network sockets (Redis / DB connection pool).
+2. Add an `inspect.ping` timeout cap, or parallelize the vital fetches.
+3. Consider degrading to a 5-minute interval if the heartbeat is meant to
+   be quick.
+
+**Risk:** medium — the heartbeat tasks themselves are infrastructure
+and may have established SLO expectations elsewhere. Don't change
+intervals without checking what reads from `HeartBeat` model.
+
+---
+
+## 15. `core_skin_status` schema drift — missing `total_files_tracked` column
+
+**Status:** open · high severity · schema fix.
+
+**Verifier doc:** `docs/BODY_SYSTEM_AUDIT.md` (would surface as
+`body_systems_fully_wired` if the audit gained DB-state coverage)
+
+**What:** When `get_skin_service().get_vitals()` runs against the fresh
+Session 1115 local DB, it raises:
+
+```
+django.db.utils.ProgrammingError: column core_skin_status.total_files_tracked does not exist
+```
+
+The code in `core/services/skin.py` queries a column that no migration
+created. This is a real schema-vs-code drift. Production has presumably
+been running this query against a DB that DOES have the column — but
+new local bootstraps (or recreated production DBs) will fail at the
+skin vitals step.
+
+**Fix path:**
+
+1. Find the most recent migration that should have added the column:
+   `git log --all -p -S 'total_files_tracked' core/migrations/`
+2. If a migration exists but wasn't applied, run it.
+3. If no migration exists for the field, create one:
+   `python manage.py makemigrations core` — it should detect the model
+   field has no DB column.
+4. Apply with `python manage.py migrate`.
+
+**Risk:** low — adding a column with a default value is non-destructive.
+
+This finding only became visible because we bootstrapped local Postgres
+from scratch. The runtime audit framework doesn't catch schema drift
+directly; the body-system call surfaced it.
+
+---
+
+## 16. Body systems express cold-start state
+
+**Status:** open · informational · known cold-start state.
+
+**What:** On the freshly-seeded Session 1115 local DB:
+
+- `muscular` reports `overall_status: paralyzed` (no agent execution rows)
+- `digestive` reports `overall_status: sluggish` (low ingestion activity)
+
+These aren't bugs — the body systems are correctly reflecting that the
+platform hasn't been doing work. But it does mean:
+
+1. A fresh prod-mirror bootstrap will show the same "paralyzed/sluggish"
+   states until traffic flows.
+2. Any health-check alert that bins these as "unhealthy" will fire on
+   sandbox/test instances.
+
+**Suggested action:** none required. Just worth documenting that these
+specific states are expected on cold-start.
+
+---
+
+## 17. `ToolCallRecord` blind spot for non-PA dispatch
+
+**Status:** open · low-medium severity · observability gap.
+
+**What:** `ToolCallRecord` rows are only written by
+`core/services/unified_pa_entrypoint.py:1849`. When `ToolDispatcher`
+gets invoked by any other path (direct `execute_sync()` calls,
+agent-to-tool delegation, internal tool composition), nothing logs
+the call.
+
+This was surfaced when Session 1115's local test invoked 20 PA tools
+via `td.execute_sync(...)` and `ToolCallRecord.count() == 0` afterward.
+
+**Implication:** the runtime audit's `tools never executed` set is an
+under-count of "tools that fired"; specifically, any tool fired
+outside a PA chat conversation is invisible to the audit.
+
+**Fix path:** add the same `ToolCallRecord.objects.create(...)` block
+inside `ToolDispatcher.execute()` so EVERY dispatch logs telemetry,
+regardless of caller. PA entrypoint would either keep its own log or
+defer to the dispatcher's.
+
+**Risk:** small — adds 1 DB write per tool call. Match the existing
+column schema; the PA path already does this.
 
 ---
 
