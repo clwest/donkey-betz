@@ -2353,6 +2353,71 @@ def _spider_category_count() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/LEARNING_BRIDGE_AUDIT.md',
+    claim_id='learning_bridges_documented',
+    description="Every learning bridge module under core/learning_bridges/ has a module docstring + at least one learning-loop class",
+)
+def _learning_bridges_documented() -> ClaimResult:
+    """Catch under-documented learning bridges.
+
+    Each `*_bridge.py` under `core/learning_bridges/` is supposed to be a
+    Django-signal-driven shim that feeds runtime events to the learning
+    pipeline. If the module has no docstring or contains no learning-loop
+    class, the bridge audit can't describe what the bridge does.
+
+    Session 1115 baseline: 8 bridges, 9 learning-loop classes, 8/8 with
+    docstrings.
+    """
+    import ast
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    bridges_dir = repo_root / 'core' / 'learning_bridges'
+    if not bridges_dir.exists():
+        return ClaimResult.build(
+            expected='core/learning_bridges/ exists',
+            actual='missing',
+            severity='high',
+            note='directory removed?',
+        )
+    problems: list[str] = []
+    total = 0
+    for path in sorted(bridges_dir.glob('*_bridge.py')):
+        total += 1
+        try:
+            tree = ast.parse(path.read_text(errors='ignore'))
+        except SyntaxError as e:
+            problems.append(f'{path.name}: parse error {e}')
+            continue
+        if not (ast.get_docstring(tree) or '').strip():
+            problems.append(f'{path.name}: module docstring missing')
+        has_class = any(
+            isinstance(n, ast.ClassDef)
+            and not any(
+                isinstance(b, ast.Attribute) and getattr(b, 'attr', '') == 'Model'
+                for b in n.bases
+            )
+            for n in tree.body
+        )
+        if not has_class:
+            problems.append(f'{path.name}: no learning-loop class')
+    severity = 'ok' if not problems else 'low'
+    return ClaimResult.build(
+        expected=f'all {total} bridges documented + have a class',
+        actual=(
+            f'{total - len(problems)} / {total} clean'
+            if problems else f'{total}/{total} documented'
+        ),
+        severity=severity,
+        note=f"problems: {problems}" if problems else 'all bridges documented',
+        fix_suggestion=(
+            "Add the missing module docstring or learning-loop class to "
+            "each bridge listed in `note`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/BODY_SYSTEM_AUDIT.md',
     claim_id='body_systems_fully_wired',
     description="All 9 body systems in run_all_systems_scan resolve to a service module with a docstring + get_vitals()",
