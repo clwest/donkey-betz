@@ -156,7 +156,24 @@ class CeleryHealthService:
         return status
 
     def _check_workers(self) -> Dict[str, Any]:
-        """Check Celery worker status."""
+        """Check Celery worker status.
+
+        Session 1115 finding 14 fix: each `inspect.ping/active/stats()` call
+        blocks on a broadcast-reply poll for ~`timeout` seconds; with three
+        sequential calls at 10s each, this method alone burned ~30s every
+        heartbeat (which fires every 10 minutes — 5% of wall-clock CPU on
+        heartbeat polling alone).
+
+        Two changes:
+          1. Drop the per-call timeout to 1.0s. Responsive workers reply
+             in <100ms; non-responsive ones aren't going to answer at 10s
+             either, so the extra wait is pure overhead.
+          2. Short-circuit when no worker process exists. Each broadcast
+             still has to wait for the poll-timeout (no replies means
+             nothing to return early), so a single cheap `_check_worker_processes()`
+             probe up front saves 3× the timeout when workers are
+             genuinely down.
+        """
         try:
             if not self._app:
                 return {
@@ -166,8 +183,21 @@ class CeleryHealthService:
                     'error': 'Celery app not initialized'
                 }
 
-            # Inspect workers with timeout (Session 758: increased from 2s to 10s for busy workers)
-            inspect = self._app.control.inspect(timeout=10.0)
+            # Session 1115: short-circuit when zero worker processes exist on
+            # the host. Otherwise the three broadcasts below each block for
+            # the full timeout waiting for replies that will never arrive.
+            process_workers = self._check_worker_processes()
+            if not process_workers:
+                return {
+                    'count': 0,
+                    'status': 'offline',
+                    'workers': [],
+                    'total_active_tasks': 0,
+                }
+
+            # Session 1115: 10s -> 1s. Workers that respond do so in <100ms;
+            # waiting longer never produces new information.
+            inspect = self._app.control.inspect(timeout=1.0)
 
             # Get active workers
             active = inspect.active() or {}
