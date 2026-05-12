@@ -542,7 +542,10 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         tool_name: str,
         payload: Dict[str, Any],
         user_id: Optional[int] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
+        agent_name: str = 'Direct',
+        conversation_id: Optional[Any] = None,
+        record_telemetry: bool = True,
     ) -> ToolResult:
         """
         Execute a tool with full error handling.
@@ -552,6 +555,18 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             payload: Tool-specific payload
             user_id: Optional user ID for context
             timeout: Optional timeout override (seconds)
+            agent_name: Who's invoking. Defaults to 'Direct' for non-PA
+                callers. PA pipelines should pass 'PersonalAssistant' so
+                the resulting ToolCallRecord row reflects the caller.
+            conversation_id: Optional conversation UUID to link the
+                ToolCallRecord to a chat session. Defaults to None.
+            record_telemetry: When True (default), every dispatch writes a
+                ToolCallRecord row covering every return path (success,
+                timeout, exception, permission-denied, tool-not-found).
+                Session 1115 finding 17 closure: previously only PA wrote
+                these rows, leaving every other caller in a telemetry
+                blind spot. Pass False if the caller wants exclusive
+                control over recording (legacy path).
 
         Returns:
             ToolResult with structured response (never raises)
@@ -577,12 +592,19 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                             f"for user_id={user_id} (role={profile.role})"
                         )
                         _record_tool_metric(tool_name, action, 'denied', latency_ms)
-                        return ToolResult(
+                        result_obj = ToolResult(
                             ok=False, tool=tool_name, latency_ms=latency_ms,
                             error_code='TOOL_PERMISSION_DENIED',
                             error_message=f'Tool {tool_name} is not available for your account.',
                             trace_id=trace_id, result=None,
                         )
+                        if record_telemetry:
+                            await self._record_tool_call_async(
+                                tool_name, payload, result_obj,
+                                agent_name=agent_name,
+                                conversation_id=conversation_id,
+                            )
+                        return result_obj
             except Exception as e:
                 logger.debug(f"[{trace_id}] AssistantProfile check skipped: {e}")
 
@@ -590,7 +612,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         if tool_name not in self._tool_handlers:
             latency_ms = int((time.time() - start_time) * 1000)
             logger.error(f"[{trace_id}] Tool not found: {tool_name}")
-            return ToolResult(
+            result_obj = ToolResult(
                 ok=False,
                 tool=tool_name,
                 latency_ms=latency_ms,
@@ -599,6 +621,13 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 trace_id=trace_id,
                 result=None
             )
+            if record_telemetry:
+                await self._record_tool_call_async(
+                    tool_name, payload, result_obj,
+                    agent_name=agent_name,
+                    conversation_id=conversation_id,
+                )
+            return result_obj
 
         try:
             # Execute with timeout
@@ -663,7 +692,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     tool_name, action, type(e).__name__, e,
                 )
 
-            return ToolResult(
+            result_obj = ToolResult(
                 ok=True,
                 tool=tool_name,
                 latency_ms=latency_ms,
@@ -672,12 +701,19 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 trace_id=trace_id,
                 result=result
             )
+            if record_telemetry:
+                await self._record_tool_call_async(
+                    tool_name, payload, result_obj,
+                    agent_name=agent_name,
+                    conversation_id=conversation_id,
+                )
+            return result_obj
 
         except asyncio.TimeoutError:
             latency_ms = int((time.time() - start_time) * 1000)
             logger.error(f"[{trace_id}] Tool {tool_name} timed out after {timeout}s")
             _record_tool_metric(tool_name, action, 'timeout', latency_ms)
-            return ToolResult(
+            result_obj = ToolResult(
                 ok=False,
                 tool=tool_name,
                 latency_ms=latency_ms,
@@ -686,12 +722,19 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 trace_id=trace_id,
                 result=None
             )
+            if record_telemetry:
+                await self._record_tool_call_async(
+                    tool_name, payload, result_obj,
+                    agent_name=agent_name,
+                    conversation_id=conversation_id,
+                )
+            return result_obj
 
         except Exception as e:
             latency_ms = int((time.time() - start_time) * 1000)
             logger.error(f"[{trace_id}] Tool {tool_name} failed: {e}", exc_info=True)
             _record_tool_metric(tool_name, action, 'error', latency_ms)
-            return ToolResult(
+            result_obj = ToolResult(
                 ok=False,
                 tool=tool_name,
                 latency_ms=latency_ms,
@@ -700,6 +743,94 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 trace_id=trace_id,
                 result=None
             )
+            if record_telemetry:
+                await self._record_tool_call_async(
+                    tool_name, payload, result_obj,
+                    agent_name=agent_name,
+                    conversation_id=conversation_id,
+                )
+            return result_obj
+
+    # ── ToolCallRecord telemetry (Session 1115 finding 17) ─────────────────
+    # Closes the observability gap where only the PA pipeline wrote
+    # ToolCallRecord rows. Now every dispatch through `execute()` writes
+    # one row, regardless of caller, so direct invocations (agent
+    # delegation, internal composition, `execute_sync` from scripts /
+    # management commands) are visible in the runtime audit alongside PA
+    # tool usage.
+    #
+    # Implementation notes:
+    #   - `execute()` is async, but the ORM is sync — bridge via
+    #     `asyncio.to_thread`.
+    #   - Failure to write is logged at WARNING and swallowed. We never
+    #     let a telemetry write failure mask the actual tool result.
+
+    async def _record_tool_call_async(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        result: "ToolResult",
+        *,
+        agent_name: str,
+        conversation_id: Optional[Any],
+    ) -> None:
+        """Async wrapper: schedule the sync ORM write on a thread.
+
+        Fire-and-forget; never raises. Errors are logged at WARNING.
+        """
+        try:
+            await asyncio.to_thread(
+                self._record_tool_call_sync,
+                tool_name, payload, result, agent_name, conversation_id,
+            )
+        except Exception as e:
+            logger.warning(
+                f"[{result.trace_id}] ToolCallRecord write failed for "
+                f"{tool_name} (non-fatal): {type(e).__name__}: {e}"
+            )
+
+    def _record_tool_call_sync(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        result: "ToolResult",
+        agent_name: str,
+        conversation_id: Optional[Any],
+    ) -> None:
+        """The actual ORM write. Single INSERT; safe to call from any
+        thread (Django ORM handles thread-local DB connections)."""
+        import hashlib
+        import json as _json
+        try:
+            from core.models_tool_calls import ToolCallRecord
+        except ImportError:
+            return  # Model not migrated yet — silent skip on fresh DBs.
+
+        result_str = (
+            _json.dumps(result.result, default=str)
+            if result.result is not None else ''
+        )
+        result_size = len(result_str.encode('utf-8', errors='replace'))
+
+        ToolCallRecord.objects.create(
+            trace_id=None,  # dispatcher trace_id ('td-N-hex') isn't a UUID
+            conversation_id=conversation_id,
+            agent_name=agent_name,
+            tool_name=tool_name,
+            parameters=payload if isinstance(payload, dict) else {'_raw': str(payload)},
+            result_summary=result_str[:4096],
+            result_hash=(
+                f"sha256:{hashlib.sha256(result_str.encode()).hexdigest()}"
+                if result_str else ''
+            ),
+            full_result=result_str if result_size <= 65536 else '',
+            result_size_bytes=result_size,
+            success=result.ok,
+            error_message=result.error_message or '',
+            error_type=result.error_code or '',
+            latency_ms=result.latency_ms,
+            task_summary=f"[{result.trace_id}] dispatcher.execute"[:500],
+        )
 
     # ── PA Impact Event Emission ───────────────────────────────────────────
     # Session 1098: Record successful PA tool calls as ImpactEvents so the
