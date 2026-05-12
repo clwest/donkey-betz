@@ -61,7 +61,11 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 
-SEVERITIES = ('ok', 'low', 'medium', 'high', 'critical', 'error')
+SEVERITIES = ('ok', 'skipped', 'low', 'medium', 'high', 'critical', 'error')
+# `skipped` = claim is marked `db_required=True` and the runtime had no usable
+# DB/extension to evaluate against. Surfaces in JSON but is not drift and does
+# not fail `--fail-on-drift`. Set on a claim by passing `db_required=True` to
+# `@register_claim(...)`.
 
 
 @dataclass
@@ -118,17 +122,26 @@ class _RegisteredClaim:
     claim_id: str
     description: str
     verifier: Callable[[], ClaimResult]
+    db_required: bool = False
 
 
 _REGISTRY: list[_RegisteredClaim] = []
 
 
-def register_claim(doc: str, claim_id: str, description: str = ''):
+def register_claim(doc: str, claim_id: str, description: str = '', db_required: bool = False):
     """Decorator: register a verifier function for a documentation claim.
 
     The verifier takes no arguments and returns a :class:`ClaimResult`.
     Its ``doc``, ``claim_id``, and ``description`` fields are filled in
     automatically by the runner, so ``ClaimResult.build`` suffices.
+
+    ``db_required=True`` tells the runner that this claim genuinely needs a
+    live database (rows must exist, not just be queryable). When the verifier
+    raises a recognised DB-availability error (``OperationalError``,
+    ``InterfaceError``, ``ProgrammingError`` for missing extensions/tables),
+    the runner returns ``severity='skipped'`` instead of ``'error'``, and the
+    summary breaks `skipped` out separately. This keeps the verifier honest
+    on developer machines that don't have the full local stack stood up.
     """
     def _deco(fn: Callable[[], ClaimResult]) -> Callable[[], ClaimResult]:
         _REGISTRY.append(_RegisteredClaim(
@@ -136,6 +149,7 @@ def register_claim(doc: str, claim_id: str, description: str = ''):
             claim_id=claim_id,
             description=description or fn.__doc__ or '',
             verifier=fn,
+            db_required=db_required,
         ))
         return fn
     return _deco
@@ -149,8 +163,43 @@ def list_registered() -> list[dict]:
     ]
 
 
+def _looks_like_db_unavailable(exc: BaseException) -> bool:
+    """Return True if *exc* indicates the DB / required extension is missing.
+
+    Recognised: ``django.db.utils.OperationalError`` (connection refused,
+    fe_sendauth, no such host), ``InterfaceError`` (dead connection),
+    ``ProgrammingError`` whose message mentions a missing extension or
+    relation, and bare ``ImportError`` for the optional ``psycopg`` driver.
+    Anything else is real and should still surface as ``severity='error'``.
+    """
+    try:
+        from django.db.utils import (
+            OperationalError, InterfaceError, ProgrammingError,
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    if isinstance(exc, (OperationalError, InterfaceError)):
+        return True
+    if isinstance(exc, ProgrammingError):
+        msg = str(exc).lower()
+        # Missing pgvector extension, or tables that haven't been migrated yet.
+        if 'extension' in msg and ('vector' in msg or 'not available' in msg):
+            return True
+        if 'does not exist' in msg or 'relation' in msg:
+            return True
+    if isinstance(exc, ImportError) and 'psycopg' in str(exc).lower():
+        return True
+    return False
+
+
 def run_one(claim: _RegisteredClaim) -> ClaimResult:
-    """Execute one claim, trapping exceptions as ``severity='error'`` results."""
+    """Execute one claim, trapping exceptions as ``severity='error'`` results.
+
+    If ``claim.db_required`` is set and the exception looks like a DB-
+    availability problem (connection refused, missing pgvector, unmigrated
+    tables), the result is returned with ``severity='skipped'`` instead so
+    it shows up as informational rather than a hard error.
+    """
     t0 = time.monotonic()
     try:
         result = claim.verifier()
@@ -160,13 +209,19 @@ def run_one(claim: _RegisteredClaim) -> ClaimResult:
                 f"expected ClaimResult"
             )
     except Exception as e:  # noqa: BLE001
+        if claim.db_required and _looks_like_db_unavailable(e):
+            severity = 'skipped'
+            note = f"DB unavailable ({type(e).__name__}); claim marked db_required=True"
+        else:
+            severity = 'error'
+            note = f"Verifier raised {type(e).__name__}: {e}"
         result = ClaimResult(
             matched=False,
             expected=None,
             actual=None,
-            severity='error',
-            note=f"Verifier raised {type(e).__name__}: {e}",
-            error=traceback.format_exc(limit=3),
+            severity=severity,
+            note=note,
+            error=traceback.format_exc(limit=3) if severity == 'error' else None,
         )
     result.doc = claim.doc
     result.claim_id = claim.claim_id
@@ -176,30 +231,44 @@ def run_one(claim: _RegisteredClaim) -> ClaimResult:
 
 
 def run_all(doc_filter: Optional[str] = None, only_drift: bool = False) -> list[ClaimResult]:
-    """Run every registered claim (optionally filtered by doc path)."""
+    """Run every registered claim (optionally filtered by doc path).
+
+    ``only_drift`` hides both ``ok`` AND ``skipped`` — they're informational,
+    not drift.
+    """
     results: list[ClaimResult] = []
     for claim in _REGISTRY:
         if doc_filter and claim.doc != doc_filter:
             continue
         r = run_one(claim)
-        if only_drift and r.severity == 'ok':
+        if only_drift and r.severity in ('ok', 'skipped'):
             continue
         results.append(r)
     return results
 
 
 def summarize(results: list[ClaimResult]) -> dict:
-    """Roll up counts by severity + by doc."""
+    """Roll up counts by severity + by doc.
+
+    ``skipped`` is bucketed separately — not as drift, not as error, not as
+    ok. Use it to spot claims that didn't get evaluated because the local
+    stack lacks something (DB, pgvector, migrations, …).
+    """
     by_severity: dict[str, int] = {s: 0 for s in SEVERITIES}
     by_doc: dict[str, dict] = {}
     for r in results:
         by_severity[r.severity] = by_severity.get(r.severity, 0) + 1
-        d = by_doc.setdefault(r.doc, {'total': 0, 'ok': 0, 'drift': 0, 'error': 0})
+        d = by_doc.setdefault(
+            r.doc,
+            {'total': 0, 'ok': 0, 'drift': 0, 'error': 0, 'skipped': 0},
+        )
         d['total'] += 1
         if r.severity == 'ok':
             d['ok'] += 1
         elif r.severity == 'error':
             d['error'] += 1
+        elif r.severity == 'skipped':
+            d['skipped'] += 1
         else:
             d['drift'] += 1
     return {
@@ -242,6 +311,7 @@ def _agent_map_count() -> ClaimResult:
     doc='CLAUDE.md',
     claim_id='persona_agent_count',
     description="CLAUDE.md stats table: '223 DB persona agents (via DynamicPersonaAgent)'",
+    db_required=True,
 )
 def _persona_agent_count() -> ClaimResult:
     """Count rows in Agent table — these are the agents the AgentRouter
@@ -272,6 +342,7 @@ def _persona_agent_count() -> ClaimResult:
     doc='CLAUDE.md',
     claim_id='total_agent_count_claim',
     description="CLAUDE.md header: 'Agents (total registered) | 306'",
+    db_required=True,
 )
 def _total_agent_count_claim() -> ClaimResult:
     from core.agent_router import AgentRouter
@@ -336,6 +407,7 @@ def _provenance_tracked_count() -> ClaimResult:
         "Session 1100 corrected claim: only `run_market_intelligence_desk` (stocks) "
         "is scheduled daily; 3 of 4 desks are on-demand only via /api/home/trigger-desks/"
     ),
+    db_required=True,
 )
 def _intelligence_desks_partial_schedule() -> ClaimResult:
     """Verify the corrected claim: stocks desk IS scheduled, others are on-demand only.
@@ -441,6 +513,7 @@ def _spider_count() -> ClaimResult:
     doc='core/services/priority/governor.py',
     claim_id='platform_operations_whitelist_integrity',
     description="Whitelisted agents must exist in AGENT_MAP",
+    db_required=True,
 )
 def _platform_operations_whitelist_integrity() -> ClaimResult:
     from core.models_unified_system import ActivePriority
