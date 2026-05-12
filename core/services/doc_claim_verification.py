@@ -61,7 +61,11 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 
-SEVERITIES = ('ok', 'low', 'medium', 'high', 'critical', 'error')
+SEVERITIES = ('ok', 'skipped', 'low', 'medium', 'high', 'critical', 'error')
+# `skipped` = claim is marked `db_required=True` and the runtime had no usable
+# DB/extension to evaluate against. Surfaces in JSON but is not drift and does
+# not fail `--fail-on-drift`. Set on a claim by passing `db_required=True` to
+# `@register_claim(...)`.
 
 
 @dataclass
@@ -118,17 +122,26 @@ class _RegisteredClaim:
     claim_id: str
     description: str
     verifier: Callable[[], ClaimResult]
+    db_required: bool = False
 
 
 _REGISTRY: list[_RegisteredClaim] = []
 
 
-def register_claim(doc: str, claim_id: str, description: str = ''):
+def register_claim(doc: str, claim_id: str, description: str = '', db_required: bool = False):
     """Decorator: register a verifier function for a documentation claim.
 
     The verifier takes no arguments and returns a :class:`ClaimResult`.
     Its ``doc``, ``claim_id``, and ``description`` fields are filled in
     automatically by the runner, so ``ClaimResult.build`` suffices.
+
+    ``db_required=True`` tells the runner that this claim genuinely needs a
+    live database (rows must exist, not just be queryable). When the verifier
+    raises a recognised DB-availability error (``OperationalError``,
+    ``InterfaceError``, ``ProgrammingError`` for missing extensions/tables),
+    the runner returns ``severity='skipped'`` instead of ``'error'``, and the
+    summary breaks `skipped` out separately. This keeps the verifier honest
+    on developer machines that don't have the full local stack stood up.
     """
     def _deco(fn: Callable[[], ClaimResult]) -> Callable[[], ClaimResult]:
         _REGISTRY.append(_RegisteredClaim(
@@ -136,6 +149,7 @@ def register_claim(doc: str, claim_id: str, description: str = ''):
             claim_id=claim_id,
             description=description or fn.__doc__ or '',
             verifier=fn,
+            db_required=db_required,
         ))
         return fn
     return _deco
@@ -149,8 +163,43 @@ def list_registered() -> list[dict]:
     ]
 
 
+def _looks_like_db_unavailable(exc: BaseException) -> bool:
+    """Return True if *exc* indicates the DB / required extension is missing.
+
+    Recognised: ``django.db.utils.OperationalError`` (connection refused,
+    fe_sendauth, no such host), ``InterfaceError`` (dead connection),
+    ``ProgrammingError`` whose message mentions a missing extension or
+    relation, and bare ``ImportError`` for the optional ``psycopg`` driver.
+    Anything else is real and should still surface as ``severity='error'``.
+    """
+    try:
+        from django.db.utils import (
+            OperationalError, InterfaceError, ProgrammingError,
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    if isinstance(exc, (OperationalError, InterfaceError)):
+        return True
+    if isinstance(exc, ProgrammingError):
+        msg = str(exc).lower()
+        # Missing pgvector extension, or tables that haven't been migrated yet.
+        if 'extension' in msg and ('vector' in msg or 'not available' in msg):
+            return True
+        if 'does not exist' in msg or 'relation' in msg:
+            return True
+    if isinstance(exc, ImportError) and 'psycopg' in str(exc).lower():
+        return True
+    return False
+
+
 def run_one(claim: _RegisteredClaim) -> ClaimResult:
-    """Execute one claim, trapping exceptions as ``severity='error'`` results."""
+    """Execute one claim, trapping exceptions as ``severity='error'`` results.
+
+    If ``claim.db_required`` is set and the exception looks like a DB-
+    availability problem (connection refused, missing pgvector, unmigrated
+    tables), the result is returned with ``severity='skipped'`` instead so
+    it shows up as informational rather than a hard error.
+    """
     t0 = time.monotonic()
     try:
         result = claim.verifier()
@@ -160,13 +209,19 @@ def run_one(claim: _RegisteredClaim) -> ClaimResult:
                 f"expected ClaimResult"
             )
     except Exception as e:  # noqa: BLE001
+        if claim.db_required and _looks_like_db_unavailable(e):
+            severity = 'skipped'
+            note = f"DB unavailable ({type(e).__name__}); claim marked db_required=True"
+        else:
+            severity = 'error'
+            note = f"Verifier raised {type(e).__name__}: {e}"
         result = ClaimResult(
             matched=False,
             expected=None,
             actual=None,
-            severity='error',
-            note=f"Verifier raised {type(e).__name__}: {e}",
-            error=traceback.format_exc(limit=3),
+            severity=severity,
+            note=note,
+            error=traceback.format_exc(limit=3) if severity == 'error' else None,
         )
     result.doc = claim.doc
     result.claim_id = claim.claim_id
@@ -176,30 +231,44 @@ def run_one(claim: _RegisteredClaim) -> ClaimResult:
 
 
 def run_all(doc_filter: Optional[str] = None, only_drift: bool = False) -> list[ClaimResult]:
-    """Run every registered claim (optionally filtered by doc path)."""
+    """Run every registered claim (optionally filtered by doc path).
+
+    ``only_drift`` hides both ``ok`` AND ``skipped`` — they're informational,
+    not drift.
+    """
     results: list[ClaimResult] = []
     for claim in _REGISTRY:
         if doc_filter and claim.doc != doc_filter:
             continue
         r = run_one(claim)
-        if only_drift and r.severity == 'ok':
+        if only_drift and r.severity in ('ok', 'skipped'):
             continue
         results.append(r)
     return results
 
 
 def summarize(results: list[ClaimResult]) -> dict:
-    """Roll up counts by severity + by doc."""
+    """Roll up counts by severity + by doc.
+
+    ``skipped`` is bucketed separately — not as drift, not as error, not as
+    ok. Use it to spot claims that didn't get evaluated because the local
+    stack lacks something (DB, pgvector, migrations, …).
+    """
     by_severity: dict[str, int] = {s: 0 for s in SEVERITIES}
     by_doc: dict[str, dict] = {}
     for r in results:
         by_severity[r.severity] = by_severity.get(r.severity, 0) + 1
-        d = by_doc.setdefault(r.doc, {'total': 0, 'ok': 0, 'drift': 0, 'error': 0})
+        d = by_doc.setdefault(
+            r.doc,
+            {'total': 0, 'ok': 0, 'drift': 0, 'error': 0, 'skipped': 0},
+        )
         d['total'] += 1
         if r.severity == 'ok':
             d['ok'] += 1
         elif r.severity == 'error':
             d['error'] += 1
+        elif r.severity == 'skipped':
+            d['skipped'] += 1
         else:
             d['drift'] += 1
     return {
@@ -242,6 +311,7 @@ def _agent_map_count() -> ClaimResult:
     doc='CLAUDE.md',
     claim_id='persona_agent_count',
     description="CLAUDE.md stats table: '223 DB persona agents (via DynamicPersonaAgent)'",
+    db_required=True,
 )
 def _persona_agent_count() -> ClaimResult:
     """Count rows in Agent table — these are the agents the AgentRouter
@@ -272,6 +342,7 @@ def _persona_agent_count() -> ClaimResult:
     doc='CLAUDE.md',
     claim_id='total_agent_count_claim',
     description="CLAUDE.md header: 'Agents (total registered) | 306'",
+    db_required=True,
 )
 def _total_agent_count_claim() -> ClaimResult:
     from core.agent_router import AgentRouter
@@ -336,6 +407,7 @@ def _provenance_tracked_count() -> ClaimResult:
         "Session 1100 corrected claim: only `run_market_intelligence_desk` (stocks) "
         "is scheduled daily; 3 of 4 desks are on-demand only via /api/home/trigger-desks/"
     ),
+    db_required=True,
 )
 def _intelligence_desks_partial_schedule() -> ClaimResult:
     """Verify the corrected claim: stocks desk IS scheduled, others are on-demand only.
@@ -441,6 +513,7 @@ def _spider_count() -> ClaimResult:
     doc='core/services/priority/governor.py',
     claim_id='platform_operations_whitelist_integrity',
     description="Whitelisted agents must exist in AGENT_MAP",
+    db_required=True,
 )
 def _platform_operations_whitelist_integrity() -> ClaimResult:
     from core.models_unified_system import ActivePriority
@@ -1626,39 +1699,63 @@ def _backend_inv_mgmt() -> ClaimResult:
 @register_claim(
     doc='docs/DISCORD_INTEGRATION.md',
     claim_id='discord_total_commands',
-    description="docs/DISCORD_INTEGRATION.md header: 'Commands: 144 total (96 .command + 48 app_commands.command)'",
+    description="docs/DISCORD_AUDIT.md header: '96 total commands (48 slash + 48 prefix)' in discord_bot.py",
 )
 def _discord_total_commands() -> ClaimResult:
-    """Count both @*.command(...) and @*.app_commands.command(...) decorators."""
-    import re
+    """Count Discord command decorators via AST — Session 1115 corrected the
+    long-standing regex double-count.
+
+    The previous version (Session 1100) added two regex match lists:
+      classic = `^\\s*@\\w+\\.command\\(`         # matches @app_commands.command too
+      app_cmds = `^\\s*@app_commands\\.command\\(`
+      total = len(classic) + len(app_cmds)  # double-counts the 48 slash commands
+
+    `@\\w+\\.command` already matches `@app_commands.command` (because
+    `app_commands` is `\\w+`). Adding `app_cmds` again inflates by 48.
+    Real total is `len(classic)` = 96 (48 slash + 48 prefix). Audited via
+    AST in `core/management/commands/build_discord_audit.py`.
+    """
+    import ast
     from pathlib import Path
     bot_file = Path(__file__).resolve().parent / 'discord_bot.py'
     if not bot_file.exists():
         return ClaimResult.build(
-            expected=144, actual=None, severity='error',
+            expected=96, actual=None, severity='error',
             note='discord_bot.py not found',
         )
-    src = bot_file.read_text()
-    # Session 1100: count BOTH decorator styles to match doc claim
-    classic = re.findall(r'^\s*@\w+\.command\(', src, re.MULTILINE)
-    app_cmds = re.findall(r'^\s*@app_commands\.command\(', src, re.MULTILINE)
-    matches = classic + app_cmds
-    actual = len(matches)
-    expected = 144  # refreshed Session 1100 — 96 .command + 48 app_commands
+    try:
+        tree = ast.parse(bot_file.read_text(errors='ignore'))
+    except SyntaxError as e:
+        return ClaimResult.build(
+            expected=96, actual=None, severity='error',
+            note=f'discord_bot.py would not parse: {e}',
+        )
+    n_slash = n_prefix = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for dec in node.decorator_list:
+            if not isinstance(dec, ast.Call):
+                continue
+            text = ast.unparse(dec.func) if hasattr(ast, 'unparse') else ''
+            if 'app_commands.command' in text:
+                n_slash += 1
+                break
+            if text.endswith('.command'):
+                n_prefix += 1
+                break
+    actual = n_slash + n_prefix
+    expected = 96  # 48 slash + 48 prefix per Session 1115 audit
     drift = abs(actual - expected)
-    severity = 'ok' if drift <= 5 else ('medium' if drift <= 25 else 'high')
+    severity = 'ok' if drift <= 2 else ('medium' if drift <= 10 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual,
         severity=severity,
-        note=(
-            "Multiple docs contradict on this: DISCORD_COMMANDS.md 112/25 Cogs; "
-            "DISCORD_INTEGRATION.md 112/20 cats; current/DISCORD.md 112/29 Cogs; "
-            "CAPABILITIES.md 112; BACKEND_INVENTORY.md 231. Counting "
-            "@*.command decorators in discord_bot.py."
-        ),
+        note=f"{n_slash} slash + {n_prefix} prefix (AST-counted)",
         fix_suggestion=(
-            f"Reconcile Discord command count to '{actual}' across all docs"
+            f"Update CLAUDE.md Discord row + docs/DISCORD_AUDIT.md headline "
+            f"to '{actual} commands ({n_slash} slash + {n_prefix} prefix)'"
             if severity != 'ok' else None
         ),
     )
@@ -1852,38 +1949,95 @@ def _claude_db_models() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='agent_taxonomy_reconciliation',
-    description="CLAUDE.md stats: '83 AGENT_MAP (73 enabled, 8 rerouted, 2 blocked)'",
+    description="CLAUDE.md stats: '83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked)'",
 )
 def _claude_agent_taxonomy() -> ClaimResult:
     """Verify the reconciliation sum: fully_enabled + rerouted + blocked == AGENT_MAP."""
     from core.agent_router import AgentRouter
     from core.models_unified_system import AgentControlEntry
-    total = len(AgentRouter.AGENT_MAP)
+    agent_map_keys = set(AgentRouter.AGENT_MAP.keys())
+    total = len(agent_map_keys)
     blocked = list(AgentControlEntry.get_blocked_names())
-    # Same hardcoded set as td_handlers_ops.py:3618
+    # Same hardcoded set as td_handlers_ops.py:3618. Note: this set is the
+    # *routing* whitelist, and may include legacy names that no longer
+    # exist in AGENT_MAP (Session 1115 audit caught ContentDistributionAgent
+    # in this state). Counting must intersect with AGENT_MAP, otherwise
+    # `fully_enabled` undercounts and the totals don't add to `total`.
     non_specialist = {
         'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
         'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
         'COOAgent', 'CTOAgent', 'AudioAgent',
     }
-    rerouted = sorted(non_specialist - set(blocked))
+    rerouted = sorted(non_specialist & agent_map_keys - set(blocked))
     fully_enabled = total - len(blocked) - len(rerouted)
-    # Refreshed Session 1100 — matches current CLAUDE.md
-    expected_claim = "73 enabled + 8 rerouted + 2 blocked = 83"
+    phantom = sorted(non_specialist - agent_map_keys)
+    # Refreshed Session 1115 — matches AGENT_MAP-strict reality (74/8/1)
+    expected_claim = "74 enabled + 8 rerouted + 1 blocked = 83"
     actual_claim = f"{fully_enabled} enabled + {len(rerouted)} rerouted + {len(blocked)} blocked = {total}"
-    matches = (fully_enabled == 73 and len(rerouted) == 8 and len(blocked) == 2 and total == 83)
+    matches = (fully_enabled == 74 and len(rerouted) == 8 and len(blocked) == 1 and total == 83)
     severity = 'ok' if matches else 'medium'
+    note_parts = [
+        f"blocked (AgentControlEntry): {blocked}",
+        f"rerouted (in AGENT_MAP ∩ _NON_SPECIALIST): {rerouted}",
+    ]
+    if phantom:
+        note_parts.append(
+            f"phantom _NON_SPECIALIST entries (not in AGENT_MAP): {phantom}"
+        )
     return ClaimResult.build(
         expected=expected_claim,
         actual=actual_claim,
         severity=severity,
-        note=(
-            f"blocked (AgentControlEntry): {blocked}; "
-            f"rerouted (hardcoded _NON_SPECIALIST): {rerouted}"
-        ),
+        note='; '.join(note_parts),
         fix_suggestion=(
             f"Update CLAUDE.md to '{fully_enabled} enabled, "
             f"{len(rerouted)} rerouted, {len(blocked)} blocked'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='core/epa_handlers/td_handlers_ops.py',
+    claim_id='non_specialist_phantom_entries',
+    description="`_NON_SPECIALIST` route set should not contain names that aren't in AGENT_MAP",
+)
+def _non_specialist_phantom_entries() -> ClaimResult:
+    """Surface any `_NON_SPECIALIST` entries that don't resolve to an AGENT_MAP key.
+
+    Session 1115 audit caught ``ContentDistributionAgent`` in this state: it
+    was being counted as "rerouted" in the agent taxonomy and shown as such
+    in CLAUDE.md, but no class with that name exists and AGENT_MAP doesn't
+    reference it. The routing whitelist and the agent registry drifted apart.
+
+    A phantom entry is fail-soft (the router never matches it) but it
+    pollutes counts and is a sign that the routing layer hasn't been cleaned
+    up after agent removals.
+    """
+    from core.agent_router import AgentRouter
+    agent_map_keys = set(AgentRouter.AGENT_MAP.keys())
+    non_specialist = {
+        'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
+        'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+        'COOAgent', 'CTOAgent', 'AudioAgent',
+    }
+    phantom = sorted(non_specialist - agent_map_keys)
+    severity = 'ok' if not phantom else 'low'
+    return ClaimResult.build(
+        expected='no _NON_SPECIALIST entries outside AGENT_MAP',
+        actual=phantom or 'none',
+        severity=severity,
+        note=(
+            f"_NON_SPECIALIST has {len(non_specialist)} entries; "
+            f"{len(non_specialist & agent_map_keys)} resolve to AGENT_MAP"
+        ),
+        fix_suggestion=(
+            "Remove the phantom name(s) from `_NON_SPECIALIST` in "
+            "`core/epa_handlers/td_handlers_ops.py`, "
+            "`core/services/platform_inventory.py`, and "
+            "`core/services/doc_claim_verification.py` (kept in sync). "
+            "If a legacy class is intentionally being kept on the reroute "
+            "whitelist, document why with a comment."
             if severity != 'ok' else None
         ),
     )
@@ -1963,6 +2117,673 @@ def _content_reviewer_panel() -> ClaimResult:
         ),
         fix_suggestion=(
             "Clarify docs/topics/content-pipeline.md: '2 always + 1 conditional'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Session 1115 — forward-drift guards (DB-free; safe in CI without Postgres).
+# These exist so that future hand-edits / inventory-block refreshes that
+# diverge from runtime get flagged without needing the autoblock pipeline.
+# ---------------------------------------------------------------------------
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='frontend_route_count',
+    description="CLAUDE.md stats table: 'Frontend | 61 routes' in frontend/src/App.tsx",
+)
+def _claude_frontend_routes() -> ClaimResult:
+    """Count `<Route ` declarations in App.tsx."""
+    import re
+    from pathlib import Path
+    app = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'App.tsx'
+    if not app.exists():
+        return ClaimResult.build(
+            expected=61, actual=None, severity='error',
+            note=f"App.tsx not at {app}",
+        )
+    actual = len(re.findall(r'<Route\s', app.read_text()))
+    expected = 61
+    severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 2 else 'medium')
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note="counts top-level `<Route ` JSX tags",
+        fix_suggestion=(
+            f"Update CLAUDE.md frontend row to '{actual} routes'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='procfile_entry_count',
+    description="CLAUDE.md stats table: 'Procfile entries | 11' (release + web + 7 celery + code-worker + resolve-node)",
+)
+def _claude_procfile_entries() -> ClaimResult:
+    """Count non-comment, non-blank lines in Procfile that look like `name: cmd`."""
+    from pathlib import Path
+    p = Path(__file__).resolve().parents[2] / 'Procfile'
+    if not p.exists():
+        return ClaimResult.build(
+            expected=11, actual=None, severity='error', note='Procfile missing'
+        )
+    entries = [
+        l for l in p.read_text().splitlines()
+        if l.strip() and not l.lstrip().startswith('#') and ':' in l
+    ]
+    actual = len(entries)
+    expected = 11
+    severity = 'ok' if actual == expected else 'medium'
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"names: {[l.split(':',1)[0] for l in entries]}",
+        fix_suggestion=(
+            f"Update CLAUDE.md Procfile row to '{actual}'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='signal_pattern_type_count',
+    description="CLAUDE.md stats: '10 SignalCluster pattern types' (demand_spike, trend_emergence, …)",
+)
+def _claude_signal_pattern_types() -> ClaimResult:
+    """Read SignalCluster.pattern_type choices."""
+    from core.models import SignalCluster
+    f = SignalCluster._meta.get_field('pattern_type')
+    raw_choices = getattr(f, 'choices', None) or []
+    choices = [c[0] for c in raw_choices]
+    actual = len(choices)
+    expected = 10
+    severity = 'ok' if actual == expected else 'medium'
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"types: {choices}",
+        fix_suggestion=(
+            f"Update CLAUDE.md signal pattern types row to '{actual}'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='CLAUDE.md',
+    claim_id='spider_registry_count',
+    description="CLAUDE.md stats table: '80 spiders across 41 categories'",
+)
+def _claude_spider_count() -> ClaimResult:
+    """Count registered spider classes via the module-level singleton."""
+    from ai_core.spiders.spider_registry import get_spider_registry
+    actual = len(get_spider_registry().list_spiders())
+    expected = 80
+    severity = 'ok' if actual == expected else ('low' if abs(actual - expected) <= 2 else 'medium')
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note='spider count comes from SpiderRegistry import-time registration',
+        fix_suggestion=(
+            f"Update CLAUDE.md spider row to '{actual} spiders'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Session 1115 — capability audit guards.
+# These back the `docs/CAPABILITY_AUDIT.md` generator: if these regress,
+# the audit doc silently loses information.
+# ---------------------------------------------------------------------------
+
+
+@register_claim(
+    doc='docs/CAPABILITY_AUDIT.md',
+    claim_id='all_agents_have_docstrings',
+    description="Every AGENT_MAP class should have a class docstring (drives capability audit)",
+)
+def _all_agents_have_docstrings() -> ClaimResult:
+    """Every class in AGENT_MAP must have a docstring.
+
+    The capability audit (`docs/CAPABILITY_AUDIT.md`) uses class docstrings
+    as the canonical "what does this agent do" string. An agent without one
+    becomes invisible in the audit and Chris's "what is this thing capable of"
+    answer.
+    """
+    import inspect as _inspect
+    from core.agent_router import AgentRouter
+    missing = sorted(
+        name for name, cls in AgentRouter.AGENT_MAP.items()
+        if not (_inspect.getdoc(cls) or '').strip()
+    )
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected='all 83 agents have a class docstring',
+        actual=f"{len(AgentRouter.AGENT_MAP) - len(missing)} / "
+               f"{len(AgentRouter.AGENT_MAP)} have docstrings",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            f"Add a class docstring to the {len(missing)} agent(s) listed in `note`. "
+            f"First non-empty line of the docstring is what shows up in "
+            f"`docs/CAPABILITY_AUDIT.md`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/SPIDER_AUDIT.md',
+    claim_id='all_spiders_have_docstrings',
+    description="Every registered spider class should have a class docstring (drives spider audit)",
+)
+def _all_spiders_have_docstrings() -> ClaimResult:
+    """Every spider class registered with `SpiderRegistry` must have a docstring.
+
+    The spider capability audit (`docs/SPIDER_AUDIT.md`) uses class docstrings
+    as the "what does this spider fetch" string. Missing one means the spider
+    becomes invisible in the audit.
+    """
+    import inspect as _inspect
+    from ai_core.spiders.spider_registry import get_spider_registry
+    reg = get_spider_registry()
+    missing = sorted(
+        name for name, cls in reg.spider_classes.items()
+        if not (_inspect.getdoc(cls) or '').strip()
+    )
+    total = len(reg.spider_classes)
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected='all registered spider classes have a class docstring',
+        actual=f"{total - len(missing)} / {total} have docstrings",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            f"Add a class docstring to the {len(missing)} spider class(es) "
+            f"listed in `note`. First non-empty line is what shows up in "
+            f"`docs/SPIDER_AUDIT.md`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/SPIDER_AUDIT.md',
+    claim_id='spider_category_count',
+    description="docs/SPIDER_AUDIT.md headline: '41 distinct categories'",
+)
+def _spider_category_count() -> ClaimResult:
+    """Count distinct categories in spider registry configs.
+
+    The spider audit headlines the category count alongside the spider count.
+    Drift on either is worth surfacing.
+    """
+    from ai_core.spiders.spider_registry import get_spider_registry
+    reg = get_spider_registry()
+    categories = {
+        (cfg or {}).get('category', 'unknown')
+        for cfg in reg.spider_configs.values()
+    }
+    actual = len(categories)
+    expected = 41  # refreshed Session 1115 — matches current registry
+    severity = 'ok' if actual == expected else (
+        'low' if abs(actual - expected) <= 2 else 'medium'
+    )
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"categories: {sorted(categories)}",
+        fix_suggestion=(
+            f"Update docs/SPIDER_AUDIT.md headline + CLAUDE.md spider row to "
+            f"'{actual} categories'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/ML_AUDIT.md',
+    claim_id='ml_capability_dirs_present',
+    description="All 9 ML capability subdirectories exist under ml/ (anomaly_detection, auto_selection, automation, core, graph_neural_network, integrations, reinforcement_learning, time_series, training)",
+)
+def _ml_capability_dirs_present() -> ClaimResult:
+    """Catch ML capability subdirs being removed or renamed.
+
+    The ML audit (`docs/ML_AUDIT.md`) is federated — it walks each named
+    capability subdirectory under `ml/`. If a subdir disappears the audit
+    silently drops that capability from its overview. This claim catches
+    that.
+
+    Session 1115 baseline: 9 capability subdirs.
+    """
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    ml_dir = repo_root / 'ml'
+    expected = {
+        'anomaly_detection', 'auto_selection', 'automation', 'core',
+        'graph_neural_network', 'integrations', 'reinforcement_learning',
+        'time_series', 'training',
+    }
+    if not ml_dir.exists():
+        return ClaimResult.build(
+            expected=f"{len(expected)} ML capability dirs present",
+            actual='ml/ missing',
+            severity='high',
+        )
+    present = {p.name for p in ml_dir.iterdir() if p.is_dir() and not p.name.startswith('_')}
+    missing = sorted(expected - present)
+    extra = sorted(present - expected - {'data', 'logs', 'management', 'migrations'})
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected=f"all of: {sorted(expected)}",
+        actual=f"present: {sorted(expected & present)}; missing: {missing}",
+        severity=severity,
+        note=(
+            f"missing: {missing}; "
+            f"extra (not in expected): {extra}"
+            if missing or extra else 'all good'
+        ),
+        fix_suggestion=(
+            f"Restore the missing capability subdir(s) under ml/, or "
+            f"update the expected set in `_ml_capability_dirs_present`. "
+            f"If a new capability has been added (in `extra`), update the "
+            f"expected set + add its primary class(es) to ML_AUDIT.md by "
+            f"regenerating with `python manage.py build_ml_audit`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/LEARNING_BRIDGE_AUDIT.md',
+    claim_id='learning_bridges_documented',
+    description="Every learning bridge module under core/learning_bridges/ has a module docstring + at least one learning-loop class",
+)
+def _learning_bridges_documented() -> ClaimResult:
+    """Catch under-documented learning bridges.
+
+    Each `*_bridge.py` under `core/learning_bridges/` is supposed to be a
+    Django-signal-driven shim that feeds runtime events to the learning
+    pipeline. If the module has no docstring or contains no learning-loop
+    class, the bridge audit can't describe what the bridge does.
+
+    Session 1115 baseline: 8 bridges, 9 learning-loop classes, 8/8 with
+    docstrings.
+    """
+    import ast
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    bridges_dir = repo_root / 'core' / 'learning_bridges'
+    if not bridges_dir.exists():
+        return ClaimResult.build(
+            expected='core/learning_bridges/ exists',
+            actual='missing',
+            severity='high',
+            note='directory removed?',
+        )
+    problems: list[str] = []
+    total = 0
+    for path in sorted(bridges_dir.glob('*_bridge.py')):
+        total += 1
+        try:
+            tree = ast.parse(path.read_text(errors='ignore'))
+        except SyntaxError as e:
+            problems.append(f'{path.name}: parse error {e}')
+            continue
+        if not (ast.get_docstring(tree) or '').strip():
+            problems.append(f'{path.name}: module docstring missing')
+        has_class = any(
+            isinstance(n, ast.ClassDef)
+            and not any(
+                isinstance(b, ast.Attribute) and getattr(b, 'attr', '') == 'Model'
+                for b in n.bases
+            )
+            for n in tree.body
+        )
+        if not has_class:
+            problems.append(f'{path.name}: no learning-loop class')
+    severity = 'ok' if not problems else 'low'
+    return ClaimResult.build(
+        expected=f'all {total} bridges documented + have a class',
+        actual=(
+            f'{total - len(problems)} / {total} clean'
+            if problems else f'{total}/{total} documented'
+        ),
+        severity=severity,
+        note=f"problems: {problems}" if problems else 'all bridges documented',
+        fix_suggestion=(
+            "Add the missing module docstring or learning-loop class to "
+            "each bridge listed in `note`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/BODY_SYSTEM_AUDIT.md',
+    claim_id='body_systems_fully_wired',
+    description="All 9 body systems in run_all_systems_scan resolve to a service module with a docstring + get_vitals()",
+)
+def _body_systems_fully_wired() -> ClaimResult:
+    """Catch regressions in the body-system wiring.
+
+    Each body system listed in `body_systems = [...]` inside
+    `core/tasks.py::run_all_systems_scan` must:
+      (a) have a module at `core/services/<name>.py`,
+      (b) define a primary class with a docstring,
+      (c) expose a `get_vitals()` method on that class.
+
+    If any of those break, `run_all_systems_scan` will degrade — either
+    raising an ImportError or skipping the system in its `if system == X`
+    chain. Audit (Session 1115) confirms 9/9 wired; this claim catches
+    future regressions.
+    """
+    import ast
+    import re as _re
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[2]
+    src = (repo_root / 'core' / 'tasks.py').read_text(errors='ignore')
+    m = _re.search(r"body_systems\s*=\s*\[([^\]]+)\]", src)
+    systems = _re.findall(r"'([^']+)'", m.group(1)) if m else []
+    problems: list[str] = []
+    for name in systems:
+        mod_path = repo_root / 'core' / 'services' / f'{name}.py'
+        if not mod_path.exists():
+            problems.append(f'{name}: missing module {mod_path.name}')
+            continue
+        try:
+            tree = ast.parse(mod_path.read_text(errors='ignore'))
+        except SyntaxError as e:
+            problems.append(f'{name}: parse error {e}')
+            continue
+        primary_class = None
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and (
+                node.name.endswith('Service')
+                or node.name.endswith('Monitor')
+                or node.name.endswith('Coordinator')
+                or node.name.endswith('System')
+            ):
+                primary_class = node
+                break
+        if primary_class is None:
+            problems.append(f'{name}: no Service/Monitor class')
+            continue
+        if not (ast.get_docstring(primary_class) or '').strip():
+            problems.append(f'{name}: class missing docstring')
+        has_vitals = any(
+            isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and s.name == 'get_vitals'
+            for s in primary_class.body
+        )
+        if not has_vitals:
+            problems.append(f'{name}: no get_vitals()')
+    severity = 'ok' if not problems else 'medium'
+    return ClaimResult.build(
+        expected=f'all {len(systems)} body systems fully wired',
+        actual=(
+            f'{len(systems) - sum(1 for _ in problems)} fully wired'
+            if problems else f'{len(systems)}/{len(systems)} wired'
+        ),
+        severity=severity,
+        note=f"systems: {systems}; problems: {problems}",
+        fix_suggestion=(
+            "Address each `<name>: <issue>` entry in `note` — restore the "
+            "missing module, class docstring, or `get_vitals()` method."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/ADVISOR_AUDIT.md',
+    claim_id='advisor_count_matches_doc',
+    description="advisors.registry.advisor_registry materializes the documented 25 advisors (14 named + 11 specialists)",
+)
+def _advisor_count_matches_doc() -> ClaimResult:
+    """Compare the live AdvisorProfile registry against the documented total.
+
+    The audit (Session 1115) caught CLAUDE.md claiming `32 (10 named + 22
+    specialists)` while the registry only materializes 25 (14 named + 11
+    specialists). Aligned in the same session; this claim catches future
+    drift on either side.
+    """
+    from advisors.registry import advisor_registry
+    rows = list(advisor_registry.advisors.values())
+    n_total = len(rows)
+    n_named = sum(1 for r in rows if '(AI Model)' in (r.name or ''))
+    n_specialists = n_total - n_named
+    expected_total = 25
+    expected_named = 14
+    expected_specialists = 11
+    matches = (
+        n_total == expected_total
+        and n_named == expected_named
+        and n_specialists == expected_specialists
+    )
+    severity = 'ok' if matches else 'medium'
+    return ClaimResult.build(
+        expected=f"{expected_total} total ({expected_named} named + "
+                 f"{expected_specialists} specialists)",
+        actual=f"{n_total} total ({n_named} named + {n_specialists} specialists)",
+        severity=severity,
+        note='from advisor_registry.advisors',
+        fix_suggestion=(
+            f"Update CLAUDE.md (Advisors row) + docs/ADVISOR_AUDIT.md to "
+            f"'{n_total} ({n_named} named + {n_specialists} specialists)'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/ADVISOR_AUDIT.md',
+    claim_id='all_advisors_have_background',
+    description="Every AdvisorProfile should have a `background` text (drives ADVISOR_AUDIT.md per-advisor description)",
+)
+def _all_advisors_have_background() -> ClaimResult:
+    """Background is the primary description shown for each advisor.
+
+    Missing one makes the advisor effectively undescribed in the capability
+    audit.
+    """
+    from advisors.registry import advisor_registry
+    missing = sorted(
+        (r.name or r.id) for r in advisor_registry.advisors.values()
+        if not (r.background or '').strip()
+    )
+    total = len(advisor_registry.advisors)
+    severity = 'ok' if not missing else 'low'
+    return ClaimResult.build(
+        expected='all advisors have a background',
+        actual=f"{total - len(missing)} / {total}",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            f"Add a `background` to the advisor(s) in `note`. "
+            f"Edit `advisors/registry.py::_initialize_advisor_network`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/BEAT_AUDIT.md',
+    claim_id='beat_schedule_task_refs_resolve',
+    description="Every static beat entry's `task` ref should resolve in the Celery task registry",
+)
+def _beat_schedule_task_refs_resolve() -> ClaimResult:
+    """Catch scheduled tasks that fail at dispatch time.
+
+    Each entry in `app.conf.beat_schedule` declares a task path. If that
+    path isn't in `app.tasks` at worker start (autodiscover misses it, or
+    the path is a typo), the schedule fires but Celery can't dispatch.
+    Silent failure unless monitored.
+
+    Session 1115 audit caught 7 of these in `core/celery.py`:
+    `ai_core.tasks.{clean_stale_data, collect_real_opportunities,
+    warm_up_spider_network}`, `ml.cleanup_old_model_files`,
+    `sports.cleanup_old_predictions`,
+    `intelligence.tasks.{cleanup_old_opportunities, scan_spider_opportunities}`.
+    The underlying functions exist; Celery autodiscover isn't picking up
+    those modules. Fix is to add them to `app.conf.imports` in
+    `core/celery.py:317` or to ensure the apps' `tasks.py` modules import
+    cleanly at boot.
+    """
+    from core.celery import app as celery_app
+    registry = set(celery_app.tasks.keys())
+    schedule = dict(celery_app.conf.beat_schedule or {})
+    broken = sorted(
+        f"{name} -> {(entry or {}).get('task', '<no task>')}"
+        for name, entry in schedule.items()
+        if (entry or {}).get('task') not in registry
+    )
+    severity = 'ok' if not broken else 'medium'
+    return ClaimResult.build(
+        expected='no broken task refs in app.conf.beat_schedule',
+        actual=f"{len(broken)} broken" if broken else 'none',
+        severity=severity,
+        note=(
+            f"{len(schedule)} static beat entries · "
+            f"{len(registry)} registered tasks · broken: {broken[:8]}"
+            + ('…' if len(broken) > 8 else '')
+        ),
+        fix_suggestion=(
+            "For each broken ref: confirm the task function exists, then "
+            "either add the parent app's `tasks` module to `app.conf.imports` "
+            "in `core/celery.py:317`, or fix the dotted path in "
+            "`app.conf.beat_schedule`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/PA_TOOL_AUDIT.md',
+    claim_id='pa_schemas_have_descriptions',
+    description="Every PA tool schema needs a `description` — the LLM uses it as the routing signal",
+)
+def _pa_schemas_have_descriptions() -> ClaimResult:
+    """Schema description is the LLM's routing signal at function-call time.
+
+    A schema with no description still appears in the function list, but
+    the LLM has nothing to base its choice on — effectively invisible. The
+    audit (`docs/PA_TOOL_AUDIT.md`) treats this as a hard finding.
+    """
+    from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+    missing = sorted(
+        s.get('name', '<unnamed>')
+        for s in PA_TOOL_SCHEMAS
+        if not (s.get('description', '') or '').strip()
+    )
+    total = len(PA_TOOL_SCHEMAS)
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected='all PA schemas have a description',
+        actual=f"{total - len(missing)} / {total} have descriptions",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            "Add a description to the schema(s) in `note`. "
+            "The LLM cannot route to a description-less tool."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/PA_TOOL_AUDIT.md',
+    claim_id='pa_handlers_reachable',
+    description="Registered tool handlers should be reachable: either via a schema or `run_agent`",
+)
+def _pa_handlers_reachable() -> ClaimResult:
+    """Catches handlers that the LLM has no way to invoke.
+
+    A handler is reachable if:
+      (a) a schema exists with the same name, OR
+      (b) the handler's name is listed in `run_agent.agent_name.enum`.
+
+    Anything else is a dead registration — the handler runs at startup but
+    the LLM never calls it because it doesn't know it exists. Surfaces real
+    drift (Session 1115 caught `distribution_agent` in this state).
+    """
+    from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+    from core.services.tool_dispatcher import ToolDispatcher
+    td = ToolDispatcher()
+    schema_names = {s.get('name', '') for s in PA_TOOL_SCHEMAS if s.get('name')}
+    run_agent_schema = next(
+        (s for s in PA_TOOL_SCHEMAS if s.get('name') == 'run_agent'), {}
+    )
+    params = (run_agent_schema or {}).get('parameters', {}) or {}
+    props = params.get('properties', {}) or {}
+    run_agent_targets = set(
+        (props.get('agent_name') or {}).get('enum', []) or []
+    )
+    handlers = set(td._tool_handlers.keys())  # noqa: SLF001
+    orphans = sorted(handlers - schema_names - run_agent_targets)
+    severity = 'ok' if not orphans else 'low'
+    return ClaimResult.build(
+        expected='no handler-only registrations outside run_agent.agent_name enum',
+        actual=orphans or 'none',
+        severity=severity,
+        note=(
+            f"{len(handlers)} handlers · {len(schema_names)} schemas · "
+            f"{len(run_agent_targets)} agents reachable via run_agent meta-tool"
+        ),
+        fix_suggestion=(
+            "Either add the orphan(s) to `run_agent.agent_name.enum` in "
+            "`core/services/pa_tool_schemas.py`, give them their own schema, "
+            "or remove the `self.register(...)` call from "
+            "`core/services/tool_dispatcher.py`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/CAPABILITY_AUDIT.md',
+    claim_id='agent_map_key_matches_class_name',
+    description="Each AGENT_MAP key should match the agent class's `name` class attribute",
+)
+def _agent_map_key_matches_class_name() -> ClaimResult:
+    """The AGENT_MAP key is what callers use to route; the class `name`
+    attribute is what the agent reports about itself in execution metadata.
+
+    Mismatches cause confusing telemetry — an agent named ``Foo`` in
+    AGENT_MAP shows up as ``Bar`` in AgentExecution rows. Worth catching.
+    Agents that don't declare a `name` attribute at all are skipped (some
+    base classes leave it unset).
+    """
+    from core.agent_router import AgentRouter
+    mismatched = []
+    for name, cls in AgentRouter.AGENT_MAP.items():
+        declared = getattr(cls, 'name', None)
+        if declared and declared != name:
+            mismatched.append((name, declared))
+    severity = 'ok' if not mismatched else 'low'
+    return ClaimResult.build(
+        expected='AGENT_MAP key == cls.name on every entry that declares one',
+        actual=f"{len(mismatched)} mismatch(es)",
+        severity=severity,
+        note=(
+            'mismatches: '
+            + ', '.join(f'{k}->declares "{v}"' for k, v in mismatched)
+            if mismatched else 'all matched'
+        ),
+        fix_suggestion=(
+            "Update either the AGENT_MAP key or the class `name` attribute "
+            "so they agree."
             if severity != 'ok' else None
         ),
     )

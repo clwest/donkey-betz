@@ -81,7 +81,12 @@ def collect_agents() -> InventorySection:
         'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
         'COOAgent', 'CTOAgent', 'AudioAgent',
     }
-    rerouted = sorted(non_specialist - set(blocked))
+    # Session 1115: phantom-entry guard. `_NON_SPECIALIST` lives in the
+    # routing layer (`core/epa_handlers/td_handlers_ops.py`); it may name
+    # agents that aren't registered in AGENT_MAP (e.g. legacy
+    # `ContentDistributionAgent`). Counting must intersect with AGENT_MAP
+    # keys, otherwise `fully_enabled` undercounts and the totals don't add.
+    rerouted = sorted(non_specialist & set(agent_map.keys()) - set(blocked))
     fully_enabled = len(agent_map) - len(blocked) - len(rerouted)
 
     items: list[dict[str, Any]] = []

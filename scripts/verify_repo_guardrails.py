@@ -33,6 +33,23 @@ DOCS_INDEX_AUTOGEN_PATTERN = re.compile(
     r"<!--\s*DOC-AUTOGEN:.*build_docs_index", re.IGNORECASE
 )
 
+# Session 1115 — extra DOC-AUTOGEN files emitted by the capability audits.
+# Each has its own `build_<x>_audit` command; CI/strict mode catches
+# hand-edits to any of them by requiring the first non-blank line to carry
+# a DOC-AUTOGEN marker that references the regenerating command.
+AUDIT_AUTOGEN_FILES: list[tuple[Path, str]] = [
+    (REPO_ROOT / "docs" / "CAPABILITY_AUDIT.md",  "build_capability_audit"),
+    (REPO_ROOT / "docs" / "SPIDER_AUDIT.md",      "build_spider_audit"),
+    (REPO_ROOT / "docs" / "PA_TOOL_AUDIT.md",     "build_pa_tool_audit"),
+    (REPO_ROOT / "docs" / "BEAT_AUDIT.md",        "build_beat_audit"),
+    (REPO_ROOT / "docs" / "ADVISOR_AUDIT.md",     "build_advisor_audit"),
+    (REPO_ROOT / "docs" / "DISCORD_AUDIT.md",     "build_discord_audit"),
+    (REPO_ROOT / "docs" / "BODY_SYSTEM_AUDIT.md", "build_body_system_audit"),
+    (REPO_ROOT / "docs" / "LEARNING_BRIDGE_AUDIT.md", "build_learning_bridge_audit"),
+    (REPO_ROOT / "docs" / "ML_AUDIT.md", "build_ml_audit"),
+]
+AUDIT_AUTOGEN_PATTERN = re.compile(r"<!--\s*DOC-AUTOGEN", re.IGNORECASE)
+
 
 @dataclass
 class CommandResult:
@@ -243,6 +260,42 @@ def check_docs_index_autogen_marker() -> tuple[bool, str]:
     return classify_docs_index_autogen(first_line)
 
 
+def check_audit_autogen_markers() -> tuple[bool, list[str]]:
+    """Confirm every Session-1115 audit doc still carries its DOC-AUTOGEN marker.
+
+    Each entry is checked against the same first-non-blank-line rule used
+    for ``docs/INDEX.md``. Missing files report `missing`; present-but-no-
+    marker files report `hand-edited`. Returns ``(all_ok, per-file messages)``.
+    """
+    messages: list[str] = []
+    all_ok = True
+    for path, command_hint in AUDIT_AUTOGEN_FILES:
+        rel = path.relative_to(REPO_ROOT)
+        if not path.exists():
+            all_ok = False
+            messages.append(
+                f"{rel}: missing "
+                f"(fix: python manage.py {command_hint})"
+            )
+            continue
+        first_line = ""
+        with path.open("r", encoding="utf-8", errors="replace") as fh:
+            for raw in fh:
+                stripped = raw.strip()
+                if stripped:
+                    first_line = stripped
+                    break
+        if AUDIT_AUTOGEN_PATTERN.search(first_line):
+            messages.append(f"{rel}: marker present")
+        else:
+            all_ok = False
+            messages.append(
+                f"{rel}: missing DOC-AUTOGEN marker on first non-blank line "
+                f"(fix: python manage.py {command_hint})"
+            )
+    return all_ok, messages
+
+
 def check_platform_inventory_freshness() -> tuple[bool, str]:
     if not PLATFORM_INVENTORY.exists():
         return False, "docs/PLATFORM_INVENTORY.md is missing"
@@ -276,6 +329,7 @@ def classify_failures(
     inventory_blocking: bool,
     autogen_blocking: bool,
     conflict_blocking: bool,
+    audit_autogen_blocking: bool = False,
 ) -> list[str]:
     """Return the strict-mode failure list given the per-check booleans.
 
@@ -298,6 +352,10 @@ def classify_failures(
         failures.append("platform inventory is stale")
     if strict and autogen_blocking:
         failures.append("docs/INDEX.md is missing the DOC-AUTOGEN marker")
+    if strict and audit_autogen_blocking:
+        failures.append(
+            "one or more capability-audit docs are missing the DOC-AUTOGEN marker"
+        )
     if strict and conflict_blocking:
         failures.append("context-kit has CONFLICT findings")
     return failures
@@ -372,6 +430,12 @@ def main() -> int:
         autogen_message,
     )
 
+    audit_autogen_ok, audit_autogen_messages = check_audit_autogen_markers()
+    print_block(
+        "audit DOC-AUTOGEN markers",
+        "\n".join(audit_autogen_messages),
+    )
+
     tracked_blocking = bool(tracked)
     if tracked:
         print("WARNING: tracked generated paths were found.")
@@ -396,6 +460,16 @@ def main() -> int:
     else:
         print("OK: docs/INDEX.md carries the DOC-AUTOGEN marker.")
 
+    audit_autogen_blocking = not audit_autogen_ok
+    if not audit_autogen_ok:
+        print(
+            "WARNING: one or more capability-audit DOC-AUTOGEN files are "
+            "missing or hand-edited (see the 'audit DOC-AUTOGEN markers' "
+            "block above for which)."
+        )
+    else:
+        print("OK: all capability-audit docs carry their DOC-AUTOGEN marker.")
+
     conflict_blocking = conflict_count > 0
     if conflict_count:
         print(f"WARNING: context-kit reported {conflict_count} CONFLICT finding(s).")
@@ -408,6 +482,7 @@ def main() -> int:
         tracked_blocking=tracked_blocking,
         inventory_blocking=inventory_blocking,
         autogen_blocking=autogen_blocking,
+        audit_autogen_blocking=audit_autogen_blocking,
         conflict_blocking=conflict_blocking,
     )
 
