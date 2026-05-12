@@ -2259,6 +2259,76 @@ def _all_agents_have_docstrings() -> ClaimResult:
 
 
 @register_claim(
+    doc='docs/SPIDER_AUDIT.md',
+    claim_id='all_spiders_have_docstrings',
+    description="Every registered spider class should have a class docstring (drives spider audit)",
+)
+def _all_spiders_have_docstrings() -> ClaimResult:
+    """Every spider class registered with `SpiderRegistry` must have a docstring.
+
+    The spider capability audit (`docs/SPIDER_AUDIT.md`) uses class docstrings
+    as the "what does this spider fetch" string. Missing one means the spider
+    becomes invisible in the audit.
+    """
+    import inspect as _inspect
+    from ai_core.spiders.spider_registry import get_spider_registry
+    reg = get_spider_registry()
+    missing = sorted(
+        name for name, cls in reg.spider_classes.items()
+        if not (_inspect.getdoc(cls) or '').strip()
+    )
+    total = len(reg.spider_classes)
+    severity = 'ok' if not missing else 'medium'
+    return ClaimResult.build(
+        expected='all registered spider classes have a class docstring',
+        actual=f"{total - len(missing)} / {total} have docstrings",
+        severity=severity,
+        note=f"missing: {missing}" if missing else 'all good',
+        fix_suggestion=(
+            f"Add a class docstring to the {len(missing)} spider class(es) "
+            f"listed in `note`. First non-empty line is what shows up in "
+            f"`docs/SPIDER_AUDIT.md`."
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
+    doc='docs/SPIDER_AUDIT.md',
+    claim_id='spider_category_count',
+    description="docs/SPIDER_AUDIT.md headline: '41 distinct categories'",
+)
+def _spider_category_count() -> ClaimResult:
+    """Count distinct categories in spider registry configs.
+
+    The spider audit headlines the category count alongside the spider count.
+    Drift on either is worth surfacing.
+    """
+    from ai_core.spiders.spider_registry import get_spider_registry
+    reg = get_spider_registry()
+    categories = {
+        (cfg or {}).get('category', 'unknown')
+        for cfg in reg.spider_configs.values()
+    }
+    actual = len(categories)
+    expected = 41  # refreshed Session 1115 — matches current registry
+    severity = 'ok' if actual == expected else (
+        'low' if abs(actual - expected) <= 2 else 'medium'
+    )
+    return ClaimResult.build(
+        expected=expected,
+        actual=actual,
+        severity=severity,
+        note=f"categories: {sorted(categories)}",
+        fix_suggestion=(
+            f"Update docs/SPIDER_AUDIT.md headline + CLAUDE.md spider row to "
+            f"'{actual} categories'"
+            if severity != 'ok' else None
+        ),
+    )
+
+
+@register_claim(
     doc='docs/CAPABILITY_AUDIT.md',
     claim_id='agent_map_key_matches_class_name',
     description="Each AGENT_MAP key should match the agent class's `name` class attribute",
