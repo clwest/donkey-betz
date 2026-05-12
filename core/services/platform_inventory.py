@@ -77,15 +77,13 @@ def collect_agents() -> InventorySection:
     agent_map = AgentRouter.AGENT_MAP
     blocked = list(AgentControlEntry.get_blocked_names())
     non_specialist = {
+        # Session 1115: removed `ContentDistributionAgent` after confirming
+        # no class exists. The intersection-with-AGENT_MAP guard below stays
+        # in place as defense against future phantom-entry drift.
         'WorkflowAgent', 'VideoAgent', 'CodeGeneratorAgent', 'DevOpsAgent',
-        'FullStackDeveloperAgent', 'CodeReviewAgent', 'ContentDistributionAgent',
+        'FullStackDeveloperAgent', 'CodeReviewAgent',
         'COOAgent', 'CTOAgent', 'AudioAgent',
     }
-    # Session 1115: phantom-entry guard. `_NON_SPECIALIST` lives in the
-    # routing layer (`core/epa_handlers/td_handlers_ops.py`); it may name
-    # agents that aren't registered in AGENT_MAP (e.g. legacy
-    # `ContentDistributionAgent`). Counting must intersect with AGENT_MAP
-    # keys, otherwise `fully_enabled` undercounts and the totals don't add.
     rerouted = sorted(non_specialist & set(agent_map.keys()) - set(blocked))
     fully_enabled = len(agent_map) - len(blocked) - len(rerouted)
 

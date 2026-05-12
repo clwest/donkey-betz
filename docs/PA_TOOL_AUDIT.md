@@ -16,8 +16,7 @@
 
 ## Findings
 
-- Handlers with **no schema and not reachable via** `run_agent` — dead registration, LLM has no way to invoke these: `distribution_agent`.
-- Handler-only entries that the LLM reaches via the `run_agent(agent_name=…)` meta-tool (by design, not a bug): 65 agents — these are the agent-routing bypass paths sharing `_handle_agent_tool`.
+- Handler-only entries that the LLM reaches via the `run_agent(agent_name=…)` meta-tool (by design, not a bug): 66 agents — these are the agent-routing bypass paths sharing `_handle_agent_tool`.
 - Heavily-shared handlers (≥5 tool names route to the same function — usually a gateway / meta-tool by design): `ToolDispatcher._handle_agent_tool` (80).
 
 ## Tool overview
@@ -246,7 +245,7 @@ Introspect agents: list registered agents, view capabilities, check which agents
 
 ### `agent_memory_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_memory` in `core/services/td_handlers_ops.py:4339`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_memory` in `core/services/td_handlers_ops.py:4340`
 
 Browse agent memories and knowledge sources. Use when the user asks about what agents remember, agent knowledge, memory entries, or agent learning history.
 
@@ -1070,7 +1069,7 @@ Beat Task Governor — controls which autonomous agent dispatches are allowed to
 
 ### `heartbeat_history_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_heartbeat_history` in `core/services/td_handlers_ops.py:4474`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_heartbeat_history` in `core/services/td_handlers_ops.py:4475`
 
 View heartbeat history and trends. Use when the user asks about system heartbeat history, health trends over time, uptime, or historical system status.
 
@@ -1103,7 +1102,7 @@ _(no schema description)_
 
 ### `infra_health_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_infra_health` in `core/services/td_handlers_ops.py:4543`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_infra_health` in `core/services/td_handlers_ops.py:4544`
 
 Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runtime metrics. Use when the user asks about Redis health, database performance, dependency status, memory usage, or infrastructure diagnostics.
 
@@ -1154,7 +1153,7 @@ Unified intelligence desk — stocks, sports betting, legislation, search, and K
 
 ### `kb_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_kb_browse` in `core/services/td_handlers_ops.py:4768`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_kb_browse` in `core/services/td_handlers_ops.py:4769`
 
 Browse the knowledge base — documents, embedding collections, chunk counts, and text search across all embedded content. Use when the user asks about KB content, embeddings, document chunks, what's been embedded, or RAG sources.
 
@@ -1709,7 +1708,7 @@ Delegate a task to a specialized agent. Use when the user asks to Run any of 72 
 
 ### `scheduled_tasks_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_scheduled_tasks` in `core/services/td_handlers_ops.py:3766`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_scheduled_tasks` in `core/services/td_handlers_ops.py:3767`
 
 View and manage scheduled Celery tasks: list beat entries, enable/disable schedules. Use when the user asks about scheduled tasks, cron jobs, what runs automatically, or Celery beat. Supports search, pagination, and enable/disable management.
 
@@ -1787,7 +1786,7 @@ _(no schema description)_
 
 ### `spider_status_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_spider_status` in `core/services/td_handlers_ops.py:4204`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_spider_status` in `core/services/td_handlers_ops.py:4205`
 
 View individual spider health and activity. Use when the user asks about spider status, which spiders are active/stale, spider item counts, or spider data history.
 

@@ -13,10 +13,6 @@
 
 > This is a static-code audit. Whether an agent is *actually wired* into a Celery task or a PA tool route is a different question — tracked separately (Session 1116+).
 
-## Findings
-
-- `_NON_SPECIALIST` references names that don't exist in AGENT_MAP: `ContentDistributionAgent`. Caught Session 1115. Fixed in `platform_inventory.py` and `doc_claim_verification.py`; routing layer in `core/epa_handlers/td_handlers_ops.py` still contains the entry — leaving it as a documented oddity rather than a code behavior change.
-
 ## Enabled agents (74)
 
 | Agent | File | Docs? | Tools | Summary |
