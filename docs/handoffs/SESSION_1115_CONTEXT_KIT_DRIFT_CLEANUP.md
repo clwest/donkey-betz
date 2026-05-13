@@ -1,10 +1,18 @@
 ---
 title: "Session 1115 — context-kit drift cleanup (verifier + README/CLAUDE headers)"
 date: 2026-05-12
-status: active
+status: superseded-by-companion
 session: 1115
 previous_handoff: SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md
+companion_handoff: SESSION_1115_CODE_HEALTH_REFACTORS.md
 ---
+
+> **Heads up — this is only Session 1115's early phase.** The session
+> kept going after this handoff was written and turned into a 13-PR
+> code-health arc that closed AUDIT_FINDINGS #9 and reduced #12 by
+> 96.3%. The full arc is documented in
+> [`SESSION_1115_CODE_HEALTH_REFACTORS.md`](SESSION_1115_CODE_HEALTH_REFACTORS.md).
+> Read both for the complete Session 1115 picture.
 
 # Session 1115 — context-kit drift cleanup
 

@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** May 12, 2026 (Session 1115 — context-kit drift cleanup)
+**Last Updated:** May 12, 2026 (Session 1115 — code-health refactors: closed finding #9, finding #12 to 96.3%)
 
 > **Source of truth for numbers:** [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) (runtime-derived, regenerable). When this doc disagrees with either, PLATFORM_INVENTORY wins. Run `python manage.py verify_doc_claims --only-drift` to see which claims across all docs currently drift from reality.
 
