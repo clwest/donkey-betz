@@ -2,7 +2,11 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest planning doc:** [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) — Session 1116 architecture proposal for folding Character OS (`runway-hackathon`) into u-d-b. Awaiting operator decision on six open questions in § I.
+**Latest planning docs (Session 1116 — pick one):**
+- [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) — sidecar architecture (new `spokesperson/` Django app, isolated, easy rollback)
+- [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) — native integration (extend `Advisor` + `VideoHistory`, finishing layers as general-purpose video ops, faster long-term but harder rollback)
+
+Both proposals plan to fold Character OS (`runway-hackathon`) into u-d-b. Read both before deciding. The native proposal includes a comparison table in Appendix A.
 
 **Latest handoff:** [`SESSION_1115_CODE_HEALTH_REFACTORS.md`](SESSION_1115_CODE_HEALTH_REFACTORS.md)
 
