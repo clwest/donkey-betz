@@ -2950,33 +2950,15 @@ def trigger_spider_conversations(self, min_relevance: int = 70, max_conversation
 def trigger_project_research(self, max_projects: int = 3, max_spiders_per_project: int = 2):
     from core.tasks_ops import _impl_trigger_project_research
     return _impl_trigger_project_research(self, max_projects, max_spiders_per_project)
-@shared_task(bind=True)
-def propagate_new_policies(self, hours_back: int = 2, max_actions: int = 3):
-    """
-    Session 363: Propagate newly promoted policies to relevant agents.
-
-    DEPRECATED (Session 659): This task used a non-existent 'propagated_at' field.
-    Policy injection now happens automatically via PolicyContextService when agents
-    are called, so explicit propagation is no longer needed.
-
-    Args:
-        hours_back: How far back to look for new policies
-        max_actions: Maximum actions to trigger per run
-
-    Returns:
-        Deprecation notice
-    """
-    # Session 659: This task is deprecated because:
-    # 1. The 'propagated_at' field never existed on AgentDecisionSummary
-    # 2. PolicyContextService already injects canonical policies into agent prompts
-    # 3. Agents automatically receive policy context without explicit propagation
-    logger.info("🏛️ [POLICY-PROPAGATE] DEPRECATED - PolicyContextService handles policy injection automatically")
-
-    return {
-        'status': 'deprecated',
-        'message': 'Policy propagation now happens automatically via PolicyContextService when agents are called.',
-        'info': 'Canonical policies are injected into agent prompts without needing explicit propagation.'
-    }
+# Session 1115 batch-8: deleted `propagate_new_policies`. Session 659
+# deprecation note said the original logic referenced a non-existent
+# `propagated_at` field and that PolicyContextService already injects
+# canonical policies into agent prompts at runtime. The task had been a
+# no-op `return {'status': 'deprecated', ...}` since then, with zero
+# callers. Removed entirely now that the audit/registry tracks the
+# expected shape. If a policy-propagation hook is ever needed again,
+# wire it through PolicyContextService or a new dedicated service —
+# don't resurrect this orphan.
 
 
 @shared_task(bind=True)

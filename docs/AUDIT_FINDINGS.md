@@ -41,10 +41,10 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
 | 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 167 | medium | **✅ fixed Session 1115** | new `build_management_command_audit` + inline refresh |
-| 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
+| 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · 1 of 9 migrated (RevenueAttribution, Session 1115 batch-9); 8 remain | multi-PR refactor in progress |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 11 orphan Celery tasks** — batches 1-7: 4x detector upgrades, 32 tasks wired, dead stubs un-tasked, 3 signal/mgmt-cmd wirings completed | medium-high | partial · 96% reduction; remaining 11 are all constraint-deferred (LLM-cost, agent-dispatch, Session 1031, deprecated, intentional) | none — wait for credits or green-light |
+| 12 | **272 → 10 orphan Celery tasks** — batches 1-8: 4x detector upgrades, 32 tasks wired, dead stubs un-tasked, 3 signal/mgmt-cmd wirings, `propagate_new_policies` deleted | medium-high | partial · 96.3% reduction; remaining 10 are all constraint-deferred (LLM-cost, agent-dispatch, Session 1031, intentional) | none — wait for credits or green-light |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -370,8 +370,11 @@ underlying doc had been stale for many sessions before.
 
 ## 9. Unused `LearningBridge` ABC — naming inconsistency is the symptom
 
-**Status:** partial fix Session 1115 — forward-drift guard added; full
-refactor deferred to a follow-up session.
+**Status:** in progress — 1 of 9 migrated (Session 1115 batch-9).
+`RevenueAttributionLearningLoop` is now the first concrete consumer of
+the `LearningBridge` ABC; verifier baseline dropped 9 → 8. Migration
+pattern is proven; remaining 8 to follow incrementally. Forward-drift
+guard catches any NEW bridge added without inheritance.
 
 **Verifier doc:** `docs/LEARNING_BRIDGE_AUDIT.md`
 **Verifier claim:** `learning_bridges_inherit_base` (added Session 1115).
@@ -548,7 +551,19 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 11 orphan Celery tasks — batches 1-7 closed
+## 12. 272 → 10 orphan Celery tasks — batches 1-8 closed
+
+### Batch 8 outcome (Session 1115) — deprecated stub deletion
+
+Deleted `propagate_new_policies` (Session 363, deprecated Session 659).
+The task referenced a non-existent `propagated_at` field and returned a
+deprecation notice immediately — `PolicyContextService` has handled
+canonical policy injection at runtime since Session 659. Zero callers
+anywhere in the codebase. Cleaned removal with a comment block in
+`core/tasks.py` documenting the supersession path for future readers.
+
+Registry shrank 398 → 397. Orphan count 11 → **10**.
+Cumulative across batches 1-8: **272 → 10 (96.3% reduction).**
 
 ### Batch 7 outcome (Session 1115) — signal/CLI wire-ups for the last 3
 
