@@ -8,20 +8,20 @@
 
 - **User-defined tasks (`!celery.*`):** 398
 - **Scheduled in `beat_schedule`:** 74 of 398
-- **Has at least one `.delay()` / `.apply_async()` caller:** 384 of 398
-- **Orphans (no caller AND not scheduled):** **14** of 398. These ship but nothing fires them.
+- **Has at least one `.delay()` / `.apply_async()` caller:** 387 of 398
+- **Orphans (no caller AND not scheduled):** **11** of 398. These ship but nothing fires them.
 - **Tasks with docstrings:** 178 of 398 (45%)
 
 > A task can be wired by either path: a `beat_schedule` entry (cron-fires it) or an explicit `.delay(...)` from view / service / agent code. Tasks with neither are dead-on-arrival — the function exists but no execution path reaches it.
 
 ## Findings
 
-- **Orphan tasks** — 14 tasks have no caller via `.delay(...)` / `.apply_async(...)` AND aren't in `app.conf.beat_schedule`. They ship but nothing fires them. Top: `debug_task`, `rag_retrieval_canary`, `assign_open_findings_to_agents`, `check_blocked_research_for_unblock`, `discover_and_import_audits`, `maintain_knowledge_freshness`, `post_ops_digest`, `process_document_async`…. Full list in the appendix.
+- **Orphan tasks** — 11 tasks have no caller via `.delay(...)` / `.apply_async(...)` AND aren't in `app.conf.beat_schedule`. They ship but nothing fires them. Top: `debug_task`, `rag_retrieval_canary`, `assign_open_findings_to_agents`, `check_blocked_research_for_unblock`, `discover_and_import_audits`, `maintain_knowledge_freshness`, `post_ops_digest`, `propagate_new_policies`…. Full list in the appendix.
 - Tasks with no docstring: 220 of 398 (55%). The audit relies on the function docstring to describe what each task does.
 - Queue distribution (top 5): `<default>` (381), `default` (10), `long_running` (5), `code_jobs` (1), `pa` (1). `<default>` carries 381 of 398 tasks.
 - Cross-reference: the 7 broken beat refs (BEAT_AUDIT.md finding 3) point at tasks that DO exist in the registry once their modules are imported — found in this audit at: `ai_core.tasks.clean_stale_data`, `ai_core.tasks.collect_real_opportunities`, `ai_core.tasks.warm_up_spider_network`, `intelligence.tasks.cleanup_old_opportunities`, `intelligence.tasks.scan_spider_opportunities`, `ml.cleanup_old_model_files`, `sports.cleanup_old_predictions`. The issue is autodiscover at worker startup, not missing tasks.
 
-## Orphan tasks (14)
+## Orphan tasks (11)
 
 Tasks with no static caller and no beat-schedule entry. Worth a manual review — some may be invoked dynamically (reflection, name-based dispatch) and a few may be intentionally kept warm for future use, but most are likely dead code or got disconnected during a refactor.
 
@@ -34,19 +34,16 @@ Tasks with no static caller and no beat-schedule entry. Worth a manual review �
 | `discover_and_import_audits` | `core.tasks` | `core/tasks.py:10109` | `<default>` | Session 820: Automatically discover and import new audit files. |
 | `maintain_knowledge_freshness` | `core.tasks` | `core/tasks.py:7347` | `<default>` | Session 767: Maintain knowledge source freshness. |
 | `post_ops_digest` | `core.tasks` | `core/tasks.py:12431` | `<default>` | _(no docstring)_ |
-| `process_document_async` | `core.tasks` | `core/tasks.py:3940` | `<default>` | _(no docstring)_ |
 | `propagate_new_policies` | `core.tasks` | `core/tasks.py:2953` | `<default>` | Session 363: Propagate newly promoted policies to relevant agents. |
 | `run_ops_autopilot` | `core.tasks` | `core/tasks.py:12411` | `<default>` | Every 10 min: evaluate ops policies and take allowed automatic actions. |
 | `send_weekly_kpi_summary` | `core.tasks` | `core/tasks.py:6078` | `<default>` | _(no docstring)_ |
-| `start_resolve_render` | `core.tasks` | `core/tasks.py:5045` | `<default>` | _(no docstring)_ |
 | `process_pending_action_plans` | `intelligence.tasks` | `intelligence/tasks.py:68` | `<default>` | Session 799: Process all pending action plans. |
-| `trigger_content_from_shift` | `narrative_drift` | `core/tasks.py:4710` | `<default>` | _(no docstring)_ |
 
 ## Tasks by module (21 modules)
 
 | Module | Tasks | Scheduled | Wired | Orphans |
 |---|---:|---:|---:|---:|
-| `core.tasks` | 332 | 62 | 322 | 10 |
+| `core.tasks` | 332 | 62 | 324 | 8 |
 | `intelligence.tasks` | 14 | 4 | 13 | 1 |
 | `sports` | 8 | 1 | 8 | 0 |
 | `core.tasks_agents` | 6 | 0 | 6 | 0 |
@@ -54,7 +51,7 @@ Tasks with no static caller and no beat-schedule entry. Worth a manual review �
 | `ai_core.tasks` | 5 | 3 | 5 | 0 |
 | `ml` | 5 | 1 | 5 | 0 |
 | `roi_metrics` | 4 | 0 | 4 | 0 |
-| `narrative_drift` | 3 | 0 | 2 | 1 |
+| `narrative_drift` | 3 | 0 | 3 | 0 |
 | `content_studio` | 2 | 0 | 2 | 0 |
 | `core` | 2 | 1 | 1 | 1 |
 | `learning_loop` | 2 | 0 | 2 | 0 |
@@ -303,7 +300,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `process_content_ideas` | `core.tasks` | 7292 | `<default>` | · | 4 | · | _(no docstring)_ |
 | `process_core_spider_data` | `core.tasks` | 1159 | `<default>` | ✓ | 6 | · | _(no docstring)_ |
 | `process_distribution` | `core.tasks` | 2005 | `<default>` | · | 3 | · | _(no docstring)_ |
-| `process_document_async` | `core.tasks` | 3940 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `process_document_async` | `core.tasks` | 3940 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `process_event_bus_analytics_queue` | `core.tasks` | 4525 | `<default>` | · | 1 | · | Process events from the analytics worker queue. |
 | `process_event_bus_scoring_queue` | `core.tasks` | 4457 | `<default>` | · | 1 | · | Process events from the scoring worker queue. |
 | `process_event_bus_validation_queue` | `core.tasks` | 4491 | `<default>` | · | 1 | · | Process events from the validation worker queue. |
@@ -432,7 +429,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `settle_user_bets` | `sports` | 106 | `<default>` | · | 3 | · | Settle user bets for games that have completed |
 | `snapshot_odds_for_line_movement` | `core.tasks` | 5658 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `spider_data_retention` | `core.tasks` | 4010 | `long_running` | ✓ | 2 | · | Apr 2026: Prevent SpiderData table from filling the database. |
-| `start_resolve_render` | `core.tasks` | 5045 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `start_resolve_render` | `core.tasks` | 5045 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `submit_follow_up` | `intelligence.tasks` | 1386 | `<default>` | · | 2 | · | Submit follow-up communication to clients |
 | `submit_proposal_automatically` | `intelligence.tasks` | 1211 | `<default>` | · | 2 | · | Automatically submit high-confidence proposals to platforms |
 | `summarize_conversation_task` | `core.tasks` | 12393 | `<default>` | · | 4 | · | _(no docstring)_ |
@@ -448,7 +445,7 @@ All tasks, alphabetical by short name. `Sched.` = beat schedule. `Callers` = fil
 | `track_prediction_outcomes` | `learning_loop` | 4363 | `<default>` | · | 3 | · | _(no docstring)_ |
 | `train_ml_scoring_model` | `core.tasks` | 1935 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `transcribe_video_task` | `core.tasks` | 3952 | `long_running` | · | 2 | · | _(no docstring)_ |
-| `trigger_content_from_shift` | `narrative_drift` | 4710 | `<default>` | · | 0 | ⚠ | _(no docstring)_ |
+| `trigger_content_from_shift` | `narrative_drift` | 4710 | `<default>` | · | 1 | · | _(no docstring)_ |
 | `trigger_project_research` | `core.tasks` | 2949 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `trigger_signal_driven_conversation` | `` | 10936 | `<default>` | · | 2 | · | _(no docstring)_ |
 | `trigger_spider_conversations` | `core.tasks` | 2945 | `<default>` | · | 3 | · | _(no docstring)_ |

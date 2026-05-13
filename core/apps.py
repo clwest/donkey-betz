@@ -94,6 +94,15 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Push notification signals not available
 
+        # Session 1115 batch-7: Connect Document + NarrativeShift signals so
+        # process_document_async and trigger_content_from_shift fire when
+        # their source rows are saved.
+        try:
+            from core.signals import connect_document_processing_signals
+            connect_document_processing_signals()
+        except ImportError:
+            pass  # Document processing signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled

@@ -40,6 +40,12 @@ from .mythology_alert_signals import (
     connect_mythology_alert_signals,
 )
 
+from .document_processing_signals import (
+    on_document_created,
+    on_narrative_shift_created,
+    connect_document_processing_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -65,4 +71,8 @@ __all__ = [
     # Mythology alert → HAI bridge (Session 1095 Tier 1b)
     'bridge_mythology_alert_to_hai',
     'connect_mythology_alert_signals',
+    # Document + NarrativeShift processing signals (Session 1115 batch-7)
+    'on_document_created',
+    'on_narrative_shift_created',
+    'connect_document_processing_signals',
 ]

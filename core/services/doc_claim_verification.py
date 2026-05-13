@@ -2600,29 +2600,27 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         orphans += 1
 
-    # Session 1115 batch-6 baseline: dead-stub cleanup + 1 wiring. Removed
-    # @shared_task from 4 intelligence-engine stubs that had zero callers
-    # anywhere (`get_live_opportunities`, `get_live_predictions`,
-    # `trigger_market_scan`, `start_intelligence_engine` — kept as plain
-    # functions). Scheduled `scan_income_spider_orchestrator` hourly (its
-    # docstring already said "Should run every hour").
+    # Session 1115 batch-7 baseline: wired the 3 remaining "forgotten" tasks
+    # to their real triggers:
+    #   - process_document_async → Document.post_save signal (created=True,
+    #     status=pending, file_path set)
+    #   - trigger_content_from_shift → NarrativeShift.post_save signal
+    #     (via current_app.send_task to bypass function-vs-task-name mismatch)
+    #   - start_resolve_render → same-name `manage.py start_resolve_render`
     #
-    # Cumulative across batches 1-6: 272 → 14 (95% reduction).
-    # Registry shrank 402 → 398 (the 4 dead stubs no longer @shared_task).
+    # Cumulative across batches 1-7: 272 → 11 (96% reduction).
     #
-    # Remaining 14 split into:
-    #   - ~5 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
+    # Remaining 11 are exclusively constraint-deferred or intentional:
+    #   - 5 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
     #     run_ops_autopilot, post_ops_digest, maintain_knowledge_freshness)
-    #   - ~2 agent-dispatch chain (check_blocked_research_for_unblock,
+    #   - 2 agent-dispatch chain (check_blocked_research_for_unblock,
     #     process_pending_action_plans)
-    #   - ~3 Session 1031 hard-blocked (discover_and_import_audits,
+    #   - 3 Session 1031 hard-blocked (discover_and_import_audits,
     #     assign_open_findings_to_agents, [+ execute_remediation_tasks])
-    #   - ~3 needs signal/webhook wire-up (process_document_async,
-    #     trigger_content_from_shift, start_resolve_render)
     #   - 1 deprecated (propagate_new_policies)
     #   - 1 intentionally orphan (debug_task)
-    # See AUDIT_FINDINGS.md #12.
-    baseline = 14
+    # No "forgotten" wirings remain. See AUDIT_FINDINGS.md #12.
+    baseline = 11
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'

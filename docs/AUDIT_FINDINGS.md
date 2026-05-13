@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 14 orphan Celery tasks** — batches 1-6: 4x detector upgrades, 32 tasks wired, intra-file bug fixed, 4 dead stubs un-tasked | medium-high | partial · 95% reduction; LLM-cost + agent-dispatch chains + 3 wire-ups remain | per-task wire-up |
+| 12 | **272 → 11 orphan Celery tasks** — batches 1-7: 4x detector upgrades, 32 tasks wired, dead stubs un-tasked, 3 signal/mgmt-cmd wirings completed | medium-high | partial · 96% reduction; remaining 11 are all constraint-deferred (LLM-cost, agent-dispatch, Session 1031, deprecated, intentional) | none — wait for credits or green-light |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,60 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 14 orphan Celery tasks — batches 1-6 closed
+## 12. 272 → 11 orphan Celery tasks — batches 1-7 closed
+
+### Batch 7 outcome (Session 1115) — signal/CLI wire-ups for the last 3
+
+Closed all three remaining "truly forgotten" tasks by wiring them to
+their real triggers:
+
+**1) `process_document_async`** → wired to `Document.post_save` signal.
+New handler in `core/signals/document_processing_signals.py`. Fires
+when `created=True` AND `file_path` is set AND `status in (pending, '')`.
+Uses `transaction.on_commit` so dispatch waits for the row to commit
+(mirrors existing trigger_signals pattern).
+
+**2) `trigger_content_from_shift`** → wired to `NarrativeShift.post_save`
+signal. The task's registered name is `narrative_drift.trigger_content_from_shift`
+but the Python function is `trigger_content_from_narrative_shift` —
+a function-name-vs-task-name mismatch. The signal dispatches via
+`current_app.send_task('narrative_drift.trigger_content_from_shift', ...)`
+which:
+- Uses the canonical task name (won't break if function gets renamed)
+- Gets picked up by the audit's `send_task('...')` string-literal scan
+- Avoids the import-cycle risk of `from core.tasks import ...` in a signal
+
+The NarrativeShift model lives in `core/models_narrative_drift.py` which
+isn't auto-imported during Django startup (the `core/models/` package
+directory shadows `core/models.py`'s catch-all `from .models_narrative_drift import *`).
+Solution: explicit class import in `connect_document_processing_signals()`
++ `post_save.connect()` with the imported class as sender, instead of
+the `@receiver(sender='core.NarrativeShift')` lazy-string form.
+
+**3) `start_resolve_render`** → wrapped in same-name management command
+`core/management/commands/start_resolve_render.py`. Operators can now
+dispatch a Resolve render via:
+
+    python manage.py start_resolve_render --job-id <uuid> --video-ids id1,id2 \
+        --template default --color-grade neutral
+
+The same-name CLI detector picks this up as a real caller automatically.
+
+**Orphan count drop in batch 7:** 14 → **11** (3 wirings).
+Cumulative across batches 1-7: **272 → 11 (96% reduction).**
+No "forgotten" wirings remain.
+
+### Remaining 11 — all constraint-deferred or intentional
+
+| Category | Count | Examples |
+|---|---:|---|
+| **LLM-cost scheduled** (deferred until OpenAI credits) | 5 | `rag_retrieval_canary` (embeddings), `send_weekly_kpi_summary` (Discord), `run_ops_autopilot` (takes actions), `post_ops_digest`, `maintain_knowledge_freshness` |
+| **Agent-dispatch chain** (deferred for green-light) | 2 | `check_blocked_research_for_unblock` (→ retry_blocked_research), `process_pending_action_plans` (→ execute_action_plan) |
+| **Session 1031 hard-blocked** (return immediately) | 3 | `discover_and_import_audits`, `assign_open_findings_to_agents`, + 1 |
+| **Deprecated** | 1 | `propagate_new_policies` — Session 659 |
+| **Intentionally orphan** | 1 | `debug_task` |
+
+Verifier baseline locked at **11**. Future regressions surface immediately.
 
 ### Batch 6 outcome (Session 1115) — dead stubs + 1 wiring
 
