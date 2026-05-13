@@ -2831,13 +2831,11 @@ def _learning_bridges_inherit_base() -> ClaimResult:
             if 'LearningBridge' not in base_text:
                 orphans.append(f'{path.name}::{name}')
 
-    # Session 1115 batch-11: 5 of 9 bridges migrated. Added
-    # ApplicationOutcomeLearningLoop + SpiderDataLearningLoop to the
-    # ABC-inheriting set (joining RevenueAttribution + Collaboration +
-    # AgentExecution from prior batches). 4 remain: AdvisorFeedback +
-    # AutoConsultation (same file), PersonalizationFeedbackLoop,
+    # Session 1115 batch-12: 7 of 9 bridges migrated. Added
+    # AdvisorFeedbackLearningLoop + AutoConsultationLearningLoop to the
+    # ABC-inheriting set. 2 remain: PersonalizationFeedbackLoop,
     # SportsBettingLearningBridge.
-    baseline = 4
+    baseline = 2
     if not orphans:
         return ClaimResult.build(
             expected="all concrete bridges inherit from LearningBridge ABC",
