@@ -2600,27 +2600,24 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         orphans += 1
 
-    # Session 1115 batch-7 baseline: wired the 3 remaining "forgotten" tasks
-    # to their real triggers:
-    #   - process_document_async → Document.post_save signal (created=True,
-    #     status=pending, file_path set)
-    #   - trigger_content_from_shift → NarrativeShift.post_save signal
-    #     (via current_app.send_task to bypass function-vs-task-name mismatch)
-    #   - start_resolve_render → same-name `manage.py start_resolve_render`
+    # Session 1115 batch-8 baseline: deleted the deprecated
+    # `propagate_new_policies` (Session 659 supersession — PolicyContextService
+    # handles policy injection automatically; the task returned a deprecation
+    # notice and had zero callers). Registry shrank 398 → 397.
     #
-    # Cumulative across batches 1-7: 272 → 11 (96% reduction).
+    # Cumulative across batches 1-8: 272 → 10 (96.3% reduction).
     #
-    # Remaining 11 are exclusively constraint-deferred or intentional:
+    # Remaining 10 are exclusively constraint-deferred or intentional:
     #   - 5 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
     #     run_ops_autopilot, post_ops_digest, maintain_knowledge_freshness)
     #   - 2 agent-dispatch chain (check_blocked_research_for_unblock,
     #     process_pending_action_plans)
     #   - 3 Session 1031 hard-blocked (discover_and_import_audits,
     #     assign_open_findings_to_agents, [+ execute_remediation_tasks])
-    #   - 1 deprecated (propagate_new_policies)
+    #   - 0 deprecated (propagate_new_policies removed in batch 8)
     #   - 1 intentionally orphan (debug_task)
-    # No "forgotten" wirings remain. See AUDIT_FINDINGS.md #12.
-    baseline = 11
+    # See AUDIT_FINDINGS.md #12.
+    baseline = 10
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'
@@ -2834,9 +2831,12 @@ def _learning_bridges_inherit_base() -> ClaimResult:
             if 'LearningBridge' not in base_text:
                 orphans.append(f'{path.name}::{name}')
 
-    # Session 1115 baseline: 9 orphans (every concrete bridge). When the
-    # multi-PR refactor lands, baseline drops to 0 and severity = medium.
-    baseline = 9
+    # Session 1115 batch-9: refactor started. RevenueAttributionLearningLoop
+    # now inherits from LearningBridge ABC (first concrete consumer). 8
+    # remaining bridges to migrate. When all inherit, baseline drops to 0
+    # and severity should be bumped from `low` to `medium` to make the
+    # guard teeth-on.
+    baseline = 8
     if not orphans:
         return ClaimResult.build(
             expected="all concrete bridges inherit from LearningBridge ABC",
