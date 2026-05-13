@@ -4,21 +4,27 @@ Learns from spider-collected data to improve agent intelligence and opportunity 
 
 Session 400: Fixed to use core.models_unified_system.SpiderData (active model with 6500+ records)
 instead of persistence.models.SpiderData (empty model - never populated)
+
+Session 1115 batch-11: refactored to inherit from `LearningBridge` ABC.
+Public `process_spider_data` kept as a back-compat shim so the existing
+`on_spider_data_collected` signal handler keeps working unchanged.
 """
 
 import logging
+from typing import Any, Dict, List
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import List
 
 # Session 400: Use the CORRECT SpiderData model (the one that actually has data!)
 # Also use Agent from core.models_unified_system (has 31 agents) not UnifiedAgentTemplate (28 agents)
+from core.learning_bridges.base import LearningBridge
 from core.models_unified_system import SpiderData, UserAgentLearning, Agent
 
 logger = logging.getLogger(__name__)
 
 
-class SpiderDataLearningLoop:
+class SpiderDataLearningLoop(LearningBridge):
     """
     Learns from spider data collection to improve agent intelligence
 
@@ -28,32 +34,104 @@ class SpiderDataLearningLoop:
     - Agent-specific data preferences
     - Opportunity matching accuracy
     - Source reliability over time
+
+    ABC contract mapping:
+      - `process_event(spider_data)` wraps the original entry; multi-agent
+        fan-out happens inside `_update_learning` (one entry per agent).
+      - `_extract_patterns(spider_data)` computes target agents + a
+        compact metrics summary.
+      - `_update_learning(patterns)` calls `_create_agent_learning_entry`
+        once per target agent.
+      - `_generate_insights(patterns)` returns human-readable strings.
     """
 
-    def process_spider_data(self, spider_data: SpiderData):
-        """Process newly collected spider data for learning
+    def __init__(self):
+        super().__init__(bridge_name='spider_data')
 
-        Session 400: Updated to use core.models_unified_system.SpiderData which doesn't
-        have routed_to_agents field. Instead, we determine agents based on data_type/category.
-        """
-        # Determine which agents should learn from this data based on category
+    # ------------------------------------------------------------------
+    # ABC contract
+    # ------------------------------------------------------------------
+    def process_event(self, event_data: Any) -> Dict:
+        """Process a newly-saved SpiderData row end-to-end."""
+        spider_data: SpiderData = event_data
         target_agents = self._get_target_agents_for_data(spider_data)
-
         if not target_agents:
-            logger.debug(f"Spider data {spider_data.id} has no target agents for category '{spider_data.data_type}'")
-            return
+            logger.debug(
+                f"Spider data {spider_data.id} has no target agents for "
+                f"category '{spider_data.data_type}'"
+            )
+            return {'status': 'skipped', 'reason': 'no_target_agents'}
 
-        logger.info(f"🕷️ Learning from spider data: {spider_data.spider_name} -> {len(target_agents)} agents")
-
+        self.log_event(
+            f"Learning from spider data: {spider_data.spider_name} "
+            f"-> {len(target_agents)} agents"
+        )
         try:
-            # Process for each agent that should learn from this data
-            for agent_name in target_agents:
-                self._create_agent_learning_entry(spider_data, agent_name)
-
-            logger.info(f"✅ Spider data learning complete: {len(target_agents)} learning entries created")
-
+            patterns = self._extract_patterns(spider_data)
+            self._update_learning(patterns)
+            insights = self._generate_insights(patterns)
+            self.log_success(
+                f"Spider data learning complete: "
+                f"{len(patterns['target_agents'])} learning entries"
+            )
+            return {
+                'status': 'ok',
+                'spider_data_id': str(spider_data.id),
+                'spider_name': spider_data.spider_name,
+                'target_agents': patterns['target_agents'],
+                'insights': insights,
+            }
         except Exception as e:
-            logger.error(f"Error in spider data learning: {e}", exc_info=True)
+            self.log_error(f"Error in spider data learning: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _extract_patterns(self, event_data: Any) -> Dict:
+        """Extract target agents + summary metrics."""
+        spider_data: SpiderData = event_data
+        target_agents = self._get_target_agents_for_data(spider_data)
+        raw_data = spider_data.raw_data or {}
+        items = raw_data.get('items', [])
+        return {
+            'target_agents': target_agents,
+            'spider_name': spider_data.spider_name,
+            'data_type': spider_data.data_type,
+            'item_count': len(items),
+            'relevance_score': float(spider_data.relevance_score or 0),
+            'completeness': self._calculate_completeness(spider_data),
+            'freshness': self._calculate_freshness(spider_data),
+            'opportunity_potential': self._estimate_opportunity_potential(spider_data),
+            # Thread the SpiderData instance through for `_update_learning`.
+            '_spider_data': spider_data,
+        }
+
+    def _update_learning(self, patterns: Dict) -> None:
+        """Create one UserAgentLearning entry per target agent."""
+        spider_data: SpiderData = patterns['_spider_data']
+        for agent_name in patterns['target_agents']:
+            self._create_agent_learning_entry(spider_data, agent_name)
+
+    def _generate_insights(self, patterns: Dict) -> List[str]:
+        """Derive human-readable insight strings."""
+        insights: List[str] = []
+        insights.append(
+            f"{patterns['spider_name']} → {len(patterns['target_agents'])} agents "
+            f"(data_type={patterns['data_type']})"
+        )
+        if patterns.get('item_count'):
+            insights.append(f"items: {patterns['item_count']}")
+        if patterns.get('relevance_score'):
+            insights.append(f"relevance: {patterns['relevance_score']:.1f}")
+        insights.append(f"potential: {patterns['opportunity_potential']}")
+        insights.append(f"completeness: {patterns['completeness']:.2f}")
+        insights.append(f"freshness: {patterns['freshness']:.2f}")
+        return insights
+
+    # ------------------------------------------------------------------
+    # Back-compat alias used by `on_spider_data_collected` signal handler
+    # ------------------------------------------------------------------
+    def process_spider_data(self, spider_data: SpiderData) -> Dict:
+        """Back-compat shim — delegates to `process_event`."""
+        return self.process_event(spider_data)
 
     def _get_target_agents_for_data(self, spider_data: SpiderData) -> List[str]:
         """Determine which agents should learn from this spider data based on category
