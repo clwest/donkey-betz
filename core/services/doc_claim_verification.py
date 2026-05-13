@@ -2831,12 +2831,12 @@ def _learning_bridges_inherit_base() -> ClaimResult:
             if 'LearningBridge' not in base_text:
                 orphans.append(f'{path.name}::{name}')
 
-    # Session 1115 batch-9: refactor started. RevenueAttributionLearningLoop
-    # now inherits from LearningBridge ABC (first concrete consumer). 8
-    # remaining bridges to migrate. When all inherit, baseline drops to 0
-    # and severity should be bumped from `low` to `medium` to make the
-    # guard teeth-on.
-    baseline = 8
+    # Session 1115 batch-10: 3 of 9 bridges migrated this round —
+    # CollaborationLearningLoop + AgentExecutionLearningLoop joined
+    # RevenueAttributionLearningLoop from batch-9. 6 remaining bridges
+    # to migrate. When all inherit, baseline drops to 0 and severity
+    # should be bumped from `low` to `medium`.
+    baseline = 6
     if not orphans:
         return ClaimResult.build(
             expected="all concrete bridges inherit from LearningBridge ABC",

@@ -1,100 +1,156 @@
 """
 Collaboration Learning Bridge
 Learns from multi-agent collaboration outcomes to optimize team formation
+
+Session 1115 batch-10: refactored to inherit from the `LearningBridge` ABC
+(second concrete migration after RevenueAttributionLearningLoop). Public
+`process_collaboration` kept as a back-compat shim so the existing
+`on_collaboration_completed` signal handler keeps working unchanged.
 """
 
 import logging
+from typing import Any, Dict, List
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import Dict
 
+from core.learning_bridges.base import LearningBridge
 from core.models_unified_system import Collaboration, UserAgentLearning
 
 logger = logging.getLogger(__name__)
 
 
-class CollaborationLearningLoop:
+class CollaborationLearningLoop(LearningBridge):
     """
     Learns from multi-agent collaboration outcomes
-    Optimizes which agents work well together
+    Optimizes which agents work well together.
+
+    ABC contract mapping:
+      - `process_event(collab)` wraps the original entry (only processes
+        when `status='completed'`).
+      - `_extract_patterns(collab)` → original `_extract_collaboration_patterns`
+        plus the `was_successful` boolean and `_collab` instance threaded
+        through for the update step.
+      - `_update_learning(patterns)` → calls
+        `_update_team_formation_learning` + `_update_agent_collaboration_metrics`.
+      - `_generate_insights(patterns)` → human-readable strings about
+        the team, duration, and success outcome.
     """
 
-    def process_collaboration(self, collaboration: Collaboration):
-        """Process collaboration outcome"""
+    def __init__(self):
+        super().__init__(bridge_name='collaboration')
 
-        # Only learn from completed collaborations
+    # ------------------------------------------------------------------
+    # ABC contract
+    # ------------------------------------------------------------------
+    def process_event(self, event_data: Any) -> Dict:
+        """Process a completed Collaboration end-to-end."""
+        collaboration: Collaboration = event_data
         if collaboration.status != 'completed':
-            return
+            return {'status': 'skipped', 'reason': f'status={collaboration.status}'}
 
-        logger.info(f"🤝 Processing collaboration: {collaboration.id}")
-
+        self.log_event(f"Processing collaboration: {collaboration.id}")
         try:
-            # Determine if collaboration was successful
-            was_successful = self._evaluate_success(collaboration)
-
-            # Extract collaboration patterns
-            patterns = self._extract_collaboration_patterns(collaboration)
-
-            # Update team formation learning
-            self._update_team_formation_learning(collaboration, was_successful, patterns)
-
-            # Update individual agent collaboration skills
-            self._update_agent_collaboration_metrics(collaboration, was_successful, patterns)
-
-            logger.info(f"✅ Collaboration learning complete")
-
+            patterns = self._extract_patterns(collaboration)
+            self._update_learning(patterns)
+            insights = self._generate_insights(patterns)
+            self.log_success(f"Collaboration learning complete for {collaboration.id}")
+            return {
+                'status': 'ok',
+                'collaboration_id': str(collaboration.id),
+                'was_successful': patterns.get('was_successful', False),
+                'patterns': {k: v for k, v in patterns.items() if not k.startswith('_')},
+                'insights': insights,
+            }
         except Exception as e:
-            logger.error(f"Error in collaboration learning: {e}", exc_info=True)
+            self.log_error(f"Error in collaboration learning: {e}")
+            return {'status': 'error', 'error': str(e)}
 
-    def _evaluate_success(self, collaboration: Collaboration) -> bool:
-        """Evaluate if collaboration was successful"""
-        # Check outcome field if it exists
-        if hasattr(collaboration, 'outcome'):
-            return collaboration.outcome in ['success', 'completed', 'achieved']
-
-        # Otherwise, check if there's a result and no errors
-        if hasattr(collaboration, 'result') and collaboration.result:
-            return True
-
-        return False
-
-    def _extract_collaboration_patterns(self, collaboration: Collaboration) -> Dict:
-        """Extract patterns from collaboration"""
-        patterns = {
+    def _extract_patterns(self, event_data: Any) -> Dict:
+        """Extract collaboration patterns + success classification."""
+        collaboration: Collaboration = event_data
+        patterns: Dict[str, Any] = {
             'task_type': collaboration.task if hasattr(collaboration, 'task') else 'unknown',
             'num_agents': 0,
             'agent_names': [],
-            'coordinator_agent': collaboration.coordinator_agent.name if hasattr(collaboration, 'coordinator_agent') and collaboration.coordinator_agent else None,
+            'coordinator_agent': (
+                collaboration.coordinator_agent.name
+                if hasattr(collaboration, 'coordinator_agent') and collaboration.coordinator_agent
+                else None
+            ),
             'duration': None,
-            'result_quality': 0
+            'result_quality': 0,
+            'was_successful': self._evaluate_success(collaboration),
+            # Thread the Collaboration instance through so `_update_learning`
+            # can use it without breaking the 1-argument ABC contract.
+            '_collab': collaboration,
         }
 
-        # Extract participating agents
         if hasattr(collaboration, 'agents'):
             agents = collaboration.agents.all()
             patterns['num_agents'] = agents.count()
             patterns['agent_names'] = [agent.name for agent in agents]
 
-        # Calculate duration
-        if hasattr(collaboration, 'completed_at') and collaboration.completed_at and hasattr(collaboration, 'created_at'):
+        if (
+            hasattr(collaboration, 'completed_at') and collaboration.completed_at
+            and hasattr(collaboration, 'created_at')
+        ):
             duration = collaboration.completed_at - collaboration.created_at
             patterns['duration'] = duration.total_seconds()
 
-        # Extract result quality if available
         if hasattr(collaboration, 'result') and isinstance(collaboration.result, dict):
             patterns['result_quality'] = collaboration.result.get('quality_score', 0)
 
         return patterns
 
+    def _update_learning(self, patterns: Dict) -> None:
+        """Update team-formation + per-agent collaboration learning."""
+        collaboration: Collaboration = patterns['_collab']
+        was_successful: bool = patterns['was_successful']
+        self._update_team_formation_learning(collaboration, was_successful, patterns)
+        self._update_agent_collaboration_metrics(collaboration, was_successful, patterns)
+
+    def _generate_insights(self, patterns: Dict) -> List[str]:
+        """Derive human-readable insight strings."""
+        insights: List[str] = []
+        was_successful = patterns.get('was_successful', False)
+        verb = 'succeeded' if was_successful else 'failed'
+        team_size = patterns.get('num_agents', 0)
+        names = patterns.get('agent_names', [])
+        task = patterns.get('task_type', 'unknown')
+
+        insights.append(
+            f"team of {team_size} {verb} on task '{task}'"
+        )
+        duration = patterns.get('duration')
+        if duration is not None:
+            insights.append(f"duration: {duration:.1f}s")
+        coord = patterns.get('coordinator_agent')
+        if coord:
+            insights.append(f"coordinator: {coord}")
+        if names:
+            insights.append(f"members: {sorted(names)}")
+        return insights
+
+    # ------------------------------------------------------------------
+    # Bridge-specific helpers (unchanged from pre-refactor implementation)
+    # ------------------------------------------------------------------
+    def _evaluate_success(self, collaboration: Collaboration) -> bool:
+        """Evaluate if collaboration was successful."""
+        if hasattr(collaboration, 'outcome'):
+            return collaboration.outcome in ['success', 'completed', 'achieved']
+        if hasattr(collaboration, 'result') and collaboration.result:
+            return True
+        return False
+
     def _update_team_formation_learning(self, collaboration: Collaboration,
                                        was_successful: bool, patterns: Dict):
-        """Update learning about which agent combinations work well"""
+        """Update learning about which agent combinations work well."""
 
         user = collaboration.user if hasattr(collaboration, 'user') else None
         if not user:
             return
 
-        # Create a team signature (sorted agent names for consistency)
         team_signature = '_'.join(sorted(patterns['agent_names']))
 
         learning, _ = UserAgentLearning.objects.get_or_create(
@@ -108,11 +164,11 @@ class CollaborationLearningLoop:
                     'failures': 0,
                     'team_members': patterns['agent_names'],
                     'avg_duration': 0,
-                    'task_types': []
+                    'task_types': [],
                 },
                 'confidence_score': 0.5,
-                'learning_source': 'performance_tracking'
-            }
+                'learning_source': 'performance_tracking',
+            },
         )
 
         content = learning.learning_content if isinstance(learning.learning_content, dict) else {}
@@ -125,20 +181,17 @@ class CollaborationLearningLoop:
             content['failures'] = content.get('failures', 0) + 1
             learning.record_failure()
 
-        # Update average duration
         if patterns['duration']:
             current_avg = content.get('avg_duration', 0)
             total = content['collaborations']
             new_avg = ((current_avg * (total - 1)) + patterns['duration']) / total
             content['avg_duration'] = new_avg
 
-        # Track task types this team handles
         if 'task_types' not in content:
             content['task_types'] = []
         if patterns['task_type'] not in content['task_types']:
             content['task_types'].append(patterns['task_type'])
 
-        # Calculate success rate
         if content['collaborations'] > 0:
             content['success_rate'] = content['successes'] / content['collaborations']
 
@@ -149,13 +202,12 @@ class CollaborationLearningLoop:
 
     def _update_agent_collaboration_metrics(self, collaboration: Collaboration,
                                            was_successful: bool, patterns: Dict):
-        """Update individual agent's collaboration performance metrics"""
+        """Update individual agent's collaboration performance metrics."""
 
         user = collaboration.user if hasattr(collaboration, 'user') else None
         if not user:
             return
 
-        # Update each participating agent's collaboration metrics
         for agent_name in patterns['agent_names']:
             learning, _ = UserAgentLearning.objects.get_or_create(
                 user=user,
@@ -166,11 +218,11 @@ class CollaborationLearningLoop:
                         'total_collaborations': 0,
                         'successful_collaborations': 0,
                         'team_sizes': [],
-                        'common_partners': {}
+                        'common_partners': {},
                     },
                     'confidence_score': 0.5,
-                    'learning_source': 'performance_tracking'
-                }
+                    'learning_source': 'performance_tracking',
+                },
             )
 
             content = learning.learning_content if isinstance(learning.learning_content, dict) else {}
@@ -182,12 +234,10 @@ class CollaborationLearningLoop:
             else:
                 learning.record_failure()
 
-            # Track team sizes this agent works well in
             if 'team_sizes' not in content:
                 content['team_sizes'] = []
             content['team_sizes'].append(patterns['num_agents'])
 
-            # Track common collaboration partners
             if 'common_partners' not in content:
                 content['common_partners'] = {}
 
@@ -200,7 +250,6 @@ class CollaborationLearningLoop:
                     if was_successful:
                         content['common_partners'][partner_name]['successes'] += 1
 
-            # Calculate collaboration success rate
             if content['total_collaborations'] > 0:
                 content['collaboration_success_rate'] = (
                     content['successful_collaborations'] / content['total_collaborations']
@@ -209,7 +258,16 @@ class CollaborationLearningLoop:
             learning.learning_content = content
             learning.save()
 
-        logger.info(f"✅ Updated agent collaboration metrics for {len(patterns['agent_names'])} agents")
+        logger.info(
+            f"✅ Updated agent collaboration metrics for {len(patterns['agent_names'])} agents"
+        )
+
+    # ------------------------------------------------------------------
+    # Back-compat alias used by `on_collaboration_completed` signal handler
+    # ------------------------------------------------------------------
+    def process_collaboration(self, collaboration: Collaboration) -> Dict:
+        """Back-compat shim — delegates to `process_event`."""
+        return self.process_event(collaboration)
 
 
 # Signal integration
