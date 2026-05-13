@@ -6,13 +6,23 @@ Session 461: Extended to capture preferences from chat conversations, not just
 opportunity interactions. Now learns from:
 - Opportunity interactions (view, click, apply, etc.)
 - Chat conversations (extracting preferences like "remote work", "AI jobs", etc.)
+
+Session 1115 batch-13: refactored to inherit from `LearningBridge` ABC.
+This bridge handles TWO event types — ConversationMemory rows and
+OpportunityInteraction rows — so `process_event` dispatches by inspecting
+the input. Public `process_conversation` and `process_interaction` are
+kept as back-compat shims so the existing signal handlers (and any
+direct callers) keep working unchanged.
 """
 
 import logging
 import re
+from typing import Any, Dict, List
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import Dict, List
+
+from core.learning_bridges.base import LearningBridge
 
 logger = logging.getLogger(__name__)
 
@@ -56,47 +66,170 @@ PREFERENCE_PATTERNS = {
 }
 
 
-class PersonalizationFeedbackLoop:
+class PersonalizationFeedbackLoop(LearningBridge):
     """
     Learns from user interactions to personalize content and opportunities.
 
     Session 461: Now learns from both:
     1. OpportunityInteraction signals (view, click, apply, etc.)
     2. ConversationMemory signals (chat messages that reveal preferences)
+
+    ABC contract mapping:
+      - `process_event(event_data)` dispatches by type:
+        ConversationMemory → process_conversation flow,
+        OpportunityInteraction → process_interaction flow.
+      - `_extract_patterns(event_data)` returns either chat-preference
+        patterns or interaction patterns depending on event type, with
+        `_kind` discriminator and `_event` instance threaded through.
+      - `_update_learning(patterns)` dispatches the update path by
+        `_kind`.
+      - `_generate_insights(patterns)` derives human-readable strings
+        for either event type.
     """
 
-    def process_conversation(self, conversation_memory):
-        """
-        Process a chat conversation to extract user preferences.
+    def __init__(self):
+        super().__init__(bridge_name='personalization_feedback')
 
-        Session 461: New method to learn from chat interactions.
-        Extracts preferences like "I prefer remote work" or "looking for AI jobs"
-        from the user's message text.
+    # ------------------------------------------------------------------
+    # ABC contract — dispatches on event type
+    # ------------------------------------------------------------------
+    def process_event(self, event_data: Any) -> Dict:
+        """Dispatch based on event type (ConversationMemory vs OpportunityInteraction).
+
+        ConversationMemory is detected by the presence of a `message`
+        attribute; OpportunityInteraction by `interaction_type`.
         """
+        if hasattr(event_data, 'message') and hasattr(event_data, 'user'):
+            return self._process_conversation_event(event_data)
+        if hasattr(event_data, 'interaction_type') and hasattr(event_data, 'opportunity_id'):
+            return self._process_interaction_event(event_data)
+        return {'status': 'skipped', 'reason': 'unknown_event_type'}
+
+    def _process_conversation_event(self, conversation_memory) -> Dict:
+        """ABC entry for ConversationMemory events."""
+        message = conversation_memory.message or ''
+        if not message or len(message) < 5:
+            return {'status': 'skipped', 'reason': 'message_too_short'}
+
+        self.log_event(
+            f"Processing conversation for personalization "
+            f"(user={conversation_memory.user.username})"
+        )
         try:
-            pass
-
-            message = conversation_memory.message or ''
-            user = conversation_memory.user
-
-            if not message or len(message) < 5:
-                return  # Skip very short messages
-
-            # Extract preferences from the message
             extracted = self._extract_preferences_from_text(message)
-
             if not extracted:
-                return  # No preferences detected
+                self.log_event("No preferences detected", level='debug')
+                return {'status': 'no_preferences'}
 
-            logger.info(f"💡 Extracted preferences from chat: {extracted}")
-
-            # Update user's chat-derived preferences
-            self._update_chat_preferences(user, extracted, message)
-
-            logger.info(f"✅ Chat preference learning complete for {user.username}")
-
+            self._update_chat_preferences(conversation_memory.user, extracted, message)
+            insights = [f"chat preferences: {sorted(extracted.keys())}"]
+            self.log_success(
+                f"Chat preference learning complete for "
+                f"{conversation_memory.user.username}"
+            )
+            return {
+                'status': 'ok',
+                'kind': 'conversation',
+                'extracted': extracted,
+                'insights': insights,
+            }
         except Exception as e:
-            logger.error(f"Error processing conversation for personalization: {e}", exc_info=True)
+            self.log_error(f"Error processing conversation: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _process_interaction_event(self, interaction) -> Dict:
+        """ABC entry for OpportunityInteraction events."""
+        self.log_event(f"Processing interaction: {interaction.interaction_type}")
+        try:
+            from core.models_unified_system import Opportunity
+            opportunity = Opportunity.objects.filter(id=interaction.opportunity_id).first()
+            if not opportunity:
+                return {'status': 'skipped', 'reason': 'opportunity_not_found'}
+
+            patterns = self._extract_interaction_patterns(opportunity, interaction)
+            self._update_user_preferences(
+                interaction.user, patterns, interaction.interaction_type
+            )
+            if hasattr(opportunity, 'opportunity_type'):
+                self._update_opportunity_type_preferences(
+                    interaction.user,
+                    opportunity.opportunity_type,
+                    interaction.interaction_type,
+                )
+
+            insights = [
+                f"{interaction.interaction_type} on {patterns['source']} "
+                f"(depth={patterns['interaction_depth']})"
+            ]
+            self.log_success("Personalization learning complete")
+            return {
+                'status': 'ok',
+                'kind': 'interaction',
+                'patterns': patterns,
+                'insights': insights,
+            }
+        except Exception as e:
+            self.log_error(f"Error in personalization learning: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _extract_patterns(self, event_data: Any) -> Dict:
+        """Required by ABC. Routes through the same dispatch as process_event."""
+        if hasattr(event_data, 'message'):
+            return {
+                '_kind': 'conversation',
+                '_event': event_data,
+                'extracted': self._extract_preferences_from_text(event_data.message or ''),
+            }
+        if hasattr(event_data, 'interaction_type'):
+            from core.models_unified_system import Opportunity
+            opportunity = Opportunity.objects.filter(id=event_data.opportunity_id).first()
+            patterns = self._extract_interaction_patterns(opportunity, event_data) if opportunity else {}
+            return {
+                '_kind': 'interaction',
+                '_event': event_data,
+                '_opportunity': opportunity,
+                'patterns': patterns,
+            }
+        return {'_kind': 'unknown'}
+
+    def _update_learning(self, patterns: Dict) -> None:
+        """Route the update path by `_kind`."""
+        kind = patterns.get('_kind')
+        if kind == 'conversation':
+            event = patterns['_event']
+            self._update_chat_preferences(event.user, patterns['extracted'], event.message or '')
+        elif kind == 'interaction':
+            event = patterns['_event']
+            inner = patterns['patterns']
+            opportunity = patterns.get('_opportunity')
+            if opportunity is not None:
+                self._update_user_preferences(event.user, inner, event.interaction_type)
+                if hasattr(opportunity, 'opportunity_type'):
+                    self._update_opportunity_type_preferences(
+                        event.user, opportunity.opportunity_type, event.interaction_type
+                    )
+
+    def _generate_insights(self, patterns: Dict) -> List[str]:
+        """Derive insight strings for either event type."""
+        kind = patterns.get('_kind')
+        if kind == 'conversation':
+            extracted = patterns.get('extracted') or {}
+            return [f"chat preferences: {sorted(extracted.keys())}"] if extracted else []
+        if kind == 'interaction':
+            inner = patterns.get('patterns') or {}
+            event = patterns.get('_event')
+            return [
+                f"{event.interaction_type} on {inner.get('source', 'unknown')} "
+                f"(depth={inner.get('interaction_depth', 0)})"
+            ] if event else []
+        return []
+
+    # ------------------------------------------------------------------
+    # Back-compat aliases used by the signal handlers below
+    # ------------------------------------------------------------------
+    def process_conversation(self, conversation_memory):
+        """Back-compat shim — delegates to `process_event`."""
+        return self.process_event(conversation_memory)
 
     def _extract_preferences_from_text(self, text: str) -> Dict[str, List[str]]:
         """
@@ -177,36 +310,8 @@ class PersonalizationFeedbackLoop:
         learning.save()
 
     def process_interaction(self, interaction):
-        """Process opportunity interaction for personalization learning"""
-
-        logger.info(f"👤 Processing interaction: {interaction.interaction_type}")
-
-        try:
-            from core.models_unified_system import Opportunity
-
-            # Get the opportunity
-            opportunity = Opportunity.objects.filter(id=interaction.opportunity_id).first()
-            if not opportunity:
-                return
-
-            # Extract interaction patterns
-            patterns = self._extract_interaction_patterns(opportunity, interaction)
-
-            # Update user preference learning
-            self._update_user_preferences(interaction.user, patterns, interaction.interaction_type)
-
-            # Update opportunity type preferences
-            if hasattr(opportunity, 'opportunity_type'):
-                self._update_opportunity_type_preferences(
-                    interaction.user,
-                    opportunity.opportunity_type,
-                    interaction.interaction_type
-                )
-
-            logger.info(f"✅ Personalization learning complete")
-
-        except Exception as e:
-            logger.error(f"Error in personalization learning: {e}", exc_info=True)
+        """Back-compat shim — delegates to `process_event`."""
+        return self.process_event(interaction)
 
     def _extract_interaction_patterns(self, opportunity, interaction) -> Dict:
         """Extract patterns from opportunity and interaction"""
