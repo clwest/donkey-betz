@@ -41,7 +41,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 6 | CLAUDE.md said `32` advisors; actual is `25` (drift on both subtotals) | medium | **✅ fixed Session 1115** | — |
 | 7 | Phantom `ContentDistributionAgent` taxonomy miscount (73/9/1 → 74/8/1) | medium | **✅ fixed Session 1115** | — |
 | 8 | `BACKEND_INVENTORY.md` says 63 management commands; actual is 167 | medium | **✅ fixed Session 1115** | new `build_management_command_audit` + inline refresh |
-| 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · 1 of 9 migrated (RevenueAttribution, Session 1115 batch-9); 8 remain | multi-PR refactor in progress |
+| 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | **✅ fixed Session 1115 batch-13** — all 9 bridges migrated; guard severity bumped low → medium | — |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
 | 12 | **272 → 10 orphan Celery tasks** — batches 1-8: 4x detector upgrades, 32 tasks wired, dead stubs un-tasked, 3 signal/mgmt-cmd wirings, `propagate_new_policies` deleted | medium-high | partial · 96.3% reduction; remaining 10 are all constraint-deferred (LLM-cost, agent-dispatch, Session 1031, intentional) | none — wait for credits or green-light |
@@ -370,11 +370,35 @@ underlying doc had been stale for many sessions before.
 
 ## 9. Unused `LearningBridge` ABC — naming inconsistency is the symptom
 
-**Status:** in progress — 1 of 9 migrated (Session 1115 batch-9).
-`RevenueAttributionLearningLoop` is now the first concrete consumer of
-the `LearningBridge` ABC; verifier baseline dropped 9 → 8. Migration
-pattern is proven; remaining 8 to follow incrementally. Forward-drift
-guard catches any NEW bridge added without inheritance.
+**Status:** ✅ fixed Session 1115 batch-13 — all 9 concrete bridges
+now inherit from the `LearningBridge` ABC. Verifier baseline dropped
+9 → 0; severity bumped from `low` to `medium` so the forward-drift
+guard is teeth-on (any new bridge that doesn't inherit fails the
+check). Migration spanned five PRs:
+
+- batch-9 PR #2086 — `RevenueAttributionLearningLoop`
+- batch-10 PR #2087 — `Collaboration` + `AgentExecution`
+- batch-11 PR #2088 — `ApplicationOutcome` + `SpiderData`
+- batch-12 PR #2089 — `AdvisorFeedback` + `AutoConsultation`
+- batch-13 — `PersonalizationFeedback` + `SportsBetting`
+
+Migration pattern (documented in batch-9 commit, reused in batches
+10-13):
+1. Subclass `LearningBridge` with `bridge_name='...'`
+2. Implement 4 abstract methods (`process_event`, `_extract_patterns`,
+   `_update_learning`, `_generate_insights`)
+3. Thread the ORM/event instance through `patterns['_X']` so the
+   1-argument `_update_learning(patterns)` contract works
+4. Keep original entry methods as back-compat shims
+5. Get observability helpers (`log_event`, `log_success`, `log_error`,
+   `event_count`, `success_count`, `get_statistics`) for free
+
+Two bridges needed slight pattern adaptations:
+- `PersonalizationFeedbackLoop` handles TWO event types; `process_event`
+  dispatches by `hasattr(event_data, 'message')` vs
+  `hasattr(event_data, 'interaction_type')`.
+- `SportsBettingLearningBridge` is invocation-driven (sync utility),
+  not signal-driven; `process_event(user)` triggers a full sync.
 
 **Verifier doc:** `docs/LEARNING_BRIDGE_AUDIT.md`
 **Verifier claim:** `learning_bridges_inherit_base` (added Session 1115).
