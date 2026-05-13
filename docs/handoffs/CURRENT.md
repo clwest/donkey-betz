@@ -2,9 +2,10 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest handoff:** [`SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md`](SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md)
+**Latest handoff:** [`SESSION_1115_CODE_HEALTH_REFACTORS.md`](SESSION_1115_CODE_HEALTH_REFACTORS.md)
 
-**Previous:** [`SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md`](SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md)
+**Previous:** [`SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md`](SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md)
+(early-phase companion of the same session — read both for complete 1115 context)
 
 ## How to update
 
