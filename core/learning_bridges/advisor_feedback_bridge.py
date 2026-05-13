@@ -1,15 +1,22 @@
 """
 Advisor Feedback Learning Bridge
 Tracks advisor consultation effectiveness and optimizes advisor selection
+
+Session 1115 batch-12: both `AdvisorFeedbackLearningLoop` and
+`AutoConsultationLearningLoop` now inherit from `LearningBridge` ABC.
+Public entry methods (`process_feedback`, `track_auto_consultation`)
+kept as back-compat shims.
 """
 
 import logging
+from typing import Any, Dict, List
+
 from django.db import models
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import Dict
 
+from core.learning_bridges.base import LearningBridge
 from core.models_unified_system import UserAgentLearning
 
 logger = logging.getLogger(__name__)
@@ -40,32 +47,99 @@ class AdvisorConsultationFeedback(models.Model):
         ]
 
 
-class AdvisorFeedbackLearningLoop:
+class AdvisorFeedbackLearningLoop(LearningBridge):
     """
-    Learns from advisor consultation outcomes to improve advisor selection
+    Learns from advisor consultation outcomes to improve advisor selection.
+
+    ABC contract mapping:
+      - `process_event(feedback)` wraps `process_feedback`.
+      - `_extract_patterns(feedback)` pulls advisor name, follow/success
+        flags, and category, threading the AdvisorConsultationFeedback
+        through as `_feedback`.
+      - `_update_learning(patterns)` calls both
+        `_update_advisor_effectiveness` and
+        `_update_category_effectiveness` (when category is present).
+      - `_generate_insights(patterns)` derives human-readable strings.
     """
 
-    def process_feedback(self, feedback: AdvisorConsultationFeedback):
-        """Process advisor consultation feedback"""
+    def __init__(self):
+        super().__init__(bridge_name='advisor_feedback')
 
-        logger.info(f"💡 Processing advisor feedback for {feedback.advisor_insight.advisor.name}")
-
+    # ------------------------------------------------------------------
+    # ABC contract
+    # ------------------------------------------------------------------
+    def process_event(self, event_data: Any) -> Dict:
+        """Process an AdvisorConsultationFeedback end-to-end."""
+        feedback: AdvisorConsultationFeedback = event_data
+        advisor_name = feedback.advisor_insight.advisor.name
+        self.log_event(f"Processing advisor feedback for {advisor_name}")
         try:
-            advisor_name = feedback.advisor_insight.advisor.name
-            was_followed = feedback.followed_advice
-            was_successful = feedback.outcome_success
-
-            # Update advisor effectiveness learning
-            self._update_advisor_effectiveness(feedback, advisor_name, was_followed, was_successful)
-
-            # Update category-specific effectiveness
-            if hasattr(feedback.advisor_insight, 'category'):
-                self._update_category_effectiveness(feedback, advisor_name, was_followed, was_successful)
-
-            logger.info(f"✅ Advisor feedback learning complete")
-
+            patterns = self._extract_patterns(feedback)
+            self._update_learning(patterns)
+            insights = self._generate_insights(patterns)
+            self.log_success(f"Advisor feedback learning complete for {advisor_name}")
+            return {
+                'status': 'ok',
+                'advisor_name': advisor_name,
+                'was_followed': patterns['was_followed'],
+                'was_successful': patterns['was_successful'],
+                'insights': insights,
+            }
         except Exception as e:
-            logger.error(f"Error in advisor feedback learning: {e}", exc_info=True)
+            self.log_error(f"Error in advisor feedback learning: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _extract_patterns(self, event_data: Any) -> Dict:
+        """Extract advisor + outcome metadata from feedback row."""
+        feedback: AdvisorConsultationFeedback = event_data
+        category = (
+            feedback.advisor_insight.category
+            if hasattr(feedback.advisor_insight, 'category')
+            else None
+        )
+        return {
+            'advisor_name': feedback.advisor_insight.advisor.name,
+            'was_followed': feedback.followed_advice,
+            'was_successful': feedback.outcome_success,
+            'satisfaction_rating': feedback.satisfaction_rating,
+            'category': category,
+            '_feedback': feedback,
+        }
+
+    def _update_learning(self, patterns: Dict) -> None:
+        """Update advisor + category effectiveness rows."""
+        feedback: AdvisorConsultationFeedback = patterns['_feedback']
+        self._update_advisor_effectiveness(
+            feedback, patterns['advisor_name'],
+            patterns['was_followed'], patterns['was_successful'],
+        )
+        if patterns.get('category') is not None:
+            self._update_category_effectiveness(
+                feedback, patterns['advisor_name'],
+                patterns['was_followed'], patterns['was_successful'],
+            )
+
+    def _generate_insights(self, patterns: Dict) -> List[str]:
+        """Derive human-readable insight strings."""
+        insights: List[str] = []
+        advisor = patterns['advisor_name']
+        followed = 'followed' if patterns['was_followed'] else 'ignored'
+        insights.append(f"User {followed} advice from {advisor}")
+        if patterns['was_followed'] and patterns['was_successful'] is not None:
+            outcome = 'success' if patterns['was_successful'] else 'failure'
+            insights.append(f"outcome: {outcome}")
+        if patterns.get('satisfaction_rating'):
+            insights.append(f"satisfaction: {patterns['satisfaction_rating']}/10")
+        if patterns.get('category'):
+            insights.append(f"category: {patterns['category']}")
+        return insights
+
+    # ------------------------------------------------------------------
+    # Back-compat alias used by `on_advisor_feedback_created` signal handler
+    # ------------------------------------------------------------------
+    def process_feedback(self, feedback: AdvisorConsultationFeedback) -> Dict:
+        """Back-compat shim — delegates to `process_event`."""
+        return self.process_event(feedback)
 
     def _update_advisor_effectiveness(self, feedback: AdvisorConsultationFeedback,
                                      advisor_name: str, was_followed: bool, was_successful: bool):
@@ -173,7 +247,7 @@ def on_advisor_feedback_created(sender, instance, created, **kwargs):
         logger.error(f"Error in advisor feedback learning signal: {e}", exc_info=True)
 
 
-class AutoConsultationLearningLoop:
+class AutoConsultationLearningLoop(LearningBridge):
     """
     Session 461: Learns from automatic advisor consultations in audit coordinators.
 
@@ -185,8 +259,149 @@ class AutoConsultationLearningLoop:
 
     This enables the system to learn which advisors are most accurate for which
     types of alerts and to improve advisor selection over time.
+
+    ABC contract mapping:
+      - `process_event(consultation)` wraps `track_auto_consultation`
+        — `event_data` is a Dict (not a Django row) since auto-consultations
+        come from in-process audit coordinators, not signal handlers.
+        Optional `user` is passed via `event_data['_user']` if needed.
+      - `_extract_patterns(consultation)` normalizes the dict shape.
+      - `_update_learning(patterns)` writes the UserAgentLearning row.
+      - `_generate_insights(patterns)` derives summary strings.
+
+    `record_outcome` and `get_advisor_accuracy_stats` are kept as
+    separate public methods (different lifecycle than event processing).
     """
 
+    def __init__(self):
+        super().__init__(bridge_name='auto_consultation')
+
+    # ------------------------------------------------------------------
+    # ABC contract
+    # ------------------------------------------------------------------
+    def process_event(self, event_data: Any) -> Dict:
+        """Process a consultation dict end-to-end.
+
+        Expected shape: see docstring of `track_auto_consultation`.
+        Optional `_user` key for non-system-user attribution.
+        """
+        consultation: Dict = event_data or {}
+        user = consultation.get('_user')
+        advisor_name = consultation.get('advisor', 'Unknown')
+        self.log_event(f"Tracking auto-consultation: {advisor_name}")
+        try:
+            patterns = self._extract_patterns(consultation)
+            patterns['_user'] = user
+            success = self._update_learning_with_status(patterns)
+            insights = self._generate_insights(patterns)
+            if success:
+                self.log_success(f"Auto-consultation tracked: {advisor_name}")
+                return {
+                    'status': 'ok',
+                    'advisor_name': advisor_name,
+                    'ticker': patterns['ticker'],
+                    'severity': patterns['severity'],
+                    'insights': insights,
+                }
+            return {'status': 'failed', 'reason': 'no_user'}
+        except Exception as e:
+            self.log_error(f"Error tracking auto-consultation: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _extract_patterns(self, event_data: Any) -> Dict:
+        """Normalize the consultation dict shape."""
+        consultation: Dict = event_data or {}
+        return {
+            'advisor_name': consultation.get('advisor', 'Unknown'),
+            'ticker': (
+                consultation.get('ticker') or consultation.get('token', 'UNKNOWN')
+            ),
+            'severity': consultation.get('severity', 'UNKNOWN'),
+            'alert_type': consultation.get('alert_type', 'general'),
+            'response': consultation.get('response', ''),
+            'confidence': consultation.get('confidence', 0.7),
+        }
+
+    def _update_learning(self, patterns: Dict) -> None:
+        """ABC-contract entry — delegates to the typed variant."""
+        self._update_learning_with_status(patterns)
+
+    def _update_learning_with_status(self, patterns: Dict) -> bool:
+        """Write the auto-consultation row. Returns True on success."""
+        user = patterns.get('_user')
+        if user is None:
+            user = self._get_system_user()
+            if user is None:
+                logger.warning("Could not get system user for tracking")
+                return False
+
+        from django.utils import timezone
+        advisor_name = patterns['advisor_name']
+        ticker = patterns['ticker']
+        severity = patterns['severity']
+        alert_type = patterns['alert_type']
+
+        learning, _ = UserAgentLearning.objects.get_or_create(
+            user=user,
+            agent_name=advisor_name.replace(' (AI)', ''),
+            learning_domain='auto_consultation_accuracy',
+            defaults={
+                'learning_content': {
+                    'total_consultations': 0,
+                    'by_alert_type': {},
+                    'by_severity': {},
+                    'outcomes_tracked': 0,
+                    'correct_predictions': 0,
+                    'recent_consultations': [],
+                },
+                'confidence_score': 0.5,
+                'learning_source': 'auto_consultation',
+            },
+        )
+
+        content = learning.learning_content if isinstance(learning.learning_content, dict) else {}
+        content['total_consultations'] = content.get('total_consultations', 0) + 1
+
+        if 'by_alert_type' not in content:
+            content['by_alert_type'] = {}
+        content['by_alert_type'][alert_type] = content['by_alert_type'].get(alert_type, 0) + 1
+
+        if 'by_severity' not in content:
+            content['by_severity'] = {}
+        content['by_severity'][severity] = content['by_severity'].get(severity, 0) + 1
+
+        if 'recent_consultations' not in content:
+            content['recent_consultations'] = []
+        content['recent_consultations'].append({
+            'ticker': ticker,
+            'severity': severity,
+            'alert_type': alert_type,
+            'response_summary': patterns['response'][:200] if patterns['response'] else '',
+            'confidence': patterns['confidence'],
+            'timestamp': timezone.now().isoformat(),
+            'outcome': None,
+        })
+        content['recent_consultations'] = content['recent_consultations'][-100:]
+
+        learning.learning_content = content
+        learning.save()
+        return True
+
+    def _generate_insights(self, patterns: Dict) -> List[str]:
+        """Derive insight strings."""
+        insights = [
+            f"{patterns['advisor_name']} consulted on "
+            f"{patterns['ticker']} ({patterns['severity']})"
+        ]
+        if patterns['alert_type'] != 'general':
+            insights.append(f"alert_type: {patterns['alert_type']}")
+        if patterns['confidence']:
+            insights.append(f"confidence: {patterns['confidence']:.2f}")
+        return insights
+
+    # ------------------------------------------------------------------
+    # Bridge-specific helpers (preserved from pre-refactor implementation)
+    # ------------------------------------------------------------------
     def _get_system_user(self):
         """Get or create a system user for anonymous tracking."""
         try:
@@ -206,102 +421,18 @@ class AutoConsultationLearningLoop:
             return None
 
     def track_auto_consultation(self, consultation: Dict, user=None) -> bool:
+        """Back-compat shim — delegates to `process_event`.
+
+        Returns True if the consultation was tracked successfully (matches
+        the original boolean return signature). Callers in audit
+        coordinators (e.g. `track_audit_advisor_consultation`) keep working
+        unchanged.
         """
-        Track an automatic advisor consultation from audit coordinators.
-
-        Args:
-            consultation: Dict with keys:
-                - advisor: Advisor name (e.g., 'Warren Buffett (AI)')
-                - ticker/token: Symbol being analyzed
-                - severity: Alert severity (CRITICAL, HIGH, etc.)
-                - alert_type: Type of alert (stock_audit, blockchain_security)
-                - response: Advisor's response text
-                - confidence: Advisor's confidence score
-                - timestamp: When consultation occurred
-
-        Returns:
-            True if successfully tracked
-        """
-        try:
-            advisor_name = consultation.get('advisor', 'Unknown')
-            ticker = consultation.get('ticker') or consultation.get('token', 'UNKNOWN')
-            severity = consultation.get('severity', 'UNKNOWN')
-            alert_type = consultation.get('alert_type', 'general')
-            response = consultation.get('response', '')
-            confidence = consultation.get('confidence', 0.7)
-
-            # Use system user if no user provided (for auto-consultations)
-            if user is None:
-                user = self._get_system_user()
-                if user is None:
-                    logger.warning("Could not get system user for tracking")
-                    return False
-
-            logger.info(f"📊 Tracking auto-consultation: {advisor_name} on {ticker} ({severity})")
-
-            # Get or create learning record for this advisor's auto-consultations
-            learning, _ = UserAgentLearning.objects.get_or_create(
-                user=user,
-                agent_name=advisor_name.replace(' (AI)', ''),  # Clean advisor name
-                learning_domain='auto_consultation_accuracy',
-                defaults={
-                    'learning_content': {
-                        'total_consultations': 0,
-                        'by_alert_type': {},
-                        'by_severity': {},
-                        'outcomes_tracked': 0,
-                        'correct_predictions': 0,
-                        'recent_consultations': [],
-                    },
-                    'confidence_score': 0.5,
-                    'learning_source': 'auto_consultation'
-                }
-            )
-
-            content = learning.learning_content if isinstance(learning.learning_content, dict) else {}
-            content['total_consultations'] = content.get('total_consultations', 0) + 1
-
-            # Track by alert type
-            if 'by_alert_type' not in content:
-                content['by_alert_type'] = {}
-            if alert_type not in content['by_alert_type']:
-                content['by_alert_type'][alert_type] = 0
-            content['by_alert_type'][alert_type] += 1
-
-            # Track by severity
-            if 'by_severity' not in content:
-                content['by_severity'] = {}
-            if severity not in content['by_severity']:
-                content['by_severity'][severity] = 0
-            content['by_severity'][severity] += 1
-
-            # Store recent consultation (for outcome tracking later)
-            if 'recent_consultations' not in content:
-                content['recent_consultations'] = []
-
-            from django.utils import timezone
-            content['recent_consultations'].append({
-                'ticker': ticker,
-                'severity': severity,
-                'alert_type': alert_type,
-                'response_summary': response[:200] if response else '',
-                'confidence': confidence,
-                'timestamp': timezone.now().isoformat(),
-                'outcome': None,  # To be filled when outcome is known
-            })
-
-            # Keep only last 100 consultations
-            content['recent_consultations'] = content['recent_consultations'][-100:]
-
-            learning.learning_content = content
-            learning.save()
-
-            logger.info(f"✅ Auto-consultation tracked: {advisor_name} - consultation #{content['total_consultations']}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error tracking auto-consultation: {e}", exc_info=True)
-            return False
+        event_data = dict(consultation) if consultation else {}
+        if user is not None:
+            event_data['_user'] = user
+        result = self.process_event(event_data)
+        return result.get('status') == 'ok'
 
     def record_outcome(self, advisor_name: str, ticker: str, outcome: bool, user=None) -> bool:
         """
