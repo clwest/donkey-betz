@@ -511,6 +511,18 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
         'options': {'queue': 'default', 'expires': 14400},
     },
+
+    # ────────────────────────────────────────────────────────────────────────
+    # Session 1115 batch-6 — "truly forgotten" task that was clearly designed
+    # to be scheduled. Docstring says: "Should run every hour to gather
+    # opportunities from multiple sources." Uses spiders (no LLM); discovers
+    # opportunities and saves them to DB.
+    # ────────────────────────────────────────────────────────────────────────
+    'scan-income-spider-orchestrator': {
+        'task': 'intelligence.tasks.scan_income_spider_orchestrator',
+        'schedule': crontab(minute=10),  # 10 min past every hour
+        'options': {'queue': 'long_running', 'expires': 3600},
+    },
 }
 
 # Task routing configuration

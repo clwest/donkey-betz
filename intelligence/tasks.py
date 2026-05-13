@@ -16,24 +16,29 @@ from .shared_memory import sync_all_entity_memories  # noqa: F401
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True)
-def start_intelligence_engine(self):
-    """🚀 Start the Real-Time Intelligence Engine"""
+# Session 1115 batch-6: removed @shared_task from four intelligence-engine
+# stubs that had zero callers anywhere in the codebase. They were thin
+# pass-throughs to `intelligence_engine` methods and never invoked via
+# .delay() / .apply_async() / signal / chain. Kept as plain Python so
+# future callers can still import them, but they no longer pollute the
+# Celery task registry.
+def start_intelligence_engine():
+    """🚀 Start the Real-Time Intelligence Engine.
+
+    No longer a Celery task (Session 1115 batch-6) — invoke directly
+    from a management command or boot script if needed. Uses asyncio.run
+    to drive `intelligence_engine.start_intelligence_stream()`.
+    """
     try:
         logger.info("🚀 Starting Limitless Intelligence Engine...")
-
-        # Session 881: Use asyncio.run() to properly create Task context
-        # (fixes "Timeout context manager should be used inside a task" error)
         asyncio.run(intelligence_engine.start_intelligence_stream())
-
     except Exception as e:
         logger.error(f"Intelligence engine error: {e}")
         raise
 
 
-@shared_task
 def get_live_opportunities():
-    """Get current live opportunities"""
+    """Get current live opportunities (plain function — no longer a Celery task)."""
     try:
         return intelligence_engine.get_current_opportunities()
     except Exception as e:
@@ -41,9 +46,8 @@ def get_live_opportunities():
         return []
 
 
-@shared_task
 def get_live_predictions():
-    """Get current live predictions"""
+    """Get current live predictions (plain function — no longer a Celery task)."""
     try:
         return intelligence_engine.get_current_predictions()
     except Exception as e:
@@ -51,12 +55,10 @@ def get_live_predictions():
         return []
 
 
-@shared_task
 def trigger_market_scan():
-    """Trigger an immediate market scan"""
+    """Trigger an immediate market scan (plain function — no longer a Celery task)."""
     try:
         logger.info("🎯 Manual market scan triggered")
-        # This would trigger immediate scans in the engine
         return {"status": "scan_triggered", "timestamp": "now"}
     except Exception as e:
         logger.error(f"Market scan trigger error: {e}")

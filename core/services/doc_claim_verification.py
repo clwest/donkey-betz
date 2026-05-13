@@ -2600,35 +2600,29 @@ def _celery_orphan_count_baseline() -> ClaimResult:
             continue
         orphans += 1
 
-    # Session 1115 batch-5 baseline: detector bug fix — `_inspect()` was
-    # excluding ALL callers in the task's own definition file (intended to
-    # filter the @shared_task decorator line). This dropped legitimate
-    # intra-file parent→child task chains: `submit_proposal_automatically`,
-    # `submit_follow_up`, `handle_client_response`, `check_proposal_responses`,
-    # `update_ml_model_with_feedback` are all dispatched via `.delay()` from
-    # within `intelligence/tasks.py` (caller and callee in the same module).
-    # Filter now only excludes the exact file:line of the task's definition.
-    # 5 fewer false orphans (24 → 19). Verifier's logic was always correct
-    # — only the audit-doc had the bug, but the verifier baseline was
-    # tracking the audit's miscount.
+    # Session 1115 batch-6 baseline: dead-stub cleanup + 1 wiring. Removed
+    # @shared_task from 4 intelligence-engine stubs that had zero callers
+    # anywhere (`get_live_opportunities`, `get_live_predictions`,
+    # `trigger_market_scan`, `start_intelligence_engine` — kept as plain
+    # functions). Scheduled `scan_income_spider_orchestrator` hourly (its
+    # docstring already said "Should run every hour").
     #
-    # Cumulative across batches 1-5: 272 → 19 (93% reduction).
+    # Cumulative across batches 1-6: 272 → 14 (95% reduction).
+    # Registry shrank 402 → 398 (the 4 dead stubs no longer @shared_task).
     #
-    # Remaining 19 split into:
+    # Remaining 14 split into:
     #   - ~5 LLM-cost scheduled (rag_retrieval_canary, send_weekly_kpi_summary,
     #     run_ops_autopilot, post_ops_digest, maintain_knowledge_freshness)
     #   - ~2 agent-dispatch chain (check_blocked_research_for_unblock,
     #     process_pending_action_plans)
-    #   - ~3 Session 1031 blocked (discover_and_import_audits,
-    #     assign_open_findings_to_agents, ~execute_remediation_tasks)
-    #   - ~7 truly forgotten / event-needs-wiring (start_resolve_render,
-    #     scan_income_spider_orchestrator, start_intelligence_engine,
-    #     trigger_market_scan, trigger_content_from_shift,
-    #     process_document_async, get_live_opportunities, get_live_predictions)
+    #   - ~3 Session 1031 hard-blocked (discover_and_import_audits,
+    #     assign_open_findings_to_agents, [+ execute_remediation_tasks])
+    #   - ~3 needs signal/webhook wire-up (process_document_async,
+    #     trigger_content_from_shift, start_resolve_render)
     #   - 1 deprecated (propagate_new_policies)
     #   - 1 intentionally orphan (debug_task)
     # See AUDIT_FINDINGS.md #12.
-    baseline = 19
+    baseline = 14
     drift = orphans - baseline
     if abs(drift) <= 10:
         severity = 'ok'

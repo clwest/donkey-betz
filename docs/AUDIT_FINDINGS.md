@@ -44,7 +44,7 @@ Substitute the doc name from each finding's `Verifier doc:` line.
 | 9 | Learning bridge naming inconsistency — symptom of an **unused ABC** (`LearningBridge`) that nobody inherits from | informational → low (reframed) | partial · forward-guard added; refactor deferred | multi-PR refactor |
 | 10 | `run_market_intelligence_desk` PeriodicTask absent — doc said it should be scheduled daily | medium | **✅ fixed Session 1115** | doc-stale; updated topic doc to "all 4 desks on-demand only" |
 | 11 | `persona_agent_count` / `total_agent_count_claim` re-pegged from prod-stale `223/306` to seed-baseline `148/231` | medium | **✅ fixed Session 1115** | — |
-| 12 | **272 → 19 orphan Celery tasks** — batches 1-5: detection upgraded 4x, 31 tasks wired, intra-file dispatch bug fixed | medium-high | partial · 93% reduction; LLM-cost + agent-dispatch chains deferred | per-task wire-up |
+| 12 | **272 → 14 orphan Celery tasks** — batches 1-6: 4x detector upgrades, 32 tasks wired, intra-file bug fixed, 4 dead stubs un-tasked | medium-high | partial · 95% reduction; LLM-cost + agent-dispatch chains + 3 wire-ups remain | per-task wire-up |
 | 13 | Runtime telemetry framework added (`build_runtime_audit`) — surfaces "declared vs actually executed" once telemetry rows exist | informational | open | run against prod for real findings |
 | 14 | **`run_heartbeat` 32s** + **`check_celery_health` 31s** — long for "every 10 min" infra tasks | medium | **✅ fixed Session 1115** | timeout cap + no-worker short-circuit (34s→1.5s, 31s→0.04s) |
 | 15 | **`core_skin_status` + `core_skin_pulses` missing 15 columns from migration 0185's raw CREATE TABLE IF NOT EXISTS** | high | **✅ fixed Session 1115** | migrations 0338 + 0339 |
@@ -548,7 +548,46 @@ as a normal `medium` finding — that's the right behavior.
 
 ---
 
-## 12. 272 → 19 orphan Celery tasks — batches 1-5 closed
+## 12. 272 → 14 orphan Celery tasks — batches 1-6 closed
+
+### Batch 6 outcome (Session 1115) — dead stubs + 1 wiring
+
+Two targeted cleanups:
+
+**Removed `@shared_task`** from 4 intelligence-engine stubs that had
+**zero callers** anywhere in the codebase:
+
+- `start_intelligence_engine` — uses `asyncio.run` to drive
+  `intelligence_engine.start_intelligence_stream()`. Now plain function;
+  invoke from a management command if needed.
+- `get_live_opportunities` — 1-liner pass-through to
+  `intelligence_engine.get_current_opportunities()`. URL handler
+  `core/views_ecosystem_activation.py:95` is the real `get_live_opportunities`.
+- `get_live_predictions` — same pattern.
+- `trigger_market_scan` — returns a hardcoded dict.
+
+The functions are kept (still importable) but removed from the Celery
+task registry. Registry shrank 402 → 398.
+
+**Scheduled `scan_income_spider_orchestrator`** hourly. Its docstring
+already said *"Should run every hour to gather opportunities from
+multiple sources."* No LLM cost (uses spiders + income_spider_orchestrator).
+
+**Orphan count drop in batch 6:** 19 → **14** (4 dead-stub removals
++ 1 wiring). Cumulative across batches 1-6: **272 → 14 (95% reduction).**
+
+### Remaining 14 — final final triage
+
+| Category | Count | Examples |
+|---|---:|---|
+| **LLM-cost scheduled** (deferred until credits) | 5 | `rag_retrieval_canary` (embeddings), `send_weekly_kpi_summary` (Discord), `run_ops_autopilot` (takes actions), `post_ops_digest`, `maintain_knowledge_freshness` |
+| **Agent-dispatch chain** (deferred for green-light) | 2 | `check_blocked_research_for_unblock` (→ retry_blocked_research), `process_pending_action_plans` (→ execute_action_plan) |
+| **Session 1031 hard-blocked** | 3 | `discover_and_import_audits`, `assign_open_findings_to_agents`, + 1 — all `return {'blocked': True}` immediately |
+| **Needs signal/webhook wire-up** | 3 | `process_document_async` (Document post_save signal), `trigger_content_from_shift` (SignalCluster post_save signal), `start_resolve_render` (video-render webhook or mgmt command) |
+| **Deprecated** | 1 | `propagate_new_policies` — Session 659 supersession |
+| **Intentionally orphan** | 1 | `debug_task` |
+
+Verifier baseline locked at **14**.
 
 ### Batch 5 outcome (Session 1115) — intra-file dispatch bug
 
