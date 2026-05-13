@@ -3,18 +3,31 @@ Sports Betting Learning Bridge
 
 Connects the sports betting learning system to the core unified learning pipeline.
 Syncs performance data, insights, and feedback between isolated sports system and core learning.
+
+Session 1115 batch-13: refactored to inherit from `LearningBridge` ABC.
+Unlike the other bridges, this one is invocation-driven (not signal-driven)
+— it's called by `sync_user_betting_to_learning(user)` and similar
+sync-utility convenience functions, plus by the learning orchestrator
+in `core.self_development.learning_orchestrator`. The `event_data`
+passed to `process_event` is the User object whose betting performance
+should be synced. The original `sync_betting_performance_to_learning`
+remains as a back-compat method so all existing callers keep working.
 """
 
 import logging
+from typing import Any, Dict, List
+
 from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, Avg
 
+from core.learning_bridges.base import LearningBridge
+
 logger = logging.getLogger(__name__)
 
 
-class SportsBettingLearningBridge:
+class SportsBettingLearningBridge(LearningBridge):
     """
     Bridge between sports betting system and core unified learning system.
 
@@ -23,10 +36,63 @@ class SportsBettingLearningBridge:
     - Sync AgentPerformanceMetrics → UserAgentLearning
     - Generate cross-domain insights from sports betting patterns
     - Feed sports prediction results into learning loop
+
+    ABC contract mapping:
+      - `process_event(user)` triggers a full sync for the given user.
+      - `_extract_patterns(user)` returns the sync targets (bankroll +
+        agent metrics) without doing any DB writes yet.
+      - `_update_learning(patterns)` performs the actual sync writes
+        via the existing `sync_betting_performance_to_learning` method
+        (which mutates UserAgentLearning rows).
+      - `_generate_insights(patterns)` returns short summary strings.
     """
 
     def __init__(self, user=None):
+        super().__init__(bridge_name='sports_betting')
         self.user = user
+
+    # ------------------------------------------------------------------
+    # ABC contract — `event_data` is the User to sync
+    # ------------------------------------------------------------------
+    def process_event(self, event_data: Any) -> Dict:
+        """Run a betting-performance sync for the given user."""
+        user = event_data or self.user
+        if not user:
+            return {'status': 'skipped', 'reason': 'no_user'}
+
+        self.log_event(f"Syncing betting performance for user={user.id}")
+        try:
+            result = self.sync_betting_performance_to_learning(user=user)
+            if result.get('success'):
+                self.log_success(
+                    f"Betting performance synced for user={user.id}"
+                )
+            else:
+                self.log_error(
+                    f"Betting performance sync failed: {result.get('error')}"
+                )
+            return result
+        except Exception as e:
+            self.log_error(f"Error in betting performance sync: {e}")
+            return {'status': 'error', 'error': str(e)}
+
+    def _extract_patterns(self, event_data: Any) -> Dict:
+        """No separate extraction step — the bridge reads bankroll + agent
+        metrics inline during the sync. Return the user as a thin pattern
+        so `_update_learning` can still be called independently."""
+        user = event_data or self.user
+        return {'_user': user}
+
+    def _update_learning(self, patterns: Dict) -> None:
+        """Perform the sync. Delegates to the existing implementation."""
+        user = patterns.get('_user') or self.user
+        if user:
+            self.sync_betting_performance_to_learning(user=user)
+
+    def _generate_insights(self, patterns: Dict) -> List[str]:
+        """Bridge doesn't produce per-event insights — sync is idempotent."""
+        user = patterns.get('_user') or self.user
+        return [f"betting performance synced (user={user.id})"] if user else []
 
     def sync_betting_performance_to_learning(self, user=None):
         """

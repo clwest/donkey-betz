@@ -2831,11 +2831,11 @@ def _learning_bridges_inherit_base() -> ClaimResult:
             if 'LearningBridge' not in base_text:
                 orphans.append(f'{path.name}::{name}')
 
-    # Session 1115 batch-12: 7 of 9 bridges migrated. Added
-    # AdvisorFeedbackLearningLoop + AutoConsultationLearningLoop to the
-    # ABC-inheriting set. 2 remain: PersonalizationFeedbackLoop,
-    # SportsBettingLearningBridge.
-    baseline = 2
+    # Session 1115 batch-13: COMPLETE — all 9 concrete bridges now
+    # inherit from LearningBridge ABC. Baseline drops to 0, severity
+    # bumped from `low` to `medium` so the guard fails on any new
+    # bridge added without inheritance.
+    baseline = 0
     if not orphans:
         return ClaimResult.build(
             expected="all concrete bridges inherit from LearningBridge ABC",
@@ -2843,9 +2843,10 @@ def _learning_bridges_inherit_base() -> ClaimResult:
             severity='ok',
             note=f"{total_classes} bridge classes scanned",
         )
-    severity = 'ok' if len(orphans) == baseline else (
-        'medium' if len(orphans) > baseline else 'low'
-    )
+    # Session 1115 batch-13: refactor complete. The forward-drift guard
+    # is now teeth-on at `medium` severity — any new bridge that doesn't
+    # inherit from LearningBridge surfaces as a real drift.
+    severity = 'ok' if len(orphans) == baseline else 'medium'
     return ClaimResult.build(
         expected=(
             f"all bridges inherit from LearningBridge "
