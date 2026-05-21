@@ -64,7 +64,54 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1106+ — CURRENT AUDIT / CLEANUP ENTRY POINT
+## SESSION 1117+ — CURRENT ENTRY POINT (post-1116 strategic pivot)
+
+Session 1116 was a strategic pivot session. Three things to know before
+doing anything else:
+
+1. **Brand pivot is real and shipping.** Donkey Betz → **24/7 Global AI**.
+   The marketing site at `/Users/donkeyking/development/24-7-ai-global/`
+   is live on Vercel with the locked Suite of 4 (PitchDeckForge,
+   DealFlowTracker, Contract Concierge, MentorForge) + 3 Verticals +
+   5 Lab entries. **u-d-b is the engine, not a product** — Rigby is not
+   in the public taxonomy. New work should think of u-d-b as the backend
+   that powers public surfaces.
+
+2. **Character OS merge is parked.** [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md)
+   and its sidecar variant stay in tree as v2 backlog. Unpark only if a
+   paying customer asks for an avatar.
+
+3. **First u-d-b → 247globalai.com integration shipped:** `/now` page
+   renders live `SignalCluster` data from the last 24h via new endpoint
+   `GET /api/public/intelligence/now/` (token-gated, default-off).
+   See [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md).
+
+**Awaiting Jessica:** `PUBLIC_INTEL_TOKEN` env var on Railway + matching
+`UDB_API_URL` / `UDB_PUBLIC_INTEL_TOKEN` on Vercel. Until set, `/now`
+renders the "all quiet on the wire" panel — by design, on-brand. See
+handoff § "Operator action required (Jessica)" for the 4-step setup.
+
+**Next priorities (post-Jessica):**
+1. Verify `/now` renders real signals on 247globalai.com after env vars
+   land (visual check, no code change expected).
+2. Pick next integration from `docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md`
+   § C.5 — recommended: **#4 Initiative changelog panel** (same
+   architecture template as `/now`, ~2-3 hr, zero new infra) or
+   **#5 Advisor wisdom hovers** (high brand-amplifying value).
+3. Phase 0 cost-survival work ([`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md) § H.1):
+   `LLMCallLog.workspace` FK + `ExternalAPICallLog` model + per-workspace
+   daily cap + `cost_per_workspace_today` query. Still blocks any
+   multi-tenant SaaS launch. ~1 week of focused work.
+4. **`products.ts` modification** on 24-7-ai-global main was in working
+   tree at Session 1116 branch cut — Chris should commit or revert.
+
+**Deployment ownership change:** Jessica took over deploy ops in
+Session 1116. Don't bake Railway-specific assumptions into new code;
+hand env-var instructions to Jessica via Chris, not directly to Chris.
+
+---
+
+## SESSION 1106-1115 — PRIOR AUDIT / CLEANUP ENTRY POINT
 
 Phase 1 (Session 1101) closed the spider-count `CONFLICT`. Phase 2B
 (Session 1102) fixed the CLAUDE.md taxonomy drift (`73/8/2` → `73/9/1`),
@@ -183,9 +230,10 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md`](docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md`](docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md)
+- Previous handoff: [`docs/handoffs/SESSION_1115_CODE_HEALTH_REFACTORS.md`](docs/handoffs/SESSION_1115_CODE_HEALTH_REFACTORS.md)
+- Strategy docs: [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](docs/24_7_GLOBAL_AI_APP_ATLAS.md), [`docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md`](docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md), [`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md)
 - Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
 - Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
 - Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
