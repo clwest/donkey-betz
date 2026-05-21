@@ -1,8 +1,8 @@
 ---
 title: "Donkey Betz Platform — What It Actually Is"
 status: active
-session: 1099
-generated: 2026-04-18
+session: 1116
+generated: 2026-05-21
 companion_doc: PLATFORM_INVENTORY.md
 ---
 
@@ -13,7 +13,7 @@ companion_doc: PLATFORM_INVENTORY.md
 > runtime-derived and regenerable (via `python manage.py generate_platform_inventory`)
 > — it tells you *what exists right now*. This doc tells you *what it all is,
 > why it exists, and how it fits together*. Numbers cited here are accurate
-> at time of writing (Session 1099 audit, 2026-04-18); regenerate the
+> at time of writing (Session 1116 refresh, 2026-05-21); regenerate the
 > inventory for a fresh snapshot.
 
 ---
@@ -22,7 +22,7 @@ companion_doc: PLATFORM_INVENTORY.md
 
 You've built an autonomous multi-agent intelligence platform that ingests real-time data from **80 spiders**, clusters it into signals, routes signals through **83 specialized AI agents** deliberating in multi-reviewer pipelines with full citation provenance, surfaces everything through a GPT-5.2-powered personal assistant (**Rigby**) with **101 tools** and **8 enrichment services**, monitors itself via a **9-system "body" health metaphor**, and audits its own documentation against runtime reality.
 
-**Scale:** ~919K lines of app Python (core/ + ai_core/). 570 database tables. 365 Celery tasks. One conversational interface to all of it.
+**Scale:** ~919K lines of app Python (core/ + ai_core/). 574 database tables. 397 Celery tasks. One conversational interface to all of it.
 
 ---
 
@@ -231,7 +231,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 ### Layer 7 — Execution Plumbing (Celery + Redis)
 
 **Celery topology:**
-- 365 user-defined Celery tasks (excludes `celery.*` internals)
+- 397 user-defined Celery tasks (excludes `celery.*` internals)
 - `core/celery.py` is the primary static source of beat definitions; `django-celery-beat` stores the 305 runtime `PeriodicTask` rows (258 enabled, 47 disabled)
 - `sync_celery_schedules`, `sync_celery_beat`, `add_critical_celery_tasks`, `setup_workspace_autopilot`, and `sync_task_queues` bridge or repair those definitions into database-backed runtime state
 - 11 Procfile entries: `release` + `web`, `celery-worker`, `celery-pa`, `celery-content`, `celery-long-running`, `celery-long-running-2`, `celery-broadcast`, `celery-beat`, `code-worker`, `resolve-node`
@@ -303,7 +303,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 
 ### Layer 11 — Storage (PostgreSQL + pgvector)
 
-**570 concrete Django models across 23 apps.** Key model families:
+**574 concrete Django models across 23 apps.** Key model families:
 
 | Family | Key Models | Location |
 |---|---|---|
