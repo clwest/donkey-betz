@@ -242,8 +242,11 @@ def _check_workspace_caps(
     daily_cap = getattr(settings, "F2F_CAP_DAILY_CENTS", 1000)
     monthly_cap = getattr(settings, "F2F_CAP_MONTHLY_CENTS", 5000)
 
+    # ``>=`` semantics: "exhausted" means budget is fully consumed.
+    # At create_session, ``estimated_cents=0`` so this also blocks when
+    # the counter is exactly at the limit (no headroom for any speak()).
     daily_used = _redis_get_int(_key_daily(workspace_id, today))
-    if daily_used + estimated_cents > daily_cap:
+    if daily_used + estimated_cents >= daily_cap:
         raise F2FCapExceededError(
             "daily",
             message="Daily F2F cap exhausted for this workspace.",
@@ -253,7 +256,7 @@ def _check_workspace_caps(
         )
 
     monthly_used = _redis_get_int(_key_monthly(workspace_id, today))
-    if monthly_used + estimated_cents > monthly_cap:
+    if monthly_used + estimated_cents >= monthly_cap:
         raise F2FCapExceededError(
             "monthly",
             message="Monthly F2F cap exhausted for this workspace.",
@@ -278,7 +281,7 @@ def _check_session_caps(session: F2FSession, estimated_cents: int) -> None:
 
     session_cap = getattr(settings, "F2F_CAP_SESSION_SPEND_CENTS", 300)
     session_used = _redis_get_int(_key_session_counter(session.id))
-    if session_used + estimated_cents > session_cap:
+    if session_used + estimated_cents >= session_cap:
         raise F2FCapExceededError(
             "session_spend",
             message="Per-session spend cap reached.",
