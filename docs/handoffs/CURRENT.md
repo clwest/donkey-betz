@@ -2,16 +2,17 @@
 
 > Stable pointer so future sessions don't have to lex-sort 600+ files to find the latest handoff.
 
-**Latest planning docs (Session 1116 — pick one):**
-- [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) — sidecar architecture (new `spokesperson/` Django app, isolated, easy rollback)
-- [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) — native integration (extend `Advisor` + `VideoHistory`, finishing layers as general-purpose video ops, faster long-term but harder rollback)
+**Latest strategy docs (Session 1116 — read for current state):**
+- [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](../24_7_GLOBAL_AI_APP_ATLAS.md) (v1) — brand pivot Donkey Betz → 24/7 Global AI, soft-cut architecture
+- [`docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md`](../247_LIVE_INTELLIGENCE_PANEL_SKETCH.md) — first u-d-b → 247globalai.com integration; **shipped** this session
+- [`docs/COST_SURVIVAL_AUDIT.md`](../COST_SURVIVAL_AUDIT.md) — Phase 0 gating constraints (still pending)
 
-Both proposals plan to fold Character OS (`runway-hackathon`) into u-d-b. Read both before deciding. The native proposal includes a comparison table in Appendix A.
+**Character OS merge — parked:**
+- [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1115_CODE_HEALTH_REFACTORS.md`](SESSION_1115_CODE_HEALTH_REFACTORS.md)
+**Latest handoff:** [`SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
 
-**Previous:** [`SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md`](SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md)
-(early-phase companion of the same session — read both for complete 1115 context)
+**Previous:** [`SESSION_1115_CODE_HEALTH_REFACTORS.md`](SESSION_1115_CODE_HEALTH_REFACTORS.md)
 
 ## How to update
 
