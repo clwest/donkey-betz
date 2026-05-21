@@ -64,7 +64,68 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1117+ — CURRENT ENTRY POINT (post-1116 strategic pivot + portfolio buildout)
+## SESSION 1118+ — CURRENT ENTRY POINT (post-1117 engine bridge)
+
+Session 1117 closed the local-portfolio-grounding vision Chris flagged
+at end of Session 1116. Three slices landed end-to-end in one session:
+
+1. **Rigby corpus ingest into Character OS** — 9 docs / 55 chunks from
+   u-d-b's `docs/spokesperson/` are now M2M-bound to Rigby in Character
+   OS's admins-workspace with real `text-embedding-3-small` vectors.
+   Script:
+   [`character-os/scripts/ingest-udb-spokesperson-corpus.py`](../character-os/scripts/ingest-udb-spokesperson-corpus.py).
+
+2. **Fleet network anchor** — `fleet-net` external Docker network with
+   all four data containers (`unified-postgres`, `character_os_postgres`,
+   `session1115-redis`, `character_os_redis`) attached. Manifest at
+   [`/Users/donkeyking/development/infra/README.md`](/Users/donkeyking/development/infra/README.md)
+   codifies the convention + a Docker Desktop multi-network host-port
+   caveat to avoid the bug I hit twice.
+
+3. **`consult_engine` realtime tool** — first engine-bridge tool on
+   Character OS. HTTP-POSTs to u-d-b's `/api/pa/chat/`, polls for
+   result, surfaces the answer in the spokesperson conversation.
+   End-to-end tested via the live Runway realtime UI; round-trip
+   ~10 s; $0.0081 per call. See
+   [`docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
+   for the full arc.
+
+**Carry-over for the next session** (in priority order):
+
+1. **Seed u-d-b's local DB.** Engine answers via `consult_engine` are
+   competent on platform mechanics but light on portfolio specifics
+   because u-d-b's local DB has no workspaces, recent deliverables,
+   or agent history. Either dump-and-restore from prod, or run the
+   seed commands. Until this is done, the bridge proves wiring but
+   not knowledge depth.
+
+2. **Reconcile u-d-b's schema drift properly.** I added 6 columns to
+   `chat_conversations` via manual `ALTER TABLE` to unblock PA chat.
+   A proper `makemigrations` pass would generate `0340_*.py` plus
+   several other code-but-not-DB model changes (Narrative,
+   NarrativeEvidence, etc.). Run on a clean branch when ready.
+
+3. **Resolve the host-port collision long-term.** u-d-b currently
+   has to run on :8020 to coexist with Character OS on :8000. Either
+   move Character OS to :8010 permanently (one vite.config.ts edit
+   + Django runserver flag), or containerise one of the apps so it
+   doesn't compete for the host port.
+
+4. **Expand the bridge tool catalogue.** `consult_engine` is the
+   first engine-bridge tool. Two clear next ones: `query_spider_data`
+   (search recent SpiderData by topic) and `agent_consult` (invoke
+   a specific u-d-b agent like MarketIntelligenceAgent). Both follow
+   the same HTTP-POST + poll pattern.
+
+*(The mock/real embedding cache collision flagged in the Session 1117
+handoff was independently fixed by the parallel Character OS CC in
+commit `9c10b57`. No carry-over there.)*
+
+Below 1117 (older entry from Session 1116 preserved for context):
+
+---
+
+## SESSION 1117 — PRIOR ENTRY POINT (post-1116 strategic pivot + portfolio buildout)
 
 Session 1116 ran in two halves and shipped **13 PRs across 2 repos**.
 Three things to know before doing anything else:
