@@ -64,10 +64,11 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1118+ — CURRENT ENTRY POINT (post-1117 engine bridge)
+## SESSION 1118+ — CURRENT ENTRY POINT (post-1117 engine bridge + carry-over wrap)
 
 Session 1117 closed the local-portfolio-grounding vision Chris flagged
-at end of Session 1116. Three slices landed end-to-end in one session:
+at end of Session 1116, then knocked out the carry-overs in the same
+night before pushing on testing. Six slices landed end-to-end:
 
 1. **Rigby corpus ingest into Character OS** — 9 docs / 55 chunks from
    u-d-b's `docs/spokesperson/` are now M2M-bound to Rigby in Character
@@ -86,40 +87,65 @@ at end of Session 1116. Three slices landed end-to-end in one session:
    Character OS. HTTP-POSTs to u-d-b's `/api/pa/chat/`, polls for
    result, surfaces the answer in the spokesperson conversation.
    End-to-end tested via the live Runway realtime UI; round-trip
-   ~10 s; $0.0081 per call. See
+   ~10 s; $0.0081 per call.
+
+4. **Schema drift reconciled** — manual `ALTER TABLE` brought
+   `chat_conversations` back in sync with migration 0095 (which had
+   been applied but somehow lost the columns from a past restore).
+   Remaining auto-detected drift (Narrative models + agentexecution
+   alters) is someone else's WIP — left alone deliberately.
+
+5. **Host-port collision resolved permanently** — Character OS Django
+   now binds `:8010` by default (vite proxy driven by
+   `CHARACTER_OS_DJANGO_TARGET` env var). u-d-b keeps `:8000`.
+   Both apps run concurrently without ceremony.
+
+6. **Minimum-viable u-d-b seed** — `donkeyking` superuser + DRF
+   token, "Donkey Betz" `ProjectWorkspace`, 4 `Initiative` rows
+   (Session 1117/1118 carry-overs reflected), `CTOAgent` + `COOAgent`
+   registered via existing `register_*_agent` management commands.
+   Engine now has portfolio-shaped data to surface when consulted.
+
+7. **Bridge tool catalogue expanded** — `query_spider_data` and
+   `agent_consult` added to Character OS realtime tools, following
+   `consult_engine`'s pattern. Live-fire tested at ~5 s latency.
+   See
    [`docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
-   for the full arc.
+   for the original arc; carry-over wrap not yet documented in a
+   separate handoff (this entry covers it).
 
-**Carry-over for the next session** (in priority order):
+**Remaining carry-overs heading into 1118**:
 
-1. **Seed u-d-b's local DB.** Engine answers via `consult_engine` are
-   competent on platform mechanics but light on portfolio specifics
-   because u-d-b's local DB has no workspaces, recent deliverables,
-   or agent history. Either dump-and-restore from prod, or run the
-   seed commands. Until this is done, the bridge proves wiring but
-   not knowledge depth.
+1. **Test the expanded bridge in the live realtime UI.** All three
+   bridge tools (`consult_engine`, `query_spider_data`,
+   `agent_consult`) plumbing is proven via Django shell. They should
+   also be exercised via the avatar talk surface so Rigby's LLM
+   actually decides which tool to invoke for which question shape.
+   Use the seeded Initiative rows + Donkey Betz workspace as test
+   targets.
 
-2. **Reconcile u-d-b's schema drift properly.** I added 6 columns to
-   `chat_conversations` via manual `ALTER TABLE` to unblock PA chat.
-   A proper `makemigrations` pass would generate `0340_*.py` plus
-   several other code-but-not-DB model changes (Narrative,
-   NarrativeEvidence, etc.). Run on a clean branch when ready.
+2. **PA-side: workspace auto-discovery.** When `consult_engine` fires
+   without a `workspace_id` in context, u-d-b's PA currently can't
+   discover the operator's workspace automatically — even though
+   there's only one. Either (a) pass `workspace_id` explicitly from
+   Character OS via the bridge context, or (b) make u-d-b's PA fall
+   back to a default workspace when none is supplied. Touches
+   `core/services/unified_pa_entrypoint.py`.
 
-3. **Resolve the host-port collision long-term.** u-d-b currently
-   has to run on :8020 to coexist with Character OS on :8000. Either
-   move Character OS to :8010 permanently (one vite.config.ts edit
-   + Django runserver flag), or containerise one of the apps so it
-   doesn't compete for the host port.
+3. **PA-side: direct agent invocation tool.** `agent_consult` surfaced
+   that u-d-b's PA can't directly route to a named AGENT_MAP entry
+   from the chat surface — the test response said "no agent_router /
+   CTOAgent tool is available to me here." Add an `invoke_agent`
+   PA tool that takes `(agent_name, payload)` and uses `agent_router`
+   internally. Lets the bridge surface ACTUAL agent responses, not
+   PA's framing of why it can't reach them.
 
-4. **Expand the bridge tool catalogue.** `consult_engine` is the
-   first engine-bridge tool. Two clear next ones: `query_spider_data`
-   (search recent SpiderData by topic) and `agent_consult` (invoke
-   a specific u-d-b agent like MarketIntelligenceAgent). Both follow
-   the same HTTP-POST + poll pattern.
-
-*(The mock/real embedding cache collision flagged in the Session 1117
-handoff was independently fixed by the parallel Character OS CC in
-commit `9c10b57`. No carry-over there.)*
+4. **u-d-b seed depth.** Current seed is 1 workspace + 4 initiatives +
+   2 agents. Future steps if needed: ingest u-d-b's `docs/handoffs/`
+   into the platform's RAG via `sync_docs_index_to_documents` so PA
+   has historical context, register more agents
+   (`register_creative_agents`), seed some spider data manually if
+   live spiders aren't enabled locally.
 
 Below 1117 (older entry from Session 1116 preserved for context):
 
