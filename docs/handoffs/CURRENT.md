@@ -10,12 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
+**Latest handoff:** [`SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
+(Rigby corpus ingest + fleet-net + `consult_engine` engine bridge — local-portfolio-grounding vision first-pass realised)
 
-**Companion (Part 1):** [`SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
-(read both for the full Session 1116 arc — Part 1 = strategy pivot + first integration, Part 2 = second integration + Channels section + Lab Wave 2)
-
-**Previous:** [`SESSION_1115_CODE_HEALTH_REFACTORS.md`](SESSION_1115_CODE_HEALTH_REFACTORS.md)
+**Previous:** [`SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
 
 ## How to update
 

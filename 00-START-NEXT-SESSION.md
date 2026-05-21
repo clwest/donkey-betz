@@ -64,7 +64,290 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1117+ — CURRENT ENTRY POINT (post-1116 strategic pivot + portfolio buildout)
+## SESSION 1118+ — CURRENT ENTRY POINT (post-1117 engine bridge + carry-over wrap)
+
+Session 1117 closed the local-portfolio-grounding vision Chris flagged
+at end of Session 1116, then knocked out the carry-overs in the same
+night before pushing on testing. Six slices landed end-to-end:
+
+1. **Rigby corpus ingest into Character OS** — 9 docs / 55 chunks from
+   u-d-b's `docs/spokesperson/` are now M2M-bound to Rigby in Character
+   OS's admins-workspace with real `text-embedding-3-small` vectors.
+   Script:
+   [`character-os/scripts/ingest-udb-spokesperson-corpus.py`](../character-os/scripts/ingest-udb-spokesperson-corpus.py).
+
+2. **Fleet network anchor** — `fleet-net` external Docker network with
+   all four data containers (`unified-postgres`, `character_os_postgres`,
+   `session1115-redis`, `character_os_redis`) attached. Manifest at
+   [`/Users/donkeyking/development/infra/README.md`](/Users/donkeyking/development/infra/README.md)
+   codifies the convention + a Docker Desktop multi-network host-port
+   caveat to avoid the bug I hit twice.
+
+3. **`consult_engine` realtime tool** — first engine-bridge tool on
+   Character OS. HTTP-POSTs to u-d-b's `/api/pa/chat/`, polls for
+   result, surfaces the answer in the spokesperson conversation.
+   End-to-end tested via the live Runway realtime UI; round-trip
+   ~10 s; $0.0081 per call.
+
+4. **Schema drift reconciled** — manual `ALTER TABLE` brought
+   `chat_conversations` back in sync with migration 0095 (which had
+   been applied but somehow lost the columns from a past restore).
+   Remaining auto-detected drift (Narrative models + agentexecution
+   alters) is someone else's WIP — left alone deliberately.
+
+5. **Host-port collision resolved permanently** — Character OS Django
+   now binds `:8010` by default (vite proxy driven by
+   `CHARACTER_OS_DJANGO_TARGET` env var). u-d-b keeps `:8000`.
+   Both apps run concurrently without ceremony.
+
+6. **Minimum-viable u-d-b seed** — `donkeyking` superuser + DRF
+   token, "Donkey Betz" `ProjectWorkspace`, 4 `Initiative` rows
+   (Session 1117/1118 carry-overs reflected), `CTOAgent` + `COOAgent`
+   registered via existing `register_*_agent` management commands.
+   Engine now has portfolio-shaped data to surface when consulted.
+
+7. **Bridge tool catalogue expanded** — `query_spider_data` and
+   `agent_consult` added to Character OS realtime tools, following
+   `consult_engine`'s pattern. Live-fire tested at ~5 s latency.
+   See
+   [`docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
+   for the original arc; carry-over wrap not yet documented in a
+   separate handoff (this entry covers it).
+
+---
+
+## HEADLINE PROJECT FOR SESSION 1118 — Rigby Face-to-Face (F2F) in u-d-b
+
+> **Architectural pivot from the parallel Character OS Session 215**
+> ([handoff](../character-os/docs/handoffs/SESSION_215_RIGBY_FACE_TO_FACE_PIVOT.md)).
+> The three bridge tools shipped in Session 1117
+> (`consult_engine`, `query_spider_data`, `agent_consult`) are **soft-
+> deprecated as v1 dogfood**. Real-mode dogfood on the Character OS
+> avatar proved Runway's realtime LLM ignores pre-narration cues —
+> same class as the documented greeting bias. The avatar fires the
+> tool successfully and renders the answer in a SPA panel, but never
+> voices anything after. That's a Runway-conversational-LLM limit, not
+> a fixable description issue.
+>
+> **The real product** lives in u-d-b with a **push-to-speak avatar**
+> (HeyGen / D-ID / similar) instead of Runway's conversational
+> avatar. u-d-b's PA pipeline is OURS; we control STT + LLM + TTS +
+> lip-sync end-to-end. No bridge. No narration gap. End customers of
+> Character OS don't have a u-d-b anyway — bridge tools were a wrong-
+> repo feature.
+
+### Architecture (target)
+
+```
+operator mic ──► STT (Whisper Realtime / Runway / etc.)
+                  │
+                  ▼
+              Rigby PA (existing u-d-b /api/pa/chat/)
+                  │
+                  ▼ answer text
+              TTS (ElevenLabs / Runway / Cartesia)
+                  │
+                  ▼ audio
+              Avatar lip-sync (HeyGen Streaming / D-ID Live)
+                  │
+                  ▼ video stream
+              Operator screen
+```
+
+### Provider candidates (push-to-speak avatars)
+
+- **HeyGen Streaming Avatar API** — text → live avatar, sub-second
+  latency, WebRTC streaming, `speak()` endpoint. Probably best fit.
+- **D-ID Live Portrait API** — similar shape, often cheaper, less
+  polished lip-sync.
+- **Runway again** — only if Runway ships a `speak()` API. As of
+  SESSION 215, no such API in `@runwayml/avatars@0.16.0`. Re-check
+  when work starts.
+
+### Implementation slices (F2F.0 → F2F.5)
+
+| Slice | Scope | Effort |
+|---|---|---|
+| **F2F.0** | Scope lock — pick provider, document architecture, confirm cost model. | ½ session |
+| **F2F.1** | Provider abstraction + first impl. Mirror Character OS R2's `RealtimeProvider` Protocol pattern. Single named adapter + one v1 provider + mock for tests. | 1 session |
+| **F2F.2** | `/api/pa/voice_session/` broker. New Django endpoint that creates a streaming session and returns SDK-safe payload. Mirrors COS `RealtimeSession` broker but with push-to-speak shape. | 1 session |
+| **F2F.3** | STT → Rigby → TTS pipeline. Operator mic → STT → existing `/api/pa/chat/` → TTS → audio stream → avatar. | 1-2 sessions |
+| **F2F.4** | u-d-b SPA route `/rigby/talk`. Mirrors COS `/spokespeople/:id/talk` but simpler (one Rigby, no picker). | 1 session |
+| **F2F.5** | Real-mode dogfood. End-to-end with real provider, cost cap $1. | ½ session |
+
+Total: ~5 sessions if everything lands clean.
+
+### What u-d-b can borrow from Character OS
+
+- `apps.realtime` model shape (`RealtimeSession`, `RealtimeToolInvocation`)
+- `RealtimeProvider` Protocol + mock provider pattern
+- `compose_realtime_document` IDEA (but inverted — Rigby's PA
+  pipeline already has knowledge access, so the doc step is
+  redundant; just use Rigby's existing system prompt)
+- Cost ticker UI from `web/src/components/cost-ticker.tsx`
+- `AvatarCall` lifecycle pattern from `talk.tsx`
+
+### What u-d-b should NOT borrow
+
+- Tool dispatch surface — Rigby already has 101 PA tools
+- R6 session memory — Rigby already has conversation history
+  (ChatConversation rows)
+- The bridge tool pattern (`consult_engine`, etc.) — that's what the
+  pivot is replacing
+
+### Why Session 1117's work isn't wasted
+
+The pivot moves the SURFACE (avatar narration) but everything
+foundational stays valuable:
+
+- **24/7 Global AI corpus** ingested into Character OS — still useful
+  for the Character OS spokesperson product (customer-facing); will
+  also be re-ingestable into u-d-b's Rigby F2F context if/when
+  needed.
+- **fleet-net Docker network** — still the right cross-app addressing
+  shape; F2F will likely run on the same network when containerised.
+- **u-d-b local seed** (workspace + initiatives + agents) — Rigby PA
+  uses all of it; doubly important for F2F because that's where the
+  avatar's answers come from.
+- **Worker fleet + Beat up** — needed for Rigby PA tool dispatch
+  inside the F2F voice loop.
+- **Three bridge tools** — stay as dogfood seam until F2F.5 ships.
+  Operator can still use them to test Rigby on Character OS during
+  F2F development. Soft-deprecation flag eventually gates them from
+  customer workspaces (`tier_required='agency'` or a `dogfood_only`
+  flag — under 1 hr work when needed).
+
+### Original Session 1117 bridge follow-ups (kept for reference)
+
+These were the next-step ideas for the bridge tool path. Most are
+subsumed by the F2F pivot; preserved here in case the bridge needs
+operator-only polish during the F2F build:
+
+1. **PA-side: workspace auto-discovery** — when consult_engine fires
+   without `workspace_id`, PA can't find the operator's workspace
+   even though there's only one. Either pass it explicitly or have
+   PA fall back to a default. Touches
+   `core/services/unified_pa_entrypoint.py`.
+
+2. **PA-side: direct agent invocation tool** — add an `invoke_agent`
+   PA tool that takes `(agent_name, payload)` and uses `agent_router`
+   internally. Lets `agent_consult` actually reach named AGENT_MAP
+   entries instead of returning "no agent_router tool available
+   here." Still useful for non-F2F PA flows too.
+
+3. **u-d-b seed depth** — current seed is 1 workspace + 4 initiatives
+   + 2 agents. Ingest `docs/handoffs/` via `sync_docs_index_to_documents`,
+   register more agents (`register_creative_agents`), maybe seed
+   spider data manually. F2F.3 dogfood will surface what depth is
+   actually missing.
+
+---
+
+## Standing local stack (Session 1117 reference)
+
+This is the live config Session 1117 stood up. New sessions can
+follow these steps to reproduce.
+
+### Prereqs (one-time per laptop)
+
+```bash
+# Fleet network anchor (Docker containers reach each other by name)
+docker network create fleet-net  # idempotent — skip if exists
+docker network connect fleet-net unified-postgres
+docker network connect fleet-net session1115-redis
+docker network connect fleet-net character_os_postgres
+docker network connect fleet-net character_os_redis
+# If a connect breaks a host-port mapping, restart that container.
+# See /Users/donkeyking/development/infra/README.md "Known caveats".
+```
+
+### Per-session boot — u-d-b (engine on :8000)
+
+```bash
+cd /Users/donkeyking/development/unified-donkey-betz
+
+# 1. Daphne + Redis (default PORT=8000)
+make start
+
+# 2. Full Celery fleet (4 workers: default, pa, long_running,
+#    broadcast) + Beat scheduler
+make celery
+```
+
+Verify:
+- `curl -s http://localhost:8000/health/ping/` → `pong`
+- `.venv/bin/celery -A core inspect ping` → 4 nodes online
+
+The 44 enabled `PeriodicTask` rows are pre-pruned to safe
+pipeline/hygiene work (cleanup, monitoring, spider data
+processing) plus three daily agent diagnostics (CTO/COO/Trend
+at 7:15/7:30/7:45 am). No free-willed content generation.
+
+### Per-session boot — Character OS (face on :8010)
+
+```bash
+cd /Users/donkeyking/development/character-os/shell
+source .venv/bin/activate && set -a && source ../.env && set +a
+python manage.py runserver 0.0.0.0:8010                     # Django
+
+cd /Users/donkeyking/development/character-os/shell
+source .venv/bin/activate && set -a && source ../.env && set +a
+celery -A character_os worker --loglevel=info --pool=solo   # workers
+celery -A character_os beat --loglevel=info                 # beat
+
+cd /Users/donkeyking/development/character-os/media-engine
+source .venv/bin/activate && set -a && source ../.env && set +a
+uvicorn app.main:app --host localhost --port 8001           # media
+
+cd /Users/donkeyking/development/character-os/web
+pnpm dev                                                    # vite :5174
+```
+
+Bridge env vars (Character OS reaches u-d-b PA via
+`localhost:8000`):
+
+```bash
+# Already in character-os/.env from Session 1117:
+UDB_PA_API_URL=http://localhost:8000
+UDB_PA_API_TOKEN=e3c7276f00f12b77bda365c7c186577cd854cf2a
+```
+
+### Local accounts
+
+- u-d-b superuser: `donkeyking` (token
+  `e3c7276f00f12b77bda365c7c186577cd854cf2a`, matches `tools/pa_local.sh`)
+- u-d-b workspace: `Donkey Betz` (id `3e4970d8-6834-44fb-99ed-93e18b5754b6`)
+- Character OS spokesperson: `Rigby` (id
+  `d3d0fb14-193e-4c4c-88d1-acae9af25bb5`) in `Admin's workspace`
+  (id `f4f2aa20-e2e2-4ae2-85a0-abacd8bea231`)
+
+### Talk surface
+
+http://localhost:5174/spokespeople/d3d0fb14-193e-4c4c-88d1-acae9af25bb5/talk
+
+### Per-session context-kit hygiene
+
+After any code/doc change:
+
+```bash
+# Regenerate the docs index (memory rule — commit INDEX.md after)
+python manage.py build_docs_index
+
+# Refresh context-kit's inventory snapshot
+context-kit inventory --write
+
+# Drift check (must report 0 CONFLICT findings to satisfy CI)
+context-kit verify --json | jq '.summary'
+
+# Repo guardrail (forbidden paths, INVENTORY freshness, etc.)
+python scripts/verify_repo_guardrails.py
+```
+
+Below 1117 (older entry from Session 1116 preserved for context):
+
+---
+
+## SESSION 1117 — PRIOR ENTRY POINT (post-1116 strategic pivot + portfolio buildout)
 
 Session 1116 ran in two halves and shipped **13 PRs across 2 repos**.
 Three things to know before doing anything else:
