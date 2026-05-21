@@ -64,50 +64,62 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1117+ — CURRENT ENTRY POINT (post-1116 strategic pivot)
+## SESSION 1117+ — CURRENT ENTRY POINT (post-1116 strategic pivot + portfolio buildout)
 
-Session 1116 was a strategic pivot session. Three things to know before
-doing anything else:
+Session 1116 ran in two halves and shipped **13 PRs across 2 repos**.
+Three things to know before doing anything else:
 
 1. **Brand pivot is real and shipping.** Donkey Betz → **24/7 Global AI**.
-   The marketing site at `/Users/donkeyking/development/24-7-ai-global/`
-   is live on Vercel with the locked Suite of 4 (PitchDeckForge,
-   DealFlowTracker, Contract Concierge, MentorForge) + 3 Verticals +
-   5 Lab entries. **u-d-b is the engine, not a product** — Rigby is not
-   in the public taxonomy. New work should think of u-d-b as the backend
-   that powers public surfaces.
+   The marketing site at `247globalai.com` (owned, Vercel-served, live)
+   now has **22 Works in Motion** across 8 editorial sections:
+   `§ 01 Charter · 02 Suite · 03 Verticals · 04 Lab (10 entries) ·
+   05 Channels (5 entries) · 06 Around the Clock · 07 Position · 08 Engage`.
+   **u-d-b is the engine, not a product** — Rigby is in the Lab as
+   "Private", not in the public Suite. New work should think of u-d-b
+   as the backend that powers public surfaces, not as a 23rd product.
 
 2. **Character OS merge is parked.** [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md)
    and its sidecar variant stay in tree as v2 backlog. Unpark only if a
    paying customer asks for an avatar.
 
-3. **First u-d-b → 247globalai.com integration shipped:** `/now` page
-   renders live `SignalCluster` data from the last 24h via new endpoint
-   `GET /api/public/intelligence/now/` (token-gated, default-off).
-   See [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md).
+3. **Two u-d-b → 247globalai.com integrations shipped:**
+   - `/now` page renders live `SignalCluster` data via
+     `GET /api/public/intelligence/now/` (token-gated, default-off)
+   - `/shipped` page renders recently-published Deliverables via
+     `GET /api/public/changelog/recent/` (same token)
+   - Both render graceful empty-state panels until Jessica sets the env vars
+   - See [`docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
+     (Part 2) and [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
+     (Part 1) for the full arc
 
-**Awaiting Jessica:** `PUBLIC_INTEL_TOKEN` env var on Railway + matching
-`UDB_API_URL` / `UDB_PUBLIC_INTEL_TOKEN` on Vercel. Until set, `/now`
-renders the "all quiet on the wire" panel — by design, on-brand. See
-handoff § "Operator action required (Jessica)" for the 4-step setup.
+**Awaiting Jessica:**
+- `PUBLIC_INTEL_TOKEN` on Railway u-d-b + matching `UDB_API_URL` +
+  `UDB_PUBLIC_INTEL_TOKEN` on Vercel 24-7-ai-global (single shared token
+  unlocks BOTH `/now` and `/shipped` simultaneously)
+- Optional: Fly.io migration when ready — config + 12-section runbook in
+  open PR #2096 (parked)
 
-**Next priorities (post-Jessica):**
-1. Verify `/now` renders real signals on 247globalai.com after env vars
-   land (visual check, no code change expected).
-2. Pick next integration from `docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md`
-   § C.5 — recommended: **#4 Initiative changelog panel** (same
-   architecture template as `/now`, ~2-3 hr, zero new infra) or
-   **#5 Advisor wisdom hovers** (high brand-amplifying value).
-3. Phase 0 cost-survival work ([`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md) § H.1):
+**Next priorities:**
+1. **Verify `/now` and `/shipped` render real signals after env vars
+   land.** Visual check on 247globalai.com, no code change expected.
+2. **Atlas v1 → v2 reframe.** Phase 1 currently reads "Rigby standalone";
+   reality is "u-d-b as engine for the public Suite". Atlas needs the
+   structural rewrite. ~1 hr docs work.
+3. **Integration #5 — Advisor wisdom hovers on Suite cards.** Last
+   unhit item from `docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md` § C.5.
+   ~3-5 hr, same template as `/now` and `/shipped`.
+4. **Phase 0 cost-survival work** ([`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md) § H.1):
    `LLMCallLog.workspace` FK + `ExternalAPICallLog` model + per-workspace
-   daily cap + `cost_per_workspace_today` query. Still blocks any
-   multi-tenant SaaS launch. ~1 week of focused work.
-4. **`products.ts` modification** on 24-7-ai-global main was in working
-   tree at Session 1116 branch cut — Chris should commit or revert.
+   daily cap + `cost_per_workspace_today` query + `build_cost_audit`.
+   Still blocks any multi-tenant SaaS launch. ~1 week of focused work.
+5. **Atlas § J open questions** — pricing anchors, daily $ cap, what
+   survives the stripped consumer Rigby UI, sports betting fate.
 
-**Deployment ownership change:** Jessica took over deploy ops in
-Session 1116. Don't bake Railway-specific assumptions into new code;
-hand env-var instructions to Jessica via Chris, not directly to Chris.
+**Deployment ownership:** Jessica is the deploy owner. Don't bake
+Railway-specific assumptions into new code; hand env-var instructions
+to Jessica via Chris, not directly to Chris. Fly.io migration plan
+documented in PR #2096 + `docs/ops/FLY_IO_MIGRATION.md` — operator
+intentionally deferred going live.
 
 ---
 
@@ -230,7 +242,8 @@ window:
 
 ### What to read next
 
-- Fresh handoff: [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
+- Fresh handoff: [`docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
+- Part 1 companion: [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
 - Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
 - Previous handoff: [`docs/handoffs/SESSION_1115_CODE_HEALTH_REFACTORS.md`](docs/handoffs/SESSION_1115_CODE_HEALTH_REFACTORS.md)
 - Strategy docs: [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](docs/24_7_GLOBAL_AI_APP_ATLAS.md), [`docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md`](docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md), [`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md)
