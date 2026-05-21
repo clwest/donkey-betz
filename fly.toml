@@ -1,0 +1,153 @@
+# =============================================================================
+# fly.toml — unified-donkey-betz (Session 1116 migration prep)
+#
+# Multi-process Fly.io app config translating the existing Procfile.
+# Mirrors Railway's process layout: 1 web (Daphne) + 7 Celery worker
+# types + 1 Beat scheduler + 1 code-worker + 1 Resolve Node FastAPI.
+#
+# To launch this app:
+#   1) flyctl auth login
+#   2) flyctl launch --copy-config --no-deploy --name <your-app-name>
+#      (will prompt for region + create app shell using THIS toml)
+#   3) Provision Postgres + Redis (see docs/ops/FLY_IO_MIGRATION.md § 3)
+#   4) Set secrets (see docs/ops/FLY_IO_MIGRATION.md § 4)
+#   5) flyctl deploy --build-target production
+#
+# Memory sizes informed by Procfile annotations (parent ~200MB + child
+# limits 150-400MB). Adjust [[vm]] blocks if your real RSS differs.
+#
+# Cost estimate: ~$30-40/mo for the full fleet at the sizes below. See
+# docs/ops/FLY_IO_MIGRATION.md § 8 for the breakdown.
+# =============================================================================
+
+app = "udb-backend"  # ← Jessica: change this when running `flyctl launch`
+primary_region = "ord"  # Chicago — central US, low latency to most users
+
+# -----------------------------------------------------------------------------
+# Build
+# -----------------------------------------------------------------------------
+[build]
+  dockerfile = "Dockerfile"
+  # The Dockerfile has multiple stages; production stage is the runtime image.
+  # Fly.io will use the LAST stage by default (currently "flower") — override
+  # with --build-target production when deploying.
+
+# -----------------------------------------------------------------------------
+# Non-secret environment
+# -----------------------------------------------------------------------------
+[env]
+  DJANGO_SETTINGS_MODULE = "core.settings"
+  PYTHONUNBUFFERED = "1"
+  PYTHONDONTWRITEBYTECODE = "1"
+  PORT = "8000"
+  # Memory ceilings the runtime advertises to Celery — informational only,
+  # the real ceiling is the Fly VM memory.
+  CELERY_WORKER_MAX_MEMORY_DEFAULT = "150000"
+
+# -----------------------------------------------------------------------------
+# Process groups (mirrors Procfile)
+# -----------------------------------------------------------------------------
+[processes]
+  # 1) Web — Daphne ASGI server, primary HTTP entrypoint
+  web = "daphne -b 0.0.0.0 -p 8000 --http-timeout 120 --application-close-timeout 120 core.asgi:application"
+
+  # 2) Default queue worker — agents, sports, default Celery tasks
+  worker = "celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=5 --max-memory-per-child=150000 -Q default,agents,sports"
+
+  # 3) PA queue — Rigby's tool dispatch and enrichment
+  pa = "celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q pa"
+
+  # 4) Content queue — deliberation + content pipeline
+  content = "celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=2 --max-memory-per-child=250000 -Q content"
+
+  # 5) Long-running + ML — embeddings, finishing layers, heavy tasks
+  # Procfile runs TWO instances of this (long-running + long-running-2);
+  # in Fly we run ONE process group and scale it: `flyctl scale count long_running=2`
+  long_running = "celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=2 --max-memory-per-child=150000 -Q long_running,ml"
+
+  # 6) Broadcast — fast, threaded fan-out tasks (notifications, etc.)
+  broadcast = "celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast"
+
+  # 7) Beat — Celery's cron scheduler (single instance ONLY; do not scale > 1)
+  beat = "celery -A core beat -l info"
+
+  # 8) Code worker — code generation/job tasks; biggest single-task RSS
+  code_worker = "celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 -Q code_jobs"
+
+  # 9) Resolve Node — FastAPI video pipeline (DaVinci Resolve integration)
+  resolve = "sh -c 'cd resolve_node && MOCK_MODE=${MOCK_MODE:-true} uvicorn app:app --host 0.0.0.0 --port 5001'"
+
+# -----------------------------------------------------------------------------
+# HTTP service (web only)
+# -----------------------------------------------------------------------------
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false  # Web should stay warm; Daphne WebSocket sessions are stateful
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["web"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+# -----------------------------------------------------------------------------
+# Release command — runs once per deploy BEFORE new machines roll
+# (mirrors Procfile's `release:` line)
+# -----------------------------------------------------------------------------
+[deploy]
+  release_command = "bash -c 'python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only --disable-missing && python manage.py sync_task_queues --apply && python manage.py setup_codebase_workspace && python manage.py setup_pa_service_account'"
+  strategy = "rolling"  # Replace machines one at a time; avoids dual-Beat startup race
+
+# -----------------------------------------------------------------------------
+# VM sizing per process group
+# -----------------------------------------------------------------------------
+# Beat: lightweight scheduler, low memory, never scales > 1
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  processes = ["beat"]
+
+# Resolve Node: FastAPI in MOCK_MODE is cheap; when real rendering ships, bump
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  processes = ["resolve"]
+
+# Most Celery workers: 512MB fits 200MB parent + 200-250MB child
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  processes = ["worker", "pa", "content", "long_running", "broadcast"]
+
+# Web: Daphne + WebSocket + the full import surface needs headroom
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1024mb"
+  processes = ["web"]
+
+# Code worker: child can spike to 400MB — needs 1GB safety margin
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1024mb"
+  processes = ["code_worker"]
+
+# -----------------------------------------------------------------------------
+# Health checks per process (Fly polls these to decide if a machine is healthy)
+# -----------------------------------------------------------------------------
+# Web health check happens via the http_service above; no [[checks]] block needed.
+
+# Celery worker health checks — `inspect ping` matches the existing Procfile
+# convention. Disabled by default in this initial config (uncomment and tune
+# after first successful deploy to avoid early-deploy false-positive restarts).
+#
+# [[checks]]
+#   name = "celery-worker-ping"
+#   type = "command"
+#   command = ["celery", "-A", "core", "inspect", "ping"]
+#   interval = "60s"
+#   timeout = "30s"
+#   grace_period = "120s"
+#   processes = ["worker", "pa", "content", "long_running", "broadcast", "code_worker"]
