@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
-(Rigby corpus ingest + fleet-net + `consult_engine` engine bridge — local-portfolio-grounding vision first-pass realised)
+**Latest handoff:** [`SESSION_1118_F2F_BROKER_LANDED.md`](SESSION_1118_F2F_BROKER_LANDED.md)
+(F2F.0 → F2F.2 of the Rigby Face-to-Face arc: provider abstraction + cap-enforced voice session broker + endpoints, mock-mode end-to-end live, real HeyGen wiring deferred to F2F.3)
 
-**Previous:** [`SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
+**Previous:** [`SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
 
 ## How to update
 
