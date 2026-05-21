@@ -247,8 +247,15 @@ import dj_database_url
 
 if 'DATABASE_URL' in os.environ:
     DATABASES = {
-        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+        'default': dj_database_url.parse(os.environ['DATABASE_URL'])
     }
+    # Backfill discrete DB_* vars when DATABASE_URL omits them (local-dev pattern
+    # where the URL holds only host/user/db and DB_PASSWORD lives in its own var).
+    for field, env_key in (('PASSWORD', 'DB_PASSWORD'), ('USER', 'DB_USER'),
+                            ('HOST', 'DB_HOST'), ('PORT', 'DB_PORT'),
+                            ('NAME', 'DB_NAME')):
+        if not DATABASES['default'].get(field) and os.environ.get(env_key):
+            DATABASES['default'][field] = os.environ[env_key]
 else:
     # Fallback to SQLite for development
     DATABASES = {
