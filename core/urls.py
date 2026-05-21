@@ -3863,12 +3863,18 @@ urlpatterns += [
 # docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md for the architecture story.
 # =============================================================================
 from core.views_public_intelligence import PublicIntelligenceNowView
+from core.views_public_changelog import PublicChangelogRecentView
 
 urlpatterns += [
     path(
         'api/public/intelligence/now/',
         PublicIntelligenceNowView.as_view(),
         name='public-intel-now',
+    ),
+    path(
+        'api/public/changelog/recent/',
+        PublicChangelogRecentView.as_view(),
+        name='public-changelog-recent',
     ),
 ]
 
