@@ -64,7 +64,75 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1118+ — CURRENT ENTRY POINT (post-1117 engine bridge + carry-over wrap)
+## SESSION 1119 — CURRENT ENTRY POINT (post-1118 F2F broker landed)
+
+Session 1118 closed F2F.0 → F2F.2 of the Rigby Face-to-Face arc Chris
+flagged as that session's headline. Two PRs merged:
+
+- **F2F.0 — Scope lock.** Providers locked (HeyGen / OpenAI Realtime
+  Whisper / Cartesia), caps locked ($10/day, $50/month, $3/session,
+  90s duration), F2F.5 dogfood cap raised $1 → $5. Rigby identity also
+  updated mid-session: **she is now a male donkey, he/him**. Locked
+  to Rigby's memory as `memory_id=3` (identity) and `memory_id=5`
+  (decisions), both `importance=9`.
+- **F2F.1 — Provider abstraction.** [PR #2101](https://github.com/clwest/donkey-betz-platform/pull/2101)
+  merged via `bb1ee684`. New `core/services/realtime_avatar/` package:
+  `F2FProvider` Protocol (push-to-speak), `MockF2FProvider`,
+  `HeyGenF2FProvider` stub, `get_provider()` factory with auto-mock
+  fallback. 13 tests.
+- **F2F.2 — Broker + endpoints + tests.** [PR #2102](https://github.com/clwest/donkey-betz-platform/pull/2102)
+  merged via `f57df6a9`. F2FSession model, narrow migration 0340, full
+  broker with Rigby's locked cap-check ladder, three DRF endpoints
+  (`POST /api/pa/voice_session/`, `/<uuid>/speak/`, `/<uuid>/end/`),
+  Redis hot state (session_key never to disk), error JSON shape with
+  402/410/429/502/503 mapping. 35 tests.
+
+Mock-mode end-to-end is live. **Real-mode wiring (HeyGen HTTP) is
+F2F.3.** Full Session 1118 handoff:
+[`docs/handoffs/SESSION_1118_F2F_BROKER_LANDED.md`](docs/handoffs/SESSION_1118_F2F_BROKER_LANDED.md).
+
+---
+
+## HEADLINE PROJECT FOR SESSION 1119 — F2F.3: real provider wiring
+
+F2F.3 is the heaviest remaining slice (1-2 sessions per the F2F arc
+plan). Scope:
+
+1. **Replace `HeyGenF2FProvider` `NotImplementedError` stubs** in
+   `core/services/realtime_avatar/heygen.py` with real HTTP calls.
+   Verify HeyGen's streaming endpoint shape first — their docs
+   reorganized in late 2025.
+2. **Wire STT and TTS into the speak pipeline.** Operator audio →
+   OpenAI Realtime Whisper → `/api/pa/chat/` → Cartesia → audio chunk
+   → HeyGen avatar. F2F.2's broker contract is text-in to provider;
+   if HeyGen turns out to need audio-in, add `speak_audio(bytes)` to
+   the Protocol then (Rigby greenlit this as a F2F.3-time decision).
+3. **Add deploy-time assertion** that `HEYGEN_API_KEY` is set in
+   real-mode envs — `F2F_PROVIDER_MOCK=auto` silently routes to mock
+   if missing.
+
+### Pre-F2F.3 checklist
+
+- [ ] HeyGen Streaming Avatar account created; `HEYGEN_API_KEY` in env
+- [ ] Cartesia API key (or ElevenLabs fallback) in env
+- [ ] Confirm HeyGen's current streaming endpoint URL + auth shape
+- [ ] (Optional) `docs/BEHAVIOR_LAYER.md` first draft from Rigby —
+  identity (male donkey, he/him), pronoun constraints,
+  push-to-speak contract. Doctor flagged this as missing; F2F.3 is
+  the right moment to seed it since voice surface is the trigger.
+
+### F2F.4 + F2F.5 still ahead
+
+- **F2F.4** — u-d-b SPA route `/rigby/talk`. ~1 session. Borrow
+  `cost-ticker` + `AvatarCall` lifecycle patterns from Character OS
+  `talk.tsx`. Single Rigby, no picker. Convert `reset_at` ISO from
+  UTC `+00:00` to MT (`-06:00`) in the cap-trip UI per Rigby's nit.
+- **F2F.5** — Real-mode dogfood, $5 cap. ½ session. ~90s of avatar
+  at mid-case envelope. Confirms F2F is real before going wider.
+
+---
+
+## SESSION 1118 — PRIOR ENTRY POINT (post-1117 engine bridge + carry-over wrap)
 
 Session 1117 closed the local-portfolio-grounding vision Chris flagged
 at end of Session 1116, then knocked out the carry-overs in the same
@@ -116,7 +184,7 @@ night before pushing on testing. Six slices landed end-to-end:
 
 ---
 
-## HEADLINE PROJECT FOR SESSION 1118 — Rigby Face-to-Face (F2F) in u-d-b
+## HEADLINE PROJECT FOR SESSION 1118 (closed in F2F.0–F2F.2) — Rigby Face-to-Face (F2F) in u-d-b
 
 > **Architectural pivot from the parallel Character OS Session 215**
 > ([handoff](../character-os/docs/handoffs/SESSION_215_RIGBY_FACE_TO_FACE_PIVOT.md)).
