@@ -102,6 +102,11 @@ CELERY_TASK_EVENT_RETENTION_DAYS = int(os.environ.get('CELERY_TASK_EVENT_RETENTI
 LLM_CALL_LOG_RETENTION_DAYS = int(os.environ.get('LLM_CALL_LOG_RETENTION_DAYS', '30'))
 BODY_THROTTLE_MAX_DELAY_SECONDS = int(os.environ.get('BODY_THROTTLE_MAX_DELAY_SECONDS', '30'))
 
+# Session 1116: Public-read intelligence endpoint token (247globalai.com integration).
+# When unset / empty, the endpoint at /api/public/intelligence/now/ rejects every
+# request — default-off safety. See core/views_public_intelligence.py.
+PUBLIC_INTEL_TOKEN = os.environ.get('PUBLIC_INTEL_TOKEN', '')
+
 # Application definition
 INSTALLED_APPS = [
     # ASGI/WebSocket support (MUST be first)
