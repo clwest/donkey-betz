@@ -3857,6 +3857,22 @@ urlpatterns += [
 ]
 
 # =============================================================================
+# Session 1116: Public-read intelligence endpoint for 247globalai.com.
+# Token-gated via settings.PUBLIC_INTEL_TOKEN; disabled by default.
+# See core/views_public_intelligence.py and
+# docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md for the architecture story.
+# =============================================================================
+from core.views_public_intelligence import PublicIntelligenceNowView
+
+urlpatterns += [
+    path(
+        'api/public/intelligence/now/',
+        PublicIntelligenceNowView.as_view(),
+        name='public-intel-now',
+    ),
+]
+
+# =============================================================================
 # MARKET INTELLIGENCE ROI METRICS (Phase 6 - Session 472)
 # =============================================================================
 from core.views_roi_metrics import (
