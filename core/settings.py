@@ -347,6 +347,18 @@ AI_PROVIDERS = {
 RUNWAY_API_KEY = os.environ.get('RUNWAY_API_KEY', '')
 RUNWAY_MOCK_MODE = os.environ.get('RUNWAY_MOCK_MODE', 'False') == 'True'  # Production default: real mode
 
+# F2F (Rigby Face-to-Face) — Session 1118 push-to-speak avatar.
+# Provider locked to HeyGen Streaming Avatar API in F2F.0.
+# Mock mode auto-enables when HEYGEN_API_KEY is empty so tests and
+# local dev never crash on missing credentials. STT/TTS keys land
+# in F2F.3 wiring; HEYGEN_API_KEY is the only one F2F.1 needs.
+HEYGEN_API_KEY = os.environ.get('HEYGEN_API_KEY', '')
+F2F_PROVIDER_NAME = os.environ.get('F2F_PROVIDER_NAME', 'heygen')
+F2F_PROVIDER_MOCK = (
+    os.environ.get('F2F_PROVIDER_MOCK', 'auto') == 'True'
+    or (os.environ.get('F2F_PROVIDER_MOCK', 'auto') == 'auto' and not HEYGEN_API_KEY)
+)
+
 # DaVinci Resolve Bridge Configuration
 # The bridge server runs alongside DaVinci Resolve and provides REST API access
 DAVINCI_BRIDGE_URL = os.environ.get('DAVINCI_BRIDGE_URL', 'http://localhost:9090')
