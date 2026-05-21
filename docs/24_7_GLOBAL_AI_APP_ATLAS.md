@@ -361,13 +361,9 @@ Brand: **24/7 Global AI**
 Flagship: **24/7 Global AI** (the assistant — same name as brand)
 Verticals: **24/7 Markets**, **24/7 Content**, **24/7 Studio**, **24/7 Legal**, **24/7 Dev** (or whatever sticks)
 
-Domain candidates (verify availability):
-- `247globalai.com` (primary — verify)
-- `247.ai` (probably taken; check)
-- `tfsglobalai.com` (T-F-S = twenty-four/seven; ugly, skip)
-- `247global.ai` (verify)
+**Domain:** `247globalai.com` is **owned and live** (Vercel-served, production custom domain on the `24-7-ai-global` Next.js project). The Vercel preview URL `24-7-ai-global.vercel.app` is preview-only.
 
-Sub-app subdomains:
+**Sub-app subdomains** (proposed, not yet provisioned — DNS work for later if/when verticals get their own personas):
 - `markets.247globalai.com`
 - `content.247globalai.com`
 - `studio.247globalai.com`
@@ -375,7 +371,7 @@ Sub-app subdomains:
 - `app.247globalai.com` → flagship / Rigby
 - `edge.247globalai.com` → Operator Edge
 
-**Action:** before naming locks, run a 30-min trademark + .com availability check.
+**Action remaining:** trademark check on "24/7 Global AI" (USPTO TESS search + optional Intent-to-Use 1(b) filing before the brand spreads further). The .com is already secured.
 
 ---
 
@@ -392,7 +388,7 @@ Sub-app subdomains:
 | 3 | Ship `cost_per_workspace_today` query + PA tool | Operator visibility | ~1 day |
 | 4 | Ship per-workspace daily $ cap (`budget_gate.check()`) | Hard cap before any multi-tenant launch | ~1 day |
 | 5 | Brand decision lock: 24/7 Global AI + Rigby naming | Marketing alignment | ~3 days |
-| 6 | Domain + trademark check, register .com | Legal safety | ~half day |
+| 6 | Trademark check on "24/7 Global AI" (USPTO TESS + optional ITU filing) — `.com` already owned and live | Legal safety | ~1-2 hr |
 | 7 | Per-app persona scaffolding in React frontend (route prefix + theme system) | Multi-persona-ready frontend even though Phase 1 only uses one | ~1 week |
 | 8 | Stripe product for flagship tier (Rigby standalone) | Revenue plumbing | ~2 days |
 
@@ -457,7 +453,7 @@ If a paying customer says "I'd pay you $50/mo extra to have Rigby with a face," 
 
 - **No new code.** This is strategy, not implementation.
 - **No new repos.** Soft cut means no repo proliferation.
-- **No name lock.** Operator + Rigby + (ideally) a trademark check decides names.
+- **Soft name lock only.** Brand "24/7 Global AI" is locked enough to ship the live site at `247globalai.com`; trademark filing is still recommended before scaling the brand further.
 - **No commitment to a sports-betting fate.** I recommend demoting, but Chris's call.
 - **No removal of any existing surface.** `CONNECTION_CENSUS_2026_05.md` correctly says: detectors first, deletes later. Same applies here.
 - **No promise of timelines below 4 weeks.** Per memory `feedback_no_fluff_verify_truth.md`, anything faster would be aspirational.
@@ -470,7 +466,7 @@ These need real answers before this Atlas becomes a plan. v1 has narrowed the li
 
 ### J.1 Phase 1 (decide now)
 
-1. **Is "24/7 Global AI" actually the brand?** Or is it a working title? Trademark + .com availability must be checked before Phase 0 item #5 closes.
+1. **Trademark check on "24/7 Global AI"** — the brand is locked in practice (site is live at `247globalai.com`, .com is owned), but no USPTO TESS check or filing has happened yet. ~1-2 hr of legal-adjacent work. Recommended before scaling the brand further (paid ads, press, partnerships).
 
 2. **Phase 1 flagship pricing — $20/mo or $30/mo?** Sensitive to expected cost-per-seat (the daily $ cap × 30). My instinct: start at $30 with a 7-day trial; lower if conversion is weak. Raising prices later is harder than lowering them.
 
