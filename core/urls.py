@@ -1064,6 +1064,11 @@ from core.views_personal_assistant import (
     session_health,  # Context-aware session management
 )
 from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
+from core.views_f2f import (  # Session 1118 F2F.2: Rigby Face-to-Face voice broker
+    create_voice_session as f2f_create_voice_session,
+    speak_voice_session as f2f_speak_voice_session,
+    end_voice_session as f2f_end_voice_session,
+)
 if settings.DEBUG:
     from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
     from core.views_assistant_minimal import chat_minimal_dev, context_minimal_dev
@@ -2410,6 +2415,23 @@ urlpatterns = [
     path('api/pa/conversations/<str:conversation_id>/health/', session_health, name='pa-session-health'),
     # Session 977: On-demand boardroom maintenance trigger
     path('api/pa/boardroom/maintenance/', trigger_boardroom_maintenance, name='boardroom-maintenance'),
+
+    # Session 1118 F2F.2 — Rigby Face-to-Face push-to-speak voice loop
+    path(
+        'api/pa/voice_session/',
+        f2f_create_voice_session,
+        name='f2f-voice-session-create',
+    ),
+    path(
+        'api/pa/voice_session/<uuid:session_id>/speak/',
+        f2f_speak_voice_session,
+        name='f2f-voice-session-speak',
+    ),
+    path(
+        'api/pa/voice_session/<uuid:session_id>/end/',
+        f2f_end_voice_session,
+        name='f2f-voice-session-end',
+    ),
 
     # Research endpoints
     path('api/v1/research/books/', research_books, name='research-books'),

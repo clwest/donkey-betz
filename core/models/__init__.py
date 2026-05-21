@@ -146,6 +146,10 @@ from ..models_signal_intelligence import (
 # Import audio cache model (Session 926 - Universal Agent Voice System)
 from ..models_audio_cache import AudioCache
 
+# Import F2F (Rigby Face-to-Face) realtime avatar session model
+# (Session 1118 F2F.2 — push-to-speak voice broker durable record).
+from ..models_f2f import F2FSession, F2FSessionStatus, TERMINAL_STATUSES
+
 # Import user feedback model (Session 948 - PA Feedback Queue)
 from ..models_user_feedback import UserFeedback
 

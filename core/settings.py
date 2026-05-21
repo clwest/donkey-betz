@@ -359,6 +359,35 @@ F2F_PROVIDER_MOCK = (
     or (os.environ.get('F2F_PROVIDER_MOCK', 'auto') == 'auto' and not HEYGEN_API_KEY)
 )
 
+# F2F.2 cost caps (Rigby F2F.0 locked decisions, memory_id 5).
+# Cents to avoid float arithmetic on monetary values.
+F2F_CAP_DAILY_CENTS = int(os.environ.get('F2F_CAP_DAILY_CENTS', '1000'))           # $10/day per workspace
+F2F_CAP_MONTHLY_CENTS = int(os.environ.get('F2F_CAP_MONTHLY_CENTS', '5000'))       # $50/month per workspace
+F2F_CAP_SESSION_SPEND_CENTS = int(os.environ.get('F2F_CAP_SESSION_SPEND_CENTS', '300'))   # $3/session
+F2F_CAP_SESSION_DURATION_SECONDS = int(os.environ.get('F2F_CAP_SESSION_DURATION_SECONDS', '90'))
+
+# F2F.2 cost model (conservative envelope; refine in F2F.3 once HeyGen
+# billing units are confirmed). Avatar streaming dominates cost.
+F2F_AVATAR_COST_CENTS_PER_MINUTE = int(os.environ.get('F2F_AVATAR_COST_CENTS_PER_MINUTE', '250'))
+F2F_TTS_COST_CENTS_PER_MINUTE = int(os.environ.get('F2F_TTS_COST_CENTS_PER_MINUTE', '8'))   # Cartesia
+F2F_STT_COST_CENTS_PER_MINUTE = int(os.environ.get('F2F_STT_COST_CENTS_PER_MINUTE', '2'))   # OpenAI Realtime Whisper rounded up
+F2F_LLM_COST_CENTS_PER_CALL = int(os.environ.get('F2F_LLM_COST_CENTS_PER_CALL', '5'))       # PA call estimate
+
+# Speaking rate for chars → seconds conversion (TTS rendering).
+F2F_CHARS_PER_SECOND = int(os.environ.get('F2F_CHARS_PER_SECOND', '13'))
+
+# F2F.2 broker behavior knobs.
+# When True + mock_mode, mock sessions accrue synthetic cost so cap-trip
+# logic can be exercised in CI without spending real money.
+F2F_MOCK_SYNTHETIC_COST = os.environ.get('F2F_MOCK_SYNTHETIC_COST', 'False') == 'True'
+
+# Redis TTLs (seconds) for F2F.2 hot state.
+F2F_REDIS_SESSION_KEY_TTL = int(os.environ.get('F2F_REDIS_SESSION_KEY_TTL', '600'))    # 10 min
+F2F_REDIS_SESSION_COUNTER_TTL = int(os.environ.get('F2F_REDIS_SESSION_COUNTER_TTL', '900'))   # 15 min
+F2F_REDIS_DAILY_COUNTER_TTL = int(os.environ.get('F2F_REDIS_DAILY_COUNTER_TTL', str(26 * 3600)))   # 26h
+F2F_REDIS_MONTHLY_COUNTER_TTL = int(os.environ.get('F2F_REDIS_MONTHLY_COUNTER_TTL', str(35 * 86400)))   # 35d
+F2F_SPEAK_DEDUPE_BUCKET_SECONDS = int(os.environ.get('F2F_SPEAK_DEDUPE_BUCKET_SECONDS', '5'))
+
 # DaVinci Resolve Bridge Configuration
 # The bridge server runs alongside DaVinci Resolve and provides REST API access
 DAVINCI_BRIDGE_URL = os.environ.get('DAVINCI_BRIDGE_URL', 'http://localhost:9090')
