@@ -114,46 +114,132 @@ night before pushing on testing. Six slices landed end-to-end:
    for the original arc; carry-over wrap not yet documented in a
    separate handoff (this entry covers it).
 
-**Remaining carry-overs heading into 1118**:
+---
 
-1. **Test the expanded bridge in the live realtime UI.** All three
-   bridge tools (`consult_engine`, `query_spider_data`,
-   `agent_consult`) plumbing is proven via Django shell. They should
-   also be exercised via the avatar talk surface so Rigby's LLM
-   actually decides which tool to invoke for which question shape.
-   Use the seeded Initiative rows + Donkey Betz workspace as test
-   targets.
+## HEADLINE PROJECT FOR SESSION 1118 — Rigby Face-to-Face (F2F) in u-d-b
 
-2. **PA-side: workspace auto-discovery.** When `consult_engine` fires
-   without a `workspace_id` in context, u-d-b's PA currently can't
-   discover the operator's workspace automatically — even though
-   there's only one. Either (a) pass `workspace_id` explicitly from
-   Character OS via the bridge context, or (b) make u-d-b's PA fall
-   back to a default workspace when none is supplied. Touches
+> **Architectural pivot from the parallel Character OS Session 215**
+> ([handoff](../character-os/docs/handoffs/SESSION_215_RIGBY_FACE_TO_FACE_PIVOT.md)).
+> The three bridge tools shipped in Session 1117
+> (`consult_engine`, `query_spider_data`, `agent_consult`) are **soft-
+> deprecated as v1 dogfood**. Real-mode dogfood on the Character OS
+> avatar proved Runway's realtime LLM ignores pre-narration cues —
+> same class as the documented greeting bias. The avatar fires the
+> tool successfully and renders the answer in a SPA panel, but never
+> voices anything after. That's a Runway-conversational-LLM limit, not
+> a fixable description issue.
+>
+> **The real product** lives in u-d-b with a **push-to-speak avatar**
+> (HeyGen / D-ID / similar) instead of Runway's conversational
+> avatar. u-d-b's PA pipeline is OURS; we control STT + LLM + TTS +
+> lip-sync end-to-end. No bridge. No narration gap. End customers of
+> Character OS don't have a u-d-b anyway — bridge tools were a wrong-
+> repo feature.
+
+### Architecture (target)
+
+```
+operator mic ──► STT (Whisper Realtime / Runway / etc.)
+                  │
+                  ▼
+              Rigby PA (existing u-d-b /api/pa/chat/)
+                  │
+                  ▼ answer text
+              TTS (ElevenLabs / Runway / Cartesia)
+                  │
+                  ▼ audio
+              Avatar lip-sync (HeyGen Streaming / D-ID Live)
+                  │
+                  ▼ video stream
+              Operator screen
+```
+
+### Provider candidates (push-to-speak avatars)
+
+- **HeyGen Streaming Avatar API** — text → live avatar, sub-second
+  latency, WebRTC streaming, `speak()` endpoint. Probably best fit.
+- **D-ID Live Portrait API** — similar shape, often cheaper, less
+  polished lip-sync.
+- **Runway again** — only if Runway ships a `speak()` API. As of
+  SESSION 215, no such API in `@runwayml/avatars@0.16.0`. Re-check
+  when work starts.
+
+### Implementation slices (F2F.0 → F2F.5)
+
+| Slice | Scope | Effort |
+|---|---|---|
+| **F2F.0** | Scope lock — pick provider, document architecture, confirm cost model. | ½ session |
+| **F2F.1** | Provider abstraction + first impl. Mirror Character OS R2's `RealtimeProvider` Protocol pattern. Single named adapter + one v1 provider + mock for tests. | 1 session |
+| **F2F.2** | `/api/pa/voice_session/` broker. New Django endpoint that creates a streaming session and returns SDK-safe payload. Mirrors COS `RealtimeSession` broker but with push-to-speak shape. | 1 session |
+| **F2F.3** | STT → Rigby → TTS pipeline. Operator mic → STT → existing `/api/pa/chat/` → TTS → audio stream → avatar. | 1-2 sessions |
+| **F2F.4** | u-d-b SPA route `/rigby/talk`. Mirrors COS `/spokespeople/:id/talk` but simpler (one Rigby, no picker). | 1 session |
+| **F2F.5** | Real-mode dogfood. End-to-end with real provider, cost cap $1. | ½ session |
+
+Total: ~5 sessions if everything lands clean.
+
+### What u-d-b can borrow from Character OS
+
+- `apps.realtime` model shape (`RealtimeSession`, `RealtimeToolInvocation`)
+- `RealtimeProvider` Protocol + mock provider pattern
+- `compose_realtime_document` IDEA (but inverted — Rigby's PA
+  pipeline already has knowledge access, so the doc step is
+  redundant; just use Rigby's existing system prompt)
+- Cost ticker UI from `web/src/components/cost-ticker.tsx`
+- `AvatarCall` lifecycle pattern from `talk.tsx`
+
+### What u-d-b should NOT borrow
+
+- Tool dispatch surface — Rigby already has 101 PA tools
+- R6 session memory — Rigby already has conversation history
+  (ChatConversation rows)
+- The bridge tool pattern (`consult_engine`, etc.) — that's what the
+  pivot is replacing
+
+### Why Session 1117's work isn't wasted
+
+The pivot moves the SURFACE (avatar narration) but everything
+foundational stays valuable:
+
+- **24/7 Global AI corpus** ingested into Character OS — still useful
+  for the Character OS spokesperson product (customer-facing); will
+  also be re-ingestable into u-d-b's Rigby F2F context if/when
+  needed.
+- **fleet-net Docker network** — still the right cross-app addressing
+  shape; F2F will likely run on the same network when containerised.
+- **u-d-b local seed** (workspace + initiatives + agents) — Rigby PA
+  uses all of it; doubly important for F2F because that's where the
+  avatar's answers come from.
+- **Worker fleet + Beat up** — needed for Rigby PA tool dispatch
+  inside the F2F voice loop.
+- **Three bridge tools** — stay as dogfood seam until F2F.5 ships.
+  Operator can still use them to test Rigby on Character OS during
+  F2F development. Soft-deprecation flag eventually gates them from
+  customer workspaces (`tier_required='agency'` or a `dogfood_only`
+  flag — under 1 hr work when needed).
+
+### Original Session 1117 bridge follow-ups (kept for reference)
+
+These were the next-step ideas for the bridge tool path. Most are
+subsumed by the F2F pivot; preserved here in case the bridge needs
+operator-only polish during the F2F build:
+
+1. **PA-side: workspace auto-discovery** — when consult_engine fires
+   without `workspace_id`, PA can't find the operator's workspace
+   even though there's only one. Either pass it explicitly or have
+   PA fall back to a default. Touches
    `core/services/unified_pa_entrypoint.py`.
 
-3. **PA-side: direct agent invocation tool.** `agent_consult` surfaced
-   that u-d-b's PA can't directly route to a named AGENT_MAP entry
-   from the chat surface — the test response said "no agent_router /
-   CTOAgent tool is available to me here." Add an `invoke_agent`
+2. **PA-side: direct agent invocation tool** — add an `invoke_agent`
    PA tool that takes `(agent_name, payload)` and uses `agent_router`
-   internally. Lets the bridge surface ACTUAL agent responses, not
-   PA's framing of why it can't reach them.
+   internally. Lets `agent_consult` actually reach named AGENT_MAP
+   entries instead of returning "no agent_router tool available
+   here." Still useful for non-F2F PA flows too.
 
-4. **u-d-b seed depth.** Current seed is 1 workspace + 4 initiatives +
-   2 agents. Future steps if needed: ingest u-d-b's `docs/handoffs/`
-   into the platform's RAG via `sync_docs_index_to_documents` so PA
-   has historical context, register more agents
-   (`register_creative_agents`), seed some spider data manually if
-   live spiders aren't enabled locally.
-
-5. **Address silent-avatar fix in the live UI.** The Character OS
-   parallel CC shipped a description-cue fix (avatar voices a
-   pre-narration acknowledgement like "Let me check with the engine
-   — one moment" before invoking) since Runway's realtime SDK is
-   one-way (avatar → SPA, tool results invisible to the LLM).
-   Re-test the three bridge tools in the avatar talk surface; the
-   answer renders on screen for the operator to read.
+3. **u-d-b seed depth** — current seed is 1 workspace + 4 initiatives
+   + 2 agents. Ingest `docs/handoffs/` via `sync_docs_index_to_documents`,
+   register more agents (`register_creative_agents`), maybe seed
+   spider data manually. F2F.3 dogfood will surface what depth is
+   actually missing.
 
 ---
 
