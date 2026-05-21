@@ -147,6 +147,116 @@ night before pushing on testing. Six slices landed end-to-end:
    (`register_creative_agents`), seed some spider data manually if
    live spiders aren't enabled locally.
 
+5. **Address silent-avatar fix in the live UI.** The Character OS
+   parallel CC shipped a description-cue fix (avatar voices a
+   pre-narration acknowledgement like "Let me check with the engine
+   — one moment" before invoking) since Runway's realtime SDK is
+   one-way (avatar → SPA, tool results invisible to the LLM).
+   Re-test the three bridge tools in the avatar talk surface; the
+   answer renders on screen for the operator to read.
+
+---
+
+## Standing local stack (Session 1117 reference)
+
+This is the live config Session 1117 stood up. New sessions can
+follow these steps to reproduce.
+
+### Prereqs (one-time per laptop)
+
+```bash
+# Fleet network anchor (Docker containers reach each other by name)
+docker network create fleet-net  # idempotent — skip if exists
+docker network connect fleet-net unified-postgres
+docker network connect fleet-net session1115-redis
+docker network connect fleet-net character_os_postgres
+docker network connect fleet-net character_os_redis
+# If a connect breaks a host-port mapping, restart that container.
+# See /Users/donkeyking/development/infra/README.md "Known caveats".
+```
+
+### Per-session boot — u-d-b (engine on :8000)
+
+```bash
+cd /Users/donkeyking/development/unified-donkey-betz
+
+# 1. Daphne + Redis (default PORT=8000)
+make start
+
+# 2. Full Celery fleet (4 workers: default, pa, long_running,
+#    broadcast) + Beat scheduler
+make celery
+```
+
+Verify:
+- `curl -s http://localhost:8000/health/ping/` → `pong`
+- `.venv/bin/celery -A core inspect ping` → 4 nodes online
+
+The 44 enabled `PeriodicTask` rows are pre-pruned to safe
+pipeline/hygiene work (cleanup, monitoring, spider data
+processing) plus three daily agent diagnostics (CTO/COO/Trend
+at 7:15/7:30/7:45 am). No free-willed content generation.
+
+### Per-session boot — Character OS (face on :8010)
+
+```bash
+cd /Users/donkeyking/development/character-os/shell
+source .venv/bin/activate && set -a && source ../.env && set +a
+python manage.py runserver 0.0.0.0:8010                     # Django
+
+cd /Users/donkeyking/development/character-os/shell
+source .venv/bin/activate && set -a && source ../.env && set +a
+celery -A character_os worker --loglevel=info --pool=solo   # workers
+celery -A character_os beat --loglevel=info                 # beat
+
+cd /Users/donkeyking/development/character-os/media-engine
+source .venv/bin/activate && set -a && source ../.env && set +a
+uvicorn app.main:app --host localhost --port 8001           # media
+
+cd /Users/donkeyking/development/character-os/web
+pnpm dev                                                    # vite :5174
+```
+
+Bridge env vars (Character OS reaches u-d-b PA via
+`localhost:8000`):
+
+```bash
+# Already in character-os/.env from Session 1117:
+UDB_PA_API_URL=http://localhost:8000
+UDB_PA_API_TOKEN=e3c7276f00f12b77bda365c7c186577cd854cf2a
+```
+
+### Local accounts
+
+- u-d-b superuser: `donkeyking` (token
+  `e3c7276f00f12b77bda365c7c186577cd854cf2a`, matches `tools/pa_local.sh`)
+- u-d-b workspace: `Donkey Betz` (id `3e4970d8-6834-44fb-99ed-93e18b5754b6`)
+- Character OS spokesperson: `Rigby` (id
+  `d3d0fb14-193e-4c4c-88d1-acae9af25bb5`) in `Admin's workspace`
+  (id `f4f2aa20-e2e2-4ae2-85a0-abacd8bea231`)
+
+### Talk surface
+
+http://localhost:5174/spokespeople/d3d0fb14-193e-4c4c-88d1-acae9af25bb5/talk
+
+### Per-session context-kit hygiene
+
+After any code/doc change:
+
+```bash
+# Regenerate the docs index (memory rule — commit INDEX.md after)
+python manage.py build_docs_index
+
+# Refresh context-kit's inventory snapshot
+context-kit inventory --write
+
+# Drift check (must report 0 CONFLICT findings to satisfy CI)
+context-kit verify --json | jq '.summary'
+
+# Repo guardrail (forbidden paths, INVENTORY freshness, etc.)
+python scripts/verify_repo_guardrails.py
+```
+
 Below 1117 (older entry from Session 1116 preserved for context):
 
 ---
