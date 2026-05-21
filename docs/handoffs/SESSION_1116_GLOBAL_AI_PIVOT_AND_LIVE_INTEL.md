@@ -1,12 +1,21 @@
 ---
-title: "Session 1116 — 24/7 Global AI strategic pivot + live intel panel shipped"
+title: "Session 1116 Part 1 — 24/7 Global AI strategic pivot + live intel panel shipped"
 date: 2026-05-20
-status: active
+status: superseded-by-companion
 session: 1116
 previous_handoff: SESSION_1115_CODE_HEALTH_REFACTORS.md
+companion_handoff: SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md
 ---
 
-# Session 1116 — 24/7 Global AI strategic pivot + live intel panel shipped
+> **Heads up — this is only Session 1116's first half.** The session
+> kept going after this handoff was written and added 8 more PRs
+> (second integration `/shipped`, new Channels section, Lab Wave 2,
+> domain corrections, Fly.io migration plan, section renumber fix).
+> Part 2 is documented in
+> [`SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md).
+> Read both for the complete Session 1116 picture.
+
+# Session 1116 Part 1 — 24/7 Global AI strategic pivot + live intel panel shipped
 
 > **Read this if** you need the May 2026 brand-pivot context — Donkey Betz
 > → 24/7 Global AI, why the Character OS merge got parked, and how u-d-b
