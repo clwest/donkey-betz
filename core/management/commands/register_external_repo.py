@@ -158,6 +158,52 @@ def _render_repo_profile_markdown(config: dict) -> str:
             "```",
         ])
 
+    docker = config.get("docker")
+    if docker and docker.get("enabled"):
+        base = docker.get("base_urls", {})
+        bb = docker.get("brain_bridge", {})
+        hostnames = docker.get("fleet_net_hostnames", {})
+        cnames = docker.get("container_names", {})
+        hc = docker.get("healthchecks", {})
+        boot = docker.get("bootstrap_commands", {})
+        lines.extend([
+            "",
+            "## Docker runtime (live laptop fleet)",
+            "",
+            f"- Primary service: **{docker.get('primary_service', '—')}**",
+            f"- Web URL: `{base.get('web_url', '—')}`",
+            f"- API URL: `{base.get('api_url', '—')}`",
+            f"- Brain bridge: `{bb.get('url', '—')}` "
+            f"(auth: `{bb.get('auth_mode', '—')}`"
+            f"{', open' if not bb.get('requires_auth', True) else ''})",
+        ])
+        if bb.get("demo_user"):
+            lines.append(
+                f"- Demo creds: `{bb['demo_user'].get('email', '—')}` "
+                f"/ `{bb['demo_user'].get('password', '—')}`"
+            )
+        if cnames:
+            lines.append("- Containers: " + ", ".join(
+                f"{role}=`{name}`" for role, name in cnames.items()
+            ))
+        if hostnames:
+            lines.append("- Fleet-net hostnames: " + ", ".join(
+                f"{role}=`{host}`" for role, host in hostnames.items()
+            ))
+        if hc:
+            for role, spec in hc.items():
+                lines.append(
+                    f"- Healthcheck ({role}): `{spec.get('method', 'GET')} "
+                    f"{spec.get('path', '—')}` → "
+                    f"{spec.get('expect_status', [200])}"
+                )
+        if boot:
+            lines.append("- Bootstrap:")
+            for k, v in boot.items():
+                lines.append(f"  - `{k}`: `{v}`")
+        for note in docker.get("notes", []):
+            lines.append(f"  > {note}")
+
     bridge = md.get("bridge_relationship")
     if bridge:
         lines.extend([

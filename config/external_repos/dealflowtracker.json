@@ -2,65 +2,207 @@
   "schema_version": 1,
   "repo_id": "dealflowtracker",
   "name": "dealflowtracker",
-  "description": "Deal Flow Tracker (Suite IV — `arc: Grow`, pillar Intelligence). Kanban dealflow for angels and emerging funds. Intake by public form or manual entry, 6-stage pipeline, 5-dimension scorecard (team · market · traction · moat · fit), AI investment memos from scorecard + deal data, public submission form, contact mgmt, analytics. Pricing Free → $99/mo. Live at https://dealflowtracker.vercel.app. Built for funds that want institutional memory without hiring an analyst.",
+  "description": "Deal Flow Tracker (Suite IV \u2014 `arc: Grow`, pillar Intelligence). Kanban dealflow for angels and emerging funds. Intake by public form or manual entry, 6-stage pipeline, 5-dimension scorecard (team \u00b7 market \u00b7 traction \u00b7 moat \u00b7 fit), AI investment memos from scorecard + deal data, public submission form, contact mgmt, analytics. Pricing Free \u2192 $99/mo. Live at https://dealflowtracker.vercel.app. Built for funds that want institutional memory without hiring an analyst.",
   "root_path": "/Users/donkeyking/development/dealflowtracker",
   "workspace_type": "local",
   "tech_stack": {
-    "primary_language": "python", "repo_type": "saas_app", "backend": "fastapi",
-    "frontend": "react+vite", "react_version": "19", "database": "postgres",
-    "llm": "openai", "billing": "stripe", "deploy_target": "vercel+render",
-    "package_managers": {"python": "pip", "js": "pnpm"},
-    "products_24_7_slug": "dealflowtracker", "products_24_7_no": "IV"
+    "primary_language": "python",
+    "repo_type": "saas_app",
+    "backend": "fastapi",
+    "frontend": "react+vite",
+    "react_version": "19",
+    "database": "postgres",
+    "llm": "openai",
+    "billing": "stripe",
+    "deploy_target": "vercel+render",
+    "package_managers": {
+      "python": "pip",
+      "js": "pnpm"
+    },
+    "products_24_7_slug": "dealflowtracker",
+    "products_24_7_no": "IV"
   },
   "entry_points": {
     "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
     "anchor_runtime": "docs/DEAL_FLOW_TRACKER_INVENTORY.md",
     "anchor_start": "00-START-NEXT-SESSION.md",
     "anchor_claude": "CLAUDE.md",
-    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
-    "code_allowlist": ["backend", "frontend/src", "scripts"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "docs_root": "docs/",
+    "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": [
+      "backend",
+      "frontend/src",
+      "scripts"
+    ],
+    "docs_allowlist": [
+      "docs",
+      "README.md",
+      "CLAUDE.md",
+      "00-START-NEXT-SESSION.md"
+    ],
     "ports": {
-      "frontend": 3040,
-      "backend": 8050,
+      "frontend": 5178,
+      "backend": 8006,
       "websocket": null,
-      "notes": "Vite :3040, FastAPI uvicorn :8050. Slot 5 in the fleet port table."
+      "notes": "Vite/nginx host :5178 \u2192 container :80 (web). FastAPI uvicorn :8006 (api). Updated Session 1125 Docker fleet rollout."
     },
     "start_commands": {
-      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8050 --reload",
-      "frontend": "cd frontend && pnpm dev --port 3040 --strictPort"
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8006 --reload",
+      "frontend": "cd frontend && npm run dev -- --port 5178 --strictPort"
     }
   },
   "protected_paths": [
-    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
-    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
-    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
-    "*.sqlite3", "media/"
+    ".env",
+    ".env.*",
+    "**/.env*",
+    "**/*.pem",
+    "**/*key*",
+    "**/credentials*",
+    "**/.ssh/**",
+    ".git",
+    ".git/",
+    "backend/.venv",
+    "backend/.venv/**",
+    "frontend/node_modules",
+    "frontend/node_modules/**",
+    "frontend/dist",
+    "frontend/dist/**",
+    "**/__pycache__/**",
+    "*.sqlite3",
+    "media/"
   ],
   "permissions": {
-    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
-    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+    "allow_file_write": true,
+    "allow_file_delete": false,
+    "allow_command_execution": true,
+    "allow_git_operations": true,
+    "allow_autonomous_writes": false,
+    "require_human_review": false
   },
   "repo_profile_metadata": {
     "constraints_text": [
       "No pushes / tags without explicit operator approval. No --force ever.",
-      "Investor/founder data is sensitive — uploaded deals contain confidential pitch material. Never commit, never log payloads."
+      "Investor/founder data is sensitive \u2014 uploaded deals contain confidential pitch material. Never commit, never log payloads."
     ],
     "constraints_rules": [
-      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_force", "always": true},
-      {"type": "deny_paths", "globs": [".env*", "**/.env*", "media/**"]}
+      {
+        "type": "deny_git_push",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_tag",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_force",
+        "always": true
+      },
+      {
+        "type": "deny_paths",
+        "globs": [
+          ".env*",
+          "**/.env*",
+          "media/**"
+        ]
+      }
     ],
     "session_log_pointer": "docs/handoffs/",
     "fleet_role": {
-      "role": "suite_product", "suite_position": "IV (Grow arc)", "pillar": "Intelligence",
-      "url": "https://dealflowtracker.vercel.app", "status": "shipped", "income_lane": true,
+      "role": "suite_product",
+      "suite_position": "IV (Grow arc)",
+      "pillar": "Intelligence",
+      "url": "https://dealflowtracker.vercel.app",
+      "status": "shipped",
+      "income_lane": true,
       "founder_toolkit_member": true
     },
     "bridge_relationship": null,
-    "open_questions": [], "last_refresh_at": null, "last_git_head": null,
-    "last_branch": null, "health_status": null,
-    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+    "open_questions": [],
+    "last_refresh_at": null,
+    "last_git_head": null,
+    "last_branch": null,
+    "health_status": null,
+    "snapshot_retention": {
+      "max_snapshots": 20,
+      "max_age_days": 30
+    }
+  },
+  "docker": {
+    "enabled": true,
+    "primary_service": "web",
+    "base_urls": {
+      "web_url": "http://localhost:5178",
+      "api_url": "http://localhost:8006"
+    },
+    "host_ports": {
+      "web": 5178,
+      "api": 8006
+    },
+    "container_ports": {
+      "web": 80,
+      "api": 8006
+    },
+    "container_names": {
+      "web": "dealflowtracker_web",
+      "api": "dealflowtracker_api",
+      "postgres": "dealflowtracker_postgres"
+    },
+    "fleet_net_hostnames": {
+      "web": "dealflowtracker_web:80",
+      "api": "dealflowtracker_api:8006",
+      "postgres": "dealflowtracker_postgres:5432"
+    },
+    "healthchecks": {
+      "web": {
+        "method": "GET",
+        "path": "/",
+        "expect_status": [
+          200,
+          304
+        ],
+        "notes": "nginx static root"
+      },
+      "api": {
+        "method": "GET",
+        "path": "/api/health",
+        "expect_status": [
+          200
+        ]
+      }
+    },
+    "brain_bridge": {
+      "url": "http://localhost:8006/api/brain/ask",
+      "callable_from": [
+        "host",
+        "fleet_net"
+      ],
+      "requires_auth": true,
+      "auth_mode": "demo_user",
+      "demo_user": {
+        "email": "demo@dealflow.dev",
+        "password": "demo123"
+      }
+    },
+    "compose_files": [
+      "docker-compose.yml",
+      "docker-compose.dev.yml"
+    ],
+    "env_files": [
+      ".env",
+      ".env.example"
+    ],
+    "depends_on_services": [
+      "postgres"
+    ],
+    "bootstrap_commands": {
+      "direct": "cd ~/development/dealflowtracker && docker compose up -d --build",
+      "via_infra_make": "cd ~/development/infra && make up-app APP=dealflowtracker"
+    },
+    "notes": [
+      "Web container runs nginx with the built Vite bundle (host :5178 \u2192 container :80).",
+      "API container runs uvicorn directly (host :8006 \u2192 container :8006).",
+      "Postgres is internal-only; reachable on fleet-net as dealflowtracker_postgres:5432.",
+      "Brain bridge requires auth; demo creds are documented publicly in README."
+    ]
   }
 }

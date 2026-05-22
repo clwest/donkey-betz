@@ -2,16 +2,24 @@
   "schema_version": 1,
   "repo_id": "signal-studio",
   "name": "signal-studio",
-  "description": "SignalStudio (Lab XI — `arc: Scout`, pillar Intelligence). Cluster web signals into evidence-backed intelligence. Turns news/social/RSS into clustered signals with confidence scores, evidence-card citations, and analyst-generated action steps. Rigorous data model running on a hardcoded MVP action engine (no LLM dependency); ingestion pipeline forthcoming. Status: demo-ready, frontend live. Render API Blueprint queued. MVP action engine runs without any LLM key.",
+  "description": "SignalStudio (Lab XI \u2014 `arc: Scout`, pillar Intelligence). Cluster web signals into evidence-backed intelligence. Turns news/social/RSS into clustered signals with confidence scores, evidence-card citations, and analyst-generated action steps. Rigorous data model running on a hardcoded MVP action engine (no LLM dependency); ingestion pipeline forthcoming. Status: demo-ready, frontend live. Render API Blueprint queued. MVP action engine runs without any LLM key.",
   "root_path": "/Users/donkeyking/development/signal-studio",
   "workspace_type": "local",
   "tech_stack": {
-    "primary_language": "python", "repo_type": "saas_app",
-    "backend": "fastapi", "frontend": "react+vite", "react_version": "19",
-    "database": "sqlite", "billing": "stripe-stubbed",
+    "primary_language": "python",
+    "repo_type": "saas_app",
+    "backend": "fastapi",
+    "frontend": "react+vite",
+    "react_version": "19",
+    "database": "sqlite",
+    "billing": "stripe-stubbed",
     "deploy_target": "vercel+render",
-    "package_managers": {"python": "pip", "js": "pnpm"},
-    "products_24_7_slug": "signal-studio", "products_24_7_no": "XI",
+    "package_managers": {
+      "python": "pip",
+      "js": "pnpm"
+    },
+    "products_24_7_slug": "signal-studio",
+    "products_24_7_no": "XI",
     "url": "https://signal-studio-ten.vercel.app",
     "repo_remote": "https://github.com/clwest/signal-studio"
   },
@@ -20,52 +28,179 @@
     "anchor_runtime": "docs/SIGNAL_STUDIO_INVENTORY.md",
     "anchor_start": "00-START-NEXT-SESSION.md",
     "anchor_claude": "CLAUDE.md",
-    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
-    "code_allowlist": ["backend", "frontend/src", "scripts"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "docs_root": "docs/",
+    "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": [
+      "backend",
+      "frontend/src",
+      "scripts"
+    ],
+    "docs_allowlist": [
+      "docs",
+      "README.md",
+      "CLAUDE.md",
+      "00-START-NEXT-SESSION.md"
+    ],
     "ports": {
-      "frontend": 3080,
-      "backend": 8090,
+      "frontend": 5173,
+      "backend": 8007,
       "websocket": null,
-      "notes": "Vite :3080, FastAPI uvicorn :8090. Slot 9 in the fleet port table."
+      "notes": "Vite/nginx host :5173 \u2192 container :80 (web). FastAPI uvicorn :8007 (api). Updated Session 1125 Docker fleet rollout."
     },
     "start_commands": {
-      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8090 --reload",
-      "frontend": "cd frontend && pnpm dev --port 3080 --strictPort"
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8007 --reload",
+      "frontend": "cd frontend && npm run dev -- --port 5173 --strictPort"
     }
   },
   "protected_paths": [
-    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
-    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
-    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
-    "*.sqlite3", "media/"
+    ".env",
+    ".env.*",
+    "**/.env*",
+    "**/*.pem",
+    "**/*key*",
+    "**/credentials*",
+    "**/.ssh/**",
+    ".git",
+    ".git/",
+    "backend/.venv",
+    "backend/.venv/**",
+    "frontend/node_modules",
+    "frontend/node_modules/**",
+    "frontend/dist",
+    "frontend/dist/**",
+    "**/__pycache__/**",
+    "*.sqlite3",
+    "media/"
   ],
   "permissions": {
-    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
-    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+    "allow_file_write": true,
+    "allow_file_delete": false,
+    "allow_command_execution": true,
+    "allow_git_operations": true,
+    "allow_autonomous_writes": false,
+    "require_human_review": false
   },
   "repo_profile_metadata": {
     "constraints_text": [
       "No pushes / tags without explicit operator approval. No --force ever.",
-      "Render API Blueprint queued — backend not yet deployed.",
-      "MVP action engine intentionally LLM-free — preserve that property when adding ingestion."
+      "Render API Blueprint queued \u2014 backend not yet deployed.",
+      "MVP action engine intentionally LLM-free \u2014 preserve that property when adding ingestion."
     ],
     "constraints_rules": [
-      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_force", "always": true},
-      {"type": "deny_paths", "globs": [".env*", "**/.env*", "media/**"]}
+      {
+        "type": "deny_git_push",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_tag",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_force",
+        "always": true
+      },
+      {
+        "type": "deny_paths",
+        "globs": [
+          ".env*",
+          "**/.env*",
+          "media/**"
+        ]
+      }
     ],
     "session_log_pointer": "docs/handoffs/",
     "fleet_role": {
-      "role": "lab", "lab_position": "XI (Scout arc)", "pillar": "Intelligence",
-      "status": "demo-ready", "substatus": "Frontend Live",
+      "role": "lab",
+      "lab_position": "XI (Scout arc)",
+      "pillar": "Intelligence",
+      "status": "demo-ready",
+      "substatus": "Frontend Live",
       "url": "https://signal-studio-ten.vercel.app",
-      "founder_toolkit_triplet": "sellerpilot · signal-studio · compliancesentinel"
+      "founder_toolkit_triplet": "sellerpilot \u00b7 signal-studio \u00b7 compliancesentinel"
     },
     "bridge_relationship": null,
     "open_questions": [],
-    "last_refresh_at": null, "last_git_head": null, "last_branch": null, "health_status": null,
-    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+    "last_refresh_at": null,
+    "last_git_head": null,
+    "last_branch": null,
+    "health_status": null,
+    "snapshot_retention": {
+      "max_snapshots": 20,
+      "max_age_days": 30
+    }
+  },
+  "docker": {
+    "enabled": true,
+    "primary_service": "web",
+    "base_urls": {
+      "web_url": "http://localhost:5173",
+      "api_url": "http://localhost:8007"
+    },
+    "host_ports": {
+      "web": 5173,
+      "api": 8007
+    },
+    "container_ports": {
+      "web": 80,
+      "api": 8007
+    },
+    "container_names": {
+      "web": "signal_studio_web",
+      "api": "signal_studio_api",
+      "postgres": "signal_studio_postgres"
+    },
+    "fleet_net_hostnames": {
+      "web": "signal_studio_web:80",
+      "api": "signal_studio_api:8007",
+      "postgres": "signal_studio_postgres:5432"
+    },
+    "healthchecks": {
+      "web": {
+        "method": "GET",
+        "path": "/",
+        "expect_status": [
+          200,
+          304
+        ],
+        "notes": "nginx static root"
+      },
+      "api": {
+        "method": "GET",
+        "path": "/api/health",
+        "expect_status": [
+          200
+        ]
+      }
+    },
+    "brain_bridge": {
+      "url": "http://localhost:8007/api/brain/ask",
+      "callable_from": [
+        "host",
+        "fleet_net"
+      ],
+      "requires_auth": false,
+      "auth_mode": "open"
+    },
+    "compose_files": [
+      "docker-compose.yml",
+      "docker-compose.dev.yml"
+    ],
+    "env_files": [
+      ".env",
+      ".env.example"
+    ],
+    "depends_on_services": [
+      "postgres"
+    ],
+    "bootstrap_commands": {
+      "direct": "cd ~/development/signal-studio && docker compose up -d --build",
+      "via_infra_make": "cd ~/development/infra && make up-app APP=signal-studio"
+    },
+    "notes": [
+      "Web container runs nginx with the built Vite bundle (host :5173 \u2192 container :80).",
+      "API container runs uvicorn directly (host :8007 \u2192 container :8007).",
+      "Postgres is internal-only; reachable on fleet-net as signal_studio_postgres:5432.",
+      "Brain bridge endpoint is open (signal-studio is auth-less)."
+    ]
   }
 }
