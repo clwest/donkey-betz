@@ -21,7 +21,7 @@ The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversatio
 
 1. **`docs/PLATFORM_INVENTORY.md`** — runtime facts (counts, schedules, agents, spiders). Regenerate with `python manage.py generate_platform_inventory`.
 2. **`docs/PLATFORM_WHAT_IT_IS.md`** — narrative anchor.
-3. **`docs/UDB_BEHAVIOR_LAYER.md`** — Rigby's voice + display rules + constraints. **Validated 3x now** (Sessions 1124, 1125, 1126 — she's auto-redacting and invoking no-claims rule unprompted; sometimes over-cautious on public-domain demo creds).
+3. **`docs/UDB_BEHAVIOR_LAYER.md`** — Rigby's voice + display rules + constraints.
 4. **`docs/UDB_TRANSLATION_LAYER.md`** — audience contract + no-claims rule.
 5. **Archive / handoff docs** — historical unless promoted by `docs/handoffs/CURRENT.md` or this file.
 
@@ -50,115 +50,109 @@ make status              # what's running + URLs
 - Rigby resolves `global` vs `workspace` mode from request/profile/context.
 - **PA tool registration needs BOTH daphne AND celery restart.** Each celery worker loads its own tool registry. `pkill -f "daphne -b 127.0.0.1 -p 8000"; pkill -f "celery -A core"; make start && make celery`.
 
-## NEW IN SESSION 1126 — FLEET RUNTIME + ROUTING
+## NEW IN SESSION 1127 — FLEET ROUTING PHASE 2A LIVE
 
-Three PRs landed:
+One PR. Phase 2A force-dispatch + hint bias plumbed end-to-end. See `docs/handoffs/SESSION_1127_FLEET_ROUTING_PHASE_2A.md` for the full handoff.
 
-- **PR #2123** — Docker runtime metadata block in each fleet repo profile. Rigby sees web URL, API URL, brain bridge endpoint, fleet-net hostnames, healthchecks per app. `register_external_repo` markdown serializer was patched to surface the block in the pinned Repo Profile deliverable.
+**Headline:** when a fleet app sends `mode=force` with a permitted + allowlisted + AGENT_MAP-resolvable agent, the PA Celery task now bypasses `UnifiedPAEntrypoint.process_message()` entirely and dispatches via `AgentRouter`. Response carries `routing.phase2_dispatched: true` so the caller can tell force actually fired. Hint mode biases the keyword path when intent detection returned no `routed_to`, never overrides positive matches.
 
-- **PR #2124** — `fleet_health` rollup. New mgmt command + new PA tool, shared `probe_fleet()` function. Rigby can answer "what's broken in the fleet right now?" in ~2 seconds.
+### Where the new pieces live
 
-- **PR #2125** — **Phase 1** of agent-specific consult routing. Control plane (`config/fleet_agent_routing.json`) + pure resolver (`core/services/fleet_routing.py:resolve()`) + PA chat accepts/emits structured `routing` block. **METADATA pipeline only — Phase 2 wires `resolved_agent` into PA's deliberation router.**
+| File | Role |
+|---|---|
+| `core/services/fleet_routing_dispatch.py` | Snake_case ↔ AGENT_MAP-key resolver, force-dispatch gate, hint deriver. |
+| `core/tasks_misc.py:_impl_process_pa_chat_task` | Pre-PA force-dispatch shortcut + routing block emission. |
+| `core/services/unified_pa_entrypoint.py:process_message` | Hint-mode bias for the keyword path. |
+| `config/fleet_agent_routing.json` | `compliancesentinel` default flipped to null (no SecurityAgent class). |
+| `tests/services/test_fleet_routing_{dispatch,config_phase2}.py` | 26 tests covering all 5 force gates, hint rules, config patch. |
 
-### Routing — where it lives
+### Audit signals to know about
 
-- **Config:** `config/fleet_agent_routing.json` — defaults / roles / allowlists / force_allowed per app.
-- **Resolver:** `core/services/fleet_routing.py:resolve(app_slug, routing_block)` → `RoutingDecision`. Pure function, lru_cache'd. Hint vs force semantics: hint downgrades to default if not allowlisted; force only honored if `force_allowed[app_slug]==true` AND allowlisted, else downgrades with `was_overridden=true`.
-- **Request shape** (new fields on `/api/pa/chat/` payload):
-  ```json
-  {
-    "message": "...",
-    "app_slug": "contract-concierge",
-    "routing": {"mode": "hint", "agent": "legal_doc_drafter_agent", "role": null}
-  }
-  ```
-- **Response shape** (new `routing` block):
-  ```json
-  {
-    "routing": {
-      "app_slug": "...", "requested": {...}, "default_agent": "...",
-      "resolved_agent": "...", "routed_to": "...",
-      "allowlist_hit": true, "force_permitted": true,
-      "was_overridden": false, "override_reason": null
-    }
-  }
-  ```
+- `routing.phase2_dispatched: true/false` in `/api/pa/chat/` response — was force actually used.
+- Worker log: `[PA routing] divergence — app=X resolved_agent=Y routed_to=Z` — hint set but intent detection picked something different. Useful for tuning the allowlist.
 
 ---
 
-## SESSION 1127 — CURRENT ENTRY POINT
+## SESSION 1128 — CURRENT ENTRY POINT
 
-### What Session 1126 shipped (so you know where things stand)
+### FIRST THING — Chris's directive for Session 1128
 
-Full handoff: [`docs/handoffs/SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md`](docs/handoffs/SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md).
+> **"Phase 2B — fleet `brain_client.py` updates (7 PRs), then either FC-path hint bias OR the SecurityAgent / compliancesentinel decision."**
 
-TL;DR: 3 PRs (#2123 #2124 #2125). Workspaces existed from Session 1119; reframed Option A as runtime-metadata-extension. Docker block per repo profile. `fleet_health` rollup mgmt+tool. Phase 1 routing infra. Rigby co-designed each.
+Phase 2A made force/hint *actionable* in u-d-b. Phase 2B makes the fleet apps actually *send* the routing blocks. Without 2B, the new dispatch path stays inert (apps currently don't send `app_slug` or `routing`).
 
-### FIRST THING — Chris's directive for Session 1127
+### Headline options for Session 1128
 
-> **"Phase 2 — plumb resolved_agent into PA's deliberation router, then update each fleet app's brain_client to send routing."**
+- **A. Fleet `brain_client.py` updates (~½ session, 7 PRs in worktree-pattern).**
+  Each app's `backend/app/brain_client.py:ask()` gains optional
+  `agent` / `role` / `mode` params + ships `app_slug` automatically. Each
+  app's `POST /api/brain/ask` exposes those params to the frontend.
+  Each frontend Brain page gains a role-select dropdown.
 
-Phase 1 made routing decisions observable. Phase 2 makes them *actionable*.
+  Success criterion: open contract-concierge's Brain page → pick "Legal
+  drafter (force)" → response carries `routing.phase2_dispatched: true`
+  and `routed_to: "LegalDocDrafterAgent"`.
 
-### Headline options for Session 1127
+- **B. FC-path hint bias (~⅓ session).**
+  Inject a system message into `_run_agentic_loop` when `_routing_hint`
+  is set, biasing GPT-5.2 toward calling the hinted agent's tool. Adds
+  hint coverage to the FC path; today only the keyword path uses hints.
 
-- **A. Phase 2 plumb (u-d-b side, ~½ session).**
-  Patch `core/services/unified_pa_entrypoint.py` to look at `context.routing` and, when `resolved_agent` is set, bias the PA's intent detection / router toward that agent. Probably: if mode is `force` + `force_permitted` + `allowlist_hit`, dispatch directly via AgentRouter (bypass PA's intent detection). If mode is `hint`, pass `resolved_agent` as a system-prompt hint or routing preference into PA's normal loop.
+- **C. SecurityAgent decision for compliancesentinel.**
+  Either add a real `SecurityAgent` class (audit + compliance reasoning,
+  feed from MemoryIsolationAgent + audit findings) or remap
+  `compliancesentinel` default to an existing concrete agent. Rigby's
+  call — flag her before picking.
 
-  Success criterion: `contract-concierge force legal_doc_drafter_agent` → response `routed_to == "LegalDocDrafterAgent"` (or whatever the AGENT_MAP key resolves to), not whatever PA's intent picker chose.
+- **D. fleet_health → spider-driven signals into signal-studio**
+  (still deferred from Session 1126). Independent of A/B/C.
 
-- **B. Fleet brain_client updates (7 PRs, ~½ session).**
-  Each app's `backend/app/brain_client.py:ask()` gains optional `agent` / `role` / `mode` params + `app_slug` sent via the `routing` block to u-d-b. Each app's `POST /api/brain/ask` exposes these to the frontend. Then the Brain page UI gains a role-select dropdown.
-
-  These can land before or after A — each adds the optional fields without requiring the deliberation hook to be wired.
-
-- **C. fleet_health → spider-driven signals into signal-studio (deferred from Session 1126).**
-  Pipe u-d-b's spider signals into signal-studio's database, replace its demo data with live data. Most natural per-app integration. Independent of A/B.
-
-**My recommendation: A → B in same session.** A is the smaller change but unlocks B's actual usefulness (apps sending routing blocks that don't dispatch are decorative). C is independent and can slot in either order.
+**Recommendation: A first (unlocks 2A's actual usefulness). Then
+either B or C as time permits.**
 
 ### Carryovers (open / parked, not blocking)
 
-- **ai-content-studio#2** — Docker foundation PR open. Runtime needs migration + dep reconciliation. Per Chris: "back burner."
-- **24-7-ai-global** — Next.js, not yet Dockerized. Different template needed.
+- **ai-content-studio#2** — Docker foundation PR. Per Chris: back burner.
+- **24-7-ai-global** — Next.js, not yet Dockerized.
 - **context-kit doctor floor: `10 OK / 2 warnings`** (both upstream).
-
-### Architectural patterns now well-established
-
-1. **Brain bridge** — `~150 backend + ~80 frontend lines/app`, shared brain_client.py
-2. **Co-authored docs** (1124) — Claude scaffolds, Rigby fills via marker-block inline replies
-3. **Defang security placeholders at source** — no user-equals-password defaults
-4. **make up** is the answer to "bring everything up"
-5. **NEW Phase-1-metadata-first** (1126) — ship observability before action. Lets you iterate on resolution logic with real traffic before risking dispatch.
+- **Service-token verification for `app_slug`** (Phase 2C) — today any
+  PA-token caller can claim any `app_slug`. Mitigated by allowlist +
+  force_allowed gates; production hardening is a separate PR.
 
 ### Operational notes
 
-- **u-d-b restart is safe** (PR #2121 PGDATA fix). `docker compose down`+`up` on u-d-b's postgres preserves the cluster.
-- **PA tool changes need BOTH daphne AND celery restart** — each celery worker has its own loaded tool registry.
-- **`register_external_repo` markdown serializer must keep pace with the JSON shape.** If you add a new field to the config, patch `_render_repo_profile_markdown()` in the same PR.
-- **Workspaces already exist for all 12 fleet repos.** Don't re-create; extend.
-- **`config/fleet_agent_routing.json` is the single source of truth** for which apps can talk to which agents.
+- **`config/fleet_agent_routing.json` is cached.** `fleet_routing._load_config`
+  is `lru_cache(maxsize=1)`. Edits require a restart (or
+  `_load_config.cache_clear()` in tests/dev).
+- **`SNAKE_TO_AGENT_MAP_KEY` is the source of truth** for snake_case ↔
+  AGENT_MAP-key resolution (handles acronyms). If you add a new agent
+  to `allowlists` in the JSON config, also add a row to that dict in
+  `core/services/fleet_routing_dispatch.py`.
 
-### Recommended Rigby coordination for Session 1127
+### Recommended Rigby coordination for Session 1128
 
-She's been co-designing the routing infrastructure since the brief; she has strong opinions on hint/force semantics + the allowlist contract. Before coding the Phase 2 dispatch, brief her with **exactly which file/function will branch on `resolved_agent`** and how. Likely she'll want:
+She co-designed Phase 2A and reviewed the safety hatches. For 2B
+(`brain_client.py` updates across 7 repos), her likely concerns:
 
-- A clean separation between "PA route by intent" and "PA route by hint" paths
-- Audit logging when `routed_to != resolved_agent` (so we can see when PA's intent detection diverged from the resolution)
-- A safety hatch: never let `mode=hint` override a security-sensitive default
+- Whether to ship one canonical `brain_client.py` shared across apps
+  (single source of truth) vs per-app copies (current model).
+- Frontend role-select UX — what set of roles to expose; what default
+  per app.
+- Defaults vs "stay in PA intent" toggle — should the role select
+  default to "PA chooses" or to the app's default agent?
 
 ---
 
-## SESSION 1126 — PRIOR ENTRY POINT (fleet runtime + routing Phase 1)
+## SESSION 1127 — PRIOR ENTRY POINT (fleet routing Phase 2A)
+
+Full handoff: [`docs/handoffs/SESSION_1127_FLEET_ROUTING_PHASE_2A.md`](docs/handoffs/SESSION_1127_FLEET_ROUTING_PHASE_2A.md).
+
+---
+
+## SESSION 1126 — TWO SESSIONS BACK (fleet runtime + routing Phase 1)
 
 Full handoff: [`docs/handoffs/SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md`](docs/handoffs/SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md).
 
 ---
 
-## SESSION 1125 — TWO SESSIONS BACK (Docker fleet + brain bridge)
-
-Full handoff: [`docs/handoffs/SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md`](docs/handoffs/SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md).
-
----
-
-*Last overwrite: Session 1126 close, 2026-05-22.*
+*Last overwrite: Session 1127 close, 2026-05-22.*

@@ -10,7 +10,7 @@
     "contract-concierge": "legal_doc_drafter_agent",
     "sellerpilot":        "marketing_strategy_agent",
     "dealflowtracker":    "market_intelligence_agent",
-    "compliancesentinel": "security_agent",
+    "compliancesentinel": null,
     "signal-studio":      "trend_analysis_agent"
   },
 
@@ -52,9 +52,7 @@
       "strategic_review",
       "competitor_analysis_agent"
     ],
-    "compliancesentinel": [
-      "security_agent"
-    ],
+    "compliancesentinel": [],
     "signal-studio": [
       "trend_analysis_agent",
       "market_intelligence_agent"
