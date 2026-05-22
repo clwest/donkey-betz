@@ -315,6 +315,25 @@ def unified_pa_chat(request):
                 type(_e).__name__, _e,
             )
 
+        # Session 1126: Fleet-app routing block. When a fleet app calls
+        # /api/pa/chat/ via its brain bridge, it may include a `routing`
+        # object asking for a specific agent (hint or force) plus an
+        # app_slug for allowlist resolution. Carry both through context;
+        # the Celery task resolves via fleet_routing.resolve() and emits
+        # a structured `routing` decision in the response. Phase 1 ships
+        # the metadata pipeline; Phase 2 will inject resolved_agent into
+        # PA's actual deliberation routing.
+        routing_block = request.data.get('routing')
+        app_slug_field = request.data.get('app_slug')
+        if routing_block or app_slug_field:
+            context = context or {}
+            if routing_block:
+                context['routing'] = routing_block
+            if app_slug_field:
+                context['app_slug'] = app_slug_field
+            elif isinstance(routing_block, dict) and routing_block.get('app_slug'):
+                context['app_slug'] = routing_block['app_slug']
+
         # Session 1077: Inject workspace context so PA knows which workspace is active
         workspace_id = request.data.get('workspace_id') or workspace_id
         if workspace_id:

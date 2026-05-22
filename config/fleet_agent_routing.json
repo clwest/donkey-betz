@@ -1,0 +1,68 @@
+{
+  "_meta": {
+    "purpose": "Fleet app → u-d-b agent routing map. Read by core/services/fleet_routing.py:resolve(). Designed in Session 1126 with Rigby; see PR description for the full contract.",
+    "schema_version": 1
+  },
+
+  "defaults": {
+    "mentorforge":        "customer_research_agent",
+    "pitchdeckforge":     "content_writer_agent",
+    "contract-concierge": "legal_doc_drafter_agent",
+    "sellerpilot":        "marketing_strategy_agent",
+    "dealflowtracker":    "market_intelligence_agent",
+    "compliancesentinel": "security_agent",
+    "signal-studio":      "trend_analysis_agent"
+  },
+
+  "roles": {
+    "legal_drafting":       "legal_doc_drafter_agent",
+    "marketing":            "marketing_strategy_agent",
+    "content_writing":      "content_writer_agent",
+    "trend_analysis":       "trend_analysis_agent",
+    "market_intelligence":  "market_intelligence_agent",
+    "security_compliance":  "security_agent",
+    "mentor_coaching":      "customer_research_agent",
+    "brand_strategy":       "brand_strategy_agent",
+    "competitor_analysis":  "competitor_analysis_agent",
+    "seo":                  "seo_optimizer_agent",
+    "social_media":         "social_media_agent"
+  },
+
+  "allowlists": {
+    "mentorforge": [
+      "customer_research_agent",
+      "content_writer_agent"
+    ],
+    "pitchdeckforge": [
+      "content_writer_agent",
+      "brand_strategy_agent",
+      "editor_agent"
+    ],
+    "contract-concierge": [
+      "legal_doc_drafter_agent"
+    ],
+    "sellerpilot": [
+      "marketing_strategy_agent",
+      "social_media_agent",
+      "seo_optimizer_agent",
+      "content_writer_agent"
+    ],
+    "dealflowtracker": [
+      "market_intelligence_agent",
+      "strategic_review",
+      "competitor_analysis_agent"
+    ],
+    "compliancesentinel": [
+      "security_agent"
+    ],
+    "signal-studio": [
+      "trend_analysis_agent",
+      "market_intelligence_agent"
+    ]
+  },
+
+  "force_allowed": {
+    "signal-studio": true,
+    "contract-concierge": true
+  }
+}

@@ -4824,6 +4824,29 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
         except Exception as tts_err:
             logger.warning(f"[PA_TTS] Failed to dispatch TTS task: {tts_err}")
 
+    # Session 1126: If the caller (a fleet app via its brain bridge)
+    # sent a `routing` block in context, resolve it via
+    # fleet_routing.resolve() and surface the decision in the response.
+    # Phase 1 emits the decision as metadata; Phase 2 will plumb the
+    # resolved_agent into PA's deliberation router.
+    routing_decision = None
+    if isinstance(context, dict) and (context.get('routing') or context.get('app_slug')):
+        try:
+            from core.services.fleet_routing import resolve as _resolve_routing
+            app_slug_ctx = (
+                context.get('app_slug')
+                or (context.get('routing') or {}).get('app_slug')
+            )
+            decision = _resolve_routing(app_slug_ctx, context.get('routing'))
+            # `routed_to` reflects whatever actually ran. Until Phase 2
+            # actually dispatches by resolved_agent, the PA's own
+            # routed_to wins; record both so the caller can see drift.
+            decision_dict = decision.as_dict()
+            decision_dict['routed_to'] = response.routed_to
+            routing_decision = decision_dict
+        except Exception as e:
+            logger.warning(f"[PA routing] resolve failed, omitting routing block: {e}")
+
     # Session 1076+: Sanitize entire return dict — tool_runs may contain
     # non-JSON-serializable objects (ManyRelatedManager, UUID, ProjectWorkspace)
     # that cause EncodeError in Celery's JSON serializer.
@@ -4841,6 +4864,8 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
         'conversation_id': conversation_id,
         'source': source,
     }
+    if routing_decision is not None:
+        raw_return['routing'] = routing_decision
     return json.loads(json.dumps(raw_return, default=str))
 
 
