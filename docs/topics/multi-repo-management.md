@@ -189,6 +189,41 @@ Agent personas live in `core/management/commands/survey_external_repo.py`
 as a dict: `cto`, `coo`, `editor` ship in v0. Add more personas by
 editing that dict.
 
+### Initiatives from survey findings
+
+`extract_initiatives_from_survey` turns a survey's "Recommended next
+actions" section into structured `Initiative` rows in u-d-b's existing
+pipeline. Each Initiative is:
+
+- `status=TRIAGE` (auto-created, awaiting operator review per Session 994)
+- `target_workspace=<external repo's workspace>` — Rigby's existing
+  initiative tools surface them scoped to that repo
+- `created_by='multi-repo-survey'`
+- `owner_agent=<survey persona, e.g. CTOAgent>`
+- `parent_topic='repo:<repo_id>'`
+- scored on `impact_score`, `urgency`, `confidence` (LLM-estimated 0-1
+  from survey text; defaults to 0.5 when survey gives no signal)
+- name format: `[<repo_id>] <action title> — <YYYY-MM-DD>` for uniqueness
+
+The extract command makes one gpt-5-mini call in JSON-object mode
+against the survey's `content` and parses the result. The survey's
+`metadata.auto_extracted` field is updated with the created Initiative
+IDs for traceability.
+
+```bash
+# Extract from a specific survey deliverable
+python manage.py extract_initiatives_from_survey --deliverable <uuid>
+
+# Or by repo + agent (uses latest survey)
+python manage.py extract_initiatives_from_survey --repo <repo> --agent cto
+
+# Preview without writing
+python manage.py extract_initiatives_from_survey --repo <repo> --agent cto --dry-run
+
+# Cap how many to create (defaults to 7)
+python manage.py extract_initiatives_from_survey --repo <repo> --agent cto --max 5
+```
+
 ---
 
 ## Adding a new repo
@@ -338,6 +373,7 @@ Rigby's locked list:
 | `core/management/commands/register_external_repo.py` | Profile → Workspace + pinned Deliverable |
 | `core/management/commands/refresh_repo_context.py` | Snapshot + Repo Profile metadata refresh |
 | `core/management/commands/survey_external_repo.py` | Agent persona over latest snapshot |
+| `core/management/commands/extract_initiatives_from_survey.py` | Survey → Initiative rows (TRIAGE, target_workspace scoped) |
 | `core/models_skin_layer.py` | `ProjectWorkspace` (existing — no migrations) |
 | `core/models_deliverables.py` | `Deliverable` (existing — no migrations) |
 | `core/services/deliverable_factory.py` | `create_deliverable` (the only deliverable creation path) |
