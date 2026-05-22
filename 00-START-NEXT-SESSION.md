@@ -156,10 +156,12 @@ Most loose ends shipped end of session. Four PRs landed
    (#2107). `extract_initiatives_from_survey` command. 7 TRIAGE
    Initiatives created from character-os CTO survey, scoped to its
    workspace, surfacing via Rigby's existing initiative tools.
-4. **Active-repo conversation context.** Still open (v1 graduation
-   item). Claude Code's handshake to Rigby is explicit ("we're in
-   character-os now"); the conversation doesn't persist that pointer.
-   Touches Rigby's PA conversation infrastructure. ~1 session.
+4. ~~Active-repo conversation context~~ — DONE (v0 storage primitive;
+   v1 auto-context-loading deferred). `active_repo_tool` PA tool ships
+   `set / get / clear` over Redis with 7-day TTL. Per-user state — does
+   NOT change u-d-b's own `is_active` workspace. Verified end-to-end
+   via the dispatcher. **Server restart required** for Rigby's live
+   tool registry to pick it up.
 5. ~~Seed a third external repo~~ — DONE (#2106). Became a batch of 10.
    Fleet now covers all local code repos behind 24-7-ai-global's
    public catalog: mentorforge / pitchdeckforge / contract-concierge /
@@ -168,9 +170,10 @@ Most loose ends shipped end of session. Four PRs landed
    founder toolkit triplet); 24-7-ai-global itself. Plus character-os
    + context-kit from Session 1119 main = **12 fleet members**.
 
-Remaining: only the v1 graduation work (#4) and any new repos that get
-added later. The fleet is now meaningfully populated and Rigby can
-surface state + initiatives for any of the 12.
+All five Session 1119 loose ends shipped end of session. The fleet is
+populated (12 members) and the read/write surface is complete:
+register → refresh → survey → extract initiatives → set active-repo
+pointer. Next session: begin testing the end-to-end multi-repo workflow.
 
 ### Option B — F2F.4 against mock-mode
 

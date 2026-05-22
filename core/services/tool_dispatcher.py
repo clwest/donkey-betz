@@ -377,6 +377,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Session 1031: Dream browsing/approval via PA
         self.register("dream_tool", self._handle_dream)
 
+        # Session 1119 carryover #4: persist "currently working in repo X"
+        # pointer per-user so the handshake doesn't have to repeat. Reads
+        # also drive auto-context loading in future iterations.
+        self.register("active_repo_tool", self._handle_active_repo)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
