@@ -640,6 +640,47 @@ PA_TOOL_SCHEMAS = [
     # ── Active repo (multi-repo v0 — Session 1119 carryover #4) ─────────────
     {
         "type": "function",
+        "name": "fleet_health",
+        "description": (
+            "Read-only rollup of every Dockerized fleet app's /api/health "
+            "endpoint. Use this to answer 'what's broken in the fleet right "
+            "now?' or 'is mentorforge up?'. Returns overall_status "
+            "(healthy/degraded/empty), a per-app rows array with "
+            "{slug, status, ok, latency_ms, detail}, and counts. Probes the "
+            "7 registered Docker fleet apps (mentorforge, contract-concierge, "
+            "pitchdeckforge, sellerpilot, dealflowtracker, signal-studio, "
+            "compliancesentinel) by default. Source of truth: each app's "
+            "docker.base_urls.api_url + docker.healthchecks.api.path from "
+            "the registered Repo Profile."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "repo": {
+                    "type": "string",
+                    "description": (
+                        "Optional. Probe a single repo by slug (e.g. "
+                        "'mentorforge'). When omitted, probes all 7."
+                    ),
+                },
+                "timeout_seconds": {
+                    "type": "number",
+                    "description": "Per-app HTTP timeout in seconds. Default 3.",
+                },
+                "include_healthy": {
+                    "type": "boolean",
+                    "description": (
+                        "Default true. When false, the apps array only "
+                        "includes degraded/unreachable apps (concise output "
+                        "for status pings)."
+                    ),
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "type": "function",
         "name": "active_repo_tool",
         "description": (
             "Persist or read the 'currently working in repo X' pointer for the "

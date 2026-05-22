@@ -382,6 +382,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # also drive auto-context loading in future iterations.
         self.register("active_repo_tool", self._handle_active_repo)
 
+        # Session 1126: read-only rollup of every Dockerized fleet app's
+        # /api/health. Calls the same probe function the
+        # fleet_health_rollup mgmt command uses.
+        self.register("fleet_health", self._handle_fleet_health)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)
