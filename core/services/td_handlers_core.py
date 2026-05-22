@@ -157,6 +157,35 @@ class CoreHandlersMixin:
             "error": f"Unknown action {action!r}. Use set / get / clear.",
         }
 
+    def _handle_fleet_health(self, tool_name, payload, user_id, trace_id) -> Dict:
+        """Session 1126 — fleet_health PA tool.
+
+        Read-only rollup of every Dockerized fleet app's /api/health
+        endpoint. Calls the same `probe_fleet` function the
+        `fleet_health_rollup` management command uses, so the tool and
+        the CLI never drift.
+
+        Payload (all optional):
+          repo (str)            — single-repo probe (e.g. 'mentorforge')
+          timeout_seconds (num) — per-app HTTP timeout, default 3.0
+          include_healthy (bool) — default True. When False, only
+                                   degraded/unreachable apps are returned
+                                   (concise output for status pings).
+        """
+        from core.management.commands.fleet_health_rollup import (
+            probe_fleet, DEFAULT_TIMEOUT_S,
+        )
+
+        payload = payload or {}
+        repo = payload.get("repo")
+        timeout_s = float(payload.get("timeout_seconds") or DEFAULT_TIMEOUT_S)
+        include_healthy = payload.get("include_healthy", True)
+
+        result = probe_fleet(repo_filter=repo, timeout_s=timeout_s)
+        if not include_healthy:
+            result["apps"] = [a for a in result["apps"] if not a["ok"]]
+        return result
+
     def _handle_dream(self, tool_name, payload, user_id, trace_id) -> Dict:
         """Handle dream browsing and approval actions."""
         from core.models_unified_system import AgentDream
