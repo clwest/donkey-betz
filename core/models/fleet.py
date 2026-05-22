@@ -322,12 +322,111 @@ class FleetAuthAuditLog(UnifiedBaseModel):
         )
 
 
+class FleetArtifact(UnifiedBaseModel):
+    """A work product pushed by a fleet service for later retrieval.
+
+    Move 2 Round 1 (MLC, Session 1129). Minimal scope per Rigby's
+    minimum-lovable-contract: no versioning, no provenance/citations
+    panel, no cross-app visibility — just enough to prove the
+    push-then-pull round-trip works under fleet auth.
+
+    Future rounds add (per `docs/specs/FLEET_MOVE_1_AND_2_SPEC.md`
+    section 2):
+    - artifact_id + version with `(artifact_id, version)` unique
+    - provenance.deliberation (panel, citations, agent_execution_ids)
+    - lifecycle (retention_days, expires_at, supersedes/superseded_by)
+    - visibility scope (cross-app allowlists)
+    - blob storage offload for large payloads
+
+    For Round 1: flat row keyed by UUID, payload stored in-row as
+    JSONField, sha256 computed from the canonicalized JSON form.
+
+    Ownership rule: only the **creating identity's app_slug** can
+    retrieve. We compare app_slug (not service_identity_id) so
+    rotating a key doesn't lock the owner out of their own
+    artifacts.
+    """
+
+    artifact_type = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Caller-chosen type tag (e.g. 'contract_draft', 'lead_list')",
+    )
+    payload = models.JSONField(
+        help_text="The artifact's contents — caller-controlled JSON",
+    )
+    caller_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Optional caller-supplied tags. Separate from `metadata` "
+                  "which is system-flexible storage on UnifiedBaseModel.",
+    )
+    sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="Hex SHA-256 of canonical JSON payload. Computed server-side; "
+                  "clients can verify after a pull.",
+    )
+    size_bytes = models.PositiveIntegerField(
+        default=0,
+        help_text="Bytes of canonical JSON payload — used for "
+                  "max_payload_kb capability gating.",
+    )
+    created_by_identity = models.ForeignKey(
+        FleetServiceIdentity,
+        on_delete=models.PROTECT,
+        related_name="artifacts",
+        help_text="The fleet service that pushed this artifact",
+    )
+    created_by_key_id = models.CharField(
+        max_length=120,
+        help_text="The specific signing key used at create time (may "
+                  "differ from the identity's current active key after "
+                  "a rotation)",
+    )
+    request_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="X-Request-Id from the signing headers; joins to "
+                  "FleetAuthAuditLog for full trace.",
+    )
+
+    class Meta:
+        verbose_name = "Fleet Artifact"
+        verbose_name_plural = "Fleet Artifacts"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_by_identity", "-created_at"]),
+            models.Index(fields=["artifact_type", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.artifact_type} ({self.created_by_identity.app_slug}) — {self.id}"
+
+
+def compute_payload_sha256(payload) -> tuple[str, int]:
+    """Compute canonical SHA-256 + byte size of a JSON-serializable payload.
+
+    Uses `sort_keys=True` + tight separators so the same logical
+    payload always hashes identically regardless of insertion order
+    or formatting. Returns ``(hex_digest, byte_size)``.
+    """
+    import json as _json
+    canonical = _json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    canonical_bytes = canonical.encode("utf-8")
+    return hashlib.sha256(canonical_bytes).hexdigest(), len(canonical_bytes)
+
+
 __all__ = [
     "FleetServiceIdentity",
     "FleetServiceKey",
     "FleetServiceRotation",
     "FleetAuthAuditLog",
+    "FleetArtifact",
     "generate_service_secret",
     "hash_service_secret",
+    "compute_payload_sha256",
     "SECRET_BYTES",
 ]
