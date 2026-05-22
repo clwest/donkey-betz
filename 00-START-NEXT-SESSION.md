@@ -64,37 +64,47 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1123 — CURRENT ENTRY POINT
+## SESSION 1124 — CURRENT ENTRY POINT
 
-### What Session 1122 shipped (so you know where things stand)
+### What Session 1123 shipped (so you know where things stand)
 
-Full handoff: [`docs/handoffs/SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md`](docs/handoffs/SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md).
-TL;DR: 2 PRs merged extending the doc-verifier framework into Django and
-Next.js. **Zero LLM spend.** Two repos parked.
+Full handoff: [`docs/handoffs/SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](docs/handoffs/SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md).
+TL;DR: **fleet verifier rollout is complete across all 10 laptop-local
+repos**, plus a substantial cleanup + bootstrap of ai-content-studio.
+**Total LLM cost: ~$0.01.**
 
-1. **Django flavor** — norman-handyman-mvp#1 merged (`38c1e3b2`).
-   3 claims green on first run (`local_django_app_count`,
-   `core_model_count`, `job_status_count`). Shipped as a **standalone
-   Python script** under `scripts/`, not as a `manage.py` mgmt command —
-   the latter requires the full backend dependency stack to boot in CI.
+1. **character-os verifier (character-os#1, `358dd548`)** — picked up
+   the lane after the other CC's engine-bridge work closed. Standalone
+   Python script under `scripts/`, 3 claims green on first run
+   (`django_app_count` = 14, `subscription_tier_count` = 3,
+   `starter_videos_per_month` = 10). Branched from `origin/main` to
+   keep the other CC's 5 unpushed engine-bridge commits separate.
 
-2. **Next.js flavor** — 24-7-ai-global#9 merged (`2ca4081d`). 3 claims
-   green (`suite_product_count`, `lab_work_count`,
-   `total_works_in_motion`). Pure-Node ESM
-   (`scripts/verify-doc-claims.mjs`) — no `typescript`, `ts-morph`, or
-   `@typescript-eslint/parser` deps. Brace-matching against TS source
-   text covers all current claim shapes.
+2. **ai-content-studio: 5-phase cleanup + first push + verifier
+   (ai-content-studio#1, `9db91cda`)** — repo was 8 months stale with
+   an empty GitHub origin. Cleaned up:
+   - Phase 1: untracked 108 generated artifacts (-67 MB, -85% tracked
+     size)
+   - Phase 2: quarantined 40 root-level exploration scripts to
+     `scripts/legacy/` + `tests/legacy/`
+   - Phase 3: renamed `donkey-betz-*` packages → `ai-content-studio-*`
+   - Phase 4: salvaged Theme 2 (`text-embedding-ada-002 → 3-small`)
+     from 8-month-old WIP; shelved Themes 1 + 3 to
+     `shelved/2025-09-personal-assistant-prototype` dead branch
+   - Phase 4.5: scrubbed 5 credentialed files (`youtube_credentials.json`,
+     `youtube_token_2.pickle`, 2 Stable Diffusion handoff docs,
+     `start-backend.sh`); flipped GitHub repo PUBLIC → PRIVATE before
+     first push
+   - Phase 6: first push to private origin
+   - Phase 7: verifier PR
 
-3. **Two repos parked** —
-   - **character-os**: Chris flagged active CC session in that repo,
-     said "don't interfere." Verifier files left uncommitted in working
-     tree; memory rule saved (`project_character_os_active_cc.md`).
-   - **ai-content-studio**: `clwest/ai-content-studio` on GitHub is empty
-     (`isEmpty: true`). No origin/main to PR against. Verifier files
-     committed locally — waiting for repo bootstrap before pushing.
-
-**Fleet scoreboard after Session 1122:** 9 repos, 20 claims actively
-gated in CI across 3 runtime stacks (7 FastAPI + 1 Django + 1 Next.js).
+3. **Fleet scoreboard: 10 / 10.** Every repo in the original Session
+   1120 campaign target now has `--fail-on-drift` CI gates:
+   - **FastAPI:** 7 repos (mentorforge + 6 siblings) — 14 claims
+   - **Django:** 3 repos (norman-handyman-mvp, character-os,
+     ai-content-studio) — 9 claims
+   - **Next.js:** 1 repo (24-7-ai-global) — 3 claims
+   - **Total:** 10 repos, **26 claims** actively gated in CI
 
 ### FIRST THING — pick a headline (local-only mode)
 
@@ -102,31 +112,35 @@ gated in CI across 3 runtime stacks (7 FastAPI + 1 Django + 1 Next.js).
 deploys, or Jessica follow-ups. u-d-b #2114's migration is in `main`
 and dormant until Chris flips the deploy switch.
 
-**character-os is OFF-LIMITS** from u-d-b sessions for the duration of
-the other CC's engagement there. Check `git -C /Users/donkeyking/development/character-os
-log --oneline origin/main..HEAD` for their unpushed work; if the working
-tree is still hot or there are still WIP files in `shell/apps/realtime/`,
-the lane is closed.
+**ai-content-studio is now on GitHub but PRIVATE.** Original 5 commits
+on `main` (pre-cleanup) still contain real secrets (`GOCSPX-9cvf…`
+Google OAuth client_secret, `sk-9DSt…` Stability AI key in 3 files).
+Per Session 1123 close, Chris deferred secret rotation. If/when
+ai-content-studio flips back to PUBLIC, rotate Google OAuth + Stability
+AI keys AND `git filter-repo` the 5 files from history.
 
-### Then — pick the Session 1123 headline
+**character-os: the other CC's 5 unpushed engine-bridge commits** (EB.0 →
+EB.3 + SESSION 217 close) are still local-only on their machine. We
+branched the verifier from `origin/main` so those are decoupled — but
+they're someone else's lane.
+
+### Then — pick the Session 1124 headline
 
 Options, ordered by leverage:
 
-- **character-os verifier (½ session)** — pending the other CC finishing
-  up. Rewrite my pre-pivot prototype
-  (`shell/apps/accounts/management/commands/verify_doc_claims.py`) as a
-  standalone Python script under `scripts/`, recheck the 3 claims
-  against current code (`django_app_count`, `subscription_tier_count`,
-  `starter_videos_per_month`), open PR. The mgmt-command files in the
-  working tree are SUPERSEDED — start from the norman pattern instead.
-- **ai-content-studio verifier (½ session)** — pending origin bootstrap.
-  When `clwest/ai-content-studio` gets published with code, the verifier
-  files in the working tree can be committed and pushed. Re-verify the
-  published baseline matches what local sees first.
+- **ai-content-studio Phase 5 — anchor doc reconciliation (~30-60 min)**.
+  `CLAUDE.md` reads like marketing copy ("100% Complete - Production
+  Ready") — trim to actual capabilities. `docs/PROJECT_WHAT_IT_IS.md`
+  still has `[adopt: please describe]` placeholders — fill or delete.
+  Decide which doc is canonical narrative (recommend
+  `PROJECT_WHAT_IT_IS.md` per fleet pattern; let CLAUDE.md be a
+  developer guide).
 - **Promote the next cross-cutting initiative theme (~1 session)** —
-  `.env.example` + secret-scan appears in 3+ repos; "document local
-  dev startup" appears in 3+ repos. Same campaign shape as the
-  verifier rollout (Rigby drafts, Claude Code wires).
+  `.env.example` + secret-scan campaign now has fresh motivation from
+  the ai-content-studio Phase 4.5 incident. Pattern: drop a curated
+  `.env.example` into each repo + add a CI gate scanning tracked files
+  for known secret prefixes (`GOCSPX-`, `sk-`, `AIza`, `ghp_`, etc.).
+  Same campaign shape as the verifier rollout.
 - **Phase 0 cost-survival audit (~1 focused week)** —
   `LLMCallLog.workspace` FK + `ExternalAPICallLog` + per-workspace
   daily cap + `cost_per_workspace_today` query + `build_cost_audit`.
@@ -135,44 +149,39 @@ Options, ordered by leverage:
 - **Atlas v1 → v2 reframe (~1 hr)** — pure docs work. Phase 1 currently
   reads "Rigby standalone"; reality is "u-d-b as engine for the public
   Suite."
+- **ai-content-studio secret rotation + history scrub** — only if you
+  want to make that repo PUBLIC. Rotate Google OAuth + Stability AI
+  keys, then `git filter-repo` to scrub the 5 files from all commit
+  history. ~1 session.
 
-### Architecture lessons (carry forward to character-os / ai-content-studio)
+### Architectural patterns now well-established across the fleet
 
-- **Standalone script > mgmt command for Django.** First attempt at a
-  Django mgmt command failed in CI on missing `pdfplumber`. The pattern
-  that ships is `scripts/verify_doc_claims.py` with AST-based claims —
-  no Django boot needed.
-- **Pure-Node ESM > ts-morph for Next.js.** Regex + brace-matching
-  covers all current claim shapes. Save `ts-morph` for when you need
-  generic resolution / type narrowing.
-- **Default to zero external deps.** Every verifier in the fleet now
-  runs with stdlib (Python) or built-in Node 20 — no `pip install`,
-  no `npm install` in CI.
-- **CI workflow file is the only repo-shape thing.** Conceptually:
-  ```yaml
-  - uses: actions/checkout@v4
-  - uses: actions/setup-{python|node}@v{5|4}
-  - run: {python|node} scripts/verify-doc-claims.{py|mjs} --fail-on-drift
-  ```
+Three lessons worth carrying forward:
+
+1. **Standalone scripts > mgmt commands for Django.** Don't ship
+   `manage.py verify_doc_claims` — full backend dep stack makes it
+   CI-hostile. Standalone Python under `scripts/` with AST-based
+   claims is the canonical Django shape.
+2. **Stdlib > deps for verifier work.** Every verifier in the fleet
+   runs on stdlib Python 3.11 or built-in Node 20. No `pip install`,
+   no `npm install` in CI. Workflow file is ~15 lines per repo.
+3. **Pre-push secret sweep is mandatory.** ai-content-studio nearly
+   leaked 3 real credentials to a public repo in Session 1123. Future
+   "first push" or "visibility flip" actions need a tracked-files
+   secret scan: `gh ls-files | xargs grep -l -E
+   "GOCSPX-|sk-[a-zA-Z0-9]{32,}|AIza|ghp_|xoxb-..."`.
 
 ### Operational notes
 
-- **TRIAGE backlog** sits at ~65 across the 12-repo fleet (down from
-  ~67 at Session 1121 close). Two more closed by Session 1122's
-  verifier rollouts.
-- **character-os verifier files (uncommitted, pre-pivot)** —
-  - `shell/apps/accounts/management/commands/verify_doc_claims.py`
-  - `.github/workflows/verify-doc-claims.yml`
-  - 1-line anchor doc edit at `docs/CHARACTER_OS_WHAT_IT_IS.md:34`
-    (the other CC reverted it later)
-
-  Treat these as SUPERSEDED design once the lane reopens — port to
-  standalone script following norman pattern.
-- **ai-content-studio verifier files (uncommitted, post-pivot)** —
-  - `scripts/verify_doc_claims.py` (standalone, correct shape)
-  - `.github/workflows/verify-doc-claims.yml`
-
-  These are reusable as-is once origin gets bootstrapped.
+- **TRIAGE backlog** sits at ~63 across the 12-repo fleet (down from
+  ~65 at Session 1122 close). Two more closed by Session 1123's
+  character-os + ai-content-studio verifier landings.
+- **Dead branches preserved on remote:**
+  - `clwest/ai-content-studio` → `shelved/2025-09-personal-assistant-prototype`
+    (Theme 1 + Theme 3 from 8-month-old WIP, Rigby-reviewed shelve)
+- **ai-content-studio repo state:** PRIVATE, 1030 tracked files,
+  ~12 MB, no secrets at HEAD (but yes in history). All cleanup work
+  on `main`.
 - **u-d-b `00-START-NEXT-SESSION.md` + `docs/handoffs/CURRENT.md`
   updated** at session close. Regenerate `docs/INDEX.md` via
   `python manage.py build_docs_index` before commit.
