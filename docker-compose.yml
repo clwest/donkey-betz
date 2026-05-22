@@ -49,6 +49,14 @@ services:
       POSTGRES_USER: unified_user
       POSTGRES_PASSWORD: secure_password
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      # The existing postgres_data volume stores cluster files at
+      # /var/lib/postgresql/data/pgdata (one level deeper than the
+      # default). Without PGDATA pointing at that subdir, postgres sees
+      # the empty top-level on startup, tries to initdb, and fails with
+      # "directory exists but is not empty" — leaving the running
+      # native daphne unable to authenticate any tokens. See incident
+      # at end of Session 1124.
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
