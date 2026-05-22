@@ -274,6 +274,14 @@ from ..models_assistant_profile import AssistantProfile
 # Learning readback telemetry
 from .learning_readback import LearningReadbackEvent
 
+# Fleet service identity + signed-request audit (Session 1129 — Move 1)
+from .fleet import (
+    FleetServiceIdentity,
+    FleetServiceKey,
+    FleetServiceRotation,
+    FleetAuthAuditLog,
+)
+
 # In-app messaging
 from ..models_messaging import MessageThread, ThreadParticipant, DirectMessage
 
@@ -555,5 +563,11 @@ __all__ = [
 
     # Learning readback telemetry
     'LearningReadbackEvent',
+
+    # Fleet service identity (Session 1129 Move 1)
+    'FleetServiceIdentity',
+    'FleetServiceKey',
+    'FleetServiceRotation',
+    'FleetAuthAuditLog',
 
 ]
