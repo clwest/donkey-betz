@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md`](SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md)
-(Fleet doc-verifier rollout: u-d-b's Session 1099 verifier framework ported into 7 laptop-local fleet repos as single-file scripts. New `draft_repo_verifier_claims` u-d-b mgmt command. 9 CTO surveys + 11 initiative extracts across the fleet → 79 TRIAGE initiatives, 5 closed by this campaign. Migration 0341 fixes prod chat_conversations drift. Total LLM cost: ~$0.18.)
+**Latest handoff:** [`SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md`](SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md)
+(Closed Session 1120's 8 open PRs (u-d-b #2114 + #2115 + 6 fleet verifier rollouts). Reconciled 2 surfaced drifts (mentorforge `mentor_persona_count`, contract-concierge `starter_template_count` + `audit_event_type_count`) — 17/17 claims now green across the fleet. Added `--fail-on-drift` CI gates to all 7 FastAPI fleet repos. 15 PRs merged across 8 repos. Total LLM cost: ~$0.)
 
-**Previous:** [`SESSION_1119_MULTI_REPO_V0.md`](SESSION_1119_MULTI_REPO_V0.md)
+**Previous:** [`SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md`](SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md)
 
 ## How to update
 
