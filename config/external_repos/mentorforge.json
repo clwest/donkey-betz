@@ -31,15 +31,59 @@
     "inventory_command": "context-kit inventory --write",
     "inventory_cwd": ".",
     "ports": {
-      "frontend": 3010,
-      "backend": 8020,
+      "frontend": 5174,
+      "backend": 8002,
       "websocket": null,
-      "notes": "Vite :3010, FastAPI uvicorn :8020. Slot 2 in the fleet port table."
+      "notes": "Vite :5174 / nginx :5174 (host) → :80 (container web), FastAPI uvicorn :8002. Updated Session 1125 Docker fleet rollout."
     },
     "start_commands": {
-      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8020 --reload",
-      "frontend": "cd frontend && pnpm dev --port 3010 --strictPort"
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8002 --reload",
+      "frontend": "cd frontend && npm run dev -- --port 5174 --strictPort"
     }
+  },
+  "docker": {
+    "enabled": true,
+    "primary_service": "web",
+    "base_urls": {
+      "web_url": "http://localhost:5174",
+      "api_url": "http://localhost:8002"
+    },
+    "host_ports": {"web": 5174, "api": 8002},
+    "container_ports": {"web": 80, "api": 8002},
+    "container_names": {
+      "web": "mentorforge_web",
+      "api": "mentorforge_api",
+      "postgres": "mentorforge_postgres"
+    },
+    "fleet_net_hostnames": {
+      "web": "mentorforge_web:80",
+      "api": "mentorforge_api:8002",
+      "postgres": "mentorforge_postgres:5432"
+    },
+    "healthchecks": {
+      "web": {"method": "GET", "path": "/", "expect_status": [200, 304], "notes": "nginx static root"},
+      "api": {"method": "GET", "path": "/api/health", "expect_status": [200]}
+    },
+    "brain_bridge": {
+      "url": "http://localhost:8002/api/brain/ask",
+      "callable_from": ["host", "fleet_net"],
+      "requires_auth": true,
+      "auth_mode": "demo_user",
+      "demo_user": {"email": "demo@mentorforge.dev", "password": "demo123"}
+    },
+    "compose_files": ["docker-compose.yml", "docker-compose.dev.yml"],
+    "env_files": [".env", ".env.example"],
+    "depends_on_services": ["postgres"],
+    "bootstrap_commands": {
+      "direct": "cd ~/development/mentorforge && docker compose up -d --build",
+      "via_infra_make": "cd ~/development/infra && make up-app APP=mentorforge"
+    },
+    "notes": [
+      "Web container runs nginx with the built Vite bundle (host :5174 → container :80).",
+      "API container runs uvicorn directly (host :8002 → container :8002).",
+      "Postgres is internal-only (no host port); reachable on fleet-net as mentorforge_postgres:5432.",
+      "Brain bridge endpoint is on the API service; demo creds are documented publicly in README."
+    ]
   },
   "protected_paths": [
     ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
