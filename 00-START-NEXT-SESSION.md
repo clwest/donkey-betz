@@ -64,100 +64,106 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1121 — CURRENT ENTRY POINT
+## SESSION 1122 — CURRENT ENTRY POINT
 
-### What Session 1120 shipped (so you know where things stand)
+### What Session 1121 shipped (so you know where things stand)
 
-Full handoff: [`docs/handoffs/SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md`](docs/handoffs/SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md).
-TL;DR: three pieces of work landed in one session.
+Full handoff: [`docs/handoffs/SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md`](docs/handoffs/SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md).
+TL;DR: 15 PRs merged across 8 repos in three waves, **zero LLM spend**.
 
-1. **u-d-b chat_conversations migration drift fix** — migration `0341` ships
-   an idempotent `ADD COLUMN IF NOT EXISTS` backfill. PR
-   [#2114](https://github.com/clwest/donkey-betz-platform/pull/2114).
-   No-op locally; restores prod schema when Jessica deploys. Should bring
-   PA `process_pa_chat_task` back to 100% success.
+1. **Session 1120 closeout (8 PRs)** — eyeballed + merged u-d-b #2114
+   (chat_conversations migration), u-d-b #2115 (`draft_repo_verifier_claims`
+   + topic doc), and the 6 fleet verifier-rollout PRs (pitchdeckforge,
+   dealflowtracker, contract-concierge, sellerpilot, signal-studio,
+   compliancesentinel).
 
-2. **Option D fleet survey + initiative extract** — 9 new CTO surveys
-   + 11 initiative extracts → **79 TRIAGE initiatives** across the 12
-   fleet workspaces. Rigby now has a portfolio-level view of what each
-   repo needs.
+2. **Drift reconciliation (2 PRs)** —
+   - **mentorforge#9**: doc `12 mentor personas` → `8` (README already
+     correct, narrative was stale). Also pushed Chris's 2 unpushed local
+     commits via rebase (`build_planning` tier fix resolves
+     `session_mode_count` drift; stripe config).
+   - **contract-concierge#6**: doc `3 starter templates` → enumerate all
+     12 (SOW/ICA/NDA + 9 more all real in `backend/app/templates.py`);
+     doc audit trail `created/edited/sent/viewed/signed` → add
+     `cancelled, archived` to match the 7-value `EventType` enum.
 
-3. **Doc-verifier fleet campaign** — picked the most cross-cutting
-   theme ("wire doc verifier") from the 79 initiatives and ported
-   u-d-b's Session 1099 verifier framework into 7 FastAPI repos.
-   7 PRs landed (mentorforge#8 merged; pitchdeckforge#7,
-   dealflowtracker#5, contract-concierge#5, sellerpilot#1,
-   signal-studio#1, compliancesentinel#1 open). Plus u-d-b
-   [#2115](https://github.com/clwest/donkey-betz-platform/pull/2115)
-   for the new `draft_repo_verifier_claims` mgmt command + topic doc.
-   5 TRIAGE initiatives closed with PR refs.
+3. **CI gate rollout (5 PRs)** — added
+   `.github/workflows/verify-doc-claims.yml` (runs
+   `python scripts/verify_doc_claims.py --fail-on-drift` on push + PR
+   to main) to pitchdeckforge, dealflowtracker, sellerpilot,
+   signal-studio, compliancesentinel.
 
-Total LLM cost: **~$0.18**.
+**Outcome:** all 7 fleet repos (mentorforge + 6 FastAPI siblings) now
+enforce doc-vs-runtime parity in CI. 17 claims actively gated
+(14 originally green + 3 reconciled this session). Total LLM cost: **$0**.
 
-### FIRST THING — eyeball + merge the 6 open fleet PRs
+### FIRST THING — verify Jessica deployed u-d-b #2114
 
-The 6 fleet PRs landed clean but weren't reviewed before push. Either:
+Migration `0341_chat_conversation_columns_idempotent` is in `main` but
+only takes effect on prod after Jessica's next deploy. Confirm via
+Rigby's `ops_tool` that:
 
-- Merge them as-is (all verifiers tested locally, all 2-3 claims per
-  PR run green or surface known drift; no claim is brittle), or
-- Skim each diff first if you want a pulse-check on the per-repo
-  template adaptations.
+- `process_pa_chat_task` ProgrammingError has cleared
+- PA success rate has recovered 99.59% → ~100%
 
-Links: [pitchdeckforge#7](https://github.com/clwest/pitchdeckforge/pull/7),
-[dealflowtracker#5](https://github.com/clwest/dealflowtracker/pull/5),
-[contract-concierge#5](https://github.com/clwest/contract-concierge/pull/5),
-[sellerpilot#1](https://github.com/clwest/sellerpilot/pull/1),
-[signal-studio#1](https://github.com/clwest/signal-studio/pull/1),
-[compliancesentinel#1](https://github.com/clwest/compliancesentinel/pull/1).
+If not yet deployed, that's a 24h+ outstanding item; everything else
+in this session was local/PR work that doesn't require deployment.
 
-Also merge u-d-b [#2114](https://github.com/clwest/donkey-betz-platform/pull/2114)
-(migration fix) and [#2115](https://github.com/clwest/donkey-betz-platform/pull/2115)
-(`draft_repo_verifier_claims` + topic doc) when ready — Jessica deploys
-prod from `main` so #2114 only takes effect after merge + deploy.
-
-Heads-up on mentorforge: local `main` is 2 commits ahead of
-`origin/main` (your unpushed `build_planning` mode commit etc.).
-Pushing those resolves mentorforge#8's `session_mode_count` drift.
-
-### Then — pick the Session 1121 headline
+### Then — pick the Session 1122 headline
 
 Options, ordered by leverage:
 
-- **Reconcile the 2 surfaced drifts** (mentorforge + contract-concierge)
-  so their verifiers can be flipped to `--fail-on-drift` in CI. Small
-  bounded work, closes the loop on the campaign. ~½ session.
-- **Add CI gates to the 4 green-baseline verifiers** (pitchdeckforge,
-  dealflowtracker, sellerpilot, signal-studio, compliancesentinel —
-  any that run clean). Single `.github/workflows/verify-doc-claims.yml`
-  per repo with `python scripts/verify_doc_claims.py --fail-on-drift`.
-  ~½ session.
-- **Django-flavor verifier rollout** — port the framework as a
-  `python manage.py verify_doc_claims` command for character-os,
-  ai-content-studio, norman-handyman-mvp. Same patterns, different
-  packaging. ~1 session.
-- **Next.js verifier rollout** — port to 24-7-ai-global as
-  `scripts/verify_doc_claims.mjs`. Needs Node-native AST handling
-  (ts-morph or @typescript-eslint/parser). ~1 session.
+- **Django verifier rollout** — port the verifier framework as a
+  `python manage.py verify_doc_claims` mgmt command for `character-os`,
+  `ai-content-studio`, `norman-handyman-mvp`. Same AST/import patterns
+  as the FastAPI version, swap to Django's `BaseCommand` shape. ~1 session.
+- **Next.js verifier rollout** — port to `24-7-ai-global` as
+  `scripts/verify_doc_claims.mjs`. Needs Node-native AST (ts-morph or
+  `@typescript-eslint/parser`). Hardest port of the three. ~1 session.
 - **Promote the next cross-cutting initiative theme** — `.env.example`
-  + secret scan appears in 3+ repos; "document local dev startup"
-  appears in 3+ repos. Same campaign shape as doc-verifier.
+  + secret-scan appears in 3+ repos; "document local dev startup"
+  appears in 3+ repos. Same campaign shape as doc-verifier — Rigby
+  drafts, Claude Code wires. ~1 session.
+- **Phase 0 cost-survival audit** (Session 1116+ carry-over) —
+  `LLMCallLog.workspace` FK + `ExternalAPICallLog` + per-workspace
+  daily cap + `cost_per_workspace_today` query + `build_cost_audit`.
+  Gate for any multi-tenant SaaS launch. ~1 focused week.
 - **F2F.3 unfreeze** — only if HeyGen + Cartesia keys are provisioned.
-- **Phase 0 cost-survival audit** (Session 1116 carry-over still
-  pending) — `LLMCallLog.workspace` FK + `ExternalAPICallLog` +
-  per-workspace daily cap. Gate for multi-tenant SaaS launch.
-  ~1 week focused work.
+- **Atlas v1 → v2 reframe** (Session 1116 carry-over) — pure docs
+  work. Phase 1 currently reads "Rigby standalone"; reality is
+  "u-d-b as engine for the public Suite." ~1 hr.
+
+### Reconciliation lessons learned (for the Django/Next.js rollouts)
+
+- **Verifiers carry hardcoded `expected = N` baselines.** To reconcile
+  a drift, BOTH the doc AND the baseline must move. Updating doc alone
+  leaves the verifier still flagging it.
+- **AI-drafted `description=...` strings carry specific numbers**
+  (e.g. "README lists 3 starter templates"). After reconciliation
+  these go stale. Default to generic 'N' phrasing in new rollouts
+  (matches the mentorforge canonical template).
+- **First-run accuracy was 82%** (14/17 claims green on first run
+  across 7 repos). All 3 drifts pointed at real narrative staleness
+  — code was canonical in every case. Rigby's draft quality is good
+  enough that "doc up to code" is the safe default reconciliation
+  direction.
 
 ### Operational notes
 
-- **`build_docs_index` regenerated** at session close — `docs/INDEX.md`
-  includes the new topic file.
-- **`verify_doc_claims --only-drift` not re-run** — no u-d-b docs
-  changed that affect existing registered claims, just additions.
-- **Fleet member count unchanged** at 12 (no new repos registered this
-  session).
-- **TRIAGE backlog** sits at ~74 across the fleet (was 79 at sweep
-  close; 5 closed by this campaign). Plenty of fodder for follow-up
-  themed campaigns.
+- **TRIAGE backlog** sits at ~67 across the 12-repo fleet (was 79 at
+  Session 1120 close; ~12 closed this session via reconciliation and
+  CI rollout). Still plenty of fodder for follow-up themed campaigns.
+- **Untracked artifacts** in fleet repos (`analysis/`, `connections.json`,
+  `coverage.json`) are context-kit local-only files. Harmless to leave;
+  worth adding to `.gitignore` if any repo cleans up.
+- **Verifier pyright warnings** — every ported `scripts/verify_doc_claims.py`
+  has ~10 pre-existing `dict[Unknown, Unknown]` warnings. Not blocking,
+  not regressions from this session. Could backport type hints in the
+  u-d-b template before Django/Next.js rollout. Skip if not gating CI.
+- **u-d-b `00-START-NEXT-SESSION.md` + `docs/handoffs/CURRENT.md`
+  updated** at session close. `docs/INDEX.md` should be regenerated
+  via `python manage.py build_docs_index` if any new docs touched the
+  index (this session only added the new handoff file).
 
 ---
 
