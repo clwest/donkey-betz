@@ -637,6 +637,47 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Active repo (multi-repo v0 — Session 1119 carryover #4) ─────────────
+    {
+        "type": "function",
+        "name": "active_repo_tool",
+        "description": (
+            "Persist or read the 'currently working in repo X' pointer for the "
+            "user, so multi-repo workflows don't need to re-state context every "
+            "turn. Per-user state, 7-day TTL. Actions: set | get | clear. "
+            "When set, downstream tools (workspace_tool, deliverable_tool, "
+            "agent dispatch) can scope to this repo's ProjectWorkspace via "
+            "its workspace_id. Use 'set' with the repo's workspace name to "
+            "scope a conversation to that repo; 'get' to check current scope; "
+            "'clear' when done. The pointer never affects Donkey Betz "
+            "(u-d-b's own workspace stays the global active workspace)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["set", "get", "clear"],
+                    "description": (
+                        "set: scope this user to repo X for ~7 days. "
+                        "get: return the currently scoped repo (or null). "
+                        "clear: drop the pointer."
+                    ),
+                },
+                "repo": {
+                    "type": "string",
+                    "description": (
+                        "For set: workspace name / repo_id "
+                        "(e.g. 'character-os', 'mentorforge'). Must match "
+                        "a ProjectWorkspace that has been registered via "
+                        "register_external_repo."
+                    ),
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Workspace ───────────────────────────────────────────────────────────
     {
         "type": "function",

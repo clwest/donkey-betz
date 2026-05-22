@@ -76,8 +76,86 @@ class ToolResult:
 
 
 
+_ACTIVE_REPO_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
+_ACTIVE_REPO_CACHE_KEY = "pa:active_repo:user:{user_id}"
+
+
+def _active_repo_cache_key(user_id) -> str:
+    return _ACTIVE_REPO_CACHE_KEY.format(user_id=user_id or "anonymous")
+
+
 class CoreHandlersMixin:
     """Mixin providing handler methods for ToolDispatcher."""
+
+    def _handle_active_repo(self, tool_name, payload, user_id, trace_id) -> Dict:
+        """Session 1119 carryover #4 (v1 graduation #1) — persist the
+        'currently working in repo X' pointer across messages so Claude
+        Code's handshake doesn't have to be re-stated every turn.
+
+        Per-user state (one active repo per operator at a time), stored
+        in Redis via Django's cache with a 7-day TTL. Auto-clears.
+
+        Actions:
+          set    — payload['repo'] = repo_id (or workspace name); resolves
+                   to the ProjectWorkspace and caches workspace_id + name
+          get    — returns the currently active repo, or null
+          clear  — drops the pointer
+        """
+        from django.core.cache import cache
+        from datetime import datetime, timezone as dt_timezone
+        from core.models_skin_layer import ProjectWorkspace
+
+        action = (payload or {}).get("action", "get")
+        cache_key = _active_repo_cache_key(user_id)
+
+        if action == "get":
+            value = cache.get(cache_key)
+            return {
+                "action": "get",
+                "active_repo": value,
+                "set": value is not None,
+                "cache_key": cache_key,
+            }
+
+        if action == "clear":
+            had = cache.get(cache_key) is not None
+            cache.delete(cache_key)
+            return {"action": "clear", "cleared": had, "cache_key": cache_key}
+
+        if action == "set":
+            repo = (payload or {}).get("repo")
+            if not repo:
+                return {
+                    "action": "set",
+                    "ok": False,
+                    "error": "Provide payload.repo (workspace name / repo_id)",
+                }
+            workspace = (
+                ProjectWorkspace.objects.filter(name=repo, user_id=user_id).first()
+                or ProjectWorkspace.objects.filter(name=repo).first()
+            )
+            if not workspace:
+                return {
+                    "action": "set",
+                    "ok": False,
+                    "error": f"No ProjectWorkspace named {repo!r} found",
+                }
+            value = {
+                "repo_id": repo,
+                "workspace_id": str(workspace.id),
+                "name": workspace.name,
+                "root_path": workspace.root_path,
+                "set_at": datetime.now(dt_timezone.utc).isoformat(timespec="seconds"),
+                "ttl_seconds": _ACTIVE_REPO_TTL_SECONDS,
+            }
+            cache.set(cache_key, value, _ACTIVE_REPO_TTL_SECONDS)
+            return {"action": "set", "ok": True, "active_repo": value}
+
+        return {
+            "action": action,
+            "ok": False,
+            "error": f"Unknown action {action!r}. Use set / get / clear.",
+        }
 
     def _handle_dream(self, tool_name, payload, user_id, trace_id) -> Dict:
         """Handle dream browsing and approval actions."""
