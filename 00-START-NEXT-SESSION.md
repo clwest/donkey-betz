@@ -64,12 +64,68 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1120 — CURRENT ENTRY POINT (post-1119 multi-repo v0 shipped)
+## SESSION 1120 — CURRENT ENTRY POINT
+
+### FIRST THING — fix the `chat_conversations` migration drift bug
+
+During the live UI multi-repo test at the end of Session 1119, Rigby
+autonomously surfaced this u-d-b bug from `ops_tool` failure analysis:
+
+```
+core.tasks.process_pa_chat_task — 2 failures in 24h — ProgrammingError:
+  column chat_conversations.platform does not exist
+  column chat_conversations.discord_user_id does not exist
+```
+
+The `ChatConversation` model in `core/models.py` (Session 455) declares
+both fields for cross-platform tracking (`platform` CharField,
+`discord_user_id` CharField). The model is up-to-date but the live DB
+is missing the columns — migration drift. Currently dropping PA task
+success rate from 100% → 99.59%.
+
+Tasks:
+1. Confirm which migration was supposed to add them (`grep` migrations
+   for `platform` field on `chat_conversations`).
+2. Check `python manage.py showmigrations core | grep -A 2 -B 2 chat`
+   to see if a migration is unapplied or missing.
+3. If migration exists but unapplied: `python manage.py migrate core`.
+4. If the migration is missing entirely:
+   `python manage.py makemigrations core --name add_chat_conversation_platform_fields`,
+   review the generated migration, then apply.
+5. Verify by re-running `process_pa_chat_task` or watching ops_tool for
+   24h that the error disappears.
+6. Don't touch the model — only the migration history is out of sync.
+
+This is the kind of "small bounded ops debt" task that fits well with
+the multi-repo v0 pattern even though it's u-d-b's own. ~30 min.
+
+### Then — pick the next session 1120 headline
+
+After the bug is in, options for what to work on:
+
+- **Container the fleet (Docker compose per repo)** — natural next step
+  after port allocation locked. Each fleet member gets its own compose
+  file; `infra/` repo orchestrates. ~2-3 sessions.
+- **Survey + extract initiatives for the other 9 repos** — currently
+  only character-os has TRIAGE initiatives. Sweep the rest at ~$0.01
+  per survey + ~$0.01 per extract = ~$0.20 total. ~½ session.
+- **F2F.3 unfreeze** — if HeyGen + Cartesia keys are provisioned, the
+  HeyGen wiring is the heaviest remaining slice on the F2F arc.
+- **Atlas v1 → v2 reframe** — pure docs; Atlas currently reads "Rigby
+  standalone" but reality is "u-d-b as engine for the public Suite."
+- **Phase 0 cost-survival audit** (per Session 1116 carry-over) —
+  `LLMCallLog.workspace` FK + `ExternalAPICallLog` + per-workspace
+  daily cap. Gate for multi-tenant SaaS launch. ~1 week focused work.
+
+---
+
+## SESSION 1119 — PRIOR ENTRY POINT (multi-repo v0 shipped end-to-end)
 
 Session 1119 reframed the headline mid-session. Chris pulled back on
 adding new external APIs (HeyGen, Cartesia) until what's built is
 working, then proposed a much bigger vision: **Rigby manages each
-laptop-local repo as a project she runs.** v0 of that shipped:
+laptop-local repo as a project she runs.** Nine PRs landed; v0 is
+live and verified end-to-end through the React UI:
 
 - **Repo Profile JSON schema** at `config/external_repos/<id>.json`.
   Canonical config for an external repo — tech stack, anchor doc
@@ -192,18 +248,7 @@ focused).
 
 ---
 
-## SESSION 1119 — PRIOR ENTRY POINT (multi-repo v0)
-
-The full Session 1119 record (vision scoping, schema lock, code,
-demo, cost ledger, loose ends) lives in
-[`docs/handoffs/SESSION_1119_MULTI_REPO_V0.md`](docs/handoffs/SESSION_1119_MULTI_REPO_V0.md).
-Read that file plus
-[`docs/topics/multi-repo-management.md`](docs/topics/multi-repo-management.md)
-before extending the multi-repo system.
-
----
-
-## SESSION 1118 — PRIOR ENTRY POINT (post-1117 engine bridge + carry-over wrap)
+## SESSION 1118 — TWO SESSIONS BACK (F2F broker landed)
 
 Session 1117 closed the local-portfolio-grounding vision Chris flagged
 at end of Session 1116, then knocked out the carry-overs in the same

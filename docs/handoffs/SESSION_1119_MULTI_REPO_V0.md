@@ -260,6 +260,44 @@ Cost of context-kit survey: ~$0.01 (8217 tokens, gpt-5-mini).
    survey `c71aa5a4-819f-4f69-b002-1a4dd51d6f87` runs with live
    inventory output via the venv wrapper.
 
+## Session 1119 close — full PR list + live UI verification
+
+Nine PRs landed in this session, all on `main`:
+
+| PR | Commit | What |
+|---|---|---|
+| #2104 | `8b9f7c27` | v0 framework — Repo Profile schema + register/refresh/survey commands |
+| #2105 | `ce090a85` | inventory_venv + inventory_env_file wrapper |
+| #2106 | `bac3f07e` | 10-repo catalog seed + Editor persona fix |
+| #2107 | `ee486be0` | `extract_initiatives_from_survey` (read-only deliverable → actionable Initiative rows) |
+| #2108 | `537d57a6` | doc state update — loose-ends matrix |
+| #2109 | `445e5b56` | `active_repo_tool` PA tool (set/get/clear, 7-day Redis TTL) |
+| #2110 | `6cf8fc0a` | auto-inject active repo context into PA system prompt (v1 graduation) |
+| #2111 | `65014ad5` | lock fleet port allocation across 11 profiles |
+| #2112 | `a58ba8ff` | vite dev base `/` so React Router matches |
+
+Live UI test results (browser → React Command Center → PA chat):
+
+| Step | Expected | Got |
+|---|---|---|
+| Set active repo to character-os | Confirm pointer | ✅ `Workspace fd91a85d-...` cached, 7-day TTL |
+| Cold ask "what's urgent" | Cite top TRIAGE | ✅ `[character-os] Decide SESSION_217 priority: engine-config or VO.3` (urgency 0.95) |
+| Multi-turn "30-min win" | Different TRIAGE without re-state | ✅ `[character-os] Regenerate and commit CHARACTER_OS_INVENTORY.md at HEAD` (urgency 0.85, impact 0.6) |
+| Switch to mentorforge | Pointer moves | ✅ `Workspace 560c4125-...` |
+| Clear scope | Drop pointer | ✅ confirmed |
+| Cold u-d-b question after clear | Default platform tools, not deliverable_tool | ✅ status_snapshot + cockpit + ops |
+
+The full multi-repo workflow is **live and working through the production React UI**. Rigby autonomously uses `active_repo_tool` when the user mentions scoping; pulls Repo Profile + Snapshot + TRIAGE Initiatives via the auto-injected system context; switches and clears scope cleanly.
+
+### One pre-existing u-d-b bug Rigby surfaced
+
+During the final cold-u-d-b-question test, Rigby reported 2 failures in `core.tasks.process_pa_chat_task` with `ProgrammingError`:
+
+- `column chat_conversations.platform does not exist`
+- `column chat_conversations.discord_user_id does not exist`
+
+`ChatConversation` model declares both fields (Session 455 — cross-platform tracking) but the live DB is missing them — migration drift. **Queued as the first item for Session 1120.**
+
 ## How to use this
 
 Runbook lives at [`docs/topics/multi-repo-management.md`](../topics/multi-repo-management.md).
@@ -291,7 +329,15 @@ with filters `workspace__name=<repo_id>` + `category` in
 | register context-kit | 0 | $0.00 |
 | refresh context-kit (full inventory) | 0 | $0.00 |
 | CTO survey context-kit | 8,217 | ~$0.01 |
-| **Total session 1119** | **16,563** | **~$0.02** |
+| COO survey character-os | ~7,500 | ~$0.01 |
+| Editor survey character-os | 9,432 | ~$0.01 |
+| Fresh CTO survey character-os (post-venv fix) | 8,727 | ~$0.01 |
+| CTO survey mentorforge | ~8,000 | ~$0.01 |
+| Extract initiatives (character-os CTO) | ~3,500 | ~$0.01 |
+| Register × 10 new repos | 0 | $0.00 |
+| Refresh × 10 new repos | 0 | $0.00 |
+| Live UI test sequence (6 turns) | ~25,000 | ~$0.08 |
+| **Total session 1119** | **~87,000** | **~$0.15** |
 
 ## Provenance
 
