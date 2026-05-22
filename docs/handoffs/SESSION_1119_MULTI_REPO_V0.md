@@ -227,32 +227,37 @@ Cost of context-kit survey: ~$0.01 (8217 tokens, gpt-5-mini).
 
 ## Loose ends for next session
 
-1. **Seed context-kit as the second repo.** Once a second repo is in
-   the fleet, the "is this generalizable or character-os-specific?"
-   question gets a real answer.
-2. **Inventory command needs the repo's own venv.** character-os's
-   `python manage.py inventory` (cwd `shell/`) didn't run during the
-   refresh because the character-os venv isn't active from u-d-b's
-   process. Either:
+> **Note on u-d-b:** u-d-b is *not* a fleet member and should not be
+> registered as one. Rigby IS u-d-b's PA — its CLAUDE.md / PLATFORM_*
+> anchors / handoffs are already injected into her system context.
+> Registering u-d-b as a fleet repo would just duplicate native context.
+> The fleet is for repos Rigby otherwise wouldn't have context for.
+
+1. **Inventory command needs the repo's own venv** (when the repo has
+   third-party deps). character-os's `python manage.py inventory`
+   (cwd `shell/`) didn't run during the refresh because the character-os
+   venv isn't active from u-d-b's process. context-kit's inventory
+   ran fine (stdlib-only). Either:
    - (a) Skip inventory by default and accept staler anchor-docs
      coverage in the snapshot, or
    - (b) Update `refresh_repo_context` to wrap the inventory command
      in a `bash -c "source .venv/bin/activate && ..."` invocation
      when the repo profile declares a venv path.
    v0 ships option (a) via `--skip-inventory`. v1 should explore (b).
-3. **COO + Editor surveys** — only CTO ran in v0. Worth running COO
+2. **COO + Editor surveys** — only CTO ran in v0. Worth running COO
    and Editor surveys against character-os to confirm the personas
    produce useful, distinct lenses.
-4. **Initiatives.** v0 surveys produce `repo_survey` deliverables but
+3. **Initiatives.** v0 surveys produce `repo_survey` deliverables but
    don't yet auto-create Initiatives or Action Items in u-d-b's
    pipeline. The scoping target was "tasks land as Initiatives";
    that's a v0.5 follow-up.
-5. **Active-repo conversation context.** Right now Claude Code's
+4. **Active-repo conversation context.** Right now Claude Code's
    handshake is explicit ("we're in character-os now"). The
    conversation doesn't persist that pointer. v1 graduation item #1.
-6. **Re-run the CTO survey after fixing inventory ingestion.**
-   Currently the survey lacks fresh runtime numbers because inventory
-   was skipped.
+5. **Re-run the character-os CTO survey after fixing inventory
+   ingestion.** Currently the survey lacks fresh runtime numbers
+   because inventory was skipped (the context-kit survey already
+   had this because its inventory ran).
 
 ## How to use this
 

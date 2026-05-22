@@ -137,30 +137,33 @@ build on it). All keep the "no new APIs" lane.
 
 ### Option A — Multi-repo v0 carryover (cheapest)
 
-The Session 1119 handoff lists six loose ends. The highest-leverage:
+The Session 1119 handoff lists loose ends. The highest-leverage:
 
-1. ~~**Seed context-kit as the second repo.**~~ DONE end of Session 1119.
-   Schema generalised cleanly to a Python CLI tool. Surveys for u-d-b
-   itself as a third repo would close the "Rigby manages her own
-   repo too" loop.
-2. **Inventory ingestion across venvs.** Repo's own inventory command
+> **u-d-b is not a fleet member.** Rigby IS u-d-b's PA — its anchor
+> docs are already in her system context. The fleet is for OTHER
+> repos. Don't register u-d-b as a managed workspace.
+
+1. **Inventory ingestion across venvs.** Repo's own inventory command
    needs its own venv WHEN the repo has third-party deps. context-kit
    ran inventory fine (stdlib-only); character-os needs the wrapper.
    Add a `bash -c "source .venv/bin/activate && ..."` shape when the
    profile declares a venv path. ~1 hr.
-3. **Run COO + Editor surveys against character-os** to confirm the
+2. **Run COO + Editor surveys against character-os** to confirm the
    personas produce useful, distinct lenses. ~10 min, ~$0.02.
-4. **Auto-create Initiatives from survey findings** (v0.5). Right now
+3. **Auto-create Initiatives from survey findings** (v0.5). Right now
    surveys produce `repo_survey` deliverables but don't land tasks in
    the Initiative pipeline. ~1 session.
-5. **Active-repo conversation context.** Right now Claude Code's
+4. **Active-repo conversation context.** Right now Claude Code's
    handshake to Rigby is explicit ("we're in character-os now"). The
    conversation doesn't persist that pointer. v1 graduation item #1.
    ~1 session.
-6. **Re-run CTO survey after fixing inventory ingestion** so it has
-   fresh runtime numbers, not just CLAUDE.md phase claims.
+5. **Re-run character-os CTO survey after fixing inventory ingestion**
+   so it has fresh runtime numbers, not just CLAUDE.md phase claims.
+6. **Seed a third external repo** (mentorforge / 24-7-ai-global /
+   focus-flow) once the inventory venv wrapper lands. Confirms the
+   schema across a third repo shape.
 
-Order Rigby will most likely recommend: 2 → 6 → 1 → 3 → 4 → 5.
+Order Rigby will most likely recommend: 1 → 5 → 2 → 6 → 3 → 4.
 
 ### Option B — F2F.4 against mock-mode
 

@@ -59,6 +59,14 @@ via file system); cross-repo runtime traffic (e.g. character-os's
 `consult_engine` reaching u-d-b's PA over HTTP) is a separate product
 layer and never touches the fleet primitives.
 
+**u-d-b is not a fleet member.** Rigby IS u-d-b's PA — she runs inside
+this repo, and CLAUDE.md / PLATFORM_WHAT_IT_IS / PLATFORM_INVENTORY /
+the handoffs are already injected into her system context on every
+conversation. The fleet is specifically for repos Rigby would not
+otherwise have context for. Don't register u-d-b as a fleet member;
+it's redundant and would just duplicate context she already has
+natively.
+
 ---
 
 ## Concepts
