@@ -131,7 +131,7 @@ Options, ordered by leverage:
 - **ai-content-studio Phase 5 — anchor doc reconciliation (~30-60 min)**.
   `CLAUDE.md` reads like marketing copy ("100% Complete - Production
   Ready") — trim to actual capabilities. `docs/PROJECT_WHAT_IT_IS.md`
-  still has `[adopt: please describe]` placeholders — fill or delete.
+  still has `[adopt: please&nbsp;describe]` placeholders — fill or delete.
   Decide which doc is canonical narrative (recommend
   `PROJECT_WHAT_IT_IS.md` per fleet pattern; let CLAUDE.md be a
   developer guide).
