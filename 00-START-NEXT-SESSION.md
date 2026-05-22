@@ -95,6 +95,16 @@ If you find yourself editing `brain_client.py` in any one repo, **edit contract-
 > compliancesentinel decision stub → THEN frontend. Routing control
 > without auth is the only thing that can turn into a real incident,
 > so it ranks above visible UI work.
+>
+> **Implement-from-this spec lives at
+> [`docs/specs/FLEET_MOVE_1_AND_2_SPEC.md`](docs/specs/FLEET_MOVE_1_AND_2_SPEC.md).**
+> Full Move 1 (service identity + signed requests) and Move 2 (artifact
+> push/pull) contracts — models, headers, signature scheme, capability
+> gates, failure codes, audit log shape, bootstrap + rotation flow,
+> push/pull endpoints, edge cases for versioning/citations/attribution/
+> retention. Drafted by Rigby in conversation `pa-d19c1674b936`. If you
+> find yourself making a judgment call that isn't in the spec, brief
+> her before coding.
 
 ### FIRST THING — Merge dependency + e2e verification checklist
 
