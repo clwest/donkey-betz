@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md`](SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md)
-(Extended doc-verifier framework into Django + Next.js. Shipped norman-handyman-mvp#1 (standalone Python, AST-based) and 24-7-ai-global#9 (pure Node ESM, brace-matching). Parked character-os (active CC) and ai-content-studio (empty origin). Fleet scoreboard: 9 repos, 20 claims actively gated in CI across 3 runtime stacks. Total LLM cost: $0.)
+**Latest handoff:** [`SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md)
+(Fleet verifier rollout complete across all 10 laptop-local repos. character-os#1 shipped after the other CC's lane closed; ai-content-studio bootstrapped to private GitHub origin via 5-phase cleanup (-67 MB tracked size, -85%) including 3-secret scrub before push. Theme 2 (embedding upgrade) salvaged from 8-month-old WIP; Themes 1+3 shelved to dead branch. Fleet scoreboard: 10 repos, 26 claims actively gated. Total LLM cost: ~$0.01.)
 
-**Previous:** [`SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md`](SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md)
+**Previous:** [`SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md`](SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md)
 
 ## How to update
 
