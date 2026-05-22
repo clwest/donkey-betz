@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md`](SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md)
-(Cleared 6 of 8 `context-kit doctor` warnings on u-d-b; remaining 2 are upstream context-kit heuristic mismatches (test count: lexical vs discovery; handoff gap doc not honored). Shipped `docs/UDB_BEHAVIOR_LAYER.md` + `docs/UDB_TRANSLATION_LAYER.md` co-authored with Rigby via new marker-block pattern (Claude scaffolds structure/rules, Rigby fills voice/audience inline). PR #2120, one docs-only commit, 8 files +858/-29.)
+**Latest handoff:** [`SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md`](SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md)
+(~25 PRs across 9 repos. Dockerized all 7 FastAPI+React fleet apps on `fleet-net`. Brain bridge (`POST /api/brain/ask` + frontend Brain page) live across all 7 — each app now proxies questions to u-d-b's PA in 4.7-9s. New private repo `github.com/clwest/infra` with `make up` launcher. u-d-b PGDATA fix #2121 — postgres data was in a subdir, missing env caused crash-loop. Defang sweep replaced `POSTGRES_PASSWORD=<repo>` antipattern with `change-me-in-production` (GitGuardian-clean). signal-studio backend port moved 8080→8007. ai-content-studio Docker foundation PR #2 open but parked. Behavior layer validation: Rigby invoked the no-claims-verification rule unprompted during testing.)
 
-**Previous:** [`SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md)
+**Previous:** [`SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md`](SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md)
 
 ## How to update
 
