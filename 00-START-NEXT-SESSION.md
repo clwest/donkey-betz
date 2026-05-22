@@ -97,17 +97,13 @@ TL;DR: 15 PRs merged across 8 repos in three waves, **zero LLM spend**.
 enforce doc-vs-runtime parity in CI. 17 claims actively gated
 (14 originally green + 3 reconciled this session). Total LLM cost: **$0**.
 
-### FIRST THING — verify Jessica deployed u-d-b #2114
+### FIRST THING — pick a headline (local-only mode)
 
-Migration `0341_chat_conversation_columns_idempotent` is in `main` but
-only takes effect on prod after Jessica's next deploy. Confirm via
-Rigby's `ops_tool` that:
-
-- `process_pa_chat_task` ProgrammingError has cleared
-- PA success rate has recovered 99.59% → ~100%
-
-If not yet deployed, that's a 24h+ outstanding item; everything else
-in this session was local/PR work that doesn't require deployment.
+**Working local-only until notified.** Don't drive prod verification,
+deploys, or Jessica follow-ups. u-d-b #2114's migration is in `main`
+and dormant until Chris flips the deploy switch — local Rigby is
+healthy (no new `process_pa_chat_task` ProgrammingError since the 2
+yesterday-evening events).
 
 ### Then — pick the Session 1122 headline
 
