@@ -2,68 +2,212 @@
   "schema_version": 1,
   "repo_id": "contract-concierge",
   "name": "contract-concierge",
-  "description": "Contract Concierge (Suite III — `arc: Execute`, pillar Automation). Templates → e-signed → archived, no lawyers required. 3 templates (SOW · Contractor · NDA), live HTML preview, multi-signer flow, e-signature with IP + UA + timestamp audit trail, optional AI clauses (explain/tighten/custom). Works end-to-end with no AI or email — both are optional layers. Pricing Free → $79/mo. Live at https://contract-concierge.vercel.app.",
+  "description": "Contract Concierge (Suite III \u2014 `arc: Execute`, pillar Automation). Templates \u2192 e-signed \u2192 archived, no lawyers required. 3 templates (SOW \u00b7 Contractor \u00b7 NDA), live HTML preview, multi-signer flow, e-signature with IP + UA + timestamp audit trail, optional AI clauses (explain/tighten/custom). Works end-to-end with no AI or email \u2014 both are optional layers. Pricing Free \u2192 $79/mo. Live at https://contract-concierge.vercel.app.",
   "root_path": "/Users/donkeyking/development/contract-concierge",
   "workspace_type": "local",
   "tech_stack": {
-    "primary_language": "python", "repo_type": "saas_app", "backend": "fastapi",
-    "frontend": "react+vite", "react_version": "19", "database": "postgres",
-    "email": "gmail_smtp", "billing": "stripe", "deploy_target": "vercel+render",
-    "package_managers": {"python": "pip", "js": "pnpm"},
-    "products_24_7_slug": "contract-concierge", "products_24_7_no": "III"
+    "primary_language": "python",
+    "repo_type": "saas_app",
+    "backend": "fastapi",
+    "frontend": "react+vite",
+    "react_version": "19",
+    "database": "postgres",
+    "email": "gmail_smtp",
+    "billing": "stripe",
+    "deploy_target": "vercel+render",
+    "package_managers": {
+      "python": "pip",
+      "js": "pnpm"
+    },
+    "products_24_7_slug": "contract-concierge",
+    "products_24_7_no": "III"
   },
   "entry_points": {
     "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
     "anchor_runtime": null,
     "anchor_start": "00-START-NEXT-SESSION.md",
     "anchor_claude": "CLAUDE.md",
-    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
-    "code_allowlist": ["backend", "frontend/src", "scripts"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "docs_root": "docs/",
+    "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": [
+      "backend",
+      "frontend/src",
+      "scripts"
+    ],
+    "docs_allowlist": [
+      "docs",
+      "README.md",
+      "CLAUDE.md",
+      "00-START-NEXT-SESSION.md"
+    ],
     "ports": {
-      "frontend": 3030,
-      "backend": 8040,
+      "frontend": 5175,
+      "backend": 8003,
       "websocket": null,
-      "notes": "Vite :3030, FastAPI uvicorn :8040. Slot 4 in the fleet port table."
+      "notes": "Vite/nginx host :5175 \u2192 container :80 (web). FastAPI uvicorn :8003 (api). Updated Session 1125 Docker fleet rollout."
     },
     "start_commands": {
-      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8040 --reload",
-      "frontend": "cd frontend && pnpm dev --port 3030 --strictPort"
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8003 --reload",
+      "frontend": "cd frontend && npm run dev -- --port 5175 --strictPort"
     }
   },
   "protected_paths": [
-    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
-    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
-    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
-    "*.sqlite3", "media/", "signed_contracts/"
+    ".env",
+    ".env.*",
+    "**/.env*",
+    "**/*.pem",
+    "**/*key*",
+    "**/credentials*",
+    "**/.ssh/**",
+    ".git",
+    ".git/",
+    "backend/.venv",
+    "backend/.venv/**",
+    "frontend/node_modules",
+    "frontend/node_modules/**",
+    "frontend/dist",
+    "frontend/dist/**",
+    "**/__pycache__/**",
+    "*.sqlite3",
+    "media/",
+    "signed_contracts/"
   ],
   "permissions": {
-    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
-    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+    "allow_file_write": true,
+    "allow_file_delete": false,
+    "allow_command_execution": true,
+    "allow_git_operations": true,
+    "allow_autonomous_writes": false,
+    "require_human_review": false
   },
   "repo_profile_metadata": {
     "constraints_text": [
       "No pushes / tags without explicit operator approval. No --force ever.",
-      "signed_contracts/ and audit-trail blobs are legally sensitive — never commit, never echo.",
-      "Stripe + OpenAI + Gmail-SMTP keys live in .env — never commit."
+      "signed_contracts/ and audit-trail blobs are legally sensitive \u2014 never commit, never echo.",
+      "Stripe + OpenAI + Gmail-SMTP keys live in .env \u2014 never commit."
     ],
     "constraints_rules": [
-      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_force", "always": true},
-      {"type": "deny_paths", "globs": [".env*", "**/.env*", "signed_contracts/**", "media/**"]}
+      {
+        "type": "deny_git_push",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_tag",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_force",
+        "always": true
+      },
+      {
+        "type": "deny_paths",
+        "globs": [
+          ".env*",
+          "**/.env*",
+          "signed_contracts/**",
+          "media/**"
+        ]
+      }
     ],
     "session_log_pointer": "docs/handoffs/",
     "fleet_role": {
-      "role": "suite_product", "suite_position": "III (Execute arc)", "pillar": "Automation",
-      "url": "https://contract-concierge.vercel.app", "status": "shipped", "income_lane": true,
+      "role": "suite_product",
+      "suite_position": "III (Execute arc)",
+      "pillar": "Automation",
+      "url": "https://contract-concierge.vercel.app",
+      "status": "shipped",
+      "income_lane": true,
       "founder_toolkit_member": true
     },
     "bridge_relationship": null,
     "open_questions": [
-      "Runtime inventory anchor missing — docs/<APP>_INVENTORY.md not present. Wire to context-kit inventory or stub-write it during refresh."
+      "Runtime inventory anchor missing \u2014 docs/<APP>_INVENTORY.md not present. Wire to context-kit inventory or stub-write it during refresh."
     ],
-    "last_refresh_at": null, "last_git_head": null, "last_branch": null, "health_status": null,
-    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+    "last_refresh_at": null,
+    "last_git_head": null,
+    "last_branch": null,
+    "health_status": null,
+    "snapshot_retention": {
+      "max_snapshots": 20,
+      "max_age_days": 30
+    }
+  },
+  "docker": {
+    "enabled": true,
+    "primary_service": "web",
+    "base_urls": {
+      "web_url": "http://localhost:5175",
+      "api_url": "http://localhost:8003"
+    },
+    "host_ports": {
+      "web": 5175,
+      "api": 8003
+    },
+    "container_ports": {
+      "web": 80,
+      "api": 8003
+    },
+    "container_names": {
+      "web": "contract_concierge_web",
+      "api": "contract_concierge_api",
+      "postgres": "contract_concierge_postgres"
+    },
+    "fleet_net_hostnames": {
+      "web": "contract_concierge_web:80",
+      "api": "contract_concierge_api:8003",
+      "postgres": "contract_concierge_postgres:5432"
+    },
+    "healthchecks": {
+      "web": {
+        "method": "GET",
+        "path": "/",
+        "expect_status": [
+          200,
+          304
+        ],
+        "notes": "nginx static root"
+      },
+      "api": {
+        "method": "GET",
+        "path": "/api/health",
+        "expect_status": [
+          200
+        ]
+      }
+    },
+    "brain_bridge": {
+      "url": "http://localhost:8003/api/brain/ask",
+      "callable_from": [
+        "host",
+        "fleet_net"
+      ],
+      "requires_auth": true,
+      "auth_mode": "demo_user",
+      "demo_user": {
+        "email": "demo@concierge.dev",
+        "password": "demo123"
+      }
+    },
+    "compose_files": [
+      "docker-compose.yml",
+      "docker-compose.dev.yml"
+    ],
+    "env_files": [
+      ".env",
+      ".env.example"
+    ],
+    "depends_on_services": [
+      "postgres"
+    ],
+    "bootstrap_commands": {
+      "direct": "cd ~/development/contract-concierge && docker compose up -d --build",
+      "via_infra_make": "cd ~/development/infra && make up-app APP=contract-concierge"
+    },
+    "notes": [
+      "Web container runs nginx with the built Vite bundle (host :5175 \u2192 container :80).",
+      "API container runs uvicorn directly (host :8003 \u2192 container :8003).",
+      "Postgres is internal-only; reachable on fleet-net as contract_concierge_postgres:5432.",
+      "Brain bridge requires auth; demo creds are documented publicly in README."
+    ]
   }
 }

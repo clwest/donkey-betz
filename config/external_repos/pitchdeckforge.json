@@ -2,65 +2,207 @@
   "schema_version": 1,
   "repo_id": "pitchdeckforge",
   "name": "pitchdeckforge",
-  "description": "Pitch Deck Forge (Suite II — `arc: Pitch`, pillar Innovation). AI investor decks — describe the company, ship a polished investor-ready 10-slide deck with speaker notes, executive summary, and 90-second pitch script. Four template styles tuned to different investor personas, plus Pro bonus slides (Market Context, VC Q&A, Competitive Landscape) + per-slide AI regeneration. Pricing Free → $79/mo. Live at https://pitchdeckforge.vercel.app.",
+  "description": "Pitch Deck Forge (Suite II \u2014 `arc: Pitch`, pillar Innovation). AI investor decks \u2014 describe the company, ship a polished investor-ready 10-slide deck with speaker notes, executive summary, and 90-second pitch script. Four template styles tuned to different investor personas, plus Pro bonus slides (Market Context, VC Q&A, Competitive Landscape) + per-slide AI regeneration. Pricing Free \u2192 $79/mo. Live at https://pitchdeckforge.vercel.app.",
   "root_path": "/Users/donkeyking/development/pitchdeckforge",
   "workspace_type": "local",
   "tech_stack": {
-    "primary_language": "python", "repo_type": "saas_app", "backend": "fastapi",
-    "frontend": "react+vite", "react_version": "19", "database": "postgres",
-    "llm": "openai", "billing": "stripe", "deploy_target": "vercel+render",
-    "package_managers": {"python": "pip", "js": "pnpm"},
-    "products_24_7_slug": "pitchdeckforge", "products_24_7_no": "II"
+    "primary_language": "python",
+    "repo_type": "saas_app",
+    "backend": "fastapi",
+    "frontend": "react+vite",
+    "react_version": "19",
+    "database": "postgres",
+    "llm": "openai",
+    "billing": "stripe",
+    "deploy_target": "vercel+render",
+    "package_managers": {
+      "python": "pip",
+      "js": "pnpm"
+    },
+    "products_24_7_slug": "pitchdeckforge",
+    "products_24_7_no": "II"
   },
   "entry_points": {
     "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
     "anchor_runtime": "docs/PITCH_DECK_FORGE_INVENTORY.md",
     "anchor_start": "00-START-NEXT-SESSION.md",
     "anchor_claude": "CLAUDE.md",
-    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
-    "code_allowlist": ["backend", "frontend/src", "scripts"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "docs_root": "docs/",
+    "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": [
+      "backend",
+      "frontend/src",
+      "scripts"
+    ],
+    "docs_allowlist": [
+      "docs",
+      "README.md",
+      "CLAUDE.md",
+      "00-START-NEXT-SESSION.md"
+    ],
     "ports": {
-      "frontend": 3020,
-      "backend": 8030,
+      "frontend": 5176,
+      "backend": 8004,
       "websocket": null,
-      "notes": "Vite :3020, FastAPI uvicorn :8030. Slot 3 in the fleet port table."
+      "notes": "Vite/nginx host :5176 \u2192 container :80 (web). FastAPI uvicorn :8004 (api). Updated Session 1125 Docker fleet rollout."
     },
     "start_commands": {
-      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8030 --reload",
-      "frontend": "cd frontend && pnpm dev --port 3020 --strictPort"
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8004 --reload",
+      "frontend": "cd frontend && npm run dev -- --port 5176 --strictPort"
     }
   },
   "protected_paths": [
-    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
-    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
-    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
-    "*.sqlite3", "media/"
+    ".env",
+    ".env.*",
+    "**/.env*",
+    "**/*.pem",
+    "**/*key*",
+    "**/credentials*",
+    "**/.ssh/**",
+    ".git",
+    ".git/",
+    "backend/.venv",
+    "backend/.venv/**",
+    "frontend/node_modules",
+    "frontend/node_modules/**",
+    "frontend/dist",
+    "frontend/dist/**",
+    "**/__pycache__/**",
+    "*.sqlite3",
+    "media/"
   ],
   "permissions": {
-    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
-    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+    "allow_file_write": true,
+    "allow_file_delete": false,
+    "allow_command_execution": true,
+    "allow_git_operations": true,
+    "allow_autonomous_writes": false,
+    "require_human_review": false
   },
   "repo_profile_metadata": {
     "constraints_text": [
       "No pushes / tags / PyPI publishes without explicit operator approval. No --force ever.",
-      "Stripe + OpenAI keys live in .env — never commit."
+      "Stripe + OpenAI keys live in .env \u2014 never commit."
     ],
     "constraints_rules": [
-      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
-      {"type": "deny_git_force", "always": true},
-      {"type": "deny_paths", "globs": [".env*", "**/.env*", "media/**"]}
+      {
+        "type": "deny_git_push",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_tag",
+        "unless": "explicit_operator_approval"
+      },
+      {
+        "type": "deny_git_force",
+        "always": true
+      },
+      {
+        "type": "deny_paths",
+        "globs": [
+          ".env*",
+          "**/.env*",
+          "media/**"
+        ]
+      }
     ],
     "session_log_pointer": "docs/handoffs/",
     "fleet_role": {
-      "role": "suite_product", "suite_position": "II (Pitch arc)", "pillar": "Innovation",
-      "url": "https://pitchdeckforge.vercel.app", "status": "shipped", "income_lane": true,
+      "role": "suite_product",
+      "suite_position": "II (Pitch arc)",
+      "pillar": "Innovation",
+      "url": "https://pitchdeckforge.vercel.app",
+      "status": "shipped",
+      "income_lane": true,
       "founder_toolkit_member": true
     },
     "bridge_relationship": null,
-    "open_questions": [], "last_refresh_at": null, "last_git_head": null,
-    "last_branch": null, "health_status": null,
-    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+    "open_questions": [],
+    "last_refresh_at": null,
+    "last_git_head": null,
+    "last_branch": null,
+    "health_status": null,
+    "snapshot_retention": {
+      "max_snapshots": 20,
+      "max_age_days": 30
+    }
+  },
+  "docker": {
+    "enabled": true,
+    "primary_service": "web",
+    "base_urls": {
+      "web_url": "http://localhost:5176",
+      "api_url": "http://localhost:8004"
+    },
+    "host_ports": {
+      "web": 5176,
+      "api": 8004
+    },
+    "container_ports": {
+      "web": 80,
+      "api": 8004
+    },
+    "container_names": {
+      "web": "pitchdeckforge_web",
+      "api": "pitchdeckforge_api",
+      "postgres": "pitchdeckforge_postgres"
+    },
+    "fleet_net_hostnames": {
+      "web": "pitchdeckforge_web:80",
+      "api": "pitchdeckforge_api:8004",
+      "postgres": "pitchdeckforge_postgres:5432"
+    },
+    "healthchecks": {
+      "web": {
+        "method": "GET",
+        "path": "/",
+        "expect_status": [
+          200,
+          304
+        ],
+        "notes": "nginx static root"
+      },
+      "api": {
+        "method": "GET",
+        "path": "/api/health",
+        "expect_status": [
+          200
+        ]
+      }
+    },
+    "brain_bridge": {
+      "url": "http://localhost:8004/api/brain/ask",
+      "callable_from": [
+        "host",
+        "fleet_net"
+      ],
+      "requires_auth": true,
+      "auth_mode": "demo_user",
+      "demo_user": {
+        "email": "demo@pitchdeckforge.dev",
+        "password": "demo123"
+      }
+    },
+    "compose_files": [
+      "docker-compose.yml",
+      "docker-compose.dev.yml"
+    ],
+    "env_files": [
+      ".env",
+      ".env.example"
+    ],
+    "depends_on_services": [
+      "postgres"
+    ],
+    "bootstrap_commands": {
+      "direct": "cd ~/development/pitchdeckforge && docker compose up -d --build",
+      "via_infra_make": "cd ~/development/infra && make up-app APP=pitchdeckforge"
+    },
+    "notes": [
+      "Web container runs nginx with the built Vite bundle (host :5176 \u2192 container :80).",
+      "API container runs uvicorn directly (host :8004 \u2192 container :8004).",
+      "Postgres is internal-only; reachable on fleet-net as pitchdeckforge_postgres:5432.",
+      "Brain bridge requires auth; demo creds are documented publicly in README."
+    ]
   }
 }
