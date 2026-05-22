@@ -275,11 +275,13 @@ from ..models_assistant_profile import AssistantProfile
 from .learning_readback import LearningReadbackEvent
 
 # Fleet service identity + signed-request audit (Session 1129 — Move 1)
+# Fleet artifacts (Session 1129 — Move 2 Round 1, MLC scope)
 from .fleet import (
     FleetServiceIdentity,
     FleetServiceKey,
     FleetServiceRotation,
     FleetAuthAuditLog,
+    FleetArtifact,
 )
 
 # In-app messaging
@@ -569,5 +571,8 @@ __all__ = [
     'FleetServiceKey',
     'FleetServiceRotation',
     'FleetAuthAuditLog',
+
+    # Fleet artifacts (Session 1129 Move 2 Round 1)
+    'FleetArtifact',
 
 ]

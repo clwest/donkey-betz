@@ -506,6 +506,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/voice-marketplace/',  # Browse marketplace is public, purchasing requires auth
         '/api/monitoring/',  # Public monitoring dashboard for stress tests
         '/api/deliverables/',  # Deliverables: anonymous gets public, authed gets scoped by user/workspace
+        # Session 1129 Move 2 — fleet artifact endpoints authenticate via
+        # X-Fleet-Signature headers at the DRF layer, not via PA token /
+        # session. This middleware would otherwise reject signed-but-
+        # tokenless fleet requests before DRF auth ran.
+        '/api/fleet/artifacts/',
     ]
     
     # Paths that require staff privileges

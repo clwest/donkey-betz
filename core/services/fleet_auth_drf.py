@@ -272,8 +272,45 @@ def _client_ip(request) -> Optional[str]:
     return meta.get("REMOTE_ADDR") or None
 
 
+class FleetSignatureExclusiveAuthentication(FleetSignatureAuthentication):
+    """Authenticating variant for fleet-only endpoints.
+
+    Side-effect-only parent is the right shape for hybrid endpoints
+    like `/api/pa/chat/` (we want Session/Token to claim
+    `request.user`). For fleet-only endpoints (artifact push/pull)
+    there's no user-auth fallback, so we promote to a real
+    authentication: on success return `(FleetServicePrincipal, key_id)`
+    so DRF treats the request as authenticated. On failure raise
+    `AuthenticationFailed` so DRF emits 401 (instead of falling
+    through to AnonymousUser + default-permission denial).
+
+    DO NOT use this on hybrid endpoints — it'd shadow the real Django
+    user with the fleet principal.
+    """
+
+    def authenticate(self, request):
+        # Parent does verify + audit (always returns None — side-effect-only).
+        super().authenticate(request)
+        identity = getattr(request, "fleet_identity", None)
+        if identity:
+            return (FleetServicePrincipal(identity["app_slug"]), identity["key_id"])
+
+        outcome = getattr(request, "_fleet_auth_outcome", None)
+        if outcome is not None and outcome.deny_code:
+            raise exceptions.AuthenticationFailed(
+                {"code": outcome.deny_code, "message": outcome.message}
+            )
+        raise exceptions.AuthenticationFailed(
+            {
+                "code": DenyCode.MISSING_HEADERS,
+                "message": "fleet signature required",
+            }
+        )
+
+
 __all__ = [
     "FleetSignatureAuthentication",
+    "FleetSignatureExclusiveAuthentication",
     "FleetSignatureRequired",
     "FleetCapabilityRequired",
     "FleetServicePrincipal",

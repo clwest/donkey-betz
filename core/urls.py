@@ -84,6 +84,12 @@ from core.views_fleet_admin import (
     fleet_rotation_transition,
 )
 
+# Session 1129 Move 2 Round 1 — Fleet artifact push/pull
+from core.views_fleet_artifacts import (
+    fleet_artifacts_push,
+    fleet_artifacts_pull,
+)
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -1731,6 +1737,17 @@ urlpatterns = [
         'api/admin/fleet/rotations/<uuid:rotation_id>/<str:action>/',
         fleet_rotation_transition,
         name='fleet-admin-rotation-transition',
+    ),
+    # Session 1129 Move 2 Round 1 — Fleet artifact push/pull
+    path(
+        'api/fleet/artifacts/',
+        fleet_artifacts_push,
+        name='fleet-artifacts-push',
+    ),
+    path(
+        'api/fleet/artifacts/<str:artifact_id>/',
+        fleet_artifacts_pull,
+        name='fleet-artifacts-pull',
     ),
     # P12: Agent Fleet Management
     path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),
