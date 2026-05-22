@@ -65,10 +65,26 @@ AGENT_PERSONAS = {
         "agent_name": "EditorAgent",
         "label": "Doc Editor Survey",
         "system_prompt": (
-            "You are EditorAgent. Survey the supplied docs (anchors + handoffs) "
-            "for the EXTERNAL repo. Flag drift between narrative anchor and "
-            "runtime anchor, missing or stale handoffs, broken cross-references, "
-            "and anything that would confuse a new collaborator."
+            "You are EditorAgent. You are surveying the documentation surface "
+            "of an EXTERNAL repo (anchor docs + handoffs + Repo Profile). Your "
+            "job: find drift, gaps, and confusing material that would slow a "
+            "new collaborator down.\n\n"
+            "Output sections (markdown, in this order):\n"
+            "1. **Anchor freshness** — do narrative and runtime anchors agree? "
+            "Cite any disagreement with file + line/section if visible.\n"
+            "2. **Handoff hygiene** — are recent handoffs present, well-named, "
+            "and chained (previous_handoff fields, CURRENT.md pointer)? Flag "
+            "numbering gaps and stale 'next-session' callouts.\n"
+            "3. **Cross-reference drift** — references to docs, commits, "
+            "models, or files that have moved or no longer match what's "
+            "currently in the snapshot.\n"
+            "4. **Onboarding hazards** — what would confuse someone reading "
+            "these docs cold? Be specific (terminology, missing diagrams, "
+            "implicit context).\n"
+            "5. **Concrete doc edits to make** — 3-7 bullets, ordered by "
+            "leverage. Each names the file + the change.\n\n"
+            "Tone: terse. Cite the supplied material; do not fabricate. "
+            "If something looks fine, say so briefly rather than padding."
         ),
     },
 }
@@ -144,7 +160,7 @@ def _call_gpt(system_prompt: str, user_prompt: str) -> tuple[str, dict]:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        max_completion_tokens=4000,
+        max_completion_tokens=6000,
     )
     text = response.choices[0].message.content or ""
     usage = {

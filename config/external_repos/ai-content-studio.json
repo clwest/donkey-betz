@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "repo_id": "ai-content-studio",
+  "name": "ai-content-studio",
+  "description": "AI Content Studio (Vertical V — `arc: Create`, pillar Innovation). Multi-format AI content engine — SEO blog generation, social posts across 4 networks, 53+ image styles via Stability AI, end-to-end text-to-video + image-to-video via Runway ML. Full user auth + gallery + ownership model ready to monetize. Two client apps share one Django backend: web (~39K LOC) + React Native (Expo) premium app. Status: demo-ready, Phase 1+2 complete.",
+  "root_path": "/Users/donkeyking/development/ai-content-studio",
+  "workspace_type": "local",
+  "tech_stack": {
+    "primary_language": "python", "repo_type": "monorepo_vertical",
+    "backend": "django", "django_version": "4.2", "frontend": "react+vite",
+    "react_version": "19", "mobile": "react-native-expo",
+    "task_queue": "celery+redis", "database": "postgres",
+    "llm": "openai", "image_gen": "stability", "video_gen": "runway",
+    "deploy_target": "vercel+render", "package_managers": {"python": "pip", "js": "pnpm"},
+    "products_24_7_slug": "ai-content-studio", "products_24_7_no": "V"
+  },
+  "entry_points": {
+    "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
+    "anchor_runtime": "docs/AI_CONTENT_STUDIO_INVENTORY.md",
+    "anchor_start": "00-START-NEXT-SESSION.md",
+    "anchor_claude": "CLAUDE.md",
+    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": ["backend", "frontend/src", "mobile", "scripts"],
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+  },
+  "protected_paths": [
+    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
+    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
+    "frontend/node_modules/**", "mobile/node_modules", "mobile/node_modules/**",
+    "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
+    "*.sqlite3", "media/", "user_uploads/", "generated_media/"
+  ],
+  "permissions": {
+    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
+    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+  },
+  "repo_profile_metadata": {
+    "constraints_text": [
+      "No pushes / tags without explicit operator approval. No --force ever.",
+      "Stability + OpenAI + Runway keys live in .env — never commit. Generated media in media/ + generated_media/ is user-owned content.",
+      "39K LOC web + RN mobile share one Django backend — coordinate cross-app changes."
+    ],
+    "constraints_rules": [
+      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_force", "always": true},
+      {"type": "deny_paths", "globs": [".env*", "**/.env*", "media/**", "user_uploads/**", "generated_media/**"]}
+    ],
+    "session_log_pointer": "docs/handoffs/",
+    "fleet_role": {
+      "role": "vertical", "vertical_position": "V (Create arc)", "pillar": "Innovation",
+      "status": "demo-ready", "substatus": "Phase 1+2 Complete", "income_lane": true,
+      "size_loc_web": 39000
+    },
+    "bridge_relationship": null,
+    "open_questions": [],
+    "last_refresh_at": null, "last_git_head": null, "last_branch": null, "health_status": null,
+    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+  }
+}

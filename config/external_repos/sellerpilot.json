@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "repo_id": "sellerpilot",
+  "name": "sellerpilot",
+  "description": "SellerPilot (Lab X — `arc: Optimize`, pillar Innovation). GPT-driven listing optimization across Amazon, Etsy, Shopify. Sellers submit a product once; SellerPilot generates SEO titles, conversion-tuned bullets, descriptions, and pricing — then ranks variants for A/B testing. Demo seeded with 3 sample products; demo-mode fallback returns deterministic stub listings until an OpenAI key is connected. Status: demo-ready, frontend live. Render API Blueprint queued.",
+  "root_path": "/Users/donkeyking/development/sellerpilot",
+  "workspace_type": "local",
+  "tech_stack": {
+    "primary_language": "python", "repo_type": "saas_app",
+    "backend": "fastapi", "frontend": "react+vite", "react_version": "19",
+    "database": "sqlite", "llm": "openai", "billing": "stripe-stubbed",
+    "deploy_target": "vercel+render",
+    "package_managers": {"python": "pip", "js": "pnpm"},
+    "products_24_7_slug": "sellerpilot", "products_24_7_no": "X",
+    "url": "https://sellerpilot-mu.vercel.app",
+    "repo_remote": "https://github.com/clwest/sellerpilot",
+    "demo_login": "demo@sellerpilot.dev / demo123"
+  },
+  "entry_points": {
+    "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
+    "anchor_runtime": "docs/SELLER_PILOT_INVENTORY.md",
+    "anchor_start": "00-START-NEXT-SESSION.md",
+    "anchor_claude": "CLAUDE.md",
+    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": ["backend", "frontend/src", "scripts"],
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+  },
+  "protected_paths": [
+    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
+    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
+    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
+    "*.sqlite3", "media/"
+  ],
+  "permissions": {
+    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
+    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+  },
+  "repo_profile_metadata": {
+    "constraints_text": [
+      "No pushes / tags without explicit operator approval. No --force ever.",
+      "Render API Blueprint queued — backend not yet deployed; frontend is live on Vercel.",
+      "Demo-mode fallback must stay deterministic — never call OpenAI when no key configured."
+    ],
+    "constraints_rules": [
+      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_force", "always": true},
+      {"type": "deny_paths", "globs": [".env*", "**/.env*", "media/**"]}
+    ],
+    "session_log_pointer": "docs/handoffs/",
+    "fleet_role": {
+      "role": "lab", "lab_position": "X (Optimize arc)", "pillar": "Innovation",
+      "status": "demo-ready", "substatus": "Frontend Live",
+      "url": "https://sellerpilot-mu.vercel.app",
+      "founder_toolkit_triplet": "sellerpilot · signal-studio · compliancesentinel (coordinated build, coordinated pause)"
+    },
+    "bridge_relationship": null,
+    "open_questions": [],
+    "last_refresh_at": null, "last_git_head": null, "last_branch": null, "health_status": null,
+    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+  }
+}

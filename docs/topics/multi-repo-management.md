@@ -67,6 +67,39 @@ otherwise have context for. Don't register u-d-b as a fleet member;
 it's redundant and would just duplicate context she already has
 natively.
 
+## Current fleet members
+
+As of the v0 seed batch (Session 1119), the fleet covers the laptop-local
+code repos behind the 24/7 Global AI public catalog
+(`src/lib/products.ts` in the `24-7-ai-global` repo):
+
+| Repo | Role | Shape |
+|---|---|---|
+| `character-os` | Lab IX (Broadcast / Character OS) | Django + FastAPI + React monorepo |
+| `context-kit` | Lab VIII (master pattern repo) | Python CLI tool (stdlib only) |
+| `mentorforge` | Suite I (Mentor) | FastAPI + React (income lane) |
+| `pitchdeckforge` | Suite II (Pitch) | FastAPI + React |
+| `contract-concierge` | Suite III (Execute) | FastAPI + React |
+| `dealflowtracker` | Suite IV (Grow) | FastAPI + React |
+| `ai-content-studio` | Vertical V (Create) | Django + React + RN (39K LOC web) |
+| `norman-handyman-mvp` | Vertical VII (Dispatch / JobFlow) | Django + Next.js + Expo + Neon |
+| `sellerpilot` | Lab X (Optimize) | FastAPI + React (founder toolkit triplet) |
+| `signal-studio` | Lab XI (Scout) | FastAPI + React (founder toolkit triplet) |
+| `compliancesentinel` | Lab XII (Guard) | FastAPI + React (founder toolkit triplet) |
+| `24-7-ai-global` | public marketing site | Next.js 16 + pnpm (canonical taxonomy) |
+
+Not yet in the fleet (intentionally):
+
+- **u-d-b** itself — Rigby's home; covered natively.
+- **vehicle-match** — repo not present locally (`/Users/donkeyking/development/vehicle-match` missing). Has a GitHub remote at `clwest/vehicle-match`.
+- **Engine-internal sub-products** in 24-7's `LAB` section that don't
+  have their own repo: advisor-council, spider-network, rigby, boardroom,
+  atelier — these all live INSIDE u-d-b and are surfaced publicly via
+  product cards. Don't register them.
+- **Channel publications** (Operator Edge, The Wire, The Dossier, The
+  Almanac, Council Sessions) — these are publication products, not
+  separate code repos.
+
 ---
 
 ## Concepts
