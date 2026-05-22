@@ -3,10 +3,11 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  // Use '/static/' for production builds served through Django
-  base: '/static/',
+  // Dev: serve at '/' so React Router routes (which mount at '/') match.
+  // Build: emit assets under '/static/' so Django collectstatic serves them.
+  base: command === 'serve' ? '/' : '/static/',
   build: {
     // Output assets to 'assets' subfolder
     assetsDir: 'assets',
@@ -36,4 +37,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))
