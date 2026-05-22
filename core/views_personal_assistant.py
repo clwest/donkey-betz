@@ -13,10 +13,14 @@ import asyncio
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 from django.db.models import Max, Count
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from asgiref.sync import async_to_sync
+
+# Session 1129 Move 1 — fleet signed-request authentication
+from core.services.fleet_auth_drf import FleetSignatureAuthentication
 
 logger = logging.getLogger(__name__)
 
@@ -248,6 +252,17 @@ def get_learning_summary(request):
 
 @csrf_exempt
 @api_view(['POST'])
+@authentication_classes([
+    # Session 1129 Move 1 — fleet auth runs FIRST but is
+    # side-effect-only (returns None unconditionally). On success it
+    # sets `request.fleet_identity`; the body of this view checks
+    # that flag to gate routing-block enforcement. `request.user`
+    # still comes from Session/Token below — fleet identity is a
+    # separate dimension from user identity.
+    FleetSignatureAuthentication,
+    SessionAuthentication,
+    TokenAuthentication,
+])
 @permission_classes([IsAuthenticated])
 def unified_pa_chat(request):
     """
@@ -315,17 +330,92 @@ def unified_pa_chat(request):
                 type(_e).__name__, _e,
             )
 
-        # Session 1126: Fleet-app routing block. When a fleet app calls
-        # /api/pa/chat/ via its brain bridge, it may include a `routing`
-        # object asking for a specific agent (hint or force) plus an
-        # app_slug for allowlist resolution. Carry both through context;
-        # the Celery task resolves via fleet_routing.resolve() and emits
-        # a structured `routing` decision in the response. Phase 1 ships
-        # the metadata pipeline; Phase 2 will inject resolved_agent into
-        # PA's actual deliberation routing.
+        # Session 1126/1129: Fleet-app routing block. When a fleet app
+        # calls /api/pa/chat/ via its brain bridge, it may include a
+        # `routing` object asking for a specific agent + an `app_slug`
+        # for allowlist resolution.
+        #
+        # Session 1129 (Move 1) gating: routing/app_slug claims are
+        # ONLY honored when the request carries a verified fleet
+        # signature (X-Fleet-Signature). FleetSignatureAuthentication
+        # sets `request.fleet_identity` on success; the server-side
+        # `app_slug` is taken from the verified identity, not the JSON
+        # body. Unsigned requests carrying a routing block get those
+        # fields silently stripped and a degraded-mode flag set on
+        # context so audit logging can see the spoofing attempt.
+        from django.conf import settings as _settings
+
+        fleet_identity = getattr(request, 'fleet_identity', None)
+        enforce_fleet_routing = getattr(
+            _settings, 'FLEET_AUTH_ENFORCE_ROUTING', True
+        )
+
         routing_block = request.data.get('routing')
         app_slug_field = request.data.get('app_slug')
-        if routing_block or app_slug_field:
+
+        if fleet_identity:
+            # Verified caller → honor everything. Overwrite app_slug
+            # from the verified identity so clients can't spoof.
+            context = context or {}
+            if routing_block:
+                context['routing'] = routing_block
+            context['app_slug'] = fleet_identity['app_slug']
+            context['_fleet_auth'] = {
+                'trusted': True,
+                'key_id': fleet_identity.get('key_id'),
+                'request_id': fleet_identity.get('request_id'),
+            }
+        elif enforce_fleet_routing and (routing_block or app_slug_field):
+            # Unverified caller sent routing claims → drop them.
+            # Per spec section 1.5: persist an audit row even though no
+            # fleet headers were present, because the request DID claim
+            # routing authority. This is how operators see spoof
+            # attempts.
+            claimed_app = (
+                app_slug_field
+                or (isinstance(routing_block, dict) and routing_block.get('app_slug'))
+                or ''
+            )
+            logger.warning(
+                "[fleet-auth] unsigned request claimed routing/app_slug; "
+                "stripping (path=%s claimed_app=%s)",
+                request.path,
+                claimed_app or '?',
+            )
+            try:
+                from core.models.fleet import FleetAuthAuditLog
+                from core.services.fleet_auth import DenyCode, DENY_STATUS_CODES
+                FleetAuthAuditLog.objects.create(
+                    method=request.method or '',
+                    path=request.path,
+                    query=request.META.get('QUERY_STRING', '') or '',
+                    status_code=DENY_STATUS_CODES.get(DenyCode.MISSING_HEADERS, 401),
+                    result=FleetAuthAuditLog.RESULT_DENY,
+                    deny_code=DenyCode.MISSING_HEADERS,
+                    app_slug_claimed=claimed_app,
+                    sig_present=False,
+                    ip=request.META.get('REMOTE_ADDR') or None,
+                    user_agent=request.META.get('HTTP_USER_AGENT', '') or '',
+                    notes={
+                        'routing_block_present': bool(routing_block),
+                        'routing_ignored': True,
+                        'reason': 'missing_signature',
+                        'app_slug_claimed_in_body': bool(app_slug_field),
+                    },
+                )
+            except Exception as _e:  # audit must never block the request
+                logger.debug(f"[fleet-auth] audit row persist failed (non-blocking): {_e}")
+
+            context = context or {}
+            context['_fleet_auth'] = {
+                'trusted': False,
+                'reason': 'missing_signature',
+                'routing_ignored': True,
+                'routing_block_present': bool(routing_block),
+            }
+        elif routing_block or app_slug_field:
+            # Enforcement disabled (grace-period flag off) — preserve
+            # the Phase 1 behavior of letting unsigned routing through.
             context = context or {}
             if routing_block:
                 context['routing'] = routing_block
@@ -333,6 +423,10 @@ def unified_pa_chat(request):
                 context['app_slug'] = app_slug_field
             elif isinstance(routing_block, dict) and routing_block.get('app_slug'):
                 context['app_slug'] = routing_block['app_slug']
+            context['_fleet_auth'] = {
+                'trusted': False,
+                'reason': 'enforcement_disabled',
+            }
 
         # Session 1077: Inject workspace context so PA knows which workspace is active
         workspace_id = request.data.get('workspace_id') or workspace_id
