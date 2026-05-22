@@ -189,6 +189,41 @@ Agent personas live in `core/management/commands/survey_external_repo.py`
 as a dict: `cto`, `coo`, `editor` ship in v0. Add more personas by
 editing that dict.
 
+### Active-repo conversation context
+
+`active_repo_tool` (PA tool) persists a "currently working in repo X"
+pointer **per user** so multi-repo workflows don't have to re-state
+context every message. Stored in Redis via Django's cache with a
+7-day TTL (auto-clears stale).
+
+Actions:
+
+- `set` (with `repo: "<workspace_name>"`) — resolves to a registered
+  `ProjectWorkspace` and caches `{repo_id, workspace_id, name,
+  root_path, set_at, ttl_seconds}`
+- `get` — returns the currently scoped pointer or `null`
+- `clear` — drops it
+
+```jsonc
+// Example PA tool calls:
+{ "tool": "active_repo_tool", "action": "set", "repo": "character-os" }
+{ "tool": "active_repo_tool", "action": "get" }
+{ "tool": "active_repo_tool", "action": "clear" }
+```
+
+**Important nuance:** the pointer does NOT change u-d-b's own
+`is_active` ProjectWorkspace (Donkey Betz stays globally active). It's
+a soft per-user override that downstream tools can read to scope
+operations to the right external workspace. Auto-context-loading on
+top of this (injecting the repo's Repo Profile + latest Snapshot into
+every PA message's system context) is a v1 graduation item — the tool
+ships the storage primitive; the consumer side lands incrementally.
+
+**Server restart needed** for newly registered PA tools to appear in
+Rigby's live tool registry. Direct dispatcher invocation
+(`get_tool_dispatcher().execute(...)`) sees the tool immediately,
+which is how the v0 ship was verified.
+
 ### Initiatives from survey findings
 
 `extract_initiatives_from_survey` turns a survey's "Recommended next
