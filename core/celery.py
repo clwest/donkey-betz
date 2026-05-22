@@ -42,6 +42,15 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 1800},
     },
 
+    # Session 1129 Move 2 Round 2 — Soft-delete expired fleet artifacts.
+    # Daily run is the spec'd default. Staging may want hourly; if so,
+    # change schedule to crontab(minute=0).
+    'cleanup-expired-fleet-artifacts': {
+        'task': 'core.tasks.cleanup_expired_fleet_artifacts',
+        'schedule': crontab(hour=2, minute=10),  # 2:10 AM MST daily
+        'options': {'queue': 'broadcast', 'expires': 3600},
+    },
+
     # ── Essential cleanups (daily/weekly, low cost) ──────────────────────
     'cleanup-stuck-agent-executions': {
         'task': 'core.tasks.cleanup_stale_agent_executions',

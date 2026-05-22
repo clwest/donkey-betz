@@ -393,6 +393,30 @@ class FleetArtifact(UnifiedBaseModel):
                   "FleetAuthAuditLog for full trace.",
     )
 
+    # Session 1129 Move 2 Round 2 — TTL + soft-delete.
+    # See docs/specs/FLEET_MOVE_2_ROUND_2_SPEC.md section 2.
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Server-set at create time: created_at + DEFAULT_TTL_DAYS. "
+                  "Past expires_at + deleted_at IS NULL = candidate for cleanup.",
+    )
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Soft-delete marker. Set by cleanup job on expiry OR "
+                  "by manual operator action. Hard delete is Round 3+.",
+    )
+    delete_reason = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="Why this artifact was soft-deleted. Values: 'expired' "
+                  "(cleanup), 'manual', 'admin', '' (not deleted).",
+    )
+
     class Meta:
         verbose_name = "Fleet Artifact"
         verbose_name_plural = "Fleet Artifacts"
@@ -400,10 +424,39 @@ class FleetArtifact(UnifiedBaseModel):
         indexes = [
             models.Index(fields=["created_by_identity", "-created_at"]),
             models.Index(fields=["artifact_type", "-created_at"]),
+            # Round 2 — supports the list endpoint's stable ordering
+            # with the (-created_at, -id) tiebreaker.
+            models.Index(
+                fields=["created_by_identity", "-created_at", "-id"],
+                name="core_fleeta_list_stable_idx",
+            ),
+            # Round 2 — supports the cleanup job's selection scan
+            # (`expires_at <= now AND deleted_at IS NULL`).
+            models.Index(
+                fields=["expires_at", "deleted_at"],
+                name="core_fleeta_cleanup_scan_idx",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.artifact_type} ({self.created_by_identity.app_slug}) — {self.id}"
+
+    @property
+    def is_expired(self) -> bool:
+        """True when this artifact has crossed its TTL boundary.
+
+        Independent of soft-delete state — an artifact can be expired
+        but not yet deleted (cleanup hasn't run), or deleted but not
+        expired (manual delete). Both states return 404 to clients.
+        """
+        if self.expires_at is None:
+            return False
+        from django.utils import timezone
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
 
 
 def compute_payload_sha256(payload) -> tuple[str, int]:
