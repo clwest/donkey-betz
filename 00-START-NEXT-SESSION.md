@@ -143,11 +143,11 @@ The Session 1119 handoff lists loose ends. The highest-leverage:
 > docs are already in her system context. The fleet is for OTHER
 > repos. Don't register u-d-b as a managed workspace.
 
-1. **Inventory ingestion across venvs.** Repo's own inventory command
-   needs its own venv WHEN the repo has third-party deps. context-kit
-   ran inventory fine (stdlib-only); character-os needs the wrapper.
-   Add a `bash -c "source .venv/bin/activate && ..."` shape when the
-   profile declares a venv path. ~1 hr.
+1. ~~**Inventory ingestion across venvs.**~~ DONE end of Session 1119
+   (follow-up commit). `inventory_venv` + `inventory_env_file` fields
+   land in the schema; character-os now runs inventory end-to-end via
+   the bash wrapper. Bare-command path still works for stdlib-only
+   repos. character-os CTO survey re-run with live runtime numbers.
 2. **Run COO + Editor surveys against character-os** to confirm the
    personas produce useful, distinct lenses. ~10 min, ~$0.02.
 3. **Auto-create Initiatives from survey findings** (v0.5). Right now
@@ -157,13 +157,10 @@ The Session 1119 handoff lists loose ends. The highest-leverage:
    handshake to Rigby is explicit ("we're in character-os now"). The
    conversation doesn't persist that pointer. v1 graduation item #1.
    ~1 session.
-5. **Re-run character-os CTO survey after fixing inventory ingestion**
-   so it has fresh runtime numbers, not just CLAUDE.md phase claims.
-6. **Seed a third external repo** (mentorforge / 24-7-ai-global /
-   focus-flow) once the inventory venv wrapper lands. Confirms the
-   schema across a third repo shape.
+5. **Seed a third external repo** (mentorforge / 24-7-ai-global /
+   focus-flow). Confirms the schema across a third repo shape.
 
-Order Rigby will most likely recommend: 1 → 5 → 2 → 6 → 3 → 4.
+Order Rigby will most likely recommend: 5 → 2 → 3 → 4.
 
 ### Option B — F2F.4 against mock-mode
 

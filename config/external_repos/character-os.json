@@ -42,6 +42,8 @@
     ],
     "inventory_command": "python manage.py inventory",
     "inventory_cwd": "shell",
+    "inventory_venv": "shell/.venv/bin/activate",
+    "inventory_env_file": ".env",
     "health_command": "python3 /Users/donkeyking/development/context-kit/context_kit.py doctor",
     "test_commands": {
       "django": "cd shell && source .venv/bin/activate && python manage.py test",
