@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md`](SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md)
-(~25 PRs across 9 repos. Dockerized all 7 FastAPI+React fleet apps on `fleet-net`. Brain bridge (`POST /api/brain/ask` + frontend Brain page) live across all 7 — each app now proxies questions to u-d-b's PA in 4.7-9s. New private repo `github.com/clwest/infra` with `make up` launcher. u-d-b PGDATA fix #2121 — postgres data was in a subdir, missing env caused crash-loop. Defang sweep replaced `POSTGRES_PASSWORD=<repo>` antipattern with `change-me-in-production` (GitGuardian-clean). signal-studio backend port moved 8080→8007. ai-content-studio Docker foundation PR #2 open but parked. Behavior layer validation: Rigby invoked the no-claims-verification rule unprompted during testing.)
+**Latest handoff:** [`SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md`](SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md)
+(3 PRs merged: #2123 Docker runtime metadata block added to each of the 7 fleet repo profiles + register_external_repo markdown serializer patched to surface it. #2124 fleet_health rollup — mgmt command + `fleet_health` PA tool, shared probe function. #2125 Phase 1 agent-specific consult routing — `config/fleet_agent_routing.json` + `core/services/fleet_routing.py:resolve()` + PA chat accepts/emits structured `routing` block. METADATA pipeline only; Phase 2 wires `resolved_agent` into PA's deliberation router + updates 7 fleet brain_clients. Workspaces already existed from Session 1119. Rigby co-designed all three.)
 
-**Previous:** [`SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md`](SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md)
+**Previous:** [`SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md`](SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md)
 
 ## How to update
 

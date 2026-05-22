@@ -1710,7 +1710,7 @@ def _backend_inv_mgmt() -> ClaimResult:
         if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
     ]
     actual = len(cmds)
-    expected = 167  # Session 1115 baseline post-audit-doc additions
+    expected = 174  # Session 1126 baseline — fleet_health_rollup + 6 accumulated since 1115
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
     return ClaimResult.build(
