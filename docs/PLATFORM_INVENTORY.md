@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-21 21:58:52
-**Git HEAD:** `912d1874`
+**Generated:** 2026-05-22 13:52:50
+**Git HEAD:** `2568d7c7`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -10,16 +10,16 @@
 
 | Subsystem | Headline |
 |---|---|
-| [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 149 rows in Agent table. |
+| [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 150 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
-| [Services](#services) | 112 `*Service` classes across 324 files in core/services/ |
+| [Services](#services) | 112 `*Service` classes across 325 files in core/services/ |
 | [Celery Tasks](#celery-tasks) | 397 user-defined Celery tasks (excludes celery.* internals) |
 | [Celery Beat — Scheduled Tasks](#beat-schedule) | 77 enabled + 0 disabled = 77 PeriodicTask rows |
-| [Personal Assistant (PA) Tools](#pa-tools) | 102 tool schemas + 167 registered handlers; 8 enrichment services |
+| [Personal Assistant (PA) Tools](#pa-tools) | 103 tool schemas + 168 registered handlers; 8 enrichment services |
 | [Database Models](#database-models) | 575 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1846 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 203 files matching core/views*.py |
-| [Django Management Commands](#management-commands) | 173 management commands in core/management/commands/ |
+| [Django Management Commands](#management-commands) | 174 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
 | [LLM Providers](#llm-providers) | 6 providers registered in LLMProviderRegistry |
@@ -29,7 +29,7 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,006 Python files, 982,644 lines across core/ + ai_core/ + intelligence/ |
+| [Code Statistics](#code-stats) | 2,008 Python files, 983,199 lines across core/ + ai_core/ + intelligence/ |
 | [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 72 OK, 1 drifts |
 
 ## Table of Contents
@@ -59,11 +59,11 @@
 <a id="agents"></a>
 ## Agents
 
-**Headline:** 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 149 rows in Agent table.
+**Headline:** 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 150 rows in Agent table.
 
 **Code location:** `core/agent_router.py AGENT_MAP`
 
-**Notes:** AGENT_MAP total = 83 (74 enabled + 8 rerouted + 1 blocked). DB Agent rows = 149. Top agent_type breakdown: income=20, content=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, creative=11, marketing=10, analytics=7. Blocked: ['CodeGeneratorAgent']. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeReviewAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
+**Notes:** AGENT_MAP total = 83 (74 enabled + 8 rerouted + 1 blocked). DB Agent rows = 150. Top agent_type breakdown: income=20, content=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, creative=11, marketing=10, analytics=7. Blocked: ['CodeGeneratorAgent']. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeReviewAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
 
 | Name | Module | Status |
 |---|---|---|
@@ -246,7 +246,7 @@
 <a id="services"></a>
 ## Services
 
-**Headline:** 112 `*Service` classes across 324 files in core/services/
+**Headline:** 112 `*Service` classes across 325 files in core/services/
 
 **Code location:** `core/services/`
 
@@ -864,14 +864,15 @@
 <a id="pa-tools"></a>
 ## Personal Assistant (PA) Tools
 
-**Headline:** 102 tool schemas + 167 registered handlers; 8 enrichment services
+**Headline:** 103 tool schemas + 168 registered handlers; 8 enrichment services
 
 **Code location:** `core/services/pa_tool_schemas.py + tool_dispatcher.py`
 
-**Notes:** Schemas: 102. Handlers (self.register in tool_dispatcher.py): 167. Intent-mapped: 102. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
+**Notes:** Schemas: 103. Handlers (self.register in tool_dispatcher.py): 168. Intent-mapped: 102. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
 
 | Schema name | Canonical intent |
 |---|---|
+|  |  |
 |  |  |
 |  |  |
 |  |  |
@@ -1670,7 +1671,7 @@
 <a id="management-commands"></a>
 ## Django Management Commands
 
-**Headline:** 173 management commands in core/management/commands/
+**Headline:** 174 management commands in core/management/commands/
 
 **Code location:** `core/management/commands/`
 
@@ -1766,6 +1767,7 @@
 | python manage.py fix_workspace_deliverables |
 | python manage.py fix_workspace_permissions |
 | python manage.py fix_workspace_visibility |
+| python manage.py fleet_health_rollup |
 | python manage.py force_agent_cycle |
 | python manage.py full_system_demo |
 | python manage.py generate_ironwood_sprites |
@@ -2017,14 +2019,14 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,006 Python files, 982,644 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,008 Python files, 983,199 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1600 | 816247 |
+| core | 1602 | 816802 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2006 | 982644 |
+| TOTAL (python) | 2008 | 983199 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
