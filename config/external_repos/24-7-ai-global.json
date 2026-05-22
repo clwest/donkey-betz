@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "repo_id": "24-7-ai-global",
+  "name": "24-7-ai-global",
+  "description": "24/7 Global AI — Next.js public marketing site. Deployed on Vercel at 247globalai.com. Editorial dark-luxe brand identity. Hosts the canonical product catalog (`src/lib/products.ts`) of 22 Works in Motion across 4 sections: § 02 Suite (4 shipped products), § 03 Verticals (3 industry apps), § 04 The Lab (10 OSS + in-development entries), § 05 Channels (5 publications). Also hosts `/now` (u-d-b SignalCluster feed) and `/shipped` (u-d-b Deliverable changelog) — both gated by PUBLIC_INTEL_TOKEN env var. This site IS the public taxonomy that other repos reference.",
+  "root_path": "/Users/donkeyking/development/24-7-ai-global",
+  "workspace_type": "local",
+  "tech_stack": {
+    "primary_language": "typescript", "repo_type": "marketing_site",
+    "frontend": "nextjs", "nextjs_version": "16", "react_version": "19",
+    "styling": "tailwind", "deploy_target": "vercel",
+    "package_managers": {"js": "pnpm"},
+    "is_pnpm_workspace": true,
+    "domain": "247globalai.com",
+    "products_24_7_slug": "self",
+    "engine_backed_routes": ["/now", "/shipped"]
+  },
+  "entry_points": {
+    "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
+    "anchor_runtime": "docs/CONTEXT_KIT_INVENTORY.md",
+    "anchor_start": "00-START-NEXT-SESSION.md",
+    "anchor_claude": "CLAUDE.md",
+    "products_catalog": "src/lib/products.ts",
+    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": ["src", "public"],
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+  },
+  "protected_paths": [
+    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
+    ".git", ".git/", "node_modules", "node_modules/**",
+    ".next", ".next/**", ".vercel", ".vercel/**",
+    "**/__pycache__/**"
+  ],
+  "permissions": {
+    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
+    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+  },
+  "repo_profile_metadata": {
+    "constraints_text": [
+      "No pushes / tags without explicit operator approval. No --force ever.",
+      "src/lib/products.ts is the canonical taxonomy other fleet members reference. Any edits there propagate the public narrative — coordinate with operator before structural changes.",
+      "/now and /shipped read u-d-b's public-intel API (token-gated). When that token rotates, this site needs the new value via UDB_PUBLIC_INTEL_TOKEN + UDB_API_URL env vars on Vercel.",
+      "Brand identity is editorial dark-luxe per docs/design/BRAND_IDENTITY_V3.md (in character-os) — defer to that lock for visual decisions."
+    ],
+    "constraints_rules": [
+      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_force", "always": true},
+      {"type": "deny_paths", "globs": [".env*", "**/.env*", ".next/**", "node_modules/**"]},
+      {"type": "treat_as_public_contract", "globs": ["src/lib/products.ts"], "reason": "Canonical taxonomy that other repos reference."}
+    ],
+    "session_log_pointer": "docs/handoffs/",
+    "fleet_role": {
+      "role": "public_marketing_site", "domain": "247globalai.com", "status": "live",
+      "deploy_owner": "Jessica (per session 1116 ownership note)",
+      "hosts_canonical_taxonomy": true,
+      "engine_dependencies": ["unified-donkey-betz public intel API"]
+    },
+    "bridge_relationship": {
+      "reaches_engine": "unified-donkey-betz",
+      "via": "Public intel REST (UDB_API_URL + UDB_PUBLIC_INTEL_TOKEN)",
+      "endpoints": ["/api/public/intelligence/now/", "/api/public/changelog/recent/"],
+      "product_status": "shipped (Session 1116); both routes graceful-empty-state until env vars land"
+    },
+    "open_questions": [],
+    "last_refresh_at": null, "last_git_head": null, "last_branch": null, "health_status": null,
+    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+  }
+}

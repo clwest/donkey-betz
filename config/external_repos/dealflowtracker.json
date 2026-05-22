@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "repo_id": "dealflowtracker",
+  "name": "dealflowtracker",
+  "description": "Deal Flow Tracker (Suite IV — `arc: Grow`, pillar Intelligence). Kanban dealflow for angels and emerging funds. Intake by public form or manual entry, 6-stage pipeline, 5-dimension scorecard (team · market · traction · moat · fit), AI investment memos from scorecard + deal data, public submission form, contact mgmt, analytics. Pricing Free → $99/mo. Live at https://dealflowtracker.vercel.app. Built for funds that want institutional memory without hiring an analyst.",
+  "root_path": "/Users/donkeyking/development/dealflowtracker",
+  "workspace_type": "local",
+  "tech_stack": {
+    "primary_language": "python", "repo_type": "saas_app", "backend": "fastapi",
+    "frontend": "react+vite", "react_version": "19", "database": "postgres",
+    "llm": "openai", "billing": "stripe", "deploy_target": "vercel+render",
+    "package_managers": {"python": "pip", "js": "pnpm"},
+    "products_24_7_slug": "dealflowtracker", "products_24_7_no": "IV"
+  },
+  "entry_points": {
+    "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
+    "anchor_runtime": "docs/DEAL_FLOW_TRACKER_INVENTORY.md",
+    "anchor_start": "00-START-NEXT-SESSION.md",
+    "anchor_claude": "CLAUDE.md",
+    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": ["backend", "frontend/src", "scripts"],
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+  },
+  "protected_paths": [
+    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
+    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
+    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
+    "*.sqlite3", "media/"
+  ],
+  "permissions": {
+    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
+    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+  },
+  "repo_profile_metadata": {
+    "constraints_text": [
+      "No pushes / tags without explicit operator approval. No --force ever.",
+      "Investor/founder data is sensitive — uploaded deals contain confidential pitch material. Never commit, never log payloads."
+    ],
+    "constraints_rules": [
+      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_force", "always": true},
+      {"type": "deny_paths", "globs": [".env*", "**/.env*", "media/**"]}
+    ],
+    "session_log_pointer": "docs/handoffs/",
+    "fleet_role": {
+      "role": "suite_product", "suite_position": "IV (Grow arc)", "pillar": "Intelligence",
+      "url": "https://dealflowtracker.vercel.app", "status": "shipped", "income_lane": true,
+      "founder_toolkit_member": true
+    },
+    "bridge_relationship": null,
+    "open_questions": [], "last_refresh_at": null, "last_git_head": null,
+    "last_branch": null, "health_status": null,
+    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+  }
+}
