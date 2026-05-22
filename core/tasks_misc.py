@@ -4679,27 +4679,101 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
     if not conversation_id:
         conversation_id, _ = ChatConversation.get_or_create_session(user=user, platform=platform)
 
-    # Session 1068: Create fresh PA instance per task instead of caching.
-    from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
-    pa = UnifiedPAEntrypoint(user, conversation_id=conversation_id)
+    # Session 1127 Phase 2A — Resolve fleet routing BEFORE the PA loop.
+    # Phase 1 (Session 1126) emitted the decision as response metadata
+    # only. Phase 2A actually *uses* it:
+    #   - force + force_permitted + allowlist_hit + AGENT_MAP-resolvable
+    #     → bypass UnifiedPAEntrypoint entirely, dispatch via
+    #       AgentRouter, build a PAResponse-shaped result.
+    #   - Everything else → carry the decision into PA context so
+    #     `process_message()` can apply a hint-mode bias without
+    #     overriding intent detection.
+    #   - was_overridden / unresolvable / non-fleet caller → no-op;
+    #     normal PA flow runs.
+    #
+    # Co-designed with Rigby (Session 1127). See
+    # `core/services/fleet_routing_dispatch.py` for the contract.
+    routing_decision = None
+    if isinstance(context, dict) and (context.get('routing') or context.get('app_slug')):
+        try:
+            from core.services.fleet_routing import resolve as _resolve_routing
+            app_slug_ctx = (
+                context.get('app_slug')
+                or (context.get('routing') or {}).get('app_slug')
+            )
+            routing_decision = _resolve_routing(app_slug_ctx, context.get('routing'))
+        except Exception as e:
+            logger.warning(f"[PA routing] resolve failed, omitting routing block: {e}")
+            routing_decision = None
 
-    start_ms = time.time()
-    # Session 976: Run async PA in a fresh event loop to avoid deadlock
-    # in Celery's --pool=threads worker. async_to_sync and asyncio.run()
-    # can both fail if an event loop already exists in the thread.
-    # Session 1077: NEVER generate audio in the main task — it blocks for
-    # 60-280s calling ElevenLabs TTS and causes SoftTimeLimitExceeded.
-    # Audio is generated in a separate background task after the response.
-    loop = asyncio.new_event_loop()
-    try:
-        response = loop.run_until_complete(pa.process_message(
-            message=message,
-            context=context or {},
-            generate_audio=False  # Always False — TTS offloaded below
-        ))
-    finally:
-        loop.close()
-    elapsed_ms = int((time.time() - start_ms) * 1000)
+    # Force-dispatch shortcut: when all gates pass + AGENT_MAP resolvable,
+    # skip the PA loop and route straight to the named agent.
+    phase2_dispatched_raw = None
+    if routing_decision is not None:
+        try:
+            from core.services.fleet_routing_dispatch import (
+                should_force_dispatch,
+                apply_force_dispatch,
+            )
+            if should_force_dispatch(routing_decision):
+                phase2_dispatched_raw = apply_force_dispatch(
+                    user=user,
+                    message=message,
+                    decision=routing_decision,
+                    context=context or {},
+                    conversation_id=conversation_id,
+                )
+        except Exception as e:
+            logger.warning(
+                f"[PA routing] Phase 2 force-dispatch failed, falling back to PA: {e}"
+            )
+            phase2_dispatched_raw = None
+
+    if phase2_dispatched_raw is not None:
+        # Build a PAResponse-equivalent from the dispatch result so the
+        # downstream persist + return paths can stay unchanged.
+        from core.services.unified_pa_entrypoint import PAResponse
+        response = PAResponse(
+            content=phase2_dispatched_raw['content'],
+            trace_id=phase2_dispatched_raw['trace_id'],
+            tool_runs=phase2_dispatched_raw['tool_runs'],
+            audio_url=None,
+            intent=phase2_dispatched_raw['intent'],
+            routed_to=phase2_dispatched_raw['routed_to'],
+            profile_completeness=None,
+            latency_ms=phase2_dispatched_raw['latency_ms'],
+            error=phase2_dispatched_raw['error'],
+        )
+        start_ms = time.time() - (phase2_dispatched_raw['latency_ms'] / 1000.0)
+        elapsed_ms = phase2_dispatched_raw['latency_ms']
+    else:
+        # Session 1068: Create fresh PA instance per task instead of caching.
+        from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
+        pa = UnifiedPAEntrypoint(user, conversation_id=conversation_id)
+
+        # Carry the routing decision into PA context so process_message
+        # can apply a hint-mode bias (no override; bias only).
+        pa_context = dict(context or {})
+        if routing_decision is not None:
+            pa_context['_fleet_routing_decision'] = routing_decision
+
+        start_ms = time.time()
+        # Session 976: Run async PA in a fresh event loop to avoid deadlock
+        # in Celery's --pool=threads worker. async_to_sync and asyncio.run()
+        # can both fail if an event loop already exists in the thread.
+        # Session 1077: NEVER generate audio in the main task — it blocks for
+        # 60-280s calling ElevenLabs TTS and causes SoftTimeLimitExceeded.
+        # Audio is generated in a separate background task after the response.
+        loop = asyncio.new_event_loop()
+        try:
+            response = loop.run_until_complete(pa.process_message(
+                message=message,
+                context=pa_context,
+                generate_audio=False  # Always False — TTS offloaded below
+            ))
+        finally:
+            loop.close()
+        elapsed_ms = int((time.time() - start_ms) * 1000)
 
     # Persist to ChatConversation (same logic as the former sync view)
     try:
@@ -4824,28 +4898,37 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
         except Exception as tts_err:
             logger.warning(f"[PA_TTS] Failed to dispatch TTS task: {tts_err}")
 
-    # Session 1126: If the caller (a fleet app via its brain bridge)
-    # sent a `routing` block in context, resolve it via
-    # fleet_routing.resolve() and surface the decision in the response.
-    # Phase 1 emits the decision as metadata; Phase 2 will plumb the
-    # resolved_agent into PA's deliberation router.
-    routing_decision = None
-    if isinstance(context, dict) and (context.get('routing') or context.get('app_slug')):
+    # Session 1126/1127: Surface the routing decision (computed
+    # pre-PA in the Phase 2A block above). `routed_to` reflects what
+    # actually ran — either the force-dispatched agent or PA's own
+    # choice. When phase 2 force-dispatched, `phase2_dispatched=true`
+    # in the routing block lets the caller distinguish bypass from
+    # the normal PA path.
+    routing_block_out = None
+    if routing_decision is not None:
         try:
-            from core.services.fleet_routing import resolve as _resolve_routing
-            app_slug_ctx = (
-                context.get('app_slug')
-                or (context.get('routing') or {}).get('app_slug')
-            )
-            decision = _resolve_routing(app_slug_ctx, context.get('routing'))
-            # `routed_to` reflects whatever actually ran. Until Phase 2
-            # actually dispatches by resolved_agent, the PA's own
-            # routed_to wins; record both so the caller can see drift.
-            decision_dict = decision.as_dict()
+            decision_dict = routing_decision.as_dict()
             decision_dict['routed_to'] = response.routed_to
-            routing_decision = decision_dict
+            decision_dict['phase2_dispatched'] = phase2_dispatched_raw is not None
+            # Audit signal — when PA's intent diverged from the fleet
+            # resolution (and we didn't force-dispatch), log a warning
+            # so we can see where intent detection wins or loses.
+            if (
+                phase2_dispatched_raw is None
+                and decision_dict.get('resolved_agent')
+                and response.routed_to
+                and decision_dict['resolved_agent'] != response.routed_to
+            ):
+                logger.warning(
+                    "[PA routing] divergence — app=%s resolved_agent=%s "
+                    "routed_to=%s (hint did not steer PA's intent)",
+                    decision_dict.get('app_slug'),
+                    decision_dict.get('resolved_agent'),
+                    response.routed_to,
+                )
+            routing_block_out = decision_dict
         except Exception as e:
-            logger.warning(f"[PA routing] resolve failed, omitting routing block: {e}")
+            logger.warning(f"[PA routing] failed to surface decision: {e}")
 
     # Session 1076+: Sanitize entire return dict — tool_runs may contain
     # non-JSON-serializable objects (ManyRelatedManager, UUID, ProjectWorkspace)
@@ -4864,8 +4947,8 @@ def _impl_process_pa_chat_task(self, user_id, message, context=None, generate_au
         'conversation_id': conversation_id,
         'source': source,
     }
-    if routing_decision is not None:
-        raw_return['routing'] = routing_decision
+    if routing_block_out is not None:
+        raw_return['routing'] = routing_block_out
     return json.loads(json.dumps(raw_return, default=str))
 
 
