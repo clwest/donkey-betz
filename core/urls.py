@@ -84,9 +84,9 @@ from core.views_fleet_admin import (
     fleet_rotation_transition,
 )
 
-# Session 1129 Move 2 Round 1 — Fleet artifact push/pull
+# Session 1129 Move 2 Round 1+2 — Fleet artifact push/pull/list
 from core.views_fleet_artifacts import (
-    fleet_artifacts_push,
+    fleet_artifacts_collection,
     fleet_artifacts_pull,
 )
 
@@ -1738,11 +1738,11 @@ urlpatterns = [
         fleet_rotation_transition,
         name='fleet-admin-rotation-transition',
     ),
-    # Session 1129 Move 2 Round 1 — Fleet artifact push/pull
+    # Session 1129 Move 2 — Fleet artifact collection (POST=push, GET=list)
     path(
         'api/fleet/artifacts/',
-        fleet_artifacts_push,
-        name='fleet-artifacts-push',
+        fleet_artifacts_collection,
+        name='fleet-artifacts-collection',
     ),
     path(
         'api/fleet/artifacts/<str:artifact_id>/',

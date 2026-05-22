@@ -12555,3 +12555,29 @@ def backfill_deliverable_workspaces(workspace_name='Donkey Betz',
     output = out.getvalue()
     logger.info('[BACKFILL_WORKSPACES] %s', output)
     return {'output': output}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Session 1129 Move 2 Round 2 — Fleet artifact retention cleanup.
+# Soft-deletes expired artifacts so they stop appearing in list/pull.
+# See `docs/specs/FLEET_MOVE_2_ROUND_2_SPEC.md` section 3 for the
+# invariants (batched, capped, idempotent, soft-delete only).
+# ──────────────────────────────────────────────────────────────────────
+
+
+@shared_task(
+    name='core.tasks.cleanup_expired_fleet_artifacts',
+    ignore_result=False,
+    queue='broadcast',
+    soft_time_limit=300,
+    time_limit=360,
+)
+def cleanup_expired_fleet_artifacts():
+    """Celery wrapper around `fleet_artifact_cleanup.run_cleanup()`.
+
+    Scheduled daily via `app.conf.beat_schedule`. Also callable on
+    demand via the `cleanup_fleet_artifacts` management command.
+    """
+    from core.services.fleet_artifact_cleanup import run_cleanup
+    stats = run_cleanup()
+    return stats.as_dict()
