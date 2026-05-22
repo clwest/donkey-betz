@@ -366,18 +366,51 @@ def unified_pa_chat(request):
             }
         elif enforce_fleet_routing and (routing_block or app_slug_field):
             # Unverified caller sent routing claims → drop them.
+            # Per spec section 1.5: persist an audit row even though no
+            # fleet headers were present, because the request DID claim
+            # routing authority. This is how operators see spoof
+            # attempts.
+            claimed_app = (
+                app_slug_field
+                or (isinstance(routing_block, dict) and routing_block.get('app_slug'))
+                or ''
+            )
             logger.warning(
                 "[fleet-auth] unsigned request claimed routing/app_slug; "
                 "stripping (path=%s claimed_app=%s)",
                 request.path,
-                app_slug_field
-                or (isinstance(routing_block, dict) and routing_block.get('app_slug'))
-                or '?',
+                claimed_app or '?',
             )
+            try:
+                from core.models.fleet import FleetAuthAuditLog
+                from core.services.fleet_auth import DenyCode, DENY_STATUS_CODES
+                FleetAuthAuditLog.objects.create(
+                    method=request.method or '',
+                    path=request.path,
+                    query=request.META.get('QUERY_STRING', '') or '',
+                    status_code=DENY_STATUS_CODES.get(DenyCode.MISSING_HEADERS, 401),
+                    result=FleetAuthAuditLog.RESULT_DENY,
+                    deny_code=DenyCode.MISSING_HEADERS,
+                    app_slug_claimed=claimed_app,
+                    sig_present=False,
+                    ip=request.META.get('REMOTE_ADDR') or None,
+                    user_agent=request.META.get('HTTP_USER_AGENT', '') or '',
+                    notes={
+                        'routing_block_present': bool(routing_block),
+                        'routing_ignored': True,
+                        'reason': 'missing_signature',
+                        'app_slug_claimed_in_body': bool(app_slug_field),
+                    },
+                )
+            except Exception as _e:  # audit must never block the request
+                logger.debug(f"[fleet-auth] audit row persist failed (non-blocking): {_e}")
+
             context = context or {}
             context['_fleet_auth'] = {
                 'trusted': False,
                 'reason': 'missing_signature',
+                'routing_ignored': True,
+                'routing_block_present': bool(routing_block),
             }
         elif routing_block or app_slug_field:
             # Enforcement disabled (grace-period flag off) — preserve
