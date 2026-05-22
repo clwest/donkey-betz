@@ -2087,6 +2087,26 @@ class UnifiedPAEntrypoint:
             if lane_prompt:
                 prompt_parts.append(lane_prompt)
 
+        # Session 1119 v1 graduation — multi-repo: inject active-repo
+        # context block when the user has scoped the conversation to an
+        # external repo via active_repo_tool. Cheap (Redis + indexed DB
+        # reads); silently no-ops when no pointer is set.
+        try:
+            from core.services.active_repo_context import load_active_repo_context_block
+            active_repo_block = load_active_repo_context_block(self.user.id)
+            if active_repo_block:
+                prompt_parts.append("")
+                prompt_parts.append(active_repo_block)
+                from core.tools.ops_run_tracker import get_active_tracker
+                tracker = get_active_tracker()
+                if tracker:
+                    tracker.info('active_repo_context_injected', {
+                        'user_id': str(self.user.id),
+                        'chars': len(active_repo_block),
+                    })
+        except Exception as e:
+            logger.debug(f"[PA] Active repo context injection skipped: {e}")
+
         # Inject persistent memory context
         try:
             from core.services.memory_context_service import get_memory_context_service
