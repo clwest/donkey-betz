@@ -90,52 +90,87 @@ If you find yourself editing `brain_client.py` in any one repo, **edit contract-
 
 ## SESSION 1129 — CURRENT ENTRY POINT
 
-### What's still gated on u-d-b PR #2127
+> **Rigby's Session 1129 priority order (her review of Session 1128
+> close):** verify #2127 merge → service-token auth → observability →
+> compliancesentinel decision stub → THEN frontend. Routing control
+> without auth is the only thing that can turn into a real incident,
+> so it ranks above visible UI work.
 
-Phase 2B PRs are inert without 2A on `main`. **First thing in Session 1129: confirm #2127 is merged**, then run the e2e smoke (force POST to contract-concierge's `/api/brain/ask` → expect `routing.phase2_dispatched: true`).
+### FIRST THING — Merge dependency + e2e verification checklist
 
-### Headline options for Session 1129
+Phase 2B PRs are inert without u-d-b PR #2127 (Phase 2A) on `main`.
 
-- **A. Frontend role-select dropdown (Phase 2B.2).**
-  Each fleet app's Brain page currently has only a freeform message
-  input. Add a per-app role-select dropdown to make force/hint
-  reachable from the UI ("PA chooses" / "Legal drafter (force)" /
-  "Trend analyst (hint)"). 7 PRs in worktree-pattern; per-app role
-  list comes from u-d-b's `config/fleet_agent_routing.json`
-  allowlists.
+1. **Confirm #2127 is merged** to u-d-b `main` in the prod/local target.
+2. **Run true e2e from a force_allowed app.** Either contract-concierge
+   or signal-studio is fine — both have `force_allowed=true` in
+   `config/fleet_agent_routing.json`. Example:
+
+   ```bash
+   curl -X POST http://localhost:8003/api/brain/ask \
+     -H "Authorization: Bearer <token>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "message": "draft a 1-page NDA",
+       "mode": "force",
+       "agent": "legal_doc_drafter_agent"
+     }'
+   ```
+
+3. **Verify all routing fields land** in the response: `requested` /
+   `resolved_agent` / `routed_to` / `was_overridden` / `override_reason`
+   / `phase2_dispatched`.
+
+### Headline options for Session 1129 (Rigby-ordered)
+
+- **A. Service-token verification for `app_slug` — highest-risk gap.**
+  Today any PA-token caller can claim any `app_slug`. Mitigated by the
+  server-side allowlist + `force_allowed` gates, but routing control
+  without auth is the one thing that can turn into a real incident.
+  Bind PA tokens to one-or-more allowed `app_slug` values; reject at
+  view layer. Add an explicit audit log line when routing is ignored
+  due to auth failure: `override_reason="untrusted_app_slug"`.
+
+  **This ranks above the frontend dropdown** — Rigby's call. Routing
+  is a security boundary now, not a hint.
+
+- **B. Observability — one metric + one log line.**
+  Add a counter `fleet_routing.force_dispatch.count` tagged by
+  `app_slug` + `agent`. WARN when `resolved_agent` exists but
+  `routed_to` diverges (catches fallback or dispatch failure). This
+  is the cheapest way to learn what the new dispatch path is
+  actually doing in the wild.
+
+  Estimate: ~⅙ session. Can land alongside A.
+
+- **C. Compliancesentinel — decision STUB (don't pick yet).**
+  Keep defaults `null` for now. Drop a short decision note into the
+  handoff: "SecurityAgent: build vs map to existing compliance-capable
+  agent vs leave unpinned." Lock the question so it doesn't get
+  re-litigated mid-session.
+
+- **D. Frontend role-select dropdown (Phase 2B.2).**
+  Per-app Brain-page dropdown ("PA chooses" / "Legal drafter (force)"
+  / "Trend analyst (hint)"). 7 PRs in worktree-pattern. Role list
+  comes from u-d-b's `config/fleet_agent_routing.json` allowlists
+  but Rigby will want to filter which roles are exposed to users
+  (some are internal-only). Defer to AFTER service-token auth (A).
 
   Estimate: ~½ session.
 
-- **B. FC-path hint bias (Phase 2D).**
+- **E. FC-path hint bias (Phase 2D).**
   u-d-b's `_run_agentic_loop` (GPT-5.2 function calling) currently
   ignores `_routing_hint`. When `PA_USE_FUNCTION_CALLING=True` (prod
-  default), hints are observable in the routing dict but have no
-  effect. Inject a system message into `_run_agentic_loop` biasing
-  the LLM toward the hinted agent's tool when `_routing_hint` is set.
+  default), hints have no effect. Inject a system message biasing
+  the LLM toward the hinted agent's tool. Touches prompt assembly —
+  brief Rigby with the exact injection point first.
 
-  Estimate: ~⅓ session. More invasive than the keyword-path hint
-  because it touches prompt assembly.
+  Estimate: ~⅓ session.
 
-- **C. `SecurityAgent` decision for compliancesentinel.**
-  Either add a real `SecurityAgent` class (audit + compliance
-  reasoning) or remap compliancesentinel's default/allowlist to an
-  existing concrete agent (`MemoryIsolationAgent` or
-  `ContentAuditAgent`). Brief Rigby before picking; she'll have a
-  view on whether this is worth a real new agent or just a config
-  patch.
+- **F. fleet_health → signal-studio spider feed** (deferred since
+  Session 1126). Independent of A-E.
 
-- **D. Service-token verification for `app_slug` (Phase 2C-hardening).**
-  Today any PA-token caller can claim any `app_slug`. Mitigated by
-  allowlist + force_allowed gates server-side. Production hardening:
-  bind PA tokens to one or more allowed `app_slug` values and reject
-  mismatches at the view layer. This is the prerequisite for
-  treating routing as a security boundary rather than a routing hint.
-
-- **E. fleet_health → spider-driven signals into signal-studio**
-  (deferred since Session 1126). Independent of A/B/C/D.
-
-**Recommendation: A first (makes Phase 2 visible to humans), then
-either D or B depending on what Rigby flags as the next bottleneck.**
+**Rigby's recommendation: A + B in same session, then C (just the
+stub), then D in Session 1130.**
 
 ### Carryovers (open / parked, not blocking)
 
