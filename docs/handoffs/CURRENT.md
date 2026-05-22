@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1118_F2F_BROKER_LANDED.md`](SESSION_1118_F2F_BROKER_LANDED.md)
-(F2F.0 → F2F.2 of the Rigby Face-to-Face arc: provider abstraction + cap-enforced voice session broker + endpoints, mock-mode end-to-end live, real HeyGen wiring deferred to F2F.3)
+**Latest handoff:** [`SESSION_1119_MULTI_REPO_V0.md`](SESSION_1119_MULTI_REPO_V0.md)
+(Multi-repo v0: Rigby manages laptop-local repos as projects. Repo Profile schema + three management commands + character-os seeded as first proof case. CTO survey of character-os shipped. Zero migrations, zero new APIs. F2F.3 paused — no new external API integrations until existing work proves out.)
 
-**Previous:** [`SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
+**Previous:** [`SESSION_1118_F2F_BROKER_LANDED.md`](SESSION_1118_F2F_BROKER_LANDED.md)
 
 ## How to update
 

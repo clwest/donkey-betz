@@ -64,71 +64,129 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1119 — CURRENT ENTRY POINT (post-1118 F2F broker landed)
+## SESSION 1120 — CURRENT ENTRY POINT (post-1119 multi-repo v0 shipped)
 
-Session 1118 closed F2F.0 → F2F.2 of the Rigby Face-to-Face arc Chris
-flagged as that session's headline. Two PRs merged:
+Session 1119 reframed the headline mid-session. Chris pulled back on
+adding new external APIs (HeyGen, Cartesia) until what's built is
+working, then proposed a much bigger vision: **Rigby manages each
+laptop-local repo as a project she runs.** v0 of that shipped:
 
-- **F2F.0 — Scope lock.** Providers locked (HeyGen / OpenAI Realtime
-  Whisper / Cartesia), caps locked ($10/day, $50/month, $3/session,
-  90s duration), F2F.5 dogfood cap raised $1 → $5. Rigby identity also
-  updated mid-session: **she is now a male donkey, he/him**. Locked
-  to Rigby's memory as `memory_id=3` (identity) and `memory_id=5`
-  (decisions), both `importance=9`.
-- **F2F.1 — Provider abstraction.** [PR #2101](https://github.com/clwest/donkey-betz-platform/pull/2101)
-  merged via `bb1ee684`. New `core/services/realtime_avatar/` package:
-  `F2FProvider` Protocol (push-to-speak), `MockF2FProvider`,
-  `HeyGenF2FProvider` stub, `get_provider()` factory with auto-mock
-  fallback. 13 tests.
-- **F2F.2 — Broker + endpoints + tests.** [PR #2102](https://github.com/clwest/donkey-betz-platform/pull/2102)
-  merged via `f57df6a9`. F2FSession model, narrow migration 0340, full
-  broker with Rigby's locked cap-check ladder, three DRF endpoints
-  (`POST /api/pa/voice_session/`, `/<uuid>/speak/`, `/<uuid>/end/`),
-  Redis hot state (session_key never to disk), error JSON shape with
-  402/410/429/502/503 mapping. 35 tests.
+- **Repo Profile JSON schema** at `config/external_repos/<id>.json`.
+  Canonical config for an external repo — tech stack, anchor doc
+  paths, code allowlist, inventory/health/test commands, protected
+  paths, permission flags, machine-readable and human-readable
+  constraints, bridge relationship metadata.
+- **Three management commands** —
+  - `register_external_repo --repo <id>` → creates `ProjectWorkspace`
+    + pinned Repo Profile `Deliverable`. Idempotent (`--force`),
+    previewable (`--dry-run`).
+  - `refresh_repo_context --repo <id>` → git snapshot + anchor doc
+    excerpts + handoff excerpts → append-only `repo_snapshot`
+    deliverable. Updates Repo Profile metadata with
+    `last_refresh_at`, `last_git_head`, `last_branch`, `health_status`.
+    Retention: keep last 20 snapshots; older ones archived.
+  - `survey_external_repo --repo <id> --agent {cto,coo,editor}` →
+    gpt-5-mini call against the latest snapshot + Repo Profile under
+    the chosen agent's persona; saves output as a `repo_survey`
+    deliverable. ~$0.01 per survey.
+- **character-os seeded as first proof case.** Workspace id
+  `fd91a85d-0ac3-428f-b6a2-437b98c083f2`. Repo Profile + first
+  Snapshot + first CTO Survey all written. Rigby surfaced everything
+  via her existing `deliverable_tool` + `workspace_tool`. **Zero new
+  PA tools required.** "No new APIs" scoping call held up.
+- **context-kit seeded as second proof case** (end of session).
+  Workspace id `2ba6ee3b-2d45-4bdf-b02e-4e50fc979ba5`. Different shape
+  than character-os (Python CLI tool, not Django+SPA monorepo) —
+  schema generalised cleanly. Inventory command (`python3 context_kit.py
+  inventory --write`) ran successfully end-to-end (rc=0); confirms the
+  inventory cross-venv issue is repo-specific, not a v0 design defect.
+  CTO survey caught real signal: 5 consecutive sessions deferred the
+  same two pending docs, "second worked instance" gating on
+  spokesperson-corpus + fleet-network CLI subcommands.
+- **Architecture lock:** the fleet is **one-way**. Rigby knows about
+  character-os; character-os does not know about her. Cross-repo
+  runtime traffic (e.g. character-os's `consult_engine` reaching
+  u-d-b's PA over HTTP) stays a separate product layer and never
+  touches the fleet primitives.
 
-Mock-mode end-to-end is live. **Real-mode wiring (HeyGen HTTP) is
-F2F.3.** Full Session 1118 handoff:
-[`docs/handoffs/SESSION_1118_F2F_BROKER_LANDED.md`](docs/handoffs/SESSION_1118_F2F_BROKER_LANDED.md).
+Zero migrations. Zero new API endpoints. Runbook lives at
+[`docs/topics/multi-repo-management.md`](docs/topics/multi-repo-management.md).
+Full handoff: [`docs/handoffs/SESSION_1119_MULTI_REPO_V0.md`](docs/handoffs/SESSION_1119_MULTI_REPO_V0.md).
+
+### Where F2F sits now
+
+**F2F.3 — HeyGen + Cartesia wiring — PAUSED.** Chris pulled back
+mid-session: no new external APIs until existing work is working. F2F.0
+→ F2F.2 mock-mode end-to-end is still live and unchanged. F2F.4 (SPA)
+and F2F.5 (real-mode dogfood) still queued.
+
+When F2F.3 unfreezes, the gating items remain:
+
+- [ ] `HEYGEN_API_KEY` provisioned
+- [ ] `CARTESIA_API_KEY` (or ELEVENLABS_API_KEY fallback) confirmed
+- [ ] HeyGen's current streaming endpoint URL + auth shape verified
+- [ ] `docs/BEHAVIOR_LAYER.md` drafted (Doctor flagged it; F2F voice
+  surface is the right trigger)
 
 ---
 
-## HEADLINE PROJECT FOR SESSION 1119 — F2F.3: real provider wiring
+## HEADLINE OPTIONS FOR SESSION 1120
 
-F2F.3 is the heaviest remaining slice (1-2 sessions per the F2F arc
-plan). Scope:
+Pick one (the multi-repo v0 carryover is the cheapest; the others
+build on it). All keep the "no new APIs" lane.
 
-1. **Replace `HeyGenF2FProvider` `NotImplementedError` stubs** in
-   `core/services/realtime_avatar/heygen.py` with real HTTP calls.
-   Verify HeyGen's streaming endpoint shape first — their docs
-   reorganized in late 2025.
-2. **Wire STT and TTS into the speak pipeline.** Operator audio →
-   OpenAI Realtime Whisper → `/api/pa/chat/` → Cartesia → audio chunk
-   → HeyGen avatar. F2F.2's broker contract is text-in to provider;
-   if HeyGen turns out to need audio-in, add `speak_audio(bytes)` to
-   the Protocol then (Rigby greenlit this as a F2F.3-time decision).
-3. **Add deploy-time assertion** that `HEYGEN_API_KEY` is set in
-   real-mode envs — `F2F_PROVIDER_MOCK=auto` silently routes to mock
-   if missing.
+### Option A — Multi-repo v0 carryover (cheapest)
 
-### Pre-F2F.3 checklist
+The Session 1119 handoff lists six loose ends. The highest-leverage:
 
-- [ ] HeyGen Streaming Avatar account created; `HEYGEN_API_KEY` in env
-- [ ] Cartesia API key (or ElevenLabs fallback) in env
-- [ ] Confirm HeyGen's current streaming endpoint URL + auth shape
-- [ ] (Optional) `docs/BEHAVIOR_LAYER.md` first draft from Rigby —
-  identity (male donkey, he/him), pronoun constraints,
-  push-to-speak contract. Doctor flagged this as missing; F2F.3 is
-  the right moment to seed it since voice surface is the trigger.
+1. ~~**Seed context-kit as the second repo.**~~ DONE end of Session 1119.
+   Schema generalised cleanly to a Python CLI tool. Surveys for u-d-b
+   itself as a third repo would close the "Rigby manages her own
+   repo too" loop.
+2. **Inventory ingestion across venvs.** Repo's own inventory command
+   needs its own venv WHEN the repo has third-party deps. context-kit
+   ran inventory fine (stdlib-only); character-os needs the wrapper.
+   Add a `bash -c "source .venv/bin/activate && ..."` shape when the
+   profile declares a venv path. ~1 hr.
+3. **Run COO + Editor surveys against character-os** to confirm the
+   personas produce useful, distinct lenses. ~10 min, ~$0.02.
+4. **Auto-create Initiatives from survey findings** (v0.5). Right now
+   surveys produce `repo_survey` deliverables but don't land tasks in
+   the Initiative pipeline. ~1 session.
+5. **Active-repo conversation context.** Right now Claude Code's
+   handshake to Rigby is explicit ("we're in character-os now"). The
+   conversation doesn't persist that pointer. v1 graduation item #1.
+   ~1 session.
+6. **Re-run CTO survey after fixing inventory ingestion** so it has
+   fresh runtime numbers, not just CLAUDE.md phase claims.
 
-### F2F.4 + F2F.5 still ahead
+Order Rigby will most likely recommend: 2 → 6 → 1 → 3 → 4 → 5.
 
-- **F2F.4** — u-d-b SPA route `/rigby/talk`. ~1 session. Borrow
-  `cost-ticker` + `AvatarCall` lifecycle patterns from Character OS
-  `talk.tsx`. Single Rigby, no picker. Convert `reset_at` ISO from
-  UTC `+00:00` to MT (`-06:00`) in the cap-trip UI per Rigby's nit.
-- **F2F.5** — Real-mode dogfood, $5 cap. ½ session. ~90s of avatar
-  at mid-case envelope. Confirms F2F is real before going wider.
+### Option B — F2F.4 against mock-mode
+
+Build the `/rigby/talk` SPA route driven by `MockF2FProvider`. Proves
+the F2F.0-F2F.2 broker through a real UI surface; no new APIs needed
+because mock-mode doesn't talk to HeyGen. When F2F.3 unfreezes, the
+provider swap is one line. ~½-1 session.
+
+### Option C — Atlas v1 → v2 reframe + cost survival audit
+
+Pure docs/observability work. Atlas currently reads "Rigby standalone";
+reality is "u-d-b as engine for the public Suite." Cost survival audit
+(Phase 0) is still pending and is the gate for any multi-tenant SaaS
+launch. ~1 session for Atlas reframe; cost survival is bigger (~1 week
+focused).
+
+---
+
+## SESSION 1119 — PRIOR ENTRY POINT (multi-repo v0)
+
+The full Session 1119 record (vision scoping, schema lock, code,
+demo, cost ledger, loose ends) lives in
+[`docs/handoffs/SESSION_1119_MULTI_REPO_V0.md`](docs/handoffs/SESSION_1119_MULTI_REPO_V0.md).
+Read that file plus
+[`docs/topics/multi-repo-management.md`](docs/topics/multi-repo-management.md)
+before extending the multi-repo system.
 
 ---
 
