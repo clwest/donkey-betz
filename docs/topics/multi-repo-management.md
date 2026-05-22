@@ -88,7 +88,19 @@ Required keys (validated by `register_external_repo`):
 - `tech_stack` — JSON with `primary_language`, `backend`, `frontend`,
   `package_managers`, etc.
 - `entry_points` — JSON with anchor doc paths, code/docs allowlists,
-  inventory/health/start/test commands
+  inventory/health/start/test commands. Optional inventory wrapper
+  fields:
+  - `inventory_venv` — relative path to a venv activate script. If
+    set, `refresh_repo_context` wraps the inventory command in
+    `bash -c "unset DJANGO_SETTINGS_MODULE PYTHONPATH PYTHONHOME
+    VIRTUAL_ENV && source <venv> && cd <cwd> && <cmd>"` so a sibling
+    Django/FastAPI repo doesn't inherit u-d-b's Python state.
+  - `inventory_env_file` — relative path to a `.env` file to source
+    before activating the venv. Use when the target repo's
+    `manage.py` depends on env vars (DJANGO_SETTINGS_MODULE,
+    DATABASE_URL, etc.). Sources via `set -a && source <file> && set +a`.
+  - Bare command (no venv, no env file) fits stdlib-only repos like
+    context-kit.
 - `protected_paths` — list of glob patterns Rigby/agents must not write
 - `permissions` — `allow_file_write`, `allow_file_delete`,
   `allow_command_execution`, `allow_git_operations`,
@@ -157,6 +169,10 @@ editing that dict.
    - `entry_points.code_allowlist` — directories Rigby/agents can read
    - `entry_points.inventory_command` + `inventory_cwd` — how to
      regenerate the runtime anchor
+   - `entry_points.inventory_venv` + `inventory_env_file` (optional)
+     — if the inventory command needs a venv activate or `.env`
+     sourcing (Django/FastAPI/etc.), declare them and the refresh
+     command will wrap with `bash -c`. Skip both for stdlib-only repos.
    - `entry_points.test_commands` / `start_commands` — runbook helpers
    - `protected_paths` — env files, secrets, node_modules, .git, etc.
    - `permissions` — typically `allow_file_write=true`,

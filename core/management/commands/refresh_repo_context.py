@@ -98,25 +98,85 @@ def _latest_handoffs(handoffs_dir: Path, limit: int = 2) -> list[Path]:
 
 
 def _run_inventory(workspace: Any) -> dict:
+    """Run the repo's inventory command. If `inventory_venv` is declared,
+    wrap in `bash -c "source <venv> && cd <cwd> && <cmd>"` so repos with
+    third-party deps (Django, FastAPI, etc.) can import them. Otherwise
+    run the bare command (fits stdlib-only repos like context-kit)."""
     entry = workspace.entry_points or {}
     cmd_str = entry.get("inventory_command")
     if not cmd_str:
         return {"skipped": True, "reason": "no inventory_command configured"}
+
     cwd = workspace.root_path
     cwd_sub = entry.get("inventory_cwd")
     if cwd_sub:
         cwd = os.path.join(workspace.root_path, cwd_sub)
     if not os.path.isdir(cwd):
         return {"skipped": True, "reason": f"cwd does not exist: {cwd}"}
-    rc, out, err = _run(cmd_str.split(), cwd, timeout=INVENTORY_TIMEOUT_SECONDS)
+
+    venv_rel = entry.get("inventory_venv")
+    env_file_rel = entry.get("inventory_env_file")
+    wrapped = False
+    venv_abs = None
+    env_file_abs = None
+
+    if venv_rel or env_file_rel:
+        # Build a bash -c wrapper. Order:
+        #   1. unset Django/Python env vars that leak from the parent
+        #      process (u-d-b's worker has DJANGO_SETTINGS_MODULE +
+        #      PYTHONPATH set; those would break a sibling Django repo)
+        #   2. source the env file (so the target repo can re-set what
+        #      it needs)
+        #   3. activate venv
+        #   4. cd into inventory cwd
+        #   5. run command
+        parts: list[str] = [
+            "unset DJANGO_SETTINGS_MODULE PYTHONPATH PYTHONHOME VIRTUAL_ENV",
+        ]
+        if env_file_rel:
+            env_file_abs = os.path.join(workspace.root_path, env_file_rel)
+            if not os.path.exists(env_file_abs):
+                return {
+                    "skipped": True,
+                    "reason": f"inventory_env_file declared but missing: {env_file_abs}",
+                }
+            parts.append(f"set -a && source {_sh_quote(env_file_abs)} && set +a")
+        if venv_rel:
+            venv_abs = os.path.join(workspace.root_path, venv_rel)
+            if not os.path.exists(venv_abs):
+                return {
+                    "skipped": True,
+                    "reason": f"inventory_venv declared but activate script missing: {venv_abs}",
+                }
+            parts.append(f"source {_sh_quote(venv_abs)}")
+        parts.append(f"cd {_sh_quote(cwd)}")
+        parts.append(cmd_str)
+        shell_cmd = " && ".join(parts)
+        argv = ["bash", "-c", shell_cmd]
+        exec_cwd = workspace.root_path
+        wrapped = True
+    else:
+        argv = cmd_str.split()
+        exec_cwd = cwd
+
+    rc, out, err = _run(argv, exec_cwd, timeout=INVENTORY_TIMEOUT_SECONDS)
     return {
         "command": cmd_str,
         "cwd": cwd,
+        "venv": venv_abs,
+        "env_file": env_file_abs,
+        "wrapped": wrapped,
         "returncode": rc,
         "stdout_tail": out[-1500:] if out else "",
         "stderr_tail": err[-500:] if err else "",
         "succeeded": rc == 0,
     }
+
+
+def _sh_quote(s: str) -> str:
+    """Minimal shell-quote for paths inside bash -c strings. Wraps in
+    single quotes and escapes any embedded single quote."""
+    return "'" + s.replace("'", "'\"'\"'") + "'"
 
 
 def _build_snapshot_markdown(
@@ -162,6 +222,8 @@ def _build_snapshot_markdown(
         lines.extend([
             f"- Command: `{inventory_result['command']}`",
             f"- Cwd: `{inventory_result['cwd']}`",
+            f"- venv: `{inventory_result.get('venv') or 'none'}` "
+            f"({'wrapped' if inventory_result.get('wrapped') else 'bare'})",
             f"- Result: {inv_status}",
         ])
         if inventory_result.get("stderr_tail"):
