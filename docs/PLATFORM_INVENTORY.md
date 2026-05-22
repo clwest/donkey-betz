@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-21 20:12:09
-**Git HEAD:** `a58ba8ff`
+**Generated:** 2026-05-21 21:58:52
+**Git HEAD:** `912d1874`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -19,7 +19,7 @@
 | [Database Models](#database-models) | 575 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1846 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 203 files matching core/views*.py |
-| [Django Management Commands](#management-commands) | 172 management commands in core/management/commands/ |
+| [Django Management Commands](#management-commands) | 173 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
 | [LLM Providers](#llm-providers) | 6 providers registered in LLMProviderRegistry |
@@ -29,8 +29,8 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,004 Python files, 982,284 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
+| [Code Statistics](#code-stats) | 2,006 Python files, 982,644 lines across core/ + ai_core/ + intelligence/ |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 72 OK, 1 drifts |
 
 ## Table of Contents
 
@@ -1670,7 +1670,7 @@
 <a id="management-commands"></a>
 ## Django Management Commands
 
-**Headline:** 172 management commands in core/management/commands/
+**Headline:** 173 management commands in core/management/commands/
 
 **Code location:** `core/management/commands/`
 
@@ -1749,6 +1749,7 @@
 | python manage.py deploy_platform_unification |
 | python manage.py digestion_check |
 | python manage.py discover_learning_cohorts |
+| python manage.py draft_repo_verifier_claims |
 | python manage.py embed_documents |
 | python manage.py enrich_boardroom_ml |
 | python manage.py ensure_enhanced_profiles |
@@ -2016,23 +2017,23 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,004 Python files, 982,284 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,006 Python files, 982,644 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1598 | 815887 |
+| core | 1600 | 816247 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2004 | 982284 |
+| TOTAL (python) | 2006 | 982644 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 73 registered claims across 34 docs: 73 OK, 0 drifts
+**Headline:** 73 registered claims across 34 docs: 72 OK, 1 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=73, low=0, medium=0, high=0, error=0. Top drifting docs: .
+**Notes:** Severity rollup: ok=72, low=0, medium=1, high=0, error=0. Top drifting docs: docs/BACKEND_INVENTORY.md.
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
@@ -2048,7 +2049,7 @@
 | docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
-| docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
+| docs/BACKEND_INVENTORY.md | 5 | 1 | 0 |
 | docs/BEAT_AUDIT.md | 1 | 0 | 0 |
 | docs/BODY_SYSTEM_AUDIT.md | 1 | 0 | 0 |
 | docs/CAPABILITIES.md | 4 | 0 | 0 |
