@@ -23,7 +23,17 @@
     "anchor_claude": "CLAUDE.md",
     "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
     "code_allowlist": ["backend", "frontend/src", "scripts"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "ports": {
+      "frontend": 3070,
+      "backend": 8080,
+      "websocket": null,
+      "notes": "Vite :3070, FastAPI uvicorn :8080. Slot 8 in the fleet port table."
+    },
+    "start_commands": {
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8080 --reload",
+      "frontend": "cd frontend && pnpm dev --port 3070 --strictPort"
+    }
   },
   "protected_paths": [
     ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
