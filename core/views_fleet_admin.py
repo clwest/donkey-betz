@@ -284,4 +284,180 @@ def fleet_identity_keys(request, app_slug: str):
     )
 
 
-__all__ = ["fleet_identities", "fleet_identity_keys"]
+@csrf_exempt
+@api_view(["POST", "GET"])
+@permission_classes([IsAdminUser])
+def fleet_rotations(request, app_slug: str | None = None):
+    """List rotations (GET, optionally filtered by app_slug) or plan a new one (POST).
+
+    POST body:
+        {"app_slug": "contract-concierge", "ends_in_hours": 72}
+
+    POST 201 returns the raw new_key_secret EXACTLY ONCE.
+    """
+    gate = _superuser_gate(request)
+    if gate is not None:
+        return gate
+
+    if request.method == "GET":
+        from core.models.fleet import FleetServiceRotation
+        qs = FleetServiceRotation.objects.select_related(
+            "service", "old_key", "new_key"
+        )
+        if app_slug:
+            qs = qs.filter(service__app_slug=app_slug)
+        rows = [
+            {
+                "rotation_id": str(r.pk),
+                "app_slug": r.service.app_slug,
+                "status": r.status,
+                "old_key_id": r.old_key.key_id,
+                "new_key_id": r.new_key.key_id,
+                "starts_at": r.starts_at.isoformat() if r.starts_at else None,
+                "ends_at": r.ends_at.isoformat() if r.ends_at else None,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in qs.order_by("-created_at")[:50]
+        ]
+        return Response({"rotations": rows})
+
+    # POST — plan a new rotation
+    from core.services.fleet_rotation import plan_rotation, RotationError
+    payload = request.data or {}
+    target_slug = app_slug or (payload.get("app_slug") or "").strip()
+    if not target_slug:
+        return Response(
+            {"error": {"code": "missing_app_slug", "message": "app_slug required"}},
+            status=400,
+        )
+    ends_in_hours = int(payload.get("ends_in_hours", 72))
+
+    try:
+        result = plan_rotation(app_slug=target_slug, ends_in_hours=ends_in_hours)
+    except RotationError as e:
+        logger.warning(f"[fleet-rotation] plan reject app_slug={target_slug!r}: {e}")
+        return Response(
+            {"error": {"code": "rotation_plan_failed", "message": str(e)}},
+            status=409,
+        )
+
+    logger.info(
+        "[fleet-rotation] planned app=%s rotation_id=%s by user=%s",
+        target_slug, result.rotation_id, request.user.username,
+    )
+
+    return Response(
+        {
+            "rotation": {
+                "rotation_id": result.rotation_id,
+                "status": result.status,
+                "old_key_id": result.old_key_id,
+                "new_key_id": result.new_key_id,
+                "ends_at": result.ends_at,
+            },
+            "key": {
+                "key_id": result.new_key_id,
+                "secret": result.new_key_secret,
+            },
+            "next_steps": {
+                "1_set_env": [
+                    f"FLEET_KEY_ID={result.new_key_id}",
+                    "FLEET_SERVICE_SECRET=<see secret above>",
+                ],
+                "2_activate": (
+                    f"POST /api/admin/fleet/rotations/{result.rotation_id}/activate/ — "
+                    f"flips old key to draining, marks rotation as in-rollout."
+                ),
+                "3_complete": (
+                    f"POST /api/admin/fleet/rotations/{result.rotation_id}/complete/ — "
+                    f"after the fleet app starts using the new key, this disables the old."
+                ),
+                "abort_anytime": (
+                    f"POST /api/admin/fleet/rotations/{result.rotation_id}/abort/ — "
+                    f"only allowed before complete."
+                ),
+                "warning": (
+                    "The secret is shown EXACTLY ONCE. Save now; u-d-b stores only the SHA256 hash."
+                ),
+            },
+        },
+        status=201,
+    )
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def fleet_rotation_transition(request, rotation_id: str, action: str):
+    """Drive a rotation through its state machine.
+
+    action ∈ {"activate", "complete", "abort"}. Idempotent for
+    activate + complete; abort rejected after complete.
+    """
+    gate = _superuser_gate(request)
+    if gate is not None:
+        return gate
+
+    from core.services.fleet_rotation import (
+        RotationError,
+        abort_rotation,
+        activate_rotation,
+        complete_rotation,
+    )
+
+    payload = request.data or {}
+
+    try:
+        if action == "activate":
+            result = activate_rotation(rotation_id=rotation_id)
+        elif action == "complete":
+            force = bool(payload.get("force", False))
+            result = complete_rotation(rotation_id=rotation_id, force=force)
+        elif action == "abort":
+            result = abort_rotation(rotation_id=rotation_id)
+        else:
+            return Response(
+                {
+                    "error": {
+                        "code": "unknown_action",
+                        "message": f"action must be activate/complete/abort, got {action!r}",
+                    }
+                },
+                status=400,
+            )
+    except RotationError as e:
+        logger.warning(
+            f"[fleet-rotation] {action} reject rotation_id={rotation_id!r}: {e}"
+        )
+        return Response(
+            {"error": {"code": "rotation_transition_failed", "message": str(e)}},
+            status=409,
+        )
+
+    logger.info(
+        "[fleet-rotation] %s rotation_id=%s by user=%s",
+        action, rotation_id, request.user.username,
+    )
+
+    return Response(
+        {
+            "rotation": {
+                "rotation_id": result.rotation_id,
+                "status": result.status,
+                "old_key_id": result.old_key_id,
+                "new_key_id": result.new_key_id,
+                "old_key_status": result.old_key_status,
+                "new_key_status": result.new_key_status,
+                "starts_at": result.starts_at,
+                "ends_at": result.ends_at,
+            }
+        }
+    )
+
+
+__all__ = [
+    "fleet_identities",
+    "fleet_identity_keys",
+    "fleet_rotations",
+    "fleet_rotation_transition",
+]
