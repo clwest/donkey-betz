@@ -64,58 +64,100 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1120 — CURRENT ENTRY POINT
+## SESSION 1121 — CURRENT ENTRY POINT
 
-### FIRST THING — fix the `chat_conversations` migration drift bug
+### What Session 1120 shipped (so you know where things stand)
 
-During the live UI multi-repo test at the end of Session 1119, Rigby
-autonomously surfaced this u-d-b bug from `ops_tool` failure analysis:
+Full handoff: [`docs/handoffs/SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md`](docs/handoffs/SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md).
+TL;DR: three pieces of work landed in one session.
 
-```
-core.tasks.process_pa_chat_task — 2 failures in 24h — ProgrammingError:
-  column chat_conversations.platform does not exist
-  column chat_conversations.discord_user_id does not exist
-```
+1. **u-d-b chat_conversations migration drift fix** — migration `0341` ships
+   an idempotent `ADD COLUMN IF NOT EXISTS` backfill. PR
+   [#2114](https://github.com/clwest/donkey-betz-platform/pull/2114).
+   No-op locally; restores prod schema when Jessica deploys. Should bring
+   PA `process_pa_chat_task` back to 100% success.
 
-The `ChatConversation` model in `core/models.py` (Session 455) declares
-both fields for cross-platform tracking (`platform` CharField,
-`discord_user_id` CharField). The model is up-to-date but the live DB
-is missing the columns — migration drift. Currently dropping PA task
-success rate from 100% → 99.59%.
+2. **Option D fleet survey + initiative extract** — 9 new CTO surveys
+   + 11 initiative extracts → **79 TRIAGE initiatives** across the 12
+   fleet workspaces. Rigby now has a portfolio-level view of what each
+   repo needs.
 
-Tasks:
-1. Confirm which migration was supposed to add them (`grep` migrations
-   for `platform` field on `chat_conversations`).
-2. Check `python manage.py showmigrations core | grep -A 2 -B 2 chat`
-   to see if a migration is unapplied or missing.
-3. If migration exists but unapplied: `python manage.py migrate core`.
-4. If the migration is missing entirely:
-   `python manage.py makemigrations core --name add_chat_conversation_platform_fields`,
-   review the generated migration, then apply.
-5. Verify by re-running `process_pa_chat_task` or watching ops_tool for
-   24h that the error disappears.
-6. Don't touch the model — only the migration history is out of sync.
+3. **Doc-verifier fleet campaign** — picked the most cross-cutting
+   theme ("wire doc verifier") from the 79 initiatives and ported
+   u-d-b's Session 1099 verifier framework into 7 FastAPI repos.
+   7 PRs landed (mentorforge#8 merged; pitchdeckforge#7,
+   dealflowtracker#5, contract-concierge#5, sellerpilot#1,
+   signal-studio#1, compliancesentinel#1 open). Plus u-d-b
+   [#2115](https://github.com/clwest/donkey-betz-platform/pull/2115)
+   for the new `draft_repo_verifier_claims` mgmt command + topic doc.
+   5 TRIAGE initiatives closed with PR refs.
 
-This is the kind of "small bounded ops debt" task that fits well with
-the multi-repo v0 pattern even though it's u-d-b's own. ~30 min.
+Total LLM cost: **~$0.18**.
 
-### Then — pick the next session 1120 headline
+### FIRST THING — eyeball + merge the 6 open fleet PRs
 
-After the bug is in, options for what to work on:
+The 6 fleet PRs landed clean but weren't reviewed before push. Either:
 
-- **Container the fleet (Docker compose per repo)** — natural next step
-  after port allocation locked. Each fleet member gets its own compose
-  file; `infra/` repo orchestrates. ~2-3 sessions.
-- **Survey + extract initiatives for the other 9 repos** — currently
-  only character-os has TRIAGE initiatives. Sweep the rest at ~$0.01
-  per survey + ~$0.01 per extract = ~$0.20 total. ~½ session.
-- **F2F.3 unfreeze** — if HeyGen + Cartesia keys are provisioned, the
-  HeyGen wiring is the heaviest remaining slice on the F2F arc.
-- **Atlas v1 → v2 reframe** — pure docs; Atlas currently reads "Rigby
-  standalone" but reality is "u-d-b as engine for the public Suite."
-- **Phase 0 cost-survival audit** (per Session 1116 carry-over) —
-  `LLMCallLog.workspace` FK + `ExternalAPICallLog` + per-workspace
-  daily cap. Gate for multi-tenant SaaS launch. ~1 week focused work.
+- Merge them as-is (all verifiers tested locally, all 2-3 claims per
+  PR run green or surface known drift; no claim is brittle), or
+- Skim each diff first if you want a pulse-check on the per-repo
+  template adaptations.
+
+Links: [pitchdeckforge#7](https://github.com/clwest/pitchdeckforge/pull/7),
+[dealflowtracker#5](https://github.com/clwest/dealflowtracker/pull/5),
+[contract-concierge#5](https://github.com/clwest/contract-concierge/pull/5),
+[sellerpilot#1](https://github.com/clwest/sellerpilot/pull/1),
+[signal-studio#1](https://github.com/clwest/signal-studio/pull/1),
+[compliancesentinel#1](https://github.com/clwest/compliancesentinel/pull/1).
+
+Also merge u-d-b [#2114](https://github.com/clwest/donkey-betz-platform/pull/2114)
+(migration fix) and [#2115](https://github.com/clwest/donkey-betz-platform/pull/2115)
+(`draft_repo_verifier_claims` + topic doc) when ready — Jessica deploys
+prod from `main` so #2114 only takes effect after merge + deploy.
+
+Heads-up on mentorforge: local `main` is 2 commits ahead of
+`origin/main` (your unpushed `build_planning` mode commit etc.).
+Pushing those resolves mentorforge#8's `session_mode_count` drift.
+
+### Then — pick the Session 1121 headline
+
+Options, ordered by leverage:
+
+- **Reconcile the 2 surfaced drifts** (mentorforge + contract-concierge)
+  so their verifiers can be flipped to `--fail-on-drift` in CI. Small
+  bounded work, closes the loop on the campaign. ~½ session.
+- **Add CI gates to the 4 green-baseline verifiers** (pitchdeckforge,
+  dealflowtracker, sellerpilot, signal-studio, compliancesentinel —
+  any that run clean). Single `.github/workflows/verify-doc-claims.yml`
+  per repo with `python scripts/verify_doc_claims.py --fail-on-drift`.
+  ~½ session.
+- **Django-flavor verifier rollout** — port the framework as a
+  `python manage.py verify_doc_claims` command for character-os,
+  ai-content-studio, norman-handyman-mvp. Same patterns, different
+  packaging. ~1 session.
+- **Next.js verifier rollout** — port to 24-7-ai-global as
+  `scripts/verify_doc_claims.mjs`. Needs Node-native AST handling
+  (ts-morph or @typescript-eslint/parser). ~1 session.
+- **Promote the next cross-cutting initiative theme** — `.env.example`
+  + secret scan appears in 3+ repos; "document local dev startup"
+  appears in 3+ repos. Same campaign shape as doc-verifier.
+- **F2F.3 unfreeze** — only if HeyGen + Cartesia keys are provisioned.
+- **Phase 0 cost-survival audit** (Session 1116 carry-over still
+  pending) — `LLMCallLog.workspace` FK + `ExternalAPICallLog` +
+  per-workspace daily cap. Gate for multi-tenant SaaS launch.
+  ~1 week focused work.
+
+### Operational notes
+
+- **`build_docs_index` regenerated** at session close — `docs/INDEX.md`
+  includes the new topic file.
+- **`verify_doc_claims --only-drift` not re-run** — no u-d-b docs
+  changed that affect existing registered claims, just additions.
+- **Fleet member count unchanged** at 12 (no new repos registered this
+  session).
+- **TRIAGE backlog** sits at ~74 across the fleet (was 79 at sweep
+  close; 5 closed by this campaign). Plenty of fodder for follow-up
+  themed campaigns.
 
 ---
 

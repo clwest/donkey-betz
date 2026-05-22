@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1119_MULTI_REPO_V0.md`](SESSION_1119_MULTI_REPO_V0.md)
-(Multi-repo v0: Rigby manages laptop-local repos as projects. Repo Profile schema + three management commands + character-os seeded as first proof case. CTO survey of character-os shipped. Zero migrations, zero new APIs. F2F.3 paused — no new external API integrations until existing work proves out.)
+**Latest handoff:** [`SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md`](SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md)
+(Fleet doc-verifier rollout: u-d-b's Session 1099 verifier framework ported into 7 laptop-local fleet repos as single-file scripts. New `draft_repo_verifier_claims` u-d-b mgmt command. 9 CTO surveys + 11 initiative extracts across the fleet → 79 TRIAGE initiatives, 5 closed by this campaign. Migration 0341 fixes prod chat_conversations drift. Total LLM cost: ~$0.18.)
 
-**Previous:** [`SESSION_1118_F2F_BROKER_LANDED.md`](SESSION_1118_F2F_BROKER_LANDED.md)
+**Previous:** [`SESSION_1119_MULTI_REPO_V0.md`](SESSION_1119_MULTI_REPO_V0.md)
 
 ## How to update
 
