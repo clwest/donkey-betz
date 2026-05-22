@@ -64,102 +64,118 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1122 — CURRENT ENTRY POINT
+## SESSION 1123 — CURRENT ENTRY POINT
 
-### What Session 1121 shipped (so you know where things stand)
+### What Session 1122 shipped (so you know where things stand)
 
-Full handoff: [`docs/handoffs/SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md`](docs/handoffs/SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md).
-TL;DR: 15 PRs merged across 8 repos in three waves, **zero LLM spend**.
+Full handoff: [`docs/handoffs/SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md`](docs/handoffs/SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md).
+TL;DR: 2 PRs merged extending the doc-verifier framework into Django and
+Next.js. **Zero LLM spend.** Two repos parked.
 
-1. **Session 1120 closeout (8 PRs)** — eyeballed + merged u-d-b #2114
-   (chat_conversations migration), u-d-b #2115 (`draft_repo_verifier_claims`
-   + topic doc), and the 6 fleet verifier-rollout PRs (pitchdeckforge,
-   dealflowtracker, contract-concierge, sellerpilot, signal-studio,
-   compliancesentinel).
+1. **Django flavor** — norman-handyman-mvp#1 merged (`38c1e3b2`).
+   3 claims green on first run (`local_django_app_count`,
+   `core_model_count`, `job_status_count`). Shipped as a **standalone
+   Python script** under `scripts/`, not as a `manage.py` mgmt command —
+   the latter requires the full backend dependency stack to boot in CI.
 
-2. **Drift reconciliation (2 PRs)** —
-   - **mentorforge#9**: doc `12 mentor personas` → `8` (README already
-     correct, narrative was stale). Also pushed Chris's 2 unpushed local
-     commits via rebase (`build_planning` tier fix resolves
-     `session_mode_count` drift; stripe config).
-   - **contract-concierge#6**: doc `3 starter templates` → enumerate all
-     12 (SOW/ICA/NDA + 9 more all real in `backend/app/templates.py`);
-     doc audit trail `created/edited/sent/viewed/signed` → add
-     `cancelled, archived` to match the 7-value `EventType` enum.
+2. **Next.js flavor** — 24-7-ai-global#9 merged (`2ca4081d`). 3 claims
+   green (`suite_product_count`, `lab_work_count`,
+   `total_works_in_motion`). Pure-Node ESM
+   (`scripts/verify-doc-claims.mjs`) — no `typescript`, `ts-morph`, or
+   `@typescript-eslint/parser` deps. Brace-matching against TS source
+   text covers all current claim shapes.
 
-3. **CI gate rollout (5 PRs)** — added
-   `.github/workflows/verify-doc-claims.yml` (runs
-   `python scripts/verify_doc_claims.py --fail-on-drift` on push + PR
-   to main) to pitchdeckforge, dealflowtracker, sellerpilot,
-   signal-studio, compliancesentinel.
+3. **Two repos parked** —
+   - **character-os**: Chris flagged active CC session in that repo,
+     said "don't interfere." Verifier files left uncommitted in working
+     tree; memory rule saved (`project_character_os_active_cc.md`).
+   - **ai-content-studio**: `clwest/ai-content-studio` on GitHub is empty
+     (`isEmpty: true`). No origin/main to PR against. Verifier files
+     committed locally — waiting for repo bootstrap before pushing.
 
-**Outcome:** all 7 fleet repos (mentorforge + 6 FastAPI siblings) now
-enforce doc-vs-runtime parity in CI. 17 claims actively gated
-(14 originally green + 3 reconciled this session). Total LLM cost: **$0**.
+**Fleet scoreboard after Session 1122:** 9 repos, 20 claims actively
+gated in CI across 3 runtime stacks (7 FastAPI + 1 Django + 1 Next.js).
 
 ### FIRST THING — pick a headline (local-only mode)
 
 **Working local-only until notified.** Don't drive prod verification,
 deploys, or Jessica follow-ups. u-d-b #2114's migration is in `main`
-and dormant until Chris flips the deploy switch — local Rigby is
-healthy (no new `process_pa_chat_task` ProgrammingError since the 2
-yesterday-evening events).
+and dormant until Chris flips the deploy switch.
 
-### Then — pick the Session 1122 headline
+**character-os is OFF-LIMITS** from u-d-b sessions for the duration of
+the other CC's engagement there. Check `git -C /Users/donkeyking/development/character-os
+log --oneline origin/main..HEAD` for their unpushed work; if the working
+tree is still hot or there are still WIP files in `shell/apps/realtime/`,
+the lane is closed.
+
+### Then — pick the Session 1123 headline
 
 Options, ordered by leverage:
 
-- **Django verifier rollout** — port the verifier framework as a
-  `python manage.py verify_doc_claims` mgmt command for `character-os`,
-  `ai-content-studio`, `norman-handyman-mvp`. Same AST/import patterns
-  as the FastAPI version, swap to Django's `BaseCommand` shape. ~1 session.
-- **Next.js verifier rollout** — port to `24-7-ai-global` as
-  `scripts/verify_doc_claims.mjs`. Needs Node-native AST (ts-morph or
-  `@typescript-eslint/parser`). Hardest port of the three. ~1 session.
-- **Promote the next cross-cutting initiative theme** — `.env.example`
-  + secret-scan appears in 3+ repos; "document local dev startup"
-  appears in 3+ repos. Same campaign shape as doc-verifier — Rigby
-  drafts, Claude Code wires. ~1 session.
-- **Phase 0 cost-survival audit** (Session 1116+ carry-over) —
+- **character-os verifier (½ session)** — pending the other CC finishing
+  up. Rewrite my pre-pivot prototype
+  (`shell/apps/accounts/management/commands/verify_doc_claims.py`) as a
+  standalone Python script under `scripts/`, recheck the 3 claims
+  against current code (`django_app_count`, `subscription_tier_count`,
+  `starter_videos_per_month`), open PR. The mgmt-command files in the
+  working tree are SUPERSEDED — start from the norman pattern instead.
+- **ai-content-studio verifier (½ session)** — pending origin bootstrap.
+  When `clwest/ai-content-studio` gets published with code, the verifier
+  files in the working tree can be committed and pushed. Re-verify the
+  published baseline matches what local sees first.
+- **Promote the next cross-cutting initiative theme (~1 session)** —
+  `.env.example` + secret-scan appears in 3+ repos; "document local
+  dev startup" appears in 3+ repos. Same campaign shape as the
+  verifier rollout (Rigby drafts, Claude Code wires).
+- **Phase 0 cost-survival audit (~1 focused week)** —
   `LLMCallLog.workspace` FK + `ExternalAPICallLog` + per-workspace
   daily cap + `cost_per_workspace_today` query + `build_cost_audit`.
-  Gate for any multi-tenant SaaS launch. ~1 focused week.
+  Multi-tenant SaaS launch gate.
 - **F2F.3 unfreeze** — only if HeyGen + Cartesia keys are provisioned.
-- **Atlas v1 → v2 reframe** (Session 1116 carry-over) — pure docs
-  work. Phase 1 currently reads "Rigby standalone"; reality is
-  "u-d-b as engine for the public Suite." ~1 hr.
+- **Atlas v1 → v2 reframe (~1 hr)** — pure docs work. Phase 1 currently
+  reads "Rigby standalone"; reality is "u-d-b as engine for the public
+  Suite."
 
-### Reconciliation lessons learned (for the Django/Next.js rollouts)
+### Architecture lessons (carry forward to character-os / ai-content-studio)
 
-- **Verifiers carry hardcoded `expected = N` baselines.** To reconcile
-  a drift, BOTH the doc AND the baseline must move. Updating doc alone
-  leaves the verifier still flagging it.
-- **AI-drafted `description=...` strings carry specific numbers**
-  (e.g. "README lists 3 starter templates"). After reconciliation
-  these go stale. Default to generic 'N' phrasing in new rollouts
-  (matches the mentorforge canonical template).
-- **First-run accuracy was 82%** (14/17 claims green on first run
-  across 7 repos). All 3 drifts pointed at real narrative staleness
-  — code was canonical in every case. Rigby's draft quality is good
-  enough that "doc up to code" is the safe default reconciliation
-  direction.
+- **Standalone script > mgmt command for Django.** First attempt at a
+  Django mgmt command failed in CI on missing `pdfplumber`. The pattern
+  that ships is `scripts/verify_doc_claims.py` with AST-based claims —
+  no Django boot needed.
+- **Pure-Node ESM > ts-morph for Next.js.** Regex + brace-matching
+  covers all current claim shapes. Save `ts-morph` for when you need
+  generic resolution / type narrowing.
+- **Default to zero external deps.** Every verifier in the fleet now
+  runs with stdlib (Python) or built-in Node 20 — no `pip install`,
+  no `npm install` in CI.
+- **CI workflow file is the only repo-shape thing.** Conceptually:
+  ```yaml
+  - uses: actions/checkout@v4
+  - uses: actions/setup-{python|node}@v{5|4}
+  - run: {python|node} scripts/verify-doc-claims.{py|mjs} --fail-on-drift
+  ```
 
 ### Operational notes
 
-- **TRIAGE backlog** sits at ~67 across the 12-repo fleet (was 79 at
-  Session 1120 close; ~12 closed this session via reconciliation and
-  CI rollout). Still plenty of fodder for follow-up themed campaigns.
-- **Untracked artifacts** in fleet repos (`analysis/`, `connections.json`,
-  `coverage.json`) are context-kit local-only files. Harmless to leave;
-  worth adding to `.gitignore` if any repo cleans up.
-- **Verifier pyright warnings** — every ported `scripts/verify_doc_claims.py`
-  has ~10 pre-existing `dict[Unknown, Unknown]` warnings. Not blocking,
-  not regressions from this session. Could backport type hints in the
-  u-d-b template before Django/Next.js rollout. Skip if not gating CI.
+- **TRIAGE backlog** sits at ~65 across the 12-repo fleet (down from
+  ~67 at Session 1121 close). Two more closed by Session 1122's
+  verifier rollouts.
+- **character-os verifier files (uncommitted, pre-pivot)** —
+  - `shell/apps/accounts/management/commands/verify_doc_claims.py`
+  - `.github/workflows/verify-doc-claims.yml`
+  - 1-line anchor doc edit at `docs/CHARACTER_OS_WHAT_IT_IS.md:34`
+    (the other CC reverted it later)
+
+  Treat these as SUPERSEDED design once the lane reopens — port to
+  standalone script following norman pattern.
+- **ai-content-studio verifier files (uncommitted, post-pivot)** —
+  - `scripts/verify_doc_claims.py` (standalone, correct shape)
+  - `.github/workflows/verify-doc-claims.yml`
+
+  These are reusable as-is once origin gets bootstrapped.
 - **u-d-b `00-START-NEXT-SESSION.md` + `docs/handoffs/CURRENT.md`
-  updated** at session close. `docs/INDEX.md` should be regenerated
-  via `python manage.py build_docs_index` if any new docs touched the
-  index (this session only added the new handoff file).
+  updated** at session close. Regenerate `docs/INDEX.md` via
+  `python manage.py build_docs_index` before commit.
 
 ---
 

@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md`](SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md)
-(Closed Session 1120's 8 open PRs (u-d-b #2114 + #2115 + 6 fleet verifier rollouts). Reconciled 2 surfaced drifts (mentorforge `mentor_persona_count`, contract-concierge `starter_template_count` + `audit_event_type_count`) — 17/17 claims now green across the fleet. Added `--fail-on-drift` CI gates to all 7 FastAPI fleet repos. 15 PRs merged across 8 repos. Total LLM cost: ~$0.)
+**Latest handoff:** [`SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md`](SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md)
+(Extended doc-verifier framework into Django + Next.js. Shipped norman-handyman-mvp#1 (standalone Python, AST-based) and 24-7-ai-global#9 (pure Node ESM, brace-matching). Parked character-os (active CC) and ai-content-studio (empty origin). Fleet scoreboard: 9 repos, 20 claims actively gated in CI across 3 runtime stacks. Total LLM cost: $0.)
 
-**Previous:** [`SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md`](SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md)
+**Previous:** [`SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md`](SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md)
 
 ## How to update
 
