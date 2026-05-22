@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "repo_id": "contract-concierge",
+  "name": "contract-concierge",
+  "description": "Contract Concierge (Suite III — `arc: Execute`, pillar Automation). Templates → e-signed → archived, no lawyers required. 3 templates (SOW · Contractor · NDA), live HTML preview, multi-signer flow, e-signature with IP + UA + timestamp audit trail, optional AI clauses (explain/tighten/custom). Works end-to-end with no AI or email — both are optional layers. Pricing Free → $79/mo. Live at https://contract-concierge.vercel.app.",
+  "root_path": "/Users/donkeyking/development/contract-concierge",
+  "workspace_type": "local",
+  "tech_stack": {
+    "primary_language": "python", "repo_type": "saas_app", "backend": "fastapi",
+    "frontend": "react+vite", "react_version": "19", "database": "postgres",
+    "email": "gmail_smtp", "billing": "stripe", "deploy_target": "vercel+render",
+    "package_managers": {"python": "pip", "js": "pnpm"},
+    "products_24_7_slug": "contract-concierge", "products_24_7_no": "III"
+  },
+  "entry_points": {
+    "anchor_narrative": "docs/PROJECT_WHAT_IT_IS.md",
+    "anchor_runtime": null,
+    "anchor_start": "00-START-NEXT-SESSION.md",
+    "anchor_claude": "CLAUDE.md",
+    "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
+    "code_allowlist": ["backend", "frontend/src", "scripts"],
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+  },
+  "protected_paths": [
+    ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",
+    ".git", ".git/", "backend/.venv", "backend/.venv/**", "frontend/node_modules",
+    "frontend/node_modules/**", "frontend/dist", "frontend/dist/**", "**/__pycache__/**",
+    "*.sqlite3", "media/", "signed_contracts/"
+  ],
+  "permissions": {
+    "allow_file_write": true, "allow_file_delete": false, "allow_command_execution": true,
+    "allow_git_operations": true, "allow_autonomous_writes": false, "require_human_review": false
+  },
+  "repo_profile_metadata": {
+    "constraints_text": [
+      "No pushes / tags without explicit operator approval. No --force ever.",
+      "signed_contracts/ and audit-trail blobs are legally sensitive — never commit, never echo.",
+      "Stripe + OpenAI + Gmail-SMTP keys live in .env — never commit."
+    ],
+    "constraints_rules": [
+      {"type": "deny_git_push", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_tag", "unless": "explicit_operator_approval"},
+      {"type": "deny_git_force", "always": true},
+      {"type": "deny_paths", "globs": [".env*", "**/.env*", "signed_contracts/**", "media/**"]}
+    ],
+    "session_log_pointer": "docs/handoffs/",
+    "fleet_role": {
+      "role": "suite_product", "suite_position": "III (Execute arc)", "pillar": "Automation",
+      "url": "https://contract-concierge.vercel.app", "status": "shipped", "income_lane": true,
+      "founder_toolkit_member": true
+    },
+    "bridge_relationship": null,
+    "open_questions": [
+      "Runtime inventory anchor missing — docs/<APP>_INVENTORY.md not present. Wire to context-kit inventory or stub-write it during refresh."
+    ],
+    "last_refresh_at": null, "last_git_head": null, "last_branch": null, "health_status": null,
+    "snapshot_retention": {"max_snapshots": 20, "max_age_days": 30}
+  }
+}
