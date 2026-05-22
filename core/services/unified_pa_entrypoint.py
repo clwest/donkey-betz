@@ -531,6 +531,27 @@ class UnifiedPAEntrypoint:
             full_context = await self._build_context(message, context)
             logger.info(f"[{trace_id}] Step 1 _build_context: {int((time.time()-t0)*1000)}ms")
 
+            # Session 1127 Phase 2A — derive a hint-mode routing nudge
+            # from the fleet routing decision (attached by tasks_misc).
+            # Hint never overrides PA intent; only steers when intent
+            # detection produced nothing specific. See
+            # `core/services/fleet_routing_dispatch.derive_hint_for_context`.
+            _routing_hint = None
+            _fleet_decision = context.get('_fleet_routing_decision') if context else None
+            if _fleet_decision is not None:
+                try:
+                    from core.services.fleet_routing_dispatch import derive_hint_for_context
+                    _routing_hint = derive_hint_for_context(_fleet_decision)
+                    if _routing_hint:
+                        full_context['_routing_hint'] = _routing_hint
+                        logger.info(
+                            f"[{trace_id}] Phase 2A hint active: "
+                            f"app={_routing_hint['app_slug']} → "
+                            f"{_routing_hint['agent_map_key']} (snake={_routing_hint['snake_name']})"
+                        )
+                except Exception as e:
+                    logger.warning(f"[{trace_id}] Routing hint derivation failed: {e}")
+
             # Session 1036: Feature flag for LLM-driven function calling
             tool_call_metadata = None
             tool_result_data = None
@@ -626,6 +647,22 @@ class UnifiedPAEntrypoint:
                 )
                 intent = detected_intent or 'general'
                 logger.info(f"[{trace_id}] Step 2 intent={intent} routed_to={routed_to}")
+
+                # Session 1127 Phase 2A — hint nudge: when keyword
+                # routing did NOT pick a specialist tool, but a fleet
+                # caller hinted at one (and it survived the resolver
+                # safety gates), steer toward the hinted tool. We
+                # never override a positive intent match — that's the
+                # "hint never overrides" rule.
+                if (not routed_to) and _routing_hint:
+                    snake = _routing_hint.get('snake_name')
+                    if snake:
+                        routed_to = snake
+                        intent = intent or 'fleet_hint_route'
+                        logger.info(
+                            f"[{trace_id}] Phase 2A hint applied: routed_to={routed_to} "
+                            f"(app={_routing_hint.get('app_slug')})"
+                        )
 
                 # 2b. Consult learning signals (Phase 2 — closed feedback loop)
                 try:
