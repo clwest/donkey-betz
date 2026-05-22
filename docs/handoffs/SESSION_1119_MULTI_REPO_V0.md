@@ -233,17 +233,18 @@ Cost of context-kit survey: ~$0.01 (8217 tokens, gpt-5-mini).
 > Registering u-d-b as a fleet repo would just duplicate native context.
 > The fleet is for repos Rigby otherwise wouldn't have context for.
 
-1. **Inventory command needs the repo's own venv** (when the repo has
-   third-party deps). character-os's `python manage.py inventory`
-   (cwd `shell/`) didn't run during the refresh because the character-os
-   venv isn't active from u-d-b's process. context-kit's inventory
-   ran fine (stdlib-only). Either:
-   - (a) Skip inventory by default and accept staler anchor-docs
-     coverage in the snapshot, or
-   - (b) Update `refresh_repo_context` to wrap the inventory command
-     in a `bash -c "source .venv/bin/activate && ..."` invocation
-     when the repo profile declares a venv path.
-   v0 ships option (a) via `--skip-inventory`. v1 should explore (b).
+1. ~~**Inventory command needs the repo's own venv**~~ RESOLVED
+   (follow-up commit, same session). `refresh_repo_context` now
+   supports `inventory_venv` + `inventory_env_file` entry-points.
+   When set, the command is wrapped in `bash -c "unset
+   DJANGO_SETTINGS_MODULE PYTHONPATH PYTHONHOME VIRTUAL_ENV && source
+   <env_file> && source <venv> && cd <cwd> && <cmd>"`. The unset is
+   load-bearing: u-d-b's worker process exports its own Django state
+   into subprocesses, which a sibling Django repo (character-os)
+   inherits and fails on. character-os now runs inventory end-to-end
+   (rc=0) with `inventory_venv=shell/.venv/bin/activate` +
+   `inventory_env_file=.env` declared in its profile. Bare command
+   path still works for stdlib-only repos (context-kit).
 2. **COO + Editor surveys** — only CTO ran in v0. Worth running COO
    and Editor surveys against character-os to confirm the personas
    produce useful, distinct lenses.
@@ -254,10 +255,10 @@ Cost of context-kit survey: ~$0.01 (8217 tokens, gpt-5-mini).
 4. **Active-repo conversation context.** Right now Claude Code's
    handshake is explicit ("we're in character-os now"). The
    conversation doesn't persist that pointer. v1 graduation item #1.
-5. **Re-run the character-os CTO survey after fixing inventory
-   ingestion.** Currently the survey lacks fresh runtime numbers
-   because inventory was skipped (the context-kit survey already
-   had this because its inventory ran).
+5. ~~**Re-run the character-os CTO survey after fixing inventory
+   ingestion.**~~ DONE (follow-up commit, same session). Fresh CTO
+   survey `c71aa5a4-819f-4f69-b002-1a4dd51d6f87` runs with live
+   inventory output via the venv wrapper.
 
 ## How to use this
 
