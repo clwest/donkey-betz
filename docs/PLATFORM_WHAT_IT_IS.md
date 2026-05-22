@@ -1,10 +1,18 @@
 ---
 title: "Donkey Betz Platform — What It Actually Is"
 status: active
-session: 1099
-generated: 2026-04-18
+session: 1124
+generated: 2026-05-22
+last_reviewed: 2026-05-22
 companion_doc: PLATFORM_INVENTORY.md
 ---
+
+> **Anchor refresh — Session 1124 (2026-05-22):** narrative body reviewed
+> against handoffs SESSION_1099 → SESSION_1123. No material drift in the
+> subsystem narrative; the brand pivot (Donkey Betz → 24/7 Global AI),
+> fleet-network multi-repo work, and verifier rollout are described in
+> later handoffs but do not invalidate the platform-internal narrative
+> below. Live runtime counts always come from `PLATFORM_INVENTORY.md`.
 
 # Donkey Betz Platform — What It Actually Is
 

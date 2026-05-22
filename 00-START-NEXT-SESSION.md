@@ -15,20 +15,23 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm the response includes `service_context: local`.** Don't trust conversation IDs to tell you which instance — the same IDs can exist on both prod and local with different histories.
 
+The local-donkeyking wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars.
+
 ## SOURCE OF TRUTH
 
 This is **precedence**, not enumeration order. When docs disagree:
 
 1. **`docs/PLATFORM_INVENTORY.md` wins for runtime facts** — counts, schedules, tasks, agents, spiders, models, routes. Runtime-derived; regenerate with `python manage.py generate_platform_inventory`.
 2. **`docs/PLATFORM_WHAT_IT_IS.md` is the narrative anchor** — what each subsystem is, why it exists, how it fits together. Use it for conceptual context, not for current numbers.
-3. **Archive and handoff docs are historical** unless explicitly promoted by [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) or this file. Their numbers and route examples may be stale by design — banners on those docs say so.
+3. **`docs/UDB_BEHAVIOR_LAYER.md`** — canonical for how Rigby (and any LLM-driven u-d-b surface) speaks: voice, source-of-truth display rules, constraint preservation. Shipped Session 1124.
+4. **`docs/UDB_TRANSLATION_LAYER.md`** — canonical for how the same facts get framed for donkeyking / Jessica / external Suite consumers / Discord. Includes the no-claims verification rule. Shipped Session 1124.
+5. **Archive and handoff docs are historical** unless explicitly promoted by [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) or this file.
 
 Live drift checks:
 - `python manage.py verify_doc_claims --only-drift` (Django-side)
 - [`docs/verification/VERIFY_REPORT.md`](docs/verification/VERIFY_REPORT.md) (context-kit, regenerated via `context-kit verify --write`)
-- `python scripts/verify_repo_guardrails.py` (forbidden-paths, inventory freshness, **DOC-AUTOGEN marker**, CONFLICT findings)
-
-If you're unsure which doc to trust, read INVENTORY first, then WHAT_IT_IS.
+- `python scripts/verify_repo_guardrails.py` (forbidden-paths, inventory freshness, DOC-AUTOGEN marker, CONFLICT findings)
+- `.venv/bin/context-kit doctor` — **expected floor: `10 OK / 2 warnings`** (the 2 are upstream context-kit heuristic mismatches; see Session 1124 handoff)
 
 ## GENERATED DOCS — DO NOT HAND-EDIT
 
@@ -47,12 +50,14 @@ Rule: edit the source command or the underlying docs, then **regenerate**. Hand-
 
 | Strict gate | Blocks PR? | Notes |
 |---|---|---|
-| Tracked generated paths (`venv_ml/`, `dist/`, `frontend/dist/`, `.pyright-after.txt`, `tests/artifacts/*.png`, `docs/_index.json`) | ✅ Yes | Enforces no-regen-leakage |
-| `docs/INDEX.md` carries the `<!-- DOC-AUTOGEN -->` marker | ✅ Yes | Catches hand-edits to the autogen file |
-| `context-kit verify --json` CONFLICT findings | ✅ Yes | Catches doc-vs-runtime drift like the historical spider-count CONFLICT |
-| `docs/PLATFORM_INVENTORY.md` freshness | ⚠ Advisory **in CI only** | Reports but doesn't block, because `python manage.py generate_platform_inventory` needs DB access the runner doesn't have. Local strict runs (`python scripts/verify_repo_guardrails.py` with no flag) **still fail on stale inventory** — regenerate before opening the PR if you can. |
+| Tracked generated paths (`venv_ml/`, `dist/`, `frontend/dist/`, `.pyright-after.txt`, `tests/artifacts/*.png`, `docs/_index.json`) | Yes | Enforces no-regen-leakage |
+| `docs/INDEX.md` carries the `<!-- DOC-AUTOGEN -->` marker | Yes | Catches hand-edits to the autogen file |
+| `context-kit verify --json` CONFLICT findings | Yes | Catches doc-vs-runtime drift like the historical spider-count CONFLICT |
+| `docs/PLATFORM_INVENTORY.md` freshness | Advisory in CI only | Reports but doesn't block, because `python manage.py generate_platform_inventory` needs DB access the runner doesn't have. Local strict runs still fail on stale inventory — regenerate before opening the PR if you can. |
 
-The `--inventory-advisory` carve-out is narrow and named: only the freshness check changes behavior; everything else stays strict.
+## PRE-COMMIT HOOK BLOCKS DIRECT COMMITS TO MAIN
+
+Always use a feature branch + PR. The hook errors immediately on `git commit` if HEAD is `main`. Topical prefix per recent history (`docs/`, `feat/`, `fix/`).
 
 ## CANONICAL PA / WORKSPACE NOTES
 
@@ -64,741 +69,166 @@ The `--inventory-advisory` carve-out is narrow and named: only the freshness che
 
 ---
 
-## SESSION 1124 — CURRENT ENTRY POINT
+## SESSION 1125 — CURRENT ENTRY POINT
 
-### What Session 1123 shipped (so you know where things stand)
+### What Session 1124 shipped (so you know where things stand)
 
-Full handoff: [`docs/handoffs/SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](docs/handoffs/SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md).
-TL;DR: **fleet verifier rollout is complete across all 10 laptop-local
-repos**, plus a substantial cleanup + bootstrap of ai-content-studio.
-**Total LLM cost: ~$0.01.**
+Full handoff: [`docs/handoffs/SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md`](docs/handoffs/SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md).
+TL;DR: **one docs-only PR (#2120)**, cleared 6 of 8 `context-kit doctor`
+warnings; the 2 remaining are upstream heuristic mismatches documented
+in the handoff. Two new doc layers shipped, co-authored with Rigby
+via a new marker-block pattern.
 
-1. **character-os verifier (character-os#1, `358dd548`)** — picked up
-   the lane after the other CC's engine-bridge work closed. Standalone
-   Python script under `scripts/`, 3 claims green on first run
-   (`django_app_count` = 14, `subscription_tier_count` = 3,
-   `starter_videos_per_month` = 10). Branched from `origin/main` to
-   keep the other CC's 5 unpushed engine-bridge commits separate.
+1. **`docs/UDB_BEHAVIOR_LAYER.md`** — Rigby's voice contract,
+   source-of-truth display rules, constraint preservation across
+   turns, GOOD/BAD examples from her own conversation history.
+2. **`docs/UDB_TRANSLATION_LAYER.md`** — per-persona blocks
+   (donkeyking / Jessica / external Suite / Discord), the no-claims
+   verification rule, four worked translations of a canonical
+   Initiative fact set.
+3. **`.claude/skills/context-kit/SKILL.md`** — context-kit session
+   orientation skill installed from upstream template.
+4. **`docs/HANDOFF_NUMBERING_GAPS.md`** — explains the intentional
+   198 → 206 jump (SESSION_197 UI consolidation → SESSION_206
+   dashboards renumber). Future intentional gaps go here.
+5. **`docs/PLATFORM_WHAT_IT_IS.md`** frontmatter bumped 2026-04-18 →
+   2026-05-22 with a review banner. No material content drift.
 
-2. **ai-content-studio: 5-phase cleanup + first push + verifier
-   (ai-content-studio#1, `9db91cda`)** — repo was 8 months stale with
-   an empty GitHub origin. Cleaned up:
-   - Phase 1: untracked 108 generated artifacts (-67 MB, -85% tracked
-     size)
-   - Phase 2: quarantined 40 root-level exploration scripts to
-     `scripts/legacy/` + `tests/legacy/`
-   - Phase 3: renamed `donkey-betz-*` packages → `ai-content-studio-*`
-   - Phase 4: salvaged Theme 2 (`text-embedding-ada-002 → 3-small`)
-     from 8-month-old WIP; shelved Themes 1 + 3 to
-     `shelved/2025-09-personal-assistant-prototype` dead branch
-   - Phase 4.5: scrubbed 5 credentialed files (`youtube_credentials.json`,
-     `youtube_token_2.pickle`, 2 Stable Diffusion handoff docs,
-     `start-backend.sh`); flipped GitHub repo PUBLIC → PRIVATE before
-     first push
-   - Phase 6: first push to private origin
-   - Phase 7: verifier PR
+### New co-authored docs pattern (reusable)
 
-3. **Fleet scoreboard: 10 / 10.** Every repo in the original Session
-   1120 campaign target now has `--fail-on-drift` CI gates:
-   - **FastAPI:** 7 repos (mentorforge + 6 siblings) — 14 claims
-   - **Django:** 3 repos (norman-handyman-mvp, character-os,
-     ai-content-studio) — 9 claims
-   - **Next.js:** 1 repo (24-7-ai-global) — 3 claims
-   - **Total:** 10 repos, **26 claims** actively gated in CI
+Claude scaffolds structure + rules + non-judgment sections (write
+to disk with `<!-- BEGIN: rigby-<name>-block -->` markers around
+stub placeholders). Rigby replies with code blocks (one per marker,
+marker-name-headed) via PA chat. Claude diffs Rigby's content into
+the markers with Edit. Frontmatter flips `scaffold` → `active` once
+filled.
+
+Gotcha: `pa_chat.py` truncates terminal output at ~250-300 lines.
+Batch requests to ≤3 marker blocks per turn, or ask Rigby to label
+sections so a continuation request can fetch specific missing ones.
 
 ### FIRST THING — pick a headline (local-only mode)
 
 **Working local-only until notified.** Don't drive prod verification,
-deploys, or Jessica follow-ups. u-d-b #2114's migration is in `main`
-and dormant until Chris flips the deploy switch.
+deploys, or Jessica follow-ups. PR #2120 should auto-merge once CI
+guardrails pass; if it stalls, check `gh pr view 2120 --comments`.
 
-**ai-content-studio is now on GitHub but PRIVATE.** Original 5 commits
-on `main` (pre-cleanup) still contain real secrets (`GOCSPX-9cvf…`
-Google OAuth client_secret, `sk-9DSt…` Stability AI key in 3 files).
-Per Session 1123 close, Chris deferred secret rotation. If/when
-ai-content-studio flips back to PUBLIC, rotate Google OAuth + Stability
-AI keys AND `git filter-repo` the 5 files from history.
-
-**character-os: the other CC's 5 unpushed engine-bridge commits** (EB.0 →
-EB.3 + SESSION 217 close) are still local-only on their machine. We
-branched the verifier from `origin/main` so those are decoupled — but
-they're someone else's lane.
-
-### Then — pick the Session 1124 headline
-
-Options, ordered by leverage:
+### Headline options for Session 1125 (ordered by leverage)
 
 - **ai-content-studio Phase 5 — anchor doc reconciliation (~30-60 min)**.
   `CLAUDE.md` reads like marketing copy ("100% Complete - Production
   Ready") — trim to actual capabilities. `docs/PROJECT_WHAT_IT_IS.md`
-  still has `[adopt: please describe]` placeholders — fill or delete.
-  Decide which doc is canonical narrative (recommend
+  still has `[adopt: please&nbsp;describe]` placeholders — fill or
+  delete. Decide which doc is canonical narrative (recommend
   `PROJECT_WHAT_IT_IS.md` per fleet pattern; let CLAUDE.md be a
   developer guide).
-- **Promote the next cross-cutting initiative theme (~1 session)** —
-  `.env.example` + secret-scan campaign now has fresh motivation from
-  the ai-content-studio Phase 4.5 incident. Pattern: drop a curated
-  `.env.example` into each repo + add a CI gate scanning tracked files
-  for known secret prefixes (`GOCSPX-`, `sk-`, `AIza`, `ghp_`, etc.).
-  Same campaign shape as the verifier rollout.
+
+- **`.env.example` + secret-scan campaign (~1 session)**. Fresh
+  motivation from the ai-content-studio Phase 4.5 near-miss (3 real
+  secrets nearly leaked to a public repo). Pattern: drop a curated
+  `.env.example` into each fleet repo + add a CI gate scanning
+  tracked files for known secret prefixes (`GOCSPX-`, `sk-`,
+  `AIza`, `ghp_`, etc.). Same campaign shape as the verifier
+  rollout.
+
 - **Phase 0 cost-survival audit (~1 focused week)** —
   `LLMCallLog.workspace` FK + `ExternalAPICallLog` + per-workspace
   daily cap + `cost_per_workspace_today` query + `build_cost_audit`.
   Multi-tenant SaaS launch gate.
-- **F2F.3 unfreeze** — only if HeyGen + Cartesia keys are provisioned.
-- **Atlas v1 → v2 reframe (~1 hr)** — pure docs work. Phase 1 currently
-  reads "Rigby standalone"; reality is "u-d-b as engine for the public
-  Suite."
-- **ai-content-studio secret rotation + history scrub** — only if you
-  want to make that repo PUBLIC. Rotate Google OAuth + Stability AI
-  keys, then `git filter-repo` to scrub the 5 files from all commit
-  history. ~1 session.
+
+- **F2F.3 unfreeze** — only if HeyGen + Cartesia keys are
+  provisioned. Gating items: `HEYGEN_API_KEY` provisioned,
+  `CARTESIA_API_KEY` (or ElevenLabs fallback) confirmed, HeyGen
+  streaming endpoint URL + auth shape verified.
+
+- **Atlas v1 → v2 reframe (~1 hr)** — pure docs work. Phase 1
+  currently reads "Rigby standalone"; reality is "u-d-b as engine
+  for the public Suite."
+
+- **ai-content-studio secret rotation + history scrub** — only if
+  you want to make that repo PUBLIC. Rotate Google OAuth + Stability
+  AI keys, then `git filter-repo` to scrub the 5 files from all
+  commit history. ~1 session.
+
+- **File upstream context-kit issues** (~30 min) — open two issues
+  against context-kit:
+  1. Test count drift heuristic should reconcile lexical parse with
+     unittest discovery.
+  2. Doctor should honor an allowlist doc (e.g.
+     `HANDOFF_NUMBERING_GAPS.md`) when flagging numbering
+     continuity gaps.
 
 ### Architectural patterns now well-established across the fleet
-
-Three lessons worth carrying forward:
 
 1. **Standalone scripts > mgmt commands for Django.** Don't ship
    `manage.py verify_doc_claims` — full backend dep stack makes it
    CI-hostile. Standalone Python under `scripts/` with AST-based
    claims is the canonical Django shape.
 2. **Stdlib > deps for verifier work.** Every verifier in the fleet
-   runs on stdlib Python 3.11 or built-in Node 20. No `pip install`,
-   no `npm install` in CI. Workflow file is ~15 lines per repo.
-3. **Pre-push secret sweep is mandatory.** ai-content-studio nearly
-   leaked 3 real credentials to a public repo in Session 1123. Future
-   "first push" or "visibility flip" actions need a tracked-files
-   secret scan: `gh ls-files | xargs grep -l -E
-   "GOCSPX-|sk-[a-zA-Z0-9]{32,}|AIza|ghp_|xoxb-..."`.
+   runs on stdlib Python 3.11 or built-in Node 20.
+3. **Pre-push secret sweep is mandatory.** Future "first push" or
+   "visibility flip" actions need a tracked-files secret scan.
+4. **Co-authored docs pattern** (new, Session 1124) — Claude
+   scaffolds structure, Rigby fills voice/audience via marker-block
+   inline replies, Claude diffs back. Reusable for any doc needing
+   Rigby's judgment without ceding structural discipline.
 
 ### Operational notes
 
+- **u-d-b doctor floor:** `10 OK / 2 warnings`. If you see 3+
+  warnings, something new broke. Both remaining are upstream
+  context-kit heuristic mismatches.
 - **TRIAGE backlog** sits at ~63 across the 12-repo fleet (down from
-  ~65 at Session 1122 close). Two more closed by Session 1123's
-  character-os + ai-content-studio verifier landings.
+  ~65 at Session 1122 close).
 - **Dead branches preserved on remote:**
   - `clwest/ai-content-studio` → `shelved/2025-09-personal-assistant-prototype`
-    (Theme 1 + Theme 3 from 8-month-old WIP, Rigby-reviewed shelve)
 - **ai-content-studio repo state:** PRIVATE, 1030 tracked files,
-  ~12 MB, no secrets at HEAD (but yes in history). All cleanup work
-  on `main`.
+  ~12 MB, no secrets at HEAD (but yes in history). All cleanup
+  work on `main`.
 - **u-d-b `00-START-NEXT-SESSION.md` + `docs/handoffs/CURRENT.md`
   updated** at session close. Regenerate `docs/INDEX.md` via
-  `python manage.py build_docs_index` before commit.
+  `python manage.py build_docs_index` before commit on any
+  docs-touching PR.
 
 ---
 
-## SESSION 1119 — PRIOR ENTRY POINT (multi-repo v0 shipped end-to-end)
+## SESSION 1124 — PRIOR ENTRY POINT (doctor warnings cleared)
 
-Session 1119 reframed the headline mid-session. Chris pulled back on
-adding new external APIs (HeyGen, Cartesia) until what's built is
-working, then proposed a much bigger vision: **Rigby manages each
-laptop-local repo as a project she runs.** Nine PRs landed; v0 is
-live and verified end-to-end through the React UI:
+PR #2120 — `docs(context-kit): clear doctor warnings; add
+behavior/translation layers` — landed 8 files (+858/-29) on
+`docs/session-1124-clear-doctor-warnings`. Six doctor warnings
+closed. Two remain as upstream issues. Two new layer docs shipped.
 
-- **Repo Profile JSON schema** at `config/external_repos/<id>.json`.
-  Canonical config for an external repo — tech stack, anchor doc
-  paths, code allowlist, inventory/health/test commands, protected
-  paths, permission flags, machine-readable and human-readable
-  constraints, bridge relationship metadata.
-- **Three management commands** —
-  - `register_external_repo --repo <id>` → creates `ProjectWorkspace`
-    + pinned Repo Profile `Deliverable`. Idempotent (`--force`),
-    previewable (`--dry-run`).
-  - `refresh_repo_context --repo <id>` → git snapshot + anchor doc
-    excerpts + handoff excerpts → append-only `repo_snapshot`
-    deliverable. Updates Repo Profile metadata with
-    `last_refresh_at`, `last_git_head`, `last_branch`, `health_status`.
-    Retention: keep last 20 snapshots; older ones archived.
-  - `survey_external_repo --repo <id> --agent {cto,coo,editor}` →
-    gpt-5-mini call against the latest snapshot + Repo Profile under
-    the chosen agent's persona; saves output as a `repo_survey`
-    deliverable. ~$0.01 per survey.
-- **character-os seeded as first proof case.** Workspace id
-  `fd91a85d-0ac3-428f-b6a2-437b98c083f2`. Repo Profile + first
-  Snapshot + first CTO Survey all written. Rigby surfaced everything
-  via her existing `deliverable_tool` + `workspace_tool`. **Zero new
-  PA tools required.** "No new APIs" scoping call held up.
-- **context-kit seeded as second proof case** (end of session).
-  Workspace id `2ba6ee3b-2d45-4bdf-b02e-4e50fc979ba5`. Different shape
-  than character-os (Python CLI tool, not Django+SPA monorepo) —
-  schema generalised cleanly. Inventory command (`python3 context_kit.py
-  inventory --write`) ran successfully end-to-end (rc=0); confirms the
-  inventory cross-venv issue is repo-specific, not a v0 design defect.
-  CTO survey caught real signal: 5 consecutive sessions deferred the
-  same two pending docs, "second worked instance" gating on
-  spokesperson-corpus + fleet-network CLI subcommands.
-- **Architecture lock:** the fleet is **one-way**. Rigby knows about
-  character-os; character-os does not know about her. Cross-repo
-  runtime traffic (e.g. character-os's `consult_engine` reaching
-  u-d-b's PA over HTTP) stays a separate product layer and never
-  touches the fleet primitives.
-
-Zero migrations. Zero new API endpoints. Runbook lives at
-[`docs/topics/multi-repo-management.md`](docs/topics/multi-repo-management.md).
-Full handoff: [`docs/handoffs/SESSION_1119_MULTI_REPO_V0.md`](docs/handoffs/SESSION_1119_MULTI_REPO_V0.md).
-
-### Where F2F sits now
-
-**F2F.3 — HeyGen + Cartesia wiring — PAUSED.** Chris pulled back
-mid-session: no new external APIs until existing work is working. F2F.0
-→ F2F.2 mock-mode end-to-end is still live and unchanged. F2F.4 (SPA)
-and F2F.5 (real-mode dogfood) still queued.
-
-When F2F.3 unfreezes, the gating items remain:
-
-- [ ] `HEYGEN_API_KEY` provisioned
-- [ ] `CARTESIA_API_KEY` (or ELEVENLABS_API_KEY fallback) confirmed
-- [ ] HeyGen's current streaming endpoint URL + auth shape verified
-- [ ] `docs/BEHAVIOR_LAYER.md` drafted (Doctor flagged it; F2F voice
-  surface is the right trigger)
+Full handoff:
+[`docs/handoffs/SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md`](docs/handoffs/SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md).
 
 ---
 
-## HEADLINE OPTIONS FOR SESSION 1120
+## SESSION 1123 — TWO SESSIONS BACK (fleet verifier rollout complete)
 
-Pick one (the multi-repo v0 carryover is the cheapest; the others
-build on it). All keep the "no new APIs" lane.
+Full handoff:
+[`docs/handoffs/SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](docs/handoffs/SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md).
+TL;DR: **fleet verifier rollout complete across all 10 laptop-local
+repos**, plus a 5-phase cleanup + bootstrap of ai-content-studio.
+**Total LLM cost: ~$0.01.**
 
-### Option A — Multi-repo v0 carryover (cheapest)
+1. **character-os verifier (PR #1)** — standalone Python script
+   under `scripts/`, 3 claims green on first run.
 
-The Session 1119 handoff lists loose ends. The highest-leverage:
+2. **ai-content-studio: 5-phase cleanup + first push + verifier
+   (PR #1)** — untracked 108 generated artifacts (-67 MB, -85%
+   tracked size), quarantined 40 root-level scripts, renamed
+   packages, salvaged Theme 2 (embedding upgrade), shelved Themes
+   1+3, scrubbed 5 credentialed files, flipped repo PUBLIC →
+   PRIVATE before first push.
 
-> **u-d-b is not a fleet member.** Rigby IS u-d-b's PA — its anchor
-> docs are already in her system context. The fleet is for OTHER
-> repos. Don't register u-d-b as a managed workspace.
+3. **Fleet scoreboard: 10 / 10** — every repo in the original
+   campaign target now ships `--fail-on-drift` CI gates: 7
+   FastAPI, 3 Django, 1 Next.js. 26 claims actively gated.
 
-Most loose ends shipped end of session. Four PRs landed
-(#2104 / #2105 / #2106 / #2107). Status:
-
-1. ~~Inventory ingestion across venvs~~ — DONE (#2105). `inventory_venv`
-   + `inventory_env_file` fields. character-os runs end-to-end.
-2. ~~COO + Editor surveys against character-os~~ — DONE (#2106). Editor
-   caught real doc drift (`CHARACTER_OS_WHAT_IT_IS.md` contradictory
-   `last_revised` claims). Editor prompt restructured + token cap raised
-   to 6000.
-3. ~~Auto-create Initiatives from survey findings (v0.5)~~ — DONE
-   (#2107). `extract_initiatives_from_survey` command. 7 TRIAGE
-   Initiatives created from character-os CTO survey, scoped to its
-   workspace, surfacing via Rigby's existing initiative tools.
-4. ~~Active-repo conversation context~~ — DONE (v0 storage primitive;
-   v1 auto-context-loading deferred). `active_repo_tool` PA tool ships
-   `set / get / clear` over Redis with 7-day TTL. Per-user state — does
-   NOT change u-d-b's own `is_active` workspace. Verified end-to-end
-   via the dispatcher. **Server restart required** for Rigby's live
-   tool registry to pick it up.
-5. ~~Seed a third external repo~~ — DONE (#2106). Became a batch of 10.
-   Fleet now covers all local code repos behind 24-7-ai-global's
-   public catalog: mentorforge / pitchdeckforge / contract-concierge /
-   dealflowtracker (Suite); ai-content-studio / norman-handyman-mvp
-   (Verticals); sellerpilot / signal-studio / compliancesentinel (Lab
-   founder toolkit triplet); 24-7-ai-global itself. Plus character-os
-   + context-kit from Session 1119 main = **12 fleet members**.
-
-All five Session 1119 loose ends shipped end of session. The fleet is
-populated (12 members) and the read/write surface is complete:
-register → refresh → survey → extract initiatives → set active-repo
-pointer. Next session: begin testing the end-to-end multi-repo workflow.
-
-### Option B — F2F.4 against mock-mode
-
-Build the `/rigby/talk` SPA route driven by `MockF2FProvider`. Proves
-the F2F.0-F2F.2 broker through a real UI surface; no new APIs needed
-because mock-mode doesn't talk to HeyGen. When F2F.3 unfreezes, the
-provider swap is one line. ~½-1 session.
-
-### Option C — Atlas v1 → v2 reframe + cost survival audit
-
-Pure docs/observability work. Atlas currently reads "Rigby standalone";
-reality is "u-d-b as engine for the public Suite." Cost survival audit
-(Phase 0) is still pending and is the gate for any multi-tenant SaaS
-launch. ~1 session for Atlas reframe; cost survival is bigger (~1 week
-focused).
+Two dead branches preserved on remote for traceability.
 
 ---
 
-## SESSION 1118 — TWO SESSIONS BACK (F2F broker landed)
-
-Session 1117 closed the local-portfolio-grounding vision Chris flagged
-at end of Session 1116, then knocked out the carry-overs in the same
-night before pushing on testing. Six slices landed end-to-end:
-
-1. **Rigby corpus ingest into Character OS** — 9 docs / 55 chunks from
-   u-d-b's `docs/spokesperson/` are now M2M-bound to Rigby in Character
-   OS's admins-workspace with real `text-embedding-3-small` vectors.
-   Script:
-   [`character-os/scripts/ingest-udb-spokesperson-corpus.py`](../character-os/scripts/ingest-udb-spokesperson-corpus.py).
-
-2. **Fleet network anchor** — `fleet-net` external Docker network with
-   all four data containers (`unified-postgres`, `character_os_postgres`,
-   `session1115-redis`, `character_os_redis`) attached. Manifest at
-   [`/Users/donkeyking/development/infra/README.md`](/Users/donkeyking/development/infra/README.md)
-   codifies the convention + a Docker Desktop multi-network host-port
-   caveat to avoid the bug I hit twice.
-
-3. **`consult_engine` realtime tool** — first engine-bridge tool on
-   Character OS. HTTP-POSTs to u-d-b's `/api/pa/chat/`, polls for
-   result, surfaces the answer in the spokesperson conversation.
-   End-to-end tested via the live Runway realtime UI; round-trip
-   ~10 s; $0.0081 per call.
-
-4. **Schema drift reconciled** — manual `ALTER TABLE` brought
-   `chat_conversations` back in sync with migration 0095 (which had
-   been applied but somehow lost the columns from a past restore).
-   Remaining auto-detected drift (Narrative models + agentexecution
-   alters) is someone else's WIP — left alone deliberately.
-
-5. **Host-port collision resolved permanently** — Character OS Django
-   now binds `:8010` by default (vite proxy driven by
-   `CHARACTER_OS_DJANGO_TARGET` env var). u-d-b keeps `:8000`.
-   Both apps run concurrently without ceremony.
-
-6. **Minimum-viable u-d-b seed** — `donkeyking` superuser + DRF
-   token, "Donkey Betz" `ProjectWorkspace`, 4 `Initiative` rows
-   (Session 1117/1118 carry-overs reflected), `CTOAgent` + `COOAgent`
-   registered via existing `register_*_agent` management commands.
-   Engine now has portfolio-shaped data to surface when consulted.
-
-7. **Bridge tool catalogue expanded** — `query_spider_data` and
-   `agent_consult` added to Character OS realtime tools, following
-   `consult_engine`'s pattern. Live-fire tested at ~5 s latency.
-   See
-   [`docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md`](docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md)
-   for the original arc; carry-over wrap not yet documented in a
-   separate handoff (this entry covers it).
-
----
-
-## HEADLINE PROJECT FOR SESSION 1118 (closed in F2F.0–F2F.2) — Rigby Face-to-Face (F2F) in u-d-b
-
-> **Architectural pivot from the parallel Character OS Session 215**
-> ([handoff](../character-os/docs/handoffs/SESSION_215_RIGBY_FACE_TO_FACE_PIVOT.md)).
-> The three bridge tools shipped in Session 1117
-> (`consult_engine`, `query_spider_data`, `agent_consult`) are **soft-
-> deprecated as v1 dogfood**. Real-mode dogfood on the Character OS
-> avatar proved Runway's realtime LLM ignores pre-narration cues —
-> same class as the documented greeting bias. The avatar fires the
-> tool successfully and renders the answer in a SPA panel, but never
-> voices anything after. That's a Runway-conversational-LLM limit, not
-> a fixable description issue.
->
-> **The real product** lives in u-d-b with a **push-to-speak avatar**
-> (HeyGen / D-ID / similar) instead of Runway's conversational
-> avatar. u-d-b's PA pipeline is OURS; we control STT + LLM + TTS +
-> lip-sync end-to-end. No bridge. No narration gap. End customers of
-> Character OS don't have a u-d-b anyway — bridge tools were a wrong-
-> repo feature.
-
-### Architecture (target)
-
-```
-operator mic ──► STT (Whisper Realtime / Runway / etc.)
-                  │
-                  ▼
-              Rigby PA (existing u-d-b /api/pa/chat/)
-                  │
-                  ▼ answer text
-              TTS (ElevenLabs / Runway / Cartesia)
-                  │
-                  ▼ audio
-              Avatar lip-sync (HeyGen Streaming / D-ID Live)
-                  │
-                  ▼ video stream
-              Operator screen
-```
-
-### Provider candidates (push-to-speak avatars)
-
-- **HeyGen Streaming Avatar API** — text → live avatar, sub-second
-  latency, WebRTC streaming, `speak()` endpoint. Probably best fit.
-- **D-ID Live Portrait API** — similar shape, often cheaper, less
-  polished lip-sync.
-- **Runway again** — only if Runway ships a `speak()` API. As of
-  SESSION 215, no such API in `@runwayml/avatars@0.16.0`. Re-check
-  when work starts.
-
-### Implementation slices (F2F.0 → F2F.5)
-
-| Slice | Scope | Effort |
-|---|---|---|
-| **F2F.0** | Scope lock — pick provider, document architecture, confirm cost model. | ½ session |
-| **F2F.1** | Provider abstraction + first impl. Mirror Character OS R2's `RealtimeProvider` Protocol pattern. Single named adapter + one v1 provider + mock for tests. | 1 session |
-| **F2F.2** | `/api/pa/voice_session/` broker. New Django endpoint that creates a streaming session and returns SDK-safe payload. Mirrors COS `RealtimeSession` broker but with push-to-speak shape. | 1 session |
-| **F2F.3** | STT → Rigby → TTS pipeline. Operator mic → STT → existing `/api/pa/chat/` → TTS → audio stream → avatar. | 1-2 sessions |
-| **F2F.4** | u-d-b SPA route `/rigby/talk`. Mirrors COS `/spokespeople/:id/talk` but simpler (one Rigby, no picker). | 1 session |
-| **F2F.5** | Real-mode dogfood. End-to-end with real provider, cost cap $1. | ½ session |
-
-Total: ~5 sessions if everything lands clean.
-
-### What u-d-b can borrow from Character OS
-
-- `apps.realtime` model shape (`RealtimeSession`, `RealtimeToolInvocation`)
-- `RealtimeProvider` Protocol + mock provider pattern
-- `compose_realtime_document` IDEA (but inverted — Rigby's PA
-  pipeline already has knowledge access, so the doc step is
-  redundant; just use Rigby's existing system prompt)
-- Cost ticker UI from `web/src/components/cost-ticker.tsx`
-- `AvatarCall` lifecycle pattern from `talk.tsx`
-
-### What u-d-b should NOT borrow
-
-- Tool dispatch surface — Rigby already has 101 PA tools
-- R6 session memory — Rigby already has conversation history
-  (ChatConversation rows)
-- The bridge tool pattern (`consult_engine`, etc.) — that's what the
-  pivot is replacing
-
-### Why Session 1117's work isn't wasted
-
-The pivot moves the SURFACE (avatar narration) but everything
-foundational stays valuable:
-
-- **24/7 Global AI corpus** ingested into Character OS — still useful
-  for the Character OS spokesperson product (customer-facing); will
-  also be re-ingestable into u-d-b's Rigby F2F context if/when
-  needed.
-- **fleet-net Docker network** — still the right cross-app addressing
-  shape; F2F will likely run on the same network when containerised.
-- **u-d-b local seed** (workspace + initiatives + agents) — Rigby PA
-  uses all of it; doubly important for F2F because that's where the
-  avatar's answers come from.
-- **Worker fleet + Beat up** — needed for Rigby PA tool dispatch
-  inside the F2F voice loop.
-- **Three bridge tools** — stay as dogfood seam until F2F.5 ships.
-  Operator can still use them to test Rigby on Character OS during
-  F2F development. Soft-deprecation flag eventually gates them from
-  customer workspaces (`tier_required='agency'` or a `dogfood_only`
-  flag — under 1 hr work when needed).
-
-### Original Session 1117 bridge follow-ups (kept for reference)
-
-These were the next-step ideas for the bridge tool path. Most are
-subsumed by the F2F pivot; preserved here in case the bridge needs
-operator-only polish during the F2F build:
-
-1. **PA-side: workspace auto-discovery** — when consult_engine fires
-   without `workspace_id`, PA can't find the operator's workspace
-   even though there's only one. Either pass it explicitly or have
-   PA fall back to a default. Touches
-   `core/services/unified_pa_entrypoint.py`.
-
-2. **PA-side: direct agent invocation tool** — add an `invoke_agent`
-   PA tool that takes `(agent_name, payload)` and uses `agent_router`
-   internally. Lets `agent_consult` actually reach named AGENT_MAP
-   entries instead of returning "no agent_router tool available
-   here." Still useful for non-F2F PA flows too.
-
-3. **u-d-b seed depth** — current seed is 1 workspace + 4 initiatives
-   + 2 agents. Ingest `docs/handoffs/` via `sync_docs_index_to_documents`,
-   register more agents (`register_creative_agents`), maybe seed
-   spider data manually. F2F.3 dogfood will surface what depth is
-   actually missing.
-
----
-
-## Standing local stack (Session 1117 reference)
-
-This is the live config Session 1117 stood up. New sessions can
-follow these steps to reproduce.
-
-### Prereqs (one-time per laptop)
-
-```bash
-# Fleet network anchor (Docker containers reach each other by name)
-docker network create fleet-net  # idempotent — skip if exists
-docker network connect fleet-net unified-postgres
-docker network connect fleet-net session1115-redis
-docker network connect fleet-net character_os_postgres
-docker network connect fleet-net character_os_redis
-# If a connect breaks a host-port mapping, restart that container.
-# See /Users/donkeyking/development/infra/README.md "Known caveats".
-```
-
-### Per-session boot — u-d-b (engine on :8000)
-
-```bash
-cd /Users/donkeyking/development/unified-donkey-betz
-
-# 1. Daphne + Redis (default PORT=8000)
-make start
-
-# 2. Full Celery fleet (4 workers: default, pa, long_running,
-#    broadcast) + Beat scheduler
-make celery
-```
-
-Verify:
-- `curl -s http://localhost:8000/health/ping/` → `pong`
-- `.venv/bin/celery -A core inspect ping` → 4 nodes online
-
-The 44 enabled `PeriodicTask` rows are pre-pruned to safe
-pipeline/hygiene work (cleanup, monitoring, spider data
-processing) plus three daily agent diagnostics (CTO/COO/Trend
-at 7:15/7:30/7:45 am). No free-willed content generation.
-
-### Per-session boot — Character OS (face on :8010)
-
-```bash
-cd /Users/donkeyking/development/character-os/shell
-source .venv/bin/activate && set -a && source ../.env && set +a
-python manage.py runserver 0.0.0.0:8010                     # Django
-
-cd /Users/donkeyking/development/character-os/shell
-source .venv/bin/activate && set -a && source ../.env && set +a
-celery -A character_os worker --loglevel=info --pool=solo   # workers
-celery -A character_os beat --loglevel=info                 # beat
-
-cd /Users/donkeyking/development/character-os/media-engine
-source .venv/bin/activate && set -a && source ../.env && set +a
-uvicorn app.main:app --host localhost --port 8001           # media
-
-cd /Users/donkeyking/development/character-os/web
-pnpm dev                                                    # vite :5174
-```
-
-Bridge env vars (Character OS reaches u-d-b PA via
-`localhost:8000`):
-
-```bash
-# Already in character-os/.env from Session 1117:
-UDB_PA_API_URL=http://localhost:8000
-UDB_PA_API_TOKEN=e3c7276f00f12b77bda365c7c186577cd854cf2a
-```
-
-### Local accounts
-
-- u-d-b superuser: `donkeyking` (token
-  `e3c7276f00f12b77bda365c7c186577cd854cf2a`, matches `tools/pa_local.sh`)
-- u-d-b workspace: `Donkey Betz` (id `3e4970d8-6834-44fb-99ed-93e18b5754b6`)
-- Character OS spokesperson: `Rigby` (id
-  `d3d0fb14-193e-4c4c-88d1-acae9af25bb5`) in `Admin's workspace`
-  (id `f4f2aa20-e2e2-4ae2-85a0-abacd8bea231`)
-
-### Talk surface
-
-http://localhost:5174/spokespeople/d3d0fb14-193e-4c4c-88d1-acae9af25bb5/talk
-
-### Per-session context-kit hygiene
-
-After any code/doc change:
-
-```bash
-# Regenerate the docs index (memory rule — commit INDEX.md after)
-python manage.py build_docs_index
-
-# Refresh context-kit's inventory snapshot
-context-kit inventory --write
-
-# Drift check (must report 0 CONFLICT findings to satisfy CI)
-context-kit verify --json | jq '.summary'
-
-# Repo guardrail (forbidden paths, INVENTORY freshness, etc.)
-python scripts/verify_repo_guardrails.py
-```
-
-Below 1117 (older entry from Session 1116 preserved for context):
-
----
-
-## SESSION 1117 — PRIOR ENTRY POINT (post-1116 strategic pivot + portfolio buildout)
-
-Session 1116 ran in two halves and shipped **13 PRs across 2 repos**.
-Three things to know before doing anything else:
-
-1. **Brand pivot is real and shipping.** Donkey Betz → **24/7 Global AI**.
-   The marketing site at `247globalai.com` (owned, Vercel-served, live)
-   now has **22 Works in Motion** across 8 editorial sections:
-   `§ 01 Charter · 02 Suite · 03 Verticals · 04 Lab (10 entries) ·
-   05 Channels (5 entries) · 06 Around the Clock · 07 Position · 08 Engage`.
-   **u-d-b is the engine, not a product** — Rigby is in the Lab as
-   "Private", not in the public Suite. New work should think of u-d-b
-   as the backend that powers public surfaces, not as a 23rd product.
-
-2. **Character OS merge is parked.** [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md)
-   and its sidecar variant stay in tree as v2 backlog. Unpark only if a
-   paying customer asks for an avatar.
-
-3. **Two u-d-b → 247globalai.com integrations shipped:**
-   - `/now` page renders live `SignalCluster` data via
-     `GET /api/public/intelligence/now/` (token-gated, default-off)
-   - `/shipped` page renders recently-published Deliverables via
-     `GET /api/public/changelog/recent/` (same token)
-   - Both render graceful empty-state panels until Jessica sets the env vars
-   - See [`docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
-     (Part 2) and [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
-     (Part 1) for the full arc
-
-**Awaiting Jessica:**
-- `PUBLIC_INTEL_TOKEN` on Railway u-d-b + matching `UDB_API_URL` +
-  `UDB_PUBLIC_INTEL_TOKEN` on Vercel 24-7-ai-global (single shared token
-  unlocks BOTH `/now` and `/shipped` simultaneously)
-- Optional: Fly.io migration when ready — config + 12-section runbook in
-  open PR #2096 (parked)
-
-**Next priorities:**
-1. **Verify `/now` and `/shipped` render real signals after env vars
-   land.** Visual check on 247globalai.com, no code change expected.
-2. **Atlas v1 → v2 reframe.** Phase 1 currently reads "Rigby standalone";
-   reality is "u-d-b as engine for the public Suite". Atlas needs the
-   structural rewrite. ~1 hr docs work.
-3. **Integration #5 — Advisor wisdom hovers on Suite cards.** Last
-   unhit item from `docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md` § C.5.
-   ~3-5 hr, same template as `/now` and `/shipped`.
-4. **Phase 0 cost-survival work** ([`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md) § H.1):
-   `LLMCallLog.workspace` FK + `ExternalAPICallLog` model + per-workspace
-   daily cap + `cost_per_workspace_today` query + `build_cost_audit`.
-   Still blocks any multi-tenant SaaS launch. ~1 week of focused work.
-5. **Atlas § J open questions** — pricing anchors, daily $ cap, what
-   survives the stripped consumer Rigby UI, sports betting fate.
-
-**Deployment ownership:** Jessica is the deploy owner. Don't bake
-Railway-specific assumptions into new code; hand env-var instructions
-to Jessica via Chris, not directly to Chris. Fly.io migration plan
-documented in PR #2096 + `docs/ops/FLY_IO_MIGRATION.md` — operator
-intentionally deferred going live.
-
----
-
-## SESSION 1106-1115 — PRIOR AUDIT / CLEANUP ENTRY POINT
-
-Phase 1 (Session 1101) closed the spider-count `CONFLICT`. Phase 2B
-(Session 1102) fixed the CLAUDE.md taxonomy drift (`73/8/2` → `73/9/1`),
-added a `<!-- DOC-AUTOGEN -->` header to `docs/INDEX.md`, and regenerated
-the index. Phase 2C-prep (Session 1103) installed the DOC-AUTOGEN
-guardrail in `scripts/verify_repo_guardrails.py`. Phase 2C (Session 1104)
-**removed the unused 24 MB `core/static/images/donkey-logo.png`** after a
-deep source-side scan confirmed zero consumers. Phase 2D (Session 1105)
-**fixed broken YAML in `docker-compose.yml`** (orphaned mobile-service
-fragment causing duplicate-key parse error) and narrowly extended the
-pre-commit hook's database-URL placeholder allowlist to accept
-`secure_password`. Local subnet override (172.20→172.21) preserved as
-named git stash. Phase 2E (Session 1106) **untracked the 18 MB
-`external-project-docs/.../master_context_all.md`** vendored convenience
-snapshot — only ad-hoc scripts (with graceful fail-fast) reference it,
-zero runtime/CI consumers. Local copy preserved; path added to
-`.gitignore`. Verifier reports `CONFLICT: 0`.
-
-`.rag/` is now **untracked and gitignored** as of Session 1109 (PR 2 of the
-Option B plan). The producer (`python manage.py build_rag_corpus`, shipped
-in Session 1108) regenerates `.rag/corpus.jsonl` from `docs/_index.json`
-on demand. **Production PA RAG remains unaffected** — it goes through
-`Document` + pgvector via `sync_docs_index_to_documents` and never reads
-`.rag/`. The redundant `.rag/corpus.jsonl` skip was removed from the
-pre-commit hook in the same PR. See
-[`docs/topics/local-askdocs.md`](docs/topics/local-askdocs.md).
-
-Session 1110 (PR `fix/mounted-broken-route-fallbacks`) closed the four
-mounted Django routes that were guaranteed to 500 because their legacy
-templates were gone:
-
-- `/visualization/` → 302 to `/neural-orchestra`
-- `/ai-building-products/` → 302 to `/agents`
-- `/share/<token>/` → inline HTML fallbacks per state (status codes preserved)
-- `/nexus/` and `/intelligence/` → React SPA shell (URL preserved, no
-  redirect loop). `@login_required` gate kept; unauth'd callers still
-  get the existing 302 to login.
-
-No view deletions, no URL pattern removals. The deeper-review dormant
-list (`sports_betting/`, `agents/urls_deployment.py`,
-`intelligence/urls_ai_jobs.py`, `revenue/models.py`,
-`ai_core/intelligence/{monitoring_dashboard,testing_suite}.py`,
-`frontend/components/generated/`, stale `reports/*.json`,
-`templates/*/.gitkeep` orphans) is **deliberately untouched** —
-those remain pending PR 2 (artifact untracks) and PR 3 (annotation
-banners).
-
-Session 1111 recorded the structured deeper-review map as a docs-only
-continuity handoff. The next-5-PRs queue (PR-A through PR-E) lives in
-[`docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md`](docs/handoffs/SESSION_1111_DEEPER_REVIEW_MAP.md):
-artifact untracks first, then defensive banners, then archive-candidate
-banners, then docs for the active-but-undocumented modules
-(`revenue/revenue_verifier.py`, `advisors/`, top-level `llm/`,
-`core/tasks_*.py` indirection, `core/urls.py` vs `urls_unified.py`),
-then a Rigby-gated decision PR on the partial systems.
-
-Session 1112 shipped **PR-A** off that queue:
-[`docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md`](docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md).
-Untracked 23 verified zero-reader artifact files across
-`frontend/components/generated/`, `reports/*.json`, `frontend/nohup.out`,
-`templates/frontend_index.html`, and `templates/{agents,content,invoices}/.gitkeep`.
-Local copies preserved; `.gitignore` extended with three new rules.
-Guardrails still report `0 blocking, 0 CONFLICT`.
-
-Session 1113 shipped **PR-B + PR-C** off the same queue:
-[`docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md`](docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md).
-Annotation-only labels added to 13 files across the agent-deploy bundle,
-`sports_betting/`, `intelligence/urls_ai_jobs.py`, the broken
-`ai_core/intelligence/{monitoring_dashboard,testing_suite}.py` family,
-`ai_core/intelligence/orchestration.py`, `revenue/models.py`, and a docs
-note in `ml_pipeline/__init__.py` for the missing `ml_pipeline.pipeline`
-shim. Classification labels: PARTIAL, ARCHIVE-CANDIDATE,
-BROKEN-BUT-UNREACHABLE, ACTIVE-COMPANION-PARTIAL. No runtime behavior
-changes. Smoke imports for every banner-touched module match the
-documented classification exactly. `docs/audit/CLEANUP_PLAN.md` now
-carries a Phase 6 section with the full label table.
-
-Session 1114 shipped **PR-D** off the same queue:
-[`docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md`](docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md).
-Docs-only — no code changes. New topic file
-[`docs/topics/active-module-ownership-map.md`](docs/topics/active-module-ownership-map.md)
-covers all five active-but-underdocumented runtime modules in one
-cohesive map: `revenue/revenue_verifier.py` (Redis-only verifier with
-fail-silent semantics), `advisors/` registry + LLM advisor system
-(corrects Session 1111's namespace-package claim — real `__init__.py`
-exists), top-level `llm/` (52 LOC direct-Ollama helper, distinct from
-the production `core/services/agent_llm_router.py` and
-`LLMProviderRegistry`), `core/tasks_*.py` lazy `_impl_*` wrapper pattern
-behind `core/tasks.py`, and `core/urls.py` (4,750 LOC entrypoint AND
-monolith) vs `core/urls_unified.py` (118 LOC redirect helper). Two
-Session 1111 PR-D claims corrected by this pass. `docs/topics/README.md`
-updated; `docs/audit/CLEANUP_PLAN.md` now carries Phase 7. **PR-E**
-(decisions: revive `ml_pipeline.pipeline` shim, wire
-`agents/urls_deployment.py`, rehome `revenue/models.py`) remains the
-only unfinished item, Rigby-gated.
-
-Remaining cleanup: platform-inventory refresh (needs DB access),
-`BACKEND_INVENTORY.md` hygiene reassessment, and CI inventory regen
-(long-term).
-
-Start with the current audit artifacts, not the older Session 1099 canary
-window:
-
-- Audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
-- Cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
-- Verification report: [`docs/verification/VERIFY_REPORT.md`](docs/verification/VERIFY_REPORT.md)
-- Canonical inventory: [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md)
-
-### Current focus
-
-1. Reconcile active docs with runtime truth.
-2. Keep historical canary material in the Session 1098 handoff rather than
-   duplicating it here.
-3. Treat `core.settings` and `run_stock_audit_cycle` as the runtime sources of
-   truth for settings and stock schedule ownership.
-
-### What to read next
-
-- Fresh handoff: [`docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md`](docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md)
-- Part 1 companion: [`docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md`](docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md)
-- Stable pointer: [`docs/handoffs/CURRENT.md`](docs/handoffs/CURRENT.md) (always points at the latest two handoffs)
-- Previous handoff: [`docs/handoffs/SESSION_1115_CODE_HEALTH_REFACTORS.md`](docs/handoffs/SESSION_1115_CODE_HEALTH_REFACTORS.md)
-- Strategy docs: [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](docs/24_7_GLOBAL_AI_APP_ATLAS.md), [`docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md`](docs/247_LIVE_INTELLIGENCE_PANEL_SKETCH.md), [`docs/COST_SURVIVAL_AUDIT.md`](docs/COST_SURVIVAL_AUDIT.md)
-- Audit workspace index: [`docs/AUDIT_INDEX.md`](docs/AUDIT_INDEX.md) (canonical = `docs/audit/`; `docs/audit-2026/` and `docs/audits/` are historical)
-- Current audit: [`docs/audit/AUDIT_V1.md`](docs/audit/AUDIT_V1.md)
-- Current cleanup plan: [`docs/audit/CLEANUP_PLAN.md`](docs/audit/CLEANUP_PLAN.md)
-
-### Runtime reminders
-
-- `tools/pa_chat.py` defaults to the production API URL. Set `PA_API_URL`
-  explicitly before any local Rigby work.
-- `core.settings` is the runtime Django settings module.
-- `run_stock_financial_agents` is a compatibility wrapper that delegates to
-  `run_stock_audit_cycle`.
-- `workspace_id` should come from explicit scope, not guesswork.
-
-### Historical context
-
-The Session 1098 canary story remains in the handoff archive:
-[`docs/handoffs/SESSION_1098_WRAP_CANARY_GREEN.md`](docs/handoffs/SESSION_1098_WRAP_CANARY_GREEN.md).
-Do not restate it here unless the cleanup pass needs a specific historical
-reference.
+*This file overwritten at end of every session with the next
+session's priorities. Last overwrite: Session 1124, 2026-05-22.*

@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md)
-(Fleet verifier rollout complete across all 10 laptop-local repos. character-os#1 shipped after the other CC's lane closed; ai-content-studio bootstrapped to private GitHub origin via 5-phase cleanup (-67 MB tracked size, -85%) including 3-secret scrub before push. Theme 2 (embedding upgrade) salvaged from 8-month-old WIP; Themes 1+3 shelved to dead branch. Fleet scoreboard: 10 repos, 26 claims actively gated. Total LLM cost: ~$0.01.)
+**Latest handoff:** [`SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md`](SESSION_1124_DOCTOR_WARNINGS_CLEARANCE.md)
+(Cleared 6 of 8 `context-kit doctor` warnings on u-d-b; remaining 2 are upstream context-kit heuristic mismatches (test count: lexical vs discovery; handoff gap doc not honored). Shipped `docs/UDB_BEHAVIOR_LAYER.md` + `docs/UDB_TRANSLATION_LAYER.md` co-authored with Rigby via new marker-block pattern (Claude scaffolds structure/rules, Rigby fills voice/audience inline). PR #2120, one docs-only commit, 8 files +858/-29.)
 
-**Previous:** [`SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md`](SESSION_1122_DJANGO_NEXTJS_VERIFIER_ROLLOUT.md)
+**Previous:** [`SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md`](SESSION_1123_VERIFIER_COMPLETE_AND_AI_CONTENT_STUDIO_BOOTSTRAP.md)
 
 ## How to update
 
