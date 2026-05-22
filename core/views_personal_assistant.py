@@ -253,14 +253,15 @@ def get_learning_summary(request):
 @csrf_exempt
 @api_view(['POST'])
 @authentication_classes([
+    # Session 1129 Move 1 — fleet auth runs FIRST but is
+    # side-effect-only (returns None unconditionally). On success it
+    # sets `request.fleet_identity`; the body of this view checks
+    # that flag to gate routing-block enforcement. `request.user`
+    # still comes from Session/Token below — fleet identity is a
+    # separate dimension from user identity.
+    FleetSignatureAuthentication,
     SessionAuthentication,
     TokenAuthentication,
-    # Session 1129 Move 1 — when a fleet app signs the request,
-    # `request.fleet_identity` gets populated and the routing block
-    # is honored. Unsigned requests fall through to user auth and
-    # any client-claimed routing/app_slug is stripped (see body of
-    # this view).
-    FleetSignatureAuthentication,
 ])
 @permission_classes([IsAuthenticated])
 def unified_pa_chat(request):

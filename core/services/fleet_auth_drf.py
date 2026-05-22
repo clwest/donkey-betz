@@ -132,7 +132,13 @@ class FleetSignatureAuthentication(authentication.BaseAuthentication):
             request._fleet_auth_outcome = outcome
             return None
 
-        # Success: build the per-request identity payload.
+        # Success: build the per-request identity payload as a SIDE
+        # EFFECT and return None so the next auth class (Token /
+        # Session) can still claim `request.user` for the real Django
+        # user. This is critical for hybrid endpoints like
+        # `/api/pa/chat/` where we need BOTH: a fleet identity for
+        # routing trust AND a Django user for everything downstream
+        # (PA user_id, conversation_id, deliverable ownership).
         request.fleet_identity = {
             "app_slug": outcome.app_slug_resolved,
             "key_id": outcome.key_id,
@@ -141,12 +147,7 @@ class FleetSignatureAuthentication(authentication.BaseAuthentication):
             "verified_at": timezone.now().isoformat(),
         }
         request._fleet_auth_outcome = outcome
-
-        # DRF wants (user, auth) — we don't author a Django user; just
-        # mark the request as authenticated by fleet by returning a
-        # truthy sentinel. The actual permission gating happens via
-        # FleetSignatureRequired or hybrid view code.
-        return (FleetServicePrincipal(outcome.app_slug_resolved), outcome.key_id)
+        return None
 
 
 class FleetServicePrincipal:

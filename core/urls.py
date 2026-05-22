@@ -76,6 +76,12 @@ from core.views_deliberation import (
 )
 
 # Session 866: ATS Optimization API
+# Session 1129 Move 1 Round 2 — Fleet identity admin
+from core.views_fleet_admin import (
+    fleet_identities,
+    fleet_identity_keys,
+)
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -1697,6 +1703,17 @@ urlpatterns = [
     path('api/cockpit/remediate/retry-run/<str:run_id>/', cockpit_retry_run, name='cockpit-retry-run'),
     path('api/cockpit/remediate/incident-note/', cockpit_create_incident_note, name='cockpit-incident-note'),
     path('api/cockpit/audit/', cockpit_audit_list, name='cockpit-audit-list'),
+    # Session 1129 Move 1 Round 2 — Fleet service identity admin
+    path(
+        'api/admin/fleet/identities/',
+        fleet_identities,
+        name='fleet-admin-identities',
+    ),
+    path(
+        'api/admin/fleet/identities/<str:app_slug>/keys/',
+        fleet_identity_keys,
+        name='fleet-admin-identity-keys',
+    ),
     # P12: Agent Fleet Management
     path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),
     path('api/cockpit/agents/<str:agent_name>/', cockpit_agent_detail, name='cockpit-agent-detail'),
