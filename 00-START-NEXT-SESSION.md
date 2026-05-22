@@ -143,24 +143,34 @@ The Session 1119 handoff lists loose ends. The highest-leverage:
 > docs are already in her system context. The fleet is for OTHER
 > repos. Don't register u-d-b as a managed workspace.
 
-1. ~~**Inventory ingestion across venvs.**~~ DONE end of Session 1119
-   (follow-up commit). `inventory_venv` + `inventory_env_file` fields
-   land in the schema; character-os now runs inventory end-to-end via
-   the bash wrapper. Bare-command path still works for stdlib-only
-   repos. character-os CTO survey re-run with live runtime numbers.
-2. **Run COO + Editor surveys against character-os** to confirm the
-   personas produce useful, distinct lenses. ~10 min, ~$0.02.
-3. **Auto-create Initiatives from survey findings** (v0.5). Right now
-   surveys produce `repo_survey` deliverables but don't land tasks in
-   the Initiative pipeline. ~1 session.
-4. **Active-repo conversation context.** Right now Claude Code's
-   handshake to Rigby is explicit ("we're in character-os now"). The
-   conversation doesn't persist that pointer. v1 graduation item #1.
-   ~1 session.
-5. **Seed a third external repo** (mentorforge / 24-7-ai-global /
-   focus-flow). Confirms the schema across a third repo shape.
+Most loose ends shipped end of session. Four PRs landed
+(#2104 / #2105 / #2106 / #2107). Status:
 
-Order Rigby will most likely recommend: 5 → 2 → 3 → 4.
+1. ~~Inventory ingestion across venvs~~ — DONE (#2105). `inventory_venv`
+   + `inventory_env_file` fields. character-os runs end-to-end.
+2. ~~COO + Editor surveys against character-os~~ — DONE (#2106). Editor
+   caught real doc drift (`CHARACTER_OS_WHAT_IT_IS.md` contradictory
+   `last_revised` claims). Editor prompt restructured + token cap raised
+   to 6000.
+3. ~~Auto-create Initiatives from survey findings (v0.5)~~ — DONE
+   (#2107). `extract_initiatives_from_survey` command. 7 TRIAGE
+   Initiatives created from character-os CTO survey, scoped to its
+   workspace, surfacing via Rigby's existing initiative tools.
+4. **Active-repo conversation context.** Still open (v1 graduation
+   item). Claude Code's handshake to Rigby is explicit ("we're in
+   character-os now"); the conversation doesn't persist that pointer.
+   Touches Rigby's PA conversation infrastructure. ~1 session.
+5. ~~Seed a third external repo~~ — DONE (#2106). Became a batch of 10.
+   Fleet now covers all local code repos behind 24-7-ai-global's
+   public catalog: mentorforge / pitchdeckforge / contract-concierge /
+   dealflowtracker (Suite); ai-content-studio / norman-handyman-mvp
+   (Verticals); sellerpilot / signal-studio / compliancesentinel (Lab
+   founder toolkit triplet); 24-7-ai-global itself. Plus character-os
+   + context-kit from Session 1119 main = **12 fleet members**.
+
+Remaining: only the v1 graduation work (#4) and any new repos that get
+added later. The fleet is now meaningfully populated and Rigby can
+surface state + initiatives for any of the 12.
 
 ### Option B — F2F.4 against mock-mode
 
