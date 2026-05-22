@@ -21,7 +21,18 @@
     "anchor_claude": "CLAUDE.md",
     "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
     "code_allowlist": ["backend", "frontend/src", "mobile", "scripts"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "ports": {
+      "frontend": 3050,
+      "backend": 8060,
+      "websocket": 8060,
+      "notes": "Vite :3050, Django :8060 (also serves WS via Daphne in prod). Slot 6 in the fleet port table."
+    },
+    "start_commands": {
+      "backend": "cd backend && source .venv/bin/activate && python manage.py runserver 0.0.0.0:8060",
+      "frontend": "cd frontend && pnpm dev --port 3050 --strictPort",
+      "mobile": "cd mobile && pnpm start"
+    }
   },
   "protected_paths": [
     ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",

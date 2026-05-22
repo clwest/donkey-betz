@@ -23,7 +23,16 @@
     "products_catalog": "src/lib/products.ts",
     "docs_root": "docs/", "handoffs_dir": "docs/handoffs/",
     "code_allowlist": ["src", "public"],
-    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"]
+    "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
+    "ports": {
+      "frontend": 3100,
+      "backend": null,
+      "websocket": null,
+      "notes": "Next.js :3100 (marketing site only — no backend, calls u-d-b's public API via UDB_API_URL). Slot 11 in the fleet port table."
+    },
+    "start_commands": {
+      "frontend": "PORT=3100 pnpm dev"
+    }
   },
   "protected_paths": [
     ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",

@@ -67,6 +67,51 @@ otherwise have context for. Don't register u-d-b as a fleet member;
 it's redundant and would just duplicate context she already has
 natively.
 
+## Fleet port allocation
+
+Each repo's `entry_points` carries a `ports` block + pinned
+`start_commands` so all 12 fleet members can run concurrently without
+binding the same port. Use these exact ports when running locally —
+the goal is "run any subset of the fleet at once without port pile-up."
+
+| Slot | Repo | Frontend | Backend | Aux |
+|---:|---|---:|---:|---|
+| home | **u-d-b** (Rigby's home, not a fleet member) | 3000 | 8000 | — |
+| 1 | **character-os** | 5174 | 8010 (Django) | 8001 (FastAPI media-engine) |
+| 2 | **mentorforge** | 3010 | 8020 | — |
+| 3 | **pitchdeckforge** | 3020 | 8030 | — |
+| 4 | **contract-concierge** | 3030 | 8040 | — |
+| 5 | **dealflowtracker** | 3040 | 8050 | — |
+| 6 | **ai-content-studio** | 3050 | 8060 (Django + WS) | — |
+| 7 | **norman-handyman-mvp** | 3060 (Next.js) | 8070 (Django) | Expo metro default |
+| 8 | **sellerpilot** | 3070 | 8080 | — |
+| 9 | **signal-studio** | 3080 | 8090 | — |
+| 10 | **compliancesentinel** | 3090 | 8100 | — |
+| 11 | **24-7-ai-global** | 3100 (Next.js) | — | — |
+| n/a | **context-kit** | — | — | CLI tool, no UI/server |
+
+Scheme:
+- **Frontend ports 3000-3100** in 10-step slots (3000 = u-d-b home,
+  3010 = slot 2, etc.). character-os keeps 5174 (its historical
+  allocation, no conflict).
+- **Backend ports 8000-8100** in 10-step slots. character-os keeps
+  8010 + 8001 (Django + media-engine), matching its existing config.
+- **Auxiliary ports** (websocket, media-engine, etc.) noted in the
+  `ports` block's `notes` field when present.
+
+Rules:
+- u-d-b stays on 3000 + 8000; do not displace it.
+- character-os stays on 5174 + 8010 + 8001; do not displace it.
+- Everyone else uses the assigned slot from the table above.
+- If a new repo joins the fleet, allocate the next free slot
+  (3110/8110, 3120/8120, …) and update this table + its Repo Profile.
+
+When you start a fleet member, use the `start_commands` block in
+its Repo Profile (e.g. `entry_points.start_commands.frontend`) so
+the port stays pinned. Vite uses `--port <N> --strictPort`; FastAPI
+uvicorn uses `--port <N>`; Django uses `runserver 0.0.0.0:<N>`;
+Next.js uses `PORT=<N> pnpm dev`.
+
 ## Current fleet members
 
 As of the v0 seed batch (Session 1119), the fleet covers the laptop-local

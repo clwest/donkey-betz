@@ -29,7 +29,17 @@
     "code_allowlist": ["backend", "frontend/src", "scripts"],
     "docs_allowlist": ["docs", "README.md", "CLAUDE.md", "00-START-NEXT-SESSION.md"],
     "inventory_command": "context-kit inventory --write",
-    "inventory_cwd": "."
+    "inventory_cwd": ".",
+    "ports": {
+      "frontend": 3010,
+      "backend": 8020,
+      "websocket": null,
+      "notes": "Vite :3010, FastAPI uvicorn :8020. Slot 2 in the fleet port table."
+    },
+    "start_commands": {
+      "backend": "cd backend && source .venv/bin/activate && uvicorn app.main:app --host localhost --port 8020 --reload",
+      "frontend": "cd frontend && pnpm dev --port 3010 --strictPort"
+    }
   },
   "protected_paths": [
     ".env", ".env.*", "**/.env*", "**/*.pem", "**/*key*", "**/credentials*", "**/.ssh/**",

@@ -55,7 +55,14 @@
       "celery_worker": "cd shell && source .venv/bin/activate && set -a && source ../.env && set +a && celery -A character_os worker --loglevel=info --pool=solo",
       "celery_beat": "cd shell && source .venv/bin/activate && set -a && source ../.env && set +a && celery -A character_os beat --loglevel=info",
       "media-engine": "cd media-engine && source .venv/bin/activate && set -a && source ../.env && set +a && uvicorn app.main:app --host localhost --port 8001",
-      "spa": "cd web && pnpm dev"
+      "spa": "cd web && pnpm dev --port 5174 --strictPort"
+    },
+    "ports": {
+      "frontend": 5174,
+      "backend": 8010,
+      "media_engine": 8001,
+      "websocket": null,
+      "notes": "Vite SPA :5174, Django shell :8010, FastAPI media-engine :8001. Slot 1 in the fleet port table — character-os's historical allocation, preserved."
     }
   },
   "protected_paths": [
