@@ -223,6 +223,62 @@ brain-events` for the upstream subscriber's view. The first thing to
 look for is whether `_replay_since` even fires — if not, the seq
 tracking probably regressed.
 
+## Post-merge close-out (added 2026-05-22 evening)
+
+After the smoke pass, the full close ran clean:
+
+- **9 PRs merged in order**: u-d-b #2135 (code) → #2136 (docs) →
+  CC #16 → mentorforge #18 → pitchdeckforge #17 → sellerpilot #11 →
+  dealflowtracker #15 → compliancesentinel #11 → signal-studio #11.
+- **All 7 fleet apps rebuilt to R2 brain_events.py**. Verified via
+  `docker exec <c> wc -l /app/app/brain_events.py` — every container
+  reports **312 lines** (R1 was 162). Parallel `docker compose up
+  -d --build --force-recreate` across the 6 sibling repos completed
+  without Docker Desktop daemon hang (despite the Session 1125
+  warning — looked like a coin flip; serialize next time).
+- **Context-kit refresh ran**: `refresh_doc_inventory_blocks` bumped
+  CLAUDE.md to reflect +1 beat task + +1 Celery task,
+  `generate_platform_inventory` regenerated, `build_docs_index` rolled
+  to 1990 docs, `context-kit inventory --write` clean.
+- **Drift verifier**: 1 medium drift in `docs/SERVICES.md` (file
+  count 320 → 332 because fleet_event_cleanup.py landed). Pre-
+  existing pattern of header-text staleness; tracked as carryover,
+  not blocking.
+
+### Signal-studio next-session briefing (Rigby — same conversation)
+
+Chris pivoted post-merge to signal-studio: "kinda like to do
+signal-studio because it doesn't have any data showing up on the UI
+but it could do some cool shit with the right Agents." Briefed Rigby
+on three paths (A event-only, B pull+events, C agent curation); she
+locked **B + C in that order** with three side locks:
+
+1. **Path:** Phase 1 = B (pull endpoint `/api/fleet/signals/clusters?since=…`
+   + `signal.cluster_promoted` events scoped to signal-studio).
+   Phase 2 = C (lightweight SignalCuratorAgent that picks Top 5-10
+   into a curated artifact set; emits `signal.curated_published`;
+   UI gets Curated + Raw feed tabs).
+2. **DB:** keep SQLite for MLC; design SQLAlchemy clean (upsert by
+   external_cluster_id) so Postgres migration is painless. Trigger
+   for migration: multi-user/team-facing or high-volume historical
+   storage.
+3. **Action cards:** keep lazy-on-click via existing
+   `/generate-action`. Optionally precompute for the curated Top
+   only, once Phase 2 lands.
+
+Two gotchas she flagged:
+
+- **Quality bar for promotion** — `cluster_size >= MIN_CLUSTER_SIZE
+  (3)` AND `pattern_type in allowed` AND `strength >= threshold`
+  (or evidence diversity). Don't fire `signal.cluster_promoted` on
+  every cluster or signal-studio becomes noisy.
+- **App-scope the feed.** Signal-studio-only at first — don't
+  accidentally turn the endpoint into a global firehose every
+  fleet app can subscribe to.
+
+Full Phase 1 detail baked into `00-START-NEXT-SESSION.md` for the
+next session.
+
 ---
 
-*Last edit: Session 1130 close, 2026-05-22.*
+*Last edit: Session 1130 close, 2026-05-22 evening (post-merge).*

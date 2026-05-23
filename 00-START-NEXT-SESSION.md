@@ -50,196 +50,240 @@ make status              # what's running + URLs
 - Rigby resolves `global` vs `workspace` mode from request/profile/context.
 - **PA tool registration needs BOTH daphne AND celery restart.** Each celery worker loads its own tool registry. `pkill -f "daphne -b 127.0.0.1 -p 8000"; pkill -f "celery -A core"; make start && make celery`.
 
-## NEW IN SESSION 1130 — MOVE 3 ROUND 2 RECONNECT RESILIENCE
+## SESSION 1130 LANDED — Move 3 R2 reconnect-resilience live everywhere
 
 Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md).
 
-**Headline:** the fleet event stream no longer silently loses events on
-reconnect. FleetEvent rows now carry a monotonic `seq` (Postgres
-sequence), `GET /api/fleet/events/?since=<seq>` is the canonical
-recovery path, the SSE `id:` field carries `seq` not UUID, and
-`brain_events.py` across all 7 fleet repos drains replay before each
-subscribe. TTL retention (`FLEET_EVENT_RETENTION_DAYS`, default 30)
-landed alongside.
+**Headline:** monotonic `seq` column on FleetEvent + canonical
+replay endpoint + 30-day TTL + drain-before-subscribe pattern across
+all 7 fleet apps. 9 PRs merged. All 7 containers now run
+312-line brain_events.py (verify with
+`docker exec <container> wc -l /app/app/brain_events.py`).
 
-### Open PRs (8 — need merge to lock Session 1130 in)
-
-| Repo | PR | What |
-|---|---|---|
-| u-d-b | [#2135](https://github.com/clwest/donkey-betz-platform/pull/2135) | seq + replay endpoint + SSE update + TTL + 18 unit tests |
-| contract-concierge | [#16](https://github.com/clwest/contract-concierge/pull/16) | Canonical R2 brain_events.py — drain-then-subscribe + last_seq tracking |
-| mentorforge | [#18](https://github.com/clwest/mentorforge/pull/18) | byte-identical back-prop |
-| pitchdeckforge | [#17](https://github.com/clwest/pitchdeckforge/pull/17) | byte-identical back-prop |
-| sellerpilot | [#11](https://github.com/clwest/sellerpilot/pull/11) | byte-identical back-prop |
-| dealflowtracker | [#15](https://github.com/clwest/dealflowtracker/pull/15) | byte-identical back-prop |
-| compliancesentinel | [#11](https://github.com/clwest/compliancesentinel/pull/11) | byte-identical back-prop |
-| signal-studio | [#11](https://github.com/clwest/signal-studio/pull/11) | byte-identical back-prop |
-
-All on the same `feature/fleet-events-move3-r2` branch name across
-repos. Browser smoke (Test 1 + Test 2) confirmed by Chris before
-commit.
-
-### Why brain_events.py stays byte-identical across 7 repos
-
-Same as Session 1129: ship per-app first, identical bodies, `DO NOT
-EDIT EXCEPT THESE CONSTANTS` header preserved so Phase 2C can extract
-into a shared package without diffing away accidental drift. Only
-`DEFAULT_APP_SLUG` and the docstring's first line legitimately differ.
-
-If you find yourself editing `brain_events.py` in any one repo, **edit
-contract-concierge first, then back-prop**. Same rule applies to
-`brain_client.py`.
-
-### Docker rebuild reminder (Session 1130 hit it)
-
-The 7 fleet apps run from `docker-compose.yml` (no volume mounts),
-not `docker-compose.dev.yml`. Code changes need:
-
-```bash
-cd ~/development/<repo> && docker compose up -d --build --force-recreate <service>
-```
-
-`--build` alone often doesn't recreate the container. Verify with
-`docker exec <container> wc -l /app/app/<file>.py` against the host
-file.
+Browser smoke confirmed: tab-switch-then-replay works end-to-end.
 
 ---
 
-## SESSION 1131 — CURRENT ENTRY POINT
+## SESSION 1131 — CURRENT ENTRY POINT (signal-studio Phase 1)
 
-> **Rigby's priority order coming out of 1130** (her standing rule:
-> "auth-gate before UI for security-boundary features"):
+> **Chris's pivot at the end of 1130:** signal-studio is currently
+> showing 5 hardcoded seed signals. He wants it wired into u-d-b's
+> spider + signal-aggregation pipeline so it shows real data with
+> agent-curated ranking on top.
 >
-> **B → D → E → F**
->
-> B ranks first now that the 1130-priority A (replay) shipped. The
-> signed fleet → u-d-b path is auth'd; the PA-token brain-bridge path
-> still trusts whatever `app_slug` the caller claims. That gap is the
-> next real security-boundary cleanup.
+> Briefed Rigby; she locked **path B + C** (pull endpoint + events
+> first, then a SignalCuratorAgent layer). Phase 1 below is the B
+> half. Phase 2 (C) ships in Session 1132.
 
-### FIRST THING — Merge the 8 open Session 1130 PRs + rebuild fleet
+### FIRST THING — Quick stack sanity check before coding
 
-Before starting 1131 work, lock 1130 in:
+1. `cd ~/development/infra && make up` — fleet up.
+2. `make all` (or `make start && make celery` from u-d-b) — u-d-b native.
+3. Open `http://localhost:5173` (signal-studio frontend) and confirm
+   the 5 hardcoded seed signals still show. That's the "before"
+   state for the visual diff Chris will care about at the end of 1131.
+4. `curl http://localhost:8007/api/signals` should return the same
+   5 signals (sanity check the API mirror of what the UI sees).
 
-1. Review + merge u-d-b [#2135](https://github.com/clwest/donkey-betz-platform/pull/2135) first (migration lives here; the 7 brain_events repos depend on the u-d-b replay endpoint being live).
-2. Merge contract-concierge [#16](https://github.com/clwest/contract-concierge/pull/16) + the 6 back-prop PRs.
-3. `cd ~/development/infra && make up` to pull rebuilt images for the 6 fleet apps that are still on R1 brain_events.py.
-4. Verify locally: `docker exec <each-of-7> wc -l /app/app/brain_events.py` — they should all show **~312 lines** (the R2 size). R1 was ~162.
-5. Re-run the smoke from the SESSION_1130 handoff (Test 1 + Test 2) just to be sure no merge regressions slipped in.
+If anything is off, debug before starting Phase 1 work — every
+step below assumes a green stack.
 
-### Headline options for Session 1131 (Rigby-ordered)
+### Phase 1 — pull endpoint + event emit (Rigby's "B")
 
-#### B. Service-token auth for `app_slug` (now top priority)
+**Estimate:** ~1 day.
 
-**Why first.** Routing control is a security boundary, not a hint.
-Today, signed fleet → u-d-b requests are auth'd; PA-token brain-bridge
-requests can still claim any `app_slug`. The two paths have different
-trust models and the PA-token path is the gap.
+#### Step 1 (u-d-b): `GET /api/fleet/signals/clusters` endpoint
 
-What ships:
-- `allowed_app_slugs` JSONField on the PA token model (or a join
-  table).
-- On `/api/pa/chat/`, verify `routing.app_slug` is in the token's
-  allowlist; if not, strip the routing block and log
-  `override_reason="untrusted_app_slug"`.
-- Back-fill migration: existing PA tokens get `["*"]` with a warning
-  logged on each use until they're rotated to scoped tokens.
+Add a signed endpoint that returns a normalized cluster summary
+list, paginated by an exclusive cursor (mirror the Move 3 R2
+contract):
 
-Existing `FleetAuthAuditLog` rows will capture the security boundary
-crossings automatically.
+```
+GET /api/fleet/signals/clusters?since=<seq>&limit=50
+Response: { clusters: [...], next_since: <int>, has_more: <bool>, app_slug: "<caller>" }
+```
 
-**Brief Rigby before coding.** She'll want a clean migration path
-that doesn't break existing brain-bridge callers. The default
-`["*"]` for legacy tokens is the obvious starting move but she
-might want a tighter posture.
+Per-cluster shape (drawn from `core/services/signal_aggregation_service.py`'s
+SignalCluster model + what signal-studio's `SignalCluster` /
+`EvidenceCard` rows need):
 
-Estimate: ~½ session. Touches PA token model + brain-bridge view +
-routing override logic.
+```json
+{
+  "external_cluster_id": "<uuid>",
+  "title": "<short title>",
+  "summary": "<2-3 sentences>",
+  "pattern_type": "demand_spike | trend_emergence | ...",
+  "category": "tech | crypto | business | career | ...",
+  "signal_strength": 0.0-1.0,
+  "confidence_score": 0.0-1.0,
+  "cluster_size": <int>,
+  "evidence": [
+    {"source": "...", "url": "...", "headline": "..."},
+    ...
+  ],
+  "tags": ["...", "..."],
+  "created_at": "<iso8601>"
+}
+```
 
-#### D. Wire SSE into mentorforge
+**Where to wire it in u-d-b:**
+- New view file `core/views_fleet_signals.py` (mirrors
+  `core/views_fleet_events.py` shape — fleet sig verify + audit row
+  + JSON response).
+- New helper service `core/services/fleet_signals.py` that
+  translates `SignalCluster` ORM rows into the response shape above.
+- Register the URL in `core/urls.py` alongside the fleet artifacts/
+  events routes.
 
-Lesson generation has the same "long-running task you want to watch
-live" shape as draft generation. Mirrors CC's pattern exactly:
-- u-d-b emits `lesson.created` / `lesson.published` events.
-- mentorforge backend: per-user `/api/lessons/events` endpoint.
-- mentorforge frontend: activity strip on the relevant page.
+**App-scoping gotcha (Rigby's gotcha B):** restrict this endpoint
+to `app_slug == "signal-studio"` *at first* — the cluster
+firehose is not a thing other fleet apps should subscribe to by
+default. Easiest path: add an explicit allowlist check after
+signature verification. If/when other apps need clusters later we
+can broaden via `FleetServiceIdentity.capabilities`.
 
-Mostly reuse from CC. Estimate: ~½ session. Lands cleanly after B.
+#### Step 2 (u-d-b): `signal.cluster_promoted` event emit
 
-#### E. FC-path hint bias (Phase 2D, carryover from 1128)
+When `signal_aggregation_service` creates a new cluster meeting the
+quality bar (Rigby's gotcha A):
 
-u-d-b's `_run_agentic_loop` ignores `_routing_hint` when
-`PA_USE_FUNCTION_CALLING=True` (prod default). Inject a system
-message biasing the LLM toward the hinted agent's tool. Touches
-prompt assembly — brief Rigby with the exact injection point first.
+- `cluster_size >= MIN_CLUSTER_SIZE` (3, already a constant)
+- `pattern_type in {allowed list — start permissive, tighten if noisy}`
+- `signal_strength >= 0.6` *or* evidence from ≥2 unique source
+  domains (Rigby's "evidence diversity" alternative)
 
-Estimate: ~⅓ session. Independent of B + D.
+Call `emit_event(event_type="signal.cluster_promoted",
+app_slug="signal-studio", payload={...cluster summary...})`. Same
+envelope shape as the pull endpoint's per-cluster object so
+signal-studio's consumer doesn't need two code paths.
 
-#### F. fleet_health → signal-studio spider feed
+**Important:** emit AFTER the cluster row commits (matches the
+existing artifact emit pattern in
+`core/services/fleet_artifact_cleanup.py`).
 
-Deferred since Session 1126. Still independent of everything above.
+#### Step 3 (signal-studio): brain_events handler + DB writes
 
-**Rigby's recommendation for 1131: B alone is enough. D + E + F
-remain queueable.**
+In `~/development/signal-studio/backend/app/`:
+
+- Extend brain_events.py consumer (or add a sibling handler) to
+  recognize `signal.cluster_promoted` and `signal.curated_published`
+  events.
+- New `app/signal_ingest.py` that:
+  - On app startup: pulls one page of `/api/fleet/signals/clusters`
+    with `since=<max(external_cluster_id seq) or 0>` until exhausted
+    — backfills SignalCluster + EvidenceCard rows.
+  - On each `signal.cluster_promoted` event: upserts the cluster by
+    `external_cluster_id` (NOT by local UUID — that's Rigby's
+    "upsert by external_cluster_id" lock).
+- Persist `external_cluster_id` as a column on `SignalCluster` (new
+  field; lightweight Alembic migration or SQLAlchemy create_all
+  refresh since it's SQLite + early development).
+
+#### Step 4 (signal-studio): drop the seed-only path
+
+`backend/app/seed.py` currently fills 5 hardcoded signals. After
+backfill works, the seeder should be a NO-OP when real clusters
+exist (`if SignalCluster.objects.count() == 0: seed_demo_signals()`
+or similar guard). Don't delete it — useful for cold-start dev /
+demo when u-d-b isn't running.
+
+#### Step 5: smoke
+
+- `cd ~/development/infra && make up && make all`
+- Trigger a synthetic cluster on u-d-b (Django shell or test fixture
+  → emit_event manually).
+- Confirm the event lands in signal-studio's SQLite within ~5s and
+  shows up in the UI (`localhost:5173/`).
+- Optional: tab-switch → emit another cluster → tab back → confirm
+  the missed cluster replays (Move 3 R2 already validated this, but
+  it's a nice belt-and-suspenders for the new event type).
+
+### Carryover for Session 1132 — Phase 2 (C)
+
+Not in scope for 1131; sketched here so the next handoff doesn't
+have to re-discover it:
+
+- New `SignalCuratorAgent` (lightweight, agent-rotation eligible
+  under the governor) that runs daily:
+  - Pulls recent clusters via the new endpoint.
+  - Scores into Top 5-10 by composite of `signal_strength` +
+    `cluster_size` + recency.
+  - Writes a curated artifact set + emits
+    `signal.curated_published`.
+- signal-studio UI: add a Curated tab alongside the existing list.
+- Optional: action-card pre-generation for curated top only
+  (bounded LLM cost; keeps lazy-on-click for everything else).
+
+### Operational notes carried forward
+
+- **brain_events.py is byte-identical across all 7 fleet repos.**
+  Edit contract-concierge first, then back-prop. New event types
+  (`signal.cluster_promoted`, etc.) probably need a generic event
+  router in the subscriber — design that before coding to avoid
+  another per-app divergence.
+- **EventSource is browser-only.** The 2-hop pattern is u-d-b emits
+  → fleet backend subscribes (signed server-to-server) → fleet
+  backend re-emits to browser (user-session, token in query).
+- **Daphne + sync generator + Redis pub/sub = hang.** Use
+  `async def event_generator` + `redis.asyncio` for any new SSE
+  endpoint.
+- **Docker rebuild gotcha.** `docker compose up -d --build` doesn't
+  always recreate the container — use `--force-recreate`. Don't run
+  parallel builds across 6+ repos (Docker Desktop daemon hang risk,
+  per Session 1125 memory; we got lucky on the Session 1130 close
+  but it's a coin flip).
+- **`/api/fleet/*` paths are in `OPTIONAL_AUTH_PATHS`.** Signed-but-
+  tokenless is the canonical fleet auth shape.
+- **Test DB needs pgvector.** Use pure-function unit tests + live
+  smoke against running stack for fleet-anything changes.
+- **Django 5 `db_default` for DB-managed defaults** (Postgres
+  sequences, `gen_random_uuid()`, `now()`). `null=True` alone makes
+  Django pass NULL in INSERT and overrides the DB DEFAULT.
 
 ### Carryovers (open / parked, not blocking)
 
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
 - **24-7-ai-global** — Next.js, not yet Dockerized.
-- **Per-user filter at u-d-b** — optional `?user_id=…` on the replay
-  endpoint to push filtering server-side. Not done in 1130; current
-  fan-out + filter in each consumer is cheaper than another index at
-  current traffic.
-- **DB-dependent tests** for replay ordering + TTL deletion — would
-  need test DB with pgvector. Live smoke is the canonical
+- **Per-user filter at u-d-b's replay endpoint** — optional
+  `?user_id=…` query param to push filtering server-side. Not done
+  in 1130; current fan-out + filter in each consumer is cheaper at
+  this traffic.
+- **DB-dependent tests** for replay ordering + TTL deletion —
+  requires test DB with pgvector. Live smoke is the canonical
   verification path until that's solved.
+- **`docs/SERVICES.md` drift** — header text says 320 service files,
+  reality is 332 (fleet_event_cleanup.py landed). Pre-existing
+  header-staleness pattern; cleanup pass when there's bandwidth.
 - **context-kit doctor floor:** `10 OK / 2 warnings` (both upstream).
 - **`character-os`** — Another Claude Code instance may be active there. Read-only is fine; don't push PRs there or edit their anchor docs.
 
-### Operational notes carried forward from 1129/1130
+### Service-token auth for `app_slug` (deferred from 1131 top priority)
 
-- **`brain_events.py` is byte-identical across all 7 fleet repos.**
-  Edit contract-concierge first, then back-prop. Same rule as
-  `brain_client.py`.
-- **EventSource is browser-only.** The 2-hop pattern is: u-d-b emits
-  → fleet backend subscribes (signed, server-to-server) → fleet
-  backend re-emits to browser (user-session, token in query). Don't
-  point a browser directly at u-d-b's SSE; auth model doesn't fit.
-- **Token-in-query for SSE auth.** EventSource can't set custom
-  headers. JWT goes as `?token=...`. Same `SECRET_KEY` + `ALGORITHM`
-  as `decode_token`. Same trust model — short-lived, same-origin.
-- **Daphne + sync generator + Redis pub/sub = hang.** If you write a
-  new SSE endpoint, use `async def event_generator` + `redis.asyncio`
-  (see `core/services/fleet_events.asubscribe_events`). The sync
-  variant blocks daphne's event loop and makes the server
-  unresponsive after one disconnect.
-- **Docker rebuild gotcha.** `docker compose up -d --build <service>`
-  doesn't always re-create the container — use `--force-recreate`
-  when you need the new code to actually run.
-- **`/api/fleet/events/*` paths are in `OPTIONAL_AUTH_PATHS`.** Signed-but-
-  tokenless is the canonical fleet auth shape; the SSE and replay
-  views do their own signature verification.
-- **Test DB needs pgvector.** The rotation tests use it; the local
-  Postgres container has it but a bare `createdb` doesn't. Manual
-  smoke against the running stack remains the most reliable
-  validation for fleet-auth + fleet-event changes.
-- **Django 5 `db_default` is the right tool for DB-managed defaults
-  on non-PK columns.** `null=True` alone makes Django pass NULL in
-  INSERT and overrides the Postgres DEFAULT. Saved as a feedback
-  memory.
+This was Rigby's option B priority coming out of 1130 ("auth-gate
+before UI for security-boundary features"). Chris pivoted to
+signal-studio because it's higher-visibility. Service-token auth
+moves to Session 1132 or 1133. The PA-token brain-bridge path still
+trusts whatever `app_slug` the caller claims — known gap, not yet
+exploited because the fleet is laptop-local.
 
 ### Recommended Rigby coordination for Session 1131
 
-For option B (service-token auth): brief her on the migration shape
-before coding. Specifically: (1) is the allowlist on the PA token
-model or a separate join table; (2) what's the default for legacy
-tokens — `["*"]` with a deprecation warning, or fail-closed; (3)
-how should `/api/pa/chat/` log violations — strip + log, or
-401-deny?
+For the Step 2 quality bar: lock the exact threshold values before
+coding. The starter values above (strength >= 0.6, OR ≥2 unique
+domains) are placeholders — she'll want to base them on actual
+distribution of current cluster scores, which a quick
+`SignalCluster.objects.aggregate(...)` will give. Brief her with
+the histogram before deciding.
+
+For Step 3: confirm whether to extend the existing brain_events.py
+subscriber or add a sibling `signal_events.py` module. The CC-side
+draft listener filters by `event_type.startswith("artifact.")`;
+adding `signal.*` to the same listener might be cleaner than two
+parallel handlers. Her call.
 
 ---
 
-## SESSION 1130 — PRIOR ENTRY POINT (Move 3 R2)
+## SESSION 1130 — PRIOR ENTRY POINT (Move 3 R2 — closed)
 
 Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md).
 
@@ -251,4 +295,4 @@ Full handoff: [`docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md`
 
 ---
 
-*Last overwrite: Session 1130 close, 2026-05-22.*
+*Last overwrite: Session 1130 close → 1131 entry, 2026-05-22 evening.*
