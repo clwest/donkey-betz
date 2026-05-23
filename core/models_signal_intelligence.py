@@ -46,6 +46,25 @@ class SignalCluster(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Session 1131: monotonic cursor for the signal-studio replay endpoint
+    # (GET /api/fleet/signals/clusters?since=<seq>). Postgres-managed
+    # sequence; Django 5 db_default keeps the INSERT free of the column
+    # so the server-side nextval() fires. See migration 0347.
+    seq = models.BigIntegerField(
+        unique=True,
+        editable=False,
+        db_default=models.expressions.RawSQL(
+            "nextval('core_signalcluster_seq')", []
+        ),
+        help_text=(
+            "Monotonic cluster sequence number assigned by Postgres at "
+            "INSERT via the `core_signalcluster_seq` sequence. Canonical "
+            "ordering cursor for the signal-studio replay endpoint "
+            "(`?since=<seq>` is exclusive). Django 5 `db_default` omits "
+            "this column from INSERTs so the sequence fires server-side."
+        ),
+    )
+
     # Human-readable pattern name
     name = models.CharField(
         max_length=200,
