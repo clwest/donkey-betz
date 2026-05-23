@@ -99,8 +99,12 @@ def emit_event(
         return None
 
     # Now publish to Redis. Best-effort — never block the caller.
+    # `seq` is the canonical cursor (Move 3 R2 / Session 1130 lock with
+    # Rigby). `event_id` (UUID) is kept for FK-style joins back to the
+    # FleetEvent row, but client replay is keyed on `seq`.
     envelope = {
         "event_id": str(row.id),
+        "seq": row.seq,
         "type": event_type,
         "created_at": row.created_at.isoformat(),
         "app_slug": app_slug,

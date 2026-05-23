@@ -91,7 +91,7 @@ from core.views_fleet_artifacts import (
 )
 
 # Session 1129 Move 3 Round 1 — Fleet event SSE
-from core.views_fleet_events import fleet_events_stream
+from core.views_fleet_events import fleet_events_replay, fleet_events_stream
 
 from core.views_ats_optimization import (
     ATSAnalyzeView,
@@ -1752,11 +1752,19 @@ urlpatterns = [
         fleet_artifacts_pull,
         name='fleet-artifacts-pull',
     ),
-    # Session 1129 Move 3 — Fleet event SSE stream
+    # Session 1129 Move 3 R1 — Fleet event SSE stream
     path(
         'api/fleet/events/stream',
         fleet_events_stream,
         name='fleet-events-stream',
+    ),
+    # Session 1130 Move 3 R2 — Replay endpoint (paginated, ?since=<seq>
+    # exclusive). Canonical recovery path per Rigby's lock #3; SSE's
+    # Last-Event-ID is the best-effort shortcut.
+    path(
+        'api/fleet/events/',
+        fleet_events_replay,
+        name='fleet-events-replay',
     ),
     # P12: Agent Fleet Management
     path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),

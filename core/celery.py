@@ -51,6 +51,16 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 3600},
     },
 
+    # Session 1130 Move 3 Round 2 — Hard-delete expired fleet events.
+    # Slightly later than the artifact cleanup so the two don't both
+    # hit Postgres at once. Retention controlled by
+    # FLEET_EVENT_RETENTION_DAYS (default 30).
+    'cleanup-expired-fleet-events': {
+        'task': 'core.tasks.cleanup_expired_fleet_events',
+        'schedule': crontab(hour=2, minute=25),  # 2:25 AM MST daily
+        'options': {'queue': 'broadcast', 'expires': 3600},
+    },
+
     # ── Essential cleanups (daily/weekly, low cost) ──────────────────────
     'cleanup-stuck-agent-executions': {
         'task': 'core.tasks.cleanup_stale_agent_executions',

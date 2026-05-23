@@ -480,8 +480,28 @@ class FleetEvent(UnifiedBaseModel):
     subscriber) sees only its own app's events at the u-d-b layer.
     Per-user filtering happens at the consuming app side (CC matches
     `payload.generated_by_user_id` to the browser session).
+
+    Move 3 Round 2 (Session 1130) — added monotonic `seq` column backed
+    by a Postgres sequence. Per Rigby's lock (conversation
+    pa-d19c1674b936): `seq` is the canonical ordering cursor for
+    replay. UUID `id` is preserved for FK joins; `seq` is what clients
+    pass back as `?since=<seq>` to resume.
     """
 
+    seq = models.BigIntegerField(
+        unique=True,
+        editable=False,
+        db_default=models.expressions.RawSQL(
+            "nextval('core_fleetevent_seq')", []
+        ),
+        help_text=(
+            "Monotonic event sequence number assigned by Postgres at INSERT "
+            "via the `core_fleetevent_seq` sequence. Canonical ordering "
+            "cursor for SSE replay (`?since=<seq>` is exclusive). Django 5 "
+            "`db_default` omits this column from INSERTs so the sequence "
+            "fires server-side."
+        ),
+    )
     event_type = models.CharField(
         max_length=64,
         db_index=True,
@@ -510,10 +530,16 @@ class FleetEvent(UnifiedBaseModel):
     class Meta:
         verbose_name = "Fleet Event"
         verbose_name_plural = "Fleet Events"
-        ordering = ["-created_at"]
+        ordering = ["seq"]
         indexes = [
-            # Subscribers stream filtered by app_slug; this index supports
-            # the catch-up replay path (when Last-Event-ID lands).
+            # Subscribers stream filtered by app_slug; this composite
+            # supports the replay-by-seq path scoped to one app.
+            models.Index(
+                fields=["app_slug", "seq"],
+                name="core_fleete_app_seq_idx",
+            ),
+            # Legacy index from Round 1 — kept for any callers still
+            # ordering by created_at; ordering=["seq"] now though.
             models.Index(
                 fields=["app_slug", "-created_at"],
                 name="core_fleete_app_recent_idx",
