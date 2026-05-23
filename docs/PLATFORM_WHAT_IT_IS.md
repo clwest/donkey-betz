@@ -1,18 +1,21 @@
 ---
 title: "Donkey Betz Platform — What It Actually Is"
 status: active
-session: 1124
-generated: 2026-05-22
-last_reviewed: 2026-05-22
+session: 1133
+generated: 2026-05-23
+last_reviewed: 2026-05-23
 companion_doc: PLATFORM_INVENTORY.md
 ---
 
-> **Anchor refresh — Session 1124 (2026-05-22):** narrative body reviewed
-> against handoffs SESSION_1099 → SESSION_1123. No material drift in the
-> subsystem narrative; the brand pivot (Donkey Betz → 24/7 Global AI),
-> fleet-network multi-repo work, and verifier rollout are described in
-> later handoffs but do not invalidate the platform-internal narrative
-> below. Live runtime counts always come from `PLATFORM_INVENTORY.md`.
+> **Anchor refresh — Session 1133 close (2026-05-23):** narrative body
+> reviewed against handoffs SESSION_1099 → SESSION_1133. No material
+> drift in the subsystem narrative. Session 1131-1133 arc added the
+> signal-studio vertical slice (Phase 1 pull endpoint + Phase 2
+> SignalCuratorAgent + 1132 (C) live SSE refresh + 1132 (B-scaffold)
+> PA-chat warn-only audit + 1133 FLEET_* env back-prop to remaining
+> 5 fleet repos) — extends the existing fleet-network plumbing, no
+> change to platform-internal narrative below. Live runtime counts
+> always come from `PLATFORM_INVENTORY.md`.
 
 # Donkey Betz Platform — What It Actually Is
 

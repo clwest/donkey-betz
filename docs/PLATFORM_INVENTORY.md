@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-22 21:39:02
-**Git HEAD:** `a6f744cb`
+**Generated:** 2026-05-23 10:03:50
+**Git HEAD:** `584116e0`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -12,11 +12,11 @@
 |---|---|
 | [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 151 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
-| [Services](#services) | 112 `*Service` classes across 335 files in core/services/ |
+| [Services](#services) | 112 `*Service` classes across 336 files in core/services/ |
 | [Celery Tasks](#celery-tasks) | 400 user-defined Celery tasks (excludes celery.* internals) |
 | [Celery Beat — Scheduled Tasks](#beat-schedule) | 78 enabled + 0 disabled = 78 PeriodicTask rows |
 | [Personal Assistant (PA) Tools](#pa-tools) | 103 tool schemas + 168 registered handlers; 8 enrichment services |
-| [Database Models](#database-models) | 583 concrete models across 23 apps |
+| [Database Models](#database-models) | 584 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1856 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 207 files matching core/views*.py |
 | [Django Management Commands](#management-commands) | 178 management commands in core/management/commands/ |
@@ -29,8 +29,8 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,034 Python files, 990,937 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 72 OK, 1 drifts |
+| [Code Statistics](#code-stats) | 2,036 Python files, 991,358 lines across core/ + ai_core/ + intelligence/ |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 71 OK, 2 drifts |
 
 ## Table of Contents
 
@@ -246,7 +246,7 @@
 <a id="services"></a>
 ## Services
 
-**Headline:** 112 `*Service` classes across 335 files in core/services/
+**Headline:** 112 `*Service` classes across 336 files in core/services/
 
 **Code location:** `core/services/`
 
@@ -983,9 +983,9 @@
 <a id="database-models"></a>
 ## Database Models
 
-**Headline:** 583 concrete models across 23 apps
+**Headline:** 584 concrete models across 23 apps
 
-**Notes:** By app: core=474, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
+**Notes:** By app: core=475, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
 
 | Model | App | DB Table |
 |---|---|---|
@@ -1247,6 +1247,7 @@
 | FleetArtifact | core |  |
 | FleetAuthAuditLog | core |  |
 | FleetEvent | core |  |
+| FleetPAChatAuditRow | core |  |
 | FleetServiceIdentity | core |  |
 | FleetServiceKey | core |  |
 | FleetServiceRotation | core |  |
@@ -1388,8 +1389,7 @@
 | ProjectResearchFeedback | core |  |
 | ProjectSpiderPriority | core |  |
 | ProjectWorkspace | core |  |
-| PublishedWorkflow | core |  |
-| ... | _(183 more rows truncated)_ |
+| ... | _(184 more rows truncated)_ |
 
 <a id="url-routes"></a>
 ## URL Routes
@@ -2031,23 +2031,23 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,034 Python files, 990,937 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,036 Python files, 991,358 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1628 | 824540 |
+| core | 1630 | 824961 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2034 | 990937 |
+| TOTAL (python) | 2036 | 991358 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 73 registered claims across 34 docs: 72 OK, 1 drifts
+**Headline:** 73 registered claims across 34 docs: 71 OK, 2 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=72, low=0, medium=1, high=0, error=0. Top drifting docs: docs/SERVICES.md.
+**Notes:** Severity rollup: ok=71, low=0, medium=2, high=0, error=0. Top drifting docs: docs/SERVICES.md, docs/BACKEND_INVENTORY.md.
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
@@ -2063,7 +2063,7 @@
 | docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
-| docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
+| docs/BACKEND_INVENTORY.md | 5 | 1 | 0 |
 | docs/BEAT_AUDIT.md | 1 | 0 | 0 |
 | docs/BODY_SYSTEM_AUDIT.md | 1 | 0 | 0 |
 | docs/CAPABILITIES.md | 4 | 0 | 0 |

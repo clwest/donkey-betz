@@ -1076,7 +1076,7 @@ def _services_md_file_count() -> ClaimResult:
         p for p in services_dir.rglob('*.py')
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
-    expected = 320  # refreshed Session 1100 — matches new docs/SERVICES.md
+    expected = 336  # refreshed Session 1133 close — post 1131-1133 arc count
     actual = len(py_files)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
@@ -1671,7 +1671,7 @@ def _backend_inv_services_files() -> ClaimResult:
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
     actual = len(py_files)
-    expected = 320  # refreshed Session 1100
+    expected = 336  # refreshed Session 1133 close — post 1131-1133 arc count
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 80 else 'high')
     return ClaimResult.build(

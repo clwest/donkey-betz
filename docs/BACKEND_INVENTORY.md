@@ -31,7 +31,7 @@ repeats the live summary table so it cannot drift independently.
 | **URL Endpoints** | 1,831 |
 | **Celery Tasks** | 365 |
 | **Agents** | 83 in AGENT_MAP + 223 DB persona-eligible rows = 306 total |
-| **Services** | 320 files / 112 `*Service` classes |
+| **Services** | 336 files / 112 `*Service` classes |
 | **Spiders** | 80 (172 files including management) |
 | **Views Files** | 200 |
 | **Management Commands** | 174 (see [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md)) |
@@ -193,7 +193,7 @@ repeats the live summary table so it cannot drift independently.
 
 ---
 
-## Services (167 Files)
+## Services (336 Files)
 
 ### Largest Services
 
