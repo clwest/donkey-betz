@@ -69,12 +69,30 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1133 — CURRENT ENTRY POINT (X locked + 5 enhancements)
+## SESSION 1133 LANDED — (X) FLEET_* back-prop, 5 of 5
 
-> **Rigby locked** (conversation pa-d19c1674b936, Session 1132 close):
-> **Session 1133 = (X)**. Back-prop FLEET_* env vars to the remaining
-> 5 fleet repos. 5 small PRs (one per repo), not one ops-rollup. (A)
-> and (Y) explicitly held unless Chris overrides at session start.
+Full handoff: [`docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md`](docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md).
+
+**Headline**: 5 small PRs opened (one per remaining fleet repo). All 7 fleet repos now have FLEET_* env vars provisioned and sign PA-chat requests with HMAC. Audit telemetry shows `fleet_signature` rows for each. Reject-mode-flip prerequisite (X) is fully delivered.
+
+| Repo | PR |
+|---|---|
+| mentorforge | [#19](https://github.com/clwest/mentorforge/pull/19) |
+| pitchdeckforge | [#18](https://github.com/clwest/pitchdeckforge/pull/18) |
+| sellerpilot | [#12](https://github.com/clwest/sellerpilot/pull/12) |
+| dealflowtracker | [#16](https://github.com/clwest/dealflowtracker/pull/16) |
+| compliancesentinel | [#12](https://github.com/clwest/compliancesentinel/pull/12) |
+
+Combined with contract-concierge (1129) + signal-studio (1131 Phase 1), all 7 fleet repos are wired. Bearer-only canary still works + audited correctly per Rigby's fail-open invariant.
+
+---
+
+## SESSION 1134 — CURRENT ENTRY POINT (needs Rigby pick after audit-window decision)
+
+> **Direction**: not yet locked. (Y) reject-mode flip is the natural next step
+> per Rigby's lock from 1132, BUT it requires "≥3 days of clean audit telemetry"
+> and (X) just shipped. Brief her with the audit-table state + ask whether the
+> 3-day window applies to laptop-local deployment.
 
 ### FIRST THING — Sanity check before any new work
 
@@ -83,7 +101,7 @@ make status              # what's running + URLs
 3. `curl -s http://localhost:8007/api/signals | jq '.total'` → expect 131-ish (5 seed + N real)
 4. `curl -s http://localhost:8007/api/signals/curated | jq '.total'` → expect 10 (if curator has run)
 5. Visual check at `localhost:5173`: "All Signals" + "Curated Top 10" tabs render with real data; clicking Curated and triggering `curate_and_emit()` from u-d-b shell should surface a "🟢 New curated set — refresh" pill within ~5s
-6. **NEW for 1133**: check the PA-chat audit table to see current rollout state:
+6. **Check the PA-chat audit table — Session 1134 direction hinges on this**:
    ```bash
    cd ~/development/unified-donkey-betz
    .venv/bin/python manage.py shell -c "
@@ -91,71 +109,103 @@ make status              # what's running + URLs
    from collections import Counter
    from django.utils import timezone
    from datetime import timedelta
-   since = timezone.now() - timedelta(hours=24)
+   since = timezone.now() - timedelta(hours=72)
    rows = FleetPAChatAuditRow.objects.filter(created_at__gte=since)
-   print(f'audit rows (24h): {rows.count()}')
+   print(f'audit rows (72h): {rows.count()}')
    print('by auth_mode:')
    for am, n in Counter(rows.values_list(\"auth_mode\", flat=True)).most_common():
        print(f'  {am}: {n}')
-   bearer_claims = rows.filter(auth_mode=\"bearer_only\").exclude(claimed_app_slug=\"\")
-   print(f'bearer-only with body app_slug claim: {bearer_claims.count()}')
+   # The critical metric: bearer-only calls FROM FLEET APPS (claimed_app_slug != '')
+   # If this is 0 across all 7 fleet apps for ≥3 days, (Y) is safe.
+   bearer_from_fleet = rows.filter(auth_mode='bearer_only').exclude(claimed_app_slug='')
+   print(f'bearer-only with fleet app_slug claim (72h): {bearer_from_fleet.count()}')
+   for slug, n in Counter(bearer_from_fleet.values_list('claimed_app_slug', flat=True)).most_common():
+       print(f'  {slug}: {n}')
    mismatches = rows.filter(match=False)
-   print(f'mismatches (claimed != verified): {mismatches.count()}')
+   print(f'mismatches (claimed != verified) 72h: {mismatches.count()}')
    "
    ```
 
 If anything is off, fix it before starting new work.
 
-### Three credible candidates for Session 1133 (Rigby to pick)
+### Direction candidates for Session 1134
 
-#### (X) FLEET_* env back-prop to 5 fleet repos — **LOCKED for 1133**
-- **Estimate**: ~1 session, mostly mechanical
-- **Strategy lock (Rigby)**: 5 small PRs (one per repo). NOT an ops-rollup PR. Easier rollback + isolated failures + easier review.
-- **Why it matters**: unlocks the reject-mode-flip prerequisite by getting `auth_mode=fleet_signature` rows from mentorforge / pitchdeckforge / sellerpilot / dealflowtracker / compliancesentinel into the audit table
-- **What's done already**: contract-concierge (1129) + signal-studio (Phase 1) have `FLEET_KEY_ID` + `FLEET_SERVICE_SECRET`. Their `brain_client.py` is byte-identical to the other 5; auto-signs once env vars land
-- **Canonical env var set** (Rigby's lock — keep identical across all repos to avoid drift):
-  ```
-  FLEET_APP_SLUG=<app-slug>
-  FLEET_KEY_ID=fs_<appslug>_k1
-  FLEET_SERVICE_SECRET=<32-byte-raw-secret-shown-once-at-mint>
-  ```
-- **Work per repo**:
-  1. `python manage.py provision_fleet_identity --app-slug <name>` on u-d-b (one-time mint, secret shown once — save to repo `.env` immediately)
-  2. Add the three env vars above to the repo's `.env` + `docker-compose.yml` (mirror contract-concierge's compose block exactly)
-  3. `docker compose up -d --build --force-recreate <repo>_api`
-  4. **Goal metric (Rigby's lock)**: at least 1 live audit row showing ALL three:
-     - `auth_mode='fleet_signature'`
-     - `verified_app_slug='<that app>'`
-     - `has_fleet_identity=True`
-     This is the only proof that env + signing wiring is actually working end-to-end. "Request succeeded" is NOT the goal metric — given the DRF auth-classifier weirdness from 1132, treat the audit row as source of truth.
-  5. **Bearer-only canary smoke per repo** (Rigby's lock): also verify bearer-only paths still get audited as `auth_mode='bearer_only'` and remain fail-open. Confirms HMAC is the dominant path without breaking warn-only.
-- **Nice-to-have if time** (Rigby's suggestion): add a short repo-local README snippet ("How to provision identity + set FLEET_* + verify audit row") so future repos don't repeat wiring drift.
+**Rigby's 1133-close briefing locked the framing for both options** (conversation pa-d19c1674b936). Her crisp top-line for Chris:
 
-#### (A) Action-card pre-generation for curated
-- **Estimate**: ~1 session
-- **Cost**: bounded LLM (~10 calls/day per curator run)
-- **Visible UX win**: Curated tab cards show instant action plans
-- **Rigby's locked shape** (from Phase 1 close, preserved): pre-generate u-d-b-side, include in `signal.curated_published` payload OR in `CuratedSignalEntry` child rows. signal-studio is a renderer, not an LLM executor
-- **Open design question for Rigby**: payload vs child rows? Payload is simpler (event self-contained); child rows are queryable (admin can see historical action plans per snapshot). Lean child rows for the same reason Phase 2 picked typed snapshot table over column-on-cluster
+> Merge the 5 PRs. Set envs in mainline deploy contexts. Start telemetry clock. In parallel, prep the reject-mode flip BEHIND A FLAG so it's a low-risk toggle once the telemetry window is satisfied. If choosing (A), implement child rows.
 
-#### (Y) Reject-mode flip in unified_pa_chat
-- **Pre-req**: (X) done AND audit table shows ≥3 days of clean (signed + matching) telemetry
-- **Estimate**: ~half a session of careful config + verification
-- **Lock from 1132**: the existing Session 1129 Move 1 gate is the enforcement point; flipping is just changing the log-only behavior to deny when `fleet_identity` is None AND a routing/app_slug claim is present
-- **NOT a session 1133 candidate** unless (X) has shipped and the audit data is clean — Rigby's hard rule: do NOT ship partial auth enforcement
+#### (Y) Reject-mode flip in unified_pa_chat — PRIMARY (staged)
 
-**My read**: (X) → (Y) is the security-focused arc (X this session, Y when telemetry is clean). (A) is the visible-feature path if Chris wants polish over security.
+**Rigby's lock on the 3-day window**: treat it as "post-merge, mainline, persistent envs," NOT "since I proved it locally in 1133." The thing being validated isn't code correctness — it's that REAL CALLERS from main with committed env wiring reliably send fleet HMAC AND no legitimate bearer-only+claim traffic exists. That observability only starts after Chris merges the 5 PRs.
 
-**Rigby's lock**: (X) for 1133. (A) and (Y) explicitly held unless Chris overrides at session start.
+**Two paths Rigby will accept**:
 
-### Recommended Rigby coordination for Session 1133
+- **Default path** — wait for merge + envs in mainline, then start the 3-day clock. Lower risk, sharper signal.
+- **Staged path if Chris wants to ship security NOW**:
+  - **Stage 1 (immediately)**: "soft deny" — flip the deny ONLY when a routing claim is present in the body. Include a feature flag / env toggle as escape hatch + loud logging. Roll out with the flag OFF first; flip it on after merge.
+  - **Stage 2 (post-merge + minimal telemetry window)**: "hard deny" — keep deny behavior, remove the escape hatch once telemetry is clean.
 
-Direction is locked. Only re-engage Rigby if:
-- **Chris overrides** the (X) lock at session start (e.g. wants (A) instead)
-- **The provision flow surfaces a design fork** (e.g. you discover one of the 5 repos doesn't have `brain_client.py` or has a divergent version that won't auto-sign — would change the back-prop unit of work)
-- **A canary smoke fails** in a way that suggests the existing 1129 Move 1 path is broken for that app (not just env-var-missing) — pull her in before patching
+**Lock from 1132 + 1133 audit table verification**: deny condition is **narrow**:
+```
+(fleet_identity is None) AND (routing claim present in body) → 403
+```
+NOT "no fleet identity ever" — bearer-only must still work for non-fleet callers (Chris's web UI, CLI tests, etc.). The Session 1129 Move 1 gate at `views_personal_assistant.py:340-360` is the right point to flip.
 
-Otherwise: provision identities, update env + compose, recreate containers, verify audit rows for each app, open 5 small PRs.
+**Pre-flip audit checklist (Rigby's 4 sweeps)** — grep across u-d-b before changing the gate:
+
+1. **`app_slug` reads outside the 1129 gate**:
+   ```
+   grep -rn "context.get(\"app_slug\")\|request.data\[\"context\"\]\[\"app_slug\"\]\|app_slug=" core/
+   ```
+   Audit any usage in: workspace selection, content routing, tool scoping, initiative scoping, KB ingest tags, publish destinations.
+
+2. **`X-Fleet-` header usage** in business logic (not just auth class/middleware):
+   ```
+   grep -rn "X-Fleet-" core/ --include="*.py"
+   ```
+   Business logic should use VERIFIED identity (`request.fleet_identity.get("app_slug")`), not raw headers.
+
+3. **"Fleet identity optional" branches** where claimed slug still influences behavior:
+   ```
+   grep -rn "if fleet_identity\|fleet_identity is None\|fleet_identity or" core/
+   ```
+   Pattern to flag: `if fleet_identity: ... else: <still uses claimed slug>`.
+
+4. **Confirm deny condition is narrowly scoped** — bearer-only without claim still works; bearer-only WITH claim gets 403.
+
+**Estimate**: ~half a session for the gate change + flag wiring, plus 1 session of audit-sweep work if needed.
+
+#### (A) Action-card pre-generation for curated — visible-feature alternative
+
+**Rigby locked the design fork**: **child rows** (typed `CuratedSignalEntry` rows for actions), NOT payload blob. Reasons:
+- Stable schema + typed fields (title/url/source/summary/category/importance/rationale) beats a blob for rendering, filtering, and QA
+- Per-entry evidence/citations attach cleanly
+- Diffs + dedupe are easier on rows
+- Future scoring, suppression, "why did this appear?" auditing is cheap on rows, painful on JSON blobs
+
+**Estimate**: ~1 session.
+
+**Cost**: bounded LLM (~10 calls/day per curator run).
+
+**Visible UX**: Curated tab cards show instant action plans (no "Generate Action" click).
+
+**Locked shape**: u-d-b pre-generates during the curator run, persists actions as child rows on `CuratedSignalEntry`, includes them in the `signal.curated_published` payload. signal-studio is a pure renderer — no LLM calls on the consumer side.
+
+**My read**: brief Rigby with the audit telemetry first. If Chris wants security finish → (Y) staged (Stage 1 now, Stage 2 after merge). If he wants visible feature → (A) with child rows.
+
+### Recommended Rigby coordination for Session 1134
+
+If Chris locks (Y):
+- **Default path**: just merge the 5 PRs first, set envs, wait 3 days, then flip. No code work this session.
+- **Staged path**: implement Stage 1 with feature flag off by default. Flip flag on after merge + audit clean.
+- Either way, run Rigby's 4-sweep audit checklist BEFORE touching the gate.
+- Re-engage Rigby only if an audit sweep surfaces an unexpected consumer of `context.app_slug` outside the 1129 gate.
+
+If Chris locks (A):
+- **Design fork already resolved**: child rows for the action data.
+- Code u-d-b pre-gen: extend `signal_curator_service.curate_and_emit()` to also call action generation per top-N cluster, persist as `CuratedSignalEntry` child rows (or a new sibling table — flag this fork to Rigby if it surfaces).
+- Update `build_curated_envelope()` to include the actions per entry.
+- signal-studio side: likely zero changes — `cluster` envelope already passes through; just surface the action rows in the Curated tab UI.
 
 ### Operational notes carried forward from 1131 + 1132
 
@@ -217,23 +267,20 @@ feat/curated-live-refresh (#14)                   ← signal-studio 1132 (C) cod
 
 Each handoff is stacked on the previous; each feat branch is stacked on the previous feat. Merge in order if you want clean linear history; out of order works too — GitHub rebases automatically.
 
-### Original three-candidate framing (preserved for context)
+### Status of 1131-1133 arc carryovers
 
-Before Rigby locked (X), the three options were:
-
-1. **(X)** FLEET_* env back-prop — the picked one
-2. **(A)** Action-card pre-gen for curated — held, Rigby noted it "adds LLM surface area; keep behind (X) unless Chris explicitly wants UX polish now"
-3. **(Y)** Reject-mode flip — held behind (X) + clean telemetry window
-
-If Chris wants to override (X) at session start, the candidates and their tradeoffs are all in the [Session 1132 close handoff](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md).
+- **(X)** FLEET_* env back-prop — **DONE (1133)**, see PRs above
+- **(A)** Action-card pre-gen for curated — **deferred candidate for 1134** (above)
+- **(Y)** Reject-mode flip — **primary candidate for 1134** (above), gated on audit telemetry
 
 ---
 
-## SESSION 1131 + 1132 HANDOFFS
+## SESSION 1131-1133 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
 - [Session 1132 close](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md)
+- [Session 1133 close](docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md)
 
 ---
 
@@ -243,4 +290,4 @@ Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/hand
 
 ---
 
-*Last overwrite: Session 1132 close → 1133 entry (X locked by Rigby), 2026-05-22 evening.*
+*Last overwrite: Session 1133 close → 1134 entry (Y primary, A alternative, both gated on Rigby brief), 2026-05-23.*
