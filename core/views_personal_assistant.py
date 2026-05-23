@@ -285,6 +285,20 @@ def unified_pa_chat(request):
         "status": "processing"
     }
     """
+    # Session 1132 (B-scaffold): warn-only audit of PA chat auth posture.
+    # Records one row per call so we can measure how many fleet apps are
+    # still bearer-only before flipping enforcement. Wrapped in try/except
+    # at the helper level — a DB hiccup here can never block a chat from
+    # going through. Rigby's lock: NO enforcement in this phase.
+    try:
+        from core.services.fleet_pa_chat_audit import write_pa_chat_audit
+        write_pa_chat_audit(request)
+    except Exception as _audit_e:  # pragma: no cover
+        logger.warning(
+            "views_personal_assistant.unified_pa_chat: pa-chat-audit "
+            "swallowed (%s: %s) — degraded", type(_audit_e).__name__, _audit_e,
+        )
+
     try:
         message = request.data.get('message', '').strip()
         context = request.data.get('context', {})
