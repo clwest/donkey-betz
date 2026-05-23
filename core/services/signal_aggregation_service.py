@@ -322,6 +322,12 @@ class SignalAggregationService:
             ).first()
 
             if existing:
+                # Capture prior status before mutation so we know whether
+                # this update is a detecting→active transition (Session
+                # 1131 Phase 1: emit signal.cluster_promoted only on the
+                # transition, not on steady-state updates).
+                was_active = existing.status == 'active'
+
                 # Update existing cluster
                 existing.spider_data_ids.extend([s['spider_data_id'] for s in signals])
                 existing.spider_data_ids = list(set(existing.spider_data_ids))
@@ -340,6 +346,10 @@ class SignalAggregationService:
                 self._apply_scores(existing)
                 created.append(existing)
                 logger.info(f"Updated existing cluster: {existing.name}")
+
+                # Session 1131 Phase 1: emit on detecting→active transition only.
+                if not was_active and existing.status == 'active':
+                    self._maybe_emit_cluster_promoted(existing)
             else:
                 # Create new cluster
                 cluster = SignalCluster.objects.create(
@@ -364,7 +374,76 @@ class SignalAggregationService:
                 created.append(cluster)
                 logger.info(f"Created new cluster: {cluster.name} (strength={strength:.2f}, track={cluster.track})")
 
+                # Session 1131 Phase 1: emit if the cluster was born `active`.
+                if cluster.status == 'active':
+                    self._maybe_emit_cluster_promoted(cluster)
+
         return created
+
+    def _maybe_emit_cluster_promoted(self, cluster: SignalCluster) -> None:
+        """Emit `signal.cluster_promoted` if the cluster passes Rigby's bar.
+
+        Session 1131 Phase 1 (Rigby's path B, conversation pa-d19c1674b936).
+        The bar (locked Session 1131 after histogram review):
+            status == 'active'  AND  strength >= 0.6  AND  cluster_size >= 3
+
+        The size floor is also enforced upstream by MIN_CLUSTER_SIZE; this
+        defensive check guards against future regressions.
+
+        Payload mirrors the GET /api/fleet/signals/clusters envelope byte-
+        for-byte so signal-studio's consumer needs only one code path
+        (Rigby's gotcha A — consistency between pull + push).
+
+        Best-effort: emit failure logs but never raises (we already
+        committed the cluster row; the event is a notification, not
+        the source of truth — signal-studio's startup backfill closes
+        any gap).
+        """
+        # Lazy imports to avoid circular import risk (fleet_signals → models).
+        from core.services.fleet_events import emit_event
+        from core.services.fleet_signals import (
+            QUALITY_BAR_MIN_CLUSTER_SIZE,
+            QUALITY_BAR_MIN_STRENGTH,
+            QUALITY_BAR_STATUS,
+            cluster_envelope,
+        )
+
+        if cluster.status != QUALITY_BAR_STATUS:
+            return
+        if (cluster.strength or 0.0) < QUALITY_BAR_MIN_STRENGTH:
+            return
+        # cluster_size lives in source_breakdown — sum here to avoid an
+        # extra property dispatch in the hot path.
+        cluster_size = sum((cluster.source_breakdown or {}).values())
+        if cluster_size < QUALITY_BAR_MIN_CLUSTER_SIZE:
+            return
+
+        envelope = cluster_envelope(cluster)
+        if envelope is None:
+            # Translator already logged the reason (e.g. size guard
+            # tripped). Don't double-log.
+            return
+
+        try:
+            event_id = emit_event(
+                event_type="signal.cluster_promoted",
+                app_slug="signal-studio",
+                payload=envelope,
+            )
+            if event_id:
+                logger.info(
+                    "[fleet-events] signal.cluster_promoted emitted "
+                    "cluster_id=%s seq=%s strength=%.2f size=%s event_id=%s",
+                    cluster.id, cluster.seq, cluster.strength,
+                    cluster_size, event_id,
+                )
+        except Exception as e:  # pragma: no cover
+            # emit_event already swallows internal failures; this is
+            # belt-and-suspenders for anything that leaks out.
+            logger.exception(
+                "[fleet-events] signal.cluster_promoted emit raised "
+                "cluster_id=%s: %s", cluster.id, e,
+            )
 
     def _apply_scores(self, cluster: SignalCluster) -> None:
         """Apply content scoring to a cluster and persist."""

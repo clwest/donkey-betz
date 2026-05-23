@@ -513,6 +513,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/fleet/artifacts/',
         # Session 1129 Move 3 — fleet event SSE stream, same pattern.
         '/api/fleet/events/',
+        # Session 1131 Phase 1 — fleet signal-cluster replay
+        # (signal-studio only; app_slug allowlist enforced in the view).
+        '/api/fleet/signals/',
     ]
     
     # Paths that require staff privileges
