@@ -567,6 +567,130 @@ def compute_payload_sha256(payload) -> tuple[str, int]:
     return hashlib.sha256(canonical_bytes).hexdigest(), len(canonical_bytes)
 
 
+class FleetPAChatAuditRow(UnifiedBaseModel):
+    """Warn-only audit of PA-chat auth posture (Session 1132 B-scaffold).
+
+    Rigby's lock (conversation pa-d19c1674b936, Session 1132): we do
+    NOT introduce a separate bearer-token scheme. The existing fleet
+    HMAC signature path (FleetSignatureAuthentication, Session 1129
+    Move 1) is the canonical mechanism for binding `app_slug` to a
+    request. The remaining gap is just that fleet apps' `brain_client.py`
+    still calls `/api/pa/chat/` with bearer-only `BRAIN_TOKEN` instead
+    of signing.
+
+    This audit table records — per PA chat request — what the auth
+    posture actually was, so we can measure how many fleet-app callers
+    are still bearer-only and how many are attempting to claim
+    `app_slug` in the body without a verified identity. Once the
+    audit shows the back-prop has converted all 7 fleet apps to
+    signing, the enforcement flip becomes a tiny config change in
+    `unified_pa_chat` (already structured to strip routing claims when
+    `fleet_identity` is absent).
+
+    NO ENFORCEMENT is done in this phase — every value in this table
+    is purely for visibility. Rigby's hard rule: do NOT ship partial
+    auth enforcement; reject-mode waits for end-to-end coverage.
+    """
+
+    # Categorical auth mode of the incoming request. Captures the
+    # actual path the request took through the auth stack so we can
+    # measure rollout progress per call surface.
+    AUTH_MODE_FLEET_SIGNATURE = "fleet_signature"
+    AUTH_MODE_BEARER_ONLY = "bearer_only"
+    AUTH_MODE_SESSION_USER = "session_user"
+    AUTH_MODE_API_USER_TOKEN = "api_user_token"
+    AUTH_MODE_ANONYMOUS = "anonymous"
+
+    AUTH_MODE_CHOICES = [
+        (AUTH_MODE_FLEET_SIGNATURE, "Fleet HMAC signature"),
+        (AUTH_MODE_BEARER_ONLY, "Bearer token only (no fleet signature)"),
+        (AUTH_MODE_SESSION_USER, "Django session user"),
+        (AUTH_MODE_API_USER_TOKEN, "DRF token (user-scoped)"),
+        (AUTH_MODE_ANONYMOUS, "Anonymous / unauthenticated"),
+    ]
+
+    auth_mode = models.CharField(
+        max_length=24,
+        choices=AUTH_MODE_CHOICES,
+        db_index=True,
+        help_text="Which auth path the request took through unified_pa_chat",
+    )
+
+    has_fleet_identity = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True when FleetSignatureAuthentication set request.fleet_identity",
+    )
+
+    verified_app_slug = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text=(
+            "app_slug from the verified fleet_identity, if present. "
+            "Empty string when no fleet signature was attached."
+        ),
+    )
+
+    claimed_app_slug = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text=(
+            "app_slug claimed in the request body's context.app_slug or "
+            "routing.app_slug, if present. The whole point of the audit "
+            "is to compare this against verified_app_slug."
+        ),
+    )
+
+    # NULL when no claim was made (so we don't conflate 'no claim' with
+    # 'mismatched claim'). True/False only when both verified and
+    # claimed are present.
+    match = models.BooleanField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=(
+            "True iff verified_app_slug == claimed_app_slug. NULL when "
+            "either side is missing (no claim, or no verified identity)."
+        ),
+    )
+
+    # Request metadata for triage. All best-effort; don't fail the
+    # audit write if any of these can't be derived.
+    request_path = models.CharField(max_length=200, blank=True, default="")
+    remote_addr = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True, default="")
+    request_id = models.CharField(max_length=64, blank=True, default="")
+
+    class Meta:
+        verbose_name = "Fleet PA-Chat Audit Row"
+        verbose_name_plural = "Fleet PA-Chat Audit Rows"
+        ordering = ["-created_at"]
+        indexes = [
+            # The two queries we'll run during rollout:
+            # 1. "How many bearer-only PA chat calls in last 24h, by claimed app_slug?"
+            # 2. "How many mismatches (verified != claimed) in last 24h?"
+            models.Index(
+                fields=["auth_mode", "-created_at"],
+                name="pa_chat_audit_mode_idx",
+            ),
+            models.Index(
+                fields=["match", "-created_at"],
+                name="pa_chat_audit_match_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"PAChatAudit {self.auth_mode} "
+            f"verified={self.verified_app_slug or '∅'} "
+            f"claimed={self.claimed_app_slug or '∅'} "
+            f"match={self.match}"
+        )
+
+
 __all__ = [
     "FleetServiceIdentity",
     "FleetServiceKey",
@@ -574,6 +698,7 @@ __all__ = [
     "FleetAuthAuditLog",
     "FleetArtifact",
     "FleetEvent",
+    "FleetPAChatAuditRow",
     "generate_service_secret",
     "hash_service_secret",
     "compute_payload_sha256",
