@@ -12581,3 +12581,30 @@ def cleanup_expired_fleet_artifacts():
     from core.services.fleet_artifact_cleanup import run_cleanup
     stats = run_cleanup()
     return stats.as_dict()
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Session 1130 Move 3 Round 2 — Fleet event retention cleanup.
+# Hard-deletes FleetEvent rows past `FLEET_EVENT_RETENTION_DAYS`
+# (default 30). Distinct from artifact cleanup (which soft-deletes)
+# because events are pure log/replay state with no FK protection.
+# ──────────────────────────────────────────────────────────────────────
+
+
+@shared_task(
+    name='core.tasks.cleanup_expired_fleet_events',
+    ignore_result=False,
+    queue='broadcast',
+    soft_time_limit=300,
+    time_limit=360,
+)
+def cleanup_expired_fleet_events():
+    """Celery wrapper around `fleet_event_cleanup.run_cleanup()`.
+
+    Scheduled daily via `app.conf.beat_schedule`. Separate from
+    artifact cleanup so the two retention windows can be tuned
+    independently and a failure in one doesn't bleed into the other.
+    """
+    from core.services.fleet_event_cleanup import run_cleanup
+    stats = run_cleanup()
+    return stats.as_dict()
