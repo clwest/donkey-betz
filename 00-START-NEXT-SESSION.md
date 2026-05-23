@@ -50,134 +50,121 @@ make status              # what's running + URLs
 - Rigby resolves `global` vs `workspace` mode from request/profile/context.
 - **PA tool registration needs BOTH daphne AND celery restart.** Each celery worker loads its own tool registry. `pkill -f "daphne -b 127.0.0.1 -p 8000"; pkill -f "celery -A core"; make start && make celery`.
 
-## NEW IN SESSION 1129 — FLEET AUTH + ARTIFACTS + SSE EVENT STREAM
+## NEW IN SESSION 1130 — MOVE 3 ROUND 2 RECONNECT RESILIENCE
 
-Five movements landed this session. Full handoff:
-[`docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md`](docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md).
+Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md).
 
-**Headline:** every fleet → u-d-b call is now HMAC-SHA256 signed (Move 1). Fleet apps can persist work-product as artifacts with TTL retention (Move 2 R1+R2). Contract Concierge has a real "AI Draft Library" flow live in the running stack. u-d-b emits lifecycle events; CC streams them to the browser via two SSE hops (Move 3 R1).
+**Headline:** the fleet event stream no longer silently loses events on
+reconnect. FleetEvent rows now carry a monotonic `seq` (Postgres
+sequence), `GET /api/fleet/events/?since=<seq>` is the canonical
+recovery path, the SSE `id:` field carries `seq` not UUID, and
+`brain_events.py` across all 7 fleet repos drains replay before each
+subscribe. TTL retention (`FLEET_EVENT_RETENTION_DAYS`, default 30)
+landed alongside.
 
-### Open PRs (need merge to lock Session 1129 in)
+### Open PRs (8 — need merge to lock Session 1130 in)
 
 | Repo | PR | What |
 |---|---|---|
-| u-d-b | [#2133](https://github.com/clwest/donkey-betz-platform/pull/2133) | Move 3 R1 — SSE event stream MLC |
-| contract-concierge | [#15](https://github.com/clwest/contract-concierge/pull/15) | Live SSE activity feed + per-user filter |
-| mentorforge | [#17](https://github.com/clwest/mentorforge/pull/17) | brain_events subscriber back-prop |
-| pitchdeckforge | [#16](https://github.com/clwest/pitchdeckforge/pull/16) | brain_events subscriber back-prop |
-| sellerpilot | [#10](https://github.com/clwest/sellerpilot/pull/10) | brain_events subscriber back-prop |
-| dealflowtracker | [#14](https://github.com/clwest/dealflowtracker/pull/14) | brain_events subscriber back-prop |
-| compliancesentinel | [#10](https://github.com/clwest/compliancesentinel/pull/10) | brain_events subscriber back-prop |
-| signal-studio | [#10](https://github.com/clwest/signal-studio/pull/10) | brain_events subscriber back-prop |
+| u-d-b | [#2135](https://github.com/clwest/donkey-betz-platform/pull/2135) | seq + replay endpoint + SSE update + TTL + 18 unit tests |
+| contract-concierge | [#16](https://github.com/clwest/contract-concierge/pull/16) | Canonical R2 brain_events.py — drain-then-subscribe + last_seq tracking |
+| mentorforge | [#18](https://github.com/clwest/mentorforge/pull/18) | byte-identical back-prop |
+| pitchdeckforge | [#17](https://github.com/clwest/pitchdeckforge/pull/17) | byte-identical back-prop |
+| sellerpilot | [#11](https://github.com/clwest/sellerpilot/pull/11) | byte-identical back-prop |
+| dealflowtracker | [#15](https://github.com/clwest/dealflowtracker/pull/15) | byte-identical back-prop |
+| compliancesentinel | [#11](https://github.com/clwest/compliancesentinel/pull/11) | byte-identical back-prop |
+| signal-studio | [#11](https://github.com/clwest/signal-studio/pull/11) | byte-identical back-prop |
 
-Move 1 + Move 2 PRs from earlier in the session (#2129, #2130, #2131, #2132, CC #12, CC #13, CC #14, and back-prop stacks) are already merged.
+All on the same `feature/fleet-events-move3-r2` branch name across
+repos. Browser smoke (Test 1 + Test 2) confirmed by Chris before
+commit.
 
-### Why brain_client.py AND brain_events.py are intentionally copy-pasted
+### Why brain_events.py stays byte-identical across 7 repos
 
-Per Rigby's standing signoff: ship per-app first, identical bodies, "DO NOT EDIT EXCEPT THESE CONSTANTS" header so a future round (Phase 2C) can extract into a shared package without diffing away accidental drift. Only `DEFAULT_APP_SLUG` and the docstring's first line legitimately differ between copies.
+Same as Session 1129: ship per-app first, identical bodies, `DO NOT
+EDIT EXCEPT THESE CONSTANTS` header preserved so Phase 2C can extract
+into a shared package without diffing away accidental drift. Only
+`DEFAULT_APP_SLUG` and the docstring's first line legitimately differ.
 
-If you find yourself editing either file in any one repo, **edit contract-concierge first, then back-prop**. Propagation helpers:
-- `/tmp/propagate_brain_client.py`
-- `/tmp/propagate_brain_events.py`
+If you find yourself editing `brain_events.py` in any one repo, **edit
+contract-concierge first, then back-prop**. Same rule applies to
+`brain_client.py`.
 
-Both get cleared on reboot; recreate from the canonical source if needed.
+### Docker rebuild reminder (Session 1130 hit it)
+
+The 7 fleet apps run from `docker-compose.yml` (no volume mounts),
+not `docker-compose.dev.yml`. Code changes need:
+
+```bash
+cd ~/development/<repo> && docker compose up -d --build --force-recreate <service>
+```
+
+`--build` alone often doesn't recreate the container. Verify with
+`docker exec <container> wc -l /app/app/<file>.py` against the host
+file.
 
 ---
 
-## SESSION 1130 — CURRENT ENTRY POINT
+## SESSION 1131 — CURRENT ENTRY POINT
 
-> **Rigby's Session 1130 priority order (her standing rule: "auth-gate
-> before UI for security-boundary features"):** Move 3 R2 (replay + per-
-> user filter at u-d-b) → service-token auth for app_slug → FleetEvent
-> retention → wire SSE into one other fleet app → FC-path hint bias.
+> **Rigby's priority order coming out of 1130** (her standing rule:
+> "auth-gate before UI for security-boundary features"):
 >
-> Replay ranks above auth because: today's MLC drops events on every
-> reconnect, and reconnect happens any time the browser tab loses focus
-> on iOS. Without replay, the activity strip silently lies about
-> "everything that's happened" — that's a worse UX foot-gun than the
-> auth gap (which has u-d-b's allowlist + force_allowed gates as
-> mitigation).
+> **B → D → E → F**
+>
+> B ranks first now that the 1130-priority A (replay) shipped. The
+> signed fleet → u-d-b path is auth'd; the PA-token brain-bridge path
+> still trusts whatever `app_slug` the caller claims. That gap is the
+> next real security-boundary cleanup.
 
-### FIRST THING — Verify Session 1129 PRs merged + e2e smoke
+### FIRST THING — Merge the 8 open Session 1130 PRs + rebuild fleet
 
-Before starting 1130 work, confirm the 8 open PRs from 1129 are on
-`main` in each repo, then run the live SSE end-to-end:
+Before starting 1131 work, lock 1130 in:
 
-1. `cd ~/development/infra && make up` (or `make all` for u-d-b natively too)
-2. Log into Contract Concierge as `chris@donkeybetz.com` at http://localhost:5175
-3. Open the **Drafts** tab. The activity strip should show "Live —
-   connected to Rigby brain stream" with an emerald dot within ~2s.
-4. Click **New draft** → fill in (NDA / parties / Colorado / 2 years) →
-   Generate. The new draft should appear in the activity strip as
-   `created` within ~10-30s, and the library list should auto-refresh.
+1. Review + merge u-d-b [#2135](https://github.com/clwest/donkey-betz-platform/pull/2135) first (migration lives here; the 7 brain_events repos depend on the u-d-b replay endpoint being live).
+2. Merge contract-concierge [#16](https://github.com/clwest/contract-concierge/pull/16) + the 6 back-prop PRs.
+3. `cd ~/development/infra && make up` to pull rebuilt images for the 6 fleet apps that are still on R1 brain_events.py.
+4. Verify locally: `docker exec <each-of-7> wc -l /app/app/brain_events.py` — they should all show **~312 lines** (the R2 size). R1 was ~162.
+5. Re-run the smoke from the SESSION_1130 handoff (Test 1 + Test 2) just to be sure no merge regressions slipped in.
 
-If any of those fail, debug before moving on — the Session 1130
-priorities all assume Move 3 R1 is working.
+### Headline options for Session 1131 (Rigby-ordered)
 
-### Headline options for Session 1130 (Rigby-ordered)
+#### B. Service-token auth for `app_slug` (now top priority)
 
-#### A. Move 3 Round 2 — replay + per-user filter at u-d-b
-
-**Why first.** MLC works while connected; reconnection drops every
-event that happened during the gap. iOS / mobile / tab-switch users
-silently lose activity. Worse failure mode than the auth gap.
+**Why first.** Routing control is a security boundary, not a hint.
+Today, signed fleet → u-d-b requests are auth'd; PA-token brain-bridge
+requests can still claim any `app_slug`. The two paths have different
+trust models and the PA-token path is the gap.
 
 What ships:
-- `GET /api/fleet/events/?since=<event_id>&limit=100` — replay from
-  `FleetEvent` rows. Signed (fleet auth class). Auto-scoped to
-  caller's `app_slug`.
-- Optional `?user_id=...` query for u-d-b-side per-user filtering
-  (cheaper than fan-out + filter in every consuming app — Rigby will
-  want to weigh DB-side filter vs. consumer-side filter trade-off).
-- `Last-Event-ID` header support on `/api/fleet/events/stream` so
-  reconnecting clients pick up where they left off.
-- Frontend (CC): when EventSource fires `onerror` then reconnects,
-  send `?since=<last seen event_id>` to replay missed events.
+- `allowed_app_slugs` JSONField on the PA token model (or a join
+  table).
+- On `/api/pa/chat/`, verify `routing.app_slug` is in the token's
+  allowlist; if not, strip the routing block and log
+  `override_reason="untrusted_app_slug"`.
+- Back-fill migration: existing PA tokens get `["*"]` with a warning
+  logged on each use until they're rotated to scoped tokens.
 
-Brief Rigby with the replay query shape before coding. She'll want
-to lock event_id ordering semantics (timestamp tiebreak, gap-detection
-rules) up front.
+Existing `FleetAuthAuditLog` rows will capture the security boundary
+crossings automatically.
 
-Estimate: ~⅓ session.
-
-#### B. Service-token auth for `app_slug` (carryover from 1128 option A)
-
-**Why second.** Routing control is a security boundary now, not a
-hint. Today, signed fleet → u-d-b requests are auth'd; PA-token
-brain-bridge requests can still claim any `app_slug`. The two paths
-have different trust models.
-
-Bind PA tokens to one-or-more allowed `app_slug` values. Add
-`allowed_app_slugs` JSONField on the PA token model (or a join
-table). On `/api/pa/chat/`, verify `routing.app_slug` is in the
-token's allowlist; if not, strip the routing block and log
-`override_reason="untrusted_app_slug"`.
-
-Existing `FleetAuthAuditLog` rows will capture the security
-boundary crossings automatically.
+**Brief Rigby before coding.** She'll want a clean migration path
+that doesn't break existing brain-bridge callers. The default
+`["*"]` for legacy tokens is the obvious starting move but she
+might want a tighter posture.
 
 Estimate: ~½ session. Touches PA token model + brain-bridge view +
 routing override logic.
 
-#### C. FleetEvent retention (quick win)
+#### D. Wire SSE into mentorforge
 
-Borrow Move 2 R2's pattern: add `expires_at` + cleanup beat task to
-`FleetEvent`. Default TTL = 30 days (Rigby's call — confirm before
-shipping). Reuse the cleanup primitive in
-`core/services/fleet_artifact_cleanup.py` rather than duplicating.
-
-Estimate: ~⅙ session. Can land alongside A.
-
-#### D. Wire SSE into one other fleet app
-
-mentorforge is the natural pick — lesson generation has the same
-"long-running task you want to watch live" shape as draft generation.
-Mirrors CC's pattern exactly:
+Lesson generation has the same "long-running task you want to watch
+live" shape as draft generation. Mirrors CC's pattern exactly:
 - u-d-b emits `lesson.created` / `lesson.published` events.
 - mentorforge backend: per-user `/api/lessons/events` endpoint.
 - mentorforge frontend: activity strip on the relevant page.
 
-Mostly reuse. Estimate: ~½ session.
+Mostly reuse from CC. Estimate: ~½ session. Lands cleanly after B.
 
 #### E. FC-path hint bias (Phase 2D, carryover from 1128)
 
@@ -186,23 +173,30 @@ u-d-b's `_run_agentic_loop` ignores `_routing_hint` when
 message biasing the LLM toward the hinted agent's tool. Touches
 prompt assembly — brief Rigby with the exact injection point first.
 
-Estimate: ~⅓ session. Independent of A-D.
+Estimate: ~⅓ session. Independent of B + D.
 
 #### F. fleet_health → signal-studio spider feed
 
 Deferred since Session 1126. Still independent of everything above.
 
-**Rigby's recommendation: A + C in same session, then B, then D in
-Session 1131.**
+**Rigby's recommendation for 1131: B alone is enough. D + E + F
+remain queueable.**
 
 ### Carryovers (open / parked, not blocking)
 
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
 - **24-7-ai-global** — Next.js, not yet Dockerized.
+- **Per-user filter at u-d-b** — optional `?user_id=…` on the replay
+  endpoint to push filtering server-side. Not done in 1130; current
+  fan-out + filter in each consumer is cheaper than another index at
+  current traffic.
+- **DB-dependent tests** for replay ordering + TTL deletion — would
+  need test DB with pgvector. Live smoke is the canonical
+  verification path until that's solved.
 - **context-kit doctor floor:** `10 OK / 2 warnings` (both upstream).
 - **`character-os`** — Another Claude Code instance may be active there. Read-only is fine; don't push PRs there or edit their anchor docs.
 
-### Operational notes
+### Operational notes carried forward from 1129/1130
 
 - **`brain_events.py` is byte-identical across all 7 fleet repos.**
   Edit contract-concierge first, then back-prop. Same rule as
@@ -222,43 +216,39 @@ Session 1131.**
 - **Docker rebuild gotcha.** `docker compose up -d --build <service>`
   doesn't always re-create the container — use `--force-recreate`
   when you need the new code to actually run.
-- **`/api/fleet/events/` is in `OPTIONAL_AUTH_PATHS`.** Signed-but-
-  tokenless is the canonical fleet auth shape; the SSE view does its
-  own signature verification.
+- **`/api/fleet/events/*` paths are in `OPTIONAL_AUTH_PATHS`.** Signed-but-
+  tokenless is the canonical fleet auth shape; the SSE and replay
+  views do their own signature verification.
 - **Test DB needs pgvector.** The rotation tests use it; the local
   Postgres container has it but a bare `createdb` doesn't. Manual
   smoke against the running stack remains the most reliable
-  validation for fleet-auth changes.
+  validation for fleet-auth + fleet-event changes.
+- **Django 5 `db_default` is the right tool for DB-managed defaults
+  on non-PK columns.** `null=True` alone makes Django pass NULL in
+  INSERT and overrides the Postgres DEFAULT. Saved as a feedback
+  memory.
 
-### Recommended Rigby coordination for Session 1130
+### Recommended Rigby coordination for Session 1131
 
-For Move 3 R2 (option A): lock event_id ordering semantics before
-coding. Specifically: (1) is timestamp + uuid the tiebreak, or
-something more deterministic; (2) what's the gap-detection rule on
-reconnect — strict (replay all events `> last_seen`) or fuzzy
-(replay last N + dedupe client-side); (3) should the SSE endpoint
-auto-replay on `Last-Event-ID` or require the client to explicitly
-GET the replay endpoint first.
-
-For service-token auth (option B): she'll want a clean migration
-path. The PA token model has a lot of existing rows; back-filling
-`allowed_app_slugs` needs a default that doesn't break existing
-brain-bridge callers (probably `["*"]` for legacy tokens, with a
-warning logged on each use until they're rotated to a scoped
-token).
+For option B (service-token auth): brief her on the migration shape
+before coding. Specifically: (1) is the allowlist on the PA token
+model or a separate join table; (2) what's the default for legacy
+tokens — `["*"]` with a deprecation warning, or fail-closed; (3)
+how should `/api/pa/chat/` log violations — strip + log, or
+401-deny?
 
 ---
 
-## SESSION 1129 — PRIOR ENTRY POINT (fleet auth + artifacts + SSE)
+## SESSION 1130 — PRIOR ENTRY POINT (Move 3 R2)
+
+Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md).
+
+---
+
+## SESSION 1129 — TWO SESSIONS BACK (fleet auth + artifacts + SSE)
 
 Full handoff: [`docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md`](docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md).
 
 ---
 
-## SESSION 1128 — TWO SESSIONS BACK (fleet brain bridge sends routing)
-
-Full handoff: [`docs/handoffs/SESSION_1128_FLEET_BRAIN_BRIDGE_ROUTING.md`](docs/handoffs/SESSION_1128_FLEET_BRAIN_BRIDGE_ROUTING.md).
-
----
-
-*Last overwrite: Session 1129 close, 2026-05-22.*
+*Last overwrite: Session 1130 close, 2026-05-22.*
