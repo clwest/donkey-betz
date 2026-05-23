@@ -50,249 +50,211 @@ make status              # what's running + URLs
 - Rigby resolves `global` vs `workspace` mode from request/profile/context.
 - **PA tool registration needs BOTH daphne AND celery restart.** Each celery worker loads its own tool registry. `pkill -f "daphne -b 127.0.0.1 -p 8000"; pkill -f "celery -A core"; make start && make celery`.
 
-## SESSION 1130 LANDED — Move 3 R2 reconnect-resilience live everywhere
+## SESSION 1131 LANDED — signal-studio drinks from the real fleet pipe
 
-Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md).
+Full handoff: [`docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md`](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md).
 
-**Headline:** monotonic `seq` column on FleetEvent + canonical
-replay endpoint + 30-day TTL + drain-before-subscribe pattern across
-all 7 fleet apps. 9 PRs merged. All 7 containers now run
-312-line brain_events.py (verify with
-`docker exec <container> wc -l /app/app/brain_events.py`).
+**Headline:** signal-studio went from 5 hardcoded seeds to **131 real
+clusters** (5 seed + 126 upstream). Live SSE updates land in ~3s.
+Quality bar locked by Rigby: `status=active AND cluster_size>=3 AND
+strength>=0.6`. HANDLERS prefix router shipped per Rigby's lock C.
+2 PRs open: u-d-b [#2138](https://github.com/clwest/donkey-betz-platform/pull/2138) +
+signal-studio [#12](https://github.com/clwest/signal-studio/pull/12).
 
-Browser smoke confirmed: tab-switch-then-replay works end-to-end.
+**Visual diff for Chris:** open `http://localhost:5173`. Real cluster
+titles ("React demand spike", "Marketing sentiment shift", "AI
+emerging trend") replace the 5 hardcoded seeds.
+
+**Burned-in gotcha (saved to memory):** Fleet HMAC clients sign with
+`SHA256(raw_secret).hexdigest()`, not the raw secret. Symptom is 401
+`signature_mismatch`. Reference impl: `contract-concierge/backend/app/fleet_signer.py:141`.
 
 ---
 
-## SESSION 1131 — CURRENT ENTRY POINT (signal-studio Phase 1)
+## SESSION 1132 — CURRENT ENTRY POINT (signal-studio Phase 2: SignalCuratorAgent)
 
-> **Chris's pivot at the end of 1130:** signal-studio is currently
-> showing 5 hardcoded seed signals. He wants it wired into u-d-b's
-> spider + signal-aggregation pipeline so it shows real data with
-> agent-curated ranking on top.
->
-> Briefed Rigby; she locked **path B + C** (pull endpoint + events
-> first, then a SignalCuratorAgent layer). Phase 1 below is the B
-> half. Phase 2 (C) ships in Session 1132.
+> **Carry-over from 1131:** Rigby's path C — the curated ranking
+> layer on top of what Phase 1 shipped. The pull endpoint + emit +
+> live consumer is the firehose; Phase 2 turns the 126-cluster feed
+> into a curated experience.
 
-### FIRST THING — Quick stack sanity check before coding
+### FIRST THING — Sanity check before coding
 
-1. `cd ~/development/infra && make up` — fleet up.
-2. `make all` (or `make start && make celery` from u-d-b) — u-d-b native.
-3. Open `http://localhost:5173` (signal-studio frontend) and confirm
-   the 5 hardcoded seed signals still show. That's the "before"
-   state for the visual diff Chris will care about at the end of 1131.
-4. `curl http://localhost:8007/api/signals` should return the same
-   5 signals (sanity check the API mirror of what the UI sees).
+1. `cd ~/development/infra && make up`
+2. `make all` (or `make start && make celery` from u-d-b)
+3. `curl http://localhost:8007/api/signals | jq '.total'` should be `131`-ish (5 seed + N real). If it's still 5, Phase 1 isn't running — check `FLEET_SERVICE_SECRET` is set in signal-studio's container env (`docker exec signal_studio_api env | grep FLEET`).
+4. Visual check: `localhost:5173` shows real cluster titles, not the 5 hardcoded seeds.
 
-If anything is off, debug before starting Phase 1 work — every
-step below assumes a green stack.
+If anything is off, debug Phase 1 before starting Phase 2.
 
-### Phase 1 — pull endpoint + event emit (Rigby's "B")
+### Phase 2 — SignalCuratorAgent layer (Rigby's "C")
 
-**Estimate:** ~1 day.
+**Estimate:** ~1 day for the agent + handler + Curated tab.
 
-#### Step 1 (u-d-b): `GET /api/fleet/signals/clusters` endpoint
+#### Step 1 (u-d-b): SignalCuratorAgent
 
-Add a signed endpoint that returns a normalized cluster summary
-list, paginated by an exclusive cursor (mirror the Move 3 R2
-contract):
+Where to wire it in:
+- New agent class — likely `core/agents/signal_curator_agent.py`
+- Register in `AGENT_MAP` (governor-eligible, rate-limited daily)
+- Beat schedule entry: once daily, say 6 AM MST
 
-```
-GET /api/fleet/signals/clusters?since=<seq>&limit=50
-Response: { clusters: [...], next_since: <int>, has_more: <bool>, app_slug: "<caller>" }
-```
+What it does:
+- Pulls all clusters with `status=active AND strength>=0.6` (the
+  Phase 1 quality-bar set — same predicate as the pull endpoint)
+- Scores each by composite: starter formula
+  `0.5*strength + 0.3*size_normalized + 0.2*recency_decay` (Rigby
+  should lock the weights based on actual distribution shape — brief
+  her with a recency-weighted histogram before coding)
+- Picks Top 5–10
+- Persists curated artifact set (see Step 2 for storage shape)
+- Emits `signal.curated_published` with the curated list as payload
 
-Per-cluster shape (drawn from `core/services/signal_aggregation_service.py`'s
-SignalCluster model + what signal-studio's `SignalCluster` /
-`EvidenceCard` rows need):
+#### Step 2 (u-d-b): curated persistence
 
-```json
-{
-  "external_cluster_id": "<uuid>",
-  "title": "<short title>",
-  "summary": "<2-3 sentences>",
-  "pattern_type": "demand_spike | trend_emergence | ...",
-  "category": "tech | crypto | business | career | ...",
-  "signal_strength": 0.0-1.0,
-  "confidence_score": 0.0-1.0,
-  "cluster_size": <int>,
-  "evidence": [
-    {"source": "...", "url": "...", "headline": "..."},
-    ...
-  ],
-  "tags": ["...", "..."],
-  "created_at": "<iso8601>"
-}
-```
+Two options to brief with Rigby:
 
-**Where to wire it in u-d-b:**
-- New view file `core/views_fleet_signals.py` (mirrors
-  `core/views_fleet_events.py` shape — fleet sig verify + audit row
-  + JSON response).
-- New helper service `core/services/fleet_signals.py` that
-  translates `SignalCluster` ORM rows into the response shape above.
-- Register the URL in `core/urls.py` alongside the fleet artifacts/
-  events routes.
+**(a)** Separate ORM type (`CuratedSignalSnapshot`?) — cleaner
+long-term, requires new table + migration. Each daily run writes a
+new snapshot row; historical curated lists are queryable.
 
-**App-scoping gotcha (Rigby's gotcha B):** restrict this endpoint
-to `app_slug == "signal-studio"` *at first* — the cluster
-firehose is not a thing other fleet apps should subscribe to by
-default. Easiest path: add an explicit allowlist check after
-signature verification. If/when other apps need clusters later we
-can broaden via `FleetServiceIdentity.capabilities`.
+**(b)** Boolean + score on `SignalCluster` — simpler, one column
+add (`curated_score: float`, indexed). Curated set = `ORDER BY
+curated_score DESC LIMIT 10`. No history — last run wins.
 
-#### Step 2 (u-d-b): `signal.cluster_promoted` event emit
+I lean (a) but (b) ships faster. Rigby's call.
 
-When `signal_aggregation_service` creates a new cluster meeting the
-quality bar (Rigby's gotcha A):
+#### Step 3 (u-d-b): emit `signal.curated_published`
 
-- `cluster_size >= MIN_CLUSTER_SIZE` (3, already a constant)
-- `pattern_type in {allowed list — start permissive, tighten if noisy}`
-- `signal_strength >= 0.6` *or* evidence from ≥2 unique source
-  domains (Rigby's "evidence diversity" alternative)
+Payload should mirror the cluster envelope shape from Phase 1 (so
+the consumer's HANDLERS router can reuse `_handle_signal_event`'s
+upsert path with minimal branching) BUT include a `curated_score`
+field and ideally a snapshot id.
 
-Call `emit_event(event_type="signal.cluster_promoted",
-app_slug="signal-studio", payload={...cluster summary...})`. Same
-envelope shape as the pull endpoint's per-cluster object so
-signal-studio's consumer doesn't need two code paths.
+Same fleet-event mechanism as `signal.cluster_promoted` — call
+`emit_event(event_type="signal.curated_published", app_slug="signal-studio", payload={...})`.
 
-**Important:** emit AFTER the cluster row commits (matches the
-existing artifact emit pattern in
-`core/services/fleet_artifact_cleanup.py`).
+#### Step 4 (signal-studio): handler + Curated tab
 
-#### Step 3 (signal-studio): brain_events handler + DB writes
-
-In `~/development/signal-studio/backend/app/`:
-
-- Extend brain_events.py consumer (or add a sibling handler) to
-  recognize `signal.cluster_promoted` and `signal.curated_published`
-  events.
-- New `app/signal_ingest.py` that:
-  - On app startup: pulls one page of `/api/fleet/signals/clusters`
-    with `since=<max(external_cluster_id seq) or 0>` until exhausted
-    — backfills SignalCluster + EvidenceCard rows.
-  - On each `signal.cluster_promoted` event: upserts the cluster by
-    `external_cluster_id` (NOT by local UUID — that's Rigby's
-    "upsert by external_cluster_id" lock).
-- Persist `external_cluster_id` as a column on `SignalCluster` (new
-  field; lightweight Alembic migration or SQLAlchemy create_all
-  refresh since it's SQLite + early development).
-
-#### Step 4 (signal-studio): drop the seed-only path
-
-`backend/app/seed.py` currently fills 5 hardcoded signals. After
-backfill works, the seeder should be a NO-OP when real clusters
-exist (`if SignalCluster.objects.count() == 0: seed_demo_signals()`
-or similar guard). Don't delete it — useful for cold-start dev /
-demo when u-d-b isn't running.
+- **Handler**: in `app/signal_ingest.py`, add a new tuple to the
+  HANDLERS list. The router already routes anything `signal.*` to
+  `_handle_signal_event` — split that into per-event-type branches
+  (or add a new `_handle_signal_curated_event` and route by exact
+  match before the prefix). Rigby's choice when she sees the
+  envelope shape.
+- **Storage**: a `curated_score` column on `SignalCluster` (cheapest)
+  OR a new `CuratedSnapshot` ORM type if she chose (a) above.
+- **UI**: new Curated tab in the React frontend alongside the
+  existing signal list. Renders top 10 by `curated_score`.
 
 #### Step 5: smoke
 
-- `cd ~/development/infra && make up && make all`
-- Trigger a synthetic cluster on u-d-b (Django shell or test fixture
-  → emit_event manually).
-- Confirm the event lands in signal-studio's SQLite within ~5s and
-  shows up in the UI (`localhost:5173/`).
-- Optional: tab-switch → emit another cluster → tab back → confirm
-  the missed cluster replays (Move 3 R2 already validated this, but
-  it's a nice belt-and-suspenders for the new event type).
+- Trigger SignalCuratorAgent manually via Django shell
+- Confirm `signal.curated_published` lands in signal-studio (the
+  HANDLERS router fires; new column / table populated)
+- UI: Curated tab shows 5–10 ranked clusters
 
-### Carryover for Session 1132 — Phase 2 (C)
+### Lower-priority cleanup (defer further if Phase 2 is the focus)
 
-Not in scope for 1131; sketched here so the next handoff doesn't
-have to re-discover it:
+- **Evidence URL field** — Phase 1 ships `url=""` because
+  `SignalCluster.sample_signals` has no URL column. Options: extend
+  `sample_signals` upstream OR wait for SignalCuratorAgent to do
+  enrichment (cleaner path). Phase 2 candidate if cleanly bounded.
+- **Action-card pre-generation for curated only** — bounded LLM
+  cost; keeps lazy-on-click for everything else, which is what
+  `/api/signals/{id}/generate-action` already does. Optional.
+- **`pattern_type` as `category` rename** — Phase 1 honest
+  placeholder. Phase 2 SignalCuratorAgent can categorize
+  semantically.
 
-- New `SignalCuratorAgent` (lightweight, agent-rotation eligible
-  under the governor) that runs daily:
-  - Pulls recent clusters via the new endpoint.
-  - Scores into Top 5-10 by composite of `signal_strength` +
-    `cluster_size` + recency.
-  - Writes a curated artifact set + emits
-    `signal.curated_published`.
-- signal-studio UI: add a Curated tab alongside the existing list.
-- Optional: action-card pre-generation for curated top only
-  (bounded LLM cost; keeps lazy-on-click for everything else).
+### Operational notes carried forward from 1131
 
-### Operational notes carried forward
-
+- **Fleet HMAC sign-key = SHA256(secret), not raw secret.** Saved to
+  memory. Any new fleet client (Step 1 SignalCuratorAgent doesn't
+  need this — it runs IN u-d-b; only OUTSIDE callers sign) must
+  follow this contract.
+- **`init_db()` does not migrate existing tables.** Adding a column
+  to a signal-studio model requires either an explicit
+  `_ensure_schema()`-style helper OR an Alembic setup. Phase 1
+  chose the former.
+- **Dockerfile CMD runs `seed_database()` BEFORE uvicorn.** Any
+  schema migration helper used in main.py's startup must ALSO be
+  callable from seed.py before its query. Phase 1's pattern: import
+  inside the function, call before any query that touches the new
+  column.
 - **brain_events.py is byte-identical across all 7 fleet repos.**
-  Edit contract-concierge first, then back-prop. New event types
-  (`signal.cluster_promoted`, etc.) probably need a generic event
-  router in the subscriber — design that before coding to avoid
-  another per-app divergence.
-- **EventSource is browser-only.** The 2-hop pattern is u-d-b emits
-  → fleet backend subscribes (signed server-to-server) → fleet
-  backend re-emits to browser (user-session, token in query).
+  signal_ingest.py is signal-studio-specific (no back-prop) but if
+  another fleet app ever needs `signal.*` events later, the
+  HANDLERS pattern in signal_ingest.py is the reference for how to
+  consume them.
+- **EventSource is browser-only.** The 2-hop pattern still applies:
+  u-d-b emits → fleet backend subscribes server-to-server → fleet
+  backend re-emits to browser. signal-studio currently has NO
+  browser-facing SSE — adding one for the Curated tab (live updates
+  to the curated list?) is a Phase 2 design question, not assumed.
 - **Daphne + sync generator + Redis pub/sub = hang.** Use
   `async def event_generator` + `redis.asyncio` for any new SSE
   endpoint.
 - **Docker rebuild gotcha.** `docker compose up -d --build` doesn't
   always recreate the container — use `--force-recreate`. Don't run
-  parallel builds across 6+ repos (Docker Desktop daemon hang risk,
-  per Session 1125 memory; we got lucky on the Session 1130 close
-  but it's a coin flip).
+  parallel builds across 6+ repos.
 - **`/api/fleet/*` paths are in `OPTIONAL_AUTH_PATHS`.** Signed-but-
   tokenless is the canonical fleet auth shape.
-- **Test DB needs pgvector.** Use pure-function unit tests + live
-  smoke against running stack for fleet-anything changes.
 - **Django 5 `db_default` for DB-managed defaults** (Postgres
   sequences, `gen_random_uuid()`, `now()`). `null=True` alone makes
   Django pass NULL in INSERT and overrides the DB DEFAULT.
 
 ### Carryovers (open / parked, not blocking)
 
+- **Service-token auth for `app_slug`** (deferred 1130 → 1131 → 1132).
+  PA-token brain-bridge path still trusts whatever `app_slug` the
+  caller claims. Known gap; not exploited because the fleet is
+  laptop-local. Promote when the fleet leaves the laptop.
+- **`docs/SERVICES.md` drift** — header says 320 service files,
+  reality is 334 after Phase 1 (+ `fleet_signals.py`). Pre-existing
+  pattern; cleanup pass when there's bandwidth.
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
 - **24-7-ai-global** — Next.js, not yet Dockerized.
 - **Per-user filter at u-d-b's replay endpoint** — optional
-  `?user_id=…` query param to push filtering server-side. Not done
-  in 1130; current fan-out + filter in each consumer is cheaper at
-  this traffic.
-- **DB-dependent tests** for replay ordering + TTL deletion —
-  requires test DB with pgvector. Live smoke is the canonical
-  verification path until that's solved.
-- **`docs/SERVICES.md` drift** — header text says 320 service files,
-  reality is 332 (fleet_event_cleanup.py landed). Pre-existing
-  header-staleness pattern; cleanup pass when there's bandwidth.
+  `?user_id=…` query param. Cheaper to fan-out + filter in each
+  consumer at current traffic.
+- **DB-dependent tests** for `signal_aggregation_service` emit
+  predicate + cursor advancement — requires test DB with pgvector.
+  Live smoke is the canonical verification path until that's solved.
 - **context-kit doctor floor:** `10 OK / 2 warnings` (both upstream).
 - **`character-os`** — Another Claude Code instance may be active there. Read-only is fine; don't push PRs there or edit their anchor docs.
 
-### Service-token auth for `app_slug` (deferred from 1131 top priority)
+### Recommended Rigby coordination for Session 1132
 
-This was Rigby's option B priority coming out of 1130 ("auth-gate
-before UI for security-boundary features"). Chris pivoted to
-signal-studio because it's higher-visibility. Service-token auth
-moves to Session 1132 or 1133. The PA-token brain-bridge path still
-trusts whatever `app_slug` the caller claims — known gap, not yet
-exploited because the fleet is laptop-local.
+For Step 1: brief her with a recency-weighted strength histogram of
+the current ~126 real clusters before locking SignalCuratorAgent's
+scoring weights. The starter formula
+(`0.5*strength + 0.3*size_normalized + 0.2*recency_decay`) is a guess;
+she'll want to base the weights on actual distribution shape, same way
+she locked the Phase 1 quality bar.
 
-### Recommended Rigby coordination for Session 1131
+For Step 2: lock the curated-persistence shape (separate ORM type vs
+column-on-SignalCluster). Her past architectural calls (publish_intent
+enum vs boolean, Session 1094) suggest she'll lean toward the typed
+option, but ask explicitly.
 
-For the Step 2 quality bar: lock the exact threshold values before
-coding. The starter values above (strength >= 0.6, OR ≥2 unique
-domains) are placeholders — she'll want to base them on actual
-distribution of current cluster scores, which a quick
-`SignalCluster.objects.aggregate(...)` will give. Brief her with
-the histogram before deciding.
-
-For Step 3: confirm whether to extend the existing brain_events.py
-subscriber or add a sibling `signal_events.py` module. The CC-side
-draft listener filters by `event_type.startswith("artifact.")`;
-adding `signal.*` to the same listener might be cleaner than two
-parallel handlers. Her call.
+For Step 3: confirm the curated payload envelope shape — does it
+re-send the full cluster envelope plus `curated_score`, or just an
+ID list pointing back to the cluster the consumer already has? The
+latter is leaner but assumes the consumer is caught up; the former is
+self-contained.
 
 ---
 
-## SESSION 1130 — PRIOR ENTRY POINT (Move 3 R2 — closed)
+## SESSION 1131 — PRIOR ENTRY POINT (signal-studio Phase 1 — closed)
+
+Full handoff: [`docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md`](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md).
+
+---
+
+## SESSION 1130 — TWO SESSIONS BACK (Move 3 R2 reconnect-resilience)
 
 Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md).
 
 ---
 
-## SESSION 1129 — TWO SESSIONS BACK (fleet auth + artifacts + SSE)
-
-Full handoff: [`docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md`](docs/handoffs/SESSION_1129_FLEET_BRAIN_AUTH_ARTIFACTS_EVENTS.md).
-
----
-
-*Last overwrite: Session 1130 close → 1131 entry, 2026-05-22 evening.*
+*Last overwrite: Session 1131 close → 1132 entry, 2026-05-22 evening.*
