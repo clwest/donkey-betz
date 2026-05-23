@@ -907,3 +907,45 @@ def _impl_aggregate_spider_signals(self, lookback_hours: int = 6):
             'status': 'error',
             'error': str(e),
         }
+
+
+def _impl_curate_signal_clusters(self, top_n: int = 10):
+    """
+    Session 1131 Phase 2 (Rigby's path C): produce one curated snapshot.
+
+    Pulls the Phase 1 quality-bar pool (status=active AND strength>=0.6),
+    scores by `0.9*strength + 0.1*recency_decay`, dedupes by
+    `(pattern_type, topic_key)` keeping the best per group, applies a
+    per-pattern_type cap of `max(2, ceil(N/4))`, persists the snapshot,
+    and emits `signal.curated_published` to signal-studio.
+
+    Idempotent at the content level (same inputs + clock → same
+    snapshot CONTENT) but each run writes a new snapshot row — history
+    is a feature (Rigby's lock #2).
+    """
+    from core.services.signal_curator_service import curate_and_emit
+
+    logger.info(f"🎯 [SIGNAL-CURATOR] Starting top_n={top_n}")
+    try:
+        result = curate_and_emit(top_n=top_n)
+        snapshot = result.snapshot
+        out = {
+            'status': 'success',
+            'snapshot_id': str(snapshot.id),
+            'pool_size': result.pool_size,
+            'top_n': snapshot.top_n,
+            'excluded_count': result.excluded_count,
+            'formula': snapshot.scoring_formula_version,
+        }
+        logger.info(
+            f"🎯 [SIGNAL-CURATOR] Complete: snapshot={snapshot.id} "
+            f"pool={result.pool_size} kept={snapshot.top_n} "
+            f"excluded={result.excluded_count}"
+        )
+        return out
+    except Exception as e:
+        logger.error(f"🎯 [SIGNAL-CURATOR] Error: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'error': str(e),
+        }

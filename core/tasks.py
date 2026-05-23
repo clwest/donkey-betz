@@ -10915,6 +10915,11 @@ def _detect_initiative_content_type(topic: str) -> str:
 def aggregate_spider_signals(self, lookback_hours: int = 6):
     from core.tasks_spiders import _impl_aggregate_spider_signals
     return _impl_aggregate_spider_signals(self, lookback_hours)
+@shared_task(bind=True, name='curate_signal_clusters')
+def curate_signal_clusters(self, top_n: int = 10):
+    """Session 1131 Phase 2 — daily curated snapshot for signal-studio."""
+    from core.tasks_spiders import _impl_curate_signal_clusters
+    return _impl_curate_signal_clusters(self, top_n)
 @shared_task(bind=True, name='trigger_signal_driven_conversation')
 def trigger_signal_driven_conversation(self, auto_topic_id: str):
     from core.tasks_conversations import _impl_trigger_signal_driven_conversation
