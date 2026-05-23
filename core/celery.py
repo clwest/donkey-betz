@@ -279,6 +279,16 @@ app.conf.beat_schedule = {
         'kwargs': {'lookback_hours': 6},
         'options': {'queue': 'long_running', 'expires': 1800},
     },
+    # Session 1131 Phase 2 (Rigby's path C) — daily curated snapshot.
+    # Runs at 6:00 AM MST (= 13:00 UTC) so signal-studio's Curated tab
+    # has fresh content before any morning sessions. Expires at 4h so
+    # a stuck task can't trip an evening re-run.
+    'curate-signal-clusters': {
+        'task': 'curate_signal_clusters',
+        'schedule': crontab(hour=13, minute=0),
+        'kwargs': {'top_n': 10},
+        'options': {'queue': 'long_running', 'expires': 4 * 3600},
+    },
     # Scan spider data for opportunities
     'scan-spider-opportunities': {
         'task': 'intelligence.tasks.scan_spider_opportunities',
