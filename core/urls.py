@@ -93,6 +93,9 @@ from core.views_fleet_artifacts import (
 # Session 1129 Move 3 Round 1 — Fleet event SSE
 from core.views_fleet_events import fleet_events_replay, fleet_events_stream
 
+# Session 1131 Phase 1 — Fleet signal-cluster replay (signal-studio only)
+from core.views_fleet_signals import fleet_signals_clusters_replay
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -1765,6 +1768,14 @@ urlpatterns = [
         'api/fleet/events/',
         fleet_events_replay,
         name='fleet-events-replay',
+    ),
+    # Session 1131 Phase 1 — Fleet signal-cluster replay (Rigby's path B).
+    # Same cursor contract as fleet_events_replay; app_slug allowlist
+    # restricts to `signal-studio` only (Rigby's gotcha B).
+    path(
+        'api/fleet/signals/clusters',
+        fleet_signals_clusters_replay,
+        name='fleet-signals-clusters-replay',
     ),
     # P12: Agent Fleet Management
     path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),

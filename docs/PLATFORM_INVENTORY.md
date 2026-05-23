@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-22 20:05:30
-**Git HEAD:** `1c113da7`
+**Generated:** 2026-05-22 20:42:43
+**Git HEAD:** `c9cfe523`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -12,13 +12,13 @@
 |---|---|
 | [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 151 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
-| [Services](#services) | 112 `*Service` classes across 332 files in core/services/ |
-| [Celery Tasks](#celery-tasks) | 398 user-defined Celery tasks (excludes celery.* internals) |
+| [Services](#services) | 112 `*Service` classes across 334 files in core/services/ |
+| [Celery Tasks](#celery-tasks) | 399 user-defined Celery tasks (excludes celery.* internals) |
 | [Celery Beat — Scheduled Tasks](#beat-schedule) | 78 enabled + 0 disabled = 78 PeriodicTask rows |
 | [Personal Assistant (PA) Tools](#pa-tools) | 103 tool schemas + 168 registered handlers; 8 enrichment services |
 | [Database Models](#database-models) | 581 concrete models across 23 apps |
-| [URL Routes](#url-routes) | 1854 path() patterns across all core/urls*.py files |
-| [Django View Files](#views-files) | 206 files matching core/views*.py |
+| [URL Routes](#url-routes) | 1856 path() patterns across all core/urls*.py files |
+| [Django View Files](#views-files) | 207 files matching core/views*.py |
 | [Django Management Commands](#management-commands) | 178 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
@@ -29,7 +29,7 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,027 Python files, 988,861 lines across core/ + ai_core/ + intelligence/ |
+| [Code Statistics](#code-stats) | 2,032 Python files, 989,953 lines across core/ + ai_core/ + intelligence/ |
 | [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 72 OK, 1 drifts |
 
 ## Table of Contents
@@ -246,7 +246,7 @@
 <a id="services"></a>
 ## Services
 
-**Headline:** 112 `*Service` classes across 332 files in core/services/
+**Headline:** 112 `*Service` classes across 334 files in core/services/
 
 **Code location:** `core/services/`
 
@@ -368,14 +368,15 @@
 <a id="celery-tasks"></a>
 ## Celery Tasks
 
-**Headline:** 398 user-defined Celery tasks (excludes celery.* internals)
+**Headline:** 399 user-defined Celery tasks (excludes celery.* internals)
 
 **Code location:** `core/tasks.py + siblings`
 
-**Notes:** Top 10 modules by task count: core.tasks=332, intelligence.tasks=14, sports=8, core.tasks_agents=6, (top-level)=5, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
+**Notes:** Top 10 modules by task count: core.tasks=333, intelligence.tasks=14, sports=8, core.tasks_agents=6, (top-level)=5, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
 
 | Task |
 |---|
+|  |
 |  |
 |  |
 |  |
@@ -1392,13 +1393,13 @@
 <a id="url-routes"></a>
 ## URL Routes
 
-**Headline:** 1854 path() patterns across all core/urls*.py files
+**Headline:** 1856 path() patterns across all core/urls*.py files
 
 **Code location:** `core/urls*.py`
 
 | Prefix | Count |
 |---|---|
-| api | 1773 |
+| api | 1775 |
 | (root) | 5 |
 | sports | 4 |
 | marketplace | 4 |
@@ -1460,7 +1461,7 @@
 <a id="views-files"></a>
 ## Django View Files
 
-**Headline:** 206 files matching core/views*.py
+**Headline:** 207 files matching core/views*.py
 
 **Code location:** `core/views*.py`
 
@@ -1544,6 +1545,7 @@
 | views_fleet_admin.py |
 | views_fleet_artifacts.py |
 | views_fleet_events.py |
+| views_fleet_signals.py |
 | views_government.py |
 | views_heart.py |
 | views_hive_mind.py |
@@ -2028,14 +2030,14 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,027 Python files, 988,861 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,032 Python files, 989,953 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1621 | 822464 |
+| core | 1626 | 823556 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2027 | 988861 |
+| TOTAL (python) | 2032 | 989953 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
