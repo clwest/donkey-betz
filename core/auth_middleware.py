@@ -511,6 +511,8 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # session. This middleware would otherwise reject signed-but-
         # tokenless fleet requests before DRF auth ran.
         '/api/fleet/artifacts/',
+        # Session 1129 Move 3 — fleet event SSE stream, same pattern.
+        '/api/fleet/events/',
     ]
     
     # Paths that require staff privileges
