@@ -50,201 +50,190 @@ make status              # what's running + URLs
 - Rigby resolves `global` vs `workspace` mode from request/profile/context.
 - **PA tool registration needs BOTH daphne AND celery restart.** Each celery worker loads its own tool registry. `pkill -f "daphne -b 127.0.0.1 -p 8000"; pkill -f "celery -A core"; make start && make celery`.
 
-## SESSION 1131 LANDED — Phase 1 + Phase 2 both shipped
+## SESSIONS 1131 + 1132 LANDED — signal-studio full vertical slice + 1132 polish
 
-Phase 1 (signal-studio drinks from the real fleet pipe):
-- Full handoff: [`docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md`](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
-- u-d-b PR [#2138](https://github.com/clwest/donkey-betz-platform/pull/2138) + signal-studio PR [#12](https://github.com/clwest/signal-studio/pull/12)
-- 5 hardcoded seeds → **131 real clusters** (5 seed + 126 upstream). Live SSE updates in ~3s.
+**Session 1131 — signal-studio vertical slice**
+- Phase 1 ([handoff](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)): pull endpoint + emit + ingest + backfill. 5 hardcoded seeds → 131 real clusters live via SSE. u-d-b [#2138](https://github.com/clwest/donkey-betz-platform/pull/2138) + signal-studio [#12](https://github.com/clwest/signal-studio/pull/12)
+- Phase 2 ([handoff](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)): SignalCuratorAgent daily Top 10 by score 0.9·strength + 0.1·recency, dedup by (pattern_type, topic_key), cap of 3/type. u-d-b [#2140](https://github.com/clwest/donkey-betz-platform/pull/2140) + signal-studio [#13](https://github.com/clwest/signal-studio/pull/13)
 
-Phase 2 (curated experience on top of the firehose):
-- Full handoff: [`docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md`](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
-- u-d-b PR [#2140](https://github.com/clwest/donkey-betz-platform/pull/2140) + signal-studio PR [#13](https://github.com/clwest/signal-studio/pull/13)
-- Daily SignalCuratorAgent at 6 AM MST. Top 10 deduped by `(pattern_type, topic_key)`, capped at 3/type. `signal.curated_published` event drives the Curated tab in signal-studio.
+**Session 1132 — Curated tab live refresh + PA-chat audit**
+- Full handoff: [`docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md`](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md)
+- (C) Curated tab live SSE refresh: ~5s latency u-d-b → browser. signal-studio [#14](https://github.com/clwest/signal-studio/pull/14)
+- (B-scaffold) PA-chat warn-only audit: `FleetPAChatAuditRow` table. u-d-b [#2142](https://github.com/clwest/donkey-betz-platform/pull/2142). **NO ENFORCEMENT** — visibility only.
 
-**Visual diff for Chris**: open `localhost:5173`. Click "Curated Top 10" → see rank badges 1-10 on amber-bordered cards. Scores 0.804–0.921. Click any → existing SignalDetail UI (evidence cards, sources, action plan).
+**Burned-in gotcha (saved to memory):** Fleet HMAC clients sign with `SHA256(raw_secret).hexdigest()`, not the raw secret. Symptom is 401 `signature_mismatch`. Reference impl: `contract-concierge/backend/app/fleet_signer.py:141`.
 
-**Burned-in gotcha from Phase 1 (saved to memory):** Fleet HMAC clients sign with `SHA256(raw_secret).hexdigest()`, not the raw secret. Symptom is 401 `signature_mismatch`. Reference impl: `contract-concierge/backend/app/fleet_signer.py:141`.
+**1132 discoveries (documented inline, not new memory rules):**
+- Django session middleware can satisfy `SessionAuthentication` even for curl-style requests with `Authorization: Token`. Read the `Authorization` header directly when classifying auth mode rather than trusting DRF's `successful_authenticator`.
+- `request.fleet_identity` is a **dict**, not an ORM row — `.get("app_slug")`, not `getattr(_, "app_slug")`. Documented inline in `core/services/fleet_pa_chat_audit.py`.
 
 ---
 
-## SESSION 1132 — CURRENT ENTRY POINT (C primary + B scaffold stretch)
+## SESSION 1133 — CURRENT ENTRY POINT (X locked + 5 enhancements)
 
-> **Rigby's pick** (conversation pa-d19c1674b936, locked at Phase 2
-> close): **C first**, then start **B** scaffolding if time remains.
-> A is deferred — see "Deferred this session" below for her forward
-> note on how A should land when greenlit.
+> **Rigby locked** (conversation pa-d19c1674b936, Session 1132 close):
+> **Session 1133 = (X)**. Back-prop FLEET_* env vars to the remaining
+> 5 fleet repos. 5 small PRs (one per repo), not one ops-rollup. (A)
+> and (Y) explicitly held unless Chris overrides at session start.
 
 ### FIRST THING — Sanity check before any new work
 
 1. `cd ~/development/infra && make up`
 2. `make all` (or `make start && make celery` from u-d-b)
-3. `curl -s http://localhost:8007/api/signals | jq '.total'` should be `131`-ish (5 seed + N real). If still 5, Phase 1's `FLEET_SERVICE_SECRET` isn't set in signal-studio's env: `docker exec signal_studio_api env | grep FLEET`.
-4. `curl -s http://localhost:8007/api/signals/curated | jq '.total'` should be `10` if the curator has run; `0` with the "no curated snapshot yet" empty state otherwise. To force a fresh curated emit:
+3. `curl -s http://localhost:8007/api/signals | jq '.total'` → expect 131-ish (5 seed + N real)
+4. `curl -s http://localhost:8007/api/signals/curated | jq '.total'` → expect 10 (if curator has run)
+5. Visual check at `localhost:5173`: "All Signals" + "Curated Top 10" tabs render with real data; clicking Curated and triggering `curate_and_emit()` from u-d-b shell should surface a "🟢 New curated set — refresh" pill within ~5s
+6. **NEW for 1133**: check the PA-chat audit table to see current rollout state:
    ```bash
    cd ~/development/unified-donkey-betz
    .venv/bin/python manage.py shell -c "
-   from core.services.signal_curator_service import curate_and_emit
-   r = curate_and_emit(top_n=10)
-   print(r.snapshot.id, r.snapshot.top_n)
+   from core.models.fleet import FleetPAChatAuditRow
+   from collections import Counter
+   from django.utils import timezone
+   from datetime import timedelta
+   since = timezone.now() - timedelta(hours=24)
+   rows = FleetPAChatAuditRow.objects.filter(created_at__gte=since)
+   print(f'audit rows (24h): {rows.count()}')
+   print('by auth_mode:')
+   for am, n in Counter(rows.values_list(\"auth_mode\", flat=True)).most_common():
+       print(f'  {am}: {n}')
+   bearer_claims = rows.filter(auth_mode=\"bearer_only\").exclude(claimed_app_slug=\"\")
+   print(f'bearer-only with body app_slug claim: {bearer_claims.count()}')
+   mismatches = rows.filter(match=False)
+   print(f'mismatches (claimed != verified): {mismatches.count()}')
    "
    ```
-5. Visual check at `localhost:5173`: "All Signals" tab + "Curated Top 10" tab both render with real data.
 
 If anything is off, fix it before starting new work.
 
-### Primary: (C) Real-time SSE refresh in the Curated tab
+### Three credible candidates for Session 1133 (Rigby to pick)
 
-**Estimate:** ~half a session.
+#### (X) FLEET_* env back-prop to 5 fleet repos — **LOCKED for 1133**
+- **Estimate**: ~1 session, mostly mechanical
+- **Strategy lock (Rigby)**: 5 small PRs (one per repo). NOT an ops-rollup PR. Easier rollback + isolated failures + easier review.
+- **Why it matters**: unlocks the reject-mode-flip prerequisite by getting `auth_mode=fleet_signature` rows from mentorforge / pitchdeckforge / sellerpilot / dealflowtracker / compliancesentinel into the audit table
+- **What's done already**: contract-concierge (1129) + signal-studio (Phase 1) have `FLEET_KEY_ID` + `FLEET_SERVICE_SECRET`. Their `brain_client.py` is byte-identical to the other 5; auto-signs once env vars land
+- **Canonical env var set** (Rigby's lock — keep identical across all repos to avoid drift):
+  ```
+  FLEET_APP_SLUG=<app-slug>
+  FLEET_KEY_ID=fs_<appslug>_k1
+  FLEET_SERVICE_SECRET=<32-byte-raw-secret-shown-once-at-mint>
+  ```
+- **Work per repo**:
+  1. `python manage.py provision_fleet_identity --app-slug <name>` on u-d-b (one-time mint, secret shown once — save to repo `.env` immediately)
+  2. Add the three env vars above to the repo's `.env` + `docker-compose.yml` (mirror contract-concierge's compose block exactly)
+  3. `docker compose up -d --build --force-recreate <repo>_api`
+  4. **Goal metric (Rigby's lock)**: at least 1 live audit row showing ALL three:
+     - `auth_mode='fleet_signature'`
+     - `verified_app_slug='<that app>'`
+     - `has_fleet_identity=True`
+     This is the only proof that env + signing wiring is actually working end-to-end. "Request succeeded" is NOT the goal metric — given the DRF auth-classifier weirdness from 1132, treat the audit row as source of truth.
+  5. **Bearer-only canary smoke per repo** (Rigby's lock): also verify bearer-only paths still get audited as `auth_mode='bearer_only'` and remain fail-open. Confirms HMAC is the dominant path without breaking warn-only.
+- **Nice-to-have if time** (Rigby's suggestion): add a short repo-local README snippet ("How to provision identity + set FLEET_* + verify audit row") so future repos don't repeat wiring drift.
 
-**Why Rigby picked C first:** highest ROI per hour. No new backend
-semantics, no LLM spend, makes Phase 2 feel "alive" immediately.
-Aligns with Chris's cleanup/verify-truth mode + local-only default.
+#### (A) Action-card pre-generation for curated
+- **Estimate**: ~1 session
+- **Cost**: bounded LLM (~10 calls/day per curator run)
+- **Visible UX win**: Curated tab cards show instant action plans
+- **Rigby's locked shape** (from Phase 1 close, preserved): pre-generate u-d-b-side, include in `signal.curated_published` payload OR in `CuratedSignalEntry` child rows. signal-studio is a renderer, not an LLM executor
+- **Open design question for Rigby**: payload vs child rows? Payload is simpler (event self-contained); child rows are queryable (admin can see historical action plans per snapshot). Lean child rows for the same reason Phase 2 picked typed snapshot table over column-on-cluster
 
-**Goal:** when `signal.curated_published` lands while a user is
-viewing the Curated tab, the page either auto-refreshes the list
-or shows a toast like *"new curated set available — refresh?"*
+#### (Y) Reject-mode flip in unified_pa_chat
+- **Pre-req**: (X) done AND audit table shows ≥3 days of clean (signed + matching) telemetry
+- **Estimate**: ~half a session of careful config + verification
+- **Lock from 1132**: the existing Session 1129 Move 1 gate is the enforcement point; flipping is just changing the log-only behavior to deny when `fleet_identity` is None AND a routing/app_slug claim is present
+- **NOT a session 1133 candidate** unless (X) has shipped and the audit data is clean — Rigby's hard rule: do NOT ship partial auth enforcement
 
-#### Suggested path (Rigby may adjust)
+**My read**: (X) → (Y) is the security-focused arc (X this session, Y when telemetry is clean). (A) is the visible-feature path if Chris wants polish over security.
 
-1. **signal-studio backend**: add a small browser-facing SSE
-   endpoint (e.g. `GET /api/signals/events`) that subscribes to a
-   per-app-slug Redis channel and emits curated-only events to the
-   user-session. **Async only** — daphne + sync generator + Redis
-   pub/sub = hang (memory rule). Use `async def event_generator` +
-   `redis.asyncio`. The Phase 1 brain_events.py SSE primitive is
-   the reference pattern.
-2. **signal_ingest handler**: when `_apply_curated_snapshot()`
-   finishes, also publish a tiny `curated:refreshed` event onto
-   the browser-facing Redis channel (just `{snapshot_id, top_n}`
-   — no need to fan out the full envelope; the UI can refetch).
-3. **React Curated tab**: open an `EventSource` to the new
-   endpoint when the tab is active; on `curated:refreshed`, either
-   call `setCurated(refetch)` directly or render a small "🟢 New
-   curated set — refresh" pill that re-fetches on click. UX call
-   is yours/Rigby's; the toast variant is less jarring while the
-   user is reading.
-4. **Smoke**: trigger `curate_and_emit()` from u-d-b shell while
-   the Curated tab is open in the browser; verify the badge/refresh
-   fires within a few seconds.
+**Rigby's lock**: (X) for 1133. (A) and (Y) explicitly held unless Chris overrides at session start.
 
-#### Gotchas to expect
+### Recommended Rigby coordination for Session 1133
 
-- **2-hop pattern still applies** (memory rule): u-d-b's
-  `signal.curated_published` arrives at signal-studio backend via
-  the existing brain_events SSE consumer. The NEW user-facing SSE
-  channel is signal-studio backend → browser. The two-hop is
-  preserved; you're adding the second hop.
-- **EventSource is browser-only.** Server-to-server stays on the
-  signed signal_ingest path.
-- **No per-user filtering needed** at signal-studio backend for
-  Phase 2: curated set is app-wide, not user-scoped. Phase 3+ can
-  add user-personalized curation if it ever matters.
+Direction is locked. Only re-engage Rigby if:
+- **Chris overrides** the (X) lock at session start (e.g. wants (A) instead)
+- **The provision flow surfaces a design fork** (e.g. you discover one of the 5 repos doesn't have `brain_client.py` or has a divergent version that won't auto-sign — would change the back-prop unit of work)
+- **A canary smoke fails** in a way that suggests the existing 1129 Move 1 path is broken for that app (not just env-var-missing) — pull her in before patching
 
-### Stretch: (B) Service-token auth for `app_slug` (scaffold only)
+Otherwise: provision identities, update env + compose, recreate containers, verify audit rows for each app, open 5 small PRs.
 
-**Rigby's rule**: "do not ship partial auth unless it's end-to-end
-enforceable." If there's session time after C lands, **start B's
-scaffolding** — token plumbing, model fields, tests — but don't
-flip any verification on until the next session can finish it.
+### Operational notes carried forward from 1131 + 1132
 
-**Status**: deferred 1130 → 1131 → 1131 Phase 2 → now scaffolding
-candidate. Only remaining "real incident risk" carryover.
-
-**What it fixes**: the PA-token brain-bridge path still trusts
-whatever `app_slug` the caller claims. A compromised fleet app
-could currently impersonate another. Not exploited because fleet
-is laptop-local; promote when fleet leaves the laptop.
-
-**Suggested scaffold work order** (1132 stretch, 1133 finish):
-
-1. New `FleetServiceToken` model (or extend existing
-   `FleetServiceIdentity` with a token field) — bearer-token
-   shape, rotation-capable, scoped to `app_slug`.
-2. Mint endpoint or management command (mirrors
-   `provision_fleet_identity`).
-3. Verification middleware/decorator — initially log-only (warn
-   when claimed app_slug doesn't match token's identity, don't
-   reject yet). Once we have a few days of clean logs, flip to
-   enforce.
-4. Update each fleet app's `.env` to consume + send the token.
-5. **Do NOT ship partial enforcement** — the warn-only phase is
-   safe to land, but the reject phase has to wait for end-to-end
-   coverage across all 7 fleet repos.
-
-If 1132 only gets C + scaffolding for B's models/tests landed,
-that's a successful session per Rigby's framing.
-
-### Deferred this session: (A) Action-card pre-gen for curated
-
-Rigby's forward note for when A is greenlit:
-
-> Pre-generate on the **u-d-b side** for curated-only (top 10) and
-> include them in the `signal.curated_published` payload **or**
-> store them in the snapshot child rows. That keeps "curated set
-> is ready-to-act" as a single-source-of-truth artifact, and
-> signal-studio becomes a renderer, not an LLM executor.
-
-Cost shape: ~10 LLM calls/day per curator run. Bounded. Postponed
-because Chris is in cleanup/verify-truth mode and A adds an
-"is the generated content correct?" surface area. Promote when
-Chris explicitly wants Phase 2's UX to feel "done."
-
-### Lower-priority cleanup (defer further if 1132 has a clear focus)
-
-- **Evidence URL field** — both phases ship `url=""` because `SignalCluster.sample_signals` has no URL column. Cleanest path: a future enrichment agent populates it.
-- **Semantic `category`** — phases 1+2 use `pattern_type` as category. Real semantic categorization would unlock cleaner UI filtering.
-- **`docs/SERVICES.md` drift** — header says 320 service files; reality after Phase 2 is 335. Cleanup pass when there's bandwidth.
-
-### Operational notes carried forward from 1131
-
-These are now locked in code and tests but worth remembering when touching adjacent areas:
+These are locked in code/tests but worth remembering when touching adjacent areas:
 
 - **Fleet HMAC sign-key = SHA256(secret), not raw secret.** Saved to memory. Any new fleet client must follow this contract.
-- **`init_db()` does not migrate existing tables** (signal-studio side). Schema additions need `_ensure_schema()` calls in BOTH startup paths (`main.py` startup hook AND `seed.py` before its first query — Dockerfile runs seed before uvicorn). Phase 1's pattern is the reference.
-- **brain_events.py is byte-identical across all 7 fleet repos.** signal_ingest.py is signal-studio-specific. Future event types plug into the HANDLERS prefix router (one tuple, no parallel listener) — the Phase 2 `signal.curated_published` handler proved this pattern.
+- **`init_db()` does not migrate existing tables** (signal-studio side). Schema additions need `_ensure_schema()` calls in BOTH startup paths (`main.py` startup hook AND `seed.py` before its first query — Dockerfile runs seed before uvicorn).
+- **brain_events.py is byte-identical across all 7 fleet repos.** Future event prefixes plug into the HANDLERS prefix router in `signal_ingest.py` (one tuple, no parallel listener).
 - **EventSource is browser-only.** 2-hop pattern still applies: u-d-b emits → fleet backend server-to-server subscribes → fleet backend re-emits to browser.
 - **Daphne + sync generator + Redis pub/sub = hang.** Use `async def event_generator` + `redis.asyncio` for any new SSE endpoint.
 - **Docker rebuild gotcha.** `docker compose up -d --build` doesn't always recreate the container — use `--force-recreate`. Don't run parallel builds across 6+ repos.
 - **`/api/fleet/*` paths are in `OPTIONAL_AUTH_PATHS`.** Signed-but-tokenless is the canonical fleet auth shape.
 - **Django 5 `db_default` for DB-managed defaults** (Postgres sequences, `gen_random_uuid()`, `now()`). `null=True` alone makes Django pass NULL in INSERT and overrides the DB DEFAULT.
 - **Phase 2 topic-key gotcha**: upstream keywords mix PATTERN_TYPE_KEYWORDS indicator words with topics. `topic_key_for_cluster` in `signal_curator_service.py` prefers `cluster.name` first then keywords, with a stop-word filter on BOTH. If you add new pattern types or change `_generate_topic_name`, update the stop-word set.
+- **Session middleware can satisfy SessionAuthentication** (1132 discovery). Don't trust DRF's `successful_authenticator` to identify the auth mode if you need to distinguish bearer-token from session callers. Read the `Authorization` header directly.
+- **`request.fleet_identity` is a dict, not an ORM row** (1132 gotcha). Use `.get("app_slug")`, not `getattr`.
 
 ### Carryovers (open / parked, not blocking)
 
-- **Service-token auth for `app_slug`** — see (B) above. Promote when fleet leaves laptop.
+- **(A) Action-card pre-gen for curated** — see candidate above.
+- **(Y) Reject-mode flip in unified_pa_chat** — see candidate above.
+- **Evidence URL field** — both phases ship `url=""`. Cleanest path: enrichment agent populates it.
+- **Semantic `category`** — `pattern_type` is the honest placeholder.
+- **`docs/SERVICES.md` drift** — header says 320 service files; reality after 1132 is 336.
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
 - **24-7-ai-global** — Next.js, not yet Dockerized.
-- **Per-user filter at u-d-b's replay endpoint** — optional `?user_id=…` query param. Cheaper to fan-out + filter in each consumer at current traffic.
-- **DB-dependent tests** for fleet emit predicate + cursor advancement + curator dedup at scale — requires test DB with pgvector. Live smoke is the canonical verification path until that's solved.
+- **Per-user filter at u-d-b's replay endpoint** — optional `?user_id=…` query param.
+- **DB-dependent tests** for fleet emit predicate + cursor advancement + curator dedup + PA-chat audit — requires test DB with pgvector.
 - **context-kit doctor floor:** `10 OK / 2 warnings` (both upstream).
-- **`character-os`** — Another Claude Code instance may be active there. Read-only is fine; don't push PRs there or edit their anchor docs.
+- **`character-os`** — Another Claude Code instance may be active there. Read-only is fine; don't push PRs there.
 
-### Recommended Rigby coordination for Session 1132
+### Open PR stack from sessions 1131 + 1132
 
-Direction is already locked (C primary + B scaffold stretch). Only
-re-engage Rigby if:
+When Chris is ready to review/merge, the order is:
 
-- **C surfaces an unexpected design question** (e.g. per-user
-  filter becomes necessary, or the toast vs auto-refresh UX call
-  needs a second opinion based on what you see in browser smoke).
-- **B scaffolding hits a model design fork** (FleetServiceToken
-  as new model vs token field on existing FleetServiceIdentity).
-  She locked Phase 2's snapshot as a new typed table over a
-  column-on-cluster; the analog for B is probably "new model" but
-  confirm before you code.
-- **Chris overrides** the C → B order and asks for something
-  different at session start.
+```
+main
+  ↑
+docs/session-1131-close (#2139)
+  ↑
+docs/session-1131-phase-2-close (#2141)
+  ↑
+docs/session-1132-close (this branch when it lands)
 
-Otherwise: code C, smoke it in the browser, ship the PR, then
-start B scaffolding only if there's session budget left. Do NOT
-ship partial auth enforcement (her hard rule).
+feat/signal-studio-phase-1-pull-endpoint (#2138)  ← u-d-b Phase 1 code
+  ↑
+feat/phase-2-signal-curator-agent (#2140)         ← u-d-b Phase 2 code
+  ↑
+feat/pa-chat-audit-scaffold (#2142)               ← u-d-b 1132 (B) code
+
+signal-studio main
+  ↑
+feat/phase-1-fleet-signal-ingest (#12)
+  ↑
+feat/phase-2-curated-signals (#13)
+  ↑
+feat/curated-live-refresh (#14)                   ← signal-studio 1132 (C) code
+```
+
+Each handoff is stacked on the previous; each feat branch is stacked on the previous feat. Merge in order if you want clean linear history; out of order works too — GitHub rebases automatically.
+
+### Original three-candidate framing (preserved for context)
+
+Before Rigby locked (X), the three options were:
+
+1. **(X)** FLEET_* env back-prop — the picked one
+2. **(A)** Action-card pre-gen for curated — held, Rigby noted it "adds LLM surface area; keep behind (X) unless Chris explicitly wants UX polish now"
+3. **(Y)** Reject-mode flip — held behind (X) + clean telemetry window
+
+If Chris wants to override (X) at session start, the candidates and their tradeoffs are all in the [Session 1132 close handoff](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md).
 
 ---
 
-## SESSION 1131 PHASE 1 — PRIOR ENTRY POINT (closed)
+## SESSION 1131 + 1132 HANDOFFS
 
-Full handoff: [`docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md`](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md).
+- [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
+- [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
+- [Session 1132 close](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md)
 
 ---
 
@@ -254,4 +243,4 @@ Full handoff: [`docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md`](docs/hand
 
 ---
 
-*Last overwrite: Session 1131 Phase 2 close → 1132 entry (C primary + B scaffold stretch, per Rigby pick), 2026-05-22 evening.*
+*Last overwrite: Session 1132 close → 1133 entry (X locked by Rigby), 2026-05-22 evening.*
