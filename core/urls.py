@@ -90,6 +90,9 @@ from core.views_fleet_artifacts import (
     fleet_artifacts_pull,
 )
 
+# Session 1129 Move 3 Round 1 — Fleet event SSE
+from core.views_fleet_events import fleet_events_stream
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -1748,6 +1751,12 @@ urlpatterns = [
         'api/fleet/artifacts/<str:artifact_id>/',
         fleet_artifacts_pull,
         name='fleet-artifacts-pull',
+    ),
+    # Session 1129 Move 3 — Fleet event SSE stream
+    path(
+        'api/fleet/events/stream',
+        fleet_events_stream,
+        name='fleet-events-stream',
     ),
     # P12: Agent Fleet Management
     path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),

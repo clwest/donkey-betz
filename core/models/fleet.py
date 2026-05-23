@@ -459,6 +459,75 @@ class FleetArtifact(UnifiedBaseModel):
         return self.deleted_at is not None
 
 
+class FleetEvent(UnifiedBaseModel):
+    """Lifecycle event emitted by u-d-b for downstream fleet consumers.
+
+    Move 3 Round 1 (MLC, Session 1129). Persistence + Redis pub/sub fan-out.
+    Persisted rows give us audit + replay (when we add Last-Event-ID
+    later); Redis gives low-latency delivery to subscribers.
+
+    Schema is deliberately generic — `event_type` + `payload` JSON — so
+    new event types don't require migrations.
+
+    Move 3 MLC emits:
+    - `artifact.created` — after FleetArtifact row commit on push
+    - `artifact.expired` — after cleanup task soft-deletes a row
+
+    Future rounds will add: `agent.run.completed`, `agent.run.started`,
+    `routing.dispatch`, etc. Don't add them in MLC.
+
+    Filtering: events are app-scoped via `app_slug`. CC (or any
+    subscriber) sees only its own app's events at the u-d-b layer.
+    Per-user filtering happens at the consuming app side (CC matches
+    `payload.generated_by_user_id` to the browser session).
+    """
+
+    event_type = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="Dotted event name (e.g. 'artifact.created', 'artifact.expired')",
+    )
+    app_slug = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text="The fleet app this event belongs to (matches FleetServiceIdentity.app_slug)",
+    )
+    payload = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Event body — caller-defined per event_type. Should include "
+                  "enough context for subscribers to act without a separate fetch.",
+    )
+    source_artifact = models.ForeignKey(
+        "FleetArtifact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
+        help_text="Optional FK to the source artifact (for lifecycle events).",
+    )
+
+    class Meta:
+        verbose_name = "Fleet Event"
+        verbose_name_plural = "Fleet Events"
+        ordering = ["-created_at"]
+        indexes = [
+            # Subscribers stream filtered by app_slug; this index supports
+            # the catch-up replay path (when Last-Event-ID lands).
+            models.Index(
+                fields=["app_slug", "-created_at"],
+                name="core_fleete_app_recent_idx",
+            ),
+            models.Index(
+                fields=["event_type", "-created_at"],
+                name="core_fleete_type_recent_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.event_type} ({self.app_slug}) @ {self.created_at:%H:%M:%S}"
+
+
 def compute_payload_sha256(payload) -> tuple[str, int]:
     """Compute canonical SHA-256 + byte size of a JSON-serializable payload.
 
@@ -478,6 +547,7 @@ __all__ = [
     "FleetServiceRotation",
     "FleetAuthAuditLog",
     "FleetArtifact",
+    "FleetEvent",
     "generate_service_secret",
     "hash_service_secret",
     "compute_payload_sha256",

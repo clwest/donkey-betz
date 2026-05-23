@@ -238,6 +238,38 @@ def _do_push(request):
         identity.app_slug, artifact_type, artifact.id, size_bytes, sha256[:16],
     )
 
+    # Session 1129 Move 3 — emit lifecycle event AFTER successful create.
+    # Include rich payload so subscribers can act without a follow-up fetch.
+    try:
+        from core.services.fleet_events import emit_event
+        emit_event(
+            event_type="artifact.created",
+            app_slug=identity.app_slug,
+            payload={
+                "artifact_id": str(artifact.id),
+                "artifact_type": artifact_type,
+                "sha256": sha256,
+                "size_bytes": size_bytes,
+                "created_at": artifact.created_at.isoformat(),
+                "expires_at": (
+                    artifact.expires_at.isoformat() if artifact.expires_at else None
+                ),
+                # Forward caller metadata so the consuming app (CC for
+                # the flagship) has enough to filter per-user without
+                # an extra DB hit. Includes generated_by_user_id when
+                # present.
+                "metadata": caller_metadata if isinstance(caller_metadata, dict) else {},
+                "request_id": identity_payload.get("request_id", "") or "",
+            },
+            source_artifact=artifact,
+        )
+    except Exception as e:
+        # Event emit must never block the create — log and move on.
+        logger.warning(
+            "[fleet-events] emit failed for artifact.created %s: %s",
+            artifact.id, e,
+        )
+
     return Response(
         {
             "id": str(artifact.id),

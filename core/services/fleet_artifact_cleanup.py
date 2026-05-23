@@ -72,6 +72,10 @@ def run_cleanup(*, now=None) -> CleanupStats:
     total_soft_deleted = 0
     capped = False
 
+    # Session 1129 Move 3 — emit artifact.expired events per row.
+    # We need (id, app_slug) for each expired artifact to publish the
+    # event correctly. Pull a small projection so we can fan out events
+    # AFTER the soft-delete commits.
     while True:
         remaining = cap - total_soft_deleted
         if remaining <= 0:
@@ -82,17 +86,26 @@ def run_cleanup(*, now=None) -> CleanupStats:
         # `expires_at__lte` + `deleted_at__isnull=True` is the canonical
         # selection. Use list() so we can update by id (and so the
         # update is bounded — Postgres UPDATE ... WHERE id IN (...)).
-        ids = list(
+        rows = list(
             FleetArtifact.objects.filter(
                 expires_at__lte=moment,
                 deleted_at__isnull=True,
             )
-            .order_by("expires_at", "id")
-            .values_list("id", flat=True)[: min(batch_size, remaining)]
+            .select_related("created_by_identity")
+            .order_by("expires_at", "id")[: min(batch_size, remaining)]
+            .values(
+                "id",
+                "artifact_type",
+                "sha256",
+                "size_bytes",
+                "caller_metadata",
+                "created_by_identity__app_slug",
+            )
         )
-        if not ids:
+        if not rows:
             break
 
+        ids = [r["id"] for r in rows]
         updated = FleetArtifact.objects.filter(
             id__in=ids,
             deleted_at__isnull=True,  # idempotency belt-and-suspenders
@@ -102,9 +115,37 @@ def run_cleanup(*, now=None) -> CleanupStats:
         )
         total_soft_deleted += updated
 
+        # Emit one artifact.expired event per row. After the commit so
+        # subscribers can't see an "expired" event before the soft-
+        # delete actually lands. Best-effort — never blocks the loop.
+        try:
+            from core.services.fleet_events import emit_event
+            for r in rows:
+                emit_event(
+                    event_type="artifact.expired",
+                    app_slug=r["created_by_identity__app_slug"] or "",
+                    payload={
+                        "artifact_id": str(r["id"]),
+                        "artifact_type": r["artifact_type"],
+                        "sha256": r["sha256"],
+                        "size_bytes": r["size_bytes"],
+                        "metadata": r["caller_metadata"] or {},
+                        "delete_reason": "expired",
+                        "deleted_at": moment.isoformat(),
+                    },
+                    # No FK — the row exists but we already have everything
+                    # we need in payload, and avoiding the lookup keeps
+                    # the cleanup loop fast.
+                    source_artifact=None,
+                )
+        except Exception as e:
+            logger.warning(
+                "[fleet-events] emit failed for artifact.expired batch: %s", e
+            )
+
         # If we got fewer rows than the batch limit, we drained the
         # eligible set — exit cleanly.
-        if len(ids) < batch_size:
+        if len(rows) < batch_size:
             break
 
     duration_ms = int((_time.monotonic() - start) * 1000)
