@@ -525,6 +525,109 @@ def curate_and_emit(top_n: int = DEFAULT_TOP_N) -> CurationResult:
     return result
 
 
+# ─── Session 1140 (A) — curated action_card envelope + emit ───────────
+
+
+def build_curated_actions_envelope(snapshot_id: str) -> dict | None:
+    """Build the `signal.curated_actions_ready` event payload.
+
+    Self-contained shape (no need for the consumer to have already
+    received the matching `signal.curated_published` snapshot). Pairs
+    each action_card row with the cluster envelope of its paired
+    cluster_pick so signal-studio can render the action under the
+    right curated cluster without an extra DB lookup.
+
+    Returns None if the snapshot has no action_card rows yet
+    (generator hasn't fired or every cluster fell back without
+    persistence).
+    """
+    from core.models_signal_intelligence import (
+        CuratedSignalEntry, CuratedSignalSnapshot,
+    )
+
+    try:
+        snapshot = CuratedSignalSnapshot.objects.get(id=snapshot_id)
+    except CuratedSignalSnapshot.DoesNotExist:
+        logger.warning(
+            "[signal-curator] build_curated_actions_envelope: snapshot %s "
+            "not found",
+            snapshot_id,
+        )
+        return None
+
+    action_entries = (
+        CuratedSignalEntry.objects
+        .filter(snapshot=snapshot, entry_type='action_card')
+        .select_related('cluster')
+        .order_by('rank')
+    )
+    if not action_entries.exists():
+        return None
+
+    items: list[dict] = []
+    for entry in action_entries:
+        env = cluster_envelope(entry.cluster)
+        if env is None:
+            # Same defensive skip as build_curated_envelope — the pool
+            # filter should make this impossible, but log if it happens.
+            logger.warning(
+                "[signal-curator] cluster_envelope returned None for "
+                "action rank=%d cluster=%s — skipping",
+                entry.rank, entry.cluster_id,
+            )
+            continue
+        items.append({
+            "rank": entry.rank,
+            "cluster": env,
+            "action_card": {
+                "id": str(entry.id),
+                "action_type": entry.action_type,
+                "title": entry.action_title,
+                "steps": entry.action_steps or [],
+                "outreach_draft": entry.outreach_draft or "",
+                "status": entry.action_status,
+                "generated_by": entry.generated_by,
+            },
+        })
+    return {
+        "snapshot_id": str(snapshot.id),
+        "snapshot_created_at": snapshot.created_at.isoformat(),
+        "items": items,
+        "cluster_ids": [str(e.cluster_id) for e in action_entries],
+    }
+
+
+def emit_curated_actions_ready(snapshot_id: str) -> str | None:
+    """Emit `signal.curated_actions_ready` after action_card rows commit.
+
+    Separate from `emit_curated_published` because action cards are
+    generated asynchronously (Rigby's lock #2: snapshot success can't
+    depend on OpenAI). The consumer side joins this event back to the
+    snapshot by snapshot_id.
+
+    Returns the emit event id on success, None on no-op or failure.
+    Idempotent at the content level — re-emitting the same snapshot's
+    actions is harmless (downstream upsert is keyed on action_card.id).
+    """
+    envelope = build_curated_actions_envelope(snapshot_id)
+    if envelope is None or not envelope.get("items"):
+        return None
+    from core.services.fleet_events import emit_event
+    try:
+        return emit_event(
+            event_type="signal.curated_actions_ready",
+            app_slug="signal-studio",
+            payload=envelope,
+        )
+    except Exception as e:  # pragma: no cover
+        logger.exception(
+            "[signal-curator] emit_curated_actions_ready failed "
+            "snapshot=%s: %s",
+            snapshot_id, e,
+        )
+        return None
+
+
 __all__ = [
     "CurationResult",
     "DEDUP_STRATEGY",
@@ -535,6 +638,8 @@ __all__ = [
     "SCORING_FORMULA_VERSION",
     "STRENGTH_WEIGHT",
     "build_curated_envelope",
+    "build_curated_actions_envelope",
+    "emit_curated_actions_ready",
     "compute_pattern_type_cap",
     "compute_score",
     "curate_and_emit",

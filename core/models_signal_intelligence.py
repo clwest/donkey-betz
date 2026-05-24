@@ -388,12 +388,41 @@ class CuratedSignalSnapshot(models.Model):
 
 class CuratedSignalEntry(models.Model):
     """
-    Session 1131 Phase 2: one curated cluster within a snapshot.
+    Session 1131 Phase 2 + Session 1140 (A): one typed entry within a
+    curated snapshot.
 
-    Stores enough provenance to answer "why was this cluster picked?"
-    without rerunning the score (cluster.strength/size could drift
-    between snapshot time and read time).
+    Originally (Phase 2) held only the curator's cluster selections.
+    Session 1140 (A) extends the table to also hold LLM-generated
+    action cards per cluster — both shapes are typed rows under the
+    same parent snapshot, discriminated by `entry_type`. Per Rigby's
+    locked design (conversation pa-d19c1674b936): "typed columns, not
+    a payload blob; unique(snapshot, cluster, entry_type)".
+
+    Two entry types today:
+
+      - `cluster_pick` (Phase 2 default) — the curator's pick. Carries
+        `rank`, `curated_score`, `group_key`, and the immutable
+        snapshot fields (`strength_at_pick`, etc.). All action_* fields
+        are NULL on these rows.
+
+      - `action_card` (Session 1140) — async LLM-generated action card
+        paired 1:1 with a `cluster_pick` for the same `cluster` within
+        the same `snapshot`. Carries `action_type`, `action_title`,
+        `action_steps`, `outreach_draft`, `action_status`, and
+        `generated_by`. The cluster-pick-only columns are NULL on
+        these rows EXCEPT `rank`, which is copied from the paired pick
+        so action rows can join + sort alongside picks without an
+        explicit join.
+
+    Pairing is enforced at the DB level by the unique constraint
+    `unique(snapshot, cluster, entry_type)` — at most one pick + one
+    action card per (snapshot, cluster).
     """
+    ENTRY_TYPE_CHOICES = [
+        ('cluster_pick', 'Curator selection (Session 1131 Phase 2)'),
+        ('action_card', 'LLM-generated action card (Session 1140 A)'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     snapshot = models.ForeignKey(
@@ -407,46 +436,151 @@ class CuratedSignalEntry(models.Model):
         related_name='curated_entries',
     )
 
+    # Session 1140: discriminator that makes this a typed-row table.
+    # Defaults to cluster_pick so existing call sites that build
+    # entries without specifying entry_type continue to work.
+    entry_type = models.CharField(
+        max_length=16,
+        choices=ENTRY_TYPE_CHOICES,
+        default='cluster_pick',
+        db_index=True,
+        help_text=(
+            "Which content shape this row carries. cluster_pick rows "
+            "populate curated_score/group_key/*_at_pick. action_card "
+            "rows populate action_type/action_title/action_steps/"
+            "outreach_draft/action_status/generated_by. rank is shared "
+            "(action_card rows copy their paired pick's rank for sort)."
+        ),
+    )
+
     rank = models.IntegerField(
         help_text=(
             "1-based rank within the snapshot. rank=1 is the highest "
             "curated_score; ties broken by cluster.seq ASC (older row "
-            "wins) so ranking is deterministic."
-        ),
-    )
-    curated_score = models.FloatField(
-        help_text="Composite score this cluster earned in the snapshot run.",
-    )
-    group_key = models.CharField(
-        max_length=200,
-        help_text=(
-            "Dedup group key the cluster won (e.g. 'demand_spike::react'). "
-            "Stored verbatim so we can trace which group it competed in."
+            "wins) so ranking is deterministic. action_card rows copy "
+            "rank from their paired cluster_pick so both join+sort."
         ),
     )
 
-    # Snapshot of the cluster's metrics at curation time. These are
-    # IMMUTABLE — they record what the curator saw, not the current
-    # state of the cluster row.
+    # ─── cluster_pick-only columns (NULL on action_card rows) ────────
+    curated_score = models.FloatField(
+        null=True, blank=True,
+        help_text=(
+            "Composite score this cluster earned in the snapshot run. "
+            "Populated on cluster_pick rows only."
+        ),
+    )
+    group_key = models.CharField(
+        max_length=200,
+        null=True, blank=True,
+        help_text=(
+            "Dedup group key the cluster won (e.g. 'demand_spike::react'). "
+            "Populated on cluster_pick rows only."
+        ),
+    )
     strength_at_pick = models.FloatField(
-        help_text="Cluster.strength at snapshot time (immutable record).",
+        null=True, blank=True,
+        help_text=(
+            "Cluster.strength at snapshot time (immutable record). "
+            "Populated on cluster_pick rows only."
+        ),
     )
     cluster_size_at_pick = models.IntegerField(
-        help_text="sum(source_breakdown.values()) at snapshot time.",
+        null=True, blank=True,
+        help_text=(
+            "sum(source_breakdown.values()) at snapshot time. "
+            "Populated on cluster_pick rows only."
+        ),
     )
     age_hours_at_pick = models.FloatField(
-        help_text="Hours since detected_at when the snapshot ran.",
+        null=True, blank=True,
+        help_text=(
+            "Hours since detected_at when the snapshot ran. "
+            "Populated on cluster_pick rows only."
+        ),
+    )
+
+    # ─── action_card-only columns (NULL on cluster_pick rows) ────────
+    # Session 1140 (A). Mirror signal-studio's ActionCard shape so the
+    # event payload + frontend reuse the existing UI.
+    ACTION_TYPE_CHOICES = [
+        ('investigate', 'Investigate'),
+        ('invest', 'Invest'),
+        ('build', 'Build'),
+        ('hire', 'Hire'),
+        ('pitch', 'Pitch'),
+    ]
+    ACTION_STATUS_CHOICES = [
+        ('draft', 'Draft (auto-generated, not yet user-reviewed)'),
+        ('ready', 'Ready (user-reviewed)'),
+        ('dismissed', 'Dismissed'),
+    ]
+    action_type = models.CharField(
+        max_length=32,
+        choices=ACTION_TYPE_CHOICES,
+        null=True, blank=True,
+        help_text=(
+            "investigate/invest/build/hire/pitch. Inferred by the LLM "
+            "from cluster context. Populated on action_card rows only."
+        ),
+    )
+    action_title = models.CharField(
+        max_length=500,
+        null=True, blank=True,
+        help_text=(
+            "Short title for the action card (e.g. 'Open a discovery call "
+            "with two Spacex customers'). Populated on action_card rows "
+            "only."
+        ),
+    )
+    action_steps = models.JSONField(
+        default=list, blank=True,
+        help_text=(
+            "List of {step: str, priority: str}. 3-5 concrete steps. "
+            "JSONField is fine here because it's inherently a list "
+            "(per Rigby: no payload blob, but inherent-list JSONB is "
+            "acceptable). Populated on action_card rows only."
+        ),
+    )
+    outreach_draft = models.TextField(
+        blank=True, default='',
+        help_text=(
+            "Optional drafted outreach message (DM/email) the user can "
+            "copy + send. Populated on action_card rows only."
+        ),
+    )
+    action_status = models.CharField(
+        max_length=32,
+        choices=ACTION_STATUS_CHOICES,
+        default='draft', blank=True,
+        help_text=(
+            "draft/ready/dismissed. New rows always land as 'draft'. "
+            "Populated on action_card rows only."
+        ),
+    )
+    generated_by = models.CharField(
+        max_length=64,
+        null=True, blank=True,
+        help_text=(
+            "Audit metadata: which generator produced this card "
+            "(e.g. 'gpt-5-mini', 'fallback_placeholder'). Populated on "
+            "action_card rows only."
+        ),
     )
 
     class Meta:
         app_label = 'core'
         verbose_name = "Curated Signal Entry"
         verbose_name_plural = "Curated Signal Entries"
-        ordering = ['snapshot', 'rank']
+        ordering = ['snapshot', 'rank', 'entry_type']
         constraints = [
+            # Session 1140: replaces the Phase 2 (snapshot, rank)
+            # constraint. Now BOTH cluster_pick AND action_card rows
+            # for the same cluster share the same rank, so uniqueness
+            # is keyed on the typed pairing instead.
             models.UniqueConstraint(
-                fields=['snapshot', 'rank'],
-                name='curated_signal_entry_unique_rank_per_snapshot',
+                fields=['snapshot', 'cluster', 'entry_type'],
+                name='curated_signal_entry_unique_snapshot_cluster_type',
             ),
         ]
         indexes = [
@@ -454,12 +588,24 @@ class CuratedSignalEntry(models.Model):
                 fields=['cluster', '-snapshot'],
                 name='curated_entry_cluster_idx',
             ),
+            # Session 1140: enables "show me all action cards for this
+            # snapshot" without a table scan over cluster_pick rows.
+            models.Index(
+                fields=['snapshot', 'entry_type'],
+                name='curated_entry_snap_type_idx',
+            ),
         ]
 
     def __str__(self):
+        if self.entry_type == 'action_card':
+            return (
+                f"CuratedSignalEntry[action] rank={self.rank} "
+                f"action_type={self.action_type} cluster={self.cluster_id}"
+            )
+        score = self.curated_score if self.curated_score is not None else 0.0
         return (
             f"CuratedSignalEntry rank={self.rank} "
-            f"score={self.curated_score:.3f} "
+            f"score={score:.3f} "
             f"cluster={self.cluster_id}"
         )
 
