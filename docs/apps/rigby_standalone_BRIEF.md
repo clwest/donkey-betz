@@ -1,37 +1,48 @@
 ---
-title: "Rigby standalone — Phase 1 flagship brief"
-status: draft (Session 1135 discovery, rev. 2 post-Rigby review, pending Chris confirmations)
+title: "Rigby standalone — Phase 1 GTM proposal (currently-private product)"
+status: draft (Session 1135 discovery, rev. 3 — corrected against products.ts; this brief proposes a public Phase 1 launch of a currently-private product)
 session: 1135
 generated: 2026-05-23
-revised: 2026-05-23 (Rigby review pass applied)
+revised: 2026-05-23 (rev. 3 — corrected against products.ts; rev. 2 framed Rigby as "Phase 1 flagship" but products.ts treats Rigby as "in-development, private, standalone surface forthcoming")
 workspace: Donkey Betz
 companion_docs:
   - 24_7_GLOBAL_AI_APP_ATLAS.md
-  - specs/FLEET_CAPABILITY_BUSINESS_SPEC.md
+  - apps/contract_concierge_BRIEF.md
+  - apps/signal_studio_BRIEF.md
   - UDB_BEHAVIOR_LAYER.md
   - UDB_TRANSLATION_LAYER.md
-authors: claude + jessica (discovery pass) → rigby (review applied)
+source_of_truth: "24-7-ai-global/src/lib/products.ts LAB[7] (slug: rigby; status: in-development, subStatus: Private)"
+authors: claude + jessica (discovery pass) → rigby (review applied) → corrected against products.ts ground truth
 ---
 
-# Rigby standalone — Phase 1 flagship brief
+# Rigby standalone — Phase 1 GTM proposal
 
-## 1. What it is
+> **⚠️ Source of truth + reality check:** Per `24-7-ai-global/src/lib/products.ts` LAB[7] (entry no. XV), **Rigby is currently `in-development · Private`** — *"private today; public decomposition pending — for those who refuse to wait until Monday morning."* This brief is a **Phase 1 GTM proposal** for how to take that currently-private product to public market. It is NOT a description of an existing public product. Rev. 1-2 framed Rigby as the "Phase 1 flagship at app.247globalai.com" per Atlas, but products.ts (the marketing-page source of truth) treats Rigby as not-yet-public.
 
-**"24/7 Global AI is your personal AI assistant that never sleeps — it watches 80 global data sources, has 80+ specialised agents on call, and 100+ tools so it can actually do things, not just talk."** (Atlas §C.2 canonical marketing pitch.)
+## 1. What it is (products.ts canonical framing)
 
-*Note: pitch numbers are directional; current counts verified on local as of 2026-05-23 (103 tool schemas, 74 enabled agents, 80 spiders) appear in §3 and supersede the round figures in the quote. Production parity not asserted.*
+**Tagline (per products.ts):** *"An agentic personal assistant with a brain."*
 
-**Phase 1 scope:** Rigby is a research-and-draft engine running on local today. She produces; the customer ships. Tools that connect to a customer's external accounts (Gmail, Google Calendar, LinkedIn, CRM) do not exist yet and are Phase 2 candidates driven by customer demand.
+**Elevator (per products.ts):** *"The proprietor's personal AI. A function-calling agentic loop on top of six LLM providers with 101 typed tools and 166 handlers wired into spider data, agent dispatch, advisor consultation, and the full Suite. Private today; public decomposition pending — for those who refuse to wait until Monday morning."*
+
+**Pillar:** Impact. **Arc:** Companion. **Tier:** LAB (engine reveal, no. XV). **Status:** in-development · Private.
+
+**Phase 1 GTM proposal scope (THIS BRIEF):** propose taking the currently-private Rigby public as a standalone subscription product at `app.247globalai.com`. The Atlas (Session 1116) recommended this as Phase 1 of the broader portfolio. products.ts confirms the standalone surface is "forthcoming." This brief is the GTM build plan to get from "private" to "public."
+
+**Phase 1 capability scope:** Research-and-draft engine + tool dispatch + agent consultation. Tools that connect to a customer's external accounts (Gmail, Google Calendar, LinkedIn, CRM) do not exist yet and are Phase 2 candidates driven by customer demand.
 
 ## 2. Who buys it
 
-**Hypothesis (A/B, pending customer-discovery validation):** two target audiences, no narrowing yet.
-- **A.** Solo founders (building side projects or early-stage companies)
-- **B.** Small-agency owners (with billable workload, looking for AI leverage)
+**Per products.ts target:** *"Operators who refuse to wait for the work week."*
+
+**Phase 1 GTM proposal — interpretation of "operators":**
+- Founders / solo operators / small-team leads who use AI tools daily
+- People who currently rely on ChatGPT/Claude for assistant-style workflows but want spider-data grounding + agent dispatch + advisor consultation
+- Both rev. 1-2 hypothesis audiences (solo founders + small-agency owners) fit under this canonical "operators" framing
 
 **Buyer = user.** Self-serve via Stripe checkout. No sales team. No procurement.
 
-*Validation gate: pick A vs B (or both) after first 10 paying customers tell us which voice converts.*
+*Rev. 1-2 had "Hypothesis A/B" framing. Rev. 3 keeps the hypothesis posture but anchors it in products.ts's "operators" target rather than extrapolating two audience types from scratch.*
 
 ## 3. What's built (real shipping evidence)
 
@@ -99,15 +110,17 @@ Per-item sizing:
 
 ## 7. GTM sketch
 
+> **⚠️ Pricing reality:** products.ts has **no pricing block for Rigby** (it's `Private`). The $30/mo + $1.50/day cap below are Atlas (Session 1116) recommendations + Phase 1 GTM proposal numbers, NOT currently in market. Chris ratifies all pricing at GTM lock.
+
 | Lever | Plan |
 |---|---|
-| **Channel** | *Proposed (pending Chris greenlight + budget):* Paid ads from day one + warm/personal network. No newsletter funnel (audience = 0). |
-| **Pricing** | $30/mo flat, single tier, 7-day free trial |
-| **Cap behavior** | Daily $ cap per customer (number TBD — Atlas suggests $1.50; pending Chris confirmation per §9 Decision 3) |
-| **CTA** | "Start using Rigby — $30/mo, 7-day trial" → Stripe → onboarding |
-| **What's included** | Chat + tools + files + history (running on local today; consumer-facing deploy pending), 1 seat, daily cap |
-| **Customer-facing surface** | `app.247globalai.com` (consumer persona, build status TBC) — stripped to chat, file upload/download, conversation history, "what Rigby can do" catalog |
-| **Hidden from consumer** | *Proposed list (needs Chris per-item confirmation; only Sports Betting hide is directly Atlas-cited):* Boardroom, Governance, Platform, Agents panel, Advisors, Neural Orchestra, Initiatives admin, Intelligence, Image/Video Studio, Sports Betting (legacy), Government, Legal-as-domain |
+| **Channel (proposed)** | *Pending Chris greenlight + budget:* Paid ads + warm/personal network. No newsletter funnel (Operator Edge audience exists per products.ts CHANNELS[0] but not as a paying-customer funnel yet). |
+| **Pricing (Atlas-suggested, Chris ratifies)** | $30/mo flat, single tier, 7-day free trial (per Atlas §H Phase 1). Compare to Suite products in products.ts at $29-99/mo. |
+| **Cap behavior (Atlas-suggested)** | Daily $ cap per customer (Atlas suggests $1.50; pending Chris confirmation per §9). |
+| **CTA (proposed)** | "Start using Rigby — $30/mo, 7-day trial" → Stripe → onboarding |
+| **What's included (proposed Phase 1 scope)** | Chat + tools + files + history (running on local today; consumer-facing public deploy pending), 1 seat, daily cap |
+| **Customer-facing surface (proposed)** | `app.247globalai.com` per Atlas §G subdomain plan (build status = §9 Decision 1) — stripped to chat, file upload/download, conversation history, "what Rigby can do" catalog |
+| **Hidden from consumer (proposed list)** | *Needs Chris per-item confirmation:* Boardroom, Governance, Platform, Agents panel, Advisors, Neural Orchestra, Initiatives admin, Intelligence, Image/Video Studio, Sports Betting (legacy), Government, Legal-as-domain |
 | **Safety guardrails** | No medical/legal/specific-investment advice. No personalized betting picks. No claims about features not built. "Powered by LLMs, may be wrong" disclaimer. (Expandable later.) |
 | **Execution posture** | Rigby drafts; customer ships. No outbound action on customer's external accounts. Publishing to OUR channels (newsletter/blog/Discord) stays internal-only. |
 
@@ -117,16 +130,19 @@ Per Atlas §C.5, J.2.8: Character OS / avatar / voice = parked until a paying cu
 
 ## 9. Decisions still needed (escalate to Chris)
 
-*Re-ordered per Rigby review: build status + cap/cost gating moved to top because they block multiple downstream decisions.*
+> Re-ordered per Rigby review: build status + cap/cost gating block multiple downstream decisions. Plus a new top-level question added in rev. 3: products.ts treats Rigby as `Private`; does Chris commit to taking it public per this brief?
 
 | # | Question | Why it matters |
 |---|---|---|
+| 0 | **Confirm "take Rigby public" decision** — products.ts has Rigby as `in-development · Private`. This brief proposes a Phase 1 public launch. Does Chris confirm that's the direction, or does Rigby stay private through a different phase? | Reframes everything downstream. If "stay private," this brief becomes archival exploration. |
 | 1 | **`app.247globalai.com` build status — what's done in the repo?** | Determines whether Phase 1 product is "API + internal UI" vs "consumer app." Unlocks proof-pick + Phase 0 timeline. |
 | 2 | **Pick canonical proof: Candidate A (local-internal demo) or Candidate B (consumer signup flow)?** | §4 currently hedges. Chris picks the single Phase 1 truth we sell against. |
 | 3 | **Confirm $1.50/day cap per customer + cost-tracking shipped as Phase 0 GATING** | Without this, paid ads at $30/mo can produce negative unit economics. Not optional. |
-| 4 | **Paid ads budget** | How much per month to test the channel? |
-| 5 | **Trademark filing green-light** | 1–2 hr of legal work; recommended before paid ads scale brand visibility. |
-| 6 | **When does the landing page have to pick a voice** (founders vs agencies)? | Both audiences for discovery, but copy eventually picks one. |
+| 4 | **Pricing lock — $30/mo or different?** products.ts has no Rigby pricing block; Atlas suggests $30. | Locks Stripe SKU + ad copy. |
+| 5 | **Paid ads budget** | How much per month to test the channel? |
+| 6 | **Trademark filing green-light** | 1–2 hr of legal work; recommended before paid ads scale brand visibility. |
+| 7 | **When does the landing page have to pick a voice** (founders vs agencies vs broader operators)? | Both audiences for discovery, but copy eventually picks one. |
+| 8 | **Update products.ts to reflect Phase 1 launch when ready** | products.ts is the source of truth for the public-facing portfolio. When Rigby goes public, its entry needs to update from `in-development · Private` to `shipped` with pricing tier. |
 
 ## 10. Honest claim audit (per translation layer §2)
 
@@ -146,4 +162,5 @@ Per Atlas §C.5, J.2.8: Character OS / avatar / voice = parked until a paying cu
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass).
 **Rev. 2:** Rigby review pass applied — 14 mechanical fixes (count alignment, deterministic proof, hypothesis labeling, source citations, expanded claim audit, §9 reorder, Phase 0 gating elevation).
-**Next step:** Rigby quick "looks good?" pass on rev. 2. Then Chris ratifies the 6 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth.
+**Rev. 3:** Discovery of `24-7-ai-global/src/lib/products.ts` as canonical source of truth revealed rev. 1-2 framed Rigby as "Phase 1 flagship" but products.ts treats Rigby as `in-development · Private` ("standalone surface forthcoming"). Rev. 3 reframes brief as a **Phase 1 GTM proposal** for taking the currently-private Rigby public, not a description of an existing public product. Updated header note, §1 grounded in products.ts pitch + elevator, §2 anchored in canonical "Operators who refuse to wait for the work week" target, §7 marked pricing as Atlas-suggested-pending-Chris (not currently in products.ts), §9 added Decision 0 ("confirm take-public decision") + Decision 8 ("update products.ts when launched").
+**Next step:** Rigby review for honest framing on rev. 3. Then Chris ratifies the 9 open decisions in §9 (especially Decision 0). Then brief becomes locked Phase 1 GTM proposal for Rigby standalone.
