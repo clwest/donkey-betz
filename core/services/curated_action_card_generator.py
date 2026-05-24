@@ -354,8 +354,16 @@ def generate_for_snapshot(
 
         cluster = pick.cluster
         card, generated_by = _llm_generate_card(cluster)
-        if generated_by == "fallback_placeholder":
+        is_fallback = generated_by == "fallback_placeholder"
+        if is_fallback:
             result.fallback_count += 1
+
+        # Session 1140 (Rigby PR-review fix-up): set action_status to
+        # 'needs_regen' on fallback rows so the UI can label them and
+        # a future regen path can pick them up via the status filter
+        # without needing to query the audit-only `generated_by` field.
+        # Real LLM cards land as 'draft' until user-reviewed.
+        action_status = 'needs_regen' if is_fallback else 'draft'
 
         # Persist as a sibling row — same snapshot, same cluster, same
         # rank (so action_cards sort alongside their pick), entry_type
@@ -377,7 +385,7 @@ def generate_for_snapshot(
                 action_title=card["action_title"],
                 action_steps=card["action_steps"],
                 outreach_draft=card["outreach_draft"],
-                action_status='draft',
+                action_status=action_status,
                 generated_by=generated_by,
             )
         result.entries_created.append(entry)

@@ -511,7 +511,8 @@ class CuratedSignalEntry(models.Model):
         ('pitch', 'Pitch'),
     ]
     ACTION_STATUS_CHOICES = [
-        ('draft', 'Draft (auto-generated, not yet user-reviewed)'),
+        ('draft', 'Draft (auto-generated, real LLM output, not yet user-reviewed)'),
+        ('needs_regen', 'Needs regeneration (fallback placeholder — LLM call failed)'),
         ('ready', 'Ready (user-reviewed)'),
         ('dismissed', 'Dismissed'),
     ]
@@ -572,7 +573,20 @@ class CuratedSignalEntry(models.Model):
         app_label = 'core'
         verbose_name = "Curated Signal Entry"
         verbose_name_plural = "Curated Signal Entries"
-        ordering = ['snapshot', 'rank', 'entry_type']
+        # Session 1140 design note (Rigby review on PR #2174): default
+        # ordering deliberately does NOT include entry_type. The choice
+        # values sort 'action_card' < 'cluster_pick' alphabetically,
+        # which would interleave action rows BEFORE their paired picks
+        # in any default-ordered query — wrong shape for the UI.
+        # Queries that need pick-before-action ordering should annotate
+        # an explicit Case discriminator and sort on it:
+        #   .annotate(_pick_first=Case(
+        #       When(entry_type='cluster_pick', then=0), default=1,
+        #       output_field=IntegerField()))
+        #   .order_by('rank', '_pick_first')
+        # The default ordering below gives stable rank ordering but
+        # makes no promise about pick-vs-action tie-break.
+        ordering = ['snapshot', 'rank']
         constraints = [
             # Session 1140: replaces the Phase 2 (snapshot, rank)
             # constraint. Now BOTH cluster_pick AND action_card rows
