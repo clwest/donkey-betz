@@ -55,23 +55,24 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1134 LANDED — Capability specs drafted, grounded, Atlas-anchored
+## SESSION 1135 LANDED — App-by-app discovery sprint started (2 of 8 briefs shipped)
 
-**Full handoff**: [`docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md`](docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md)
+**Full handoff**: [`docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md`](docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md)
 
-Spec + grounding session, no code changes. Three docs:
+Discovery pattern validated. Two app briefs landed, both Rigby double-LGTM, both awaiting Chris ratification:
 
-| Doc | Purpose |
-|---|---|
-| `docs/specs/FLEET_CAPABILITY_MANIFEST_SPEC.md` v3 | Engineering spec — per-app authz across agents/spiders/beat tasks/PA tools/spokespersons. Atlas-anchored. |
-| `docs/specs/FLEET_CAPABILITY_BUSINESS_SPEC.md` v3 | Plain-English GTM framing. Phase 1 = Rigby standalone; tiered Suite is Phase 2-3 evolution. |
-| `docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md` | Session record + Session 1135 primer |
+| App | Brief | PR | Open decisions |
+|---|---|---|---|
+| **Rigby standalone** (Atlas Phase 1 flagship) | `docs/apps/rigby_standalone_BRIEF.md` | [#2147](https://github.com/clwest/donkey-betz-platform/pull/2147) | 6 §9 |
+| **Signal Studio Markets edition** (Atlas flagship vertical) | `docs/apps/signal_studio_BRIEF.md` | [#2148](https://github.com/clwest/donkey-betz-platform/pull/2148) | 8 §9 |
 
-**Critical grounding finding** (Rigby's pass): of 7 fleet apps, only 3 have actively-developed product surfaces — Rigby standalone (Phase 1 flagship per Atlas), signal-studio (flagship vertical per Atlas), contract-concierge (Draft Library demo from 1129). The other 5 (mentorforge, pitchdeckforge, sellerpilot, dealflowtracker, compliancesentinel) have HMAC identity + plumbing but **no documented product intent**. Routing allowlists "could be name-extrapolated."
+**Process pattern (now muscle memory):** Jessica drives discovery in collaborator/ops voice → Claude grounds in Atlas + verified runtime → Rigby reviews (~12 mechanical + ~2 micro fixes per brief) → PR. ~2 hr per brief.
+
+**Bookmarked for Chris:** all 14 open per-app decisions + 6 cross-cutting items consolidated in the 1135 handoff doc under "Chris's action items — consolidated bookmark."
 
 ---
 
-## SESSION 1135 — CURRENT ENTRY POINT
+## SESSION 1136 — CURRENT ENTRY POINT
 
 ### FIRST THING — sanity check before any new work
 
@@ -79,11 +80,11 @@ Spec + grounding session, no code changes. Three docs:
 2. `make all` (or `make start && make celery` from u-d-b)
 3. `make status` — confirm 7 fleet apps + u-d-b all healthy
 4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
-5. Read both v3 specs + Session 1134 handoff if you don't have context
+5. Read Session 1135 handoff (above) for full discovery context if resuming with fresh context
 
-### PRIMARY TASK — App-by-app discovery sprint with Rigby
+### PRIMARY TASK — Continue app discovery sprint (Contract Concierge brief, app 3 of 8)
 
-**Chris's directive** (Session 1134 close):
+**Chris's directive** (Session 1134 close, still active):
 
 > *"After everything is anchored I want you and Rigby to begin a
 > new session where you guys go through the apps and you tell me
@@ -94,23 +95,25 @@ Spec + grounding session, no code changes. Three docs:
 
 ### Per-app deliverable (1 doc per app, `docs/apps/<slug>_BRIEF.md`)
 
-For each app (Rigby standalone + the 7 fleet apps = 8 surfaces), produce:
+For each app, produce:
 
 1. **What it is**: actual product intent, not name-implied. Chris fills or confirms.
 2. **Who buys it**: primary user + buyer.
 3. **What's built**: real shipping evidence (UI, API, workflows, artifacts).
-4. **What proves it's real**: one screenshot / API path / demo step / curl invocation that backs item 3. Forces artifact-backed evidence, not narrative. (Rigby's lock from 1134 close.)
+4. **What proves it's real**: one screenshot / API path / demo step / curl invocation that backs item 3. Forces artifact-backed evidence, not narrative.
 5. **What's missing**: gap between "current shipping evidence" and "could sell for real."
 6. **Buildable in one sprint?**: small / medium / large / blocked.
 7. **GTM sketch**: where customers find it, how they buy, what they pay, what they get.
 8. **Spokesperson alignment** (future-state): if/when Phase 4+ activates, which persona + modality fits.
 
-### Order of attack (per Atlas precedence)
+Add `§9 Decisions still needed (escalate to Chris)` and `§10 Honest claim audit` sections per the pattern Sessions 1135 established.
 
-1. **Rigby standalone** — Phase 1 flagship, the one shipping next.
-2. **Signal Studio** — flagship vertical, most product surface built among siblings.
-3. **Contract Concierge** — Suite candidate with Draft Library shipped.
-4. **MentorForge / PitchDeckForge / SellerPilot / DealFlowTracker / ComplianceSentinel** — order by Chris's intent priority (he picks).
+### Order of attack (per Atlas precedence) — updated for Session 1136
+
+1. ~~Rigby standalone~~ — **Done** (PR #2147, awaiting Chris ratification)
+2. ~~Signal Studio~~ — **Done** (PR #2148, awaiting Chris ratification)
+3. **Contract Concierge** — **Next.** Suite candidate with Draft Library shipped Session 1129; concrete artifact evidence makes discovery faster than apps 4-8.
+4. **MentorForge / PitchDeckForge / SellerPilot / DealFlowTracker / ComplianceSentinel** — order by Chris's intent priority (he picks). All 5 have routing-only metadata, no documented intent per Atlas grounding — discovery will need Chris to provide intent first.
 
 ### Process per app (Rigby + Claude collaboration)
 
@@ -230,7 +233,7 @@ These are locked in code/tests but worth remembering when touching adjacent area
 - **(Y) Reject-mode flip** — see above
 - **(A) Action-card pre-gen** — see above
 - **Capability spec Phase 0 scaffolding** — gated on Session 1135 discovery filling per-app intent for signal-studio + CC
-- **Evidence URL field** — both signal phases ship `url=""`. Cleanest path: enrichment agent populates it.
+- **Evidence URL field** — both signal phases ship `url=""`. Cleanest path: enrichment agent populates it. **Session 1135 elevated this to Signal Studio Phase 0 GATING** — without source URLs, brief sentences can't link to provenance and the briefing's credibility suffers.
 - **Semantic `category`** — `pattern_type` is the honest placeholder.
 - **`docs/SERVICES.md` drift** — header says 320 service files; reality after 1132 is 336.
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
@@ -242,14 +245,15 @@ These are locked in code/tests but worth remembering when touching adjacent area
 
 ---
 
-## SESSION 1131-1134 HANDOFFS
+## SESSION 1131-1135 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
 - [Session 1132 close](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md)
 - [Session 1133 close](docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md)
-- [Session 1134 close (this entry's prior session)](docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md)
+- [Session 1134 close](docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md)
+- [Session 1135 close (this entry's prior session)](docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md)
 
 ---
 
-*Last overwrite: Session 1134 close → 1135 entry (app-by-app discovery sprint with Rigby; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
+*Last overwrite: Session 1135 close → 1136 entry (continue discovery sprint with Contract Concierge; 14 Chris decisions from 1135 briefs bookmarked in handoff; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
