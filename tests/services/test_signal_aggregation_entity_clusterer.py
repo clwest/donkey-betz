@@ -411,23 +411,29 @@ class TestClustererKillSwitch:
 # ─── Signal-extraction wiring ─────────────────────────────────────────
 
 
+class _StubSD:
+    """Minimal SpiderData stand-in for pure-function tests.
+
+    Shared by TestExtractSignalsWiring + TestExtractUrl since both
+    need the same shape (id / spider_name / raw_data / processed_data
+    / embedding_text / created_at / relevance_score).
+    """
+
+    def __init__(self, raw, name="test", relevance=50, processed=None):
+        from uuid import uuid4
+        self.id = uuid4()
+        self.spider_name = name
+        self.raw_data = raw
+        self.processed_data = processed or {}
+        self.embedding_text = ""
+        self.created_at = _now()
+        self.relevance_score = relevance
+
+
 class TestExtractSignalsWiring:
-    """The `entity_tokens` field must appear on every signal dict."""
+    """The `entity_tokens` and `url` fields must appear on every signal dict."""
 
     def test_entity_tokens_field_present_on_extracted_signals(self):
-        # Build a SpiderData-shaped stub with the minimum fields
-        # _extract_text_from_spider_data + _extract_signals need.
-        class _StubSD:
-            def __init__(self, raw, name="test", relevance=50):
-                from uuid import uuid4
-                self.id = uuid4()
-                self.spider_name = name
-                self.raw_data = raw
-                self.processed_data = {}
-                self.embedding_text = ""
-                self.created_at = _now()
-                self.relevance_score = relevance
-
         svc = SignalAggregationService()
         stubs = [
             _StubSD({"title": "Tesla launches new Cybertruck variant"}),
@@ -438,3 +444,164 @@ class TestExtractSignalsWiring:
         assert isinstance(sigs[0]["entity_tokens"], set)
         assert "tesla" in sigs[0]["entity_tokens"]
         assert "cybertruck" in sigs[0]["entity_tokens"]
+
+    def test_url_field_present_on_extracted_signals(self):
+        # Session 1139 follow-up: every signal dict carries the URL so
+        # _create_signal_clusters can stash it in sample_signals, which
+        # cluster_envelope then ships to signal-studio.
+        svc = SignalAggregationService()
+        stubs = [
+            _StubSD({
+                "title": "Tesla launches Cybertruck variant",
+                "url": "https://tesla.com/news/cybertruck-variant",
+            }),
+        ]
+        sigs = svc._extract_signals(stubs)  # type: ignore[arg-type]
+        assert sigs[0].get("url") == "https://tesla.com/news/cybertruck-variant"
+
+    def test_url_empty_when_missing(self):
+        svc = SignalAggregationService()
+        stubs = [
+            _StubSD({"title": "Tesla launches Cybertruck variant"}),
+        ]
+        sigs = svc._extract_signals(stubs)  # type: ignore[arg-type]
+        assert sigs[0].get("url") == ""
+
+
+# ─── URL extraction (Session 1139 follow-up — empty-href bugfix) ──────
+
+
+class TestExtractUrlFromSpiderData:
+    """Closes the empty-href bug: signal-studio's EvidenceCards rendered
+    `<a href="">` because cluster_envelope hardcoded url="". The
+    extractor walks the common shape conventions a spider survey
+    confirmed dominate `raw_data`."""
+
+    def setup_method(self):
+        self.svc = SignalAggregationService()
+
+    def test_top_level_url_field(self):
+        sd = _StubSD({"title": "T", "url": "https://example.com/a"})
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/a"
+
+    def test_top_level_link_field(self):
+        sd = _StubSD({"title": "T", "link": "https://example.com/b"})
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/b"
+
+    def test_top_level_permalink_field(self):
+        sd = _StubSD({"title": "T", "permalink": "https://reddit.com/r/foo/x"})
+        assert self.svc._extract_url_from_spider_data(sd) == "https://reddit.com/r/foo/x"
+
+    def test_top_level_href_field(self):
+        sd = _StubSD({"title": "T", "href": "https://example.com/c"})
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/c"
+
+    def test_url_priority_over_link_when_both_present(self):
+        # `url` is the more common convention; deterministic priority.
+        sd = _StubSD({
+            "url": "https://example.com/url-wins",
+            "link": "https://example.com/link-loses",
+        })
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/url-wins"
+
+    def test_rss_items_first_url_used(self):
+        # RSS-style spiders bundle multiple articles in items[] — the
+        # representative URL is the first item's URL.
+        sd = _StubSD({
+            "items": [
+                {"title": "A1", "url": "https://example.com/article-1"},
+                {"title": "A2", "url": "https://example.com/article-2"},
+            ]
+        })
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/article-1"
+
+    def test_rss_items_link_field_also_supported(self):
+        sd = _StubSD({
+            "items": [{"title": "A1", "link": "https://example.com/feed-1"}],
+        })
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/feed-1"
+
+    def test_top_level_beats_nested_items(self):
+        # If both top-level and items[] have URLs, top-level wins.
+        sd = _StubSD({
+            "url": "https://example.com/top",
+            "items": [{"url": "https://example.com/nested"}],
+        })
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/top"
+
+    def test_processed_data_fallback(self):
+        sd = _StubSD(
+            raw={"title": "T"},
+            processed={"url": "https://example.com/processed"},
+        )
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/processed"
+
+    def test_returns_empty_when_no_url_anywhere(self):
+        sd = _StubSD({"title": "T", "description": "D"})
+        assert self.svc._extract_url_from_spider_data(sd) == ""
+
+    def test_handles_none_raw_data(self):
+        sd = _StubSD({})
+        sd.raw_data = None  # type: ignore[assignment]
+        assert self.svc._extract_url_from_spider_data(sd) == ""
+
+    def test_strips_surrounding_whitespace(self):
+        sd = _StubSD({"url": "  https://example.com/spaced  "})
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/spaced"
+
+    def test_ignores_non_string_url_field(self):
+        # Defensive: a malformed spider that wrote a dict or None
+        # into 'url' must not crash the extractor.
+        sd = _StubSD({"url": {"href": "https://example.com/wrapped"}})
+        assert self.svc._extract_url_from_spider_data(sd) == ""
+
+    def test_ignores_empty_string_url_falls_through_to_link(self):
+        sd = _StubSD({"url": "", "link": "https://example.com/fallback"})
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/fallback"
+
+    def test_ignores_non_dict_items_entries(self):
+        # RSS feed with a stray non-dict entry shouldn't crash.
+        sd = _StubSD({
+            "items": [
+                "this is not a dict",
+                {"title": "A2", "url": "https://example.com/second"},
+            ]
+        })
+        assert self.svc._extract_url_from_spider_data(sd) == "https://example.com/second"
+
+
+# ─── sample_signals URL plumbing ──────────────────────────────────────
+
+
+class TestSampleSignalsCarriesUrl:
+    """The sample_signals payload on each cluster row must carry the URL
+    so cluster_envelope can ship real hrefs to signal-studio. Pure-
+    function check against the dict construction in
+    _create_signal_clusters — the DB save path is parked by the
+    pgvector local-env blocker (same parking pattern as Session 1131)."""
+
+    def test_sample_dict_includes_url_when_signal_has_one(self):
+        # Mirrors the dict-comp inside _create_signal_clusters.
+        sig = {
+            "spider_name": "techcrunch",
+            "text_sample": "Tesla launches new Cybertruck variant in Q4",
+            "url": "https://techcrunch.com/tesla-cybertruck",
+        }
+        sample = {
+            "source": sig["spider_name"],
+            "text": sig["text_sample"][:100],
+            "url": sig.get("url") or "",
+        }
+        assert sample["url"] == "https://techcrunch.com/tesla-cybertruck"
+
+    def test_sample_dict_url_empty_when_signal_missing_url(self):
+        sig = {
+            "spider_name": "techcrunch",
+            "text_sample": "Some headline",
+        }
+        sample = {
+            "source": sig["spider_name"],
+            "text": sig["text_sample"][:100],
+            "url": sig.get("url") or "",
+        }
+        assert sample["url"] == ""
