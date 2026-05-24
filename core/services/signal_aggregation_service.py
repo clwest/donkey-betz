@@ -290,6 +290,9 @@ class SignalAggregationService:
             topics = self._extract_topics(text)
             # Session 1139: entity tokens drive the new clusterer.
             entity_tokens = self._extract_entity_tokens(text)
+            # Session 1139 follow-up: URL plumbing for signal-studio's
+            # evidence cards (was the empty-href bug Chris reported).
+            url = self._extract_url_from_spider_data(sd)
 
             if keywords or topics or entity_tokens:
                 signals.append({
@@ -299,6 +302,7 @@ class SignalAggregationService:
                     'topics': topics,
                     'entity_tokens': entity_tokens,
                     'text_sample': text[:200],
+                    'url': url,
                     'created_at': sd.created_at,
                     'relevance_score': sd.relevance_score or 0,
                 })
@@ -338,6 +342,53 @@ class SignalAggregationService:
             if len(out) >= self.MAX_ENTITY_TOKENS_PER_SIGNAL:
                 break
         return out
+
+    def _extract_url_from_spider_data(self, sd: 'SpiderData') -> str:
+        """Best-effort URL extraction from a SpiderData row.
+
+        Session 1139 follow-up — closes the empty `evidence[].url` bug
+        that surfaces in signal-studio as broken `<a href="">` links
+        (`fleet_signals.cluster_envelope` was shipping url="" hardcoded
+        since Phase 1).
+
+        Field priority — matches the conventions a spider survey
+        showed dominate `raw_data`:
+          1. Top-level `url` / `link` / `permalink` / `href`
+          2. First `items[i].url` / `link` / `permalink` for RSS-style
+             feed snapshots that bundle multiple articles per row.
+          3. Top-level `link` inside `processed_data`.
+
+        Returns "" when nothing usable is present — caller renders an
+        empty href, same failure mode as today but for many fewer rows.
+        Doesn't validate scheme/host; assumes spiders persist
+        already-clean URLs.
+        """
+        raw = sd.raw_data or {}
+        for field in ('url', 'link', 'permalink', 'href'):
+            v = raw.get(field)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+
+        # RSS-style: representative URL = first item's URL.
+        items = raw.get('items')
+        if isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                for field in ('url', 'link', 'permalink', 'href'):
+                    v = item.get(field)
+                    if isinstance(v, str) and v.strip():
+                        return v.strip()
+
+        # processed_data fallback (some spiders write enriched fields there).
+        processed = sd.processed_data or {}
+        if isinstance(processed, dict):
+            for field in ('url', 'link', 'permalink', 'href'):
+                v = processed.get(field)
+                if isinstance(v, str) and v.strip():
+                    return v.strip()
+
+        return ""
 
     def _extract_text_from_spider_data(self, sd: SpiderData) -> str:
         """Extract readable text from spider data."""
@@ -612,6 +663,10 @@ class SignalAggregationService:
                 {
                     'source': s['spider_name'],
                     'text': s['text_sample'][:100],
+                    # Session 1139 follow-up: URL stored alongside text
+                    # so cluster_envelope can emit real hrefs to
+                    # signal-studio's evidence cards.
+                    'url': s.get('url') or '',
                 }
                 for s in signals[:5]  # Top 5 samples
             ]

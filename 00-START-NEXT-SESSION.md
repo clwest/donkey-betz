@@ -236,7 +236,7 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 - **Legacy SignalCluster bulk-archive** (Session 1139 follow-up) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
 - **Ops view fork decision** (Session 1136 PARKED) — Chris picks: kill / radical-simplify / different medium / redirect with new interview
 - **Capability spec Phase 0 scaffolding** — gated on per-app intent (Session 1135 done, Session 1137 ratified Jessica side)
-- **Evidence URL field** — both signal phases ship `url=""`. Cleanest path: enrichment agent populates it. Signal Studio Phase 0 GATING.
+- **~~Evidence URL field~~ — CLOSED Session 1139 follow-up** (`fix/session-1139-evidence-url-plumbing`). u-d-b now extracts URL from `SpiderData.raw_data` (top-level `url`/`link`/`permalink`/`href` → first `items[i]` → `processed_data` fallback) and ships it through `sample_signals[i].url` → `evidence[i].url`. signal-studio's `signal_ingest.py:275` already read the field; new EvidenceCards get real hrefs. 630/642 broken pre-fix → only legacy 307 stay URL-less (decaying per plan).
 - **Semantic `category`** — `pattern_type` is the honest placeholder.
 - **`docs/SERVICES.md` drift** — header says 320 service files; reality after 1132 is 336.
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
