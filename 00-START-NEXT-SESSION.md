@@ -89,25 +89,52 @@ make status              # what's running + URLs
 4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
 5. Read `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` for full session arc
 
-### PRIMARY TASK options for Session 1136
+### PRIMARY TASK — Tweak context-kit UI so Jessica can see what Claude is doing in her terms
 
-Discovery sprint is complete (8 of 8 apps briefed). Chris picks Session 1136 focus:
+**Chris's directive (Session 1135 close, 2026-05-23):**
 
-**Option A — Chris ratification pass.** Work through the 54 open §9 decisions across the 8 briefs. Likely batched by theme (Stripe / pricing / cost-attribution / engine-mismatch / cross-Suite handoffs / legal / trademark) rather than one brief at a time.
+> *"You and Rigby need to work with Jessica on context-kit. context-kit has a UI, and Jessica wants a way to see what you are doing in her terms — and context-kit I think has that UI stuff but needs to be tweaked some. So I figure you, Rigby and Jessica can build it."*
 
-**Option B — Phase 0 portfolio infrastructure** (the cross-cutting items from the SESSION_1135_FINAL_CLOSE):
-- `LLMCallLog.workspace` FK + daily $ cap — shared infra for all 8 (~5-6 days)
-- Stripe SKU verification across 4 shipped Suite products (Mentor Forge, Pitch Deck Forge, Contract Concierge, Deal Flow Tracker)
-- Stripe SKU + pricing lock across 3 LAB-tier paid products (SellerPilot, ComplianceSentinel, Signal Studio)
-- Trademark filing on "24/7 Global AI"
+**Team:** Claude + Rigby + Jessica.
 
-**Option C — Engine-mismatch resolutions** in fleet routing config:
-- Contract Concierge → currently routes to `legal_doc_drafter_agent`; should route to commercial-contracts agent
-- ComplianceSentinel → currently `null`; decide route to `security_agent` (named in roles) or stay null
+**Goal:** Jessica (per `docs/UDB_TRANSLATION_LAYER.md` §1.2 — collaborator/ops voice, [BLOCKER]/[VERIFY]/[RISK]/[ROLLBACK] tags, checklist-shaped, deploy-readiness framing) gets a UI surface that shows what Claude is doing in HER vocabulary — not raw tool calls, not engineering jargon.
 
-**Option D — Cross-Suite handoff verification.** MentorForge → PitchDeckForge / ContractConcierge / DealFlowTracker is the cross-Suite story per products.ts. Verify end-to-end.
+### Where the existing UI lives (verified 2026-05-23)
 
-**Option E — Colorado Family Law Concierge spin-off exploration** per `docs/apps/colorado_family_law_concierge_FUTURE_CONCEPT.md`. The legal_doc_drafter_agent engine exists; Atlas §H Phase 3 named Colorado family law as a strong PMF candidate. Phase 2+ work — explore further, park, or kill.
+- **Repo:** `/Users/donkeyking/development/context-kit/`
+- **Server:** `cli/server.py` — stdlib-only HTTP, launches via `context-kit start`
+- **Pages:** `/` (project-view onboarding), `/wizard` (beginner), `/audit` (read-only audit dashboard)
+- **Static assets:** `cli/_static/audit.html`, `cli/_static/wizard.html`
+- **APIs:** `/api/state`, `/api/idea`, `/api/check`, `/api/audit/state`, `/api/audit/run`, `/api/audit/report`
+
+This is real infrastructure to tweak, not greenfield.
+
+### Suggested kickoff sequence
+
+1. **Sanity check** (per FIRST THING above): infra fleet + u-d-b + Rigby local config
+2. **Open context-kit start** locally and walk Jessica through the three existing pages — capture what reads / what feels engineering-flavored / what's missing for her voice
+3. **Jessica defines the audience contract** for the UI (what she needs to SEE about Claude's work — task state, decisions pending, drift flags, deliverable status)
+4. **Rigby reviews translation-layer alignment** — make sure UI copy matches §1.2 Jessica-mode conventions
+5. **Claude implements the tweaks** in context-kit cli/server.py + cli/_static/* — small iteration cycles, demo back to Jessica each round
+6. **Land via PR(s)** to context-kit repo (separate from u-d-b; `clwest/context-kit` per memory)
+
+### Reading order for context
+
+1. `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` — full Session 1135 arc + process learnings
+2. `docs/UDB_TRANSLATION_LAYER.md` §1.2 — Jessica's persona contract (audience intent / checklist density / [TAG] conventions / risk-flag conventions / ops-state surfacing / verify-before-deploy phrasing)
+3. `/Users/donkeyking/development/context-kit/CLAUDE.md` — context-kit project entry
+4. `/Users/donkeyking/development/context-kit/cli/server.py` — current server (start here for tweaks)
+5. `/Users/donkeyking/development/context-kit/cli/_static/wizard.html` + `audit.html` — current pages
+
+### Out of scope for Session 1136 (deferred per Chris directive)
+
+- The 54 Session 1135 open §9 decisions (deferred — different track)
+- Phase 0 portfolio infrastructure work (Stripe SKU, cost-attribution, trademark) — deferred
+- Engine-mismatch resolutions in fleet routing — deferred
+- Cross-Suite handoff verification — deferred
+- Colorado Family Law Concierge spin-off — deferred
+
+These all stay in `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` as bookmarked work for whichever session Chris green-lights them.
 
 ### Brief template established by Session 1135 (for any future per-app work)
 
@@ -250,4 +277,4 @@ These are locked in code/tests but worth remembering when touching adjacent area
 
 ---
 
-*Last overwrite: Session 1135 FINAL close → 1136 entry (all 8 app briefs merged; products.ts discovery captured as critical pattern lesson; 54 Chris decisions + 7 cross-cutting items bookmarked in FINAL_CLOSE handoff; 5 path options for Session 1136 listed above; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
+*Last overwrite: Session 1135 FINAL close + Chris directive → 1136 entry (Claude + Rigby + Jessica build context-kit UI tweaks so Jessica can see Claude's work in HER terms per UDB_TRANSLATION_LAYER.md §1.2; 5 prior path options + 54 Session 1135 decisions deferred per Chris; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
