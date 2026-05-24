@@ -85,6 +85,12 @@ def cluster_envelope(c: SignalCluster) -> dict | None:
         # but the SignalCluster model has no equivalent field. Honest
         # placeholder until Phase 2 SignalCuratorAgent categorizes.
         "category": c.pattern_type,
+        # Session 1139: clusterer discriminator. Lets signal-studio's
+        # mirror (and any downstream consumer) measure summarizer
+        # rejection rate per cluster_method — which is the SLO/
+        # acceptance test for the entity-token rewrite. Defaults to
+        # 'legacy' for safety if the field is somehow missing.
+        "cluster_method": getattr(c, "cluster_method", "legacy") or "legacy",
         "signal_strength": float(c.strength or 0.0),
         "confidence_score": float(c.confidence or 0.0),
         "cluster_size": cluster_size,
