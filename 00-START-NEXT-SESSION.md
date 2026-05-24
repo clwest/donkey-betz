@@ -66,49 +66,44 @@ The last three sessions form a coherent measurement-instrumentation arc on top o
 
 **Session 1140 — mirror + judge-stats tool.** signal-studio mirror now persists `cluster_method` + new `/api/judge-stats` endpoint returns the LLM judge accept/reject breakdown by `cluster_method` and `pattern_type`. New u-d-b PA tool `signal_studio_judge_stats` GETs it (auth-less, `SIGNAL_STUDIO_API_URL` env). PRs: signal-studio#17 (`19dfe102`), u-d-b#2169 (`4086019d`). Also Rigby-design-reviewed mid-session: she stripped stale acceptance numbers from the LLM-facing schema (they belong in handoffs/start-here, not in the tool). Final handoff: [`SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md`](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md).
 
+**Session 1140 post-close — `$libdir/vector` pgvector blocker CLOSED.** Investigated why `signal_studio_judge_stats` was returning legacy-only rows post-deploy. Root cause traced to u-d-b's local Postgres still on plain `postgres:15-alpine` (no pgvector) while every other fleet app's Postgres uses `pgvector/pgvector:pg16` — `aggregate_spider_signals` had been failing every 30 minutes for ~2 days with `OperationalError: could not access file "$libdir/vector"`. Fix shipped in u-d-b#2172 (`3ec9e074`): swap `docker-compose.yml` image to `pgvector/pgvector:pg15` (same major → volume-compatible). End-to-end verified: 19 v1 SignalCluster rows created locally, 3 reached signal-studio's mirror, `entity_token_v1` bucket now visible in `signal_studio_judge_stats`. Volume chown side effect (UID 70→999) documented in PR body. **This closes the Session 1131 pgvector carryover** that's been on the deck for ~3 weeks.
+
 ---
 
 ## SESSION 1141 — CURRENT ENTRY POINT
 
-### FIRST THING — Restart daphne + every celery worker for the new PA tool
+### Already done in the 1140 post-close session
 
-The Session 1140 `signal_studio_judge_stats` handler is on disk but the running daphne/celery processes are still pinned to the pre-merge tool registry. Until you bounce them, Rigby will return "no such tool" when you try it.
+- ✅ Daphne + every celery worker restarted (`signal_studio_judge_stats` registered, smoke-tested end-to-end at 11ms).
+- ✅ signal-studio docker rebuilt with `--force-recreate` (mirror got `cluster_method` column + `/api/judge-stats` endpoint).
+- ✅ pgvector unblocked via u-d-b#2172 (`3ec9e074`); `aggregate_spider_signals` now runs against working SpiderData queries.
+- ✅ First-pass aggregation produced 19 v1 SignalClusters; 3 reached signal-studio's mirror tagged `entity_token_v1`.
 
-```bash
-pkill -f "daphne -b 127.0.0.1 -p 8000"
-pkill -f "celery -A core"
-make start && make celery
-# Smoke check:
-tools/pa_local.sh "signal_studio_judge_stats with days=7"
-```
+### FIRST THING — Read the live rejection rate
 
-Expected: `{ok: true, days: 7, total: ..., rejection_rate: ..., by_cluster_method: {...}, by_pattern_type: {...}}`. If `ok: false / signal-studio unreachable`, signal-studio's docker stack isn't running — `make up` from `~/development/infra`.
+Both preconditions for the Session 1139 acceptance test now hold:
+1. ✅ Beat-aggregation has produced real v1-tagged rows (3 in signal-studio's mirror, more accumulating as beat fires every 30 min).
+2. ✅ Working pgvector — local stack now serves SpiderData queries.
 
-### SECOND — Live rejection-rate measurement (Session 1139/1140 acceptance test)
-
-This is the load-bearing question for the Session 1139 entity-token rewrite. Until the answer arrives, the rewrite's quality bar is hypothetical.
-
-**Two preconditions:**
-1. **≥24h since the Session 1139 PR landed** (2026-05-24 18:03 UTC), so celery-beat has produced enough v1-tagged rows for a real sample. As of 2026-05-25 18:03 UTC this is satisfied.
-2. **Stack with working pgvector.** Local `$libdir/vector` blocker still in effect — measure against the docker stack (`~/development/infra/make up`) or production.
-
-**Once both hold, ask Rigby:**
+Wait for signal-studio's auto-summarize worker to judge the new v1 rows (they land as `raw` and the worker promotes them to `summarized` or `rejected` on its next cycle), then ask Rigby:
 
 ```text
 signal_studio_judge_stats with days=7
 ```
 
-Then read `by_cluster_method.entity_token_v1.rejection_rate`.
+Read `by_cluster_method.entity_token_v1.rejection_rate`. If the bucket is still tiny (n < 20), wait another aggregation cycle or two — a 1-of-3 rejection looks like 33% but isn't a real signal.
 
 **Acceptance bar (Rigby-locked, do not edit without re-anchoring):**
-- **< 30%** → victory. Queue legacy bulk-archive (see THIRD).
+- **< 30%** → victory. Queue legacy bulk-archive (see SECOND).
 - **30–60%** → partial. Decide whether Option B (embedding-based clustering) is worth the spend.
 - **≥ 60%** → close to the 85.5% baseline. Escalate to Option B.
 
-Fallback if Rigby/PA loop isn't available:
+**Don't read a rejection rate from a < 20 sample.** Wait for accumulation.
+
+Fallback paths if Rigby loop is unavailable:
 
 ```bash
-# Direct curl against signal-studio docker:
+# Direct curl against signal-studio:
 curl -s "http://localhost:8007/api/judge-stats?days=7" | jq .by_cluster_method
 
 # Or docker exec into Postgres:
@@ -116,11 +111,21 @@ cd ~/development/signal-studio
 docker compose exec -T signal_studio_postgres psql -U signalstudio -d signalstudio -c \
   "SELECT cluster_method, summary_quality, COUNT(*) FROM signal_clusters
    GROUP BY 1, 2 ORDER BY 1, 2;"
+
+# Or check u-d-b upstream directly (where new v1 rows land first):
+.venv/bin/python -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings'); django.setup()
+from core.models_signal_intelligence import SignalCluster
+from django.db.models import Count
+for row in SignalCluster.objects.values('cluster_method').annotate(n=Count('id')):
+    print(row)
+"
 ```
 
-### THIRD — Conditional on SECOND landing < 30%: legacy bulk-archive
+### SECOND — Conditional on FIRST landing < 30%: legacy bulk-archive
 
-Only after 7–14 days of v1 running cleanly AND the SECOND measurement says victory:
+Only after 7–14 days of v1 running cleanly AND the FIRST measurement says victory:
 
 ```python
 # Bulk-archive eligible legacy rows. Conservative predicate: don't tie
@@ -183,7 +188,7 @@ These are locked in code/tests but worth remembering when touching adjacent area
 - **Session 1139 — `cluster_method` discriminator on SignalCluster.** New rows default `entity_token_v1`; backfilled 307 legacy rows. Downstream consumers should filter on `cluster_method='entity_token_v1'` when applying any new quality bar.
 - **Session 1139 — entity-token clusterer in `signal_aggregation_service`.** Requires ≥2 shared specific tokens (frequency ≥2 in window) to form a cluster. Better to miss a cluster than create a junk one. Per-pattern min size: `opportunity_window=4`, default 3.
 - **Session 1139 — kill-switch.** `SIGNAL_CLUSTERER_METHOD=legacy` flips the active clusterer at worker boot. Flag both `celery-long-running` AND `celery-long-running-2` together — half-and-half leaves confusing telemetry. Typos fall through to v1 (not legacy) by design.
-- **Local `$libdir/vector` pgvector path mismatch** blocks any Django query touching SpiderData / other VectorField tables. Known local-env issue (same blocker since Session 1131). Workaround: defer live verification to Docker / production stack.
+- **Local `$libdir/vector` pgvector blocker — CLOSED in Session 1140 post-close (#2172, `3ec9e074`).** u-d-b's `docker-compose.yml` postgres service now uses `pgvector/pgvector:pg15` (was plain `postgres:15-alpine`). SpiderData / VectorField queries work locally. **Upgrade gotcha:** the Debian-based image uses postgres UID=999 vs the alpine image's UID=70 — existing volumes need a one-time `chown -R 999:999` (full command in u-d-b#2172 PR body). Fresh `make up` against an empty volume initdb's cleanly with no manual step.
 - **Fleet HMAC sign-key = SHA256(secret), not raw secret.** Saved to memory. Any new fleet client must follow this contract.
 - **`init_db()` does not migrate existing tables** (signal-studio side). Schema additions need `_ensure_schema()` calls in BOTH startup paths.
 - **brain_events.py is byte-identical across all 7 fleet repos.** Future event prefixes plug into the HANDLERS prefix router in `signal_ingest.py`.
@@ -242,7 +247,9 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ### Other carryovers
 
-- **Legacy SignalCluster bulk-archive** (Session 1139 follow-up, now Session 1141 THIRD if SECOND lands < 30%) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
+- **Legacy SignalCluster bulk-archive** (Session 1139 follow-up, now Session 1141 SECOND if FIRST lands < 30%) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
+- **v1 accumulation in progress** — as of Session 1140 close: 19 v1 SignalClusters in u-d-b, 3 in signal-studio mirror (passed strength≥0.6 emit predicate). Beat cron `*/30` will accumulate more. Auto-summarize worker on signal-studio side judges them periodically into `summarized` / `rejected`. Read FIRST when sample size ≥20 in the v1 bucket.
+- **DB-dependent tests can be re-enabled** — pgvector now works locally (#2172). `test_fleet_signals_phase1.py` integration paths + curator dedup + PA-chat audit tests were parked since Session 1131 specifically because of the pgvector blocker. Separate scope from FIRST; cleanup work for a quieter session.
 - **signal-studio mirror dep gap** (Session 1140 discovery) — `stripe` + `httpx` were missing from `backend/.venv` until ad-hoc `pip install`. Not committed. Future smoke-test sessions should re-pip from `requirements.txt` rather than assume venv is current.
 - **Vercel preview deploy on signal-studio** — failed during Session 1140 signal-studio#17 merge. Backend-only diff couldn't have caused it; pre-existing flake or quota issue. Worth a separate look if frontend redeploys are needed.
 - **Ops view fork decision** (Session 1136 PARKED) — Chris picks: kill / radical-simplify / different medium / redirect with new interview
@@ -252,7 +259,6 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
 - **24-7-ai-global** — Next.js, not yet Dockerized. Surface for Rigby standalone Phase 1 (deferred per Decision 1).
 - **Per-user filter at u-d-b's replay endpoint** — optional `?user_id=…` query param.
-- **DB-dependent tests** for fleet emit predicate + cursor advancement + curator dedup + PA-chat audit — requires test DB with pgvector.
 - **context-kit doctor floor:** `10 OK / 2 warnings` (both upstream).
 - **`character-os`** — Another Claude Code instance may be active there. Read-only is fine; don't push PRs there. Per Atlas, Phase 4+ parked.
 
@@ -274,4 +280,4 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ---
 
-*Last overwrite: Session 1140 close → Session 1141 entry. Headline 1141 work: restart daphne+celery to pick up `signal_studio_judge_stats` registration, then run the live rejection-rate measurement against the post-merge stack to close out the Session 1139 acceptance test. Pre-merge baseline: 112/131 = 85.5% legacy rejection; target for v1: <30%. Acceptance bar Rigby-locked.*
+*Last overwrite: Session 1140 close → Session 1141 entry (then post-close patch: pgvector blocker closed via #2172). Headline 1141 work is now just **read the v1 rejection rate once the sample is big enough** — all instrumentation is live, all infra blockers cleared, beat cron is producing real v1 rows. Pre-merge baseline: 112/131 = 85.5% legacy rejection; target for v1: <30%. Acceptance bar Rigby-locked.*
