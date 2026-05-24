@@ -119,14 +119,38 @@ class TestClusterEnvelope:
     def test_basic_envelope_shape(self):
         env = cluster_envelope(_fake_cluster())
         assert env is not None
-        # Every key the start-here doc names must be present.
+        # Every key the start-here doc names must be present, plus
+        # Session 1139's `cluster_method` discriminator that propagates
+        # the upstream clusterer's version downstream so signal-studio
+        # can measure rejection-rate-per-method as the SLO for the
+        # entity-token rewrite.
         expected_keys = {
             "seq", "external_cluster_id", "title", "summary",
-            "pattern_type", "category", "signal_strength",
-            "confidence_score", "cluster_size", "evidence", "tags",
-            "created_at",
+            "pattern_type", "category", "cluster_method",
+            "signal_strength", "confidence_score", "cluster_size",
+            "evidence", "tags", "created_at",
         }
         assert set(env.keys()) == expected_keys
+
+    def test_envelope_includes_cluster_method(self):
+        """Session 1139: discriminator must appear and default safely.
+
+        Legacy rows in the DB are tagged 'legacy' by migration 0351
+        backfill; new rows default to 'entity_token_v1'. The envelope
+        must surface whatever the row carries, falling back to 'legacy'
+        if the attribute is missing entirely (defensive for back-compat
+        with any out-of-band fixture).
+        """
+        c = _fake_cluster()
+        c.cluster_method = "entity_token_v1"
+        env = cluster_envelope(c)
+        assert env is not None
+        assert env["cluster_method"] == "entity_token_v1"
+
+        c.cluster_method = "legacy"
+        env2 = cluster_envelope(c)
+        assert env2 is not None
+        assert env2["cluster_method"] == "legacy"
 
     def test_external_cluster_id_is_string(self):
         env = cluster_envelope(_fake_cluster())

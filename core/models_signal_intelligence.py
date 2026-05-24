@@ -91,6 +91,26 @@ class SignalCluster(models.Model):
         help_text="Classification of the detected pattern"
     )
 
+    # Session 1139: which clusterer produced this row. Downstream
+    # consumers filter on this to opt new rows into the entity-token
+    # quality bar while letting legacy rows decay naturally. Existing
+    # rows are backfilled to 'legacy' by migration 0351.
+    CLUSTER_METHOD_CHOICES = [
+        ('legacy', 'Legacy verb-keyword clusterer (pre-1139)'),
+        ('entity_token_v1', 'Entity-token clusterer (Session 1139)'),
+    ]
+    cluster_method = models.CharField(
+        max_length=32,
+        choices=CLUSTER_METHOD_CHOICES,
+        default='entity_token_v1',
+        db_index=True,
+        help_text=(
+            "Which clustering algorithm produced this row. Downstream "
+            "selection filters on this so the rewrite can be staircased "
+            "in without forced re-clustering of historical data."
+        ),
+    )
+
     # Linked spider data (IDs for efficiency)
     spider_data_ids = models.JSONField(
         default=list,
