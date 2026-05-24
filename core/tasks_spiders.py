@@ -922,6 +922,12 @@ def _impl_curate_signal_clusters(self, top_n: int = 10):
     Idempotent at the content level (same inputs + clock → same
     snapshot CONTENT) but each run writes a new snapshot row — history
     is a feature (Rigby's lock #2).
+
+    Session 1140 (A) — on success, schedules `generate_curated_action_cards`
+    as a follow-on. Non-fatal: snapshot success doesn't depend on
+    action-gen success (Rigby's lock: snapshot can't be coupled to LLM
+    uptime). The follow-on schedule itself is wrapped so a broker outage
+    won't sink an otherwise-good snapshot.
     """
     from core.services.signal_curator_service import curate_and_emit
 
@@ -942,10 +948,92 @@ def _impl_curate_signal_clusters(self, top_n: int = 10):
             f"pool={result.pool_size} kept={snapshot.top_n} "
             f"excluded={result.excluded_count}"
         )
+
+        # Session 1140 (A): schedule action-card generation as a
+        # follow-on. Only when the snapshot has at least one pick —
+        # an empty snapshot has nothing to generate against.
+        if snapshot.top_n > 0:
+            try:
+                # Local import to keep the module import surface small
+                # and to avoid a circular if this module ever gets
+                # pulled in by tasks.py at startup.
+                from core.tasks import generate_curated_action_cards
+                generate_curated_action_cards.delay(str(snapshot.id))
+                logger.info(
+                    f"🎯 [SIGNAL-CURATOR] follow-on action-gen queued "
+                    f"snapshot={snapshot.id}"
+                )
+                out['action_gen_scheduled'] = True
+            except Exception as schedule_err:  # pragma: no cover
+                # Broker outage or import failure shouldn't fail the
+                # snapshot — the rows are already on disk and a later
+                # manual / cron retry can pick them up.
+                logger.warning(
+                    f"🎯 [SIGNAL-CURATOR] follow-on action-gen scheduling "
+                    f"failed snapshot={snapshot.id}: {schedule_err}"
+                )
+                out['action_gen_scheduled'] = False
+                out['action_gen_schedule_error'] = str(schedule_err)
+        else:
+            out['action_gen_scheduled'] = False
+
         return out
     except Exception as e:
         logger.error(f"🎯 [SIGNAL-CURATOR] Error: {e}", exc_info=True)
         return {
             'status': 'error',
+            'error': str(e),
+        }
+
+
+def _impl_generate_curated_action_cards(self, snapshot_id: str):
+    """Session 1140 (A) — generate action cards for a curated snapshot.
+
+    One LLM call per cluster_pick row in the snapshot (≤Top-N, default
+    10). Persists each as a sibling `entry_type='action_card'` row,
+    then emits `signal.curated_actions_ready` so signal-studio's mirror
+    can render them inline under the Curated tab.
+
+    Idempotent: re-running on the same snapshot_id is a no-op (the
+    generator's `only_missing=True` skips clusters that already have an
+    action_card row).
+    """
+    from core.services.curated_action_card_generator import generate_for_snapshot
+    from core.services.signal_curator_service import emit_curated_actions_ready
+
+    logger.info(
+        f"🎯 [ACTION-CARD-GEN] Starting snapshot={snapshot_id}"
+    )
+    try:
+        result = generate_for_snapshot(snapshot_id)
+        if result.generated == 0 and result.skipped_existing == 0:
+            logger.info(
+                f"🎯 [ACTION-CARD-GEN] nothing to do for snapshot={snapshot_id}"
+            )
+            return {
+                'status': 'noop',
+                'snapshot_id': snapshot_id,
+            }
+
+        emit_id = emit_curated_actions_ready(snapshot_id)
+        out = {
+            'status': 'success',
+            'snapshot_id': snapshot_id,
+            'generated': result.generated,
+            'skipped_existing': result.skipped_existing,
+            'fallback_count': result.fallback_count,
+            'emit_event_id': emit_id,
+        }
+        logger.info(
+            f"🎯 [ACTION-CARD-GEN] Complete: snapshot={snapshot_id} "
+            f"generated={result.generated} skipped={result.skipped_existing} "
+            f"fallback={result.fallback_count} emit={emit_id}"
+        )
+        return out
+    except Exception as e:
+        logger.error(f"🎯 [ACTION-CARD-GEN] Error: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'snapshot_id': snapshot_id,
             'error': str(e),
         }
