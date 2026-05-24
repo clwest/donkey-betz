@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-05-24 12:19
+**Generated:** 2026-05-24 14:20
 **Current Session:** 1138
 **Total Documentation:** 2014 files | 671,980 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,960 |
+| Total cross-references | 2,961 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -33,7 +33,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 176 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/plans/README.md` | 79 | 📋 Strategic Plans & Roadmaps |
+| `docs/archive/SYSTEM_CAPABILITIES-original/09_Self_Awareness/README.md` | 79 | 🔮 SELF-AWARENESS SYSTEMS - The AI That Knows Itsel |
 | `docs/PLATFORM_INVENTORY.md` | 73 | Platform Master Inventory |
 | `docs/INDEX.md` | 61 | INDEX |
 | `docs/AGENTS.md` | 59 | AGENTS |
@@ -257,10 +257,10 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md | handoffs | 331 | 2026-05-24 12:19 |
+| CONTEXT_KIT_INVENTORY.md | docs | 41 | 2026-05-24 14:19 |
+| SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md | handoffs | 331 | 2026-05-24 12:22 |
+| INDEX.md | docs | 401 | 2026-05-24 12:22 |
 | PLATFORM_INVENTORY.md | docs | 2,095 | 2026-05-24 12:04 |
-| INDEX.md | docs | 401 | 2026-05-24 12:04 |
-| CONTEXT_KIT_INVENTORY.md | docs | 41 | 2026-05-24 12:04 |
 | AGENTS.md | docs | 1,683 | 2026-05-24 11:10 |
 | SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md | specs | 166 | 2026-05-24 11:00 |
 | SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md | handoffs | 236 | 2026-05-24 11:00 |
