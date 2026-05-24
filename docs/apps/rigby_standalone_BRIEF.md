@@ -163,4 +163,20 @@ Per Atlas §C.5, J.2.8: Character OS / avatar / voice = parked until a paying cu
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass).
 **Rev. 2:** Rigby review pass applied — 14 mechanical fixes (count alignment, deterministic proof, hypothesis labeling, source citations, expanded claim audit, §9 reorder, Phase 0 gating elevation).
 **Rev. 3:** Discovery of `24-7-ai-global/src/lib/products.ts` as canonical source of truth revealed rev. 1-2 framed Rigby as "Phase 1 flagship" but products.ts treats Rigby as `in-development · Private` ("standalone surface forthcoming"). Rev. 3 reframes brief as a **Phase 1 GTM proposal** for taking the currently-private Rigby public, not a description of an existing public product. Updated header note, §1 grounded in products.ts pitch + elevator, §2 anchored in canonical "Operators who refuse to wait for the work week" target, §7 marked pricing as Atlas-suggested-pending-Chris (not currently in products.ts), §9 added Decision 0 ("confirm take-public decision") + Decision 8 ("update products.ts when launched").
-**Next step:** Rigby review for honest framing on rev. 3. Then Chris ratifies the 9 open decisions in §9 (especially Decision 0). Then brief becomes locked Phase 1 GTM proposal for Rigby standalone.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q0 Confirm take-public decision | ✅ **Decision 1** — (c) Defer; trigger: ≥2 Suite products at ≥$500 MRR + concrete "Rigby standalone" answer | handoff Decision 1 |
+| Q1 app.247globalai.com build status | ⏸ Phase 5 #27 audit task — Claude/Jessica run repo audit | handoff Phase 5 queue |
+| Q2 Canonical proof pick (A vs B) | ✅ **Decision 17** — (d) Hybrid: Candidate A (local-internal demo) now; upgrade to B on launch trigger | handoff Decision 17 |
+| Q3 $1.50/day cap + cost-tracking Phase 0 GATING | ✅ **Decision 9** — superseded by portfolio rule: per-customer cap = `25% × monthly_subscription / 30` per day; Rigby $30/mo → $0.25/day | handoff Decision 9 |
+| Q4 Pricing lock — $30/mo or different | ✅ **Decision 5** — $30/mo (contingent on Decision 1 launch trigger) | handoff Decision 5 |
+| Q5 Paid ads budget | ✅ **Decision 11** — (a) Defer entirely; revisit on Decision 1 trigger | handoff Decision 11 |
+| Q6 Trademark filing green-light | ✅ **Decision 2** — (c) Wait; same trigger as Decision 1; revisit-anytime allowed | handoff Decision 2 |
+| Q7 Landing page voice timing | ⏸ Naturally defers with Decision 1 launch trigger — revisit when public launch ratified | handoff Decision 1 |
+| Q8 Update products.ts to reflect Phase 1 launch when ready | 🔧 Chris queue — fires when Decision 1 trigger met | handoff Chris queue #8 |
+
+9 of 9 §9 items either ratified or queued. Brief now reads as the ratified Phase 1 GTM proposal pending launch trigger.
