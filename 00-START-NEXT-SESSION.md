@@ -68,6 +68,8 @@ The last three sessions form a coherent measurement-instrumentation arc on top o
 
 **Session 1140 post-close — `$libdir/vector` pgvector blocker CLOSED.** Investigated why `signal_studio_judge_stats` was returning legacy-only rows post-deploy. Root cause traced to u-d-b's local Postgres still on plain `postgres:15-alpine` (no pgvector) while every other fleet app's Postgres uses `pgvector/pgvector:pg16` — `aggregate_spider_signals` had been failing every 30 minutes for ~2 days with `OperationalError: could not access file "$libdir/vector"`. Fix shipped in u-d-b#2172 (`3ec9e074`): swap `docker-compose.yml` image to `pgvector/pgvector:pg15` (same major → volume-compatible). End-to-end verified: 19 v1 SignalCluster rows created locally, 3 reached signal-studio's mirror, `entity_token_v1` bucket now visible in `signal_studio_judge_stats`. Volume chown side effect (UID 70→999) documented in PR body. **This closes the Session 1131 pgvector carryover** that's been on the deck for ~3 weeks.
 
+**Session 1140 (A) — action-card pre-generation vertical slice SHIPPED.** Picked up carryover (A) and closed it in the same session via 3 coordinated PRs (Rigby reviewed every one mid-build, all merged). Curated snapshots now ship with LLM-generated action cards paired 1:1 with each cluster_pick. Curated tab → click any cluster → "Suggested Next Steps" section renders action_type badge ("AI draft" vs "Needs retry" pill), concrete steps, and outreach draft (when populated). 3 PRs: u-d-b#2174 (`1c268726`) + signal-studio#18 (`3f279730`) + signal-studio#19 (`11bee51f`). ~2300 LOC, 57 new tests, 80% real LLM cards on live smoke. Full details + Rigby's three design-review passes in [`SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md`](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md). **This closes carryover (A)** that was queued from Session 1132.
+
 ---
 
 ## SESSION 1141 — CURRENT ENTRY POINT
@@ -78,6 +80,7 @@ The last three sessions form a coherent measurement-instrumentation arc on top o
 - ✅ signal-studio docker rebuilt with `--force-recreate` (mirror got `cluster_method` column + `/api/judge-stats` endpoint).
 - ✅ pgvector unblocked via u-d-b#2172 (`3ec9e074`); `aggregate_spider_signals` now runs against working SpiderData queries.
 - ✅ First-pass aggregation produced 19 v1 SignalClusters; 3 reached signal-studio's mirror tagged `entity_token_v1`.
+- ✅ Carryover (A) action-card pre-generation shipped end-to-end (3 PRs merged: u-d-b#2174, signal-studio#18, signal-studio#19). Curated snapshots now ship with LLM action cards rendering inline; 8/10 real LLM, 2/10 fallback at current variance. See [`SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md`](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md).
 
 ### FIRST THING — Read the live rejection rate
 
@@ -219,11 +222,11 @@ These are locked in code/tests but worth remembering when touching adjacent area
 
 **Estimate**: ~half a session + 1 session of audit-sweep work if needed.
 
-### (A) Action-card pre-generation for curated — visible-feature alternative, STILL queued
+### ~~(A) Action-card pre-generation for curated~~ — CLOSED Session 1140 (3 PRs)
 
-**Rigby locked the design fork**: child rows (typed `CuratedSignalEntry` rows for actions), NOT payload blob.
+Shipped end-to-end via u-d-b#2174 (`1c268726`) + signal-studio#18 (`3f279730`) + signal-studio#19 (`11bee51f`). Curated snapshots now produce 10 LLM-generated action cards (≈80% real, ≈20% fallback at current variance) that signal-studio mirrors and renders inline under each curated cluster's detail view. Rigby reviewed every PR mid-build. Full details + Rigby's three design-review passes in [`SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md`](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md).
 
-**Estimate**: ~1 session. ~10 LLM calls/day per curator run.
+**Spawned follow-ups (now in "Other carryovers" below):** regen scheduler for `needs_regen` rows, copy-button on outreach_draft, curated tab list-card inline preview, legacy-snapshot action backfill.
 
 ### Audit telemetry check (relevant for (Y) gate)
 
@@ -247,6 +250,10 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ### Other carryovers
 
+- **Action-card regen scheduler** (Session 1140 (A) follow-up) — fallback rows now land as `action_status='needs_regen'`, queryable independently of the `generated_by` audit field. A scheduler can filter on that status + retry with backoff. Needs explicit design pass (rate limit, audit, retry budget, model selection). Per Rigby: deliberate follow-on, NOT to land alongside the slice.
+- **Action-card copy button** (Session 1140 (A) Rigby Q4 non-blocking) — outreach_draft block is currently monospace + preserved line breaks. Adding a 1-click Copy button tightens the loop for templates with `[Name]`/`[Role]` placeholders. Frontend-only.
+- **Curated tab list-card inline action preview** (Session 1140 (A) deferred) — currently action cards only render in drill-in. A 1-line action title teaser inline on `CuratedSignalCard` would show the actionable angle without click. Separate UX scope.
+- **Legacy-snapshot action backfill** (Session 1140 (A) honest-scope) — pre-1140 curated snapshots have no action_cards (the LLM cards never existed). Either run a one-off backfill via `generate_for_snapshot(snapshot_id, only_missing=False)` per old snapshot OR let time-decay carry it (new snapshots inherit the upgraded render naturally).
 - **Legacy SignalCluster bulk-archive** (Session 1139 follow-up, now Session 1141 SECOND if FIRST lands < 30%) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
 - **v1 accumulation in progress** — as of Session 1140 close: 19 v1 SignalClusters in u-d-b, 3 in signal-studio mirror (passed strength≥0.6 emit predicate). Beat cron `*/30` will accumulate more. Auto-summarize worker on signal-studio side judges them periodically into `summarized` / `rejected`. Read FIRST when sample size ≥20 in the v1 bucket.
 - **DB-dependent tests can be re-enabled** — pgvector now works locally (#2172). `test_fleet_signals_phase1.py` integration paths + curator dedup + PA-chat audit tests were parked since Session 1131 specifically because of the pgvector blocker. Separate scope from FIRST; cleanup work for a quieter session.
@@ -277,7 +284,8 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 - [Session 1138 F1 paid-interest implementation](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md)
 - [Session 1139 upstream clustering quality](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md)
 - [Session 1140 cluster_method mirror + judge-stats](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md)
+- [Session 1140 (A) action-card vertical slice](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md)
 
 ---
 
-*Last overwrite: Session 1140 close → Session 1141 entry (then post-close patch: pgvector blocker closed via #2172). Headline 1141 work is now just **read the v1 rejection rate once the sample is big enough** — all instrumentation is live, all infra blockers cleared, beat cron is producing real v1 rows. Pre-merge baseline: 112/131 = 85.5% legacy rejection; target for v1: <30%. Acceptance bar Rigby-locked.*
+*Last overwrite: Session 1140 close → Session 1141 entry (then 3 post-close patches: pgvector blocker closed via #2172, then (A) action-card vertical slice shipped via u-d-b#2174 + signal-studio#18 + signal-studio#19). Headline 1141 work is now just **read the v1 rejection rate once the sample is big enough** — all instrumentation live, all infra blockers cleared, beat cron producing real v1 rows AND real LLM action cards on every curated snapshot. Pre-merge baseline: 112/131 = 85.5% legacy rejection; target for v1: <30%. Acceptance bar Rigby-locked.*
