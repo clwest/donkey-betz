@@ -721,6 +721,41 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Signal-studio judge stats (Session 1140) ────────────────────────────
+    # Intentionally evergreen description — no SLO numbers, baselines,
+    # or acceptance thresholds. Those belong in handoff docs / runbooks
+    # so they don't bias the model toward a stale target. See Rigby's
+    # design review on PR #2169 for the rationale.
+    {
+        "type": "function",
+        "name": "signal_studio_judge_stats",
+        "description": (
+            "Return signal-studio's LLM auto-summarizer judge stats over "
+            "the last N days: counts of clusters accepted (summarized) "
+            "vs rejected as incoherent, with rejection_rate broken down "
+            "by cluster_method and pattern_type. Used to validate "
+            "clustering-quality changes and answer 'how is the current "
+            "clusterer performing?'. Calls signal-studio's auth-less "
+            "/api/judge-stats endpoint over the configured base URL."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": (
+                        "Lookback window in days. Default 7. Range 1-90. "
+                        "Use 1 for 'today only', 7 for a week's signal, 30 "
+                        "to include slower-moving categories."
+                    ),
+                    "minimum": 1,
+                    "maximum": 90,
+                },
+            },
+            "required": [],
+        },
+    },
+
     {
         "type": "function",
         "name": "active_repo_tool",
@@ -4348,6 +4383,7 @@ TOOL_ENRICHMENT_MAP = {
     'platform_awareness_tool': [],
     'platform_config_tool': [],
     'paid_interest_status': [],
+    'signal_studio_judge_stats': [],
     'db_health_tool': [],
     'studio_tool': ['intelligence_enricher'],
     'persona_tool': ['domain_context', 'spider_trends'],
@@ -4452,6 +4488,7 @@ TOOL_TO_INTENT_MAP = {
     'platform_awareness_tool': 'platform_awareness',
     'platform_config_tool': 'system_health',
     'paid_interest_status': 'system_health',
+    'signal_studio_judge_stats': 'system_health',
     'db_health_tool': 'system_health',
     'studio_tool': 'studio',
     'persona_tool': 'agent_execution',
