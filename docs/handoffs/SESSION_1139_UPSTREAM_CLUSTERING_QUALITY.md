@@ -1,11 +1,14 @@
 ---
 title: "Session 1139 — Upstream clustering quality (Option A: entity-token clusterer)"
 date: 2026-05-24
-status: active
+status: merged
 session: 1139
 previous_handoff: SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md
 next_session_primary: Live rejection-rate measurement post-merge + (Y) reject-mode flip if audit telemetry clean + Rigby's `signal_studio_judge_stats` PA tool from her Q3 design note
 team: chris + claude + rigby (design review)
+pr: 2165
+merge_commit: aac43d31
+merged_at: 2026-05-24T18:03Z
 ---
 
 # Session 1139 — Upstream clustering quality
@@ -14,6 +17,17 @@ team: chris + claude + rigby (design review)
 > details: empirical diagnosis, what the entity-token clusterer does,
 > Rigby's design decisions, what's verified locally, and how the live
 > rejection-rate acceptance test gets run after this merges.
+
+> **Merge status (2026-05-24):** PR
+> [#2165](https://github.com/clwest/donkey-betz-platform/pull/2165) merged
+> to `main` as `aac43d31`. All 3 CI checks green (Direct LLM SDK,
+> Repo Guardrails, GitGuardian). Two commits landed:
+> `4f0b5185` (entity-token rewrite) + `1efb922a` (env-flag kill-switch
+> added per Rigby's PR-review note). Branch
+> `feat/session-1139-upstream-clustering-quality` deleted. Rigby
+> logged the Session 1140 telemetry pull as a high-importance goal
+> (memory id 89) — she'll surface it as first-thing when Chris next
+> opens a session.
 
 ## TL;DR
 
@@ -37,10 +51,12 @@ rejection rate after the change lands.
 - Same name-string repeated ≥2x in 4/15 latest sample = ~27% near-dup
   rate (Rigby's parallel empirical check using `intelligence_tool`).
 
-**Test posture**: 24 new pure-function tests in
-`test_signal_aggregation_entity_clusterer.py` (all passing). 1
-existing `test_fleet_signals_phase1` test updated for the new envelope
-key (also passing). 84/84 across signal-adjacent suites green.
+**Test posture**: 30 new pure-function tests in
+`test_signal_aggregation_entity_clusterer.py` (24 entity-token + 6
+kill-switch). 1 existing `test_fleet_signals_phase1` test updated for
+the new envelope key + 1 added for `cluster_method` propagation.
+54/54 across new clusterer suite + fleet_signals_phase1; 84/84 across
+broader signal-adjacent suites.
 
 **Local live verification BLOCKED** by Postgres `$libdir/vector` path
 mismatch on SpiderData queries — same parking pattern as Session
@@ -48,15 +64,19 @@ mismatch on SpiderData queries — same parking pattern as Session
 measurement is Session 1140's first task once this merges to a stack
 with working pgvector (production / Docker).
 
-## What landed (u-d-b, branch `feat/session-1139-upstream-clustering-quality`)
+## What landed (u-d-b, PR [#2165](https://github.com/clwest/donkey-betz-platform/pull/2165) → merge commit `aac43d31`)
+
+Two commits on the branch:
+- `4f0b5185` — entity-token rewrite (the main change)
+- `1efb922a` — runtime kill-switch `SIGNAL_CLUSTERER_METHOD=legacy` (added post-PR-open per Rigby's review concern about rollback being git-revert-only)
 
 | Path | Change |
 |---|---|
 | `core/models_signal_intelligence.py` | `SignalCluster.cluster_method` CharField (`legacy` / `entity_token_v1`), db_index'd, default `entity_token_v1`. |
 | `core/migrations/0351_session_1139_cluster_method.py` | AddField + RunPython that backfills all 307 existing rows to `legacy`. Hand-trimmed: makemigrations auto-included unrelated NarrativeShift / AgentExecution / FleetPAChatAuditRow ops from prior partial work — stripped to keep Session 1139 PR minimal. |
-| `core/services/signal_aggregation_service.py` | Entity-token clusterer constants (`CLUSTER_METHOD_V1`, `MIN_ENTITY_TOKEN_LENGTH`, `MIN_TOKEN_FREQUENCY_IN_WINDOW`, `MIN_SHARED_TOKENS`, `PER_PATTERN_MIN_CLUSTER_SIZE`, 72-token `NEWS_BOILERPLATE_TOKENS` denylist, regex). New `_extract_entity_tokens` helper. `_cluster_signals` rewritten as entity-token Union-Find. `_create_signal_clusters` tags new rows with `cluster_method=v1` and looks up existing rows by `(cluster_method, pattern_type, keywords__contains=key_tokens)`. `_generate_cluster_name` handles `"tok1|tok2"` v1 format with Title-cased tokens; legacy single-token path preserved for back-compat. |
+| `core/services/signal_aggregation_service.py` | Entity-token clusterer constants (`CLUSTER_METHOD_V1`, `MIN_ENTITY_TOKEN_LENGTH`, `MIN_TOKEN_FREQUENCY_IN_WINDOW`, `MIN_SHARED_TOKENS`, `PER_PATTERN_MIN_CLUSTER_SIZE`, 72-token `NEWS_BOILERPLATE_TOKENS` denylist, regex). New `_extract_entity_tokens` helper. `_cluster_signals` rewritten as entity-token Union-Find. `_create_signal_clusters` tags new rows with `cluster_method=v1` and looks up existing rows by `(cluster_method, pattern_type, keywords__contains=key_tokens)`. `_generate_cluster_name` handles `"tok1|tok2"` v1 format with Title-cased tokens; legacy single-token path preserved for back-compat. **(`1efb922a` adds:)** `CLUSTER_METHOD_LEGACY` constant, `CLUSTER_METHOD_ENV_VAR="SIGNAL_CLUSTERER_METHOD"`, `__init__` reads env into `self._active_cluster_method`, `_cluster_signals` dispatches to `_cluster_signals_legacy` (verbatim pre-1139 verb-keyword path) when flag is set, `_create_signal_clusters` tags rows with the ACTIVE method (not always v1), existing-cluster lookup scoped by active method so v1 and legacy pools stay separate during a flip. |
 | `core/services/fleet_signals.py` | `cluster_envelope` emits `cluster_method`, falling back to `legacy` if missing. So signal-studio's mirror records which clusterer produced each row. |
-| `tests/services/test_signal_aggregation_entity_clusterer.py` | 24 new pure-function tests across 6 classes: entity extraction (basic, ALL-CAPS exclusion, denylist, hyphenated, camel-case, per-signal cap, empty), clusterer collapse (Tableau dup-merge, two-topic separation), rejection (heterogeneity, one-off entities, no-token signals), per-pattern min size (opportunity_window=4 vs default=3), name generation (v1 csv format + legacy back-compat), degenerate inputs, extract_signals wiring. |
+| `tests/services/test_signal_aggregation_entity_clusterer.py` | 24 entity-token tests + 6 kill-switch tests (`TestClustererKillSwitch`) covering default, explicit v1, legacy flip, typo fall-through, case/whitespace tolerance, end-to-end dispatch visibility. 30 new pure-function tests total. |
 | `tests/services/test_fleet_signals_phase1.py` | Existing `test_basic_envelope_shape` updated for new key; new `test_envelope_includes_cluster_method` exercises both `legacy` and `entity_token_v1` paths. |
 
 ## Empirical baseline (locked 2026-05-24 11:18 local time)
@@ -192,6 +212,29 @@ to receive the envelope field. Today's signal-studio
 compat). The mirror schema change is a separate small signal-studio
 PR — included in the Session 1140 first-step work.
 
+## Rollback path (env-flag kill-switch, commit `1efb922a`)
+
+Added post-PR-open per Rigby's review concern that revert was the
+only rollback. Now there are three tiers:
+
+1. **Preferred — runtime env flag:** set
+   `SIGNAL_CLUSTERER_METHOD=legacy` on the workers that serve the
+   `long_running` queue (where `aggregate_spider_signals` runs per
+   `core/celery.py:280`). That is **both** `celery-long-running`
+   AND `celery-long-running-2` in Procfile — flipping one and not
+   the other leaves half of new clusters tagged v1, the other half
+   legacy (confusing telemetry).
+   - Local: `pkill -f "celery -A core"; make celery`
+   - Railway: redeploy after env edit (the flag is read at worker
+     `__init__`, so a fresh process is required)
+2. **Last resort — git revert:** `git revert 1efb922a 4f0b5185` if
+   the env-flag path itself misbehaves.
+3. **Typo behavior is explicit:** unknown values (including
+   `SIGNAL_CLUSTERER_METHOD=lagacy`) **fall through to
+   `entity_token_v1`**, NOT to legacy. Prevents a typo from
+   silently disabling the new clusterer; ops must type `legacy`
+   exactly (case + whitespace normalized).
+
 ## Honest scope notes
 
 - **Live RUN through real SpiderData**: not executed locally. Local
@@ -224,11 +267,14 @@ u-d-b (branch feat/session-1139-upstream-clustering-quality):
 
 ## Test posture
 
-- **24/24 new clusterer tests passing** (`tests/services/test_signal_aggregation_entity_clusterer.py`)
+- **30/30 new tests passing** in `tests/services/test_signal_aggregation_entity_clusterer.py` (24 entity-token + 6 kill-switch)
+- **54/54 across new clusterer suite + fleet_signals_phase1**
 - **84/84 signal-adjacent suites passing** (clusterer + fleet_signals_phase1 + signal_curator_phase2)
 - **Migration 0351 applied locally**: all 307 existing rows backfilled to `cluster_method='legacy'`
 - **Synthetic clustering verified**: Tableau-job dup-merge → 1 cluster; Trump+Hubble+NFL heterogeneity → 0 clusters; window-frequency throttle blocks single-token clusters
+- **Kill-switch verified**: `SIGNAL_CLUSTERER_METHOD=legacy` dispatches to verbatim pre-1139 path producing `kw:<keyword>` cluster keys (vs entity-token keys when unset)
 - **DB-dependent integration parked**: pgvector local env block — verification deferred to post-merge stack run
+- **CI green** (PR #2165, merge `aac43d31`): Direct LLM SDK check, Repo Guardrails, GitGuardian — all SUCCESS
 
 ## Carryover into Session 1140
 
