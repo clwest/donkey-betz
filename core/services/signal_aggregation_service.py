@@ -63,6 +63,14 @@ class SignalAggregationService:
     # 'entity_token_v1' so downstream selection can opt them in.
 
     CLUSTER_METHOD_V1 = "entity_token_v1"
+    CLUSTER_METHOD_LEGACY = "legacy"
+
+    # Runtime kill-switch env var. Defaults to entity_token_v1. Set to
+    # 'legacy' to fall back to the pre-1139 verb-keyword clusterer
+    # without a code revert — operational rollback path Rigby flagged
+    # at PR review time. Reads the env at __init__ so beat-scheduled
+    # runs pick up changes on next worker restart.
+    CLUSTER_METHOD_ENV_VAR = "SIGNAL_CLUSTERER_METHOD"
 
     # Min characters in an entity token. 4 drops most common short
     # words (the, and, was, two) while keeping real entities (Tesla,
@@ -180,8 +188,20 @@ class SignalAggregationService:
         Args:
             lookback_hours: How far back to look for signals (default 6 hours)
         """
+        import os
         self.lookback_hours = lookback_hours
         self.cutoff_time = timezone.now() - timedelta(hours=lookback_hours)
+
+        # Session 1139: runtime clusterer-method kill-switch. Defaults
+        # to entity_token_v1 (the new behavior). Set
+        # SIGNAL_CLUSTERER_METHOD=legacy to fall back to the verb-
+        # keyword clusterer without a code revert. Unknown values fall
+        # through to v1 so a typo doesn't silently disable the new path.
+        env_val = os.environ.get(self.CLUSTER_METHOD_ENV_VAR, "").strip().lower()
+        if env_val == self.CLUSTER_METHOD_LEGACY:
+            self._active_cluster_method = self.CLUSTER_METHOD_LEGACY
+        else:
+            self._active_cluster_method = self.CLUSTER_METHOD_V1
 
     @staticmethod
     def _get_governance_mode() -> str:
@@ -375,6 +395,47 @@ class SignalAggregationService:
         return list(set(topics))[:5]  # Dedupe and limit
 
     def _cluster_signals(self, signals: List[Dict]) -> Dict[str, List[Dict]]:
+        """Dispatch to the configured clusterer (Session 1139).
+
+        Reads `self._active_cluster_method` (set in __init__ from the
+        SIGNAL_CLUSTERER_METHOD env var) and routes to either the new
+        entity-token clusterer or the pre-1139 verb-keyword fallback.
+        Provides a no-code-change rollback path; new rows are tagged
+        with whichever method actually produced them.
+        """
+        if self._active_cluster_method == self.CLUSTER_METHOD_LEGACY:
+            return self._cluster_signals_legacy(signals)
+        return self._cluster_signals_entity_token_v1(signals)
+
+    def _cluster_signals_legacy(self, signals: List[Dict]) -> Dict[str, List[Dict]]:
+        """Pre-1139 verb-keyword fallback clusterer (kept for rollback).
+
+        Clusters by (a) regex topic match against PATTERN_TYPE topic
+        regexes OR (b) literal first PATTERN_TYPE_KEYWORD. Diagnosed
+        in Session 1139 as the cause of 85.5% LLM-judge rejection
+        upstream — generic-verb clusters lumped heterogeneous news.
+        Preserved verbatim so SIGNAL_CLUSTERER_METHOD=legacy can flip
+        back operationally if the entity-token path regresses in prod.
+        """
+        clusters = defaultdict(list)
+
+        for signal in signals:
+            # Primary clustering by topics
+            for topic in signal['topics']:
+                clusters[topic].append(signal)
+
+            # Secondary clustering by keywords if no topics
+            if not signal['topics'] and signal['keywords']:
+                cluster_key = f"kw:{signal['keywords'][0]}"
+                clusters[cluster_key].append(signal)
+
+        # Filter clusters below minimum size
+        return {
+            k: v for k, v in clusters.items()
+            if len(v) >= self.MIN_CLUSTER_SIZE
+        }
+
+    def _cluster_signals_entity_token_v1(self, signals: List[Dict]) -> Dict[str, List[Dict]]:
         """Entity-token clusterer (Session 1139).
 
         Groups signals by shared specific entity tokens. Replaces the
@@ -562,12 +623,12 @@ class SignalAggregationService:
             name = self._generate_cluster_name(topic, pattern_type, keywords)
 
             # Session 1139: existing-cluster lookup keys on cluster_method
-            # + pattern_type + presence of ALL key_tokens. This way v1 runs
-            # only merge with v1 rows (legacy decays naturally), and rows
-            # with different entity sets stay separate clusters even when
-            # they share a pattern_type.
+            # + pattern_type + presence of ALL key_tokens. v1 runs only
+            # merge with v1 rows, legacy runs (env-flipped rollback) only
+            # merge with legacy rows. Rows with different entity sets stay
+            # separate clusters even when they share a pattern_type.
             existing = SignalCluster.objects.filter(
-                cluster_method=self.CLUSTER_METHOD_V1,
+                cluster_method=self._active_cluster_method,
                 status__in=['detecting', 'active'],
                 pattern_type=pattern_type,
                 keywords__contains=key_tokens,
@@ -607,9 +668,11 @@ class SignalAggregationService:
                 cluster = SignalCluster.objects.create(
                     name=name,
                     pattern_type=pattern_type,
-                    # Session 1139: tag every new row so downstream can
-                    # filter to the new clusterer's output cleanly.
-                    cluster_method=self.CLUSTER_METHOD_V1,
+                    # Session 1139: tag every new row with the method
+                    # that actually produced it. v1 by default; legacy
+                    # only if the SIGNAL_CLUSTERER_METHOD=legacy
+                    # rollback flag is set at init time.
+                    cluster_method=self._active_cluster_method,
                     spider_data_ids=[s['spider_data_id'] for s in signals],
                     source_breakdown=source_breakdown,
                     strength=strength,

@@ -349,6 +349,65 @@ class TestDegenerate:
         assert self.svc._cluster_signals(signals) == {}
 
 
+# ─── Rollback kill-switch (SIGNAL_CLUSTERER_METHOD env var) ───────────
+
+
+class TestClustererKillSwitch:
+    """The SIGNAL_CLUSTERER_METHOD env var lets ops flip back to the
+    pre-1139 verb-keyword clusterer without a code revert. Rigby
+    flagged this as a PR-review concern — runtime rollback path is
+    materially safer than git revert alone."""
+
+    def test_default_is_entity_token_v1(self, monkeypatch):
+        monkeypatch.delenv("SIGNAL_CLUSTERER_METHOD", raising=False)
+        svc = SignalAggregationService()
+        assert svc._active_cluster_method == svc.CLUSTER_METHOD_V1
+
+    def test_explicit_v1_env_value(self, monkeypatch):
+        monkeypatch.setenv("SIGNAL_CLUSTERER_METHOD", "entity_token_v1")
+        svc = SignalAggregationService()
+        assert svc._active_cluster_method == svc.CLUSTER_METHOD_V1
+
+    def test_legacy_env_value_flips_clusterer(self, monkeypatch):
+        monkeypatch.setenv("SIGNAL_CLUSTERER_METHOD", "legacy")
+        svc = SignalAggregationService()
+        assert svc._active_cluster_method == svc.CLUSTER_METHOD_LEGACY
+
+    def test_unknown_env_value_falls_through_to_v1(self, monkeypatch):
+        # A typo or unknown value must NOT silently disable the new
+        # clusterer (defaulting to legacy on unknown input would be
+        # dangerous — ops would lose the quality win without noticing).
+        monkeypatch.setenv("SIGNAL_CLUSTERER_METHOD", "v2_embeddings_typo")
+        svc = SignalAggregationService()
+        assert svc._active_cluster_method == svc.CLUSTER_METHOD_V1
+
+    def test_env_value_is_case_insensitive_and_trimmed(self, monkeypatch):
+        monkeypatch.setenv("SIGNAL_CLUSTERER_METHOD", "  LEGACY  ")
+        svc = SignalAggregationService()
+        assert svc._active_cluster_method == svc.CLUSTER_METHOD_LEGACY
+
+    def test_legacy_path_uses_verb_keyword_clusterer(self, monkeypatch):
+        """When legacy is selected, _cluster_signals dispatches to the
+        old verb-keyword path — visible because legacy keys clusters
+        on first PATTERN_TYPE_KEYWORD (`kw:hiring`) while v1 keys on
+        entity tokens (`tableau|developer`)."""
+        monkeypatch.setenv("SIGNAL_CLUSTERER_METHOD", "legacy")
+        svc = SignalAggregationService()
+
+        signals = [
+            _mksig("Tableau Developer Acme Corp remote job",
+                   keywords=["hiring", "position", "remote"]),
+            _mksig("Tableau Developer Beta Inc remote position",
+                   keywords=["hiring", "position", "remote"]),
+            _mksig("Tableau Developer Gamma Co remote role",
+                   keywords=["hiring", "position", "remote"]),
+        ]
+        clusters = svc._cluster_signals(signals)
+        # Legacy clusterer's key format is `kw:<first_keyword>` when
+        # topics are empty — proves the dispatch routed correctly.
+        assert any(k.startswith("kw:") for k in clusters.keys())
+
+
 # ─── Signal-extraction wiring ─────────────────────────────────────────
 
 
