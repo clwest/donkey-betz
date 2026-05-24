@@ -55,129 +55,61 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1135 LANDED — All 8 app briefs shipped + products.ts discovery + 9 PRs merged
+## SESSION 1136 — context-kit ops view PARKED
 
-**Final handoff**: [`docs/handoffs/SESSION_1135_FINAL_CLOSE.md`](docs/handoffs/SESSION_1135_FINAL_CLOSE.md) (supersedes the mid-session `SESSION_1135_APP_DISCOVERY_SPRINT.md` written before the products.ts discovery)
+**Final handoff:** [`docs/handoffs/SESSION_1136_OPS_VIEW_PARKED.md`](docs/handoffs/SESSION_1136_OPS_VIEW_PARKED.md)
 
-**8 app briefs all merged to main** + the Colorado Family Law spin-off preserved as future-concept:
+**TL;DR:** Built a working v1 of `/ops` page on `context-kit start` server (two-panel dashboard, 10-app picker, real blocker/deliverable/deploy-readiness data, Rigby translation-layer review applied). Jessica rejected the dashboard shape: *"feels complicated, hard to even compare these, probably the UI I don't love."* Parked on `clwest/context-kit` branch `feat/jessica-ops-view` (~1360 lines, committed `87c8ae9`, NOT pushed, NOT merged). Data plumbing reusable for any future re-attempt.
 
-| # | App | File | Source of truth |
-|---|---|---|---|
-| 1 | Rigby standalone | `docs/apps/rigby_standalone_BRIEF.md` | products.ts LAB[7] |
-| 2 | Signal Studio | `docs/apps/signal_studio_BRIEF.md` | products.ts LAB[3] |
-| 3 | Contract Concierge | `docs/apps/contract_concierge_BRIEF.md` | products.ts PRODUCTS[2] |
-| 4 | Mentor Forge | `docs/apps/mentorforge_BRIEF.md` | products.ts PRODUCTS[0] |
-| 5 | Pitch Deck Forge | `docs/apps/pitchdeckforge_BRIEF.md` | products.ts PRODUCTS[1] |
-| 6 | Deal Flow Tracker | `docs/apps/dealflowtracker_BRIEF.md` | products.ts PRODUCTS[3] |
-| 7 | SellerPilot | `docs/apps/sellerpilot_BRIEF.md` | products.ts LAB[2] |
-| 8 | ComplianceSentinel | `docs/apps/compliancesentinel_BRIEF.md` | products.ts LAB[4] |
-| (concept) | Colorado Family Law Concierge | `docs/apps/colorado_family_law_concierge_FUTURE_CONCEPT.md` | Phase 2+ spin-off (engine exists; product is separate) |
-
-**Critical pattern lesson:** read `24-7-ai-global/src/lib/products.ts` FIRST before hypothesizing product intent from Atlas + fleet routing + handoffs. The mid-session discovery of products.ts (a 606-line hand-authored canonical source of truth for the entire portfolio) reframed the first 3 briefs and unlocked the next 5 without needing Chris's intent input.
-
-**54 open Chris decisions** across the 8 briefs + 7 cross-cutting items — see `SESSION_1135_FINAL_CLOSE.md` §"Chris's action items."
+**Where it lives:**
+- u-d-b: branch `docs/session-1136-ops-view-parked` — this handoff + 1137 entry (PR pending)
+- context-kit: branch `feat/jessica-ops-view` — parked code, local only
 
 ---
 
-## SESSION 1136 — CURRENT ENTRY POINT
+## SESSION 1137 — CURRENT ENTRY POINT
 
-### FIRST THING — sanity check before any new work
+### FIRST THING — Chris decides on the ops view fork
+
+The ops view from Session 1136 is parked. The underlying need (Jessica seeing Claude's work in her terms) still exists. Chris needs to pick one of:
+
+| # | Option | Cost | What survives |
+|---|---|---|---|
+| 0 | **Redirect entirely** — re-interview Jessica differently before re-attempting | varies | nothing on the branch reused |
+| 1 | **Kill** — close the branch, lessons live in the 1136 handoff | 0 | branch unmerged forever |
+| 2 | **Radical simplification** — 1 page, no panels, no picker, 3 lines per app | ~30 min | 100% of data plumbing |
+| 3 | **Different medium** — CLI `context-kit ops <app>` plain-text card OR daily Slack/Discord snippet | ~1–2 hr | 100% of data plumbing |
+
+**Recommended pre-step:** ask Jessica what she'd ACTUALLY read on her worst Monday morning, BEFORE picking a fork. The audience interview in 1136 captured features but not gestalt (see 1136 handoff §"What we learned" #3).
+
+### Sanity check before any new work
 
 1. `cd ~/development/infra && make up`
 2. `make all` (or `make start && make celery` from u-d-b)
 3. `make status` — confirm 7 fleet apps + u-d-b all healthy
 4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
-5. Read `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` for full session arc
+5. Read `docs/handoffs/SESSION_1136_OPS_VIEW_PARKED.md` for full session arc
 
-### PRIMARY TASK — Tweak context-kit UI so Jessica can see what Claude is doing in her terms
+### If Chris picks fork 2 or 3 (reusable code)
 
-**Chris's directive (Session 1135 close, 2026-05-23):**
+The branch `feat/jessica-ops-view` on `clwest/context-kit` (commit `87c8ae9`, local-only) contains:
+- `_OPS_KNOWN_APPS` (10 apps)
+- `_ops_app_path`, `_ops_active_session` (handoff-derived session number), `_ops_last_handoff`, `_ops_recent_commits` (`git log -5`), `_ops_blockers` (carryover-section parser), `_ops_deliverables` (`gh pr list`), `_ops_deploy_readiness` (5 PASS/FAIL/UNKNOWN checks), `_collect_ops_state`
+- All return shapes designed to back any UI format (dashboard, plain-text card, daily snippet)
 
-> *"You and Rigby need to work with Jessica on context-kit. context-kit has a UI, and Jessica wants a way to see what you are doing in her terms — and context-kit I think has that UI stuff but needs to be tweaked some. So I figure you, Rigby and Jessica can build it."*
+To revive: `cd ~/development/context-kit && git checkout feat/jessica-ops-view`
 
-**Team:** Claude + Rigby + Jessica.
+### If Chris picks fork 0 or 1 (kill / redirect)
 
-**Goal:** Jessica (per `docs/UDB_TRANSLATION_LAYER.md` §1.2 — collaborator/ops voice, [BLOCKER]/[VERIFY]/[RISK]/[ROLLBACK] tags, checklist-shaped, deploy-readiness framing) gets a UI surface that shows what Claude is doing in HER vocabulary — not raw tool calls, not engineering jargon.
-
-### Where the existing UI lives (verified 2026-05-23)
-
-- **Repo:** `/Users/donkeyking/development/context-kit/`
-- **Server:** `cli/server.py` — stdlib-only HTTP, launches via `context-kit start`
-- **Pages:** `/` (project-view onboarding), `/wizard` (beginner), `/audit` (read-only audit dashboard)
-- **Static assets:** `cli/_static/audit.html`, `cli/_static/wizard.html`
-- **APIs:** `/api/state`, `/api/idea`, `/api/check`, `/api/audit/state`, `/api/audit/run`, `/api/audit/report`
-
-This is real infrastructure to tweak, not greenfield.
-
-### Suggested kickoff sequence
-
-1. **Sanity check** (per FIRST THING above): infra fleet + u-d-b + Rigby local config
-2. **Open context-kit start** locally and walk Jessica through the three existing pages — capture what reads / what feels engineering-flavored / what's missing for her voice
-3. **Jessica defines the audience contract** for the UI (what she needs to SEE about Claude's work — task state, decisions pending, drift flags, deliverable status)
-4. **Rigby reviews translation-layer alignment** — make sure UI copy matches §1.2 Jessica-mode conventions
-5. **Claude implements the tweaks** in context-kit cli/server.py + cli/_static/* — small iteration cycles, demo back to Jessica each round
-6. **Land via PR(s)** to context-kit repo (separate from u-d-b; `clwest/context-kit` per memory)
-
-### Reading order for context
-
-1. `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` — full Session 1135 arc + process learnings
-2. `docs/UDB_TRANSLATION_LAYER.md` §1.2 — Jessica's persona contract (audience intent / checklist density / [TAG] conventions / risk-flag conventions / ops-state surfacing / verify-before-deploy phrasing)
-3. `/Users/donkeyking/development/context-kit/CLAUDE.md` — context-kit project entry
-4. `/Users/donkeyking/development/context-kit/cli/server.py` — current server (start here for tweaks)
-5. `/Users/donkeyking/development/context-kit/cli/_static/wizard.html` + `audit.html` — current pages
-
-### Out of scope for Session 1136 (deferred per Chris directive)
-
-- The 54 Session 1135 open §9 decisions (deferred — different track)
-- Phase 0 portfolio infrastructure work (Stripe SKU, cost-attribution, trademark) — deferred
-- Engine-mismatch resolutions in fleet routing — deferred
-- Cross-Suite handoff verification — deferred
-- Colorado Family Law Concierge spin-off — deferred
-
-These all stay in `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` as bookmarked work for whichever session Chris green-lights them.
-
-### Brief template established by Session 1135 (for any future per-app work)
-
-Each brief lands at `docs/apps/<slug>_BRIEF.md` with these 10 sections:
-
-1. **What it is** — anchored on products.ts pitch + elevator
-2. **Who buys it** — products.ts target field
-3. **What's built** — table verified against runtime + products.ts features
-4. **What proves it's real** — canonical proof + interim local proof + launch-day proof
-5. **What's missing** — Phase 0 GATING items (5.1) + other prerequisites (5.2) + not-gaps-but-worth-naming (5.3)
-6. **Buildable in one sprint?** — sizing per item
-7. **GTM sketch** — channel / pricing / CTA / disclaimers / scope / forbidden
-8. **Spokesperson alignment** — Phase 4+ Character OS unpark
-9. **Decisions still needed** — closed by products.ts + Jessica + still open for Chris
-10. **Honest claim audit** — "we do NOT claim" / "we DO claim" per translation layer §2
-
-`source_of_truth:` field in frontmatter cites the products.ts array index.
-
-### Process learnings (worth keeping for any future per-app brief)
-
-- **products.ts is the canonical public-surface source of truth.** Read it FIRST.
-- **Atlas-recommended next-phase positioning ≠ current positioning.** If products.ts marks something `Private` or `in-development`, that's the public-surface status of record.
-- **Each fleet repo has its own context-kit pattern** at `docs/PROJECT_WHAT_IT_IS.md`.
-- **Spokesperson docs at `docs/spokesperson/`** = editorial source of truth.
-- **Fleet routing defaults can be wiring details, NOT product intent.**
-- **Phase 0 cost-attribution is portfolio-wide, not per-app.**
-- **products.ts-anchored briefs need much less review** than hypothesized briefs.
-
-**Per-app specific questions**: see engineering spec v3 §7 (Primary blocker — fill in next session).
-
-### Out-of-scope for Session 1135
-
-- Implementing the capability bundle (Phase 0 of engineering spec) — comes AFTER 1135 + 1134 (Y) reject-mode flip.
-- **No manifest enforcement flips beyond warn-only** during 1135 unless Chris explicitly asks. Keeps discovery from accidentally becoming enforcement work. (Rigby's lock from 1134 close.)
-- Character OS / spokesperson work — Atlas Phase 4+, parked.
-- New fleet app slugs — work with the 8 surfaces that exist.
-- Marketing copy beyond GTM sketches — follow-on session once intent locked.
+- `git -C ~/development/context-kit branch -D feat/jessica-ops-view` if killing outright
+- OR leave the branch indefinitely as documentation of the attempt
+- Update `context-kit/docs/proposals/ops-view-page.md` frontmatter `status: parked` → `status: killed` if going full kill
 
 ---
 
-## CARRYOVER FROM 1134-PRE — Still queued in parallel
+## CARRYOVER FROM 1135-PRE — Still queued in parallel
 
-These were the original 1134 candidates from the 1133 close. They remain valid and should ship in parallel with Session 1135's discovery work — neither blocks the other.
+These were the original 1134/1135 candidates. They remain valid and should ship in parallel — none blocked by 1136.
 
 ### (Y) Reject-mode flip in unified_pa_chat — STILL queued
 
@@ -231,6 +163,19 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ---
 
+## CARRYOVER FROM 1135 — Chris ratification track (separate from 1137 primary)
+
+The 54 per-app open decisions + 7 cross-cutting items from Session 1135 are still queued for whichever session Chris green-lights them. See `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` §"Chris's action items" for the full list. Includes:
+
+- **Phase 0 portfolio infrastructure** — `LLMCallLog.workspace` FK + daily $ cap (cross-cutting, all 8 apps)
+- **Stripe SKU verification** — 4 Suite products + Contract Concierge
+- **Stripe SKU + pricing lock** — SellerPilot, ComplianceSentinel, Signal Studio (LAB tier)
+- **Cross-Suite handoff verification** — MentorForge → other Suite products
+- **Engine-mismatch resolutions** — Contract Concierge fleet routing, ComplianceSentinel fleet routing
+- **Trademark filing on "24/7 Global AI"**
+
+---
+
 ## OPERATIONAL NOTES (carry forward)
 
 These are locked in code/tests but worth remembering when touching adjacent areas:
@@ -252,8 +197,9 @@ These are locked in code/tests but worth remembering when touching adjacent area
 
 - **(Y) Reject-mode flip** — see above
 - **(A) Action-card pre-gen** — see above
-- **Capability spec Phase 0 scaffolding** — gated on Session 1135 discovery filling per-app intent for signal-studio + CC
-- **Evidence URL field** — both signal phases ship `url=""`. Cleanest path: enrichment agent populates it. **Session 1135 elevated this to Signal Studio Phase 0 GATING** — without source URLs, brief sentences can't link to provenance and the briefing's credibility suffers.
+- **Ops view fork decision** — see Session 1137 entry above
+- **Capability spec Phase 0 scaffolding** — gated on per-app intent (Session 1135 done)
+- **Evidence URL field** — both signal phases ship `url=""`. Cleanest path: enrichment agent populates it. Signal Studio Phase 0 GATING.
 - **Semantic `category`** — `pattern_type` is the honest placeholder.
 - **`docs/SERVICES.md` drift** — header says 320 service files; reality after 1132 is 336.
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
@@ -265,7 +211,7 @@ These are locked in code/tests but worth remembering when touching adjacent area
 
 ---
 
-## SESSION 1131-1135 HANDOFFS
+## SESSION 1131-1136 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
@@ -273,8 +219,9 @@ These are locked in code/tests but worth remembering when touching adjacent area
 - [Session 1133 close](docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md)
 - [Session 1134 close](docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md)
 - [Session 1135 mid-session handoff (superseded)](docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md)
-- [Session 1135 FINAL close (this entry's prior session)](docs/handoffs/SESSION_1135_FINAL_CLOSE.md)
+- [Session 1135 FINAL close](docs/handoffs/SESSION_1135_FINAL_CLOSE.md)
+- [Session 1136 ops view PARKED (this entry's prior session)](docs/handoffs/SESSION_1136_OPS_VIEW_PARKED.md)
 
 ---
 
-*Last overwrite: Session 1135 FINAL close + Chris directive → 1136 entry (Claude + Rigby + Jessica build context-kit UI tweaks so Jessica can see Claude's work in HER terms per UDB_TRANSLATION_LAYER.md §1.2; 5 prior path options + 54 Session 1135 decisions deferred per Chris; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
+*Last overwrite: Session 1136 PARKED close + Chris directive → 1137 entry (Chris picks ops-view fork: kill / radical-simplify / different medium / redirect; data plumbing on context-kit branch `feat/jessica-ops-view` commit `87c8ae9` reusable for forks 2/3; (Y) reject-mode + (A) action-card stay queued in parallel; Session 1135 ratification track unchanged), 2026-05-23.*
