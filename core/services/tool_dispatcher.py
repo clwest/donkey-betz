@@ -392,6 +392,15 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # and returns trigger_state per Decision 13 conditions.
         self.register("paid_interest_status", self._handle_paid_interest_status)
 
+        # Session 1140: GETs signal-studio's auth-less /api/judge-stats
+        # and returns the LLM judge accept/reject breakdown so Rigby can
+        # answer "how is the Session 1139 entity-token clusterer doing?"
+        # without docker exec. URL via SIGNAL_STUDIO_API_URL env.
+        self.register(
+            "signal_studio_judge_stats",
+            self._handle_signal_studio_judge_stats,
+        )
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)

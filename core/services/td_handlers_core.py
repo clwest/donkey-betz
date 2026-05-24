@@ -207,6 +207,72 @@ class CoreHandlersMixin:
         state = evaluate_trigger_state(app_slug, manual_override=manual_override)
         return state.to_dict()
 
+    def _handle_signal_studio_judge_stats(
+        self, tool_name, payload, user_id, trace_id
+    ) -> Dict:
+        """Session 1140 — signal_studio_judge_stats PA tool.
+
+        Calls signal-studio's `/api/judge-stats?days=N` endpoint and
+        returns the LLM auto-summarizer judge breakdown so Rigby can
+        answer 'how is the entity-token clusterer doing?' without
+        shelling into docker. signal-studio is auth-less by design so
+        no fleet HMAC signing is needed; we just GET over the
+        configured base URL.
+
+        URL resolution: `SIGNAL_STUDIO_API_URL` env var (default
+        `http://localhost:8007`). On fleet-net set to
+        `http://signal_studio_api:8007`.
+
+        Payload (all optional):
+          days (int) — lookback window, 1..90, default 7
+
+        Returns the endpoint's JSON unchanged plus an `ok: bool` /
+        `error: str` envelope so the LLM gets a uniform shape.
+        """
+        import os
+        import httpx
+
+        payload = payload or {}
+        days = payload.get("days")
+        try:
+            days = int(days) if days is not None else 7
+        except (TypeError, ValueError):
+            days = 7
+        # Clamp to the endpoint's enforced range so a bad value doesn't
+        # round-trip a 422 — keeps the PA loop snappy.
+        days = max(1, min(days, 90))
+
+        base = os.environ.get(
+            "SIGNAL_STUDIO_API_URL", "http://localhost:8007"
+        ).rstrip("/")
+        url = f"{base}/api/judge-stats?days={days}"
+
+        try:
+            with httpx.Client(timeout=httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)) as client:
+                resp = client.get(url)
+        except httpx.HTTPError as e:
+            return {
+                "ok": False,
+                "error": f"signal-studio unreachable at {base}: {e}",
+                "days": days,
+            }
+
+        if resp.status_code != 200:
+            return {
+                "ok": False,
+                "error": f"signal-studio /api/judge-stats HTTP {resp.status_code}: {resp.text[:200]}",
+                "days": days,
+            }
+        try:
+            data = resp.json()
+        except ValueError as e:
+            return {
+                "ok": False,
+                "error": f"signal-studio response not JSON: {e}",
+                "days": days,
+            }
+        return {"ok": True, **data}
+
     def _handle_dream(self, tool_name, payload, user_id, trace_id) -> Dict:
         """Handle dream browsing and approval actions."""
         from core.models_unified_system import AgentDream

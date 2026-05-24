@@ -721,6 +721,42 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Signal-studio judge stats (Session 1140 — Session 1139 acceptance) ──
+    {
+        "type": "function",
+        "name": "signal_studio_judge_stats",
+        "description": (
+            "Return signal-studio's LLM auto-summarizer judge stats: how "
+            "many upstream clusters were accepted (summarized) vs rejected "
+            "as incoherent, broken down by cluster_method "
+            "(entity_token_v1=Session 1139 rewrite, legacy=verb-keyword "
+            "fallback) and pattern_type. The headline number is "
+            "by_cluster_method.entity_token_v1.rejection_rate — that is "
+            "the SLO for the Session 1139 entity-token clusterer (Rigby-"
+            "locked acceptance: <30% victory, 30-60% partial, ≥60% "
+            "escalate). Pre-1139 baseline was 112/131 = 85.5% rejection. "
+            "Use this to answer 'how is the new clusterer doing?' or 'is "
+            "the v1 rewrite working?'. Calls signal-studio's /api/judge-"
+            "stats endpoint (auth-less, fleet-net or host)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer",
+                    "description": (
+                        "Lookback window in days. Default 7. Range 1-90. "
+                        "Use 1 for 'today only', 7 for a week's signal, 30 "
+                        "to include slower-moving categories."
+                    ),
+                    "minimum": 1,
+                    "maximum": 90,
+                },
+            },
+            "required": [],
+        },
+    },
+
     {
         "type": "function",
         "name": "active_repo_tool",
@@ -4348,6 +4384,7 @@ TOOL_ENRICHMENT_MAP = {
     'platform_awareness_tool': [],
     'platform_config_tool': [],
     'paid_interest_status': [],
+    'signal_studio_judge_stats': [],
     'db_health_tool': [],
     'studio_tool': ['intelligence_enricher'],
     'persona_tool': ['domain_context', 'spider_trends'],
@@ -4452,6 +4489,7 @@ TOOL_TO_INTENT_MAP = {
     'platform_awareness_tool': 'platform_awareness',
     'platform_config_tool': 'system_health',
     'paid_interest_status': 'system_health',
+    'signal_studio_judge_stats': 'system_health',
     'db_health_tool': 'system_health',
     'studio_tool': 'studio',
     'persona_tool': 'agent_execution',
