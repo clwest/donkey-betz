@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-23 10:03:50
-**Git HEAD:** `584116e0`
+**Generated:** 2026-05-23 20:52:27
+**Git HEAD:** `979f4585`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -30,7 +30,7 @@
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
 | [Code Statistics](#code-stats) | 2,036 Python files, 991,358 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 71 OK, 2 drifts |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
 
 ## Table of Contents
 
@@ -2043,11 +2043,11 @@
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 73 registered claims across 34 docs: 71 OK, 2 drifts
+**Headline:** 73 registered claims across 34 docs: 73 OK, 0 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=71, low=0, medium=2, high=0, error=0. Top drifting docs: docs/SERVICES.md, docs/BACKEND_INVENTORY.md.
+**Notes:** Severity rollup: ok=73, low=0, medium=0, high=0, error=0. Top drifting docs: .
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
@@ -2063,7 +2063,7 @@
 | docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
-| docs/BACKEND_INVENTORY.md | 5 | 1 | 0 |
+| docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
 | docs/BEAT_AUDIT.md | 1 | 0 | 0 |
 | docs/BODY_SYSTEM_AUDIT.md | 1 | 0 | 0 |
 | docs/CAPABILITIES.md | 4 | 0 | 0 |
@@ -2073,7 +2073,7 @@
 | docs/LEARNING_BRIDGE_AUDIT.md | 1 | 0 | 0 |
 | docs/ML_AUDIT.md | 1 | 0 | 0 |
 | docs/PA_TOOL_AUDIT.md | 2 | 0 | 0 |
-| docs/SERVICES.md | 1 | 1 | 0 |
+| docs/SERVICES.md | 2 | 0 | 0 |
 | docs/SPIDERS.md | 3 | 0 | 0 |
 | docs/SPIDER_AUDIT.md | 2 | 0 | 0 |
 | docs/topics/agent-system.md | 2 | 0 | 0 |
