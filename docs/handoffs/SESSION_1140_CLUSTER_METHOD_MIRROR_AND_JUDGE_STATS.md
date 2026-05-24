@@ -1,16 +1,17 @@
 ---
-title: "Session 1140 — Mirror cluster_method + signal_studio_judge_stats PA tool (DRAFT SCAFFOLD)"
+title: "Session 1140 — Mirror cluster_method + signal_studio_judge_stats PA tool"
 date: 2026-05-24
-status: in_flight
+status: merged
 session: 1140
 previous_handoff: SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md
-next_session_primary: Live rejection-rate measurement (Session 1139 acceptance test) — gated on PR merges + 24-48h post-merge beat aggregation + working pgvector
-team: chris + claude
+next_session_primary: Live rejection-rate measurement (Session 1139 acceptance test) — gated on 24-48h post-merge beat aggregation + working pgvector
+team: chris + claude + rigby (PR-review pass)
 signal_studio_pr: 17
 udb_pr: 2169
-merged_at: TBD (post-merge update required)
-signal_studio_merge_commit: TBD
-udb_merge_commit: TBD
+signal_studio_merge_commit: 19dfe102
+udb_merge_commit: 4086019d
+signal_studio_merged_at: 2026-05-24T21:02:50Z
+udb_merged_at: 2026-05-24T21:03:46Z
 ---
 
 # Session 1140 — Mirror `cluster_method` + `signal_studio_judge_stats` PA tool
@@ -21,11 +22,11 @@ udb_merge_commit: TBD
 > `signal_studio_judge_stats` PA tool surfaces the rejection-rate per
 > clusterer without `docker exec`.
 
-> **Merge status (DRAFT — post-merge update required):**
-> - signal-studio PR [#17](https://github.com/clwest/signal-studio/pull/17) — `feat/session-1140-cluster-method-mirror`. 2 commits: `fb2285c` (mirror column) + `274d10a` (judge-stats endpoint).
-> - u-d-b PR [#2169](https://github.com/clwest/donkey-betz-platform/pull/2169) — `feat/session-1140-signal-studio-judge-stats-tool`. 2 commits: `c9b0e444` (PA tool registration + 11-test unit suite) + `0eb3f1d9` (Rigby PR-review fixes: evergreen schema description, `status_code` on HTTP failures).
-> - Merge order required: **signal-studio first** (endpoint exists), then **u-d-b** (consumer needs the endpoint).
-> - Update this header block with `merged_at` + merge commits when the PRs land.
+> **Merge status (2026-05-24):**
+> - signal-studio PR [#17](https://github.com/clwest/signal-studio/pull/17) — squash-merged at `19dfe102` (2026-05-24T21:02:50Z). 3 checks green (verify-doc-claims, GitGuardian, Vercel Preview Comments). Vercel preview deploy FAILURE noted on merge — non-local, backend-only diff couldn't have caused it, proceeded per `feedback_local_only_default.md` (non-local CI doesn't block local-only merges).
+> - u-d-b PR [#2169](https://github.com/clwest/donkey-betz-platform/pull/2169) — squash-merged at `4086019d` (2026-05-24T21:03:46Z). 3 checks all CLEAN (Direct LLM SDK, Repo Guardrails, GitGuardian).
+> - Source branches: `feat/session-1140-cluster-method-mirror` (signal-studio, 2 commits before squash: `fb2285c` + `274d10a`); `feat/session-1140-signal-studio-judge-stats-tool` (u-d-b, 3 commits before squash: `c9b0e444` + `0eb3f1d9` + `1e120422`). Both branches deleted on merge.
+> - **Deploy reminder:** PA tool registration needs both daphne AND celery restart for the registry to pick up — per canonical PA notes in `00-START-NEXT-SESSION.md`. Not done yet (next-session work).
 
 > **Rigby design-review pass (PR #2169, conversation `pa-d19c1674b936`):** Six-question review (Q1–Q6) ran mid-session. Rigby's only merge-blocker — stale SLO numbers in the LLM-facing schema description — was fixed in `0eb3f1d9`. Acceptance bar + 85.5% baseline relocated from the schema into this handoff doc + start-here, where they belong. Nice-to-have (`status_code` on HTTP failures) also landed in the same commit. Sync httpx, days clamping, env var name (`SIGNAL_STUDIO_API_URL`), `{ok, error, days}` envelope shape, single-PR vertical slice — all confirmed correct, no change required.
 
