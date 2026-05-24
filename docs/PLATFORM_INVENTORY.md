@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-23 23:50:19
-**Git HEAD:** `81e930b7`
+**Generated:** 2026-05-24 11:05:07
+**Git HEAD:** `ac7ac8f9`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -12,13 +12,13 @@
 |---|---|
 | [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 151 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
-| [Services](#services) | 112 `*Service` classes across 336 files in core/services/ |
+| [Services](#services) | 112 `*Service` classes across 337 files in core/services/ |
 | [Celery Tasks](#celery-tasks) | 400 user-defined Celery tasks (excludes celery.* internals) |
-| [Celery Beat — Scheduled Tasks](#beat-schedule) | 78 enabled + 0 disabled = 78 PeriodicTask rows |
-| [Personal Assistant (PA) Tools](#pa-tools) | 103 tool schemas + 168 registered handlers; 8 enrichment services |
-| [Database Models](#database-models) | 584 concrete models across 23 apps |
-| [URL Routes](#url-routes) | 1856 path() patterns across all core/urls*.py files |
-| [Django View Files](#views-files) | 207 files matching core/views*.py |
+| [Celery Beat — Scheduled Tasks](#beat-schedule) | 80 enabled + 0 disabled = 80 PeriodicTask rows |
+| [Personal Assistant (PA) Tools](#pa-tools) | 104 tool schemas + 169 registered handlers; 8 enrichment services |
+| [Database Models](#database-models) | 585 concrete models across 23 apps |
+| [URL Routes](#url-routes) | 1857 path() patterns across all core/urls*.py files |
+| [Django View Files](#views-files) | 208 files matching core/views*.py |
 | [Django Management Commands](#management-commands) | 178 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
@@ -29,7 +29,7 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,036 Python files, 991,358 lines across core/ + ai_core/ + intelligence/ |
+| [Code Statistics](#code-stats) | 2,039 Python files, 992,231 lines across core/ + ai_core/ + intelligence/ |
 | [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
 
 ## Table of Contents
@@ -246,7 +246,7 @@
 <a id="services"></a>
 ## Services
 
-**Headline:** 112 `*Service` classes across 336 files in core/services/
+**Headline:** 112 `*Service` classes across 337 files in core/services/
 
 **Code location:** `core/services/`
 
@@ -780,7 +780,7 @@
 <a id="beat-schedule"></a>
 ## Celery Beat — Scheduled Tasks
 
-**Headline:** 78 enabled + 0 disabled = 78 PeriodicTask rows
+**Headline:** 80 enabled + 0 disabled = 80 PeriodicTask rows
 
 **Code location:** `django_celery_beat.PeriodicTask + core/tasks_schedule.py`
 
@@ -807,6 +807,7 @@
 | cleanup-conversation-duplicates | core.tasks.cleanup_conversation_duplicates_task | yes | default |
 | cleanup-expired-boardroom-items | core.tasks.cleanup_expired_boardroom_items | yes | default |
 | cleanup-expired-fleet-artifacts | core.tasks.cleanup_expired_fleet_artifacts | yes | broadcast |
+| cleanup-expired-fleet-events | core.tasks.cleanup_expired_fleet_events | yes | broadcast |
 | cleanup-expired-pa-insights | core.tasks.cleanup_expired_pa_insights | yes | default |
 | cleanup-expired-signals | cleanup_expired_signals | yes | default |
 | cleanup-expired-uploads | core.tasks.cleanup_expired_uploads | yes | default |
@@ -829,6 +830,7 @@
 | collect-real-opportunities | ai_core.tasks.collect_real_opportunities | yes | long_running |
 | coo-daily-diagnostic | core.tasks.run_coo_daily_diagnostic | yes | long_running |
 | cto-daily-diagnostic | core.tasks.run_cto_daily_diagnostic | yes | long_running |
+| curate-signal-clusters | curate_signal_clusters | yes | long_running |
 | decay-learning-patterns | core.tasks.decay_learning_patterns | yes | default |
 | detect-duplicate-initiatives | core.tasks.detect_duplicate_initiatives | yes | default |
 | dream-daily-surfacing | core.tasks.surface_top_dreams | yes | default |
@@ -868,14 +870,15 @@
 <a id="pa-tools"></a>
 ## Personal Assistant (PA) Tools
 
-**Headline:** 103 tool schemas + 168 registered handlers; 8 enrichment services
+**Headline:** 104 tool schemas + 169 registered handlers; 8 enrichment services
 
 **Code location:** `core/services/pa_tool_schemas.py + tool_dispatcher.py`
 
-**Notes:** Schemas: 103. Handlers (self.register in tool_dispatcher.py): 168. Intent-mapped: 102. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
+**Notes:** Schemas: 104. Handlers (self.register in tool_dispatcher.py): 169. Intent-mapped: 103. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
 
 | Schema name | Canonical intent |
 |---|---|
+|  |  |
 |  |  |
 |  |  |
 |  |  |
@@ -983,9 +986,9 @@
 <a id="database-models"></a>
 ## Database Models
 
-**Headline:** 584 concrete models across 23 apps
+**Headline:** 585 concrete models across 23 apps
 
-**Notes:** By app: core=475, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
+**Notes:** By app: core=476, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
 
 | Model | App | DB Table |
 |---|---|---|
@@ -1248,6 +1251,7 @@
 | FleetAuthAuditLog | core |  |
 | FleetEvent | core |  |
 | FleetPAChatAuditRow | core |  |
+| FleetPaidInterest | core |  |
 | FleetServiceIdentity | core |  |
 | FleetServiceKey | core |  |
 | FleetServiceRotation | core |  |
@@ -1388,19 +1392,18 @@
 | ProjectRepo | core |  |
 | ProjectResearchFeedback | core |  |
 | ProjectSpiderPriority | core |  |
-| ProjectWorkspace | core |  |
-| ... | _(184 more rows truncated)_ |
+| ... | _(185 more rows truncated)_ |
 
 <a id="url-routes"></a>
 ## URL Routes
 
-**Headline:** 1856 path() patterns across all core/urls*.py files
+**Headline:** 1857 path() patterns across all core/urls*.py files
 
 **Code location:** `core/urls*.py`
 
 | Prefix | Count |
 |---|---|
-| api | 1775 |
+| api | 1776 |
 | (root) | 5 |
 | sports | 4 |
 | marketplace | 4 |
@@ -1462,7 +1465,7 @@
 <a id="views-files"></a>
 ## Django View Files
 
-**Headline:** 207 files matching core/views*.py
+**Headline:** 208 files matching core/views*.py
 
 **Code location:** `core/views*.py`
 
@@ -1546,6 +1549,7 @@
 | views_fleet_admin.py |
 | views_fleet_artifacts.py |
 | views_fleet_events.py |
+| views_fleet_paid_interest.py |
 | views_fleet_signals.py |
 | views_government.py |
 | views_heart.py |
@@ -2031,14 +2035,14 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,036 Python files, 991,358 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,039 Python files, 992,231 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1630 | 824961 |
+| core | 1633 | 825834 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2036 | 991358 |
+| TOTAL (python) | 2039 | 992231 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
