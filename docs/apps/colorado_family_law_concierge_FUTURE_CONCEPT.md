@@ -1,22 +1,32 @@
 ---
-title: "Colorado Family Law Concierge — Phase 1 brief"
-status: draft (Session 1135 discovery, rev. 2 post-Rigby review, pending Chris ratification)
+title: "Colorado Family Law Concierge — Phase 2+ spin-off concept (NOT a current product)"
+status: future-concept (Session 1135 discovery; superseded by products.ts ground-truth, see header note)
 session: 1135
 generated: 2026-05-23
 revised: 2026-05-23 (Rigby content-flag review applied)
+note_2026_05_23_late: "PRODUCTS.TS REVEALED CONTRACT CONCIERGE IS COMMERCIAL CONTRACTS (SOW/NDA/Contractor with e-signature), NOT family law. This brief was written before that discovery; preserved as a Phase 2+ spin-off concept since the legal_doc_drafter_agent engine is real and Colorado pro-se family law IS a valid Atlas Phase 3 vertical (per Atlas §H Phase 3). Treat this as future-concept exploration, not a current product brief. The actual Contract Concierge product brief is at docs/apps/contract_concierge_BRIEF.md."
 workspace: Donkey Betz
 companion_docs:
   - 24_7_GLOBAL_AI_APP_ATLAS.md
-  - specs/FLEET_CAPABILITY_BUSINESS_SPEC.md
+  - apps/contract_concierge_BRIEF.md
   - apps/rigby_standalone_BRIEF.md
   - apps/signal_studio_BRIEF.md
   - UDB_BEHAVIOR_LAYER.md
   - UDB_TRANSLATION_LAYER.md
-authors: claude + jessica (discovery pass) → rigby (review pending)
-note: "Internal repo + container name remains `contract-concierge` per Jessica decision (i); product brand = 'Colorado Family Law Concierge' externally. Repo rename deferred to Phase 2 if desired."
+authors: claude + jessica (discovery pass) → rigby (review pending) → superseded by products.ts ground-truth
 ---
 
-# Colorado Family Law Concierge — Phase 1 brief
+# Colorado Family Law Concierge — Phase 2+ spin-off CONCEPT (not a current product)
+
+> **⚠️ HEADER NOTE — read first.** This brief was written before the discovery that `24-7-ai-global/src/lib/products.ts` is the canonical source of truth for product framing. That source reveals the actual **Contract Concierge product is commercial contracts** (SOW / Contractor / NDA + e-signature, shipped, live at `https://contract-concierge.vercel.app`, $29-79/mo).
+>
+> **What this doc still is:** a real exploration of the `legal_doc_drafter_agent` engine's potential as a Colorado pro-se family-law product, which Atlas §H Phase 3 explicitly flagged as a strong PMF candidate. **It is a Phase 2+ spin-off concept, not a current product.** Treat as future thinking, not a current brief.
+>
+> **For the actual current Contract Concierge brief:** see `docs/apps/contract_concierge_BRIEF.md`.
+
+---
+
+# Colorado Family Law Concierge — Phase 2+ spin-off concept (original brief text below)
 
 ## 1. What it is
 
