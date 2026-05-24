@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-05-23 23:31
+**Generated:** 2026-05-23 23:53
 **Current Session:** 1137
 **Total Documentation:** 2012 files | 671,343 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,954 |
+| Total cross-references | 2,956 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -33,7 +33,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 176 | CLAUDE - AI Session Entry Point |
-| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 79 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/archive/superseded-current-jan-2026/README.md` | 79 | Superseded `docs/current/*` (January 2026 snapshot |
 | `docs/PLATFORM_INVENTORY.md` | 73 | Platform Master Inventory |
 | `docs/INDEX.md` | 61 | INDEX |
 | `docs/AGENTS.md` | 59 | AGENTS |
@@ -257,16 +257,16 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| compliancesentinel_BRIEF.md | apps | 176 | 2026-05-23 23:29 |
-| sellerpilot_BRIEF.md | apps | 172 | 2026-05-23 23:29 |
-| dealflowtracker_BRIEF.md | apps | 158 | 2026-05-23 23:29 |
-| pitchdeckforge_BRIEF.md | apps | 158 | 2026-05-23 23:29 |
-| mentorforge_BRIEF.md | apps | 154 | 2026-05-23 23:29 |
-| contract_concierge_BRIEF.md | apps | 185 | 2026-05-23 23:29 |
-| signal_studio_BRIEF.md | apps | 226 | 2026-05-23 23:28 |
-| rigby_standalone_BRIEF.md | apps | 182 | 2026-05-23 23:28 |
-| SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md | handoffs | 201 | 2026-05-23 23:22 |
-| SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md | specs | 155 | 2026-05-23 23:16 |
+| PLATFORM_WHAT_IT_IS.md | docs | 488 | 2026-05-23 23:52 |
+| PLATFORM_INVENTORY.md | docs | 2,091 | 2026-05-23 23:50 |
+| 20_pitchdeckforge.md | spokesperson | 83 | 2026-05-23 23:44 |
+| SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md | specs | 155 | 2026-05-23 23:44 |
+| SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md | handoffs | 201 | 2026-05-23 23:44 |
+| signal_studio_BRIEF.md | apps | 226 | 2026-05-23 23:44 |
+| sellerpilot_BRIEF.md | apps | 172 | 2026-05-23 23:44 |
+| rigby_standalone_BRIEF.md | apps | 182 | 2026-05-23 23:44 |
+| pitchdeckforge_BRIEF.md | apps | 158 | 2026-05-23 23:44 |
+| mentorforge_BRIEF.md | apps | 154 | 2026-05-23 23:44 |
 
 ## Documentation by Subsystem
 
