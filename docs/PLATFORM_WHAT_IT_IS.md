@@ -1,9 +1,9 @@
 ---
 title: "Donkey Betz Platform — What It Actually Is"
 status: active
-session: 1133
-generated: 2026-05-23
-last_reviewed: 2026-05-23
+session: 1137
+generated: 2026-05-24
+last_reviewed: 2026-05-24
 companion_doc: PLATFORM_INVENTORY.md
 ---
 
