@@ -145,31 +145,40 @@ SignalCluster.objects.filter(
 
 Spec the cutoff + threshold with Rigby first. Don't blanket-delete the 307 legacy rows — they're useful as a comparison baseline for the next quality regression.
 
-### Chris's tech queue (carried over from Session 1138/1140)
+### Chris's punch list (prioritized — load-bearing items first)
 
-1. **Contract Concierge fleet routing fix** (Q1) — architecture: new agent / extend `legal_doc_drafter_agent` / remove default
-2. **Signal Studio engine-side enrichment integration** (Q3) — architecture: v2 question
-3. **ComplianceSentinel fleet routing** (Q4) — architecture: `security_agent` / null / skip u-d-b
-4. **Engine-mismatch resolutions** (cross-cutting C5)
-5. **Phase 0 cost-attribution SCHEMA** — UNBLOCKED by Jessica's Decision 9. Chris designs `LLMCallLog.workspace` FK + daily cap + soft-degrade-to-gpt-5-mini + portfolio kill switch.
-6. **SellerPilot Render API Blueprint deployment** — ops (deferred per local-only mode)
-7. **ComplianceSentinel Render API Blueprint deployment** — ops (deferred per local-only mode)
-8. **Rigby products.ts update** — fires when Decision 1 trigger met
-9. **Atlas deviation ratification** (cross-cutting C7)
-10. **F5 audit** — verify the 4 PitchDeckForge styles meaningfully differ in code (~15 min)
-11. **F7 Stripe verification collaboration** — Jessica drives, Chris's Stripe access
+**Load-bearing rationale:** Items 1-2 are queued from Session 1135-1137 work and have been waiting on Chris's input for multiple sessions. Items 3-9 are tech-queue work that's unblocked but parallel. Items 10-11 are Jessica-collab. Quick wins (item 9) can land any session.
 
-### Phase 5 audit queue (Jessica-driven)
+#### 🔥 Highest-need (you specifically, queued from 1136-1137)
 
-| # | Action | Your time |
-|---|---|---|
-| F5 | Audit 4 PitchDeckForge styles in code (with Chris) | 5 min review |
-| F6 | Ask 3 fund operators about intake widget (Decision 22 trigger) | days-weeks of outreach |
-| F7 | Stripe verification audit on 4 Suite products (with Chris) | 30-60 min |
-| #23 | Cross-Suite handoff E2E matrix | 1-2 hr |
-| #24 | TOS + e-signature legal review status check | 5 min ping; days wait |
-| #25 | Marketplace policy research (SellerPilot) | 30 min review |
-| #27 | Rigby repo audit — what's in 24-7-ai-global for Rigby standalone | 5 min review |
+1. **Ratification pass on Jessica's 22 decisions** (Session 1137 next-session-primary). Read `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`; redline anything in Decision 9 cost-rules (implementation-heavy) or other items where her business read needs tech adjustment. ~30-60 min. **Nothing blocking — decisions stand unless you push back, but stale ratification slows F1/F7 Stripe sequencing.** Status: **OPEN since Session 1137**.
+
+2. **Ops view fork decision** (Session 1136 PARKED). Jessica rejected the dashboard shape ("feels complicated"). ~1360 LOC sitting on `clwest/context-kit` branch `feat/jessica-ops-view` commit `87c8ae9` — **not pushed, not merged**. Pick: kill / radical-simplify / different medium / redirect with new interview. Status: **PARKED since Session 1136**.
+
+#### 🛠 Tech queue (you own, unblocked but parallel)
+
+3. **Phase 0 cost-attribution SCHEMA** — `LLMCallLog.workspace` FK + daily cap + soft-degrade-to-gpt-5-mini + portfolio kill switch. **UNBLOCKED by Jessica's Decision 9.** Worked example in SESSION_1137 handoff. Highest tech-queue priority because it underwrites every other Suite product's cost discipline.
+4. **Contract Concierge fleet routing fix** (Q1) — architecture decision: new agent / extend `legal_doc_drafter_agent` / remove default.
+5. **Signal Studio engine-side enrichment integration** (Q3) — architecture v2 question.
+6. **ComplianceSentinel fleet routing** (Q4) — `security_agent` / null / skip u-d-b.
+7. **Engine-mismatch resolutions** (cross-cutting C5).
+8. **Atlas deviation ratification** (cross-cutting C7).
+9. **F5 PitchDeckForge styles audit** — verify the 4 deck styles meaningfully differ in code before names ship publicly (~15 min). Smallest-effort item on the queue.
+
+#### 🤝 Jessica-driven (collab role, not lead)
+
+10. **F7 Stripe verification audit** on 4 Suite products — Jessica drives, needs your Stripe access (~30-60 min).
+11. **Other Phase 5 audit queue** — F6 (fund operator outreach, days-weeks), #23 (Cross-Suite handoff matrix, 1-2 hr), #24 (TOS legal review, 5 min ping), #25 (Marketplace policy, 30 min review), #27 (Rigby repo audit, 5 min review).
+
+#### ⏸ Gated / deferred (no action needed)
+
+- **Rigby products.ts update** — fires when Decision 1 take-public trigger is met. Currently deferred.
+- **SellerPilot + ComplianceSentinel Render Blueprint deploys** — ops, deferred per local-only mode (`feedback_local_only_default.md`).
+- **(Y) Reject-mode flip in unified_pa_chat** — gated on 3-day clean audit telemetry post-merge. Currently in flight.
+
+#### ⏳ Passive (in flight, no action needed)
+
+- **v1 rejection-rate measurement** (Session 1139/1140 acceptance test) — beat cron + auto-summarize worker accumulate; read once sample reaches n≥20. **This is the FIRST THING above** — listed here so it stays on the radar.
 
 ### Sanity check before any new work
 
