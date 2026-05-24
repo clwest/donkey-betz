@@ -28,9 +28,13 @@ PA tool.
 u-d-b daphne port 8000), Decision 13 condition 2 ("≥1 willing-pay ≥$49")
 correctly flips trigger_state to `ready` with the smoke row.
 
-**Not verified live yet** (next session, 1-2 commands):
-1. Celery PA worker restart so Rigby chat exposes `paid_interest_status`
-2. Frontend visual smoke (TypeScript build is clean; browser unverified)
+**Verified live via Rigby** (same session, post-celery-restart):
+- Rigby executed `paid_interest_status` in 13ms via `pa_local.sh`
+- Returned `trigger_state="ready"` correctly (smoke row's willing_pay=49 fires Decision 13 condition 2)
+- Tool runs verbose block shows `[OK] paid_interest_status (13ms)` — task_id `73fbef09-c97f-4a07-9fbf-d5055ea3fd7e`
+
+**Not verified live yet** (next session):
+- Frontend visual smoke (TypeScript build is clean; browser unverified)
 
 **Honest scope note (Chris's pushback ratified mid-session)**: Signal
 Studio is pre-launch with no traffic. The form will not capture organic
@@ -148,29 +152,14 @@ FleetPaidInterest.objects.filter(email="smoke-test@example.com").delete()
 
 ## What's left
 
-### FIRST THING — Restart celery PA worker to expose new tool to Rigby
+### ~~FIRST THING — Restart celery PA worker~~ DONE same session
 
-The `paid_interest_status` handler is registered in code + the schema
-is in `PA_TOOL_SCHEMAS`, but the running celery `pa` queue worker
-(PID 15942) loaded its tool registry before this change. Per the
-canonical restart command in `00-START-NEXT-SESSION.md`:
+Celery restarted (`pkill -f "celery -A core"; make celery`), Rigby
+verified via `pa_local.sh` and successfully invoked the new tool.
+Tool result + verbose Tool Runs block captured above in the
+"Verified live via Rigby" section.
 
-```bash
-pkill -f "celery -A core"
-make celery
-```
-
-(Daphne is already restarted — that picked up the HTTP endpoint +
-middleware change. Celery is what exposes the PA tool to Rigby.)
-
-After restart, verify via:
-
-```bash
-tools/pa_local.sh "paid_interest_status"
-# expected: returns trigger state JSON for signal-studio
-```
-
-### SECOND — Frontend visual check
+### FIRST — Frontend visual check
 
 TypeScript build is clean (`./node_modules/.bin/tsc -b` exits 0).
 Browser-side smoke not done. `cd signal-studio && docker compose

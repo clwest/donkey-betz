@@ -100,23 +100,18 @@ because mechanism is small and ready-for-when-traffic-exists.
 
 ## SESSION 1139 — CURRENT ENTRY POINT
 
-### FIRST THING — Celery PA worker restart (1 command, then verify)
+### Status check before any new work
 
-Code change to expose `paid_interest_status` PA tool to Rigby is
-landed. The currently-running celery `pa` queue worker has the old
-registry. Canonical restart command (already documented above):
+F1 paid-interest is **fully live including Rigby integration** as of
+Session 1138 close. Celery restarted same-session; `pa_local.sh
+"paid_interest_status"` returned a 13ms tool run with the expected
+JSON envelope. Jessica can ask Rigby "what's the paid-interest signal
+status?" today.
 
-```bash
-pkill -f "celery -A core"
-make celery
-
-# then verify Rigby sees it:
-tools/pa_local.sh "paid_interest_status"
-# expected: JSON with trigger_state, last_90d_signals, etc
-```
-
-If green, the F1 implementation is fully live and Jessica can ask
-Rigby "what's the paid-interest signal status?" today.
+Remaining 1138 follow-up: frontend visual smoke (TS build is clean;
+browser unverified). Low priority — 5 minutes when Chris is at the
+machine: `cd ~/development/signal-studio && docker compose restart
+web`, then visit the frontend URL.
 
 ### SECOND THING — Chris ratification pass on Session 1137's 22 decisions
 
