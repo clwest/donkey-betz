@@ -55,20 +55,27 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1135 LANDED — App-by-app discovery sprint started (2 of 8 briefs shipped)
+## SESSION 1135 LANDED — All 8 app briefs shipped + products.ts discovery + 9 PRs merged
 
-**Full handoff**: [`docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md`](docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md)
+**Final handoff**: [`docs/handoffs/SESSION_1135_FINAL_CLOSE.md`](docs/handoffs/SESSION_1135_FINAL_CLOSE.md) (supersedes the mid-session `SESSION_1135_APP_DISCOVERY_SPRINT.md` written before the products.ts discovery)
 
-Discovery pattern validated. Two app briefs landed, both Rigby double-LGTM, both awaiting Chris ratification:
+**8 app briefs all merged to main** + the Colorado Family Law spin-off preserved as future-concept:
 
-| App | Brief | PR | Open decisions |
+| # | App | File | Source of truth |
 |---|---|---|---|
-| **Rigby standalone** (Atlas Phase 1 flagship) | `docs/apps/rigby_standalone_BRIEF.md` | [#2147](https://github.com/clwest/donkey-betz-platform/pull/2147) | 6 §9 |
-| **Signal Studio Markets edition** (Atlas flagship vertical) | `docs/apps/signal_studio_BRIEF.md` | [#2148](https://github.com/clwest/donkey-betz-platform/pull/2148) | 8 §9 |
+| 1 | Rigby standalone | `docs/apps/rigby_standalone_BRIEF.md` | products.ts LAB[7] |
+| 2 | Signal Studio | `docs/apps/signal_studio_BRIEF.md` | products.ts LAB[3] |
+| 3 | Contract Concierge | `docs/apps/contract_concierge_BRIEF.md` | products.ts PRODUCTS[2] |
+| 4 | Mentor Forge | `docs/apps/mentorforge_BRIEF.md` | products.ts PRODUCTS[0] |
+| 5 | Pitch Deck Forge | `docs/apps/pitchdeckforge_BRIEF.md` | products.ts PRODUCTS[1] |
+| 6 | Deal Flow Tracker | `docs/apps/dealflowtracker_BRIEF.md` | products.ts PRODUCTS[3] |
+| 7 | SellerPilot | `docs/apps/sellerpilot_BRIEF.md` | products.ts LAB[2] |
+| 8 | ComplianceSentinel | `docs/apps/compliancesentinel_BRIEF.md` | products.ts LAB[4] |
+| (concept) | Colorado Family Law Concierge | `docs/apps/colorado_family_law_concierge_FUTURE_CONCEPT.md` | Phase 2+ spin-off (engine exists; product is separate) |
 
-**Process pattern (now muscle memory):** Jessica drives discovery in collaborator/ops voice → Claude grounds in Atlas + verified runtime → Rigby reviews (~12 mechanical + ~2 micro fixes per brief) → PR. ~2 hr per brief.
+**Critical pattern lesson:** read `24-7-ai-global/src/lib/products.ts` FIRST before hypothesizing product intent from Atlas + fleet routing + handoffs. The mid-session discovery of products.ts (a 606-line hand-authored canonical source of truth for the entire portfolio) reframed the first 3 briefs and unlocked the next 5 without needing Chris's intent input.
 
-**Bookmarked for Chris:** all 14 open per-app decisions + 6 cross-cutting items consolidated in the 1135 handoff doc under "Chris's action items — consolidated bookmark."
+**54 open Chris decisions** across the 8 briefs + 7 cross-cutting items — see `SESSION_1135_FINAL_CLOSE.md` §"Chris's action items."
 
 ---
 
@@ -80,68 +87,54 @@ Discovery pattern validated. Two app briefs landed, both Rigby double-LGTM, both
 2. `make all` (or `make start && make celery` from u-d-b)
 3. `make status` — confirm 7 fleet apps + u-d-b all healthy
 4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
-5. Read Session 1135 handoff (above) for full discovery context if resuming with fresh context
+5. Read `docs/handoffs/SESSION_1135_FINAL_CLOSE.md` for full session arc
 
-### PRIMARY TASK — Continue app discovery sprint (Contract Concierge brief, app 3 of 8)
+### PRIMARY TASK options for Session 1136
 
-**Chris's directive** (Session 1134 close, still active):
+Discovery sprint is complete (8 of 8 apps briefed). Chris picks Session 1136 focus:
 
-> *"After everything is anchored I want you and Rigby to begin a
-> new session where you guys go through the apps and you tell me
-> what we can do with it. I know it's crazy but I want to see if
-> you and Rigby can research everything, and create a business
-> that has everything I need to start marketing it and you guys
-> can build out anything missing."*
+**Option A — Chris ratification pass.** Work through the 54 open §9 decisions across the 8 briefs. Likely batched by theme (Stripe / pricing / cost-attribution / engine-mismatch / cross-Suite handoffs / legal / trademark) rather than one brief at a time.
 
-### Per-app deliverable (1 doc per app, `docs/apps/<slug>_BRIEF.md`)
+**Option B — Phase 0 portfolio infrastructure** (the cross-cutting items from the SESSION_1135_FINAL_CLOSE):
+- `LLMCallLog.workspace` FK + daily $ cap — shared infra for all 8 (~5-6 days)
+- Stripe SKU verification across 4 shipped Suite products (Mentor Forge, Pitch Deck Forge, Contract Concierge, Deal Flow Tracker)
+- Stripe SKU + pricing lock across 3 LAB-tier paid products (SellerPilot, ComplianceSentinel, Signal Studio)
+- Trademark filing on "24/7 Global AI"
 
-For each app, produce:
+**Option C — Engine-mismatch resolutions** in fleet routing config:
+- Contract Concierge → currently routes to `legal_doc_drafter_agent`; should route to commercial-contracts agent
+- ComplianceSentinel → currently `null`; decide route to `security_agent` (named in roles) or stay null
 
-1. **What it is**: actual product intent, not name-implied. Chris fills or confirms.
-2. **Who buys it**: primary user + buyer.
-3. **What's built**: real shipping evidence (UI, API, workflows, artifacts).
-4. **What proves it's real**: one screenshot / API path / demo step / curl invocation that backs item 3. Forces artifact-backed evidence, not narrative.
-5. **What's missing**: gap between "current shipping evidence" and "could sell for real."
-6. **Buildable in one sprint?**: small / medium / large / blocked.
-7. **GTM sketch**: where customers find it, how they buy, what they pay, what they get.
-8. **Spokesperson alignment** (future-state): if/when Phase 4+ activates, which persona + modality fits.
+**Option D — Cross-Suite handoff verification.** MentorForge → PitchDeckForge / ContractConcierge / DealFlowTracker is the cross-Suite story per products.ts. Verify end-to-end.
 
-Add `§9 Decisions still needed (escalate to Chris)` and `§10 Honest claim audit` sections per the pattern Sessions 1135 established.
+**Option E — Colorado Family Law Concierge spin-off exploration** per `docs/apps/colorado_family_law_concierge_FUTURE_CONCEPT.md`. The legal_doc_drafter_agent engine exists; Atlas §H Phase 3 named Colorado family law as a strong PMF candidate. Phase 2+ work — explore further, park, or kill.
 
-### Order of attack (per Atlas precedence) — updated for Session 1136
+### Brief template established by Session 1135 (for any future per-app work)
 
-1. ~~Rigby standalone~~ — **Done** (PR #2147, awaiting Chris ratification)
-2. ~~Signal Studio~~ — **Done** (PR #2148, awaiting Chris ratification)
-3. **Contract Concierge** — **Next.** Suite candidate with Draft Library shipped Session 1129; concrete artifact evidence makes discovery faster than apps 4-8.
-4. **MentorForge / PitchDeckForge / SellerPilot / DealFlowTracker / ComplianceSentinel** — order by Chris's intent priority (he picks). All 5 have routing-only metadata, no documented intent per Atlas grounding — discovery will need Chris to provide intent first.
+Each brief lands at `docs/apps/<slug>_BRIEF.md` with these 10 sections:
 
-### Process per app (Rigby + Claude collaboration)
+1. **What it is** — anchored on products.ts pitch + elevator
+2. **Who buys it** — products.ts target field
+3. **What's built** — table verified against runtime + products.ts features
+4. **What proves it's real** — canonical proof + interim local proof + launch-day proof
+5. **What's missing** — Phase 0 GATING items (5.1) + other prerequisites (5.2) + not-gaps-but-worth-naming (5.3)
+6. **Buildable in one sprint?** — sizing per item
+7. **GTM sketch** — channel / pricing / CTA / disclaimers / scope / forbidden
+8. **Spokesperson alignment** — Phase 4+ Character OS unpark
+9. **Decisions still needed** — closed by products.ts + Jessica + still open for Chris
+10. **Honest claim audit** — "we do NOT claim" / "we DO claim" per translation layer §2
 
-1. **Rigby reads** what's in u-d-b about the app (fleet routing config, runtime metadata, handoff mentions, any per-app docs).
-2. **Rigby produces**: Known for sure / Guessing / Need from Chris — narrowed to this one app, deeper than the Session 1134 grounding pass.
-3. **Chris fills gaps** in PA-chat conversation: user, workflow, output, voice, status.
-4. **Claude drafts** the brief from grounded intent (not name-extrapolated).
-5. **Rigby reviews** the draft for honest framing.
-6. **Final brief lands** at `docs/apps/<slug>_BRIEF.md`, workspace-assigned per memory rule.
+`source_of_truth:` field in frontmatter cites the products.ts array index.
 
-### Cross-app synthesis (after per-app briefs)
+### Process learnings (worth keeping for any future per-app brief)
 
-1. **Which app to push to v1 first** after Rigby Phase 1?
-2. **Manifest entries** for signal-studio + contract-concierge populated in `config/fleet_agent_routing.json` v3 schema (proof of v3 design under real intent).
-3. **Build list** of anything missing — small concrete tickets sized to fit subsequent sessions.
-4. **Updated illustrative pricing** in business spec where discovery contradicts current bands.
-
-### Rigby's "Need from Chris" list (from 1134 grounding)
-
-**Global categories** (answer once, applies to all):
-1. Intended user + buyer
-2. Core workflow(s) + output artifacts
-3. Execution posture (analysis-only vs allowed to execute)
-4. Data posture (needs spiders? freshness expectations?)
-5. Scope boundaries / cross-app calls
-6. Brand voice + spokesperson alignment
-7. Tier-cut intuition (which dimension defines upgrades?)
-8. Status classification (flagship / core SKU / cross-sell / internal / parked)
+- **products.ts is the canonical public-surface source of truth.** Read it FIRST.
+- **Atlas-recommended next-phase positioning ≠ current positioning.** If products.ts marks something `Private` or `in-development`, that's the public-surface status of record.
+- **Each fleet repo has its own context-kit pattern** at `docs/PROJECT_WHAT_IT_IS.md`.
+- **Spokesperson docs at `docs/spokesperson/`** = editorial source of truth.
+- **Fleet routing defaults can be wiring details, NOT product intent.**
+- **Phase 0 cost-attribution is portfolio-wide, not per-app.**
+- **products.ts-anchored briefs need much less review** than hypothesized briefs.
 
 **Per-app specific questions**: see engineering spec v3 §7 (Primary blocker — fill in next session).
 
@@ -252,8 +245,9 @@ These are locked in code/tests but worth remembering when touching adjacent area
 - [Session 1132 close](docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md)
 - [Session 1133 close](docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md)
 - [Session 1134 close](docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md)
-- [Session 1135 close (this entry's prior session)](docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md)
+- [Session 1135 mid-session handoff (superseded)](docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md)
+- [Session 1135 FINAL close (this entry's prior session)](docs/handoffs/SESSION_1135_FINAL_CLOSE.md)
 
 ---
 
-*Last overwrite: Session 1135 close → 1136 entry (continue discovery sprint with Contract Concierge; 14 Chris decisions from 1135 briefs bookmarked in handoff; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
+*Last overwrite: Session 1135 FINAL close → 1136 entry (all 8 app briefs merged; products.ts discovery captured as critical pattern lesson; 54 Chris decisions + 7 cross-cutting items bookmarked in FINAL_CLOSE handoff; 5 path options for Session 1136 listed above; (Y) reject-mode + (A) action-card stay queued in parallel), 2026-05-23.*
