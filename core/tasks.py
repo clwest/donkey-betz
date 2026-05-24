@@ -10920,6 +10920,19 @@ def curate_signal_clusters(self, top_n: int = 10):
     """Session 1131 Phase 2 — daily curated snapshot for signal-studio."""
     from core.tasks_spiders import _impl_curate_signal_clusters
     return _impl_curate_signal_clusters(self, top_n)
+@shared_task(bind=True, name='generate_curated_action_cards', queue='long_running')
+def generate_curated_action_cards(self, snapshot_id: str):
+    """Session 1140 (A) — async action-card generation for a curated snapshot.
+
+    Triggered as a follow-on to curate_signal_clusters with the new
+    snapshot's id. Generates one action_card row per cluster_pick,
+    then emits signal.curated_actions_ready. Idempotent by design.
+
+    On `long_running` queue because LLM calls dominate wall-time and we
+    don't want to block the default queue.
+    """
+    from core.tasks_spiders import _impl_generate_curated_action_cards
+    return _impl_generate_curated_action_cards(self, snapshot_id)
 @shared_task(bind=True, name='trigger_signal_driven_conversation')
 def trigger_signal_driven_conversation(self, auto_topic_id: str):
     from core.tasks_conversations import _impl_trigger_signal_driven_conversation
