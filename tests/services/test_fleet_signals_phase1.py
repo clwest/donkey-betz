@@ -214,12 +214,42 @@ class TestClusterEnvelope:
         env = cluster_envelope(c)
         assert len(env["evidence"]) == 2
 
-    def test_evidence_url_is_empty_in_phase_1(self):
-        # SignalCluster has no URL field on sample_signals today; Phase 1
-        # honestly returns empty url rather than fabricating one.
+    def test_evidence_url_empty_when_sample_signals_lack_url(self):
+        # Session 1139 follow-up superseded the Phase 1 contract: the
+        # envelope no longer hardcodes url="". When sample_signals
+        # carry no 'url' key (legacy rows pre-fix), envelope still
+        # returns empty — back-compat preserved.
         env = cluster_envelope(_fake_cluster())
         for e in env["evidence"]:
             assert e["url"] == ""
+
+    def test_evidence_url_propagates_from_sample_signals(self):
+        # Session 1139 follow-up: when sample_signals[i] carries a 'url'
+        # key (new rows post-fix), the envelope ships it through. Closes
+        # the empty-href bug surfaced by signal-studio's EvidenceCards
+        # rendering `<a href="">` links.
+        c = _fake_cluster(sample_signals=[
+            {"source": "techcrunch", "text": "Tesla news",
+             "url": "https://techcrunch.com/tesla"},
+            {"source": "reuters", "text": "Apple news",
+             "url": "https://reuters.com/apple"},
+        ])
+        env = cluster_envelope(c)
+        urls = [e["url"] for e in env["evidence"]]
+        assert "https://techcrunch.com/tesla" in urls
+        assert "https://reuters.com/apple" in urls
+
+    def test_evidence_url_coerces_non_string_to_empty(self):
+        # Defensive: if a malformed row somehow stored a non-string in
+        # sample_signals[i].url, the envelope must not crash and must
+        # surface an empty string rather than leaking the malformed type.
+        c = _fake_cluster(sample_signals=[
+            {"source": "s", "text": "ok", "url": None},
+            {"source": "s2", "text": "ok2", "url": 12345},
+        ])
+        env = cluster_envelope(c)
+        for e in env["evidence"]:
+            assert isinstance(e["url"], str)
 
     def test_tags_pass_through_as_list(self):
         c = _fake_cluster(keywords=["one", "two", "three"])
