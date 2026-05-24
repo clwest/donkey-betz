@@ -1,54 +1,54 @@
 ---
-title: "Signal Studio — Markets edition Phase 1 brief"
-status: draft (Session 1135 discovery, rev. 2 post-Rigby review, pending Chris ratification)
+title: "Signal Studio — Phase 1 brief (products.ts-anchored)"
+status: draft (Session 1135 discovery, rev. 3 — corrected against products.ts canonical source, pending Chris ratification)
 session: 1135
 generated: 2026-05-23
-revised: 2026-05-23 (Rigby review pass + Jessica's 4 confirmations applied)
+revised: 2026-05-23 (rev. 3 — corrected against products.ts; rev. 2 had wrong audience + wrong product framing)
 workspace: Donkey Betz
 companion_docs:
   - 24_7_GLOBAL_AI_APP_ATLAS.md
-  - specs/FLEET_CAPABILITY_BUSINESS_SPEC.md
+  - apps/contract_concierge_BRIEF.md
   - apps/rigby_standalone_BRIEF.md
   - UDB_BEHAVIOR_LAYER.md
   - UDB_TRANSLATION_LAYER.md
-authors: claude + jessica (discovery pass) → rigby (review applied)
+source_of_truth: "24-7-ai-global/src/lib/products.ts LAB[3] (slug: signal-studio)"
+authors: claude + jessica (discovery pass) → rigby (review applied) → corrected against products.ts ground truth
 ---
 
-# Signal Studio — Markets edition Phase 1 brief
+# Signal Studio — Phase 1 brief
+
+> **⚠️ Source of truth:** `24-7-ai-global/src/lib/products.ts` LAB[3] (entry no. XI). All product framing below traces back there. Rev. 3 corrected this brief against products.ts after discovering that rev. 1–2 targeted the wrong audience ("self-directed retail investor" instead of the canonical "Investors · deal sourcers · competitive analysts") and pitched a different product shape ("AI-written morning briefing" instead of canonical "Cluster web signals into evidence-backed intelligence").
 
 ## 1. What it is
 
-**Phase 1 customer-facing pitch:**
+**Phase 1 customer-facing pitch (per products.ts):**
 
-> *"Signal Studio is your daily morning briefing — the top 10 emerging patterns from 80 spiders, algorithmically curated and delivered at 4:30 AM MT, with cluster cards that auto-refresh when new signals are published."*
+> *"Cluster web signals into evidence-backed intelligence."*
 
-**Phase 1 wedge: Markets/investing.** The brief is written by AI from live spider data and surfaces emerging patterns across public data feeds. Hybrid product shape: AI-written morning narrative on top of 10 ranked cluster cards underneath. **Packaging direction: standalone product** (Jessica discovery decision; not yet separately purchasable — separate Stripe SKU + landing page are Phase 0 gating items, see §5.1), marketed parallel to Rigby standalone. Bundling deferred to Phase 2+.
+**Elevator (per products.ts):** *"An intelligence engine that turns news, social, and RSS into clustered signals — each with confidence scores, evidence-card citations, and analyst-generated action steps. The data model is rigorous and runs on a hardcoded MVP action engine (no LLM dependency); ingestion pipeline forthcoming."*
 
-*Time zone shorthand: "MT" throughout = US Mountain Time (MDT in summer, MST in winter); times computed from `13:00 UTC` and `9:30 UTC` regardless of season.*
+**Pillar:** Intelligence. **Arc:** Scout. **Tier:** LAB (Lab #4 — no. XI). **Status:** demo-ready · Frontend Live.
 
-*AI is the voice (how the brief is written), not the marketing claim. Customers see "morning intelligence briefing," not "AI-powered."*
+**Phase 1 scope:** Signal clustering with 0-1 confidence scoring, evidence cards with direct URL citations, source deduplication + multi-category filtering, action card generation, dashboard signal-strength view. **The MVP action engine runs without any LLM key** — LLM is an optional enhancement layer, not the core product.
 
-**Current state vs Phase 1 target (honesty note):**
-- **Brief generation cadence** currently runs `13:00 UTC = 6:00 AM MT` on local. Phase 1 target is `9:30 UTC = 4:30 AM MT` for east-coast pre-market delivery — a 5-minute Celery beat config change.
-- **"Auto-refresh"** today = SSE pill appears in the UI when the daily curator publishes a new snapshot (Session 1132). It is **not** continuous intraday re-curation. Underlying cluster data does update live as spiders find new patterns.
-- **AI brief generation** is NOT yet built — see §5.1 Phase 0 gating.
+**Live URL:** https://signal-studio-ten.vercel.app
+**Repo:** https://github.com/clwest/signal-studio
+**Tier note:** LAB tier (alongside SellerPilot, ComplianceSentinel, context-kit, Character OS, Rigby). NOT a Suite product. NOT a flagship vertical.
+
+**Engineering reality on local** (separate from products.ts framing): Session 1131-1132 wired the signal-studio fleet repo to u-d-b's signal cluster pipeline + SSE refresh + daily curator at 13:00 UTC. This is the **engine-side enrichment** that could feed the products.ts-described product, but is not the core product.
 
 ## 2. Who buys it
 
-**Primary user: Self-directed retail investor (solo).**
-- Manages own portfolio via Robinhood / IBKR / Fidelity / Schwab
-- Reads markets daily, watches FinTwit, subscribes to a few Substacks
-- Wants an edge but can't afford Bloomberg ($2k+/mo) and finds Koyfin/Stockanalysis too data-heavy
-- Mobile-first, scan-first, low attention
+**Target per products.ts:** Investors · deal sourcers · competitive analysts.
 
-**Adjacent secondary user: Indie newsletter writer / FinTwit creator.**
-- Uses signals as research material for their own content
-- Higher LTV, smaller TAM
-- Same product surface; different ad copy
+Three concrete buyer profiles:
+- **Investor** (angel / emerging-fund GP / scout) tracking emerging signals across sectors
+- **Deal sourcer** (VC platform team / scout) needing evidence-backed signal flow
+- **Competitive analyst** (corp strategy / product marketing) tracking competitor and category signals
 
-**Buyer = User.** Self-serve via Stripe. No team/seat pricing. No firm-level sales. No procurement.
+**Buyer = User** (self-serve via Stripe — note Stripe is *stubbed* per products.ts, not live).
 
-*Marketing voice deliberately not narrowed yet — both adjacent audiences share the same product; first 10 paying customers tell us which converts better.*
+*Rev. 1-2 misframed audience as "self-directed retail investor." That was extrapolation, not what products.ts targets.*
 
 ## 3. What's built (real shipping evidence)
 
@@ -130,19 +130,20 @@ Per-item sizing:
 
 ## 7. GTM sketch
 
+> **⚠️ Pricing reality:** products.ts marks Stripe as **stubbed** (not live). Pricing tiers below are *Phase 1 proposal*, not currently in-market — products.ts has no pricing block for Signal Studio (unlike Suite products which do).
+
 | Lever | Plan |
 |---|---|
-| **Channel** | *Proposed (pending Chris greenlight + budget):* Paid ads from day one (Meta, Twitter/X, Reddit r/investing-adjacent), warm/personal network. No newsletter funnel (audience = 0, same as Rigby). |
-| **Pricing** | $29/mo flat, single tier, 7-day free trial, monthly billing only in Phase 1 |
-| **Cap behavior** | Daily $ cap per customer (same number as Rigby's, pending Chris confirmation — Atlas suggests $1.50/day) |
-| **CTA** | "Start your free 7-day trial — $29/mo" → Stripe → onboarding |
-| **What's included** | *Planned Phase-1 offer (post-Phase-0 gating, see §5.1):* Daily AI-written morning brief (email + web), Top 10 cluster cards with live refresh, AI commentary on any cluster (click-through), save signals to watchlist, ask Rigby about a cluster (chat), export to workspace as deliverable. 1 seat per subscription. |
-| **Customer-facing surface** | `signal-studio.247globalai.com` (or chosen sub-domain) — own landing page, own Stripe SKU, separate from Rigby |
-| **Brief delivery** | Daily at 4:30 AM MT to all active subscribers' inboxes (single batch, no per-user picker in Phase 1) |
-| **Disclaimers** | "Not investment advice / AI-generated / educational only / past patterns ≠ future / consult licensed advisor / US-only" — in TOS, landing footer, every email, every brief, every AI chat reply |
-| **Forbidden in product + marketing** | Buy/sell framing, price targets, accuracy claims without backing, SEC/FINRA registration implications, return-based marketing, personalized advice (Rigby chat hard-refuses) |
-| **Scope** | Information service for US adult retail investors. NOT advisor, NOT trading platform, NOT recommendation engine. |
-| **Execution posture** | Read + internal actions only (watchlist, chat about cluster, export). No outbound action on customer's external accounts. |
+| **Surface** | https://signal-studio-ten.vercel.app (live, frontend-only per products.ts) + https://github.com/clwest/signal-studio (public repo) |
+| **Tier classification** | LAB tier per products.ts (alongside SellerPilot, ComplianceSentinel, context-kit, Character OS). NOT a Suite product. |
+| **Channel (proposed Phase 1)** | Reach via 24-7-ai-global studio site + Operator Edge cross-promo to the deal-sourcer / VC analyst audience. No paid ads until Stripe SKU is live + pricing locked. |
+| **Pricing (proposed Phase 1 — NOT currently locked in products.ts)** | Suggest Free / Pro / Team tiers similar to other LAB products. Free: limited signal clusters + evidence cards. Pro: full clusters + action cards. Team: API + multi-seat. **Chris ratifies actual price points at GTM lock.** |
+| **What's actually in-market today** | Signal clustering with confidence scoring, evidence cards with URL citations, source dedup, multi-category filtering, action card generation. Stripe stubbed. |
+| **Engine-side enrichment (separate from products.ts product)** | Session 1131-1132 wired u-d-b signal cluster pipeline + SSE refresh + daily curator. Could power an enhanced version of the products.ts product, but the products.ts product runs without LLM dependency on a hardcoded MVP action engine. |
+| **Disclaimers** | "Not investment advice / signals are pattern observations, not predictions / consult appropriate advisors before acting" — in TOS, landing footer, any analyst-output context. |
+| **Forbidden in product + marketing** | Buy/sell recommendations, price targets, accuracy/win-rate claims without backing, SEC/FINRA registration implications, return-based marketing. |
+| **Scope** | Intelligence engine for investors / deal sourcers / competitive analysts. NOT a trading platform, NOT a financial advisor, NOT a recommendation engine. |
+| **Execution posture** | Read + cluster + cite + suggest action. No outbound actions, no customer-account integrations. |
 
 ## 8. Spokesperson alignment (Phase 4+, parked)
 
@@ -154,24 +155,25 @@ Per Atlas §C.5, J.2.8: Character OS / avatar / voice = parked until a paying cu
 
 ## 9. Decisions still needed (escalate to Chris)
 
-**Closed in Jessica discovery pass** (Chris ratification pending, captured for record):
-- ✅ **Standalone vs bundled** — packaging direction locked as standalone, parallel to Rigby. Separately-purchasable infra (Stripe SKU, landing page) still Phase 0 work (see §5.1). Bundle deferred to Phase 2+.
-- ✅ **"Hand-picked" vs "curated" language** — locked as "algorithmically curated."
-- ✅ **4:30 AM MT brief generation shift** — locked as Phase 1 priority.
-- ✅ **Canonical proof path** — locked as launch-day proof (brief + email + cards + SSE), requires Phase 0 gating items first.
+**Closed by products.ts as canonical source of truth:**
+- ✅ **Product framing** — locked per products.ts LAB[3]
+- ✅ **Target audience** — Investors · deal sourcers · competitive analysts per products.ts
+- ✅ **Status** — demo-ready · Frontend Live per products.ts
+- ✅ **Production URL** — https://signal-studio-ten.vercel.app
+- ✅ **Tier classification** — LAB tier (not Suite, not flagship vertical)
+- ✅ **Core product = MVP action engine without LLM dependency** per products.ts elevator
 
 **Still open for Chris:**
 
 | # | Question | Why it matters |
 |---|---|---|
-| 1 | **Signal-studio web repo consumer-app status — what's actually shipped vs scaffolded?** | Same shape as Rigby's `app.247globalai.com` question. Unlocks Phase 0 timeline math + auth/signup effort sizing. |
-| 2 | **Sub-domain pick** — `signal-studio.247globalai.com` vs `markets.247globalai.com` vs other? | Atlas §G lists `markets.247globalai.com` as proposed for the vertical; product name vs vertical name is a brand decision. |
-| 3 | **Email service pick** — Resend vs Postmark vs other? | Drives Phase 0 integration effort + monthly cost ($10–50/mo at launch volume). |
-| 4 | **Confirm $29/mo + 7-day trial as Phase 1 pricing** | Locks Stripe SKU. |
-| 5 | **Same Phase 0 cost-attribution + daily cap as Rigby (Atlas-level requirement applies to both products)** | Without this, paid ads at $29 can produce negative unit economics during trial alone. |
-| 6 | **Paid ads budget for Signal Studio (separate from Rigby's)** | Two parallel paid-ad campaigns = two budget pools. |
-| 7 | **Legal review greenlight (~$500–1500) for TOS + disclaimers** | Required before launching any markets-adjacent paid product. |
-| 8 | **Existing u-d-b email infra check** — is there already messaging/notification infra we can reuse vs greenfield Resend/Postmark integration? | If u-d-b already sends transactional email, save 2–3 days of integration work. |
+| 1 | **Pricing tiers + price points** — products.ts has no pricing block for Signal Studio (Stripe stubbed). Lock Free / Pro / Team price points before Stripe SKU work. | Required before any paid acquisition |
+| 2 | **Stripe SKU wiring** — Stripe is stubbed per products.ts. Path to live billing? | Revenue plumbing |
+| 3 | **Engine-side enrichment integration** — should the products.ts product use the u-d-b cluster pipeline + SSE + daily curator (Session 1131-1132 work), or stay on its own MVP action engine per products.ts? | Determines whether the engineering work is a Signal Studio v2 (richer data) or stays separate (engine reveal product) |
+| 4 | **Phase 0 cost-attribution shared with Rigby + Contract Concierge** | Atlas-level requirement once paid |
+| 5 | **TOS + privacy + investment-disclaimer legal review** | Required for any markets-adjacent paid product |
+| 6 | **GTM channel** — Operator Edge cross-promo, direct outreach to deal-sourcer audiences, both? | Acquisition strategy |
+| 7 | **Suite vs Lab positioning long-term** — products.ts treats as LAB today. Should it graduate to Suite if it hits revenue thresholds? | Brand portfolio strategy |
 
 ## 10. Honest claim audit (per translation layer §2)
 
@@ -179,27 +181,32 @@ Per Atlas §C.5, J.2.8: Character OS / avatar / voice = parked until a paying cu
 - Signal Studio provides investment, financial, or trading advice.
 - Specific accuracy or prediction rates for our signals.
 - A paying Signal Studio customer exists.
-- The AI brief generation is built (it's not — Phase 0 gating item).
-- The consumer landing page exists (it doesn't — Phase 0 gating item).
-- Email delivery to subscribers is wired (it isn't — Phase 0 gating item).
-- A Stripe SKU for Signal Studio exists (it doesn't — separate from Rigby's).
-- Auth/signup flow in the signal-studio repo is consumer-ready (status TBC — see §9).
+- A live Stripe SKU exists (products.ts marks Stripe stubbed).
+- Pricing is locked (products.ts has no pricing block; tiers are Phase 1 proposal).
+- The u-d-b engine-side enrichment (Session 1131-1132 cluster pipeline + SSE + daily curator) is currently wired into the products.ts product — those are separate engineering streams.
 - SEC, FINRA, or other regulatory registration.
-- International availability (US-only Phase 1).
-- Continuous 24/7 personalized monitoring or watchlist alerts (Phase 1 is daily batch only).
-- **Humans hand-pick the Top 10.** Curation is algorithmic (scoring formula + dedup) + the `SignalCuratorAgent`, not human editorial selection.
-- **Continuous intraday re-curation.** The morning curator runs once daily; the SSE-pill UI refresh fires when the next daily snapshot lands, not continuously throughout the day.
-- **Real-time market data quotes or guaranteed source completeness.** Spider coverage is what it is; downstream APIs (polygon/finnhub/etc.) have their own latency, rate limits, and coverage gaps. We surface patterns, not live tape.
+- International compliance beyond US.
+- Continuous 24/7 personalized monitoring or watchlist alerts.
+- **Real-time market data quotes** — Signal Studio is pattern observation, not live tape.
 
-**We DO claim:**
-- The signal cluster pipeline (u-d-b spider → fleet event → signal-studio Postgres) is operational on local today; 131 clusters in DB; verifiable via `curl localhost:8007/api/signals`.
-- The daily curator agent (`SignalCuratorAgent`) runs on Celery beat with documented scoring formula; produces Top-10 snapshot with provenance.
-- The live SSE refresh from signal-studio backend to browser is working on local; pill appears within ~5s of new snapshot.
-- The Top-10 cards UI is shipping in the signal-studio web app on local.
-- The brand domain `247globalai.com` is owned and live.
+**We DO claim (per products.ts ground truth):**
+- Signal Studio is **demo-ready · Frontend Live** at https://signal-studio-ten.vercel.app per products.ts.
+- Core capabilities (per products.ts): signal clustering with 0-1 confidence scoring, evidence cards with direct URL citations, source deduplication + multi-category filtering, action card generation, dashboard signal-strength view.
+- **MVP action engine runs without any LLM key** (per products.ts elevator).
+- LAB tier classification (entry no. XI, alongside SellerPilot, ComplianceSentinel, context-kit, Character OS, Rigby).
+- Target audience: Investors · deal sourcers · competitive analysts (per products.ts).
+- Stack per products.ts: FastAPI · React 19 · Vite · SQLite · Stripe (stubbed).
+- Repo: https://github.com/clwest/signal-studio.
+
+**We DO claim (engine-side, separate from products.ts product):**
+- The u-d-b signal cluster pipeline (Session 1131 Phase 1 PR #2138) is operational on local; 131 clusters in DB at time of last verification.
+- `SignalCuratorAgent` daily curator (Session 1131 Phase 2) runs on Celery beat.
+- SSE refresh (Session 1132 PR #14) operational on local.
+- These could be wired into the products.ts product as enrichment (see §9 decision #3) but currently are separate engineering streams.
 
 ---
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass).
-**Rev. 2:** Rigby review pass applied — 12 mechanical fixes (§1 honesty rewrite + current-vs-target state note, "curated" not "hand-picked", spider list disambiguation, fleet routing labeled as internal policy, `url=""` enrichment elevated to Phase 0 gating, §6 explicit "not buildable in one sprint", §7 "What's included" prefixed as planned not shipped, §9 reduced by Jessica's 4 confirmations, §10 expanded with 3 new "we do not claim" bullets). Jessica's 4 in-session decisions ratified (standalone / curated / 4:30 AM MT priority / canonical proof path).
-**Next step:** Rigby quick "looks good?" pass on rev. 2. Then Chris ratifies the 8 remaining decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Signal Studio.
+**Rev. 2:** Rigby review pass applied — 12 mechanical fixes + Jessica's 4 in-session decisions ratified (standalone / curated / 4:30 AM MT priority / canonical proof path).
+**Rev. 3:** Discovery of `24-7-ai-global/src/lib/products.ts` as canonical source of truth revealed rev. 1-2 targeted the wrong audience (retail traders vs canonical investors/deal sourcers/competitive analysts) and pitched wrong product shape (AI-written morning briefing vs canonical MVP action engine without LLM dependency). §1 / §2 / §7 / §9 / §10 rewritten to align with products.ts LAB[3]. Engine-side u-d-b work (Session 1131-1132) preserved as separate engineering stream.
+**Next step:** Rigby review for honest framing on rev. 3. Then Chris ratifies the 7 remaining decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Signal Studio.
