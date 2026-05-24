@@ -142,4 +142,17 @@ Per Atlas §C.5: Character OS / avatar / voice = parked until paying customer de
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass, products.ts-anchored).
 **Source of truth:** `24-7-ai-global/src/lib/products.ts` PRODUCTS[3].
-**Next step:** Rigby review for honest framing. Then Chris ratifies the 6 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Deal Flow Tracker.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Stripe SKU + webhook verification | ⏸ Phase 5 F7 — audit on Stripe (Jessica + Chris's access) | handoff Phase 5 queue |
+| Q2 Phase 0 cost-attribution | ✅ **Decision 9** — portfolio rule covers DealFlowTracker | handoff Decision 9 |
+| Q3 MentorForge → DealFlowTracker handoff verification | ⏸ Phase 5 #23 — Jessica drives E2E matrix | handoff Phase 5 queue |
+| Q4 LP exports format | ✅ **Decision 20** — (b) PDF + Excel for v1; custom branded PDF as v2 feature | handoff Decision 20 |
+| Q5 API exposed (Fund tier) | ✅ **Decision 21** — (e) Defer until first Fund-tier customer asks; demand-gate | handoff Decision 21 |
+| Q6 Public intake form embedding | ✅ **Decision 22** — (c) Defer + Phase 5 F6 audit-ask 3 fund operators; revisit if 2+ say yes meaningfully | handoff Decision 22 + Phase 5 F6 |
+
+6 of 6 §9 items ratified or queued. Brief now reads as the ratified Phase 1 source-of-truth for Deal Flow Tracker.

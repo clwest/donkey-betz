@@ -143,4 +143,16 @@ Per Atlas §C.5: Character OS / avatar / voice = parked until paying customer de
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass, products.ts-anchored).
 **Source of truth:** `24-7-ai-global/src/lib/products.ts` PRODUCTS[1].
-**Next step:** Rigby review for honest framing. Then Chris ratifies the 5 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Pitch Deck Forge.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Stripe SKU + webhook verification | ⏸ Phase 5 F7 — audit on Stripe (Jessica + Chris's access) | handoff Phase 5 queue |
+| Q2 Phase 0 cost-attribution | ✅ **Decision 9** — portfolio rule covers PitchDeckForge | handoff Decision 9 |
+| Q3 MentorForge → PitchDeckForge handoff verification | ⏸ Phase 5 #23 — Jessica drives E2E matrix | handoff Phase 5 queue |
+| Q4 Template style enumeration | ✅ **Decision 19** + F4 — (b) Persona-typed names: **VC-Standard / Angel / Strategic / Growth**; new spokesperson doc at `docs/spokesperson/20_pitchdeckforge.md`; Phase 5 F5 audits code-side style differentiation | handoff Decision 19 + F4 |
+| Q5 Expert review (Team tier) | ✅ **Decision 12** + F2 — (d) Defer feature + rebrand Team tier; truthful blurb shipped to products.ts: `5 seats · shared workspace · team admin` | handoff Decision 12 + F2 |
+
+5 of 5 §9 items ratified or queued. Brief now reads as the ratified Phase 1 source-of-truth for Pitch Deck Forge.

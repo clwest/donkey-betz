@@ -169,4 +169,17 @@ Per Atlas §C.5: Character OS / avatar / voice = parked until paying customer de
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass, rewritten post-products.ts discovery).
 **Supersedes:** The earlier `colorado_family_law_concierge_BRIEF.md` (renamed to `_FUTURE_CONCEPT.md`) which was based on the legal_doc_drafter_agent engine-mismatch misread.
 **Source of truth:** `24-7-ai-global/src/lib/products.ts` PRODUCTS[2].
-**Next step:** Rigby review for honest framing. Then Chris ratifies the 6 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Contract Concierge.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Fleet routing fix path | 🔧 Chris queue — architecture decision (new agent / extend / remove) | handoff Chris queue #1 |
+| Q2 Stripe SKU verification | ⏸ Phase 5 F7 — audit on Stripe (Jessica + Chris's access) | handoff Phase 5 queue |
+| Q3 Phase 0 cost-attribution | ✅ **Decision 9** — portfolio rule covers Contract Concierge | handoff Decision 9 |
+| Q4 TOS + e-signature legal review status | ⏸ Phase 5 #24 — Jessica pings lawyer | handoff Phase 5 queue |
+| Q5 Colorado Family Law Concierge spin-off | ✅ **Decision 3** — (b) Park until portfolio >$5K MRR OR active vertical-add decision | handoff Decision 3 |
+| Q6 Operator Edge cross-promo | ✅ **Decision 16** — (b+d) Inline-only now; rotated paid placements when Operator Edge ≥2K subscribers | handoff Decision 16 |
+
+4 of 6 §9 items ratified or queued; Q1 stays Chris queue (architecture). Brief now reads as the ratified Phase 1 source-of-truth for Contract Concierge.
