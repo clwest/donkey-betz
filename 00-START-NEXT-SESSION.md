@@ -26,7 +26,7 @@ The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversatio
 5. **`docs/UDB_TRANSLATION_LAYER.md`** — audience contract + no-claims rule.
 6. **`docs/specs/FLEET_CAPABILITY_MANIFEST_SPEC.md`** (v3) — engineering spec for per-app authz, Atlas-anchored.
 7. **`docs/specs/FLEET_CAPABILITY_BUSINESS_SPEC.md`** (v3) — GTM framing of the same, Atlas-anchored.
-8. **`docs/specs/SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md`** (new — Session 1137 F1) — Chris-implementable spec for Decision 13 demand-gate.
+8. **`docs/specs/SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md`** — Decision 13 demand-gate spec (status: implemented, Session 1138).
 9. **Archive / handoff docs** — historical unless promoted by `docs/handoffs/CURRENT.md` or this file.
 
 Live drift checks:
@@ -56,87 +56,96 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1137 LANDED — 22 strategic decisions + 4 deliverables
-
-**Final handoff:** [`docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`](docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md)
-
-**TL;DR:** Jessica drove a single-session strategic ratification pass through the 54+7 Session 1135 open decisions, landing **22 explicit decisions across 4 phases plus 4 concrete follow-up deliverables**. All 8 app briefs now have `## Session 1137 ratification status` tables appended to §9 showing per-question lock/queue status. Heaviest single-session strategic close in the project's history.
-
-**Pattern across all 22:** revenue-gated triggers + portfolio-consistent pricing + conservative pre-revenue cost discipline + sequenced engineering load + demand-validation gates for non-essential capital + editorial honesty over marketing fluff.
-
-**Where it lives:**
-- u-d-b: branch `docs/session-1137-jessica-ratification-1-4` → PR (this entry post-merge)
-- mentorforge: separate small PR for F3 BUILD_PLAN drift fix
-- 24-7-ai-global: separate small PR for F2 products.ts Team tier truthful blurb
-
----
-
 ## SESSION 1138 LANDED — F1 paid-interest signal implementation
 
 **Final handoff:** [`docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md`](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md)
 
-**TL;DR:** Decision 13 demand-gate built end-to-end. `FleetPaidInterest`
-table + fleet-HMAC POST endpoint on u-d-b, `paid_interest_status` PA
-tool for Jessica, signal-studio backend relay (per-IP rate-limit) +
-frontend footer form. Live smoke verified — willing_pay=49 row flips
-trigger_state to `ready` correctly.
-
-**Renames Chris ratified mid-session:** generic `FleetPaidInterest`
-keyed by `app_slug` (not signal-studio-specific) + `/api/fleet/paid-interest/`
-URL (no app slug in path — derived from HMAC). Lets SellerPilot /
-ComplianceSentinel reuse the same table when their Decision-13-style
-gates come up.
-
-**Honest scope ratification:** Chris pushed back early — signal-studio
-has no traffic, so the form will capture no organic signal yet. The
-**manual override clause** is the actual working trigger today;
-outreach to 5 ICP conversations > waiting on a form. Build was kept
-because mechanism is small and ready-for-when-traffic-exists.
-
-**Where it lives:** u-d-b branch `feat/session-1138-paid-interest`
-(PR pending), signal-studio branch `feat/paid-interest-form` (PR pending).
+**TL;DR:** Decision 13 demand-gate built end-to-end. `FleetPaidInterest` table + fleet-HMAC POST endpoint on u-d-b, `paid_interest_status` PA tool for Jessica, signal-studio backend relay + frontend footer form. PRs merged: u-d-b #2162 (commit `9c8425f9`), signal-studio #15 (`1e6dbb4`).
 
 ---
 
-## SESSION 1139 — CURRENT ENTRY POINT
+## SESSION 1139 LANDED — upstream clustering quality (entity-token clusterer)
 
-### Status check before any new work
+**Final handoff:** [`docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md`](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md)
 
-F1 paid-interest is **fully live including Rigby integration** as of
-Session 1138 close. Celery restarted same-session; `pa_local.sh
-"paid_interest_status"` returned a 13ms tool run with the expected
-JSON envelope. Jessica can ask Rigby "what's the paid-interest signal
-status?" today.
+**TL;DR:** Replaced the verb-keyword fallback clusterer in u-d-b's `signal_aggregation_service` with an entity-token clusterer, gated behind a new `cluster_method` field so legacy rows decay naturally (no forced re-cluster). Pre-1139 baseline: signal-studio LLM judge rejected 112/131 = 85.5% of clusters as incoherent; latest 25 u-d-b clusters were 100% generic-verb-fallback names like "Now opportunity window" lumping Trump phone + Hubble + Ebola + NFL.
 
-Remaining 1138 follow-up: frontend visual smoke (TS build is clean;
-browser unverified). Low priority — 5 minutes when Chris is at the
-machine: `cd ~/development/signal-studio && docker compose restart
-web`, then visit the frontend URL.
+**Empirical baseline locked** (for the Session 1140 acceptance test):
+- u-d-b: 307 SignalCluster rows, all backfilled `cluster_method='legacy'` by migration 0351.
+- signal-studio: 131 mirror rows, 112 rejected (85.5%), 19 summarized (14.5%).
+- Rigby's design Q1–Q5 ratified mid-session and saved into the handoff.
 
-### SECOND THING — Chris ratification pass on Session 1137's 22 decisions
+**Where it lives:** u-d-b branch `feat/session-1139-upstream-clustering-quality` — PR pending (this entry post-merge).
 
-Chris reads the 22 Jessica-locked decisions in `SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md` and redlines anything he disagrees with. Especially:
+**Honest scope note:** Local live verification of the full pipeline was BLOCKED by the persistent local-env `$libdir/vector` pgvector path mismatch (same blocker that's parked `test_fleet_signals_phase1.py` integration paths since Session 1131). 24 pure-function unit tests cover algorithmic behavior; live rejection-rate measurement is Session 1140's first task once the change runs against production (which has working pgvector).
 
-- **Decision 9 cost-attribution rules** (most implementation-heavy; Chris's schema lane)
-- **Decision 10 Stripe SKU wiring sequence** (Signal Studio → SellerPilot → ComplianceSentinel) — Chris confirms ordering is feasible given his bandwidth
-- **Decision 13 + F1 spec** — F1 IMPLEMENTED Session 1138. Spec file updated to `status: implemented` (DONE). Manual override is the working trigger until signal-studio has traffic.
+---
 
-**No expected redline** on per-product pricing (5-8), GTM channels (15a-c), capital allocation (11, 13, 14), or feature scope cuts (12, 18, 19, 20-22) — those are business-side calls.
+## SESSION 1140 — CURRENT ENTRY POINT
 
-### Chris's tech queue (unblocked by Session 1137, parallel execution)
+### FIRST THING — Live rejection-rate measurement (Session 1139 acceptance test)
+
+**Pre-req:** Session 1139 PR merged + 24-48h of celery-beat aggregation runs against production-like data so v1 clusters land in both u-d-b and signal-studio's mirror.
+
+```bash
+# 1. u-d-b side — fraction of recent clusters tagged v1
+cd ~/development/unified-donkey-betz
+.venv/bin/python manage.py shell -c "
+from core.models_signal_intelligence import SignalCluster
+from django.utils import timezone
+from datetime import timedelta
+from collections import Counter
+recent = SignalCluster.objects.filter(
+    detected_at__gte=timezone.now() - timedelta(hours=24)
+)
+print(f'last 24h total: {recent.count()}')
+print('by cluster_method:')
+for cm, n in Counter(recent.values_list('cluster_method', flat=True)).most_common():
+    print(f'  {cm}: {n}')
+"
+
+# 2. signal-studio side — rejection rate per cluster_method
+#    (after the mirror schema includes cluster_method — see SECOND below)
+cd ~/development/signal-studio
+docker compose exec -T signal_studio_postgres psql -U signalstudio -d signalstudio -c \
+  "SELECT cluster_method, summary_quality, COUNT(*) FROM signal_clusters
+   GROUP BY 1, 2 ORDER BY 1, 2;"
+```
+
+**Acceptance bar (Rigby-locked Session 1139):**
+- v1 rejection rate **< 30%** → declare victory; ship the PA tool; queue legacy bulk-archive for 1141.
+- v1 rejection rate **30–60%** → partial win; decide whether Option B (embedding clustering) is worth spend.
+- v1 rejection rate **≥ 60%** → close to baseline failure; escalate to Option B.
+
+### SECOND — signal-studio mirror schema accepts `cluster_method`
+
+Session 1139 made u-d-b's `cluster_envelope` emit `cluster_method`. signal-studio's `signal_ingest.py` currently accept-and-ignore (forward compat). To do the per-method breakdown query above, the mirror needs to store it:
+
+1. Add `cluster_method` column to signal-studio's `signal_clusters` table (Alembic migration).
+2. Update `signal_ingest.upsert_cluster` (or equivalent) to persist the envelope's `cluster_method` field. Default `'legacy'` for rows ingested before this lands.
+3. Small PR in signal-studio.
+
+### THIRD — Rigby's `signal_studio_judge_stats` PA tool (Q3 from Session 1139)
+
+~50 LOC across 2 repos. Surfaces the rejection rate Rigby can query directly without docker exec.
+
+- signal-studio: add `/api/judge-stats?days=N` endpoint returning `{total, rejected, accepted, rejection_rate, by_pattern_type: {...}, by_cluster_method: {...}}`.
+- u-d-b: register `signal_studio_judge_stats` PA tool in `pa_tool_schemas.py` + handler in `td_handlers_core.py` + `tool_dispatcher.register(...)`. Tool calls signal-studio over the fleet-net hostname.
+- Daphne + celery restart per the canonical PA notes above.
+
+### Chris's tech queue (carried over from Session 1138)
 
 1. **Contract Concierge fleet routing fix** (Q1) — architecture: new agent / extend `legal_doc_drafter_agent` / remove default
 2. **Signal Studio engine-side enrichment integration** (Q3) — architecture: v2 question
 3. **ComplianceSentinel fleet routing** (Q4) — architecture: `security_agent` / null / skip u-d-b
 4. **Engine-mismatch resolutions** (cross-cutting C5)
-5. **Phase 0 cost-attribution SCHEMA** — NOW UNBLOCKED. Jessica's business rules in Decision 9 are the input. Chris designs `LLMCallLog.workspace` FK + daily cap enforcement + soft-degrade-to-gpt-5-mini + portfolio kill switch.
+5. **Phase 0 cost-attribution SCHEMA** — UNBLOCKED by Jessica's Decision 9. Chris designs `LLMCallLog.workspace` FK + daily cap + soft-degrade-to-gpt-5-mini + portfolio kill switch.
 6. **SellerPilot Render API Blueprint deployment** — ops
 7. **ComplianceSentinel Render API Blueprint deployment** — ops
-8. **Rigby products.ts update** — fires when Decision 1 trigger met (currently deferred)
-9. **Atlas deviation ratification** (cross-cutting C7) — could be both
-10. ~~**F1 Signal Studio paid-interest signal**~~ — IMPLEMENTED Session 1138. See handoff. Next: celery PA worker restart to expose tool to Rigby.
-11. **F5 audit** — verify the 4 PitchDeckForge styles meaningfully differ in code (~15 min)
-12. **F7 Stripe verification collaboration** — Jessica drives, Chris's Stripe access
+8. **Rigby products.ts update** — fires when Decision 1 trigger met
+9. **Atlas deviation ratification** (cross-cutting C7)
+10. **F5 audit** — verify the 4 PitchDeckForge styles meaningfully differ in code (~15 min)
+11. **F7 Stripe verification collaboration** — Jessica drives, Chris's Stripe access
 
 ### Phase 5 audit queue (Jessica-driven)
 
@@ -156,7 +165,7 @@ Chris reads the 22 Jessica-locked decisions in `SESSION_1137_JESSICA_PHASES_1_4_
 2. `make all` (or `make start && make celery` from u-d-b)
 3. `make status` — confirm 7 fleet apps + u-d-b all healthy
 4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
-5. Read `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md` for full session arc
+5. Read `docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md` for the clusterer rewrite details and the acceptance protocol.
 
 ---
 
@@ -164,6 +173,9 @@ Chris reads the 22 Jessica-locked decisions in `SESSION_1137_JESSICA_PHASES_1_4_
 
 These are locked in code/tests but worth remembering when touching adjacent areas:
 
+- **Session 1139 — `cluster_method` discriminator on SignalCluster.** New rows default `entity_token_v1`; backfilled 307 legacy rows. Downstream consumers should filter on `cluster_method='entity_token_v1'` when applying any new quality bar.
+- **Session 1139 — entity-token clusterer in `signal_aggregation_service`.** Requires ≥2 shared specific tokens (frequency ≥2 in window) to form a cluster. Better to miss a cluster than create a junk one. Per-pattern min size: `opportunity_window=4`, default 3.
+- **Local `$libdir/vector` pgvector path mismatch** blocks any Django query touching SpiderData / other VectorField tables. Known local-env issue (same blocker since Session 1131). Workaround: defer live verification to Docker / production stack.
 - **Fleet HMAC sign-key = SHA256(secret), not raw secret.** Saved to memory. Any new fleet client must follow this contract.
 - **`init_db()` does not migrate existing tables** (signal-studio side). Schema additions need `_ensure_schema()` calls in BOTH startup paths.
 - **brain_events.py is byte-identical across all 7 fleet repos.** Future event prefixes plug into the HANDLERS prefix router in `signal_ingest.py`.
@@ -176,7 +188,7 @@ These are locked in code/tests but worth remembering when touching adjacent area
 - **`request.fleet_identity` is a dict, not an ORM row** (1132 gotcha). Use `.get("app_slug")`, not `getattr`.
 - **Format is its own translation axis** — §1.2 governs vocabulary; format-fit (dashboard vs sticker vs CLI) is a separate consideration. (Session 1136 lesson.)
 - **Audience interviews need "worst Monday morning" prompt** — Q1-Q6 elicit features but miss format-fit. (Session 1136 lesson.)
-- **My on-the-fly rebrand suggestions can be sloppy** — Decision 12 in Session 1137 promised features that don't exist (custom branding, priority queue). Audit existing copy BEFORE proposing rebrand. (Session 1137 lesson, F2 execution.)
+- **My on-the-fly rebrand suggestions can be sloppy** — Decision 12 in Session 1137 promised features that don't exist. Audit existing copy BEFORE proposing rebrand. (Session 1137 lesson, F2 execution.)
 - **Vague triggers don't fire** — Decision 13's "concrete paying-interest signal" was vague until F1 spec made it specific. Numeric trigger thresholds need explicit lock. (Session 1137 lesson, F1 execution.)
 
 ---
@@ -221,6 +233,7 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ### Other carryovers
 
+- **Legacy SignalCluster bulk-archive** (Session 1139 follow-up) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
 - **Ops view fork decision** (Session 1136 PARKED) — Chris picks: kill / radical-simplify / different medium / redirect with new interview
 - **Capability spec Phase 0 scaffolding** — gated on per-app intent (Session 1135 done, Session 1137 ratified Jessica side)
 - **Evidence URL field** — both signal phases ship `url=""`. Cleanest path: enrichment agent populates it. Signal Studio Phase 0 GATING.
@@ -235,7 +248,7 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ---
 
-## SESSION 1131-1137 HANDOFFS
+## SESSION 1131-1139 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
@@ -244,12 +257,10 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 - [Session 1134 close](docs/handoffs/SESSION_1134_CAPABILITY_SPECS_ATLAS_ANCHOR.md)
 - [Session 1135 FINAL close](docs/handoffs/SESSION_1135_FINAL_CLOSE.md)
 - [Session 1136 ops view PARKED](docs/handoffs/SESSION_1136_OPS_VIEW_PARKED.md)
-- [Session 1137 Jessica Phases 1-4 ratification (this entry's prior session)](docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md)
+- [Session 1137 Jessica Phases 1-4 ratification](docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md)
+- [Session 1138 F1 paid-interest implementation](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md)
+- [Session 1139 upstream clustering quality](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md)
 
 ---
 
-*Last overwrite: Session 1137 close + Jessica 22 decisions + 4 deliverables → Session 1138 entry (Chris ratification pass on Jessica decisions; tech queue unblocked for parallel execution; Phase 5 audit queue carried forward), 2026-05-24.*
-
-*Session 1138 close (2026-05-24, same day): F1 paid-interest signal implemented end-to-end. u-d-b + signal-studio + frontend all touched; live HTTP smoke verified. Next session FIRST THING shifted to celery PA worker restart to expose `paid_interest_status` to Rigby.*
-
-*Session 1138 EXTENDED close (2026-05-24, same day): Chris pushed back that the page wasn't ad-worthy. Round 2 added: LLM summarizer (gpt-5-mini, 19 → 11 distinct insight-grade signals after dedup), `signal_deduper.py` (Jaccard + specific-tag rescue), `signal_summarizer.py` (auto-poll worker, 60s tick, self-maintaining), `/api/summarizer-status` endpoint. **Both PRs merged: u-d-b #2162 (commit 9c8425f9), signal-studio #15 (commit 1e6dbb4).** Total OpenAI spend this session: ~$1.03. Session 1139 entry: upstream clustering quality on u-d-b (multi-day, 85% rejection rate from gpt-5-mini suggests real upstream issue).*
+*Last overwrite: Session 1139 close → Session 1140 entry. Headline 1140 work: live rejection-rate measurement (Session 1139 acceptance test), signal-studio mirror schema for `cluster_method`, Rigby's `signal_studio_judge_stats` PA tool. Pre-merge baseline: signal-studio judge rejecting 112/131 = 85.5%; target post-merge with v1 clusters is <30%. Acceptance bar Rigby-locked.*

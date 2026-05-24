@@ -46,6 +46,87 @@ class SignalAggregationService:
     # Minimum sources needed for confidence
     MIN_SOURCES_FOR_CONFIDENCE = 2
 
+    # ── Session 1139: entity-token clusterer constants ──────────────────
+    #
+    # The pre-1139 clusterer keyed clusters by (a) regex topic match
+    # against 10 broad patterns OR (b) the literal first PATTERN_TYPE
+    # keyword ("now", "need", "rising"). Path (b) fired for ~100% of
+    # latest clusters, producing junk like "Now opportunity window"
+    # that lumped Trump-phone + Hubble + Ebola + NFL across 13 sources.
+    # Downstream LLM judge in signal-studio rejected 112/131 = 85.5%.
+    # See SESSION_1139_UPSTREAM_CLUSTERING_QUALITY handoff for diagnosis.
+    #
+    # The entity-token clusterer groups signals by shared specific
+    # noun tokens (Title-cased ≥4 chars), with a window-frequency
+    # threshold so one-off capitalized nouns don't form clusters. Old
+    # rows keep cluster_method='legacy'; new rows are tagged
+    # 'entity_token_v1' so downstream selection can opt them in.
+
+    CLUSTER_METHOD_V1 = "entity_token_v1"
+
+    # Min characters in an entity token. 4 drops most common short
+    # words (the, and, was, two) while keeping real entities (Tesla,
+    # Apple, Brazil). Short genuine entities (US, UK, EU, AI) are
+    # noise more often than signal in headlines.
+    MIN_ENTITY_TOKEN_LENGTH = 4
+
+    # Cap on entity tokens extracted per signal. Bounds the all-pairs
+    # comparison cost for ≤500 signals (the upstream fetch limit).
+    MAX_ENTITY_TOKENS_PER_SIGNAL = 8
+
+    # Tokens must appear in ≥ this many distinct signals within the
+    # clustering window before they can contribute to "shared specific
+    # token" logic. Rigby's check: prevents one-off capitalized nouns
+    # from forming tiny clusters.
+    MIN_TOKEN_FREQUENCY_IN_WINDOW = 2
+
+    # Two signals join a cluster when they share ≥ this many frequent
+    # entity tokens. 2 is the sweet spot — 1 over-merges on common
+    # short tokens; 3 starves clusters on shorter headlines.
+    MIN_SHARED_TOKENS = 2
+
+    # Per-pattern_type minimum cluster size. Falls back to
+    # MIN_CLUSTER_SIZE (3). opportunity_window was the noisiest type
+    # (72/307 pre-1139 rows, most incoherent) so bumped to 4.
+    PER_PATTERN_MIN_CLUSTER_SIZE = {
+        "opportunity_window": 4,
+    }
+
+    # News-boilerplate token denylist — capitalized but carry no
+    # entity meaning. Curated from Rigby's review of the latest-25
+    # sample (Session 1139). Lowercase for case-folded matching.
+    NEWS_BOILERPLATE_TOKENS = frozenset({
+        # News labels / headers
+        "today", "breaking", "update", "exclusive", "report",
+        "live", "video", "photos", "watch", "read", "latest",
+        "shares", "stock", "stocks", "review", "story", "news",
+        "trending", "headline", "headlines",
+        # Corporate / title suffixes
+        "inc", "ltd", "llc", "corp", "ceo", "cfo", "vp",
+        "gov", "sen", "rep",
+        # Time / sequence words that get capitalized
+        "first", "second", "third", "next", "last",
+        "year", "week", "month", "day", "monday", "tuesday",
+        "wednesday", "thursday", "friday", "saturday", "sunday",
+        "january", "february", "march", "april", "june",
+        "july", "august", "september", "october", "november",
+        "december",
+        # Generic news transition words
+        "after", "before", "during", "while", "amid", "since",
+        # Generic adjectives that creep through capitalization
+        "best", "worst", "most", "many", "some", "more",
+        "new", "old", "another",
+    })
+
+    # Capitalized-noun candidate regex. Matches words that start with
+    # an optional single lowercase letter, then an uppercase letter,
+    # then at least one alphabetic char. The optional leading lowercase
+    # accepts case-mixed product names ("iPhone", "eBay"). Short
+    # ALL-CAPS acronyms (FDA / FBI / DOJ — 3 chars) are filtered later
+    # by MIN_ENTITY_TOKEN_LENGTH, not by this regex. Hyphenated
+    # entities ("Anti-Corruption") survive via `\-` in the tail class.
+    _ENTITY_CANDIDATE_RE = re.compile(r"\b([a-z]?[A-Z][a-zA-Z][a-zA-Z\-]+)\b")
+
     # Keywords that indicate different pattern types
     PATTERN_TYPE_KEYWORDS = {
         'demand_spike': [
@@ -187,19 +268,56 @@ class SignalAggregationService:
             # Extract keywords and topics
             keywords = self._extract_keywords(text)
             topics = self._extract_topics(text)
+            # Session 1139: entity tokens drive the new clusterer.
+            entity_tokens = self._extract_entity_tokens(text)
 
-            if keywords or topics:
+            if keywords or topics or entity_tokens:
                 signals.append({
                     'spider_data_id': str(sd.id),
                     'spider_name': sd.spider_name,
                     'keywords': keywords,
                     'topics': topics,
+                    'entity_tokens': entity_tokens,
                     'text_sample': text[:200],
                     'created_at': sd.created_at,
                     'relevance_score': sd.relevance_score or 0,
                 })
 
         return signals
+
+    def _extract_entity_tokens(self, text: str) -> set:
+        """Extract capitalized noun-ish tokens that look like entities.
+
+        Session 1139 — heuristic entity extraction (no NER dependency).
+        Returns case-folded tokens so 'Tesla' / 'TESLA' merge cleanly
+        across signals.
+
+        Filters:
+          - Must match _ENTITY_CANDIDATE_RE (Capital + lowercase tail —
+            excludes ALL-CAPS acronyms which are usually boilerplate).
+          - Length ≥ MIN_ENTITY_TOKEN_LENGTH (drops short generics).
+          - Not in NEWS_BOILERPLATE_TOKENS (curated denylist).
+          - Capped at MAX_ENTITY_TOKENS_PER_SIGNAL per signal.
+
+        The window-frequency throttle (MIN_TOKEN_FREQUENCY_IN_WINDOW)
+        is applied later in _cluster_signals, not here — this method
+        is per-signal and stateless.
+        """
+        if not text:
+            return set()
+
+        raw = self._ENTITY_CANDIDATE_RE.findall(text)
+        out: set = set()
+        for tok in raw:
+            cf = tok.casefold()
+            if len(cf) < self.MIN_ENTITY_TOKEN_LENGTH:
+                continue
+            if cf in self.NEWS_BOILERPLATE_TOKENS:
+                continue
+            out.add(cf)
+            if len(out) >= self.MAX_ENTITY_TOKENS_PER_SIGNAL:
+                break
+        return out
 
     def _extract_text_from_spider_data(self, sd: SpiderData) -> str:
         """Extract readable text from spider data."""
@@ -257,35 +375,153 @@ class SignalAggregationService:
         return list(set(topics))[:5]  # Dedupe and limit
 
     def _cluster_signals(self, signals: List[Dict]) -> Dict[str, List[Dict]]:
-        """
-        Cluster signals by topic similarity.
+        """Entity-token clusterer (Session 1139).
 
-        Returns dict of topic -> list of signals
-        """
-        clusters = defaultdict(list)
+        Groups signals by shared specific entity tokens. Replaces the
+        pre-1139 topic-regex + verb-keyword-fallback path which produced
+        clusters keyed on generic words like "now" or "rising", lumping
+        unrelated headlines together (e.g. "Now opportunity window" mixed
+        Trump phone + Hubble + Ebola across 13 sources — see
+        SESSION_1139 handoff).
 
+        Algorithm:
+          1. Tally entity_tokens across all signals in the window.
+          2. Drop tokens with freq < MIN_TOKEN_FREQUENCY_IN_WINDOW
+             so one-off capitalized nouns can't form tiny clusters.
+          3. For each signal, restrict to the frequent set.
+          4. Union-find pairs sharing ≥ MIN_SHARED_TOKENS frequent
+             tokens (O(n²); n ≤ 500 in practice from upstream cap).
+          5. Drop groups below the per-pattern_type minimum size.
+
+        Returns dict of cluster_key -> list of signals. The cluster_key
+        is "tok1|tok2" (sorted lexicographically, top 2) — used by
+        _create_signal_clusters for both naming and existing-cluster
+        lookup (JSONField __contains on `keywords`).
+
+        Signals with fewer than MIN_SHARED_TOKENS frequent tokens are
+        intentionally not clustered. Per Rigby: better to miss a cluster
+        than create a junk one. The downstream LLM judge's 85.5%
+        rejection rate confirmed that creating junk clusters was the
+        worse failure mode.
+        """
+        if not signals:
+            return {}
+
+        # 1. Global token frequency across the window.
+        token_freq: Dict[str, int] = defaultdict(int)
         for signal in signals:
-            # Primary clustering by topics
-            for topic in signal['topics']:
-                clusters[topic].append(signal)
+            for tok in signal.get('entity_tokens') or set():
+                token_freq[tok] += 1
 
-            # Secondary clustering by keywords if no topics
-            if not signal['topics'] and signal['keywords']:
-                # Use first keyword as cluster key
-                cluster_key = f"kw:{signal['keywords'][0]}"
-                clusters[cluster_key].append(signal)
-
-        # Filter clusters below minimum size
-        return {
-            k: v for k, v in clusters.items()
-            if len(v) >= self.MIN_CLUSTER_SIZE
+        # 2. Frequent set — tokens that appeared in ≥ N distinct signals.
+        frequent = {
+            tok for tok, n in token_freq.items()
+            if n >= self.MIN_TOKEN_FREQUENCY_IN_WINDOW
         }
+        if not frequent:
+            return {}
+
+        # 3. Restrict each signal's tokens.
+        restricted: List[Tuple[int, set]] = [
+            (i, (signal.get('entity_tokens') or set()) & frequent)
+            for i, signal in enumerate(signals)
+        ]
+
+        # 4. Union-find on pairs sharing ≥ MIN_SHARED_TOKENS.
+        parent = list(range(len(signals)))
+
+        def _find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def _union(a: int, b: int) -> None:
+            ra, rb = _find(a), _find(b)
+            if ra != rb:
+                parent[rb] = ra
+
+        for a in range(len(restricted)):
+            toks_a = restricted[a][1]
+            if len(toks_a) < self.MIN_SHARED_TOKENS:
+                continue
+            for b in range(a + 1, len(restricted)):
+                toks_b = restricted[b][1]
+                if len(toks_a & toks_b) >= self.MIN_SHARED_TOKENS:
+                    _union(a, b)
+
+        # 5. Group by root, enforce per-pattern min size, build keys.
+        groups: Dict[int, List[int]] = defaultdict(list)
+        for i in range(len(signals)):
+            if len(restricted[i][1]) >= self.MIN_SHARED_TOKENS:
+                groups[_find(i)].append(i)
+
+        clusters: Dict[str, List[Dict]] = {}
+        for root_idx, member_idxs in groups.items():
+            member_signals = [signals[i] for i in member_idxs]
+            pattern_type = self._detect_pattern_type(member_signals)
+            min_size = self.PER_PATTERN_MIN_CLUSTER_SIZE.get(
+                pattern_type, self.MIN_CLUSTER_SIZE
+            )
+            if len(member_signals) < min_size:
+                continue
+
+            # Cluster key: top-2 tokens by within-group frequency.
+            # `full_shared` (intersection across all members) is the
+            # cleanest signal but chain merges (A↔B via {x,y}, B↔C via
+            # {y,z}) can produce empty full-intersection even when
+            # pairwise overlap met threshold. Falling back to local
+            # frequency keeps the key meaningful; we sort by frequency
+            # DESCENDING so the most-discriminative token leads the
+            # name (e.g. 'tableau' beats 'boston' for Tableau-Developer
+            # job clusters).
+            local_freq: Dict[str, int] = defaultdict(int)
+            for i in member_idxs:
+                for tok in restricted[i][1]:
+                    local_freq[tok] += 1
+            full_shared = set.intersection(
+                *(restricted[i][1] for i in member_idxs)
+            )
+            if len(full_shared) >= 2:
+                shared = full_shared
+            else:
+                shared = {tok for tok, n in local_freq.items() if n >= 2}
+                if not shared:
+                    # Last resort: union of all member tokens.
+                    shared = {
+                        tok for i in member_idxs
+                        for tok in restricted[i][1]
+                    }
+
+            key_tokens = sorted(
+                shared,
+                key=lambda t: (-local_freq.get(t, 0), t),
+            )[:2]
+            cluster_key = "|".join(key_tokens) or f"group:{root_idx}"
+            clusters[cluster_key] = member_signals
+
+        return clusters
 
     def _create_signal_clusters(self, clusters: Dict[str, List[Dict]]) -> List[SignalCluster]:
-        """Create SignalCluster records from clustered signals."""
+        """Create SignalCluster records from clustered signals.
+
+        Session 1139: all rows are tagged cluster_method='entity_token_v1'.
+        Existing-cluster lookup keys on cluster_method + pattern_type +
+        all key_tokens present, so v1 runs only merge with v1 rows
+        (legacy rows decay naturally).
+        """
         created = []
 
         for topic, signals in clusters.items():
+            # Session 1139: parse the entity-token cluster_key.
+            # Format: "tok1|tok2" (top-2 most-shared tokens). The legacy
+            # path used a single topic word — anything without a pipe is
+            # treated as a one-token key for back-compat with edge cases
+            # (chain-merge groups that fell through to the union-of-all
+            # branch with only 1 element).
+            key_tokens = topic.split("|") if "|" in topic else [topic]
+            key_tokens = [t for t in key_tokens if t]  # drop empties
+
             # Calculate metrics
             source_breakdown = self._calculate_source_breakdown(signals)
             strength = self._calculate_strength(signals, source_breakdown)
@@ -293,12 +529,22 @@ class SignalAggregationService:
             novelty = self._calculate_novelty(signals)
             pattern_type = self._detect_pattern_type(signals)
 
-            # Collect keywords across all signals
-            all_keywords = []
+            # Collect keywords across all signals. Session 1139: prepend
+            # the key_tokens so downstream lookups + display lead with
+            # the entity tokens that actually defined the cluster.
+            extracted_keywords = []
             for s in signals:
-                all_keywords.extend(s['keywords'])
-                all_keywords.extend(s['topics'])
-            keywords = list(set(all_keywords))[:15]
+                extracted_keywords.extend(s['keywords'])
+                extracted_keywords.extend(s['topics'])
+            # De-dupe preserving order, entity tokens first.
+            seen = set()
+            keywords: List[str] = []
+            for kw in list(key_tokens) + extracted_keywords:
+                if kw and kw not in seen:
+                    seen.add(kw)
+                    keywords.append(kw)
+                if len(keywords) >= 15:
+                    break
 
             # Create sample signals for display
             sample_signals = [
@@ -315,10 +561,16 @@ class SignalAggregationService:
             # Generate cluster name
             name = self._generate_cluster_name(topic, pattern_type, keywords)
 
-            # Check for existing active cluster with same topic
+            # Session 1139: existing-cluster lookup keys on cluster_method
+            # + pattern_type + presence of ALL key_tokens. This way v1 runs
+            # only merge with v1 rows (legacy decays naturally), and rows
+            # with different entity sets stay separate clusters even when
+            # they share a pattern_type.
             existing = SignalCluster.objects.filter(
+                cluster_method=self.CLUSTER_METHOD_V1,
                 status__in=['detecting', 'active'],
-                keywords__contains=[topic]
+                pattern_type=pattern_type,
+                keywords__contains=key_tokens,
             ).first()
 
             if existing:
@@ -355,6 +607,9 @@ class SignalAggregationService:
                 cluster = SignalCluster.objects.create(
                     name=name,
                     pattern_type=pattern_type,
+                    # Session 1139: tag every new row so downstream can
+                    # filter to the new clusterer's output cleanly.
+                    cluster_method=self.CLUSTER_METHOD_V1,
                     spider_data_ids=[s['spider_data_id'] for s in signals],
                     source_breakdown=source_breakdown,
                     strength=strength,
@@ -543,11 +798,14 @@ class SignalAggregationService:
         return 'demand_spike'  # Default
 
     def _generate_cluster_name(self, topic: str, pattern_type: str, keywords: List[str]) -> str:
-        """Generate a human-readable cluster name."""
-        # Clean up topic
-        topic_clean = topic.replace('kw:', '').replace('_', ' ').title()
+        """Generate a human-readable cluster name.
 
-        # Pattern type descriptions
+        Session 1139: entity-token clusters arrive as 'tok1|tok2'.
+        Render as 'Tok1, Tok2 <pattern>' (Title-cased). Legacy single-
+        word topics (pre-pipe-format) fall through to the original
+        path for back-compat with any edge cases.
+        """
+        # Pattern type descriptions — shared across both paths.
         type_descriptions = {
             'demand_spike': 'demand spike',
             'trend_emergence': 'emerging trend',
@@ -560,9 +818,19 @@ class SignalAggregationService:
             'market_movement': 'market movement',
             'user_need': 'user need',
         }
-
         type_desc = type_descriptions.get(pattern_type, 'signal pattern')
 
+        # Session 1139 path — entity-token cluster_key.
+        if "|" in topic:
+            tokens = [t for t in topic.split("|") if t]
+            if tokens:
+                # Title-case each token. casefold().title() handles
+                # hyphenated entities ("anti-corruption" → "Anti-Corruption").
+                rendered = ", ".join(t.title() for t in tokens[:2])
+                return f"{rendered} {type_desc}"
+
+        # Legacy / fallback path (single-token group or pre-1139 topic).
+        topic_clean = topic.replace('kw:', '').replace('_', ' ').title()
         return f"{topic_clean} {type_desc}"
 
     # Maximum auto-topics created per 24h rolling window
