@@ -56,92 +56,96 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1138 LANDED — F1 paid-interest signal implementation
+## SESSION 1138-1140 LANDED — Decision-13 + clusterer + judge-stats arc
 
-**Final handoff:** [`docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md`](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md)
+The last three sessions form a coherent measurement-instrumentation arc on top of Session 1138's Decision-13 demand-gate. All three are merged to main:
 
-**TL;DR:** Decision 13 demand-gate built end-to-end. `FleetPaidInterest` table + fleet-HMAC POST endpoint on u-d-b, `paid_interest_status` PA tool for Jessica, signal-studio backend relay + frontend footer form. PRs merged: u-d-b #2162 (commit `9c8425f9`), signal-studio #15 (`1e6dbb4`).
+**Session 1138 (F1) — paid-interest demand-gate.** `FleetPaidInterest` table + fleet-HMAC POST + `paid_interest_status` PA tool. PRs: u-d-b#2162 (`9c8425f9`), signal-studio#15 (`1e6dbb4`). Final handoff: [`SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md`](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md).
 
----
+**Session 1139 — entity-token clusterer.** Replaced the verb-keyword fallback clusterer with an entity-token one, gated behind a `cluster_method` discriminator (`legacy` / `entity_token_v1`). Pre-fix baseline: signal-studio's LLM judge rejected **112/131 = 85.5%** of upstream clusters as incoherent. PR u-d-b#2165 (`aac43d31`), follow-up evidence-URL fix `370d49ae`. Final handoff: [`SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md`](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md).
 
-## SESSION 1139 LANDED — upstream clustering quality (entity-token clusterer)
-
-**Final handoff:** [`docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md`](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md)
-
-**TL;DR:** Replaced the verb-keyword fallback clusterer in u-d-b's `signal_aggregation_service` with an entity-token clusterer, gated behind a new `cluster_method` field so legacy rows decay naturally (no forced re-cluster). Pre-1139 baseline: signal-studio LLM judge rejected 112/131 = 85.5% of clusters as incoherent; latest 25 u-d-b clusters were 100% generic-verb-fallback names like "Now opportunity window" lumping Trump phone + Hubble + Ebola + NFL.
-
-**Empirical baseline locked** (for the Session 1140 acceptance test):
-- u-d-b: 307 SignalCluster rows, all backfilled `cluster_method='legacy'` by migration 0351.
-- signal-studio: 131 mirror rows, 112 rejected (85.5%), 19 summarized (14.5%).
-- Rigby's design Q1–Q5 ratified mid-session and saved into the handoff.
-
-**Where it lives:** u-d-b branch `feat/session-1139-upstream-clustering-quality` — PR pending (this entry post-merge).
-
-**Honest scope note:** Local live verification of the full pipeline was BLOCKED by the persistent local-env `$libdir/vector` pgvector path mismatch (same blocker that's parked `test_fleet_signals_phase1.py` integration paths since Session 1131). 24 pure-function unit tests cover algorithmic behavior; live rejection-rate measurement is Session 1140's first task once the change runs against production (which has working pgvector).
+**Session 1140 — mirror + judge-stats tool.** signal-studio mirror now persists `cluster_method` + new `/api/judge-stats` endpoint returns the LLM judge accept/reject breakdown by `cluster_method` and `pattern_type`. New u-d-b PA tool `signal_studio_judge_stats` GETs it (auth-less, `SIGNAL_STUDIO_API_URL` env). PRs: signal-studio#17 (`19dfe102`), u-d-b#2169 (`4086019d`). Also Rigby-design-reviewed mid-session: she stripped stale acceptance numbers from the LLM-facing schema (they belong in handoffs/start-here, not in the tool). Final handoff: [`SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md`](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md).
 
 ---
 
-## SESSION 1140 — CURRENT ENTRY POINT
+## SESSION 1141 — CURRENT ENTRY POINT
 
-### FIRST THING — Live rejection-rate measurement (Session 1139 acceptance test)
+### FIRST THING — Restart daphne + every celery worker for the new PA tool
 
-**Pre-req:** Session 1139 PR merged + 24-48h of celery-beat aggregation runs against production-like data so v1 clusters land in both u-d-b and signal-studio's mirror.
+The Session 1140 `signal_studio_judge_stats` handler is on disk but the running daphne/celery processes are still pinned to the pre-merge tool registry. Until you bounce them, Rigby will return "no such tool" when you try it.
 
 ```bash
-# 1. u-d-b side — fraction of recent clusters tagged v1
-cd ~/development/unified-donkey-betz
-.venv/bin/python manage.py shell -c "
-from core.models_signal_intelligence import SignalCluster
-from django.utils import timezone
-from datetime import timedelta
-from collections import Counter
-recent = SignalCluster.objects.filter(
-    detected_at__gte=timezone.now() - timedelta(hours=24)
-)
-print(f'last 24h total: {recent.count()}')
-print('by cluster_method:')
-for cm, n in Counter(recent.values_list('cluster_method', flat=True)).most_common():
-    print(f'  {cm}: {n}')
-"
+pkill -f "daphne -b 127.0.0.1 -p 8000"
+pkill -f "celery -A core"
+make start && make celery
+# Smoke check:
+tools/pa_local.sh "signal_studio_judge_stats with days=7"
+```
 
-# 2. signal-studio side — rejection rate per cluster_method
-#    (after the mirror schema includes cluster_method — see SECOND below)
+Expected: `{ok: true, days: 7, total: ..., rejection_rate: ..., by_cluster_method: {...}, by_pattern_type: {...}}`. If `ok: false / signal-studio unreachable`, signal-studio's docker stack isn't running — `make up` from `~/development/infra`.
+
+### SECOND — Live rejection-rate measurement (Session 1139/1140 acceptance test)
+
+This is the load-bearing question for the Session 1139 entity-token rewrite. Until the answer arrives, the rewrite's quality bar is hypothetical.
+
+**Two preconditions:**
+1. **≥24h since the Session 1139 PR landed** (2026-05-24 18:03 UTC), so celery-beat has produced enough v1-tagged rows for a real sample. As of 2026-05-25 18:03 UTC this is satisfied.
+2. **Stack with working pgvector.** Local `$libdir/vector` blocker still in effect — measure against the docker stack (`~/development/infra/make up`) or production.
+
+**Once both hold, ask Rigby:**
+
+```text
+signal_studio_judge_stats with days=7
+```
+
+Then read `by_cluster_method.entity_token_v1.rejection_rate`.
+
+**Acceptance bar (Rigby-locked, do not edit without re-anchoring):**
+- **< 30%** → victory. Queue legacy bulk-archive (see THIRD).
+- **30–60%** → partial. Decide whether Option B (embedding-based clustering) is worth the spend.
+- **≥ 60%** → close to the 85.5% baseline. Escalate to Option B.
+
+Fallback if Rigby/PA loop isn't available:
+
+```bash
+# Direct curl against signal-studio docker:
+curl -s "http://localhost:8007/api/judge-stats?days=7" | jq .by_cluster_method
+
+# Or docker exec into Postgres:
 cd ~/development/signal-studio
 docker compose exec -T signal_studio_postgres psql -U signalstudio -d signalstudio -c \
   "SELECT cluster_method, summary_quality, COUNT(*) FROM signal_clusters
    GROUP BY 1, 2 ORDER BY 1, 2;"
 ```
 
-**Acceptance bar (Rigby-locked Session 1139):**
-- v1 rejection rate **< 30%** → declare victory; ship the PA tool; queue legacy bulk-archive for 1141.
-- v1 rejection rate **30–60%** → partial win; decide whether Option B (embedding clustering) is worth spend.
-- v1 rejection rate **≥ 60%** → close to baseline failure; escalate to Option B.
+### THIRD — Conditional on SECOND landing < 30%: legacy bulk-archive
 
-### SECOND — signal-studio mirror schema accepts `cluster_method`
+Only after 7–14 days of v1 running cleanly AND the SECOND measurement says victory:
 
-Session 1139 made u-d-b's `cluster_envelope` emit `cluster_method`. signal-studio's `signal_ingest.py` currently accept-and-ignore (forward compat). To do the per-method breakdown query above, the mirror needs to store it:
+```python
+# Bulk-archive eligible legacy rows. Conservative predicate: don't tie
+# to judge-reject mapping on day 1 — let signal age + status carry the
+# decision.
+SignalCluster.objects.filter(
+    cluster_method='legacy',
+).filter(
+    Q(status__ne='active') |
+    Q(created_at__lt=<cutoff>) |
+    Q(strength__lt=<threshold>),
+).update(status='archived')
+```
 
-1. Add `cluster_method` column to signal-studio's `signal_clusters` table (Alembic migration).
-2. Update `signal_ingest.upsert_cluster` (or equivalent) to persist the envelope's `cluster_method` field. Default `'legacy'` for rows ingested before this lands.
-3. Small PR in signal-studio.
+Spec the cutoff + threshold with Rigby first. Don't blanket-delete the 307 legacy rows — they're useful as a comparison baseline for the next quality regression.
 
-### THIRD — Rigby's `signal_studio_judge_stats` PA tool (Q3 from Session 1139)
-
-~50 LOC across 2 repos. Surfaces the rejection rate Rigby can query directly without docker exec.
-
-- signal-studio: add `/api/judge-stats?days=N` endpoint returning `{total, rejected, accepted, rejection_rate, by_pattern_type: {...}, by_cluster_method: {...}}`.
-- u-d-b: register `signal_studio_judge_stats` PA tool in `pa_tool_schemas.py` + handler in `td_handlers_core.py` + `tool_dispatcher.register(...)`. Tool calls signal-studio over the fleet-net hostname.
-- Daphne + celery restart per the canonical PA notes above.
-
-### Chris's tech queue (carried over from Session 1138)
+### Chris's tech queue (carried over from Session 1138/1140)
 
 1. **Contract Concierge fleet routing fix** (Q1) — architecture: new agent / extend `legal_doc_drafter_agent` / remove default
 2. **Signal Studio engine-side enrichment integration** (Q3) — architecture: v2 question
 3. **ComplianceSentinel fleet routing** (Q4) — architecture: `security_agent` / null / skip u-d-b
 4. **Engine-mismatch resolutions** (cross-cutting C5)
 5. **Phase 0 cost-attribution SCHEMA** — UNBLOCKED by Jessica's Decision 9. Chris designs `LLMCallLog.workspace` FK + daily cap + soft-degrade-to-gpt-5-mini + portfolio kill switch.
-6. **SellerPilot Render API Blueprint deployment** — ops
-7. **ComplianceSentinel Render API Blueprint deployment** — ops
+6. **SellerPilot Render API Blueprint deployment** — ops (deferred per local-only mode)
+7. **ComplianceSentinel Render API Blueprint deployment** — ops (deferred per local-only mode)
 8. **Rigby products.ts update** — fires when Decision 1 trigger met
 9. **Atlas deviation ratification** (cross-cutting C7)
 10. **F5 audit** — verify the 4 PitchDeckForge styles meaningfully differ in code (~15 min)
@@ -165,7 +169,7 @@ Session 1139 made u-d-b's `cluster_envelope` emit `cluster_method`. signal-studi
 2. `make all` (or `make start && make celery` from u-d-b)
 3. `make status` — confirm 7 fleet apps + u-d-b all healthy
 4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
-5. Read `docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md` for the clusterer rewrite details and the acceptance protocol.
+5. Read [`docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md`](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md) for the most recent merge state.
 
 ---
 
@@ -173,8 +177,12 @@ Session 1139 made u-d-b's `cluster_envelope` emit `cluster_method`. signal-studi
 
 These are locked in code/tests but worth remembering when touching adjacent areas:
 
+- **Session 1140 — `cluster_method` mirror on signal-studio side.** `signal_clusters.cluster_method VARCHAR(32) DEFAULT 'legacy'`, indexed. `_ensure_schema` ALTERs + backfills existing rows on first boot. `upsert_cluster_from_envelope` reads `envelope.get('cluster_method') or 'legacy'`.
+- **Session 1140 — `/api/judge-stats?days=N` on signal-studio (auth-less).** Returns `{total, summarized, rejected, raw, rejection_rate, by_cluster_method, by_pattern_type}`. `rejection_rate` denominator excludes `summary_quality='raw'` so a backlog spike doesn't mask quality.
+- **Session 1140 — `signal_studio_judge_stats` PA tool.** Calls signal-studio over `${SIGNAL_STUDIO_API_URL:-http://localhost:8007}`. Days clamped 1..90 client-side. Returns `{ok, status_code?, error?, ...endpoint_json}`. Rigby's design-review rule: tool descriptions stay evergreen — SLO numbers/baselines belong in handoffs, not in the LLM-facing schema (they go stale and bias the model).
 - **Session 1139 — `cluster_method` discriminator on SignalCluster.** New rows default `entity_token_v1`; backfilled 307 legacy rows. Downstream consumers should filter on `cluster_method='entity_token_v1'` when applying any new quality bar.
 - **Session 1139 — entity-token clusterer in `signal_aggregation_service`.** Requires ≥2 shared specific tokens (frequency ≥2 in window) to form a cluster. Better to miss a cluster than create a junk one. Per-pattern min size: `opportunity_window=4`, default 3.
+- **Session 1139 — kill-switch.** `SIGNAL_CLUSTERER_METHOD=legacy` flips the active clusterer at worker boot. Flag both `celery-long-running` AND `celery-long-running-2` together — half-and-half leaves confusing telemetry. Typos fall through to v1 (not legacy) by design.
 - **Local `$libdir/vector` pgvector path mismatch** blocks any Django query touching SpiderData / other VectorField tables. Known local-env issue (same blocker since Session 1131). Workaround: defer live verification to Docker / production stack.
 - **Fleet HMAC sign-key = SHA256(secret), not raw secret.** Saved to memory. Any new fleet client must follow this contract.
 - **`init_db()` does not migrate existing tables** (signal-studio side). Schema additions need `_ensure_schema()` calls in BOTH startup paths.
@@ -190,6 +198,7 @@ These are locked in code/tests but worth remembering when touching adjacent area
 - **Audience interviews need "worst Monday morning" prompt** — Q1-Q6 elicit features but miss format-fit. (Session 1136 lesson.)
 - **My on-the-fly rebrand suggestions can be sloppy** — Decision 12 in Session 1137 promised features that don't exist. Audit existing copy BEFORE proposing rebrand. (Session 1137 lesson, F2 execution.)
 - **Vague triggers don't fire** — Decision 13's "concrete paying-interest signal" was vague until F1 spec made it specific. Numeric trigger thresholds need explicit lock. (Session 1137 lesson, F1 execution.)
+- **Non-local CI doesn't block local-only merges** — Vercel preview deploys, Render builds, Railway preview deploys etc. are advisory only when the work doesn't touch them. If diff is backend-only / local-scope and a deploy-side check fails, note it once and proceed. Reinforced 2026-05-24 (Session 1140) on signal-studio#17 Vercel-failure-but-backend-only merge.
 
 ---
 
@@ -233,10 +242,11 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ### Other carryovers
 
-- **Legacy SignalCluster bulk-archive** (Session 1139 follow-up) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
+- **Legacy SignalCluster bulk-archive** (Session 1139 follow-up, now Session 1141 THIRD if SECOND lands < 30%) — after 7-14 days of v1 running cleanly, bulk-archive rows with `cluster_method='legacy' AND (status != 'active' OR created_at < cutoff OR strength < threshold)`. Avoid tying to judge-reject mapping on day 1.
+- **signal-studio mirror dep gap** (Session 1140 discovery) — `stripe` + `httpx` were missing from `backend/.venv` until ad-hoc `pip install`. Not committed. Future smoke-test sessions should re-pip from `requirements.txt` rather than assume venv is current.
+- **Vercel preview deploy on signal-studio** — failed during Session 1140 signal-studio#17 merge. Backend-only diff couldn't have caused it; pre-existing flake or quota issue. Worth a separate look if frontend redeploys are needed.
 - **Ops view fork decision** (Session 1136 PARKED) — Chris picks: kill / radical-simplify / different medium / redirect with new interview
 - **Capability spec Phase 0 scaffolding** — gated on per-app intent (Session 1135 done, Session 1137 ratified Jessica side)
-- **~~Evidence URL field~~ — CLOSED Session 1139 follow-up** (`fix/session-1139-evidence-url-plumbing`). u-d-b now extracts URL from `SpiderData.raw_data` (top-level `url`/`link`/`permalink`/`href` → first `items[i]` → `processed_data` fallback) and ships it through `sample_signals[i].url` → `evidence[i].url`. signal-studio's `signal_ingest.py:275` already read the field; new EvidenceCards get real hrefs. 630/642 broken pre-fix → only legacy 307 stay URL-less (decaying per plan).
 - **Semantic `category`** — `pattern_type` is the honest placeholder.
 - **`docs/SERVICES.md` drift** — header says 320 service files; reality after 1132 is 336.
 - **ai-content-studio#2** — Docker foundation PR. Back burner.
@@ -248,7 +258,7 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ---
 
-## SESSION 1131-1139 HANDOFFS
+## SESSION 1131-1140 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
@@ -260,7 +270,8 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 - [Session 1137 Jessica Phases 1-4 ratification](docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md)
 - [Session 1138 F1 paid-interest implementation](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md)
 - [Session 1139 upstream clustering quality](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md)
+- [Session 1140 cluster_method mirror + judge-stats](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md)
 
 ---
 
-*Last overwrite: Session 1139 close → Session 1140 entry. Headline 1140 work: live rejection-rate measurement (Session 1139 acceptance test), signal-studio mirror schema for `cluster_method`, Rigby's `signal_studio_judge_stats` PA tool. Pre-merge baseline: signal-studio judge rejecting 112/131 = 85.5%; target post-merge with v1 clusters is <30%. Acceptance bar Rigby-locked.*
+*Last overwrite: Session 1140 close → Session 1141 entry. Headline 1141 work: restart daphne+celery to pick up `signal_studio_judge_stats` registration, then run the live rejection-rate measurement against the post-merge stack to close out the Session 1139 acceptance test. Pre-merge baseline: 112/131 = 85.5% legacy rejection; target for v1: <30%. Acceptance bar Rigby-locked.*
