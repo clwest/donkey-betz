@@ -691,6 +691,155 @@ class FleetPAChatAuditRow(UnifiedBaseModel):
         )
 
 
+class FleetPaidInterest(UnifiedBaseModel):
+    """Free-tier paid-interest signal from a fleet app's users (Session 1138).
+
+    Implements the table side of
+    `docs/specs/SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md` (renamed from
+    spec-literal `signal_studio_paid_interest` to the generic
+    `FleetPaidInterest` so Phase 5 / Decision-13-style demand-gates on
+    SellerPilot, ComplianceSentinel etc reuse the same table — keyed by
+    `app_slug`).
+
+    Submission flow:
+
+        anon user -> fleet app frontend
+                  -> fleet app backend (rate-limit per IP, dedup check)
+                  -> u-d-b POST /api/fleet/paid-interest/ (HMAC signed)
+                  -> row persisted here
+
+    Trigger evaluation (Jessica via Rigby PA tool):
+        - Total rows for `app_slug` in the last rolling 90 days >= 5
+          (Decision 13 trigger condition 1)
+        - OR any row with `willing_pay >= 49` (condition 2)
+        - OR Jessica manual override (recorded out-of-band)
+
+    Anti-spam guardrails (enforced upstream in the fleet app's backend
+    AND duplicated here as a safety net via the dedup query in
+    `core.services.fleet_paid_interest`):
+        - Rate-limit 3/IP/hour at the fleet app backend.
+        - Email + use_case dedup within 7 days = no-op (return existing).
+    """
+
+    # The fleet app this signal was submitted for. Matches the
+    # FleetServiceIdentity.app_slug of the submitter (and is also
+    # enforced via the HMAC signature path).
+    app_slug = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text="The fleet app this paid-interest signal belongs to "
+                  "(matches FleetServiceIdentity.app_slug)",
+    )
+
+    # Stored lowercased — see `clean_email()` in the service module.
+    # Lowercasing in the model means the (app_slug, email) index can
+    # serve case-insensitive dedup directly.
+    email = models.CharField(
+        max_length=320,
+        help_text="Submitter's email, lowercased pre-save for dedup",
+    )
+
+    use_case = models.CharField(
+        max_length=140,
+        help_text="One-line description of intended use (≤140 chars per spec)",
+    )
+
+    willing_pay = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional monthly $ the user said they'd pay. NULL when "
+                  "the form field was left blank. Triggers Decision 13 "
+                  "condition 2 when >= the app's Pro tier price.",
+    )
+
+    WORKSPACE_SIZE_SOLO = "solo"
+    WORKSPACE_SIZE_2_5 = "2-5"
+    WORKSPACE_SIZE_6_20 = "6-20"
+    WORKSPACE_SIZE_20_PLUS = "20+"
+    WORKSPACE_SIZE_CHOICES = [
+        (WORKSPACE_SIZE_SOLO, "Solo"),
+        (WORKSPACE_SIZE_2_5, "2-5 people"),
+        (WORKSPACE_SIZE_6_20, "6-20 people"),
+        (WORKSPACE_SIZE_20_PLUS, "20+ people"),
+    ]
+    workspace_size = models.CharField(
+        max_length=8,
+        choices=WORKSPACE_SIZE_CHOICES,
+        blank=True,
+        default="",
+        help_text="Optional sizing signal: solo / 2-5 / 6-20 / 20+",
+    )
+
+    # Claimed user id from the calling fleet app. Not a FK because the
+    # u-d-b User model is not authoritative for fleet-app users — each
+    # fleet app owns its own user IDs.
+    user_id_claim = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        help_text="If the submitter was signed in on the fleet app side, "
+                  "their user id from that app's user model. Empty for "
+                  "anonymous submissions.",
+    )
+
+    notified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Set when a launch-notification email is sent. NULL "
+                  "until then. Operator-driven; no automated emails ship "
+                  "in the MLC scope.",
+    )
+
+    # Forensic columns — track which fleet identity submitted via which
+    # key. Same pattern as FleetArtifact.created_by_identity.
+    submitted_by_identity = models.ForeignKey(
+        FleetServiceIdentity,
+        on_delete=models.PROTECT,
+        related_name="paid_interest_submissions",
+        help_text="The fleet service identity that signed this submission",
+    )
+    submitted_by_key_id = models.CharField(
+        max_length=120,
+        help_text="The specific signing key used at submission time",
+    )
+    request_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="X-Request-Id from the signing headers; joins to "
+                  "FleetAuthAuditLog.",
+    )
+
+    class Meta:
+        db_table = "core_fleetpaidinterest"
+        ordering = ["-created_at"]
+        indexes = [
+            # Trigger-state query: count rows for app_slug in last 90d.
+            models.Index(
+                fields=["app_slug", "-created_at"],
+                name="fpi_app_recent_idx",
+            ),
+            # Dedup query: (app_slug, email) lookup within 7d.
+            models.Index(
+                fields=["app_slug", "email"],
+                name="fpi_app_email_idx",
+            ),
+            # High-value query: app_slug + willing_pay for condition 2.
+            models.Index(
+                fields=["app_slug", "willing_pay"],
+                name="fpi_app_pay_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"PaidInterest {self.app_slug} {self.email} "
+            f"pay={self.willing_pay or '∅'} @ {self.created_at:%Y-%m-%d}"
+        )
+
+
 __all__ = [
     "FleetServiceIdentity",
     "FleetServiceKey",
@@ -699,6 +848,7 @@ __all__ = [
     "FleetArtifact",
     "FleetEvent",
     "FleetPAChatAuditRow",
+    "FleetPaidInterest",
     "generate_service_secret",
     "hash_service_secret",
     "compute_payload_sha256",

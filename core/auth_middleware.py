@@ -516,6 +516,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 1131 Phase 1 — fleet signal-cluster replay
         # (signal-studio only; app_slug allowlist enforced in the view).
         '/api/fleet/signals/',
+        # Session 1138 — fleet paid-interest submission (Decision 13
+        # demand-gate). Same fleet HMAC auth as artifacts/events.
+        '/api/fleet/paid-interest/',
     ]
     
     # Paths that require staff privileges
