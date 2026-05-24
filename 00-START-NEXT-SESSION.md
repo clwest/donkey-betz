@@ -71,15 +71,55 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1138 — CURRENT ENTRY POINT
+## SESSION 1138 LANDED — F1 paid-interest signal implementation
 
-### FIRST THING — Chris ratification pass
+**Final handoff:** [`docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md`](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md)
+
+**TL;DR:** Decision 13 demand-gate built end-to-end. `FleetPaidInterest`
+table + fleet-HMAC POST endpoint on u-d-b, `paid_interest_status` PA
+tool for Jessica, signal-studio backend relay (per-IP rate-limit) +
+frontend footer form. Live smoke verified — willing_pay=49 row flips
+trigger_state to `ready` correctly.
+
+**Renames Chris ratified mid-session:** generic `FleetPaidInterest`
+keyed by `app_slug` (not signal-studio-specific) + `/api/fleet/paid-interest/`
+URL (no app slug in path — derived from HMAC). Lets SellerPilot /
+ComplianceSentinel reuse the same table when their Decision-13-style
+gates come up.
+
+**Honest scope ratification:** Chris pushed back early — signal-studio
+has no traffic, so the form will capture no organic signal yet. The
+**manual override clause** is the actual working trigger today;
+outreach to 5 ICP conversations > waiting on a form. Build was kept
+because mechanism is small and ready-for-when-traffic-exists.
+
+**Where it lives:** u-d-b branch `feat/session-1138-paid-interest`
+(PR pending), signal-studio branch `feat/paid-interest-form` (PR pending).
+
+---
+
+## SESSION 1139 — CURRENT ENTRY POINT
+
+### Status check before any new work
+
+F1 paid-interest is **fully live including Rigby integration** as of
+Session 1138 close. Celery restarted same-session; `pa_local.sh
+"paid_interest_status"` returned a 13ms tool run with the expected
+JSON envelope. Jessica can ask Rigby "what's the paid-interest signal
+status?" today.
+
+Remaining 1138 follow-up: frontend visual smoke (TS build is clean;
+browser unverified). Low priority — 5 minutes when Chris is at the
+machine: `cd ~/development/signal-studio && docker compose restart
+web`, then visit the frontend URL.
+
+### SECOND THING — Chris ratification pass on Session 1137's 22 decisions
 
 Chris reads the 22 Jessica-locked decisions in `SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md` and redlines anything he disagrees with. Especially:
 
 - **Decision 9 cost-attribution rules** (most implementation-heavy; Chris's schema lane)
 - **Decision 10 Stripe SKU wiring sequence** (Signal Studio → SellerPilot → ComplianceSentinel) — Chris confirms ordering is feasible given his bandwidth
-- **Decision 13 + F1 spec** (Signal Studio paid-interest signal) — Chris reviews `docs/specs/SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md` and either commits to the ~1.5 days implementation or pushes back on scope
+- **Decision 13 + F1 spec** — F1 IMPLEMENTED Session 1138. Spec file updated to `status: implemented` (DONE). Manual override is the working trigger until signal-studio has traffic.
 
 **No expected redline** on per-product pricing (5-8), GTM channels (15a-c), capital allocation (11, 13, 14), or feature scope cuts (12, 18, 19, 20-22) — those are business-side calls.
 
@@ -94,7 +134,7 @@ Chris reads the 22 Jessica-locked decisions in `SESSION_1137_JESSICA_PHASES_1_4_
 7. **ComplianceSentinel Render API Blueprint deployment** — ops
 8. **Rigby products.ts update** — fires when Decision 1 trigger met (currently deferred)
 9. **Atlas deviation ratification** (cross-cutting C7) — could be both
-10. **F1 Signal Studio paid-interest signal** — implement per spec (~1.5 days)
+10. ~~**F1 Signal Studio paid-interest signal**~~ — IMPLEMENTED Session 1138. See handoff. Next: celery PA worker restart to expose tool to Rigby.
 11. **F5 audit** — verify the 4 PitchDeckForge styles meaningfully differ in code (~15 min)
 12. **F7 Stripe verification collaboration** — Jessica drives, Chris's Stripe access
 
@@ -209,3 +249,5 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 ---
 
 *Last overwrite: Session 1137 close + Jessica 22 decisions + 4 deliverables → Session 1138 entry (Chris ratification pass on Jessica decisions; tech queue unblocked for parallel execution; Phase 5 audit queue carried forward), 2026-05-24.*
+
+*Session 1138 close (2026-05-24, same day): F1 paid-interest signal implemented end-to-end. u-d-b + signal-studio + frontend all touched; live HTTP smoke verified. Next session FIRST THING shifted to celery PA worker restart to expose `paid_interest_status` to Rigby.*

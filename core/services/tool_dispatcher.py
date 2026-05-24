@@ -387,6 +387,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # fleet_health_rollup mgmt command uses.
         self.register("fleet_health", self._handle_fleet_health)
 
+        # Session 1138: Decision 13 paid-interest demand-gate state.
+        # Read-only — counts rows in core_fleetpaidinterest for an app
+        # and returns trigger_state per Decision 13 conditions.
+        self.register("paid_interest_status", self._handle_paid_interest_status)
+
         # Workflow tools
         self.register("workflow_orchestration_agent", self._handle_agent_tool)
         self.register("create_brand_video", self._handle_agent_tool)

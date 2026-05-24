@@ -1,13 +1,24 @@
 ---
 title: "Signal Studio — paid-interest signal affordance (spec)"
-status: draft
+status: implemented
 created: 2026-05-24
-session: 1137
+implemented: 2026-05-24
+session_created: 1137
+session_implemented: 1138
 audience: Chris (implementation) + Jessica (sign-off)
 related:
   - SESSION_1137 Decision 13 (legal review demand-gate)
   - SESSION_1137 Decision 10 (Stripe SKU sequencing, Signal Studio first)
+  - SESSION_1138 F1 implementation handoff
+  - docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md
   - docs/apps/signal_studio_BRIEF.md
+implementation_renames:
+  - "Table: signal_studio_paid_interest → fleet_paid_interest (generic, app_slug-keyed)"
+  - "URL: /api/signal-studio/paid-interest → /api/fleet/paid-interest/"
+honest_scope_note: |
+  Signal Studio is pre-launch with no traffic as of 2026-05-24. The form
+  is wired up but will capture no organic signal until traffic exists.
+  The Jessica manual-override path is the working trigger today.
 ---
 
 # Signal Studio — paid-interest signal affordance

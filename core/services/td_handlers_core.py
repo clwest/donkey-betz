@@ -186,6 +186,27 @@ class CoreHandlersMixin:
             result["apps"] = [a for a in result["apps"] if not a["ok"]]
         return result
 
+    def _handle_paid_interest_status(self, tool_name, payload, user_id, trace_id) -> Dict:
+        """Session 1138 — paid_interest_status PA tool.
+
+        Returns the Decision 13 demand-gate state for a fleet app's
+        paid-interest signal. Delegates to
+        `core.services.fleet_paid_interest.evaluate_trigger_state` so the
+        tool and any admin surface never drift.
+
+        Payload (all optional):
+          app_slug (str)         — defaults to 'signal-studio'
+          manual_override (bool) — defaults False
+        """
+        from core.services.fleet_paid_interest import evaluate_trigger_state
+
+        payload = payload or {}
+        app_slug = (payload.get("app_slug") or "signal-studio").strip()
+        manual_override = bool(payload.get("manual_override", False))
+
+        state = evaluate_trigger_state(app_slug, manual_override=manual_override)
+        return state.to_dict()
+
     def _handle_dream(self, tool_name, payload, user_id, trace_id) -> Dict:
         """Handle dream browsing and approval actions."""
         from core.models_unified_system import AgentDream
