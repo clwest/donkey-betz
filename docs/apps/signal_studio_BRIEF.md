@@ -209,4 +209,18 @@ Per Atlas §C.5, J.2.8: Character OS / avatar / voice = parked until a paying cu
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass).
 **Rev. 2:** Rigby review pass applied — 12 mechanical fixes + Jessica's 4 in-session decisions ratified (standalone / curated / 4:30 AM MT priority / canonical proof path).
 **Rev. 3:** Discovery of `24-7-ai-global/src/lib/products.ts` as canonical source of truth revealed rev. 1-2 targeted the wrong audience (retail traders vs canonical investors/deal sourcers/competitive analysts) and pitched wrong product shape (AI-written morning briefing vs canonical MVP action engine without LLM dependency). §1 / §2 / §7 / §9 / §10 rewritten to align with products.ts LAB[3]. Engine-side u-d-b work (Session 1131-1132) preserved as separate engineering stream.
-**Next step:** Rigby review for honest framing on rev. 3. Then Chris ratifies the 7 remaining decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Signal Studio.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Pricing tiers + price points | ✅ **Decision 6** — Free + $49 Pro + $99 Team | handoff Decision 6 |
+| Q2 Stripe SKU wiring | ✅ **Decision 10** — 1st in sequence (Signal Studio → SellerPilot → ComplianceSentinel) | handoff Decision 10 |
+| Q3 Engine-side enrichment integration | 🔧 Chris queue — architecture decision; v2 question | handoff Chris queue #2 |
+| Q4 Phase 0 cost-attribution shared with Rigby + Contract Concierge | ✅ **Decision 9** — portfolio rule covers Signal Studio | handoff Decision 9 |
+| Q5 TOS + privacy + investment-disclaimer legal review | ✅ **Decision 13** + F1 spec — demand-gated $2K cap; trigger: ≥5 users / 90d OR ≥1 user willing-pay ≥$49/mo OR Jessica override; affordance spec at `docs/specs/SIGNAL_STUDIO_PAID_INTEREST_SIGNAL_SPEC.md` | handoff Decision 13 + F1 |
+| Q6 GTM channel | ✅ **Decision 15a** — (c) Direct outreach + Operator Edge cross-promo | handoff Decision 15a |
+| Q7 Suite vs Lab positioning long-term | ✅ **Decision 4** — graduates to Suite at ≥$1K MRR sustained ≥2 months | handoff Decision 4 |
+
+6 of 7 §9 items ratified; Q3 stays Chris queue (architecture). Brief now reads as the ratified Phase 1 source-of-truth for Signal Studio.

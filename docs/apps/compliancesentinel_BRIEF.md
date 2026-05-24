@@ -157,4 +157,20 @@ Per Atlas §C.5: Character OS / avatar / voice = parked until paying customer de
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass, products.ts-anchored).
 **Source of truth:** `24-7-ai-global/src/lib/products.ts` LAB[4].
-**Next step:** Rigby review for honest framing. Then Chris ratifies the 9 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth for ComplianceSentinel.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Render API Blueprint deployment | 🔧 Chris queue — ops decision | handoff Chris queue #7 |
+| Q2 Pricing lock | ✅ **Decision 8** — Free + $79 Pro + $249 Team (deliberately above portfolio norm for compliance market) | handoff Decision 8 |
+| Q3 Stripe SKU wiring | ✅ **Decision 10** — 3rd in sequence (Signal Studio → SellerPilot → ComplianceSentinel) | handoff Decision 10 |
+| Q4 Fleet routing decision | 🔧 Chris queue — architecture decision (security_agent / null / skip u-d-b) | handoff Chris queue #3 |
+| Q5 Phase 0 cost-attribution | ✅ **Decision 9** — portfolio rule covers ComplianceSentinel | handoff Decision 9 |
+| Q6 Multi-tenant org isolation verification | ⏸ Phase 5 #26 — Chris-led security audit | handoff Phase 5 queue |
+| Q7 Legal review | ✅ **Decision 14** — (b) Pre-approve $3K cap; deploy on Stripe-ready (compliance market makes demand-gate impractical) | handoff Decision 14 |
+| Q8 GTM channel pick | ✅ **Decision 15c** — (e) Sequenced: Content + Communities first (compliance buyers buy on authority) | handoff Decision 15c |
+| Q9 Suite vs Lab positioning long-term | ✅ **Decision 4** — graduates to Suite at ≥$1K MRR sustained ≥2 months | handoff Decision 4 |
+
+7 of 9 §9 items ratified or queued; Q1 + Q4 stay Chris queue. Brief now reads as the ratified Phase 1 source-of-truth for ComplianceSentinel.

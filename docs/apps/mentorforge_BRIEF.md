@@ -139,4 +139,16 @@ Per Atlas §C.5: Character OS / avatar / voice = parked until paying customer de
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass, products.ts-anchored).
 **Source of truth:** `24-7-ai-global/src/lib/products.ts` PRODUCTS[0] + `docs/spokesperson/10_mentorforge.md`.
-**Next step:** Rigby review for honest framing. Then Chris ratifies the 5 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth for Mentor Forge.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Stripe SKU + webhook verification | ⏸ Phase 5 F7 — audit on Stripe (Jessica + Chris's access) | handoff Phase 5 queue |
+| Q2 Phase 0 cost-attribution shared across portfolio | ✅ **Decision 9** — portfolio rule covers MentorForge | handoff Decision 9 |
+| Q3 Cross-Suite handoff verification | ⏸ Phase 5 #23 — Jessica drives E2E matrix | handoff Phase 5 queue |
+| Q4 Mentor persona inventory — locked + published | ✅ **Decision 18** + F3 — (a) Stay functional types (code reviewer, system designer, etc.); no individual or famous-style names; F3 fixed BUILD_PLAN.md 12-vs-8 drift | handoff Decision 18 + F3 |
+| Q5 Operator Edge cross-promo | ✅ **Decision 16** — (b+d) Inline-only now; rotated paid placements when Operator Edge ≥2K subscribers | handoff Decision 16 |
+
+5 of 5 §9 items ratified or queued. Brief now reads as the ratified Phase 1 source-of-truth for Mentor Forge.
