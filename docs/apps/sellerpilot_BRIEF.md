@@ -155,4 +155,18 @@ Per Atlas §C.5: Character OS / avatar / voice = parked until paying customer de
 
 **Brief authored:** Session 1135 (Claude + Jessica discovery pass, products.ts-anchored).
 **Source of truth:** `24-7-ai-global/src/lib/products.ts` LAB[2].
-**Next step:** Rigby review for honest framing. Then Chris ratifies the 7 open decisions in §9. Then brief becomes locked Phase 1 source-of-truth for SellerPilot.
+**Next step:** Jessica ratified §9 decisions in Session 1137 (2026-05-24) — see `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`.
+
+## Session 1137 ratification status
+
+| §9 Q | Status | Source |
+|---|---|---|
+| Q1 Render API Blueprint deployment | 🔧 Chris queue — ops decision | handoff Chris queue #6 |
+| Q2 Pricing lock | ✅ **Decision 7** — Free + $39 Pro + $99 Team | handoff Decision 7 |
+| Q3 Stripe SKU wiring | ✅ **Decision 10** — 2nd in sequence (Signal Studio → SellerPilot → ComplianceSentinel) | handoff Decision 10 |
+| Q4 Phase 0 cost-attribution | ✅ **Decision 9** — portfolio rule covers SellerPilot | handoff Decision 9 |
+| Q5 GTM channel pick | ✅ **Decision 15b** — (d) Sequenced: Reddit r/AmazonFBA first → direct outreach when ≥10 customers → Shopify Partner | handoff Decision 15b |
+| Q6 Marketplace policy review | ⏸ Phase 5 #25 — Claude research + Jessica review | handoff Phase 5 queue |
+| Q7 Suite vs Lab positioning long-term | ✅ **Decision 4** — graduates to Suite at ≥$1K MRR sustained ≥2 months | handoff Decision 4 |
+
+6 of 7 §9 items ratified or queued; Q1 stays Chris queue (ops). Brief now reads as the ratified Phase 1 source-of-truth for SellerPilot.
