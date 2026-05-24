@@ -126,6 +126,9 @@ class TestSignalStudioJudgeStatsTool:
             result = handler("signal_studio_judge_stats", {}, "u", "t")
         assert result["ok"] is False
         assert "HTTP 500" in result["error"]
+        # Per Rigby's review on PR #2169: surface status_code on HTTP
+        # failures so debugging doesn't require log diving.
+        assert result["status_code"] == 500
         assert result["days"] == 7
 
     def test_network_error_returns_error_envelope(self):
@@ -135,6 +138,9 @@ class TestSignalStudioJudgeStatsTool:
         assert result["ok"] is False
         assert "unreachable" in result["error"]
         assert "conn refused" in result["error"]
+        # No status_code on transport-layer failure — there was no
+        # response. The error string carries the diagnostic.
+        assert "status_code" not in result
 
     def test_non_json_200_returns_error_envelope(self):
         handler = _bind_handler()
@@ -143,6 +149,10 @@ class TestSignalStudioJudgeStatsTool:
             result = handler("signal_studio_judge_stats", {}, "u", "t")
         assert result["ok"] is False
         assert "not JSON" in result["error"]
+        # 200 + unparseable body: surface status_code so a caller can
+        # distinguish "endpoint live but returning HTML" from "endpoint
+        # down". Per Rigby's PR #2169 review.
+        assert result["status_code"] == 200
 
     def test_env_override_changes_base_url(self, monkeypatch):
         monkeypatch.setenv("SIGNAL_STUDIO_API_URL", "http://signal_studio_api:8007")

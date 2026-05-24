@@ -721,23 +721,22 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
-    # ── Signal-studio judge stats (Session 1140 — Session 1139 acceptance) ──
+    # ── Signal-studio judge stats (Session 1140) ────────────────────────────
+    # Intentionally evergreen description — no SLO numbers, baselines,
+    # or acceptance thresholds. Those belong in handoff docs / runbooks
+    # so they don't bias the model toward a stale target. See Rigby's
+    # design review on PR #2169 for the rationale.
     {
         "type": "function",
         "name": "signal_studio_judge_stats",
         "description": (
-            "Return signal-studio's LLM auto-summarizer judge stats: how "
-            "many upstream clusters were accepted (summarized) vs rejected "
-            "as incoherent, broken down by cluster_method "
-            "(entity_token_v1=Session 1139 rewrite, legacy=verb-keyword "
-            "fallback) and pattern_type. The headline number is "
-            "by_cluster_method.entity_token_v1.rejection_rate — that is "
-            "the SLO for the Session 1139 entity-token clusterer (Rigby-"
-            "locked acceptance: <30% victory, 30-60% partial, ≥60% "
-            "escalate). Pre-1139 baseline was 112/131 = 85.5% rejection. "
-            "Use this to answer 'how is the new clusterer doing?' or 'is "
-            "the v1 rewrite working?'. Calls signal-studio's /api/judge-"
-            "stats endpoint (auth-less, fleet-net or host)."
+            "Return signal-studio's LLM auto-summarizer judge stats over "
+            "the last N days: counts of clusters accepted (summarized) "
+            "vs rejected as incoherent, with rejection_rate broken down "
+            "by cluster_method and pattern_type. Used to validate "
+            "clustering-quality changes and answer 'how is the current "
+            "clusterer performing?'. Calls signal-studio's auth-less "
+            "/api/judge-stats endpoint over the configured base URL."
         ),
         "parameters": {
             "type": "object",

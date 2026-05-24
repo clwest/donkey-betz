@@ -261,6 +261,7 @@ class CoreHandlersMixin:
             return {
                 "ok": False,
                 "error": f"signal-studio /api/judge-stats HTTP {resp.status_code}: {resp.text[:200]}",
+                "status_code": resp.status_code,
                 "days": days,
             }
         try:
@@ -269,6 +270,7 @@ class CoreHandlersMixin:
             return {
                 "ok": False,
                 "error": f"signal-studio response not JSON: {e}",
+                "status_code": resp.status_code,
                 "days": days,
             }
         return {"ok": True, **data}
