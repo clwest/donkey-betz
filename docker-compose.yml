@@ -42,7 +42,13 @@ services:
   
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    # Session 1140: swapped from plain postgres:15-alpine to the pgvector
+    # variant so the `vector` extension is available. Major version stays
+    # at 15 → on-disk data files in postgres_data volume are 100% compatible
+    # (no migration needed). Unblocks `aggregate_spider_signals` and any
+    # other Django query that touches SpiderData / VectorField columns —
+    # the `$libdir/vector` blocker parked since Session 1131.
+    image: pgvector/pgvector:pg15
     container_name: unified-postgres
     environment:
       POSTGRES_DB: ai_unified_platform
