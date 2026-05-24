@@ -58,12 +58,14 @@ def cluster_envelope(c: SignalCluster) -> dict | None:
     for s in sample_signals[:EVIDENCE_CAP_PER_CLUSTER]:
         if not isinstance(s, dict):
             continue
-        # sample_signals shape upstream is {'text': str, 'source': str}.
-        # No URL field on the model today; we leave url="" so consumers
-        # can render without a click-through until Phase 2 plumbs it.
+        # Session 1139 follow-up: sample_signals now carries {text,
+        # source, url} so we propagate the real URL through to
+        # signal-studio. Falls back to "" when upstream sample is
+        # missing the field (pre-fix rows in source_breakdown can
+        # still flow through this code path during the transition).
         evidence.append({
             "source": str(s.get("source", "") or ""),
-            "url": "",
+            "url": str(s.get("url", "") or ""),
             "headline": str(s.get("text", "") or "")[:EVIDENCE_HEADLINE_MAX],
         })
 

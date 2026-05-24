@@ -276,6 +276,44 @@ u-d-b (branch feat/session-1139-upstream-clustering-quality):
 - **DB-dependent integration parked**: pgvector local env block — verification deferred to post-merge stack run
 - **CI green** (PR #2165, merge `aac43d31`): Direct LLM SDK check, Repo Guardrails, GitGuardian — all SUCCESS
 
+## Follow-up: evidence URL plumbing (same-session bug fix)
+
+Chris flagged post-merge that "links on SignalStudio don't go to the
+correct articles." Empirical confirmation pulled from signal-studio's
+local postgres:
+
+| `source_url` state | count |
+|---|---|
+| EMPTY    | 630 (98.1%) |
+| POPULATED |  12 (1.9% — all original seed/demo rows: Gartner, Forbes, Buffer, …) |
+
+Root cause: `cluster_envelope` (`core/services/fleet_signals.py:66`)
+shipped `"url": ""` hardcoded since Phase 1, documented as the
+"evidence URL field" carryover. signal-studio's `signal_ingest.py:275`
+faithfully read `ev.get("url") or ""` and persisted empty
+`EvidenceCard.source_url`, which the frontend rendered as
+`<a href="">` (clicks reload the page).
+
+**Fix (PR pending, branch `fix/session-1139-evidence-url-plumbing`):**
+
+- u-d-b: new `_extract_url_from_spider_data` helper walks the
+  conventions a spider-source survey confirmed dominate `raw_data`:
+  top-level `url` / `link` / `permalink` / `href`, then first
+  `items[i].url` for RSS-style feed snapshots, then `processed_data`
+  fallback. Returns `""` only when nothing usable is present.
+- u-d-b: `_extract_signals` includes the URL on every signal dict;
+  `_create_signal_clusters` carries it through to
+  `sample_signals[i].url`; `cluster_envelope` emits it on
+  `evidence[i].url` instead of the hardcoded empty string.
+- signal-studio: **no code change required** —
+  `signal_ingest.upsert_cluster_from_envelope` was already reading
+  `ev.get("url") or ""`. Just starts working as soon as upstream
+  populates.
+- Tests: 16 new (14 URL extractor + 2 sample-plumbing) + 2 updated
+  envelope tests. 75/75 across the broader suite green.
+- Existing 307 SignalCluster rows stay URL-less — they're legacy and
+  decaying per the cluster-method plan anyway.
+
 ## Carryover into Session 1140
 
 **FIRST THING** — Live rejection-rate measurement (protocol above).
