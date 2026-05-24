@@ -679,6 +679,48 @@ PA_TOOL_SCHEMAS = [
             "required": [],
         },
     },
+
+    # ── Paid-interest trigger state (Session 1138 — Decision 13) ─────────────
+    {
+        "type": "function",
+        "name": "paid_interest_status",
+        "description": (
+            "Return the Decision 13 demand-gate trigger state for a fleet "
+            "app's paid-interest signal. Use this to answer 'is signal-studio "
+            "ready for paid launch / legal review yet?' or 'how many paid-"
+            "interest signups do we have?'. Returns total_signals, "
+            "last_90d_signals, has_high_value_signal, count_threshold, "
+            "high_value_threshold_usd, trigger_state "
+            "(not_yet|ready|manually_overridden), and last_signal_at. The "
+            "trigger flips to 'ready' when (last_90d_signals >= "
+            "count_threshold) OR has_high_value_signal is true."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "app_slug": {
+                    "type": "string",
+                    "description": (
+                        "Fleet app to evaluate. Defaults to 'signal-studio' "
+                        "(the first app on the demand-gate per Decision 13). "
+                        "Other registered apps: see APP_TRIGGER_CONFIG in "
+                        "core.services.fleet_paid_interest."
+                    ),
+                },
+                "manual_override": {
+                    "type": "boolean",
+                    "description": (
+                        "When true, the response reports "
+                        "trigger_state='manually_overridden' regardless of "
+                        "signal counts. Use when Jessica is asking 'what "
+                        "would the override look like'. Default false."
+                    ),
+                },
+            },
+            "required": [],
+        },
+    },
+
     {
         "type": "function",
         "name": "active_repo_tool",
@@ -4305,6 +4347,7 @@ TOOL_ENRICHMENT_MAP = {
     'task_breakdown_tool': [],
     'platform_awareness_tool': [],
     'platform_config_tool': [],
+    'paid_interest_status': [],
     'db_health_tool': [],
     'studio_tool': ['intelligence_enricher'],
     'persona_tool': ['domain_context', 'spider_trends'],
@@ -4408,6 +4451,7 @@ TOOL_TO_INTENT_MAP = {
     'task_breakdown_tool': 'task_breakdown',
     'platform_awareness_tool': 'platform_awareness',
     'platform_config_tool': 'system_health',
+    'paid_interest_status': 'system_health',
     'db_health_tool': 'system_health',
     'studio_tool': 'studio',
     'persona_tool': 'agent_execution',

@@ -96,6 +96,9 @@ from core.views_fleet_events import fleet_events_replay, fleet_events_stream
 # Session 1131 Phase 1 — Fleet signal-cluster replay (signal-studio only)
 from core.views_fleet_signals import fleet_signals_clusters_replay
 
+# Session 1138 — Decision 13: fleet paid-interest submission
+from core.views_fleet_paid_interest import fleet_paid_interest_submit
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -1776,6 +1779,14 @@ urlpatterns = [
         'api/fleet/signals/clusters',
         fleet_signals_clusters_replay,
         name='fleet-signals-clusters-replay',
+    ),
+    # Session 1138 — Fleet paid-interest submission (Decision 13 demand-gate).
+    # Generic across fleet apps; app_slug is taken from the verified HMAC
+    # signature, not the body.
+    path(
+        'api/fleet/paid-interest/',
+        fleet_paid_interest_submit,
+        name='fleet-paid-interest-submit',
     ),
     # P12: Agent Fleet Management
     path('api/cockpit/agents/', cockpit_agent_fleet, name='cockpit-agent-fleet'),

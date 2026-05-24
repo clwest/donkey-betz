@@ -284,6 +284,7 @@ from .fleet import (
     FleetAuthAuditLog,
     FleetArtifact,
     FleetEvent,
+    FleetPaidInterest,
 )
 
 # In-app messaging
