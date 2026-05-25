@@ -1,7 +1,8 @@
 ---
 title: "Fleet Move 1 + Move 2 — Service identity + Artifact push/pull (spec)"
-status: spec
-session: 1128
+status: implemented
+session_drafted: 1128
+session_implemented: 1129-1130
 date: 2026-05-22
 authors: ["rigby (PA, conversation pa-d19c1674b936)", "claude-code"]
 implements: ["Session 1129 Phase 2C", "Session 1130 Phase 2D"]
