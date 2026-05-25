@@ -1,3 +1,9 @@
+---
+originating_session: 999
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 999: Stock Intelligence Hub
 
 **Date:** February 12, 2026

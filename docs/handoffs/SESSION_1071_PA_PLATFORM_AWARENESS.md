@@ -1,3 +1,9 @@
+---
+originating_session: 1071
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1071 — PA Platform-Wide Awareness + Control
 
 **Date:** February 23, 2026

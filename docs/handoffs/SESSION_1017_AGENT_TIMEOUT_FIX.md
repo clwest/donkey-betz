@@ -1,3 +1,9 @@
+---
+originating_session: 1017
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1017 — Agent Execution Pipeline Audit: Timeouts + .metadata Fix
 
 **Date:** February 16, 2026

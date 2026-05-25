@@ -1,3 +1,9 @@
+---
+originating_session: 1000
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1000: Activate All Intelligence Desks
 
 **Date:** February 12, 2026

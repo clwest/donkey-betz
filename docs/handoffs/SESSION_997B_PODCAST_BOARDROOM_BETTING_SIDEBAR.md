@@ -1,3 +1,9 @@
+---
+originating_session: 997
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 997B: Podcast Cleanup + Boardroom Preview + Betting Sidebar + Initiative Owner Backfill
 
 **Date:** February 12, 2026

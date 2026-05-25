@@ -1,3 +1,9 @@
+---
+originating_session: 1068
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1068: Artifact Execution Fan-Out & Observability Fixes
 
 **Date:** 2026-02-23

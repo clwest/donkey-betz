@@ -1,3 +1,9 @@
+---
+originating_session: 1145
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1145 — Architecture sweep (2 PRs) + Provenance Plan B (1 PR)
 
 **Date:** 2026-05-25

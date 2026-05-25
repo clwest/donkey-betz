@@ -1,3 +1,9 @@
+---
+originating_session: 1091
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1091 — Ops Hardening + Workspace/Deliverable Flow
 
 **Date:** April 16, 2026

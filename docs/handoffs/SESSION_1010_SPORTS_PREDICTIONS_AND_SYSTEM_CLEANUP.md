@@ -1,3 +1,9 @@
+---
+originating_session: 1010
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1010: Sports Predictions, Sharp Action Fix & System Cleanup
 
 **Date:** February 15, 2026

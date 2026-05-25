@@ -1,3 +1,9 @@
+---
+originating_session: 1097
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1097 — Mythology Sweep + Agent Failure Fixes
 
 **Date:** April 17, 2026

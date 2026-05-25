@@ -1,3 +1,9 @@
+---
+originating_session: 1144
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1144 — /docs/ cleanup + provenance command + socket leak fix
 
 **Date:** 2026-05-25

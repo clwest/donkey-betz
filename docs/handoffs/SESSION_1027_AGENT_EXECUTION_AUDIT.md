@@ -1,3 +1,9 @@
+---
+originating_session: 1027
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1027: Agent Execution Audit & Waste Removal
 
 **Date:** February 17, 2026

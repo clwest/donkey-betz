@@ -1,3 +1,9 @@
+---
+originating_session: 997
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 997: Mythology Validation for PA Responses + PublishGate Scoring
 
 **Date:** February 12, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 1018
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1018 — End-to-End Audit + Conversation Junk Fix + Initiative Fast-Track Fix
 
 **Date:** February 16, 2026

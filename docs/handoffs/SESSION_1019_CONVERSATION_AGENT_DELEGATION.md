@@ -1,3 +1,9 @@
+---
+originating_session: 1019
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1019 - Conversation Agent Delegation
 
 **Date:** February 16, 2026
