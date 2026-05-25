@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-05-25T20:15:38+00:00",
+    "generated": "2026-05-25T21:42:00+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "640c46cacc91",
-    "doc_count": 2061,
-    "commit_count": 6618,
+    "git_head": "41521ff293f6",
+    "doc_count": 2062,
+    "commit_count": 6622,
     "confidence_breakdown": {
-      "HIGH": 1278,
+      "HIGH": 1279,
       "MEDIUM": 294,
       "LOW": 0,
       "UNKNOWN": 489
@@ -2247,9 +2247,10 @@
         1149,
         1150,
         1151,
-        1152
+        1152,
+        1153
       ],
-      "commit_count": 866,
+      "commit_count": 868,
       "prs": [
         10,
         11,
@@ -2504,7 +2505,8 @@
         2226,
         2229,
         2231,
-        2233
+        2233,
+        2235
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -6718,9 +6720,9 @@
       "originating_session": 1145,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "362b648e",
+      "first_commit_sha": "01e7673d",
       "first_commit_date": "2026-05-25",
-      "first_commit_subject": "feat(session-1152-provenance): P3.5 round 5 \u2014 backfill next 75 handoffs (HIGH only) (#2233)",
+      "first_commit_subject": "feat(session-1153-provenance): P3.5 round 6 \u2014 backfill next 75 handoffs (HIGH only) (#2235)",
       "sessions_touched": [
         1145,
         1147,
@@ -6728,16 +6730,18 @@
         1149,
         1150,
         1151,
-        1152
+        1152,
+        1153
       ],
-      "commit_count": 12,
+      "commit_count": 14,
       "prs": [
         2213,
         2219,
         2223,
         2229,
         2231,
-        2233
+        2233,
+        2235
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -14568,6 +14572,22 @@
         2234
       ]
     },
+    "docs/handoffs/SESSION_1153_P35_ROUND6.md": {
+      "originating_session": 1153,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "41521ff2",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1153): handoff \u2014 P3.5 round 6 (1 PR, bypass mode continues) (#2236)",
+      "sessions_touched": [
+        1153,
+        1154
+      ],
+      "commit_count": 2,
+      "prs": [
+        2236
+      ]
+    },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
       "originating_session": 197,
       "confidence": "HIGH",
@@ -18848,11 +18868,13 @@
         493,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_494_AGENT_CONVERSATIONS_FIX.md": {
@@ -18868,11 +18890,13 @@
         495,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_494_COMPLETE_AI_ASSISTANT_FIXES.md": {
@@ -18886,11 +18910,13 @@
         494,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_495_AI_ASSISTANT_FOCUS.md": {
@@ -18906,11 +18932,13 @@
         495,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_495_SMART_TRENDING_SERVICE.md": {
@@ -18924,11 +18952,13 @@
         495,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_496_AI_PODCAST_STUDIO_PLAN.md": {
@@ -18943,11 +18973,13 @@
         738,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_496_PODCAST_AUDIO_GENERATION.md": {
@@ -18961,11 +18993,13 @@
         496,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_498_AGENT_ROUTING_CONCISENESS.md": {
@@ -18980,11 +19014,13 @@
         499,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_499_FULL_AGENT_ROUTING.md": {
@@ -19002,11 +19038,13 @@
         513,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_500_LEARNING_OUTCOME_FIX.md": {
@@ -19021,11 +19059,13 @@
         501,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_501_SMOOTH_LOOP_VIDEO.md": {
@@ -19039,11 +19079,13 @@
         501,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_502_UI_CONSOLIDATION.md": {
@@ -19058,11 +19100,13 @@
         503,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_503_SPIDER_FIXES.md": {
@@ -19076,11 +19120,13 @@
         503,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_504_SPIDER_SIGNATURE_DETECTION.md": {
@@ -19094,11 +19140,13 @@
         504,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_505_SPIDER_ROUTING_FIXES.md": {
@@ -19112,11 +19160,13 @@
         505,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_506_NARRATIVE_DRIFT_FIX.md": {
@@ -19131,11 +19181,13 @@
         507,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_507_NARRATIVE_DISCORD_COMMANDS.md": {
@@ -19149,11 +19201,13 @@
         507,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_508_SPIDER_FIXES.md": {
@@ -19168,11 +19222,13 @@
         509,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md": {
@@ -19187,11 +19243,13 @@
         512,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_512_ML_TRAINING_DATA_GENERATION.md": {
@@ -19205,11 +19263,13 @@
         512,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_513_CAMPAIGN_ORCHESTRATOR.md": {
@@ -19224,11 +19284,13 @@
         514,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_514_CAMPAIGN_UI.md": {
@@ -19243,11 +19305,13 @@
         514,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_515_CODE_REVIEW_AUTO_CHAIN.md": {
@@ -19262,11 +19326,13 @@
         516,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_516_DEVELOPMENT_AGENTS_ROUTING.md": {
@@ -19281,11 +19347,13 @@
         516,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_517_CONTENT_WRITER_ROUTING.md": {
@@ -19299,11 +19367,13 @@
         517,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_518_AUTO_PROJECT_CREATION.md": {
@@ -19318,11 +19388,13 @@
         519,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md": {
@@ -19337,11 +19409,13 @@
         519,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_520_PROJECTS_TAB_AUDIT.md": {
@@ -19356,11 +19430,13 @@
         520,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_523_SYSTEM_AUDIT_HANDOFF.md": {
@@ -19375,11 +19451,13 @@
         528,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_529_INTELLIGENT_PROMPTING_COMPLETE.md": {
@@ -19394,11 +19472,13 @@
         529,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_530_INTELLIGENCE_COMMAND_CENTER.md": {
@@ -19414,11 +19494,13 @@
         532,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_534_SPIDER_SYNC_CONVERSION.md": {
@@ -19433,11 +19515,13 @@
         535,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_535_UI_REALITY_CHECK.md": {
@@ -19452,11 +19536,13 @@
         536,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_539_LIVE_FEED_AND_TRIGGERS.md": {
@@ -19471,11 +19557,13 @@
         540,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_540_LEARNING_NETWORK_EXPANSION.md": {
@@ -19489,11 +19577,13 @@
         540,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_541_MYTHOLOGY_QUARANTINE_SYSTEM.md": {
@@ -19508,11 +19598,13 @@
         542,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_542_RESEARCH_DEMO.md": {
@@ -19527,11 +19619,13 @@
         543,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_543_SELF_BLOG_AND_RESEARCH_DEMO.md": {
@@ -19545,11 +19639,13 @@
         543,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_544_AUTONOMOUS_REASONING_ENGINE.md": {
@@ -19564,11 +19660,13 @@
         545,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_546_CONCERN_TRACKING_FEEDBACK_LOOP.md": {
@@ -19582,11 +19680,13 @@
         546,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_546_SELF_BLOG_REPORT_RENDERING.md": {
@@ -19600,11 +19700,13 @@
         546,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_547_CONCERN_TRACKING_INTEGRATION.md": {
@@ -19618,11 +19720,13 @@
         547,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_548_CONCERN_VERIFICATION_FIX.md": {
@@ -19637,11 +19741,13 @@
         549,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_549_HUMAN_ACTION_SYSTEM.md": {
@@ -19656,11 +19762,13 @@
         550,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_550_THINKINGAGENT_EXPECTED_BEHAVIOR.md": {
@@ -19674,11 +19782,13 @@
         550,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_551_BOARDROOM_DEDUPLICATION.md": {
@@ -19693,11 +19803,13 @@
         552,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_552_RESEARCH_DEMO_FIXES.md": {
@@ -19712,11 +19824,13 @@
         552,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_553_PA_INTELLIGENCE_MAPPING.md": {
@@ -19731,11 +19845,13 @@
         554,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_554_PA_INTELLIGENCE_INTEGRATION.md": {
@@ -19750,11 +19866,13 @@
         555,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_555_CHIEF_OF_STAFF_LAYER.md": {
@@ -19769,11 +19887,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_555_CHIEF_OF_STAFF_ROADMAP.md": {
@@ -19788,11 +19908,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_555_PHASE_A_ARTIFACT_EXTRACTION.md": {
@@ -19807,11 +19929,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_555_PHASE_B_EXECUTION_PIPELINE.md": {
@@ -19826,11 +19950,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_555_PHASE_C_WEEKLY_SYNTHESIS.md": {
@@ -19845,11 +19971,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_555_PHASE_D_HUMAN_FEEDBACK_LOOP.md": {
@@ -19864,11 +19992,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md": {
@@ -19883,11 +20013,13 @@
         556,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_557_CHIEF_OF_STAFF_TESTING.md": {
@@ -19902,11 +20034,13 @@
         558,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_558_BETTING_PLATFORM.md": {
@@ -19921,11 +20055,13 @@
         559,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_558_KALSHI_PREDICTION_MARKETS.md": {
@@ -19941,11 +20077,13 @@
         559,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_559_BETTING_DASHBOARD_UI.md": {
@@ -19960,11 +20098,13 @@
         559,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_560_BETTING_DASHBOARD_ENHANCEMENTS.md": {
@@ -19982,11 +20122,13 @@
         567,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_561_LINE_MOVEMENT_CHARTS.md": {
@@ -20004,11 +20146,13 @@
         567,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_562_PUSH_NOTIFICATIONS.md": {
@@ -20026,11 +20170,13 @@
         567,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_563_AGENT_ECOSYSTEM_AUDIT.md": {
@@ -20044,11 +20190,13 @@
         563,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_563_BETTING_DASHBOARD_FIXES.md": {
@@ -20063,11 +20211,13 @@
         564,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_563_LIVE_ODDS_PLAYER_PROPS.md": {
@@ -20082,11 +20232,13 @@
         564,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_567_FULL_SYSTEM_AUDIT.md": {
@@ -20100,11 +20252,13 @@
         567,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_573_PA_SYSTEM_AWARENESS.md": {
@@ -20118,11 +20272,13 @@
         573,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_575_PA_TOOLS_AUDIT_AND_ROADMAP.md": {
@@ -20137,11 +20293,13 @@
         576,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_586_PA_TOOLS_PHASE_22_23.md": {
@@ -20155,11 +20313,13 @@
         586,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_588_PA_PHASE25_SYSTEM_INSIGHTS.md": {
@@ -20174,11 +20334,13 @@
         589,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_589_EXECUTION_GAP_INFRASTRUCTURE.md": {
@@ -20193,11 +20355,13 @@
         589,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_592_PILOT_READINESS_GATE_COMPLETE.md": {
@@ -20212,11 +20376,13 @@
         593,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md": {
@@ -20231,11 +20397,13 @@
         593,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_594_PILOT_AUTO_COMPLETION.md": {
@@ -20249,11 +20417,13 @@
         594,
         800,
         1126,
-        1143
+        1143,
+        1153
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
-        2199
+        2199,
+        2235
       ]
     },
     "docs/handoffs/SESSION_595_PILOT_DASHBOARD.md": {
