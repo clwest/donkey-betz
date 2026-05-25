@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+> **Note:** content may be stale (last refreshed 2026-02-16) — workflow direction is still canonical (cited from CLAUDE.md), but verify stage names + service signatures against current code before relying on specifics.
+
 # Dream → Initiative Workflow
 
 **Created:** Session 871 (January 29, 2026)
