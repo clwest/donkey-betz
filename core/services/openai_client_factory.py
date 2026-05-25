@@ -37,7 +37,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+import threading
+from typing import Dict, Optional, Tuple
 
 import httpx
 from openai import OpenAI
@@ -51,6 +52,16 @@ OPENAI_POOL_TIMEOUT_S = 60.0
 OPENAI_MAX_RETRIES = 2
 
 _FORBIDDEN_KWARGS = ("timeout", "max_retries", "api_key")
+
+# Session 1144: per-process client cache. Every ``OpenAI(...)`` instance
+# carries its own internal httpx connection pool — so calling the factory
+# afresh for every request meant zero socket reuse and contributed to the
+# ~4K TIME_WAIT sockets to :443 observed during the Session 1144 leak
+# audit. Cache key is ``(api_key, base_url)`` so callers using different
+# providers (OpenAI / DeepSeek / Together) still get isolated clients,
+# and ``**kwargs`` calls bypass the cache (rare path, hard to key safely).
+_CLIENT_CACHE: Dict[Tuple[str, Optional[str]], OpenAI] = {}
+_CLIENT_CACHE_LOCK = threading.Lock()
 
 
 def get_openai_client(
@@ -86,6 +97,16 @@ def get_openai_client(
                 f"centrally managed by the factory"
             )
 
+    # Cache hit path — repeat callers with the same (api_key, base_url)
+    # share one client and therefore one internal httpx connection pool.
+    # Skipped when caller passes extra kwargs (default_headers / organization /
+    # project) since those would need to be part of the key.
+    cache_key = (resolved_key, base_url)
+    if not kwargs:
+        cached = _CLIENT_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+
     timeout = httpx.Timeout(
         connect=OPENAI_CONNECT_TIMEOUT_S,
         read=OPENAI_READ_TIMEOUT_S,
@@ -102,4 +123,14 @@ def get_openai_client(
         ctor_kwargs["base_url"] = base_url
     ctor_kwargs.update(kwargs)  # safe — forbidden keys already rejected above
 
-    return OpenAI(**ctor_kwargs)
+    client = OpenAI(**ctor_kwargs)
+    if not kwargs:
+        with _CLIENT_CACHE_LOCK:
+            # Double-check after acquiring the lock to avoid two concurrent
+            # constructors racing — first writer wins; the loser's client is
+            # GC'd along with its (unused) pool.
+            existing = _CLIENT_CACHE.get(cache_key)
+            if existing is not None:
+                return existing
+            _CLIENT_CACHE[cache_key] = client
+    return client
