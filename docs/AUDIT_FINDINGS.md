@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V1 (Session 1146) -->
+> **Living runbook — refresh-in-place; do not move.**
+> This file is the central runbook for findings surfaced by the capability audits. Entries are updated as findings close; do not delete closed entries (the history is the point — see "How to use this file" below).
+> **Last reviewed for drift labeling:** Session 1146 (2026-05-25)
+> **Note:** the original "Last refreshed: Session 1115" line below reflects the last full sweep; individual entries may have been updated since. Many entries already show `✅ fixed Session 1115` status. If a finding looks open but was closed in a later session, re-verify per the entry's `Verifier doc:` line before re-opening.
+> **Related canon:** [`docs/canon/INDEX.md`](canon/INDEX.md) (canon registry) + [`docs/PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) (sole counts source per `DOC_LIFECYCLE.md` §2c) + the 8 DOC-AUTOGEN audit files in `docs/*_AUDIT.md` (per-subsystem runtime evidence).
+
 # Audit Findings — Open Items
 
 > **Purpose:** central runbook for every real finding surfaced by the
