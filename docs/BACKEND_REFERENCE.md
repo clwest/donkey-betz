@@ -1433,11 +1433,11 @@ Advisors are **AI personas** modeled after famous investors and domain experts. 
 
 | Advisor | Expertise | Style |
 |---------|-----------|-------|
-| Warren Buffett | Value investing | Long-term, margin of safety |
-| Cathie Wood | Growth/disruption | Innovation, ARK style |
-| Ray Dalio | Macro economics | Principles-based |
-| Peter Lynch | Stock picking | Invest in what you know |
-| Charlie Munger | Mental models | Multi-disciplinary |
+| Value Investing Strategist | Value investing | Long-term, margin of safety |
+| Innovation Investment Strategist | Growth/disruption | Disruptive innovation, thematic growth |
+| Macro Economic Strategist | Macro economics | Principles-based, all-weather portfolio |
+| Growth Investing Advisor | Stock picking | Invest in what you know |
+| Mental-Models Frameworks Advisor | Mental models | Multi-disciplinary reasoning |
 | Benjamin Graham | Value fundamentals | Security analysis |
 | Howard Marks | Risk management | Contrarian thinking |
 | Seth Klarman | Contrarian investing | Margin of safety |

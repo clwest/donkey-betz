@@ -83,10 +83,13 @@ Character OS has 3 mascots (Miles=sloth, Riggs=raccoon, Donny=donkey).
 PR EX in the brief proved Act-Two requires human face geometry —
 *every* mascot fails the Runway face detector.
 
-u-d-b's 30 advisors are Buffett, Wood, Dalio, Altman, Musk,
-Vaynerchuk, MrBeast, Voss, Beane, Voulgaris + 20 specialists — every
-one a human. **Every one is an Act-Two candidate the moment they have
-a portrait bound.** The merge thesis is "Character OS's primitives unlock
+u-d-b's 30 advisors are functional domain specialists — Value Investing
+Strategist, Innovation Investment Strategist, Macro Economic Strategist,
+AI & Startup Strategy Expert, First-Principles Engineering Advisor,
+Digital Marketing & Brand Strategist, Creator Economy Strategist,
+Master Negotiation Specialist, Sports Analytics Pioneer, Sports Betting
+Quant + 20 more domain specialists. **Each is an Act-Two candidate the
+moment a functional persona-archetype has a portrait bound.** The merge thesis is "Character OS's primitives unlock
 when you have human spokespersons" — and u-d-b *only* has human
 spokespersons. There's no value in keeping a separate `Spokesperson`
 model that wraps `Advisor`. The Advisor IS the spokesperson.

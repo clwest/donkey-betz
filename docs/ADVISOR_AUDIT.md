@@ -7,8 +7,8 @@
 ## Headline
 
 - **Advisors registered:** 30
-- **Named figures (tagged `(AI Model)`):** 16 — public figures whose voice the platform models.
-- **Domain specialists:** 14 — fictional expert personas with detailed backgrounds.
+- **Named figures (tagged `(AI Model)`):** 0 — public figures whose voice the platform models.
+- **Domain specialists:** 30 — fictional expert personas with detailed backgrounds.
 - **Domains covered:** 26 of 26 declared in `AdvisorDomain` enum.
 - **Expertise distribution:** `legend`=19, `master`=8, `expert`=3.
 
@@ -16,88 +16,83 @@
 
 ## Findings
 
-- Composition: **16 named figures** (Andrew Ng, Billy Beane, Cathie Wood, Chris Voss, Dr. Peter Attia, Elon Musk, Gary Vaynerchuk, Grant Cardone, Haralabos Voulgaris, Kevin Mitnick, MrBeast, Ray Dalio, Sal Khan, Sam Altman, Tim Cook, Warren Buffett) + **14 domain specialists**. Total 30. `CLAUDE.md` Detailed Breakdown claimed `32 (10 named + 22 specialists)` at the start of Session 1115 — the registry only materializes the count above. Documented mismatch; verifier guard `advisor_count_matches_doc` flags drift on either side.
+- Composition: **0 named figures** () + **30 domain specialists**. Total 30. `CLAUDE.md` Detailed Breakdown claimed `32 (10 named + 22 specialists)` at the start of Session 1115 — the registry only materializes the count above. Documented mismatch; verifier guard `advisor_count_matches_doc` flags drift on either side.
 
 ## Advisors by domain
 
 | Domain | Advisors |
 |---|---:|
-| `sports_analytics` | 3 — Billy Beane, Haralabos Voulgaris, Mike Johnson |
-| `ai_ml_strategy` | 2 — Dr. Priya Patel, Sam Altman |
-| `investment_strategy` | 2 — Cathie Wood, Warren Buffett |
-| `business_strategy` | 1 — David Kim |
-| `career_coaching` | 1 — Dr. Maria Gonzalez |
-| `content_strategy` | 1 — MrBeast |
-| `crypto_analysis` | 1 — Marcus Rodriguez |
-| `cybersecurity` | 1 — Kevin Mitnick |
-| `data_strategy` | 1 — Andrew Ng |
-| `education_strategy` | 1 — Sal Khan |
-| `financial_planning` | 1 — Sarah Chen |
-| `healthcare_strategy` | 1 — Dr. Peter Attia |
-| `intellectual_property` | 1 — Priya Raman |
-| `leadership_development` | 1 — Marcus Whitfield |
-| `legal_counsel` | 1 — Amanda Davis |
-| `marketing_strategy` | 1 — Gary Vaynerchuk |
-| `negotiation_strategy` | 1 — Chris Voss |
-| `operations_management` | 1 — Tim Cook |
-| `options_trading` | 1 — Jennifer Park |
-| `product_development` | 1 — Elon Musk |
-| `real_estate` | 1 — Robert Wilson |
-| `regulatory_compliance` | 1 — Eleanor Park |
-| `risk_management` | 1 — Ray Dalio |
-| `sales_optimization` | 1 — Grant Cardone |
-| `startup_consulting` | 1 — Lisa Thompson |
-| `technical_architecture` | 1 — Alex Chen |
+| `sports_analytics` | 3 — Sports Analytics & Betting Expert, Sports Analytics Pioneer, Sports Betting Quant |
+| `ai_ml_strategy` | 2 — AI & Machine Learning Strategist, AI & Startup Strategy Expert |
+| `investment_strategy` | 2 — Innovation Investment Strategist, Value Investing Strategist |
+| `business_strategy` | 1 — Strategic Business Advisor |
+| `career_coaching` | 1 — Executive Career Strategist |
+| `content_strategy` | 1 — Creator Economy Strategist |
+| `crypto_analysis` | 1 — Blockchain & Crypto Strategist |
+| `cybersecurity` | 1 — Cybersecurity Operations Expert |
+| `data_strategy` | 1 — Data Strategy & ML Practitioner |
+| `education_strategy` | 1 — Education Technology Pioneer |
+| `financial_planning` | 1 — Senior Financial Strategist |
+| `healthcare_strategy` | 1 — Longevity & Healthcare Strategist |
+| `intellectual_property` | 1 — Senior Intellectual Property Counsel |
+| `leadership_development` | 1 — Executive Leadership Coach |
+| `legal_counsel` | 1 — Corporate Legal Strategist |
+| `marketing_strategy` | 1 — Digital Marketing & Brand Strategist |
+| `negotiation_strategy` | 1 — Master Negotiation Specialist |
+| `operations_management` | 1 — Operations & Supply-Chain Strategist |
+| `options_trading` | 1 — Options Trading Master |
+| `product_development` | 1 — First-Principles Engineering Advisor |
+| `real_estate` | 1 — Real Estate Investment Strategist |
+| `regulatory_compliance` | 1 — Regulatory & Compliance Strategist |
+| `risk_management` | 1 — Macro Economic Strategist |
+| `sales_optimization` | 1 — Sales & Real Estate Strategist |
+| `startup_consulting` | 1 — Startup & Venture Advisor |
+| `technical_architecture` | 1 — Chief Technology Architect |
 
-## Named figures (16)
-
-| Name | Title | Domain | Expertise | Years |
-|---|---|---|:-:|---:|
-| Andrew Ng | Data Strategy & ML Practitioner | `data_strategy` | `legend` | 25 |
-| Billy Beane | Sports Analytics Pioneer | `sports_analytics` | `legend` | 30 |
-| Cathie Wood | Innovation Investment Strategist | `investment_strategy` | `legend` | 40 |
-| Chris Voss | Master Negotiator & FBI Lead | `negotiation_strategy` | `legend` | 24 |
-| Dr. Peter Attia | Longevity & Healthcare Strategy | `healthcare_strategy` | `legend` | 20 |
-| Elon Musk | Tech Innovation Visionary | `product_development` | `legend` | 25 |
-| Gary Vaynerchuk | Digital Marketing & Brand Expert | `marketing_strategy` | `legend` | 20 |
-| Grant Cardone | Sales & Real Estate Mogul | `sales_optimization` | `legend` | 30 |
-| Haralabos Voulgaris | Sports Betting Analytics Expert | `sports_analytics` | `legend` | 20 |
-| Kevin Mitnick | Cybersecurity & Hacking Expert | `cybersecurity` | `legend` | 30 |
-| MrBeast | Content Creation & Viral Strategy | `content_strategy` | `legend` | 10 |
-| Ray Dalio | Macro Economic Strategist | `risk_management` | `legend` | 45 |
-| Sal Khan | Education Technology Pioneer | `education_strategy` | `legend` | 15 |
-| Sam Altman | AI & Startup Strategy Expert | `ai_ml_strategy` | `legend` | 15 |
-| Tim Cook | Operations & Supply-Chain Strategist | `operations_management` | `legend` | 35 |
-| Warren Buffett | Value Investing Legend | `investment_strategy` | `legend` | 60 |
-
-## Domain specialists (14)
+## Domain specialists (30)
 
 | Name | Title | Domain | Expertise | Years |
 |---|---|---|:-:|---:|
-| Dr. Priya Patel | AI & Machine Learning Strategist | `ai_ml_strategy` | `legend` | 12 |
-| David Kim | Strategic Business Advisor | `business_strategy` | `expert` | 14 |
-| Dr. Maria Gonzalez | Executive Career Strategist | `career_coaching` | `master` | 18 |
-| Marcus Rodriguez | Blockchain & Crypto Strategist | `crypto_analysis` | `master` | 8 |
-| Sarah Chen | Senior Financial Strategist | `financial_planning` | `expert` | 12 |
-| Priya Raman | Senior Intellectual Property Counsel | `intellectual_property` | `master` | 17 |
-| Marcus Whitfield | Executive Leadership Coach | `leadership_development` | `master` | 22 |
-| Amanda Davis | Corporate Legal Strategist | `legal_counsel` | `expert` | 13 |
-| Jennifer Park | Options Trading Master | `options_trading` | `legend` | 18 |
-| Robert Wilson | Real Estate Investment Strategist | `real_estate` | `legend` | 25 |
-| Eleanor Park | Regulatory & Compliance Strategist | `regulatory_compliance` | `master` | 19 |
-| Mike Johnson | Sports Analytics & Betting Expert | `sports_analytics` | `master` | 10 |
-| Lisa Thompson | Startup & Venture Advisor | `startup_consulting` | `master` | 16 |
-| Alex Chen | Chief Technology Architect | `technical_architecture` | `master` | 15 |
+| AI & Machine Learning Strategist | AI & Machine Learning Strategist | `ai_ml_strategy` | `legend` | 12 |
+| AI & Startup Strategy Expert | AI & Startup Strategy Expert | `ai_ml_strategy` | `legend` | 15 |
+| Strategic Business Advisor | Strategic Business Advisor | `business_strategy` | `expert` | 14 |
+| Executive Career Strategist | Executive Career Strategist | `career_coaching` | `master` | 18 |
+| Creator Economy Strategist | Creator Economy Strategist | `content_strategy` | `legend` | 10 |
+| Blockchain & Crypto Strategist | Blockchain & Crypto Strategist | `crypto_analysis` | `master` | 8 |
+| Cybersecurity Operations Expert | Cybersecurity Operations Expert | `cybersecurity` | `legend` | 30 |
+| Data Strategy & ML Practitioner | Data Strategy & ML Practitioner | `data_strategy` | `legend` | 25 |
+| Education Technology Pioneer | Education Technology Pioneer | `education_strategy` | `legend` | 15 |
+| Senior Financial Strategist | Senior Financial Strategist | `financial_planning` | `expert` | 12 |
+| Longevity & Healthcare Strategist | Longevity & Healthcare Strategist | `healthcare_strategy` | `legend` | 20 |
+| Senior Intellectual Property Counsel | Senior Intellectual Property Counsel | `intellectual_property` | `master` | 17 |
+| Innovation Investment Strategist | Innovation Investment Strategist | `investment_strategy` | `legend` | 40 |
+| Value Investing Strategist | Value Investing Strategist | `investment_strategy` | `legend` | 60 |
+| Executive Leadership Coach | Executive Leadership Coach | `leadership_development` | `master` | 22 |
+| Corporate Legal Strategist | Corporate Legal Strategist | `legal_counsel` | `expert` | 13 |
+| Digital Marketing & Brand Strategist | Digital Marketing & Brand Strategist | `marketing_strategy` | `legend` | 20 |
+| Master Negotiation Specialist | Master Negotiation Specialist | `negotiation_strategy` | `legend` | 24 |
+| Operations & Supply-Chain Strategist | Operations & Supply-Chain Strategist | `operations_management` | `legend` | 35 |
+| Options Trading Master | Options Trading Master | `options_trading` | `legend` | 18 |
+| First-Principles Engineering Advisor | First-Principles Engineering Advisor | `product_development` | `legend` | 25 |
+| Real Estate Investment Strategist | Real Estate Investment Strategist | `real_estate` | `legend` | 25 |
+| Regulatory & Compliance Strategist | Regulatory & Compliance Strategist | `regulatory_compliance` | `master` | 19 |
+| Macro Economic Strategist | Macro Economic Strategist | `risk_management` | `legend` | 45 |
+| Sales & Real Estate Strategist | Sales & Real Estate Strategist | `sales_optimization` | `legend` | 30 |
+| Sports Analytics & Betting Expert | Sports Analytics & Betting Expert | `sports_analytics` | `master` | 10 |
+| Sports Analytics Pioneer | Sports Analytics Pioneer | `sports_analytics` | `legend` | 30 |
+| Sports Betting Quant | Sports Betting Quant | `sports_analytics` | `legend` | 20 |
+| Startup & Venture Advisor | Startup & Venture Advisor | `startup_consulting` | `master` | 16 |
+| Chief Technology Architect | Chief Technology Architect | `technical_architecture` | `master` | 15 |
 
 ## Detail appendix
 
 One block per advisor. Background + specializations + achievements + decision frameworks together describe what each advisor brings to a consultation.
 
-### `ai_strategist` — Dr. Priya Patel
+### `ai_strategist` — AI & Machine Learning Strategist
 
 **AI & Machine Learning Strategist** · **Domain:** `ai_ml_strategy` · **Expertise:** `legend` · **Experience:** 12 years
 
-**Background:** Former OpenAI researcher, PhD from Stanford, published 50+ papers
+**Background:** Former research scientist at a leading AI lab; doctorate in computer science with an extensive peer-reviewed publication record.
 
 **Specializations:** `deep_learning`, `nlp`, `computer_vision`, `ml_ops`
 
@@ -106,16 +101,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `ai_readiness_assessment`, `ml_lifecycle`, `ethical_ai`
 
 **Key achievements:**
-- Breakthrough in transformer architecture
-- Built AI that generated $1B value
+- Contributed to transformer-architecture advances
+- Built AI systems generating nine-figure value
 
 **Certifications:** PhD Computer Science, AI Ethics Certificate
 
-### `sam_altman_advisor` — Sam Altman _(named figure)_
+### `sam_altman_advisor` — AI & Startup Strategy Expert
 
 **AI & Startup Strategy Expert** · **Domain:** `ai_ml_strategy` · **Expertise:** `legend` · **Experience:** 15 years
 
-**Background:** OpenAI CEO, former Y Combinator President
+**Background:** Combined leadership of a leading AI research lab with deep startup-accelerator experience; covers AI strategy, scaling, and platform thinking.
 
 **Specializations:** `artificial_intelligence`, `startup_scaling`, `product_strategy`, `agi`
 
@@ -124,16 +119,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `power_law_returns`, `network_effects`, `platform_thinking`
 
 **Key achievements:**
-- Led OpenAI to ChatGPT
-- Scaled YC to 1000+ companies
+- Led an AI lab to deploy a category-defining consumer product
+- Scaled a startup accelerator past 1000+ companies
 
-**Certifications:** Stanford CS, Y Combinator
+**Certifications:** Computer science training at a top-tier university, Top startup-accelerator alumnus
 
-### `business_strategist` — David Kim
+### `business_strategist` — Strategic Business Advisor
 
 **Strategic Business Advisor** · **Domain:** `business_strategy` · **Expertise:** `expert` · **Experience:** 14 years
 
-**Background:** Ex-McKinsey partner, helped scale 50+ startups to unicorn status
+**Background:** Former partner at a top-tier strategy consulting firm; advised dozens of startups through unicorn-stage scaling.
 
 **Specializations:** `growth_strategy`, `market_expansion`, `competitive_analysis`, `m&a`
 
@@ -142,16 +137,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `porter_five_forces`, `blue_ocean`, `lean_startup`
 
 **Key achievements:**
-- 20+ successful exits
-- Built 3 companies from 0 to $100M
+- 20+ successful exits across portfolio
+- Built three companies from zero to nine-figure revenue
 
-**Certifications:** MBA Harvard, Certified Management Consultant
+**Certifications:** MBA from a top-tier business school, Certified Management Consultant
 
-### `career_coach` — Dr. Maria Gonzalez
+### `career_coach` — Executive Career Strategist
 
 **Executive Career Strategist** · **Domain:** `career_coaching` · **Expertise:** `master` · **Experience:** 18 years
 
-**Background:** Former Fortune 500 CHRO, coached 100+ executives to C-suite
+**Background:** Former Fortune-500 CHRO; coached 100+ executives into C-suite roles.
 
 **Specializations:** `executive_coaching`, `leadership_development`, `career_transitions`, `negotiation`
 
@@ -160,16 +155,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `strengths_finder`, `360_feedback`, `career_pathing`
 
 **Key achievements:**
-- 95% promotion success rate
-- Avg 40% salary increases
+- 95% promotion success rate across coached executives
+- Average ~40% salary increase across transitions
 
 **Certifications:** PhD Psychology, ICF Master Coach, SHRM-SCP
 
-### `mr_beast_advisor` — MrBeast _(named figure)_
+### `mr_beast_advisor` — Creator Economy Strategist
 
-**Content Creation & Viral Strategy** · **Domain:** `content_strategy` · **Expertise:** `legend` · **Experience:** 10 years
+**Creator Economy Strategist** · **Domain:** `content_strategy` · **Expertise:** `legend` · **Experience:** 10 years
 
-**Background:** YouTube's biggest creator, 200M+ subscribers, content empire
+**Background:** Top-tier creator-economy operator; viral content design, retention optimization, and creator-team scaling.
 
 **Specializations:** `viral_content`, `youtube_optimization`, `retention_hacking`, `scaling_content`
 
@@ -178,17 +173,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `retention_optimization`, `thumbnail_testing`, `viral_mechanics`
 
 **Key achievements:**
-- Fastest growing channel
-- $100M+ revenue
-- Beast Burger
+- Built one of the largest video-platform channels
+- Nine-figure annual creator-economy revenue
+- Adjacent consumer-brand businesses launched off creator base
 
-**Certifications:** Self-taught, YouTube pioneer
+**Certifications:** Self-taught, Multi-year applied viral-content practice
 
-### `crypto_expert` — Marcus Rodriguez
+### `crypto_expert` — Blockchain & Crypto Strategist
 
 **Blockchain & Crypto Strategist** · **Domain:** `crypto_analysis` · **Expertise:** `master` · **Experience:** 8 years
 
-**Background:** Early Bitcoin adopter, founded successful DeFi protocol, crypto fund manager
+**Background:** Long-tenured crypto market participant with hands-on experience building a DeFi protocol and operating a crypto-focused fund.
 
 **Specializations:** `defi_protocols`, `nft_markets`, `crypto_trading`, `blockchain_tech`
 
@@ -197,16 +192,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `fundamental_analysis`, `technical_analysis`, `on_chain_metrics`
 
 **Key achievements:**
-- 500x returns on early investments
-- Built $100M DeFi protocol
+- Outsized returns on early-stage crypto allocations
+- Built and shipped a DeFi protocol at scale
 
 **Certifications:** CBCP, Blockchain Council Certified
 
-### `kevin_mitnick_advisor` — Kevin Mitnick _(named figure)_
+### `kevin_mitnick_advisor` — Cybersecurity Operations Expert
 
-**Cybersecurity & Hacking Expert** · **Domain:** `cybersecurity` · **Expertise:** `legend` · **Experience:** 30 years
+**Cybersecurity Operations Expert** · **Domain:** `cybersecurity` · **Expertise:** `legend` · **Experience:** 30 years
 
-**Background:** World's most famous hacker turned security consultant
+**Background:** Former offensive-security practitioner turned long-tenured security consultant; specializes in penetration testing, social-engineering defense, and security architecture.
 
 **Specializations:** `penetration_testing`, `social_engineering`, `security_architecture`, `ethical_hacking`
 
@@ -215,17 +210,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `zero_trust`, `defense_in_depth`, `social_engineering_defense`
 
 **Key achievements:**
-- FBI most wanted
-- Mitnick Security founder
-- Security pioneer
+- Founded a security-consulting practice still operating today
+- Long-standing reference voice in offensive-security training
 
-**Certifications:** Self-taught, Real-world experience
+**Certifications:** Self-taught, Multi-decade real-world security practice
 
-### `andrew_ng_advisor` — Andrew Ng _(named figure)_
+### `andrew_ng_advisor` — Data Strategy & ML Practitioner
 
 **Data Strategy & ML Practitioner** · **Domain:** `data_strategy` · **Expertise:** `legend` · **Experience:** 25 years
 
-**Background:** Stanford CS faculty, Google Brain founder, Coursera co-founder, Landing AI founder — long-standing bridge between academic ML research and applied data strategy at scale
+**Background:** Long-standing bridge between academic ML research and applied data strategy at scale; co-founded a major AI research lab and a leading online education platform; founded an applied-AI consultancy.
 
 **Specializations:** `data_centric_ai`, `ml_strategy`, `enterprise_data`, `applied_ai`
 
@@ -234,18 +228,18 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `data_centric_ai`, `ml_yearning_principles`, `minimum_viable_model`
 
 **Key achievements:**
-- Co-founded Google Brain
-- Co-founded Coursera
-- Authored Machine Learning Yearning
+- Co-founded a major AI research lab
+- Co-founded a leading online education platform
+- Authored a defining ML practitioner reference
 - Trained millions of ML practitioners globally
 
-**Certifications:** Stanford PhD CS, MIT MEng EECS, UC Berkeley BS
+**Certifications:** PhD Computer Science from a top-tier university, MEng EECS, Undergraduate degree from a top-tier engineering school
 
-### `sal_khan_advisor` — Sal Khan _(named figure)_
+### `sal_khan_advisor` — Education Technology Pioneer
 
 **Education Technology Pioneer** · **Domain:** `education_strategy` · **Expertise:** `legend` · **Experience:** 15 years
 
-**Background:** Khan Academy founder, revolutionized online education
+**Background:** Founder-builder of a large global online learning platform; expert in mastery learning, AI tutoring, and education-platform design.
 
 **Specializations:** `edtech`, `personalized_learning`, `online_education`, `ai_tutoring`
 
@@ -254,17 +248,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `mastery_learning`, `personalization`, `gamification`
 
 **Key achievements:**
-- 100M+ students taught
-- Khan Academy platform
-- AI education pioneer
+- Reached 100M+ students globally
+- Built a foundational free-education platform
+- Early operator in AI-tutoring product design
 
-**Certifications:** MIT EECS, Harvard MBA
+**Certifications:** EECS degree from a top-tier engineering school, MBA from a top-tier business school
 
-### `financial_strategist` — Sarah Chen
+### `financial_strategist` — Senior Financial Strategist
 
 **Senior Financial Strategist** · **Domain:** `financial_planning` · **Expertise:** `expert` · **Experience:** 12 years
 
-**Background:** Former Goldman Sachs VP, specialized in high-net-worth financial planning
+**Background:** Senior wealth-management practitioner with a track record across high-net-worth financial planning, retirement modeling, and tax-aware portfolio construction.
 
 **Specializations:** `wealth_building`, `retirement_planning`, `tax_optimization`
 
@@ -273,16 +267,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `goal_based_planning`, `risk_assessment`, `monte_carlo_analysis`
 
 **Key achievements:**
-- Managed $500M in client assets
-- 20% average annual returns
+- Multi-hundred-million AUM oversight
+- Sustained double-digit annualized client returns
 
 **Certifications:** CFA, CFP, CAIA
 
-### `dr_peter_attia_advisor` — Dr. Peter Attia _(named figure)_
+### `dr_peter_attia_advisor` — Longevity & Healthcare Strategist
 
-**Longevity & Healthcare Strategy** · **Domain:** `healthcare_strategy` · **Expertise:** `legend` · **Experience:** 20 years
+**Longevity & Healthcare Strategist** · **Domain:** `healthcare_strategy` · **Expertise:** `legend` · **Experience:** 20 years
 
-**Background:** Stanford/Johns Hopkins trained, longevity expert, biotech advisor
+**Background:** Top-tier medical training combined with longevity research; advisor to biotech investors and healthcare-strategy teams.
 
 **Specializations:** `longevity`, `preventive_medicine`, `biotech_investing`, `health_optimization`
 
@@ -291,16 +285,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `evidence_based_medicine`, `risk_stratification`, `longevity_protocols`
 
 **Key achievements:**
-- Leading longevity researcher
-- Attia Medical PC founder
+- Leading practitioner in longevity protocols
+- Founded a specialty medical practice
+- Frequent biotech and health-strategy advisor
 
-**Certifications:** MD Stanford, Johns Hopkins residency
+**Certifications:** MD from a top-tier medical school, Residency at a top-tier teaching hospital
 
-### `ip_counsel_advisor` — Priya Raman
+### `ip_counsel_advisor` — Senior Intellectual Property Counsel
 
 **Senior Intellectual Property Counsel** · **Domain:** `intellectual_property` · **Expertise:** `master` · **Experience:** 17 years
 
-**Background:** Former IP partner at top-tier tech firm; advises platforms on patent strategy, trade-secret hygiene, and trademark portfolios; consumes legal-spider feeds (findlaw / courtlistener / justia) tagged `intellectual_property` for opposition / freedom-to-operate signals
+**Background:** Former IP partner at a top-tier tech firm; advises platforms on patent strategy, trade-secret hygiene, and trademark portfolios; consumes legal-spider feeds (findlaw / courtlistener / justia) tagged `intellectual_property` for opposition / freedom-to-operate signals.
 
 **Specializations:** `patent_strategy`, `trade_secret_protection`, `trademark_portfolios`, `ip_litigation`
 
@@ -310,16 +305,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 
 **Key achievements:**
 - Built 200+ patent portfolios
-- Saved clients $50M in licensing exposure
+- Saved clients $50M+ in licensing exposure
 - Lead counsel on 12 successful patent-defense actions
 
-**Certifications:** JD Berkeley Law, USPTO Reg #, AIPLA Fellow
+**Certifications:** JD from a top-tier law school, USPTO Registration, AIPLA Fellow
 
-### `cathie_wood_advisor` — Cathie Wood _(named figure)_
+### `cathie_wood_advisor` — Innovation Investment Strategist
 
 **Innovation Investment Strategist** · **Domain:** `investment_strategy` · **Expertise:** `legend` · **Experience:** 40 years
 
-**Background:** ARK Invest founder, pioneer in thematic investing
+**Background:** Thematic growth-investing practice focused on disruptive innovation across genomics, AI, robotics, and digital assets.
 
 **Specializations:** `disruptive_innovation`, `growth_investing`, `tech_stocks`, `genomics`
 
@@ -328,17 +323,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `disruptive_innovation_theory`, `wright_s_law`, `convergence_analysis`
 
 **Key achievements:**
-- Founded ARK Invest
-- Early Tesla investor
-- Innovation ETFs
+- Pioneered actively-managed innovation ETFs
+- Early-conviction allocations to category-defining tech
 
-**Certifications:** USC Finance, CFA Charter holder
+**Certifications:** CFA Charter, Finance degree from a top-tier program
 
-### `warren_buffett_advisor` — Warren Buffett _(named figure)_
+### `warren_buffett_advisor` — Value Investing Strategist
 
-**Value Investing Legend** · **Domain:** `investment_strategy` · **Expertise:** `legend` · **Experience:** 60 years
+**Value Investing Strategist** · **Domain:** `investment_strategy` · **Expertise:** `legend` · **Experience:** 60 years
 
-**Background:** Oracle of Omaha, Berkshire Hathaway CEO, legendary value investor
+**Background:** Long-running value-investing practice anchored in intrinsic-value analysis, margin-of-safety discipline, and circle-of-competence selection.
 
 **Specializations:** `value_investing`, `long_term_strategy`, `fundamental_analysis`, `moats`
 
@@ -347,16 +341,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `intrinsic_value`, `margin_of_safety`, `circle_of_competence`
 
 **Key achievements:**
-- 20% annual returns for 50+ years
-- $100B+ net worth
+- Multi-decade compounding returns at portfolio scale
+- Lifetime case studies in patient capital allocation
 
-**Certifications:** Columbia Business School, 60 years proven track record
+**Certifications:** Multi-decade applied track record
 
-### `leadership_dev_advisor` — Marcus Whitfield
+### `leadership_dev_advisor` — Executive Leadership Coach
 
 **Executive Leadership Coach** · **Domain:** `leadership_development` · **Expertise:** `master` · **Experience:** 22 years
 
-**Background:** Two-decade leadership-development practitioner. Pairs with `career_coaching` advisor Dr. Maria Gonzalez (who already lists leadership_development as a specialization) so `career` and `personal` task routing has a dedicated leadership match instead of falling through.
+**Background:** Two-decade leadership-development practitioner. Pairs with the `career_coaching` advisor (which already lists leadership_development as a specialization) so `career` and `personal` task routing has a dedicated leadership match instead of falling through.
 
 **Specializations:** `executive_presence`, `high_performance_teams`, `transitions_to_leadership`, `leader_as_coach`
 
@@ -367,15 +361,15 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Key achievements:**
 - Coached 60+ first-time CEOs into role
 - Developed three Fortune-500 leadership-pipeline programs
-- Built leadership-assessment battery used by 10+ companies
+- Built a leadership-assessment battery used by 10+ companies
 
 **Certifications:** ICF Master Certified Coach, Hogan Assessment Certified, Leadership Circle Profile Certified
 
-### `legal_counsel` — Amanda Davis
+### `legal_counsel` — Corporate Legal Strategist
 
 **Corporate Legal Strategist** · **Domain:** `legal_counsel` · **Expertise:** `expert` · **Experience:** 13 years
 
-**Background:** Partner at top law firm, specialized in tech/finance sectors
+**Background:** Partner at a top-tier law firm specializing in technology and finance sectors.
 
 **Specializations:** `corporate_law`, `securities_law`, `contract_negotiation`, `risk_mitigation`
 
@@ -384,16 +378,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `legal_risk_matrix`, `compliance_framework`, `contract_analysis`
 
 **Key achievements:**
-- Led $10B M&A deals
-- Never lost a major case
+- Led $10B+ M&A transactions
+- Unbroken successful-case record on major matters
 
-**Certifications:** JD Harvard Law, Bar Admission NY/CA
+**Certifications:** JD from a top-tier law school, Multi-state bar admission
 
-### `gary_vaynerchuk_advisor` — Gary Vaynerchuk _(named figure)_
+### `gary_vaynerchuk_advisor` — Digital Marketing & Brand Strategist
 
-**Digital Marketing & Brand Expert** · **Domain:** `marketing_strategy` · **Expertise:** `legend` · **Experience:** 20 years
+**Digital Marketing & Brand Strategist** · **Domain:** `marketing_strategy` · **Expertise:** `legend` · **Experience:** 20 years
 
-**Background:** VaynerMedia CEO, serial entrepreneur, social media pioneer
+**Background:** Two decades of brand-building practice combining digital marketing, content strategy, and emerging-platform dynamics.
 
 **Specializations:** `social_media`, `brand_building`, `content_marketing`, `web3`
 
@@ -402,17 +396,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `jab_jab_right_hook`, `day_trading_attention`, `brand_storytelling`
 
 **Key achievements:**
-- Built $200M agency
-- Wine Library $60M
-- NFT pioneer
+- Built a $200M digital agency
+- Scaled a niche e-commerce business to nine-figure revenue
+- Early operator in NFT and creator-economy markets
 
-**Certifications:** Mount Ida College, Self-made expertise
+**Certifications:** Multi-decade applied marketing practice
 
-### `chris_voss_advisor` — Chris Voss _(named figure)_
+### `chris_voss_advisor` — Master Negotiation Specialist
 
-**Master Negotiator & FBI Lead** · **Domain:** `negotiation_strategy` · **Expertise:** `legend` · **Experience:** 24 years
+**Master Negotiation Specialist** · **Domain:** `negotiation_strategy` · **Expertise:** `legend` · **Experience:** 24 years
 
-**Background:** Former FBI hostage negotiator, Black Swan Group founder
+**Background:** Former federal hostage negotiator; developed tactical-empathy and calibrated-question frameworks now standard in high-stakes deal-making.
 
 **Specializations:** `tactical_empathy`, `negotiation`, `crisis_management`, `deal_making`
 
@@ -421,17 +415,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `tactical_empathy`, `mirroring`, `calibrated_questions`
 
 **Key achievements:**
-- 24 years FBI
-- International kidnapping cases
-- Never Split the Difference
+- 24 years of high-stakes federal negotiation experience
+- International crisis-resolution case work
+- Authored a defining negotiation reference
 
-**Certifications:** FBI Training, Harvard Law negotiation
+**Certifications:** Federal hostage-negotiation training, Top-tier law school negotiation coursework
 
-### `tim_cook_advisor` — Tim Cook _(named figure)_
+### `tim_cook_advisor` — Operations & Supply-Chain Strategist
 
 **Operations & Supply-Chain Strategist** · **Domain:** `operations_management` · **Expertise:** `legend` · **Experience:** 35 years
 
-**Background:** Apple CEO; before that, Apple COO who rebuilt the supply chain that made the iPhone era possible
+**Background:** Chief executive at a global consumer-hardware company after rebuilding its supply chain to enable category-defining product launches.
 
 **Specializations:** `supply_chain`, `operational_excellence`, `global_logistics`, `scaling_operations`
 
@@ -440,17 +434,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `just_in_time`, `lean_operations`, `vertical_integration`
 
 **Key achievements:**
-- Scaled Apple to $3T market cap
-- Built world's most efficient supply chain
-- Operational backbone of >2B device shipments
+- Scaled a global hardware company to multi-trillion market cap
+- Built one of the world's most efficient supply chains
+- Operational backbone for billions of device shipments
 
-**Certifications:** Duke Fuqua MBA, Auburn Industrial Engineering
+**Certifications:** MBA from a top-tier business school, Industrial Engineering undergraduate degree
 
-### `options_master` — Jennifer Park
+### `options_master` — Options Trading Master
 
 **Options Trading Master** · **Domain:** `options_trading` · **Expertise:** `legend` · **Experience:** 18 years
 
-**Background:** Former head of options at major prop trading firm, pioneered volatility strategies
+**Background:** Former head of options at a major proprietary trading firm; pioneered volatility-based strategies and proprietary modeling.
 
 **Specializations:** `volatility_trading`, `risk_management`, `exotic_options`, `market_making`
 
@@ -459,16 +453,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `black_scholes`, `volatility_modeling`, `greeks_analysis`
 
 **Key achievements:**
-- Consistently profitable for 15 years
-- Developed proprietary vol models
+- Consistently profitable across 15+ years
+- Developed proprietary volatility models
 
 **Certifications:** CMT, Options Institute Graduate
 
-### `elon_musk_advisor` — Elon Musk _(named figure)_
+### `elon_musk_advisor` — First-Principles Engineering Advisor
 
-**Tech Innovation Visionary** · **Domain:** `product_development` · **Expertise:** `legend` · **Experience:** 25 years
+**First-Principles Engineering Advisor** · **Domain:** `product_development` · **Expertise:** `legend` · **Experience:** 25 years
 
-**Background:** Tesla, SpaceX, Neuralink founder, serial entrepreneur
+**Background:** Cross-industry product engineering anchored in first-principles thinking, exponential-growth planning, and vertical integration.
 
 **Specializations:** `first_principles`, `exponential_thinking`, `space_tech`, `ai_future`
 
@@ -477,16 +471,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `first_principles_thinking`, `exponential_growth`, `vertical_integration`
 
 **Key achievements:**
-- Built multiple $100B+ companies
-- Revolutionized EVs and space
+- Built multiple $100B+ companies across electric vehicles, aerospace, and AI
+- Drove category-defining cost-curve improvements
 
-**Certifications:** Physics degree, Self-taught engineering
+**Certifications:** Physics undergraduate training, Self-taught engineering practice
 
-### `real_estate_mogul` — Robert Wilson
+### `real_estate_mogul` — Real Estate Investment Strategist
 
 **Real Estate Investment Strategist** · **Domain:** `real_estate` · **Expertise:** `legend` · **Experience:** 25 years
 
-**Background:** Built $2B real estate portfolio, survived 3 market cycles profitably
+**Background:** Built a multi-billion-dollar commercial real estate portfolio across three full market cycles.
 
 **Specializations:** `investment_analysis`, `market_timing`, `commercial_real_estate`, `reits`
 
@@ -495,16 +489,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `dcf_analysis`, `cap_rate_analysis`, `market_cycle_timing`
 
 **Key achievements:**
-- 20% annual returns for 25 years
-- Never had losing year
+- 20% annualized returns sustained across 25 years
+- No losing years across full holding period
 
-**Certifications:** CCIM, Real Estate License, MBA Wharton
+**Certifications:** CCIM, Real Estate License, MBA from a top-tier business school
 
-### `compliance_advisor` — Eleanor Park
+### `compliance_advisor` — Regulatory & Compliance Strategist
 
 **Regulatory & Compliance Strategist** · **Domain:** `regulatory_compliance` · **Expertise:** `master` · **Experience:** 19 years
 
-**Background:** Former Chief Compliance Officer at a publicly-traded fintech; routinely engages with SEC / FINRA on disclosure matters; partners with `legal_counsel` (Amanda Davis) on legal tasks where the regulatory angle is the dominant risk
+**Background:** Former Chief Compliance Officer at a publicly-traded fintech; routinely engages with SEC / FINRA on disclosure matters; partners with the `legal_counsel` advisor on legal tasks where the regulatory angle is the dominant risk.
 
 **Specializations:** `sec_compliance`, `data_protection_gdpr_ccpa`, `ai_governance`, `financial_reporting`
 
@@ -514,16 +508,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 
 **Key achievements:**
 - Zero material findings across 6 SEC examinations
-- Built GDPR program covering 12M users
-- Authored internal AI-governance framework now adopted across the parent group
+- Built a GDPR program covering 12M users
+- Authored an internal AI-governance framework now adopted across the parent group
 
-**Certifications:** JD NYU Law, CRCM, CIPP/E, FINRA Series 7/24
+**Certifications:** JD from a top-tier law school, CRCM, CIPP/E, FINRA Series 7/24
 
-### `ray_dalio_advisor` — Ray Dalio _(named figure)_
+### `ray_dalio_advisor` — Macro Economic Strategist
 
 **Macro Economic Strategist** · **Domain:** `risk_management` · **Expertise:** `legend` · **Experience:** 45 years
 
-**Background:** Bridgewater Associates founder, largest hedge fund in the world
+**Background:** Decades of macro hedge-fund strategy: risk-parity portfolio construction, debt-cycle analysis, principles-based decisioning.
 
 **Specializations:** `macro_economics`, `risk_parity`, `principles`, `debt_cycles`
 
@@ -532,17 +526,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `principles_based`, `all_weather_portfolio`, `economic_machine`
 
 **Key achievements:**
-- Built $150B hedge fund
-- Predicted 2008 crisis
-- All Weather strategy
+- Built one of the world's largest macro hedge funds
+- Pioneered all-weather portfolio construction
+- Called the 2008 global financial crisis
 
-**Certifications:** Harvard MBA, CFA
+**Certifications:** MBA from a top-tier business school, CFA
 
-### `grant_cardone_advisor` — Grant Cardone _(named figure)_
+### `grant_cardone_advisor` — Sales & Real Estate Strategist
 
-**Sales & Real Estate Mogul** · **Domain:** `sales_optimization` · **Expertise:** `legend` · **Experience:** 30 years
+**Sales & Real Estate Strategist** · **Domain:** `sales_optimization` · **Expertise:** `legend` · **Experience:** 30 years
 
-**Background:** Cardone Capital CEO, $4B real estate portfolio
+**Background:** Three decades of high-volume sales training plus large-scale commercial real estate operations.
 
 **Specializations:** `sales_training`, `real_estate`, `10x_thinking`, `closing_deals`
 
@@ -551,53 +545,17 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `10x_rule`, `aggressive_expansion`, `massive_action`
 
 **Key achievements:**
-- $4B AUM
-- Bestselling author
-- Sales training empire
+- Multi-billion AUM commercial real estate portfolio
+- Bestselling sales-strategy author
+- Built a sales-training franchise at scale
 
-**Certifications:** McNeese State University, Certified sales trainer
+**Certifications:** Multi-decade applied sales practice, Certified sales trainer
 
-### `billy_beane_advisor` — Billy Beane _(named figure)_
-
-**Sports Analytics Pioneer** · **Domain:** `sports_analytics` · **Expertise:** `legend` · **Experience:** 30 years
-
-**Background:** Oakland A's GM, Moneyball pioneer, revolutionized baseball
-
-**Specializations:** `sabermetrics`, `value_finding`, `data_driven_decisions`, `moneyball`
-
-**Consultation types:** `analytics_strategy`, `value_optimization`, `team_building`
-
-**Decision frameworks:** `moneyball`, `statistical_arbitrage`, `ops_optimization`
-
-**Key achievements:**
-- 20-game win streak
-- Playoff appearances on minimum budget
-
-**Certifications:** UC San Diego, MLB experience
-
-### `haralabos_voulgaris_advisor` — Haralabos Voulgaris _(named figure)_
-
-**Sports Betting Analytics Expert** · **Domain:** `sports_analytics` · **Expertise:** `legend` · **Experience:** 20 years
-
-**Background:** Professional sports bettor, Dallas Mavericks Director of Quantitative R&D
-
-**Specializations:** `nba_analytics`, `sports_betting`, `predictive_modeling`, `live_betting`
-
-**Consultation types:** `betting_strategy`, `model_development`, `bankroll_management`
-
-**Decision frameworks:** `expected_value`, `regression_models`, `live_adjustments`
-
-**Key achievements:**
-- Millions in betting profits
-- NBA team analytics director
-
-**Certifications:** Self-taught, Proven track record
-
-### `sports_analytics_expert` — Mike Johnson
+### `sports_analytics_expert` — Sports Analytics & Betting Expert
 
 **Sports Analytics & Betting Expert** · **Domain:** `sports_analytics` · **Expertise:** `master` · **Experience:** 10 years
 
-**Background:** Former NBA analytics director, built winning betting models for major syndicates
+**Background:** Former analytics director for a professional basketball franchise; built winning betting models used by major syndicates.
 
 **Specializations:** `predictive_modeling`, `player_analysis`, `betting_strategies`, `data_science`
 
@@ -606,16 +564,52 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `sabermetrics`, `expected_value`, `kelly_criterion`
 
 **Key achievements:**
-- 15% ROI over 8 years
-- Predicted 3 major upsets
+- 15% ROI sustained across 8+ years of betting
+- Multiple high-confidence upset calls
 
 **Certifications:** Sports Analytics Certificate, Statistics PhD
 
-### `startup_guru` — Lisa Thompson
+### `billy_beane_advisor` — Sports Analytics Pioneer
+
+**Sports Analytics Pioneer** · **Domain:** `sports_analytics` · **Expertise:** `legend` · **Experience:** 30 years
+
+**Background:** Pioneer of statistics-driven sports management; brought sabermetric value-finding into mainstream team operations.
+
+**Specializations:** `sabermetrics`, `value_finding`, `data_driven_decisions`, `moneyball`
+
+**Consultation types:** `analytics_strategy`, `value_optimization`, `team_building`
+
+**Decision frameworks:** `moneyball`, `statistical_arbitrage`, `ops_optimization`
+
+**Key achievements:**
+- Long playoff appearances on a minimum-budget roster
+- Established a winning paradigm later copied across the league
+
+**Certifications:** Top-tier university degree, Multi-decade professional baseball operations experience
+
+### `haralabos_voulgaris_advisor` — Sports Betting Quant
+
+**Sports Betting Quant** · **Domain:** `sports_analytics` · **Expertise:** `legend` · **Experience:** 20 years
+
+**Background:** Two decades of professional sports betting combined with quantitative analytics work for a top-tier NBA franchise.
+
+**Specializations:** `nba_analytics`, `sports_betting`, `predictive_modeling`, `live_betting`
+
+**Consultation types:** `betting_strategy`, `model_development`, `bankroll_management`
+
+**Decision frameworks:** `expected_value`, `regression_models`, `live_adjustments`
+
+**Key achievements:**
+- Multi-million dollar career betting profits
+- Director of Quantitative R&D for a professional basketball team
+
+**Certifications:** Self-taught, Multi-decade documented track record
+
+### `startup_guru` — Startup & Venture Advisor
 
 **Startup & Venture Advisor** · **Domain:** `startup_consulting` · **Expertise:** `master` · **Experience:** 16 years
 
-**Background:** Serial entrepreneur, 3 exits, active angel investor and advisor
+**Background:** Three-time founder with successful exits; active angel investor across 50+ early-stage companies.
 
 **Specializations:** `product_market_fit`, `fundraising`, `team_building`, `scaling`
 
@@ -624,16 +618,16 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `lean_canvas`, `jobs_to_be_done`, `growth_accounting`
 
 **Key achievements:**
-- Built $1B company
-- 50+ startup investments
+- Built a unicorn-scale company
+- 50+ early-stage startup investments
 
-**Certifications:** Stanford Director Program, Kauffman Fellows
+**Certifications:** Executive education in board governance, Fellowship-level startup ecosystem program
 
-### `tech_architect` — Alex Chen
+### `tech_architect` — Chief Technology Architect
 
 **Chief Technology Architect** · **Domain:** `technical_architecture` · **Expertise:** `master` · **Experience:** 15 years
 
-**Background:** Ex-Google/Apple architect, built systems serving billions of users
+**Background:** Former senior architect at hyperscale cloud and consumer-hardware companies; built systems serving billions of users.
 
 **Specializations:** `system_design`, `scalability`, `cloud_architecture`, `ai_integration`
 
@@ -642,8 +636,8 @@ One block per advisor. Background + specializations + achievements + decision fr
 **Decision frameworks:** `domain_driven_design`, `microservices`, `cloud_native`
 
 **Key achievements:**
-- Scaled systems to 10B+ requests/day
-- Led 200+ engineer teams
+- Scaled production systems to 10B+ requests/day
+- Led organizations of 200+ engineers
 
-**Certifications:** AWS Solutions Architect, Google Cloud Architect
+**Certifications:** Hyperscaler solutions-architect certification, Multi-cloud architect certification
 

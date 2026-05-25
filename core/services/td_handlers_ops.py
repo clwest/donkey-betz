@@ -4874,6 +4874,104 @@ class OpsHandlersMixin:
             return {'error': str(e)}
 
     # =========================================================================
+    # Session 1142: search_docs — semantic-ish doc search over .rag/corpus.jsonl
+    # =========================================================================
+
+    def _handle_search_docs(self, tool_name, payload, user_id, trace_id):
+        """Search the /docs/ corpus via core.rag.top_k.
+
+        Returns ranked chunks with [docs/path#chunk_id] citations. The corpus
+        is a token-overlap + hint-boosted scorer over .rag/corpus.jsonl (not
+        true vector similarity — that path is `kb_tool` over Document +
+        DocumentEmbedding). Use this for "find the passage about X" queries
+        that need an inline-cited answer grounded in the doc corpus.
+        """
+        query = (payload.get('query') or '').strip()
+        if not query:
+            return {'error': 'query is required'}
+        try:
+            k = max(1, min(int(payload.get('k', 8) or 8), 20))
+        except (TypeError, ValueError):
+            k = 8
+        try:
+            max_chars = max(500, min(int(payload.get('max_chars', 6000) or 6000), 12000))
+        except (TypeError, ValueError):
+            max_chars = 6000
+
+        try:
+            from core.rag import top_k, CORPUS_PATH
+
+            if not CORPUS_PATH.exists():
+                return {
+                    'error': (
+                        f'RAG corpus not found at {CORPUS_PATH}. '
+                        'Run `python manage.py build_rag_corpus` to build it.'
+                    ),
+                    'query': query,
+                }
+
+            # boost_hints=False: skip the legacy learning-loop bias so
+            # general doc questions get neutral token-overlap ranking.
+            rows = top_k(query, k=k, boost_hints=False)
+            if not rows:
+                return {
+                    'query': query,
+                    'result_count': 0,
+                    'chunks': [],
+                    'note': (
+                        'No matching chunks. Try broader terms; if recently-'
+                        'added docs are missing, run `python manage.py build_rag_corpus`.'
+                    ),
+                }
+
+            chunks = []
+            total = 0
+            truncated = False
+            for r in rows:
+                f = r.get('file', '') or ''
+                # Corpus paths drop the leading 'docs/'. Add it back so the
+                # citation matches a real on-disk path the reader can open.
+                cite_path = f if f.startswith('docs/') else f'docs/{f}'
+                text = ' '.join((r.get('text') or '').split())
+                citation = f"[{cite_path}#{r.get('chunk_id')}]"
+                overhead = len(citation) + 1  # +1 for the space joining citation+text
+                remaining = max_chars - total - overhead
+
+                if remaining <= 0:
+                    # No room even for the citation; stop.
+                    truncated = True
+                    break
+
+                if len(text) > remaining:
+                    # Truncate this chunk's text so we still return *something*.
+                    text = text[:remaining].rstrip() + '…'
+                    truncated = True
+
+                chunks.append({
+                    'file': cite_path,
+                    'chunk_id': r.get('chunk_id'),
+                    'citation': citation,
+                    'text': text,
+                })
+                total += overhead + len(text)
+                if truncated:
+                    break
+
+            return {
+                'query': query,
+                'result_count': len(chunks),
+                'k_requested': k,
+                'max_chars': max_chars,
+                'truncated': truncated,
+                'total_chars': total,
+                'chunks': chunks,
+            }
+
+        except Exception as e:
+            logger.error(f"[SEARCH_DOCS] error: {e}", exc_info=True)
+            return {'error': str(e), 'query': query}
+
+    # =========================================================================
     # Session 1031: Dream Tool — browse, approve, dismiss dreams via PA
     # =========================================================================
 

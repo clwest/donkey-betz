@@ -543,6 +543,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # R2-6: KB / embedding browsing
         self.register("kb_tool", self._handle_kb_browse)
+        # Session 1142: chunked /docs/ retrieval via .rag/corpus.jsonl
+        self.register("search_docs", self._handle_search_docs)
 
         # In-app messaging between platform users
         self.register("messaging_tool", self._handle_messaging)
