@@ -1107,7 +1107,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/agent-list [category]` | List agents by category | Phase 5 |
 | `/agent-task <name> <task>` | Execute any agent directly | Phase 5 |
 | `/advisors` | List 25 legendary advisors | Phase 5 |
-| `/consult <advisor> <question>` | Get advice from Warren Buffett, Elon Musk, etc. | Phase 5 |
+| `/consult <advisor> <question>` | Get advice from a functional domain specialist (Value Investing Strategist, First-Principles Engineering Advisor, etc.) — see ADVISOR_AUDIT.md. | Phase 5 |
 | `/workflow-list` | Show available multi-step workflows | Phase 5 |
 | `/workflow-run <name> <input>` | Execute workflow with input | Phase 5 |
 | `/subscribe [tier]` | Subscribe to Pro/Premium tier | Monetization |

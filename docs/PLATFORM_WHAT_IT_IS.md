@@ -143,7 +143,7 @@ Every agent inherits from `BaseAgent` (`core/agents/base_agent.py`) which provid
 - **Post-execution outcome recording** — `AgentExecution` (status/tokens/cost), `AgentMemory` (safety-classified memories), `AgentLearning` (XP + pattern detection), `AgentKnowledgeSource` (shared knowledge)
 - **Provenance tracking** — 29 agents explicitly wire `build_provenance()` into their output (data sources, timestamps, validation)
 
-Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **32 advisors** (10 named figures — Warren Buffett, Cathie Wood, Ray Dalio, Sam Altman, Elon Musk, Gary Vaynerchuk, Mr Beast, Chris Voss, Billy Beane, Haralabos Voulgaris — and 22 domain specialists) accessible through `AdvisorContextBuilder`.
+Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **30 advisors** — functional domain specialists across investment strategy, AI/ML, content/creator economy, sports analytics, negotiation, healthcare, cybersecurity, education, operations, IP counsel, leadership coaching, regulatory compliance — accessible through `AdvisorContextBuilder`. All advisor identities are functional (no real-person names); see [`ADVISOR_AUDIT.md`](ADVISOR_AUDIT.md).
 
 **Router entry point:** `AgentRouter.route(agent_name, task, context)` performs parallel context gathering (11 workers × 10s timeout each) before dispatching to the agent. See `core/agent_router.py:738-1264`.
 
@@ -472,7 +472,7 @@ open http://localhost:8000/ai-studio/
 |---|---|
 | **Agent** | A specialized AI worker. Code agents are Python classes in `core/agents/`; persona agents are DB rows routed through `DynamicPersonaAgent`. |
 | **AGENT_MAP** | Dictionary in `core/agent_router.py` mapping agent names → agent classes. Current size: 83. |
-| **Advisor** | A "personality-infused" advisor (Warren Buffett-style, Cathie Wood-style, etc.) injected into prompts via `AdvisorContextBuilder`. 25 total. |
+| **Advisor** | A functional domain-specialist advisor (Value Investing Strategist, Innovation Investment Strategist, Macro Economic Strategist, Sports Analytics Pioneer, etc.) injected into prompts via `AdvisorContextBuilder`. 30 total. Identities are functional, not modeled on real-world figures. |
 | **AgentMemory** | A specific memory of one agent execution. Safety-classified (`test_only`/`exploratory`/`candidate`/`approved`). |
 | **AutoTopic** | A topic auto-generated from a signal cluster, ready to drive initiative creation. |
 | **BaseAgent** | The 5,575-line base class every code agent inherits from. |

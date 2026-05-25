@@ -1552,19 +1552,19 @@ These agents exist in `agents/` directory and are used by the legacy system:
 Advisors provide expertise for complex decisions:
 
 ### Investment/Finance
-- Warren Buffett - Value investing
-- Charlie Munger - Mental models
-- Ray Dalio - Macro economics
-- Cathie Wood - Disruptive innovation
-- Peter Lynch - Growth investing
-- Howard Marks - Risk management
+- Value Investing Strategist - Long-term value, margin of safety
+- Macro Economic Strategist - Principles-based, all-weather portfolio
+- Innovation Investment Strategist - Disruptive innovation, thematic growth
+- Mental-Models Frameworks Advisor - Multi-disciplinary reasoning
+- Growth Investing Advisor - Invest-in-what-you-know discipline
+- Risk Management Advisor - Cycle-aware risk control
 
 ### Tech/Innovation
-- Elon Musk - First principles
-- Steve Jobs - Design/UX
-- Jeff Bezos - Customer obsession
-- Reid Hoffman - Network effects
-- Marc Andreessen - Software trends
+- First-Principles Engineering Advisor - Decompose-to-fundamentals product thinking
+- Design & UX Advisor - User-centric craft, simplicity discipline
+- Customer-Obsessed Operator - Reverse-from-customer planning
+- Network-Effects Strategist - Platform economics, scale dynamics
+- Software Trends Analyst - Market structure + technology direction
 - Paul Graham - Startup wisdom
 
 ### Creative
