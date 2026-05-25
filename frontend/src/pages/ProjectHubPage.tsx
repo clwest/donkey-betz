@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import {
   ArrowLeft, FileText, Lightbulb, MessageSquare, BarChart3,
@@ -293,7 +294,7 @@ export default function ProjectHubPage() {
                     {expandedDeliverable === d.id && d.preview && (
                       <div className="px-4 pb-4 border-t border-dark-border/50">
                         <div className="mt-3 text-sm text-gray-300 prose prose-invert prose-sm max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{d.preview}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{d.preview}</ReactMarkdown>
                         </div>
                       </div>
                     )}

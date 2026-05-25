@@ -61,6 +61,7 @@ import { cn } from '@/lib/cn'
 import { platformApi, blogsApi } from '@/lib/api'
 import { generateDocumentPDF } from '@/lib/pdfExport'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 
 // Session 906: Time duration helper for "time in stage" display
@@ -593,7 +594,7 @@ function DocumentViewerModal({
               {/* Session 943: Unified prose styling */}
               <div className="relative">
                 <div className={`prose prose-invert prose-dark prose-sm max-w-none ${!contentExpanded ? 'max-h-[400px] overflow-hidden' : ''}`}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                     {data.full_text || data.content || 'No content available'}
                   </ReactMarkdown>
                 </div>

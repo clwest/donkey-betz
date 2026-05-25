@@ -10,6 +10,7 @@ import { X, ExternalLink, Clock, FileText, Copy, Check, ChevronLeft, Maximize2, 
 import { cn } from '@/lib/cn'
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 
 interface DocumentMetadata {
@@ -236,7 +237,7 @@ export function DocumentViewer({
             /* Session 943: Unified prose styling with ReactMarkdown */
             <div className="p-6">
               <article className="prose prose-invert prose-dark prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                   {content}
                 </ReactMarkdown>
               </article>
