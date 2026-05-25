@@ -33,7 +33,7 @@ python manage.py build_docs_index                 # regenerate docs/INDEX.md + _
 
 ## Recent corpus audit
 
-Session 1143 produced a deep audit of `/docs/`: [`audit-2026/SESSION_1143_DOCS_AUDIT.md`](../audit-2026/SESSION_1143_DOCS_AUDIT.md). It contains per-subdir verdicts, pathology list, and a phased action queue for cleanup work.
+Session 1143 produced a deep audit of `/docs/`: [`audit/SESSION_1143_DOCS_AUDIT.md`](../audit/SESSION_1143_DOCS_AUDIT.md). It contains per-subdir verdicts, pathology list, and a phased action queue for cleanup work.
 
 ---
 
