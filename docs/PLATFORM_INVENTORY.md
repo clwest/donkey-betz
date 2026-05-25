@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-24 19:03:53
-**Git HEAD:** `080636e1`
+**Generated:** 2026-05-24 22:38:31
+**Git HEAD:** `b4432d8e`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -10,16 +10,16 @@
 
 | Subsystem | Headline |
 |---|---|
-| [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 151 rows in Agent table. |
+| [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 155 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
 | [Services](#services) | 112 `*Service` classes across 338 files in core/services/ |
 | [Celery Tasks](#celery-tasks) | 401 user-defined Celery tasks (excludes celery.* internals) |
 | [Celery Beat — Scheduled Tasks](#beat-schedule) | 80 enabled + 0 disabled = 80 PeriodicTask rows |
-| [Personal Assistant (PA) Tools](#pa-tools) | 105 tool schemas + 170 registered handlers; 8 enrichment services |
+| [Personal Assistant (PA) Tools](#pa-tools) | 106 tool schemas + 171 registered handlers; 8 enrichment services |
 | [Database Models](#database-models) | 585 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1857 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 208 files matching core/views*.py |
-| [Django Management Commands](#management-commands) | 178 management commands in core/management/commands/ |
+| [Django Management Commands](#management-commands) | 179 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
 | [LLM Providers](#llm-providers) | 6 providers registered in LLMProviderRegistry |
@@ -29,7 +29,7 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,043 Python files, 993,935 lines across core/ + ai_core/ + intelligence/ |
+| [Code Statistics](#code-stats) | 2,044 Python files, 994,480 lines across core/ + ai_core/ + intelligence/ |
 | [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 71 OK, 2 drifts |
 
 ## Table of Contents
@@ -59,11 +59,11 @@
 <a id="agents"></a>
 ## Agents
 
-**Headline:** 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 151 rows in Agent table.
+**Headline:** 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 155 rows in Agent table.
 
 **Code location:** `core/agent_router.py AGENT_MAP`
 
-**Notes:** AGENT_MAP total = 83 (74 enabled + 8 rerouted + 1 blocked). DB Agent rows = 151. Top agent_type breakdown: income=20, content=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, creative=11, marketing=10, analytics=7. Blocked: ['CodeGeneratorAgent']. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeReviewAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
+**Notes:** AGENT_MAP total = 83 (74 enabled + 8 rerouted + 1 blocked). DB Agent rows = 155. Top agent_type breakdown: income=20, content=17, career=15, business=14, job_search=12, finance=12, ai_ml=11, creative=11, marketing=10, analytics=7. Blocked: ['CodeGeneratorAgent']. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeReviewAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
 
 | Name | Module | Status |
 |---|---|---|
@@ -871,14 +871,15 @@
 <a id="pa-tools"></a>
 ## Personal Assistant (PA) Tools
 
-**Headline:** 105 tool schemas + 170 registered handlers; 8 enrichment services
+**Headline:** 106 tool schemas + 171 registered handlers; 8 enrichment services
 
 **Code location:** `core/services/pa_tool_schemas.py + tool_dispatcher.py`
 
-**Notes:** Schemas: 105. Handlers (self.register in tool_dispatcher.py): 170. Intent-mapped: 104. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
+**Notes:** Schemas: 106. Handlers (self.register in tool_dispatcher.py): 171. Intent-mapped: 105. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
 
 | Schema name | Canonical intent |
 |---|---|
+|  |  |
 |  |  |
 |  |  |
 |  |  |
@@ -1685,7 +1686,7 @@
 <a id="management-commands"></a>
 ## Django Management Commands
 
-**Headline:** 178 management commands in core/management/commands/
+**Headline:** 179 management commands in core/management/commands/
 
 **Code location:** `core/management/commands/`
 
@@ -1740,6 +1741,7 @@
 | python manage.py bulk_embed_spiders |
 | python manage.py calibrate_halt_thresholds |
 | python manage.py celery_inspect_report |
+| python manage.py check_doc_headers |
 | python manage.py check_experiment_status |
 | python manage.py check_initiative_drift |
 | python manage.py circulation_check |
@@ -2037,14 +2039,14 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,043 Python files, 993,935 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,044 Python files, 994,480 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1637 | 827538 |
+| core | 1638 | 828083 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2043 | 993935 |
+| TOTAL (python) | 2044 | 994480 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
@@ -2053,26 +2055,26 @@
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=71, low=0, medium=2, high=0, error=0. Top drifting docs: docs/AGENTS.md, docs/CAPABILITIES.md.
+**Notes:** Severity rollup: ok=71, low=0, medium=2, high=0, error=0. Top drifting docs: core/management/commands/load_all_agents_advisors.py.
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
 | CLAUDE.md | 10 | 0 | 0 |
 | core/epa_handlers/td_handlers_ops.py | 1 | 0 | 0 |
 | core/learning_bridges/base.py | 1 | 0 | 0 |
-| core/management/commands/load_all_agents_advisors.py | 2 | 0 | 0 |
+| core/management/commands/load_all_agents_advisors.py | 0 | 2 | 0 |
 | core/models_document_registry.py | 1 | 0 | 0 |
 | core/models_unified_system.py | 1 | 0 | 0 |
 | core/services/advisor_context_builder.py | 1 | 0 | 0 |
 | core/services/priority/governor.py | 1 | 0 | 0 |
 | docs/ADVISOR_AUDIT.md | 2 | 0 | 0 |
-| docs/AGENTS.md | 2 | 1 | 0 |
+| docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
 | docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
 | docs/BEAT_AUDIT.md | 1 | 0 | 0 |
 | docs/BODY_SYSTEM_AUDIT.md | 1 | 0 | 0 |
-| docs/CAPABILITIES.md | 3 | 1 | 0 |
+| docs/CAPABILITIES.md | 4 | 0 | 0 |
 | docs/CAPABILITY_AUDIT.md | 2 | 0 | 0 |
 | docs/CELERY_AUDIT.md | 1 | 0 | 0 |
 | docs/DISCORD_INTEGRATION.md | 1 | 0 | 0 |
