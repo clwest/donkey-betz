@@ -1,6 +1,6 @@
 # Roadmap Index
 
-**Total Documents:** 8
+**Total Documents:** 9 (Session 1143: docs/roadmaps/ merged in)
 
 ## Documents
 
@@ -12,4 +12,5 @@
 - [05-Trigger-Tuning](05-TRIGGER-TUNING.md)
 - [06-Spider-Health](06-SPIDER-HEALTH.md)
 - [Roadmap](ROADMAP.md)
+- [Integration Roadmap 2026](INTEGRATION_ROADMAP_2026.md) — merged from docs/roadmaps/ in Session 1143
 
