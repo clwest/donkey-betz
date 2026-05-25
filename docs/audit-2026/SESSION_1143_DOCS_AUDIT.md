@@ -157,6 +157,17 @@ Subdirs inside `archive/`:
    - If no critical inbound references → move to a dated subdir under `docs/archive/superseded-2026-05/`, leave V2-Moved stub at root.
 3. After moves, run `verify_doc_claims` + `build_docs_index` + commit.
 
+### Phase 2A pre-flight checklist (runs on EVERY Phase 2+ PR)
+
+Before any subdir-level move, fold, or merge:
+1. **Runtime-coupled paths check.** Cross-reference target dir/file against the table in [`docs/00-START-HERE/DOC_LIFECYCLE.md`](../00-START-HERE/DOC_LIFECYCLE.md) §2b. If listed → STOP, do not move.
+2. **Inbound reference scan.** `grep -rln "docs/<dir>/" CLAUDE.md 00-START-NEXT-SESSION.md docs/*_AUDIT.md docs/topics/ docs/00-START-HERE/` plus `grep -rln "docs/<dir>/" --include="*.py" core/ scripts/`. Note all critical citers; update or stub as appropriate.
+3. **Every move = V2 stub + citation-identity caveat line** at the old path. No exceptions.
+4. **Same-PR comment refs.** Any Python docstring or code comment pointing to a moved path gets grep-replaced in the same PR.
+5. **Verifiers.** Run `python manage.py verify_doc_claims --only-drift`, `python manage.py build_docs_index`, `python manage.py generate_platform_inventory`, and `python scripts/verify_repo_guardrails.py`.
+6. **Spot-check** at least 3 moved files: archive copy present + stub present + stub points to correct relative path.
+7. **Pre-commit security check** passes (auto-enforced).
+
 ### Phase 2 — subdir consolidation (separate PR)
 1. **Merge `roadmap/` + `roadmaps/`** → single dir, V2-Moved stubs.
 2. **Consolidate `audit/` + `audits/` + `audit-2026/`:** keep `audit-2026/` as current-cycle, move `audit/` files into it, treat `audits/` as historical archive.
