@@ -1,3 +1,9 @@
+---
+originating_session: 1023
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1023 — Evidence Gate Layers 1-3
 
 **Date:** February 16, 2026

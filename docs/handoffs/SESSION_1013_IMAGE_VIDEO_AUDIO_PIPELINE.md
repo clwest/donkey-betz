@@ -1,3 +1,9 @@
+---
+originating_session: 1013
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1013 Handoff — Image/Video/Audio Pipeline + Agent Failure Fix
 
 **Date:** February 15, 2026

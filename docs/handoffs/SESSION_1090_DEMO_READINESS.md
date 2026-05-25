@@ -1,3 +1,9 @@
+---
+originating_session: 1090
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1090 — Demo Readiness + Agent Self-Audit
 
 **Date:** April 16, 2026

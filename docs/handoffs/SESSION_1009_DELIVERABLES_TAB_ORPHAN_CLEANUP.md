@@ -1,3 +1,9 @@
+---
+originating_session: 1009
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1009: Deliverables Tab + Orphan Endpoint Cleanup
 
 **Date:** February 15, 2026

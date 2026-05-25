@@ -1,3 +1,9 @@
+---
+originating_session: 1024
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1024 — Semantic Spider Search (Root Cause Fix)
 
 **Date:** February 17, 2026

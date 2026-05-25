@@ -1,3 +1,9 @@
+---
+originating_session: 1035
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1035 — PA Function Calling Hardening & Operator Report
 
 **Date:** February 19, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 1025
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1025 — Scoring Contract: Reach, Intent & Replicability
 
 **Date:** February 17, 2026

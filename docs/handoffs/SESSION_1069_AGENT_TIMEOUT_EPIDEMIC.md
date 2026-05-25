@@ -1,3 +1,9 @@
+---
+originating_session: 1069
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1069: Agent Timeout Epidemic Fix
 
 **Date:** 2026-02-23

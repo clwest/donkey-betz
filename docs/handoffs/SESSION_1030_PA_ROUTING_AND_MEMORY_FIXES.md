@@ -1,3 +1,9 @@
+---
+originating_session: 1030
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1030: PA Routing & Memory Fixes
 
 **Date:** February 17, 2026

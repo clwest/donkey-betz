@@ -1,3 +1,9 @@
+---
+originating_session: 1001
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1001: Ground Blog Generation in Real Telemetry Data
 
 **Date:** February 13, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 1070
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1070 — Decision Gates: Classification Before Execution
 
 **Date:** February 23, 2026

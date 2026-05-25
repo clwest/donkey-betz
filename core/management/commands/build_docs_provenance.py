@@ -92,6 +92,22 @@ _FRONTMATTER_SESSION_RE = re.compile(
     re.MULTILINE,
 )
 
+# Handoff filename convention is unambiguous: ``SESSION_NNNN_*.md``
+# (with optional letter suffix like ``SESSION_998B_*``). When git history
+# attributes a handoff to a neighboring session number (file committed
+# AS PART of a neighboring session's wrap-up commit), the filename is
+# the more honest signal. Session 1147 (P3.5) added this filename
+# override so the index agrees with the filename for handoffs.
+_HANDOFF_FILENAME_RE = re.compile(r"/SESSION_(\d+)[A-Z]?(?:_[A-Z]+)?_")
+
+
+def _handoff_filename_session(path: str) -> Optional[int]:
+    """For ``docs/handoffs/SESSION_NNNN_*.md``, return NNNN; else None."""
+    if not path.startswith("docs/handoffs/"):
+        return None
+    m = _HANDOFF_FILENAME_RE.search(path)
+    return int(m.group(1)) if m else None
+
 # ASCII control codes for git log delimiters. \x1f (Unit Separator) and
 # \x1e (Record Separator) are non-printable; git accepts them in
 # ``--pretty=format`` and they cannot legally appear in commit
@@ -326,7 +342,7 @@ def build_provenance_index(commits: list[dict], excludes: list[str]) -> dict[str
                 entry["first_commit_subject"] = c["subject"]
 
     # Resolve originating_session + confidence per file.
-    for entry in provenance.values():
+    for path, entry in provenance.items():
         sessions = entry["sessions_touched"]
         if sessions:
             origin = min(sessions)
@@ -335,6 +351,22 @@ def build_provenance_index(commits: list[dict], excludes: list[str]) -> dict[str
             entry["confidence"] = "HIGH" if match == "subject" else "MEDIUM"
             entry["match_source"] = match
         # else: confidence stays UNKNOWN, originating_session None.
+
+        # Session 1147 P3.5: handoff filename override. When the file
+        # is ``docs/handoffs/SESSION_NNNN_*.md``, the filename is the
+        # unambiguous truth — it always wins over git's first-commit
+        # attribution. This catches cases like SESSION_998 handoff
+        # being attributed to Session 997 (because the wrap-up commit
+        # for session 997 created the file). Adds NNNN to
+        # sessions_touched if missing, sets as origin, marks the source
+        # so search_docs filter consumers know.
+        fn_session = _handoff_filename_session(path)
+        if fn_session is not None and fn_session != entry["originating_session"]:
+            if fn_session not in sessions:
+                sessions.add(fn_session)
+            entry["originating_session"] = fn_session
+            entry["confidence"] = "HIGH"  # filename is authoritative
+            entry["match_source"] = "filename"
 
     # Serialize sets to sorted lists; drop scratch fields.
     for entry in provenance.values():

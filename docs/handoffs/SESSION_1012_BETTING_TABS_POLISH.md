@@ -1,3 +1,9 @@
+---
+originating_session: 1012
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1012 — Betting Dashboard Polish & Bug Fixes
 
 **Date:** February 15, 2026

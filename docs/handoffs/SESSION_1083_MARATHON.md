@@ -1,3 +1,9 @@
+---
+originating_session: 1083
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1083 Marathon — ML Isolation + Dead Endpoint Sweep
 
 **Date:** April 15, 2026

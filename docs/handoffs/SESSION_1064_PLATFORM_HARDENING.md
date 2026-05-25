@@ -1,3 +1,9 @@
+---
+originating_session: 1064
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1064: Platform Hardening
 
 **Date:** February 22, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 1089
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1089 — Governor Activation + Agent Data Grounding
 
 **Date:** April 15-16, 2026
