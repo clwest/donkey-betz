@@ -1,5 +1,16 @@
 """
 DaVinci Resolve Video Editing Provider
+
+.. deprecated:: Session 1143 (2026-05-25)
+    DaVinci Resolve integration was SUNSET by Chris in Session 1143
+    following the Session 1143 abandoned-features audit. Per
+    docs/archive/superseded-2026-05/UNDERUTILIZED_FEATURES.md
+    (Session 412): $300+ Studio license investment, never used,
+    $0 ROI. Do NOT invoke for new work. Code preserved in tree for
+    historical reference; routes in core/urls.py may be removed in
+    a future cleanup. See docs/archive/superseded-2026-05/DAVINCI_RESOLVE.md
+    for the deprecation banner.
+
 Session 66 Part 2: Professional video editing workflows
 
 This provider enables:

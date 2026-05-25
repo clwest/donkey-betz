@@ -1,9 +1,16 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Deprecated (DaVinci side); ffmpeg side stays in active use
+> **Originally:** Session 85 (Nov 12 2025) — hybrid DaVinci+ffmpeg architecture
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** **DaVinci Resolve integration sunset by Chris in Session 1143** following abandoned-features audit (PR #2191). The ffmpeg side of the "hybrid architecture" remains in active use (`content/video_provider.py` ffmpeg paths). Only the DaVinci-specific portions are deprecated.
+> **Preserved because:** historical record + the ffmpeg-side patterns are still valid reference material.
+
 # DaVinci Resolve + ffmpeg - Hybrid Video Editing Integration
 
 **Providers:** DaVinci Resolve Studio + ffmpeg
 **Website:** https://www.blackmagicdesign.com/products/davinciresolve
-**Status:** ✅ Hybrid Architecture (DaVinci for color, ffmpeg for operations)
-**Last Updated:** November 12, 2025 - Session 85
+**Status:** DEPRECATED (Session 1143) — DaVinci side sunset; ffmpeg side still active
+**Last Updated:** November 12, 2025 - Session 85 (content frozen; Session 1143 added deprecation banner)
 
 ---
 
