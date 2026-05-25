@@ -1,3 +1,9 @@
+---
+originating_session: 816
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 816: Operations Panel Overhaul
 
 **Date:** January 24, 2026

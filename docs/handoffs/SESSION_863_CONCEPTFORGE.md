@@ -1,3 +1,9 @@
+---
+originating_session: 863
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 863: ConceptForge - Autonomous Think Tank Pipeline
 
 **Date:** January 28, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 887
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 887: Operations Tab Fix + Content Improvements
 
 **Date:** January 31, 2026

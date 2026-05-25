@@ -1,3 +1,9 @@
+---
+originating_session: 827
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 827: Production 502 Fix
 
 **Date:** January 25, 2026

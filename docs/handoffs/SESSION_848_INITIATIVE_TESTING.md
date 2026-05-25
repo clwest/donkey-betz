@@ -1,3 +1,9 @@
+---
+originating_session: 848
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 848 - Initiative Pipeline Testing & Fixes
 
 **Date:** January 27, 2026

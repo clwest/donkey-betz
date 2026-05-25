@@ -1,3 +1,9 @@
+---
+originating_session: 876
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 876: GPT-5-mini Token Limits Fix
 
 ## Summary

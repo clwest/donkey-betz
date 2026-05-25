@@ -1,3 +1,9 @@
+---
+originating_session: 828
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 828: Self-Healing System Execution
 
 **Date:** January 25, 2026

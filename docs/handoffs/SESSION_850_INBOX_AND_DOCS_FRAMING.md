@@ -1,3 +1,9 @@
+---
+originating_session: 850
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 850: Inbox View + Smart Truncate + Docs Framing
 
 **Date:** January 27, 2026

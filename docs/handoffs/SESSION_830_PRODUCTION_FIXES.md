@@ -1,3 +1,9 @@
+---
+originating_session: 830
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 830: Agent File Operations + Production Fixes
 
 **Date:** January 26, 2026

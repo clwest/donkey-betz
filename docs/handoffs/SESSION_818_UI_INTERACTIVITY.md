@@ -1,3 +1,9 @@
+---
+originating_session: 818
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 818: Platform Command Center UI Interactivity
 
 **Date:** January 24, 2026

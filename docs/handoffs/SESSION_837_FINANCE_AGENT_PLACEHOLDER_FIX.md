@@ -1,3 +1,9 @@
+---
+originating_session: 837
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 837-838: Finance Agent Placeholder Data Fixes
 
 **Date:** January 27, 2026

@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-05-25T19:22:02+00:00",
+    "generated": "2026-05-25T19:58:07+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3348ae53c730",
-    "doc_count": 2056,
-    "commit_count": 6593,
+    "git_head": "cab437eb5562",
+    "doc_count": 2058,
+    "commit_count": 6606,
     "confidence_breakdown": {
-      "HIGH": 1273,
+      "HIGH": 1275,
       "MEDIUM": 294,
       "LOW": 0,
       "UNKNOWN": 489
@@ -872,15 +872,18 @@
         1127,
         1131,
         1133,
-        1143
+        1143,
+        1149,
+        1151
       ],
-      "commit_count": 13,
+      "commit_count": 15,
       "prs": [
         2027,
         2036,
         2126,
         2145,
-        2196
+        2196,
+        2227
       ]
     },
     "docs/BACKEND_REFERENCE.md": {
@@ -2238,9 +2241,10 @@
         1141,
         1142,
         1143,
-        1144
+        1144,
+        1149
       ],
-      "commit_count": 858,
+      "commit_count": 860,
       "prs": [
         10,
         11,
@@ -2491,7 +2495,8 @@
         2198,
         2199,
         2200,
-        2207
+        2207,
+        2226
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -6705,17 +6710,19 @@
       "originating_session": 1145,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "7f3cb10a",
+      "first_commit_sha": "33fe091f",
       "first_commit_date": "2026-05-25",
-      "first_commit_subject": "feat(session-1147-provenance): P3.5 frontmatter backfill (50 handoffs) + filename override in build_docs_provenance (#2219)",
+      "first_commit_subject": "feat(session-1148-provenance): P3.5 round 2 \u2014 backfill next 75 handoffs (HIGH only) (#2223)",
       "sessions_touched": [
         1145,
-        1147
+        1147,
+        1148
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         2213,
-        2219
+        2219,
+        2223
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -11559,12 +11566,18 @@
       "first_commit_subject": "feat(Session 814): Comprehensive documentation architecture with governance & focus layers (#127)",
       "sessions_touched": [
         814,
-        1143
+        1142,
+        1143,
+        1145,
+        1148,
+        1149
       ],
-      "commit_count": 4,
+      "commit_count": 8,
       "prs": [
         127,
-        2186
+        2186,
+        2224,
+        2226
       ]
     },
     "docs/governance_redesign.md": {
@@ -12171,9 +12184,10 @@
         1145,
         1146,
         1147,
-        1148
+        1148,
+        1149
       ],
-      "commit_count": 40,
+      "commit_count": 42,
       "prs": [
         2091,
         2092,
@@ -12193,7 +12207,8 @@
         2206,
         2214,
         2218,
-        2222
+        2222,
+        2225
       ]
     },
     "docs/handoffs/HANDOFF_00_MASTER_PLAN.md": {
@@ -12521,10 +12536,14 @@
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "feat: wire content review automation pipeline \u2014 PublishGate promotion, enhancement guard, auto-publish (Session 1000C)",
       "sessions_touched": [
-        1000
+        1000,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1000_INTELLIGENCE_DESKS.md": {
       "originating_session": 1000,
@@ -12568,10 +12587,14 @@
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "fix: make agent delegation discover all 81 agents and centralize spider_query (Session 1002B)",
       "sessions_touched": [
-        1002
+        1002,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md": {
       "originating_session": 1002,
@@ -12581,10 +12604,14 @@
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "fix: replace tools=self.tools with get_tools_with_delegation() in 9 agents",
       "sessions_touched": [
-        1002
+        1002,
+        1147,
+        1148
       ],
-      "commit_count": 4,
-      "prs": []
+      "commit_count": 6,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1002_SPIDER_CONTEXT_FABRICATION_FIX.md": {
       "originating_session": 1002,
@@ -12594,10 +12621,14 @@
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "fix: make agent delegation discover all 81 agents and centralize spider_query (Session 1002B)",
       "sessions_touched": [
-        1002
+        1002,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1003_PIPELINE_COMPLETION.md": {
       "originating_session": 1003,
@@ -12625,14 +12656,17 @@
       "first_commit_date": "2026-02-14",
       "first_commit_subject": "docs: update session entry point and handoff for PRs #1144-#1147 (queue fixes) (#1148)",
       "sessions_touched": [
-        1004
+        1004,
+        1147,
+        1148
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         1143,
         1144,
         1147,
-        1148
+        1148,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md": {
@@ -12643,10 +12677,14 @@
       "first_commit_date": "2026-02-14",
       "first_commit_subject": "docs: update session entry point for 1005 completion (desk fixes + queue purge)",
       "sessions_touched": [
-        1005
+        1005,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1006_SYSTEMATIC_CLEANUP.md": {
       "originating_session": 1006,
@@ -12951,10 +12989,14 @@
       "first_commit_date": "2026-02-17",
       "first_commit_subject": "fix: disable remediation execution loop, save $9/day",
       "sessions_touched": [
-        1026
+        1026,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1027_AGENT_EXECUTION_AUDIT.md": {
       "originating_session": 1027,
@@ -13110,11 +13152,14 @@
       "first_commit_date": "2026-02-19",
       "first_commit_subject": "feat: add bulk paginated list action to brainstorm_tool for conversation export (#1345) (#1345)",
       "sessions_touched": [
-        1043
+        1043,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        1345
+        1345,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1043_DOCX_CSV_PROCESSORS.md": {
@@ -13125,10 +13170,14 @@
       "first_commit_date": "2026-02-19",
       "first_commit_subject": "feat: add DOCX and CSV processors to RAG upload pipeline",
       "sessions_touched": [
-        1043
+        1043,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_1048_TASK_VOLUME_BREAKDOWN.md": {
       "originating_session": 1048,
@@ -13185,13 +13234,16 @@
       "first_commit_date": "2026-02-22",
       "first_commit_subject": "fix: QueuePreservingScheduler prevents celery-beat from resetting queue values (#1417)",
       "sessions_touched": [
-        1064
+        1064,
+        1147,
+        1148
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         1415,
         1416,
-        1417
+        1417,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1064_PLATFORM_HARDENING.md": {
@@ -13349,12 +13401,15 @@
       "first_commit_subject": "docs(handoff): Session 1084 final \u2014 heartbeat durability + OpenAI/Anthropic factories (#1896)",
       "sessions_touched": [
         1083,
-        1084
+        1084,
+        1147,
+        1148
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         1896,
-        2033
+        2033,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1089_GOVERNOR_AND_GROUNDING.md": {
@@ -13441,12 +13496,15 @@
       "sessions_touched": [
         1092,
         1093,
-        1094
+        1094,
+        1147,
+        1148
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         1984,
-        2033
+        2033,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1097_MYTHOLOGY_SWEEP_AND_AGENT_FIXES.md": {
@@ -14319,17 +14377,20 @@
       "originating_session": 1143,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "998e7ed4",
+      "first_commit_sha": "33fe091f",
       "first_commit_date": "2026-05-25",
-      "first_commit_subject": "docs(session-1143): final handoff + CURRENT.md update + 00-START-NEXT-SESSION \u2192 1144 entry (#2200)",
+      "first_commit_subject": "feat(session-1148-provenance): P3.5 round 2 \u2014 backfill next 75 handoffs (HIGH only) (#2223)",
       "sessions_touched": [
         1142,
         1143,
-        1144
+        1144,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        2200
+        2200,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1144_DOCS_CLEANUP_PROVENANCE_AND_LEAK_FIX.md": {
@@ -14372,17 +14433,19 @@
       "originating_session": 1146,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "2dfc899a",
+      "first_commit_sha": "33fe091f",
       "first_commit_date": "2026-05-25",
-      "first_commit_subject": "docs(session-1146): handoff \u2014 root-level audits sweep (3 PRs) (#2218)",
+      "first_commit_subject": "feat(session-1148-provenance): P3.5 round 2 \u2014 backfill next 75 handoffs (HIGH only) (#2223)",
       "sessions_touched": [
         1145,
         1146,
-        1147
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        2218
+        2218,
+        2223
       ]
     },
     "docs/handoffs/SESSION_1147_P35_BACKFILL_PLUS_APPS_AND_TOPICS_SWEEPS.md": {
@@ -14399,6 +14462,39 @@
       "commit_count": 2,
       "prs": [
         2222
+      ]
+    },
+    "docs/handoffs/SESSION_1148_P35_ROUND2_AND_SYSTEM_OWNER_DRIFT_LABEL.md": {
+      "originating_session": 1148,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "9d11667d",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1148): handoff \u2014 P3.5 round 2 + SYSTEM_OWNER drift label (2 PRs) (#2225)",
+      "sessions_touched": [
+        1148,
+        1149
+      ],
+      "commit_count": 2,
+      "prs": [
+        2225
+      ]
+    },
+    "docs/handoffs/SESSION_1149_SYSTEM_OWNER_SECTION_3_AND_DRIFT_FIXES.md": {
+      "originating_session": 1149,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "cab437eb",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1149): handoff \u2014 SYSTEM_OWNER \u00a73 rewrite + drift fixes (2 PRs blocked on GH billing) (#2228)",
+      "sessions_touched": [
+        1148,
+        1149,
+        1150
+      ],
+      "commit_count": 2,
+      "prs": [
+        2228
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -24293,11 +24389,14 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "feat(Session 891): Add Domain Content Context System for all content types (#636)",
       "sessions_touched": [
-        891
+        891,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        636
+        636,
+        2223
       ]
     },
     "docs/handoffs/SESSION_892_WORKFLOW_AGENT_FIX.md": {
@@ -24308,11 +24407,14 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "feat(Session 892): Fix WorkflowAgent multi-step orchestration (20\u219236 agents) (#637)",
       "sessions_touched": [
-        892
+        892,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        637
+        637,
+        2223
       ]
     },
     "docs/handoffs/SESSION_893_DELIVERABLES_BUG_FIX.md": {
@@ -24323,11 +24425,14 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "fix(Session 893): Fix single-letter document titles from LLM output bug (#638)",
       "sessions_touched": [
-        893
+        893,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        638
+        638,
+        2223
       ]
     },
     "docs/handoffs/SESSION_893_WORKSPACE_CONTEXT_FIX.md": {
@@ -24338,11 +24443,14 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "docs(Session 893): Add session handoff and update start file (#642)",
       "sessions_touched": [
-        893
+        893,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        642
+        642,
+        2223
       ]
     },
     "docs/handoffs/SESSION_894_VOICE_MODE.md": {
@@ -24353,11 +24461,14 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "docs(Session 894): Add voice mode handoff documentation (#645)",
       "sessions_touched": [
-        894
+        894,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        645
+        645,
+        2223
       ]
     },
     "docs/handoffs/SESSION_895_COORDINATOR_TIMEOUT_PROTECTION.md": {
@@ -24369,11 +24480,14 @@
       "first_commit_subject": "feat(Session 895): Add timeout protection to all coordinator agents (#655)",
       "sessions_touched": [
         895,
-        896
+        896,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        655
+        655,
+        2223
       ]
     },
     "docs/handoffs/SESSION_896_CODEBASE_WORKSPACE_FIX.md": {
@@ -24384,12 +24498,15 @@
       "first_commit_date": "2026-02-01",
       "first_commit_subject": "docs(Session 896): Update handoff with PDF export feature (#659)",
       "sessions_touched": [
-        896
+        896,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         657,
-        659
+        659,
+        2223
       ]
     },
     "docs/handoffs/SESSION_897_COMPLETE.md": {
@@ -24400,11 +24517,14 @@
       "first_commit_date": "2026-02-01",
       "first_commit_subject": "docs(Session 897): Complete session handoff and update start file (#667)",
       "sessions_touched": [
-        897
+        897,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        667
+        667,
+        2223
       ]
     },
     "docs/handoffs/SESSION_897_EXPERIMENT_PIPELINE_FIX.md": {
@@ -24432,11 +24552,14 @@
       "first_commit_subject": "docs(Session 898): Add session handoff and update start file (#669)",
       "sessions_touched": [
         898,
-        899
+        899,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        669
+        669,
+        2223
       ]
     },
     "docs/handoffs/SESSION_899_COMPREHENSIVE_INITIATIVE_VIEW.md": {
@@ -24447,11 +24570,14 @@
       "first_commit_date": "2026-02-01",
       "first_commit_subject": "feat(Session 899): Add Completed filter and comprehensive initiative view (#671)",
       "sessions_touched": [
-        899
+        899,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        671
+        671,
+        2223
       ]
     },
     "docs/handoffs/SESSION_899_CONVERSATION_TRANSCRIPT.md": {
@@ -24462,11 +24588,14 @@
       "first_commit_date": "2026-02-01",
       "first_commit_subject": "docs(Session 899): Add conversation transcript handoff document (#677)",
       "sessions_touched": [
-        899
+        899,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        677
+        677,
+        2223
       ]
     },
     "docs/handoffs/SESSION_8_COMPLETE_AUTONOMOUS_LEARNING_ACTIVATED.md": {
@@ -24490,12 +24619,15 @@
       "first_commit_date": "2026-02-01",
       "first_commit_subject": "feat(Session 900): Add Signal Intelligence UI to Initiative modal (#676)",
       "sessions_touched": [
-        900
+        900,
+        1147,
+        1148
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         675,
-        676
+        676,
+        2223
       ]
     },
     "docs/handoffs/SESSION_901_INITIATIVE_PRIORITY.md": {
@@ -24507,10 +24639,14 @@
       "first_commit_subject": "docs(Session 901): Add Initiative Priority documentation",
       "sessions_touched": [
         901,
-        902
+        902,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_902_ACTION_ITEM_TRACKING.md": {
       "originating_session": 902,
@@ -24551,11 +24687,14 @@
       "first_commit_subject": "docs(Session 904): Update documentation - Initiative UI Overhaul complete (#693)",
       "sessions_touched": [
         904,
-        905
+        905,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        693
+        693,
+        2223
       ]
     },
     "docs/handoffs/SESSION_905_INITIATIVE_TITLE_GENERATOR.md": {
@@ -24566,13 +24705,16 @@
       "first_commit_date": "2026-02-01",
       "first_commit_subject": "feat(Session 905): Initiative auto-progression through stages (#699) (#699)",
       "sessions_touched": [
-        905
+        905,
+        1147,
+        1148
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         696,
         698,
-        699
+        699,
+        2223
       ]
     },
     "docs/handoffs/SESSION_914_7_OPERATING_RHYTHM.md": {
@@ -24583,10 +24725,14 @@
       "first_commit_date": "2026-02-02",
       "first_commit_subject": "docs(Session 914.7): Add session handoff document",
       "sessions_touched": [
-        914
+        914,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_915_STAGE_DOCUMENT_BACKFILL.md": {
       "originating_session": 915,
@@ -24596,11 +24742,14 @@
       "first_commit_date": "2026-02-02",
       "first_commit_subject": "docs(Session 915): Add stage document backfill handoff document (#764)",
       "sessions_touched": [
-        915
+        915,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        764
+        764,
+        2223
       ]
     },
     "docs/handoffs/SESSION_916_HARD_INVARIANTS.md": {
@@ -24612,12 +24761,15 @@
       "first_commit_subject": "docs(Session 916): Add production reset details to handoff (#776)",
       "sessions_touched": [
         916,
-        918
+        918,
+        1147,
+        1148
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         771,
-        776
+        776,
+        2223
       ]
     },
     "docs/handoffs/SESSION_916_INITIATIVE_TITLE_GENERATOR.md": {
@@ -24628,11 +24780,14 @@
       "first_commit_date": "2026-02-02",
       "first_commit_subject": "docs(Session 916): Add handoff document for initiative title generator (#766)",
       "sessions_touched": [
-        916
+        916,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        766
+        766,
+        2223
       ]
     },
     "docs/handoffs/SESSION_917_OPERATIONS_TAB_CATEGORY_ROTATIONS.md": {
@@ -24643,11 +24798,14 @@
       "first_commit_date": "2026-02-02",
       "first_commit_subject": "feat(Session 917): Add category rotations for Operations Tab (#768)",
       "sessions_touched": [
-        917
+        917,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        768
+        768,
+        2223
       ]
     },
     "docs/handoffs/SESSION_918_REPORT_PROVENANCE.md": {
@@ -24660,14 +24818,17 @@
       "sessions_touched": [
         916,
         918,
-        919
+        919,
+        1147,
+        1148
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         771,
         775,
         777,
-        780
+        780,
+        2223
       ]
     },
     "docs/handoffs/SESSION_920_PANEL_ADVISOR_IMPROVEMENTS.md": {
@@ -24678,11 +24839,14 @@
       "first_commit_date": "2026-02-03",
       "first_commit_subject": "docs: Update CLAUDE.md and add Session 920 handoff (#805)",
       "sessions_touched": [
-        920
+        920,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        805
+        805,
+        2223
       ]
     },
     "docs/handoffs/SESSION_921_PIPELINE_HEALTH_MONITORING.md": {
@@ -24694,10 +24858,14 @@
       "first_commit_subject": "docs(Session 921): Add handoff and update session file",
       "sessions_touched": [
         921,
-        922
+        922,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_922_STAGE_GEN_FIX.md": {
       "originating_session": 922,
@@ -24708,11 +24876,14 @@
       "first_commit_subject": "docs(Session 922): Add handoff documentation for stage generation fix (#813)",
       "sessions_touched": [
         922,
-        923
+        923,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        813
+        813,
+        2223
       ]
     },
     "docs/handoffs/SESSION_923_RESEARCH_AGENT_FIX.md": {
@@ -24740,12 +24911,15 @@
       "first_commit_subject": "docs(Session 924): Add HiveMind enhancement to handoff (#823)",
       "sessions_touched": [
         924,
-        925
+        925,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         821,
-        823
+        823,
+        2223
       ]
     },
     "docs/handoffs/SESSION_925_AUTO_CLEANUP.md": {
@@ -24759,13 +24933,16 @@
         925,
         926,
         928,
-        930
+        930,
+        1147,
+        1148
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         825,
         826,
-        833
+        833,
+        2223
       ]
     },
     "docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md": {
@@ -24777,11 +24954,14 @@
       "first_commit_subject": "feat(Session 927): Universal Agent Voice System - Listen buttons for TTS (#827)",
       "sessions_touched": [
         926,
-        927
+        927,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        827
+        827,
+        2223
       ]
     },
     "docs/handoffs/SESSION_928_INITIATIVE_CONVERSATIONS.md": {
@@ -24793,12 +24973,15 @@
       "first_commit_subject": "docs(Session 928): Complete handoff documentation (#833)",
       "sessions_touched": [
         928,
-        930
+        930,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         831,
-        833
+        833,
+        2223
       ]
     },
     "docs/handoffs/SESSION_930_USER_CONTEXT_LEARNING.md": {
@@ -24811,14 +24994,17 @@
       "sessions_touched": [
         930,
         931,
-        932
+        932,
+        1147,
+        1148
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         835,
         838,
         841,
-        842
+        842,
+        2223
       ]
     },
     "docs/handoffs/SESSION_931_PA_REFACTOR.md": {
@@ -24830,12 +25016,15 @@
       "first_commit_subject": "feat(Session 932): Unified Attention Aggregator (#845)",
       "sessions_touched": [
         931,
-        932
+        932,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         844,
-        845
+        845,
+        2223
       ]
     },
     "docs/handoffs/SESSION_943_ARTIFACT_CLEANUP.md": {
@@ -24846,9 +25035,11 @@
       "first_commit_date": "2026-02-05",
       "first_commit_subject": "docs(Session 943): Update handoff with PRs #891, #892 (#893)",
       "sessions_touched": [
-        943
+        943,
+        1147,
+        1148
       ],
-      "commit_count": 7,
+      "commit_count": 9,
       "prs": [
         885,
         887,
@@ -24857,7 +25048,8 @@
         890,
         891,
         892,
-        893
+        893,
+        2223
       ]
     },
     "docs/handoffs/SESSION_949_RISK_AWARE_RAG.md": {
@@ -24869,10 +25061,14 @@
       "first_commit_subject": "docs(Session 949): Add handoff and update start file",
       "sessions_touched": [
         949,
-        950
+        950,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_950_KALSHI_SPORTS_CATEGORIZATION.md": {
       "originating_session": 950,
@@ -24883,12 +25079,15 @@
       "first_commit_subject": "feat(Session 951): Add platform_query_tool to PA for database access (#929)",
       "sessions_touched": [
         950,
-        951
+        951,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         928,
-        929
+        929,
+        2223
       ]
     },
     "docs/handoffs/SESSION_952_NARRATIVE_INJECTION.md": {
@@ -24900,11 +25099,14 @@
       "first_commit_subject": "docs(Session 952): Update session handoff for Narrative Injection Enhancement (#931)",
       "sessions_touched": [
         952,
-        953
+        953,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        931
+        931,
+        2223
       ]
     },
     "docs/handoffs/SESSION_953_AGENT_PROVENANCE.md": {
@@ -24917,11 +25119,14 @@
       "sessions_touched": [
         952,
         953,
-        954
+        954,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        934
+        934,
+        2223
       ]
     },
     "docs/handoffs/SESSION_954_BOARDROOM_ML.md": {
@@ -24933,9 +25138,11 @@
       "first_commit_subject": "feat(Session 956): Add AI Learning effectiveness dashboard to LearningJourneyTab (#941)",
       "sessions_touched": [
         954,
-        956
+        956,
+        1147,
+        1148
       ],
-      "commit_count": 7,
+      "commit_count": 9,
       "prs": [
         935,
         936,
@@ -24943,7 +25150,8 @@
         938,
         939,
         940,
-        941
+        941,
+        2223
       ]
     },
     "docs/handoffs/SESSION_959_PA_INTELLIGENCE_UPGRADE.md": {
@@ -24954,10 +25162,14 @@
       "first_commit_date": "2026-02-06",
       "first_commit_subject": "feat(Session 959): PA Intelligence Upgrade - analytical advisor with enrichment pipeline",
       "sessions_touched": [
-        959
+        959,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_961b_PA_INITIATIVE_DISPLAY_FIX.md": {
       "originating_session": null,
@@ -24991,10 +25203,14 @@
       "first_commit_date": "2026-02-07",
       "first_commit_subject": "feat(Session 964): Phase 4 \u2014 Multi-Agent Content Deliberation Pipeline",
       "sessions_touched": [
-        964
+        964,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_968_INSIGHT_DEDUP_BUNDLING.md": {
       "originating_session": 968,
@@ -25005,10 +25221,14 @@
       "first_commit_subject": "feat(Session 968): Phase 5A insight de-dup bundling + session docs",
       "sessions_touched": [
         968,
-        969
+        969,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_969_ORCHESTRATION_ENRICHMENT.md": {
       "originating_session": 969,
@@ -25019,10 +25239,14 @@
       "first_commit_subject": "docs(Session 969): Session handoff + auto-generated content/reports",
       "sessions_touched": [
         969,
-        970
+        970,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_969b_PA_LIVE_TELEMETRY.md": {
       "originating_session": null,
@@ -25043,10 +25267,14 @@
       "first_commit_date": "2026-02-08",
       "first_commit_subject": "docs(Session 970): Handoff doc + CLAUDE.md + session start update",
       "sessions_touched": [
-        970
+        970,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_971b_UI_DISCORD_SURFACE_RESET.md": {
       "originating_session": null,
@@ -25080,10 +25308,14 @@
       "first_commit_date": "2026-02-09",
       "first_commit_subject": "docs(Session 973): Add handoff, update CLAUDE.md and session entry point",
       "sessions_touched": [
-        973
+        973,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_974b_PA_ASYNC_CELERY.md": {
       "originating_session": null,
@@ -25105,10 +25337,14 @@
       "first_commit_subject": "docs(Session 975): handoff, CLAUDE.md, session entry point, docs index",
       "sessions_touched": [
         975,
-        976
+        976,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_976_SKIN_LAYER_GITIGNORE_FIX.md": {
       "originating_session": 976,
@@ -25118,10 +25354,14 @@
       "first_commit_date": "2026-02-09",
       "first_commit_subject": "fix(Session 976): redirect SKIN layer output to generated_content/, remove 59 auto-generated files from git",
       "sessions_touched": [
-        976
+        976,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_977_PA_TIMEOUT_FIX.md": {
       "originating_session": 977,
@@ -25131,11 +25371,14 @@
       "first_commit_date": "2026-02-09",
       "first_commit_subject": "docs(Session 977): handoff, CLAUDE.md, session entry point (#1021)",
       "sessions_touched": [
-        977
+        977,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        1021
+        1021,
+        2223
       ]
     },
     "docs/handoffs/SESSION_979_STOCK_INTELLIGENCE_PA_ROUTING.md": {
@@ -25148,10 +25391,14 @@
       "sessions_touched": [
         979,
         980,
-        981
+        981,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_980_FIX_0_STOCK_BRIEF_SAVE.md": {
       "originating_session": 980,
@@ -25162,10 +25409,14 @@
       "first_commit_subject": "docs: update session 980 handoff and entry docs for full session scope",
       "sessions_touched": [
         980,
-        981
+        981,
+        1147,
+        1148
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_982_TICKER_LOOKUP.md": {
       "originating_session": 982,
@@ -25190,11 +25441,14 @@
       "first_commit_date": "2026-02-10",
       "first_commit_subject": "chore: sync docs index and add session 983 handoff (#1046)",
       "sessions_touched": [
-        983
+        983,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        1046
+        1046,
+        2223
       ]
     },
     "docs/handoffs/SESSION_984_BOARDROOM_FEEDERS_AND_CELERY_OOM.md": {
@@ -25205,11 +25459,14 @@
       "first_commit_date": "2026-02-10",
       "first_commit_subject": "docs: session 984 handoff \u2014 boardroom feeders + celery OOM (#1045)",
       "sessions_touched": [
-        984
+        984,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        1045
+        1045,
+        2223
       ]
     },
     "docs/handoffs/SESSION_985_PA_BOARDROOM_RESPONSE_IMPROVEMENT.md": {
@@ -25220,10 +25477,14 @@
       "first_commit_date": "2026-02-10",
       "first_commit_subject": "fix: celery-worker OOM \u2014 lazy ML imports drop parent process ~800MB to ~200MB",
       "sessions_touched": [
-        985
+        985,
+        1147,
+        1148
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_986_NERVOUS_SYSTEM_REDIS_FIX.md": {
       "originating_session": 986,
@@ -25234,10 +25495,14 @@
       "first_commit_subject": "docs: session 986 handoff \u2014 nervous system health fix",
       "sessions_touched": [
         986,
-        987
+        987,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_987_PA_WIRING_COMPLETION.md": {
       "originating_session": 987,
@@ -25247,10 +25512,14 @@
       "first_commit_date": "2026-02-10",
       "first_commit_subject": "docs: add Session 987 handoff \u2014 PA wiring completion",
       "sessions_touched": [
-        987
+        987,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_988_STALE_DATA_AND_PA_FIXES.md": {
       "originating_session": 988,
@@ -25261,10 +25530,14 @@
       "first_commit_subject": "docs: update session 988 handoff with crypto price + capabilities fixes",
       "sessions_touched": [
         988,
-        989
+        989,
+        1147,
+        1148
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_989_PRODUCTION_VERIFICATION.md": {
       "originating_session": 989,
@@ -25275,11 +25548,14 @@
       "first_commit_subject": "docs: session 989 handoff \u2014 production verification & field name fixes",
       "sessions_touched": [
         988,
-        989
+        989,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        2034
+        2034,
+        2223
       ]
     },
     "docs/handoffs/SESSION_990_PA_CONTENT_FEEDBACK_LOOP.md": {
@@ -25290,11 +25566,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: close PA-to-agent content feedback loop \u2014 record publish/archive/revise decisions (#1080)",
       "sessions_touched": [
-        990
+        990,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        1080
+        1080,
+        2223
       ]
     },
     "docs/handoffs/SESSION_991_PROACTIVE_INTELLIGENCE_AGENT_LEARNING_WIRING.md": {
@@ -25305,11 +25584,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: wire ProactiveIntelligenceService + AgentLearningService into execution paths (#1081)",
       "sessions_touched": [
-        991
+        991,
+        1147,
+        1148
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        1081
+        1081,
+        2223
       ]
     },
     "docs/handoffs/SESSION_993_PA_CAPABILITY_GAPS.md": {
@@ -25333,10 +25615,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "fix: enforce circuit breaker, add quality gate + TRIAGE status for initiative pipeline (Session 994B)",
       "sessions_touched": [
-        994
+        994,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_994_STOCK_PREDICTION_PODCAST_FIXES.md": {
       "originating_session": 994,
@@ -25346,10 +25632,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "fix: stock prediction type safety + podcast user context (Session 994)",
       "sessions_touched": [
-        994
+        994,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md": {
       "originating_session": 995,
@@ -25359,10 +25649,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: sports betting intelligence system \u2014 3 new agents + PA integration + pipeline (Session 995B)",
       "sessions_touched": [
-        995
+        995,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_995_BETTING_OUTCOME_VERIFICATION.md": {
       "originating_session": 995,
@@ -25372,10 +25666,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: betting outcome verification + learning loop (Session 995)",
       "sessions_touched": [
-        995
+        995,
+        1147,
+        1148
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2223
+      ]
     },
     "docs/handoffs/SESSION_996_INITIATIVE_OWNERSHIP.md": {
       "originating_session": 996,
@@ -25385,11 +25683,14 @@
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: initiative ownership system \u2014 owner fields + PA actions + auto-assignment (Session 996) (#1091)",
       "sessions_touched": [
-        996
+        996,
+        1147,
+        1148
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        1091
+        1091,
+        2223
       ]
     },
     "docs/handoffs/SESSION_997B_PODCAST_BOARDROOM_BETTING_SIDEBAR.md": {

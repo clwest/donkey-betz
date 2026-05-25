@@ -1,3 +1,9 @@
+---
+originating_session: 865
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 865: Podcast TTS + Voice Profile Integration + ConceptForge UI
 
 **Date:** January 29, 2026

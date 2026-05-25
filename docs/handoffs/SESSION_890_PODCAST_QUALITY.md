@@ -1,3 +1,9 @@
+---
+originating_session: 890
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 890 - Podcast Quality Improvements
 
 **Date:** January 31, 2026

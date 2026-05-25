@@ -1,3 +1,9 @@
+---
+originating_session: 821
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 821: Phase 1.5 Staleness Validation
 
 **Date:** January 25, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 824
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 824: UI Integration Sprint
 
 **Date:** January 25, 2026

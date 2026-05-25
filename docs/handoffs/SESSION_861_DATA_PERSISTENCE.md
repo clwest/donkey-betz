@@ -1,3 +1,9 @@
+---
+originating_session: 861
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 861 - Data Persistence Gaps + Content Tab UI
 
 **Date:** January 28, 2026

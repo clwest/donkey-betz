@@ -1,3 +1,9 @@
+---
+originating_session: 817
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 817: Autonomous Agent Behavior + Smart Tool Results Renderer
 
 **Date:** January 24, 2026
