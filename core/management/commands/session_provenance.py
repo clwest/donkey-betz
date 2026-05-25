@@ -113,10 +113,15 @@ def build_provenance(session: int, excludes: list[str]) -> dict:
     docs: dict[str, dict] = OrderedDict()
     non_docs: dict[str, dict] = OrderedDict()
 
+    # Track per-commit file-touch counts as we walk (rendered later)
+    commit_paths_touched: dict[str, int] = {}
+
     for c in commits:
         sha = c["sha"]
         subject = c["subject"]
-        for f in git_files_in_commit(sha):
+        files = git_files_in_commit(sha)
+        commit_paths_touched[sha[:8]] = len(files)
+        for f in files:
             # Skip docs/ paths under exclude prefixes (per DOC_LIFECYCLE §0)
             if f.startswith("docs/") and any(f.startswith(ex) for ex in excludes):
                 continue
@@ -186,22 +191,68 @@ def build_provenance(session: int, excludes: list[str]) -> dict:
             "they're this session's work and not later commits citing it as context."
         )
 
+    # Explicit hygiene-gap callout — Rigby Session 1144 review: tell the
+    # operator out loud when no subject-tagged commits exist at all, so the
+    # commit-convention lesson isn't something humans have to infer.
+    coverage_warning = subject_matches == 0 and body_matches > 0
+    if coverage_warning:
+        notes.append(
+            "No subject-tagged commits found; provenance is MEDIUM confidence. "
+            "Consider tagging commits `session-####` in subject going forward "
+            "(e.g. `docs(session-NNNN): ...`)."
+        )
+
+    coverage = {
+        "matched_commits": len(commits),
+        "subject_match_count": subject_matches,
+        "body_match_count": body_matches,
+        "session_tag_in_subject_rate": (
+            round(subject_matches / len(commits), 3) if commits else None
+        ),
+        "coverage_warning": coverage_warning,
+        "commit_hygiene_recommendation": (
+            "Tag every session-N commit subject with `session-N` "
+            "(e.g. `docs(session-1144): ...`)"
+        ),
+    }
+
     return {
         "session": session,
         "handoff_docs": handoffs,
         "commit_count": len(commits),
+        # Backwards-compat aliases (deprecated, prefer coverage.*)
         "subject_match_count": subject_matches,
         "body_match_count": body_matches,
+        "coverage": coverage,
         "commits": [
-            {"sha": c["sha"][:8], "subject": c["subject"], "match": c["match"]}
+            {
+                "sha": c["sha"][:8],
+                "subject": c["subject"],
+                "match": c["match"],
+                "match_level": "HIGH" if c["match"] == "subject" else "MEDIUM",
+                "match_source": c["match"],
+                "session_tag_present": c["match"] == "subject",
+                "paths_touched_count": commit_paths_touched.get(c["sha"][:8], 0),
+            }
             for c in commits
         ],
         "docs_created": sorted(docs_created, key=lambda d: d["path"]),
         "docs_modified": sorted(docs_modified, key=lambda d: d["path"]),
         "non_docs_created": sorted(non_docs_created, key=lambda d: d["path"]),
         "non_docs_modified": sorted(non_docs_modified, key=lambda d: d["path"]),
+        "counts": {
+            "docs_created": len(docs_created),
+            "docs_modified": len(docs_modified),
+            "non_docs_created": len(non_docs_created),
+            "non_docs_modified": len(non_docs_modified),
+            "frontmatter_only": len(fm_overrides),
+        },
         "frontmatter_only": sorted(fm_overrides),
-        "excludes": excludes,
+        "scope": {
+            "root": "docs/",
+            "excludes": excludes,
+        },
+        "excludes": excludes,  # kept top-level for backwards compat
         "notes": notes,
     }
 
