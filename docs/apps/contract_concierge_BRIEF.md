@@ -1,7 +1,7 @@
 ---
 title: "Contract Concierge — Phase 1 brief (products.ts-anchored)"
 status: draft (Session 1135 discovery, rewritten post-products.ts discovery, pending Rigby review + Chris ratification)
-session: 1135
+originating_session: 1135
 generated: 2026-05-23
 revised: 2026-05-23 (rewritten — supersedes Colorado Family Law Concierge brief which was based on engine-mismatch misread)
 workspace: Donkey Betz

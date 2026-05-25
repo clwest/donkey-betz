@@ -1,7 +1,7 @@
 ---
 title: "Colorado Family Law Concierge — Phase 2+ spin-off concept (NOT a current product)"
-status: future-concept (Session 1135 discovery; superseded by products.ts ground-truth, see header note)
-session: 1135
+status: parked_future_concept (Session 1135 discovery; superseded by products.ts ground-truth, see header note)
+originating_session: 1135
 generated: 2026-05-23
 revised: 2026-05-23 (Rigby content-flag review applied)
 note_2026_05_23_late: "PRODUCTS.TS REVEALED CONTRACT CONCIERGE IS COMMERCIAL CONTRACTS (SOW/NDA/Contractor with e-signature), NOT family law. This brief was written before that discovery; preserved as a Phase 2+ spin-off concept since the legal_doc_drafter_agent engine is real and Colorado pro-se family law IS a valid Atlas Phase 3 vertical (per Atlas §H Phase 3). Treat this as future-concept exploration, not a current product brief. The actual Contract Concierge product brief is at docs/apps/contract_concierge_BRIEF.md."
