@@ -1,3 +1,9 @@
+---
+originating_session: 851
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 851: Debate Agent Output Fix
 
 **Date:** January 27, 2026

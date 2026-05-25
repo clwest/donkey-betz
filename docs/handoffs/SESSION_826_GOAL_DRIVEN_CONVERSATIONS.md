@@ -1,3 +1,9 @@
+---
+originating_session: 826
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 826: Goal-Driven Conversations
 
 **Date:** January 25, 2026

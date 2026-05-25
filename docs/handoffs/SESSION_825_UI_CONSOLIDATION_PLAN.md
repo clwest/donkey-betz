@@ -1,3 +1,9 @@
+---
+originating_session: 825
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 825: UI Consolidation & Refactor Plan
 
 **Date:** January 25, 2026

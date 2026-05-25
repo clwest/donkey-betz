@@ -1,3 +1,9 @@
+---
+originating_session: 884
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 884: AI OS Boot Experience - Home Page
 
 **Date:** January 30, 2026

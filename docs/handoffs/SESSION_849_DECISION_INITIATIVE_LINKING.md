@@ -1,3 +1,9 @@
+---
+originating_session: 849
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 849 - Decision to Initiative Linking
 
 **Date:** January 27, 2026

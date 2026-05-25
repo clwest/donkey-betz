@@ -1,3 +1,9 @@
+---
+originating_session: 841
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 841: Experiment Monitoring Fixes
 
 **Date:** January 27, 2026

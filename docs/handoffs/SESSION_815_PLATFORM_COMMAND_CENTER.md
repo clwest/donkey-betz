@@ -1,3 +1,9 @@
+---
+originating_session: 815
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 815: WorkspacePage → Platform Command Center
 
 **Date:** January 24, 2026

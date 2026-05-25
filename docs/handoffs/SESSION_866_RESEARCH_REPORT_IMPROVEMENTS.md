@@ -1,3 +1,9 @@
+---
+originating_session: 866
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 866: Research Report Improvements + Internal Data Registry + Initiative Pipeline
 
 **Date:** January 29, 2026

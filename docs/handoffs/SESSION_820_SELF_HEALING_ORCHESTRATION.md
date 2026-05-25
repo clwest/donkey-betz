@@ -1,3 +1,9 @@
+---
+originating_session: 820
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 820: Self-Healing Orchestration System
 
 **Date:** January 25, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 867
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 867 - System-Wide Audit Report
 
 **Date:** January 29, 2026

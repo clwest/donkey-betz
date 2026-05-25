@@ -1,3 +1,9 @@
+---
+originating_session: 885
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 885: Celery Content Pipeline & Operations Tab Fix
 
 **Date:** January 30-31, 2026

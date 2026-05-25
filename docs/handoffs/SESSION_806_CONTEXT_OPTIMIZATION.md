@@ -1,3 +1,9 @@
+---
+originating_session: 806
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 806: Personal Assistant Context Optimization
 
 **Date:** January 24, 2026

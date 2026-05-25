@@ -1,3 +1,9 @@
+---
+originating_session: 843
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 843: Orchestration Contract + trace_id System
 
 **Date:** January 27, 2026

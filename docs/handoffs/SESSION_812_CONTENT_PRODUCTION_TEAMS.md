@@ -1,3 +1,9 @@
+---
+originating_session: 812
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 812 - Content Production Teams
 
 **Date:** January 24, 2026

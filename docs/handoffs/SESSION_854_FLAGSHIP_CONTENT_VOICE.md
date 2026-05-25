@@ -1,3 +1,9 @@
+---
+originating_session: 854
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 854: Flagship Content Voice System
 
 **Date:** January 27, 2026
