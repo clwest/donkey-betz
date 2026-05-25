@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1145) -->
+> **⚠ Aspirational architecture / not implemented as specified.** The M3 + Apple MLX + scikit-learn ML stack described here was an exploration design from Jan 2026; the current ML reality lives in the agent-system body-systems architecture, not in a separate MLX pipeline. Do not treat this doc as current system state.
+> **Last reviewed for drift labeling:** Session 1145 (2026-05-25)
+> **Current truth:** [`docs/topics/body-systems.md`](../topics/body-systems.md) (9 health systems + BodyCoordinator) + [`docs/topics/agent-system.md`](../topics/agent-system.md) (current agent architecture) + [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime ML/agent stats).
+> **Note:** Preserved as exploration/rejected-approach context. Specific performance targets, model choices (DistilBERT local, FinBERT, etc.), and "Digital Twin" framings do not match what was built. The active ML touchpoints today are governed by `MLEngine` (deadlock fix in Session 1085 #1871) + body-systems coordinator.
+
 # ML Pipeline Architecture - M3 MacBook Pro Optimized
 
 ## System Specifications

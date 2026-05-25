@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1145) -->
+> **⚠ Pattern doc with drift warning.** The wrap-model-in-orchestrated-tool-workflow pattern remains central to how PA operates, but specific listed workflows (image-gen focused: `research_and_create_logos`, `brand_identity`, etc.), tool counts ("13 tools"), and model version (GPT-5.1) are stale.
+> **Last reviewed for drift labeling:** Session 1145 (2026-05-25)
+> **Current truth:** [`docs/topics/personal-assistant.md`](../topics/personal-assistant.md) (current PA deliberation router) + [`docs/topics/agent-system.md`](../topics/agent-system.md) (AGENT_MAP routing + ToolCallRecord) + [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime tool/agent counts).
+> **Note:** Current multi-agent orchestration lives in `core/conversation_orchestrator.py`; PA's deliberation routing is in `core/services/unified_pa_entrypoint.py`. The doc's pattern intent is preserved; treat the specific implementation details below as superseded.
+
 # Workflow Orchestration Agent Architecture
 
 **Session 191** - November 25, 2025
