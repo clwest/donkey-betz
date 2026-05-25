@@ -879,7 +879,7 @@ The 58 split into categories that need different handling:
 | Category | Approx count | Action needed |
 |---|---:|---|
 | **Intentionally orphan** (debug-only) | 1 | None — `debug_task` is by design |
-| **Should-be-scheduled but never wired** | ~20 | **Wire schedules** — these have docstrings like "Every 10 min" or "daily" but no entry in `app.conf.beat_schedule` or `add_critical_celery_tasks` |
+| **Should-be-scheduled but never wired** | ~20 | **Wire schedules** — these have docstrings like "Every 10 min" or "daily" but no entry in `app.conf.beat_schedule` (the canonical source — `add_critical_celery_tasks` materializes from it per Session 1157 option A and does not define schedule entries itself) |
 | **Triggered by external events** | ~15 | None — these fire on webhook/escalation/HITL events that the detector can't grep for (e.g. `handle_client_response`, `submit_proposal_automatically`) |
 | **Dormant utilities** | ~20 | Per-task — could wrap in mgmt commands or leave with `dormant utility` comment |
 
