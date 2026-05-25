@@ -10,13 +10,15 @@
 **Last refreshed:** Session 1143 (2026-05-25) — Draft
 **Previous version:** Session 814, "Q1 2026 / $10K MRR" framing (superseded by Atlas v1 + Jessica ratification)
 
+> **Chris: reply with the 7 answers in § Decision Needed at the bottom; once answered, we lock the mission.**
+
 ---
 
 ## Mission Statement
 
 > **Ship the 24/7 Global AI portfolio. One polished Suite product at a time, paying customers before features, soft-cut architecture preserved.**
 
-The brand is **24/7 Global AI**. "Donkey Betz" is the internal name for the engine that powers the public Suite. Sports/betting is one vertical among many, deferred to Phase 3+ per the Atlas.
+**24/7 Global AI** is the public brand. "Donkey Betz" remains the internal platform codename. Sports/betting is one vertical among many, deferred to Phase 3+ per the Atlas.
 
 ---
 
@@ -41,7 +43,7 @@ These are real and govern every priority below:
 
 - **Cleanup mode (April 2026 →).** Chris stepping back from feature work. New surface area is the exception, not the rule.
 - **LLM budget tight.** Recent baseline: ~$50 OpenAI credits at last refresh; cost-attribution work (Decision 9 + Phase 0 schema) is gating multi-tenant pricing readiness.
-- **Local-only default** (`feedback_local_only_default.md`). Don't drive prod verification / deploys / Jessica follow-ups unless Chris flips the switch.
+- **Local-only default** (`feedback_local_only_default.md`). Don't drive prod verification / deploys / Jessica follow-ups unless Chris flips the switch. **Interpretation:** default posture is **no autonomous prod actions** (deploys, outbound comms, irreversible data changes) unless explicitly approved.
 - **Per-workspace cost attribution is a hard prerequisite** for any external SaaS launch. Without `LLMCallLog.workspace` FK + `ExternalAPICallLog`, multi-tenant pricing is uninsurable.
 
 ---
@@ -56,7 +58,7 @@ The Atlas implies a sequence but the explicit "top 3 for this period" lock is Ch
 
 **C. Keep Rigby's daily-driver surface stable for Chris.** The internal PA must keep functioning as Chris's working assistant while the Suite GTM work happens. Rigby's value as a paid product depends on her value as an internal one staying intact.
 
-**D. Maintain the corpus + docs hygiene that Sessions 1142/1143 just landed.** Drift erodes the foundation everything else stands on.
+**D. Maintain docs/corpus hygiene at "good enough" to prevent drift regressions.** No new cleanup projects unless they block Phase 1/2. Sessions 1142/1143 just landed the foundation; defend it cheaply, don't expand it.
 
 > See § Decision Needed at the bottom — Chris locks the top 3 + the order.
 
@@ -73,10 +75,10 @@ Atlas alignment: Phase 1 is "ship ONE polished product before fragmenting attent
 
 ### 2. Cost Consciousness
 
-**Do:** Use the right model for the task (Haiku 4.5 for simple, Sonnet 4.6 for default, Opus 4.7 for genuinely hard).
+**Do:** Use the right model for the task — cheap/fast for routine ops; premium tier only for genuinely hard work. Provider-agnostic; let the budget controller / downgrade policy decide the specific model.
 **Don't:** Use expensive models for routine operations.
 
-Verifiable via `LLMCallLog`. Phase 0 cost-attribution work makes this enforceable per-workspace.
+Verifiable via `LLMCallLog`. Phase 0 cost-attribution work (Decision 9) makes this enforceable per-workspace.
 
 ### 3. Human Experience First
 
@@ -131,8 +133,8 @@ The Session 814 metrics ($10K MRR by Q1 2026, 20+ canon docs, 10+ playbooks, dai
 
 | Metric | Old target (Session 814) | Verifiable now? | Proposed target | DECISION |
 |---|---|---|---|---|
-| Suite product count at ≥$500 MRR | n/a | `revenue_tracker_tool` once live | ≥2 (Decision 1 trigger) | Lock or revise |
-| First Suite product Stripe SKU live | n/a | Stripe dashboard + `LLMCallLog` | Signal Studio (Decision 10) | Lock or revise |
+| Suite product count at ≥$500 MRR | n/a | Stripe dashboard (source of truth) + mirrored in `revenue_tracker_tool` | ≥2 (Decision 1 trigger) | Lock or revise |
+| First Suite product Stripe SKU live | n/a | Stripe dashboard (source of truth) + `LLMCallLog` for cost-side | Signal Studio (Decision 10) | Lock or revise |
 | Phase 0 cost-attribution schema in prod | n/a | Migration applied + `ExternalAPICallLog` populating | Yes/No | Lock target date |
 | Daily LLM cost | < $50/day | `LLMCallLog` aggregation | TBD per Decision 9 cap | Lock per-workspace cap |
 | Canon docs (`docs/canon/`) | 20+ | `ls docs/canon/*.md \| wc -l` (current: 2) | TBD | Lock target OR retire metric |
@@ -157,8 +159,8 @@ Rigby's banner-only deferral pattern means this draft replaces the file at the s
 1. **Top 3 objectives, ranked.** Pick from the (A) / (B) / (C) / (D) list in § Primary Objectives, or write your own. Order matters — what's actually #1 this period?
 2. **Primary revenue anchor for the period.** Old: "$10K MRR by Q1 2026." New: ? (Decision 1 is binary trigger, not a target — Chris's call whether to set a leading indicator like "Signal Studio hits $500 MRR" or run open-ended.)
 3. **Cost-attribution sub-decisions** (Jessica clarifications still pending — Decision 9):
-   - Soft-degrade scope (when do we drop from GPT-5 → GPT-5-mini automatically?)
-   - Hard-kill threshold (when does the platform refuse a call entirely?)
+   - Soft-degrade scope (what triggers automatic model downgrade to cheaper tiers?)
+   - Hard-kill threshold (what budget / SLO limits make the platform refuse a call entirely?)
    - Internal-spend accounting (is Chris's personal Rigby use counted against the per-workspace cap?)
 4. **Canon / playbook targets — retire or refresh?** Old numeric goals (20+ canon, 10+ playbooks) were aspirational; current is 2 and 5 respectively. Either pick a number that means something, or retire as metrics and replace with "no broken canon refs" or similar.
 5. **Red lines explicitly to add to "What NOT to do."** Anything you want hard-coded into agent prompts via DocsContextBuilder?
