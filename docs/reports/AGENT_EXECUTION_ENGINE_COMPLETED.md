@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge.
+> **Note:** Agent counts (149) significantly stale; concept still valid but specifics need verification against topics/agent-system.md. Per Session 1143 Phase 4 (Chris Q4=Y): PLATFORM_INVENTORY + docs/INDEX are the only authoritative counts.
+
 # Agent Execution Engine - Completion Report
 ## Transforming 149 Passive Agents into Active Revenue Generators
 

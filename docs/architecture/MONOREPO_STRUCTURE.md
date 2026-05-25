@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/topics/*`](../topics/) (subsystem deep-dives).
+> **Change reason:** Nov 2025 'Session 100 Part 13 Complete' monorepo structure doc. Superseded by current repo layout.
+> **Preserved because:** historical "reality score" / system-overview snapshot. Useful as build-history record; do NOT cite for current state.
+
 # DonkeyOS Unified Monorepo Structure
 
 **Session 100 Part 13 - Monorepo Organization**
