@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL PLAN (Q4 2025 / Q1 2026 build phase).** Drafted during platform build-out; may be partially shipped, renamed in code, or quietly superseded. Preserved for historical reference, not current truth. For current truth see [`docs/INDEX.md`](../INDEX.md) + [`PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) + the latest handoff. See [`docs/plans/INDEX.md`](INDEX.md) for directory scope.
+
 # SYSTEM INTELLIGENCE OPERATING GROUP  
 ## Autonomous Stock Market Audit & Intelligence System
 
