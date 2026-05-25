@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For the runtime-verified PA tool registry see [`docs/PA_TOOL_AUDIT.md`](/docs/PA_TOOL_AUDIT.md) (autogen via `python manage.py build_pa_tool_audit`).
+> **Note:** content may be stale (last refreshed 2026-03-01) — this guide is canonical for "WHEN user says X, use tool Y" routing patterns. The HOW (action names, params) may have shifted; verify against current code or `PA_TOOL_AUDIT.md` before relying on specifics.
+
 # PA Tool Routing Guide (1-page)
 
 **v1.1 — 2026-03-01**
