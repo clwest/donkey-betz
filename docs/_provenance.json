@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-05-25T20:05:55+00:00",
+    "generated": "2026-05-25T20:11:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "cb1aded52ed8",
-    "doc_count": 2059,
-    "commit_count": 6610,
+    "git_head": "5e31e2ce7569",
+    "doc_count": 2060,
+    "commit_count": 6614,
     "confidence_breakdown": {
-      "HIGH": 1276,
+      "HIGH": 1277,
       "MEDIUM": 294,
       "LOW": 0,
       "UNKNOWN": 489
@@ -2245,9 +2245,10 @@
         1147,
         1148,
         1149,
-        1150
+        1150,
+        1151
       ],
-      "commit_count": 862,
+      "commit_count": 864,
       "prs": [
         10,
         11,
@@ -2500,7 +2501,8 @@
         2200,
         2207,
         2226,
-        2229
+        2229,
+        2231
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -6714,22 +6716,24 @@
       "originating_session": 1145,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "8fa05f8e",
+      "first_commit_sha": "65a22f95",
       "first_commit_date": "2026-05-25",
-      "first_commit_subject": "feat(session-1150-provenance): P3.5 round 3 \u2014 backfill next 75 handoffs (HIGH only) (#2229)",
+      "first_commit_subject": "feat(session-1151-provenance): P3.5 round 4 \u2014 backfill next 75 handoffs (HIGH only) (#2231)",
       "sessions_touched": [
         1145,
         1147,
         1148,
         1149,
-        1150
+        1150,
+        1151
       ],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         2213,
         2219,
         2223,
-        2229
+        2229,
+        2231
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -12418,10 +12422,14 @@
       "first_commit_date": "2026-01-20",
       "first_commit_subject": "docs(Session 785): Create documentation indexes to reduce orphans",
       "sessions_touched": [
-        785
+        785,
+        1150,
+        1151
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2231
+      ]
     },
     "docs/handoffs/LETTER_TO_FUTURE_CLAUDE_SESSION_323.md": {
       "originating_session": 324,
@@ -14519,6 +14527,24 @@
       "commit_count": 2,
       "prs": [
         2230
+      ]
+    },
+    "docs/handoffs/SESSION_1151_P35_ROUND4.md": {
+      "originating_session": 1151,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "5e31e2ce",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1151): handoff \u2014 P3.5 round 4 (1 PR, bypass mode continues) (#2232)",
+      "sessions_touched": [
+        1150,
+        1151,
+        1152,
+        1156
+      ],
+      "commit_count": 2,
+      "prs": [
+        2232
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -21708,11 +21734,14 @@
         702,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_702_LUNGS_SERVICE.md": {
@@ -21726,11 +21755,14 @@
         702,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_703_CIRCULATORY_SYSTEM.md": {
@@ -21746,11 +21778,14 @@
         703,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_704_SPINE_ROUTER.md": {
@@ -21765,11 +21800,14 @@
         705,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_705_IMMUNE_SYSTEM.md": {
@@ -21783,11 +21821,14 @@
         705,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_706_DIGESTIVE_SYSTEM.md": {
@@ -21801,11 +21842,14 @@
         706,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_707_MUSCULAR_SYSTEM.md": {
@@ -21819,11 +21863,14 @@
         707,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_708_BODY_ARCHITECTURE_REVIEW.md": {
@@ -21838,11 +21885,14 @@
         712,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_709_BRAIN_BODY_CONNECTION.md": {
@@ -21857,11 +21907,14 @@
         712,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_710_BODY_HEALTH_DASHBOARD.md": {
@@ -21876,11 +21929,14 @@
         712,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_711_BODY_COORDINATION.md": {
@@ -21895,11 +21951,14 @@
         712,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_712_BODY_UI_UNIFICATION.md": {
@@ -21913,11 +21972,14 @@
         712,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_713_UNIFIED_HUMAN_SYSTEM_AUDIT.md": {
@@ -21932,11 +21994,14 @@
         738,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_713_UNIFIED_SYSTEM_PHASES_1_2.md": {
@@ -21950,11 +22015,14 @@
         713,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_713_UNIFIED_SYSTEM_ROADMAP.md": {
@@ -21969,11 +22037,14 @@
         738,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_714_EVENT_BROADCASTING.md": {
@@ -21988,11 +22059,14 @@
         715,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_715_UNIFIED_STATE_STORE.md": {
@@ -22006,11 +22080,14 @@
         715,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_716_SCIFI_PAGES.md": {
@@ -22025,11 +22102,14 @@
         717,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_722_BRAIN_SYSTEM.md": {
@@ -22045,11 +22125,14 @@
         724,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_723_SKIN_BODY_SYSTEM.md": {
@@ -22063,11 +22146,14 @@
         723,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_724_NERVOUS_BODY_SYSTEM.md": {
@@ -22081,11 +22167,14 @@
         724,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_725_BODY_COORDINATOR_COMPLETE.md": {
@@ -22099,11 +22188,14 @@
         725,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_726_DEEP_SYSTEM_AUDIT.md": {
@@ -22118,11 +22210,14 @@
         727,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_728_AGENTS_MIGRATION.md": {
@@ -22136,11 +22231,14 @@
         728,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_735_COST_TRACKING_OUTPUT_FORMATTING.md": {
@@ -22154,11 +22252,14 @@
         735,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_735_DISCONNECTED_AREAS_AUDIT.md": {
@@ -22173,11 +22274,14 @@
         738,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_738_OPTIMIZATION_STAGE_FIX.md": {
@@ -22193,11 +22297,14 @@
         743,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_739_COORDINATOR_CONTEXT_PASSING.md": {
@@ -22213,11 +22320,14 @@
         743,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_740_AGENT_CHANNELS_VERIFICATION.md": {
@@ -22233,11 +22343,14 @@
         743,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_741_CONTENT_CHANNELS_PAGE.md": {
@@ -22251,11 +22364,14 @@
         741,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_742_HUMAN_PAGE_DATA_DISPLAY.md": {
@@ -22270,11 +22386,14 @@
         743,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_743_CONTENT_DIVERSITY_ORCHESTRATOR.md": {
@@ -22288,11 +22407,14 @@
         743,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_744_INTEGRATION_ROADMAP_COMPLETE.md": {
@@ -22306,11 +22428,14 @@
         744,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 7,
+      "commit_count": 9,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_745_API_UI_COVERAGE_AUDIT.md": {
@@ -22325,11 +22450,14 @@
         746,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_745_API_UI_COVERAGE_COMPLETE.md": {
@@ -22343,11 +22471,14 @@
         745,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_746_DATA_DISPLAY_ENHANCEMENTS.md": {
@@ -22361,11 +22492,14 @@
         746,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_747_EVOLUTION_PAGE_FIX.md": {
@@ -22379,11 +22513,14 @@
         747,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_748_EVOLUTION_XP_TRACKING_FIX.md": {
@@ -22397,11 +22534,14 @@
         748,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_749_MOOD_PAGE_FIXES.md": {
@@ -22416,11 +22556,14 @@
         750,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_750_TIME_TRAVEL_AUDIT.md": {
@@ -22435,11 +22578,14 @@
         751,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_751_SOCIAL_AND_ORCHESTRA_AUDIT.md": {
@@ -22454,11 +22600,14 @@
         752,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_752_ERROR_TRACKING_AND_LIVE_FEED_FIX.md": {
@@ -22473,11 +22622,14 @@
         753,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_753_MEMORY_PALACE_DATA_GAP_AUDIT.md": {
@@ -22492,11 +22644,14 @@
         758,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_758_INTEGRATION_HEALTH_OBSERVABILITY.md": {
@@ -22510,11 +22665,14 @@
         758,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_759_MEMORY_BLOG_FIXES.md": {
@@ -22529,11 +22687,14 @@
         760,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_760_AGENT_OUTPUT_DETAIL_MODAL.md": {
@@ -22548,11 +22709,14 @@
         761,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_761_LEARNING_TAB_FIXES.md": {
@@ -22566,11 +22730,14 @@
         761,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_763_MISSION_CONTROL_SYSTEM.md": {
@@ -22585,11 +22752,14 @@
         764,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_764_ORCHESTRATION_LAYER.md": {
@@ -22603,11 +22773,14 @@
         764,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_765_ORCHESTRATION_INTELLIGENCE_LINK.md": {
@@ -22621,11 +22794,14 @@
         765,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_766_HUMAN_PAGE_DATA_QUALITY.md": {
@@ -22639,11 +22815,14 @@
         766,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_767_ORCHESTRATION_TIMEOUT_FIXES.md": {
@@ -22661,11 +22840,14 @@
         772,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_768_MEMORY_SAFETY_CLASSIFICATION.md": {
@@ -22679,11 +22861,14 @@
         768,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_768_ORCHESTRATION_LAYER_DEEP_IMPLEMENTATION.md": {
@@ -22701,11 +22886,14 @@
         772,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_772_UI_COMPREHENSIVE_AUDIT.md": {
@@ -22723,11 +22911,14 @@
         774,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_773_DEEP_DATA_FLOW_AUDIT.md": {
@@ -22742,11 +22933,14 @@
         774,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_779_PROMPTENGINEERING_AND_FILE_VIEWING.md": {
@@ -22762,11 +22956,14 @@
         780,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_780_PLATFORM_STATUS.md": {
@@ -22780,12 +22977,15 @@
         780,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         2186,
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_781_AGENT_VOICE_FIXES.md": {
@@ -22800,11 +23000,14 @@
         782,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_783_SPIDER_NEWS_FEED.md": {
@@ -22819,11 +23022,14 @@
         784,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_785_HYBRID_WORKSPACE_AUTOPILOT.md": {
@@ -22837,11 +23043,14 @@
         785,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_786_CURATED_DOCS_EMBEDDING_PIPELINE.md": {
@@ -22855,11 +23064,14 @@
         786,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_786_DECISIONSUMMARY_FIX.md": {
@@ -22873,11 +23085,14 @@
         786,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_787_RAILWAY_DEPLOYMENT.md": {
@@ -22891,11 +23106,14 @@
         787,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_788_RAILWAY_DEPLOYMENT_COMPLETE.md": {
@@ -22941,11 +23159,14 @@
         790,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_791_LEARNING_SYSTEM_BOOTSTRAP.md": {
@@ -22960,11 +23181,14 @@
         792,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_792_BODY_SYSTEMS_RAILWAY_FIXES.md": {
@@ -22979,11 +23203,14 @@
         793,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_793_NEURAL_ORCHESTRA_ZERO_VALUES.md": {
@@ -22998,11 +23225,14 @@
         794,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_795_REASONING_ENGINE_EXPLAINED.md": {
@@ -23017,11 +23247,14 @@
         796,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_796_CONTEXT_PRESERVATION.md": {
@@ -23036,11 +23269,14 @@
         797,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_797_INTEGRATION_DEEPENING.md": {
@@ -23054,11 +23290,14 @@
         797,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_798_WORKSPACE_DOCS_CONTEXT_INJECTION.md": {
@@ -23073,12 +23312,15 @@
         799,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         37,
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_799_PRODUCTION_FIXES.md": {
@@ -23092,13 +23334,16 @@
         799,
         800,
         1126,
-        1143
+        1143,
+        1150,
+        1151
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         44,
         48,
-        2199
+        2199,
+        2231
       ]
     },
     "docs/handoffs/SESSION_7_COMPLETION_SUMMARY.md": {
@@ -26201,10 +26446,14 @@
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
-        738
+        738,
+        1150,
+        1151
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2231
+      ]
     },
     "docs/handoffs/WAKE_UP_README.md": {
       "originating_session": null,
