@@ -1,3 +1,9 @@
+---
+originating_session: 964
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 964: Phase 4 — Multi-Agent Content Deliberation Pipeline
 
 **Date:** February 7, 2026

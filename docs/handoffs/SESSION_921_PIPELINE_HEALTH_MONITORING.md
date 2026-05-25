@@ -1,3 +1,9 @@
+---
+originating_session: 921
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 921: Pipeline Health Monitoring
 
 **Date:** February 3, 2026

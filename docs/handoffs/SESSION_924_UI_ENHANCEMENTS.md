@@ -1,3 +1,9 @@
+---
+originating_session: 924
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 924: UI Enhancements & Pipeline Fixes
 
 **Date:** February 3, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 897
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 897 - Complete Handoff
 
 **Date:** February 1, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 959
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 959: PA Intelligence Upgrade - From Database Proxy to Intelligent Assistant
 
 **Date:** February 6, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 895
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 895 - Coordinator Timeout Protection
 
 **Date:** January 31, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 996
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 996: Initiative Ownership System
 
 **Date:** February 12, 2026

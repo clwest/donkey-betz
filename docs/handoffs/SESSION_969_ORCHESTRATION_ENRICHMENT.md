@@ -1,3 +1,9 @@
+---
+originating_session: 969
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 969 — Orchestration Tab Enrichment + ORM Fix + Blog Diversity
 
 **Date:** February 8, 2026

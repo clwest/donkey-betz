@@ -1,3 +1,9 @@
+---
+originating_session: 1093
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1093 — CTOAgent Daily Diagnostic + Dispatcher Gather v2 + code_review_agent
 
 **Date:** April 16, 2026

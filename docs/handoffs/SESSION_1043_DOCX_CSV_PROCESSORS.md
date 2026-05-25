@@ -1,3 +1,9 @@
+---
+originating_session: 1043
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1043 - DOCX & CSV Processors for RAG Upload Pipeline
 
 **Date:** February 19, 2026

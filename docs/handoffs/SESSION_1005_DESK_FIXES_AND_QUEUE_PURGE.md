@@ -1,3 +1,9 @@
+---
+originating_session: 1005
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1005: Desk Intelligence Fixes + Queue Purge
 
 **Date:** February 13-14, 2026

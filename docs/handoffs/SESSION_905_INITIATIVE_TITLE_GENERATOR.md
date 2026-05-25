@@ -1,3 +1,9 @@
+---
+originating_session: 905
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 905: Initiative Title Generator + Research Self-Unblock Loop
 
 **Date:** February 1, 2026

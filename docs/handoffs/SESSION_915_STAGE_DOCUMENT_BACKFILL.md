@@ -1,3 +1,9 @@
+---
+originating_session: 915
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 915: Stage Document Backfill Pipeline
 
 ## Summary

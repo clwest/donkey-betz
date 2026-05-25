@@ -1,3 +1,9 @@
+---
+originating_session: 985
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 985 -- PA Boardroom Response Improvement
 
 **Date:** February 10, 2026

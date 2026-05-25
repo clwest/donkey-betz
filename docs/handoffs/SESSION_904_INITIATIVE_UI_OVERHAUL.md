@@ -1,3 +1,9 @@
+---
+originating_session: 904
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 904: Initiative UI Overhaul
 
 **Date:** February 1, 2026

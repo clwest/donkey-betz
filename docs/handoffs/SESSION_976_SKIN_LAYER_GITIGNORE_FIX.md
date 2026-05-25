@@ -1,3 +1,9 @@
+---
+originating_session: 976
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 976 — Fix SKIN Layer Auto-Generated Files Polluting Git Repo
 
 **Date:** February 9, 2026

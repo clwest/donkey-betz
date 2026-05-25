@@ -1,3 +1,9 @@
+---
+originating_session: 950
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 950 - Kalshi Sports Categorization Fix
 
 **Date:** February 6, 2026

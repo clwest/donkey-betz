@@ -1,3 +1,9 @@
+---
+originating_session: 916
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 916: Hard Invariants for Initiative Stage Approval
 
 ## Summary

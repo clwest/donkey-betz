@@ -1,3 +1,9 @@
+---
+originating_session: 916
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 916: Initiative Title Generator Integration
 
 ## Summary

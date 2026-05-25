@@ -1,3 +1,9 @@
+---
+originating_session: 984
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 984 -- Boardroom Feeder Fix + Celery Worker OOM
 
 **Date:** February 9, 2026

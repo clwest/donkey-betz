@@ -1,3 +1,9 @@
+---
+originating_session: 891
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 891 - Domain Content Context System
 
 **Date:** January 31, 2026
