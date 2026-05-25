@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Archived
+> **Originally:** see header below for original date/session.
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** Session 25 GPT-5-mini compatibility fix shipped long ago. Preserved as historical incident record.
+> **Preserved because:** white-paper corpus / historical record.
+
 # ⚡ Quick Fix Guide - GPT-5-mini Prompt Compatibility
 
 **Created:** October 2, 2025 - Session 25
