@@ -24,6 +24,14 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Only cleanups + health checks run. All agent exercises, spider crawls,
 # intelligence loops, and content generation DISABLED to conserve API tokens.
 # Re-enable selectively when needed.
+#
+# **CANONICAL SOURCE (Session 1157, option A):** The Celery beat schedule
+# is defined here in `core/celery.py` (code-first single source of truth).
+# `core/management/commands/add_critical_celery_tasks.py` reads this dict
+# and materializes/repairs django-celery-beat `PeriodicTask` rows from it;
+# that command does not define scheduling semantics. Docs across the repo
+# describe this schedule but must not contradict it — if any doc disagrees
+# with what's defined here, this file wins.
 app.conf.beat_schedule = {
     # ── Essential health checks ──────────────────────────────────────────
     'heart-service-heartbeat': {

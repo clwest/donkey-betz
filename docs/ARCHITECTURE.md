@@ -677,21 +677,24 @@ response = client.chat.completions.create(
 
 ### Celery Beat Schedules
 
+The Celery beat schedule is defined in `core/celery.py` (code-first single source of truth, Session 1157 option A). The `app.conf.beat_schedule` dict there is canonical; `core/management/commands/add_critical_celery_tasks` materializes/repairs `django-celery-beat` `PeriodicTask` rows from it and does not define scheduling semantics. Since Session 1077 the schedule has been in **minimal/token-conservation mode** — only essential health checks and DB-hygiene cleanups; the broader agent/spider/intelligence schedules from earlier sessions are preserved in git history but not active.
+
+Illustrative shape (live entries live in `core/celery.py:app.conf.beat_schedule`):
+
 ```python
-# core/celery.py
-CELERY_BEAT_SCHEDULE = {
-    'run-spider-network': {
-        'task': 'core.tasks.run_spider_network',
-        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+# core/celery.py — canonical
+app.conf.beat_schedule = {
+    'heart-service-heartbeat': {
+        'task': 'core.tasks.run_heartbeat',
+        'schedule': 600,  # Every 10 min
+        'options': {'queue': 'broadcast', 'expires': 600},
     },
-    'generate-agent-dreams': {
-        'task': 'core.tasks.generate_agent_dreams',
-        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+    'cleanup-expired-fleet-events': {
+        'task': 'core.tasks.cleanup_expired_fleet_events',
+        'schedule': crontab(hour=2, minute=25),  # 2:25 AM MST daily
+        'options': {'queue': 'broadcast', 'expires': 3600},
     },
-    'trigger-agent-conversations': {
-        'task': 'core.tasks.trigger_agent_conversations',
-        'schedule': crontab(minute=0, hour='*/1'),  # Every hour
-    },
+    # ... ~75 more entries — see core/celery.py for the full canonical list
 }
 ```
 
