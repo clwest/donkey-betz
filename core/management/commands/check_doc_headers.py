@@ -107,7 +107,8 @@ def _parse_header_session(text: str) -> int | None:
     """Top-of-doc Last-Updated line wins.
 
     Restricted to the first 30 lines so per-section ``Last Updated:`` lines
-    inside the body (common in long reference docs like ``docs/agents/README.md``)
+    inside the body (common in long reference docs like
+    ``docs/archive/superseded-2026-05/agents/README.md``)
     don't shadow the real doc-level header. Returns the integer session number.
     """
     head = '\n'.join(text.splitlines()[:30])

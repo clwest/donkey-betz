@@ -1,21 +1,8 @@
-# Pre-Launch Index
-
-**Total Documents:** 7
-
-Pre-launch audit and readiness documentation.
-
-## Documents
-
-| Document | Description |
-|----------|-------------|
-| [Audit Overview](00-AUDIT-OVERVIEW.md) | Pre-launch audit summary |
-| [Feature Audit Results](01-FEATURE-AUDIT-RESULTS.md) | Feature audit findings |
-| [Database Integrity Report](03-DATABASE-INTEGRITY-REPORT.md) | Database health check |
-| [Production Blockers](05-PRODUCTION-BLOCKERS.md) | Issues blocking production |
-| [Testing Scripts](07-TESTING-SCRIPTS.md) | Test scripts and procedures |
-| [Launch Readiness Checklist](LAUNCH_READINESS_CHECKLIST.md) | Go-live checklist |
-| [Next Session Plan](NEXT_SESSION_PLAN.md) | Planned next steps |
-
-## See Also
-
-- [Audits Index](../audits/INDEX.md) - System audits
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Moved
+> **Originally:** subdir doc frozen since Jan/Feb 2026; identified by Session 1143 corpus audit as Phase 2B-1 archive candidate
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`../archive/superseded-2026-05/pre-launch/INDEX.md`](../archive/superseded-2026-05/pre-launch/INDEX.md) — read this instead.
+> **Change reason:** subdir frozen since Jan/Feb 2026; archived to reduce active surface area.
+> **Preserved because:** white-paper corpus / link-rot prevention.
+> **Caveat:** Prior RAG citations may no longer resolve to the same chunk_id.
