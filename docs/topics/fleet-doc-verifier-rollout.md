@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1147) -->
+> **Topic doc — pattern still valid; rollout numbers (7 PRs, 1 merged) are Session-1120 era.**
+> Per-fleet-repo doc-verifier rollout pattern. The "7 fleet PRs open / 1 merged" status below is a Session 1120 (2026-05-22) snapshot — current fleet-PR state lives in the per-repo GitHub queues, not in this doc. For active rollout progress see the multi-repo-management companion + each fleet repo's `scripts/verify_doc_claims.py`.
+> **Last reviewed for drift labeling:** Session 1147 (2026-05-25)
+> **Related canon:** [`docs/canon/INDEX.md`](../canon/INDEX.md) + u-d-b's `core/services/doc_claim_verification.py` (Session 1099 origin).
+
 # Fleet Doc-Verifier Rollout — Session 1120
 
 **Session:** 1120
