@@ -262,14 +262,19 @@ about.
   execution path, or whether some are legacy from earlier persona
   experiments. A row-level reconciliation pass would resolve
   this; none is recorded in handoffs so far.
-- **Are the four Intelligence Desks intentionally on-demand only,
-  or did they drift off-schedule by accident?** *Known:* the
-  daily `run_market_intelligence_desk` `PeriodicTask` was removed
-  in commit `a88fb8e7` as part of a "minimal beat schedule"
-  cleanup. *Unknown:* whether the cleanup intended to take desks
-  offline or whether desks were collateral damage. Session 1115
-  documented the on-demand-only state but did not re-litigate the
-  removal.
+- **Should the four Intelligence Desks be on a schedule again?**
+  *Known:* the schedule removal was **deliberate**, not
+  accidental — `docs/AUDIT_FINDINGS.md` finding #10 (Session 1115
+  audit) records the investigation: `git log -S
+  "run_market_intelligence_desk"` showed the schedule was removed
+  in commit `a88fb8e7` ("minimal beat schedule" cleanup), and the
+  audit's explicit decision was "doc is stale, schedule was
+  intentionally removed." All four desks are intentionally
+  on-demand only. *Unknown:* whether and when to re-enable a
+  schedule — that's a product decision, not a corpus gap. The
+  task functions still exist at `core/tasks.py:4356`; a
+  `PeriodicTask` row plus a brief on intended cadence would be
+  enough to re-activate.
 - **What is the actual current utility distribution?** Session
   1099's audit found 19 agents dormant 90 days, 8 never-executed,
   59 fighting for 23 daily budget slots. *Unknown* whether the
