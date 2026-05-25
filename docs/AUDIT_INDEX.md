@@ -6,7 +6,7 @@
 
 | Workspace | Purpose | Start here |
 |---|---|---|
-| **`docs/audit/`** | **CURRENT.** Active audit + cleanup plan. | [`AUDIT_V1.md`](audit/AUDIT_V1.md) · [`CLEANUP_PLAN.md`](audit/CLEANUP_PLAN.md) · [`README.md`](audit/README.md) |
+| **`docs/audit/`** | **CURRENT.** Active audit + cleanup plan. | [`AUDIT_V1.md`](audit/AUDIT_V1.md) · [`CLEANUP_PLAN.md`](audit/CLEANUP_PLAN.md) · [`README.md`](audit/README.md) · [`SESSION_1143_DOCS_AUDIT.md`](audit/SESSION_1143_DOCS_AUDIT.md) (Session 1143 corpus audit) |
 
 The current audit lives **only** in `docs/audit/`. New audit work goes there.
 
