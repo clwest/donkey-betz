@@ -1,6 +1,9 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Status updated Session 1144 (2026-05-25):** This ticket spec **shipped in Session 1098 itself** via PR #2016 (`feat(deliverable): B-full append semantics + race protection`), PR #2017 (addendum — Tier-1 adoption + B-full doc), and PR #2018 (DeliverableAppend canary gate). The "Queued (Session 1098 → 1099+)" line below was drafted before implementation landed in the same session. Doc preserved as the canonical ticket spec for historical record.
+
 # Fix B-full — deliverable_appends + target_stream_id + race protection
 
-**Status:** Queued (Session 1098 → 1099+)
+**Status:** **Implemented Session 1098** (PR #2016 + #2017 + #2018). Original ticket text below.
 **Depends on:** PR #2001 (Fix B-minimal) merged
 **Parent:** Rigby's EditorAgent-misroute remediation, conversation `pa-3c7ddc058db1`
 **Sibling:** PR #2001 (B-minimal, shipped Session 1098) — closed ~80% of the "wrong
