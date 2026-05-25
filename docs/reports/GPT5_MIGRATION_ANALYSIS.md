@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Archived
+> **Originally:** see header below for original date/session.
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** GPT-5-mini migration complete (Session 1143 Phase 4, Chris Q4=Y). PA now runs GPT-5.2 function calling per topics/personal-assistant.md.
+> **Preserved because:** white-paper corpus / historical record.
+
 # GPT-5-mini Migration Analysis
 **Date:** November 18, 2025 - Session 129
 **Purpose:** Comprehensive analysis of GPT-5-mini implementation requirements

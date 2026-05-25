@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Archived
+> **Originally:** see header below for original date/session.
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** GPT-5-mini migration complete. Guide preserved as historical context for the reasoning-model adoption decision.
+> **Preserved because:** white-paper corpus / historical record.
+
 # GPT-5 Reasoning Models: The Right Way to Power AI Agents
 
 **Created:** October 2, 2025

@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Archived
+> **Originally:** see header below for original date/session.
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** Nov 2025 snapshot. PLATFORM_INVENTORY.md + .env are the runtime source of truth for API key status going forward.
+> **Preserved because:** white-paper corpus / historical record.
+
 # 🎯 Final API Key Status Report
 **Date:** November 2, 2025
 **Status:** 12/19 FULLY VALIDATED ✅
