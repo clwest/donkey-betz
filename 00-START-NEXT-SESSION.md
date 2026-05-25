@@ -132,55 +132,65 @@ Higher-risk code PRs: hold the merge; stack the PR until billing fixes.
 
 ---
 
-## SESSION 1158 — CURRENT ENTRY POINT
+## SESSION 1158 — CURRENT ENTRY POINT (NEW CHARTER: corpus-narrative program)
+
+### Why the charter changed
+
+Chris's framing at end of Session 1157:
+
+> *"I still want to finish going through all of the /docs/. Right now they are just a bunch of text from the last few years of building. But what we need it to do is read in a way anyone can understand it if they don't have access to the UI. So things like what sessions added what Agents and what was the reason behind adding it, what was the outcome of us adding it? Those are the things I am trying to get out of the /docs/."*
+
+This shifts the work from **navigation infrastructure** (P3.5 frontmatter tagging, drift baselines, INDEX freshness — all done) to the **actual value of the corpus**: turning 2615 session-handoff fragments into a readable chronicle of *what was built, why, and what came of it.* This is `UDB_TRANSLATION_LAYER.md` applied to the historical corpus instead of current-state surfaces.
+
+This is a **multi-session program**, not a single charter.
 
 ### FIRST THING this session
 
-**Check whether GH Actions billing is fixed.** Run:
-```bash
-gh pr checks <latest-pr-num>
-```
+**Ping Rigby with the corpus-narrative vision and ask for her scoping proposal.** She needs to design:
 
-### TOP PRIORITY (Rigby's call from Session 1157 close)
+1. **Slicing unit** — chronological (session-by-session story arcs) vs thematic (per-subsystem: "the story of the agent system", "the story of the spider network") vs per-component ("how the Personal Assistant evolved")?
+2. **Template per narrative** — Chris's phrasing already suggests one: *added what* + *why we added it* + *what came of it.* Plus probably "what's still working" vs "what's been deprecated/superseded."
+3. **Audience** — "anyone who can't access the UI" maps closer to *future-Claude / future-hire / future-Chris* than to *external Suite consumer* in the existing translation layer's persona blocks. Voice matters.
+4. **Validation cadence** — Chris reads 1-2 sample narratives, signs off on template + voice, then we batch. He should not have to read all 2615 docs to trust the output — but he should read enough of the *first few* to trust the template before scaling.
 
-**`celery-beat-schedule` CONFLICT — second-half cleanup (clear the context-kit signal).**
+Briefing message to Rigby was sent at Session 1157 close (timestamp 2026-05-25) so she's already pre-thinking this when fresh session opens. Pick up from her response.
 
-Session 1157 closed the underlying code-level footgun. The CONFLICT signal still flags because context-kit's detector heuristic spans ~36 files. Two paths:
+### Then, after Rigby's design lands
 
-1. **Detector tuning (preferred if tractable):**
-   - Read-only investigation of context-kit's `celery-beat-schedule` detector source. Find the tokens/patterns it matches as "exclusive ownership claim."
-   - If it's a simple keyword regex, propose an upstream fix that distinguishes "incidental mention" from "ownership claim."
-   - This would clear the CONFLICT without repo-wide doc churn.
+1. **Chris picks the slice he wants to see first** — one agent's story? One subsystem's? One session arc?
+2. **Produce a single sample narrative** to that template.
+3. **Chris reads + reacts.** Iterate template if needed.
+4. **Batch through remaining slices** at the cadence Rigby specs (probably 1 per session, like the P3.5 rhythm — but tuned to narrative-writing pace, not mechanical-backfill pace).
 
-2. **Targeted token-pattern doc sweep (fallback):**
-   - If detector tuning isn't tractable, identify the specific phrases triggering "ownership claim" in each of the 36 files.
-   - Apply a consistent canonical-source phrasing template.
-   - Bigger PR, still no guarantee the heuristic clears.
+### Don't lose these — deferred but still real (NOT abandoned)
 
-**Recommend trying (1) first** — read-only context-kit source investigation before committing to a 36-file sweep.
+The Session 1158 charter previously slotted these as top priority. They're now deferred behind the corpus-narrative program. **They are not abandoned** — just re-ordered.
 
-### Carryovers (unchanged from Session 1157 close)
+**Deferred top-priority** (next available slot after corpus-narrative is operational):
 
-**If Actions is BACK** (after celery CONFLICT signal clears):
+1. **`celery-beat-schedule` CONFLICT — second-half cleanup (detector signal clear).** Session 1157 closed the underlying code-level footgun (PR #2243); the context-kit CONFLICT signal still flags because the detector heuristic spans ~36 files. Two paths:
+   - **(preferred)** Detector tuning — read-only investigation of context-kit's `celery-beat-schedule` detector source. Find tokens triggering "exclusive ownership claim." If it's a simple keyword regex, propose an upstream fix distinguishing "incidental mention" from "ownership claim."
+   - **(fallback)** Targeted 36-file token-pattern phrasing sweep with consistent canonical-source language.
+
+2. **Pre-existing 3-row PeriodicTask drift.** 80 DB rows vs 77 entries in `core/celery.py:app.conf.beat_schedule`. Folds naturally into the CONFLICT-detector work above.
+
+### Other carryovers (unchanged from Session 1157 close)
+
+**If Actions is BACK** (and after corpus-narrative work is operational):
 - Topic-doc body-count sweep (the explicit-scope one)
 - Infra track: exists_on_disk flag, beat-schedule regens, build_learning_bridge_audit generator fix, Redis pooling sweep
 
-**Continued bypass mode** (small offline-CI-safe items):
+**Continued bypass mode (small offline-CI-safe items):**
 - Older `docs/topics/` sweep (recon-first) — 7 Feb-March docs deferred from Session 1147 #2221
 - Cosmetic `load_all_agents_advisors.py 149→139` fix
 - `docs/reports/` + `docs/patents/` recon
-
-**Pre-existing 3-row drift** (noted in Session 1157 smoke-test):
-- 80 `PeriodicTask` rows in DB vs 77 entries in `core/celery.py:app.conf.beat_schedule`
-- 3-row gap is pre-existing from other sync paths (likely Session 1115 or earlier — possibly `sync_celery_beat.py` / `sync_celery_schedules.py`)
-- Separate cleanup item; folds naturally into the broader CONFLICT detector work above
 
 **Chris-call-only carryovers (still parked):**
 1. Decision Command backend cleanup
 2. DaVinci route removal
 3. Mission refresh PR #2190
 
-**Not-HIGH handoffs (783 remaining untagged):** The P3.5 backfill only handled HIGH-provenance handoffs. The 783 not-HIGH ones need different treatment — manual hand-authored frontmatter or alternative provenance heuristics. Separate explicitly-scoped track if/when prioritized.
+**Not-HIGH handoffs (783 remaining untagged):** The P3.5 backfill only handled HIGH-provenance handoffs. The 783 not-HIGH ones need different treatment — manual hand-authored frontmatter or alternative provenance heuristics. Note: the **corpus-narrative program may naturally surface frontmatter for these** as a side effect of reading + synthesizing them. Re-evaluate this track after the narrative program has run for a few sessions.
 
 ### Carryovers queued (unchanged from Session 1150 close)
 
