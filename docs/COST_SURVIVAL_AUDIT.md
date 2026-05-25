@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1146) -->
+> **Canonical gate doc — refresh-in-place; do not move.**
+> Listed in `docs/handoffs/CURRENT.md` as a current strategy/gate doc ("Phase 0 gating constraints, still pending"). Headline numbers in § A (258 enabled / 47 disabled / 305 total `PeriodicTask` rows, 42 static `beat_schedule` entries, 397 user-defined Celery tasks, 10 orphans) are Session-1116-era snapshots and should be cross-checked against [`docs/PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) (runtime-derived) + [`docs/CELERY_AUDIT.md`](CELERY_AUDIT.md) + [`docs/BEAT_AUDIT.md`](BEAT_AUDIT.md) (auto-generated runtime evidence; regenerate with `python manage.py build_celery_audit` / `build_beat_audit`) before the gate is re-evaluated.
+> **Last reviewed for drift labeling:** Session 1146 (2026-05-25)
+> **Companion canon:** [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](24_7_GLOBAL_AI_APP_ATLAS.md) (strategy anchor) + [`docs/00-START-HERE/DOC_LIFECYCLE.md`](00-START-HERE/DOC_LIFECYCLE.md) §2c.
+
 # Cost Survival Audit — May 2026 (pre-merge gate)
 
 **Date:** 2026-05-12
