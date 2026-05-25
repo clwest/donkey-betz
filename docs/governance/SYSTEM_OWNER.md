@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+> **Note:** content may be stale (last refreshed Session 814) — this file is **runtime-load-bearing**: `core/services/docs_context_builder.py:184` reads from it. Do NOT move; refresh-in-place when content drifts.
+
 # System Owner Authority
 
 **Document Status:** CANON | **Classification:** INTERNAL | **Session:** 814
