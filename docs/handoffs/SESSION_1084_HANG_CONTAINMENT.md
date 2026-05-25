@@ -1,3 +1,9 @@
+---
+originating_session: 1084
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1084 — Worker Wedge Hang Containment
 
 **Date:** April 15, 2026

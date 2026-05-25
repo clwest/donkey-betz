@@ -1,3 +1,9 @@
+---
+originating_session: 1006
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1006 — Systematic Cleanup & Agent Persistence
 
 **Date:** February 13-14, 2026

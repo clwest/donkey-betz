@@ -1,3 +1,9 @@
+---
+originating_session: 1022
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1022 - Cost Optimization Audit
 
 **Date:** February 16, 2026

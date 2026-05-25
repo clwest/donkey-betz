@@ -1,3 +1,9 @@
+---
+originating_session: 1034
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1034 — RAG Wiring, Legal Agent, and Production Stability
 
 **Date:** February 18, 2026

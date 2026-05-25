@@ -1,3 +1,9 @@
+---
+originating_session: 1098
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1098 Addendum 2 — Tier-1 Wrapper Adoption + Fix B-full
 
 **Appends to:**

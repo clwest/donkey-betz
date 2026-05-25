@@ -1,3 +1,9 @@
+---
+originating_session: 1020
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1020 - Initiative Stage 2 Stall, Dedup, and Temporal Awareness
 
 **Date:** February 16, 2026

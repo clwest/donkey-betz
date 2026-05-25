@@ -1,3 +1,9 @@
+---
+originating_session: 1142
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1142 — Docs Hygiene + `search_docs` PA Tool + 2 Stale-Audit Fixes
 
 **Date:** 2026-05-24

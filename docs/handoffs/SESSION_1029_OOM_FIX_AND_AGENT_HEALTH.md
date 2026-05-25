@@ -1,3 +1,9 @@
+---
+originating_session: 1029
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1029: OOM Fix, Agent Health Audit & Struggling Agent Fixes
 
 **Date:** February 17, 2026

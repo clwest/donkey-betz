@@ -1,3 +1,9 @@
+---
+originating_session: 1067
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1067: Full-Page Boardroom & Governance Routes
 
 **Date:** 2026-02-23

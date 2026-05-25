@@ -1,3 +1,9 @@
+---
+originating_session: 1032
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1032 — Conversation Dedup & 79-Agent Stress Test
 
 **Date:** February 18, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 1031
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1031: Evidence Gate Fixes + Ghost Remediation Block
 
 **Date:** February 17-18, 2026

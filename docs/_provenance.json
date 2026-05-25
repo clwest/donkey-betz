@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-05-25T18:25:11+00:00",
+    "generated": "2026-05-25T19:05:16+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f8b1fc4d750e",
-    "doc_count": 2052,
-    "commit_count": 6571,
+    "git_head": "2dfc899abb41",
+    "doc_count": 2055,
+    "commit_count": 6585,
     "confidence_breakdown": {
-      "HIGH": 1120,
-      "MEDIUM": 421,
+      "HIGH": 1274,
+      "MEDIUM": 292,
       "LOW": 0,
-      "UNKNOWN": 511
+      "UNKNOWN": 489
     },
     "excludes": [
       "docs/archive/",
@@ -360,13 +360,16 @@
         1116,
         1137,
         1141,
-        1142
+        1142,
+        1145,
+        1146
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         2092,
         2097,
-        2177
+        2177,
+        2215
       ]
     },
     "docs/3D_GENERATION_VERIFICATION_REPORT.md": {
@@ -751,9 +754,10 @@
         1031,
         1100,
         1115,
-        1116
+        1116,
+        1146
       ],
-      "commit_count": 22,
+      "commit_count": 24,
       "prs": [
         2080,
         2081,
@@ -762,7 +766,8 @@
         2084,
         2085,
         2086,
-        2090
+        2090,
+        2217
       ]
     },
     "docs/AUDIT_INDEX.md": {
@@ -917,10 +922,14 @@
       "first_commit_subject": "fix(celery): close 7 silently-broken beat schedules (Session 1115 finding 3)",
       "sessions_touched": [
         1100,
-        1115
+        1115,
+        1145,
+        1146
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2216
+      ]
     },
     "docs/BODY_ARCHITECTURE.md": {
       "originating_session": 712,
@@ -1156,9 +1165,11 @@
         1025,
         1031,
         1100,
-        1115
+        1115,
+        1145,
+        1146
       ],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
         2080,
         2081,
@@ -1166,7 +1177,8 @@
         2083,
         2084,
         2085,
-        2086
+        2086,
+        2216
       ]
     },
     "docs/CHARACTER_PERFORMANCE_TROUBLESHOOTING.md": {
@@ -1347,11 +1359,14 @@
       "sessions_touched": [
         1063,
         1115,
-        1116
+        1116,
+        1145,
+        1146
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        2092
+        2092,
+        2215
       ]
     },
     "docs/CREATIVEDIRECTOR_AGENT_IMPLEMENTATION.md": {
@@ -2571,10 +2586,14 @@
       "first_commit_date": "2026-05-12",
       "first_commit_subject": "fix: reframe finding 9 as unused-ABC; add forward-drift guard",
       "sessions_touched": [
-        1115
+        1115,
+        1145,
+        1146
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2216
+      ]
     },
     "docs/LEGAL_ASSISTANT.md": {
       "originating_session": 449,
@@ -2655,10 +2674,14 @@
       "first_commit_subject": "fix(audit): split args off help-text rows in MANAGEMENT_COMMAND_AUDIT",
       "sessions_touched": [
         1100,
-        1115
+        1115,
+        1145,
+        1146
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2216
+      ]
     },
     "docs/MARKET_READINESS_AUDIT.md": {
       "originating_session": 121,
@@ -2773,11 +2796,13 @@
       "sessions_touched": [
         1063,
         1115,
-        1116
+        1116,
+        1146
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        2092
+        2092,
+        2217
       ]
     },
     "docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md": {
@@ -2797,12 +2822,14 @@
         1115,
         1116,
         1137,
-        1142
+        1142,
+        1146
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         2092,
-        2178
+        2178,
+        2217
       ]
     },
     "docs/ML_AUDIT.md": {
@@ -6674,6 +6701,21 @@
         2036
       ]
     },
+    "docs/_provenance.json": {
+      "originating_session": 1145,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "a960fb51",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "feat(session-1145-provenance): docs/_provenance.json + search_docs filter + selective backfill (Plan B) (#2213)",
+      "sessions_touched": [
+        1145
+      ],
+      "commit_count": 2,
+      "prs": [
+        2213
+      ]
+    },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
       "originating_session": 1143,
       "confidence": "HIGH",
@@ -7206,8 +7248,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2211
+      ]
     },
     "docs/architecture/MEMORY_SYSTEM_ARCHITECTURE.md": {
       "originating_session": 178,
@@ -7225,8 +7269,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/MONOREPO_STRUCTURE.md": {
       "originating_session": 128,
@@ -7281,8 +7327,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/PLATFORM_ARCHITECTURE_MAP.md": {
       "originating_session": 101,
@@ -7323,8 +7371,10 @@
         1143,
         1145
       ],
-      "commit_count": 3,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/PROMPTING_SYSTEM_COMPREHENSIVE_AUDIT.md": {
       "originating_session": 1143,
@@ -7370,8 +7420,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2211
+      ]
     },
     "docs/architecture/SYSTEM_ARCHITECTURE_MAP.md": {
       "originating_session": 128,
@@ -7441,8 +7493,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/learning_system.md": {
       "originating_session": 178,
@@ -7460,8 +7514,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/ml_architecture.md": {
       "originating_session": 178,
@@ -7479,8 +7535,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/partnership_model.md": {
       "originating_session": 178,
@@ -7498,8 +7556,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/architecture/sports_betting_integration.md": {
       "originating_session": 178,
@@ -7517,8 +7577,10 @@
         1143,
         1145
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2212
+      ]
     },
     "docs/audit-2026/00-AUDIT-PLAN.md": {
       "originating_session": 1085,
@@ -9228,14 +9290,18 @@
       "first_commit_subject": "feat(Session 814): Comprehensive documentation architecture with governance & focus layers (#127)",
       "sessions_touched": [
         814,
+        1115,
         1143,
-        1144
+        1144,
+        1145,
+        1146
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
         127,
         2186,
-        2208
+        2208,
+        2216
       ]
     },
     "docs/canon/creative/DAVINCI_RESOLVE_WORKFLOW.md": {
@@ -12072,9 +12138,11 @@
         1142,
         1143,
         1144,
-        1145
+        1145,
+        1146,
+        1147
       ],
-      "commit_count": 34,
+      "commit_count": 38,
       "prs": [
         2091,
         2092,
@@ -12091,7 +12159,9 @@
         2122,
         2126,
         2200,
-        2206
+        2206,
+        2214,
+        2218
       ]
     },
     "docs/handoffs/HANDOFF_00_MASTER_PLAN.md": {
@@ -12412,13 +12482,15 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1000C_CONTENT_REVIEW_AUTOMATION.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1000,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "390a0256",
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "feat: wire content review automation pipeline \u2014 PublishGate promotion, enhancement guard, auto-publish (Session 1000C)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1000
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -12449,35 +12521,41 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1002B_DELEGATION_SHARED_TOOLS.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1002,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "af02944c",
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "fix: make agent delegation discover all 81 agents and centralize spider_query (Session 1002B)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1002
+      ],
       "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_1002C_SUPER_FALLBACK.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1002,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "ddbc1413",
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "fix: replace tools=self.tools with get_tools_with_delegation() in 9 agents",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1002
+      ],
       "commit_count": 4,
       "prs": []
     },
     "docs/handoffs/SESSION_1002_SPIDER_CONTEXT_FABRICATION_FIX.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1002,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "af02944c",
       "first_commit_date": "2026-02-13",
       "first_commit_subject": "fix: make agent delegation discover all 81 agents and centralize spider_query (Session 1002B)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1002
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -12497,13 +12575,15 @@
       ]
     },
     "docs/handoffs/SESSION_1004_PRODUCTION_STABILIZATION.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1004,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9acdec99",
       "first_commit_date": "2026-02-14",
       "first_commit_subject": "docs: update session entry point and handoff for PRs #1144-#1147 (queue fixes) (#1148)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1004
+      ],
       "commit_count": 3,
       "prs": [
         1143,
@@ -12513,13 +12593,15 @@
       ]
     },
     "docs/handoffs/SESSION_1005_DESK_FIXES_AND_QUEUE_PURGE.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1005,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f0ff6d70",
       "first_commit_date": "2026-02-14",
       "first_commit_subject": "docs: update session entry point for 1005 completion (desk fixes + queue purge)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1005
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -12736,14 +12818,15 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md": {
-      "originating_session": 1023,
+      "originating_session": 1024,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "ada4fbde",
       "first_commit_date": "2026-02-17",
       "first_commit_subject": "docs: add session 1023-1024 handoffs and update entry point",
       "sessions_touched": [
         1023,
+        1024,
         1025
       ],
       "commit_count": 1,
@@ -12763,13 +12846,15 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1026_REMEDIATION_REDESIGN.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1026,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "e055914c",
       "first_commit_date": "2026-02-17",
       "first_commit_subject": "fix: disable remediation execution loop, save $9/day",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1026
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -12834,13 +12919,14 @@
       ]
     },
     "docs/handoffs/SESSION_1032_CONVERSATION_DEDUP_AND_AGENT_TEST.md": {
-      "originating_session": 1034,
+      "originating_session": 1032,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "4920ea2b",
       "first_commit_date": "2026-02-18",
       "first_commit_subject": "docs: Session 1034 handoff \u2014 RAG wiring, legal agent, production stability",
       "sessions_touched": [
+        1032,
         1034,
         1035
       ],
@@ -12848,13 +12934,14 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1033_VALUE_CHAIN_COMPLETION.md": {
-      "originating_session": 1034,
+      "originating_session": 1033,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "4920ea2b",
       "first_commit_date": "2026-02-18",
       "first_commit_subject": "docs: Session 1034 handoff \u2014 RAG wiring, legal agent, production stability",
       "sessions_touched": [
+        1033,
         1034,
         1035
       ],
@@ -12889,26 +12976,30 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1043_BRAINSTORM_BULK_EXPORT.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1043,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "185aca3a",
       "first_commit_date": "2026-02-19",
       "first_commit_subject": "feat: add bulk paginated list action to brainstorm_tool for conversation export (#1345) (#1345)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1043
+      ],
       "commit_count": 2,
       "prs": [
         1345
       ]
     },
     "docs/handoffs/SESSION_1043_DOCX_CSV_PROCESSORS.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1043,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "966b08f4",
       "first_commit_date": "2026-02-19",
       "first_commit_subject": "feat: add DOCX and CSV processors to RAG upload pipeline",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1043
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -12933,10 +13024,13 @@
       "first_commit_date": "2026-02-20",
       "first_commit_subject": "docs: Session 1056 handoff + next session prep with PA connection guide",
       "sessions_touched": [
-        1056
+        1056,
+        1145
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2213
+      ]
     },
     "docs/handoffs/SESSION_1063_PA_TOOLS_DAVINCI_DEPLOY.md": {
       "originating_session": 1063,
@@ -12954,13 +13048,15 @@
       ]
     },
     "docs/handoffs/SESSION_1064_PERIODIC_TASK_QUEUE_SYNC.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 1064,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "0e044e67",
       "first_commit_date": "2026-02-22",
       "first_commit_subject": "fix: QueuePreservingScheduler prevents celery-beat from resetting queue values (#1417)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        1064
+      ],
       "commit_count": 4,
       "prs": [
         1415,
@@ -13087,9 +13183,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1084_HEARTBEAT_AND_FACTORIES.md": {
-      "originating_session": 1083,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1084,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "b85983ad",
       "first_commit_date": "2026-04-15",
       "first_commit_subject": "docs(handoff): Session 1084 final \u2014 heartbeat durability + OpenAI/Anthropic factories (#1896)",
@@ -13169,9 +13265,9 @@
       ]
     },
     "docs/handoffs/SESSION_1093_CTO_DAILY_DIAGNOSTIC_AND_DISPATCHER_GATHER_V2.md": {
-      "originating_session": 1092,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1093,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "975284eb",
       "first_commit_date": "2026-04-16",
       "first_commit_subject": "fix(pa-routing): honor source='claude-code' in intent detection (#1984)",
@@ -13263,13 +13359,15 @@
       ]
     },
     "docs/handoffs/SESSION_10_HANDOFF_LEARNING_LIVE.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 10,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1f5bfc02",
       "first_commit_date": "2025-10-02",
       "first_commit_subject": "feat: Activity Feed Overhaul + Database Cleanup + Documentation Reorganization",
-      "sessions_touched": [],
+      "sessions_touched": [
+        10
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -13291,9 +13389,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1101_PHASE1_DOCS_CLEANUP.md": {
-      "originating_session": 1100,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1101,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2cf6c475",
       "first_commit_date": "2026-05-07",
       "first_commit_subject": "feat: stock-financial fix + runtime fail-closed hardening + Sessions 1098\u20131106 doc/repo cleanup",
@@ -13308,9 +13406,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1102_PHASE2B_TAXONOMY_AUTOGEN.md": {
-      "originating_session": 1100,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1102,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2cf6c475",
       "first_commit_date": "2026-05-07",
       "first_commit_subject": "feat: stock-financial fix + runtime fail-closed hardening + Sessions 1098\u20131106 doc/repo cleanup",
@@ -13325,9 +13423,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1103_DOC_AUTOGEN_GUARDRAIL.md": {
-      "originating_session": 1100,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1103,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2cf6c475",
       "first_commit_date": "2026-05-07",
       "first_commit_subject": "feat: stock-financial fix + runtime fail-closed hardening + Sessions 1098\u20131106 doc/repo cleanup",
@@ -13335,6 +13433,7 @@
         1100,
         1101,
         1102,
+        1103,
         1104,
         1105
       ],
@@ -13342,9 +13441,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1104_PHASE2C_LOGO_REMOVAL.md": {
-      "originating_session": 1100,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1104,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2cf6c475",
       "first_commit_date": "2026-05-07",
       "first_commit_subject": "feat: stock-financial fix + runtime fail-closed hardening + Sessions 1098\u20131106 doc/repo cleanup",
@@ -13359,9 +13458,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1105_DOCKER_COMPOSE_SPLIT.md": {
-      "originating_session": 1100,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1105,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2cf6c475",
       "first_commit_date": "2026-05-07",
       "first_commit_subject": "feat: stock-financial fix + runtime fail-closed hardening + Sessions 1098\u20131106 doc/repo cleanup",
@@ -13376,9 +13475,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1106_MASTER_CONTEXT_UNTRACK.md": {
-      "originating_session": 1100,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1106,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2cf6c475",
       "first_commit_date": "2026-05-07",
       "first_commit_subject": "feat: stock-financial fix + runtime fail-closed hardening + Sessions 1098\u20131106 doc/repo cleanup",
@@ -13387,7 +13486,8 @@
         1101,
         1102,
         1104,
-        1105
+        1105,
+        1106
       ],
       "commit_count": 1,
       "prs": []
@@ -13458,23 +13558,24 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1112_SAFE_ARTIFACT_CLEANUP.md": {
-      "originating_session": 976,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1112,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9a6950f0",
       "first_commit_date": "2026-05-08",
       "first_commit_subject": "chore(repo): untrack safe generated artifacts",
       "sessions_touched": [
         976,
-        1111
+        1111,
+        1112
       ],
       "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_1113_DORMANT_PARTIAL_LABELS.md": {
-      "originating_session": 1111,
+      "originating_session": 1113,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "ed297242",
       "first_commit_date": "2026-05-08",
       "first_commit_subject": "docs: label dormant and partial systems from Session 1111 review",
@@ -13486,9 +13587,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md": {
-      "originating_session": 688,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1114,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "3cedf7b3",
       "first_commit_date": "2026-05-08",
       "first_commit_subject": "docs: map active module ownership from Session 1111 review",
@@ -13517,9 +13618,9 @@
       ]
     },
     "docs/handoffs/SESSION_1115_CONTEXT_KIT_DRIFT_CLEANUP.md": {
-      "originating_session": 786,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1115,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "0eb30c8d",
       "first_commit_date": "2026-05-12",
       "first_commit_subject": "docs: close Session 1115 handoff gap \u2014 full code-health refactor arc documented (#2091)",
@@ -13533,9 +13634,9 @@
       ]
     },
     "docs/handoffs/SESSION_1116_GLOBAL_AI_PIVOT_AND_LIVE_INTEL.md": {
-      "originating_session": 1106,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1116,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2dd2ab8b",
       "first_commit_date": "2026-05-20",
       "first_commit_subject": "docs(handoff): Session 1116 Part 2 \u2014 integrations + Channels + Lab Wave 2 (#2098)",
@@ -13552,9 +13653,9 @@
       ]
     },
     "docs/handoffs/SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md": {
-      "originating_session": 1115,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1116,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2dd2ab8b",
       "first_commit_date": "2026-05-20",
       "first_commit_subject": "docs(handoff): Session 1116 Part 2 \u2014 integrations + Channels + Lab Wave 2 (#2098)",
@@ -13569,9 +13670,9 @@
       ]
     },
     "docs/handoffs/SESSION_1117_LOCAL_PORTFOLIO_GROUNDING_BRIDGE.md": {
-      "originating_session": 215,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1117,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "bb1ee684",
       "first_commit_date": "2026-05-21",
       "first_commit_subject": "feat(f2f): F2F.1 \u2014 push-to-speak avatar provider abstraction (#2101)",
@@ -13603,9 +13704,9 @@
       ]
     },
     "docs/handoffs/SESSION_1119_MULTI_REPO_V0.md": {
-      "originating_session": 1118,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1119,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "cb3141ef",
       "first_commit_date": "2026-05-21",
       "first_commit_subject": "docs(handoff): Session 1119 close \u2014 9 PRs landed, multi-repo v0 live (#2113)",
@@ -13622,9 +13723,9 @@
       ]
     },
     "docs/handoffs/SESSION_1120_FLEET_DOC_VERIFIER_ROLLOUT.md": {
-      "originating_session": 987,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1120,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d9544f1c",
       "first_commit_date": "2026-05-21",
       "first_commit_subject": "feat(multi-repo): draft_repo_verifier_claims \u2014 Rigby seeds doc-verifier specs (#2115)",
@@ -13642,9 +13743,9 @@
       ]
     },
     "docs/handoffs/SESSION_1121_FLEET_DRIFT_RECONCILE_AND_CI_GATES.md": {
-      "originating_session": 1120,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1121,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f785f388",
       "first_commit_date": "2026-05-21",
       "first_commit_subject": "docs(handoff): Session 1121 close \u2014 fleet drift reconciliation + CI gates rollout (#2116)",
@@ -13720,9 +13821,9 @@
       ]
     },
     "docs/handoffs/SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md": {
-      "originating_session": 1115,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1126,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f8c903b2",
       "first_commit_date": "2026-05-22",
       "first_commit_subject": "docs(handoff): Session 1126 close \u2014 fleet runtime + fleet_health + routing Phase 1 (#2126)",
@@ -13785,9 +13886,9 @@
       ]
     },
     "docs/handoffs/SESSION_1130_FLEET_EVENTS_MOVE_3_R2.md": {
-      "originating_session": 1125,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1130,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "c9cfe523",
       "first_commit_date": "2026-05-22",
       "first_commit_subject": "docs(handoff): point Session 1131 entry at signal-studio Phase 1 (#2137)",
@@ -13835,9 +13936,9 @@
       ]
     },
     "docs/handoffs/SESSION_1132_LIVE_REFRESH_AND_PA_AUDIT.md": {
-      "originating_session": 1131,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1132,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "e0f9c7d2",
       "first_commit_date": "2026-05-23",
       "first_commit_subject": "docs(handoff): Session 1132 close \u2192 1133 entry (open) (#2143)",
@@ -13852,9 +13953,9 @@
       ]
     },
     "docs/handoffs/SESSION_1133_FLEET_PA_SIGNING_BACKPROP.md": {
-      "originating_session": 1132,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1133,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "584116e0",
       "first_commit_date": "2026-05-23",
       "first_commit_subject": "docs(handoff): Session 1133 close \u2192 1134 entry (Y primary, A alternative) (#2144)",
@@ -13883,9 +13984,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1135_APP_DISCOVERY_SPRINT.md": {
-      "originating_session": 1134,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1135,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9620a94d",
       "first_commit_date": "2026-05-23",
       "first_commit_subject": "docs(handoff): Session 1135 close \u2192 1136 entry (discovery sprint continues)",
@@ -13912,9 +14013,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1136_OPS_VIEW_PARKED.md": {
-      "originating_session": 1135,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1136,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "da7d1547",
       "first_commit_date": "2026-05-23",
       "first_commit_subject": "docs(session-1136): ops view parked at jessica user-test + 1137 entry",
@@ -13927,9 +14028,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md": {
-      "originating_session": 1135,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1137,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "c6c17464",
       "first_commit_date": "2026-05-24",
       "first_commit_subject": "docs(session-1137): Jessica Phases 1-4 ratification \u2014 22 decisions + 4 deliverables",
@@ -13942,9 +14043,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md": {
-      "originating_session": 1137,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1138,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9af7e6fd",
       "first_commit_date": "2026-05-24",
       "first_commit_subject": "docs(session-1138): celery restart done \u2014 Rigby verified paid_interest_status",
@@ -13985,9 +14086,9 @@
       ]
     },
     "docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md": {
-      "originating_session": 1139,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1140,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "0c425ce1",
       "first_commit_date": "2026-05-24",
       "first_commit_subject": "docs(session-1140): post-merge update \u2014 flip status to merged (#2170)",
@@ -14003,9 +14104,9 @@
       ]
     },
     "docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md": {
-      "originating_session": 1137,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1141,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "4583f1d6",
       "first_commit_date": "2026-05-24",
       "first_commit_subject": "docs(session-1141): Chris ratification deep dives on Jessica's 22 decisions (#2177)",
@@ -14036,9 +14137,9 @@
       ]
     },
     "docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md": {
-      "originating_session": 1142,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 1143,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "998e7ed4",
       "first_commit_date": "2026-05-25",
       "first_commit_subject": "docs(session-1143): final handoff + CURRENT.md update + 00-START-NEXT-SESSION \u2192 1144 entry (#2200)",
@@ -14068,14 +14169,48 @@
         2206
       ]
     },
-    "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
-      "originating_session": 738,
+    "docs/handoffs/SESSION_1145_ARCHITECTURE_SWEEP_AND_PROVENANCE_PLAN_B.md": {
+      "originating_session": 1145,
       "confidence": "HIGH",
       "match_source": "subject",
+      "first_commit_sha": "d71239ca",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1145): handoff \u2014 3 PRs (architecture sweep + provenance Plan B) (#2214)",
+      "sessions_touched": [
+        1145,
+        1146
+      ],
+      "commit_count": 2,
+      "prs": [
+        2214
+      ]
+    },
+    "docs/handoffs/SESSION_1146_ROOT_AUDITS_SWEEP.md": {
+      "originating_session": 1146,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2dfc899a",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1146): handoff \u2014 root-level audits sweep (3 PRs) (#2218)",
+      "sessions_touched": [
+        1145,
+        1146,
+        1147
+      ],
+      "commit_count": 2,
+      "prs": [
+        2218
+      ]
+    },
+    "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
+      "originating_session": 197,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        197,
         738,
         800,
         1126,
@@ -14087,13 +14222,14 @@
       ]
     },
     "docs/handoffs/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md": {
-      "originating_session": 738,
+      "originating_session": 206,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        206,
         738,
         800,
         1126,
@@ -14105,13 +14241,14 @@
       ]
     },
     "docs/handoffs/SESSION_208_PLUS_MASTER_PLAN.md": {
-      "originating_session": 738,
+      "originating_session": 208,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        208,
         738,
         800,
         1126,
@@ -14123,24 +14260,27 @@
       ]
     },
     "docs/handoffs/SESSION_20_HANDOFF_OVERNIGHT_TEST.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 20,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1f5bfc02",
       "first_commit_date": "2025-10-02",
       "first_commit_subject": "feat: Activity Feed Overhaul + Database Cleanup + Documentation Reorganization",
-      "sessions_touched": [],
+      "sessions_touched": [
+        20
+      ],
       "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
-      "originating_session": 738,
+      "originating_session": 261,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        261,
         738,
         800,
         1126,
@@ -14152,13 +14292,14 @@
       ]
     },
     "docs/handoffs/SESSION_262_COMPLETE_SYSTEM_REVIEW.md": {
-      "originating_session": 738,
+      "originating_session": 262,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        262,
         738,
         800,
         1126,
@@ -14170,13 +14311,14 @@
       ]
     },
     "docs/handoffs/SESSION_263_SUPER_PLATFORM_INTEGRATION_BLUEPRINT.md": {
-      "originating_session": 738,
+      "originating_session": 263,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        263,
         738,
         800,
         1126,
@@ -14188,13 +14330,14 @@
       ]
     },
     "docs/handoffs/SESSION_266_PROMPTING_SYSTEM_INTEGRATION.md": {
-      "originating_session": 738,
+      "originating_session": 266,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        266,
         738,
         800,
         1126,
@@ -14206,13 +14349,14 @@
       ]
     },
     "docs/handoffs/SESSION_266_SYSTEM_PROMPT_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 266,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        266,
         738,
         800,
         1126,
@@ -14224,13 +14368,14 @@
       ]
     },
     "docs/handoffs/SESSION_267_CLEAN_ARCHITECTURE_PROPOSAL.md": {
-      "originating_session": 738,
+      "originating_session": 267,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        267,
         738,
         800,
         1126,
@@ -14242,13 +14387,14 @@
       ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
-      "originating_session": 738,
+      "originating_session": 273,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        273,
         738,
         800,
         1126,
@@ -14260,13 +14406,14 @@
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
-      "originating_session": 293,
+      "originating_session": 280,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "8405492f",
       "first_commit_date": "2025-11-30",
       "first_commit_subject": "feat(Session 293): Workflow Engine + Creative Toolbox Fix",
       "sessions_touched": [
+        280,
         293,
         800,
         1126,
@@ -14315,9 +14462,9 @@
       ]
     },
     "docs/handoffs/SESSION_297_BUSINESS_WORKFLOWS_HANDOFF.md": {
-      "originating_session": 296,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 297,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f1cf34e0",
       "first_commit_date": "2025-12-01",
       "first_commit_subject": "docs(Session 297): Add business workflows handoff document",
@@ -14353,9 +14500,9 @@
       ]
     },
     "docs/handoffs/SESSION_299_CUMULATIVE_INTELLIGENCE.md": {
-      "originating_session": 298,
+      "originating_session": 299,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "36d0a8cf",
       "first_commit_date": "2025-12-01",
       "first_commit_subject": "feat(Session 298-299): DaVinci Bridge Server + Cumulative Intelligence Pipeline",
@@ -14446,9 +14593,9 @@
       ]
     },
     "docs/handoffs/SESSION_304_LEARNING_INFRASTRUCTURE_CONNECTION.md": {
-      "originating_session": 303,
+      "originating_session": 304,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "e51ce997",
       "first_commit_date": "2025-12-01",
       "first_commit_subject": "feat(Session 303-304): Complete Learning Infrastructure + All 11 Agents Connected",
@@ -14484,9 +14631,9 @@
       ]
     },
     "docs/handoffs/SESSION_307_DEPRECATED_AGENTS_LEARNING_EXPANSION.md": {
-      "originating_session": 306,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 307,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "bff0ce12",
       "first_commit_date": "2025-12-01",
       "first_commit_subject": "feat(Sessions 306-307): Learning hooks for 7 standalone/deprecated agents",
@@ -14521,9 +14668,9 @@
       ]
     },
     "docs/handoffs/SESSION_309_LEARNING_INFRASTRUCTURE_TESTING.md": {
-      "originating_session": 308,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 309,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "59ac0b11",
       "first_commit_date": "2025-12-01",
       "first_commit_subject": "docs(Session 309): Update handoff - issues fixed",
@@ -14540,9 +14687,9 @@
       ]
     },
     "docs/handoffs/SESSION_310_UI_FIXES_AND_AGENT_TESTING.md": {
-      "originating_session": 309,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 310,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "a43766e6",
       "first_commit_date": "2025-12-01",
       "first_commit_subject": "feat(Session 310): UI fixes + comprehensive agent testing (85.2% pass)",
@@ -14613,13 +14760,14 @@
       ]
     },
     "docs/handoffs/SESSION_312_PERSONAL_ASSISTANT_AGENT_CONNECTION.md": {
-      "originating_session": 314,
+      "originating_session": 312,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "39502609",
       "first_commit_date": "2025-12-02",
       "first_commit_subject": "feat(Session 314): GPT-5 Responses API migration + UI cleanup",
       "sessions_touched": [
+        312,
         314,
         800,
         1126,
@@ -14631,13 +14779,14 @@
       ]
     },
     "docs/handoffs/SESSION_313_AGENT_CONNECTION_EXPANSION.md": {
-      "originating_session": 314,
+      "originating_session": 313,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "39502609",
       "first_commit_date": "2025-12-02",
       "first_commit_subject": "feat(Session 314): GPT-5 Responses API migration + UI cleanup",
       "sessions_touched": [
+        313,
         314,
         800,
         1126,
@@ -14741,9 +14890,9 @@
       ]
     },
     "docs/handoffs/SESSION_318_CONVERSATION_FIXES.md": {
-      "originating_session": 316,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 318,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "e4e4e5a6",
       "first_commit_date": "2025-12-02",
       "first_commit_subject": "feat(Session 318): Agents now use REAL knowledge in conversations",
@@ -14779,13 +14928,14 @@
       ]
     },
     "docs/handoffs/SESSION_322_BOARDROOM_DECISIONS_BLUEPRINT.md": {
-      "originating_session": 324,
+      "originating_session": 322,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "0f466f8c",
       "first_commit_date": "2025-12-02",
       "first_commit_subject": "feat(Session 324): Project Model Unification + Business Research Integration",
       "sessions_touched": [
+        322,
         324,
         800,
         1126,
@@ -14797,13 +14947,14 @@
       ]
     },
     "docs/handoffs/SESSION_323_BOARDROOM_DECISIONS_IMPLEMENTATION.md": {
-      "originating_session": 324,
+      "originating_session": 323,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "0f466f8c",
       "first_commit_date": "2025-12-02",
       "first_commit_subject": "feat(Session 324): Project Model Unification + Business Research Integration",
       "sessions_touched": [
+        323,
         324,
         800,
         1126,
@@ -14833,13 +14984,14 @@
       ]
     },
     "docs/handoffs/SESSION_326_PROJECT_AGENT_LEARNING_BRIDGE.md": {
-      "originating_session": 333,
+      "originating_session": 326,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "e4884c46",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 333): Project Intelligence Hub Enhanced UI",
       "sessions_touched": [
+        326,
         333,
         738,
         800,
@@ -14852,13 +15004,14 @@
       ]
     },
     "docs/handoffs/SESSION_327_PROJECT_INTELLIGENCE_HUB.md": {
-      "originating_session": 333,
+      "originating_session": 327,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "e4884c46",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 333): Project Intelligence Hub Enhanced UI",
       "sessions_touched": [
+        327,
         333,
         800,
         1126,
@@ -14870,13 +15023,14 @@
       ]
     },
     "docs/handoffs/SESSION_328_PROJECT_INTELLIGENCE_HUB_ENHANCEMENT.md": {
-      "originating_session": 333,
+      "originating_session": 328,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "e4884c46",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 333): Project Intelligence Hub Enhanced UI",
       "sessions_touched": [
+        328,
         333,
         800,
         1126,
@@ -14888,13 +15042,14 @@
       ]
     },
     "docs/handoffs/SESSION_329_PROJECT_CONVERSATIONS.md": {
-      "originating_session": 333,
+      "originating_session": 329,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "e4884c46",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 333): Project Intelligence Hub Enhanced UI",
       "sessions_touched": [
+        329,
         333,
         800,
         1126,
@@ -14906,9 +15061,9 @@
       ]
     },
     "docs/handoffs/SESSION_330_PROJECT_MULTI_TURN_CONVERSATIONS.md": {
-      "originating_session": 329,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 330,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2a202c29",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 330): Project Multi-Turn Conversations - Agents Talk Like Agent/Social Tab",
@@ -14943,9 +15098,9 @@
       ]
     },
     "docs/handoffs/SESSION_334_PROJECT_CONTEXT_CREATIVE_WORKFLOWS.md": {
-      "originating_session": 325,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 334,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "78b13e93",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 334): Project context for creative workflows",
@@ -14980,13 +15135,14 @@
       ]
     },
     "docs/handoffs/SESSION_335_LIVING_PROJECTS.md": {
-      "originating_session": 738,
+      "originating_session": 335,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        335,
         738,
         800,
         1126,
@@ -15071,9 +15227,9 @@
       ]
     },
     "docs/handoffs/SESSION_339_CREATIVE_ORCHESTRATOR.md": {
-      "originating_session": 338,
+      "originating_session": 339,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "50c9659f",
       "first_commit_date": "2025-12-03",
       "first_commit_subject": "feat(Session 338-339): Autonomous Business Pipeline + CreativeOrchestrator",
@@ -15217,9 +15373,9 @@
       ]
     },
     "docs/handoffs/SESSION_350_DOMAIN_AWARE_SPIDER_TARGETING.md": {
-      "originating_session": 349,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 350,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "3ae29c1b",
       "first_commit_date": "2025-12-04",
       "first_commit_subject": "docs(Session 350): Final documentation update for Session 351",
@@ -15256,9 +15412,9 @@
       ]
     },
     "docs/handoffs/SESSION_352_HTML_SANITIZATION_FIX.md": {
-      "originating_session": 351,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 352,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d4590d16",
       "first_commit_date": "2025-12-04",
       "first_commit_subject": "fix(Session 352): HTML sanitization for research display + viability scoring improvements",
@@ -15314,13 +15470,14 @@
       ]
     },
     "docs/handoffs/SESSION_355_AGENTS_TAB_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 355,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        355,
         738,
         800,
         1126,
@@ -15332,9 +15489,9 @@
       ]
     },
     "docs/handoffs/SESSION_355_MYTHOLOGY_INTEGRATION.md": {
-      "originating_session": 354,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 355,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "a72cabb1",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Sessions 354-357): Agents Tab Complete + Mythology Validation",
@@ -15353,9 +15510,9 @@
       ]
     },
     "docs/handoffs/SESSION_356_AGENTS_TAB_COMPLETE.md": {
-      "originating_session": 354,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 356,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "a72cabb1",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Sessions 354-357): Agents Tab Complete + Mythology Validation",
@@ -15374,9 +15531,9 @@
       ]
     },
     "docs/handoffs/SESSION_357_MYTHOLOGY_VALIDATION.md": {
-      "originating_session": 354,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 357,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "220c8fa1",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "docs(Session 357): Update documentation with learning cycle fix",
@@ -15449,9 +15606,9 @@
       ]
     },
     "docs/handoffs/SESSION_361_CELERY_BEAT_MULTI_AGENT.md": {
-      "originating_session": 360,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 361,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "6936f693",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Session 361): Add UI differentiation for multi-agent panels",
@@ -15541,9 +15698,9 @@
       ]
     },
     "docs/handoffs/SESSION_366_DREAM_PRODUCTIZATION.md": {
-      "originating_session": 284,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 366,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2d7b75f5",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Session 366): Dream Productization Pipeline",
@@ -15692,9 +15849,9 @@
       ]
     },
     "docs/handoffs/SESSION_374_COLLECTIVE_INTELLIGENCE_SEARCH_FIX.md": {
-      "originating_session": 373,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 374,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d2664bc8",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Sessions 373-375): Knowledge Gaps, Collective Intelligence Search, Multi-Agent Orchestration",
@@ -15712,9 +15869,9 @@
       ]
     },
     "docs/handoffs/SESSION_375_MULTI_AGENT_ORCHESTRATION_FIX.md": {
-      "originating_session": 373,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 375,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d2664bc8",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Sessions 373-375): Knowledge Gaps, Collective Intelligence Search, Multi-Agent Orchestration",
@@ -15770,13 +15927,14 @@
       ]
     },
     "docs/handoffs/SESSION_378_AGENT_ECOSYSTEM_AUDIT.md": {
-      "originating_session": 379,
+      "originating_session": 378,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "0253c51e",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Session 379): Agent Ecosystem Unification",
       "sessions_touched": [
+        378,
         379,
         800,
         1126,
@@ -15788,13 +15946,14 @@
       ]
     },
     "docs/handoffs/SESSION_378_CYBERPUNK_STYLE_BIAS_FIX.md": {
-      "originating_session": 379,
+      "originating_session": 378,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "0253c51e",
       "first_commit_date": "2025-12-05",
       "first_commit_subject": "feat(Session 379): Agent Ecosystem Unification",
       "sessions_touched": [
+        378,
         379,
         800,
         1126,
@@ -15824,9 +15983,9 @@
       ]
     },
     "docs/handoffs/SESSION_380_LEARNING_HOOKS_ALL_AGENTS.md": {
-      "originating_session": 377,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 380,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "16941a18",
       "first_commit_date": "2025-12-06",
       "first_commit_subject": "feat(Sessions 377-381): Learning Hooks + Collective Intelligence",
@@ -15844,9 +16003,9 @@
       ]
     },
     "docs/handoffs/SESSION_381_COLLECTIVE_INTELLIGENCE_ARCHITECTURE.md": {
-      "originating_session": 377,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 381,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "16941a18",
       "first_commit_date": "2025-12-06",
       "first_commit_subject": "feat(Sessions 377-381): Learning Hooks + Collective Intelligence",
@@ -15864,9 +16023,9 @@
       ]
     },
     "docs/handoffs/SESSION_382_GPT5_MIGRATION_AGENT_DOCS.md": {
-      "originating_session": 16,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 382,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "7a809d0e",
       "first_commit_date": "2025-12-06",
       "first_commit_subject": "feat(Session 382): GPT-5 Migration + Agent Documentation",
@@ -15883,9 +16042,9 @@
       ]
     },
     "docs/handoffs/SESSION_384_CREATIVE_PIPELINE_ASSET_DISPLAY.md": {
-      "originating_session": 383,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 384,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "ed636ea6",
       "first_commit_date": "2025-12-06",
       "first_commit_subject": "feat(Sessions 383-384): Agent Chat/Invoke + Creative Pipeline Asset Display",
@@ -15921,9 +16080,9 @@
       ]
     },
     "docs/handoffs/SESSION_386_INTELLIGENCE_TAB_ENHANCEMENTS.md": {
-      "originating_session": 385,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 386,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "a6958648",
       "first_commit_date": "2025-12-07",
       "first_commit_subject": "feat(Sessions 385-386): Markets Tab + Intelligence Tab Enhancements",
@@ -15940,9 +16099,9 @@
       ]
     },
     "docs/handoffs/SESSION_387_PLAYWRIGHT_SPIDERS.md": {
-      "originating_session": 386,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 387,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "33e29050",
       "first_commit_date": "2025-12-07",
       "first_commit_subject": "feat(Session 387): Playwright spider infrastructure for JS-heavy sites",
@@ -15977,9 +16136,9 @@
       ]
     },
     "docs/handoffs/SESSION_392_REGISTRY_MIGRATION.md": {
-      "originating_session": 391,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 392,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "84f43563",
       "first_commit_date": "2025-12-07",
       "first_commit_subject": "feat(Session 392): Migrate AgentRegistry to core/agents/registry.py",
@@ -16068,13 +16227,14 @@
       ]
     },
     "docs/handoffs/SESSION_399_SPIDER_DATA_UI_IMPLEMENTATION.md": {
-      "originating_session": 738,
+      "originating_session": 399,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        399,
         738,
         800,
         1126,
@@ -16122,9 +16282,9 @@
       ]
     },
     "docs/handoffs/SESSION_401_KNOWLEDGE_ATTRIBUTION_UI.md": {
-      "originating_session": 400,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 401,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "10f874b3",
       "first_commit_date": "2025-12-09",
       "first_commit_subject": "feat(Session 401): Add Knowledge Attribution UI for transparency",
@@ -16141,9 +16301,9 @@
       ]
     },
     "docs/handoffs/SESSION_402_BUGFIXES.md": {
-      "originating_session": 401,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 402,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "4a1b6928",
       "first_commit_date": "2025-12-09",
       "first_commit_subject": "fix(Session 402): PDF upload, Celery type errors, and document status badges",
@@ -16179,13 +16339,14 @@
       ]
     },
     "docs/handoffs/SESSION_403_LEGAL_ASSISTANT_GAP_ANALYSIS.md": {
-      "originating_session": 738,
+      "originating_session": 403,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        403,
         738,
         800,
         1126,
@@ -16234,13 +16395,14 @@
       ]
     },
     "docs/handoffs/SESSION_405_LEGAL_AGENT_LEARNING_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 405,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        405,
         738,
         800,
         1126,
@@ -16381,9 +16543,9 @@
       ]
     },
     "docs/handoffs/SESSION_409_CASEPROFILE_AUTOSELECT_OCR.md": {
-      "originating_session": 408,
+      "originating_session": 409,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "da10f741",
       "first_commit_date": "2025-12-10",
       "first_commit_subject": "feat(Session 408-409): Document Brain + CaseProfile Auto-Select + OCR Support",
@@ -16418,13 +16580,14 @@
       ]
     },
     "docs/handoffs/SESSION_411_SYSTEM_REVIEW.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 411,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        411,
         449,
         450,
         451,
@@ -16438,13 +16601,14 @@
       ]
     },
     "docs/handoffs/SESSION_412_BOARDROOM_DECISIONS.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 412,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        412,
         449,
         450,
         451,
@@ -16494,13 +16658,14 @@
       ]
     },
     "docs/handoffs/SESSION_415_COMPREHENSIVE_SYSTEM_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 415,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        415,
         738,
         800,
         1126,
@@ -16512,13 +16677,14 @@
       ]
     },
     "docs/handoffs/SESSION_416_COMPLETE_DOCUMENTATION_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 416,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        416,
         738,
         800,
         1126,
@@ -16530,13 +16696,14 @@
       ]
     },
     "docs/handoffs/SESSION_416_GOLDEN_PATH_TESTING.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 416,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        416,
         449,
         450,
         451,
@@ -16550,13 +16717,14 @@
       ]
     },
     "docs/handoffs/SESSION_416_UNIFIED_LEARNING_SYSTEM.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 416,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        416,
         449,
         450,
         451,
@@ -16588,13 +16756,14 @@
       ]
     },
     "docs/handoffs/SESSION_417_STRESS_TEST_REPORT.md": {
-      "originating_session": 738,
+      "originating_session": 417,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        417,
         738,
         800,
         1126,
@@ -16606,13 +16775,14 @@
       ]
     },
     "docs/handoffs/SESSION_418_STRESS_TEST_LEARNING_SYSTEM.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 418,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        418,
         449,
         450,
         451,
@@ -16664,13 +16834,14 @@
       ]
     },
     "docs/handoffs/SESSION_421_ROADMAP.md": {
-      "originating_session": 738,
+      "originating_session": 421,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        421,
         738,
         800,
         1126,
@@ -16754,13 +16925,14 @@
       ]
     },
     "docs/handoffs/SESSION_427_ADVANCED_DISCORD_BOT_COMMANDS.md": {
-      "originating_session": 429,
+      "originating_session": 427,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "85c29e24",
       "first_commit_date": "2025-12-12",
       "first_commit_subject": "feat(Session 429): Discord notifications for conversations + cost optimization",
       "sessions_touched": [
+        427,
         429,
         800,
         1126,
@@ -16772,13 +16944,14 @@
       ]
     },
     "docs/handoffs/SESSION_428_PA_DISCORD_CONVERSATION_HISTORY.md": {
-      "originating_session": 429,
+      "originating_session": 428,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "85c29e24",
       "first_commit_date": "2025-12-12",
       "first_commit_subject": "feat(Session 429): Discord notifications for conversations + cost optimization",
       "sessions_touched": [
+        428,
         429,
         800,
         1126,
@@ -16808,13 +16981,14 @@
       ]
     },
     "docs/handoffs/SESSION_430_DISCORD_FIRST_PHASE1.md": {
-      "originating_session": 431,
+      "originating_session": 430,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "0a446eed",
       "first_commit_date": "2025-12-12",
       "first_commit_subject": "feat(Session 431): Discord-First Phase 2-3 + UX Improvements",
       "sessions_touched": [
+        430,
         431,
         800,
         1126,
@@ -16826,13 +17000,14 @@
       ]
     },
     "docs/handoffs/SESSION_430_USER_PROFILE_SYSTEM.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 430,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        430,
         449,
         450,
         451,
@@ -16902,9 +17077,9 @@
       ]
     },
     "docs/handoffs/SESSION_433_INCOME_PIPELINE.md": {
-      "originating_session": 430,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 433,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "689f7cad",
       "first_commit_date": "2025-12-13",
       "first_commit_subject": "docs: Update all documentation for Session 433 - Phase 4 Complete",
@@ -17014,13 +17189,14 @@
       ]
     },
     "docs/handoffs/SESSION_439_AI_PIXAR_VISION.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 439,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
       "sessions_touched": [
+        439,
         449,
         450,
         451,
@@ -17089,9 +17265,9 @@
       ]
     },
     "docs/handoffs/SESSION_442_VOICE_CLONING_COMPLETE.md": {
-      "originating_session": 441,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 442,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f25ff0de",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 442): Voice Cloning + /voice-ask Command",
@@ -17217,9 +17393,9 @@
       ]
     },
     "docs/handoffs/SESSION_451_USER_VIDEO_UPLOAD.md": {
-      "originating_session": 449,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 451,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "111f6662",
       "first_commit_date": "2025-12-14",
       "first_commit_subject": "feat(Session 451): User Video Upload + Comprehensive Documentation",
@@ -17311,9 +17487,9 @@
       ]
     },
     "docs/handoffs/SESSION_455_CROSS_PLATFORM_SESSION_CONTINUITY.md": {
-      "originating_session": 454,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 455,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "0cd019d2",
       "first_commit_date": "2025-12-15",
       "first_commit_subject": "feat(Sessions 454-456): Voice Interview, Cross-Platform Sessions, Routing Fixes",
@@ -17331,9 +17507,9 @@
       ]
     },
     "docs/handoffs/SESSION_456_VOICE_INTERVIEW_WHISPER.md": {
-      "originating_session": 454,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 456,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "0cd019d2",
       "first_commit_date": "2025-12-15",
       "first_commit_subject": "feat(Sessions 454-456): Voice Interview, Cross-Platform Sessions, Routing Fixes",
@@ -17369,13 +17545,14 @@
       ]
     },
     "docs/handoffs/SESSION_460_AUTONOMOUS_INTELLIGENCE_LOOP.md": {
-      "originating_session": 461,
+      "originating_session": 460,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "6a8d0313",
       "first_commit_date": "2025-12-16",
       "first_commit_subject": "feat(Session 461): Stock & Blockchain Audit Agent Groups + Event Monitoring",
       "sessions_touched": [
+        460,
         461,
         738,
         800,
@@ -17479,13 +17656,14 @@
       ]
     },
     "docs/handoffs/SESSION_463_LEARNING_LOOP_COMPLETE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 463,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
       "sessions_touched": [
+        463,
         468,
         470,
         471,
@@ -17521,13 +17699,14 @@
       ]
     },
     "docs/handoffs/SESSION_464_LEARNING_LOOP_COMPLETE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 464,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
       "sessions_touched": [
+        464,
         468,
         470,
         471,
@@ -17544,13 +17723,14 @@
       ]
     },
     "docs/handoffs/SESSION_465_MARKET_INTELLIGENCE_DESK_COMPLETE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 465,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
       "sessions_touched": [
+        465,
         468,
         470,
         471,
@@ -17628,14 +17808,15 @@
       ]
     },
     "docs/handoffs/SESSION_469_DISCORD_STUDIO_FIXES_AND_REAL_DEBATES.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 469,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
       "sessions_touched": [
         468,
+        469,
         470,
         471,
         472,
@@ -17651,14 +17832,15 @@
       ]
     },
     "docs/handoffs/SESSION_469_END_TO_END_TEST_SUCCESS.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 469,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
       "sessions_touched": [
         468,
+        469,
         470,
         471,
         472,
@@ -17674,9 +17856,9 @@
       ]
     },
     "docs/handoffs/SESSION_470_MARKET_INTELLIGENCE_ML_SCORING.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 470,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17697,9 +17879,9 @@
       ]
     },
     "docs/handoffs/SESSION_470_ML_SCORING_ENGINE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 470,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17720,9 +17902,9 @@
       ]
     },
     "docs/handoffs/SESSION_471_NARRATIVE_DRIFT_DETECTOR.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 471,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17743,9 +17925,9 @@
       ]
     },
     "docs/handoffs/SESSION_472_EVENT_BUS.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 472,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17766,9 +17948,9 @@
       ]
     },
     "docs/handoffs/SESSION_472_PROVENANCE_COMPLIANCE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 472,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17789,9 +17971,9 @@
       ]
     },
     "docs/handoffs/SESSION_472_ROI_METRICS_COMPLETE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 472,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17812,9 +17994,9 @@
       ]
     },
     "docs/handoffs/SESSION_473_NARRATIVE_CONTENT_INTEGRATION.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 473,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17835,9 +18017,9 @@
       ]
     },
     "docs/handoffs/SESSION_474_UNIFIED_INTELLIGENCE_PIPELINE.md": {
-      "originating_session": 468,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 474,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "277c3326",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 468-474): Complete Market Intelligence + Unified Pipeline",
@@ -17952,9 +18134,9 @@
       ]
     },
     "docs/handoffs/SESSION_480_SITUATION_DISCORD_COMMANDS.md": {
-      "originating_session": 479,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 480,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "011723d1",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 479-481): 19 Autonomous Situations + Event-Driven Triggers",
@@ -17972,9 +18154,9 @@
       ]
     },
     "docs/handoffs/SESSION_481_EVENT_DRIVEN_ALL_SITUATIONS.md": {
-      "originating_session": 479,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 481,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "011723d1",
       "first_commit_date": "2025-12-17",
       "first_commit_subject": "feat(Sessions 479-481): 19 Autonomous Situations + Event-Driven Triggers",
@@ -18086,13 +18268,14 @@
       ]
     },
     "docs/handoffs/SESSION_487_DORMANT_FEATURES_ACTIVATION_PLAN.md": {
-      "originating_session": 738,
+      "originating_session": 487,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        487,
         738,
         800,
         1126,
@@ -18122,9 +18305,9 @@
       ]
     },
     "docs/handoffs/SESSION_488_AUTONOMOUS_SITUATIONS_DATA_FIX.md": {
-      "originating_session": 487,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 488,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "039dbe77",
       "first_commit_date": "2025-12-18",
       "first_commit_subject": "fix(Session 488): Fix 3 autonomous situation tasks not creating data",
@@ -18142,9 +18325,9 @@
       ]
     },
     "docs/handoffs/SESSION_489_STREAMING_PROGRESS_INTEGRATION.md": {
-      "originating_session": 482,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 489,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "f5cdf2f3",
       "first_commit_date": "2025-12-18",
       "first_commit_subject": "feat(Session 489): Streaming Progress - WebSocket + BaseAgent Integration",
@@ -18179,9 +18362,9 @@
       ]
     },
     "docs/handoffs/SESSION_490_IMPLICIT_LEARNING_INTEGRATION.md": {
-      "originating_session": 210,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 490,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "c469b4ea",
       "first_commit_date": "2025-12-18",
       "first_commit_subject": "feat(Session 490): Connect implicit learning service to image operations",
@@ -18252,9 +18435,9 @@
       ]
     },
     "docs/handoffs/SESSION_491_GUMROAD_FRONTEND_INTEGRATION.md": {
-      "originating_session": 487,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 491,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d920509c",
       "first_commit_date": "2025-12-18",
       "first_commit_subject": "feat(Session 491): Gumroad frontend integration - Sell button on images",
@@ -18307,9 +18490,9 @@
       ]
     },
     "docs/handoffs/SESSION_494_AGENT_CONVERSATIONS_FIX.md": {
-      "originating_session": 483,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 494,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "893b7445",
       "first_commit_date": "2025-12-18",
       "first_commit_subject": "docs(Session 494): Create handoffs for Sessions 494-495",
@@ -18345,9 +18528,9 @@
       ]
     },
     "docs/handoffs/SESSION_495_AI_ASSISTANT_FOCUS.md": {
-      "originating_session": 483,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 495,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "893b7445",
       "first_commit_date": "2025-12-18",
       "first_commit_subject": "docs(Session 494): Create handoffs for Sessions 494-495",
@@ -18383,13 +18566,14 @@
       ]
     },
     "docs/handoffs/SESSION_496_AI_PODCAST_STUDIO_PLAN.md": {
-      "originating_session": 738,
+      "originating_session": 496,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        496,
         738,
         800,
         1126,
@@ -18438,9 +18622,9 @@
       ]
     },
     "docs/handoffs/SESSION_499_FULL_AGENT_ROUTING.md": {
-      "originating_session": 496,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 499,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "ab4f956b",
       "first_commit_date": "2025-12-19",
       "first_commit_subject": "docs(Session 499): Update documentation for 42-agent routing",
@@ -18626,13 +18810,14 @@
       ]
     },
     "docs/handoffs/SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md": {
-      "originating_session": 512,
+      "originating_session": 511,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "8955b761",
       "first_commit_date": "2025-12-19",
       "first_commit_subject": "feat(Session 512): ML Training Data Generation & Spider Network Sweep",
       "sessions_touched": [
+        511,
         512,
         800,
         1126,
@@ -18681,9 +18866,9 @@
       ]
     },
     "docs/handoffs/SESSION_514_CAMPAIGN_UI.md": {
-      "originating_session": 513,
+      "originating_session": 514,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "6695bd43",
       "first_commit_date": "2025-12-19",
       "first_commit_subject": "feat(Session 513-514): Campaign Orchestrator + UI",
@@ -18719,9 +18904,9 @@
       ]
     },
     "docs/handoffs/SESSION_516_DEVELOPMENT_AGENTS_ROUTING.md": {
-      "originating_session": 515,
+      "originating_session": 516,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "de586904",
       "first_commit_date": "2025-12-20",
       "first_commit_subject": "feat(Session 515-516): Development Agents Routing + Auto-Chain Fixes",
@@ -18775,9 +18960,9 @@
       ]
     },
     "docs/handoffs/SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md": {
-      "originating_session": 518,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 519,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "6aab8932",
       "first_commit_date": "2025-12-21",
       "first_commit_subject": "feat(Session 519): Auto-Project Creation & Written Content Display",
@@ -18794,9 +18979,9 @@
       ]
     },
     "docs/handoffs/SESSION_520_PROJECTS_TAB_AUDIT.md": {
-      "originating_session": 519,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 520,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "3e5c6d6c",
       "first_commit_date": "2025-12-21",
       "first_commit_subject": "feat(Session 520): Projects Tab Unification - Critical Fix",
@@ -18813,13 +18998,14 @@
       ]
     },
     "docs/handoffs/SESSION_523_SYSTEM_AUDIT_HANDOFF.md": {
-      "originating_session": 528,
+      "originating_session": 523,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "63b35435",
       "first_commit_date": "2025-12-21",
       "first_commit_subject": "feat(Session 528): System audit remediation - 4 sprints complete",
       "sessions_touched": [
+        523,
         528,
         800,
         1126,
@@ -18831,9 +19017,9 @@
       ]
     },
     "docs/handoffs/SESSION_529_INTELLIGENT_PROMPTING_COMPLETE.md": {
-      "originating_session": 528,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 529,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "a7ae8595",
       "first_commit_date": "2025-12-21",
       "first_commit_subject": "feat(Session 529): Complete intelligent prompting for ALL 38 remaining agents",
@@ -19149,9 +19335,9 @@
       ]
     },
     "docs/handoffs/SESSION_552_RESEARCH_DEMO_FIXES.md": {
-      "originating_session": 543,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 552,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "66341324",
       "first_commit_date": "2025-12-25",
       "first_commit_subject": "docs(Session 552): Complete documentation update",
@@ -19320,9 +19506,9 @@
       ]
     },
     "docs/handoffs/SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md": {
-      "originating_session": 555,
+      "originating_session": 556,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "53513672",
       "first_commit_date": "2025-12-25",
       "first_commit_subject": "feat(Session 555-556): Chief of Staff Layer - Complete Human-in-the-Loop System",
@@ -19377,9 +19563,9 @@
       ]
     },
     "docs/handoffs/SESSION_558_KALSHI_PREDICTION_MARKETS.md": {
-      "originating_session": 555,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 558,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "903a4ee3",
       "first_commit_date": "2025-12-26",
       "first_commit_subject": "docs(Session 558): Add Web UI panel to handoff document",
@@ -19397,9 +19583,9 @@
       ]
     },
     "docs/handoffs/SESSION_559_BETTING_DASHBOARD_UI.md": {
-      "originating_session": 558,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 559,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "5dc03857",
       "first_commit_date": "2025-12-27",
       "first_commit_subject": "feat(Session 559): Betting Dashboard UI - Web interface for betting platform",
@@ -19416,9 +19602,9 @@
       ]
     },
     "docs/handoffs/SESSION_560_BETTING_DASHBOARD_ENHANCEMENTS.md": {
-      "originating_session": 66,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 560,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "822b81fb",
       "first_commit_date": "2025-12-28",
       "first_commit_subject": "refactor(Session 567): Major codebase cleanup - unused imports and debug logging",
@@ -19426,6 +19612,7 @@
         66,
         340,
         522,
+        560,
         567,
         800,
         1126,
@@ -19437,9 +19624,9 @@
       ]
     },
     "docs/handoffs/SESSION_561_LINE_MOVEMENT_CHARTS.md": {
-      "originating_session": 66,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 561,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "822b81fb",
       "first_commit_date": "2025-12-28",
       "first_commit_subject": "refactor(Session 567): Major codebase cleanup - unused imports and debug logging",
@@ -19447,6 +19634,7 @@
         66,
         340,
         522,
+        561,
         567,
         800,
         1126,
@@ -19458,9 +19646,9 @@
       ]
     },
     "docs/handoffs/SESSION_562_PUSH_NOTIFICATIONS.md": {
-      "originating_session": 66,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 562,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "822b81fb",
       "first_commit_date": "2025-12-28",
       "first_commit_subject": "refactor(Session 567): Major codebase cleanup - unused imports and debug logging",
@@ -19468,6 +19656,7 @@
         66,
         340,
         522,
+        562,
         567,
         800,
         1126,
@@ -19627,9 +19816,9 @@
       ]
     },
     "docs/handoffs/SESSION_589_EXECUTION_GAP_INFRASTRUCTURE.md": {
-      "originating_session": 588,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 589,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2a7eb53a",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "docs(Session 589): Add spider telemetry fix to handoff",
@@ -19665,9 +19854,9 @@
       ]
     },
     "docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md": {
-      "originating_session": 592,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 593,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "21bb1de8",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "feat(Session 593): Gate Status Dashboard in ICC panel",
@@ -19721,9 +19910,9 @@
       ]
     },
     "docs/handoffs/SESSION_596_EXPERIMENT_TRACKING.md": {
-      "originating_session": 594,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 596,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d734d9cc",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "feat(Session 596): Experiment Tracking Registry - KPI ownership for pilots",
@@ -19794,9 +19983,9 @@
       ]
     },
     "docs/handoffs/SESSION_600_COMPLETE_LEARNING_LOOP.md": {
-      "originating_session": 590,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 600,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "30432254",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "feat(Session 600): Complete Learning Loop - Real Metrics, Rollback, ThinkingAgent",
@@ -19849,9 +20038,9 @@
       ]
     },
     "docs/handoffs/SESSION_603_LEARNING_VELOCITY_DASHBOARD.md": {
-      "originating_session": 601,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 603,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "e753aefe",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "feat(Session 603): Learning Velocity Dashboard",
@@ -19906,9 +20095,9 @@
       ]
     },
     "docs/handoffs/SESSION_619_AUTOMATIC_GATE_PROCESSOR.md": {
-      "originating_session": 544,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 619,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "fc0de7e7",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "docs(Session 619): Document autonomous decision execution system",
@@ -19926,13 +20115,14 @@
       ]
     },
     "docs/handoffs/SESSION_620_REQUEST_RESEARCH_FIX.md": {
-      "originating_session": 621,
+      "originating_session": 620,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "1c3245bd",
       "first_commit_date": "2025-12-29",
       "first_commit_subject": "feat(Session 621): Synthesis phase - chain ContentWriterAgent to create deliverables",
       "sessions_touched": [
+        620,
         621,
         800,
         1126,
@@ -19981,9 +20171,9 @@
       ]
     },
     "docs/handoffs/SESSION_626_90_PERCENT_REALITY.md": {
-      "originating_session": 624,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 626,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "c82d2187",
       "first_commit_date": "2025-12-30",
       "first_commit_subject": "feat(Session 626): Achieve 90% Reality Score - all systems wired and verified",
@@ -20211,9 +20401,9 @@
       ]
     },
     "docs/handoffs/SESSION_640_UI_TAB_VERIFICATION.md": {
-      "originating_session": 639,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 640,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "76395276",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "docs(Session 640): UI Tab Verification - All 6 tabs properly structured",
@@ -20343,9 +20533,9 @@
       ]
     },
     "docs/handoffs/SESSION_645_SPIDER_VERIFICATION.md": {
-      "originating_session": 397,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 645,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "b9c38c3e",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "docs(Session 645): Add spider network verification report",
@@ -20400,9 +20590,9 @@
       ]
     },
     "docs/handoffs/SESSION_647_DECISION_EXECUTOR_ANALYSIS.md": {
-      "originating_session": 544,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 647,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "5ba859b5",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "fix(Session 647): Decision Executor was duplicate code - deprecate and enhance",
@@ -20458,9 +20648,9 @@
       ]
     },
     "docs/handoffs/SESSION_650_ORPHANED_SERVICES_AUDIT.md": {
-      "originating_session": 646,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 650,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1795610b",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "docs(Sessions 650-651): Complete disconnected features roadmap",
@@ -20478,9 +20668,9 @@
       ]
     },
     "docs/handoffs/SESSION_651_EMPTY_MODELS_AUDIT.md": {
-      "originating_session": 646,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 651,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1795610b",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "docs(Sessions 650-651): Complete disconnected features roadmap",
@@ -20498,9 +20688,9 @@
       ]
     },
     "docs/handoffs/SESSION_652_CAMPAIGN_ACTIVATION.md": {
-      "originating_session": 651,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 652,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "000a2a41",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "feat(Session 652): Activate Campaign Orchestrator feature",
@@ -20517,9 +20707,9 @@
       ]
     },
     "docs/handoffs/SESSION_652_PODCAST_STUDIO_ACTIVATION.md": {
-      "originating_session": 651,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 652,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "4b1426f5",
       "first_commit_date": "2025-12-31",
       "first_commit_subject": "feat(Session 652): Activate Podcast Studio feature",
@@ -20646,9 +20836,9 @@
       ]
     },
     "docs/handoffs/SESSION_660_ICC_TASKS_HEALTH_DASHBOARDS.md": {
-      "originating_session": 530,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 660,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "4afefb8c",
       "first_commit_date": "2026-01-01",
       "first_commit_subject": "docs(Session 660): Add auto-refresh commits to handoff",
@@ -20820,9 +21010,9 @@
       ]
     },
     "docs/handoffs/SESSION_678_TIME_SERIES_MODELS_PHASE2.md": {
-      "originating_session": 677,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 678,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9b151470",
       "first_commit_date": "2026-01-05",
       "first_commit_subject": "feat(Sessions 677-681): Complete Agent-Model Router Architecture - All 5 Phases",
@@ -20842,9 +21032,9 @@
       ]
     },
     "docs/handoffs/SESSION_679_ANOMALY_DETECTION_PHASE3.md": {
-      "originating_session": 677,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 679,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9b151470",
       "first_commit_date": "2026-01-05",
       "first_commit_subject": "feat(Sessions 677-681): Complete Agent-Model Router Architecture - All 5 Phases",
@@ -20864,9 +21054,9 @@
       ]
     },
     "docs/handoffs/SESSION_680_REINFORCEMENT_LEARNING_PHASE4.md": {
-      "originating_session": 677,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 680,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9b151470",
       "first_commit_date": "2026-01-05",
       "first_commit_subject": "feat(Sessions 677-681): Complete Agent-Model Router Architecture - All 5 Phases",
@@ -20886,9 +21076,9 @@
       ]
     },
     "docs/handoffs/SESSION_681_GRAPH_NEURAL_NETWORKS_PHASE5.md": {
-      "originating_session": 677,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 681,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "9b151470",
       "first_commit_date": "2026-01-05",
       "first_commit_subject": "feat(Sessions 677-681): Complete Agent-Model Router Architecture - All 5 Phases",
@@ -21188,9 +21378,9 @@
       ]
     },
     "docs/handoffs/SESSION_702_HEART_UI_INTEGRATION.md": {
-      "originating_session": 701,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 702,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "4c8c03b4",
       "first_commit_date": "2026-01-06",
       "first_commit_subject": "feat(Session 702): HEART Service UI Integration - React Frontend",
@@ -21225,9 +21415,9 @@
       ]
     },
     "docs/handoffs/SESSION_703_CIRCULATORY_SYSTEM.md": {
-      "originating_session": 701,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 703,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d577dcc2",
       "first_commit_date": "2026-01-06",
       "first_commit_subject": "feat(Session 703): CIRCULATORY SYSTEM - Data Flow Monitoring",
@@ -21318,13 +21508,14 @@
       ]
     },
     "docs/handoffs/SESSION_708_BODY_ARCHITECTURE_REVIEW.md": {
-      "originating_session": 712,
+      "originating_session": 708,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "bf783e90",
       "first_commit_date": "2026-01-06",
       "first_commit_subject": "feat(Session 712): Body System UI Unification - Complete",
       "sessions_touched": [
+        708,
         712,
         800,
         1126,
@@ -21336,13 +21527,14 @@
       ]
     },
     "docs/handoffs/SESSION_709_BRAIN_BODY_CONNECTION.md": {
-      "originating_session": 712,
+      "originating_session": 709,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "bf783e90",
       "first_commit_date": "2026-01-06",
       "first_commit_subject": "feat(Session 712): Body System UI Unification - Complete",
       "sessions_touched": [
+        709,
         712,
         800,
         1126,
@@ -21354,13 +21546,14 @@
       ]
     },
     "docs/handoffs/SESSION_710_BODY_HEALTH_DASHBOARD.md": {
-      "originating_session": 712,
+      "originating_session": 710,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "bf783e90",
       "first_commit_date": "2026-01-06",
       "first_commit_subject": "feat(Session 712): Body System UI Unification - Complete",
       "sessions_touched": [
+        710,
         712,
         800,
         1126,
@@ -21372,13 +21565,14 @@
       ]
     },
     "docs/handoffs/SESSION_711_BODY_COORDINATION.md": {
-      "originating_session": 712,
+      "originating_session": 711,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "bf783e90",
       "first_commit_date": "2026-01-06",
       "first_commit_subject": "feat(Session 712): Body System UI Unification - Complete",
       "sessions_touched": [
+        711,
         712,
         800,
         1126,
@@ -21408,13 +21602,14 @@
       ]
     },
     "docs/handoffs/SESSION_713_UNIFIED_HUMAN_SYSTEM_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 713,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        713,
         738,
         800,
         1126,
@@ -21444,13 +21639,14 @@
       ]
     },
     "docs/handoffs/SESSION_713_UNIFIED_SYSTEM_ROADMAP.md": {
-      "originating_session": 738,
+      "originating_session": 713,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        713,
         738,
         800,
         1126,
@@ -21592,13 +21788,14 @@
       ]
     },
     "docs/handoffs/SESSION_726_DEEP_SYSTEM_AUDIT.md": {
-      "originating_session": 727,
+      "originating_session": 726,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "0e64dd87",
       "first_commit_date": "2026-01-07",
       "first_commit_subject": "feat(Session 727): Deep System Audit + Major agents/ Migration",
       "sessions_touched": [
+        726,
         727,
         800,
         1126,
@@ -21646,13 +21843,14 @@
       ]
     },
     "docs/handoffs/SESSION_735_DISCONNECTED_AREAS_AUDIT.md": {
-      "originating_session": 738,
+      "originating_session": 735,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f326c75b",
       "first_commit_date": "2026-01-09",
       "first_commit_subject": "chore(Session 738): Clean up docs/ folder organization",
       "sessions_touched": [
+        735,
         738,
         800,
         1126,
@@ -21664,13 +21862,14 @@
       ]
     },
     "docs/handoffs/SESSION_738_OPTIMIZATION_STAGE_FIX.md": {
-      "originating_session": 742,
+      "originating_session": 738,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "94452c0a",
       "first_commit_date": "2026-01-10",
       "first_commit_subject": "docs(Session 742): Complete Human Page audit + add missing session handoffs",
       "sessions_touched": [
+        738,
         742,
         743,
         800,
@@ -21683,13 +21882,14 @@
       ]
     },
     "docs/handoffs/SESSION_739_COORDINATOR_CONTEXT_PASSING.md": {
-      "originating_session": 742,
+      "originating_session": 739,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "94452c0a",
       "first_commit_date": "2026-01-10",
       "first_commit_subject": "docs(Session 742): Complete Human Page audit + add missing session handoffs",
       "sessions_touched": [
+        739,
         742,
         743,
         800,
@@ -21702,13 +21902,14 @@
       ]
     },
     "docs/handoffs/SESSION_740_AGENT_CHANNELS_VERIFICATION.md": {
-      "originating_session": 742,
+      "originating_session": 740,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "94452c0a",
       "first_commit_date": "2026-01-10",
       "first_commit_subject": "docs(Session 742): Complete Human Page audit + add missing session handoffs",
       "sessions_touched": [
+        740,
         742,
         743,
         800,
@@ -21961,13 +22162,14 @@
       ]
     },
     "docs/handoffs/SESSION_753_MEMORY_PALACE_DATA_GAP_AUDIT.md": {
-      "originating_session": 758,
+      "originating_session": 753,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "b757bbd9",
       "first_commit_date": "2026-01-15",
       "first_commit_subject": "docs(Session 758): Update all documentation for next session",
       "sessions_touched": [
+        753,
         758,
         800,
         1126,
@@ -22126,9 +22328,9 @@
       ]
     },
     "docs/handoffs/SESSION_767_ORCHESTRATION_TIMEOUT_FIXES.md": {
-      "originating_session": 745,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 767,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "87743c6b",
       "first_commit_date": "2026-01-16",
       "first_commit_subject": "docs(Session 767): Update handoff with modal formatting and URL fixes",
@@ -22166,15 +22368,16 @@
       ]
     },
     "docs/handoffs/SESSION_768_ORCHESTRATION_LAYER_DEEP_IMPLEMENTATION.md": {
-      "originating_session": 745,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 768,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "2fd43850",
       "first_commit_date": "2026-01-18",
       "first_commit_subject": "docs(Session 772): Comprehensive UI Audit Handoff",
       "sessions_touched": [
         745,
         766,
+        768,
         770,
         772,
         800,
@@ -22187,9 +22390,9 @@
       ]
     },
     "docs/handoffs/SESSION_772_UI_COMPREHENSIVE_AUDIT.md": {
-      "originating_session": 745,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 772,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "63a857f0",
       "first_commit_date": "2026-01-18",
       "first_commit_subject": "feat(Session 774): LearningJourneyPage + Monitoring fixes",
@@ -22209,13 +22412,14 @@
       ]
     },
     "docs/handoffs/SESSION_773_DEEP_DATA_FLOW_AUDIT.md": {
-      "originating_session": 774,
+      "originating_session": 773,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "63a857f0",
       "first_commit_date": "2026-01-18",
       "first_commit_subject": "feat(Session 774): LearningJourneyPage + Monitoring fixes",
       "sessions_touched": [
+        773,
         774,
         800,
         1126,
@@ -22227,9 +22431,9 @@
       ]
     },
     "docs/handoffs/SESSION_779_PROMPTENGINEERING_AND_FILE_VIEWING.md": {
-      "originating_session": 392,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 779,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d6ecc487",
       "first_commit_date": "2026-01-19",
       "first_commit_subject": "docs(Session 779): Documentation organization + Letter to Future Claude Code",
@@ -22247,13 +22451,14 @@
       ]
     },
     "docs/handoffs/SESSION_780_PLATFORM_STATUS.md": {
-      "originating_session": 800,
+      "originating_session": 780,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "28d6a738",
       "first_commit_date": "2026-05-24",
       "first_commit_subject": "docs(session-1143-phase1): root cleanup \u2014 39 Cat-B files archived + V1/V2 pointers applied",
       "sessions_touched": [
+        780,
         800,
         1126,
         1143
@@ -22357,13 +22562,14 @@
       ]
     },
     "docs/handoffs/SESSION_787_RAILWAY_DEPLOYMENT.md": {
-      "originating_session": 800,
+      "originating_session": 787,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "f504dd03",
       "first_commit_date": "2026-01-21",
       "first_commit_subject": "fix(migrations): Delete broken migration 0144 (created then deleted table)",
       "sessions_touched": [
+        787,
         800,
         1126,
         1143
@@ -22577,35 +22783,41 @@
       ]
     },
     "docs/handoffs/SESSION_7_COMPLETION_SUMMARY.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 7,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1f5bfc02",
       "first_commit_date": "2025-10-02",
       "first_commit_subject": "feat: Activity Feed Overhaul + Database Cleanup + Documentation Reorganization",
-      "sessions_touched": [],
+      "sessions_touched": [
+        7
+      ],
       "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_7_HANDOFF.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 7,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1f5bfc02",
       "first_commit_date": "2025-10-02",
       "first_commit_subject": "feat: Activity Feed Overhaul + Database Cleanup + Documentation Reorganization",
-      "sessions_touched": [],
+      "sessions_touched": [
+        7
+      ],
       "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_7_HANDOFF_TO_SESSION_8.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 7,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1f5bfc02",
       "first_commit_date": "2025-10-02",
       "first_commit_subject": "feat: Activity Feed Overhaul + Database Cleanup + Documentation Reorganization",
-      "sessions_touched": [],
+      "sessions_touched": [
+        7
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -22823,13 +23035,14 @@
       ]
     },
     "docs/handoffs/SESSION_823_SELF_EXECUTION_ENGINE.md": {
-      "originating_session": 824,
+      "originating_session": 823,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "81998122",
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "docs(Session 824): Setup UI Integration Sprint (#193)",
       "sessions_touched": [
+        823,
         824
       ],
       "commit_count": 1,
@@ -23189,9 +23402,9 @@
       ]
     },
     "docs/handoffs/SESSION_851_DEBATE_AGENT_FIX.md": {
-      "originating_session": 848,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 851,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "311c1ca4",
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "fix(Session 851): Fix Debate agents showing '1. Item 1' instead of actual content (#367)",
@@ -23345,13 +23558,15 @@
       "prs": []
     },
     "docs/handoffs/SESSION_861B_SKIN_LAYER_FIXES.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 861,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "ffa61434",
       "first_commit_date": "2026-01-28",
       "first_commit_subject": "docs(Session 861B): Add SKIN Layer Gap Fixes documentation (#449)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        861
+      ],
       "commit_count": 1,
       "prs": [
         449
@@ -23511,9 +23726,9 @@
       ]
     },
     "docs/handoffs/SESSION_868_TIER1_FIXES.md": {
-      "originating_session": 867,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 868,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "5b9a4f0a",
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "feat(Session 868): Complete TIER 1 critical fixes from audit",
@@ -23541,9 +23756,9 @@
       ]
     },
     "docs/handoffs/SESSION_869_STUB_REPLACEMENT.md": {
-      "originating_session": 780,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 869,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "ad34c0eb",
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "feat(Session 869): Replace all stub endpoints with real implementations (#502)",
@@ -23558,9 +23773,9 @@
       ]
     },
     "docs/handoffs/SESSION_869_TIER2_TIER3.md": {
-      "originating_session": 865,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 869,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "ed0c8eb7",
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "feat(Session 869): Add ConceptForge artifact interaction + verify TIER 2 complete (#501)",
@@ -23653,9 +23868,9 @@
       ]
     },
     "docs/handoffs/SESSION_874_COMPLETE.md": {
-      "originating_session": 841,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 874,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "d4bc5a9c",
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "docs(Session 874): Document successful linker test results (#550)",
@@ -23733,9 +23948,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_878_GOAL_COLLECTION.md": {
-      "originating_session": 877,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 878,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "4fd2ea48",
       "first_commit_date": "2026-01-30",
       "first_commit_subject": "feat(Session 878): Add automatic goal collection for Personal Assistant",
@@ -24056,13 +24271,15 @@
       ]
     },
     "docs/handoffs/SESSION_8_COMPLETE_AUTONOMOUS_LEARNING_ACTIVATED.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 8,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "1f5bfc02",
       "first_commit_date": "2025-10-02",
       "first_commit_subject": "feat: Activity Feed Overhaul + Database Cleanup + Documentation Reorganization",
-      "sessions_touched": [],
+      "sessions_touched": [
+        8
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -24235,9 +24452,9 @@
       ]
     },
     "docs/handoffs/SESSION_918_REPORT_PROVENANCE.md": {
-      "originating_session": 916,
+      "originating_session": 918,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "79802b5d",
       "first_commit_date": "2026-02-02",
       "first_commit_subject": "feat(Session 918): Add PDF download button to Operations Panel (#777)",
@@ -24353,13 +24570,14 @@
       ]
     },
     "docs/handoffs/SESSION_926_UNIVERSAL_AGENT_VOICE.md": {
-      "originating_session": 927,
+      "originating_session": 926,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "90495550",
       "first_commit_date": "2026-02-04",
       "first_commit_subject": "feat(Session 927): Universal Agent Voice System - Listen buttons for TTS (#827)",
       "sessions_touched": [
+        926,
         927
       ],
       "commit_count": 2,
@@ -24491,9 +24709,9 @@
       ]
     },
     "docs/handoffs/SESSION_953_AGENT_PROVENANCE.md": {
-      "originating_session": 952,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 953,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "b02c4ebd",
       "first_commit_date": "2026-02-06",
       "first_commit_subject": "feat(Session 953): Agent Provenance Tracking Expansion (#934)",
@@ -24722,13 +24940,14 @@
       ]
     },
     "docs/handoffs/SESSION_979_STOCK_INTELLIGENCE_PA_ROUTING.md": {
-      "originating_session": 980,
+      "originating_session": 979,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "edc593a4",
       "first_commit_date": "2026-02-09",
       "first_commit_subject": "docs: add session 980 handoff and update all documentation",
       "sessions_touched": [
+        979,
         980,
         981
       ],
@@ -24795,13 +25014,15 @@
       ]
     },
     "docs/handoffs/SESSION_985_PA_BOARDROOM_RESPONSE_IMPROVEMENT.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 985,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "7be3a494",
       "first_commit_date": "2026-02-10",
       "first_commit_subject": "fix: celery-worker OOM \u2014 lazy ML imports drop parent process ~800MB to ~200MB",
-      "sessions_touched": [],
+      "sessions_touched": [
+        985
+      ],
       "commit_count": 2,
       "prs": []
     },
@@ -24847,9 +25068,9 @@
       "prs": []
     },
     "docs/handoffs/SESSION_989_PRODUCTION_VERIFICATION.md": {
-      "originating_session": 988,
-      "confidence": "MEDIUM",
-      "match_source": "body",
+      "originating_session": 989,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "fe02d430",
       "first_commit_date": "2026-02-11",
       "first_commit_subject": "docs: session 989 handoff \u2014 production verification & field name fixes",
@@ -24863,26 +25084,30 @@
       ]
     },
     "docs/handoffs/SESSION_990_PA_CONTENT_FEEDBACK_LOOP.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 990,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "b4ea7511",
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: close PA-to-agent content feedback loop \u2014 record publish/archive/revise decisions (#1080)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        990
+      ],
       "commit_count": 1,
       "prs": [
         1080
       ]
     },
     "docs/handoffs/SESSION_991_PROACTIVE_INTELLIGENCE_AGENT_LEARNING_WIRING.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 991,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "b90d3f10",
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: wire ProactiveIntelligenceService + AgentLearningService into execution paths (#1081)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        991
+      ],
       "commit_count": 1,
       "prs": [
         1081
@@ -24902,13 +25127,15 @@
       "prs": []
     },
     "docs/handoffs/SESSION_994B_INITIATIVE_PIPELINE_FIXES.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 994,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "a6e81946",
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "fix: enforce circuit breaker, add quality gate + TRIAGE status for initiative pipeline (Session 994B)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        994
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -24926,13 +25153,15 @@
       "prs": []
     },
     "docs/handoffs/SESSION_995B_SPORTS_BETTING_INTELLIGENCE.md": {
-      "originating_session": null,
-      "confidence": "UNKNOWN",
-      "match_source": null,
+      "originating_session": 995,
+      "confidence": "HIGH",
+      "match_source": "filename",
       "first_commit_sha": "8364c8ed",
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: sports betting intelligence system \u2014 3 new agents + PA integration + pipeline (Session 995B)",
-      "sessions_touched": [],
+      "sessions_touched": [
+        995
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -24991,27 +25220,29 @@
       "prs": []
     },
     "docs/handoffs/SESSION_998B_BETTING_HUB_LIVE_SCORES.md": {
-      "originating_session": 997,
+      "originating_session": 998,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "bdb87539",
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: live scores + AI predictions on Today's Games + session 997-998B handoffs (Session 998B)",
       "sessions_touched": [
-        997
+        997,
+        998
       ],
       "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_998_GOVERNANCE_HARDENING.md": {
-      "originating_session": 997,
+      "originating_session": 998,
       "confidence": "HIGH",
-      "match_source": "subject",
+      "match_source": "filename",
       "first_commit_sha": "bdb87539",
       "first_commit_date": "2026-02-12",
       "first_commit_subject": "feat: live scores + AI predictions on Today's Games + session 997-998B handoffs (Session 998B)",
       "sessions_touched": [
-        997
+        997,
+        998
       ],
       "commit_count": 1,
       "prs": []
@@ -30669,12 +30900,14 @@
         1128,
         1129,
         1130,
-        1144
+        1144,
+        1145
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         2128,
-        2209
+        2209,
+        2213
       ]
     },
     "docs/specs/FLEET_MOVE_2_ROUND_2_SPEC.md": {

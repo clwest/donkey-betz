@@ -1,3 +1,9 @@
+---
+originating_session: 998
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 998B: Sports Betting Hub + Live Scores + AI Predictions
 
 **Date:** February 12, 2026

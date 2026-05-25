@@ -1,3 +1,9 @@
+---
+originating_session: 1098
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1098 Addendum — Cancel Token + CI Lint Trilogy
 
 **Appends to:** `SESSION_1098_LLM_TELEMETRY_AND_EDITOR_REROUTE.md`
