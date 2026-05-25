@@ -1,3 +1,9 @@
+---
+originating_session: 856
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 856 - Diagnostic Pipeline & Agent Content Review Fixes
 
 **Date:** January 28, 2026

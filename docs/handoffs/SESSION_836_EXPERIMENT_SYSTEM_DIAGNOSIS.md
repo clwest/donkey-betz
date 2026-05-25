@@ -1,3 +1,9 @@
+---
+originating_session: 836
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 836: Experiment System Diagnosis & Fix
 
 **Date:** January 26, 2026

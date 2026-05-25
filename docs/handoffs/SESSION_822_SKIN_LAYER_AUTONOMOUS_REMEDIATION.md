@@ -1,3 +1,9 @@
+---
+originating_session: 822
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 822: SKIN Layer Autonomous Remediation Integration
 
 **Date:** January 25, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 858
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 858: User Context Injection
 
 **Date:** January 28, 2026

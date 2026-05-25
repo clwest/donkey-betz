@@ -1,3 +1,9 @@
+---
+originating_session: 842
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 842: Agent Learning Tab Fixes
 
 **Date:** January 27, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 840
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 840: Workspace Tabs Enhancement & Agent Error Fixes
 
 **Date:** January 27, 2026

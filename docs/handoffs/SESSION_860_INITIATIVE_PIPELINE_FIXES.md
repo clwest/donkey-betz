@@ -1,3 +1,9 @@
+---
+originating_session: 860
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 860 - Initiative Pipeline Fixes
 
 **Date:** January 28, 2026

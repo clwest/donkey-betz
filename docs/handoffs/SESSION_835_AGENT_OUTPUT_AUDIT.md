@@ -1,3 +1,9 @@
+---
+originating_session: 835
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 835 - Agent Output Audit + Comprehensive Renderers
 
 **Previous Session:** 834 (Sidebar Cleanup + Advisors Panel + Grouped Operations)

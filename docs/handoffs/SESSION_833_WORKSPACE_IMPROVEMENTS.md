@@ -1,3 +1,9 @@
+---
+originating_session: 833
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 833 - Workspace Tab Improvements + Blog Approval Workflow
 
 **Previous Session:** 832 (Recent Activity Enhancement)

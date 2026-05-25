@@ -1,3 +1,9 @@
+---
+originating_session: 810
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 810: Celery Beat Fix & Production Database Sync
 
 **Date:** January 24, 2026

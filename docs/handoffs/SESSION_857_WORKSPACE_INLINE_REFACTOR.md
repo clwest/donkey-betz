@@ -1,3 +1,9 @@
+---
+originating_session: 857
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 857 - Workspace Inline Refactor
 
 **Date:** January 28, 2026

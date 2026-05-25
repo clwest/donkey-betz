@@ -1,3 +1,9 @@
+---
+originating_session: 847
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 847 - Initiative Pipeline Implementation
 
 **Date:** January 27, 2026

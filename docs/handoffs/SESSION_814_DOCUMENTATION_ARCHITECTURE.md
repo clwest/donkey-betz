@@ -1,3 +1,9 @@
+---
+originating_session: 814
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 814: Documentation Architecture & Governance Framework
 
 **Date:** January 24, 2026

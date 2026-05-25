@@ -1,3 +1,9 @@
+---
+originating_session: 852
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 852: Artifact Classification & Decision Card Fixes
 
 **Date:** January 27, 2026

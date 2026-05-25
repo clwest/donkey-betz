@@ -1,3 +1,9 @@
+---
+originating_session: 834
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 834 - Sidebar Cleanup + Advisors Panel + Grouped Operations + Detail Modals
 
 **Previous Session:** 833 (Workspace Improvements + Blog Approval + 50 Agent Fixes)

@@ -1,3 +1,9 @@
+---
+originating_session: 874
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 874 - Executive Function Integration + Dream Backlog Cleared
 
 **Date:** January 29, 2026

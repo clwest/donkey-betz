@@ -1,3 +1,9 @@
+---
+originating_session: 828
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 828: Agent Work Logs
 
 **Date:** January 25, 2026

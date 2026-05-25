@@ -1,3 +1,9 @@
+---
+originating_session: 878
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 878: Goal Collection Implementation
 
 ## Summary

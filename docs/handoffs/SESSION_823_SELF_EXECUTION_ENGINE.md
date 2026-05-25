@@ -1,3 +1,9 @@
+---
+originating_session: 823
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 823: Self-Awareness + Self-Execution Engine
 
 **Date:** January 25, 2026

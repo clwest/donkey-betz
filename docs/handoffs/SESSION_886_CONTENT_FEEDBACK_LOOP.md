@@ -1,3 +1,9 @@
+---
+originating_session: 886
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 886: Content Feedback Loop - Phase 1
 
 **Date:** January 31, 2026
