@@ -16,6 +16,7 @@
 import React from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize'
 import { cn } from '@/lib/cn'
 
 interface ChatMarkdownProps {
@@ -24,6 +25,7 @@ interface ChatMarkdownProps {
 }
 
 const remarkPlugins = [remarkGfm]
+const rehypePlugins = [rehypeSanitize]
 
 // Stable component overrides — defined once, never recreated
 const markdownComponents: Components = {
@@ -178,6 +180,7 @@ export const ChatMarkdown = React.memo(function ChatMarkdown({ content, classNam
     <div className={cn('chat-markdown', className)}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
         components={markdownComponents}
       >
         {content}

@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import {
   Package,
@@ -373,7 +374,7 @@ export function DeliverablesTab() {
               <div className="bg-dark-card border border-dark-border rounded-lg p-4 overflow-auto max-h-[600px]">
                 {detail.content_format === 'markdown' ? (
                   <div className="prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{detail.content || ''}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{detail.content || ''}</ReactMarkdown>
                   </div>
                 ) : detail.content_format === 'html' ? (
                   <div className="prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: detail.content || '' }} />
