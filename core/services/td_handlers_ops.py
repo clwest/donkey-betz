@@ -37,15 +37,72 @@ Usage:
     # }
 """
 
+import json
 import logging
 import time
 import uuid
 import asyncio
+from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 from dataclasses import dataclass, asdict
-from functools import wraps
+from functools import wraps, lru_cache
 
 logger = logging.getLogger(__name__)
+
+
+# Session 1145 P2: provenance index for search_docs originating_session filter.
+PROVENANCE_INDEX_PATH = Path("docs/_provenance.json")
+
+
+@lru_cache(maxsize=1)
+def _load_provenance_docs() -> dict:
+    """Load ``docs/_provenance.json`` once per process; return ``docs`` block.
+
+    Returns an empty dict if the file is missing or invalid — search_docs
+    treats "no provenance for path" as "exclude when filter is active",
+    so a missing index degrades gracefully (filter just excludes
+    everything, surfacing the regen hint to the user).
+    """
+    if not PROVENANCE_INDEX_PATH.exists():
+        return {}
+    try:
+        data = json.loads(PROVENANCE_INDEX_PATH.read_text(encoding="utf-8"))
+        return data.get("docs", {}) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _filter_chunks_by_originating_session(
+    chunks: list, originating_session: int, provenance_docs: dict
+) -> tuple[list, int, int]:
+    """Filter ranked chunks by source-doc originating_session.
+
+    Returns ``(kept, excluded_with_mismatch, excluded_missing_provenance)``.
+
+    Missing provenance is treated as exclusion when the filter is active
+    (per Rigby spec, Session 1145 P2): we can't claim a chunk belongs to
+    a session if we don't know its origin.
+
+    Pure function — chunks are dicts with a ``file`` key carrying the
+    ``docs/...`` cite path used in ``provenance.docs`` keys.
+    """
+    kept: list = []
+    mismatch = 0
+    missing = 0
+    for c in chunks:
+        path = c.get("file") if isinstance(c, dict) else None
+        if not path:
+            missing += 1
+            continue
+        meta = provenance_docs.get(path)
+        if not meta:
+            missing += 1
+            continue
+        if meta.get("originating_session") == originating_session:
+            kept.append(c)
+        else:
+            mismatch += 1
+    return kept, mismatch, missing
 
 
 # Error codes for structured failures
@@ -4898,6 +4955,18 @@ class OpsHandlersMixin:
         except (TypeError, ValueError):
             max_chars = 6000
 
+        # Session 1145 P2: optional originating_session filter.
+        originating_session_raw = payload.get('originating_session')
+        originating_session: Optional[int] = None
+        if originating_session_raw is not None:
+            try:
+                originating_session = int(originating_session_raw)
+            except (TypeError, ValueError):
+                return {
+                    'error': 'originating_session must be an integer (e.g. 1142)',
+                    'query': query,
+                }
+
         try:
             from core.rag import top_k, CORPUS_PATH
 
@@ -4912,7 +4981,10 @@ class OpsHandlersMixin:
 
             # boost_hints=False: skip the legacy learning-loop bias so
             # general doc questions get neutral token-overlap ranking.
-            rows = top_k(query, k=k, boost_hints=False)
+            # When a session filter is active, overshoot k so post-filter
+            # we still have a useful number of chunks to return.
+            k_fetch = min(k * 4, 80) if originating_session is not None else k
+            rows = top_k(query, k=k_fetch, boost_hints=False)
             if not rows:
                 return {
                     'query': query,
@@ -4957,7 +5029,39 @@ class OpsHandlersMixin:
                 if truncated:
                     break
 
-            return {
+            # Session 1145 P2: apply originating_session filter post-ranking.
+            filter_meta: Optional[dict] = None
+            if originating_session is not None:
+                provenance_docs = _load_provenance_docs()
+                if not provenance_docs:
+                    return {
+                        'query': query,
+                        'result_count': 0,
+                        'chunks': [],
+                        'originating_session': originating_session,
+                        'note': (
+                            f'Provenance index not found at {PROVENANCE_INDEX_PATH}. '
+                            'Run `python manage.py build_docs_provenance` to build it.'
+                        ),
+                    }
+                kept, excluded_mismatch, excluded_missing = (
+                    _filter_chunks_by_originating_session(
+                        chunks, originating_session, provenance_docs,
+                    )
+                )
+                # Trim to requested k after filter.
+                chunks = kept[:k]
+                filter_meta = {
+                    'originating_session': originating_session,
+                    'pre_filter_count': len(kept) + excluded_mismatch + excluded_missing,
+                    'excluded_mismatch': excluded_mismatch,
+                    'excluded_missing_provenance': excluded_missing,
+                }
+                # Recompute total_chars + truncated for the trimmed set.
+                total = sum(len(c.get('citation', '')) + 1 + len(c.get('text', '')) for c in chunks)
+                truncated = False  # k truncation already accounted for above
+
+            result = {
                 'query': query,
                 'result_count': len(chunks),
                 'k_requested': k,
@@ -4966,6 +5070,9 @@ class OpsHandlersMixin:
                 'total_chars': total,
                 'chunks': chunks,
             }
+            if filter_meta is not None:
+                result['filter'] = filter_meta
+            return result
 
         except Exception as e:
             logger.error(f"[SEARCH_DOCS] error: {e}", exc_info=True)

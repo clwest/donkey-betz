@@ -2,6 +2,7 @@
 subsystems: [celery, personal-assistant]
 decision_types: [performance, bug_fix]
 status: active
+originating_session: 1056
 ---
 
 # Session 1056 — Railway Cost Throttle + PA Degenerate Loop Fix

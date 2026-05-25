@@ -4150,6 +4150,7 @@ PA_TOOL_SCHEMAS = [
         },
     },
     # ── Session 1142: Semantic-ish doc search over .rag/corpus.jsonl ────────
+    # ── Session 1145 P2: optional originating_session filter via docs/_provenance.json
     {
         "type": "function",
         "name": "search_docs",
@@ -4160,7 +4161,9 @@ PA_TOOL_SCHEMAS = [
             "doc passages. Complements kb_tool (which browses the Document table); "
             "search_docs is for finding the literal text. Powered by "
             "`core.rag.build_docs_context` over `.rag/corpus.jsonl` "
-            "(19K+ chunks across 2K+ files). Returns [docs/path#chunk_id] citations."
+            "(19K+ chunks across 2K+ files). Returns [docs/path#chunk_id] citations. "
+            "Session 1145 P2: optional originating_session filter restricts results "
+            "to docs whose origin session matches (per docs/_provenance.json)."
         ),
         "parameters": {
             "type": "object",
@@ -4176,6 +4179,16 @@ PA_TOOL_SCHEMAS = [
                 "max_chars": {
                     "type": "integer",
                     "description": "Cap on total chars across returned chunks (default 6000, max 12000).",
+                },
+                "originating_session": {
+                    "type": "integer",
+                    "description": (
+                        "Optional. Restrict results to chunks from docs whose "
+                        "originating session matches (per docs/_provenance.json). "
+                        "Use when the user asks 'what did Session N produce?' or "
+                        "'find the docs born in Session N'. Docs without provenance "
+                        "are excluded when this filter is active."
+                    ),
                 },
             },
             "required": ["query"],
