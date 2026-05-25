@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** **FEATURE REGRESSED.** Session 1143 Phase 5 Tier 3 code-verify (Chris Q5=Y) confirmed the Decision Command React frontend has been removed — no `DecisionCommand.tsx` in `frontend/src/`, no `decision-command` route in `App.tsx`. Backend skeleton remains (`AIIncomeBuilder` refs in 5 Python files). This 'partially implemented' status note from the original write was already aware of integration gaps; the feature later regressed entirely. Treat as historical record only.
+> **Preserved because:** historical implementation record.
+
 # Decision Command Implementation Report
 
 ## Overview
