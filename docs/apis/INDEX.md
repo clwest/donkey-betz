@@ -1,13 +1,8 @@
-# Apis Index
-
-**Total Documents:** 6
-
-## Documents
-
-- [Davinci Resolve Ffmpeg](DAVINCI_RESOLVE_FFMPEG.md)
-- [Elevenlabs](ELEVENLABS.md)
-- [Openai](OPENAI.md)
-- [Replicate](REPLICATE.md)
-- [Runway Ml](RUNWAY_ML.md)
-- [Stability Ai](STABILITY_AI.md)
-
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Moved
+> **Originally:** subdir doc frozen since Jan/Feb 2026; identified by Session 1143 corpus audit as Phase 2B-1 archive candidate
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`../archive/superseded-2026-05/apis/INDEX.md`](../archive/superseded-2026-05/apis/INDEX.md) — read this instead.
+> **Change reason:** subdir frozen since Jan/Feb 2026; archived to reduce active surface area.
+> **Preserved because:** white-paper corpus / link-rot prevention.
+> **Caveat:** Prior RAG citations may no longer resolve to the same chunk_id.

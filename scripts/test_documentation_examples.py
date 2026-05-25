@@ -92,7 +92,7 @@ class DocumentationTester:
 # ============================================================================
 
 def test_stability_api_key():
-    """Test: Stability AI API key is configured (docs/apis/STABILITY_AI.md)"""
+    """Test: Stability AI API key is configured (docs/archive/superseded-2026-05/apis/STABILITY_AI.md)"""
     api_key = os.getenv('STABILITY_API_KEY')
     assert api_key, "STABILITY_API_KEY not found in environment"
     assert api_key.startswith('sk-'), "Invalid Stability API key format"
@@ -100,21 +100,21 @@ def test_stability_api_key():
 
 
 def test_runway_api_key():
-    """Test: Runway ML API key is configured (docs/apis/RUNWAY_ML.md)"""
+    """Test: Runway ML API key is configured (docs/archive/superseded-2026-05/apis/RUNWAY_ML.md)"""
     api_key = os.getenv('RUNWAY_API_SECRET')
     assert api_key, "RUNWAY_API_SECRET not found in environment"
     logger.info(f"  Found API key: {api_key[:10]}...")
 
 
 def test_elevenlabs_api_key():
-    """Test: ElevenLabs API key is configured (docs/apis/ELEVENLABS.md)"""
+    """Test: ElevenLabs API key is configured (docs/archive/superseded-2026-05/apis/ELEVENLABS.md)"""
     api_key = os.getenv('ELEVENLABS_API_KEY')
     assert api_key, "ELEVENLABS_API_KEY not found in environment"
     logger.info(f"  Found API key: {api_key[:10]}...")
 
 
 def test_openai_api_key():
-    """Test: OpenAI API key is configured (docs/apis/OPENAI.md)"""
+    """Test: OpenAI API key is configured (docs/archive/superseded-2026-05/apis/OPENAI.md)"""
     api_key = os.getenv('OPENAI_API_KEY')
     assert api_key, "OPENAI_API_KEY not found in environment"
     assert api_key.startswith('sk-'), "Invalid OpenAI API key format"
@@ -122,14 +122,14 @@ def test_openai_api_key():
 
 
 def test_replicate_api_token():
-    """Test: Replicate API token is configured (docs/apis/REPLICATE.md)"""
+    """Test: Replicate API token is configured (docs/archive/superseded-2026-05/apis/REPLICATE.md)"""
     api_token = os.getenv('REPLICATE_API_TOKEN')
     assert api_token, "REPLICATE_API_TOKEN not found in environment"
     logger.info(f"  Found API token: {api_token[:10]}...")
 
 
 # ============================================================================
-# IMAGE GENERATION TESTS (docs/features/IMAGE_GENERATION.md)
+# IMAGE GENERATION TESTS (docs/archive/superseded-2026-05/features/IMAGE_GENERATION.md)
 # ============================================================================
 
 def test_image_generation_import():
@@ -168,7 +168,7 @@ def test_style_presets_available():
 
 
 # ============================================================================
-# VIDEO GENERATION TESTS (docs/features/VIDEO_GENERATION.md)
+# VIDEO GENERATION TESTS (docs/archive/superseded-2026-05/features/VIDEO_GENERATION.md)
 # ============================================================================
 
 def test_video_provider_import():
@@ -193,7 +193,7 @@ def test_video_provider_initialization():
 
 
 # ============================================================================
-# AUDIO GENERATION TESTS (docs/features/AUDIO_GENERATION.md)
+# AUDIO GENERATION TESTS (docs/archive/superseded-2026-05/features/AUDIO_GENERATION.md)
 # ============================================================================
 
 def test_elevenlabs_provider_import():
@@ -225,7 +225,7 @@ def test_audio_agent_initialization():
 
 
 # ============================================================================
-# CHARACTER TRAINING TESTS (docs/features/CHARACTER_TRAINING.md)
+# CHARACTER TRAINING TESTS (docs/archive/superseded-2026-05/features/CHARACTER_TRAINING.md)
 # ============================================================================
 
 def test_character_model_import():
@@ -243,7 +243,7 @@ def test_replicate_provider_import():
 
 
 # ============================================================================
-# AGENT SYSTEM TESTS (docs/agents/README.md)
+# AGENT SYSTEM TESTS (docs/archive/superseded-2026-05/agents/README.md)
 # ============================================================================
 
 def test_video_agent_import():
@@ -275,7 +275,7 @@ def test_agent_query_protocol_import():
 
 
 # ============================================================================
-# DAVINCI RESOLVE TESTS (docs/apis/DAVINCI_RESOLVE.md)
+# DAVINCI RESOLVE TESTS (docs/archive/superseded-2026-05/DAVINCI_RESOLVE.md)
 # ============================================================================
 
 def test_davinci_provider_import():
@@ -328,7 +328,7 @@ def test_audio_history_model():
 
 
 # ============================================================================
-# WORKFLOW TESTS (docs/features/*.md voice commands)
+# WORKFLOW TESTS (docs/archive/superseded-2026-05/features/*.md voice commands)
 # ============================================================================
 
 def test_voice_command_structure():
@@ -382,35 +382,35 @@ def main():
     tester.test("Replicate API Token", test_replicate_api_token)
 
     # Image Generation Tests
-    print("\n📋 Category: Image Generation (docs/features/IMAGE_GENERATION.md)")
+    print("\n📋 Category: Image Generation (docs/archive/superseded-2026-05/features/IMAGE_GENERATION.md)")
     tester.test("ImageGeneration Import", test_image_generation_import)
     tester.test("ImageGeneration Initialization", test_image_generation_initialization)
     tester.test("Style Presets Available", test_style_presets_available)
 
     # Video Generation Tests
-    print("\n📋 Category: Video Generation (docs/features/VIDEO_GENERATION.md)")
+    print("\n📋 Category: Video Generation (docs/archive/superseded-2026-05/features/VIDEO_GENERATION.md)")
     tester.test("VideoProvider Import", test_video_provider_import)
     tester.test("VideoProvider Initialization", test_video_provider_initialization)
 
     # Audio Generation Tests
-    print("\n📋 Category: Audio Generation (docs/features/AUDIO_GENERATION.md)")
+    print("\n📋 Category: Audio Generation (docs/archive/superseded-2026-05/features/AUDIO_GENERATION.md)")
     tester.test("ElevenLabsProvider Import", test_elevenlabs_provider_import)
     tester.test("AudioAgent Import", test_audio_agent_import)
     tester.test("AudioAgent Initialization", test_audio_agent_initialization)
 
     # Character Training Tests
-    print("\n📋 Category: Character Training (docs/features/CHARACTER_TRAINING.md)")
+    print("\n📋 Category: Character Training (docs/archive/superseded-2026-05/features/CHARACTER_TRAINING.md)")
     tester.test("CharacterModel Import", test_character_model_import)
     tester.test("ReplicateProvider Import", test_replicate_provider_import)
 
     # Agent System Tests
-    print("\n📋 Category: Agent System (docs/agents/README.md)")
+    print("\n📋 Category: Agent System (docs/archive/superseded-2026-05/agents/README.md)")
     tester.test("VideoAgent Import", test_video_agent_import)
     tester.test("VideoAgent Initialization", test_video_agent_initialization)
     tester.test("AgentQueryProtocol Import", test_agent_query_protocol_import)
 
     # DaVinci Resolve Tests
-    print("\n📋 Category: DaVinci Resolve (docs/apis/DAVINCI_RESOLVE.md)")
+    print("\n📋 Category: DaVinci Resolve (docs/archive/superseded-2026-05/DAVINCI_RESOLVE.md)")
     tester.test("DaVinciProvider Import", test_davinci_provider_import)
     tester.test("DaVinci Resolve Connection", test_davinci_resolve_connection)
 

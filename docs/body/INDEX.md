@@ -1,32 +1,8 @@
-# Body Systems Index
-
-**Total Documents:** 4
-
-Documentation for the 9 body systems (HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN).
-
-## Documents
-
-| Document | Description |
-|----------|-------------|
-| [Body Architecture](BODY_ARCHITECTURE.md) | Overall body system architecture |
-| [Body Implementation Roadmap](BODY_IMPLEMENTATION_ROADMAP.md) | Implementation plan |
-| [Body Integration Gaps](BODY_INTEGRATION_GAPS.md) | Integration gap analysis |
-| [Body Systems Reference](BODY_SYSTEMS_REFERENCE.md) | Complete systems reference |
-
-## Body Systems Overview
-
-| System | Purpose | Session |
-|--------|---------|---------|
-| HEART | Central health monitoring | 701 |
-| LUNGS | Resource & capacity management | 702 |
-| CIRCULATORY | Data flow monitoring | 703 |
-| SPINE | Central API routing | 704 |
-| IMMUNE | Security & threat detection | 705 |
-| DIGESTIVE | Data ingestion & processing | 706 |
-| MUSCULAR | Agent work execution | 707 |
-| BRAIN | Cognitive processing (LLM calls) | 722 |
-| SKIN | Workspace output monitoring | 723 |
-
-## See Also
-
-- [Services Documentation](../SERVICES.md) - Body system services
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Moved
+> **Originally:** subdir doc frozen since Jan/Feb 2026; identified by Session 1143 corpus audit as Phase 2B-1 archive candidate
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`../archive/superseded-2026-05/body/INDEX.md`](../archive/superseded-2026-05/body/INDEX.md) — read this instead.
+> **Change reason:** subdir frozen since Jan/Feb 2026; archived to reduce active surface area.
+> **Preserved because:** white-paper corpus / link-rot prevention.
+> **Caveat:** Prior RAG citations may no longer resolve to the same chunk_id.
