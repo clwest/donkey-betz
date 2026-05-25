@@ -39,7 +39,7 @@ Live drift checks:
 - `python scripts/verify_repo_guardrails.py`
 - `python manage.py session_provenance --session N` — per-session cluster (PR #2205).
 - `python manage.py build_docs_provenance` — regenerates `docs/_provenance.json` (per-doc index w/ handoff filename override per PR #2219).
-- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 4 invocation (Session 1151's sole charter; 446 more handoffs eligible after Session 1150's round 3)**.
+- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 5 invocation (Session 1152's sole charter; 371 more handoffs eligible after Session 1151's round 4)**.
 - The 8 `build_*_audit` commands — regenerate per-subsystem runtime evidence.
 
 ## PRE-COMMIT HOOK BLOCKS DIRECT COMMITS TO MAIN
@@ -54,7 +54,7 @@ Every session-NNNN commit subject should include `session-NNNN`:
 - `fix(session-NNNN): ...`
 - `feat(session-NNNN-area): ...`
 
-Sessions 1145+1146+1147+1148+1149+1150 ran 100% subject-tagged. Keep the streak.
+Sessions 1145+1146+1147+1148+1149+1150+1151 ran 100% subject-tagged. Keep the streak.
 
 ## ONE-COMMAND LAUNCH — the laptop fleet
 
@@ -73,20 +73,27 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1150 CLOSED — 4 PRs MERGED (BYPASS MODE) (2026-05-25)
+## SESSION 1151 CLOSED — P3.5 round 4 shipped (BYPASS MODE) (2026-05-25)
 
-**Session 1149's 3 PRs + Session 1150's P3.5 r3 all merged with bypass for GH Actions billing + pre-existing CONFLICT.** Full handoff: [`docs/handoffs/SESSION_1150_P35_ROUND3_AND_SESSION_1149_MERGE_WAVE.md`](docs/handoffs/SESSION_1150_P35_ROUND3_AND_SESSION_1149_MERGE_WAVE.md).
+**1 PR merged + this handoff.** Full handoff: [`docs/handoffs/SESSION_1151_P35_ROUND4.md`](docs/handoffs/SESSION_1151_P35_ROUND4.md).
 
 | PR | What |
 |----|------|
-| **#2227** | verify_doc_claims baselines re-pegged (drift now=0) |
-| **#2226** | SYSTEM_OWNER.md §3 rewritten with current ops paths + INDEX regen |
-| **#2228** | Session 1149 handoff |
-| **#2229** | P3.5 round 3 — 75 handoffs FM-backfilled (SESSION_890 → SESSION_806) |
+| **#2231** | P3.5 round 4 — 75 handoffs FM-backfilled (~SESSION_799 → SESSION_702) |
 
-Plus this Session 1150 handoff PR.
+Plus this Session 1151 handoff PR.
 
-Post-r3 state: `_provenance.json` 2058 docs (HIGH=1275 / MEDIUM=294 / UNKNOWN=489); `INDEX.md` 2609 docs / 681,664 lines. 446 handoffs still eligible for future rounds.
+Post-r4 state: `_provenance.json` 2059 docs (HIGH=1276 / MEDIUM=294 / UNKNOWN=489); `INDEX.md` 2610 docs / 682,329 lines. **371 handoffs still eligible** for future rounds.
+
+**Pool projection:** ~5 more P3.5 sessions (rounds 5-9) at 75/round before the backfill pool is exhausted around Session 1156.
+
+### Previous merge waves (still relevant context)
+
+| PR | Theme | Session |
+|----|-------|---------|
+| #2227, #2226, #2228 | Session 1149 cleanup wave (verifier + §3 rewrite + handoff) | 1149 → merged 1150 |
+| #2229 | P3.5 round 3 | 1150 |
+| #2230 | Session 1150 handoff | 1150 |
 
 ---
 
@@ -122,7 +129,7 @@ Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery 
 
 ---
 
-## SESSION 1151 — CURRENT ENTRY POINT
+## SESSION 1152 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
@@ -132,9 +139,9 @@ gh pr checks <latest-pr-num>
 ```
 If still showing the "payments have failed / spending limit" annotation, continue in bypass mode (see protocol above). If fixed, run `gh run rerun <id>` on the next PR's failed runs and resume normal mode.
 
-### SOLE CHARTER (Rigby's spec — same as Session 1150 pattern)
+### SOLE CHARTER (continuing the established pattern)
 
-**P3.5 round 4.** One bounded mechanical PR. Same invocation as round 3:
+**P3.5 round 5.** One bounded mechanical PR. Same invocation as round 4:
 
 ```bash
 python manage.py backfill_doc_provenance \
@@ -145,11 +152,11 @@ python manage.py backfill_doc_provenance \
     --with-note "auto-added by backfill_doc_provenance"
 ```
 
-**Expected range:** ~`SESSION_805` → `SESSION_731` (next 75 most-recent below SESSION_806). **Survey expectation:** 446 add-eligible → pick 75 most-recent → 371 remaining after round 4.
+**Expected range:** ~`SESSION_701` → `SESSION_627` (next 75 most-recent below SESSION_702). **Survey expectation:** 371 add-eligible → pick 75 most-recent → 296 remaining after round 5.
 
 Bundle `docs/INDEX.md` + `docs/_provenance.json` regen in the same PR. Run local CI mirrors before push.
 
-**Why sole charter (continued from Session 1150):** One mechanical batch per session, audit trail per merge, explicit bypass documentation. Don't chain round 4 with anything else — keep the discipline that's kept the bypass-mode safe across 4 merges so far.
+**Why sole charter (continued from Sessions 1150+1151):** One mechanical batch per session, audit trail per merge, explicit bypass documentation. The discipline has kept bypass-mode safe across 6 merges so far (3 Session 1149 cleanup + Session 1150 r3 + Session 1151 r4 + their handoffs).
 
 ### Carryovers queued (unchanged from Session 1150 close)
 
@@ -192,6 +199,7 @@ Bundle `docs/INDEX.md` + `docs/_provenance.json` regen in the same PR. Run local
 
 ## RECENT SESSION ARCS
 
+- **Session 1151** — P3.5 round 4. 1 PR merged (bypass mode) + handoff.
 - **Session 1150** — Session 1149 merge wave + P3.5 round 3. 4 PRs merged (bypass mode).
 - **Session 1149** — SYSTEM_OWNER §3 rewrite + verify_doc_claims drift fixes. 3 PRs (held on billing in 1149; merged in 1150).
 - **Session 1148** — P3.5 round 2 + SYSTEM_OWNER drift label. 3 PRs (all merged).
