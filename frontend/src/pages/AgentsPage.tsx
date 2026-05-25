@@ -6,6 +6,7 @@ import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, ty
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink, Plus, Edit2, Trash2, FileText, Star, Globe, Lock, Shield, Calendar, DollarSign, XCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -4081,7 +4082,7 @@ export default function AgentsPage() {
                         <div className="mb-4">
                           <h5 className="text-sm font-medium text-accent-amber mb-2">Analysis</h5>
                           <div className="bg-dark-card rounded-lg p-3 border border-dark-border prose prose-invert prose-sm max-w-none prose-table:text-xs prose-th:text-accent-amber prose-td:border-dark-border">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedExecution.output_data.data.analysis}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{selectedExecution.output_data.data.analysis}</ReactMarkdown>
                           </div>
                         </div>
                       )}

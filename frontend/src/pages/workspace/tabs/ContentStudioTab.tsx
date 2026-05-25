@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import {
   Image,
@@ -2343,7 +2344,7 @@ function BlogDetailModal({ blog, onClose }: { blog: Blog; onClose: () => void })
               ) : displayContent.full_text ? (
                 /* Session 943: Unified prose styling */
                 <div className="prose prose-invert prose-dark prose-sm max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                     {displayContent.full_text}
                   </ReactMarkdown>
                 </div>
@@ -2633,7 +2634,7 @@ function EpisodeDetailModal({ episode, onClose }: { episode: PodcastEpisode; onC
                 <div className="space-y-4">
                   {/* Session 943: Unified prose styling */}
                   <div className="prose prose-invert prose-dark prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                       {scriptData.script}
                     </ReactMarkdown>
                   </div>
@@ -3105,7 +3106,7 @@ function PlatformDetailModal({ platform, onClose }: { platform: Platform; onClos
                   </div>
                   <div className="p-4 max-h-64 overflow-y-auto">
                     <div className="prose prose-invert prose-sm max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                         {(selectedDetail.content || '').slice(0, 3000)}
                       </ReactMarkdown>
                       {(selectedDetail.content || '').length > 3000 && (

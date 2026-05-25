@@ -49,6 +49,7 @@ import {
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 import { useAuthStore } from '@/stores/authStore'
@@ -634,7 +635,7 @@ function OperationContentModal({
                   </div>
                   {isMarkdownFile && viewMode === 'rendered' ? (
                     <div className="prose prose-invert prose-dark prose-sm max-w-none bg-dark-bg p-4 rounded overflow-y-auto max-h-96">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                         {getMarkdownContent()}
                       </ReactMarkdown>
                     </div>
@@ -658,7 +659,7 @@ function OperationContentModal({
                   </h4>
                   {operation.file_path?.endsWith('.md') ? (
                     <div className="prose prose-invert prose-dark prose-sm max-w-none bg-dark-bg p-4 rounded overflow-y-auto max-h-96">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                         {operation.file_content_after}
                       </ReactMarkdown>
                     </div>
