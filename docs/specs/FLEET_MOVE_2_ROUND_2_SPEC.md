@@ -1,7 +1,8 @@
 ---
 title: "Fleet Move 2 Round 2 — List endpoint + Retention/TTL (spec)"
-status: spec
-session: 1129
+status: implemented
+session_drafted: 1129
+session_implemented: 1130
 date: 2026-05-22
 authors: ["rigby (PA, conversation pa-d19c1674b936)", "claude-code"]
 implements: ["Session 1130 (or later) — Move 2 Round 2"]
