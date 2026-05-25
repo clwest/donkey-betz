@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** **FEATURE REGRESSED.** Despite the 'FULLY OPERATIONAL' claim (Sep 2025), Session 1143 Phase 5 Tier 3 code-verify (Chris Q5=Y) confirmed the Decision Command React frontend has since been removed — no `DecisionCommand.tsx`, no `decision-command` route in `App.tsx`. Backend `AIIncomeBuilder` skeleton remains. Doc preserved as historical record of a feature that shipped, then regressed.
+> **Preserved because:** historical implementation record.
+
 # Decision Command Integration - COMPLETE ✅
 
 **Status**: FULLY OPERATIONAL

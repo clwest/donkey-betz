@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** Superseded by `NEURAL_ORCHESTRA_REALITY_CONNECTOR_REPORT.md` which documented the mock-to-reality transformation. Session 1143 Phase 5 Tier 3 code-verify (Chris Q5=Y) confirmed Neural Orchestra still active: `frontend/src/pages/NeuralOrchestraPage.tsx` + route in `App.tsx` line 114 + `core/views_neural_orchestra.py` backend. Original 'incomplete' status accurately reflected its initial state.
+> **Preserved because:** historical implementation record.
+
 # Neural Orchestra Implementation Report
 
 ## Overview
