@@ -23,9 +23,68 @@ from core.services.fleet_paid_interest import (
 )
 from core.views_fleet_paid_interest import (
     _EMAIL_RE,
+    _TEST_EMAIL_SUFFIXES,
     _VALID_WORKSPACE_SIZES,
+    _looks_like_test_email,
     _normalize_use_case,
 )
+
+
+# ─── Session 1142 — RFC 2606 test-email detection ────────────────────
+
+
+class TestLooksLikeTestEmail:
+    """Decision 13 contamination guard: RFC 2606 reserved domains.
+
+    These rows must auto-flag is_test_data=True at submission time so
+    they never count toward the production demand-gate trigger.
+    """
+
+    def test_example_com_is_test(self):
+        assert _looks_like_test_email("smoke-test@example.com") is True
+
+    def test_example_org_is_test(self):
+        assert _looks_like_test_email("user@example.org") is True
+
+    def test_example_net_is_test(self):
+        assert _looks_like_test_email("user@example.net") is True
+
+    def test_bare_example_tld_is_test(self):
+        assert _looks_like_test_email("user@example") is True
+
+    def test_dot_test_tld_is_test(self):
+        assert _looks_like_test_email("dev@local.test") is True
+
+    def test_dot_invalid_tld_is_test(self):
+        assert _looks_like_test_email("dev@foo.invalid") is True
+
+    def test_dot_localhost_tld_is_test(self):
+        assert _looks_like_test_email("dev@my.localhost") is True
+
+    def test_subdomain_under_example_is_test(self):
+        assert _looks_like_test_email("user@mail.example.com") is True
+
+    def test_real_gmail_is_not_test(self):
+        assert _looks_like_test_email("chris@gmail.com") is False
+
+    def test_donkeybetz_dot_com_is_not_test(self):
+        assert _looks_like_test_email("chris@donkeybetz.com") is False
+
+    def test_examplelike_real_domain_is_not_test(self):
+        # exampleinc.com is a real-looking domain; only RFC 2606 exact suffixes match.
+        assert _looks_like_test_email("user@exampleinc.com") is False
+
+    def test_caller_must_lowercase(self):
+        # Helper assumes lowercased input (matches storage convention).
+        # Mixed-case @Example.com slips through — this is a contract,
+        # not a bug; view lowercases pre-call.
+        assert _looks_like_test_email("user@Example.com") is False
+
+    def test_all_suffixes_are_consistent_with_constant(self):
+        # Constant drives behavior; this asserts the constant has the
+        # expected shape so future edits surface as test failures.
+        assert "@example.com" in _TEST_EMAIL_SUFFIXES
+        assert ".test" in _TEST_EMAIL_SUFFIXES
 
 
 # ─── Pure-function helpers ────────────────────────────────────────────

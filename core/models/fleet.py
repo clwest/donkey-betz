@@ -812,6 +812,19 @@ class FleetPaidInterest(UnifiedBaseModel):
                   "FleetAuthAuditLog.",
     )
 
+    is_test_data = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "True for smoke / E2E / CORS-check submissions whose "
+            "email lives in an RFC 2606 reserved domain "
+            "(example.com / example.org / example.net / .test / "
+            ".invalid / .localhost). evaluate_trigger_state "
+            "excludes these rows from the production demand-gate "
+            "count but still reports them under test_signals."
+        ),
+    )
+
     class Meta:
         db_table = "core_fleetpaidinterest"
         ordering = ["-created_at"]
