@@ -1,3 +1,9 @@
+---
+originating_session: 896
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 896 - Codebase Workspace Fix + PDF Export
 
 **Date:** February 1, 2026

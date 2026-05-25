@@ -1,3 +1,9 @@
+---
+originating_session: 986
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 986 -- Nervous System 60% Health Fix
 
 **Date:** February 10, 2026

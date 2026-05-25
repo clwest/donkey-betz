@@ -1,3 +1,9 @@
+---
+originating_session: 1004
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1004: Production Stabilization — Blog Quality + PA Intent + Task Error Sweep + Queue Fix
 
 **Date:** February 14, 2026

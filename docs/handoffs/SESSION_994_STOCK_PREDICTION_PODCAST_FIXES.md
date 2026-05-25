@@ -1,3 +1,9 @@
+---
+originating_session: 994
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 994 — Fix Stock Prediction Pipeline + Podcast User Context
 
 **Date:** February 12, 2026

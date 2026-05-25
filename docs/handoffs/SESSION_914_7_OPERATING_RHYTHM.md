@@ -1,3 +1,9 @@
+---
+originating_session: 914
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 914.7: Operating Rhythm + Governance Pipeline Complete
 
 **Date:** February 2, 2026

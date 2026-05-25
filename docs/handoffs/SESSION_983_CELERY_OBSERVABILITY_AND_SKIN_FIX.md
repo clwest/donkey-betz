@@ -1,3 +1,9 @@
+---
+originating_session: 983
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 983 — Celery Observability Fix + Skin Health Scoring
 
 **Date:** February 9, 2026

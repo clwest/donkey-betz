@@ -1,3 +1,9 @@
+---
+originating_session: 1146
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1146 — Root-level audits sweep (3 PRs)
 
 **Date:** 2026-05-25 (afternoon — back-to-back with Session 1145)

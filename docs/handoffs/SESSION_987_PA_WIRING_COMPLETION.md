@@ -1,3 +1,9 @@
+---
+originating_session: 987
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 987 -- PA Wiring Completion
 
 **Date:** February 10, 2026

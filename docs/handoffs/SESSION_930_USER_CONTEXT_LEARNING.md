@@ -1,3 +1,9 @@
+---
+originating_session: 930
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 930 - User Context Injection & Learning System
 
 **Date:** February 4, 2026

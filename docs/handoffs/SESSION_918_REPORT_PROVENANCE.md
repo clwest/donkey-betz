@@ -1,3 +1,9 @@
+---
+originating_session: 918
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 918: Report Provenance and Structured Output
 
 **Date:** February 2, 2026

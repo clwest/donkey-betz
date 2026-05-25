@@ -1,3 +1,9 @@
+---
+originating_session: 893
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 893 - Workspace Context Fix for System Tasks
 
 **Date:** January 31, 2026

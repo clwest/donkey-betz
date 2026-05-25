@@ -1,3 +1,9 @@
+---
+originating_session: 991
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 991 - Wire ProactiveIntelligenceService + AgentLearningService
 
 **Date:** February 12, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 954
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 954: Boardroom ML Improvements
 
 **Date:** February 6, 2026

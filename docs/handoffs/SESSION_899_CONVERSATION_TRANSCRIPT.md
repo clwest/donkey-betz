@@ -1,3 +1,9 @@
+---
+originating_session: 899
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 899 - Conversation Transcript in Initiative Modal
 
 **Date:** February 1, 2026

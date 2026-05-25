@@ -1,3 +1,9 @@
+---
+originating_session: 1002
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1002: Fix SpiderContextBuilder Under-utilization & PLATFORM_CONTEXT Inflation
 
 **Date:** February 13, 2026
