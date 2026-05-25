@@ -1,3 +1,11 @@
+<!-- DOC-POINTER-V2 (Session 1146) -->
+> **Status:** Parked backlog item
+> **Deprecated:** Session 1146 (2026-05-25)
+> **Authoritative parking statement:** [`docs/handoffs/CURRENT.md`](handoffs/CURRENT.md) — *"Character OS merge — parked: [`MERGE_PROPOSAL_CHARACTER_OS.md`](MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. **Unpark only if a paying customer asks for an avatar.**"*
+> **Companion (counter-proposal):** [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) — read both before deciding.
+> **Preserved because:** documents the sidecar-app integration approach for the Character OS merge; useful as design history when (and if) Chris reopens the merge in response to customer demand. Do NOT execute the proposal as-written without explicit unpark signal.
+> **Related canon:** [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](24_7_GLOBAL_AI_APP_ATLAS.md) — Atlas v1 explicitly defers Character OS merge to Phase 4+.
+
 # Character OS → unified-donkey-betz: Merge Proposal
 
 **Author:** Claude Code, Session 1116-merge-planning
