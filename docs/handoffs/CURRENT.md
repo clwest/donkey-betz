@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md`](SESSION_1126_FLEET_RUNTIME_BRAIN_PLUMBING.md)
-(3 PRs merged: #2123 Docker runtime metadata block added to each of the 7 fleet repo profiles + register_external_repo markdown serializer patched to surface it. #2124 fleet_health rollup — mgmt command + `fleet_health` PA tool, shared probe function. #2125 Phase 1 agent-specific consult routing — `config/fleet_agent_routing.json` + `core/services/fleet_routing.py:resolve()` + PA chat accepts/emits structured `routing` block. METADATA pipeline only; Phase 2 wires `resolved_agent` into PA's deliberation router + updates 7 fleet brain_clients. Workspaces already existed from Session 1119. Rigby co-designed all three.)
+**Latest handoff:** [`SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md)
+(13 merged PRs + 1 parked. Deep `/docs/` audit + Phase 5 execution sprint. Methodology lock in [`DOC_LIFECYCLE.md`](../00-START-HERE/DOC_LIFECYCLE.md): V1/V2 pointer headers + §2b runtime-coupled paths inventory + §2c sole-counts-source rule. 39 Cat-B root docs archived + 72 frozen-subdir files archived + 457 pre-Session-800 handoffs archived. DaVinci Resolve sunset (Chris Q1=A). Reality-score cluster retired. NEW finding: Decision Command shipped then regressed — React frontend gone, backend `AIIncomeBuilder` skeleton remains. Mission refresh #2190 parked per Chris's mid-session directive to curb business/GTM framing. Active handoffs reduced 726 → 273. RAG corpus rebuilt: 19,993 chunks / 2,602 files.)
 
-**Previous:** [`SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md`](SESSION_1125_DOCKER_FLEET_AND_BRAIN_BRIDGE.md)
+**Previous:** [`SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md`](SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md)
 
 ## How to update
 

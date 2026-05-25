@@ -56,6 +56,26 @@ make status              # what's running + URLs
 
 ---
 
+## SESSION 1142-1143 LANDED — docs/ hygiene + corpus deep audit + cleanup execution
+
+**Session 1142 — docs hygiene + search_docs PA tool.** Closed 3 numeric drifts, refreshed 4 stale `Last Updated` headers, synced 852 active docs to `Document` table + embedded all chunks, rebuilt `.rag/corpus.jsonl` (19,305 chunks / 2,017 files), added `search_docs` PA tool, disk cleanup 18GB → 8.7GB. 3 PRs merged (#2178 advisor-functional-identities + docs-hygiene + search_docs, #2180 rehype-sanitize XSS fix on 10 ReactMarkdown sites, #2181 get_unified_pa cache lock). Final handoff: [`SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md`](docs/handoffs/SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md).
+
+**Session 1143 — `/docs/` deep audit + Phase 5 cleanup execution.** Chris's top-of-session ask: "deep audit of /docs/ they really need to be cleaned up." 13 PRs merged + 1 parked. Headline outcomes:
+
+- **Methodology lock:** `docs/00-START-HERE/DOC_LIFECYCLE.md` with V1/V2 pointer headers + §2b runtime-coupled paths inventory (canon/governance/missions/decisions/ops) + §2c sole-counts-source rule + §3 root-stability rule + Phase 2A pre-flight checklist.
+- **Root cleanup:** 39 Cat-B frozen docs → archive with V2-Moved stubs. 6 V1 stale-but-canonical banners.
+- **Subdir cleanup:** 9 frozen subdirs (72 files) archived. 6 single-file folds. roadmap merge. ops/tools clarified (both runtime-coupled — KEEP).
+- **Audit-dir self-correction:** caught mid-flight that `audit/` (current) + `audit-2026/` (April historical) + `audits/` (pre-2026 archive) is deliberate cycle taxonomy per `AUDIT_INDEX.md`, NOT redundancy. Reversed planned consolidation. Moved session audit doc from `audit-2026/` to `audit/`.
+- **DaVinci sunset:** $300 license / never used / $0 ROI per `UNDERUTILIZED_FEATURES.md`. V2-Deprecated banners + `.. deprecated::` docstrings on provider/views/bridge.
+- **Reality-score retire:** 18 docs claiming various reality scores (10% → 100%) V2-Superseded. New `DOC_LIFECYCLE §2c` locks `PLATFORM_INVENTORY` + `docs/INDEX` as sole authoritative counts. Future docs write conceptual narrative not numeric claims.
+- **Handoffs Option B:** 457 pre-Session-800 handoffs → `docs/archive/handoffs-pre-800/` with V2 stubs. Active count 726 → 273. RAG corpus rebuilt: 19,993 chunks / 2,602 files.
+- **NEW abandoned-features finding:** Decision Command shipped then REGRESSED. React frontend removed; backend `AIIncomeBuilder` skeleton remains in 5 Python files. Backend cleanup is out-of-scope Chris-only call.
+- **Mid-session directive:** Chris explicitly paused all business/GTM/market framing. Mission refresh PR #2190 parked; branch preserved for when Chris reopens GTM work.
+
+13 merged PRs: #2183 (Phase 0) → #2186 (Phase 1+1.5) → #2187 (Phase 2A) → #2188 (Phase 2B-1) → #2189 (Phase 2B-2) → #2191 (abandoned-features) → #2192 (redundancy hunt) → #2193 (handoffs memo + Phase 5 plan) → #2194 (DaVinci sunset) → #2195 (Tier 1) → #2196 (BACKEND_INVENTORY V1) → #2197 (Tier 2 + sole-counts-source lock) → #2198 (Tier 3 + Decision Command regressed finding) → #2199 (handoffs B archival). Final handoff: [`SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md).
+
+---
+
 ## SESSION 1138-1141 LANDED — Decision-13 + clusterer + judge-stats arc + Chris ratification
 
 The last four sessions form a coherent measurement-instrumentation arc on top of Session 1138's Decision-13 demand-gate, capped by Session 1141's ratification pass on Jessica's 22 decisions. All four are merged to main:
@@ -74,31 +94,81 @@ The last four sessions form a coherent measurement-instrumentation arc on top of
 
 ---
 
-## SESSION 1143 — CURRENT ENTRY POINT
+## SESSION 1144 — CURRENT ENTRY POINT
 
-### Top-of-session goal: /docs/ corpus walk-through (Chris + Claude Code + Rigby)
+### Session 1143 closed clean (2026-05-25)
 
-Chris asked, at Session 1142 close, to spend Session 1143 going through `/docs/` together — Chris driving, Claude Code investigating, Rigby weighing in — to figure out **exactly what's in there**. No specific approach pre-decided.
+13 merged PRs + 1 parked. Deep `/docs/` audit + Phase 5 execution sprint. Full handoff: [`SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md).
 
-**Why now:** Even after Session 1142's hygiene pass closed all numeric drift and refreshed Category A headers, the corpus is still **852 active docs, 1,163 superseded, 2 drafts, ~458 markdown files across ~30 subdirs**. Chris hasn't done a comprehensive read in a long time. Goal of Session 1143 = produce a real map of what exists, what's load-bearing vs zombie, what's redundant, what's actually trustworthy.
+**Key new constraints locked in `docs/00-START-HERE/DOC_LIFECYCLE.md`:**
+- V1/V2 pointer header conventions — read before any doc move
+- §2b runtime-coupled paths inventory — never move these (`canon/INDEX`, `governance/SYSTEM_OWNER`, `missions/CURRENT_MISSION`, `decisions/ADR-*`, `docs/ops/`)
+- §2c sole-counts-source rule — `PLATFORM_INVENTORY.md` + `docs/INDEX.md` are the ONLY authoritative counts; reality-score claims retired
+- §3 root-stability rule — anything cited from CLAUDE.md / 00-START-NEXT-SESSION.md / `*_AUDIT.md` stays at root
 
-**Pre-staged context Session 1143 can lean on:**
-- `python manage.py verify_doc_claims --only-drift` → 0 drifts (numeric claims clean)
-- `python manage.py check_doc_headers --only-stale` → 0 header_lag, 9 frozen Category B docs (untouched since Session 84–1012, full list in PR #2178 body)
-- `kb_tool` (Document table) is now populated: **852 docs, 14,149 chunks, 100% embedded** — Rigby can semantic-search the corpus
-- `search_docs` PA tool (Session 1142, **gated on PR #2178 merge**) — chunked /docs/ retrieval with `[docs/path#chunk_id]` citations via `.rag/corpus.jsonl` (19,305 chunks, 2,017 files, refreshed 2026-05-24)
-- `docs/INDEX.md` + `docs/_index.json` — auto-generated index Rigby's system prompt can reference
+**Mid-session directive from Chris:** pause all business/GTM/market framing this session. Mission refresh PR #2190 parked; branch preserved for when Chris reopens GTM work.
 
-**Approach options to pitch Chris when the session opens** (none chosen yet — figure it out together):
-- (A) Top-down by category: walk `docs/{topics,handoffs,specs,plans,cleanup,archive,audit-*,...}` and have Rigby summarize each subdir's purpose + cull/promote
-- (B) By doc age: start with the 9 frozen Category B docs (`docs/AUTONOMOUS_SYSTEMS.md`, `INTELLIGENCE_SYSTEMS.md`, `MODELS.md`, `ERROR_TRACKING.md`, `DEPLOYMENT_GUIDE.md`, `PERSONA_AGENTS.md`, `docs/agents/README.md`, `GOLDEN_GOOSE_STRATEGY.md`, `SCIFI_FEATURES.md`) and decide archive vs refresh per-doc. **Session 1143 update:** 8 of these 9 are now moved to `docs/archive/superseded-2026-05/` with V2-Moved stubs at the old paths (INTELLIGENCE_SYSTEMS, MODELS, ERROR_TRACKING, DEPLOYMENT_GUIDE, PERSONA_AGENTS, GOLDEN_GOOSE_STRATEGY, SCIFI_FEATURES, agents/README.md — last one via Phase 2B-1 whole-subdir archival). AUTONOMOUS_SYSTEMS is the only one of the original 9 that retains DOC-POINTER-V1 banner in place.
-- (C) By query-driven discovery: feed Rigby a list of platform topics and ask "which doc(s) cover X?" — surfaces what's discoverable vs orphaned
-- (D) By git activity: rank docs by last-commit-age and start where activity dropped off — surfaces zombie clusters
+### Carryovers from Session 1143 (Chris-only decisions queued)
 
-Whatever the approach, **gate on Session 1142 PRs landing first** so search_docs is callable:
-- **PR #2178** (`feat/advisor-functional-identities`) — advisor rename + Session 1142 docs hygiene + search_docs PA tool
-- **PR #2180** (`fix/markdown-xss-rehype-sanitize`) — ReactMarkdown rehype-sanitize on 10 sites
-- **PR #2181** (`fix/pa-cache-race`) — `get_unified_pa` threading.Lock + clear_pa_cache correctness
+These are out-of-Session-1143 scope; Chris's call on whether/when to action:
+
+1. **Decision Command backend cleanup** — Session 1143 Phase 5 Tier 3 (PR #2198) surfaced that Decision Command shipped (Sep 2025 `DECISION_COMMAND_INTEGRATION_COMPLETE.md`) then REGRESSED — React frontend gone, backend `AIIncomeBuilder` skeleton remains in 5 Python files (`core/consumers_base.py`, `views_diagnostics.py`, `real_job_submitter.py`, `settings.py`, `personal_assistant_profile_connector.py`). Future PR could clean up the backend. **First genuine "shipped + regressed" finding** of the corpus audit.
+
+2. **DaVinci route cleanup** — `core/views_davinci.py` now carries `.. deprecated:: Session 1143` docstring; `core/urls.py` still routes to it. Optional follow-up: comment out or remove the routes (Chris Q1=A sunset is locked; routes are the last code-side leftover).
+
+3. **Mission refresh (#2190 branch)** — preserved for when Chris reopens GTM/business framing. Currently parked per Chris's Session 1143 docs-only directive. **Important:** `docs/missions/CURRENT_MISSION.md` is runtime-coupled (`core/services/docs_context_builder.py:185` reads it). Content still says "Q1 2026 / $10K MRR" — V1 banner makes the staleness visible, but every agent prompt currently includes this stale mission framing.
+
+4. **`docs/handoffs/INDEX.md` navigation aid** — not built (Option B was chosen instead of Option A in Phase 3). 273 active handoffs could benefit from a 100-session-bucket INDEX. Optional improvement; current `CURRENT.md` Latest+Previous pattern still works.
+
+5. **Naming convention pass** — Rigby's audit question #7. Roadmap merge handled the worst case (`roadmap/` vs `roadmaps/`). Other minor inconsistencies remain across subdir naming.
+
+### Session 1138-1141 carryovers still in flight (predate Session 1143)
+
+These are NOT docs work — they're the Decision-13 / signal-studio / Jessica-ratification arc that was in progress before Session 1143's docs detour. Chris's directive to "pause business/GTM" this session means these are not active now, but they're still real.
+
+#### FIRST — v1 rejection-rate measurement (passive, beat-cron accumulates)
+
+Per Session 1139/1140 acceptance test: read `signal_studio_judge_stats` with `days=7` when v1 bucket sample reaches n≥20. Acceptance bar (Rigby-locked):
+- **< 30%** → victory. Queue legacy bulk-archive.
+- **30–60%** → partial. Decide whether Option B (embedding-based clustering) is worth the spend.
+- **≥ 60%** → close to the 85.5% baseline. Escalate to Option B.
+
+As of Session 1140 close: 19 v1 SignalClusters in u-d-b, 3 in signal-studio mirror. Beat cron `*/30` accumulates more.
+
+#### Jessica clarifications in flight (Session 1141 close)
+
+4 clarifications drafted in [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md`](docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md) §close-out, packaged as a single Rigby message. **Next move:** send via `tools/pa_local.sh` and unblock the gated tech work.
+
+- **Decision 9** (3 redlines): soft-degrade scope, hard-kill threshold, internal-spend accounting — unblocks Phase 0 cost-attribution schema final lock
+- **Decision 19** (1 redline): clean-template fate (retire vs rename-then-retune for Angel) — unblocks PitchDeckForge template retune
+
+#### Tech queue (preserved from Session 1141 punch list)
+
+- **Phase 0 cost-attribution SCHEMA** — `LLMCallLog.workspace` FK + daily cap + soft-degrade + portfolio kill switch. Partially unblocked; 3 Jessica clarifications still pending.
+- **Contract Concierge fleet routing fix** (Q1) — architecture decision: new agent / extend `legal_doc_drafter_agent` / remove default.
+- **Signal Studio engine-side enrichment integration** (Q3) — architecture v2 question.
+- **ComplianceSentinel fleet routing** (Q4) — `security_agent` / null / skip u-d-b.
+- **Engine-mismatch resolutions** (cross-cutting C5).
+- **Atlas deviation ratification** (cross-cutting C7).
+- **PitchDeckForge template retune** (Decision 19 follow-on) — gated on Jessica's clean-template fate clarification.
+- **Ops view fork decision** (Session 1136 PARKED) — Chris picks: kill / radical-simplify / different medium / redirect.
+
+#### Jessica-driven (collab role, not lead)
+
+- **F7 Stripe verification audit** on 4 Suite products — Jessica drives, needs Chris's Stripe access.
+- **Phase 5 audit queue** — F6 (fund operator outreach), #23 (Cross-Suite handoff matrix), #24 (TOS legal review), #25 (Marketplace policy), #27 (Rigby repo audit).
+
+### Sanity check before any new work
+
+1. `cd ~/development/infra && make up`
+2. `make all` (or `make start && make celery` from u-d-b)
+3. `make status` — confirm 7 fleet apps + u-d-b all healthy
+4. `tools/pa_local.sh "platform_config_tool overview"` — confirm `service_context: local`
+5. Read [`docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md) for full Session 1143 outcomes + carryovers.
+
+### Old context preserved (Session 1143's archived top-of-session plan)
+
+Original Session 1143 entry-point details — approach options A-D, search_docs gating, etc. — are captured in the Session 1143 handoff doc. They're now historical; don't re-execute Session 1143's plan.
 
 ### Already done in the 1140 post-close session
 
@@ -315,7 +385,7 @@ Four clarifications drafted in [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md
 
 ---
 
-## SESSION 1131-1141 HANDOFFS
+## SESSION 1131-1143 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
@@ -331,7 +401,8 @@ Four clarifications drafted in [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md
 - [Session 1140 (A) action-card vertical slice](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md)
 - [Session 1141 Jessica ratification deep dives](docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md)
 - [Session 1142 docs-hygiene + search_docs + 2 stale-finding fixes](docs/handoffs/SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md)
+- [Session 1143 docs corpus audit + cleanup (13 PRs)](docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md)
 
 ---
 
-*Last overwrite: Session 1141 close → Session 1142 entry. Session 1141 closed Chris's top-priority punch list item (Jessica's 22 decisions): 17 accept-as-written + 3 ratify-shipped + 2 with clarification redlines. 4 Jessica clarifications drafted as a single Rigby message in the deep-dive doc, packaged for one-shot send next session. Once Jessica responds, Phase 0 cost-attribution schema (Decision 9) and PitchDeckForge template retune (Decision 19) are unblocked. Headline 1142 work is now (a) send the Rigby message, (b) ops view fork decision (item 2, parked since 1136), (c) v1 rejection-rate read once sample is big enough.*
+*Last overwrite: Session 1143 close → Session 1144 entry. Session 1143 was a docs-only session per Chris's mid-session directive. 13 PRs merged + 1 parked. Methodology lock landed in `docs/00-START-HERE/DOC_LIFECYCLE.md` (V1/V2 pointer headers, runtime-coupled paths inventory §2b, sole-counts-source rule §2c, root-stability rule §3). 39 Cat-B root docs + 72 frozen-subdir files + 457 pre-Session-800 handoffs archived with V2 stubs (handoffs active count 726 → 273; RAG corpus rebuilt to 19,993 chunks / 2,602 files). DaVinci Resolve sunset (Chris Q1=A). Reality-score cluster retired. NEW finding: Decision Command shipped then regressed — backend `AIIncomeBuilder` skeleton remains. Mission refresh #2190 parked for when Chris reopens GTM work. Pre-Session-1143 Decision-13 / Jessica-ratification carryovers preserved above (FIRST = v1 rejection-rate measurement, plus tech queue + Jessica-driven items). Headline 1144 entry options: (a) Chris's queued Session 1143 carryovers (Decision Command backend cleanup / DaVinci routes / Mission refresh reopen) or (b) resume Decision-13 / signal-studio arc (FIRST + Jessica clarifications) or (c) something new.*
