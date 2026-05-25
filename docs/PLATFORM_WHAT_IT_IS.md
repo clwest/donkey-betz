@@ -1,11 +1,27 @@
 ---
 title: "Donkey Betz Platform — What It Actually Is"
 status: active
-session: 1137
+session: 1141
 generated: 2026-05-24
 last_reviewed: 2026-05-24
 companion_doc: PLATFORM_INVENTORY.md
 ---
+
+> **Anchor refresh — Session 1141 close (2026-05-24):** narrative body
+> reviewed against handoffs SESSION_1134 → SESSION_1141. No material
+> drift in the subsystem narrative below. Session arc summary:
+> - **1134** — capability specs anchored to Atlas (FLEET_CAPABILITY_MANIFEST + BUSINESS v3, β-scoped to Phase 1 reality)
+> - **1135** — final close on per-app discovery + 54 open decisions
+> - **1136** — context-kit ops view parked at Jessica user-test
+> - **1137** — Jessica ratification of 22 strategic decisions across pricing/GTM/cost/legal axes + 4 deliverables (F1-F4) shipped
+> - **1138** — F1 paid-interest demand-gate live (`FleetPaidInterest` + HMAC POST + `paid_interest_status` PA tool)
+> - **1139** — entity-token clusterer behind `cluster_method` discriminator
+> - **1140** — judge-stats endpoint + `signal_studio_judge_stats` PA tool + action-card pre-generation vertical slice (3 PRs); pgvector blocker closed via #2172
+> - **1141** — Chris ratification of Jessica's 22 decisions (17 accept-as-written + 3 ratify-shipped + 2 clarifications back to Jessica); F5 PitchDeckForge style audit found Angel + Strategic don't map to existing code templates
+>
+> All session work extends existing subsystems — no platform-internal
+> narrative changes below. Live runtime counts always come from
+> `PLATFORM_INVENTORY.md`.
 
 > **Anchor refresh — Session 1133 close (2026-05-23):** narrative body
 > reviewed against handoffs SESSION_1099 → SESSION_1133. No material

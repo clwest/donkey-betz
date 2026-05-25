@@ -4,14 +4,28 @@ status: draft
 version: v3 (Atlas-anchored)
 session: 1134-pre
 generated: 2026-05-23
-last_reviewed: 2026-05-23 (β-anchor: scoped to App Atlas v1 Phase 1 reality)
+last_reviewed: 2026-05-24 (Session 1141 pricing supersede pass)
 author: claude + rigby (grounding pass)
 companion_docs:
   - specs/FLEET_CAPABILITY_MANIFEST_SPEC.md   # the engineering twin of this doc
   - 24_7_GLOBAL_AI_APP_ATLAS.md               # strategy anchor — Phase 1 = Rigby standalone flagship
   - UDB_BEHAVIOR_LAYER.md                     # where brand-voice / claim guardrails live
+  - handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md   # Jessica's locked pricing + cost-rules
+  - handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md   # Chris ratification + deep dives on Decisions 9/10/19/15
 audience: non-technical (founder/investor/buyer); same truth as the engineering spec, different vocabulary
 ---
+
+> **Pricing supersede — Session 1137 + 1141.** Sections 5.1 and 5.2
+> below were written 2026-05-23 with illustrative pricing bands.
+> Session 1137 (2026-05-24) locked the **actual** Suite pricing for
+> Signal Studio, SellerPilot, ComplianceSentinel + Rigby flagship +
+> cost-attribution rules. Session 1141 (2026-05-24) ratified those
+> decisions on Chris's tech side. **The locked values supersede the
+> illustrative §5 tables.** This doc still describes the eventual
+> tiered Suite *shape*; the actual prices and cost rules now live in
+> the Session 1137 handoff (anchor source) and Session 1141 deep dives
+> (Chris's tech-feasibility scan + Jessica clarification redlines).
+> Specific drifts noted inline at §5.1 and §5.2.
 
 # Fleet Capability — Business Framing (v3, Atlas-anchored)
 
@@ -312,20 +326,52 @@ Per Atlas: **Rigby flagship at $20-30/mo flat**. One product, one
 price band, Stripe checkout. Phase 1 KPI gate is per-seat unit
 economics (LLM spend per seat ≤ 50% of subscription).
 
+> **Superseded by Session 1137 Decision 5 (2026-05-24)**: Rigby
+> flagship locked at **$30/mo flat** (top of the $20-30 band). Per-
+> account cap originally noted as ~$1.50/day is now locked at
+> **$1.67/day pre-revenue portfolio cap floor + $0.25/day per
+> $30/mo customer** per Decision 9. See SESSION_1137 handoff
+> (anchor) and SESSION_1141 deep dive (§Decision 9 math + 3 Jessica
+> clarification redlines on soft-degrade scope, hard-kill
+> threshold, and internal-spend accounting). Activation gated on
+> Decision 1 take-public trigger.
+
 ### 5.2 Phase 2-3 — illustrative per-app pricing (not committed)
 
 These bands are **for shaping the eventual tiered Suite, not
 near-term sales**. Activates per app, as each unparks.
 
+> **Superseded by Session 1137 Decisions 6/7/8 (2026-05-24)** for
+> 3 of the 7 apps. Tier names also changed: spec uses Starter/Pro/
+> Business; Jessica locked Free/Pro/Team. **The locked values
+> below are the authoritative numbers**; the illustrative table
+> after this note is preserved for the 4 apps Jessica didn't price
+> directly.
+>
+> | App | Locked tiers (Jessica Session 1137) |
+> |---|---|
+> | signal-studio | **Free + $49 Pro + $99 Team** (Decision 6) |
+> | sellerpilot | **Free + $39 Pro + $99 Team** (Decision 7) |
+> | compliancesentinel | **Free + $79 Pro + $249 Team** (Decision 8 — deliberately above portfolio norm for compliance market) |
+>
+> Stripe SKU wiring sequence locked **1-by-1**: Signal Studio →
+> SellerPilot → ComplianceSentinel (Decision 10). Hard prerequisite:
+> Phase 0 cost-attribution schema (Decision 9) must land first.
+> See SESSION_1141 deep dive §Decision 10 for the full
+> implementation sequence.
+
+**Illustrative bands (pre-Session-1137, preserved for the 4
+unpriced apps):**
+
 | App | Starter (text only) | Pro (+ spokesperson when Phase 4+) | Business (multi-persona + audit, Phase 4+) |
 |---|---|---|---|
-| signal-studio | $49 | $149 | $349 |
+| signal-studio | ~~$49~~ → Free / $49 Pro / $99 Team (locked) | ~~$149~~ | ~~$349~~ |
 | contract-concierge | $79 | $229 | $549 |
 | mentorforge | $29 | $99 | $249 |
 | pitchdeckforge | $49 | $149 | $349 |
-| sellerpilot | $49 | $149 | $349 |
+| sellerpilot | ~~$49~~ → Free / $39 Pro / $99 Team (locked) | ~~$149~~ | ~~$349~~ |
 | dealflowtracker | $79 | $199 | $499 |
-| compliancesentinel | $99 | $249 | $599 |
+| compliancesentinel | ~~$99~~ → Free / $79 Pro / $249 Team (locked) | ~~$249~~ | ~~$599~~ |
 
 Suite (all 7) at Pro tier: ~$899/mo (~35% off summed Pro). Suite
 at Business tier: ~$1,999/mo. White-label / Enterprise: custom.
