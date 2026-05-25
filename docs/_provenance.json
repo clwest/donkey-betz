@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-05-25T19:58:07+00:00",
+    "generated": "2026-05-25T20:05:55+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "cab437eb5562",
-    "doc_count": 2058,
-    "commit_count": 6606,
+    "git_head": "cb1aded52ed8",
+    "doc_count": 2059,
+    "commit_count": 6610,
     "confidence_breakdown": {
-      "HIGH": 1275,
+      "HIGH": 1276,
       "MEDIUM": 294,
       "LOW": 0,
       "UNKNOWN": 489
@@ -2242,9 +2242,12 @@
         1142,
         1143,
         1144,
-        1149
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 860,
+      "commit_count": 862,
       "prs": [
         10,
         11,
@@ -2496,7 +2499,8 @@
         2199,
         2200,
         2207,
-        2226
+        2226,
+        2229
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -6710,19 +6714,22 @@
       "originating_session": 1145,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "33fe091f",
+      "first_commit_sha": "8fa05f8e",
       "first_commit_date": "2026-05-25",
-      "first_commit_subject": "feat(session-1148-provenance): P3.5 round 2 \u2014 backfill next 75 handoffs (HIGH only) (#2223)",
+      "first_commit_subject": "feat(session-1150-provenance): P3.5 round 3 \u2014 backfill next 75 handoffs (HIGH only) (#2229)",
       "sessions_touched": [
         1145,
         1147,
-        1148
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
         2213,
         2219,
-        2223
+        2223,
+        2229
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -14495,6 +14502,23 @@
       "commit_count": 2,
       "prs": [
         2228
+      ]
+    },
+    "docs/handoffs/SESSION_1150_P35_ROUND3_AND_SESSION_1149_MERGE_WAVE.md": {
+      "originating_session": 1150,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "cb1aded5",
+      "first_commit_date": "2026-05-25",
+      "first_commit_subject": "docs(session-1150): handoff \u2014 P3.5 round 3 + Session 1149 merge wave (4 PRs, bypass mode) (#2230)",
+      "sessions_touched": [
+        1149,
+        1150,
+        1151
+      ],
+      "commit_count": 2,
+      "prs": [
+        2230
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -23125,11 +23149,16 @@
       "first_commit_subject": "docs: Update CLAUDE.md and docs for Session 806 (#83)",
       "sessions_touched": [
         806,
-        807
+        807,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        83
+        83,
+        2229
       ]
     },
     "docs/handoffs/SESSION_810_CELERY_BEAT_AND_PROD_SYNC.md": {
@@ -23140,12 +23169,17 @@
       "first_commit_date": "2026-01-24",
       "first_commit_subject": "docs: Update Session 810 handoff with PR #104 (pgvector egress fix) (#105)",
       "sessions_touched": [
-        810
+        810,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         104,
-        105
+        105,
+        2229
       ]
     },
     "docs/handoffs/SESSION_812_CONTENT_PRODUCTION_TEAMS.md": {
@@ -23157,11 +23191,16 @@
       "first_commit_subject": "docs(Session 812): Add handoff and update session entry point (#111)",
       "sessions_touched": [
         812,
-        813
+        813,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        111
+        111,
+        2229
       ]
     },
     "docs/handoffs/SESSION_814_DOCUMENTATION_ARCHITECTURE.md": {
@@ -23173,11 +23212,16 @@
       "first_commit_subject": "docs(Session 814): Add session handoff and update next session priorities (#128)",
       "sessions_touched": [
         814,
-        815
+        815,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        128
+        128,
+        2229
       ]
     },
     "docs/handoffs/SESSION_815_PLATFORM_COMMAND_CENTER.md": {
@@ -23188,10 +23232,16 @@
       "first_commit_date": "2026-01-24",
       "first_commit_subject": "feat(Session 815): Transform WorkspacePage into Platform Command Center",
       "sessions_touched": [
-        815
+        815,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_816_OPERATIONS_PANEL_OVERHAUL.md": {
       "originating_session": 816,
@@ -23201,10 +23251,16 @@
       "first_commit_date": "2026-01-24",
       "first_commit_subject": "feat(Session 816): Operations Panel Overhaul - Stats, Filtering, Grouping",
       "sessions_touched": [
-        816
+        816,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_816_OPERATIONS_PLAYBOOKS_AUDITS.md": {
       "originating_session": 816,
@@ -23215,10 +23271,16 @@
       "first_commit_subject": "docs(Session 816): Add session handoff and update next session priorities",
       "sessions_touched": [
         816,
-        817
+        817,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_817_AUTONOMOUS_AGENTS_TOOL_RENDERER.md": {
       "originating_session": 817,
@@ -23229,10 +23291,16 @@
       "first_commit_subject": "docs(Session 817): Add session handoff and update next session priorities",
       "sessions_touched": [
         817,
-        818
+        818,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_818_UI_INTERACTIVITY.md": {
       "originating_session": 818,
@@ -23242,11 +23310,16 @@
       "first_commit_date": "2026-01-24",
       "first_commit_subject": "docs(Session 818): Add session handoff document (#142)",
       "sessions_touched": [
-        818
+        818,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        142
+        142,
+        2229
       ]
     },
     "docs/handoffs/SESSION_819_AUDIT_TRACKING_MYTHOLOGY_PROMPTING.md": {
@@ -23257,11 +23330,16 @@
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "feat(Session 819): Extend intelligent prompting to 3 more agents (#157)",
       "sessions_touched": [
-        819
+        819,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        157
+        157,
+        2229
       ]
     },
     "docs/handoffs/SESSION_819_DELIVERABLES_MARKETPLACE.md": {
@@ -23273,12 +23351,17 @@
       "first_commit_subject": "docs(Session 819): Add Deliverables Marketplace handoff (#154)",
       "sessions_touched": [
         819,
-        820
+        820,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         154,
-        158
+        158,
+        2229
       ]
     },
     "docs/handoffs/SESSION_820_SELF_HEALING_ORCHESTRATION.md": {
@@ -23290,12 +23373,17 @@
       "first_commit_subject": "docs(Session 820): Complete documentation update (#163)",
       "sessions_touched": [
         820,
-        821
+        821,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         159,
-        163
+        163,
+        2229
       ]
     },
     "docs/handoffs/SESSION_821_STALENESS_VALIDATION.md": {
@@ -23306,11 +23394,16 @@
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "docs(Session 821): Complete documentation update (#168)",
       "sessions_touched": [
-        821
+        821,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        168
+        168,
+        2229
       ]
     },
     "docs/handoffs/SESSION_822_SKIN_LAYER_AUTONOMOUS_REMEDIATION.md": {
@@ -23322,11 +23415,16 @@
       "first_commit_subject": "docs(Session 822): Add session handoff and update next session doc (#179)",
       "sessions_touched": [
         822,
-        823
+        823,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        179
+        179,
+        2229
       ]
     },
     "docs/handoffs/SESSION_823_SELF_EXECUTION_ENGINE.md": {
@@ -23338,11 +23436,16 @@
       "first_commit_subject": "docs(Session 824): Setup UI Integration Sprint (#193)",
       "sessions_touched": [
         823,
-        824
+        824,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        193
+        193,
+        2229
       ]
     },
     "docs/handoffs/SESSION_824_UI_INTEGRATION_SPRINT.md": {
@@ -23353,11 +23456,16 @@
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "docs(Session 824): Add handoff and update indexes (#200)",
       "sessions_touched": [
-        824
+        824,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        200
+        200,
+        2229
       ]
     },
     "docs/handoffs/SESSION_825_UI_CONSOLIDATION_PLAN.md": {
@@ -23368,10 +23476,16 @@
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "docs(Session 825): Update all documentation for UI Consolidation completion",
       "sessions_touched": [
-        825
+        825,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_826_GOAL_DRIVEN_CONVERSATIONS.md": {
       "originating_session": 826,
@@ -23382,11 +23496,16 @@
       "first_commit_subject": "docs(Session 826): Complete documentation for Goal-Driven Conversations (#209)",
       "sessions_touched": [
         826,
-        827
+        827,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        209
+        209,
+        2229
       ]
     },
     "docs/handoffs/SESSION_827_PRODUCTION_502_FIX.md": {
@@ -23397,11 +23516,16 @@
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "fix(Session 827): Make triggered conversations async to fix production 502 (#210)",
       "sessions_touched": [
-        827
+        827,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        210
+        210,
+        2229
       ]
     },
     "docs/handoffs/SESSION_828_AGENT_WORK_LOGS.md": {
@@ -23412,11 +23536,16 @@
       "first_commit_date": "2026-01-25",
       "first_commit_subject": "docs(Session 828-829): Self-Healing System Execution - 66.4% Complete (#211)",
       "sessions_touched": [
-        828
+        828,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        211
+        211,
+        2229
       ]
     },
     "docs/handoffs/SESSION_828_SELF_HEALING_EXECUTION.md": {
@@ -23428,12 +23557,17 @@
       "first_commit_subject": "docs(Session 829): SKIN layer file writing breakthrough (#212)",
       "sessions_touched": [
         828,
-        829
+        829,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         211,
-        212
+        212,
+        2229
       ]
     },
     "docs/handoffs/SESSION_830_PRODUCTION_FIXES.md": {
@@ -23445,10 +23579,16 @@
       "first_commit_subject": "docs(Session 830): Add comprehensive session handoff documentation",
       "sessions_touched": [
         830,
-        831
+        831,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_831_REMEDIATION_PIPELINE.md": {
       "originating_session": 831,
@@ -23459,11 +23599,16 @@
       "first_commit_subject": "docs(Session 831): Update handoff documentation (#233)",
       "sessions_touched": [
         831,
-        832
+        832,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        233
+        233,
+        2229
       ]
     },
     "docs/handoffs/SESSION_832_RECENT_ACTIVITY_ENHANCEMENT.md": {
@@ -23474,10 +23619,16 @@
       "first_commit_date": "2026-01-26",
       "first_commit_subject": "feat(Session 832): Enhance Recent Activity with system activity feed",
       "sessions_touched": [
-        832
+        832,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_833_WORKSPACE_IMPROVEMENTS.md": {
       "originating_session": 833,
@@ -23488,9 +23639,13 @@
       "first_commit_subject": "docs(Session 833): Update handoff with PRs #253-255 (#256)",
       "sessions_touched": [
         833,
-        834
+        834,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         238,
         240,
@@ -23499,7 +23654,8 @@
         250,
         252,
         253,
-        256
+        256,
+        2229
       ]
     },
     "docs/handoffs/SESSION_834_UI_CONSOLIDATION.md": {
@@ -23510,11 +23666,16 @@
       "first_commit_date": "2026-01-26",
       "first_commit_subject": "docs(Session 834): Add handoff documentation (#273)",
       "sessions_touched": [
-        834
+        834,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        273
+        273,
+        2229
       ]
     },
     "docs/handoffs/SESSION_835_AGENT_OUTPUT_AUDIT.md": {
@@ -23525,11 +23686,16 @@
       "first_commit_date": "2026-01-26",
       "first_commit_subject": "docs(Session 835): Update handoff documentation (#280)",
       "sessions_touched": [
-        835
+        835,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        280
+        280,
+        2229
       ]
     },
     "docs/handoffs/SESSION_836_EXPERIMENT_SYSTEM_DIAGNOSIS.md": {
@@ -23540,16 +23706,21 @@
       "first_commit_date": "2026-01-26",
       "first_commit_subject": "docs(Session 836): Add PR #290 MeetingCoordinator fix (#291)",
       "sessions_touched": [
-        836
+        836,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         283,
         287,
         288,
         289,
         290,
-        291
+        291,
+        2229
       ]
     },
     "docs/handoffs/SESSION_837_FINANCE_AGENT_PLACEHOLDER_FIX.md": {
@@ -23562,13 +23733,18 @@
       "sessions_touched": [
         837,
         838,
-        839
+        839,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         293,
         295,
-        297
+        297,
+        2229
       ]
     },
     "docs/handoffs/SESSION_840_WORKSPACE_TABS_AND_AGENT_FIXES.md": {
@@ -23579,11 +23755,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "docs: Update handoff for Session 840 (#319) (#319)",
       "sessions_touched": [
-        840
+        840,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        319
+        319,
+        2229
       ]
     },
     "docs/handoffs/SESSION_841_EXPERIMENT_MONITORING_FIXES.md": {
@@ -23595,10 +23776,16 @@
       "first_commit_subject": "docs: Update handoff for Session 841",
       "sessions_touched": [
         841,
-        842
+        842,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_842_AGENT_LEARNING_TAB_FIXES.md": {
       "originating_session": 842,
@@ -23608,15 +23795,20 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "docs: Update Session 842 with complete investigation findings (#332)",
       "sessions_touched": [
-        842
+        842,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         323,
         324,
         325,
         329,
-        332
+        332,
+        2229
       ]
     },
     "docs/handoffs/SESSION_843_ORCHESTRATION_CONTRACT.md": {
@@ -23627,10 +23819,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "feat(Session 843): Implement Orchestration Contract + trace_id system",
       "sessions_touched": [
-        843
+        843,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_847_INITIATIVE_PIPELINE.md": {
       "originating_session": 847,
@@ -23640,11 +23838,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "feat(Session 847): Initiative Pipeline - Wire ThinkingAgent to 5-stage workflow (#353)",
       "sessions_touched": [
-        847
+        847,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        353
+        353,
+        2229
       ]
     },
     "docs/handoffs/SESSION_848_INITIATIVE_TESTING.md": {
@@ -23656,14 +23859,19 @@
       "first_commit_subject": "docs: Final Session 848 handoff with all 6 bug fixes (#361)",
       "sessions_touched": [
         848,
-        849
+        849,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         355,
         357,
         358,
-        361
+        361,
+        2229
       ]
     },
     "docs/handoffs/SESSION_849_DECISION_INITIATIVE_LINKING.md": {
@@ -23674,11 +23882,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "feat(Session 849): Auto-link Decisions with Proposed Features to Initiatives (#362)",
       "sessions_touched": [
-        849
+        849,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        362
+        362,
+        2229
       ]
     },
     "docs/handoffs/SESSION_850_INBOX_AND_DOCS_FRAMING.md": {
@@ -23689,11 +23902,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "docs: Session 850 handoff - Inbox View + Smart Truncate + Docs Framing (#366)",
       "sessions_touched": [
-        850
+        850,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        366
+        366,
+        2229
       ]
     },
     "docs/handoffs/SESSION_851_DEBATE_AGENT_FIX.md": {
@@ -23705,11 +23923,16 @@
       "first_commit_subject": "fix(Session 851): Fix Debate agents showing '1. Item 1' instead of actual content (#367)",
       "sessions_touched": [
         848,
-        851
+        851,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        367
+        367,
+        2229
       ]
     },
     "docs/handoffs/SESSION_851_INPUT_DATA_RENDER_FIX.md": {
@@ -23720,11 +23943,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "fix(Session 851): Replace raw JSON display with structured InputParamRow component (#369)",
       "sessions_touched": [
-        851
+        851,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        369
+        369,
+        2229
       ]
     },
     "docs/handoffs/SESSION_852_ARTIFACT_CLASSIFICATION.md": {
@@ -23735,11 +23963,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "docs: Session 852 handoff - Artifact Classification & Decision Card Fixes (#378)",
       "sessions_touched": [
-        852
+        852,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        378
+        378,
+        2229
       ]
     },
     "docs/handoffs/SESSION_853_CULTURAL_IMPACT_FIX.md": {
@@ -23750,11 +23983,16 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "docs: Session 853 handoff - CulturalImpactAgent output fix (#380)",
       "sessions_touched": [
-        853
+        853,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        380
+        380,
+        2229
       ]
     },
     "docs/handoffs/SESSION_854_FLAGSHIP_CONTENT_VOICE.md": {
@@ -23765,12 +24003,17 @@
       "first_commit_date": "2026-01-27",
       "first_commit_subject": "docs: Session 854 handoff - Flagship Content Voice System (#381) (#382)",
       "sessions_touched": [
-        854
+        854,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
         381,
-        382
+        382,
+        2229
       ]
     },
     "docs/handoffs/SESSION_856_DIAGNOSTIC_PIPELINE.md": {
@@ -23782,11 +24025,16 @@
       "first_commit_subject": "docs(Session 856): Update documentation for fresh session (#401)",
       "sessions_touched": [
         856,
-        857
+        857,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        401
+        401,
+        2229
       ]
     },
     "docs/handoffs/SESSION_857_WORKSPACE_INLINE_REFACTOR.md": {
@@ -23799,11 +24047,16 @@
       "sessions_touched": [
         857,
         859,
-        860
+        860,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        416
+        416,
+        2229
       ]
     },
     "docs/handoffs/SESSION_858_USER_CONTEXT_INJECTION.md": {
@@ -23814,11 +24067,16 @@
       "first_commit_date": "2026-01-28",
       "first_commit_subject": "feat(Session 858): Add user context injection to all agents (#413)",
       "sessions_touched": [
-        858
+        858,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        413
+        413,
+        2229
       ]
     },
     "docs/handoffs/SESSION_860_API_ERROR_HANDLING.md": {
@@ -23830,13 +24088,18 @@
       "first_commit_subject": "docs(Session 860): Add lost blogs audit findings (#435)",
       "sessions_touched": [
         860,
-        861
+        861,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         423,
         430,
-        435
+        435,
+        2229
       ]
     },
     "docs/handoffs/SESSION_860_INITIATIVE_PIPELINE_FIXES.md": {
@@ -23847,10 +24110,16 @@
       "first_commit_date": "2026-01-28",
       "first_commit_subject": "fix(Session 860): Initiative Pipeline - documents now link properly",
       "sessions_touched": [
-        860
+        860,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_861B_SKIN_LAYER_FIXES.md": {
       "originating_session": 861,
@@ -23860,11 +24129,16 @@
       "first_commit_date": "2026-01-28",
       "first_commit_subject": "docs(Session 861B): Add SKIN Layer Gap Fixes documentation (#449)",
       "sessions_touched": [
-        861
+        861,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        449
+        449,
+        2229
       ]
     },
     "docs/handoffs/SESSION_861_DATA_PERSISTENCE.md": {
@@ -23876,11 +24150,16 @@
       "first_commit_subject": "docs(Session 861): Add session documentation and handoff (#446)",
       "sessions_touched": [
         861,
-        862
+        862,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        446
+        446,
+        2229
       ]
     },
     "docs/handoffs/SESSION_862_CONTENT_FLOW_UNIFICATION.md": {
@@ -23892,10 +24171,16 @@
       "first_commit_subject": "docs(Session 862): Add publish fix to documentation",
       "sessions_touched": [
         862,
-        863
+        863,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_862_CONTENT_INTELLIGENCE.md": {
       "originating_session": 862,
@@ -23918,12 +24203,17 @@
       "first_commit_date": "2026-01-28",
       "first_commit_subject": "docs(Session 863): Update handoff with frontend fix details (#463)",
       "sessions_touched": [
-        863
+        863,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         460,
-        463
+        463,
+        2229
       ]
     },
     "docs/handoffs/SESSION_864_CONTENT_INTELLIGENCE_IMPROVEMENTS.md": {
@@ -23947,11 +24237,16 @@
       "first_commit_date": "2026-01-28",
       "first_commit_subject": "feat(Session 864): Content Intelligence Layer improvements (#466)",
       "sessions_touched": [
-        864
+        864,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        466
+        466,
+        2229
       ]
     },
     "docs/handoffs/SESSION_865_PODCAST_TTS_VOICE_PROFILES.md": {
@@ -23963,12 +24258,17 @@
       "first_commit_subject": "docs(Session 865): Add ConceptForge UI to documentation (#487)",
       "sessions_touched": [
         865,
-        866
+        866,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         484,
-        487
+        487,
+        2229
       ]
     },
     "docs/handoffs/SESSION_866_ATS_KEYWORD_MODULE.md": {
@@ -23979,11 +24279,16 @@
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "feat(Session 866): Add ATS keyword optimization module (#494)",
       "sessions_touched": [
-        866
+        866,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        494
+        494,
+        2229
       ]
     },
     "docs/handoffs/SESSION_866_RESEARCH_REPORT_IMPROVEMENTS.md": {
@@ -23994,14 +24299,19 @@
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "feat(Session 866): Smart HiveMind execution with DecisionSummary parsing (#493) (#493)",
       "sessions_touched": [
-        866
+        866,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         489,
         491,
         492,
-        493
+        493,
+        2229
       ]
     },
     "docs/handoffs/SESSION_867_SYSTEM_AUDIT.md": {
@@ -24013,11 +24323,16 @@
       "first_commit_subject": "docs(Session 867): Add system-wide audit documentation (#499)",
       "sessions_touched": [
         867,
-        868
+        868,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        499
+        499,
+        2229
       ]
     },
     "docs/handoffs/SESSION_868_TIER1_FIXES.md": {
@@ -24042,12 +24357,17 @@
       "first_commit_date": "2026-01-29",
       "first_commit_subject": "feat(Session 869): Add Voice Marketplace UI tab (#16 workspace) (#503)",
       "sessions_touched": [
-        869
+        869,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
         16,
-        503
+        503,
+        2229
       ]
     },
     "docs/handoffs/SESSION_869_STUB_REPLACEMENT.md": {
@@ -24060,11 +24380,16 @@
       "sessions_touched": [
         780,
         782,
-        869
+        869,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        502
+        502,
+        2229
       ]
     },
     "docs/handoffs/SESSION_869_TIER2_TIER3.md": {
@@ -24078,11 +24403,16 @@
         865,
         866,
         869,
-        870
+        870,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        501
+        501,
+        2229
       ]
     },
     "docs/handoffs/SESSION_870_COMPLETE.md": {
@@ -24094,12 +24424,17 @@
       "first_commit_subject": "docs(Session 870): Mark model deduplication audit complete (#509)",
       "sessions_touched": [
         870,
-        871
+        871,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
         507,
-        509
+        509,
+        2229
       ]
     },
     "docs/handoffs/SESSION_871_COMPLETE.md": {
@@ -24111,14 +24446,19 @@
       "first_commit_subject": "docs(Session 871): Update documentation for Phase 3 dead code cleanup (#519)",
       "sessions_touched": [
         871,
-        872
+        872,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
         515,
         516,
         517,
-        519
+        519,
+        2229
       ]
     },
     "docs/handoffs/SESSION_872_COMPLETE.md": {
@@ -24130,9 +24470,13 @@
       "first_commit_subject": "feat(Session 872): Add Prompt Sharpening for decisive language (#534)",
       "sessions_touched": [
         872,
-        873
+        873,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
         522,
         526,
@@ -24143,7 +24487,8 @@
         531,
         532,
         533,
-        534
+        534,
+        2229
       ]
     },
     "docs/handoffs/SESSION_873_DREAM_TRIAGE_FIX.md": {
@@ -24155,11 +24500,16 @@
       "first_commit_subject": "docs(Session 873): Add session handoff and update for Session 874 (#537)",
       "sessions_touched": [
         873,
-        874
+        874,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        537
+        537,
+        2229
       ]
     },
     "docs/handoffs/SESSION_874_COMPLETE.md": {
@@ -24172,14 +24522,19 @@
       "sessions_touched": [
         841,
         874,
-        875
+        875,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         546,
         548,
         549,
-        550
+        550,
+        2229
       ]
     },
     "docs/handoffs/SESSION_875_CONTEXT_TRACING_SYSTEM.md": {
@@ -24191,11 +24546,16 @@
       "first_commit_subject": "feat(Session 875): Add comprehensive context tracing system (#554)",
       "sessions_touched": [
         875,
-        876
+        876,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        554
+        554,
+        2229
       ]
     },
     "docs/handoffs/SESSION_876_TOKEN_LIMITS_FIX.md": {
@@ -24207,11 +24567,16 @@
       "first_commit_subject": "docs(Session 876): Add session handoff documentation (#555)",
       "sessions_touched": [
         876,
-        877
+        877,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        555
+        555,
+        2229
       ]
     },
     "docs/handoffs/SESSION_877_USER_CONNECTION_GAPS.md": {
@@ -24251,10 +24616,16 @@
       "first_commit_subject": "feat(Session 878): Add automatic goal collection for Personal Assistant",
       "sessions_touched": [
         877,
-        878
+        878,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_884_HOME_PAGE_BOOT.md": {
       "originating_session": 884,
@@ -24264,11 +24635,16 @@
       "first_commit_date": "2026-01-30",
       "first_commit_subject": "feat(Session 884): AI OS Boot Experience - Home Page (#576)",
       "sessions_touched": [
-        884
+        884,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        576
+        576,
+        2229
       ]
     },
     "docs/handoffs/SESSION_884_INITIATIVE_PIPELINE_FIX.md": {
@@ -24279,12 +24655,17 @@
       "first_commit_date": "2026-01-30",
       "first_commit_subject": "docs(Session 884): Final session update with production cleanup (#603)",
       "sessions_touched": [
-        884
+        884,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         600,
-        603
+        603,
+        2229
       ]
     },
     "docs/handoffs/SESSION_885_CELERY_CONTENT_PIPELINE.md": {
@@ -24296,11 +24677,16 @@
       "first_commit_subject": "docs(Session 885): Add session handoff and update start file (#609)",
       "sessions_touched": [
         885,
-        886
+        886,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": [
-        609
+        609,
+        2229
       ]
     },
     "docs/handoffs/SESSION_886_CONTENT_FEEDBACK_LOOP.md": {
@@ -24311,11 +24697,16 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "feat(Session 886): Content Feedback Loop + Experiment Audit (#610)",
       "sessions_touched": [
-        886
+        886,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        610
+        610,
+        2229
       ]
     },
     "docs/handoffs/SESSION_887_OPERATIONS_TAB_FIX.md": {
@@ -24327,13 +24718,18 @@
       "first_commit_subject": "docs(Session 887): Add initiative cleanup to handoff (#621)",
       "sessions_touched": [
         887,
-        889
+        889,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         612,
         620,
-        621
+        621,
+        2229
       ]
     },
     "docs/handoffs/SESSION_889_COMPLETE.md": {
@@ -24345,11 +24741,16 @@
       "first_commit_subject": "docs(Session 889): Add session handoff and update start file (#631)",
       "sessions_touched": [
         889,
-        890
+        890,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        631
+        631,
+        2229
       ]
     },
     "docs/handoffs/SESSION_889_INTEL_PODCAST_FIXES.md": {
@@ -24360,10 +24761,16 @@
       "first_commit_date": "2026-01-31",
       "first_commit_subject": "docs(Session 889): Add session handoff and update start file",
       "sessions_touched": [
-        889
+        889,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2229
+      ]
     },
     "docs/handoffs/SESSION_890_PODCAST_QUALITY.md": {
       "originating_session": 890,
@@ -24374,11 +24781,16 @@
       "first_commit_subject": "docs(Session 890): Add session handoff and update start file (#633)",
       "sessions_touched": [
         890,
-        891
+        891,
+        1147,
+        1148,
+        1149,
+        1150
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        633
+        633,
+        2229
       ]
     },
     "docs/handoffs/SESSION_891_DOMAIN_CONTENT_CONTEXT.md": {

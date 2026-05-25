@@ -1,3 +1,9 @@
+---
+originating_session: 738
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session Roadmap: Fixing Disconnected Infrastructure
 
 **Created:** December 31, 2025 (Session 646)
