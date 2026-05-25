@@ -39,7 +39,7 @@ Live drift checks:
 - `python scripts/verify_repo_guardrails.py`
 - `python manage.py session_provenance --session N` — per-session cluster (PR #2205).
 - `python manage.py build_docs_provenance` — regenerates `docs/_provenance.json` (per-doc index w/ handoff filename override per PR #2219).
-- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 3 invocation (Session 1150's sole charter; 446 more handoffs eligible after Session 1148's round 2)**.
+- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 4 invocation (Session 1151's sole charter; 446 more handoffs eligible after Session 1150's round 3)**.
 - The 8 `build_*_audit` commands — regenerate per-subsystem runtime evidence.
 
 ## PRE-COMMIT HOOK BLOCKS DIRECT COMMITS TO MAIN
@@ -54,7 +54,7 @@ Every session-NNNN commit subject should include `session-NNNN`:
 - `fix(session-NNNN): ...`
 - `feat(session-NNNN-area): ...`
 
-Sessions 1145+1146+1147+1148+1149 ran 100% subject-tagged. Keep the streak.
+Sessions 1145+1146+1147+1148+1149+1150 ran 100% subject-tagged. Keep the streak.
 
 ## ONE-COMMAND LAUNCH — the laptop fleet
 
@@ -73,48 +73,68 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1149 CLOSED — 2 PRs PENDING MERGE ON CI BILLING BLOCKER (2026-05-25)
+## SESSION 1150 CLOSED — 4 PRs MERGED (BYPASS MODE) (2026-05-25)
 
-**2 PRs open + this handoff PR. Merges blocked by GitHub Actions billing.** Full handoff: [`docs/handoffs/SESSION_1149_SYSTEM_OWNER_SECTION_3_AND_DRIFT_FIXES.md`](docs/handoffs/SESSION_1149_SYSTEM_OWNER_SECTION_3_AND_DRIFT_FIXES.md).
+**Session 1149's 3 PRs + Session 1150's P3.5 r3 all merged with bypass for GH Actions billing + pre-existing CONFLICT.** Full handoff: [`docs/handoffs/SESSION_1150_P35_ROUND3_AND_SESSION_1149_MERGE_WAVE.md`](docs/handoffs/SESSION_1150_P35_ROUND3_AND_SESSION_1149_MERGE_WAVE.md).
 
-### 🚨 BLOCKER: GitHub Actions billing
+| PR | What |
+|----|------|
+| **#2227** | verify_doc_claims baselines re-pegged (drift now=0) |
+| **#2226** | SYSTEM_OWNER.md §3 rewritten with current ops paths + INDEX regen |
+| **#2228** | Session 1149 handoff |
+| **#2229** | P3.5 round 3 — 75 handoffs FM-backfilled (SESSION_890 → SESSION_806) |
 
-Both Session 1149 PRs fail CI with:
+Plus this Session 1150 handoff PR.
 
-> *"The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings."*
-
-Affected workflows: **Repo Guardrails** + **Direct LLM SDK usage check**. GitGuardian (different vendor) passes. Session 1148 PRs (~12 hrs prior) all passed those same workflows. **This is a new billing failure, not a code issue.**
-
-**Chris must resolve before any PR merges this session.** Repo Settings → Billing & plans → update payment method or raise spending cap. Then re-run failed workflows (`gh run rerun <id>` or GH UI) and merge in order below.
-
-Per Rigby's explicit call (Session 1149 close): **do NOT admin-merge bypassing failed guardrails.**
-
-### Session 1149 PRs (pending merge)
-
-| PR | Branch | Files | What |
-|----|--------|-------|------|
-| **#2226** | `docs/session-1149-system-owner-section-3-rewrite` | 2 (+165/-82) | SYSTEM_OWNER.md §3 fully rewritten with current ops paths (HTTP/Django-shell/`autopilot_tool`) + INDEX regen. Closes Session 1148 follow-up #8. |
-| **#2227** | `docs/session-1149-verify-doc-claims-drift-fixes` | 2 (+21/-13) | Re-pegged 3 drifted verifier baselines: persona_agent_count 148→155, total 231→238, mgmt_cmds 174→182 (+BACKEND_INVENTORY body update). drift now=0. Closes Session 1148 follow-up #3 (the registered-claim portion). |
-
-Plus this handoff PR.
-
-Rigby's recommended merge order (after billing fix): **#2227 → #2226 → handoff PR**.
+Post-r3 state: `_provenance.json` 2058 docs (HIGH=1275 / MEDIUM=294 / UNKNOWN=489); `INDEX.md` 2609 docs / 681,664 lines. 446 handoffs still eligible for future rounds.
 
 ---
 
-## SESSION 1150 — CURRENT ENTRY POINT
+## 🚨 ACTIVE ISSUES carrying into Session 1151
+
+### 1. GitHub Actions billing — still down
+
+Same annotation: *"The job was not started because recent account payments have failed or your spending limit needs to be increased."* Multi-day outage until Chris funds account.
+
+**Self-merge protocol during outage** (Sessions 1149 + 1150 pattern):
+
+For every PR, run local mirrors before push:
+```bash
+.venv/bin/python scripts/verify_repo_guardrails.py --inventory-advisory
+.venv/bin/python tools/check_direct_llm_calls.py --root . --whitelist .ci/llm_whitelist.txt --warn-only
+```
+
+Self-merge with bypass requires:
+1. Both local mirrors run.
+2. Only failure is the pre-existing `celery-beat-schedule` CONFLICT (item 2 below).
+3. Merge commit body documents the bypass with both `billing outage` and `pre-existing CONFLICT` named.
+4. PR scope is documentation or low-risk verifier baselines (no production code changes).
+
+Higher-risk code PRs: hold the merge; stack the PR until billing fixes.
+
+### 2. Pre-existing `celery-beat-schedule` CONFLICT
+
+Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery beat schedule ownership." Docs claim exclusive ownership across `CLAUDE.md`, `00-START-NEXT-SESSION.md`, `core/celery.py`, `core/management/commands/add_critical_celery_tasks.py`, etc.
+
+**Not introduced by any Session 1145-1150 PR.** Recommendation: describe the split ownership model accurately or update the exclusive-ownership claim.
+
+**Cleanup queued as:** Future session, needs Chris's input on the ownership model.
+
+---
+
+## SESSION 1151 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify GH Actions billing is fixed.** Run:
+**Check whether GH Actions billing is fixed.** Run:
 ```bash
-gh pr checks 2226 2227
+gh pr checks <latest-pr-num>
 ```
-If still showing the "payments have failed / spending limit" annotation, Chris must resolve in Repo Settings → Billing & plans before any other work. Once green, merge Session 1149 PRs in Rigby's recommended order (#2227 → #2226 → handoff).
+If still showing the "payments have failed / spending limit" annotation, continue in bypass mode (see protocol above). If fixed, run `gh run rerun <id>` on the next PR's failed runs and resume normal mode.
 
-### SOLE CHARTER (Rigby's spec)
+### SOLE CHARTER (Rigby's spec — same as Session 1150 pattern)
 
-**P3.5 round 3.** One bounded mechanical PR. Same invocation as round 2 — no scope creep:
+**P3.5 round 4.** One bounded mechanical PR. Same invocation as round 3:
 
 ```bash
 python manage.py backfill_doc_provenance \
@@ -125,25 +145,29 @@ python manage.py backfill_doc_provenance \
     --with-note "auto-added by backfill_doc_provenance"
 ```
 
-**Survey expectation** (post-Session 1148 round 2): ~446 handoffs add-eligible (down from 521 before round 2's 75). Pick 75 most-recent. Bundle `docs/INDEX.md` + `docs/_provenance.json` regen per Rigby's Session 1148 tweak.
+**Expected range:** ~`SESSION_805` → `SESSION_731` (next 75 most-recent below SESSION_806). **Survey expectation:** 446 add-eligible → pick 75 most-recent → 371 remaining after round 4.
 
-**Why sole charter:** Sessions 1148 and 1149 both ran 2-PR "quick wins" mode. Session 1150 needs the next mechanical batch reviewed in the right mental mode — not bundled with other meaningful PRs.
+Bundle `docs/INDEX.md` + `docs/_provenance.json` regen in the same PR. Run local CI mirrors before push.
 
-### Carryovers queued for Session 1151+
+**Why sole charter (continued from Session 1150):** One mechanical batch per session, audit trail per merge, explicit bypass documentation. Don't chain round 4 with anything else — keep the discipline that's kept the bypass-mode safe across 4 merges so far.
 
-**Docs-cleanup track:**
+### Carryovers queued (unchanged from Session 1150 close)
+
+**Docs-cleanup track (avoid during offline-CI window):**
 - **(2) Older `docs/topics/` sweep** (recon-first) — 7 Feb-March docs deferred from Session 1147 #2221.
-- **(3 NEW) Topic-doc body-count sweep** — what Session 1149 #2227 *didn't* do. Explicit scope when activated: "no hardcoded platform counts remain in `docs/topics/*` except definitional constants; everything else links to PLATFORM_INVENTORY / inventory generator outputs."
+- **(3) Topic-doc body-count sweep** — explicit scope when activated: "no hardcoded platform counts remain in `docs/topics/*` except definitional constants; everything else links to PLATFORM_INVENTORY / inventory generator outputs."
 - **(4) `docs/reports/` + `docs/patents/` recon** — large piles, recon-first.
+- **(9) Cosmetic cleanup of `load_all_agents_advisors.py`** — fix "149 Specialized Agents" → "139". Trivial; bundle into next docs session that touches that file.
 
-**Infra track:**
-- **(5) `exists_on_disk: false` flag** (carried since Session 1145) — 326 dead paths in `_provenance.json`. Schema bump v1→v2.
-- **(6) Beat-schedule the regens** (carried since Session 1145) — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
-- **(7) Fix `build_learning_bridge_audit.py` generator** (carried since Session 1146) — falsely flags "ABC unused".
+**Infra track (avoid during offline-CI window):**
+- **(5) `exists_on_disk: false` flag** (since Session 1145) — 326 dead paths in `_provenance.json`. Schema bump v1→v2.
+- **(6) Beat-schedule the regens** (since Session 1145) — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
+- **(7) Fix `build_learning_bridge_audit.py` generator** (since Session 1146) — falsely flags "ABC unused".
 - **(8) Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern from PR #2201.
 
-**New from Session 1149:**
-- **(9 NEW) Cosmetic cleanup of `load_all_agents_advisors.py`** — fix the misleading "149 Specialized Agents" docstring + `self.stdout.write` (actual `agents_data` has 139 tuples). Trivial; bundle into the next docs session that touches that file.
+**Queued for when GH Actions returns:**
+- **`celery-beat-schedule` CONFLICT cleanup** — needs Chris input on ownership model.
+- All deferred items above shift back into eligibility.
 
 ### Chris-call-only carryovers (still parked)
 
@@ -151,22 +175,25 @@ python manage.py backfill_doc_provenance \
 2. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
 3. **Mission refresh PR #2190** — preserved branch.
 
-### Cross-session lessons (Sessions 1145–1149)
+### Cross-session lessons (Sessions 1145–1150)
 
-- **Recon before sweep.** Five back-to-back sessions where mid-recon findings flipped the PR plan. (Session 1149: "topic-doc body counts" framing masked 3 unrelated registered-claim drifts.)
+- **Recon before sweep.** Six back-to-back sessions where mid-recon findings flipped the PR plan.
 - **Filename overrides for canonical names** (Session 1147 PR #2219) — `SESSION_NNNN_*.md` is unambiguous.
 - **`session: NNNN` → `originating_session: NNNN`** is the standard.
 - **`build_*_audit` generators can lag reality.** Fix the generator, not the output.
 - **Quick-wins-only is valid mode** when review fatigue is real.
-- **NEW (1149):** "Counts-hygiene" framing in start-here docs is ambiguous — always disambiguate registered-claim drift vs body-level hardcoded counts. Different PRs.
-- **NEW (1149):** Stale log/docstring text inside command files can mislead future baselines (148→139→155 reconciliation). When registering `verify_doc_claims` baselines against commands, anchor to `len(data_structure)`, not to comments/logs.
-- **NEW (1149):** GH Actions billing failures are Chris-only blockers. Don't admin-merge-bypass; surface to user; headline in handoff.
+- **(1149)** "Counts-hygiene" framing in start-here docs is ambiguous — disambiguate registered-claim drift vs body-level hardcoded counts.
+- **(1149)** Stale log/docstring text inside command files can mislead future baselines (148→139→155 reconciliation). Anchor `verify_doc_claims` baselines to `len(data_structure)`, not comments/logs.
+- **(1149)** GH Actions billing failures are Chris-only blockers initially — surface in handoff, then resolve approach with Chris explicitly.
+- **NEW (1150)**: Bypass-merging during a CI outage is workable IF disciplined. Local mirrors + per-merge bypass documentation + Rigby gate-checking the rules makes self-merge safe enough during a multi-day outage window.
+- **NEW (1150)**: "One mechanical batch then stop" applies even when batches are easy. Round 3 was frictionless; round 4 would have been just as cheap. But Rigby's call to stop after each round specifically preserves audit-trail crispness during offline-CI mode. Easy ≠ safe to chain.
 
 ---
 
 ## RECENT SESSION ARCS
 
-- **Session 1149** — SYSTEM_OWNER §3 rewrite + verify_doc_claims drift fixes. 2 PRs (+ handoff), pending merge on GH Actions billing.
+- **Session 1150** — Session 1149 merge wave + P3.5 round 3. 4 PRs merged (bypass mode).
+- **Session 1149** — SYSTEM_OWNER §3 rewrite + verify_doc_claims drift fixes. 3 PRs (held on billing in 1149; merged in 1150).
 - **Session 1148** — P3.5 round 2 + SYSTEM_OWNER drift label. 3 PRs (all merged).
 - **Session 1147** — P3.5 round 1 (50 handoffs + filename override upstream) + apps light-touch + topics pragmatic sweep. 3 PRs.
 - **Session 1146** — Root-level audits sweep. DOC-AUTOGEN finding flipped plan; regen + Runtime Evidence canon section. 3 PRs.
