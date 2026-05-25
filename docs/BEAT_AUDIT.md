@@ -6,25 +6,25 @@
 
 ## Headline
 
-- **Static beat entries:** 42
-- **Task refs resolve in Celery registry:** 42 / 42 (100%)
-- **Underlying tasks with docstrings:** 26 / 42
-- **Total user-defined Celery tasks (registry):** 402 — many run on demand, not on schedule.
+- **Static beat entries:** 77
+- **Task refs resolve in Celery registry:** 77 / 77 (100%)
+- **Underlying tasks with docstrings:** 44 / 77
+- **Total user-defined Celery tasks (registry):** 401 — many run on demand, not on schedule.
 
 > What this audit doesn't cover: ad-hoc `PeriodicTask` rows in the DB (django-celery-beat). Operators can add those at runtime; the static schedule here is what the codebase intends. DB rows are tracked separately by the `db_required` claims that surface as `skipped` without a live Postgres.
 
 ## Findings
 
-- Beat entries whose underlying task has no docstring — fine for stable infrastructure tasks, worth annotating for anything domain-specific: 16 entries (`aggregate-spider-signals`, `auto-archive-stale-deliverables`, `check-celery-health`, `cleanup-audio-cache`, `cleanup-boardroom-junk`, `cleanup-expired-signals`…)
-- Single queue carries the majority of scheduled work: `default` runs 24 of 42 entries. If that worker drops, half the platform stops ticking.
+- Beat entries whose underlying task has no docstring — fine for stable infrastructure tasks, worth annotating for anything domain-specific: 33 entries (`aggregate-roi-metrics-daily`, `aggregate-spider-signals`, `auto-approve-boardroom-items`, `auto-archive-stale-deliverables`, `auto-promote-low-risk-decisions`, `check-celery-health`…)
+- Single queue carries the majority of scheduled work: `default` runs 55 of 77 entries. If that worker drops, half the platform stops ticking.
 
 ## Queue distribution
 
 | Queue | Entries |
 |---|---:|
-| `default` | 24 |
-| `long_running` | 12 |
-| `broadcast` | 4 |
+| `default` | 55 |
+| `long_running` | 14 |
+| `broadcast` | 6 |
 | `ml` | 1 |
 | `content` | 1 |
 
@@ -32,52 +32,95 @@
 
 | Name | Task | Schedule | Queue | Resolves |
 |---|---|---|:-:|:-:|
-| `aggregate-spider-signals` | `aggregate_spider_signals` ([src](core/tasks.py#L10932)) | `*/30 * * * *` | `long_running` | ✓ |
+| `aggregate-roi-metrics-daily` | `core.tasks.aggregate_roi_metrics_daily` ([src](core/tasks.py#L4700)) | `0 2 * * *` | `default` | ✓ |
+| `aggregate-spider-signals` | `aggregate_spider_signals` ([src](core/tasks.py#L10914)) | `*/30 * * * *` | `long_running` | ✓ |
+| `auto-approve-boardroom-items` | `core.tasks.auto_approve_boardroom_items` ([src](core/tasks.py#L509)) | `*/30 * * * *` | `default` | ✓ |
 | `auto-archive-stale-deliverables` | `core.tasks.auto_archive_stale_deliverables` ([src](core/tasks.py#L11208)) | `0 12 * * *` | `default` | ✓ |
+| `auto-promote-low-risk-decisions` | `core.tasks.auto_promote_low_risk_decisions` ([src](core/tasks.py#L5770)) | `0 */2 * * *` | `default` | ✓ |
 | `backfill-spider-embeddings` | `core.tasks.backfill_spider_embeddings` ([src](core/tasks.py#L1167)) | `*/15 * * * *` | `ml` | ✓ |
-| `check-celery-health` | `core.tasks.check_celery_health` ([src](core/tasks.py#L7097)) | `every 10m` | `broadcast` | ✓ |
+| `calculate-daily-revenue-metrics` | `intelligence.tasks.calculate_daily_revenue_metrics` ([src](intelligence/tasks.py#L1460)) | `15 0 * * *` | `default` | ✓ |
+| `check-celery-health` | `core.tasks.check_celery_health` ([src](core/tasks.py#L7079)) | `every 10m` | `broadcast` | ✓ |
+| `check-learning-loop-slo` | `core.check_learning_loop_slo` ([src](core/tasks.py#L12492)) | `0 9 * * *` | `default` | ✓ |
+| `check-llm-cost-spike` | `core.tasks.check_llm_cost_spike` ([src](core/tasks.py#L12407)) | `5 * * * *` | `default` | ✓ |
+| `check-operating-rhythm-status` | `core.tasks.check_operating_rhythm_status` ([src](core/tasks.py#L11156)) | `15 9 * * *` | `default` | ✓ |
+| `claim-stale-events` | `core.tasks.claim_stale_events` ([src](core/tasks.py#L4542)) | `*/5 * * * *` | `default` | ✓ |
 | `clean-stale-data` | `ai_core.tasks.clean_stale_data` ([src](ai_core/tasks.py#L156)) | `0 2 * * *` | `default` | ✓ |
 | `cleanup-audio-cache` | `core.tasks.cleanup_audio_cache` ([src](core/tasks.py#L11201)) | `0 3 * * *` | `default` | ✓ |
+| `cleanup-automated-conversation-artifacts` | `core.tasks.cleanup_automated_conversation_artifacts` ([src](core/tasks.py#L536)) | `0 3 * * *` | `default` | ✓ |
 | `cleanup-boardroom-junk` | `core.tasks.cleanup_boardroom_junk` ([src](core/tasks.py#L505)) | `30 4 * * *` | `default` | ✓ |
-| `cleanup-celery-task-events` | `core.tasks.cleanup_celery_task_events` ([src](core/tasks.py#L4126)) | `0 4 * * sunday` | `default` | ✓ |
+| `cleanup-celery-task-events` | `core.tasks.cleanup_celery_task_events` ([src](core/tasks.py#L4108)) | `0 4 * * sunday` | `default` | ✓ |
 | `cleanup-conversation-duplicates` | `core.tasks.cleanup_conversation_duplicates_task` ([src](core/tasks.py#L11640)) | `30 4 * * *` | `default` | ✓ |
+| `cleanup-expired-boardroom-items` | `core.tasks.cleanup_expired_boardroom_items` ([src](core/tasks.py#L523)) | `15 3 * * *` | `default` | ✓ |
+| `cleanup-expired-fleet-artifacts` | `core.tasks.cleanup_expired_fleet_artifacts` ([src](core/tasks.py#L12586)) | `10 2 * * *` | `broadcast` | ✓ |
+| `cleanup-expired-fleet-events` | `core.tasks.cleanup_expired_fleet_events` ([src](core/tasks.py#L12612)) | `25 2 * * *` | `broadcast` | ✓ |
 | `cleanup-expired-pa-insights` | `core.tasks.cleanup_expired_pa_insights` ([src](core/tasks.py#L11776)) | `0 3 * * *` | `default` | ✓ |
 | `cleanup-expired-signals` | `cleanup_expired_signals` ([src](core/tasks.py#L10944)) | `30 4 * * *` | `default` | ✓ |
-| `cleanup-expired-uploads` | `core.tasks.cleanup_expired_uploads` ([src](core/tasks.py#L4176)) | `30 4 * * *` | `default` | ✓ |
+| `cleanup-expired-uploads` | `core.tasks.cleanup_expired_uploads` ([src](core/tasks.py#L4158)) | `30 4 * * *` | `default` | ✓ |
+| `cleanup-halted-experiments` | `core.tasks.cleanup_halted_experiments` ([src](core/tasks.py#L545)) | `30 3 * * *` | `default` | ✓ |
 | `cleanup-junk-initiatives` | `core.tasks.cleanup_junk_initiatives` ([src](core/tasks.py#L421)) | `0 4 * * *` | `default` | ✓ |
 | `cleanup-learning-readback` | `core.tasks.cleanup_learning_readback_events` ([src](core/tasks.py#L483)) | `0 4 * * *` | `default` | ✓ |
-| `cleanup-llm-call-logs` | `core.tasks.cleanup_llm_call_logs` ([src](core/tasks.py#L4139)) | `15 4 * * sunday` | `default` | ✓ |
+| `cleanup-llm-call-logs` | `core.tasks.cleanup_llm_call_logs` ([src](core/tasks.py#L4121)) | `15 4 * * sunday` | `default` | ✓ |
 | `cleanup-old-model-files` | `ml.cleanup_old_model_files` ([src](ml/tasks.py#L142)) | `0 1 * * 1` | `default` | ✓ |
 | `cleanup-old-notifications` | `core.tasks.cleanup_old_notifications` ([src](core/tasks.py#L2423)) | `30 3 * * *` | `default` | ✓ |
 | `cleanup-old-predictions` | `sports.cleanup_old_predictions` ([src](sports/tasks.py#L343)) | `0 3 * * 1` | `default` | ✓ |
-| `cleanup-old-resolve-jobs` | `core.tasks.cleanup_old_resolve_jobs` ([src](core/tasks.py#L5058)) | `0 4 * * *` | `default` | ✓ |
-| `cleanup-opportunities-daily` | `intelligence.tasks.cleanup_old_opportunities` ([src](intelligence/tasks.py#L1802)) | `0 3 * * *` | `default` | ✓ |
-| `cleanup-resolved-signatures` | `core.tasks.cleanup_resolved_signatures` ([src](core/tasks.py#L10681)) | `45 4 * * *` | `default` | ✓ |
-| `cleanup-spider-item-hashes` | `core.tasks.cleanup_spider_item_hashes` ([src](core/tasks.py#L3978)) | `30 3 * * *` | `default` | ✓ |
+| `cleanup-old-resolve-jobs` | `core.tasks.cleanup_old_resolve_jobs` ([src](core/tasks.py#L5040)) | `0 4 * * *` | `default` | ✓ |
+| `cleanup-opportunities-daily` | `intelligence.tasks.cleanup_old_opportunities` ([src](intelligence/tasks.py#L1804)) | `0 3 * * *` | `default` | ✓ |
+| `cleanup-resolved-signatures` | `core.tasks.cleanup_resolved_signatures` ([src](core/tasks.py#L10663)) | `45 4 * * *` | `default` | ✓ |
+| `cleanup-spider-item-hashes` | `core.tasks.cleanup_spider_item_hashes` ([src](core/tasks.py#L3960)) | `30 3 * * *` | `default` | ✓ |
 | `cleanup-stale-content` | `core.tasks.cleanup_stale_content` ([src](core/tasks.py#L404)) | `5 10 * * *` | `default` | ✓ |
-| `cleanup-stale-dreams` | `core.tasks.cleanup_stale_dreams` ([src](core/tasks.py#L3006)) | `0 6 * * *` | `default` | ✓ |
+| `cleanup-stale-dreams` | `core.tasks.cleanup_stale_dreams` ([src](core/tasks.py#L2988)) | `0 6 * * *` | `default` | ✓ |
+| `cleanup-stale-scoring-requests` | `core.tasks.cleanup_stale_scoring_requests` ([src](core/tasks.py#L1997)) | `*/30 * * * *` | `default` | ✓ |
 | `cleanup-stuck-agent-executions` | `core.tasks.cleanup_stale_agent_executions` ([src](core/tasks.py#L400)) | `*/10 * * * *` | `broadcast` | ✓ |
 | `collect-real-opportunities` | `ai_core.tasks.collect_real_opportunities` ([src](ai_core/tasks.py#L17)) | `*/30 * * * *` | `long_running` | ✓ |
 | `coo-daily-diagnostic` | `core.tasks.run_coo_daily_diagnostic` ([src](core/tasks.py#L800)) | `30 7 * * *` | `long_running` | ✓ |
 | `cto-daily-diagnostic` | `core.tasks.run_cto_daily_diagnostic` ([src](core/tasks.py#L754)) | `15 7 * * *` | `long_running` | ✓ |
+| `curate-signal-clusters` | `curate_signal_clusters` ([src](core/tasks.py#L10918)) | `0 13 * * *` | `long_running` | ✓ |
 | `decay-learning-patterns` | `core.tasks.decay_learning_patterns` ([src](core/tasks.py#L496)) | `0 5 * * 0` | `default` | ✓ |
+| `detect-duplicate-initiatives` | `core.tasks.detect_duplicate_initiatives` ([src](core/tasks.py#L11042)) | `15 4 * * *` | `default` | ✓ |
 | `dream-daily-surfacing` | `core.tasks.surface_top_dreams` ([src](core/tasks.py#L11636)) | `0 9 * * *` | `default` | ✓ |
 | `enforce-data-retention` | `core.tasks.enforce_data_retention` ([src](core/tasks.py#L11806)) | `0 4 * * *` | `default` | ✓ |
 | `enforce-db-retention-daily` | `core.tasks.enforce_db_retention` ([src](core/tasks.py#L11221)) | `0 11 * * *` | `long_running` | ✓ |
-| `generate-operator-edge-newsletter` | `core.tasks.generate_operator_edge_newsletter` ([src](core/tasks.py#L5496)) | `0 13 * * friday` | `content` | ✓ |
-| `heart-service-heartbeat` | `core.tasks.run_heartbeat` ([src](core/tasks.py#L6909)) | `every 10m` | `broadcast` | ✓ |
-| `monitor-celery-health` | `core.tasks.monitor_celery_health` ([src](core/tasks.py#L5954)) | `*/30 * * * *` | `broadcast` | ✓ |
+| `expire-old-opportunities` | `core.tasks.expire_old_opportunities` ([src](core/tasks.py#L1927)) | `30 2 * * *` | `default` | ✓ |
+| `expire-old-suggestions` | `core.tasks.expire_old_suggestions` ([src](core/tasks.py#L2460)) | `45 2 * * *` | `default` | ✓ |
+| `expire-overdue-validations` | `core.tasks.expire_overdue_validations` ([src](core/tasks.py#L4400)) | `0 * * * *` | `default` | ✓ |
+| `generate-operator-edge-newsletter` | `core.tasks.generate_operator_edge_newsletter` ([src](core/tasks.py#L5478)) | `0 13 * * friday` | `content` | ✓ |
+| `heart-service-heartbeat` | `core.tasks.run_heartbeat` ([src](core/tasks.py#L6891)) | `every 10m` | `broadcast` | ✓ |
+| `maintain-dream-backlog` | `core.tasks.maintain_dream_backlog` ([src](core/tasks.py#L5706)) | `30 4 * * *` | `default` | ✓ |
+| `monitor-celery-health` | `core.tasks.monitor_celery_health` ([src](core/tasks.py#L5936)) | `*/30 * * * *` | `broadcast` | ✓ |
+| `monitor-isolation-progress` | `core.tasks.monitor_isolation_progress` ([src](core/tasks.py#L1009)) | `30 4 * * *` | `default` | ✓ |
+| `poll-pending-3d-models` | `core.tasks.poll_pending_3d_models` ([src](core/tasks.py#L1851)) | `*/5 * * * *` | `default` | ✓ |
 | `process-core-spider-data` | `core.tasks.process_core_spider_data` ([src](core/tasks.py#L1159)) | `*/5 * * * *` | `long_running` | ✓ |
-| `process-spider-actions` | `core.tasks.process_spider_actions` ([src](core/tasks.py#L6901)) | `*/30 * * * *` | `long_running` | ✓ |
+| `process-hitl-escalations` | `core.tasks.process_hitl_escalations` ([src](core/tasks.py#L4365)) | `*/15 * * * *` | `default` | ✓ |
+| `process-human-attention-lifecycle` | `core.tasks.process_human_attention_lifecycle` ([src](core/tasks.py#L6736)) | `*/10 * * * *` | `default` | ✓ |
+| `process-spider-actions` | `core.tasks.process_spider_actions` ([src](core/tasks.py#L6883)) | `*/30 * * * *` | `long_running` | ✓ |
+| `promote-to-shared-knowledge` | `core.tasks.promote_to_shared_knowledge` ([src](core/tasks.py#L7367)) | `0 4 * * monday` | `default` | ✓ |
+| `reap-zombie-work` | `core.tasks.reap_zombie_work` ([src](core/tasks.py#L414)) | `15 * * * *` | `default` | ✓ |
+| `report-pending-review-metrics` | `core.tasks.report_pending_review_metrics` ([src](core/tasks.py#L5774)) | `0 9 * * *` | `default` | ✓ |
+| `rescan-active-workspaces` | `core.tasks.rescan_active_workspaces` ([src](core/tasks.py#L11658)) | `0 */4 * * *` | `default` | ✓ |
 | `run-spider-network` | `core.tasks.run_spider_network` ([src](core/tasks.py#L1163)) | `*/30 * * * *` | `long_running` | ✓ |
-| `scan-spider-opportunities` | `intelligence.tasks.scan_spider_opportunities` ([src](intelligence/tasks.py#L1563)) | `*/30 * * * *` | `long_running` | ✓ |
-| `spider-data-retention` | `core.tasks.spider_data_retention` ([src](core/tasks.py#L4010)) | `0 4 * * *` | `long_running` | ✓ |
+| `scan-concerns-for-human-action` | `core.tasks.scan_concerns_for_human_action` ([src](core/tasks.py#L5489)) | `30 * * * *` | `default` | ✓ |
+| `scan-income-spider-orchestrator` | `intelligence.tasks.scan_income_spider_orchestrator` ([src](intelligence/tasks.py#L1651)) | `10 * * * *` | `long_running` | ✓ |
+| `scan-spider-opportunities` | `intelligence.tasks.scan_spider_opportunities` ([src](intelligence/tasks.py#L1565)) | `*/30 * * * *` | `long_running` | ✓ |
+| `send-pending-notifications` | `core.tasks.send_pending_notifications` ([src](core/tasks.py#L2381)) | `*/5 * * * *` | `default` | ✓ |
+| `spider-data-retention` | `core.tasks.spider_data_retention` ([src](core/tasks.py#L3992)) | `0 4 * * *` | `long_running` | ✓ |
+| `sync-pipeline-insights-to-collective` | `core.tasks.sync_pipeline_insights_to_collective` ([src](core/tasks.py#L4200)) | `0 */6 * * *` | `default` | ✓ |
 | `trend-daily-diagnostic` | `core.tasks.run_trend_daily_diagnostic` ([src](core/tasks.py#L847)) | `45 7 * * *` | `long_running` | ✓ |
+| `update-distribution-analytics` | `core.tasks.update_distribution_analytics` ([src](core/tasks.py#L2189)) | `0 4 * * *` | `default` | ✓ |
+| `update-mythology-pattern-statistics` | `core.tasks.update_mythology_pattern_statistics` ([src](core/tasks.py#L9756)) | `0 4 * * *` | `default` | ✓ |
+| `verify-completed-fixes` | `core.tasks.verify_completed_fixes` ([src](core/tasks.py#L10161)) | `0 */6 * * *` | `default` | ✓ |
 | `warm-up-spiders` | `ai_core.tasks.warm_up_spider_network` ([src](ai_core/tasks.py#L192)) | `0 */6 * * *` | `long_running` | ✓ |
 
 ## Detail appendix
 
 One block per beat entry. Underlying task docstring (first paragraph) is included when present so the audit explains what the schedule actually triggers.
+
+### `aggregate-roi-metrics-daily`
+
+**Task:** `core.tasks.aggregate_roi_metrics_daily` · **Schedule:** `0 2 * * *` · **Queue:** `default` · **Expires:** 7200s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:4700`_
 
 ### `aggregate-spider-signals`
 
@@ -85,7 +128,15 @@ One block per beat entry. Underlying task docstring (first paragraph) is include
 
 _(task resolves but has no docstring)_
 
-_Source: `core/tasks.py:10932`_
+_Source: `core/tasks.py:10914`_
+
+### `auto-approve-boardroom-items`
+
+**Task:** `core.tasks.auto_approve_boardroom_items` · **Schedule:** `*/30 * * * *` · **Queue:** `default` · **Expires:** 1800s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:509`_
 
 ### `auto-archive-stale-deliverables`
 
@@ -94,6 +145,14 @@ _Source: `core/tasks.py:10932`_
 _(task resolves but has no docstring)_
 
 _Source: `core/tasks.py:11208`_
+
+### `auto-promote-low-risk-decisions`
+
+**Task:** `core.tasks.auto_promote_low_risk_decisions` · **Schedule:** `0 */2 * * *` · **Queue:** `default` · **Expires:** 7200s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:5770`_
 
 ### `backfill-spider-embeddings`
 
@@ -109,13 +168,53 @@ historical backlog so all remaining unembedded records are worth processing.
 
 _Source: `core/tasks.py:1167`_
 
+### `calculate-daily-revenue-metrics`
+
+**Task:** `intelligence.tasks.calculate_daily_revenue_metrics` · **Schedule:** `15 0 * * *` · **Queue:** `default` · **Expires:** 7200s
+
+Calculate and store daily revenue metrics Runs daily at midnight
+
+_Source: `intelligence/tasks.py:1460`_
+
 ### `check-celery-health`
 
 **Task:** `core.tasks.check_celery_health` · **Schedule:** `every 10m` · **Queue:** `broadcast` · **Expires:** 600s
 
 _(task resolves but has no docstring)_
 
-_Source: `core/tasks.py:7097`_
+_Source: `core/tasks.py:7079`_
+
+### `check-learning-loop-slo`
+
+**Task:** `core.check_learning_loop_slo` · **Schedule:** `0 9 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+Daily SLO check: learning loop usage_rate should be >= 5% over 24h.
+
+_Source: `core/tasks.py:12492`_
+
+### `check-llm-cost-spike`
+
+**Task:** `core.tasks.check_llm_cost_spike` · **Schedule:** `5 * * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:12407`_
+
+### `check-operating-rhythm-status`
+
+**Task:** `core.tasks.check_operating_rhythm_status` · **Schedule:** `15 9 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+Session 914.7: Check operating rhythm status and generate recommendations.
+
+_Source: `core/tasks.py:11156`_
+
+### `claim-stale-events`
+
+**Task:** `core.tasks.claim_stale_events` · **Schedule:** `*/5 * * * *` · **Queue:** `default` · **Expires:** 300s
+
+Claim and reprocess stale events from all consumer groups.
+
+_Source: `core/tasks.py:4542`_
 
 ### `clean-stale-data`
 
@@ -133,6 +232,14 @@ _(task resolves but has no docstring)_
 
 _Source: `core/tasks.py:11201`_
 
+### `cleanup-automated-conversation-artifacts`
+
+**Task:** `core.tasks.cleanup_automated_conversation_artifacts` · **Schedule:** `0 3 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:536`_
+
 ### `cleanup-boardroom-junk`
 
 **Task:** `core.tasks.cleanup_boardroom_junk` · **Schedule:** `30 4 * * *` · **Queue:** `default` · **Expires:** 3600s
@@ -147,7 +254,7 @@ _Source: `core/tasks.py:505`_
 
 Delete CeleryTaskEvent records older than retention period.
 
-_Source: `core/tasks.py:4126`_
+_Source: `core/tasks.py:4108`_
 
 ### `cleanup-conversation-duplicates`
 
@@ -157,6 +264,30 @@ Session 1032: Daily cleanup of fuzzy-duplicate AgentConversation records. Uses J
 similarity to cluster conversations and delete lower-quality duplicates.
 
 _Source: `core/tasks.py:11640`_
+
+### `cleanup-expired-boardroom-items`
+
+**Task:** `core.tasks.cleanup_expired_boardroom_items` · **Schedule:** `15 3 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:523`_
+
+### `cleanup-expired-fleet-artifacts`
+
+**Task:** `core.tasks.cleanup_expired_fleet_artifacts` · **Schedule:** `10 2 * * *` · **Queue:** `broadcast` · **Expires:** 3600s
+
+Celery wrapper around `fleet_artifact_cleanup.run_cleanup()`.
+
+_Source: `core/tasks.py:12586`_
+
+### `cleanup-expired-fleet-events`
+
+**Task:** `core.tasks.cleanup_expired_fleet_events` · **Schedule:** `25 2 * * *` · **Queue:** `broadcast` · **Expires:** 3600s
+
+Celery wrapper around `fleet_event_cleanup.run_cleanup()`.
+
+_Source: `core/tasks.py:12612`_
 
 ### `cleanup-expired-pa-insights`
 
@@ -180,7 +311,15 @@ _Source: `core/tasks.py:10944`_
 
 Clean up incomplete upload sessions older than expiry time. Run hourly via Celery Beat.
 
-_Source: `core/tasks.py:4176`_
+_Source: `core/tasks.py:4158`_
+
+### `cleanup-halted-experiments`
+
+**Task:** `core.tasks.cleanup_halted_experiments` · **Schedule:** `30 3 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:545`_
 
 ### `cleanup-junk-initiatives`
 
@@ -204,7 +343,7 @@ _Source: `core/tasks.py:483`_
 
 Delete LLMCallLog records older than retention period.
 
-_Source: `core/tasks.py:4139`_
+_Source: `core/tasks.py:4121`_
 
 ### `cleanup-old-model-files`
 
@@ -236,7 +375,7 @@ _Source: `sports/tasks.py:343`_
 
 Clean up old resolve render jobs from the database.
 
-_Source: `core/tasks.py:5058`_
+_Source: `core/tasks.py:5040`_
 
 ### `cleanup-opportunities-daily`
 
@@ -244,7 +383,7 @@ _Source: `core/tasks.py:5058`_
 
 Mark old opportunities as expired - runs daily
 
-_Source: `intelligence/tasks.py:1802`_
+_Source: `intelligence/tasks.py:1804`_
 
 ### `cleanup-resolved-signatures`
 
@@ -252,7 +391,7 @@ _Source: `intelligence/tasks.py:1802`_
 
 Session 856: Archive old resolved failure signatures.
 
-_Source: `core/tasks.py:10681`_
+_Source: `core/tasks.py:10663`_
 
 ### `cleanup-spider-item-hashes`
 
@@ -263,7 +402,7 @@ from 7→90 days to match dedup lookback window. The 7-day window caused re-inge
 hashes expired, old RSS items looked "new" again, creating ~85k duplicate SpiderData
 rows.
 
-_Source: `core/tasks.py:3978`_
+_Source: `core/tasks.py:3960`_
 
 ### `cleanup-stale-content`
 
@@ -279,7 +418,15 @@ _Source: `core/tasks.py:404`_
 
 _(task resolves but has no docstring)_
 
-_Source: `core/tasks.py:3006`_
+_Source: `core/tasks.py:2988`_
+
+### `cleanup-stale-scoring-requests`
+
+**Task:** `core.tasks.cleanup_stale_scoring_requests` · **Schedule:** `*/30 * * * *` · **Queue:** `default` · **Expires:** 1800s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:1997`_
 
 ### `cleanup-stuck-agent-executions`
 
@@ -315,6 +462,14 @@ Session 1093 — Daily CTOAgent platform reliability diagnostic.
 
 _Source: `core/tasks.py:754`_
 
+### `curate-signal-clusters`
+
+**Task:** `curate_signal_clusters` · **Schedule:** `0 13 * * *` · **Queue:** `long_running` · **Expires:** 14400s · **kwargs:** `{'top_n': 10}`
+
+Session 1131 Phase 2 — daily curated snapshot for signal-studio.
+
+_Source: `core/tasks.py:10918`_
+
 ### `decay-learning-patterns`
 
 **Task:** `core.tasks.decay_learning_patterns` · **Schedule:** `0 5 * * 0` · **Queue:** `default` · **Expires:** 3600s
@@ -322,6 +477,14 @@ _Source: `core/tasks.py:754`_
 Session 1085: Weekly decay of stale/ineffective learning patterns.
 
 _Source: `core/tasks.py:496`_
+
+### `detect-duplicate-initiatives`
+
+**Task:** `core.tasks.detect_duplicate_initiatives` · **Schedule:** `15 4 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:11042`_
 
 ### `dream-daily-surfacing`
 
@@ -347,13 +510,37 @@ Daily database retention — prevents disk exhaustion by cleaning old rows.
 
 _Source: `core/tasks.py:11221`_
 
+### `expire-old-opportunities`
+
+**Task:** `core.tasks.expire_old_opportunities` · **Schedule:** `30 2 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:1927`_
+
+### `expire-old-suggestions`
+
+**Task:** `core.tasks.expire_old_suggestions` · **Schedule:** `45 2 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+Mark old pending suggestions as expired.
+
+_Source: `core/tasks.py:2460`_
+
+### `expire-overdue-validations`
+
+**Task:** `core.tasks.expire_overdue_validations` · **Schedule:** `0 * * * *` · **Queue:** `default` · **Expires:** 3600s
+
+Expire validation requests that are past deadline.
+
+_Source: `core/tasks.py:4400`_
+
 ### `generate-operator-edge-newsletter`
 
 **Task:** `core.tasks.generate_operator_edge_newsletter` · **Schedule:** `0 13 * * friday` · **Queue:** `content` · **Expires:** 3600s
 
 Generate an Operator Edge newsletter from recent signal clusters.
 
-_Source: `core/tasks.py:5496`_
+_Source: `core/tasks.py:5478`_
 
 ### `heart-service-heartbeat`
 
@@ -361,7 +548,15 @@ _Source: `core/tasks.py:5496`_
 
 _(task resolves but has no docstring)_
 
-_Source: `core/tasks.py:6909`_
+_Source: `core/tasks.py:6891`_
+
+### `maintain-dream-backlog`
+
+**Task:** `core.tasks.maintain_dream_backlog` · **Schedule:** `30 4 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:5706`_
 
 ### `monitor-celery-health`
 
@@ -369,7 +564,23 @@ _Source: `core/tasks.py:6909`_
 
 _(task resolves but has no docstring)_
 
-_Source: `core/tasks.py:5954`_
+_Source: `core/tasks.py:5936`_
+
+### `monitor-isolation-progress`
+
+**Task:** `core.tasks.monitor_isolation_progress` · **Schedule:** `30 4 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+Monitoring task to check overall isolation progress
+
+_Source: `core/tasks.py:1009`_
+
+### `poll-pending-3d-models`
+
+**Task:** `core.tasks.poll_pending_3d_models` · **Schedule:** `*/5 * * * *` · **Queue:** `default` · **Expires:** 300s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:1851`_
 
 ### `process-core-spider-data`
 
@@ -379,13 +590,62 @@ _(task resolves but has no docstring)_
 
 _Source: `core/tasks.py:1159`_
 
+### `process-hitl-escalations`
+
+**Task:** `core.tasks.process_hitl_escalations` · **Schedule:** `*/15 * * * *` · **Queue:** `default` · **Expires:** 900s
+
+Process validation requests that need escalation.
+
+_Source: `core/tasks.py:4365`_
+
+### `process-human-attention-lifecycle`
+
+**Task:** `core.tasks.process_human_attention_lifecycle` · **Schedule:** `*/10 * * * *` · **Queue:** `default` · **Expires:** 600s
+
+Session 766: Process Human Attention Item lifecycle events.
+
+_Source: `core/tasks.py:6736`_
+
 ### `process-spider-actions`
 
 **Task:** `core.tasks.process_spider_actions` · **Schedule:** `*/30 * * * *` · **Queue:** `long_running` · **Expires:** 1800s
 
 _(task resolves but has no docstring)_
 
-_Source: `core/tasks.py:6901`_
+_Source: `core/tasks.py:6883`_
+
+### `promote-to-shared-knowledge`
+
+**Task:** `core.tasks.promote_to_shared_knowledge` · **Schedule:** `0 4 * * monday` · **Queue:** `default` · **Expires:** 7200s
+
+Session 767: Promote high-confidence knowledge to SharedKnowledge.
+
+_Source: `core/tasks.py:7367`_
+
+### `reap-zombie-work`
+
+**Task:** `core.tasks.reap_zombie_work` · **Schedule:** `15 * * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:414`_
+
+### `report-pending-review-metrics`
+
+**Task:** `core.tasks.report_pending_review_metrics` · **Schedule:** `0 9 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:5774`_
+
+### `rescan-active-workspaces`
+
+**Task:** `core.tasks.rescan_active_workspaces` · **Schedule:** `0 */4 * * *` · **Queue:** `default` · **Expires:** 14400s
+
+Session 1055: Periodic rescan of active workspaces with stale or missing context. Keeps
+WorkspaceContext fresh so PA workspace injection stays accurate.
+
+_Source: `core/tasks.py:11658`_
 
 ### `run-spider-network`
 
@@ -395,6 +655,23 @@ _(task resolves but has no docstring)_
 
 _Source: `core/tasks.py:1163`_
 
+### `scan-concerns-for-human-action`
+
+**Task:** `core.tasks.scan_concerns_for_human_action` · **Schedule:** `30 * * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:5489`_
+
+### `scan-income-spider-orchestrator`
+
+**Task:** `intelligence.tasks.scan_income_spider_orchestrator` · **Schedule:** `10 * * * *` · **Queue:** `long_running` · **Expires:** 3600s
+
+CRITICAL FIX: Scheduled task for Income Spider Orchestrator Discovers opportunities and
+saves them to database
+
+_Source: `intelligence/tasks.py:1651`_
+
 ### `scan-spider-opportunities`
 
 **Task:** `intelligence.tasks.scan_spider_opportunities` · **Schedule:** `*/30 * * * *` · **Queue:** `long_running` · **Expires:** 1800s
@@ -402,7 +679,15 @@ _Source: `core/tasks.py:1163`_
 CRITICAL FIX: Scheduled task to scan spider network for opportunities and save them to
 database. This is the missing cron job!
 
-_Source: `intelligence/tasks.py:1563`_
+_Source: `intelligence/tasks.py:1565`_
+
+### `send-pending-notifications`
+
+**Task:** `core.tasks.send_pending_notifications` · **Schedule:** `*/5 * * * *` · **Queue:** `default` · **Expires:** 300s
+
+Send any pending scheduled notifications.
+
+_Source: `core/tasks.py:2381`_
 
 ### `spider-data-retention`
 
@@ -410,7 +695,15 @@ _Source: `intelligence/tasks.py:1563`_
 
 Apr 2026: Prevent SpiderData table from filling the database.
 
-_Source: `core/tasks.py:4010`_
+_Source: `core/tasks.py:3992`_
+
+### `sync-pipeline-insights-to-collective`
+
+**Task:** `core.tasks.sync_pipeline_insights_to_collective` · **Schedule:** `0 */6 * * *` · **Queue:** `default` · **Expires:** 21600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:4200`_
 
 ### `trend-daily-diagnostic`
 
@@ -419,6 +712,30 @@ _Source: `core/tasks.py:4010`_
 Session 1094 — Daily TrendAnalysisAgent spider-intelligence anomaly diagnostic.
 
 _Source: `core/tasks.py:847`_
+
+### `update-distribution-analytics`
+
+**Task:** `core.tasks.update_distribution_analytics` · **Schedule:** `0 4 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+_(task resolves but has no docstring)_
+
+_Source: `core/tasks.py:2189`_
+
+### `update-mythology-pattern-statistics`
+
+**Task:** `core.tasks.update_mythology_pattern_statistics` · **Schedule:** `0 4 * * *` · **Queue:** `default` · **Expires:** 3600s
+
+Session 819: Update MythPattern frequency counts and prevention rates.
+
+_Source: `core/tasks.py:9756`_
+
+### `verify-completed-fixes`
+
+**Task:** `core.tasks.verify_completed_fixes` · **Schedule:** `0 */6 * * *` · **Queue:** `default` · **Expires:** 21600s
+
+Session 820: Verify that completed fixes actually worked.
+
+_Source: `core/tasks.py:10161`_
 
 ### `warm-up-spiders`
 
