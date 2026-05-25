@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Archived
+> **Originally:** see header below for original date/session.
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** Session 25 prompting audit; remediated in subsequent sessions.
+> **Preserved because:** white-paper corpus / historical record.
+
 # 🔍 Comprehensive Prompting System Audit - Session 25
 
 **Date:** October 2, 2025
