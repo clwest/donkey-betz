@@ -1,3 +1,9 @@
+---
+originating_session: 785
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session Handoffs Index
 
 600 session handoff documents organized by subsystem. For **current-state** documentation, see [docs/topics/](../topics/README.md).
