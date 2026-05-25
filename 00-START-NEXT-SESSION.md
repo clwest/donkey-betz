@@ -39,7 +39,7 @@ Live drift checks:
 - `python scripts/verify_repo_guardrails.py`
 - `python manage.py session_provenance --session N` — per-session cluster (PR #2205).
 - `python manage.py build_docs_provenance` — regenerates `docs/_provenance.json` (per-doc index w/ handoff filename override per PR #2219).
-- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 8 invocation (Session 1155's sole charter; 146 more handoffs eligible after Session 1154's round 7)**.
+- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 9 invocation — FINAL pass (Session 1156's sole charter; 71 handoffs left after Session 1155's round 8)**.
 - The 8 `build_*_audit` commands — regenerate per-subsystem runtime evidence.
 
 ## PRE-COMMIT HOOK BLOCKS DIRECT COMMITS TO MAIN
@@ -54,7 +54,7 @@ Every session-NNNN commit subject should include `session-NNNN`:
 - `fix(session-NNNN): ...`
 - `feat(session-NNNN-area): ...`
 
-Sessions 1145+1146+1147+1148+1149+1150+1151+1152+1153+1154 ran 100% subject-tagged. Keep the streak.
+Sessions 1145+1146+1147+1148+1149+1150+1151+1152+1153+1154+1155 ran 100% subject-tagged. Keep the streak.
 
 ## ONE-COMMAND LAUNCH — the laptop fleet
 
@@ -73,19 +73,19 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1154 CLOSED — P3.5 round 7 shipped (BYPASS MODE) (2026-05-25)
+## SESSION 1155 CLOSED — P3.5 round 8 shipped (BYPASS MODE) (2026-05-25)
 
-**1 PR merged + this handoff.** Full handoff: [`docs/handoffs/SESSION_1154_P35_ROUND7.md`](docs/handoffs/SESSION_1154_P35_ROUND7.md).
+**1 PR merged + this handoff.** Full handoff: [`docs/handoffs/SESSION_1155_P35_ROUND8.md`](docs/handoffs/SESSION_1155_P35_ROUND8.md).
 
 | PR | What |
 |----|------|
-| **#2237** | P3.5 round 7 — 75 handoffs FM-backfilled (~SESSION_492 → SESSION_427) |
+| **#2239** | P3.5 round 8 — 75 handoffs FM-backfilled (~SESSION_426 → SESSION_353) |
 
-Plus this Session 1154 handoff PR.
+Plus this Session 1155 handoff PR.
 
-Post-r7 state: `_provenance.json` 2062 docs (HIGH=1279); `INDEX.md` 2613 docs / 683,958 lines. **146 handoffs still eligible**.
+Post-r8 state: `_provenance.json` 2063 docs (HIGH=1280); `INDEX.md` 2614 docs / 684,486 lines. **71 handoffs still eligible — round 9 will be the FINAL pass.**
 
-**Pool projection:** ~2 more sessions (rounds 8-9) before pool exhausted around Session 1156.
+**Pool projection:** 1 more session (round 9 = Session 1156) before pool exhausted.
 
 ### Previous merge waves (still relevant context)
 
@@ -129,7 +129,7 @@ Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery 
 
 ---
 
-## SESSION 1155 — CURRENT ENTRY POINT
+## SESSION 1156 — CURRENT ENTRY POINT (P3.5 FINAL pass)
 
 ### FIRST THING this session
 
@@ -139,9 +139,9 @@ gh pr checks <latest-pr-num>
 ```
 If still showing the "payments have failed / spending limit" annotation, continue in bypass mode.
 
-### SOLE CHARTER
+### SOLE CHARTER — FINAL P3.5 pass
 
-**P3.5 round 8.** Same invocation:
+**P3.5 round 9 (FINAL).** Same invocation:
 
 ```bash
 python manage.py backfill_doc_provenance \
@@ -152,11 +152,25 @@ python manage.py backfill_doc_provenance \
     --with-note "auto-added by backfill_doc_provenance"
 ```
 
-**Expected range:** ~`SESSION_426` → `SESSION_352`. **Survey expectation:** 146 add-eligible → pick 75 → 71 remaining after round 8.
+**Expected range:** ~`SESSION_352` → end-of-pool. **Survey expectation:** 71 add-eligible → all 71 picked (script tolerates `--limit > available`) → **0 remaining** = exit signal for the entire P3.5 track.
 
 Bundle INDEX + `_provenance.json` regens. Run local CI mirrors before push.
 
-**Why sole charter:** One mechanical batch per session. Pattern has held across 12 merges so far.
+**Session 1156 handoff should explicitly note arc transition** — the sole-charter P3.5 cadence ends here, Session 1157+ pivots back to the broader deferred list.
+
+### After round 9 — pivot
+
+When Session 1157 opens, the handoff frontmatter backfill track is **complete**. The next-best work depends on whether GH Actions billing has been resolved:
+
+**If Actions is back:**
+1. `celery-beat-schedule` CONFLICT cleanup — Rigby's flagged priority. CI stays red until this is fixed.
+2. Topic-doc body-count sweep (explicit scope when activated).
+3. Infra track: exists_on_disk flag, beat-schedule regens, build_learning_bridge_audit generator fix, Redis pooling sweep.
+
+**If Actions still down (continued bypass mode):**
+- Older docs/topics/ sweep (recon-first, smaller batches)
+- docs/reports/ + docs/patents/ recon
+- Cosmetic load_all_agents_advisors 149→139 fix
 
 ### Carryovers queued (unchanged from Session 1150 close)
 
@@ -199,6 +213,7 @@ Bundle INDEX + `_provenance.json` regens. Run local CI mirrors before push.
 
 ## RECENT SESSION ARCS
 
+- **Session 1155** — P3.5 round 8. 1 PR merged (bypass mode) + handoff.
 - **Session 1154** — P3.5 round 7. 1 PR merged (bypass mode) + handoff.
 - **Session 1153** — P3.5 round 6. 1 PR merged (bypass mode) + handoff.
 - **Session 1152** — P3.5 round 5. 1 PR merged (bypass mode) + handoff.
