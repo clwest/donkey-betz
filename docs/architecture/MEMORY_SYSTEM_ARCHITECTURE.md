@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1145) -->
+> **Status:** Superseded
+> **Deprecated:** Session 1145 (2026-05-25)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime counts) + [`docs/topics/personal-assistant.md`](../topics/personal-assistant.md) (PA enrichment + search_docs tool) + [`docs/00-START-HERE/DOC_LIFECYCLE.md`](../00-START-HERE/DOC_LIFECYCLE.md) (current truth rules).
+> **Change reason:** Session 178 snapshot of a memory/embedding reality that has materially changed: pgvector blocker closed Session 1140 (#2172), Document table now carries 852 docs / 14149 chunks (Session 1142), `search_docs` PA tool live, frontend moved from `ai_image_studio.html` to React.
+> **Preserved because:** documents the pre-pgvector style-memory + RAG-dormant snapshot; useful as build-history record for the memory subsystem's evolution. Do NOT cite for current state.
+
 # Memory & Learning System Architecture
 
 **Document Created:** November 24, 2025 - Session 178

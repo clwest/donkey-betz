@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1145) -->
+> **Status:** Superseded
+> **Deprecated:** Session 1145 (2026-05-25)
+> **Current canon:** [`docs/topics/agent-system.md`](../topics/agent-system.md) (LearningBridge ABC + current bridge catalogue) + [`docs/topics/personal-assistant.md`](../topics/personal-assistant.md) (PA learning hooks) + [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime counts).
+> **Change reason:** Sep 30 2025 snapshot of "7 Learning Bridges + 87.7% → 95%+ reality score" architecture. The Reality Score metric was retired Session 1143. Learning Bridges were materially refactored in Session 1115 (9 of 9 bridges migrated to `core/learning_bridges/base.py` ABC, finding #12 reduced 272 → 10 orphans). Specific bridge inventory and "+X-Y% reality score" impact estimates are stale.
+> **Preserved because:** documents the pre-ABC learning bridge architecture + original reality-score targeting; useful as build-history record for how the learning subsystem evolved. Do NOT cite for current state.
+
 # 🧠 LEARNING SYSTEM ARCHITECTURE - COMPLETE DOCUMENTATION
 
 **Generated**: 2025-09-30

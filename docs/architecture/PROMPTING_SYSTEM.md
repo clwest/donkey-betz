@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1145) -->
+> **⚠ Pattern doc with drift warning.** The orchestrator + function-calling pipeline concept described here is still in use, but specific counts (spider sources, registered agents, preset styles), model versions, and class names (e.g. `EnhancedPersonalAIAssistant`, `views_assistant_bypass.py`) may have drifted from code.
+> **Last reviewed for drift labeling:** Session 1145 (2026-05-25)
+> **Current truth:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime counts) + [`docs/topics/personal-assistant.md`](../topics/personal-assistant.md) (current PA architecture).
+> **Note:** Live PA route is `POST /api/pa/chat/` (this doc already carries an inline historical note about that at line 14). Per `DOC_LIFECYCLE.md` §2c, `PLATFORM_INVENTORY` + `docs/INDEX` are the only authoritative count sources. Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge.
+
 # Prompting System Architecture
 
 **Date:** November 27, 2025 - Session 238
