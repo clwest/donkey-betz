@@ -111,19 +111,25 @@ def build_provenance(session: int, excludes: list[str]) -> dict:
 
     # path -> {"commits": [{"sha", "subject"}], "first_commit_sha": str|None}
     docs: dict[str, dict] = OrderedDict()
+    non_docs: dict[str, dict] = OrderedDict()
 
-    for sha, subject in commits:
+    for c in commits:
+        sha = c["sha"]
+        subject = c["subject"]
         for f in git_files_in_commit(sha):
-            if not f.startswith("docs/"):
+            # Skip docs/ paths under exclude prefixes (per DOC_LIFECYCLE §0)
+            if f.startswith("docs/") and any(f.startswith(ex) for ex in excludes):
                 continue
-            if any(f.startswith(ex) for ex in excludes):
-                continue
-            entry = docs.setdefault(f, {"commits": [], "first_commit_sha": None})
-            entry["commits"].append({"sha": sha[:8], "subject": subject})
+            # Pick which bucket the path goes into
+            bucket = docs if f.startswith("docs/") else non_docs
+            entry = bucket.setdefault(f, {"commits": [], "first_commit_sha": None})
+            entry["commits"].append(
+                {"sha": sha[:8], "subject": subject, "match": c["match"]}
+            )
 
     # For each doc, find its first-ever introducing commit (with --follow) to
     # decide "created in this session" vs "only modified."
-    in_session_shas = {c["sha"] for sha, _ in commits for c in [{"sha": sha[:8]}]}
+    in_session_shas = {c["sha"][:8] for c in commits}
     docs_created: list[dict] = []
     docs_modified: list[dict] = []
 
@@ -134,6 +140,19 @@ def build_provenance(session: int, excludes: list[str]) -> dict:
             docs_created.append({"path": path, **info})
         else:
             docs_modified.append({"path": path, **info})
+
+    # Same split for non-docs paths (code, config, tests, etc.) — so a session
+    # like 1144 that ships a code fix has its non-doc surface visible alongside
+    # the doc surface. "What did this session produce?" = both.
+    non_docs_created: list[dict] = []
+    non_docs_modified: list[dict] = []
+    for path, info in non_docs.items():
+        first = git_first_commit(path)
+        info["first_commit_sha"] = first[0][:8] if first else None
+        if first and first[0][:8] in in_session_shas:
+            non_docs_created.append({"path": path, **info})
+        else:
+            non_docs_modified.append({"path": path, **info})
 
     # Frontmatter overrides — any doc with `session: N` or `originating_session: N`
     # that wasn't picked up by the git grep is added with confidence=frontmatter.
@@ -158,43 +177,89 @@ def build_provenance(session: int, excludes: list[str]) -> dict:
             "but had no matching commits. Listed under 'frontmatter_only'."
         )
 
+    subject_matches = sum(1 for c in commits if c["match"] == "subject")
+    body_matches = sum(1 for c in commits if c["match"] == "body")
+    if body_matches:
+        notes.append(
+            f"{body_matches} commit(s) matched the session by **body** only (no "
+            "session-NNNN tag in subject). These are MEDIUM confidence — verify "
+            "they're this session's work and not later commits citing it as context."
+        )
+
     return {
         "session": session,
         "handoff_docs": handoffs,
         "commit_count": len(commits),
-        "commits": [{"sha": sha[:8], "subject": subject} for sha, subject in commits],
+        "subject_match_count": subject_matches,
+        "body_match_count": body_matches,
+        "commits": [
+            {"sha": c["sha"][:8], "subject": c["subject"], "match": c["match"]}
+            for c in commits
+        ],
         "docs_created": sorted(docs_created, key=lambda d: d["path"]),
         "docs_modified": sorted(docs_modified, key=lambda d: d["path"]),
+        "non_docs_created": sorted(non_docs_created, key=lambda d: d["path"]),
+        "non_docs_modified": sorted(non_docs_modified, key=lambda d: d["path"]),
         "frontmatter_only": sorted(fm_overrides),
         "excludes": excludes,
         "notes": notes,
     }
 
 
-def find_session_commits(session: int) -> list[tuple[str, str]]:
-    """Find commits whose **subject** references this session.
+def find_session_commits(session: int) -> list[dict]:
+    """Find commits that reference this session — subject first, body fallback.
 
-    Matches the conventions used in this repo:
-    - ``docs(session-1143): ...``
-    - ``feat(session-1143-phaseN): ...``
-    - ``Session 1143 ...`` in subject
+    Two-tier match (each commit tagged with its match source so the caller
+    can show confidence):
 
-    Subject-only is deliberate: git's ``--grep`` searches the entire commit
-    message by default, which produces false positives when later commits
-    cite an earlier session in their body for context. Filter in Python
-    against the subject so the result is "commits that ARE this session's
-    work" rather than "commits that mention it."
+    - **subject** — commit's ``%s`` matches ``[Ss]ession[- ]?N\\b``. HIGH
+      confidence; this is the repo's preferred convention
+      (``docs(session-1143): ...``, ``feat(session-1143-phaseN): ...``).
+    - **body** — commit's full message contains ``Session N`` but subject
+      doesn't. MEDIUM confidence; could be the session's own work that
+      forgot the subject tag, OR a later commit citing this session as
+      context. Caller should display these with a "body-match" label so a
+      reviewer can sanity-check.
+
+    Returns a list of dicts: ``{"sha", "subject", "match": "subject"|"body"}``.
     """
     pattern = re.compile(rf"[Ss]ession[- ]?{session}\b")
-    out = _run_git("log", "--all", "--pretty=format:%H|%s")
-    commits = []
-    for line in out.splitlines():
+    # Pull every commit subject (cheap).
+    subject_out = _run_git("log", "--all", "--pretty=format:%H|%s")
+    subject_matches: dict[str, str] = OrderedDict()  # sha -> subject
+    all_subjects: dict[str, str] = {}
+    for line in subject_out.splitlines():
         if "|" not in line:
             continue
         sha, subject = line.split("|", 1)
+        sha, subject = sha.strip(), subject.strip()
+        all_subjects[sha] = subject
         if pattern.search(subject):
-            commits.append((sha.strip(), subject.strip()))
-    return commits
+            subject_matches[sha] = subject
+
+    # Body fallback — use git's --grep on the full message, then filter out
+    # any commits already caught by the subject pass. Anything left is a
+    # body-only mention. POSIX ERE doesn't support `\b`, so use a manual
+    # non-digit lookahead via character class instead.
+    body_grep_out = _run_git(
+        "log", "--all", "--pretty=format:%H",
+        f"--grep=[Ss]ession[- ]?{session}([^0-9]|$)", "-E",
+    )
+    body_only_shas = [
+        sha.strip() for sha in body_grep_out.splitlines()
+        if sha.strip() and sha.strip() not in subject_matches
+    ]
+
+    result: list[dict] = []
+    for sha, subject in subject_matches.items():
+        result.append({"sha": sha, "subject": subject, "match": "subject"})
+    for sha in body_only_shas:
+        result.append({
+            "sha": sha,
+            "subject": all_subjects.get(sha, "(subject unavailable)"),
+            "match": "body",
+        })
+    return result
 
 
 def git_files_in_commit(sha: str) -> list[str]:
@@ -274,10 +339,14 @@ def render_markdown(p: dict) -> str:
     else:
         out.append("## Handoff doc(s)\n\n_None found._\n")
 
-    out.append(f"## Commits ({p['commit_count']})\n")
+    subj_n = p.get("subject_match_count", 0)
+    body_n = p.get("body_match_count", 0)
+    confidence = f"subject: {subj_n}, body-only: {body_n}"
+    out.append(f"## Commits ({p['commit_count']} — {confidence})\n")
     if p["commits"]:
         for c in p["commits"][:50]:
-            out.append(f"- `{c['sha']}` — {c['subject']}")
+            label = "" if c.get("match") == "subject" else " _(body-match)_"
+            out.append(f"- `{c['sha']}` — {c['subject']}{label}")
         if len(p["commits"]) > 50:
             out.append(f"- _... and {len(p['commits']) - 50} more_")
         out.append("")
@@ -298,6 +367,28 @@ def render_markdown(p: dict) -> str:
             out.append(f"- `{d['path']}` _(first: {first}, {n} commit{'' if n == 1 else 's'} this session)_")
         if len(p["docs_modified"]) > _MD_MODIFIED_LIMIT:
             extra = len(p["docs_modified"]) - _MD_MODIFIED_LIMIT
+            out.append(f"- _... and {extra} more — use `--format json` for the complete list_")
+        out.append("")
+
+    if p["non_docs_created"]:
+        out.append(f"## Non-doc files created in this session ({len(p['non_docs_created'])})\n")
+        for d in p["non_docs_created"][:_MD_MODIFIED_LIMIT]:
+            n = len(d["commits"])
+            first = d["first_commit_sha"] or "?"
+            out.append(f"- `{d['path']}` _(first: {first}, {n} commit{'' if n == 1 else 's'} this session)_")
+        if len(p["non_docs_created"]) > _MD_MODIFIED_LIMIT:
+            extra = len(p["non_docs_created"]) - _MD_MODIFIED_LIMIT
+            out.append(f"- _... and {extra} more — use `--format json` for the complete list_")
+        out.append("")
+
+    if p["non_docs_modified"]:
+        out.append(f"## Non-doc files modified in this session ({len(p['non_docs_modified'])})\n")
+        for d in p["non_docs_modified"][:_MD_MODIFIED_LIMIT]:
+            n = len(d["commits"])
+            first = d["first_commit_sha"] or "?"
+            out.append(f"- `{d['path']}` _(first: {first}, {n} commit{'' if n == 1 else 's'} this session)_")
+        if len(p["non_docs_modified"]) > _MD_MODIFIED_LIMIT:
+            extra = len(p["non_docs_modified"]) - _MD_MODIFIED_LIMIT
             out.append(f"- _... and {extra} more — use `--format json` for the complete list_")
         out.append("")
 
