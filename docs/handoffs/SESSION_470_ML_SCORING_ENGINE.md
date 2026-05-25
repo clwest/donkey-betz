@@ -1,3 +1,9 @@
+---
+originating_session: 470
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 <!-- DOC-POINTER-V2 (Session 1143) -->
 > **Status:** Moved
 > **Originally:** pre-Session-800 handoff (build history). Session 1143 Phase 5 archival (Chris Q6=B).
