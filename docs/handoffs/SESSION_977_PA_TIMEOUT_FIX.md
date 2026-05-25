@@ -1,3 +1,9 @@
+---
+originating_session: 977
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 977 — PA Production Timeout Fix
 
 **Date:** February 9, 2026

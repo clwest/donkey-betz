@@ -1,3 +1,9 @@
+---
+originating_session: 975
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 975 — Stock Intelligence Dashboard
 
 **Date:** February 9, 2026

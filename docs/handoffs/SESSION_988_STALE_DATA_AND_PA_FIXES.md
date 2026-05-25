@@ -1,3 +1,9 @@
+---
+originating_session: 988
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 988 - Stale Agent Data, Modal Overflow, PA Routing Fixes
 
 **Date:** February 11, 2026

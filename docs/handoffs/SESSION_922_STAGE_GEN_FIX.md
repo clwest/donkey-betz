@@ -1,3 +1,9 @@
+---
+originating_session: 922
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 922: Stage Generation Bug Fix
 
 **Date:** February 3, 2026

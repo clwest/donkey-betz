@@ -1,3 +1,9 @@
+---
+originating_session: 892
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 892 - WorkflowAgent Multi-Step Orchestration Fix
 
 **Date:** January 31, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 898
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 898 - Mythology Lab Agent Name Fix
 
 **Date:** February 1, 2026

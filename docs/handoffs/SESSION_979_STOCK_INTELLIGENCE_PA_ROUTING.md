@@ -1,3 +1,9 @@
+---
+originating_session: 979
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 979 — Stock Intelligence PA Routing + Defensive spider_data_tool
 
 **Date:** February 9, 2026

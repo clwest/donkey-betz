@@ -1,3 +1,9 @@
+---
+originating_session: 925
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 925: Auto-Cleanup Stuck Executions + UI Enhancements + Experiment Fix
 
 **Date:** February 3-4, 2026

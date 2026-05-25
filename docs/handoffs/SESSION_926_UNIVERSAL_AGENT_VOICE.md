@@ -1,3 +1,9 @@
+---
+originating_session: 926
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 926: Universal Agent Voice System
 
 **Date:** February 4, 2026

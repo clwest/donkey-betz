@@ -1,3 +1,9 @@
+---
+originating_session: 1143
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1143 — Docs Corpus Audit + Cleanup (113 archived, 457 handoffs archived, 6 Phase 5 execution PRs)
 
 **Date:** 2026-05-25

@@ -1,3 +1,9 @@
+---
+originating_session: 970
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 970 — Surgical Moves Verification + ToolCallRecord Activation + Attention Coverage
 
 **Date:** February 8, 2026

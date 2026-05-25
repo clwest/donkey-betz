@@ -1,3 +1,9 @@
+---
+originating_session: 900
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 900 - Signal Intelligence & Provenance
 
 **Date:** February 1, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 1026
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 1026: Remediation System Redesign
 
 **Date:** February 17, 2026

@@ -1,3 +1,9 @@
+---
+originating_session: 989
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 989 - Production Verification & Field Name Fixes
 
 **Date:** February 11, 2026

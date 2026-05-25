@@ -1,3 +1,9 @@
+---
+originating_session: 990
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 990 - PA-to-Agent Content Feedback Loop
 
 **Date:** February 12, 2026

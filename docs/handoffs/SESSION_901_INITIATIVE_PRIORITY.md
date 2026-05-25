@@ -1,3 +1,9 @@
+---
+originating_session: 901
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 901 - Initiative Priority & Portfolio Management
 
 **Date:** February 1, 2026

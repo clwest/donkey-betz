@@ -1,3 +1,9 @@
+---
+originating_session: 995
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 995B: Sports Betting Intelligence System
 
 **Date:** February 12, 2026

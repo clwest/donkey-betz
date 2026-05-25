@@ -1,3 +1,9 @@
+---
+originating_session: 980
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 980 — Stock Intelligence Production Hardening
 
 **Date:** February 9, 2026

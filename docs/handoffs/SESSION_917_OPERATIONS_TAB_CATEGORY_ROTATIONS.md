@@ -1,3 +1,9 @@
+---
+originating_session: 917
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 917: Operations Tab Category Rotations
 
 **Date:** February 2, 2026

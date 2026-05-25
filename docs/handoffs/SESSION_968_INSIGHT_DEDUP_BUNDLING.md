@@ -1,3 +1,9 @@
+---
+originating_session: 968
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 968 — Review Insight De-dup / Bundling + Frontend Data Plumbing
 
 **Date:** February 7, 2026

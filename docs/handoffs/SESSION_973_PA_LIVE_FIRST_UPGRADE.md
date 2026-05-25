@@ -1,3 +1,9 @@
+---
+originating_session: 973
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 973 — PA Live-First Upgrade
 
 **Date:** February 9, 2026

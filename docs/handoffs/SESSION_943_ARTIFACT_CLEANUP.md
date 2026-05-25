@@ -1,3 +1,9 @@
+---
+originating_session: 943
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Session 943: Artifact Extraction Cleanup & Operations Tab Fix
 
 **Date:** February 5, 2026
