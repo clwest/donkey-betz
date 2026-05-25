@@ -3,22 +3,22 @@
 
 # Platform Capabilities
 
-**Last Updated:** Session 858 (January 28, 2026) - Added User Context Injection for personalized agent responses
+**Last Updated:** Session 1142 (May 24, 2026) — PA tools / agent counts / advisor identities refreshed; content from Sessions 858 → 1142 layered below
 
 ---
 
-## System Overview (refreshed Session 1100, 2026-04-26)
+## System Overview (refreshed Session 1142, 2026-05-24)
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Total Agents** | **306** | 83 AGENT_MAP (73 enabled, 8 rerouted, 2 blocked) + 223 DB persona-eligible Agent rows |
+| **Total Agents** | **234** | 83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked) + 151 DB persona-eligible Agent rows |
 | **Total Spiders** | **80** | All working; 41 categories |
-| **PA Tools** | **101 schemas / 166 handlers** | 6 gateway tools, 8 enrichment services |
-| **Database Models** | **570** | Concrete Django models across 23 apps (PostgreSQL + pgvector) |
-| **Celery Tasks** | **365** | + 305 PeriodicTask rows (258 enabled, 47 disabled by Session 1089 governor) |
+| **PA Tools** | **105 schemas / 170 handlers** | 6 gateway tools, 8 enrichment services |
+| **Database Models** | **585** | Concrete Django models across 23 apps (PostgreSQL + pgvector) |
+| **Celery Tasks** | **400** | User-defined Celery tasks; PeriodicTask rows materialized via sync/bootstrap from `core/celery.py` |
 | **Services** | **~300 modules / 112 classes** | Module-count vs `*Service` class-count |
 | **Discord Commands** | **144** | 96 `@*.command` + 48 `@app_commands.command` across 25 Cogs |
-| **Advisors** | **32** | 10 named figures + 22 domain specialists |
+| **Advisors** | **30** | 30 functional domain specialists (identities renamed from named figures in Session 1142 `feat/advisor-functional-identities`) |
 | **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
 | **HEART Service** | **2 models** | HeartBeat, ComponentStatus - monitors 6 body parts |
 | **LUNGS Service** | **3 models** | Budget, BreathCycle, RespiratoryStatus - 6 default budgets |

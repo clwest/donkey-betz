@@ -2,7 +2,7 @@
 
 **Created:** Session 737 (January 9, 2026)
 **Purpose:** Complete reference for all database models
-**Last Updated:** Session 969b (February 8, 2026)
+**Last Updated:** Session 1012 (March 4, 2026 — body contains Session 1012 additions; header bumped Session 1142 to match)
 
 ---
 

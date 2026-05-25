@@ -395,18 +395,28 @@ Session 1087/1089 added a cost-governed dispatcher that throttles low-priority t
 - Mythology anti-spam safety rails (Session 1096) — severity escalation, daily post caps, HAI bridge
 - Governance redesign canary (Session 1098) — DeliverableAppend path working end-to-end
 
-### Stale or drifting (tonight's audit found)
+### Doc-claim verifier state (Session 1142, 2026-05-24)
 
-Out of 65 registered doc claims across 24 docs, **45 drift from reality**:
+Out of **73 registered claims across 34 source files**, **0 drift from reality** as of this refresh. Session 1099 (the original audit cited below) flagged 45/65 — sustained closing-the-loop work across sessions 1100→1142 brought that to zero.
 
-| Drift | Biggest offenders |
+| Class of drift | Status |
+|---|---|
+| Numeric claims (counts, schedules, registries) | Clean — all 73 match runtime |
+| Header staleness (`Last Updated: Session N`) | **Not covered** by `verify_doc_claims`; tracked by `check_doc_headers` (Session 1142) |
+| Frozen docs (Category B) | Triage queued — `docs/AUTONOMOUS_SYSTEMS.md`, `INTELLIGENCE_SYSTEMS.md`, `MODELS.md`, `ERROR_TRACKING.md`, `DEPLOYMENT_GUIDE.md`, `PERSONA_AGENTS.md` untouched since Session 484-901; decide archive vs refresh in a separate pass |
+
+Re-run anytime with `python manage.py verify_doc_claims --only-drift` (numeric claims) or `python manage.py check_doc_headers` (header recency).
+
+#### Historical snapshot — Session 1099 audit
+
+Original drift survey (preserved for context):
+
+| Drift class | Then-biggest offenders |
 |---|---|
 | Stale stats tables | CAPABILITIES.md (Jan 28), AGENTS.md (Feb 8), SERVICES.md (Feb 7), docs/current/* (Jan 2026) |
-| Contradictions | PA tool count claimed as 77/85+/86/89/231 across docs — actual 101 |
+| Contradictions | PA tool count claimed as 77/85+/86/89/231 across docs |
 | Architectural drift | topics/frontend.md claims 9 workspace tabs — code has 5 primary |
 | Scheduling drift | topics/agent-system.md claims 4 Intelligence Desks run daily — only 1 actually does |
-
-See `python manage.py verify_doc_claims --only-drift` for the live list.
 
 ### Known issues queued for follow-up
 
