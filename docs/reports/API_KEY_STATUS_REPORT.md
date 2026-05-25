@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Archived
+> **Originally:** see header below for original date/session.
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** Nov 2025 snapshot. Superseded by API_KEY_FINAL_STATUS.md and ultimately by PLATFORM_INVENTORY.md runtime check.
+> **Preserved because:** white-paper corpus / historical record.
+
 # API Key Status Report
 **Generated:** November 2, 2025
 **Test Script:** `/scripts/test_api_keys.py`
