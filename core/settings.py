@@ -267,9 +267,15 @@ if 'postgresql' in os.environ.get('DATABASE_URL', ''):
         'connect_timeout': 10,
         'options': '-c search_path=studio,public,dbao,shared'  # Include all schemas
     }
-    # Session 141: Set to 0 to fix Celery Beat database connection issues
-    # Closes connections immediately instead of pooling them
-    DATABASES['default']['CONN_MAX_AGE'] = 0
+    # Session 1144: Replace Session 142's `CONN_MAX_AGE=0` (every query
+    # opened a fresh socket → ~24K TIME_WAIT sockets to :5432 on macOS dev
+    # within ~20 min, exhausting ephemeral ports). Django 4.1+ ships
+    # CONN_HEALTH_CHECKS which pre-validates pooled connections before
+    # reuse, solving the stale-connection failure mode that Session 142
+    # was working around. 60s reuse window keeps held connections well
+    # under Postgres `max_connections=100` (≈10-20 in steady state).
+    DATABASES['default']['CONN_MAX_AGE'] = 60
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
     # SQLite configuration
     DATABASES['default']['OPTIONS'] = {}

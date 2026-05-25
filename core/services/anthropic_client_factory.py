@@ -27,7 +27,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+import threading
+from typing import Dict, Optional
 
 import httpx
 from anthropic import Anthropic
@@ -39,6 +40,14 @@ ANTHROPIC_READ_TIMEOUT_S = 90.0
 ANTHROPIC_WRITE_TIMEOUT_S = 60.0
 ANTHROPIC_POOL_TIMEOUT_S = 60.0
 ANTHROPIC_MAX_RETRIES = 2
+
+# Session 1144: per-process client cache keyed by resolved api_key. Each
+# ``Anthropic(...)`` instance owns its own httpx connection pool; calling
+# the factory afresh per request meant zero socket reuse and contributed
+# to the ~4K TIME_WAIT sockets to :443 observed in the Session 1144 leak
+# audit. Same pattern as openai_client_factory.
+_CLIENT_CACHE: Dict[Optional[str], Anthropic] = {}
+_CLIENT_CACHE_LOCK = threading.Lock()
 
 
 def get_anthropic_client(api_key: Optional[str] = None) -> Anthropic:
@@ -52,7 +61,16 @@ def get_anthropic_client(api_key: Optional[str] = None) -> Anthropic:
     variable if not provided, matching the SDK default behavior. This lets
     callers that previously used bare ``Anthropic()`` keep the same
     semantics with a one-line change.
+
+    Session 1144: repeat callers with the same resolved api_key share a
+    single client (and therefore a single internal httpx connection pool).
     """
+    resolved_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+
+    cached = _CLIENT_CACHE.get(resolved_key)
+    if cached is not None:
+        return cached
+
     # Fully explicit form — all 4 timeout dimensions named so there is no
     # positional-default ambiguity. Session 1084 round 49 audit note.
     timeout = httpx.Timeout(
@@ -61,8 +79,16 @@ def get_anthropic_client(api_key: Optional[str] = None) -> Anthropic:
         write=ANTHROPIC_WRITE_TIMEOUT_S,
         pool=ANTHROPIC_POOL_TIMEOUT_S,
     )
-    return Anthropic(
-        api_key=api_key or os.getenv("ANTHROPIC_API_KEY"),
+    client = Anthropic(
+        api_key=resolved_key,
         timeout=timeout,
         max_retries=ANTHROPIC_MAX_RETRIES,
     )
+    with _CLIENT_CACHE_LOCK:
+        # Double-check after acquiring the lock — first writer wins; the
+        # loser's client gets GC'd along with its (unused) pool.
+        existing = _CLIENT_CACHE.get(resolved_key)
+        if existing is not None:
+            return existing
+        _CLIENT_CACHE[resolved_key] = client
+    return client
