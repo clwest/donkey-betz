@@ -6,39 +6,40 @@
 
 ## Headline
 
-- **Total commands:** 167
-- **Commands with `help=` text:** 167 / 167 (100%) — `help=` shows up in `manage.py help` output.
-- **Commands with class docstrings:** 3 / 167 (2%) — docstrings document the command's design intent for future readers.
+- **Total commands:** 182
+- **Commands with `help=` text:** 182 / 182 (100%) — `help=` shows up in `manage.py help` output.
+- **Commands with class docstrings:** 3 / 182 (2%) — docstrings document the command's design intent for future readers.
 - **Categories:** 11 (heuristic — see Findings)
 
 > These are Django-side commands invoked via `python manage.py <name>`. They're separate from PA tools (which Rigby invokes via function-calling) and from Celery tasks (which beat fires or workers run on `.delay()`). Each command is its own CLI entrypoint.
 
 ## Findings
 
-- **164 commands have `help=` but no docstring.** Help text is what users see; docstrings are what future developers see. Pair them up when the command does something non-obvious.
-- 68 commands didn't match any category pattern — they live under 'Uncategorised' in the table below. `CATEGORY_PATTERNS` at the top of `build_management_command_audit.py` is tunable.
+- **179 commands have `help=` but no docstring.** Help text is what users see; docstrings are what future developers see. Pair them up when the command does something non-obvious.
+- 77 commands didn't match any category pattern — they live under 'Uncategorised' in the table below. `CATEGORY_PATTERNS` at the top of `build_management_command_audit.py` is tunable.
 
 ## Categories
 
 | Category | Commands |
 |---|---:|
-| `Uncategorised` | 68 |
-| `Cleanup` | 25 |
-| `Migration / setup` | 13 |
+| `Uncategorised` | 77 |
+| `Cleanup` | 27 |
+| `Migration / setup` | 14 |
 | `Audits (build_*_audit)` | 12 |
 | `Workspace / projects` | 10 |
+| `Body systems / health` | 9 |
+| `Diagnostics` | 9 |
 | `Agents / advisors` | 8 |
-| `Body systems / health` | 8 |
-| `Diagnostics` | 8 |
 | `Spiders` | 7 |
-| `Docs / inventory` | 4 |
+| `Docs / inventory` | 5 |
 | `Task sync` | 4 |
 
-## Uncategorised (68)
+## Uncategorised (77)
 
 | Command | File | Help |
 |---|---|---|
 | `achieve_95_reality` | `achieve_95_reality.py:13` | Achieve 95%+ reality score by integrating all platform components |
+| `add_fleet_key` | `add_fleet_key.py:23` | Add an additional active key to an existing fleet identity. |
 | `agent_introduction_party` | `agent_introduction_party.py:19` | Host an Agent Introduction Party where agents meet and greet each other |
 | `apply_publish_gate` | `apply_publish_gate.py:12` | Apply PublishGate quality evaluation to SelfBlog entries |
 | `askdocs` | `askdocs.py:9` | Ask a question using the /docs RAG system |
@@ -57,6 +58,7 @@
 | `daily_priorities` | `daily_priorities.py:30` | Manage daily initiative priorities |
 | `deploy_platform_unification` | `deploy_platform_unification.py:28` | Deploy and initialize the Platform Unification Orchestrator |
 | `discover_learning_cohorts` | `discover_learning_cohorts.py:15` | Discover learning cohorts and propagate high-confidence learnings between similar users |
+| `draft_repo_verifier_claims` | `draft_repo_verifier_claims.py:180` | Draft 3 doc-vs-runtime claim specs for a registered external repo. Persists as a 'verifier_plan' deliverabl… |
 | `embed_documents` | `embed_documents.py:14` | Generate embeddings for specified documents |
 | `enrich_boardroom_ml` | `enrich_boardroom_ml.py:16` | Backfill ML predictions for boardroom attention items |
 | `ensure_enhanced_profiles` | `ensure_enhanced_profiles.py:18` | Ensure all users have an EnhancedUserProfile |
@@ -75,20 +77,27 @@
 | `operating_rhythm` | `operating_rhythm.py:31` | Manage operating rhythm (daily priorities, weekly reports) |
 | `ops_verify` | `ops_verify.py:14` | Run ops verification checks (deploy_verify, pa_tools_smoke, DB, error summary) |
 | `produce_content` | `produce_content.py:35` | Produce complete content packages with automatic asset creation |
+| `provision_fleet_identity` | `provision_fleet_identity.py:29` | Provision a new fleet service identity + first signing key. |
 | `ragtest` | `ragtest.py:53` | Local RAG test using Ollama via OpenAI-compatible API (no GPT-5-minis touched). |
+| `refresh_repo_context` | `refresh_repo_context.py:309` | Refresh repo context for a registered external repo. Creates an append-only Repo Snapshot deliverable and u… |
 | `regenerate_pilots` | `regenerate_pilots.py:19` | Regenerate pilot infrastructure from canonical decisions |
 | `register_coo_agent` | `register_coo_agent.py:24` | Register COO Agent (Phase 1: Read-Only Planning) in the database |
 | `register_creative_agents` | `register_creative_agents.py:28` | Register all creative workflow agents in the database |
 | `register_cto_agent` | `register_cto_agent.py:25` | Register CTO Agent (Phase 1: Read-Only Analysis) in the database |
+| `register_external_repo` | `register_external_repo.py:355` | Register an external repo as a managed ProjectWorkspace + pinned Repo Profile deliverable. Multi-repo v0 (S… |
 | `repo_knowledge_audit` | `repo_knowledge_audit.py:28` | Audit repo knowledge: markdown files, docs index, document models, embeddings |
 | `rescore_opportunities` | `rescore_opportunities.py:21` | Re-score opportunities using unified type-aware scoring |
+| `rotate_fleet_key` | `rotate_fleet_key.py:31` | Plan / activate / complete / abort a fleet service key rotation. |
 | `run_code_agent` | `run_code_agent.py:27` | Execute a code-agent task within a workspace-restricted sandbox |
 | `run_discord_bot` | `run_discord_bot.py:20` | Run the Discord bot with slash commands |
 | `selfpatch` | `selfpatch.py:159` | Self-patching helper: propose patches with LLM, or apply patches/diffs safely. |
+| `session_provenance` | `session_provenance.py:71` | Cluster all docs touched in a given session (git-history-derived). |
 | `set_founder_intent` | `set_founder_intent.py:27` | Set founder intent on initiatives to enable auto-progression |
 | `show_remediation_findings` | `show_remediation_findings.py:23` | Show open remediation findings for Claude Code sessions to act on |
 | `start_bridge` | `start_bridge.py:23` | Start the System Integration Bridge - The Unified Nervous System |
 | `start_learning_demo` | `start_learning_demo.py:11` | Start the live learning demonstration |
+| `start_resolve_render` | `start_resolve_render.py:27` | Manually dispatch start_resolve_render for a DaVinci Resolve job. |
+| `survey_external_repo` | `survey_external_repo.py:175` | Run an agent survey against a registered external repo. Persists result as a 'repo_survey' deliverable in t… |
 | `sync_agent_learning` | `sync_agent_learning.py:227` | Sync agent learning system: populate knowledge from spiders and create agent connections |
 | `sync_agent_tools` | `sync_agent_tools.py:21` | Sync utility tools from code definitions to database (excludes agent wrappers) |
 | `sync_docs_index_to_documents` | `sync_docs_index_to_documents.py:55` | Sync documents from docs/_index.json to the Document model |
@@ -107,7 +116,7 @@
 | `verify_surgical_moves` | `verify_surgical_moves.py:24` | Verify Surgical Moves Phase 0-3 end-to-end |
 | `write_self_blog` | `write_self_blog.py:27` | Have the system write a blog post about itself using ContentWriterAgent |
 
-## Cleanup (25)
+## Cleanup (27)
 
 | Command | File | Help |
 |---|---|---|
@@ -117,6 +126,7 @@
 | `backfill_contributions` | `backfill_contributions.py:16` | Backfill AgentContribution records from existing ImageHistory and VideoHistory |
 | `backfill_decision_summaries` | `backfill_decision_summaries.py:25` | Backfill DecisionSummary blocks for existing conversations |
 | `backfill_decisions` | `backfill_decisions.py:20` | Backfill decision summaries from existing agent conversations and hive sessions |
+| `backfill_doc_provenance` | `backfill_doc_provenance.py:51` | Add `originating_session: N` to HIGH-confidence docs that have YAML frontmatter. |
 | `backfill_dream_origins` | `backfill_dream_origins.py:22` | Backfill existing dreams with origin classification based on content analysis |
 | `backfill_evolution_xp` | `backfill_evolution_xp.py:20` | Backfill XP for historical agent activity (conversations, dreams, learning) |
 | `backfill_experiment_learnings` | `backfill_experiment_learnings.py:22` | Backfill ExperimentLearning records for experiments missing learnings |
@@ -130,6 +140,7 @@
 | `cleanup_content_quality` | `cleanup_content_quality.py:18` | Session 770: Clean up content quality issues - add blacklist entries and remove polluted data |
 | `cleanup_conversation_duplicates` | `cleanup_conversation_duplicates.py:29` | Detect and clean up fuzzy-duplicate AgentConversation records |
 | `cleanup_empty_tables` | `cleanup_empty_tables.py:15` | Clean up empty tables that are consuming disk space |
+| `cleanup_fleet_artifacts` | `cleanup_fleet_artifacts.py:19` | Run fleet artifact soft-delete cleanup (synchronous). |
 | `cleanup_orphan_documents` | `cleanup_orphan_documents.py:29` | Clean up orphan research brief documents not linked to any InitiativeStage |
 | `cleanup_single_letter_docs` | `cleanup_single_letter_docs.py:15` | Delete SelfBlog documents with single-letter titles (Session 893 bug fix) |
 | `cleanup_stale_initiatives` | `cleanup_stale_initiatives.py:40` | Archive ACTIVE initiatives whose updated_at is older than N days. Preserves rows; transitions status='ACTIV… |
@@ -137,13 +148,14 @@
 | `cleanup_stuck_tasks` | `cleanup_stuck_tasks.py:20` | Clean up stuck agent executions that have been running too long |
 | `fix_orphan_initiative_tracking` | `fix_orphan_initiative_tracking.py:31` | Fix orphan initiatives by creating HiveMindSession and AgentExecution tracking records |
 
-## Migration / setup (13)
+## Migration / setup (14)
 
 | Command | File | Help |
 |---|---|---|
 | `bootstrap_learning_system` | `bootstrap_learning_system.py:28` | Bootstrap the learning system with seed data for fresh deployments |
 | `clean_initiative_names` | `clean_initiative_names.py:148` | Clean up initiative names that look like technical descriptions |
 | `consolidate_duplicate_initiatives` | `consolidate_duplicate_initiatives.py:124` | Detect and consolidate duplicate initiatives |
+| `extract_initiatives_from_survey` | `extract_initiatives_from_survey.py:242` | Extract structured Initiatives from a repo survey deliverable. Auto-creates Initiative rows with status=TRI… |
 | `fix_initiative_stages` | `fix_initiative_stages.py:24` | Fix initiatives with inconsistent stage completion |
 | `fix_initiative_titles` | `fix_initiative_titles.py:23` | Fix messy initiative titles using smart title generation |
 | `fix_stuck_initiatives` | `fix_stuck_initiatives.py:24` | Fix stuck initiative documents that have contradictory data status markers |
@@ -187,6 +199,34 @@
 | `setup_production_workspace` | `setup_production_workspace.py:25` | Setup a production workspace for the SKIN layer |
 | `setup_workspace_autopilot` | `setup_workspace_autopilot.py:20` | Setup the Workspace Autopilot conductor task in Celery Beat database |
 
+## Body systems / health (9)
+
+| Command | File | Help |
+|---|---|---|
+| `db_health_snapshot` | `db_health_snapshot.py:23` | Output database health snapshot for environment comparison |
+| `fleet_health_rollup` | `fleet_health_rollup.py:163` | Ping each Dockerized fleet app's health endpoint and report up/down. Reads docker.base_urls.api_url + docke… |
+| `heart_check` | `heart_check.py:17` | HEART Service - Check system health (the central heartbeat of the AI body) |
+| `immune_check` | `immune_check.py:33` | Check IMMUNE (security & threat detection) system health |
+| `lungs_check` | `lungs_check.py:20` | LUNGS Service - Check resource and capacity status (the breathing of the AI body) |
+| `muscular_check` | `muscular_check.py:32` | Check MUSCULAR (agent work execution) system health |
+| `spine_check` | `spine_check.py:32` | Check SPINE (central API router) health and alignment |
+| `system_health_check` | `system_health_check.py:22` | Comprehensive system health check for all platform components |
+| `warmup_body_systems` | `warmup_body_systems.py:23` | Warm up body systems by triggering activity |
+
+## Diagnostics (9)
+
+| Command | File | Help |
+|---|---|---|
+| `check_doc_headers` | `check_doc_headers.py:199` | Check Last Updated headers in docs against latest Session N body references. Complements verify_doc_claims … |
+| `check_experiment_status` | `check_experiment_status.py:10` | Check experiment and pilot status distribution |
+| `check_initiative_drift` | `check_initiative_drift.py:30` | Check and manage semantic drift on initiatives |
+| `circulation_check` | `circulation_check.py:25` | Check data flow health - the CIRCULATORY SYSTEM of the AI body |
+| `digestion_check` | `digestion_check.py:33` | Check DIGESTIVE (data ingestion & processing) system health |
+| `reality_check` | `reality_check.py:27` | Check platform reality status and generate reports |
+| `run_smoke_tests` | `run_smoke_tests.py:14` | Run deploy verification checks against a running server |
+| `run_ui_smoke` | `run_ui_smoke.py:23` | Run UI smoke tests against frontend routes using Playwright |
+| `system_reality_check` | `system_reality_check.py:22` | Verify all autonomous systems are functioning as designed |
+
 ## Agents / advisors (8)
 
 | Command | File | Help |
@@ -200,32 +240,6 @@
 | `seed_production` | `seed_production.py:22` | Seed production database with essential infrastructure |
 | `seed_test_scenarios` | `seed_test_scenarios.py:40` | Seed test scenarios as PartnershipProjects for agent testing |
 
-## Body systems / health (8)
-
-| Command | File | Help |
-|---|---|---|
-| `db_health_snapshot` | `db_health_snapshot.py:23` | Output database health snapshot for environment comparison |
-| `heart_check` | `heart_check.py:17` | HEART Service - Check system health (the central heartbeat of the AI body) |
-| `immune_check` | `immune_check.py:33` | Check IMMUNE (security & threat detection) system health |
-| `lungs_check` | `lungs_check.py:20` | LUNGS Service - Check resource and capacity status (the breathing of the AI body) |
-| `muscular_check` | `muscular_check.py:32` | Check MUSCULAR (agent work execution) system health |
-| `spine_check` | `spine_check.py:32` | Check SPINE (central API router) health and alignment |
-| `system_health_check` | `system_health_check.py:22` | Comprehensive system health check for all platform components |
-| `warmup_body_systems` | `warmup_body_systems.py:23` | Warm up body systems by triggering activity |
-
-## Diagnostics (8)
-
-| Command | File | Help |
-|---|---|---|
-| `check_experiment_status` | `check_experiment_status.py:10` | Check experiment and pilot status distribution |
-| `check_initiative_drift` | `check_initiative_drift.py:30` | Check and manage semantic drift on initiatives |
-| `circulation_check` | `circulation_check.py:25` | Check data flow health - the CIRCULATORY SYSTEM of the AI body |
-| `digestion_check` | `digestion_check.py:33` | Check DIGESTIVE (data ingestion & processing) system health |
-| `reality_check` | `reality_check.py:27` | Check platform reality status and generate reports |
-| `run_smoke_tests` | `run_smoke_tests.py:14` | Run deploy verification checks against a running server |
-| `run_ui_smoke` | `run_ui_smoke.py:23` | Run UI smoke tests against frontend routes using Playwright |
-| `system_reality_check` | `system_reality_check.py:22` | Verify all autonomous systems are functioning as designed |
-
 ## Spiders (7)
 
 | Command | File | Help |
@@ -238,11 +252,12 @@
 | `triage_spider_embeddings` | `triage_spider_embeddings.py:43` | Triage spider embedding backlog: mark noise/dupes as [NO_ITEMS], keep best record per spider-day |
 | `wire_agents_to_spiders` | `wire_agents_to_spiders.py:10` | Wire all agents to appropriate spider categories for data integration |
 
-## Docs / inventory (4)
+## Docs / inventory (5)
 
 | Command | File | Help |
 |---|---|---|
 | `build_docs_index` | `build_docs_index.py:46` | Generate docs/INDEX.md and docs/_index.json by scanning all documentation files |
+| `build_docs_provenance` | `build_docs_provenance.py:103` | Build/refresh docs/_provenance.json — per-doc session-origin index. |
 | `generate_platform_inventory` | `generate_platform_inventory.py:24` | Generate docs/PLATFORM_INVENTORY.md — runtime-derived master platform snapshot |
 | `refresh_doc_inventory_blocks` | `refresh_doc_inventory_blocks.py:47` | Refresh <!-- @inventory-block:NAME --> regions in registered docs using runtime-derived data from gather_in… |
 | `verify_doc_claims` | `verify_doc_claims.py:49` | Verify claims in authoritative docs against runtime reality. |
@@ -263,6 +278,7 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `achieve_95_reality` — `--component`, `--validate-only`
 - `activate_spiders` — `--simulate`, `--process`, `--limit`
 - `add_critical_celery_tasks` — `--dry-run`, `--force`
+- `add_fleet_key` — `--app-slug`
 - `agent_introduction_party` — `--agents`, `--verbose`, `--dry-run`
 - `apply_publish_gate` — `--blog-id`, `--all`, `--drafts-only`, `--dry-run`, `--reclassify`, `--summary`
 - `askdocs` — `question`
@@ -278,6 +294,7 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `backfill_decisions` — `--limit`, `--dry-run`, `--verbose`, `--source`
 - `backfill_deliverable_workspaces` — `--workspace`, `--username`, `--include-archived`, `--dry-run`
 - `backfill_deliverables` — `--dry-run`, `--limit`, `--agent`, `--since-days`, `--skip-existing`
+- `backfill_doc_provenance` — `--provenance`, `--limit`, `--dry-run`
 - `backfill_dream_origins` — `--dry-run`, `--verbose`, `--limit`, `--recalculate-scores`
 - `backfill_evolution_xp` — `--dry-run`, `--days`
 - `backfill_experiment_learnings` — `--dry-run`, `--halted-only`, `--limit`
@@ -297,6 +314,7 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `build_celery_audit` — `--check`
 - `build_discord_audit` — `--check`
 - `build_docs_index` — `--dry-run`, `--json-only`
+- `build_docs_provenance` — `--dry-run`, `--include-framework`, `--include-archive`
 - `build_learning_bridge_audit` — `--check`
 - `build_management_command_audit` — `--check`
 - `build_ml_audit` — `--check`
@@ -307,6 +325,7 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `bulk_embed_spiders` — `--batch`, `--hours`, `--dry-run`, `--mark-empty`
 - `calibrate_halt_thresholds` — `--days`, `--cost-fn`, `--apply`, `--profile`
 - `celery_inspect_report` — `--json-only`, `--timeout`, `--output-dir`
+- `check_doc_headers` — `--root`, `--threshold`, `--frozen-after`, `--current-session`, `--only-stale`, `--include-no-header`, `--format`, `--fail-on-stale`
 - `check_initiative_drift` — `--initiative-id`, `--all`, `--list-flagged`, `--stage`, `--override`, `--reason`, `--set-threshold`, `--disable-drift`, `--enable-drift`, `--dry-run`
 - `circulation_check` — `--json`, `--routes`, `--bottlenecks`, `--velocity`, `--watch`, `--history`, `--hours`, `--route`, `--limit`
 - `classify_docs_for_rag` — `--dry-run`
@@ -330,9 +349,11 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `deploy_platform_unification` — `--start-immediately`, `--config-file`, `--test-mode`, `--verbose`, `--component`
 - `digestion_check` — `--json`, `--routes`, `--bottlenecks`, `--metabolism`, `--history`, `--stage`, `--watch`, `--hours`, `--force`
 - `discover_learning_cohorts` — `--min-confidence`, `--min-similarity`, `--dry-run`
+- `draft_repo_verifier_claims` — `--repo`, `--user`, `--dry-run`
 - `embed_documents` — `document_ids`, `--all-unembedded`, `--type`, `--model`, `--async`
 - `enrich_boardroom_ml` — `--pending`, `--all`, `--stats`, `--user`, `--limit`
 - `ensure_enhanced_profiles` — `--dry-run`, `--verbose`
+- `extract_initiatives_from_survey` — `--deliverable`, `--repo`, `--agent`, `--user`, `--max`, `--dry-run`
 - `fetch_training_data` — `--dry-run`, `--source`, `--save-to-db`, `--create-knowledge`, `--limit`
 - `fix_episode_titles` — `--dry-run`, `--channel`, `--limit`
 - `fix_evolution_levels` — `--dry-run`
@@ -345,6 +366,7 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `fix_workspace_deliverables` — `--dry-run`
 - `fix_workspace_permissions` — `--list`, `--fix`
 - `fix_workspace_visibility` — `--dry-run`
+- `fleet_health_rollup` — `--json`, `--repo`, `--timeout`
 - `force_agent_cycle` — `--dry-run`, `--dreams-only`, `--conversations-only`, `--learning-only`, `--dreams-per-agent`
 - `full_system_demo` — `--skip-dreams`, `--skip-conversations`, `--content-only`
 - `generate_ironwood_sprites` — `--dry-run`, `--only`, `--model`, `--user`, `--output`
@@ -363,12 +385,16 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `operating_rhythm` — `--set-priorities`, `--status`, `--weekly-report`, `--feedback`, `--map-initiative`, `--priority`, `--history`
 - `ops_verify` — `--env`, `--json`
 - `produce_content` — `content_type`, `topic`, `--tone`, `--audience`, `--skip`, `--async`, `--list`, `--json`
+- `provision_fleet_identity` — `--app-slug`, `--name`, `--capabilities-json`, `--allowed-routes-json`, `--no-defaults`
 - `ragtest` — `question`, `--docs`, `--k`, `--fresh`, `--debug`
 - `reality_check` — `--all`, `--component`, `--report`, `--dashboard`, `--trace`, `--flow`, `--output`, `--format`, `--open`, `--verbose`
 - `refresh_doc_inventory_blocks` — `--doc`, `--check`, `--list-blocks`
+- `refresh_repo_context` — `--repo`, `--user`, `--skip-inventory`, `--max-snapshots`
 - `regenerate_pilots` — `--dry-run`, `--limit`
+- `register_external_repo` — `--repo`, `--config`, `--user`, `--force`, `--dry-run`
 - `repo_knowledge_audit` — `--json`, `--output`
 - `rescore_opportunities` — `--apply`, `--retype`, `--batch-size`, `--score`, `--all`
+- `rotate_fleet_key` — `action`, `--app-slug`, `--rotation-id`, `--ends-in-hours`, `--force`
 - `run_code_agent` — `--workspace`, `--mode`, `--task`, `--run-id`
 - `run_discord_bot` — `--check`
 - `run_smoke_tests` — `--base-url`, `--token`
@@ -379,6 +405,7 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `seed_production` — `--dry-run`, `--skip-channels`, `--skip-agents`
 - `seed_test_scenarios` — `--industry`, `--scenario`, `--list`, `--cleanup`, `--user`, `--dry-run`
 - `selfpatch` — `--desc`, `--paths`, `--k`, `--temperature`, `--max_tokens`, `--raw`, `--from-file`, `--stdin`, `--dry-run`, `--no-manage-check`, `--no-pycompile`, `--pytest`, `--commit`, `--commit-msg`
+- `session_provenance` — `--session`, `--format`, `--include-framework`, `--include-archive`
 - `set_founder_intent` — `--initiative-id`, `--all-pending`, `--list`, `--interactive`, `--speed`, `--risk`, `--engineering-hours`, `--llm-spend`, `--stop-rule`, `--boardroom`, `--track`, `--auto-detect-track`, `--content-flags`, `--approve-stage`, `--complete-compliance`, `--dry-run`
 - `setup_codebase_workspace` — `--path`, `--name`, `--dry-run`, `--force`, `--read-only`
 - `setup_llm_routing` — `--check`, `--clear`, `--mode`
@@ -388,6 +415,8 @@ Argument flags per command. Listed separately from the category tables to avoid 
 - `spine_check` — `--json`, `--patterns`, `--categories`, `--pattern`, `--can-route`, `--watch`, `--history`, `--hours`
 - `start_bridge` — `--debug`
 - `start_learning_demo` — `--project-type`, `--agents`, `--iterations`
+- `start_resolve_render` — `--job-id`, `--video-ids`, `--template`, `--color-grade`, `--spider-trends`, `--user-id`, `--sync`
+- `survey_external_repo` — `--repo`, `--agent`, `--user`, `--dry-run`
 - `sync_agent_learning` — `--dry-run`, `--knowledge-only`, `--connections-only`, `--use-llm`, `--refresh`
 - `sync_celery_beat` — `--apply`, `--verbose`, `--disable-missing`, `--create-only`
 - `sync_celery_schedules` — `--dry-run`, `--list`, `--force`, `--source`
