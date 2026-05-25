@@ -71,6 +71,21 @@ That's it. No body. The stub exists to prevent external/historical links from 40
 
 **Required stub addition (Session 1143):** every V2-Moved stub MUST carry the line `> **Caveat:** Prior RAG citations may no longer resolve to the same chunk_id.` so the trade-off is visible to anyone reading old outputs.
 
+## 2b. Runtime-coupled doc paths (Session 1143 discovery — NEVER MOVE)
+
+The following docs are read by Python code at runtime. Moving them breaks production behavior even with a V2 stub. They fail the root-stability rule by extension: keep at the original path, refresh-in-place, V1 banner if stale.
+
+| Path | Reader | Notes |
+|---|---|---|
+| `docs/canon/INDEX.md` | `core/services/docs_context_builder.py:186` | Canon-index ingestion at agent baseline-context load |
+| `docs/governance/SYSTEM_OWNER.md` | `core/services/docs_context_builder.py:184` | System-owner authority record fed to agents |
+| `docs/missions/CURRENT_MISSION.md` | `core/services/docs_context_builder.py:185` | Mission statement fed to agents — currently stale, refresh-priority high |
+| `docs/decisions/ADR-*.md` | `core/models/executor/models.py`, `core/services/executor_driver.py`, `core/services/executor_policy.py` | Architectural decision records cited by the executor stack |
+
+**Before adding any new runtime-coupled doc:** add it here and add a V1 banner to the doc itself flagging its load-bearing status. Treat this list as the canonical inventory.
+
+**Before moving any doc:** check this list first. If it's on it, do not move under any circumstance — even a "harmless" subdir consolidation.
+
 ## 3. Root-stability rule (Rigby's lock, Session 1143)
 
 > **Anything referenced by `CLAUDE.md`, `00-START-NEXT-SESSION.md`, or any `*_AUDIT.md` MUST exist at the cited path — either as the canonical doc or as a permanent V2 stub.**
