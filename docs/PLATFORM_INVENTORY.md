@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-25 08:24:59
-**Git HEAD:** `18cc09ce`
+**Generated:** 2026-05-25 08:35:14
+**Git HEAD:** `5b69650f`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.

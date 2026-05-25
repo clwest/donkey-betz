@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/topics/*`](../topics/) (subsystem deep-dives).
+> **Change reason:** Sep 2025 reality-score claim (87% complete, 92% production-ready). Superseded by topics/* + PLATFORM_INVENTORY.
+> **Preserved because:** historical "reality score" / system-overview snapshot. Useful as build-history record; do NOT cite for current state.
+
 # UNIFIED DONKEY BETZ PLATFORM - FINAL 100% SYSTEM REVIEW
 **Review Completion Date**: September 16, 2025
 **Total Review Time**: 2 hours 15 minutes

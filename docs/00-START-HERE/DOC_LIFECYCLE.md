@@ -87,6 +87,20 @@ The following docs are read by Python code at runtime. Moving them breaks produc
 
 **Before moving any doc:** check this list first. If it's on it, do not move under any circumstance — even a "harmless" subdir consolidation.
 
+## 2c. Sole-counts-source rule (Rigby's lock, Session 1143 Phase 4 follow-up)
+
+> **`PLATFORM_INVENTORY.md` (autogen via `generate_platform_inventory`) and `docs/INDEX.md` (autogen via `build_docs_index`) are the ONLY authoritative counts in the corpus going forward.**
+
+Every other doc that mentions a runtime count (agent count, spider count, model count, deliverable count, "reality score," etc.) is a **snapshot of a moment**, not a current claim. The Session 1142 verifier (`verify_doc_claims --only-drift`) enforces this for tagged claims; everything else gets a `DOC-POINTER-V1` banner if it ages past 3 months.
+
+**Why this rule exists:** Session 1143 Phase 4 redundancy hunt surfaced 18 docs each claiming a different "reality score" (10% / 50-60% / 75% / 87% / 88% / 92% / 96% / 99.7% / 99.9% / 100%) across various sessions. Chris ratified retirement of this pattern in Q4 of the Session 1143 decision packet. Going forward:
+
+- **Never write** "Reality Score: N%" as a numeric claim in any new doc. It will be wrong within months.
+- **Never duplicate** counts that `PLATFORM_INVENTORY.md` already tracks (agents, spiders, models, Celery tasks, beat schedule rows, PA tools, body systems, LLM providers, signal pattern types, frontend routes). Either cite the autogen line directly or skip the claim.
+- **Write conceptual narrative** instead — "the platform has an agent layer that routes via AGENT_MAP" not "the platform has 83 agents." The former stays true through count drift; the latter rots immediately.
+
+If you must publish a count externally (marketing, GTM, pitch deck), regenerate `PLATFORM_INVENTORY.md` first and quote from it directly. Anything else gets the verifier flag.
+
 ## 3. Root-stability rule (Rigby's lock, Session 1143)
 
 > **Anything referenced by `CLAUDE.md`, `00-START-NEXT-SESSION.md`, or any `*_AUDIT.md` MUST exist at the cited path — either as the canonical doc or as a permanent V2 stub.**
