@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
+> **Note:** content may be stale (Session 1100 refresh on top of Session 775 narrative) — the doc itself already acknowledges PLATFORM_INVENTORY.md as source of truth, but specific subsystem stats may still drift. Per Session 1143 Phase 4 (Chris Q4=Y): PLATFORM_INVENTORY + docs/INDEX are the only authoritative counts going forward.
+
 # Backend Inventory & Documentation
 
 **Last Updated:** April 26, 2026 - Session 1100 (refreshed counts; original Session 775 narrative below)
