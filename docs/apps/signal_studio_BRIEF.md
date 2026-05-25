@@ -1,7 +1,7 @@
 ---
 title: "Signal Studio — Phase 1 brief (products.ts-anchored)"
 status: draft (Session 1135 discovery, rev. 3 — corrected against products.ts canonical source, pending Chris ratification)
-session: 1135
+originating_session: 1135
 generated: 2026-05-23
 revised: 2026-05-23 (rev. 3 — corrected against products.ts; rev. 2 had wrong audience + wrong product framing)
 workspace: Donkey Betz

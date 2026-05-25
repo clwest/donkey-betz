@@ -1,7 +1,7 @@
 ---
 title: "Rigby standalone — Phase 1 GTM proposal (currently-private product)"
 status: draft (Session 1135 discovery, rev. 3 — corrected against products.ts; this brief proposes a public Phase 1 launch of a currently-private product)
-session: 1135
+originating_session: 1135
 generated: 2026-05-23
 revised: 2026-05-23 (rev. 3 — corrected against products.ts; rev. 2 framed Rigby as "Phase 1 flagship" but products.ts treats Rigby as "in-development, private, standalone surface forthcoming")
 workspace: Donkey Betz
