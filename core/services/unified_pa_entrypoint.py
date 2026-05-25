@@ -31,6 +31,7 @@ Usage:
 import json
 import logging
 import re
+import threading
 import time
 import uuid
 import asyncio
@@ -7344,30 +7345,50 @@ Say 'triage decisions' to continue with more items, or 'what's in my boardroom' 
         return self._triage_mode
 
 
-# Cache for PA instances per user
+# Cache for PA instances per user.
+#
+# Session 1142: lock-protected to close the check-then-act race surfaced by
+# the April 18 2026 CodeReviewAgent audit. Two near-simultaneous requests
+# from the same user (two browser tabs, sync Django views in daphne's
+# threadpool, or concurrent WS messages on `consumers_unified_v2.py`)
+# could both miss the cache, both instantiate a fresh
+# UnifiedPAEntrypoint, and last-write-wins — silently dropping the loser's
+# conversation history. The Celery `pa` worker uses `--pool=solo` so the
+# race never fires there, but every other call site (web views, WS
+# consumers) IS concurrent. See git blame on this block for context.
 _pa_instances: Dict[int, UnifiedPAEntrypoint] = {}
+_pa_instances_lock = threading.Lock()
 
 
 def get_unified_pa(user: User) -> UnifiedPAEntrypoint:
     """
     Get or create UnifiedPA instance for a user.
 
-    Instances are cached per user to maintain conversation history.
+    Instances are cached per user to maintain conversation history. The
+    lock guards the check+set so concurrent callers for the same user
+    can't both miss the cache and create duplicate instances.
     """
     user_id = user.id  # type: ignore[attr-defined]
 
-    if user_id not in _pa_instances:
-        _pa_instances[user_id] = UnifiedPAEntrypoint(user)
-
-    return _pa_instances[user_id]
+    with _pa_instances_lock:
+        inst = _pa_instances.get(user_id)
+        if inst is None:
+            inst = UnifiedPAEntrypoint(user)
+            _pa_instances[user_id] = inst
+        return inst
 
 
 def clear_pa_cache(user_id: Optional[int] = None):
-    """Clear PA cache for a specific user or all users."""
-    global _pa_instances
+    """Clear PA cache for a specific user or all users.
 
-    if user_id:
-        if user_id in _pa_instances:
-            del _pa_instances[user_id]
-    else:
-        _pa_instances = {}
+    Session 1142: ``if user_id:`` evaluated to False for ``user_id=0``
+    (rare in practice, but a real correctness smell) — switched to an
+    explicit ``is not None`` check. The bulk-clear branch now mutates
+    the existing dict in place rather than rebinding the module-level
+    name, so any in-flight callers holding a reference don't desync.
+    """
+    with _pa_instances_lock:
+        if user_id is not None:
+            _pa_instances.pop(user_id, None)
+        else:
+            _pa_instances.clear()
