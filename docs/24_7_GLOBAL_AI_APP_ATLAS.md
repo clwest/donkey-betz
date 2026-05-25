@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1146) -->
+> **Canonical strategy anchor — refresh-in-place; do not move.**
+> Listed in `CLAUDE.md` + `00-START-NEXT-SESSION.md` as the platform's strategy anchor. Counts in this doc are narrative (Atlas-level: phase definitions, pricing bands, graduation rules); for runtime platform counts see [`docs/PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) (per `DOC_LIFECYCLE.md` §2c sole-counts-source rule).
+> **Last reviewed for drift labeling:** Session 1146 (2026-05-25)
+> **Companion canon:** [`docs/canon/INDEX.md`](canon/INDEX.md) (canon registry) + [`docs/INDEX.md`](INDEX.md) (doc corpus index) + [`docs/PLATFORM_WHAT_IT_IS.md`](PLATFORM_WHAT_IT_IS.md) (narrative anchor).
+
 # 24/7 Global AI — App Atlas (v1)
 
 **Date:** 2026-05-20
