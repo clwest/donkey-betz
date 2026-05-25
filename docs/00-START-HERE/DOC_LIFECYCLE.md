@@ -10,6 +10,15 @@ last_verified: 2026-05-24
 
 > **Why this doc exists:** `/docs/` had drifted into 92 loose top-level files + 43 subdirs + 11M of archive with no shared vocabulary for "this is moved" vs "this is stale but in place." Session 1143 locked the conventions below. Every future `/docs/` operation that moves, renames, or supersedes a file MUST follow them.
 
+## 0. Scope — what this lifecycle governs
+
+This doc governs the **u-d-b `/docs/` corpus** (instance docs that document this repo's runtime, agents, spiders, sessions, etc.). It does **not** govern `docs/docs-pattern/` — that subtree is the **context-kit framework master/templates**, a separate domain we maintain in-place for now but plan to ship as its own repo. When context-kit ships standalone, it will carry its own lifecycle doc.
+
+**Practical implication for cleanup operations:**
+- Mechanical sweeps (banner flips, V1/V2 retrofit, link-target normalization) must exclude `docs/docs-pattern/**` by default.
+- If a framework template needs the same convention as the instance docs, that's a **deliberate context-kit framework change**, not an instance cleanup — handle it in a separate, explicitly-scoped change.
+- The two anchor docs (`docs/PLATFORM_WHAT_IT_IS.md` narrative, `docs/PLATFORM_INVENTORY.md` runtime) are u-d-b's **instances** of the context-kit anchor pattern. The contract (narrative loses to runtime on counts) is the same; the instances are ours.
+
 ## 1. Two pointer-header types
 
 Pointer headers are 4–8 line metadata blocks at the very top of a doc. They tell future Claude Codes (and Rigby's `search_docs`) the doc's lifecycle state without anyone having to read the body.
