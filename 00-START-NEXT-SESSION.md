@@ -91,7 +91,7 @@ Chris asked, at Session 1142 close, to spend Session 1143 going through `/docs/`
 
 **Approach options to pitch Chris when the session opens** (none chosen yet — figure it out together):
 - (A) Top-down by category: walk `docs/{topics,handoffs,specs,plans,cleanup,archive,audit-*,...}` and have Rigby summarize each subdir's purpose + cull/promote
-- (B) By doc age: start with the 9 frozen Category B docs (`docs/AUTONOMOUS_SYSTEMS.md`, `INTELLIGENCE_SYSTEMS.md`, `MODELS.md`, `ERROR_TRACKING.md`, `DEPLOYMENT_GUIDE.md`, `PERSONA_AGENTS.md`, `docs/agents/README.md`, `GOLDEN_GOOSE_STRATEGY.md`, `SCIFI_FEATURES.md`) and decide archive vs refresh per-doc
+- (B) By doc age: start with the 9 frozen Category B docs (`docs/AUTONOMOUS_SYSTEMS.md`, `INTELLIGENCE_SYSTEMS.md`, `MODELS.md`, `ERROR_TRACKING.md`, `DEPLOYMENT_GUIDE.md`, `PERSONA_AGENTS.md`, `docs/agents/README.md`, `GOLDEN_GOOSE_STRATEGY.md`, `SCIFI_FEATURES.md`) and decide archive vs refresh per-doc. **Session 1143 update:** 7 of these 9 are now moved to `docs/archive/superseded-2026-05/` with V2-Moved stubs at the old paths (INTELLIGENCE_SYSTEMS, MODELS, ERROR_TRACKING, DEPLOYMENT_GUIDE, PERSONA_AGENTS, GOLDEN_GOOSE_STRATEGY, SCIFI_FEATURES). AUTONOMOUS_SYSTEMS retains DOC-POINTER-V1 banner in place. `docs/agents/README.md` is queued for Phase 2 subdir-level archival.
 - (C) By query-driven discovery: feed Rigby a list of platform topics and ask "which doc(s) cover X?" — surfaces what's discoverable vs orphaned
 - (D) By git activity: rank docs by last-commit-age and start where activity dropped off — surfaces zombie clusters
 

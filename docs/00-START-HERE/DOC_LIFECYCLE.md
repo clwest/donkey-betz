@@ -25,6 +25,8 @@ For canonical docs that STAY in place but whose numeric claims may drift from ru
 
 **Use when:** the doc is still the canonical place for its topic, but it has counted claims (agent counts, file counts, model counts) that the verifier might flag.
 
+**Stale-but-canonical variant:** if the doc is canonical AND hasn't been refreshed in 3+ months, append `> **Note:** content may be stale — verify against code before relying on specifics.` to the banner. This stays at root (don't move) but tells readers the policy/content side may have drifted, not just the numbers. (Session 1143 addition, Rigby callout: "don't silently present stale policy as canonical without a banner.")
+
 ### DOC-POINTER-V2 — supersession/relocation pointer (new, Session 1143)
 
 For docs whose canonical location or meaning CHANGED. Either the doc was moved, an updated version exists elsewhere, or the doc is preserved for historical reference only.
@@ -65,7 +67,9 @@ When a doc moves from `docs/X.md` → `docs/<subdir>/X.md`, **keep a 4-line stub
 
 That's it. No body. The stub exists to prevent external/historical links from 404'ing. Readers see one screen, click through.
 
-> **Citation-identity caveat:** V2 stubs preserve human navigation but **do not** preserve prior RAG citation identity. Any `[docs/path#chunk_id]` citation Rigby or `search_docs` produced before the move will resolve to the stub, not the canonical chunk. If a doc is heavily cited externally or in archived RAG outputs, prefer leaving it in place with a V2-Stale header over moving it.
+> **Citation-identity caveat:** V2 stubs preserve human navigation but **do not** preserve prior RAG citation identity. Any `[docs/path#chunk_id]` citation Rigby or `search_docs` produced before the move will resolve to the stub, not the canonical chunk. If a doc is heavily cited externally or in archived RAG outputs, prefer leaving it in place with a stale-but-canonical V1 variant banner over moving it.
+
+**Required stub addition (Session 1143):** every V2-Moved stub MUST carry the line `> **Caveat:** Prior RAG citations may no longer resolve to the same chunk_id.` so the trade-off is visible to anyone reading old outputs.
 
 ## 3. Root-stability rule (Rigby's lock, Session 1143)
 
