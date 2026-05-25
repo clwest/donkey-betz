@@ -10,10 +10,10 @@
 **Character OS merge — parked:**
 - [`docs/MERGE_PROPOSAL_CHARACTER_OS.md`](../MERGE_PROPOSAL_CHARACTER_OS.md) (sidecar) and [`docs/MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](../MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) (native) stay in tree as v2 backlog. Unpark only if a paying customer asks for an avatar.
 
-**Latest handoff:** [`SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md)
-(13 merged PRs + 1 parked. Deep `/docs/` audit + Phase 5 execution sprint. Methodology lock in [`DOC_LIFECYCLE.md`](../00-START-HERE/DOC_LIFECYCLE.md): V1/V2 pointer headers + §2b runtime-coupled paths inventory + §2c sole-counts-source rule. 39 Cat-B root docs archived + 72 frozen-subdir files archived + 457 pre-Session-800 handoffs archived. DaVinci Resolve sunset (Chris Q1=A). Reality-score cluster retired. NEW finding: Decision Command shipped then regressed — React frontend gone, backend `AIIncomeBuilder` skeleton remains. Mission refresh #2190 parked per Chris's mid-session directive to curb business/GTM framing. Active handoffs reduced 726 → 273. RAG corpus rebuilt: 19,993 chunks / 2,602 files.)
+**Latest handoff:** [`SESSION_1144_DOCS_CLEANUP_PROVENANCE_AND_LEAK_FIX.md`](SESSION_1144_DOCS_CLEANUP_PROVENANCE_AND_LEAK_FIX.md)
+(5 PRs open — checkpoint, session may continue. **#2201** Postgres `CONN_MAX_AGE=60` + `CONN_HEALTH_CHECKS=True` + per-process caching in OpenAI/Anthropic client factories — stops 33K TIME_WAIT leak (72% to :5432) caused by Session 142's `CONN_MAX_AGE=0` brute-force workaround. **#2202** `DOC_LIFECYCLE §0` scope boundary: governs u-d-b `/docs/` instance corpus; `docs/docs-pattern/` is context-kit framework master, separate domain. **#2203** `CLAUDE.md` + `CAPABILITIES.md` reframe — strip "source of truth for numbers" from PWII references, enforce §2c. **#2204** 17-doc mechanical sweep: flip DOC-POINTER-V1 banner targets PWII → PLATFORM_INVENTORY. **#2205** `python manage.py session_provenance --session N` — clusters docs+code by session of origin via git history + frontmatter + handoff naming. Rigby specced + reviewed schema. Also: socket leak's secondary effect locked Chris out of login — `sudo sysctl -w net.inet.ip.portrange.first=32768` unblocked + password reset applied.)
 
-**Previous:** [`SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md`](SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md)
+**Previous:** [`SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md)
 
 ## How to update
 
