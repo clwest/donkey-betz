@@ -765,68 +765,51 @@ class Command(BaseCommand):
         return stats
 
     def _extract_current_session(self, base_dir: Path) -> int:
-        """Extract current session number from 00-START-NEXT-SESSION.md."""
+        """Extract current session number from 00-START-NEXT-SESSION.md.
+
+        Strategy (in priority order — Session 1144 fix):
+        1. Canonical marker — look for ``## SESSION NNNN — CURRENT ENTRY POINT``
+           (the explicit current-session header used in the start-next file).
+        2. Fallback — scan every ``Session NNNN`` mention and return the
+           **highest** number found. This handles older formats and is
+           robust against recap headers like ``## SESSION 1138-1141 LANDED``
+           that would mislead a first-match regex.
+
+        Before this fix the regex returned the FIRST match, which since the
+        file routinely recaps prior sessions in opening sections always
+        produced a stale "Current Session" value in INDEX.md (off by 6+
+        sessions when the bug was found).
+
+        Returns 0 when no match found (was hardcoded 784 which silently
+        drifted for years).
+        """
         start_file = base_dir / '00-START-NEXT-SESSION.md'
-        if start_file.exists():
-            try:
-                content = start_file.read_text()
-                match = re.search(r'Session\s+(\d+)', content, re.IGNORECASE)
-                if match:
-                    return int(match.group(1))
-            except Exception as _e:
-                logger.warning(
-                    "build_docs_index._extract_current_session: swallowed (%s: %s) — degraded",
-                    type(_e).__name__, _e,
-                )
-        return 784
+        if not start_file.exists():
+            return 0
+        try:
+            content = start_file.read_text()
+        except Exception as _e:
+            logger.warning(
+                "build_docs_index._extract_current_session: swallowed (%s: %s) — degraded",
+                type(_e).__name__, _e,
+            )
+            return 0
 
-    def _extract_platform_stats(self, base_dir: Path) -> dict:
-        """Extract platform statistics from CLAUDE.md."""
-        claude_file = base_dir / 'CLAUDE.md'
-        stats = {
-            'agents': 74,
-            'spiders': 77,
-            'spiders_working': 72,
-            'services': 114,
-            'celery_tasks': 139,
-            'database_models': '364+',
-            'frontend_pages': 44,
-            'body_systems': 9,
-            'scifi_features': 14,
-            'llm_providers': 6,
-            'advisors': 25,
-            'integration_score': '95%',
-        }
+        # Primary signal — explicit "CURRENT ENTRY POINT" marker
+        marker = re.search(
+            r'##\s+SESSION\s+(\d+)\s+—\s+CURRENT ENTRY POINT',
+            content, re.IGNORECASE,
+        )
+        if marker:
+            return int(marker.group(1))
 
-        if claude_file.exists():
-            try:
-                content = claude_file.read_text()
-                patterns = {
-                    'agents': r'\*\*Agents\*\*\s*\|\s*(\d+)',
-                    'spiders': r'\*\*Spiders\*\*\s*\|\s*(\d+)',
-                    'services': r'\*\*Services\*\*\s*\|\s*(\d+)',
-                    'celery_tasks': r'\*\*Celery Tasks\*\*\s*\|\s*(\d+)',
-                    'frontend_pages': r'\*\*Frontend Pages\*\*\s*\|\s*(\d+)',
-                    'body_systems': r'\*\*Body Systems\*\*\s*\|\s*(\d+)',
-                    'scifi_features': r'\*\*Sci-Fi Features\*\*\s*\|\s*(\d+)',
-                    'advisors': r'\*\*Advisors\*\*\s*\|\s*(\d+)',
-                }
-                for key, pattern in patterns.items():
-                    match = re.search(pattern, content)
-                    if match:
-                        stats[key] = int(match.group(1))
-            except Exception as _e:
-                logger.warning(
-                    "build_docs_index._extract_platform_stats: swallowed (%s: %s) — degraded",
-                    type(_e).__name__, _e,
-                )
-
-        return stats
+        # Fallback — highest session number anywhere in the file
+        all_sessions = [int(m) for m in re.findall(r'Session\s+(\d+)', content, re.IGNORECASE)]
+        return max(all_sessions) if all_sessions else 0
 
     def _generate_index(self, stats: dict, base_dir: Path, doc_index: dict) -> str:
         """Generate the INDEX.md content."""
         current_session = self._extract_current_session(base_dir)
-        platform_stats = self._extract_platform_stats(base_dir)
 
         lines = []
 
@@ -911,22 +894,21 @@ class Command(BaseCommand):
         lines.append('| `docs/_index.json` | Machine-readable index with full metadata | - |')
         lines.append('')
 
-        # Platform Statistics
+        # Platform Statistics — removed Session 1144 per DOC_LIFECYCLE §2c.
+        # Prior implementation hardcoded stale counts in this generator
+        # (agents=74, spiders=77, celery_tasks=139, etc.) that violated the
+        # sole-counts-source rule the docs corpus is supposed to enforce.
+        # Counts live in PLATFORM_INVENTORY.md (system) and the Document
+        # Status section above (doc corpus). Point readers there.
         lines.append('## Platform Statistics')
         lines.append('')
-        lines.append('| Component | Count |')
-        lines.append('|-----------|-------|')
-        lines.append(f'| Agents | {platform_stats["agents"]} |')
-        lines.append(f'| Spiders | {platform_stats["spiders"]} ({platform_stats["spiders_working"]} working) |')
-        lines.append(f'| Services | {platform_stats["services"]} |')
-        lines.append(f'| Celery Tasks | {platform_stats["celery_tasks"]} |')
-        lines.append(f'| Database Models | {platform_stats["database_models"]} |')
-        lines.append(f'| Frontend Pages | {platform_stats["frontend_pages"]} |')
-        lines.append(f'| Body Systems | {platform_stats["body_systems"]} |')
-        lines.append(f'| Sci-Fi Features | {platform_stats["scifi_features"]} |')
-        lines.append(f'| LLM Providers | {platform_stats["llm_providers"]} |')
-        lines.append(f'| Advisors | {platform_stats["advisors"]} |')
-        lines.append(f'| Integration Score | {platform_stats["integration_score"]} |')
+        lines.append(
+            '> System counts (agents, spiders, services, Celery tasks, etc.) '
+            'live in [`PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) — '
+            'the runtime-derived, regenerable inventory anchor (per '
+            '`DOC_LIFECYCLE.md` §2c sole-counts-source rule). Run '
+            '`python manage.py generate_platform_inventory` to refresh.'
+        )
         lines.append('')
 
         # Documentation by Folder
