@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/topics/*`](../topics/) (subsystem deep-dives).
+> **Change reason:** Oct 2025 'PRODUCTION READY' claim. Superseded; current state per PLATFORM_INVENTORY + topics/*.
+> **Preserved because:** historical "reality score" / system-overview snapshot. Useful as build-history record; do NOT cite for current state.
+
 # 🎉 FINAL AUTHENTICATED REALITY SCORE REPORT
 **Date:** October 2, 2025, 5:12 PM
 **Test Type:** Full Authenticated User Flow
