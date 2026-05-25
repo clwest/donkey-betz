@@ -1,7 +1,7 @@
 ---
 title: "Pitch Deck Forge — Phase 1 brief (products.ts-anchored)"
 status: draft (Session 1135 discovery, pending Rigby review + Chris ratification)
-session: 1135
+originating_session: 1135
 generated: 2026-05-23
 workspace: Donkey Betz
 companion_docs:
