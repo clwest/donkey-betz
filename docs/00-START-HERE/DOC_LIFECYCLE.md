@@ -81,6 +81,7 @@ The following docs are read by Python code at runtime. Moving them breaks produc
 | `docs/governance/SYSTEM_OWNER.md` | `core/services/docs_context_builder.py:184` | System-owner authority record fed to agents |
 | `docs/missions/CURRENT_MISSION.md` | `core/services/docs_context_builder.py:185` | Mission statement fed to agents — currently stale, refresh-priority high |
 | `docs/decisions/ADR-*.md` | `core/models/executor/models.py`, `core/services/executor_driver.py`, `core/services/executor_policy.py` | Architectural decision records cited by the executor stack |
+| `docs/ops/` (directory) | `core/management/commands/celery_inspect_report.py:37` (`default='docs/ops'`) | Default output dir for celery inspect JSONs. Functionally a code artifact dir, not a docs subdir. Phase 2B-2 added `docs/ops/README.md` to make this clear. |
 
 **Before adding any new runtime-coupled doc:** add it here and add a V1 banner to the doc itself flagging its load-bearing status. Treat this list as the canonical inventory.
 

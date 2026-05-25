@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For the runtime-verified PA tool registry see [`docs/PA_TOOL_AUDIT.md`](/docs/PA_TOOL_AUDIT.md) (autogen via `python manage.py build_pa_tool_audit`).
+> **Note:** content may be stale (last refreshed 2026-03-01) — this manifest covers WHAT tools exist; the autogen `PA_TOOL_AUDIT.md` is the runtime-verified registry. Tools added since 2026-03-01 may be missing here. Refresh by syncing against the autogen audit.
+
 # PA Tool Manifest (Canonical)
 
 **Manifest v2 — Last updated: 2026-03-01**
