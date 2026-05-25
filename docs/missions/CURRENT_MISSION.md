@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md).
+> **Note:** content is **significantly stale** (last refreshed Session 814; period says "Q1 2026" but the platform's commercial focus has shifted to the 24/7 Global AI Suite per [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](/docs/24_7_GLOBAL_AI_APP_ATLAS.md)). This file is **runtime-load-bearing**: `core/services/docs_context_builder.py:185` reads from it. Do NOT move; refresh-in-place when Chris locks the current mission framing. **Refresh-priority: high.**
+
 # Current Mission
 
 **Status:** ACTIVE | **Period:** Q1 2026 | **Session:** 814
