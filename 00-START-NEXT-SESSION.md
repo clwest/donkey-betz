@@ -56,9 +56,9 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1138-1140 LANDED — Decision-13 + clusterer + judge-stats arc
+## SESSION 1138-1141 LANDED — Decision-13 + clusterer + judge-stats arc + Chris ratification
 
-The last three sessions form a coherent measurement-instrumentation arc on top of Session 1138's Decision-13 demand-gate. All three are merged to main:
+The last four sessions form a coherent measurement-instrumentation arc on top of Session 1138's Decision-13 demand-gate, capped by Session 1141's ratification pass on Jessica's 22 decisions. All four are merged to main:
 
 **Session 1138 (F1) — paid-interest demand-gate.** `FleetPaidInterest` table + fleet-HMAC POST + `paid_interest_status` PA tool. PRs: u-d-b#2162 (`9c8425f9`), signal-studio#15 (`1e6dbb4`). Final handoff: [`SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md`](docs/handoffs/SESSION_1138_F1_PAID_INTEREST_IMPLEMENTATION.md).
 
@@ -70,9 +70,11 @@ The last three sessions form a coherent measurement-instrumentation arc on top o
 
 **Session 1140 (A) — action-card pre-generation vertical slice SHIPPED.** Picked up carryover (A) and closed it in the same session via 3 coordinated PRs (Rigby reviewed every one mid-build, all merged). Curated snapshots now ship with LLM-generated action cards paired 1:1 with each cluster_pick. Curated tab → click any cluster → "Suggested Next Steps" section renders action_type badge ("AI draft" vs "Needs retry" pill), concrete steps, and outreach draft (when populated). 3 PRs: u-d-b#2174 (`1c268726`) + signal-studio#18 (`3f279730`) + signal-studio#19 (`11bee51f`). ~2300 LOC, 57 new tests, 80% real LLM cards on live smoke. Full details + Rigby's three design-review passes in [`SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md`](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md). **This closes carryover (A)** that was queued from Session 1132.
 
+**Session 1141 — Chris ratification deep dives on Jessica's 22 decisions.** Closed the top-priority punch list item that had been open since Session 1137. Outcome: **17 accept-as-written + 3 ratify-already-shipped + 2 with Jessica clarification redlines = 22/22 closed**. Deep dives on the 4 implementation-affecting decisions: Decision 9 (cost attribution — 3 clarifications), Decision 10 (Stripe SKU sequencing — accept), Decision 19 + F5 audit (PitchDeckForge style names — found Angel + Strategic don't map to existing code templates, retune path recommended), Decision 15a-c (GTM channels — accept). PR u-d-b#2177. Full details + draft Rigby message bouncing 4 redlines to Jessica in [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md`](docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md). **This closes Chris's punch list item #1.**
+
 ---
 
-## SESSION 1141 — CURRENT ENTRY POINT
+## SESSION 1142 — CURRENT ENTRY POINT
 
 ### Already done in the 1140 post-close session
 
@@ -147,23 +149,25 @@ Spec the cutoff + threshold with Rigby first. Don't blanket-delete the 307 legac
 
 ### Chris's punch list (prioritized — load-bearing items first)
 
-**Load-bearing rationale:** Items 1-2 are queued from Session 1135-1137 work and have been waiting on Chris's input for multiple sessions. Items 3-9 are tech-queue work that's unblocked but parallel. Items 10-11 are Jessica-collab. Quick wins (item 9) can land any session.
+**Load-bearing rationale:** Item 1 (Jessica ratification) closed Session 1141; 4 clarifications now in flight to Jessica. Item 2 (ops view fork) becomes top priority. Items 3-9 are tech-queue work that's unblocked but parallel. Items 10-11 are Jessica-collab. Quick wins (item 9) can land any session.
 
-#### 🔥 Highest-need (you specifically, queued from 1136-1137)
+#### 🔥 Highest-need (you specifically)
 
-1. **Ratification pass on Jessica's 22 decisions** (Session 1137 next-session-primary). Read `docs/handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`; redline anything in Decision 9 cost-rules (implementation-heavy) or other items where her business read needs tech adjustment. ~30-60 min. **Nothing blocking — decisions stand unless you push back, but stale ratification slows F1/F7 Stripe sequencing.** Status: **OPEN since Session 1137**.
+1. **~~Ratification pass on Jessica's 22 decisions~~** — ✅ **CLOSED Session 1141** (PR #2177, all 22 decisions ratified). 4 clarifications drafted as a single Rigby message in the deep-dive doc's close-out section. **Next move:** send the message via `tools/pa_local.sh` and unblock Decision 9 schema work + Decision 19 PitchDeckForge retune.
 
-2. **Ops view fork decision** (Session 1136 PARKED). Jessica rejected the dashboard shape ("feels complicated"). ~1360 LOC sitting on `clwest/context-kit` branch `feat/jessica-ops-view` commit `87c8ae9` — **not pushed, not merged**. Pick: kill / radical-simplify / different medium / redirect with new interview. Status: **PARKED since Session 1136**.
+2. **Ops view fork decision** (Session 1136 PARKED — now top priority). Jessica rejected the dashboard shape ("feels complicated"). ~1360 LOC sitting on `clwest/context-kit` branch `feat/jessica-ops-view` commit `87c8ae9` — **not pushed, not merged**. Pick: kill / radical-simplify / different medium / redirect with new interview. Status: **PARKED since Session 1136**.
 
 #### 🛠 Tech queue (you own, unblocked but parallel)
 
-3. **Phase 0 cost-attribution SCHEMA** — `LLMCallLog.workspace` FK + daily cap + soft-degrade-to-gpt-5-mini + portfolio kill switch. **UNBLOCKED by Jessica's Decision 9.** Worked example in SESSION_1137 handoff. Highest tech-queue priority because it underwrites every other Suite product's cost discipline.
+3. **Phase 0 cost-attribution SCHEMA** — `LLMCallLog.workspace` FK + daily cap + soft-degrade-to-gpt-5-mini + portfolio kill switch. **PARTIALLY unblocked by Jessica's Decision 9 + Session 1141 deep dive.** Three Jessica clarifications still pending (soft-degrade scope, hard-kill threshold, internal-spend accounting — see `SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md` §Decision 9). Can scaffold migrations + model in parallel; final policy locks after Jessica responds. Highest tech-queue priority because it underwrites every other Suite product's cost discipline.
 4. **Contract Concierge fleet routing fix** (Q1) — architecture decision: new agent / extend `legal_doc_drafter_agent` / remove default.
 5. **Signal Studio engine-side enrichment integration** (Q3) — architecture v2 question.
 6. **ComplianceSentinel fleet routing** (Q4) — `security_agent` / null / skip u-d-b.
 7. **Engine-mismatch resolutions** (cross-cutting C5).
 8. **Atlas deviation ratification** (cross-cutting C7).
-9. **F5 PitchDeckForge styles audit** — verify the 4 deck styles meaningfully differ in code before names ship publicly (~15 min). Smallest-effort item on the queue.
+9. **~~F5 PitchDeckForge styles audit~~** — ✅ **DONE in Session 1141** (audit confirmed 4 templates meaningfully differ; surfaced that Angel + Strategic don't map to existing code templates). Follow-on Chris-side work surfaced as new item 9a below.
+
+9a. **PitchDeckForge template retune (Decision 19 follow-on)** — Gated on Jessica's clarification re clean-template fate (retire vs rename-then-retune for Angel audience). When unblocked: rewrite `clean` → angel system prompt + slide guidance, rewrite `product` → strategic system prompt + slide guidance, rename `TEMPLATE_CONFIGS` keys, add migration for existing deck rows, update frontend selector copy (`App.tsx:307,481-484,978-989`), update `24-7-ai-global/src/lib/products.ts` Starter tier blurb when names ship publicly.
 
 #### 🤝 Jessica-driven (collab role, not lead)
 
@@ -257,6 +261,13 @@ for am, n in Counter(rows.values_list(\"auth_mode\", flat=True)).most_common():
 
 If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-merge, (Y) is safe to flip.
 
+### Jessica clarifications in flight (Session 1141 close)
+
+Four clarifications drafted in [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md`](docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md) §close-out, packaged as a single Rigby message. **Next move:** send via `tools/pa_local.sh` and unblock the gated tech work.
+
+- **Decision 9** (3 redlines): soft-degrade scope, hard-kill threshold, internal-spend accounting — unblocks Phase 0 schema final lock
+- **Decision 19** (1 redline): clean-template fate (retire vs rename-then-retune for Angel) — unblocks PitchDeckForge template retune
+
 ### Other carryovers
 
 - **Action-card regen scheduler** (Session 1140 (A) follow-up) — fallback rows now land as `action_status='needs_regen'`, queryable independently of the `generated_by` audit field. A scheduler can filter on that status + retry with backoff. Needs explicit design pass (rate limit, audit, retry budget, model selection). Per Rigby: deliberate follow-on, NOT to land alongside the slice.
@@ -280,7 +291,7 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 
 ---
 
-## SESSION 1131-1140 HANDOFFS
+## SESSION 1131-1141 HANDOFFS
 
 - [Session 1131 Phase 1 close](docs/handoffs/SESSION_1131_SIGNAL_STUDIO_PHASE_1.md)
 - [Session 1131 Phase 2 close](docs/handoffs/SESSION_1131_PHASE_2_SIGNAL_CURATOR.md)
@@ -294,7 +305,8 @@ If bearer-only-with-claim count is 0 across all 7 fleet apps for ≥3 days post-
 - [Session 1139 upstream clustering quality](docs/handoffs/SESSION_1139_UPSTREAM_CLUSTERING_QUALITY.md)
 - [Session 1140 cluster_method mirror + judge-stats](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md)
 - [Session 1140 (A) action-card vertical slice](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md)
+- [Session 1141 Jessica ratification deep dives](docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md)
 
 ---
 
-*Last overwrite: Session 1140 close → Session 1141 entry (then 3 post-close patches: pgvector blocker closed via #2172, then (A) action-card vertical slice shipped via u-d-b#2174 + signal-studio#18 + signal-studio#19). Headline 1141 work is now just **read the v1 rejection rate once the sample is big enough** — all instrumentation live, all infra blockers cleared, beat cron producing real v1 rows AND real LLM action cards on every curated snapshot. Pre-merge baseline: 112/131 = 85.5% legacy rejection; target for v1: <30%. Acceptance bar Rigby-locked.*
+*Last overwrite: Session 1141 close → Session 1142 entry. Session 1141 closed Chris's top-priority punch list item (Jessica's 22 decisions): 17 accept-as-written + 3 ratify-shipped + 2 with clarification redlines. 4 Jessica clarifications drafted as a single Rigby message in the deep-dive doc, packaged for one-shot send next session. Once Jessica responds, Phase 0 cost-attribution schema (Decision 9) and PitchDeckForge template retune (Decision 19) are unblocked. Headline 1142 work is now (a) send the Rigby message, (b) ops view fork decision (item 2, parked since 1136), (c) v1 rejection-rate read once sample is big enough.*
