@@ -320,14 +320,17 @@ def _persona_agent_count() -> ClaimResult:
 
     Session 1100 hardcoded `223` as expected — but that number doesn't
     appear in current CLAUDE.md and didn't match any code path. Session
-    1115 (with local Postgres bootstrapped) confirmed the canonical seed
-    is `load_all_agents_advisors`, which creates 148 Agent rows. Re-pegged
-    expected to 148; production may have additional rows loaded by other
-    paths, which surfaces here as drift if it diverges meaningfully.
+    1115 re-pegged to `148` against an assumed canonical seed. Session
+    1149 audit: `load_all_agents_advisors.agents_data` actually contains
+    139 tuples (the command's own '149 Specialized Agents' log text is
+    stale copy from an earlier version). The remaining 16 rows
+    (139 seed → 155 actual) come from non-seed paths (other commands,
+    migrations, runtime DynamicPersonaAgent inserts). Re-pegged to 155 to
+    reflect the current floor; growth beyond ±5 will surface here.
     """
     from core.models_unified_system import Agent
     actual = Agent.objects.count()
-    expected = 148  # canonical seed from load_all_agents_advisors (Session 1115)
+    expected = 155  # Session 1149 re-peg: current Agent.objects.count() floor
     drift = abs(actual - expected)
     # Tolerate ±5 from the seed baseline; >5 means agents were added/removed.
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 50 else 'high')
@@ -359,15 +362,17 @@ def _total_agent_count_claim() -> ClaimResult:
     """Total agent count = code-routable (AGENT_MAP) + DB persona rows.
 
     Session 1100 hardcoded `306` against a CLAUDE.md value that no longer
-    exists. Session 1115 re-pegged to the seed-driven baseline:
-    AGENT_MAP(83) + Agent rows from `load_all_agents_advisors`(148) = 231.
+    exists. Session 1115 re-pegged to the seed-driven baseline
+    AGENT_MAP(83) + Agent rows(148) = 231. Session 1149 re-pegged to
+    AGENT_MAP(83) + Agent rows(155) = 238 — see `_persona_agent_count`
+    for the seed-vs-actual reconciliation.
     """
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent
     routable = len(AgentRouter().AGENT_MAP)
     personas = Agent.objects.count()
     actual_total = routable + personas
-    expected = 231  # AGENT_MAP(83) + canonical seed Agent rows(148)
+    expected = 238  # Session 1149 re-peg: AGENT_MAP(83) + Agent rows(155)
     drift = abs(actual_total - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
@@ -1692,13 +1697,16 @@ def _backend_inv_services_files() -> ClaimResult:
 @register_claim(
     doc='docs/BACKEND_INVENTORY.md',
     claim_id='backend_inventory_mgmt_cmds_count',
-    description="docs/BACKEND_INVENTORY.md 'Management Commands | 167' matches filesystem count",
+    description="docs/BACKEND_INVENTORY.md 'Management Commands | 182' matches filesystem count",
 )
 def _backend_inv_mgmt() -> ClaimResult:
     """Track count of files under `core/management/commands/`.
 
-    Session 1115: re-pegged from a Session 1100 baseline of 153 to the
-    current count of 167 after a model-vs-filesystem audit. The new
+    Session 1115: re-pegged from a Session 1100 baseline of 153 to 167
+    after a model-vs-filesystem audit. Session 1126: bumped to 174 after
+    `fleet_health_rollup` + 6 accumulated. Session 1149: bumped to 182
+    (+8 since 1126, mostly from the Session 1140-1148 docs-provenance /
+    backfill / build_*_audit cluster). The
     `build_management_command_audit` command (Session 1115) regenerates
     `docs/MANAGEMENT_COMMAND_AUDIT.md` from the same filesystem read, so
     future drift between the two surfaces here.
@@ -1710,7 +1718,7 @@ def _backend_inv_mgmt() -> ClaimResult:
         if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
     ]
     actual = len(cmds)
-    expected = 174  # Session 1126 baseline — fleet_health_rollup + 6 accumulated since 1115
+    expected = 182  # Session 1149 re-peg: +8 commands since 1126 baseline of 174
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
     return ClaimResult.build(
