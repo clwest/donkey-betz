@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-05-24 20:28
+**Generated:** 2026-05-24 21:11
 **Current Session:** 1138
 **Total Documentation:** 2017 files | 672,910 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 2,982 |
+| Total cross-references | 2,981 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -33,7 +33,7 @@
 | Document | References | Title |
 |----------|------------|-------|
 | `CLAUDE.md` | 176 | CLAUDE - AI Session Entry Point |
-| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 79 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md` | 79 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
 | `docs/PLATFORM_INVENTORY.md` | 73 | Platform Master Inventory |
 | `docs/INDEX.md` | 61 | INDEX |
 | `docs/AGENTS.md` | 59 | AGENTS |
@@ -257,16 +257,16 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| DATABASE_MODEL_REFERENCE.md | docs | 631 | 2026-05-24 20:28 |
-| PERSONAL_ASSISTANT_ARCHITECTURE.md | docs | 312 | 2026-05-24 20:27 |
-| AGENTS.md | docs | 1,683 | 2026-05-24 20:26 |
-| CAPABILITIES.md | docs | 2,414 | 2026-05-24 20:26 |
-| PLATFORM_WHAT_IT_IS.md | docs | 514 | 2026-05-24 20:17 |
-| INDEX.md | docs | 401 | 2026-05-24 20:08 |
-| MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md | docs | 719 | 2026-05-24 19:35 |
-| BACKEND_REFERENCE.md | docs | 1,619 | 2026-05-24 19:35 |
-| ADVISOR_AUDIT.md | docs | 643 | 2026-05-24 19:33 |
-| FLEET_CAPABILITY_BUSINESS_SPEC.md | specs | 562 | 2026-05-24 19:04 |
+| INDEX.md | docs | 401 | 2026-05-24 21:08 |
+| personal-assistant.md | topics | 148 | 2026-05-24 21:08 |
+| CAPABILITIES.md | docs | 2,414 | 2026-05-24 21:03 |
+| AGENTS.md | docs | 1,683 | 2026-05-24 21:03 |
+| PLATFORM_WHAT_IT_IS.md | docs | 514 | 2026-05-24 21:01 |
+| PERSONAL_ASSISTANT_ARCHITECTURE.md | docs | 312 | 2026-05-24 21:01 |
+| MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md | docs | 719 | 2026-05-24 21:01 |
+| DATABASE_MODEL_REFERENCE.md | docs | 631 | 2026-05-24 21:01 |
+| BACKEND_REFERENCE.md | docs | 1,619 | 2026-05-24 21:01 |
+| ADVISOR_AUDIT.md | docs | 643 | 2026-05-24 21:01 |
 
 ## Documentation by Subsystem
 

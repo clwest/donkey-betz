@@ -86,7 +86,7 @@ The platform uses a **Clean Agent Architecture** where each agent is specialized
 | Content Review | 1 | 0 | ContentDeliberationRunner (3-reviewer panel) |
 | **TOTAL** | **83** | **49** | |
 
-**Session 969b Addition (counts refreshed Session 1142):** PA now has **105 tool schemas** routed through **170 dispatcher handlers**, including live telemetry tools (`recent_activity_tool`, `system_health_tool`, `error_summary_tool`) for real-time system self-awareness.
+**Session 969b Addition (counts refreshed Session 1142):** PA now has **106 tool schemas** routed through **171 dispatcher handlers**, including live telemetry tools (`recent_activity_tool`, `system_health_tool`, `error_summary_tool`) for real-time system self-awareness. Session 1142 added `search_docs` for chunked /docs/ retrieval with inline citations (complements `kb_tool`'s Document-table browse).
 
 **Session 964 Addition:** Content Deliberation Pipeline adds multi-agent content review: ClaimsPack -> ContentWriter -> 3-reviewer panel (Skeptic + FactCheck + DomainPersona) -> DecisionEnforcer (PUBLISH/REVISE/KILL) -> PublishGate.
 

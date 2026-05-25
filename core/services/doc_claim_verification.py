@@ -673,7 +673,7 @@ def _agents_md_workspace_aware() -> ClaimResult:
 def _agents_md_pa_tool_count() -> ClaimResult:
     """Compare 'PA now has 89 tools' against the live PA_TOOL_SCHEMAS list."""
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 105  # refreshed Session 1142 — matches new docs/AGENTS.md
+    expected = 106  # Session 1142 + search_docs PA tool added in same session
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')
@@ -791,13 +791,13 @@ def _spiders_md_categories() -> ClaimResult:
 @register_claim(
     doc='docs/topics/personal-assistant.md',
     claim_id='pa_tool_schema_count_85',
-    description="docs/topics/personal-assistant.md: '85+ tool schemas'",
+    description="docs/topics/personal-assistant.md: '100+ tool schemas' (floor bumped from 85 to 100 in Session 1142 after search_docs landed)",
 )
 def _pa_topics_schema_count() -> ClaimResult:
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 85
+    expected = 100  # Session 1142: floor raised from 85 to absorb steady tool growth (101 → 106)
     actual = len(PA_TOOL_SCHEMAS)
-    # '85+' = floor.  OK if actual >= 85 and drift within +20; medium if far over.
+    # '100+' = floor. OK if actual >= 100 and drift within +20; medium if far over.
     if actual < expected:
         severity = 'high'
     elif actual <= expected + 20:
@@ -948,7 +948,7 @@ def _capabilities_total_agents() -> ClaimResult:
 )
 def _capabilities_pa_tools() -> ClaimResult:
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 105  # refreshed Session 1142
+    expected = 106  # Session 1142 + search_docs PA tool
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')

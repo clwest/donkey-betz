@@ -13,7 +13,7 @@
 |-----------|-------|---------|
 | **Total Agents** | **234** | 83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked) + 151 DB persona-eligible Agent rows |
 | **Total Spiders** | **80** | All working; 41 categories |
-| **PA Tools** | **105 schemas / 170 handlers** | 6 gateway tools, 8 enrichment services |
+| **PA Tools** | **106 schemas / 171 handlers** | 6 gateway tools, 8 enrichment services; Session 1142 added `search_docs` (chunked /docs/ retrieval) |
 | **Database Models** | **585** | Concrete Django models across 23 apps (PostgreSQL + pgvector) |
 | **Celery Tasks** | **400** | User-defined Celery tasks; PeriodicTask rows materialized via sync/bootstrap from `core/celery.py` |
 | **Services** | **~300 modules / 112 classes** | Module-count vs `*Service` class-count |
