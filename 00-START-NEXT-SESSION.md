@@ -39,7 +39,7 @@ Live drift checks:
 - `python scripts/verify_repo_guardrails.py`
 - `python manage.py session_provenance --session N` — per-session cluster (PR #2205).
 - `python manage.py build_docs_provenance` — regenerates `docs/_provenance.json` (per-doc index w/ handoff filename override per PR #2219).
-- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 7 invocation (Session 1154's sole charter; 221 more handoffs eligible after Session 1153's round 6)**.
+- `python manage.py backfill_doc_provenance --add-frontmatter --paths-include docs/handoffs/ --limit 75 --with-confidence --with-note "auto-added by backfill_doc_provenance"` — **P3.5 round 8 invocation (Session 1155's sole charter; 146 more handoffs eligible after Session 1154's round 7)**.
 - The 8 `build_*_audit` commands — regenerate per-subsystem runtime evidence.
 
 ## PRE-COMMIT HOOK BLOCKS DIRECT COMMITS TO MAIN
@@ -54,7 +54,7 @@ Every session-NNNN commit subject should include `session-NNNN`:
 - `fix(session-NNNN): ...`
 - `feat(session-NNNN-area): ...`
 
-Sessions 1145+1146+1147+1148+1149+1150+1151+1152+1153 ran 100% subject-tagged. Keep the streak.
+Sessions 1145+1146+1147+1148+1149+1150+1151+1152+1153+1154 ran 100% subject-tagged. Keep the streak.
 
 ## ONE-COMMAND LAUNCH — the laptop fleet
 
@@ -73,19 +73,19 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1153 CLOSED — P3.5 round 6 shipped (BYPASS MODE) (2026-05-25)
+## SESSION 1154 CLOSED — P3.5 round 7 shipped (BYPASS MODE) (2026-05-25)
 
-**1 PR merged + this handoff.** Full handoff: [`docs/handoffs/SESSION_1153_P35_ROUND6.md`](docs/handoffs/SESSION_1153_P35_ROUND6.md).
+**1 PR merged + this handoff.** Full handoff: [`docs/handoffs/SESSION_1154_P35_ROUND7.md`](docs/handoffs/SESSION_1154_P35_ROUND7.md).
 
 | PR | What |
 |----|------|
-| **#2235** | P3.5 round 6 — 75 handoffs FM-backfilled (~SESSION_594 → SESSION_493) |
+| **#2237** | P3.5 round 7 — 75 handoffs FM-backfilled (~SESSION_492 → SESSION_427) |
 
-Plus this Session 1153 handoff PR.
+Plus this Session 1154 handoff PR.
 
-Post-r6 state: `_provenance.json` 2061 docs (HIGH=1278 / MEDIUM=294 / UNKNOWN=489); `INDEX.md` 2612 docs / 683,434 lines. **221 handoffs still eligible** for future rounds.
+Post-r7 state: `_provenance.json` 2062 docs (HIGH=1279); `INDEX.md` 2613 docs / 683,958 lines. **146 handoffs still eligible**.
 
-**Pool projection:** ~3 more P3.5 sessions (rounds 7-9) before pool exhausted around Session 1156.
+**Pool projection:** ~2 more sessions (rounds 8-9) before pool exhausted around Session 1156.
 
 ### Previous merge waves (still relevant context)
 
@@ -129,7 +129,7 @@ Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery 
 
 ---
 
-## SESSION 1154 — CURRENT ENTRY POINT
+## SESSION 1155 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
@@ -137,11 +137,11 @@ Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery 
 ```bash
 gh pr checks <latest-pr-num>
 ```
-If still showing the "payments have failed / spending limit" annotation, continue in bypass mode (see protocol above).
+If still showing the "payments have failed / spending limit" annotation, continue in bypass mode.
 
 ### SOLE CHARTER
 
-**P3.5 round 7.** Same invocation:
+**P3.5 round 8.** Same invocation:
 
 ```bash
 python manage.py backfill_doc_provenance \
@@ -152,11 +152,11 @@ python manage.py backfill_doc_provenance \
     --with-note "auto-added by backfill_doc_provenance"
 ```
 
-**Expected range:** ~`SESSION_492` → `SESSION_418`. **Survey expectation:** 221 add-eligible → pick 75 → 146 remaining after round 7.
+**Expected range:** ~`SESSION_426` → `SESSION_352`. **Survey expectation:** 146 add-eligible → pick 75 → 71 remaining after round 8.
 
-Bundle INDEX + `_provenance.json` regens. Run local CI mirrors before push. Same bypass justification format.
+Bundle INDEX + `_provenance.json` regens. Run local CI mirrors before push.
 
-**Why sole charter:** One mechanical batch per session. Pattern has held across 10 merges so far in bypass mode.
+**Why sole charter:** One mechanical batch per session. Pattern has held across 12 merges so far.
 
 ### Carryovers queued (unchanged from Session 1150 close)
 
@@ -199,6 +199,7 @@ Bundle INDEX + `_provenance.json` regens. Run local CI mirrors before push. Same
 
 ## RECENT SESSION ARCS
 
+- **Session 1154** — P3.5 round 7. 1 PR merged (bypass mode) + handoff.
 - **Session 1153** — P3.5 round 6. 1 PR merged (bypass mode) + handoff.
 - **Session 1152** — P3.5 round 5. 1 PR merged (bypass mode) + handoff.
 - **Session 1151** — P3.5 round 4. 1 PR merged (bypass mode) + handoff.
