@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1145) -->
+> **Status:** Superseded
+> **Deprecated:** Session 1145 (2026-05-25)
+> **Current canon:** [`docs/topics/agent-system.md`](../topics/agent-system.md) (current LearningBridge ABC catalogue) + [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md). Current implementation: `core/learning_bridges/sports_betting_bridge.py` (still present alongside 7+ sibling bridges).
+> **Change reason:** Sep 30 2025 implementation narrative for the sports-betting → unified-learning bridge. The bridge file still exists, but the surrounding architecture was materially refactored in Session 1115 (all 9 bridges migrated to `core/learning_bridges/base.py` ABC). Reality-score framing has been retired (Session 1143).
+> **Preserved because:** documents the original cross-domain learning integration intent + bridge design; useful as build-history record. Do NOT cite for current bridge architecture.
+
 # ✅ SPORTS BETTING LEARNING INTEGRATION - COMPLETE
 
 **Date**: 2025-09-30

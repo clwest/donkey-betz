@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1145) -->
+> **Status:** Superseded
+> **Deprecated:** Session 1145 (2026-05-25)
+> **Current canon:** [`docs/24_7_GLOBAL_AI_APP_ATLAS.md`](../24_7_GLOBAL_AI_APP_ATLAS.md) (current strategy anchor) + [`docs/topics/personal-assistant.md`](../topics/personal-assistant.md) (current human-AI collaboration surface via Rigby).
+> **Change reason:** Sep 30 2025 product-vision write-up about operationalizing human-AI partnership for users. Pre-dates the 24/7 Global AI brand lock + Suite/Verticals/Lab structure (Session ~1117 — Atlas v3) and the Rigby-as-PA architecture that now embodies the partnership pattern. This doc is closer to strategy/vision than architecture.
+> **Preserved because:** captures original partnership-as-product framing; useful as build-history record. Do NOT cite as current strategy.
+
 # 🤝 HUMAN-AI PARTNERSHIP ENHANCEMENT
 
 **Date**: 2025-09-30

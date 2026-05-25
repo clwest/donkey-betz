@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1145) -->
+> **Status:** Superseded
+> **Deprecated:** Session 1145 (2026-05-25)
+> **Current canon:** [`docs/topics/content-pipeline.md`](../topics/content-pipeline.md) (ClaimsPack + deliberation + PublishGate) + [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime counts).
+> **Change reason:** Image-generation-specific design doc (generate-3 / refine-with-editing / lock-seed). Self-described as "DESIGN COMPLETE - Ready to implement"; current content pipeline architecture lives in the content-pipeline topic doc and does not match this design as written.
+> **Preserved because:** documents the seed-locking + refinement workflow intent for the image-gen surface; useful as build-history record. Do NOT cite for current state.
+
 # 🎯 The Perfect Workflow - Generation + Editing + Locking
 **Date:** November 12, 2025
 **Insight:** Don't fight randomness - embrace it, refine it, then lock it!
