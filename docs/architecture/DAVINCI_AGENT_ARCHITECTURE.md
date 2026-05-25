@@ -1,7 +1,14 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Deprecated
+> **Originally:** Session 84 (Nov 13 2025) — DaVinci Resolve agent-based architecture design
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** **DaVinci Resolve integration sunset by Chris in Session 1143** following abandoned-features audit (PR #2191). The agent-based architecture was designed but the underlying DaVinci integration never reached active usage. Do not implement.
+> **Preserved because:** historical design record.
+
 # 🎬 Session 84: DaVinci Resolve Agent-Based Video Editing Architecture
 
 **Date:** November 13, 2025
-**Status:** Design Phase
+**Status:** DEPRECATED (Session 1143) — design preserved but integration sunset
 **Goal:** Build comprehensive Agent-powered DaVinci Resolve video editing workflow
 
 ---

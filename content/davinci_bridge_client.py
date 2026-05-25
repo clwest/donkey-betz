@@ -1,6 +1,14 @@
 """
 DaVinci Bridge Client
 
+.. deprecated:: Session 1143 (2026-05-25)
+    DaVinci Resolve integration was SUNSET by Chris in Session 1143
+    following the abandoned-features audit (PR #2191). Per
+    UNDERUTILIZED_FEATURES.md: integrated but never used, $0 ROI.
+    Do NOT invoke this bridge client for new work. See
+    docs/archive/superseded-2026-05/DAVINCI_RESOLVE.md for the
+    deprecation banner.
+
 This client connects to the DaVinci Bridge Server to perform video editing operations.
 It replaces direct DaVinci Resolve API calls with HTTP requests to the bridge.
 
