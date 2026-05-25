@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Superseded
+> **Last verified:** Session 1143 (2026-05-25)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/topics/*`](../topics/) (subsystem deep-dives).
+> **Change reason:** Sep 2025 'System Integration Orchestrator' status. 149-agent claim predates current 83-AGENT_MAP architecture.
+> **Preserved because:** historical "reality score" / system-overview snapshot. Useful as build-history record; do NOT cite for current state.
+
 # 🎼 UNIFIED DONKEY BETZ SYSTEM INTEGRATION STATUS REPORT
 
 **Generated:** September 15, 2025

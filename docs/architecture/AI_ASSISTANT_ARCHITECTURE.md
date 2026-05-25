@@ -1,3 +1,7 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge.
+> **Note:** Agent count (74) stale (current: 83 in AGENT_MAP). Architecture narrative still useful; verify subsystem links against topics/personal-assistant.md. Per Session 1143 Phase 4 (Chris Q4=Y): PLATFORM_INVENTORY + docs/INDEX are the only authoritative counts.
+
 # AI Assistant System Architecture
 
 **Last Updated:** January 20, 2026 - Session 786
