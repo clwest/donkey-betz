@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1147) -->
+> **Topic doc — current architecture spec; refresh-in-place if implementation drifts.**
+> Architecture for Railway → Mac OBS bridge via secure tunnel + local FastAPI shim. For platform-wide counts referenced anywhere in this doc, see [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md). PA tool surface for `obs_tool` is registered in `core/services/pa_tool_schemas.py`; bridge endpoint config lives in the Railway env vars referenced in §1.
+> **Last reviewed for drift labeling:** Session 1147 (2026-05-25)
+> **Related canon:** [`docs/canon/INDEX.md`](../canon/INDEX.md).
+
 # Context Packet: OBS Remote Control (Option B) + Auto-Upload (MP4)
 
 ## One-line Goal

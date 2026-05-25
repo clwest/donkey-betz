@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1147) -->
+> **Topic doc — pattern still valid; specifics may drift as more repos onboard.**
+> Multi-repo fleet pattern shipped Session 1119; proof case was character-os. For current count of onboarded repos, see [`config/external_repos/`](../../config/external_repos/) directory + [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) for fleet runtime counts.
+> **Last reviewed for drift labeling:** Session 1147 (2026-05-25)
+> **Related canon:** [`docs/canon/INDEX.md`](../canon/INDEX.md) + [`docs/topics/fleet-doc-verifier-rollout.md`](fleet-doc-verifier-rollout.md) (companion fleet-net work).
+
 # Multi-Repo Management (Rigby's Project Fleet) — v0
 
 **Session:** 1119
