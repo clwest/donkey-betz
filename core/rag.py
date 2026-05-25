@@ -36,7 +36,14 @@ def _file_bonus(path: str) -> int:
             return 8
     return 0
 
-def top_k(question: str, k: int = 8) -> list[dict]:
+def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
+    """Rank corpus chunks by token-overlap against ``question``.
+
+    boost_hints=True preserves the legacy askdocs CLI behavior (learning-
+    loop bias from LEARNING_LOOP_HINTS + PREF_FILE_BONUS). Pass False for
+    general-purpose doc search where that bias is wrong (e.g., the
+    Session 1142 ``search_docs`` PA tool).
+    """
     if not CORPUS_PATH.exists():
         return []
     q = question.lower()
@@ -51,11 +58,9 @@ def top_k(question: str, k: int = 8) -> list[dict]:
             # base: shared token overlap
             base = sum(1 for w in q_terms if w in tl)
 
-            # query-driven boosts
-            base += _hint_score(tl)
-
-            # file-path bonus for relevant docs
-            base += _file_bonus(row.get("file", ""))
+            if boost_hints:
+                base += _hint_score(tl)
+                base += _file_bonus(row.get("file", ""))
 
             if base:
                 scored.append((base, row))
@@ -63,8 +68,8 @@ def top_k(question: str, k: int = 8) -> list[dict]:
     scored.sort(key=lambda x: x[0], reverse=True)
     return [r for _, r in scored[:k]]
 
-def build_docs_context(question: str, k: int = 10, max_chars: int = 9000) -> str:
-    rows = top_k(question, k=k)
+def build_docs_context(question: str, k: int = 10, max_chars: int = 9000, boost_hints: bool = True) -> str:
+    rows = top_k(question, k=k, boost_hints=boost_hints)
     parts, total = [], 0
     for r in rows:
         cite = f"[{r['file']}#{r['chunk_id']}]"

@@ -673,7 +673,7 @@ def _agents_md_workspace_aware() -> ClaimResult:
 def _agents_md_pa_tool_count() -> ClaimResult:
     """Compare 'PA now has 89 tools' against the live PA_TOOL_SCHEMAS list."""
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 101  # refreshed Session 1100 — matches new docs/AGENTS.md
+    expected = 106  # Session 1142 + search_docs PA tool added in same session
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')
@@ -791,13 +791,13 @@ def _spiders_md_categories() -> ClaimResult:
 @register_claim(
     doc='docs/topics/personal-assistant.md',
     claim_id='pa_tool_schema_count_85',
-    description="docs/topics/personal-assistant.md: '85+ tool schemas'",
+    description="docs/topics/personal-assistant.md: '100+ tool schemas' (floor bumped from 85 to 100 in Session 1142 after search_docs landed)",
 )
 def _pa_topics_schema_count() -> ClaimResult:
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 85
+    expected = 100  # Session 1142: floor raised from 85 to absorb steady tool growth (101 → 106)
     actual = len(PA_TOOL_SCHEMAS)
-    # '85+' = floor.  OK if actual >= 85 and drift within +20; medium if far over.
+    # '100+' = floor. OK if actual >= 100 and drift within +20; medium if far over.
     if actual < expected:
         severity = 'high'
     elif actual <= expected + 20:
@@ -948,7 +948,7 @@ def _capabilities_total_agents() -> ClaimResult:
 )
 def _capabilities_pa_tools() -> ClaimResult:
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 101  # refreshed Session 1100
+    expected = 106  # Session 1142 + search_docs PA tool
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')
@@ -2944,28 +2944,26 @@ def _body_systems_fully_wired() -> ClaimResult:
 @register_claim(
     doc='docs/ADVISOR_AUDIT.md',
     claim_id='advisor_count_matches_doc',
-    description="advisors.registry.advisor_registry materializes the documented 25 advisors (14 named + 11 specialists)",
+    description="advisors.registry.advisor_registry materializes 30 advisors (all functional domain specialists; no named-figure identities post Session 1142 rename)",
 )
 def _advisor_count_matches_doc() -> ClaimResult:
     """Compare the live AdvisorProfile registry against the documented total.
 
-    The audit (Session 1115) caught CLAUDE.md claiming `32 (10 named + 22
-    specialists)` while the registry only materializes 25 (14 named + 11
-    specialists). Aligned in the same session; this claim catches future
-    drift on either side.
+    Session 1142 (feat/advisor-functional-identities): all previously
+    named-figure advisors (Warren Buffett, Cathie Wood, etc) were renamed
+    to functional identities (Value Investing Strategist, Innovation
+    Investment Strategist, etc). Net effect: 30 total, 0 named, 30
+    specialists. Prior Session 1115 state was 30 total (16 named + 14
+    specialists). This claim catches future drift on either side.
     """
     from advisors.registry import advisor_registry
     rows = list(advisor_registry.advisors.values())
     n_total = len(rows)
     n_named = sum(1 for r in rows if '(AI Model)' in (r.name or ''))
     n_specialists = n_total - n_named
-    # Session 1115 post-finding-4: 5 advisors added to fill previously-
-    # unfulfilled AdvisorDomain enum values. 2 named figures (Tim Cook,
-    # Andrew Ng), 3 fictional personas (Priya Raman / IP, Marcus Whitfield /
-    # leadership, Eleanor Park / compliance).
     expected_total = 30
-    expected_named = 16
-    expected_specialists = 14
+    expected_named = 0
+    expected_specialists = 30
     matches = (
         n_total == expected_total
         and n_named == expected_named
