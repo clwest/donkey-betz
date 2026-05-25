@@ -1,90 +1,40 @@
-# 🚀 START HERE - Unified Donkey Betz Platform
+# Start Here — Unified Donkey Betz
 
-**Welcome to Session 85+!**
+**Last updated:** Session 1143 (2026-05-24)
 
-## ⚡ Quick Start (2 Minutes)
+This dir holds **methodology anchors** for working in the `/docs/` corpus. For session priorities, runtime state, and active work, see the project root:
+
+## Mandatory entry points (read in order)
+
+1. [`/CLAUDE.md`](../../CLAUDE.md) — primary system context, always loaded into the session.
+2. [`/00-START-NEXT-SESSION.md`](../../00-START-NEXT-SESSION.md) — current session priorities + carryovers.
+3. [`/docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) — narrative anchor.
+4. [`/docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) — runtime anchor (regenerable, wins on conflict).
+5. [`/docs/24_7_GLOBAL_AI_APP_ATLAS.md`](../24_7_GLOBAL_AI_APP_ATLAS.md) — strategy anchor.
+
+## Methodology anchors (this dir)
+
+- [`DOC_LIFECYCLE.md`](DOC_LIFECYCLE.md) — pointer header conventions (V1 stats-drift, V2 supersession) + root-stability rule. Read before moving, renaming, or superseding any `/docs/` file.
+- [`INDEX.md`](INDEX.md) — index of files in this dir.
+
+## Behavior + translation anchors (root of `docs/`)
+
+- [`/docs/UDB_BEHAVIOR_LAYER.md`](../UDB_BEHAVIOR_LAYER.md) — Rigby's voice + display rules + constraint preservation.
+- [`/docs/UDB_TRANSLATION_LAYER.md`](../UDB_TRANSLATION_LAYER.md) — audience contract (same truth → different explanation).
+
+## Live drift checks
 
 ```bash
-# 1. Read current session context
-cat ../00-START-NEXT-SESSION.md
-
-# 2. Start platform
-make start
-
-# 3. Access AI Studio
-open http://localhost:8000/ai-studio/
+python manage.py verify_doc_claims --only-drift   # numeric drift detector
+python manage.py check_doc_headers --only-stale   # header staleness
+python manage.py build_docs_index                 # regenerate docs/INDEX.md + _index.json
+.venv/bin/context-kit doctor                      # expected floor: 10 OK / 2 warnings
 ```
 
-## 📊 Current Status (Session 84 Complete)
+## Recent corpus audit
 
-**Reality Score:** 99.9% ✅
-**Features:** 34/34 AI Features (100%) ✅
-**Latest:** Video chaining with ffmpeg ⚡
-
-### What Just Happened (Session 84):
-✅ Fixed DaVinci render not starting → Switched to ffmpeg
-✅ Implemented video number parsing (chain videos 5 and 8)
-✅ 2-video chains: ~5 seconds
-✅ 4-video chains: ~15 seconds
-✅ Hybrid architecture: DaVinci for color, ffmpeg for chaining
-
-## 📁 Documentation Structure
-
-```
-docs/
-├── 00-START-HERE/          ← YOU ARE HERE
-├── sessions/               ← Session history
-├── architecture/           ← System design
-├── agents/                 ← Agent docs
-├── features/               ← Feature specs
-└── guides/                 ← How-to guides
-```
-
-## 🎯 Key Documents
-
-1. **`../00-START-NEXT-SESSION.md`** - Always read this first!
-2. **`../CLAUDE.md`** - Master platform overview
-3. **`sessions/SESSION_84_VIDEO_CHAINING.md`** - Latest session
-4. **`architecture/DAVINCI_AGENT_ARCHITECTURE.md`** - Agent design
-
-## 🔥 What Works Right Now
-
-- ✅ Generate images (4 models, 69 styles)
-- ✅ Generate videos (Text-to-Video, Image-to-Video)
-- ✅ **Chain videos** (2+ videos with transitions)
-- ✅ **Color grade videos** (cinematic, vibrant, vintage, etc.)
-- ✅ Generate audio (ElevenLabs, 12 voices)
-- ✅ Voice-controlled AI Assistant
-- ✅ Character training (FLUX LoRA)
-
-## 📝 Quick Commands
-
-### Video Operations:
-```
-"Show my videos"
-"Chain videos 5 and 8"
-"Make my video cinematic"
-"Chain my last 3 videos"
-```
-
-### Testing:
-```bash
-.venv/bin/python manage.py shell
->>> from agents.video_agent import VideoAgent
->>> agent = VideoAgent(user=user)
-```
-
-## ⚠️ Known Issues
-
-1. Frontend timeout for operations >10s (cosmetic - videos still complete)
-2. Text overlays untested
-3. Natural language video matching not implemented
-
-## 🚀 Next Steps
-See `/docs/plans/SYSTEM_OPERATING_CONTEXT.md and /docs/plans/CLAUDE_CONTEXT_SYSTEM_PACK.md` from new context plans.
-See `../00-START-NEXT-SESSION.md` for current priorities!
-
+Session 1143 produced a deep audit of `/docs/`: [`audit-2026/SESSION_1143_DOCS_AUDIT.md`](../audit-2026/SESSION_1143_DOCS_AUDIT.md). It contains per-subdir verdicts, pathology list, and a phased action queue for cleanup work.
 
 ---
 
-**Partnership Reminder:** Always use "WE" not "I" - this is OUR platform! 🤝
+**Prior version:** the previous README (pre-Session 1143) pointed at a Session 84-era video-chaining status that had drifted ~16 months stale. Git history preserves it. The corpus white-paper preservation rule applies to handoffs / audits / topic docs — not orientation pages that exist to reflect current state.
