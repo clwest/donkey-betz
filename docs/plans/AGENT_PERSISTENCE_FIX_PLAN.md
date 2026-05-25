@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ HISTORICAL PLAN (Q4 2025 / Q1 2026 build phase).** Drafted during platform build-out; may be partially shipped, renamed in code, or quietly superseded. Preserved for historical reference, not current truth. For current truth see [`docs/INDEX.md`](../INDEX.md) + [`PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) + the latest handoff. See [`docs/plans/INDEX.md`](INDEX.md) for directory scope.
+
 # Agent Persistence Fix Plan - Session 861
 
 **Problem:** 96% of ContentWriterAgent blogs were lost because content was only stored in ephemeral `AgentResult`. Investigation revealed ~45 agents have the same issue.
