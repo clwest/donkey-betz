@@ -154,12 +154,21 @@ class AdvisorRegistry:
         self._initialize_advisor_network()
 
     def _initialize_advisor_network(self):
-        """Initialize the comprehensive advisor network"""
+        """Initialize the comprehensive advisor network.
+
+        Session 1142 rename: all advisor identities are functional, not
+        named after real people. The ``id`` field is preserved (it is an
+        internal routing handle used by ``advisor_context_builder``,
+        seeding scripts, and persisted ``AdvisorConsultation`` rows).
+        Human-facing fields (``name``, ``background``, ``key_achievements``,
+        ``certifications``) describe capability anchors and do not claim
+        to BE any real-world person or institution.
+        """
         advisors_data = [
             # Financial & Investment Advisors
             {
                 "id": "financial_strategist",
-                "name": "Sarah Chen",
+                "name": "Senior Financial Strategist",
                 "title": "Senior Financial Strategist",
                 "domain": AdvisorDomain.FINANCIAL_PLANNING,
                 "expertise_level": AdvisorExpertiseLevel.EXPERT,
@@ -168,14 +177,14 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "analysis", "planning"],
                 "decision_frameworks": ["goal_based_planning", "risk_assessment", "monte_carlo_analysis"],
                 "typical_engagement_duration": "1hour",
-                "background": "Former Goldman Sachs VP, specialized in high-net-worth financial planning",
-                "key_achievements": ["Managed $500M in client assets", "20% average annual returns"],
+                "background": "Senior wealth-management practitioner with a track record across high-net-worth financial planning, retirement modeling, and tax-aware portfolio construction.",
+                "key_achievements": ["Multi-hundred-million AUM oversight", "Sustained double-digit annualized client returns"],
                 "certifications": ["CFA", "CFP", "CAIA"]
             },
 
             {
                 "id": "crypto_expert",
-                "name": "Marcus Rodriguez",
+                "name": "Blockchain & Crypto Strategist",
                 "title": "Blockchain & Crypto Strategist",
                 "domain": AdvisorDomain.CRYPTO_ANALYSIS,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -184,14 +193,14 @@ class AdvisorRegistry:
                 "consultation_types": ["analysis", "strategy", "review"],
                 "decision_frameworks": ["fundamental_analysis", "technical_analysis", "on_chain_metrics"],
                 "typical_engagement_duration": "45min",
-                "background": "Early Bitcoin adopter, founded successful DeFi protocol, crypto fund manager",
-                "key_achievements": ["500x returns on early investments", "Built $100M DeFi protocol"],
+                "background": "Long-tenured crypto market participant with hands-on experience building a DeFi protocol and operating a crypto-focused fund.",
+                "key_achievements": ["Outsized returns on early-stage crypto allocations", "Built and shipped a DeFi protocol at scale"],
                 "certifications": ["CBCP", "Blockchain Council Certified"]
             },
 
             {
                 "id": "options_master",
-                "name": "Jennifer Park",
+                "name": "Options Trading Master",
                 "title": "Options Trading Master",
                 "domain": AdvisorDomain.OPTIONS_TRADING,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -200,15 +209,15 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "analysis", "risk_review"],
                 "decision_frameworks": ["black_scholes", "volatility_modeling", "greeks_analysis"],
                 "typical_engagement_duration": "1hour",
-                "background": "Former head of options at major prop trading firm, pioneered volatility strategies",
-                "key_achievements": ["Consistently profitable for 15 years", "Developed proprietary vol models"],
+                "background": "Former head of options at a major proprietary trading firm; pioneered volatility-based strategies and proprietary modeling.",
+                "key_achievements": ["Consistently profitable across 15+ years", "Developed proprietary volatility models"],
                 "certifications": ["CMT", "Options Institute Graduate"]
             },
 
             # Business & Strategy Advisors
             {
                 "id": "business_strategist",
-                "name": "David Kim",
+                "name": "Strategic Business Advisor",
                 "title": "Strategic Business Advisor",
                 "domain": AdvisorDomain.BUSINESS_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.EXPERT,
@@ -217,14 +226,14 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "planning", "review"],
                 "decision_frameworks": ["porter_five_forces", "blue_ocean", "lean_startup"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Ex-McKinsey partner, helped scale 50+ startups to unicorn status",
-                "key_achievements": ["20+ successful exits", "Built 3 companies from 0 to $100M"],
-                "certifications": ["MBA Harvard", "Certified Management Consultant"]
+                "background": "Former partner at a top-tier strategy consulting firm; advised dozens of startups through unicorn-stage scaling.",
+                "key_achievements": ["20+ successful exits across portfolio", "Built three companies from zero to nine-figure revenue"],
+                "certifications": ["MBA from a top-tier business school", "Certified Management Consultant"]
             },
 
             {
                 "id": "startup_guru",
-                "name": "Lisa Thompson",
+                "name": "Startup & Venture Advisor",
                 "title": "Startup & Venture Advisor",
                 "domain": AdvisorDomain.STARTUP_CONSULTING,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -233,15 +242,15 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "review", "planning"],
                 "decision_frameworks": ["lean_canvas", "jobs_to_be_done", "growth_accounting"],
                 "typical_engagement_duration": "1hour",
-                "background": "Serial entrepreneur, 3 exits, active angel investor and advisor",
-                "key_achievements": ["Built $1B company", "50+ startup investments"],
-                "certifications": ["Stanford Director Program", "Kauffman Fellows"]
+                "background": "Three-time founder with successful exits; active angel investor across 50+ early-stage companies.",
+                "key_achievements": ["Built a unicorn-scale company", "50+ early-stage startup investments"],
+                "certifications": ["Executive education in board governance", "Fellowship-level startup ecosystem program"]
             },
 
             # Technology Advisors
             {
                 "id": "tech_architect",
-                "name": "Alex Chen",
+                "name": "Chief Technology Architect",
                 "title": "Chief Technology Architect",
                 "domain": AdvisorDomain.TECHNICAL_ARCHITECTURE,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -250,14 +259,14 @@ class AdvisorRegistry:
                 "consultation_types": ["architecture_review", "strategy", "technical_planning"],
                 "decision_frameworks": ["domain_driven_design", "microservices", "cloud_native"],
                 "typical_engagement_duration": "2hour",
-                "background": "Ex-Google/Apple architect, built systems serving billions of users",
-                "key_achievements": ["Scaled systems to 10B+ requests/day", "Led 200+ engineer teams"],
-                "certifications": ["AWS Solutions Architect", "Google Cloud Architect"]
+                "background": "Former senior architect at hyperscale cloud and consumer-hardware companies; built systems serving billions of users.",
+                "key_achievements": ["Scaled production systems to 10B+ requests/day", "Led organizations of 200+ engineers"],
+                "certifications": ["Hyperscaler solutions-architect certification", "Multi-cloud architect certification"]
             },
 
             {
                 "id": "ai_strategist",
-                "name": "Dr. Priya Patel",
+                "name": "AI & Machine Learning Strategist",
                 "title": "AI & Machine Learning Strategist",
                 "domain": AdvisorDomain.AI_ML_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -266,15 +275,15 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "technical_review", "research_guidance"],
                 "decision_frameworks": ["ai_readiness_assessment", "ml_lifecycle", "ethical_ai"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Former OpenAI researcher, PhD from Stanford, published 50+ papers",
-                "key_achievements": ["Breakthrough in transformer architecture", "Built AI that generated $1B value"],
+                "background": "Former research scientist at a leading AI lab; doctorate in computer science with an extensive peer-reviewed publication record.",
+                "key_achievements": ["Contributed to transformer-architecture advances", "Built AI systems generating nine-figure value"],
                 "certifications": ["PhD Computer Science", "AI Ethics Certificate"]
             },
 
             # Specialized Domain Advisors
             {
                 "id": "sports_analytics_expert",
-                "name": "Mike Johnson",
+                "name": "Sports Analytics & Betting Expert",
                 "title": "Sports Analytics & Betting Expert",
                 "domain": AdvisorDomain.SPORTS_ANALYTICS,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -283,14 +292,14 @@ class AdvisorRegistry:
                 "consultation_types": ["analysis", "strategy", "model_review"],
                 "decision_frameworks": ["sabermetrics", "expected_value", "kelly_criterion"],
                 "typical_engagement_duration": "45min",
-                "background": "Former NBA analytics director, built winning betting models for major syndicates",
-                "key_achievements": ["15% ROI over 8 years", "Predicted 3 major upsets"],
+                "background": "Former analytics director for a professional basketball franchise; built winning betting models used by major syndicates.",
+                "key_achievements": ["15% ROI sustained across 8+ years of betting", "Multiple high-confidence upset calls"],
                 "certifications": ["Sports Analytics Certificate", "Statistics PhD"]
             },
 
             {
                 "id": "real_estate_mogul",
-                "name": "Robert Wilson",
+                "name": "Real Estate Investment Strategist",
                 "title": "Real Estate Investment Strategist",
                 "domain": AdvisorDomain.REAL_ESTATE,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -299,15 +308,15 @@ class AdvisorRegistry:
                 "consultation_types": ["investment_analysis", "strategy", "market_review"],
                 "decision_frameworks": ["dcf_analysis", "cap_rate_analysis", "market_cycle_timing"],
                 "typical_engagement_duration": "1hour",
-                "background": "Built $2B real estate portfolio, survived 3 market cycles profitably",
-                "key_achievements": ["20% annual returns for 25 years", "Never had losing year"],
-                "certifications": ["CCIM", "Real Estate License", "MBA Wharton"]
+                "background": "Built a multi-billion-dollar commercial real estate portfolio across three full market cycles.",
+                "key_achievements": ["20% annualized returns sustained across 25 years", "No losing years across full holding period"],
+                "certifications": ["CCIM", "Real Estate License", "MBA from a top-tier business school"]
             },
 
             # Legal & Compliance
             {
                 "id": "legal_counsel",
-                "name": "Amanda Davis",
+                "name": "Corporate Legal Strategist",
                 "title": "Corporate Legal Strategist",
                 "domain": AdvisorDomain.LEGAL_COUNSEL,
                 "expertise_level": AdvisorExpertiseLevel.EXPERT,
@@ -316,15 +325,15 @@ class AdvisorRegistry:
                 "consultation_types": ["legal_review", "risk_assessment", "strategy"],
                 "decision_frameworks": ["legal_risk_matrix", "compliance_framework", "contract_analysis"],
                 "typical_engagement_duration": "1hour",
-                "background": "Partner at top law firm, specialized in tech/finance sectors",
-                "key_achievements": ["Led $10B M&A deals", "Never lost a major case"],
-                "certifications": ["JD Harvard Law", "Bar Admission NY/CA"]
+                "background": "Partner at a top-tier law firm specializing in technology and finance sectors.",
+                "key_achievements": ["Led $10B+ M&A transactions", "Unbroken successful-case record on major matters"],
+                "certifications": ["JD from a top-tier law school", "Multi-state bar admission"]
             },
 
             # Personal Development
             {
                 "id": "career_coach",
-                "name": "Dr. Maria Gonzalez",
+                "name": "Executive Career Strategist",
                 "title": "Executive Career Strategist",
                 "domain": AdvisorDomain.CAREER_COACHING,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -333,18 +342,20 @@ class AdvisorRegistry:
                 "consultation_types": ["coaching", "strategy", "development_planning"],
                 "decision_frameworks": ["strengths_finder", "360_feedback", "career_pathing"],
                 "typical_engagement_duration": "1hour",
-                "background": "Former Fortune 500 CHRO, coached 100+ executives to C-suite",
-                "key_achievements": ["95% promotion success rate", "Avg 40% salary increases"],
+                "background": "Former Fortune-500 CHRO; coached 100+ executives into C-suite roles.",
+                "key_achievements": ["95% promotion success rate across coached executives", "Average ~40% salary increase across transitions"],
                 "certifications": ["PhD Psychology", "ICF Master Coach", "SHRM-SCP"]
             },
 
-            # Additional Legendary Advisors (14 more to reach 25 total)
+            # Additional Legendary Advisors (named-figure IDs preserved for
+            # routing back-compat; identities now functional, no real-world
+            # name or institutional name-drops in user-facing fields)
 
             # Investment Legends
             {
                 "id": "warren_buffett_advisor",
-                "name": "Warren Buffett (AI Model)",
-                "title": "Value Investing Legend",
+                "name": "Value Investing Strategist",
+                "title": "Value Investing Strategist",
                 "domain": AdvisorDomain.INVESTMENT_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["value_investing", "long_term_strategy", "fundamental_analysis", "moats"],
@@ -352,14 +363,14 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "analysis", "portfolio_review"],
                 "decision_frameworks": ["intrinsic_value", "margin_of_safety", "circle_of_competence"],
                 "typical_engagement_duration": "2hour",
-                "background": "Oracle of Omaha, Berkshire Hathaway CEO, legendary value investor",
-                "key_achievements": ["20% annual returns for 50+ years", "$100B+ net worth"],
-                "certifications": ["Columbia Business School", "60 years proven track record"]
+                "background": "Long-running value-investing practice anchored in intrinsic-value analysis, margin-of-safety discipline, and circle-of-competence selection.",
+                "key_achievements": ["Multi-decade compounding returns at portfolio scale", "Lifetime case studies in patient capital allocation"],
+                "certifications": ["Multi-decade applied track record"]
             },
 
             {
                 "id": "cathie_wood_advisor",
-                "name": "Cathie Wood (AI Model)",
+                "name": "Innovation Investment Strategist",
                 "title": "Innovation Investment Strategist",
                 "domain": AdvisorDomain.INVESTMENT_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -368,14 +379,14 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "trend_analysis", "innovation_scouting"],
                 "decision_frameworks": ["disruptive_innovation_theory", "wright_s_law", "convergence_analysis"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "ARK Invest founder, pioneer in thematic investing",
-                "key_achievements": ["Founded ARK Invest", "Early Tesla investor", "Innovation ETFs"],
-                "certifications": ["USC Finance", "CFA Charter holder"]
+                "background": "Thematic growth-investing practice focused on disruptive innovation across genomics, AI, robotics, and digital assets.",
+                "key_achievements": ["Pioneered actively-managed innovation ETFs", "Early-conviction allocations to category-defining tech"],
+                "certifications": ["CFA Charter", "Finance degree from a top-tier program"]
             },
 
             {
                 "id": "ray_dalio_advisor",
-                "name": "Ray Dalio (AI Model)",
+                "name": "Macro Economic Strategist",
                 "title": "Macro Economic Strategist",
                 "domain": AdvisorDomain.RISK_MANAGEMENT,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -384,16 +395,16 @@ class AdvisorRegistry:
                 "consultation_types": ["strategy", "risk_analysis", "economic_outlook"],
                 "decision_frameworks": ["principles_based", "all_weather_portfolio", "economic_machine"],
                 "typical_engagement_duration": "2hour",
-                "background": "Bridgewater Associates founder, largest hedge fund in the world",
-                "key_achievements": ["Built $150B hedge fund", "Predicted 2008 crisis", "All Weather strategy"],
-                "certifications": ["Harvard MBA", "CFA"]
+                "background": "Decades of macro hedge-fund strategy: risk-parity portfolio construction, debt-cycle analysis, principles-based decisioning.",
+                "key_achievements": ["Built one of the world's largest macro hedge funds", "Pioneered all-weather portfolio construction", "Called the 2008 global financial crisis"],
+                "certifications": ["MBA from a top-tier business school", "CFA"]
             },
 
             # Tech Titans
             {
                 "id": "elon_musk_advisor",
-                "name": "Elon Musk (AI Model)",
-                "title": "Tech Innovation Visionary",
+                "name": "First-Principles Engineering Advisor",
+                "title": "First-Principles Engineering Advisor",
                 "domain": AdvisorDomain.PRODUCT_DEVELOPMENT,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["first_principles", "exponential_thinking", "space_tech", "ai_future"],
@@ -401,14 +412,14 @@ class AdvisorRegistry:
                 "consultation_types": ["innovation_strategy", "product_vision", "scaling"],
                 "decision_frameworks": ["first_principles_thinking", "exponential_growth", "vertical_integration"],
                 "typical_engagement_duration": "1hour",
-                "background": "Tesla, SpaceX, Neuralink founder, serial entrepreneur",
-                "key_achievements": ["Built multiple $100B+ companies", "Revolutionized EVs and space"],
-                "certifications": ["Physics degree", "Self-taught engineering"]
+                "background": "Cross-industry product engineering anchored in first-principles thinking, exponential-growth planning, and vertical integration.",
+                "key_achievements": ["Built multiple $100B+ companies across electric vehicles, aerospace, and AI", "Drove category-defining cost-curve improvements"],
+                "certifications": ["Physics undergraduate training", "Self-taught engineering practice"]
             },
 
             {
                 "id": "sam_altman_advisor",
-                "name": "Sam Altman (AI Model)",
+                "name": "AI & Startup Strategy Expert",
                 "title": "AI & Startup Strategy Expert",
                 "domain": AdvisorDomain.AI_ML_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -417,16 +428,16 @@ class AdvisorRegistry:
                 "consultation_types": ["ai_strategy", "startup_advice", "scaling"],
                 "decision_frameworks": ["power_law_returns", "network_effects", "platform_thinking"],
                 "typical_engagement_duration": "1hour",
-                "background": "OpenAI CEO, former Y Combinator President",
-                "key_achievements": ["Led OpenAI to ChatGPT", "Scaled YC to 1000+ companies"],
-                "certifications": ["Stanford CS", "Y Combinator"]
+                "background": "Combined leadership of a leading AI research lab with deep startup-accelerator experience; covers AI strategy, scaling, and platform thinking.",
+                "key_achievements": ["Led an AI lab to deploy a category-defining consumer product", "Scaled a startup accelerator past 1000+ companies"],
+                "certifications": ["Computer science training at a top-tier university", "Top startup-accelerator alumnus"]
             },
 
             # Marketing & Sales Legends
             {
                 "id": "gary_vaynerchuk_advisor",
-                "name": "Gary Vaynerchuk (AI Model)",
-                "title": "Digital Marketing & Brand Expert",
+                "name": "Digital Marketing & Brand Strategist",
+                "title": "Digital Marketing & Brand Strategist",
                 "domain": AdvisorDomain.MARKETING_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["social_media", "brand_building", "content_marketing", "web3"],
@@ -434,15 +445,15 @@ class AdvisorRegistry:
                 "consultation_types": ["marketing_strategy", "brand_development", "content_planning"],
                 "decision_frameworks": ["jab_jab_right_hook", "day_trading_attention", "brand_storytelling"],
                 "typical_engagement_duration": "1hour",
-                "background": "VaynerMedia CEO, serial entrepreneur, social media pioneer",
-                "key_achievements": ["Built $200M agency", "Wine Library $60M", "NFT pioneer"],
-                "certifications": ["Mount Ida College", "Self-made expertise"]
+                "background": "Two decades of brand-building practice combining digital marketing, content strategy, and emerging-platform dynamics.",
+                "key_achievements": ["Built a $200M digital agency", "Scaled a niche e-commerce business to nine-figure revenue", "Early operator in NFT and creator-economy markets"],
+                "certifications": ["Multi-decade applied marketing practice"]
             },
 
             {
                 "id": "grant_cardone_advisor",
-                "name": "Grant Cardone (AI Model)",
-                "title": "Sales & Real Estate Mogul",
+                "name": "Sales & Real Estate Strategist",
+                "title": "Sales & Real Estate Strategist",
                 "domain": AdvisorDomain.SALES_OPTIMIZATION,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["sales_training", "real_estate", "10x_thinking", "closing_deals"],
@@ -450,15 +461,15 @@ class AdvisorRegistry:
                 "consultation_types": ["sales_strategy", "negotiation", "scaling"],
                 "decision_frameworks": ["10x_rule", "aggressive_expansion", "massive_action"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Cardone Capital CEO, $4B real estate portfolio",
-                "key_achievements": ["$4B AUM", "Bestselling author", "Sales training empire"],
-                "certifications": ["McNeese State University", "Certified sales trainer"]
+                "background": "Three decades of high-volume sales training plus large-scale commercial real estate operations.",
+                "key_achievements": ["Multi-billion AUM commercial real estate portfolio", "Bestselling sales-strategy author", "Built a sales-training franchise at scale"],
+                "certifications": ["Multi-decade applied sales practice", "Certified sales trainer"]
             },
 
             # Sports & Analytics
             {
                 "id": "billy_beane_advisor",
-                "name": "Billy Beane (AI Model)",
+                "name": "Sports Analytics Pioneer",
                 "title": "Sports Analytics Pioneer",
                 "domain": AdvisorDomain.SPORTS_ANALYTICS,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -467,15 +478,15 @@ class AdvisorRegistry:
                 "consultation_types": ["analytics_strategy", "value_optimization", "team_building"],
                 "decision_frameworks": ["moneyball", "statistical_arbitrage", "ops_optimization"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Oakland A's GM, Moneyball pioneer, revolutionized baseball",
-                "key_achievements": ["20-game win streak", "Playoff appearances on minimum budget"],
-                "certifications": ["UC San Diego", "MLB experience"]
+                "background": "Pioneer of statistics-driven sports management; brought sabermetric value-finding into mainstream team operations.",
+                "key_achievements": ["Long playoff appearances on a minimum-budget roster", "Established a winning paradigm later copied across the league"],
+                "certifications": ["Top-tier university degree", "Multi-decade professional baseball operations experience"]
             },
 
             {
                 "id": "haralabos_voulgaris_advisor",
-                "name": "Haralabos Voulgaris (AI Model)",
-                "title": "Sports Betting Analytics Expert",
+                "name": "Sports Betting Quant",
+                "title": "Sports Betting Quant",
                 "domain": AdvisorDomain.SPORTS_ANALYTICS,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["nba_analytics", "sports_betting", "predictive_modeling", "live_betting"],
@@ -483,16 +494,16 @@ class AdvisorRegistry:
                 "consultation_types": ["betting_strategy", "model_development", "bankroll_management"],
                 "decision_frameworks": ["expected_value", "regression_models", "live_adjustments"],
                 "typical_engagement_duration": "1hour",
-                "background": "Professional sports bettor, Dallas Mavericks Director of Quantitative R&D",
-                "key_achievements": ["Millions in betting profits", "NBA team analytics director"],
-                "certifications": ["Self-taught", "Proven track record"]
+                "background": "Two decades of professional sports betting combined with quantitative analytics work for a top-tier NBA franchise.",
+                "key_achievements": ["Multi-million dollar career betting profits", "Director of Quantitative R&D for a professional basketball team"],
+                "certifications": ["Self-taught", "Multi-decade documented track record"]
             },
 
             # Content & Media
             {
                 "id": "mr_beast_advisor",
-                "name": "MrBeast (AI Model)",
-                "title": "Content Creation & Viral Strategy",
+                "name": "Creator Economy Strategist",
+                "title": "Creator Economy Strategist",
                 "domain": AdvisorDomain.CONTENT_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["viral_content", "youtube_optimization", "retention_hacking", "scaling_content"],
@@ -500,16 +511,16 @@ class AdvisorRegistry:
                 "consultation_types": ["content_strategy", "viral_planning", "team_scaling"],
                 "decision_frameworks": ["retention_optimization", "thumbnail_testing", "viral_mechanics"],
                 "typical_engagement_duration": "1hour",
-                "background": "YouTube's biggest creator, 200M+ subscribers, content empire",
-                "key_achievements": ["Fastest growing channel", "$100M+ revenue", "Beast Burger"],
-                "certifications": ["Self-taught", "YouTube pioneer"]
+                "background": "Top-tier creator-economy operator; viral content design, retention optimization, and creator-team scaling.",
+                "key_achievements": ["Built one of the largest video-platform channels", "Nine-figure annual creator-economy revenue", "Adjacent consumer-brand businesses launched off creator base"],
+                "certifications": ["Self-taught", "Multi-year applied viral-content practice"]
             },
 
             # Negotiation & Leadership
             {
                 "id": "chris_voss_advisor",
-                "name": "Chris Voss (AI Model)",
-                "title": "Master Negotiator & FBI Lead",
+                "name": "Master Negotiation Specialist",
+                "title": "Master Negotiation Specialist",
                 "domain": AdvisorDomain.NEGOTIATION_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["tactical_empathy", "negotiation", "crisis_management", "deal_making"],
@@ -517,16 +528,16 @@ class AdvisorRegistry:
                 "consultation_types": ["negotiation_strategy", "conflict_resolution", "deal_structuring"],
                 "decision_frameworks": ["tactical_empathy", "mirroring", "calibrated_questions"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Former FBI hostage negotiator, Black Swan Group founder",
-                "key_achievements": ["24 years FBI", "International kidnapping cases", "Never Split the Difference"],
-                "certifications": ["FBI Training", "Harvard Law negotiation"]
+                "background": "Former federal hostage negotiator; developed tactical-empathy and calibrated-question frameworks now standard in high-stakes deal-making.",
+                "key_achievements": ["24 years of high-stakes federal negotiation experience", "International crisis-resolution case work", "Authored a defining negotiation reference"],
+                "certifications": ["Federal hostage-negotiation training", "Top-tier law school negotiation coursework"]
             },
 
             # Healthcare & Biotech
             {
                 "id": "dr_peter_attia_advisor",
-                "name": "Dr. Peter Attia (AI Model)",
-                "title": "Longevity & Healthcare Strategy",
+                "name": "Longevity & Healthcare Strategist",
+                "title": "Longevity & Healthcare Strategist",
                 "domain": AdvisorDomain.HEALTHCARE_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["longevity", "preventive_medicine", "biotech_investing", "health_optimization"],
@@ -534,16 +545,16 @@ class AdvisorRegistry:
                 "consultation_types": ["health_strategy", "biotech_analysis", "wellness_planning"],
                 "decision_frameworks": ["evidence_based_medicine", "risk_stratification", "longevity_protocols"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Stanford/Johns Hopkins trained, longevity expert, biotech advisor",
-                "key_achievements": ["Leading longevity researcher", "Attia Medical PC founder"],
-                "certifications": ["MD Stanford", "Johns Hopkins residency"]
+                "background": "Top-tier medical training combined with longevity research; advisor to biotech investors and healthcare-strategy teams.",
+                "key_achievements": ["Leading practitioner in longevity protocols", "Founded a specialty medical practice", "Frequent biotech and health-strategy advisor"],
+                "certifications": ["MD from a top-tier medical school", "Residency at a top-tier teaching hospital"]
             },
 
             # Cybersecurity
             {
                 "id": "kevin_mitnick_advisor",
-                "name": "Kevin Mitnick (AI Model)",
-                "title": "Cybersecurity & Hacking Expert",
+                "name": "Cybersecurity Operations Expert",
+                "title": "Cybersecurity Operations Expert",
                 "domain": AdvisorDomain.CYBERSECURITY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
                 "specializations": ["penetration_testing", "social_engineering", "security_architecture", "ethical_hacking"],
@@ -551,15 +562,15 @@ class AdvisorRegistry:
                 "consultation_types": ["security_audit", "vulnerability_assessment", "security_strategy"],
                 "decision_frameworks": ["zero_trust", "defense_in_depth", "social_engineering_defense"],
                 "typical_engagement_duration": "2hour",
-                "background": "World's most famous hacker turned security consultant",
-                "key_achievements": ["FBI most wanted", "Mitnick Security founder", "Security pioneer"],
-                "certifications": ["Self-taught", "Real-world experience"]
+                "background": "Former offensive-security practitioner turned long-tenured security consultant; specializes in penetration testing, social-engineering defense, and security architecture.",
+                "key_achievements": ["Founded a security-consulting practice still operating today", "Long-standing reference voice in offensive-security training"],
+                "certifications": ["Self-taught", "Multi-decade real-world security practice"]
             },
 
             # Education & Learning
             {
                 "id": "sal_khan_advisor",
-                "name": "Sal Khan (AI Model)",
+                "name": "Education Technology Pioneer",
                 "title": "Education Technology Pioneer",
                 "domain": AdvisorDomain.EDUCATION_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -568,9 +579,9 @@ class AdvisorRegistry:
                 "consultation_types": ["education_strategy", "platform_development", "content_design"],
                 "decision_frameworks": ["mastery_learning", "personalization", "gamification"],
                 "typical_engagement_duration": "1hour",
-                "background": "Khan Academy founder, revolutionized online education",
-                "key_achievements": ["100M+ students taught", "Khan Academy platform", "AI education pioneer"],
-                "certifications": ["MIT EECS", "Harvard MBA"]
+                "background": "Founder-builder of a large global online learning platform; expert in mastery learning, AI tutoring, and education-platform design.",
+                "key_achievements": ["Reached 100M+ students globally", "Built a foundational free-education platform", "Early operator in AI-tutoring product design"],
+                "certifications": ["EECS degree from a top-tier engineering school", "MBA from a top-tier business school"]
             },
 
             # ── Session 1115: 5 advisors added to fill domains the routing
@@ -581,7 +592,7 @@ class AdvisorRegistry:
             # Operations & Execution
             {
                 "id": "tim_cook_advisor",
-                "name": "Tim Cook (AI Model)",
+                "name": "Operations & Supply-Chain Strategist",
                 "title": "Operations & Supply-Chain Strategist",
                 "domain": AdvisorDomain.OPERATIONS_MANAGEMENT,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -590,15 +601,15 @@ class AdvisorRegistry:
                 "consultation_types": ["operations_review", "scale_planning", "process_optimization"],
                 "decision_frameworks": ["just_in_time", "lean_operations", "vertical_integration"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Apple CEO; before that, Apple COO who rebuilt the supply chain that made the iPhone era possible",
-                "key_achievements": ["Scaled Apple to $3T market cap", "Built world's most efficient supply chain", "Operational backbone of >2B device shipments"],
-                "certifications": ["Duke Fuqua MBA", "Auburn Industrial Engineering"]
+                "background": "Chief executive at a global consumer-hardware company after rebuilding its supply chain to enable category-defining product launches.",
+                "key_achievements": ["Scaled a global hardware company to multi-trillion market cap", "Built one of the world's most efficient supply chains", "Operational backbone for billions of device shipments"],
+                "certifications": ["MBA from a top-tier business school", "Industrial Engineering undergraduate degree"]
             },
 
             # Data & Analytics
             {
                 "id": "andrew_ng_advisor",
-                "name": "Andrew Ng (AI Model)",
+                "name": "Data Strategy & ML Practitioner",
                 "title": "Data Strategy & ML Practitioner",
                 "domain": AdvisorDomain.DATA_STRATEGY,
                 "expertise_level": AdvisorExpertiseLevel.LEGEND,
@@ -607,15 +618,15 @@ class AdvisorRegistry:
                 "consultation_types": ["data_strategy", "ml_roadmap", "model_review"],
                 "decision_frameworks": ["data_centric_ai", "ml_yearning_principles", "minimum_viable_model"],
                 "typical_engagement_duration": "1hour",
-                "background": "Stanford CS faculty, Google Brain founder, Coursera co-founder, Landing AI founder — long-standing bridge between academic ML research and applied data strategy at scale",
-                "key_achievements": ["Co-founded Google Brain", "Co-founded Coursera", "Authored Machine Learning Yearning", "Trained millions of ML practitioners globally"],
-                "certifications": ["Stanford PhD CS", "MIT MEng EECS", "UC Berkeley BS"]
+                "background": "Long-standing bridge between academic ML research and applied data strategy at scale; co-founded a major AI research lab and a leading online education platform; founded an applied-AI consultancy.",
+                "key_achievements": ["Co-founded a major AI research lab", "Co-founded a leading online education platform", "Authored a defining ML practitioner reference", "Trained millions of ML practitioners globally"],
+                "certifications": ["PhD Computer Science from a top-tier university", "MEng EECS", "Undergraduate degree from a top-tier engineering school"]
             },
 
             # Legal — Intellectual Property
             {
                 "id": "ip_counsel_advisor",
-                "name": "Priya Raman",
+                "name": "Senior Intellectual Property Counsel",
                 "title": "Senior Intellectual Property Counsel",
                 "domain": AdvisorDomain.INTELLECTUAL_PROPERTY,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -624,15 +635,15 @@ class AdvisorRegistry:
                 "consultation_types": ["ip_review", "portfolio_strategy", "infringement_assessment"],
                 "decision_frameworks": ["claim_charting", "freedom_to_operate", "portfolio_valuation"],
                 "typical_engagement_duration": "1hour",
-                "background": "Former IP partner at top-tier tech firm; advises platforms on patent strategy, trade-secret hygiene, and trademark portfolios; consumes legal-spider feeds (findlaw / courtlistener / justia) tagged `intellectual_property` for opposition / freedom-to-operate signals",
-                "key_achievements": ["Built 200+ patent portfolios", "Saved clients $50M in licensing exposure", "Lead counsel on 12 successful patent-defense actions"],
-                "certifications": ["JD Berkeley Law", "USPTO Reg #", "AIPLA Fellow"]
+                "background": "Former IP partner at a top-tier tech firm; advises platforms on patent strategy, trade-secret hygiene, and trademark portfolios; consumes legal-spider feeds (findlaw / courtlistener / justia) tagged `intellectual_property` for opposition / freedom-to-operate signals.",
+                "key_achievements": ["Built 200+ patent portfolios", "Saved clients $50M+ in licensing exposure", "Lead counsel on 12 successful patent-defense actions"],
+                "certifications": ["JD from a top-tier law school", "USPTO Registration", "AIPLA Fellow"]
             },
 
             # Leadership Development
             {
                 "id": "leadership_dev_advisor",
-                "name": "Marcus Whitfield",
+                "name": "Executive Leadership Coach",
                 "title": "Executive Leadership Coach",
                 "domain": AdvisorDomain.LEADERSHIP_DEVELOPMENT,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -641,15 +652,15 @@ class AdvisorRegistry:
                 "consultation_types": ["leadership_coaching", "team_design", "succession_planning"],
                 "decision_frameworks": ["leadership_circle_profile", "situational_leadership", "deliberate_practice"],
                 "typical_engagement_duration": "1hour",
-                "background": "Two-decade leadership-development practitioner. Pairs with `career_coaching` advisor Dr. Maria Gonzalez (who already lists leadership_development as a specialization) so `career` and `personal` task routing has a dedicated leadership match instead of falling through.",
-                "key_achievements": ["Coached 60+ first-time CEOs into role", "Developed three Fortune-500 leadership-pipeline programs", "Built leadership-assessment battery used by 10+ companies"],
+                "background": "Two-decade leadership-development practitioner. Pairs with the `career_coaching` advisor (which already lists leadership_development as a specialization) so `career` and `personal` task routing has a dedicated leadership match instead of falling through.",
+                "key_achievements": ["Coached 60+ first-time CEOs into role", "Developed three Fortune-500 leadership-pipeline programs", "Built a leadership-assessment battery used by 10+ companies"],
                 "certifications": ["ICF Master Certified Coach", "Hogan Assessment Certified", "Leadership Circle Profile Certified"]
             },
 
             # Regulatory Compliance
             {
                 "id": "compliance_advisor",
-                "name": "Eleanor Park",
+                "name": "Regulatory & Compliance Strategist",
                 "title": "Regulatory & Compliance Strategist",
                 "domain": AdvisorDomain.REGULATORY_COMPLIANCE,
                 "expertise_level": AdvisorExpertiseLevel.MASTER,
@@ -658,9 +669,9 @@ class AdvisorRegistry:
                 "consultation_types": ["compliance_audit", "policy_review", "regulator_engagement"],
                 "decision_frameworks": ["three_lines_of_defense", "risk_based_compliance", "control_mapping"],
                 "typical_engagement_duration": "1.5hour",
-                "background": "Former Chief Compliance Officer at a publicly-traded fintech; routinely engages with SEC / FINRA on disclosure matters; partners with `legal_counsel` (Amanda Davis) on legal tasks where the regulatory angle is the dominant risk",
-                "key_achievements": ["Zero material findings across 6 SEC examinations", "Built GDPR program covering 12M users", "Authored internal AI-governance framework now adopted across the parent group"],
-                "certifications": ["JD NYU Law", "CRCM", "CIPP/E", "FINRA Series 7/24"]
+                "background": "Former Chief Compliance Officer at a publicly-traded fintech; routinely engages with SEC / FINRA on disclosure matters; partners with the `legal_counsel` advisor on legal tasks where the regulatory angle is the dominant risk.",
+                "key_achievements": ["Zero material findings across 6 SEC examinations", "Built a GDPR program covering 12M users", "Authored an internal AI-governance framework now adopted across the parent group"],
+                "certifications": ["JD from a top-tier law school", "CRCM", "CIPP/E", "FINRA Series 7/24"]
             }
         ]
 

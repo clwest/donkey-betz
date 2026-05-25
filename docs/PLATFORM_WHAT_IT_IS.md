@@ -143,7 +143,7 @@ Every agent inherits from `BaseAgent` (`core/agents/base_agent.py`) which provid
 - **Post-execution outcome recording** — `AgentExecution` (status/tokens/cost), `AgentMemory` (safety-classified memories), `AgentLearning` (XP + pattern detection), `AgentKnowledgeSource` (shared knowledge)
 - **Provenance tracking** — 29 agents explicitly wire `build_provenance()` into their output (data sources, timestamps, validation)
 
-Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **32 advisors** (10 named figures — Warren Buffett, Cathie Wood, Ray Dalio, Sam Altman, Elon Musk, Gary Vaynerchuk, Mr Beast, Chris Voss, Billy Beane, Haralabos Voulgaris — and 22 domain specialists) accessible through `AdvisorContextBuilder`.
+Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **30 advisors** — functional domain specialists across investment strategy, AI/ML, content/creator economy, sports analytics, negotiation, healthcare, cybersecurity, education, operations, IP counsel, leadership coaching, regulatory compliance — accessible through `AdvisorContextBuilder`. All advisor identities are functional (no real-person names); see [`ADVISOR_AUDIT.md`](ADVISOR_AUDIT.md).
 
 **Router entry point:** `AgentRouter.route(agent_name, task, context)` performs parallel context gathering (11 workers × 10s timeout each) before dispatching to the agent. See `core/agent_router.py:738-1264`.
 
@@ -395,18 +395,28 @@ Session 1087/1089 added a cost-governed dispatcher that throttles low-priority t
 - Mythology anti-spam safety rails (Session 1096) — severity escalation, daily post caps, HAI bridge
 - Governance redesign canary (Session 1098) — DeliverableAppend path working end-to-end
 
-### Stale or drifting (tonight's audit found)
+### Doc-claim verifier state (Session 1142, 2026-05-24)
 
-Out of 65 registered doc claims across 24 docs, **45 drift from reality**:
+Out of **73 registered claims across 34 source files**, **0 drift from reality** as of this refresh. Session 1099 (the original audit cited below) flagged 45/65 — sustained closing-the-loop work across sessions 1100→1142 brought that to zero.
 
-| Drift | Biggest offenders |
+| Class of drift | Status |
+|---|---|
+| Numeric claims (counts, schedules, registries) | Clean — all 73 match runtime |
+| Header staleness (`Last Updated: Session N`) | **Not covered** by `verify_doc_claims`; tracked by `check_doc_headers` (Session 1142) |
+| Frozen docs (Category B) | Triage queued — `docs/AUTONOMOUS_SYSTEMS.md`, `INTELLIGENCE_SYSTEMS.md`, `MODELS.md`, `ERROR_TRACKING.md`, `DEPLOYMENT_GUIDE.md`, `PERSONA_AGENTS.md` untouched since Session 484-901; decide archive vs refresh in a separate pass |
+
+Re-run anytime with `python manage.py verify_doc_claims --only-drift` (numeric claims) or `python manage.py check_doc_headers` (header recency).
+
+#### Historical snapshot — Session 1099 audit
+
+Original drift survey (preserved for context):
+
+| Drift class | Then-biggest offenders |
 |---|---|
 | Stale stats tables | CAPABILITIES.md (Jan 28), AGENTS.md (Feb 8), SERVICES.md (Feb 7), docs/current/* (Jan 2026) |
-| Contradictions | PA tool count claimed as 77/85+/86/89/231 across docs — actual 101 |
+| Contradictions | PA tool count claimed as 77/85+/86/89/231 across docs |
 | Architectural drift | topics/frontend.md claims 9 workspace tabs — code has 5 primary |
 | Scheduling drift | topics/agent-system.md claims 4 Intelligence Desks run daily — only 1 actually does |
-
-See `python manage.py verify_doc_claims --only-drift` for the live list.
 
 ### Known issues queued for follow-up
 
@@ -472,7 +482,7 @@ open http://localhost:8000/ai-studio/
 |---|---|
 | **Agent** | A specialized AI worker. Code agents are Python classes in `core/agents/`; persona agents are DB rows routed through `DynamicPersonaAgent`. |
 | **AGENT_MAP** | Dictionary in `core/agent_router.py` mapping agent names → agent classes. Current size: 83. |
-| **Advisor** | A "personality-infused" advisor (Warren Buffett-style, Cathie Wood-style, etc.) injected into prompts via `AdvisorContextBuilder`. 25 total. |
+| **Advisor** | A functional domain-specialist advisor (Value Investing Strategist, Innovation Investment Strategist, Macro Economic Strategist, Sports Analytics Pioneer, etc.) injected into prompts via `AdvisorContextBuilder`. 30 total. Identities are functional, not modeled on real-world figures. |
 | **AgentMemory** | A specific memory of one agent execution. Safety-classified (`test_only`/`exploratory`/`candidate`/`approved`). |
 | **AutoTopic** | A topic auto-generated from a signal cluster, ready to drive initiative creation. |
 | **BaseAgent** | The 5,575-line base class every code agent inherits from. |

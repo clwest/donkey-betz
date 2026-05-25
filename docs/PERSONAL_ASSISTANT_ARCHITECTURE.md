@@ -9,7 +9,7 @@
 
 # Personal Assistant (PA) Architecture
 
-**Last Updated:** Session 931 — narrative preserved as historical gap-analysis; counts/routes superseded
+**Last Updated:** Session 933 — narrative preserved as historical gap-analysis; counts/routes superseded (Session 932-933 ML/Intelligence audits added inline; header bumped Session 1142)
 **Status:** Gap Analysis Complete | Refactor Planned (the refactor shipped — see UnifiedPAEntrypoint)
 
 ## Overview

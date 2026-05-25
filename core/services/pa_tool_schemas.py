@@ -4149,6 +4149,38 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── Session 1142: Semantic-ish doc search over .rag/corpus.jsonl ────────
+    {
+        "type": "function",
+        "name": "search_docs",
+        "description": (
+            "Search the /docs/ corpus and return ranked chunks with inline "
+            "citations. Use when the user asks 'where in the docs does it say X?', "
+            "'find the passage about X', or needs an answer grounded in specific "
+            "doc passages. Complements kb_tool (which browses the Document table); "
+            "search_docs is for finding the literal text. Powered by "
+            "`core.rag.build_docs_context` over `.rag/corpus.jsonl` "
+            "(19K+ chunks across 2K+ files). Returns [docs/path#chunk_id] citations."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural-language question or keywords to search.",
+                },
+                "k": {
+                    "type": "integer",
+                    "description": "Top-K chunks to return (default 8, max 20).",
+                },
+                "max_chars": {
+                    "type": "integer",
+                    "description": "Cap on total chars across returned chunks (default 6000, max 12000).",
+                },
+            },
+            "required": ["query"],
+        },
+    },
     # ── R2-6: KB / Embedding browsing tool ──────────────────────────────────
     {
         "type": "function",
@@ -4438,6 +4470,7 @@ TOOL_ENRICHMENT_MAP = {
     'heartbeat_history_tool': [],
     'infra_health_tool': [],
     'kb_tool': [],
+    'search_docs': [],
     'session_tool': [],
 }
 
@@ -4548,6 +4581,7 @@ TOOL_TO_INTENT_MAP = {
     'heartbeat_history_tool': 'system_health',
     'infra_health_tool': 'system_health',
     'kb_tool': 'knowledge_base',
+    'search_docs': 'knowledge_base',
     'bpaas_tool': 'workspace',
     'claude_code_tool': 'codebase',
     'session_tool': 'session_management',

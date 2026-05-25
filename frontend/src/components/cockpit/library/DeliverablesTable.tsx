@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import StatusPill from '@/components/cockpit/shared/StatusPill'
@@ -103,7 +104,7 @@ export default function DeliverablesTable({ items, total, offset = 0, limit = 50
                     <td colSpan={6} className="px-6 py-4 bg-gray-900/30 border-b border-dark-border">
                       {expandedDetail?.content ? (
                         <div className="prose prose-invert prose-sm max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                             {expandedDetail.content}
                           </ReactMarkdown>
                         </div>

@@ -23,6 +23,7 @@ import {
 import { platformApi } from '@/lib/api'
 import { ErrorState } from '@/components/ErrorState'
 import ReactMarkdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/cn'
 
@@ -750,7 +751,7 @@ function DocumentViewerModal({ doc, onClose }: { doc: { path: string; title: str
             <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary-400" /></div>
           ) : docQuery.data?.content ? (
             <div className="prose prose-invert prose-sm max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{docQuery.data.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{docQuery.data.content}</ReactMarkdown>
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400"><FileText size={48} className="mx-auto mb-4 opacity-50" /><p>No content available</p></div>
