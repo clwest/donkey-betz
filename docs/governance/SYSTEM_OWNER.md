@@ -1,6 +1,12 @@
-<!-- DOC-POINTER-V1 -->
+<!-- DOC-POINTER-V1 (Session 1148 — drift label refresh) -->
 > **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality.
-> **Note:** content may be stale (last refreshed Session 814) — this file is **runtime-load-bearing**: `core/services/docs_context_builder.py:184` reads from it. Do NOT move; refresh-in-place when content drifts.
+> **Last reviewed for drift labeling:** Session 1148 (2026-05-25)
+> **Note:** content body was last refreshed Session 814 — this file is **runtime-load-bearing**: `core/services/docs_context_builder.py:184` reads from it (also referenced at `:365` with priority 100). Do NOT move; refresh-in-place when content drifts.
+>
+> **Session 1148 spot-check findings (no rewrite, just flag):**
+> - **Section 3 emergency commands are stale.** `python manage.py skin_lock`, `python manage.py quarantine_agent`, and `python manage.py list_quarantined` do not exist in `core/management/commands/`. Use the actual operational paths via Rigby (`pa_chat` tool surface) or via direct Django shell for now. Real `skin_lock` behavior lives in `core/models_skin_layer.py` (`WorkspaceOperation` model still exists). Rewriting these examples is a content edit deferred to a later session.
+> - Authority framework (sections 1-5: override authority, HITL approval table, escalation path, notification channels) is still structurally correct as policy intent.
+> - `make stop-celery` referenced in §3 — verify against current Makefile before relying on it.
 
 # System Owner Authority
 
