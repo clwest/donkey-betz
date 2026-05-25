@@ -1,9 +1,17 @@
+<!-- DOC-POINTER-V2 (Session 1143) -->
+> **Status:** Deprecated
+> **Originally:** Sessions 103, 478, 479 — DaVinci Resolve integration design + implementation
+> **Last verified:** Session 1143 (2026-05-25)
+> **Change reason:** **DaVinci Resolve integration sunset by Chris in Session 1143** following abandoned-features audit. Per `UNDERUTILIZED_FEATURES.md` (Session 412): $300+ license investment, never used, $0 ROI. EXTERNAL_APIS.md (Dec 2025) confirmed "UNUSED" status.
+> **Preserved because:** historical record of integrated-but-unused feature. Useful as a case study in feature-investment vs adoption.
+> **Code status:** `content/davinci_provider.py`, `core/views_davinci.py`, `content/davinci_bridge_client.py` remain in tree with DEPRECATED markers but are no longer invoked. Future cleanup may remove routes from `core/urls.py`.
+
 # DaVinci Resolve Integration
 
 **Investment:** $295 (DaVinci Resolve Studio license)
 **Sessions Built:** 103, 478, 479
-**Status:** FULLY INTEGRATED & OPERATIONAL
-**Last Updated:** January 2026
+**Status:** DEPRECATED (Session 1143) — integrated but never used, sunset by Chris's decision
+**Last Updated:** January 2026 (content frozen; Session 1143 added deprecation banner)
 
 ---
 

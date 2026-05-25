@@ -1,5 +1,15 @@
 """
 DaVinci Resolve Video Editing API Endpoints
+
+.. deprecated:: Session 1143 (2026-05-25)
+    DaVinci Resolve integration was SUNSET by Chris in Session 1143
+    following the abandoned-features audit (PR #2191). Per
+    UNDERUTILIZED_FEATURES.md: integrated but never used, $0 ROI.
+    Do NOT route new endpoints through these views. Routes in
+    core/urls.py may be removed in a future cleanup PR. See
+    docs/archive/superseded-2026-05/DAVINCI_RESOLVE.md for the
+    deprecation banner.
+
 Session 66 Part 2: Professional video editing workflows
 Session 67: Frontend UI integration + database saving
 
