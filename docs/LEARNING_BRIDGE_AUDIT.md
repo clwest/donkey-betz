@@ -41,17 +41,17 @@ One block per bridge. Module docstring (first paragraph) is the high-level purpo
 Advisor Feedback Learning Bridge Tracks advisor consultation effectiveness and optimizes
 advisor selection
 
-**Class `AdvisorFeedbackLearningLoop` (line 43):**
+**Class `AdvisorFeedbackLearningLoop` (line 50):**
 
-Learns from advisor consultation outcomes to improve advisor selection
+Learns from advisor consultation outcomes to improve advisor selection.
 
-_Public methods: `process_feedback`_
+_Public methods: `process_event`, `process_feedback`_
 
-**Class `AutoConsultationLearningLoop` (line 176):**
+**Class `AutoConsultationLearningLoop` (line 250):**
 
 Session 461: Learns from automatic advisor consultations in audit coordinators.
 
-_Public methods: `track_auto_consultation`, `record_outcome`, `get_advisor_accuracy_stats`_
+_Public methods: `process_event`, `track_auto_consultation`, `record_outcome`, `get_advisor_accuracy_stats`_
 
 ### `agent_execution_bridge` — Agent Execution Bridge
 
@@ -60,11 +60,11 @@ _Public methods: `track_auto_consultation`, `record_outcome`, `get_advisor_accur
 Agent Execution Learning Bridge Learns from agent execution outcomes to improve future
 agent selection and performance
 
-**Class `AgentExecutionLearningLoop` (line 17):**
+**Class `AgentExecutionLearningLoop` (line 24):**
 
 Learns from every agent execution to optimize future performance
 
-_Public methods: `process_execution`_
+_Public methods: `process_event`, `process_execution`_
 
 ### `application_outcome_bridge` — Application Outcome Bridge
 
@@ -73,15 +73,15 @@ _Public methods: `process_execution`_
 Application Outcome Learning Bridge Learns from application outcomes to improve future
 success rates
 
-**Class `ApplicationOutcomeLearningLoop` (line 24):**
+**Class `ApplicationOutcomeLearningLoop` (line 34):**
 
 Learns from application outcomes to optimize future applications
 
-_Public methods: `process_application_outcome`_
+_Public methods: `process_event`, `process_application_outcome`_
 
 **Signal registration log lines:**
 
-- L338: `logger.info("✅ JobApplication outcome signal registered")`
+- L461: `logger.info("✅ JobApplication outcome signal registered")`
 
 ### `collaboration_bridge` — Collaboration Bridge
 
@@ -90,11 +90,12 @@ _Public methods: `process_application_outcome`_
 Collaboration Learning Bridge Learns from multi-agent collaboration outcomes to optimize
 team formation
 
-**Class `CollaborationLearningLoop` (line 16):**
+**Class `CollaborationLearningLoop` (line 23):**
 
-Learns from multi-agent collaboration outcomes Optimizes which agents work well together
+Learns from multi-agent collaboration outcomes Optimizes which agents work well
+together.
 
-_Public methods: `process_collaboration`_
+_Public methods: `process_event`, `process_collaboration`_
 
 ### `personalization_bridge` — Personalization Bridge
 
@@ -103,15 +104,15 @@ _Public methods: `process_collaboration`_
 Personalization Feedback Bridge Learns from user interactions to improve opportunity
 matching and personalization
 
-**Class `PersonalizationFeedbackLoop` (line 59):**
+**Class `PersonalizationFeedbackLoop` (line 69):**
 
 Learns from user interactions to personalize content and opportunities.
 
-_Public methods: `process_conversation`, `process_interaction`_
+_Public methods: `process_event`, `process_conversation`, `process_interaction`_
 
 **Signal registration log lines:**
 
-- L422: `logger.info("✅ ConversationMemory personalization signal registered")`
+- L527: `logger.info("✅ ConversationMemory personalization signal registered")`
 
 ### `revenue_attribution_bridge` — Revenue Attribution Bridge
 
@@ -120,11 +121,11 @@ _Public methods: `process_conversation`, `process_interaction`_
 Revenue Attribution Learning Bridge Connects revenue generation events to agent learning
 system
 
-**Class `RevenueAttributionLearningLoop` (line 23):**
+**Class `RevenueAttributionLearningLoop` (line 31):**
 
-Bidirectional learning loop for revenue attribution
+Bidirectional learning loop for revenue attribution.
 
-_Public methods: `process_revenue_event`_
+_Public methods: `process_event`, `process_revenue_event`_
 
 ### `spider_data_bridge` — Spider Data Bridge
 
@@ -133,11 +134,11 @@ _Public methods: `process_revenue_event`_
 Spider Data Learning Bridge Learns from spider-collected data to improve agent
 intelligence and opportunity matching
 
-**Class `SpiderDataLearningLoop` (line 21):**
+**Class `SpiderDataLearningLoop` (line 27):**
 
 Learns from spider data collection to improve agent intelligence
 
-_Public methods: `process_spider_data`, `evaluate_actionability`_
+_Public methods: `process_event`, `process_spider_data`, `evaluate_actionability`_
 
 ### `sports_betting_bridge` — Sports Betting Bridge
 
@@ -145,9 +146,9 @@ _Public methods: `process_spider_data`, `evaluate_actionability`_
 
 Sports Betting Learning Bridge
 
-**Class `SportsBettingLearningBridge` (line 17):**
+**Class `SportsBettingLearningBridge` (line 30):**
 
 Bridge between sports betting system and core unified learning system.
 
-_Public methods: `sync_betting_performance_to_learning`, `sync_agent_sports_performance`, `generate_sports_insights`, `create_feedback_from_prediction`, `record_wager_outcome`, `record_arbitrage_outcome`_
+_Public methods: `process_event`, `sync_betting_performance_to_learning`, `sync_agent_sports_performance`, `generate_sports_insights`, `create_feedback_from_prediction`, `record_wager_outcome`, `record_arbitrage_outcome`_
 
