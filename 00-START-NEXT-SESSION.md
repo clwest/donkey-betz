@@ -54,7 +54,7 @@ Every session-NNNN commit subject should include `session-NNNN`:
 - `fix(session-NNNN): ...`
 - `feat(session-NNNN-area): ...`
 
-Sessions 1145+1146+1147+1148+1149+1150+1151+1152+1153+1154+1155+1156 ran 100% subject-tagged. Keep the streak.
+Sessions 1145+1146+1147+1148+1149+1150+1151+1152+1153+1154+1155+1156+1157 ran 100% subject-tagged. Keep the streak.
 
 ## ONE-COMMAND LAUNCH — the laptop fleet
 
@@ -73,19 +73,24 @@ make status              # what's running + URLs
 
 ---
 
-## SESSION 1156 CLOSED — P3.5 TRACK COMPLETE 🎯 (BYPASS MODE) (2026-05-25)
+## SESSION 1157 CLOSED — celery-beat-schedule footgun closed (BYPASS MODE) (2026-05-25)
 
-**1 PR merged + this handoff. P3.5 sole-charter cadence ENDS — pool exhausted.** Full handoff: [`docs/handoffs/SESSION_1156_P35_TRACK_COMPLETE.md`](docs/handoffs/SESSION_1156_P35_TRACK_COMPLETE.md).
+**1 PR merged + this handoff.** Full handoff: [`docs/handoffs/SESSION_1157_CELERY_BEAT_SCHEDULE_CLEANUP.md`](docs/handoffs/SESSION_1157_CELERY_BEAT_SCHEDULE_CLEANUP.md).
 
 | PR | What |
 |----|------|
-| **#2241** | P3.5 round 9 (FINAL) — 71 handoffs FM-backfilled (~SESSION_352 → HANDOFF_00_MASTER_PLAN.md) |
+| **#2243** | celery-beat-schedule option A — refactored `add_critical_celery_tasks` to materialize from `core/celery.py:app.conf.beat_schedule` (canonical); removed 100-entry `CRITICAL_TASKS` dict that contradicted minimal-mode + risked re-enabling conserve-mode-disabled tasks |
 
-Plus this Session 1156 close handoff PR.
+Plus this Session 1157 handoff PR.
 
-Post-r9 state: `_provenance.json` 2064 docs (HIGH=1281); `INDEX.md` 2615 docs / 685,011 lines. **Survey: `skipped_no_fm=0` = pool exhausted.**
+**Underlying footgun: closed.** Smoke-test on main: 77/77 entries translate, 0 DB churn, idempotent.
 
-**P3.5 track totals (9 rounds, Sessions 1147-1156):** 646 handoffs auto-backfilled (+ 49 pre-existing = 695 total HIGH-provenance tagged). The 783 not-HIGH handoffs need different treatment — out of scope for this track.
+**Context-kit CONFLICT signal: still flagged.** Its detector heuristic spans ~36 files (broader than the add_critical_celery_tasks ↔ core/celery.py pair). The architectural fix is in; clearing the signal needs detector tuning OR a targeted 36-file token-pattern sweep — queued for Session 1158.
+
+### Previous closed work still relevant for context
+
+- **Session 1156** — P3.5 TRACK COMPLETE. Pool exhausted at `skipped_no_fm=0`. 646 handoffs auto-backfilled across 9 rounds + 49 pre-existing = 695 total HIGH-tagged.
+- **Sessions 1149-1155** — P3.5 rounds 3-8 + the Session 1149 cleanup merge wave + SYSTEM_OWNER §3 rewrite + verify_doc_claims drift fixes.
 
 ### Previous merge waves (still relevant context)
 
@@ -119,19 +124,15 @@ Self-merge with bypass requires:
 
 Higher-risk code PRs: hold the merge; stack the PR until billing fixes.
 
-### 2. Pre-existing `celery-beat-schedule` CONFLICT
+### 2. `celery-beat-schedule` CONFLICT — code-level fix done, detector signal pending
 
-Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery beat schedule ownership." Docs claim exclusive ownership across `CLAUDE.md`, `00-START-NEXT-SESSION.md`, `core/celery.py`, `core/management/commands/add_critical_celery_tasks.py`, etc.
+**Session 1157 (PR #2243):** Underlying code-vs-code contradiction CLOSED. `add_critical_celery_tasks.py` no longer carries its own `CRITICAL_TASKS` schedule; it now materializes from `core/celery.py:app.conf.beat_schedule` (canonical per option A).
 
-**Not introduced by any Session 1145-1150 PR.** Recommendation: describe the split ownership model accurately or update the exclusive-ownership claim.
-
-**Cleanup queued as:** Future session, needs Chris's input on the ownership model.
+**Context-kit CONFLICT signal still flags** because its detector heuristic is keyword/path-based across ~36 files (other sync commands, services, views, migrations, tests, docs). Session 1158 charter: investigate the detector source to find the specific tokens triggering "ownership claim," then either propose an upstream tuning OR apply a targeted 36-file phrasing sweep.
 
 ---
 
-## SESSION 1157 — CURRENT ENTRY POINT (post-P3.5 pivot)
-
-**The P3.5 sole-charter cadence is COMPLETE.** Session 1157 picks from the broader deferred list with a clean slate.
+## SESSION 1158 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
@@ -139,37 +140,47 @@ Context-kit finding ID `celery-beat-schedule`, status `CONFLICT`, title "Celery 
 ```bash
 gh pr checks <latest-pr-num>
 ```
-This determines the recommended path below.
 
-### IF Actions is BACK (preferred path)
+### TOP PRIORITY (Rigby's call from Session 1157 close)
 
-**Charter: `celery-beat-schedule` CONFLICT cleanup.** Rigby's flagged priority — CI stays red until this is resolved, even after billing fix.
+**`celery-beat-schedule` CONFLICT — second-half cleanup (clear the context-kit signal).**
 
-The CONFLICT lives across `CLAUDE.md`, `00-START-NEXT-SESSION.md`, `core/celery.py`, `core/management/commands/add_critical_celery_tasks.py`, `core/tasks*.py` and other files claiming exclusive ownership of the beat schedule. **Needs Chris's input on the ownership model:** single source of truth in `core/celery.py` (with docs pointing there) vs explicitly-documented split ownership.
+Session 1157 closed the underlying code-level footgun. The CONFLICT signal still flags because context-kit's detector heuristic spans ~36 files. Two paths:
 
-After CONFLICT is closed (Repo Guardrails should go green locally + on CI):
-1. Topic-doc body-count sweep (the explicit-scope one)
-2. Infra track in any order: exists_on_disk flag, beat-schedule regens, build_learning_bridge_audit generator fix, Redis pooling sweep
+1. **Detector tuning (preferred if tractable):**
+   - Read-only investigation of context-kit's `celery-beat-schedule` detector source. Find the tokens/patterns it matches as "exclusive ownership claim."
+   - If it's a simple keyword regex, propose an upstream fix that distinguishes "incidental mention" from "ownership claim."
+   - This would clear the CONFLICT without repo-wide doc churn.
 
-### IF Actions is STILL DOWN (continued bypass mode)
+2. **Targeted token-pattern doc sweep (fallback):**
+   - If detector tuning isn't tractable, identify the specific phrases triggering "ownership claim" in each of the 36 files.
+   - Apply a consistent canonical-source phrasing template.
+   - Bigger PR, still no guarantee the heuristic clears.
 
-Pick from smaller offline-CI-safe items first to maintain audit-trail discipline:
+**Recommend trying (1) first** — read-only context-kit source investigation before committing to a 36-file sweep.
 
-- **Older `docs/topics/` sweep** (recon-first) — 7 Feb-March docs deferred from Session 1147 #2221
-- **Cosmetic `load_all_agents_advisors.py 149→139` fix** — trivial, one-file
-- **`docs/reports/` + `docs/patents/` recon** — recon-first, large piles
+### Carryovers (unchanged from Session 1157 close)
 
-Hold higher-risk code work (Redis pooling sweep, infra track) until Actions returns.
+**If Actions is BACK** (after celery CONFLICT signal clears):
+- Topic-doc body-count sweep (the explicit-scope one)
+- Infra track: exists_on_disk flag, beat-schedule regens, build_learning_bridge_audit generator fix, Redis pooling sweep
 
-### Chris-call-only carryovers (still parked)
+**Continued bypass mode** (small offline-CI-safe items):
+- Older `docs/topics/` sweep (recon-first) — 7 Feb-March docs deferred from Session 1147 #2221
+- Cosmetic `load_all_agents_advisors.py 149→139` fix
+- `docs/reports/` + `docs/patents/` recon
 
+**Pre-existing 3-row drift** (noted in Session 1157 smoke-test):
+- 80 `PeriodicTask` rows in DB vs 77 entries in `core/celery.py:app.conf.beat_schedule`
+- 3-row gap is pre-existing from other sync paths (likely Session 1115 or earlier — possibly `sync_celery_beat.py` / `sync_celery_schedules.py`)
+- Separate cleanup item; folds naturally into the broader CONFLICT detector work above
+
+**Chris-call-only carryovers (still parked):**
 1. Decision Command backend cleanup
 2. DaVinci route removal
 3. Mission refresh PR #2190
 
-### Not-HIGH handoffs (783 remaining untagged)
-
-The P3.5 backfill only handled HIGH-provenance handoffs. The 783 not-HIGH ones need different treatment — either manual hand-authored frontmatter or alternative provenance heuristics (filename-pattern matching, commit-message scanning, etc). If/when this becomes a priority, it's a separate explicitly-scoped track.
+**Not-HIGH handoffs (783 remaining untagged):** The P3.5 backfill only handled HIGH-provenance handoffs. The 783 not-HIGH ones need different treatment — manual hand-authored frontmatter or alternative provenance heuristics. Separate explicitly-scoped track if/when prioritized.
 
 ### Carryovers queued (unchanged from Session 1150 close)
 
@@ -212,6 +223,7 @@ The P3.5 backfill only handled HIGH-provenance handoffs. The 783 not-HIGH ones n
 
 ## RECENT SESSION ARCS
 
+- **Session 1157** — celery-beat-schedule cleanup option A. 1 PR merged (bypass mode) + handoff. Underlying code-level footgun closed; context-kit signal pending broader follow-up.
 - **Session 1156** — P3.5 round 9 (FINAL) + P3.5 track CLOSE. 1 PR merged (bypass mode) + handoff. Pool exhausted; 646 backfilled across 9 rounds.
 - **Session 1155** — P3.5 round 8. 1 PR merged (bypass mode) + handoff.
 - **Session 1154** — P3.5 round 7. 1 PR merged (bypass mode) + handoff.
