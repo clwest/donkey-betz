@@ -54,7 +54,13 @@ These are the ones that look most like Chris's question (built but stalled/broke
 - **Reality:** Flutter was abandoned in favor of React Native at some point. Old docs describe a stack that no longer exists.
 - **Recommendation:** Already correctly handled by Phase 2B-1 archival. No action needed beyond surfacing.
 
-#### 3. `views_frontend_stubs.py` (39 stub endpoints) — REMOVED FROM CODE
+#### 3. Decision Command — SHIPPED, REGRESSED (Phase 5 Tier 3 finding)
+- **Docs:** [`reports/DECISION_COMMAND_IMPLEMENTATION_REPORT.md`](../reports/DECISION_COMMAND_IMPLEMENTATION_REPORT.md) ("partially implemented") + [`reports/DECISION_COMMAND_INTEGRATION_COMPLETE.md`](../reports/DECISION_COMMAND_INTEGRATION_COMPLETE.md) ("FULLY OPERATIONAL Sep 2025")
+- **Code:** No `DecisionCommand.tsx` in `frontend/src/`. No `decision-command` route in `App.tsx`. Backend `AIIncomeBuilder` skeleton remains in 5 Python files (`core/consumers_base.py`, `views_diagnostics.py`, `real_job_submitter.py`, `settings.py`, `personal_assistant_profile_connector.py`).
+- **Reality:** Phase 5 Tier 3 code-verify (Chris Q5=Y, PR #2198) confirmed the React frontend was removed at some point. Feature SHIPPED then REGRESSED entirely from the user-facing surface. The "integration complete" claim was true when written; the regression happened later.
+- **Recommendation:** Documented via V2-Superseded banners on both report files. Backend skeleton could be cleaned up if Chris greenlights — out of Session 1143 scope. **First genuine "shipped + regressed" finding** of this audit.
+
+#### 4. `views_frontend_stubs.py` (39 stub endpoints) — REMOVED FROM CODE
 - **Docs:** [`UI_COMPREHENSIVE_AUDIT.md`](../archive/superseded-2026-05/UI_COMPREHENSIVE_AUDIT.md) (Session 772-773, Jan 2026) said *"Stub Endpoints: 39 (in views_frontend_stubs.py)"*
 - **Code:** `core/views_frontend_stubs.py` does not exist anymore.
 - **Reality:** Whether those 39 endpoints got implemented or removed wholesale is unclear from this audit alone. Worth a separate check if anyone needs to know.
