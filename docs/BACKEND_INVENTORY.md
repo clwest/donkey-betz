@@ -38,7 +38,7 @@ repeats the live summary table so it cannot drift independently.
 | **Services** | 336 files / 112 `*Service` classes |
 | **Spiders** | 80 (172 files including management) |
 | **Views Files** | 200 |
-| **Management Commands** | 174 (see [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md)) |
+| **Management Commands** | 182 (see [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md)) |
 | **WebSocket Consumers** | 67 |
 | **Discord Commands** | 144 (96 `@*.command` + 48 `@app_commands.command`) |
 | **Script Files** | 311 (Jan 2026 snapshot) |
