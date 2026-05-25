@@ -74,7 +74,31 @@ The last four sessions form a coherent measurement-instrumentation arc on top of
 
 ---
 
-## SESSION 1142 — CURRENT ENTRY POINT
+## SESSION 1143 — CURRENT ENTRY POINT
+
+### Top-of-session goal: /docs/ corpus walk-through (Chris + Claude Code + Rigby)
+
+Chris asked, at Session 1142 close, to spend Session 1143 going through `/docs/` together — Chris driving, Claude Code investigating, Rigby weighing in — to figure out **exactly what's in there**. No specific approach pre-decided.
+
+**Why now:** Even after Session 1142's hygiene pass closed all numeric drift and refreshed Category A headers, the corpus is still **852 active docs, 1,163 superseded, 2 drafts, ~458 markdown files across ~30 subdirs**. Chris hasn't done a comprehensive read in a long time. Goal of Session 1143 = produce a real map of what exists, what's load-bearing vs zombie, what's redundant, what's actually trustworthy.
+
+**Pre-staged context Session 1143 can lean on:**
+- `python manage.py verify_doc_claims --only-drift` → 0 drifts (numeric claims clean)
+- `python manage.py check_doc_headers --only-stale` → 0 header_lag, 9 frozen Category B docs (untouched since Session 84–1012, full list in PR #2178 body)
+- `kb_tool` (Document table) is now populated: **852 docs, 14,149 chunks, 100% embedded** — Rigby can semantic-search the corpus
+- `search_docs` PA tool (Session 1142, **gated on PR #2178 merge**) — chunked /docs/ retrieval with `[docs/path#chunk_id]` citations via `.rag/corpus.jsonl` (19,305 chunks, 2,017 files, refreshed 2026-05-24)
+- `docs/INDEX.md` + `docs/_index.json` — auto-generated index Rigby's system prompt can reference
+
+**Approach options to pitch Chris when the session opens** (none chosen yet — figure it out together):
+- (A) Top-down by category: walk `docs/{topics,handoffs,specs,plans,cleanup,archive,audit-*,...}` and have Rigby summarize each subdir's purpose + cull/promote
+- (B) By doc age: start with the 9 frozen Category B docs (`docs/AUTONOMOUS_SYSTEMS.md`, `INTELLIGENCE_SYSTEMS.md`, `MODELS.md`, `ERROR_TRACKING.md`, `DEPLOYMENT_GUIDE.md`, `PERSONA_AGENTS.md`, `docs/agents/README.md`, `GOLDEN_GOOSE_STRATEGY.md`, `SCIFI_FEATURES.md`) and decide archive vs refresh per-doc
+- (C) By query-driven discovery: feed Rigby a list of platform topics and ask "which doc(s) cover X?" — surfaces what's discoverable vs orphaned
+- (D) By git activity: rank docs by last-commit-age and start where activity dropped off — surfaces zombie clusters
+
+Whatever the approach, **gate on Session 1142 PRs landing first** so search_docs is callable:
+- **PR #2178** (`feat/advisor-functional-identities`) — advisor rename + Session 1142 docs hygiene + search_docs PA tool
+- **PR #2180** (`fix/markdown-xss-rehype-sanitize`) — ReactMarkdown rehype-sanitize on 10 sites
+- **PR #2181** (`fix/pa-cache-race`) — `get_unified_pa` threading.Lock + clear_pa_cache correctness
 
 ### Already done in the 1140 post-close session
 
@@ -306,6 +330,7 @@ Four clarifications drafted in [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md
 - [Session 1140 cluster_method mirror + judge-stats](docs/handoffs/SESSION_1140_CLUSTER_METHOD_MIRROR_AND_JUDGE_STATS.md)
 - [Session 1140 (A) action-card vertical slice](docs/handoffs/SESSION_1140_ACTION_CARDS_VERTICAL_SLICE.md)
 - [Session 1141 Jessica ratification deep dives](docs/handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md)
+- [Session 1142 docs-hygiene + search_docs + 2 stale-finding fixes](docs/handoffs/SESSION_1142_DOCS_HYGIENE_SEARCH_DOCS_AND_AUDIT_FIXES.md)
 
 ---
 
