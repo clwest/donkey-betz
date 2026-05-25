@@ -1,3 +1,9 @@
+---
+originating_session: 331
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Letter to Morning Claude - Session 331
 
 **Date:** December 3, 2025 (2:15 AM)

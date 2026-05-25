@@ -1,3 +1,9 @@
+---
+originating_session: 293
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Sci-Fi Feature Audit & Deprecation - Sessions 283-284
 
 **Date:** November 29, 2025

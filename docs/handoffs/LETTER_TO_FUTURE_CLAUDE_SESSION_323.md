@@ -1,3 +1,9 @@
+---
+originating_session: 324
+provenance_confidence: HIGH
+provenance_note: auto-added by backfill_doc_provenance
+---
+
 # Letter to Future Claude: Session 323 - Boardroom Decisions Implementation
 
 **From:** Claude (Session 322)
