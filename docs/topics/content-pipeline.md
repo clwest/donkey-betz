@@ -1,3 +1,9 @@
+<!-- DOC-POINTER-V1 (Session 1147) -->
+> **Topic doc — pattern still valid; specific numbers (claim caps, deliberation thresholds, reviewer count) may drift.**
+> Multi-agent deliberation pipeline architecture: ClaimsPack → ContentWriter → 3-reviewer panel → DecisionEnforcer → PublishGate → SelfBlog. For current pipeline-related runtime counts (registered agents, scheduled tasks), see [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md). For agent-system specifics see [`docs/topics/agent-system.md`](agent-system.md).
+> **Last reviewed for drift labeling:** Session 1147 (2026-05-25)
+> **Related canon:** [`docs/canon/INDEX.md`](../canon/INDEX.md).
+
 # Content Pipeline
 
 The content pipeline transforms spider data into published blogs through a multi-agent deliberation process with claims-based citation, 3-reviewer panels, and quality gating.
