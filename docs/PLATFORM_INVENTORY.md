@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-24 14:22:09
-**Git HEAD:** `22679b19`
+**Generated:** 2026-05-24 19:03:53
+**Git HEAD:** `080636e1`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -12,10 +12,10 @@
 |---|---|
 | [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 151 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
-| [Services](#services) | 112 `*Service` classes across 337 files in core/services/ |
-| [Celery Tasks](#celery-tasks) | 400 user-defined Celery tasks (excludes celery.* internals) |
+| [Services](#services) | 112 `*Service` classes across 338 files in core/services/ |
+| [Celery Tasks](#celery-tasks) | 401 user-defined Celery tasks (excludes celery.* internals) |
 | [Celery Beat — Scheduled Tasks](#beat-schedule) | 80 enabled + 0 disabled = 80 PeriodicTask rows |
-| [Personal Assistant (PA) Tools](#pa-tools) | 104 tool schemas + 169 registered handlers; 8 enrichment services |
+| [Personal Assistant (PA) Tools](#pa-tools) | 105 tool schemas + 170 registered handlers; 8 enrichment services |
 | [Database Models](#database-models) | 585 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1857 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 208 files matching core/views*.py |
@@ -29,8 +29,8 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,040 Python files, 992,709 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
+| [Code Statistics](#code-stats) | 2,043 Python files, 993,935 lines across core/ + ai_core/ + intelligence/ |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 71 OK, 2 drifts |
 
 ## Table of Contents
 
@@ -246,7 +246,7 @@
 <a id="services"></a>
 ## Services
 
-**Headline:** 112 `*Service` classes across 337 files in core/services/
+**Headline:** 112 `*Service` classes across 338 files in core/services/
 
 **Code location:** `core/services/`
 
@@ -368,11 +368,11 @@
 <a id="celery-tasks"></a>
 ## Celery Tasks
 
-**Headline:** 400 user-defined Celery tasks (excludes celery.* internals)
+**Headline:** 401 user-defined Celery tasks (excludes celery.* internals)
 
 **Code location:** `core/tasks.py + siblings`
 
-**Notes:** Top 10 modules by task count: core.tasks=333, intelligence.tasks=14, sports=8, (top-level)=6, core.tasks_agents=6, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
+**Notes:** Top 10 modules by task count: core.tasks=333, intelligence.tasks=14, sports=8, (top-level)=7, core.tasks_agents=6, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
 
 | Task |
 |---|
@@ -776,6 +776,7 @@
 |  |
 |  |
 |  |
+| ... | _(1 more rows truncated)_ |
 
 <a id="beat-schedule"></a>
 ## Celery Beat — Scheduled Tasks
@@ -870,14 +871,15 @@
 <a id="pa-tools"></a>
 ## Personal Assistant (PA) Tools
 
-**Headline:** 104 tool schemas + 169 registered handlers; 8 enrichment services
+**Headline:** 105 tool schemas + 170 registered handlers; 8 enrichment services
 
 **Code location:** `core/services/pa_tool_schemas.py + tool_dispatcher.py`
 
-**Notes:** Schemas: 104. Handlers (self.register in tool_dispatcher.py): 169. Intent-mapped: 103. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
+**Notes:** Schemas: 105. Handlers (self.register in tool_dispatcher.py): 170. Intent-mapped: 104. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
 
 | Schema name | Canonical intent |
 |---|---|
+|  |  |
 |  |  |
 |  |  |
 |  |  |
@@ -2035,23 +2037,23 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,040 Python files, 992,709 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,043 Python files, 993,935 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1634 | 826312 |
+| core | 1637 | 827538 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2040 | 992709 |
+| TOTAL (python) | 2043 | 993935 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 73 registered claims across 34 docs: 73 OK, 0 drifts
+**Headline:** 73 registered claims across 34 docs: 71 OK, 2 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=73, low=0, medium=0, high=0, error=0. Top drifting docs: .
+**Notes:** Severity rollup: ok=71, low=0, medium=2, high=0, error=0. Top drifting docs: docs/AGENTS.md, docs/CAPABILITIES.md.
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
@@ -2064,13 +2066,13 @@
 | core/services/advisor_context_builder.py | 1 | 0 | 0 |
 | core/services/priority/governor.py | 1 | 0 | 0 |
 | docs/ADVISOR_AUDIT.md | 2 | 0 | 0 |
-| docs/AGENTS.md | 3 | 0 | 0 |
+| docs/AGENTS.md | 2 | 1 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
 | docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
 | docs/BEAT_AUDIT.md | 1 | 0 | 0 |
 | docs/BODY_SYSTEM_AUDIT.md | 1 | 0 | 0 |
-| docs/CAPABILITIES.md | 4 | 0 | 0 |
+| docs/CAPABILITIES.md | 3 | 1 | 0 |
 | docs/CAPABILITY_AUDIT.md | 2 | 0 | 0 |
 | docs/CELERY_AUDIT.md | 1 | 0 | 0 |
 | docs/DISCORD_INTEGRATION.md | 1 | 0 | 0 |

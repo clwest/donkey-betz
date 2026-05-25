@@ -6,6 +6,33 @@
 **Revision:** v0 → v1 — narrowed Phase 1 from "Legal + Markets + flagship" to "Rigby standalone only," parked the Character OS merge, pushed all verticals to Phase 3+.
 **Companion docs:** [`COST_SURVIVAL_AUDIT.md`](COST_SURVIVAL_AUDIT.md), [`CONNECTION_CENSUS_2026_05.md`](CONNECTION_CENSUS_2026_05.md), [`MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`](MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md) *(parked)*
 
+> **Atlas v1 ratification — Session 1137 + 1141 (2026-05-24).**
+> Atlas v1 (this doc, Session 1116) defined Phase 1 = Rigby standalone
+> and parked verticals to Phase 3+. Subsequent Atlas-implied decisions
+> (pricing per app, cost-attribution rules, take-public trigger,
+> trademark, graduation rules, GTM channels, persona naming) were
+> locked by Jessica in Session 1137 (22 decisions across 4 phases)
+> and ratified by Chris in Session 1141 (17 accept-as-written + 3
+> ratify-shipped + 2 with Jessica clarification redlines).
+>
+> **Atlas-relevant decisions worth knowing:**
+> - **Decision 1** (take-public): defer Rigby launch until ≥2 Suite products at ≥$500 MRR each AND concrete Rigby standalone answer
+> - **Decision 2** (24/7 Global AI trademark): wait, same trigger as Decision 1
+> - **Decision 4** (Suite vs LAB graduation): revenue-only, ≥$1K MRR sustained ≥2 months
+> - **Decision 5** (Rigby pricing): $30/mo (top of the $20-30 Atlas band)
+> - **Decisions 6/7/8** (Suite Pro/Team pricing for SS/SP/CS): see SESSION_1137 handoff
+> - **Decision 9** (cost attribution): formal rules supersede Atlas Phase 1's "~$1.50/day per-account cap"
+> - **Decision 10** (Stripe SKU wiring): 1-by-1 — Signal Studio → SellerPilot → ComplianceSentinel
+> - **Decision 13** (Signal Studio legal demand-gate): F1 spec shipped Session 1138
+> - **Decisions 15a-c** (GTM channels per product): see SESSION_1137 handoff
+>
+> Full decision text + Chris's tech-feasibility scan + Jessica
+> clarification redlines: [`SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md`](handoffs/SESSION_1137_JESSICA_PHASES_1_4_RATIFICATION.md)
+> + [`SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md`](handoffs/SESSION_1141_JESSICA_RATIFICATION_DEEP_DIVES.md).
+> Atlas's strategic shape (Rigby Phase 1 first, verticals deferred,
+> Character OS Phase 4+) is unchanged by these decisions — they refine
+> the *how* and *how much*, not the *what*.
+
 ---
 
 ## TL;DR
