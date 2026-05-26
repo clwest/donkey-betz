@@ -1541,7 +1541,8 @@ class PolicyArbitrator:
             {
                 "found": bool,                  # False when no snapshot has been written
                 "cycle_id": str | None,         # UUID from the most recent cycle, or None
-                "ts": str | None,               # ISO 8601 timestamp captured by the arbitrator
+                "ts": str | None,               # ISO 8601 timestamp captured by the arbitrator (from the JSON payload)
+                "row_updated_at": str | None,   # ISO 8601 of the SystemConfiguration row's updated_at (freshness check)
                 "knob_count": int,              # number of knobs in the snapshot (0 when not found)
                 "knobs": dict,                  # key -> {"value", "owner", "priority"} (empty when not found)
                 "storage": {                    # explicit caller-readable storage context
@@ -1569,6 +1570,7 @@ class PolicyArbitrator:
                 'found': False,
                 'cycle_id': None,
                 'ts': None,
+                'row_updated_at': None,
                 'knob_count': 0,
                 'knobs': {},
                 'storage': STORAGE_CTX,
@@ -1593,14 +1595,21 @@ class PolicyArbitrator:
             'found': True,
             'cycle_id': payload.get('cycle_id'),
             'ts': payload.get('ts'),
+            'row_updated_at': (
+                entry.updated_at.isoformat()
+                if entry.updated_at is not None else None
+            ),
             'knob_count': payload.get('knob_count', 0),
             'knobs': payload.get('knobs', {}),
             'storage': STORAGE_CTX,
             'note': (
                 'Returns the single latest arbitrator snapshot. '
                 'Per-cycle history is not stored; time-travel queries '
-                'are not supported by the current implementation. See '
-                'Disclosure L §14 addendum for the drift record.'
+                'are not supported by the current implementation. '
+                'row_updated_at carries the database row mtime so '
+                'callers can answer "is this fresh?" without inferring '
+                'from cycle cadence. See Disclosure L §14 addendum for '
+                'the drift record.'
             ),
         }
 
