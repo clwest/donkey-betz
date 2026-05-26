@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen).
+> **Change reason:** Session 131 investigation snapshot. The investigation's findings are point-in-time and have been folded into current code; do not cite as an active investigation.
+> **Preserved because:** historical investigation record. Useful as build-history; do NOT cite for current state.
+
 # Data URI Investigation - Session 131
 
 **Date:** November 19, 2025

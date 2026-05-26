@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (sole authoritative agent counts) + [`docs/narratives/AGENTS_AND_AUTONOMY.md`](../narratives/AGENTS_AND_AUTONOMY.md) (narrative A — agent system operator-handbook).
+> **Change reason:** Jan 21 plan for a single agent ("Reddit agent"). Plan is point-in-time; current agent registry per `AGENT_MAP` in `core/agent_router.py`. If the Reddit agent's current status matters, query the registry, not this doc.
+> **Preserved because:** historical agent-plan record. Useful as build-history; do NOT cite for current state.
+
 # Reddit Agent Resurrection Plan 🚀
 
 ## Executive Summary

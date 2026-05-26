@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen).
+> **Change reason:** Jan 21 WebSocket diagnostic snapshot. Diagnostic findings have been folded into code; current WebSocket behavior per the daphne/channels runtime.
+> **Preserved because:** historical diagnostic record. Useful as build-history; do NOT cite for current state.
+
 # 🔍 WebSocket Diagnostic Report
 **Date:** October 2, 2025
 **Time:** 5:03 PM

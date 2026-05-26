@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/topics/*`](../topics/) (subsystem deep-dives).
+> **Change reason:** Jan 21 problem-statement doc. The consistency concerns it raised have largely been addressed by Sessions 1099+ (`verify_doc_claims`), Session 1143 (canon hierarchy in `DOC_LIFECYCLE.md`), and Session 1158 (corpus-narrative program). Read for historical context, not as a current open issue.
+> **Preserved because:** documents the early consistency problem that motivated the canon discipline now in place. Useful as build-history record; do NOT cite for current state.
+
 # 🎯 The Consistency Problem - Critical Business Issue
 **Date:** November 12, 2025
 **Problem:** AI generation is inconsistent - can't duplicate perfect results
