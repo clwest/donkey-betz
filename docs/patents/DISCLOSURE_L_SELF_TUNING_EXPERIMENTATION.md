@@ -395,9 +395,9 @@ Prior art teaches hyperparameter optimization for ML models (Optuna), A/B testin
 
 ### 13.1 The refactor
 
-Seven days before this disclosure was drafted, commit **`fe94c928`** ("refactor: split `ops_autopilot.py` (553KB) into 11-module package", **2026-03-09**) extracted 37 classes from the monolithic `core/services/ops_autopilot.py` into a domain-organized package at `core/services/ops_autopilot/`. The §5 paths in this disclosure (drafted 2026-03-16) reference the **pre-refactor** layout — accurate for the codebase the disclosure was authored against, stale relative to the codebase as merged seven days earlier and onward.
+This disclosure cites code locations as they existed during the March 2026 drafting window; subsequent reorganization of the `ops_autopilot` codebase relocated certain class definitions into a domain-organized package. The wrappers remain accurate; this addendum maps the cited elements to their current canonical locations as-of 2026-05-26.
 
-The disclosure's mechanism description is unaffected. Only file locations shifted.
+**For historical context:** commit **`fe94c928`** ("refactor: split `ops_autopilot.py` (553KB) into 11-module package", **2026-03-09**) extracted 37 classes from the monolithic `core/services/ops_autopilot.py` into a package at `core/services/ops_autopilot/`. The disclosure's mechanism description (§5) is unaffected by the reorganization — only file locations shifted.
 
 ### 13.2 Class definitions — moved out of `core.py`
 
