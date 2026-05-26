@@ -1,8 +1,12 @@
 # Body Systems & Health Monitoring
 
-9 body systems use a human anatomy metaphor to monitor AI infrastructure health. Each system has a service singleton, health check method, and status model.
+**9 body systems monitored by `run_all_systems_scan`** (per PLATFORM_INVENTORY 2026-05-25 + verified against `core/tasks.py:body_systems` list): heart, lungs, brain, spine, immune, digestive, muscular, circulatory, skin.
 
-## The 9 Systems
+**NERVOUS exists as a separate service** (`core/services/nervous.py`) with its own `feel()` method and health levels — but it is **not in the periodic scan rotation** (`body_systems` list in `core/tasks.py`). NERVOUS is invoked situationally (e.g., during channel-layer health checks); use Inferred / Known / Unknown labels when reasoning about NERVOUS status freshness.
+
+Each system has a service singleton, health check method, and status model.
+
+## The 10 Systems (9 scanned + NERVOUS situational)
 
 | System | Service Method | Monitors | Health Levels |
 |--------|---------------|----------|---------------|
