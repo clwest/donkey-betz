@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-26 10:44:21
-**Git HEAD:** `a9061f2a`
+**Generated:** 2026-05-26 12:47:48
+**Git HEAD:** `1670436d`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -29,7 +29,7 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,049 Python files, 996,382 lines across core/ + ai_core/ + intelligence/ |
+| [Code Statistics](#code-stats) | 2,049 Python files, 996,439 lines across core/ + ai_core/ + intelligence/ |
 | [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
 
 ## Table of Contents
@@ -2044,14 +2044,14 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,049 Python files, 996,382 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,049 Python files, 996,439 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1643 | 829985 |
+| core | 1643 | 830042 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2049 | 996382 |
+| TOTAL (python) | 2049 | 996439 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State

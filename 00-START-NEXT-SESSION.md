@@ -25,9 +25,9 @@ Memory: `feedback_pa_hang_from_disk_pressure.md`. If the PA worker processes exa
 
 If you see a cluster of doc mtimes within minutes of each other and wonder "what generated this?", run `git log --since="<timestamp - 1min>" --until="<timestamp + 1min>"` first. Session 1160's "May 25 09:36 batch" mystery resolved instantly via `git show 9d75f78f` — it was Chris's own Session 1143 PR #2197. Future similar questions should start with the git history before invoking Rigby's ops tools.
 
-## READ THIS FOURTH (NEW Session 1161) — NEW `@shared_task` ⇒ WORKER RESTART
+## READ THIS FOURTH (NEW Session 1161, broadened Session 1162) — WORKER `sys.modules` CACHE ⇒ RESTART
 
-Adding a new `@shared_task` to `core/tasks.py` is invisible to running celery workers until they restart — they cache the registered-task list at process import time. Beat dispatches succeed (it picks up new `PeriodicTask` rows via `DatabaseScheduler` polling), but workers reject with `Received unregistered task of type '<dotted.task.name>'`. Same root cause as the existing PA-tool-registration rule, generalized. Fix: `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Verify with `.venv/bin/celery -A core inspect registered | grep <task_name>`.
+Two restart triggers, one fix. **(1)** Adding a new `@shared_task` to `core/tasks.py` is invisible to running celery workers until they restart — they cache the registered-task list at process import time. Beat dispatches succeed (picks up new `PeriodicTask` rows via `DatabaseScheduler` polling), but workers reject with `Received unregistered task of type '<dotted>'`. **(2)** More broadly (Session 1162 discovery): even when the `@shared_task` itself is unchanged, any helper module the task body imports is cached in the worker's `sys.modules` after first call. Modifying the imported module's code (e.g., a `Command` class the task calls) does NOT propagate to running workers. Both cases need the same restart. Fix: `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Verify with `.venv/bin/celery -A core inspect registered | grep <task_name>` (case 1) or by dispatching a manual call and checking output (case 2). PR-description anti-pattern to avoid: "no `@shared_task` changes — workers don't need restart" — wrong for case 2.
 
 ## SOURCE OF TRUTH
 
@@ -97,7 +97,31 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1161 CLOSED — PA acks_late watch instrumentation + 30-min cadence (2026-05-26)
+## SESSION 1162 CLOSED — Narrative triple + PA acks observation completion (2026-05-26)
+
+**8 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1162_NARRATIVE_TRIPLE_AND_PA_ACKS_OBSERVATION_PHASE.md`](docs/handoffs/SESSION_1162_NARRATIVE_TRIPLE_AND_PA_ACKS_OBSERVATION_PHASE.md).
+
+| PR | Theme | SHA |
+|----|------|-----|
+| **#2274** | `pa_acks_health` (PA-worker-set filter) — `is_pa_relevant` flag | `ffce1494` |
+| **#2275** | `pa_acks_health` (Mountain time) — `generated_at_mt` alongside UTC | `25b2198a` |
+| **#2276** | **`WORKSPACES_AND_SCOPING.md`** narrative (batch P, 484 lines) | `dc027f4f` |
+| **#2277** | docs/INDEX.md regen post-workspace | `0cfaa767` |
+| **#2278** | **`INITIATIVES_AND_LIFECYCLE.md`** narrative (batch Q, 724 lines) | `1ba017e3` |
+| **#2279** | docs/INDEX.md regen post-initiative | `373148c7` |
+| **#2280** | **`SELF_TUNING_AND_EXPERIMENTATION.md`** narrative (batch R, 606 lines, first patent-rooted) | `53879aef` |
+| **#2281** | docs/INDEX.md regen post-self-tuning | `1670436d` |
+
+**New persistent artifacts:** three new operator-handbook narratives (~1,814 lines combined) at `docs/narratives/`. Active doc count 904 → 907. New frontmatter pattern: `maps_to_patents` field for patent-rooted narratives.
+
+**Coverage gaps closed:**
+1. Workspace concept — scattered across 9 prior narratives, no canonical home → batch P.
+2. Initiative entity + lifecycle + non-signal creation paths — companion to SIGNAL_INTELLIGENCE (signal arc) → batch Q.
+3. Disclosure L self-tuning experimentation — Session 1161 carryover → batch R.
+
+**Post-merge ops gotcha:** PRs #2274 + #2275 said "no `@shared_task` changes — workers don't need restart" but the worker `sys.modules` cache held the old `Command` class. Discovered when 12:30 CDT auto-fire wrote JSONL without new fields. Memory rule broadened (see READ THIS FOURTH above). Post-restart cadence is fully instrumented.
+
+### Session 1161 CLOSED — PA acks_late watch instrumentation + 30-min cadence
 
 **3 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1161_PA_ACKS_WATCH_INSTRUMENTATION_AND_CADENCE.md`](docs/handoffs/SESSION_1161_PA_ACKS_WATCH_INSTRUMENTATION_AND_CADENCE.md).
 
@@ -122,11 +146,11 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## 🚨 ACTIVE ISSUES carrying into Session 1162
+## 🚨 ACTIVE ISSUES carrying into Session 1163
 
 ### 1. GitHub Actions billing — still down
 
-Same annotation as Sessions 1149-1161. Multi-day outage until Chris funds account.
+Same annotation as Sessions 1149-1162. Multi-day outage until Chris funds account.
 
 **Self-merge protocol during outage** (Sessions 1149 + 1150 + 1158-1161 pattern):
 
@@ -145,79 +169,87 @@ Self-merge with bypass requires:
 
 ### 2. `celery-beat-schedule` CONFLICT — detector signal pending
 
-Session 1157 PR #2243 closed the code-level footgun. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1162+.
+Session 1157 PR #2243 closed the code-level footgun. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1163+.
 
-### 3. PA `acks_late=False` 24-48h watch — NOW INSTRUMENTED, observation phase
+### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED
 
-Session 1161 closed the instrumentation gap. The watch now produces durable JSONL data:
+Sessions 1161 + 1162 together closed the instrumentation gap. The watch now produces durable JSONL data with all expected fields:
 
 - `logs/pa_acks_health/YYYY-MM-DD.jsonl` grows by ~48 lines/day (`*/30` cadence).
+- Each snapshot carries: UTC + MT timestamps, queue depth, per-worker rollup (with `is_pa_relevant` flag), `oldest_queued`, `inflight_estimate`, `slow_tasks` list, `hang_signature` samples (with `worker_last_event_at` heartbeat).
 - WARN-level log line fires in celery-broadcast log whenever `status != OK`.
-- All metrics in place: queue depth, oldest_queued, inflight_estimate, per_worker rollup, worker_last_event_at on hang samples.
 
-What Session 1162 should check on entry:
-- `wc -l logs/pa_acks_health/*.jsonl` — confirm growth without errors.
-- `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded"` — any WARN lines?
-- If 24+ hours of clean data exists, **threshold tuning (item 3d below) becomes actionable.**
+**Session 1162 close state (2026-05-26 13:42 CDT):** 8 JSONL lines on today's date file. All status OK. Zero WARN/CRIT lines. Cadence verified end-to-end through 13:30 CDT auto-fire (post-restart for the worker `sys.modules` cache gotcha — see READ THIS FOURTH).
+
+**What Session 1163 should check on entry:**
+- `wc -l logs/pa_acks_health/*.jsonl` — confirm overnight growth without errors.
+- `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` — any WARN lines?
+- If 24+ hours of clean data exists (likely by 2026-05-27 noon-ish), **threshold tuning (item 7 in the entry-point queue below) becomes actionable.**
 
 ---
 
-## SESSION 1162 — CURRENT ENTRY POINT
+## SESSION 1163 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Check the PA stack is healthy.** Run `platform_config_tool overview` through Rigby to confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d` (carried from Sessions 1159-1161 — update the wrapper if Chris opened a new conversation).
+**Check the PA stack is healthy.** Run `platform_config_tool overview` through Rigby to confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d` (carried from Sessions 1159-1162 — update the wrapper if Chris opened a new conversation).
 
 **Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
 
-**JSONL cadence check (new this session):** `wc -l logs/pa_acks_health/*.jsonl` should show ~48 lines per full day. `grep "pa_acks_health" celery-broadcast.log | grep -v succeeded` should be empty unless a status changed.
+**JSONL cadence check (continued from Session 1161-1162):** `wc -l logs/pa_acks_health/*.jsonl` should now show ~48 lines per full day. `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` should be empty unless a status changed. If 24h+ of clean data exists, threshold tuning (item 7 below) becomes actionable.
 
-### Queue is clear of Session 1158-1160 carryovers; Session 1161 closed the PA instrumentation gap
+### Queue is clear of Session 1158-1162 carryovers; Session 1162 closed three narrative coverage gaps + the PA acks observation surface
 
 No items are blocked on Chris-decision at session open. Chris can pick any of the active items below.
 
 ### Observation-mode items (may not produce a PR)
 
 1. **JSONL review** — sample a handful of snapshots, confirm no errors. The Session 1161 cadence wrapper runs every 30 min and emits WARN log lines on non-OK transitions.
-2. **EDITING_GUARDRAILS opportunistic rollout** to narratives A / E / F / G / H / I / J / K / L / M / N / O. Pick up when next editing each narrative; not a batch.
-3. **Disclosure L narrative coverage gap.** Self-tuning experimentation lacks a Session 1158 narrative. Fold into BODY_SYSTEMS or CONTENT_PIPELINE, or write a new narrative when the subsystem matures.
+2. **EDITING_GUARDRAILS opportunistic rollout** to narratives A / E / F / G / H / I / J / K / M / N / O (batch L is the patent disclosure, not a narrative; batches P/Q/R from Session 1162 applied guardrails from the start). Pick up when next editing each narrative; not a batch.
 
-### `pa_acks_health` follow-ons — UPDATED after Session 1161
+### Small follow-on PRs from Session 1162 — pick one (clean ~30-min PR each)
 
-Sessions 1160-1161 closed (A) and (B). What remains:
+3. **STRATEGY correction PR** — `WORKSPACES_AND_SCOPING.md` §6.1 + §6.2 flagged two STRATEGY narrative drifts (`LLMCallLog.workspace` FK + fleet "scoped workspace bootstrap" both named as implemented but aren't). Convert "is" → "planned / not yet implemented" on both; link back to the workspace narrative §6.
 
-3c. **(C) UI spinner symptom proxy** — chat requests with no assistant response recorded within N minutes (via `ChatConversation` rows). Rigby deferred this in Session 1161 pending confirmation that `ChatConversation` (or similar) has the right shape to measure it cheaply.
+4. **Patent Disclosure L addendum** — `SELF_TUNING_AND_EXPERIMENTATION.md` §6.1 surfaced that the disclosure cites `core.py:1224-1328` (PolicyOptimizer) + `core.py:2643-2706` (PolicyArbitrator); classes moved to `governance.py:702` + `:1118`. Add an "Addendum (as-of 2026-05-26)" section to the disclosure noting the path move. Cycle wrappers in `core.py` are still accurate; only class definitions moved. Frozen-artifact convention: addendum, NOT inline edit.
 
-3d. **Threshold tuning** — NOW ACTIONABLE if 24+ hours of cadence data exists. The action thresholds (per Rigby's Session 1161 ranking, documented in the Session 1161 handoff):
+5. **TRIAGE policy PR** — `INITIATIVES_AND_LIFECYCLE.md` §6.2. Rigby's verdict: real gap (operational hygiene), not bug. Two conservative options:
+   - opt-in archive rule (TRIAGE older than N days *only if* no action items + no stage docs + low confidence → ARCHIVED)
+   - review queue surfacing (TRIAGE older than N days → `HumanAttentionItem`)
+
+6. **`final_overrides_at(time)` PA tool action** — `SELF_TUNING_AND_EXPERIMENTATION.md` §6.4. A `ops_tool` / `autopilot_tool` action that wraps `FinalAppliedOverrides.objects.filter(cycle_ts__lte=t).order_by('-cycle_ts').first()` so operators can query past configurations without an ORM recipe.
+
+### Larger follow-on candidates
+
+7. **Threshold tuning** — fold `pa_acks_health` action thresholds into `_compute_status()`. Gated on 24h+ clean JSONL data (should be true by 2026-05-27 noon-ish).
    - WARN on queue depth ≥ 5 (currently ≥ 1).
    - CRIT "no workers sustained" — explicit sustain window (≥ 2 consecutive snapshots).
    - CRIT queue depth ≥ 20 — pair with second condition (workers < 2 OR oldest queued age > 120s).
-   - Any hang_age ≥ 180s → CRIT (currently 180s already triggers CRIT via `_CRIT_HANG_AGE_SEC`).
-   - **WARN persists 2 consecutive snapshots** → escalate. This one requires comparing adjacent JSONL snapshots — net new logic.
+   - **WARN persists 2 consecutive snapshots** → escalate. Net new logic (requires comparing adjacent JSONL snapshots).
 
-3e. **Optional cosmetic** — Rigby's "PA worker set" filter on the per-worker rollup. Truly optional; skipped from Session 1161 intentionally.
+8. **Per-module ops_autopilot narratives** — `SELF_TUNING_AND_EXPERIMENTATION.md` §6.3 explicitly scoped out the other 7 files. Each is a future-narrative candidate; pick one. Patent-rooted pattern applies where relevant (budget → disclosures J + K). Rigby's verdict: separate per-module narratives, not an umbrella.
 
-3f. **Timezone clarity** — JSONL records currently UTC-only. If operator readability matters during the 48h watch, add `generated_at_mt` (Mountain time string) to `build_report()`. Single line. Filed as non-blocker by Rigby Session 1161.
+9. **(C) UI spinner proxy** — confirm `ChatConversation` (or similar) shape first; should be cheap to query for "request received but no assistant response after N minutes." Then implement as `pa_acks_health` field or a separate tool action.
 
 ### Active queue (Chris's call on priority)
 
-4. **Old `docs/topics/` sweep** — 7 Feb-March docs deferred from Session 1147 #2221.
-5. **Cosmetic `load_all_agents_advisors.py 149→139` fix** — queued from Session 1149.
+10. **Old `docs/topics/` sweep** — 7 Feb-March docs deferred from Session 1147 #2221.
+11. **Cosmetic `load_all_agents_advisors.py 149→139` fix** — queued from Session 1149.
 
 ### Deferred infrastructure track (avoid during offline-CI window)
 
-6. **`celery-beat-schedule` CONFLICT — detector tuning** (preferred) or 36-file token-pattern phrasing sweep (fallback).
-7. **Pre-existing PeriodicTask drift** (now 81 DB rows vs 78 entries in `core/celery.py` after Session 1161 added one). Folds into #6.
-8. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
-9. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
-10. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
-11. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern from PR #2201.
+12. **`celery-beat-schedule` CONFLICT — detector tuning** (preferred) or 36-file token-pattern phrasing sweep (fallback).
+13. **Pre-existing PeriodicTask drift** (still 81 DB rows vs 78 entries in `core/celery.py` — Session 1162 added 0 beat entries). Folds into #12.
+14. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
+15. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
+16. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
+17. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern from PR #2201.
 
 ### Chris-call-only carryovers (still parked)
 
-12. **Decision Command backend cleanup** — 5 Python files (regressed feature).
-13. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
-14. **Mission refresh PR #2190** — preserved branch.
+18. **Decision Command backend cleanup** — 5 Python files (regressed feature).
+19. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
+20. **Mission refresh PR #2190** — preserved branch.
 
 ### Cross-session lessons (Sessions 1145–1161)
 
@@ -237,14 +269,20 @@ Sessions 1160-1161 closed (A) and (B). What remains:
 - **`git show` first for mtime mysteries** — before invoking ops tools, `git log --since/--until <timestamp>` resolves nearly every case (1160).
 - **Symmetric cross-references prevent half-resolved navigation** — pair `maps_to_*` frontmatter with reverse "Related X" sections (1160).
 - **Append-only edits are safer than restructure for high-trust documents** — PR #2263 added cross-link sections at the end of 6 narratives without touching milestone tables or vocabulary sections (1160).
-- **NEW (1161)** **Cadence wrappers belong in beat, not cron.** `DatabaseScheduler` polls — adding a `PeriodicTask` row via `add_critical_celery_tasks` is the canonical path. Beat picks up new rows without restart.
-- **NEW (1161)** **New `@shared_task` decorators are invisible to running workers** until they restart. Generalizes the existing PA-tool-registration restart rule to any task addition. Fix: `pkill -9 -f celery; rm -f .celery*.pid; make celery`.
-- **NEW (1161)** **"Stop and watch" is its own ship-able milestone.** Three sequential PRs that move from "snapshot tool" to "cadenced observation surface" can complete a session arc without the analytics layer on top. Threshold tuning waits for the data.
+- **Cadence wrappers belong in beat, not cron** (1161). `DatabaseScheduler` polls — adding a `PeriodicTask` row via `add_critical_celery_tasks` is the canonical path. Beat picks up new rows without restart.
+- **New `@shared_task` decorators are invisible to running workers** (1161) until they restart. Generalized further Session 1162: *any module imported by a task body* is cached in `sys.modules` and needs the same restart even when the `@shared_task` is unchanged. Fix: `pkill -9 -f celery; rm -f .celery*.pid; make celery`.
+- **"Stop and watch" is its own ship-able milestone** (1161). Three sequential PRs that move from "snapshot tool" to "cadenced observation surface" can complete a session arc without the analytics layer on top. Threshold tuning waits for the data.
+- **NEW (1162)** **The narrative-triple shipping pattern works at scale.** Code survey → draft → split-paste Rigby review → apply fixes → merge ran cleanly three times in one session. PA chat payload limit (~24 KB) forces multi-message review for any narrative >~24 KB; workable, not blocking.
+- **NEW (1162)** **Patent-rooted narratives are a viable corpus pattern.** Frontmatter `maps_to_patents` field creates bidirectional cross-links between frozen IP artifacts and current-state operator-handbook docs. Patent text stays frozen (Rigby's verdict: addendum-only, never inline rewrite); narrative stays current; path drift handled via the patent's addendum section, not by editing the narrative away from the disclosure.
+- **NEW (1162)** **PR-description anti-pattern to avoid:** "no `@shared_task` changes — workers don't need restart." Wrong for the case where the PR modifies a module that a task body imports. Correct phrasing: "Modifies [Command class] imported by [task_name] task body — celery workers need restart for scheduled fires to pick up the change."
+- **NEW (1162)** **Anti-duplication discipline against companion narratives works.** `INITIATIVES_AND_LIFECYCLE.md` §8 punted 7 things to `SIGNAL_INTELLIGENCE.md`. Rigby's verdict: "clean and correct, not over-claiming." Model for future companion narratives where two docs cover related arcs.
+- **NEW (1162)** **Open Questions are a triage surface, not just gap markers.** Each §6 item should resolve to a Rigby-stated verdict ("deliberate" / "real gap" / "known operational risk" / "design decision"), not stay as "Rigby's call" indefinitely. Three narratives x 5 open questions each = 15 verdicts captured this session; this triage is part of the review pass, not separate.
 
 ---
 
 ## RECENT SESSION ARCS
 
+- **Session 1162** — narrative triple (workspace + initiative + self-tuning) + PA acks observation completion. 8 PRs merged.
 - **Session 1161** — PA acks_late watch instrumentation + 30-min cadence. 3 PRs merged.
 - **Session 1160** — 1158-carryover queue clear + EDITING_GUARDRAILS operational. 8 PRs merged.
 - **Session 1159** — PA acks_late fix + narrative B/C/D iterations + EDITING_GUARDRAILS contract. 3 PRs merged.
