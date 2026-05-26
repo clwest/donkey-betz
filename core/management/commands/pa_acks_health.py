@@ -122,14 +122,43 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        hours = options["hours"]
-        queue = options["queue"]
-        task_name = options["task"]
-        slow_threshold = options["slow_threshold"]
-        hang_max_age_hours = options["hang_max_age_hours"]
-        since_pidfile = options["since_pidfile"]
-        as_json = options["json"]
+        report = self.build_report(
+            hours=options["hours"],
+            queue=options["queue"],
+            task_name=options["task"],
+            slow_threshold=options["slow_threshold"],
+            hang_max_age_hours=options["hang_max_age_hours"],
+            since_pidfile=options["since_pidfile"],
+        )
 
+        if options["json"]:
+            self.stdout.write(json.dumps(report, indent=2, default=str))
+        else:
+            self._print_human_summary(report)
+
+    def build_report(
+        self,
+        *,
+        hours=6,
+        queue="pa",
+        task_name="core.tasks.process_pa_chat_task",
+        slow_threshold=60,
+        hang_max_age_hours=24,
+        since_pidfile=".celery-pa.pid",
+    ):
+        """
+        Session 1161 cadence wrapper: assembles + returns the report dict.
+
+        Public entry point for callers that need the structured report
+        without going through CLI option parsing or stdout capture (e.g.,
+        the `capture_pa_acks_health_snapshot` Celery beat task that runs
+        every 30 minutes during the acks_late=False watch window). All
+        args have CLI-matching defaults so a no-arg call is equivalent
+        to running `python manage.py pa_acks_health` with no flags.
+
+        Read-only — same semantics as `handle()`. Advisory flags + status
+        are populated last so they reflect everything else in the report.
+        """
         pidfile_cutoff = self._pidfile_cutoff(since_pidfile)
 
         task_stats = self._task_stats(task_name, hours)
@@ -159,17 +188,9 @@ class Command(BaseCommand):
             "status": "OK",
         }
 
-        # Populate advisory flags + status last so we can reason about
-        # everything we gathered. Read-only — never returns a non-zero exit
-        # code; flags + status are signals for the human reader / downstream
-        # tooling.
         self._flag_advisory(report)
         self._compute_status(report)
-
-        if as_json:
-            self.stdout.write(json.dumps(report, indent=2, default=str))
-        else:
-            self._print_human_summary(report)
+        return report
 
     # ---- Data gatherers (read-only) ----
 
