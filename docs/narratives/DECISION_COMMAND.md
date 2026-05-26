@@ -348,3 +348,12 @@ pre-redesign). Spec for redesign in
   what's been decided lately.
 - PA: `governance_tool action=triage_batch` — bulk
   promote TRIAGE → ACTIVE.
+
+---
+
+## Related patent disclosures
+
+One invention disclosure anchors directly to Decision Command. See [`docs/patents/README.md`](../patents/README.md) for the full workstream + narrative cross-link map; treat the disclosure as the authoritative source for IP claims (this narrative is the operator-handbook layer).
+
+- [Disclosure F — Structured Multi-Agent Debate with Constructive Tension Enforcement, Decision Mandates, and Governance Escalation](../patents/DISCLOSURE_F_STRUCTURED_DEBATE_DECISION_ENFORCEMENT.md) — `DecisionEnforcerAgent` + ResearchContract / ExecutionMandate / SynthesisContract; banned-phrase enforcement; governance escalation paths. Also anchored in the AGENTS_AND_AUTONOMY narrative (milestone 3).
+
