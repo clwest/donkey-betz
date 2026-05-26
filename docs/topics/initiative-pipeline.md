@@ -62,7 +62,7 @@ SpiderData (raw, 72h)
 
 **Circuit Breaker (Session 1010):**
 - Counts ALL active + triage initiatives (not just those with no activity)
-- Default threshold: 20 (env var: `INITIATIVE_BACKLOG_THRESHOLD`)
+- Default threshold: **50** (env var: `INITIATIVE_BACKLOG_THRESHOLD`; the env var is the authoritative runtime source). Earlier mention of "20" in this section reflected the topic-quality-gate context, not the env default; corrected here in Session 1158 drift sweep.
 - Dedup check includes TRIAGE status (was only ACTIVE)
 - Blocks new initiative creation when backlog >= threshold
 

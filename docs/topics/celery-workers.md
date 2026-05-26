@@ -3,7 +3,9 @@
 
 # Celery & Workers
 
-271 Celery tasks across 9 worker processes with queue-based routing, memory management, and observability via CeleryTaskEvent signals. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing. Session 1063: Routed 46 more unrouted tasks (body checks → broadcast, LLM tasks → long_running, embeddings → ml). Session 1064: Created `sync_task_queues` management command to sync PeriodicTask.queue fields to CELERY_TASK_ROUTES — fixed 179 misrouted beat tasks.
+**Current counts (PLATFORM_INVENTORY 2026-05-25):** 401 user-defined Celery tasks across the worker fleet; 80 enabled PeriodicTask rows; 11 Procfile entries (release + web + 7 celery + beat + code-worker + resolve-node). Worker fleet uses queue-based routing, memory management, and observability via CeleryTaskEvent signals.
+
+Historical session work — most recent counts in PLATFORM_INVENTORY. Session 1000C: Routed 60+ heavy tasks off default queue to prevent OOM. Session 1029: Rerouted 5 additional heavy tasks from default to long_running to fix recurring OOM crashes. Session 1033: Added auto_enhance_blogs + score_unscored_deliverables. Session 1034: Throttled 4 beat schedules (~40% fewer runs), media task guard, workspace path self-healing. Session 1063: Routed 46 more unrouted tasks (body checks → broadcast, LLM tasks → long_running, embeddings → ml). Session 1064: Created `sync_task_queues` management command to sync PeriodicTask.queue fields to CELERY_TASK_ROUTES — fixed 179 misrouted beat tasks. Session 1157: `add_critical_celery_tasks` refactored to materialize from `core/celery.py:app.conf.beat_schedule` (canonical source).
 
 ## Worker Processes (9 in Procfile)
 

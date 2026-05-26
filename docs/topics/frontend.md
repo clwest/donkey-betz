@@ -7,9 +7,13 @@ React + TypeScript single-page application with 5 primary workspace tabs (Sessio
 
 ## Workspace Architecture
 
-`WorkspacePageNew.tsx` orchestrates 5 primary tabs (`home`, `work`, `build`, `intelligence`, `system`) — sub-areas below are nested under these primary tabs:
+`WorkspacePageNew.tsx` orchestrates 5 primary tabs (`home`, `work`, `build`, `intelligence`, `system`) — sub-areas below are nested under these primary tabs.
 
-| Tab | Sub-tabs | Purpose |
+**Post Session 1100 — 5 primary tabs:** `home`, `work`, `build`, `intelligence`, `system`. Each absorbs the prior 9-tab content as sub-areas below.
+
+**Pre Session 1100 — 9 tab structure** (preserved here as the sub-area taxonomy; primary tabs above absorb these as sub-areas):
+
+| Sub-area (legacy primary tab) | Sub-tabs | Purpose |
 |-----|----------|---------|
 | **Command Center** | "Now" hub + PA chat | 3-panel strip: Attention Queue, Active Work, System Pulse |
 | **Content Studio** | Content, Blogs, Podcasts, Calendar, Dossiers, Voices, Files, Campaigns, Deliverables | Content creation and management |
