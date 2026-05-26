@@ -15,29 +15,35 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-f93d77e34f5d` (set Session 1159).
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-f93d77e34f5d` (set Session 1159; carried into 1160).
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
-Memory: `feedback_pa_hang_from_disk_pressure.md`. If the PA worker processes exactly one task and then goes silent, check `df -h /System/Volumes/Data` + `sysctl vm.swapusage` BEFORE deeper Celery debugging. Single-digit GiB free or swap < 2 GiB free → free disk first (Docker prune, simctl delete unavailable, npm cache clean, pip cache, browser caches). Don't restart Docker — `unified-postgres` lives there.
+Memory: `feedback_pa_hang_from_disk_pressure.md`. If the PA worker processes exactly one task and then goes silent, check `df -h /System/Volumes/Data` + `sysctl vm.swapusage` BEFORE deeper Celery debugging. Single-digit GiB free or swap < 2 GiB free → free disk first. Don't restart Docker — `unified-postgres` lives there.
+
+## READ THIS THIRD (NEW Session 1160) — `git show` IS THE FIRST MOVE FOR MTIME MYSTERIES
+
+If you see a cluster of doc mtimes within minutes of each other and wonder "what generated this?", run `git log --since="<timestamp - 1min>" --until="<timestamp + 1min>"` first. Session 1160's "May 25 09:36 batch" mystery resolved instantly via `git show 9d75f78f` — it was Chris's own Session 1143 PR #2197. Future similar questions should start with the git history before invoking Rigby's ops tools.
 
 ## SOURCE OF TRUTH
 
-Per Session 1144 PR #2208 (canon rebase) + Session 1146 PR #2216 (Runtime Evidence promotion) + Session 1158 (narratives layer) + Session 1159 (EDITING_GUARDRAILS):
+Per Session 1144 PR #2208 (canon rebase) + Session 1146 PR #2216 (Runtime Evidence promotion) + Session 1158 (narratives layer) + Session 1159 (EDITING_GUARDRAILS) + Session 1160 (patents README + PR template):
 
 1. **`docs/PLATFORM_INVENTORY.md`** — runtime/inventory anchor (sole authoritative counts per `DOC_LIFECYCLE §2c`).
 2. **`docs/INDEX.md`** — doc corpus index (sole authoritative doc counts).
 3. **`docs/PLATFORM_WHAT_IT_IS.md`** — narrative anchor. **NOT** a counts source.
-4. **`docs/narratives/`** — 15 subsystem narratives (A–O) shipped Session 1158, hedged + EDITING_GUARDRAILS in Session 1159. Operator-handbook layer. Audience: future-Claude / future-hire / future-Chris who can't access UI.
-5. **`docs/narratives/EDITING_GUARDRAILS.md`** — 7-rule editing contract (Session 1159). Applies to every current and future narrative edit.
-6. **`docs/00-START-HERE/DOC_LIFECYCLE.md`** — constitution.
-7. **`docs/AUDIT_INDEX.md`** — audit taxonomy.
-8. **`docs/24_7_GLOBAL_AI_APP_ATLAS.md`** — strategy anchor.
-9. **`docs/UDB_BEHAVIOR_LAYER.md`** — Rigby's voice + display rules + constraints.
-10. **`docs/UDB_TRANSLATION_LAYER.md`** — audience contract + no-claims rule.
-11. **`docs/specs/`** — engineering specs.
-12. **Runtime Evidence (auto-generated)** — the 8 `docs/*_AUDIT.md` files. DOC-AUTOGEN per-subsystem runtime evidence. Regenerate with `build_*_audit` mgmt commands.
-13. **Archive / handoff docs** — historical unless promoted by `docs/handoffs/CURRENT.md` or this file.
+4. **`docs/narratives/`** — 15 subsystem narratives (A–O). Operator-handbook layer.
+5. **`docs/narratives/EDITING_GUARDRAILS.md`** — 7-rule editing contract + pre-PR checklist (Session 1160 add).
+6. **`docs/patents/README.md`** — 4-workstream + disclosure → narrative cross-link map (Session 1160 add).
+7. **`docs/case-studies/`** — historical case studies (Session 1160 added codex-audit + drift-reconciliation table).
+8. **`docs/00-START-HERE/DOC_LIFECYCLE.md`** — constitution.
+9. **`docs/AUDIT_INDEX.md`** — audit taxonomy.
+10. **`docs/24_7_GLOBAL_AI_APP_ATLAS.md`** — strategy anchor.
+11. **`docs/UDB_BEHAVIOR_LAYER.md`** — Rigby's voice + display rules + constraints.
+12. **`docs/UDB_TRANSLATION_LAYER.md`** — audience contract + no-claims rule.
+13. **`docs/specs/`** — engineering specs.
+14. **Runtime Evidence (auto-generated)** — the 8 `docs/*_AUDIT.md` files. DOC-AUTOGEN per-subsystem runtime evidence. Regenerate with `build_*_audit` mgmt commands.
+15. **Archive / handoff docs** — historical unless promoted by `docs/handoffs/CURRENT.md` or this file.
 
 Live drift checks:
 - `python manage.py verify_doc_claims --only-drift`
@@ -59,7 +65,13 @@ Every session-NNNN commit subject should include `session-NNNN`:
 - `fix(session-NNNN): ...`
 - `feat(session-NNNN-area): ...`
 
-Sessions 1145–1159 ran 100% subject-tagged. Keep the streak.
+Sessions 1145–1160 ran 100% subject-tagged. Keep the streak.
+
+## NARRATIVE-EDIT PR CHECKLIST (Session 1160)
+
+`.github/PULL_REQUEST_TEMPLATE.md` includes a conditional "Narrative-edit checklist" that PR authors fill out when the PR modifies any file in `docs/narratives/`. The 7-item checkbox list maps 1:1 to `docs/narratives/EDITING_GUARDRAILS.md` rules. Required only when changes touch narratives.
+
+Authoring rule of thumb: if the PR introduces a new rule/process, dogfood the rule on its own diff before opening. The `#2256 → #2257` loop (PR #2256 introduced EDITING_GUARDRAILS and still violated rules #1 + #5 in 5 places) is the cautionary tale captured both in the EDITING_GUARDRAILS source addendum and the Session 1159+1160 handoffs.
 
 ## ONE-COMMAND LAUNCH — the laptop fleet
 
@@ -81,33 +93,35 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1159 CLOSED — PA acks + narrative B/C/D review + EDITING_GUARDRAILS (2026-05-26)
+## SESSION 1160 CLOSED — Session 1158-carryover queue clear + EDITING_GUARDRAILS operational (2026-05-26)
 
-**3 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1159_PA_TASK_ACKS_AND_NARRATIVE_REVIEW.md`](docs/handoffs/SESSION_1159_PA_TASK_ACKS_AND_NARRATIVE_REVIEW.md).
+**6 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1160_QUEUE_CLEAR_AND_GUARDRAILS_OPERATIONAL.md`](docs/handoffs/SESSION_1160_QUEUE_CLEAR_AND_GUARDRAILS_OPERATIONAL.md).
 
 | PR | Theme | SHA |
 |----|------|-----|
-| **#2255** | `acks_late=False` on `process_pa_chat_task` (production code, explicit Chris bypass auth) | `3a7e347c` |
-| **#2256** | Narrative B/C/D iterations + new `EDITING_GUARDRAILS.md` | `d73f6824` |
-| **#2257** | Narrative B/C/D follow-ups from Rigby's verification | `77c68c01` |
+| **#2259** | codex-audit relocation: reports/ → case-studies/ + historical banner | `d8eedb18` |
+| **#2260** | May 25 09:36 batch resolved (git show → PR #2197) | `5fc7871b` |
+| **#2261** | reports cleanup mechanical pass (9 V2 + 2 V1→V2 + INDEX drift fix) | `7e71b2df` |
+| **#2262** | patents preservation + cross-link map (16 files + new README) | `572c4928` |
+| **#2263** | narrative → patent reverse cross-links (6 narratives) | `fb5aa7ed` |
+| **#2264** | .github/PULL_REQUEST_TEMPLATE.md + EDITING_GUARDRAILS pre-PR checklist | `e876fce5` |
 
-**New persistent artifact:** `docs/narratives/EDITING_GUARDRAILS.md` — 7-rule editing contract for every current + future narrative.
+**New persistent artifacts:** `docs/patents/README.md`, `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ### Previous closed work still relevant for context
 
-- **Session 1158** — 15 subsystem narratives shipped. Template v1-LOCKED.
-- **Session 1157** — celery-beat-schedule cleanup option A. Code-level footgun closed; context-kit CONFLICT signal still flags.
-- **Session 1156** — P3.5 TRACK COMPLETE. Pool exhausted; 646 handoffs auto-backfilled across 9 rounds.
+- **Session 1159** — PA acks_late fix + narrative B/C/D iterations + EDITING_GUARDRAILS contract. 3 PRs.
+- **Session 1158** — 15 subsystem narratives shipped. Template v1-LOCKED. 8 PRs.
 
 ---
 
-## 🚨 ACTIVE ISSUES carrying into Session 1160
+## 🚨 ACTIVE ISSUES carrying into Session 1161
 
 ### 1. GitHub Actions billing — still down
 
 Same annotation as Sessions 1149+. Multi-day outage until Chris funds account.
 
-**Self-merge protocol during outage** (Sessions 1149 + 1150 + 1158 + 1159 pattern):
+**Self-merge protocol during outage** (Sessions 1149 + 1150 + 1158 + 1159 + 1160 pattern):
 
 For every PR, run local mirrors before push:
 ```bash
@@ -120,23 +134,22 @@ Self-merge with bypass requires:
 2. Only failure is the pre-existing `celery-beat-schedule` CONFLICT.
 3. Merge commit body documents the bypass with both `billing outage` and `pre-existing CONFLICT` named.
 4. PR scope is documentation or low-risk verifier baselines (no production code changes).
-
-**Session 1159 addition: production-code bypass needs explicit per-PR Chris authorization.** PR #2255 set the precedent — Chris authorizes in-session, merge commit body names the deviation explicitly.
+5. Production-code changes need explicit per-PR Chris-authorization in-session (Session 1159 PR #2255 precedent).
 
 ### 2. `celery-beat-schedule` CONFLICT — detector signal pending
 
-Session 1157 (PR #2243) closed the underlying code-vs-code contradiction. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1160+.
+Session 1157 PR #2243 closed the code-level footgun. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1161+.
 
 ### 3. PA `acks_late=False` 24-48h observation window
 
-Session 1159 PR #2255 set `acks_late=False` on `process_pa_chat_task` to fix the unacked-task-stuck-for-an-hour symptom. Watch `pa` queue depth + UI behavior over 24-48 h:
+Continued from Session 1159 PR #2255. Watch `pa` queue depth + UI behavior:
 - Tasks should ack immediately on receipt (LLEN pa drops to 0 within seconds).
-- No regression in worker crash recovery (rare; user retypes if it happens).
+- No regression in worker crash recovery.
 - If symptoms persist, the broker conn instability is upstream of the ack pattern.
 
 ---
 
-## SESSION 1160 — CURRENT ENTRY POINT
+## SESSION 1161 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
@@ -144,70 +157,69 @@ Session 1159 PR #2255 set `acks_late=False` on `process_pa_chat_task` to fix the
 
 Disk check: `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md` before doing anything else.
 
-### Chris-call decisions still pending (from Session 1158)
+### Queue is clear of Session 1158-1159 carryovers
 
-1. **`docs/reports/donkey-betz-codex-audit.md`** — marketing material (keep) or experiment leftover (move/archive)?
-2. **May 25 09:36 batch** (12 docs in `docs/reports/` that landed within minutes of each other) — what agent generated this batch?
+All Chris-call items from the Session 1158 recon are closed (PRs #2259-2264 inclusive). The remaining queue is composed of passive observation items + active queue items + deferred infrastructure track. **No items are blocked on Chris-decision** at session open — Chris can pick any of the active items below.
 
-### Queued cleanup work (Chris's call on priority)
+### Passive observation items
 
-3. **Reports cleanup mechanical pass** — add `DOC-POINTER-V2 Superseded` to 9 Jan-21 docs, upgrade 2 V1 → V2, fix `INDEX.md` drift (30 → 33). Fully scriptable.
-4. **Patents preservation + cross-linking** — write `docs/patents/README.md` with workstream structure + narrative cross-link map; add provenance frontmatter to all 16 patent files; cross-link narratives A/B/C/F/J/E to relevant disclosures. High-value because patents map 1:1 to subsystems.
-5. **The 778 not-HIGH untagged handoffs** — alternate treatment for handoffs that didn't get cited by any Session 1158 narrative. Options: leave as-is (low-cost); manual hand-authored frontmatter pass; alternative provenance heuristic; selective archival.
-6. **Old `docs/topics/` sweep** — 7 Feb-March docs deferred from Session 1147 #2221.
-7. **Cosmetic `load_all_agents_advisors.py 149→139` fix** — queued from Session 1149.
+1. **PA `acks_late=False` observation window** (active issue #3 above).
+2. **EDITING_GUARDRAILS opportunistic rollout** to narratives A / E / F / G / H / I / J / K / L / M / N / O. Pick up when next editing each narrative; not a batch.
+3. **Disclosure L narrative coverage gap.** Self-tuning experimentation lacks a Session 1158 narrative. Fold into BODY_SYSTEMS or CONTENT_PIPELINE, or write a new narrative when the subsystem matures.
 
-### New from Session 1159
+### Active queue (Chris's call on priority)
 
-8. **PA acks_late observation window** (item #3 above in active issues).
-9. **Apply EDITING_GUARDRAILS to other narratives** — the contract was derived from B/C/D but applies to all 15. A/E/F/G/H/I/J/K/L/M/N/O have not been reviewed under the guardrails yet. Opportunistic, not batch — pick up when next editing each narrative.
+4. **Old `docs/topics/` sweep** — 7 Feb-March docs deferred from Session 1147 #2221. Now smaller because Session 1158's drift sweep already corrected the ones surfaced by narratives.
+5. **Cosmetic `load_all_agents_advisors.py 149→139` fix** — queued from Session 1149.
 
 ### Deferred infrastructure track (avoid during offline-CI window)
 
-10. **`celery-beat-schedule` CONFLICT — detector tuning** (preferred) or 36-file token-pattern phrasing sweep (fallback).
-11. **Pre-existing 3-row PeriodicTask drift** (80 DB rows vs 77 entries in `core/celery.py`). Folds into #10.
-12. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
-13. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
-14. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
-15. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern from PR #2201.
+6. **`celery-beat-schedule` CONFLICT — detector tuning** (preferred) or 36-file token-pattern phrasing sweep (fallback).
+7. **Pre-existing 3-row PeriodicTask drift** (80 DB rows vs 77 entries in `core/celery.py`). Folds into #6.
+8. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
+9. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
+10. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
+11. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern from PR #2201.
 
 ### Chris-call-only carryovers (still parked)
 
-16. **Decision Command backend cleanup** — 5 Python files (regressed feature).
-17. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
-18. **Mission refresh PR #2190** — preserved branch.
+12. **Decision Command backend cleanup** — 5 Python files (regressed feature).
+13. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
+14. **Mission refresh PR #2190** — preserved branch.
 
-### Cross-session lessons (Sessions 1145–1159)
+### Cross-session lessons (Sessions 1145–1160)
 
 - **Recon before sweep.** Multiple back-to-back sessions where mid-recon findings flipped the PR plan.
 - **Narratives become canon; topic docs get corrected to match** (1158).
 - **`docs/*_AUDIT.md` files may be DOC-AUTOGEN** — check line 1 for marker before banner sweep (1146).
 - **`build_*_audit` generators can lag reality** — fix the generator, not the output (1146).
-- **Counts-hygiene framing in start-here docs is ambiguous** — disambiguate registered-claim drift vs body-level hardcoded counts (1149).
 - **Bypass-merging during a CI outage is workable IF disciplined** (1150).
 - **"One mechanical batch then stop" applies even when batches are easy** (1150).
 - **Cited-by-narrative is a triage signal** for the 778 not-HIGH handoffs (1158).
 - **Disk + swap pressure mimics Celery bugs** — check disk first (1158).
 - **`unified-postgres` lives in Docker** — don't `docker system prune` or restart Docker as a whole (1158).
-- **Multi-narrative single-PR is viable** — PR #2250 batched 11 narratives in one PR (1158).
-- **NEW (1159)** **EDITING_GUARDRAILS is load-bearing** for any narrative edit. Rules #1 (number pointers), #5 (soften absolutes), #7 (counts as snapshots) are highest-frequency violations.
-- **NEW (1159)** **Self-referential dogfood.** A guardrails-introducing PR can still violate its own rules. Plan for the follow-up loop (review → apply → verify → re-apply); don't assume single-pass.
-- **NEW (1159)** **Production-code bypass needs explicit per-PR Chris auth.** Session-1150 protocol covers docs/verifier-baselines; production code is an explicit deviation.
-- **NEW (1159)** **Stack restart playbook works in ~30 s** post-Mac-reboot. Clear pids → Docker (auto-restores containers) → `make all`.
+- **EDITING_GUARDRAILS is load-bearing** for any narrative edit (1159).
+- **Self-referential dogfood.** A guardrails-introducing PR can still violate its own rules — `#2256 → #2257` (1159). PR-template checklist closes the loop (1160).
+- **Production-code bypass needs explicit per-PR Chris auth** (1159).
+- **Stack restart playbook works in ~30 s** post-Mac-reboot (1159).
+- **NEW (1160)** **`git show` first for mtime mysteries** — before invoking ops tools, `git log --since/--until <timestamp>` resolves nearly every case.
+- **NEW (1160)** **Symmetric cross-references prevent half-resolved navigation** — pair `maps_to_*` frontmatter with reverse "Related X" sections.
+- **NEW (1160)** **Append-only edits are safer than restructure for high-trust documents** — PR #2263 added cross-link sections at the end of 6 narratives without touching milestone tables or vocabulary sections.
 
 ---
 
 ## RECENT SESSION ARCS
 
+- **Session 1160** — 1158-carryover queue clear + EDITING_GUARDRAILS operational. 6 PRs merged.
 - **Session 1159** — PA acks_late fix + narrative B/C/D iterations + EDITING_GUARDRAILS contract. 3 PRs merged.
-- **Session 1158** — corpus-narrative program: 15 narratives (A–O) + drift sweep + cited-handoff frontmatter + reports/patents recon + 1 memory entry. 8 PRs merged.
-- **Session 1157** — celery-beat-schedule cleanup option A. 1 PR merged (bypass mode) + handoff.
-- **Session 1156** — P3.5 round 9 (FINAL) + P3.5 track CLOSE. 1 PR merged (bypass mode) + handoff.
-- **Session 1155** — P3.5 round 8. 1 PR merged (bypass mode) + handoff.
-- **Session 1154** — P3.5 round 7. 1 PR merged (bypass mode) + handoff.
-- **Session 1153** — P3.5 round 6. 1 PR merged (bypass mode) + handoff.
-- **Session 1152** — P3.5 round 5. 1 PR merged (bypass mode) + handoff.
-- **Session 1151** — P3.5 round 4. 1 PR merged (bypass mode) + handoff.
-- **Session 1150** — Session 1149 merge wave + P3.5 round 3. 4 PRs merged (bypass mode).
-- **Session 1149** — SYSTEM_OWNER §3 rewrite + verify_doc_claims drift fixes. 3 PRs (held on billing in 1149; merged in 1150).
+- **Session 1158** — corpus-narrative program: 15 narratives + drift sweep + cited-handoff frontmatter + reports/patents recon. 8 PRs merged.
+- **Session 1157** — celery-beat-schedule cleanup option A. 1 PR merged (bypass mode).
+- **Session 1156** — P3.5 round 9 (FINAL) + P3.5 track CLOSE. 1 PR merged.
+- **Session 1155** — P3.5 round 8. 1 PR merged.
+- **Session 1154** — P3.5 round 7. 1 PR merged.
+- **Session 1153** — P3.5 round 6. 1 PR merged.
+- **Session 1152** — P3.5 round 5. 1 PR merged.
+- **Session 1151** — P3.5 round 4. 1 PR merged.
+- **Session 1150** — Session 1149 merge wave + P3.5 round 3. 4 PRs merged.
+- **Session 1149** — SYSTEM_OWNER §3 rewrite + verify_doc_claims drift fixes. 3 PRs.
 - **Earlier:** see `docs/handoffs/CURRENT.md`.
