@@ -70,6 +70,15 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 3600},
     },
 
+    # Session 1163 B-style — hard-delete FinalAppliedOverrides rows
+    # older than 90 days. Slightly offset from the other 2 AM cleanups
+    # so they don't all hit Postgres at once.
+    'purge-finaloverrides-90d': {
+        'task': 'core.tasks.purge_finaloverrides_older_than_90d',
+        'schedule': crontab(hour=2, minute=40),  # 2:40 AM MST daily
+        'options': {'queue': 'broadcast', 'expires': 3600},
+    },
+
     # Session 1130 Move 3 Round 2 — Hard-delete expired fleet events.
     # Slightly later than the artifact cleanup so the two don't both
     # hit Postgres at once. Retention controlled by

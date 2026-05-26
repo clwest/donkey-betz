@@ -503,6 +503,39 @@ def decay_learning_patterns():
 
 
 @shared_task
+def purge_finaloverrides_older_than_90d():
+    """
+    Session 1163 B-style retention — delete FinalAppliedOverrides rows
+    older than 90 days.
+
+    Sized for the autopilot cycle cadence (~one row per cycle): at 10-min
+    cadence the table would otherwise accumulate ~52k rows/year per
+    knob set. 90 days * 144 cycles/day ≈ 13k rows steady-state — within
+    a comfortable index-and-query footprint for PostgreSQL.
+
+    Beat-scheduled daily via `app.conf.beat_schedule` entry
+    `purge-finaloverrides-90d` in `core/celery.py`. Per memory rule
+    "Observation cadence belongs in Celery beat, not OS cron" + the
+    canonical pattern from Session 1161's `capture_pa_acks_health_snapshot`.
+
+    Returns:
+        {"deleted": int, "retention_days": 90}
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from core.models import FinalAppliedOverrides
+
+    cutoff = timezone.now() - timedelta(days=90)
+    deleted_count, _ = FinalAppliedOverrides.objects.filter(
+        cycle_ts__lt=cutoff,
+    ).delete()
+    return {
+        'deleted': deleted_count,
+        'retention_days': 90,
+    }
+
+
+@shared_task
 def cleanup_boardroom_junk(spider_action_hours: int = 6):
     from core.tasks_ops import _impl_cleanup_boardroom_junk
     return _impl_cleanup_boardroom_junk(spider_action_hours)

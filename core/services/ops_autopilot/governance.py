@@ -1522,104 +1522,152 @@ class PolicyArbitrator:
 
         return suppressed
 
-    def get_latest_snapshot(self) -> dict:
+    def get_latest_snapshot(self, at=None) -> dict:
         """
-        Return the most recent arbitrator snapshot.
+        Return an arbitrator snapshot — either the latest, or the one
+        active at the given time.
 
-        Storage mechanism (as-of 2026-05-26): snapshots are stored as a
-        SINGLE row in `SystemConfiguration` with key
-        `'policy_arbitrator_snapshot'`, overwritten by `record_overrides_snapshot`
-        each cycle. There is no per-cycle history table — the patent
-        Disclosure L §5 Component 4 `FinalAppliedOverrides.objects.create(...)`
-        pattern is aspirational, not as-built. This method exposes the
-        single latest snapshot. A future change to append-only per-cycle
-        storage (planned follow-on) would expand this surface to support
-        time-travel queries; see `docs/patents/DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md`
-        §14 addendum for the drift record.
+        Storage mechanism (Session 1163 B-style shipped 2026-05-26):
+        snapshots are stored as append-only per-cycle rows in
+        `core_final_applied_overrides` (model: `FinalAppliedOverrides`).
+        Each autopilot cycle creates one row. Time-travel queries are
+        supported via `cycle_ts__lte` filter. Replaces the prior
+        Session 1163 C-style single-row-overwrite storage in
+        `SystemConfiguration(key='policy_arbitrator_snapshot')` —
+        see Disclosure L §14.7 + narrative §6.4 for the lineage.
+
+        Args:
+            at: Optional ISO-8601 datetime string or aware datetime.
+                When provided, returns the snapshot active at that
+                time (most recent row with `cycle_ts <= at`). When
+                omitted, returns the latest snapshot.
 
         Returns:
             {
-                "found": bool,                  # False when no snapshot has been written
-                "cycle_id": str | None,         # UUID from the most recent cycle, or None
-                "ts": str | None,               # ISO 8601 timestamp captured by the arbitrator (from the JSON payload)
-                "row_updated_at": str | None,   # ISO 8601 of the SystemConfiguration row's updated_at (freshness check)
-                "knob_count": int,              # number of knobs in the snapshot (0 when not found)
-                "knobs": dict,                  # key -> {"value", "owner", "priority"} (empty when not found)
-                "storage": {                    # explicit caller-readable storage context
-                    "model": "SystemConfiguration",
-                    "key": "policy_arbitrator_snapshot",
-                    "mechanism": "single-row overwrite per cycle (no per-cycle history)",
+                "found": bool,                  # False when no snapshot exists for the query
+                "cycle_id": str | None,         # UUID of the snapshot's cycle
+                "cycle_ts": str | None,         # ISO 8601 timestamp captured by the arbitrator
+                "row_created_at": str | None,   # ISO 8601 of the FinalAppliedOverrides row's created_at (freshness check)
+                "knob_count": int,              # number of knobs in the snapshot
+                "knobs": dict,                  # key -> {"value", "owner", "priority"}
+                "queried_at": str | None,       # echo of the `at` arg as ISO string, or None for "latest"
+                "storage": {                    # caller-readable storage context
+                    "model": "FinalAppliedOverrides",
+                    "table": "core_final_applied_overrides",
+                    "mechanism": "append-only per-cycle row (90-day retention)",
                 },
-                "note": str,                    # human-readable explainer (always present)
+                "note": str,                    # human-readable explainer
             }
         """
-        from core.models.system import SystemConfiguration
-        import json
+        from core.models import FinalAppliedOverrides
+        from django.utils.dateparse import parse_datetime
 
         STORAGE_CTX = {
-            'model': 'SystemConfiguration',
-            'key': 'policy_arbitrator_snapshot',
-            'mechanism': 'single-row overwrite per cycle (no per-cycle history)',
+            'model': 'FinalAppliedOverrides',
+            'table': 'core_final_applied_overrides',
+            'mechanism': 'append-only per-cycle row (90-day retention)',
         }
-        entry = SystemConfiguration.objects.filter(
-            key='policy_arbitrator_snapshot',
-        ).first()
 
-        if entry is None:
+        queried_at_iso = None
+        at_dt = None
+        if at is not None:
+            if isinstance(at, str):
+                at_dt = parse_datetime(at)
+                queried_at_iso = at
+            else:
+                at_dt = at
+                queried_at_iso = at.isoformat() if hasattr(at, 'isoformat') else str(at)
+
+            if at_dt is None:
+                # Caller passed a string that didn't parse — fail loud.
+                return {
+                    'found': False,
+                    'cycle_id': None,
+                    'cycle_ts': None,
+                    'row_created_at': None,
+                    'knob_count': 0,
+                    'knobs': {},
+                    'queried_at': queried_at_iso,
+                    'storage': STORAGE_CTX,
+                    'note': (
+                        f"Could not parse `at` argument {at!r} as a "
+                        "datetime. Use an ISO 8601 string "
+                        "(e.g., '2026-05-26T20:30:00+00:00')."
+                    ),
+                }
+
+        if at_dt is None:
+            row = (
+                FinalAppliedOverrides.objects
+                .order_by('-cycle_ts')
+                .first()
+            )
+        else:
+            row = (
+                FinalAppliedOverrides.objects
+                .filter(cycle_ts__lte=at_dt)
+                .order_by('-cycle_ts')
+                .first()
+            )
+
+        if row is None:
             return {
                 'found': False,
                 'cycle_id': None,
-                'ts': None,
-                'row_updated_at': None,
+                'cycle_ts': None,
+                'row_created_at': None,
                 'knob_count': 0,
                 'knobs': {},
+                'queried_at': queried_at_iso,
                 'storage': STORAGE_CTX,
                 'note': (
-                    'No arbitrator snapshot has been written yet. '
-                    'The arbitrator writes one each autopilot cycle '
-                    'after all other policies have run.'
+                    'No arbitrator snapshot matches the query. '
+                    'If `at` is unset, the arbitrator has not yet '
+                    'written a snapshot (none observed in any '
+                    'autopilot cycle). If `at` is set, no cycle '
+                    'completed before that time within the '
+                    '90-day retention window.'
                 ),
             }
 
-        try:
-            payload = json.loads(entry.value) if entry.value else {}
-        except (ValueError, TypeError) as e:
-            logger.warning(
-                'PolicyArbitrator.get_latest_snapshot: '
-                'snapshot row exists but JSON parse failed (%s: %s)',
-                type(e).__name__, e,
-            )
-            payload = {}
-
         return {
             'found': True,
-            'cycle_id': payload.get('cycle_id'),
-            'ts': payload.get('ts'),
-            'row_updated_at': (
-                entry.updated_at.isoformat()
-                if entry.updated_at is not None else None
+            'cycle_id': str(row.cycle_id),
+            'cycle_ts': row.cycle_ts.isoformat() if row.cycle_ts else None,
+            'row_created_at': (
+                row.created_at.isoformat() if row.created_at else None
             ),
-            'knob_count': payload.get('knob_count', 0),
-            'knobs': payload.get('knobs', {}),
+            'knob_count': row.knob_count,
+            'knobs': row.applied_values or {},
+            'queried_at': queried_at_iso,
             'storage': STORAGE_CTX,
             'note': (
-                'Returns the single latest arbitrator snapshot. '
-                'Per-cycle history is not stored; time-travel queries '
-                'are not supported by the current implementation. '
-                'row_updated_at carries the database row mtime so '
-                'callers can answer "is this fresh?" without inferring '
-                'from cycle cadence. See Disclosure L §14 addendum for '
-                'the drift record.'
+                'Returns the arbitrator snapshot active at the queried '
+                'time (or the latest snapshot if `at` was unset). '
+                'cycle_ts is the timestamp the arbitrator captured; '
+                'row_created_at is the Django-managed row creation '
+                'time — divergence between the two is a debugging '
+                'signal. Time-travel queries are bounded by the 90-day '
+                'retention window. See Disclosure L §14.7 for the '
+                'B-style storage shipped record.'
             ),
         }
 
     def record_overrides_snapshot(self, now, cycle_id) -> dict:
         """
-        Record a FinalAppliedOverrides snapshot in SystemConfiguration.
-        Captures the current state of all registered knobs.
+        Record a FinalAppliedOverrides snapshot — one append-only row
+        per autopilot cycle.
+
+        Storage (Session 1163 B-style, shipped 2026-05-26): each call
+        creates one row in `core_final_applied_overrides` capturing the
+        full knob state at cycle end. See `get_latest_snapshot(at=...)`
+        for the time-travel read surface. Pre-Session-1163 storage
+        (single-row overwrite in `SystemConfiguration(key='policy_arbitrator_snapshot')`)
+        is no longer written; the legacy row (if any) is cleaned up by
+        the follow-on migration documented in narrative §6.4.
         """
         from core.models.system import SystemConfiguration
-        import json
+        from core.models import FinalAppliedOverrides
 
         snapshot = {}
 
@@ -1650,15 +1698,12 @@ class PolicyArbitrator:
                     'priority': self.KNOB_REGISTRY[pattern]['priority'],
                 }
 
-        # Store snapshot
-        SystemConfiguration.objects.update_or_create(
-            key='policy_arbitrator_snapshot',
-            defaults={'value': json.dumps({
-                'cycle_id': str(cycle_id),
-                'ts': now.isoformat(),
-                'knobs': snapshot,
-                'knob_count': len(snapshot),
-            })},
+        # Append per-cycle row to the new history table.
+        FinalAppliedOverrides.objects.create(
+            cycle_id=cycle_id,
+            cycle_ts=now,
+            knob_count=len(snapshot),
+            applied_values=snapshot,
         )
 
         return {
