@@ -21,10 +21,12 @@ provenance_note: Captured as a persistent editing contract after the Session 115
 
 > **What this doc is.** A contract on what to write — and what
 > NOT to write — when authoring or editing any narrative in
-> `docs/narratives/`. The Session 1158 narrative pilot established
-> the per-narrative template (frontmatter → §1 What this is → §2
-> Vocabulary → §3 Milestone timeline → §4 What came of it → §5
-> Current state snapshot → §6 Open questions → §7 Source index).
+> `docs/narratives/`. The Session 1158 narrative pilot introduced
+> a typical per-narrative template (frontmatter → §1 What this is
+> → §2 Vocabulary → §3 Milestone timeline → §4 What came of it →
+> §5 Current state snapshot → §6 Open questions → §7 Source
+> index — current narratives also add a §8 Canonical Sources
+> block per the Session 1159 review).
 > The Session 1159 review of batches B / C / D surfaced a single
 > recurring failure mode: precise prose that *looked* canonical
 > but was actually a snapshot of a constant. This doc locks in
