@@ -63,16 +63,16 @@ reasons the next step's guards were added.
 | Term | Meaning |
 |---|---|
 | **Spider** | A collector. 80 are registered in `ai_core/spiders/spider_registry.py`. Each spider has a name, a category, a `Spider` class, a priority (1 or 2), and an HTTP method (RSS / API / JSON / Playwright). Output is normalized into `SpiderData` rows. ~1.14M `SpiderItemHash` rows record what was seen and when. |
-| **`SpiderData`** | The raw collection row in `core.models_unified_system`. Carries `spider_name`, `source_url`, `data_type`, `raw_data` (JSON), `processed_data` (JSON), `relevance_score` (0–100), `insights` (JSON list), `embedding` (1536-dim pgvector), `item_embeddings`, `is_processed`, `is_actionable`. The `data_type` field is constrained to a fixed vocabulary (opportunity, job_posting, market_data, competitor_info, trend_data, news, research, etc.) — invented types like `market_alert` or `breaking_news` do not exist and will not match queries. |
+| **`SpiderData`** | The raw collection row in `core.models_unified_system`. Carries `spider_name`, `source_url`, `data_type`, `raw_data` (JSON), `processed_data` (JSON), `relevance_score` (0–100), `insights` (JSON list), `embedding` (1536-dim pgvector), `item_embeddings`, `is_processed`, `is_actionable`. The `data_type` field is constrained to a fixed vocabulary (opportunity, job_posting, market_data, competitor_info, trend_data, news, research, etc.) — invented types like `market_alert` or `breaking_news` do not exist and will not match queries. **Common failure:** queries for `data_type='market_alert'` silently return empty; use `market_data` or `news` instead. Treat the `data_type` enum/CHOICES in code as canonical. |
 | **`SignalCluster`** | The aggregated grouping. `SignalAggregationService.aggregate_signals()` extracts keywords/topics from the last 72h of `SpiderData`, groups by topic (primary) or keywords (secondary), filters clusters below `MIN_CLUSTER_SIZE=3`, and computes three metrics: strength, confidence, novelty. |
 | **Strength / confidence / novelty** | Cluster metrics, each 0–1. **Strength** = signal count (40%) + source diversity (40%) + relevance (20%). **Confidence** = source count / 4 (needs ≥ 2 sources to exceed 0.3). **Novelty** decays over 24h based on average signal age. Together they decide whether a cluster is worth promoting to a topic. |
-| **Pattern types** | Currently 10 enumerated in `PATTERN_TYPE_CHOICES`: demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, competitive_signal, market_movement, skill_demand, content_gap, user_need. *Note:* the spider-network topic doc still lists "7 pattern types" — drift; the canonical enum is 10. Use the canonical 10. |
+| **Pattern types** | Currently 10 enumerated in `PATTERN_TYPE_CHOICES`. As-of 2026-05-25: demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, competitive_signal, market_movement, skill_demand, content_gap, user_need. **Drift procedure:** if the topic doc / older audit says "7 pattern types," treat `PATTERN_TYPE_CHOICES` as canonical. Enum in code wins; docs mentioning 7 are stale. |
 | **`AutoTopic`** | A promoted cluster. `generate_auto_topics()` reads clusters, applies a topic-name filter (Session 1010 — stopwords stripped: "new", "now", "how to", "want", "need", etc.; comma separator instead of "and"; falls back to cluster name when no meaningful keywords remain), and produces an AutoTopic row with rationale and suggested agents. |
 | **`HiveMindSession`** | A multi-agent conversation triggered by an AutoTopic. Linked to the topic via FK + to the signal cluster via FK. Auto-selects relevant agents via `AgentRouter`. The discussion output is the basis for an initiative if the quality gate (Session 994) is passed. |
 | **`Initiative`** | A tracked project. Carries `current_stage` (1–5), `purpose` (one of 5: revenue, stability, learning, expansion, maintenance), `program` (one of 10), `execution_track` (fast vs institutional), `owner` (human FK) or `owner_agent` (CharField), priority fields, and impact/urgency/confidence/revenue scores. |
 | **5-stage pipeline** | Research Brief → Prototype Plan → Evaluation Protocol → Technical Design → Pilot Execution. The "Fast Track" stops at Stage 2 awaiting founder decision; the "Institutional Track" runs all five with approval gates at 2/3/4 and content-flag triggers (external_data, user_data, public_publishing, legal_compliance, financial, irreversible). |
 | **TRIAGE status (Session 994)** | The intake state. Auto-created initiatives start in TRIAGE, not ACTIVE. The PA promotes TRIAGE → ACTIVE via `update_status`. Prevents auto-generated initiatives from polluting the active pipeline. |
-| **Circuit breaker (Sessions 884, 994, 1020)** | Backlog throttle. When ACTIVE + TRIAGE initiatives with `last_activity_at IS NULL` exceed a threshold (default 50; env `INITIATIVE_BACKLOG_THRESHOLD`, also referenced as 20 in some configs), new initiative creation is blocked. Enforced at all 6 creation paths. Cached 60s. |
+| **Circuit breaker (Sessions 884, 994, 1020)** | Backlog throttle. When ACTIVE + TRIAGE initiatives with `last_activity_at IS NULL` exceed `INITIATIVE_BACKLOG_THRESHOLD`, new initiative creation is blocked. Enforced at all 6 creation paths. Cached 60s. **Drift procedure:** the env var is canonical; the topic doc references both 20 and 50 in different contexts. Before concluding "breaker too sensitive" or "breaker too loose," check the runtime value, not this prose. |
 | **Similarity dedup (Session 1020)** | `find_similar_initiative()` in `initiative_circuit_breaker.py`. Jaccard keyword similarity at threshold 0.6. Pre-creation check on every path. Prevents the same topic from getting an initiative per agent run. |
 | **Quality gate (Session 994)** | Pre-creation filter in `ConversationInitiativePipeline._quality_gate()`. Four rules: reject 2+ explore-pattern topics; require action verb in decision summary; require 1000+ char conversation; single-pattern explore check on topic prefix. |
 | **`InitiativeActionItem`** | Structured task extracted from `=== DecisionSummary ===` sections in HiveMind conversation conclusions (Session 902). Carries status, priority, timeline (parsed from text like "Week 0-1"), agent + user assignment, dependencies (M2M to other items). |
@@ -415,3 +415,29 @@ complete_action_item, assign_owner.
   which claims drift from runtime (Session 1099 verifier).
 - `python manage.py build_docs_index` — refresh `docs/INDEX.md`
   + `_index.json` after any doc edit.
+
+---
+
+## 8. Canonical sources (for future editors)
+
+> **Reading this doc for ops decisions?** Treat code and config as
+> canonical, not prose. The narrative captures *why* the pipeline
+> is the shape it is; runtime captures *what it is now*.
+
+| Question | Canonical source (code/config wins over prose) |
+|---|---|
+| Spider count / categories | `docs/PLATFORM_INVENTORY.md` + `ai_core/spiders/spider_registry.py` |
+| Pattern type values | `PATTERN_TYPE_CHOICES` enum in code (10 as-of 2026-05-25) |
+| `data_type` vocabulary | Field CHOICES on `SpiderData` model |
+| `INITIATIVE_BACKLOG_THRESHOLD` runtime value | Env var (NOT this prose — both 20 and 50 appear in docs) |
+| Beat cadence (every 30 min, every 10 min, etc.) | `PeriodicTask` rows + `core/celery.py` schedule entries |
+| Similarity dedup threshold (0.6) | Constant in `initiative_circuit_breaker.py` |
+| `SEMANTIC_TOP_K`, `SEMANTIC_MIN_SIMILARITY` | Constants in `spider_intelligence_service.py` |
+| Embedding model + dims (1536) | Provider registry config |
+| Embedding coverage % | Live query (cited number is as-of snapshot) |
+
+If you spot drift between this doc and code/config, **code wins**
+and this doc should be corrected. See
+[`docs/narratives/EDITING_GUARDRAILS.md`](EDITING_GUARDRAILS.md)
+for the editing contract.
+

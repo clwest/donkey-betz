@@ -66,13 +66,13 @@ look at when a blog ships in a bad state.
 
 | Term | Meaning |
 |---|---|
-| **ClaimsPack** | The bundle of citable evidence assembled before drafting. `ClaimsPackBuilder` pulls items from `SpiderData` (last 72h) and active `SignalCluster` rows, deduplicates by normalized URL, caps at 20 claims, and gives each one a deterministic ID: `C-{sha256(normalize_url(url) + title)[:10]}`. The deterministic ID is the load-bearing primitive — every citation in a published blog traces back to a real source. |
+| **ClaimsPack** | The bundle of citable evidence assembled before drafting. `ClaimsPackBuilder` pulls items from `SpiderData` (last 72h) and active `SignalCluster` rows, deduplicates by normalized URL, caps at 20 claims, and gives each one a deterministic ID derived from a SHA-256 hash of the normalized URL + title (see `ClaimsPackBuilder` for the canonical recipe — treat the constant in code as authoritative, not this prose). The deterministic ID is the load-bearing primitive — every citation in a published blog traces back to a real source. |
 | **Citation `[C-xxxxxxxxxx]`** | The literal in-text citation form. Every factual assertion in a drafted blog is supposed to carry one. FactCheckReviewer verifies each one maps to a real URL with freshness inside the window. |
 | **ContentWriterAgent** | The drafting agent. Has its **own** prompt-builder (`_build_intelligent_system_prompt`, `_build_content_prompt`, `generate_flagship_injection`) — it does **not** use `BaseAgent._build_intelligent_prompt()`. Anyone injecting evidence into BaseAgent's pipeline must remember it won't reach ContentWriterAgent unless they wire it through the right path. |
 | **3-reviewer panel** | Skeptic / FactCheck / DomainPersona. The first two always run; DomainPersona only runs if a domain is detected with confidence ≥ 0.2. Each returns structured JSON `{reviewer, verdict, top_issues, required_changes, suggested_edits, confidence}`. Bad/missing LLM output is converted into a synthetic FAIL — review is never skipped. |
 | **DecisionEnforcer** | The "Prefrontal Cortex" agent (carried over from `AGENTS_AND_AUTONOMY.md` milestone 3). Outputs `PUBLISH / REVISE / KILL` plus reason, kill criteria, deadline, rejected paths, acknowledged risks. Banned phrases: "Further analysis recommended", "More research needed". Forces a decision. |
 | **Rewrite pass** | Exactly one rewrite is permitted on REVISE. ContentWriterAgent receives the top three `required_changes` per reviewer and writes again with the same ClaimsPack. No infinite loops at this layer. |
-| **PublishGate** | Three-dimensional quality gate: **quality** (≥ 0.75), **novelty** (≥ 0.60), **structure** (≥ 0.55). Decision is `publish` / `enhance` / `internal_only`. Has an explicit bypass: titles starting `[Research]`, `[Stage N]`, `[Audit]`, `[Internal]` auto-classify as internal-only and skip quality checks. |
+| **PublishGate** | Three-dimensional quality gate: **quality**, **novelty**, **structure**. Current thresholds (as-of 2026-05-25): 0.75 / 0.60 / 0.55. The thresholds are constants in the PublishGate module — **constants in code win** over this prose if drift is suspected. Decision is `publish` / `enhance` / `internal_only`. Has an explicit bypass: titles starting `[Research]`, `[Stage N]`, `[Audit]`, `[Internal]` auto-classify as internal-only and skip quality checks. The bypass prefix list is enforced in code; treat the code list as canonical and update this entry if it changes. |
 | **SelfBlog** | The published artifact's database row. Carries `quality_score`, `novelty_score`, `structure_score`, `publish_ready`, `gate_notes`, `content_type`, `status`, and a `stats_snapshot` JSON that includes the deliberation session_id, decision, claims_count, reviewers, and review verdicts. |
 | **`stats_snapshot['deliberation']`** | The per-blog audit packet. Lets you reconstruct, after the fact, what evidence the writer saw, what verdicts the reviewers gave, what DecisionEnforcer chose, and how many rewrite/enhancement rounds ran. |
 | **`stats_snapshot['enhancement_count']`** | Counter for EditorAgent rewrite rounds. After 3 unsuccessful rounds, the blog is skipped to prevent infinite enhancement loops. |
@@ -402,3 +402,26 @@ rows backfilled.
   which claims drift from runtime (Session 1099 verifier).
 - `python manage.py build_docs_index` — refresh `docs/INDEX.md`
   + `docs/_index.json` after any doc edit.
+
+---
+
+## 8. Canonical sources (for future editors)
+
+> **Reading this doc for ops decisions?** Treat code and config as
+> canonical, not prose. The narrative captures *why* things are
+> the shape they are; runtime captures *what they are now*.
+
+| Question | Canonical source (code/config wins over prose) |
+|---|---|
+| Counts (blogs by status, deliverables, scores) | `docs/PLATFORM_INVENTORY.md` + live DB queries |
+| Beat cadence (every 2h / every 4h / 6 AM, etc.) | `PeriodicTask` rows + `core/celery.py` schedule entries |
+| PublishGate thresholds (0.75 / 0.60 / 0.55) | Constants inside the PublishGate module |
+| Bypass title prefixes (`[Research]` etc.) | Constants/list inside the gate module |
+| `publish_intent` enum values | Migration 0333 + the Deliverable model field |
+| LLM model used by EditorAgent / writer / reviewers | Provider registry config |
+
+If you spot drift between this doc and code/config, **code wins**
+and this doc should be corrected. See
+[`docs/narratives/EDITING_GUARDRAILS.md`](EDITING_GUARDRAILS.md)
+for the editing contract.
+
