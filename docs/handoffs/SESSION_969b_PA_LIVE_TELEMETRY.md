@@ -1,3 +1,9 @@
+---
+originating_session: 969
+provenance_confidence: HIGH
+provenance_note: Hand-authored handoff. Cited by Session 1158 narrative G (Frontend) milestone 2 as the related handoff to the workspace 9-tab structure era.
+---
+
 # Session 969b — PA Live Telemetry Tools
 
 **Date:** February 8, 2026

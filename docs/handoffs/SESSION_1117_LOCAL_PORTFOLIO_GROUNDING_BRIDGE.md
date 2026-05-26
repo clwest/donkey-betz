@@ -3,7 +3,10 @@ title: "Session 1117 — local-portfolio-grounding vision shipped: Rigby corpus 
 date: 2026-05-21
 status: active
 session: 1117
+originating_session: 1117
 previous_handoff: SESSION_1116_PART_2_INTEGRATIONS_AND_CHANNELS.md
+provenance_confidence: HIGH
+provenance_note: Hand-authored handoff. Cited by Session 1158 narratives M (Fleet Integration milestone 1) + N (24/7 Global AI strategy milestone 4) + O (Spokesperson + Character OS milestone 3) — first proof case for the "u-d-b is brain bridge for laptop-local fleet" pattern; corpus + fleet-net + consult_engine bridge shipped end-to-end.
 ---
 
 # Session 1117 — local-portfolio-grounding vision shipped: Rigby corpus + fleet network + engine bridge
