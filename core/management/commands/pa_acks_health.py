@@ -136,12 +136,15 @@ class Command(BaseCommand):
                 task_name, slow_threshold, hang_max_age_hours, pidfile_cutoff
             ),
             "advisory_flags": [],
+            "status": "OK",
         }
 
-        # Populate advisory flags last so we can reason about everything we
-        # gathered. Read-only — never returns a non-zero exit code; flags are
-        # signals for the human reader / downstream tooling.
+        # Populate advisory flags + status last so we can reason about
+        # everything we gathered. Read-only — never returns a non-zero exit
+        # code; flags + status are signals for the human reader / downstream
+        # tooling.
         self._flag_advisory(report)
+        self._compute_status(report)
 
         if as_json:
             self.stdout.write(json.dumps(report, indent=2, default=str))
@@ -337,16 +340,87 @@ class Command(BaseCommand):
         if isinstance(workers, dict) and workers.get("count", 0) == 0:
             flags.append("no celery workers responded to inspect — worker outage?")
 
+    # ---- Status thresholds (Rigby's session-1160 watch-window proposal) ----
+    #
+    # Important: slow_tasks (already-completed) does NOT trip status. A task
+    # that ran 80s and SUCCEEDED is informational, not a warning. The hang
+    # signature (STARTED-not-finished) captures the "currently running too
+    # long" case, and the oldest-hang-age is what determines CRIT.
+
+    # WARN thresholds — any of these conditions trips WARN.
+    _WARN_HANG_COUNT = 1            # any current hang is suspicious
+    _WARN_FAILURE_COUNT = 1         # any failure in the window
+    _WARN_QUEUE_DEPTH = 1           # any queued message at snapshot time
+    _WARN_NO_WORKERS = True         # zero workers = WARN at minimum
+
+    # CRIT thresholds — any of these escalates from WARN to CRIT.
+    _CRIT_HANG_COUNT = 3            # multiple concurrent hangs
+    _CRIT_FAILURE_COUNT = 3         # failure spike
+    _CRIT_HANG_AGE_SEC = 180        # any currently-running hang > 3x threshold
+    _CRIT_QUEUE_DEPTH = 20          # serious backlog
+    _CRIT_NO_WORKERS = True         # zero workers = CRIT if sustained
+
+    def _compute_status(self, report):
+        """
+        Roll the snapshot into a single OK / WARN / CRIT verdict so downstream
+        tooling can act on the result without parsing the advisory_flags list.
+        Per Rigby's Session 1160 feedback on PR #2266.
+        """
+        depth = (report.get("queue_depth") or {}).get("depth")
+        depth = depth if isinstance(depth, int) else 0
+        stats = report.get("task_stats") or {}
+        failures = stats.get("failure", 0)
+        hang = report.get("hang_signature") or {}
+        hang_count = hang.get("count", 0)
+        hang_samples = hang.get("samples", []) or []
+        oldest_hang_age = max(
+            (s.get("age_seconds", 0.0) or 0.0) for s in hang_samples
+        ) if hang_samples else 0.0
+        worker_count = (report.get("workers") or {}).get("count", 0) or 0
+
+        # CRIT conditions first — short-circuit on any hit.
+        if (
+            hang_count >= self._CRIT_HANG_COUNT
+            or failures >= self._CRIT_FAILURE_COUNT
+            or oldest_hang_age >= self._CRIT_HANG_AGE_SEC
+            or depth >= self._CRIT_QUEUE_DEPTH
+            or (worker_count == 0 and self._CRIT_NO_WORKERS)
+        ):
+            report["status"] = "CRIT"
+            return
+
+        # WARN conditions.
+        if (
+            hang_count >= self._WARN_HANG_COUNT
+            or failures >= self._WARN_FAILURE_COUNT
+            or depth >= self._WARN_QUEUE_DEPTH
+            or (worker_count == 0 and self._WARN_NO_WORKERS)
+        ):
+            report["status"] = "WARN"
+            return
+
+        report["status"] = "OK"
+
     # ---- Human-readable summary ----
 
     def _print_human_summary(self, report):
         write = self.stdout.write
-        write("PA acks-health snapshot")
+        write(f"PA acks-health snapshot  [status: {report['status']}]")
         write(f"  generated_at:        {report['generated_at']}")
         write(f"  window:              last {report['window_hours']}h")
         write(f"  queue:               {report['queue']}")
         write(f"  task_name:           {report['task_name']}")
         write(f"  slow_threshold_sec:  {report['slow_threshold_seconds']}")
+        if report.get("since_pidfile_cutoff"):
+            write(
+                f"  hang cutoff:         {report['since_pidfile_cutoff']} "
+                f"(from {report['since_pidfile']} mtime)"
+            )
+        else:
+            write(
+                f"  hang cutoff:         max-age-hours={report['hang_max_age_hours']} "
+                f"(pidfile not found)"
+            )
         write("")
 
         depth_block = report["queue_depth"]
