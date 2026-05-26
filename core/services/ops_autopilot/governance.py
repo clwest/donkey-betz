@@ -1522,6 +1522,88 @@ class PolicyArbitrator:
 
         return suppressed
 
+    def get_latest_snapshot(self) -> dict:
+        """
+        Return the most recent arbitrator snapshot.
+
+        Storage mechanism (as-of 2026-05-26): snapshots are stored as a
+        SINGLE row in `SystemConfiguration` with key
+        `'policy_arbitrator_snapshot'`, overwritten by `record_overrides_snapshot`
+        each cycle. There is no per-cycle history table — the patent
+        Disclosure L §5 Component 4 `FinalAppliedOverrides.objects.create(...)`
+        pattern is aspirational, not as-built. This method exposes the
+        single latest snapshot. A future change to append-only per-cycle
+        storage (planned follow-on) would expand this surface to support
+        time-travel queries; see `docs/patents/DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md`
+        §14 addendum for the drift record.
+
+        Returns:
+            {
+                "found": bool,                  # False when no snapshot has been written
+                "cycle_id": str | None,         # UUID from the most recent cycle, or None
+                "ts": str | None,               # ISO 8601 timestamp captured by the arbitrator
+                "knob_count": int,              # number of knobs in the snapshot (0 when not found)
+                "knobs": dict,                  # key -> {"value", "owner", "priority"} (empty when not found)
+                "storage": {                    # explicit caller-readable storage context
+                    "model": "SystemConfiguration",
+                    "key": "policy_arbitrator_snapshot",
+                    "mechanism": "single-row overwrite per cycle (no per-cycle history)",
+                },
+                "note": str,                    # human-readable explainer (always present)
+            }
+        """
+        from core.models.system import SystemConfiguration
+        import json
+
+        STORAGE_CTX = {
+            'model': 'SystemConfiguration',
+            'key': 'policy_arbitrator_snapshot',
+            'mechanism': 'single-row overwrite per cycle (no per-cycle history)',
+        }
+        entry = SystemConfiguration.objects.filter(
+            key='policy_arbitrator_snapshot',
+        ).first()
+
+        if entry is None:
+            return {
+                'found': False,
+                'cycle_id': None,
+                'ts': None,
+                'knob_count': 0,
+                'knobs': {},
+                'storage': STORAGE_CTX,
+                'note': (
+                    'No arbitrator snapshot has been written yet. '
+                    'The arbitrator writes one each autopilot cycle '
+                    'after all other policies have run.'
+                ),
+            }
+
+        try:
+            payload = json.loads(entry.value) if entry.value else {}
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                'PolicyArbitrator.get_latest_snapshot: '
+                'snapshot row exists but JSON parse failed (%s: %s)',
+                type(e).__name__, e,
+            )
+            payload = {}
+
+        return {
+            'found': True,
+            'cycle_id': payload.get('cycle_id'),
+            'ts': payload.get('ts'),
+            'knob_count': payload.get('knob_count', 0),
+            'knobs': payload.get('knobs', {}),
+            'storage': STORAGE_CTX,
+            'note': (
+                'Returns the single latest arbitrator snapshot. '
+                'Per-cycle history is not stored; time-travel queries '
+                'are not supported by the current implementation. See '
+                'Disclosure L §14 addendum for the drift record.'
+            ),
+        }
+
     def record_overrides_snapshot(self, now, cycle_id) -> dict:
         """
         Record a FinalAppliedOverrides snapshot in SystemConfiguration.
