@@ -50,6 +50,17 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 1800},
     },
 
+    # Session 1161 cadence wrapper for the PA acks_late=False 24-48h
+    # observation window. Every 30 minutes, append a pa_acks_health
+    # snapshot (queue depth + per-worker rollup + oldest_queued +
+    # inflight_estimate + hang_signature) to logs/pa_acks_health/
+    # YYYY-MM-DD.jsonl. Status changes trigger WARN log lines.
+    'pa-acks-health-capture': {
+        'task': 'core.tasks.capture_pa_acks_health_snapshot',
+        'schedule': crontab(minute='*/30'),
+        'options': {'queue': 'broadcast', 'expires': 1800},
+    },
+
     # Session 1129 Move 2 Round 2 — Soft-delete expired fleet artifacts.
     # Daily run is the spec'd default. Staging may want hourly; if so,
     # change schedule to crontab(minute=0).
