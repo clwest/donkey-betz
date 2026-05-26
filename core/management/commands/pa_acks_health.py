@@ -19,6 +19,14 @@ The rollup localizes WARN/CRIT signals to a specific worker process;
 the heartbeat distinguishes "worker stuck" (no events since the hung
 task started) from "task wedged but worker alive."
 
+Session 1162 (cosmetic): each per_worker row carries an `is_pa_relevant`
+boolean. A worker is PA-relevant if it had any DB event for the focused
+task in window OR its hostname starts with the queue prefix (the
+`--hostname={queue}@%h` convention the Makefile sets up). The human
+summary groups PA-relevant workers in full detail and collapses idle
+workers (other queues) to a single line; the JSON output keeps every
+worker for debug visibility.
+
 Usage:
     python manage.py pa_acks_health
     python manage.py pa_acks_health --hours 24
@@ -175,7 +183,7 @@ class Command(BaseCommand):
             "queue_depth": self._queue_depth(queue),
             "workers": workers_snapshot,
             "per_worker": self._per_worker_rollup(
-                task_name, hours, slow_threshold, workers_snapshot
+                task_name, hours, slow_threshold, workers_snapshot, queue
             ),
             "task_stats": task_stats,
             "oldest_queued": self._oldest_queued(task_name),
@@ -239,7 +247,7 @@ class Command(BaseCommand):
             "total_reserved": sum(w["reserved_count"] for w in workers),
         }
 
-    def _per_worker_rollup(self, task_name, hours, slow_threshold, workers_snapshot):
+    def _per_worker_rollup(self, task_name, hours, slow_threshold, workers_snapshot, queue):
         """
         Session 1161 (B): per-worker attribution. Unions inspect-side
         workers (currently-online) with DB-side workers (active in the
@@ -254,6 +262,12 @@ class Command(BaseCommand):
           - oldest_started_age_seconds: max age of started-but-not-finished
           - last_event_at: most recent started_at OR finished_at — heartbeat
             proxy. None means the worker has touched no task this window.
+          - is_pa_relevant: bool — added Session 1162. True if this worker
+            either has any DB event for the focused task in window OR its
+            hostname starts with `{queue}@` (the celery `--hostname=pa@%h`
+            convention used in the Makefile). Lets downstream tools focus
+            diff/alert noise on workers that actually serve this queue;
+            irrelevant workers stay in the rollup for debug visibility.
 
         Returns a list ordered by name. Empty list is a valid result
         (e.g., no workers and no DB events in the window).
@@ -278,6 +292,13 @@ class Command(BaseCommand):
             .distinct()
         )
         all_workers = sorted(set(inspect_by_name.keys()) | db_workers)
+
+        # Session 1162 (cosmetic): PA-relevance heuristic uses both DB
+        # activity AND the celery `--hostname={queue}@%h` naming convention
+        # the Makefile sets up. A worker is PA-relevant if it either had
+        # an event for this task in window OR its hostname starts with
+        # the queue prefix.
+        hostname_prefix = f"{queue}@" if queue else None
 
         rows = []
         now = timezone.now()
@@ -317,6 +338,11 @@ class Command(BaseCommand):
             ]
             last_event_at = max(event_candidates).isoformat() if event_candidates else None
 
+            is_pa_relevant = (
+                worker in db_workers
+                or (hostname_prefix is not None and worker.startswith(hostname_prefix))
+            )
+
             rows.append(
                 {
                     "name": worker,
@@ -327,6 +353,7 @@ class Command(BaseCommand):
                     "slow_completed": slow_completed,
                     "oldest_started_age_seconds": oldest_age,
                     "last_event_at": last_event_at,
+                    "is_pa_relevant": is_pa_relevant,
                 }
             )
         return rows
@@ -664,12 +691,20 @@ class Command(BaseCommand):
             )
 
         # Session 1161 (B): per-worker rollup
+        # Session 1162 cosmetic: group PA-relevant workers in full detail,
+        # collapse PA-irrelevant ones to a single line so the readout
+        # focuses on workers that actually serve this queue.
         per_worker = report.get("per_worker") or []
         if isinstance(per_worker, dict) and "error" in per_worker:
             write(f"per-worker:   error — {per_worker['error']}")
         elif per_worker:
-            write(f"per-worker:   {len(per_worker)} worker(s)")
-            for row in per_worker:
+            relevant = [r for r in per_worker if r.get("is_pa_relevant")]
+            idle = [r for r in per_worker if not r.get("is_pa_relevant")]
+            write(
+                f"per-worker:   {len(relevant)} pa-relevant, "
+                f"{len(idle)} idle (other queues)"
+            )
+            for row in relevant:
                 online_marker = "online" if row["online"] else "OFFLINE"
                 oldest = row.get("oldest_started_age_seconds")
                 oldest_str = f"oldest_started={oldest:.0f}s" if oldest else "oldest_started=–"
@@ -681,6 +716,9 @@ class Command(BaseCommand):
                     f"{oldest_str} "
                     f"last_event_at={last_seen}"
                 )
+            if idle:
+                idle_names = ", ".join(r["name"] for r in idle)
+                write(f"  + {len(idle)} idle: {idle_names}")
         else:
             write("per-worker:   no workers or events in window")
 
