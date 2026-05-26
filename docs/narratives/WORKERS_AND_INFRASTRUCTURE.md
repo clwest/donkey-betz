@@ -409,3 +409,12 @@ layer uses default DB.
   queue depth.
 - `pkill -9 -f celery; rm -f .celery*.pid; make celery` — full
   worker restart (the macOS playbook).
+
+---
+
+## Related patent disclosures
+
+One invention disclosure covers the IP shape of the workers + infrastructure layer. See [`docs/patents/README.md`](../patents/README.md) for the full workstream + narrative cross-link map; treat the disclosure as the authoritative source for IP claims (this narrative is the operator-handbook layer).
+
+- [Disclosure K — Budget-Aware Task Scheduling with Tier Classification, Knob-Based Downscoping, and Attribution Debt Control](../patents/DISCLOSURE_K_BUDGET_AWARE_SCHEDULING.md) — Celery routing coupled with budget state; tier classification of tasks; knob-based downscoping under budget pressure; attribution debt accounting across tiers.
+

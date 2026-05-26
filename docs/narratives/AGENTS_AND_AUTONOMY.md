@@ -368,3 +368,15 @@ about.
   which claims drift from runtime.
 - `python manage.py build_docs_index` — refresh `docs/INDEX.md`
   + `_index.json` (always commit both after doc changes).
+
+---
+
+## Related patent disclosures
+
+Four invention disclosures cover the IP shape of subsystems documented in this narrative. See [`docs/patents/README.md`](../patents/README.md) for the full workstream + narrative cross-link map; treat the disclosures as the authoritative source for IP claims (this narrative is the operator-handbook layer).
+
+- [Disclosure A — Evidence-Gated Autonomous Agent Blocking with Post-Action Verification and Rollback](../patents/DISCLOSURE_A_EVIDENCE_GATED_BLOCKING.md) — milestone 7 governance gates (`gate_hang`, rework/bounce); evidence threshold + pre-check + deferred verification + rollback.
+- [Disclosure B — Lazy TTL Auto-Expire Agent Blocks with Distributed Multi-Point Enforcement](../patents/DISCLOSURE_B_LAZY_TTL_MULTIPOINT_ENFORCEMENT.md) — `AgentControlEntry` + 4 enforcement points; lazy TTL evaluation on read; no scheduled expiration task.
+- [Disclosure C — Graduated Remediation Ladders with Automatic De-escalation and Budget/ROI-Coupled Throttling](../patents/DISCLOSURE_C_GRADUATED_REMEDIATION_LADDERS.md) — `TimeoutRemediationPlaybook` 4-level state machine; recovery-based de-escalation; QROI coupling. Companion to BODY_SYSTEMS narrative (LUNGS budget loop).
+- [Disclosure F — Structured Multi-Agent Debate with Constructive Tension Enforcement, Decision Mandates, and Governance Escalation](../patents/DISCLOSURE_F_STRUCTURED_DEBATE_DECISION_ENFORCEMENT.md) — milestone 3 DecisionEnforcerAgent; ResearchContract / ExecutionMandate / SynthesisContract. Companion to DECISION_COMMAND narrative.
+
