@@ -1,3 +1,20 @@
+---
+title: "Invention Disclosure L: Self-Tuning Policy Framework with A/B Experimentation, Conflict Arbitration, and Governance Audit Trail"
+kind: invention_disclosure
+disclosure_id: L
+workstream: WS4 (Budget Enforcement + Experimentation)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original draft. Disclosure L is the only one in the slate without a current Session 1158 narrative — flagged as a coverage gap in `docs/patents/README.md` open items.
+maps_to_narratives: []
+companion_docs:
+  - docs/patents/README.md
+  - docs/patents/EXECUTIVE_SUMMARY_WS4.md
+---
+
 # Invention Disclosure L: Self-Tuning Policy Framework with A/B Experimentation, Conflict Arbitration, and Governance Audit Trail
 
 **Date:** March 16, 2026
