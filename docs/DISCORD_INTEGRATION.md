@@ -3,8 +3,8 @@
 
 # Discord Integration Rules & Command Reference
 
-**Last Updated:** Session 1100 (April 26, 2026 — count refresh)
-**Commands:** 144 total (96 `@*.command` + 48 `@app_commands.command`) across 25 Cogs
+**Last Updated:** Session 1158 (May 25, 2026 — count corrected via DISCORD_AUDIT.md DOC-AUTOGEN)
+**Commands:** **96 total** (48 `@app_commands.command` slash + 48 `@*.command` prefix) across 25 Cogs. Earlier "144 total" claim was a regex double-count corrected by AST parsing in Session 1115 — see `docs/DISCORD_AUDIT.md` (DOC-AUTOGEN by `python manage.py build_discord_audit`) for authoritative per-command detail.
 **Notification Channels:** 12
 **Bot File:** `core/services/discord_bot.py` (11,676 lines)
 **Notifications:** `core/services/discord_notifications.py` (2,273 lines)

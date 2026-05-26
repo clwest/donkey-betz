@@ -1,6 +1,8 @@
 # Spider Network
 
-80 spiders across 18 categories collect real-time data that feeds agents, signals, and content. 74 working, 5 need API keys.
+**Current counts (PLATFORM_INVENTORY 2026-05-25):** 80 spiders across **41 categories** (0 placeholder). Top 10 categories by count: tech=8, news=8, financial=7, legal=6, education=4, content=3, community=3, startups=2, innovation=2, design=2. Spiders feed agents, signals, and content. **Needs API keys** (per topic doc; verify current): SEC Edgar, Bluesky, Discord, Spotify, YouTube.
+
+> The "18 categories" framing below dates to an earlier snapshot when categories were grouped more coarsely. The runtime registry categorizes spiders more granularly (41 distinct categories); the grouped 18-category table below is a useful semantic taxonomy, not the runtime category enum.
 
 ## Spider Categories
 
@@ -61,7 +63,7 @@ SpiderData (72h, raw)
 - Confidence (0-1): source count / 4
 - Novelty (0-1): decays over 24h based on signal age
 
-**7 pattern types:** demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, skill_demand, content_gap
+**10 pattern types** (canonical enum `PATTERN_TYPE_CHOICES` — drift correction; was 7 in earlier doc snapshots): demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, competitive_signal, market_movement, skill_demand, content_gap, user_need
 
 ## Spider Action Pipeline
 
