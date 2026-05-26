@@ -212,6 +212,41 @@ landed within minutes of each other. Smells like a single
 agent run's output. **Worth understanding what generated this
 batch** before deciding whether to consolidate.
 
+#### Resolution (Session 1160 — 2026-05-26)
+
+**Not a renegade agent batch.** The 09:36 mtimes trace to a single
+git commit: `9d75f78f` (PR #2197, 2026-05-25 09:36:50 -05:00) —
+Chris's own Session 1143 Phase 5 PR 4-of-6, **Tier-2 redundancy
+disposition** (Chris Q4=Y in the decision packet).
+
+The PR added `DOC-POINTER-V2 Superseded` headers to **18 reality-
+score / system-overview reports** (13 in `docs/reports/`, 5 in
+`docs/architecture/`) and V1-Stale headers to 4 agent-count-
+drifted docs. The reality-score cluster spanned claims of
+10% / 50-60% / 75% / 87% / 88% / 92% / 96% / 99.7% / 99.9% / 100%
+across different sessions — all superseded by the current
+canonical chain (`PLATFORM_INVENTORY.md` + `PLATFORM_WHAT_IT_IS.md`
++ `topics/*`).
+
+**What this means for the carryover:**
+
+- The 13 `docs/reports/` files touched in the 09:36 batch already
+  carry their correct `DOC-POINTER-V2 Superseded` headers from PR
+  #2197. **No further action needed on those files.**
+- The 9 Jan-21 files that *don't* have headers (separate cluster,
+  pre-dates Phase 5) are still queued for the "Reports cleanup
+  mechanical pass" (carryover item #3).
+- The "INDEX.md drift 30 → 33" is independent of this batch and
+  remains queued.
+
+**Lesson:** mtime-driven mystery batches in a docs corpus
+typically resolve to a single `git show <commit-around-mtime>`.
+Future similar questions should start with `git log
+--since/--until` before deeper investigation.
+
+This entry closes the "Open question — May 25 09:36 batch" item
+queued in Session 1158's handoff and Session 1160's start-here.
+
 ---
 
 ## What this recon explicitly does NOT do
