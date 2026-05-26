@@ -1,3 +1,25 @@
+---
+title: "Patent Workstream #2: Multi-Agent Deliberation + Decision Enforcement + Quality Gates — Executive Summary"
+kind: executive_summary
+workstream: WS2 (Content Pipeline)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: Workstream #2 executive summary, covering disclosures D / E / F (claims-based deliberation + multi-dimensional quality gate + structured-debate decision enforcement). Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original March 16, 2026 draft.
+maps_to_narratives:
+  - docs/narratives/CONTENT_PIPELINE.md
+  - docs/narratives/AGENTS_AND_AUTONOMY.md
+  - docs/narratives/DECISION_COMMAND.md
+covers_disclosures:
+  - DISCLOSURE_D_CLAIMS_BASED_DELIBERATION.md
+  - DISCLOSURE_E_PUBLISH_GATE_FINISHING_LOOP.md
+  - DISCLOSURE_F_STRUCTURED_DEBATE_DECISION_ENFORCEMENT.md
+companion_docs:
+  - docs/patents/README.md
+---
+
 # Patent Workstream #2: Multi-Agent Deliberation + Decision Enforcement + Quality Gates — Executive Summary
 
 **Date:** March 16, 2026

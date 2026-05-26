@@ -1,3 +1,24 @@
+---
+title: "Patent Workstream #4: Budget-Aware Scheduling + ROI Throttling — Executive Summary"
+kind: executive_summary
+workstream: WS4 (Budget Enforcement + Experimentation)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: Workstream #4 executive summary, covering disclosures J / K / L (multi-tier budget enforcement + budget-aware scheduling + self-tuning experimentation). Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original March 16, 2026 draft.
+maps_to_narratives:
+  - docs/narratives/BODY_SYSTEMS.md
+  - docs/narratives/WORKERS_AND_INFRASTRUCTURE.md
+covers_disclosures:
+  - DISCLOSURE_J_BUDGET_ENFORCEMENT_QROI.md
+  - DISCLOSURE_K_BUDGET_AWARE_SCHEDULING.md
+  - DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md
+companion_docs:
+  - docs/patents/README.md
+---
+
 # Patent Workstream #4: Budget-Aware Scheduling + ROI Throttling — Executive Summary
 
 **Date:** March 16, 2026

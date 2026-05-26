@@ -1,3 +1,21 @@
+---
+title: "Invention Disclosure H: Multi-Source Signal Clustering with Pattern-Type Taxonomy and Source-Tiered Confidence Scoring"
+kind: invention_disclosure
+disclosure_id: H
+workstream: WS3 (Signal Intelligence)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original draft. See `docs/patents/README.md` for workstream organization and narrative cross-link map.
+maps_to_narratives:
+  - docs/narratives/SIGNAL_INTELLIGENCE.md
+companion_docs:
+  - docs/patents/README.md
+  - docs/patents/EXECUTIVE_SUMMARY_WS3.md
+---
+
 # Invention Disclosure H: Multi-Source Signal Clustering with Pattern-Type Taxonomy and Source-Tiered Confidence Scoring
 
 **Date:** March 16, 2026
