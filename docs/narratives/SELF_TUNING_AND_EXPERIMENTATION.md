@@ -550,8 +550,11 @@ addendum (`docs/patents/DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md`).
 
 **Current operator surface (C-style honest exposure, shipped Session 1163):**
 
-- PA tool action `latest_overrides_snapshot` (ops_tool) returns the
-  single most recent snapshot from the `SystemConfiguration` row.
+- PA tool action `latest_overrides_snapshot` (autopilot_tool — verified
+  via Rigby smoke test 2026-05-26 post-merge; the action lives on the
+  `autopilot_tool` schema at `core/services/pa_tool_schemas.py:2569`,
+  not `ops_tool`) returns the single most recent snapshot from the
+  `SystemConfiguration` row.
   The response includes an explicit `storage.mechanism` field
   naming the single-row-overwrite reality so callers do not
   develop a false mental model.
