@@ -2281,6 +2281,21 @@ class OpsHandlersMixin:
                 **report,
             }
 
+        elif action == 'latest_overrides_snapshot':
+            # Most recent PolicyArbitrator snapshot.
+            # Honest exposure of the single-row overwrite storage: the
+            # patent-disclosure FinalAppliedOverrides model is not built
+            # as described — see Disclosure L §14 addendum + narrative
+            # SELF_TUNING_AND_EXPERIMENTATION.md §6.4.
+            from core.services.ops_autopilot import PolicyArbitrator
+
+            arbitrator = PolicyArbitrator()
+            snapshot = arbitrator.get_latest_snapshot()
+            return {
+                'action': 'latest_overrides_snapshot',
+                **snapshot,
+            }
+
         elif action == 'release_report':
             # Deploy/release status report
             from django.utils import timezone as tz
