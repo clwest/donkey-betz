@@ -8,11 +8,13 @@ last_updated: 2026-03-16
 originating_session: pre-session-tracking (March 16, 2026 batch)
 inventor: Chris West (DonkeyKing)
 provenance_confidence: HIGH
-provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original draft. Disclosure L is the only one in the slate without a current Session 1158 narrative — flagged as a coverage gap in `docs/patents/README.md` open items.
-maps_to_narratives: []
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass. Operator-facing narrative `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` shipped Session 1162 (PR #2280); §13 addendum appended Session 1163 to record the as-built path drift between disclosure date and code state. Disclosure body §1–§12 unchanged from original draft.
+maps_to_narratives:
+  - docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md
 companion_docs:
   - docs/patents/README.md
   - docs/patents/EXECUTIVE_SUMMARY_WS4.md
+  - docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md
 ---
 
 # Invention Disclosure L: Self-Tuning Policy Framework with A/B Experimentation, Conflict Arbitration, and Governance Audit Trail
@@ -382,3 +384,51 @@ Changes in 24h: 4 (>= 3 threshold)
 ## Examiner Story
 
 Prior art teaches hyperparameter optimization for ML models (Optuna), A/B testing for user features (Optimizely), distributed configuration management (Consul), and policy evaluation engines (OPA). However, no single reference teaches a system that (1) analyzes its own policy action history to identify ineffective parameters and autonomously adjusts them with rate-limited application (max 1 per day), (2) A/B tests operational policy parameters (not user features) with automatic promotion on metric improvement and rollback on regression, (3) detects multi-policy conflicts on shared configuration keys using a priority-ordered knob registry with merge strategies, (4) detects configuration oscillation (flapping) and locks affected keys with human escalation, and (5) records per-cycle snapshots of all active configuration overrides for time-travel auditability. The combination is non-predictable because AutoML optimizes model parameters not operational policies, A/B platforms test features not infrastructure parameters, config managers don't detect multi-writer conflicts, and policy engines don't tune themselves.
+
+---
+
+## 13. Addendum — Code path locations (as-of 2026-05-26)
+
+**Status:** Append-only addendum. The disclosure body §1–§12 above is the original draft (March 16, 2026) and is **not edited** by this section. This addendum exists to record path drift between the disclosure's as-built §5 citations and the current code state, so a future reader of the disclosure (attorney, examiner, future operator) can follow the cited mechanism to running code without a dead-link detour.
+
+**Surfaced by:** `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` §6.1 (Session 1162, batch R). The narrative is the operator-facing translation of this disclosure and is the canonical source for the current-state mechanism. This addendum closes the cross-reference loop in the other direction.
+
+### 13.1 The refactor
+
+Seven days before this disclosure was drafted, commit **`fe94c928`** ("refactor: split `ops_autopilot.py` (553KB) into 11-module package", **2026-03-09**) extracted 37 classes from the monolithic `core/services/ops_autopilot.py` into a domain-organized package at `core/services/ops_autopilot/`. The §5 paths in this disclosure (drafted 2026-03-16) reference the **pre-refactor** layout — accurate for the codebase the disclosure was authored against, stale relative to the codebase as merged seven days earlier and onward.
+
+The disclosure's mechanism description is unaffected. Only file locations shifted.
+
+### 13.2 Class definitions — moved out of `core.py`
+
+| Class | Disclosure §5 citation | Current canonical location (2026-05-26) |
+|---|---|---|
+| `PolicyOptimizer` | `core/services/ops_autopilot/core.py` (lines 1224-1328) + `governance.py` | `core/services/ops_autopilot/governance.py:702` |
+| `ExperimentEngine` | `core/services/ops_autopilot/experiment.py` + `core.py` (lines 1693-1746) | `core/services/ops_autopilot/experiment.py:236` |
+| `PolicyArbitrator` | `core/services/ops_autopilot/core.py` (lines 2643-2706) + `governance.py` | `core/services/ops_autopilot/governance.py:1118` |
+| `AutopilotConfig` | `core/services/ops_autopilot/config.py` (lines 229-365) | `core/services/ops_autopilot/config.py:229` (still accurate) |
+
+Verified against git HEAD `1b10f361` (2026-05-26 Session 1162 close-out merge). Reproduce: `grep -n "^class \(PolicyOptimizer\|PolicyArbitrator\|ExperimentEngine\)" core/services/ops_autopilot/{governance,experiment}.py`.
+
+### 13.3 Cycle wrappers — still in `core.py`, line numbers shifted
+
+The disclosure's §5 citations to `core.py` line ranges actually pointed at the **cycle wrappers** that call into each class, not the class definitions themselves. The cycle-wrapper functions are still in `core.py`; only the line numbers drifted as `core.py` evolved post-refactor.
+
+| Cycle wrapper | Disclosure §5 citation | Current line range (2026-05-26) | Calls class via lazy import |
+|---|---|---|---|
+| `_policy_self_tuning` | `core.py` lines 1224-1328 | `core.py:1239-1346` | `from core.services.ops_autopilot.governance import PolicyOptimizer` |
+| `_policy_experiment_engine` | `core.py` lines 1693-1746 | `core.py:1708-1764` | `from core.services.ops_autopilot.experiment import ExperimentEngine` |
+| `_policy_policy_arbitrator` | `core.py` lines 2643-2706 | `core.py:2658-2724` | `from core.services.ops_autopilot.governance import PolicyArbitrator` |
+
+The mechanism §5 describes (rate-limited apply, A/B promotion/rollback, three-mechanism arbitration, FinalAppliedOverrides snapshot) lives entirely in the class files now; the `core.py` wrappers are thin entry points that instantiate the class and forward arguments.
+
+### 13.4 What this addendum does NOT change
+
+- **No claim text changes.** §10 (claim skeleton) is unaffected — claims describe the method, not file paths.
+- **No novelty-hook changes.** §6 hooks describe the mechanism, not its layout.
+- **No mechanism changes.** §5 is the canonical record of the as-built design as of March 2026; the mechanism description is still accurate today. Only the citation paths drifted.
+- **No editing of §1–§12.** Per the frozen-artifact convention for filed disclosures, the original body is preserved verbatim; this addendum is the recorded path-resolution overlay.
+
+### 13.5 Future drift policy
+
+For future code reorganizations affecting the §5 paths cited above, the same addendum-only pattern applies: append a new sub-section to §13 (`13.6`, `13.7`, …) with the new canonical locations and the commit SHA that moved them. Do not edit §5 inline. The operator-facing narrative (`docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md`) is the place to track current paths as living documentation; this disclosure body is the frozen IP artifact.
