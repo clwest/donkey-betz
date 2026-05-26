@@ -2629,11 +2629,12 @@ PA_TOOL_SCHEMAS = [
                         "attributed vs unattributed events, upstream credit flows. "
                         "policy_conflict_report: detect conflicts when multiple policies write the same knob, "
                         "flap detection (3+ changes in 24h), hold-time violations. Optional filters: knob, policy. "
-                        "latest_overrides_snapshot: return the most recent PolicyArbitrator snapshot — cycle_id, ts, "
-                        "and the knobs dict (key → value/owner/priority) from the last autopilot cycle. NOTE: storage "
-                        "is single-row overwrite (no per-cycle history); time-travel queries (final_overrides_at(t)) "
-                        "are not supported by the current implementation. See Disclosure L §14 addendum for the drift "
-                        "record and planned correct-fix follow-on. "
+                        "latest_overrides_snapshot: return a PolicyArbitrator snapshot — cycle_id, cycle_ts, "
+                        "row_created_at, and the knobs dict (key → value/owner/priority). Without `at`, returns the "
+                        "latest snapshot. With `at` (ISO 8601 datetime), returns the snapshot active at that time "
+                        "via filter(cycle_ts__lte=at).order_by('-cycle_ts').first(). Time-travel queries are "
+                        "bounded by the 90-day retention window. Session 1163 B-style storage: append-only "
+                        "per-cycle rows in FinalAppliedOverrides — see Disclosure L §14.7. "
                         "release_report: current deploy status — governor level, deploy rate, error rate, freeze state, "
                         "last deploy SHA and timestamp, recovery progress. "
                         "release_freeze: manually freeze all deploys (safety override). "
@@ -2801,6 +2802,10 @@ PA_TOOL_SCHEMAS = [
                 "policy_filter": {
                     "type": "string",
                     "description": "For 'policy_conflict_report': filter conflicts by policy name.",
+                },
+                "at": {
+                    "type": "string",
+                    "description": "For 'latest_overrides_snapshot': ISO 8601 datetime to time-travel to (e.g., '2026-05-26T20:30:00+00:00'). Returns the snapshot active at that time. Bounded by the 90-day retention window. If omitted, returns the most recent snapshot.",
                 },
                 "draft_id": {
                     "type": "string",

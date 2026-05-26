@@ -225,6 +225,9 @@ from ..models_impact_events import ImpactEvent
 # Import PolicyExperiment (Session 1090 - Autonomy #11 Experiment Engine)
 from ..models_policy_experiment import PolicyExperiment
 
+# Import FinalAppliedOverrides (Session 1163 - B-style fix for Disclosure L §14 mechanism drift)
+from ..models_final_applied_overrides import FinalAppliedOverrides
+
 # Import DecisionLedgerEntry (Session 1090 - Autonomy #12 Decision Ledger)
 from ..models_decision_ledger import DecisionLedgerEntry
 
@@ -540,6 +543,9 @@ __all__ = [
 
     # Policy Experiment (Session 1090 - Autonomy #11)
     'PolicyExperiment',
+
+    # Final Applied Overrides per-cycle history (Session 1163 - B-style)
+    'FinalAppliedOverrides',
 
     # Decision Ledger (Session 1090 - Autonomy #12)
     'DecisionLedgerEntry',
