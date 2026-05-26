@@ -1,3 +1,21 @@
+---
+title: "Invention Disclosure K: Budget-Aware Task Scheduling with Tier Classification, Knob-Based Downscoping, and Attribution Debt Control"
+kind: invention_disclosure
+disclosure_id: K
+workstream: WS4 (Budget Enforcement + Experimentation)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original draft. See `docs/patents/README.md` for workstream organization and narrative cross-link map.
+maps_to_narratives:
+  - docs/narratives/WORKERS_AND_INFRASTRUCTURE.md
+companion_docs:
+  - docs/patents/README.md
+  - docs/patents/EXECUTIVE_SUMMARY_WS4.md
+---
+
 # Invention Disclosure K: Budget-Aware Task Scheduling with Tier Classification, Knob-Based Downscoping, and Attribution Debt Control
 
 **Date:** March 16, 2026

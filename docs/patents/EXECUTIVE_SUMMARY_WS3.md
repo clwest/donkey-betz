@@ -1,3 +1,23 @@
+---
+title: "Patent Workstream #3: Signal Intelligence Pipeline — Executive Summary"
+kind: executive_summary
+workstream: WS3 (Signal Intelligence)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: Workstream #3 executive summary, covering disclosures G / H / I (signal-to-initiative provenance + clustering + circuit breaker). Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original March 16, 2026 draft.
+maps_to_narratives:
+  - docs/narratives/SIGNAL_INTELLIGENCE.md
+covers_disclosures:
+  - DISCLOSURE_G_SIGNAL_TO_INITIATIVE_PROVENANCE.md
+  - DISCLOSURE_H_SIGNAL_CLUSTERING_PATTERN_DETECTION.md
+  - DISCLOSURE_I_INITIATIVE_CIRCUIT_BREAKER.md
+companion_docs:
+  - docs/patents/README.md
+---
+
 # Patent Workstream #3: Signal Intelligence Pipeline — Executive Summary
 
 **Date:** March 16, 2026
