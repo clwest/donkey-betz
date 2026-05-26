@@ -209,6 +209,49 @@ the inventory.
 
 ---
 
+## Pre-PR checklist (operational form of the 7 rules)
+
+Run this gate **before opening a PR** that modifies any file in
+`docs/narratives/`. The Session 1159 `#2256 → #2257` loop showed
+that authors can ship a narrative-editing PR that violates the
+guardrails — including PRs that *introduce* the guardrails. This
+checklist is the operational corrective.
+
+For each item, check **only the lines you changed**, not the
+whole file.
+
+- [ ] **Rule 1 (numbers):** every numeric value in changed lines
+      has either a code pointer (constant name / config key /
+      file path) **or** an explicit `as-of YYYY-MM-DD` label.
+- [ ] **Rule 2 (model names):** no model name (`gpt-5-mini`,
+      `claude-opus-4-7`, etc.) is phrased as a permanent fact;
+      provider registry pointer present when literal is needed.
+- [ ] **Rule 3 (lists):** enum values / allowlists / prefix
+      lists in changed lines are illustrative-with-pointer, not
+      duplicated-as-canonical.
+- [ ] **Rule 4 (UI):** every "click X" / "open Y" instruction
+      in changed lines is paired with a tool/API/management-
+      command equivalent.
+- [ ] **Rule 5 (absolutes):** no "never", "always", "cannot
+      happen" for runtime behavior; softened to "should not; if
+      it does, check ___" with one remediation pointer.
+- [ ] **Rule 6 (legacy):** every legacy mention in changed lines
+      states (1) what it is, (2) what triggers it, (3) how to
+      tell from logs/data which path ran.
+- [ ] **Rule 7 (counts):** inventory-style counts in changed
+      lines are date-anchored snapshots or replaced with
+      capability descriptions.
+
+If you can't tick all 7, restructure before opening the PR. If
+you ticked all 7 but the diff still feels brittle, request
+Rigby's review before merge.
+
+This checklist is **also** auto-loaded into PRs that touch
+`docs/narratives/*` via the GitHub PR template at
+[`.github/PULL_REQUEST_TEMPLATE.md`](../../.github/PULL_REQUEST_TEMPLATE.md).
+
+---
+
 ## Source
 
 Derived from Rigby's Session 1159 internal-ops review memo of
@@ -218,3 +261,11 @@ and D (`PERSONAL_ASSISTANT.md`). The review surfaced the same
 distills the 7 actionable rules that prevent the pattern from
 recurring. See PR #2255 + the Session 1159 handoff for the
 review thread.
+
+The pre-PR checklist was added Session 1160 in response to the
+self-referential dogfood loop demonstrated by PRs #2256 →
+#2257 (the guardrails-introducing PR violated rules #1 and #5
+in 5 places that needed a second pass). Rigby's session-closed
+recommendation: "consider a short PR-template checklist for
+`docs/narratives/*` referencing EDITING_GUARDRAILS.md to avoid
+another #2256 → #2257 loop."
