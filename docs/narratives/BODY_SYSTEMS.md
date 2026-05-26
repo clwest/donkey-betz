@@ -324,3 +324,13 @@ file-write checks excluded.
   introduced the coordinator (open question § 6).
 - `grep -r "run_all_systems_scan" core/services/` — confirm
   which systems are in the scan rotation.
+
+---
+
+## Related patent disclosures
+
+Two invention disclosures cover the IP shape of the body-systems / budget-enforcement layer. See [`docs/patents/README.md`](../patents/README.md) for the full workstream + narrative cross-link map; treat the disclosures as the authoritative source for IP claims (this narrative is the operator-handbook layer).
+
+- [Disclosure C — Graduated Remediation Ladders with Automatic De-escalation and Budget/ROI-Coupled Throttling](../patents/DISCLOSURE_C_GRADUATED_REMEDIATION_LADDERS.md) — `TimeoutRemediationPlaybook` + `BudgetController` (3-tier normal/soft/hard) + `ROIEnforcer` QROI throttling. Primary narrative anchor is AGENTS_AND_AUTONOMY; secondary anchor here via the LUNGS budget loop.
+- [Disclosure J — Multi-Tier Budget Enforcement with Model Downgrade Routing and Quality-Weighted ROI Throttling](../patents/DISCLOSURE_J_BUDGET_ENFORCEMENT_QROI.md) — milestone 2 (Session 702 LUNGS); `can_breathe` + `record_breath` + QROI = ROI × quality_weight; purpose-based exemptions during budget pressure.
+

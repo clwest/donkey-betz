@@ -425,3 +425,15 @@ and this doc should be corrected. See
 [`docs/narratives/EDITING_GUARDRAILS.md`](EDITING_GUARDRAILS.md)
 for the editing contract.
 
+---
+
+## 9. Related patent disclosures
+
+Two invention disclosures cover the IP shape of the content pipeline. See [`docs/patents/README.md`](../patents/README.md) for the full workstream + narrative cross-link map; treat the disclosures as the authoritative source for IP claims (this narrative is the operator-handbook layer).
+
+- [Disclosure D — Claims-Based Multi-Reviewer Content Deliberation with Deterministic Citation Enforcement](../patents/DISCLOSURE_D_CLAIMS_BASED_DELIBERATION.md) — milestone 2 (Session 964 watershed); ClaimsPack with deterministic IDs + mandatory `[C-xxxxxxxxxx]` citation enforcement + 3-reviewer panel.
+- [Disclosure E — Multi-Dimensional Quality Gate with Anti-Hallucination Detection and Self-Healing Finishing Loop](../patents/DISCLOSURE_E_PUBLISH_GATE_FINISHING_LOOP.md) — milestones 6 + 7; PublishGate quality/novelty/structure scoring + Session 1033 finishing loop (auto-enhance → re-evaluate → auto-publish).
+
+A third disclosure, [Disclosure F (Structured Debate Decision Enforcement)](../patents/DISCLOSURE_F_STRUCTURED_DEBATE_DECISION_ENFORCEMENT.md), is anchored primarily to the AGENTS_AND_AUTONOMY narrative but also touches the content pipeline via the DecisionEnforcer's `PUBLISH / REVISE / KILL` verdict.
+
+
