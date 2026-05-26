@@ -1,3 +1,24 @@
+---
+title: "Patent Workstream #1: Ops Autopilot — Executive Summary"
+kind: executive_summary
+workstream: WS1 (Ops Autopilot)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: Workstream #1 executive summary, covering disclosures A / B / C (agent governance + autonomous control). Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original March 16, 2026 draft. File name `EXECUTIVE_SUMMARY.md` (no WS suffix) is historical — semantically this is `EXECUTIVE_SUMMARY_WS1.md`; not renamed to preserve link stability.
+maps_to_narratives:
+  - docs/narratives/AGENTS_AND_AUTONOMY.md
+  - docs/narratives/BODY_SYSTEMS.md
+covers_disclosures:
+  - DISCLOSURE_A_EVIDENCE_GATED_BLOCKING.md
+  - DISCLOSURE_B_LAZY_TTL_MULTIPOINT_ENFORCEMENT.md
+  - DISCLOSURE_C_GRADUATED_REMEDIATION_LADDERS.md
+companion_docs:
+  - docs/patents/README.md
+---
+
 # Patent Workstream #1: Ops Autopilot — Executive Summary
 
 **Date:** March 16, 2026

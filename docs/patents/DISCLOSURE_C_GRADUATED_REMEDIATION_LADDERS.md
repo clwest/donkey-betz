@@ -1,3 +1,22 @@
+---
+title: "Invention Disclosure C: Graduated Remediation Ladders with Automatic De-escalation and Budget/ROI-Coupled Throttling"
+kind: invention_disclosure
+disclosure_id: C
+workstream: WS1 (Ops Autopilot)
+status: draft (Attorney Review Pending)
+last_updated: 2026-03-16
+originating_session: pre-session-tracking (March 16, 2026 batch)
+inventor: Chris West (DonkeyKing)
+provenance_confidence: HIGH
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass; body content unchanged from original draft. See `docs/patents/README.md` for workstream organization and narrative cross-link map.
+maps_to_narratives:
+  - docs/narratives/AGENTS_AND_AUTONOMY.md
+  - docs/narratives/BODY_SYSTEMS.md
+companion_docs:
+  - docs/patents/README.md
+  - docs/patents/EXECUTIVE_SUMMARY.md
+---
+
 # Invention Disclosure C: Graduated Remediation Ladders with Automatic De-escalation and Budget/ROI-Coupled Throttling
 
 **Date:** March 16, 2026
