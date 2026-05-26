@@ -105,8 +105,10 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 | **#2262** | patents preservation + cross-link map (16 files + new README) | `572c4928` |
 | **#2263** | narrative → patent reverse cross-links (6 narratives) | `fb5aa7ed` |
 | **#2264** | .github/PULL_REQUEST_TEMPLATE.md + EDITING_GUARDRAILS pre-PR checklist | `e876fce5` |
+| **#2266** | pa_acks_health mgmt command — observation scaffold for acks_late=False watch | `f5dbea1e` |
+| **#2267** | pa_acks_health status + cutoff display (Rigby's E + D feedback) | `4c39501a` |
 
-**New persistent artifacts:** `docs/patents/README.md`, `.github/PULL_REQUEST_TEMPLATE.md`.
+**New persistent artifacts:** `docs/patents/README.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `core/management/commands/pa_acks_health.py`.
 
 ### Previous closed work still relevant for context
 
@@ -163,9 +165,19 @@ All Chris-call items from the Session 1158 recon are closed (PRs #2259-2264 incl
 
 ### Passive observation items
 
-1. **PA `acks_late=False` observation window** (active issue #3 above).
+1. **PA `acks_late=False` observation window** (active issue #3 above). Use `python manage.py pa_acks_health` for snapshots. Baseline at Session 1160 close: OK / 12 SUCCESS / 0 FAILURE / 0 hangs.
 2. **EDITING_GUARDRAILS opportunistic rollout** to narratives A / E / F / G / H / I / J / K / L / M / N / O. Pick up when next editing each narrative; not a batch.
 3. **Disclosure L narrative coverage gap.** Self-tuning experimentation lacks a Session 1158 narrative. Fold into BODY_SYSTEMS or CONTENT_PIPELINE, or write a new narrative when the subsystem matures.
+
+### `pa_acks_health` follow-ons (from Rigby's PR #2266+#2267 review)
+
+3a. **(A) Ack behavior proxy** — age of oldest queued / STARTED, received-vs-finished delta over window.
+3b. **(B) Per-worker attribution** — PID, last heartbeat, per-worker hang/slow counts.
+3c. **(C) UI spinner symptom proxy** — chat requests with no assistant response recorded within N minutes (via `ChatConversation` rows).
+3d. **Threshold tuning** — three small tunings dependent on item A:
+   - WARN on queue depth ≥ 5 (currently ≥ 1).
+   - CRIT "no workers sustained" — explicit sustain window (≥ 2 consecutive snapshots).
+   - CRIT queue depth ≥ 20 — pair with second condition (workers < 2 OR oldest queued age > 120s).
 
 ### Active queue (Chris's call on priority)
 

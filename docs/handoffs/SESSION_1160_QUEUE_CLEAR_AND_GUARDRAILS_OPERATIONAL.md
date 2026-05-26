@@ -35,8 +35,10 @@ Plus one bonus PR that closes Rigby's session-closed concern from Session 1159: 
 | **#2262** | Patents preservation + cross-link map (16 files + new README.md) | `572c4928` |
 | **#2263** | Narrative → patent reverse cross-links (6 narratives) | `fb5aa7ed` |
 | **#2264** | `.github/PULL_REQUEST_TEMPLATE.md` + EDITING_GUARDRAILS pre-PR checklist section | `e876fce5` |
+| **#2266** | `pa_acks_health` mgmt command — observation scaffold for the acks_late=False watch window | `f5dbea1e` |
+| **#2267** | `pa_acks_health` status + cutoff display (Rigby's E + D feedback applied) | `4c39501a` |
 
-Six squash-merge commits to main, all via bypass-mode (GH Actions billing still down).
+Eight squash-merge commits to main, all via bypass-mode (GH Actions billing still down). PRs #2266 + #2267 are production code (new mgmt command + an enhancement to it); both explicitly Chris-authorized in-session per the Session 1159 PR #2255 precedent. All others were docs-only and qualified for the standard Session-1150 docs/verifier-baselines bypass.
 
 ---
 
@@ -121,6 +123,42 @@ Cross-references now resolve symmetrically:
 
 ---
 
+## PR #2266 — `pa_acks_health` mgmt command (PA acks_late watch scaffold)
+
+After the handoff's first six PRs landed, Chris picked the #1 item from Rigby's priority list: the PA `acks_late=False` 24-48h watch window. Rigby ran a baseline snapshot via her cockpit/ops tools and found the observable surface clean (11/11 SUCCESS in 6h, queue empty, 0 failures) but flagged a real gap: she couldn't directly enumerate Redis "unacked" state with current tools, so the fix's working was inferred from the absence of bad symptoms, not measured directly.
+
+Built a read-only mgmt command `python manage.py pa_acks_health` that consolidates the observation surface into a single CLI output:
+
+- Queue depth via Redis LLEN
+- Worker snapshot via celery inspect (count + active + reserved per worker)
+- Task stats from `CeleryTaskEvent` for a configurable window (default 6h, default task `core.tasks.process_pa_chat_task`)
+- Slow-task list (>60s) with task_id + duration + worker
+- Hang signature (STARTED rows with no `finished_at`, bounded by pidfile mtime)
+- Advisory flags + (added in PR #2267) overall OK/WARN/CRIT status
+
+**Important runtime finding from the first smoke test:** the command surfaced 8 hang-signature rows from this morning's overnight-outage restart sequence (01:05-02:01 UTC, worker `pa@Chriss-MacBook-Pro.local`). These were `task_prerun` rows that never reached `task_postrun` because workers were SIGKILL'd during restart — NOT current hangs, but historical dead rows. Added a `--since-pidfile` flag (default `.celery-pa.pid` mtime) that uses the worker's restart time as the natural "since current worker run" cutoff. With the pidfile cutoff applied, the metric correctly shows 0 current hangs while the dead rows stay in `CeleryTaskEvent` as archaeological evidence (per Rigby's recommendation — don't auto-clean).
+
+Hang-signature interpretation is documented in the module docstring: the three failure modes that produce STARTED-with-no-finished_at (broker ack drop, worker SIGKILL, genuine task-body hang) all surface, with attribution requiring cross-referencing broker state (out of scope for a read-only Django-side tool).
+
+---
+
+## PR #2267 — `pa_acks_health` status + cutoff display
+
+Rigby's review of PR #2266 raised five enhancement areas (A-E in her response). Two were quick wins shipped as a small follow-up:
+
+- **E** — Cutoff timestamp displayed in human output explicitly. Sample line: `hang cutoff: 2026-05-26T14:19:29 UTC (from .celery-pa.pid mtime)`. Prevents misinterpreting "hang signature: 0" as "no historical hangs."
+- **D** — Single OK/WARN/CRIT `status` field rolled from advisory conditions. Header now reads `[status: OK|WARN|CRIT]`. Threshold constants defined at top of class for easy tuning.
+
+**Threshold logic worth noting:** completed-successfully slow tasks do NOT trip status. First implementation conflated slow-completed (informational) with current-hang (actionable) and tripped WARN on a clean baseline. Caught + fixed before commit. The hang signature (STARTED-not-finished) is the only "currently running too long" signal that affects status.
+
+Three larger items from Rigby's feedback captured as Session 1161 carryover:
+
+- **A** — "Ack behavior" proxy: age of oldest queued message, age of oldest STARTED, received-vs-finished delta over window.
+- **B** — Per-worker attribution: PID, last heartbeat, per-worker hang/slow counts.
+- **C** — UI spinner symptom proxy via conversation/turn tables.
+
+---
+
 ## PR #2264 — PR-template narrative checklist + operational gate
 
 Closes Rigby's session-closed concern from Session 1159: prevent another `#2256 → #2257` self-referential dogfood loop, where a guardrails-introducing PR can still violate the guardrails it introduces.
@@ -141,6 +179,9 @@ Two changes:
 - **NEW (1160) — Symmetric cross-references prevent half-resolved navigation.** A patent → narrative pointer alone leaves narrative readers stuck. The reverse `maps_to_narratives` frontmatter + "Related patent disclosures" section pattern gives both directions.
 - **NEW (1160) — Append-only edits are safer than restructure for high-trust documents.** PR #2263 added cross-link sections at the end of 6 narratives without touching milestone tables or vocabulary sections. Body content stays stable; only navigation is enriched.
 - **NEW (1160) — The pre-PR checklist closes the dogfood loop.** Combined with EDITING_GUARDRAILS.md + the GitHub PR template + this handoff entry, the `#2256 → #2257` failure pattern is formally short-circuited for future narrative work.
+- **NEW (1160) — Pidfile mtime is the natural "since current worker restart" cutoff.** PR #2266's hang-signature query was dominated by pre-restart casualties until the pidfile-mtime lower bound was added. Reusable pattern for any observation query that should be bounded by current process lifetime.
+- **NEW (1160) — Slow-completed vs current-hang are different signals.** A task that ran 80s and SUCCEEDED is informational; a task currently STARTED-for-80s is actionable. Conflating the two in alert logic produces false positives (PR #2267's first WARN flap). Status keys on hang signature, not on slow-task list.
+- **NEW (1160) — Read-only mgmt commands are the safer end of the "production code bypass" spectrum.** PRs #2266 + #2267 set the pattern for explicit-auth production-code bypass during the CI billing outage: read-only, on-demand, no scheduled-task changes, no runtime side effects outside of being invoked. Distinct from runtime behavior changes (#2255).
 
 ---
 
@@ -148,11 +189,24 @@ Two changes:
 
 ### Passive observation items
 
-1. **PA `acks_late=False` observation window** (continued from Session 1159 PR #2255). Watch `pa` queue depth + UI behavior — tasks should ack immediately on receipt; UI should stop the perpetual-spinner symptom. If symptoms persist, broker-conn instability is upstream of the ack pattern.
+1. **PA `acks_late=False` observation window** (continued from Session 1159 PR #2255). Run `python manage.py pa_acks_health` periodically over the next 24-48h. Status should stay OK; any WARN/CRIT warrants investigation. Baseline at Session 1160 close: OK / 12 SUCCESS / 0 FAILURE / 0 hangs.
 
 2. **EDITING_GUARDRAILS opportunistic rollout** to narratives A / E / F / G / H / I / J / K / L / M / N / O. Pick up when next editing each narrative; not a batch.
 
 3. **Disclosure L narrative coverage.** Self-tuning experimentation lacks a Session 1158 narrative. Fold into BODY_SYSTEMS or CONTENT_PIPELINE, or write a new narrative when the subsystem matures.
+
+### `pa_acks_health` follow-ons from Rigby's review (queued for Session 1161)
+
+4. **(A) Ack behavior proxy.** Add age-of-oldest-queued-message, age-of-oldest-STARTED, received-vs-finished delta over window. These would let the command infer Redis broker-side health without direct unacked enumeration.
+
+5. **(B) Per-worker attribution.** Add PID, last heartbeat, per-worker hang/slow counts to hang-signature samples + slow-tasks list. Currently all rows show the worker name; per-worker rollups would surface "one worker is the problem" patterns faster.
+
+6. **(C) UI spinner symptom proxy.** Add a check for chat requests with no assistant response recorded within N minutes (via `ChatConversation` rows). Currently the command observes Celery-side behavior; this would close the loop to user-visible behavior.
+
+7. **Threshold tuning per Rigby's session-1160 review.** Three optional tunings depend on item A above:
+   - WARN on queue depth ≥ 1 → ≥ 5 (depth alone is too sensitive without oldest-age context).
+   - CRIT "no workers sustained" — needs an explicit sustain window (≥ 2 consecutive snapshots, or ≥ 2 minutes if run on schedule).
+   - CRIT queue depth ≥ 20 — pair with second condition (workers < 2 OR oldest queued age > 120s).
 
 ### Active queue (Chris's call on priority)
 
@@ -178,13 +232,14 @@ Two changes:
 
 ## Session telemetry
 
-- **Duration:** longest single-session ledger of the post-1158 arc (started ~10:30 local, still open at handoff write — ~3.5 h)
-- **PRs merged:** 6 (all docs-only)
-- **Files changed across all 6 PRs:** ~50 (mostly docs/narratives/, docs/reports/, docs/patents/, plus the new .github/PULL_REQUEST_TEMPLATE.md and the recon doc resolution)
-- **New persistent artifacts:** `docs/patents/README.md`, `.github/PULL_REQUEST_TEMPLATE.md`
+- **Duration:** longest single-session ledger of the post-1158 arc (started ~10:30 local, late additions through ~10:05 — ~3.5 h)
+- **PRs merged:** 8 (6 docs-only + 2 production-code mgmt commands)
+- **Files changed across all 8 PRs:** ~52 (mostly docs/narratives/, docs/reports/, docs/patents/, plus .github/PULL_REQUEST_TEMPLATE.md, the recon doc resolution, and the new pa_acks_health mgmt command)
+- **New persistent artifacts:** `docs/patents/README.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `core/management/commands/pa_acks_health.py`
+- **Production-code PRs requiring explicit Chris-auth bypass:** 2 (#2266 + #2267, both for the pa_acks_health command; same risk profile as PR #2255 — read-only, on-demand, no scheduled-task changes)
 - **Disk pressure:** none (healthy throughout)
 - **GH Actions billing status:** still down
-- **Pre-commit security checks:** passed on all 6 commits
+- **Pre-commit security checks:** passed on all 8 commits
 
 ---
 
