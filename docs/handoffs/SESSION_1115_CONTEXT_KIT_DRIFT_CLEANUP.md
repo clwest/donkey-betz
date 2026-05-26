@@ -3,8 +3,11 @@ title: "Session 1115 — context-kit drift cleanup (verifier + README/CLAUDE hea
 date: 2026-05-12
 status: superseded-by-companion
 session: 1115
+originating_session: 1115
 previous_handoff: SESSION_1114_ACTIVE_MODULE_OWNERSHIP_MAP.md
 companion_handoff: SESSION_1115_CODE_HEALTH_REFACTORS.md
+provenance_confidence: HIGH
+provenance_note: Hand-authored handoff. Cited by Session 1158 narratives A (Agents milestone 8) + I (Advisors milestone 3) + J (Decision Command) + K (Discord milestone 7) — Session 1115 audit produced multiple count corrections (advisor 32→30, Discord 144→96, etc.) and introduced verifier guards.
 ---
 
 > **Heads up — this is only Session 1115's early phase.** The session

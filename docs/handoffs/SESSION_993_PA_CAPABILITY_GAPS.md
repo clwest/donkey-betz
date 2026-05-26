@@ -1,3 +1,9 @@
+---
+originating_session: 993
+provenance_confidence: HIGH
+provenance_note: Hand-authored handoff. Cited by Session 1158 narrative D (Personal Assistant) milestone 3 as the wiring-completion + capability-gap audit that prepared the input list for Session 1035-W2's 11 new tools.
+---
+
 # Session 993 — PA Capability Gaps: Write Actions + Blog Triage + V2 Generation
 
 **Date:** February 12, 2026
