@@ -444,3 +444,14 @@ and this doc should be corrected. See
 [`docs/narratives/EDITING_GUARDRAILS.md`](EDITING_GUARDRAILS.md)
 for the editing contract.
 
+---
+
+## 9. Related patent disclosures
+
+Three invention disclosures cover the IP shape of the signal-intelligence pipeline. See [`docs/patents/README.md`](../patents/README.md) for the full workstream + narrative cross-link map; treat the disclosures as the authoritative source for IP claims (this narrative is the operator-handbook layer).
+
+- [Disclosure G — End-to-End Signal-to-Initiative Provenance Pipeline with Autonomous Topic Generation and Conversation Dispatch](../patents/DISCLOSURE_G_SIGNAL_TO_INITIATIVE_PROVENANCE.md) — milestone 2 (Session 900); SpiderData → SignalCluster → AutoTopic → HiveMindSession → Initiative with FK-preserved provenance.
+- [Disclosure H — Multi-Source Signal Clustering with Pattern-Type Taxonomy and Source-Tiered Confidence Scoring](../patents/DISCLOSURE_H_SIGNAL_CLUSTERING_PATTERN_DETECTION.md) — `SignalAggregationService` 10-pattern taxonomy; strength / confidence / novelty metrics; source diversity weighting.
+- [Disclosure I — Four-Gate Initiative Circuit Breaker with Jaccard Deduplication and Quality-Gated Status Promotion](../patents/DISCLOSURE_I_INITIATIVE_CIRCUIT_BREAKER.md) — milestone 3 (Sessions 884 / 994 / 1020); env-configurable backlog throttle + Jaccard 0.6 similarity dedup + TRIAGE intake state + quality gate.
+
+
