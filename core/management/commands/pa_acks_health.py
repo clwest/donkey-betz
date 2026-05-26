@@ -6,6 +6,12 @@ observation surface that Rigby's cockpit_tool + ops_tool + Redis health
 expose piecewise into a single output suitable for direct inspection or
 piping to other tools.
 
+Session 1161 (A) added two ack-behavior proxies — `oldest_queued` and
+`inflight_estimate` (received-minus-finished delta) — so queue-depth
+alarms don't flap on a single in-flight task. These are advisory-only;
+OK/WARN/CRIT thresholds are unchanged until observation supports tuning
+(item 3d in `00-START-NEXT-SESSION.md`).
+
 Usage:
     python manage.py pa_acks_health
     python manage.py pa_acks_health --hours 24
@@ -119,6 +125,7 @@ class Command(BaseCommand):
 
         pidfile_cutoff = self._pidfile_cutoff(since_pidfile)
 
+        task_stats = self._task_stats(task_name, hours)
         report = {
             "generated_at": timezone.now().isoformat(),
             "window_hours": hours,
@@ -130,7 +137,9 @@ class Command(BaseCommand):
             "since_pidfile_cutoff": pidfile_cutoff.isoformat() if pidfile_cutoff else None,
             "queue_depth": self._queue_depth(queue),
             "workers": self._worker_snapshot(),
-            "task_stats": self._task_stats(task_name, hours),
+            "task_stats": task_stats,
+            "oldest_queued": self._oldest_queued(task_name),
+            "inflight_estimate": self._inflight_estimate(task_stats),
             "slow_tasks": self._slow_tasks(task_name, hours, slow_threshold),
             "hang_signature": self._hang_signature(
                 task_name, slow_threshold, hang_max_age_hours, pidfile_cutoff
@@ -222,6 +231,61 @@ class Command(BaseCommand):
             "started_still": counts["started"],
             "revoked": counts["revoked"],
             "queued": counts["queued"],
+        }
+
+    def _oldest_queued(self, task_name):
+        """
+        Session 1161 (A): age of the oldest CeleryTaskEvent row with
+        status=QUEUED for this task_name. A growing oldest-age means
+        the broker is accepting tasks faster than workers are picking
+        them up — independent of total depth. Returns None when no
+        queued rows exist.
+
+        Not bounded by the window because a queued row that's been
+        sitting for hours is exactly the signal we want to surface,
+        even if it predates the lookback.
+        """
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+        except Exception as exc:
+            return {"error": f"CeleryTaskEvent import failed: {exc}"}
+
+        row = (
+            CeleryTaskEvent.objects.filter(task_name=task_name, status="QUEUED")
+            .order_by("started_at")
+            .first()
+        )
+        if row is None:
+            return {"present": False, "age_seconds": None, "started_at": None}
+        return {
+            "present": True,
+            "task_id": row.task_id,
+            "age_seconds": (timezone.now() - row.started_at).total_seconds(),
+            "started_at": row.started_at.isoformat(),
+        }
+
+    def _inflight_estimate(self, task_stats):
+        """
+        Session 1161 (A): received-minus-finished delta over the window.
+        Implemented as `total − (success + failure + revoked)` from the
+        already-aggregated counts so we don't re-query. Equivalent to
+        `started_still + queued` over the window plus any row that hit a
+        status outside the five known states. Used to make queue-depth
+        alarms less flappy: a single STARTED task that ran 90s shouldn't
+        trip the same alarm as a real backlog.
+        """
+        if "error" in task_stats:
+            return {"error": task_stats["error"]}
+        total = task_stats.get("total", 0) or 0
+        finished = (
+            (task_stats.get("success", 0) or 0)
+            + (task_stats.get("failure", 0) or 0)
+            + (task_stats.get("revoked", 0) or 0)
+        )
+        return {
+            "total": total,
+            "finished": finished,
+            "delta": total - finished,
         }
 
     def _slow_tasks(self, task_name, hours, slow_threshold):
@@ -340,6 +404,18 @@ class Command(BaseCommand):
         if isinstance(workers, dict) and workers.get("count", 0) == 0:
             flags.append("no celery workers responded to inspect — worker outage?")
 
+        # Session 1161 (A): advisory-only — flag a stale-queued row that's
+        # been sitting longer than slow_threshold. Threshold tuning (whether
+        # this should also escalate OK→WARN) is deferred to item 3d after
+        # observation; this surfaces the signal without changing existing
+        # OK/WARN/CRIT semantics.
+        oldest = report.get("oldest_queued") or {}
+        if oldest.get("present") and (oldest.get("age_seconds") or 0) >= report["slow_threshold_seconds"]:
+            flags.append(
+                f"oldest queued row is {oldest['age_seconds']:.0f}s old "
+                f"(> slow_threshold={report['slow_threshold_seconds']}s) — workers may be lagging"
+            )
+
     # ---- Status thresholds (Rigby's session-1160 watch-window proposal) ----
     #
     # Important: slow_tasks (already-completed) does NOT trip status. A task
@@ -451,6 +527,27 @@ class Command(BaseCommand):
                 f"started_still={stats['started_still']} "
                 f"revoked={stats['revoked']}"
             )
+
+        inflight = report.get("inflight_estimate") or {}
+        if "error" in inflight:
+            write(f"inflight:     error — {inflight['error']}")
+        else:
+            write(
+                "inflight:     "
+                f"recv−finished={inflight.get('delta', 0)} "
+                f"(total={inflight.get('total', 0)} finished={inflight.get('finished', 0)})"
+            )
+
+        oldest_q = report.get("oldest_queued") or {}
+        if "error" in oldest_q:
+            write(f"oldest queued: error — {oldest_q['error']}")
+        elif oldest_q.get("present"):
+            write(
+                f"oldest queued: age={oldest_q['age_seconds']:.0f}s "
+                f"started_at={oldest_q['started_at']}"
+            )
+        else:
+            write("oldest queued: none — queue clear")
 
         slow = report["slow_tasks"]
         if slow:
