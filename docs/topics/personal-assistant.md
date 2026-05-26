@@ -3,14 +3,14 @@
 
 # Personal Assistant (PA) System
 
-The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** The LLM now sees **106 tool schemas** and **171 registered handlers**, enabling multi-tool turns and natural follow-ups. The current runtime inventory is the source of truth for counts. Session 1100: `run_agent` expanded to 77 agents across 12 domains; added `cockpit_tool` (Celery ops) and `narrative_tool` (drift analysis); expanded intelligence/work/content/governance gateways. Session 1035-W2: added proactive_tool, distribution_tool, calendar_tool, experiment_tool, podcast_tool, campaign_tool, audit_tool, conceptforge_tool, profile_tool, self_awareness_tool, ats_tool.
+The PA is the platform's conversational interface — a single `UnifiedPAEntrypoint` that handles all user queries. **Session 1036: Replaced keyword routing with GPT-5.2 function calling.** **Current runtime counts (PLATFORM_INVENTORY 2026-05-25): 104 tool schemas + 169 registered handlers; 8 enrichment services.** (Earlier snapshots showed 106 / 171; PLATFORM_INVENTORY is authoritative per `DOC_LIFECYCLE.md` §2c.) Function calling enables multi-tool turns and natural follow-ups. Session 1100: `run_agent` expanded to 77 agents across 12 domains; added `cockpit_tool` (Celery ops) and `narrative_tool` (drift analysis); expanded intelligence/work/content/governance gateways. Session 1035-W2: added proactive_tool, distribution_tool, calendar_tool, experiment_tool, podcast_tool, campaign_tool, audit_tool, conceptforge_tool, profile_tool, self_awareness_tool, ats_tool. Session 1142: added `search_docs` PA tool + `threading.Lock` on `get_unified_pa()`.
 
 ## Architecture
 
-Three files handle everything:
+Three files handle everything (counts per PLATFORM_INVENTORY 2026-05-25):
 - `core/services/unified_pa_entrypoint.py` — Agentic loop, context building, enrichment orchestration
-- `core/services/tool_dispatcher.py` — 171 tool handlers with guaranteed structured responses (ToolResult)
-- `core/services/pa_tool_schemas.py` — 101 OpenAI function-calling tool schemas + enrichment map
+- `core/services/tool_dispatcher.py` — **169 tool handlers** with guaranteed structured responses (ToolResult)
+- `core/services/pa_tool_schemas.py` — **104 OpenAI function-calling tool schemas** + enrichment map
 
 Rigby now has explicit `global` and `workspace` modes. Workspace mode activates only from explicit workspace context (`workspace_id`, `AssistantProfile.workspace`, or workspace-aware UI context). Do not infer workspace scope from the message text alone.
 
