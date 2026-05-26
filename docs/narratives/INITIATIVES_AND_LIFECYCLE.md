@@ -15,7 +15,7 @@ companion_docs:
   - docs/DREAM_INITIATIVE_WORKFLOW.md
   - docs/PLATFORM_INVENTORY.md
   - docs/narratives/EDITING_GUARDRAILS.md
-provenance_confidence: HIGH (anchored to code paths + PLATFORM_INVENTORY 2026-05-26 + named session handoffs + 23 prior session handoffs)
+provenance_confidence: HIGH (anchored to code paths + PLATFORM_INVENTORY 2026-05-26 + named session handoffs enumerated in §7 Source index)
 provenance_note: Companion to SIGNAL_INTELLIGENCE (batch C) — that narrative covers the signal → cluster → topic → HiveMind → Initiative arc (the *upstream* creation path). This narrative covers the Initiative entity itself, the 5-status state machine, the 5-stage execution pipeline, every NON-signal creation path (Dream materialization / Decision conversion / PA tool / agent-initiated / management command), lifecycle (closure / archival / ON_HOLD), and the operator surface (PA work_tool actions + 18+ URL routes). Counts anchored to PLATFORM_INVENTORY 2026-05-26 (git HEAD `dc027f4f`). Status is "draft pending Rigby review" per Session 1124 co-authored doc pattern. Naming "AND_LIFECYCLE" reflects that the entity + state machine + 5-stage pipeline + closure mechanics are the focus.
 ---
 
@@ -57,8 +57,10 @@ An Initiative is the platform's unit of multi-stage work. It
 carries:
 
 1. **Identity + strategic metadata** — name, description,
-   `purpose` (revenue / stability / learning / expansion /
-   maintenance), `program` (10 program enums), priority inputs
+   `purpose` (canonical enum at the `Purpose` field in
+   `core/models_document_registry.py`), `program` (canonical
+   enum at the `Program` field; treat the model as the source
+   of truth), priority inputs
    (impact, urgency, confidence, revenue_potential), and an
    origin trace (signal_cluster + auto_topic FKs for
    signal-driven, source_decision_id for decision-converted,
@@ -178,17 +180,24 @@ fields (`approved_by`, `approved_at`, `rejection_reason`), and
 the Session 914.3 drift-detection fields (`drift_score`,
 `similarity_score`, `drift_flagged`, `drift_override`).
 
-The Session 916 hard invariant: a stage **cannot be marked
-APPROVED without `document` set**. Enforced both in `clean()`
-and in `save()`. The reason: a prior bug-class let agents
+The Session 916 hard invariant: a stage **should not** reach
+APPROVED without `document` set, enforced in both `clean()`
+and `save()`. The reason: a prior bug-class let agents
 "approve" stages without producing the document, leaving the
 pipeline with phantom-approved stages no human ever saw.
+**If you observe an APPROVED stage with no document FK**, the
+enforcement was bypassed — check for direct `update()` calls
+that skip `save()`, recent migrations that altered the
+constraint, or shell-level data fixes.
 
-### Milestone 3 — Stage names + canonical mapping
+### Milestone 3 — Stage names + the operator mental model
 
-**Code anchor:** `STAGE_NAMES` dict at `core/models_document_registry.py:1230-1235`.
+**Code anchor:** `STAGE_NAMES` dict at `core/models_document_registry.py:1230-1235` — treat the dict as canonical for the stage names themselves.
 
-The 5 stages and the questions they answer:
+The operator mental model — the question each stage answers
+— is stable framing, useful for reasoning about *what
+content* each stage document carries. (The stage names
+themselves live in code; treat `STAGE_NAMES` as canonical.)
 
 1. **Research Brief** — *Why does this matter?*
 2. **Prototype Plan** — *How would we build this?*
@@ -196,8 +205,7 @@ The 5 stages and the questions they answer:
 4. **Technical Design** — *Exactly what to build*
 5. **Pilot Execution** — *What happened and what did we learn?*
 
-These question framings are the operator mental model. The
-agent that generates the stage document
+The agent that generates the stage document
 (`TechnicalDocumentAgent` for most stages) uses the framing
 to scope what each document contains.
 
@@ -242,10 +250,12 @@ The pipeline doesn't self-advance.
 
 Dreams are a real model. Agents dream continuously when idle
 (originally Session 247, un-deprecated Session 366). Each
-dream carries five scores (vividness, creativity,
-actionability, relevance, composite) and an origin enum
-(serious / speculative / probe / joke) that weights its
-promotion likelihood.
+dream carries scoring fields (see the `AgentDream` model in
+`core/models_unified_system.py` for the canonical field set —
+vividness / creativity / actionability / relevance plus a
+composite) and an origin enum (canonical values on the
+`origin` field of the same model) that weights its promotion
+likelihood.
 
 The materialization pipeline:
 
@@ -255,9 +265,10 @@ The materialization pipeline:
    (`core/tasks_initiatives.py:973-1225`) calculates composite
    scores.
 3. **Promote-to-Decision** — dreams above the promotion
-   threshold (operator-tunable; defaults to roughly 0.85)
-   go to the Boardroom as `AgentDecisionSummary` rows for
-   human review.
+   threshold (operator-tunable; see the threshold constant /
+   config key in `core/tasks_initiatives.py` — treat the code
+   as canonical for the value) go to the Boardroom as
+   `AgentDecisionSummary` rows for human review.
 4. **Approval** — if the Boardroom decision approves the
    dream, `promote_to_initiative()` runs.
 5. **Materialize** — creates an `Initiative` row in `TRIAGE`
@@ -485,11 +496,15 @@ As-of PLATFORM_INVENTORY 2026-05-26 (git HEAD `dc027f4f`):
 - **Cleanup tasks:** `cleanup_junk_initiatives` (daily 04:00),
   `cleanup_stale_dreams` (daily, separate time). Both via
   `app.conf.beat_schedule` in `core/celery.py`.
-- **Operator surface (PA):** `work_tool` exposes ~11+ initiative
-  actions (handler `_handle_initiative` in
-  `td_handlers_content.py`).
-- **URL surface:** 18+ initiative-related routes in
-  `core/urls.py` (treat the file as canonical).
+- **Operator surface (PA):** `work_tool` exposes the
+  initiative actions enumerated in §3M10 — handler
+  `_handle_initiative` in `td_handlers_content.py:1417-2388`.
+  Treat the handler block as canonical.
+- **URL surface:** initiative-related routes live in
+  `core/urls.py:3230-3257` + the platform decision-summary
+  endpoint at `core/urls.py:4513`. Reproduce the count with
+  `rg "initiative" core/urls.py | wc -l`. Treat `urls.py` as
+  canonical.
 - **Linked models:** `Initiative`, `InitiativeStage`,
   `InitiativeActionItem`, `AgentDream`, `Deliverable`
   (via FK back).
@@ -502,22 +517,24 @@ Each item below is a *gap* in the implementation or in the
 docs, flagged per EDITING_GUARDRAILS rule 5 ("should not; if
 it does, check ___").
 
-### 6.1 No automatic completion path
+### 6.1 No automatic completion path — deliberate
 
 As-of 2026-05-26, there is no code path that marks an
 Initiative `COMPLETED` based on all 5 stages reaching
-APPROVED. The only paths to `COMPLETED` are manual status
-updates (via PA `work_tool` or admin). **If you observe an
-Initiative auto-transition to COMPLETED**, that's the path
-you should look for in code — it doesn't exist now and adding
-it would be a real change worth a separate PR.
+APPROVED. **This is by design** (Rigby's Session 1162
+verdict): completion is a governance / "ship-or-stop"
+decision; auto-completion risks false-positive closure (e.g.,
+stages auto-approved with `auto_approve=True`, or a backfill
+run cascading into closure). Founder intent stays in the loop.
 
-**Possible deliberation:** is the absence intentional (Chris
-wants to keep humans-in-the-loop on closure) or an oversight
-(no one ever wrote the "all stages approved → mark complete"
-hook)? Rigby's call.
+**Recommended closure mechanism:** Completion is a human
+action via PA `work_tool initiative_update_status` (action
+target `COMPLETED`); there is no implied completion from
+stage approvals. **If you observe an Initiative auto-transition
+to COMPLETED**, look for a path that doesn't exist now — its
+appearance would be drift worth filing.
 
-### 6.2 No TRIAGE timeout / auto-cleanup
+### 6.2 No TRIAGE timeout / auto-cleanup — real gap (operational policy)
 
 A TRIAGE initiative not promoted to ACTIVE will sit in
 TRIAGE indefinitely. `cleanup_junk_initiatives` handles
@@ -525,41 +542,70 @@ junk-named items but doesn't time-bound TRIAGE specifically.
 A TRIAGE initiative with a real-looking name could persist
 for months.
 
-**Possible deliberation:** add a Session-N task that archives
-TRIAGE items older than N days, or document why the absence
-is correct? Rigby's call.
+Rigby's Session 1162 verdict: **gap, not bug** — the
+architecture allowing indefinite TRIAGE is fine; what's
+missing is a *policy* for stale TRIAGE. Recommended fix
+shape (conservative — don't add a blunt timeout):
+- **Opt-in archive rule:** TRIAGE older than N days *only
+  if* no action items + no stage docs + low confidence
+  scores → ARCHIVED.
+- **OR review queue surfacing:** TRIAGE older than N days
+  becomes a `HumanAttentionItem` (narrative E governance
+  surface) prompting human triage.
 
-### 6.3 No direct manual UI form for Initiative creation
+Either change is a real follow-on PR worth scoping.
+
+### 6.3 No direct manual UI form for Initiative creation — deliberate / acceptable
 
 All 8 creation paths are programmatic — PA tool, mgmt command,
-Dream/Decision/Signal materialization, agent-initiated. There
-is no plain "New Initiative" form route in the frontend.
-**If an operator says "I can't find the create-initiative
-button"**, the answer is "ask Rigby" or "use the mgmt command"
-— there isn't one to find.
+Dream/Decision/Signal materialization, agent-initiated. As-of
+2026-05-26, there is no plain "New Initiative" form route in
+the frontend. Rigby's verdict: **acceptable given the
+operator contract** — the platform's human interface is
+Rigby + the tool surface; a UI form is nice-to-have, not
+required.
 
-### 6.4 `advance_initiative_pipeline` is not beat-scheduled
+**If an operator says "I can't find the create-initiative
+button":** the answer is `work_tool initiative_create` via
+Rigby, decision conversion via the Boardroom, dream promotion,
+or `python manage.py extract_initiatives_from_survey`. A
+dedicated UI form would be a roadmap item, not a drift.
+
+### 6.4 `advance_initiative_pipeline` is not beat-scheduled — deliberate (safety tradeoff)
 
 This is named throughout the code as the pipeline-advancing
-task, but it only runs on demand. **If you observe an ACTIVE
-initiative whose `current_stage` hasn't moved in days**, check
-whether anyone triggered advance — they likely didn't.
+task, but it only runs on demand. **By design** (Rigby's
+Session 1162 verdict): always-on beat scheduling for an
+expensive document-generating task with side effects (LLM
+calls, content writes) would be risky. On-demand is coherent.
 
-**Possible deliberation:** is on-demand-only the right
-shape (the task is expensive and shouldn't fire continuously),
-or should there be a low-frequency beat entry (every 6h?
-daily?) for safety? Rigby's call.
+**Preferred operator mechanism:** trigger advance via
+`POST /api/initiatives/trigger/` or via PA `work_tool` (where
+surfaced). Beat does not advance automatically. **If you
+observe an ACTIVE initiative whose `current_stage` hasn't
+moved in days**, the first diagnostic question is "did anyone
+trigger advance?" — usually the answer is no.
 
-### 6.5 Stage-doc generator can lag the model
+### 6.5 Stage-doc generator can lag the model — known operational risk
 
 `TechnicalDocumentAgent` is the default generator for stage
 documents (Session 880). If the agent fails or the platform
 content-deliberation pipeline (narrative B) is paused, stages
 get stuck at `DRAFT` without a `document` FK set — at which
-point the Session 916 invariant blocks approval. The fix is
-to invoke `advance_initiative_pipeline` again (which will
-retry the generation) or to backfill documents via the
-`/api/initiatives/backfill-documents/` endpoint (Session 915).
+point the Session 916 invariant blocks approval. Rigby's
+Session 1162 verdict: **architecture is fine, this is a
+resilience / observability gap**, not a wrong-design issue.
+
+**Single diagnostic path:** check content pipeline health
+first (narrative B), then initiative subsystem (this doc).
+The reverse order leads to chasing the wrong subsystem.
+
+**Tool/API-reachable remediation:**
+- Re-invoke `advance_initiative_pipeline` (retries generation):
+  `POST /api/initiatives/trigger/`.
+- Backfill stage documents directly:
+  `POST /api/initiatives/backfill-documents/` (Session 915).
+
 **If you see Stage 1 stuck for many initiatives at once**, the
 upstream is probably the content pipeline, not the initiative
 subsystem.
