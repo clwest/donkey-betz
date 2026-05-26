@@ -59,12 +59,14 @@ maps_to_patents:
 ## §1 What this is
 
 The platform's autopilot has a long-standing problem: static
-policy parameters age badly. A timeout threshold of 3 that
-worked when there were 50 agents may be wrong with 218 agents.
-A budget soft-limit of 70% that fit one cost regime may need to
-move when LLM provider prices shift. Manual tuning is slow and
-requires operational knowledge that doesn't scale across
-hundreds of knobs.
+policy parameters age badly. A timeout threshold (e.g., the
+agent execution timeout) tuned for one fleet size may be
+wrong once the fleet grows or shrinks — agent count drifts
+over time; see PLATFORM_INVENTORY for current values. A budget
+soft-limit (e.g., 70% of a monthly cap) that fit one cost
+regime may need to move when LLM provider prices shift.
+Manual tuning is slow and requires operational knowledge that
+doesn't scale across hundreds of knobs.
 
 The self-tuning subsystem closes that loop. Three components
 collaborate against a shared parameter store:
@@ -92,10 +94,14 @@ collaborate against a shared parameter store:
 The substrate that makes this work is `AutopilotConfig`'s
 two-layer resolution: class-level defaults plus runtime
 overrides in `SystemConfiguration` with the
-`autopilot_tuning:` prefix. Every parameter can be tuned at
-runtime without code deployment, and every change has an
-`AutopilotAction` audit record plus a `HumanAttentionItem` for
-governance visibility.
+`autopilot_tuning:` prefix. Most autopilot parameters can be
+tuned at runtime without code deployment (the anti-flap +
+hold-time meta-policies are deliberate exceptions, see §6.5),
+and a successful change writes both an `AutopilotAction`
+audit record and a `HumanAttentionItem` for governance
+visibility. **If you observe a parameter change without
+either record**, check the writer's call site — that's the
+audit gap.
 
 **The narrative-shift vs Disclosure L:** the patent disclosure
 (March 16, 2026) names class paths in `core.py` that have
@@ -111,7 +117,7 @@ paths throughout.
 
 | Term | Definition |
 |---|---|
-| **ops_autopilot module** | The Django service package at `core/services/ops_autopilot/`. 12 files as-of 2026-05-26 (`__init__.py`, `budget.py`, `config.py`, `core.py`, `engagement.py`, `experiment.py`, `governance.py`, `impact.py`, `intelligence.py`, `remediation.py`, `revenue.py`, `verification.py`). Total ~17.7k lines. This narrative covers the policy-tuning triangle inside it; the rest is out of scope. |
+| **ops_autopilot module** | The Django service package at `core/services/ops_autopilot/`. As-of 2026-05-26, contains 12 Python files (reproduce: `find core/services/ops_autopilot -maxdepth 1 -name "*.py" \| wc -l`). Total LOC is in the same ballpark order as the rest of `core/services/` — treat the directory as canonical for the current file list + sizes. This narrative covers the policy-tuning triangle inside it; the rest is out of scope. |
 | **`PolicyOptimizer`** | The self-tuning component (`core/services/ops_autopilot/governance.py:702`). Observes `AutopilotAction` history, recommends parameter adjustments, applies them at rate. Rate limits live on `AutopilotConfig`. |
 | **`ExperimentEngine`** | The A/B testing component (`core/services/ops_autopilot/experiment.py:236`). Creates `PolicyExperiment` rows, runs baseline-vs-treatment evaluations each cycle, auto-promotes / auto-rolls-back based on metric thresholds. |
 | **`PolicyArbitrator`** | The conflict resolution component (`core/services/ops_autopilot/governance.py:1118`). Runs LAST in each autopilot cycle. Detects multi-policy writes to the same key, resolves via knob registry, enforces anti-flap + hold-time, snapshots `FinalAppliedOverrides`. |
@@ -149,11 +155,15 @@ class attribute directly. Instead, the resolver:
 3. Returns the override, OR falls through to the class default
    if no override is set.
 
-The implication: every autopilot parameter is *runtime-tunable*
-without a code deploy. Set
+The implication: most autopilot parameters are *runtime-tunable*
+without a code deploy (the anti-flap and hold-time meta-policies
+are deliberate exceptions; see §6.5). Example: set
 `SystemConfiguration.objects.update_or_create(key='autopilot_tuning:TUNING_INTERVAL_HOURS', defaults={'value': '12'})`
 and the next `AutopilotConfig.get('TUNING_INTERVAL_HOURS')`
-call returns `12` instead of the class default.
+call returns `'12'` (coerced to the class default's type)
+instead of the class default. The literal `'12'` here is
+illustrative — the canonical interval lives in
+`core/services/ops_autopilot/config.py`.
 
 **This is what `PolicyOptimizer` writes to.** The optimizer
 doesn't change Python source code; it writes
@@ -166,8 +176,11 @@ namespace, and the next config-read picks them up.
 
 The self-tuning loop. The optimizer:
 
-1. **Observes** — queries the last 7+ days of `AutopilotAction`
-   records, grouped by policy.
+1. **Observes** — queries a recent lookback window of
+   `AutopilotAction` records, grouped by policy. The window
+   constant lives in the optimizer implementation in
+   `core/services/ops_autopilot/governance.py`; treat the
+   code as canonical.
 2. **Computes** — per-policy effectiveness metrics (false
    positive rate, average time to recovery, before-vs-after
    system health impact).
@@ -217,11 +230,16 @@ through controlled A/B trials.
 | Rollback | If treatment regresses past the rollback threshold, revert to baseline_params. Status → `rolled_back`. |
 | Expiry | If neither threshold hit within the max-duration window, revert to baseline. Status → `expired`. |
 
+The status values in this table are conceptual phases; the
+canonical enum is on the `PolicyExperiment` model — treat
+`core/models_policy_experiment.py` as the source of truth.
+
 The promotion / rollback / expiry thresholds + the max-duration
-window are config constants (treat
-`core/services/ops_autopilot/experiment.py` as canonical for
-current values; the disclosure cites 10% improvement / 5%
-regression / 7-day window as historical values).
+window are config constants. Disclosure L (March 16, 2026)
+cites historical values of 10% improvement / 5% regression /
+7-day window; current values live in
+`core/services/ops_autopilot/experiment.py` — treat the code
+as canonical.
 
 **Supported parameter classes** (from Disclosure L): portfolio
 allocator (budget allocation per desk), ROI throttle (low-QROI
@@ -231,15 +249,24 @@ any parameter where `IQROI` can be measured per-variant; the
 support list isn't a hard restriction.
 
 **Every state transition emits both:** an `AutopilotAction`
-row + a `HumanAttentionItem` for governance visibility. A
-promotion that revealed a regression after promotion is itself
-auditable — there's no "silent" experiment outcome.
+row + a `HumanAttentionItem` for governance visibility.
+Outcomes **should not** be silent; if you see a promotion or
+rollback in the audit trail without both records, check the
+experiment lifecycle handler in
+`core/services/ops_autopilot/experiment.py` for any path that
+bypasses the dual-write — that would be a regression worth
+filing.
 
 ### Milestone 4 — `PolicyArbitrator` (conflict resolution)
 
 **Code anchor:** Class at `core/services/ops_autopilot/governance.py:1118`. Cycle wrapper at `core/services/ops_autopilot/core.py:2643-2706`.
 
-The cycle's gatekeeper. Three independent mechanisms run
+The cycle's gatekeeper. **By design** the arbitrator is
+intended to run last in every autopilot cycle so it can see
+all prior writes. **If you observe arbitrator output that
+disagrees with applied values**, check `core.py` for the
+cycle order — has a new policy been inserted after the
+arbitrator? See §3M5. Three independent mechanisms run
 inside the arbitrator, in order:
 
 **Mechanism 1: Priority-based resolution.** The arbitrator
@@ -260,8 +287,10 @@ fires:
 more than N times in the rolling window, the arbitrator locks
 the knob at its current value and creates a `HumanAttentionItem`
 ("Flapping detected on `{knob}`"). Threshold + window are
-config constants — treat governance.py as canonical for current
-values; the disclosure cites 3+ changes in 24h.
+config constants. Disclosure L (March 16, 2026) cites historical
+values of 3+ changes in 24h; current values live in
+`core/services/ops_autopilot/governance.py` — treat the code
+as canonical.
 
 **Mechanism 3: Hold-time enforcement.** Each knob has a
 minimum interval since its last change. If a policy tries to
@@ -286,7 +315,7 @@ joins `FinalAppliedOverrides` on `cycle_ts` and reads
 
 ### Milestone 5 — The feedback loop is closed (cycle order matters)
 
-**Code anchor:** The autopilot cycle entry in `core/services/ops_autopilot/core.py`. Cycle structure: budget → engagement → impact → intelligence → remediation → revenue → policy-optimizer → experiment-engine → arbitrator → snapshot.
+**Code anchor:** The autopilot cycle entry in `core/services/ops_autopilot/core.py`. As-of 2026-05-26, the cycle structure runs roughly: budget → engagement → impact → intelligence → remediation → revenue → policy-optimizer → experiment-engine → arbitrator → snapshot. Treat the cycle entry function in `core.py` as canonical for the current order.
 
 The order is load-bearing. The arbitrator runs LAST because:
 
@@ -387,12 +416,14 @@ across all of it.
 
 As-of PLATFORM_INVENTORY 2026-05-26 (git HEAD `373148c7`):
 
-- **Module structure:** 12 files in `core/services/ops_autopilot/`.
-  This narrative covers the policy triangle (governance.py +
-  experiment.py + config.py + relevant core.py wrappers); the
-  other 8 files (budget / engagement / impact / intelligence /
-  remediation / revenue / verification / `__init__`) are out of
-  scope — see §8 for pointers.
+- **Module structure:** Python files in
+  `core/services/ops_autopilot/` (reproduce:
+  `find core/services/ops_autopilot -maxdepth 1 -name "*.py"`).
+  This narrative covers the policy triangle (`governance.py` +
+  `experiment.py` + `config.py` + relevant `core.py` wrappers);
+  the other files (`budget` / `engagement` / `impact` /
+  `intelligence` / `remediation` / `revenue` / `verification` /
+  `__init__`) are out of scope — see §8 for pointers.
 - **Class locations:** `PolicyOptimizer` and `PolicyArbitrator`
   in `governance.py`; `ExperimentEngine` in `experiment.py`;
   `AutopilotConfig` in `config.py`. Cycle entry wrappers in
@@ -455,26 +486,30 @@ snapshot for both variants, then read impact.py's IQROI
 implementation, then check whether the metric was correctly
 populated for the experiment window.
 
-### 6.3 The other 8 ops_autopilot files have no narrative
+### 6.3 The other ops_autopilot files have no narrative
 
 This narrative scopes itself to the policy triangle. The
-other files in `core/services/ops_autopilot/`:
+other files in `core/services/ops_autopilot/` (treat the
+directory listing as canonical for the file set):
 
-- `budget.py` (~1.4k lines) — budget enforcement (separate
-  patent disclosure: J + K).
-- `engagement.py` (~1.0k) — engagement scoring.
-- `impact.py` (~1.8k) — impact + IQROI calculation.
-- `intelligence.py` (~2.8k) — intelligence-routing decisions.
-- `remediation.py` (~1.7k) — remediation playbooks.
-- `revenue.py` (~1.8k) — revenue attribution.
-- `verification.py` (~750) — verification gates.
+- `budget.py` — budget enforcement (separate patent
+  disclosures J + K).
+- `engagement.py` — engagement scoring.
+- `impact.py` — impact + IQROI calculation.
+- `intelligence.py` — intelligence-routing decisions.
+- `remediation.py` — remediation playbooks.
+- `revenue.py` — revenue attribution.
+- `verification.py` — verification gates.
 
-Each is its own narrative candidate. Rigby's call on whether
-to write a single `OPS_AUTOPILOT.md` umbrella narrative or
-expand each into its own batch entry. For now, anyone reading
-into those modules should treat them as out-of-scope here.
+Rigby's Session 1162 verdict: scope-out decision is correct;
+each module is its own narrative candidate. **Recommended
+shape** (per Rigby): write separate per-module narratives as
+needed rather than one umbrella `OPS_AUTOPILOT.md`. A thin
+`OPS_AUTOPILOT_OVERVIEW.md` index pointing to each could come
+later — but not in place of the deep mechanics for each
+module.
 
-### 6.4 `FinalAppliedOverrides` query patterns aren't documented
+### 6.4 `FinalAppliedOverrides` query patterns aren't documented — file as a small ticket
 
 The model exists; the per-cycle snapshots are written; but
 there's no documented PA tool action or admin recipe for
@@ -484,8 +519,13 @@ ergonomics are unbuilt.
 
 **If you need to debug a past configuration:**
 `FinalAppliedOverrides.objects.filter(cycle_ts__lte=t).order_by('-cycle_ts').first()`
-returns the snapshot active at time T. Worth surfacing as a
-PA tool action.
+returns the snapshot active at time T.
+
+Rigby's Session 1162 verdict: **keep as Open Question here
+AND file as a small ticket.** A `ops_tool` / `autopilot_tool`
+action like `final_overrides_at(time)` (or "latest override
+snapshot") would eliminate the ad-hoc ORM recipe and make the
+system auditable from the tool surface.
 
 ### 6.5 Hold-time + flap-detection constants live in code, not config
 
