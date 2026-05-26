@@ -8,7 +8,7 @@ last_updated: 2026-03-16
 originating_session: pre-session-tracking (March 16, 2026 batch)
 inventor: Chris West (DonkeyKing)
 provenance_confidence: HIGH
-provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass. Operator-facing narrative `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` shipped Session 1162 (PR #2280); §13 addendum appended Session 1163 to record the as-built path drift between disclosure date and code state. Disclosure body §1–§12 unchanged from original draft.
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass. Operator-facing narrative `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` shipped Session 1162 (PR #2280); §13 addendum appended Session 1163 morning to record class-path drift; §14 addendum appended Session 1163 afternoon to record a deeper mechanism drift (the `FinalAppliedOverrides` model in §5 Component 4 is aspirational — as-built is a single-row overwrite in `SystemConfiguration`). Counsel call queued in §14.3. Disclosure body §1–§12 unchanged from original draft.
 maps_to_narratives:
   - docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md
 companion_docs:
@@ -432,3 +432,96 @@ The mechanism §5 describes (rate-limited apply, A/B promotion/rollback, three-m
 ### 13.5 Future drift policy
 
 For future code reorganizations affecting the §5 paths cited above, the same addendum-only pattern applies: append a new sub-section to §13 (`13.6`, `13.7`, …) with the new canonical locations and the commit SHA that moved them. Do not edit §5 inline. The operator-facing narrative (`docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md`) is the place to track current paths as living documentation; this disclosure body is the frozen IP artifact.
+
+---
+
+## 14. Addendum — `FinalAppliedOverrides` mechanism drift (as-of 2026-05-26)
+
+**Status:** Append-only addendum. Append-only convention preserved from §13. Surfaced by Session 1163 recon while implementing the §6.4 ergonomic follow-on from `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md`. Captures a substantive divergence between the disclosure's as-built §5 mechanism and the production code state. The §5 description is the original mechanism intent; this addendum records what is actually built today and the planned correct-fix path.
+
+### 14.1 What §5 Component 4 describes
+
+The disclosure §5 Component 4 ("PolicyArbitrator — Conflict Resolution") shows the snapshot mechanism as:
+
+```python
+FinalAppliedOverrides.objects.create(
+    cycle_id=uuid,
+    cycle_ts=now,
+    knob_count=len(active_overrides),
+    applied_values={key: value for all autopilot_ keys},
+)
+```
+
+This implies a Django model `FinalAppliedOverrides` with at least `cycle_id`, `cycle_ts`, `knob_count`, and `applied_values` fields, with a NEW row appended per cycle. The novelty hook §6(e) and the operational benefit "Time-travel debugging" in §8 both depend on per-cycle history existing.
+
+### 14.2 What the code actually does (2026-05-26, HEAD `9bf87f4e`)
+
+No Django model named `FinalAppliedOverrides` exists in the codebase. Verify: `grep -rn "^class FinalAppliedOverrides" core/` returns zero matches.
+
+The snapshot is written by `PolicyArbitrator.record_overrides_snapshot()` (currently at `core/services/ops_autopilot/governance.py:1616` after the Session 1163 follow-on `get_latest_snapshot()` method was inserted; pre-Session-1163 the writer was at `governance.py:1525`). The writer uses `update_or_create` on a **single** `SystemConfiguration` row:
+
+```python
+SystemConfiguration.objects.update_or_create(
+    key='policy_arbitrator_snapshot',
+    defaults={'value': json.dumps({
+        'cycle_id': str(cycle_id),
+        'ts': now.isoformat(),
+        'knobs': snapshot,
+        'knob_count': len(snapshot),
+    })},
+)
+```
+
+Each cycle overwrites the previous snapshot. There is no `cycle_ts` column to query against, no per-cycle row history, and therefore **no time-travel query is possible** against the as-built mechanism. The novelty hook §6(e) and operational benefit "Time-travel debugging" in §8 are aspirational, not as-built.
+
+### 14.3 What this means for the claims (§10)
+
+The independent method claim §10(g) reads:
+
+> "(g) recording, at the end of each policy cycle, a snapshot of all active configuration overrides for time-series auditability."
+
+Strict reading: a single-row overwrite arguably satisfies "recording a snapshot at the end of each cycle" because each cycle does produce a new snapshot value. It does NOT satisfy "for time-series auditability" — the prior cycle's snapshot is overwritten and unrecoverable. Counsel may want to assess whether (i) the claim text needs amendment to match the as-built mechanism, or (ii) the as-built mechanism should be migrated to per-cycle storage so the claim reads accurately. **This addendum surfaces the question; it does not answer it.**
+
+### 14.4 The planned correct-fix path (B-style follow-on)
+
+The follow-on work is queued in `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` §6.4. Shape:
+
+1. Add a Django model `FinalAppliedOverrides(cycle_id UUID, cycle_ts TIMESTAMPZ indexed, knob_count INTEGER, applied_values JSONB)` with a migration.
+2. Change `PolicyArbitrator.record_overrides_snapshot()` from `SystemConfiguration.update_or_create(key='policy_arbitrator_snapshot', ...)` to `FinalAppliedOverrides.objects.create(...)`.
+3. Add a PA tool action `final_overrides_at(t)` that runs `FinalAppliedOverrides.objects.filter(cycle_ts__lte=t).order_by('-cycle_ts').first()` and returns the snapshot active at time T.
+4. Decide retention policy (Rigby's Session 1163 design Q): keep every cycle forever, or prune after N days. The arbitrator runs roughly every 10 minutes per the existing cycle structure, so unbounded retention would accumulate ~52,560 rows/year per knob set.
+5. Decide payload size policy: JSONB indexing strategy; consider compressing or storing diffs vs. full snapshots if knob counts grow.
+
+Until that work ships, the operator-visible compromise (C-style honest fix shipped Session 1163) is the `latest_overrides_snapshot` PA tool action — returns only the most recent snapshot, with an explicit `storage.mechanism` field documenting the single-row overwrite reality.
+
+### 14.5 The honest interim tool — `latest_overrides_snapshot`
+
+Shipped in the same Session 1163 PR as this addendum. `core.services.ops_autopilot.governance.PolicyArbitrator.get_latest_snapshot()` reads the single `SystemConfiguration(key='policy_arbitrator_snapshot')` row, returns the parsed JSON payload, and includes an explicit `storage` block naming the as-built mechanism:
+
+```json
+{
+  "found": true,
+  "cycle_id": "…",
+  "ts": "2026-…",
+  "row_updated_at": "2026-…",
+  "knob_count": N,
+  "knobs": {…},
+  "storage": {
+    "model": "SystemConfiguration",
+    "key": "policy_arbitrator_snapshot",
+    "mechanism": "single-row overwrite per cycle (no per-cycle history)"
+  },
+  "note": "Per-cycle history is not stored; time-travel queries are not supported by the current implementation. row_updated_at carries the database row mtime so callers can answer \"is this fresh?\" without inferring from cycle cadence. See Disclosure L §14 addendum for the drift record."
+}
+```
+
+The `row_updated_at` field (added during Session 1163 review per Rigby's nit) lets callers answer "is this snapshot fresh?" without having to know the cycle cadence. `ts` is the timestamp the arbitrator captured into the JSON payload (from `now.isoformat()` inside `record_overrides_snapshot`); `row_updated_at` is the database row's `updated_at` (Django auto-managed). The two are usually milliseconds apart; if they ever diverge significantly that itself is a debugging signal.
+
+The tool exists so operators can answer "what's configured right now?" without an ORM recipe. It does NOT pretend to support time-travel. The intent is C-style honest exposure that does not lock in the as-built mechanism — when §14.4 ships, the same tool can be extended to accept a `time` argument without renaming.
+
+### 14.6 What this addendum does NOT change
+
+- **No claim text changes.** §10(g) is preserved verbatim. Counsel decides whether claim amendment is needed (see §14.3).
+- **No novelty-hook changes.** §6(e) is preserved verbatim — the disclosure as filed remains the historical record.
+- **No mechanism changes to §5.** §5 Component 4 stays as the original mechanism description; §14 records the divergence.
+- **No editing of §1–§13.** Frozen-artifact convention preserved.

@@ -14,7 +14,7 @@ companion_docs:
   - docs/PLATFORM_INVENTORY.md
   - docs/narratives/EDITING_GUARDRAILS.md
 provenance_confidence: HIGH (anchored to code paths + Disclosure L patent text + PLATFORM_INVENTORY 2026-05-26 + named session handoffs)
-provenance_note: Third new narrative of Session 1162, addressing the "Disclosure L coverage gap" carried over from Session 1161 handoff. Patent Disclosure L (Self-Tuning Policy Framework, March 16, 2026) describes the subsystem but does not exist in the narrative corpus. This doc translates the disclosure into operator-facing narrative form, anchored to current code paths (NOT the Disclosure L paths — see §6.1 drift). Scope is the self-tuning + A/B experimentation + conflict arbitration triangle inside `core/services/ops_autopilot/`; the broader ops_autopilot module (budget / engagement / impact / intelligence / remediation / revenue / verification) is explicitly out of scope and pointed elsewhere. Counts anchored to PLATFORM_INVENTORY 2026-05-26 (git HEAD `373148c7`). Status is "draft pending Rigby review" per Session 1124 co-authored doc pattern.
+provenance_note: Third new narrative of Session 1162, addressing the "Disclosure L coverage gap" carried over from Session 1161 handoff. Patent Disclosure L (Self-Tuning Policy Framework, March 16, 2026) describes the subsystem but does not exist in the narrative corpus. This doc translates the disclosure into operator-facing narrative form, anchored to current code paths (NOT the Disclosure L paths — see §6.1 drift). Scope is the self-tuning + A/B experimentation + conflict arbitration triangle inside `core/services/ops_autopilot/`; the broader ops_autopilot module (budget / engagement / impact / intelligence / remediation / revenue / verification) is explicitly out of scope and pointed elsewhere. Counts anchored to PLATFORM_INVENTORY 2026-05-26 (git HEAD `373148c7`). Session 1163 update — §6.4 fully rewritten to correct a mechanism-drift error: the original §6.4 said `FinalAppliedOverrides` is a Django model with per-cycle rows and gave an invalid ORM recipe; verified 2026-05-26 there is no such model and snapshots are single-row-overwrite in `SystemConfiguration`. §2 vocabulary entry + §3 Milestone 4 also updated to point at §6.4 for the correction. The honest interim PA tool action `latest_overrides_snapshot` shipped same session.
 maps_to_patents:
   - DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md
 ---
@@ -125,7 +125,7 @@ paths throughout.
 | **`SystemConfiguration`** | The runtime parameter store (`core/models.py:411`; also visible at `core/models/system/models.py:9` — both reference the same canonical row). Generic key/value rows. The `autopilot_tuning:` prefix namespace holds the autopilot's runtime overrides. |
 | **`AutopilotAction`** | The audit trail row (`core/models_diagnostic_pipeline.py:516`). Every parameter change, experiment promotion, or rollback creates one. Carries the policy name, action type, old/new values, reason, confidence, and metrics. |
 | **`PolicyExperiment`** | The A/B experiment record (`core/models_policy_experiment.py:22`). Carries `baseline_params`, `treatment_params`, status (`active` / `promoted` / `rolled_back` / `expired`), and metric snapshots for both variants. |
-| **`FinalAppliedOverrides`** | The per-cycle snapshot model. End of each autopilot cycle, the arbitrator writes a row capturing every active `autopilot_tuning:` value at that moment. Enables time-travel debugging — "what was the system configured to do at 3:42 PM?". |
+| **`FinalAppliedOverrides`** | **(Aspirational name — see §6.4 for the Session 1163 correction.)** The patent disclosure §5 Component 4 names a per-cycle snapshot model with `cycle_id` / `cycle_ts` / `knob_count` / `applied_values` fields. As-built, no Django model with that name exists; the snapshot is stored as a single overwritten `SystemConfiguration` row keyed `policy_arbitrator_snapshot`. Time-travel debugging against the as-built mechanism is not supported. The B-style correct-fix is queued (§6.4). |
 | **`HumanAttentionItem`** | The unified governance escalation surface (`core/models_human_interface.py:20`). Every parameter change, experiment promotion, rollback, flap detection, and hold violation creates one. Surfaced via PA's `governance_tool.attention_list` and the governance UI. See narrative E. |
 | **Knob registry** | The priority-ordered map of which policies write which configuration keys, with merge strategies. Lives in code (governance.py); not a DB table. Each entry: key name, list of policies that write it, priority order, merge strategy (`priority_wins` or `max`). |
 | **IQROI** | The composite Impact-Quality-ROI metric the autopilot optimizes against. The threshold-based promotion / rollback decisions in `ExperimentEngine` are framed in terms of treatment IQROI vs baseline IQROI. The exact composition lives elsewhere in ops_autopilot/impact.py; treat that as canonical. |
@@ -300,18 +300,32 @@ within `{hold_time}` of last change." Hold times are per-knob
 and live in the knob registry.
 
 **End-of-cycle snapshot.** After all three mechanisms run,
-the arbitrator writes one `FinalAppliedOverrides` row capturing
-every active `autopilot_tuning:` override at that moment:
+the arbitrator writes a snapshot of every active
+`autopilot_tuning:` override at that moment. The payload
+contains:
 
 - `cycle_id` (UUID)
-- `cycle_ts` (timestamp)
-- `knob_count` (length of applied_values dict)
-- `applied_values` (full key-value map)
+- `ts` (ISO 8601 timestamp; the disclosure §5 names this
+  `cycle_ts` — read the writer in `governance.py` for the
+  canonical key)
+- `knob_count` (length of the knobs dict)
+- `knobs` (key → `{value, owner, priority}` dict)
 
-This is the time-travel debugging artifact. A future operator
-asking "what was the system configured to do at 14:30 UTC?"
-joins `FinalAppliedOverrides` on `cycle_ts` and reads
-`applied_values`.
+**Mechanism drift flag — see §6.4 for the Session 1163
+correction.** As-built, the snapshot is stored as a single
+overwritten `SystemConfiguration` row keyed
+`policy_arbitrator_snapshot`. Each cycle overwrites the
+previous snapshot, so there is no per-cycle history and no
+time-travel query against past configurations. The B-style
+correct-fix (per-cycle Django model + filter recipe) is
+queued in §6.4; the C-style honest interim surface
+(`latest_overrides_snapshot` PA tool action) is shipped.
+
+An operator asking "what was the system configured to do at
+14:30 UTC yesterday?" cannot get an answer against the
+current storage — only the most recent cycle's snapshot is
+available. An operator asking "what is the system configured
+to do right now?" runs the `latest_overrides_snapshot` tool.
 
 ### Milestone 5 — The feedback loop is closed (cycle order matters)
 
@@ -509,23 +523,79 @@ needed rather than one umbrella `OPS_AUTOPILOT.md`. A thin
 later — but not in place of the deep mechanics for each
 module.
 
-### 6.4 `FinalAppliedOverrides` query patterns aren't documented — file as a small ticket
+### 6.4 `FinalAppliedOverrides` is aspirational — Session 1163 correction
 
-The model exists; the per-cycle snapshots are written; but
-there's no documented PA tool action or admin recipe for
-"give me the configuration that was in effect at time T."
-The model is queryable via Django ORM but the operator
-ergonomics are unbuilt.
+**Original Session 1162 framing (preserved for context):** this
+section originally read "the model exists; per-cycle snapshots
+are written; the ergonomics are unbuilt" with an ORM recipe
+`FinalAppliedOverrides.objects.filter(cycle_ts__lte=t).order_by('-cycle_ts').first()`.
 
-**If you need to debug a past configuration:**
-`FinalAppliedOverrides.objects.filter(cycle_ts__lte=t).order_by('-cycle_ts').first()`
-returns the snapshot active at time T.
+**Session 1163 correction:** that framing is wrong. Verified
+2026-05-26 (HEAD `9bf87f4e`):
 
-Rigby's Session 1162 verdict: **keep as Open Question here
-AND file as a small ticket.** A `ops_tool` / `autopilot_tool`
-action like `final_overrides_at(time)` (or "latest override
-snapshot") would eliminate the ad-hoc ORM recipe and make the
-system auditable from the tool surface.
+- There is no `FinalAppliedOverrides` Django model. `grep -rn "^class FinalAppliedOverrides" core/` returns zero matches.
+- The snapshot writer (`PolicyArbitrator.record_overrides_snapshot` —
+  as-of 2026-05-26 at `core/services/ops_autopilot/governance.py:1607`)
+  does `SystemConfiguration.objects.update_or_create(key='policy_arbitrator_snapshot', defaults={'value': json.dumps({...})})`.
+  A single row is overwritten every autopilot cycle.
+- There is no `cycle_ts` column to query against and no
+  per-cycle history. Time-travel queries against the as-built
+  storage are not supported.
+
+The patent disclosure §5 Component 4 shows
+`FinalAppliedOverrides.objects.create(...)` with `cycle_id`,
+`cycle_ts`, `knob_count`, `applied_values` fields. That is
+**aspirational, not as-built** — recorded in the disclosure §14
+addendum (`docs/patents/DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md`).
+
+**Current operator surface (C-style honest exposure, shipped Session 1163):**
+
+- PA tool action `latest_overrides_snapshot` (ops_tool) returns the
+  single most recent snapshot from the `SystemConfiguration` row.
+  The response includes an explicit `storage.mechanism` field
+  naming the single-row-overwrite reality so callers do not
+  develop a false mental model.
+- Method: `PolicyArbitrator.get_latest_snapshot()` (as-of
+  2026-05-26 at `core/services/ops_autopilot/governance.py:1525`).
+- Tests pin the behavior: `core/tests/test_policy_arbitrator_latest_snapshot.py`
+  (no-row friendly null, row-exists parse, corrupt JSON graceful
+  degrade, storage-context honest framing, dispatcher action label).
+
+**If you need to debug a past configuration that pre-dates the
+latest cycle:** you can't, against the current storage. Plan
+your debugging from the latest snapshot forward (the arbitrator
+runs each autopilot cycle; check the cycle wrapper in `core.py`
+for the current cadence). If a regression report mentions
+"configuration at time T" where T is older than the latest
+cycle, the data does not exist to answer the question.
+
+**Planned correct-fix follow-on (B-style, queued — needs
+explicit Chris-authorization per the production-code rule):**
+
+1. Add a Django model `FinalAppliedOverrides(cycle_id UUID,
+   cycle_ts TIMESTAMPZ indexed, knob_count INTEGER,
+   applied_values JSONB)` with a migration.
+2. Change `record_overrides_snapshot` from
+   `update_or_create` on the single row to `create` on a new
+   row each cycle.
+3. Extend the `latest_overrides_snapshot` tool action to accept
+   an optional `time` argument that runs the filter recipe the
+   original §6.4 framing described (now valid against the new
+   model). Keep the tool name the same so callers don't have to
+   relearn it.
+4. Decide retention policy (Rigby's Session 1163 design Q): keep
+   every cycle forever, or prune after N days. The arbitrator
+   runs every autopilot cycle; check `core.py` for current
+   cadence to size the retention budget.
+5. Decide payload size policy: JSONB indexing strategy; consider
+   compressed-snapshot or diff-vs-previous storage if knob
+   counts grow.
+
+Until the B-style follow-on ships, the `latest_overrides_snapshot`
+tool is the operator-visible surface. The honest framing in the
+tool's `note` field tells callers that time-travel is not
+supported by the current implementation and points at this
+narrative + the disclosure §14 addendum for the drift record.
 
 ### 6.5 Hold-time + flap-detection constants live in code, not config
 
