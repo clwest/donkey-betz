@@ -12630,3 +12630,61 @@ def cleanup_expired_fleet_events():
     from core.services.fleet_event_cleanup import run_cleanup
     stats = run_cleanup()
     return stats.as_dict()
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Session 1161 cadence wrapper for the PA acks_late=False watch window.
+#
+# Calls Command.build_report() directly so no subprocess overhead, then
+# appends a JSON line to logs/pa_acks_health/YYYY-MM-DD.jsonl so 48h of
+# snapshots are searchable without relying on celery log retention.
+# Emits a WARN-level log line when status != OK so the daphne/celery
+# log streams flag the transition too.
+# ──────────────────────────────────────────────────────────────────────
+
+
+@shared_task(
+    name='core.tasks.capture_pa_acks_health_snapshot',
+    ignore_result=False,
+    queue='broadcast',
+    soft_time_limit=60,
+    time_limit=90,
+)
+def capture_pa_acks_health_snapshot():
+    """Run a pa_acks_health snapshot and append it to a date-rotated JSONL log.
+
+    Scheduled every 30 minutes via `app.conf.beat_schedule` during the
+    Session 1159 acks_late=False watch window. Read-only — runs the
+    same code path as the on-demand `python manage.py pa_acks_health`
+    command. Returns a small summary so the celery task event itself is
+    searchable; the full report is in the JSONL log.
+    """
+    import os
+    from pathlib import Path
+    from core.management.commands.pa_acks_health import Command
+
+    report = Command().build_report()
+
+    log_dir = Path('logs') / 'pa_acks_health'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    date_str = timezone.now().strftime('%Y-%m-%d')
+    log_path = log_dir / f'{date_str}.jsonl'
+    with open(log_path, 'a') as f:
+        f.write(json.dumps(report, default=str) + '\n')
+
+    status = report.get('status', 'OK')
+    if status != 'OK':
+        logger.warning(
+            "pa_acks_health: status=%s flags=%s",
+            status,
+            report.get('advisory_flags', []),
+        )
+
+    return {
+        'status': status,
+        'queue_depth': (report.get('queue_depth') or {}).get('depth'),
+        'worker_count': (report.get('workers') or {}).get('count'),
+        'hang_count': (report.get('hang_signature') or {}).get('count'),
+        'inflight_delta': (report.get('inflight_estimate') or {}).get('delta'),
+        'log_path': str(log_path),
+    }
