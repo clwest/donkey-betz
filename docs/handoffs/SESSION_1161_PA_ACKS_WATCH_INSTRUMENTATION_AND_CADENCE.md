@@ -205,10 +205,21 @@ Full handoff lineage: `docs/handoffs/CURRENT.md`.
 
 Chris's call on priority. No items are blocked on Chris-decision at session open.
 
+### Rigby's 24-48h readout checklist (added post-handoff)
+
+After her review of the cadence wrapper close, Rigby flagged a specific readout for whichever session reviews the JSONL. Run these against `logs/pa_acks_health/*.jsonl`:
+
+- **WARN/CRIT transition count** — expected 0. Any non-zero means a status change actually fired during the window.
+- **`inflight_estimate` drift** — expected to stay near 0 except for brief bursts. Sustained positive drift = receive-faster-than-finish.
+- **`oldest_queued` spikes** — expected rare and short. Persistent spikes = workers lagging.
+- **Slow-completion clustering by worker** — does `per_worker.slow_completed` concentrate on one worker? A consistently-hot node is a different signal than uniform slowness.
+
+If all four read clean, threshold tuning (3d) is safe to ship. If any read dirty, that's the actual signal to debug before tuning.
+
 ### Observation-mode items (passive, may not produce a PR)
 
-1. **Review `logs/pa_acks_health/` JSONL** — sample a few snapshots, confirm no errors, check for any non-OK transitions in the celery-broadcast log.
-2. **(3d) Threshold tuning** — if 24+ hours of clean data exists, fold the action-threshold doc into `_compute_status()` (any CRIT, WARN-persists-2, hang_age >= 180s).
+1. **Review `logs/pa_acks_health/` JSONL** — sample a few snapshots, confirm no errors, check for any non-OK transitions in the celery-broadcast log. Use the Rigby checklist above.
+2. **(3d) Threshold tuning** — if the 4-item readout reads clean, fold the action-threshold doc into `_compute_status()` (any CRIT, WARN-persists-2, hang_age >= 180s).
 
 ### Active queue (Chris's call on priority)
 
