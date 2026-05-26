@@ -12,6 +12,13 @@ alarms don't flap on a single in-flight task. These are advisory-only;
 OK/WARN/CRIT thresholds are unchanged until observation supports tuning
 (item 3d in `00-START-NEXT-SESSION.md`).
 
+Session 1161 (B) added a `per_worker` rollup that unions inspect-side
+workers with DB-side workers active in the window, plus a
+`worker_last_event_at` heartbeat proxy on each hang-signature sample.
+The rollup localizes WARN/CRIT signals to a specific worker process;
+the heartbeat distinguishes "worker stuck" (no events since the hung
+task started) from "task wedged but worker alive."
+
 Usage:
     python manage.py pa_acks_health
     python manage.py pa_acks_health --hours 24
@@ -126,6 +133,7 @@ class Command(BaseCommand):
         pidfile_cutoff = self._pidfile_cutoff(since_pidfile)
 
         task_stats = self._task_stats(task_name, hours)
+        workers_snapshot = self._worker_snapshot()
         report = {
             "generated_at": timezone.now().isoformat(),
             "window_hours": hours,
@@ -136,7 +144,10 @@ class Command(BaseCommand):
             "since_pidfile": since_pidfile or None,
             "since_pidfile_cutoff": pidfile_cutoff.isoformat() if pidfile_cutoff else None,
             "queue_depth": self._queue_depth(queue),
-            "workers": self._worker_snapshot(),
+            "workers": workers_snapshot,
+            "per_worker": self._per_worker_rollup(
+                task_name, hours, slow_threshold, workers_snapshot
+            ),
             "task_stats": task_stats,
             "oldest_queued": self._oldest_queued(task_name),
             "inflight_estimate": self._inflight_estimate(task_stats),
@@ -190,20 +201,114 @@ class Command(BaseCommand):
             return {"error": f"inspect failed: {exc}"}
 
         workers = []
+        by_name = {}
         for worker_name, _worker_stats in (stats or {}).items():
-            workers.append(
-                {
-                    "name": worker_name,
-                    "active_count": len(active.get(worker_name, []) or []),
-                    "reserved_count": len(reserved.get(worker_name, []) or []),
-                }
-            )
+            row = {
+                "name": worker_name,
+                "active_count": len(active.get(worker_name, []) or []),
+                "reserved_count": len(reserved.get(worker_name, []) or []),
+            }
+            workers.append(row)
+            by_name[worker_name] = row
         return {
             "count": len(workers),
             "workers": workers,
+            "by_name": by_name,
             "total_active": sum(w["active_count"] for w in workers),
             "total_reserved": sum(w["reserved_count"] for w in workers),
         }
+
+    def _per_worker_rollup(self, task_name, hours, slow_threshold, workers_snapshot):
+        """
+        Session 1161 (B): per-worker attribution. Unions inspect-side
+        workers (currently-online) with DB-side workers (active in the
+        window). Each row carries enough to localize a WARN/CRIT to a
+        specific worker process.
+
+        Fields per worker:
+          - online: bool — present in inspect stats
+          - active_count, reserved_count: from inspect (None when offline)
+          - started_still: STARTED-not-finished rows for this worker
+          - slow_completed: SUCCESS|FAILURE with duration >= slow_threshold
+          - oldest_started_age_seconds: max age of started-but-not-finished
+          - last_event_at: most recent started_at OR finished_at — heartbeat
+            proxy. None means the worker has touched no task this window.
+
+        Returns a list ordered by name. Empty list is a valid result
+        (e.g., no workers and no DB events in the window).
+        """
+        try:
+            from core.models_celery_telemetry import CeleryTaskEvent
+            from django.db.models import Max
+        except Exception as exc:
+            return {"error": f"CeleryTaskEvent import failed: {exc}"}
+
+        inspect_by_name = (workers_snapshot or {}).get("by_name") or {}
+        if "error" in (workers_snapshot or {}):
+            inspect_by_name = {}
+
+        since = timezone.now() - timedelta(hours=hours)
+        db_workers = set(
+            CeleryTaskEvent.objects.filter(
+                task_name=task_name, started_at__gte=since
+            )
+            .exclude(worker="")
+            .values_list("worker", flat=True)
+            .distinct()
+        )
+        all_workers = sorted(set(inspect_by_name.keys()) | db_workers)
+
+        rows = []
+        now = timezone.now()
+        for worker in all_workers:
+            inspect_row = inspect_by_name.get(worker)
+            qs = CeleryTaskEvent.objects.filter(
+                task_name=task_name, started_at__gte=since, worker=worker
+            )
+            started_still = qs.filter(
+                status="STARTED", finished_at__isnull=True
+            ).count()
+            slow_completed = qs.filter(
+                status__in=("SUCCESS", "FAILURE"),
+                duration_seconds__gte=slow_threshold,
+            ).count()
+            oldest_started = (
+                qs.filter(status="STARTED", finished_at__isnull=True)
+                .order_by("started_at")
+                .first()
+            )
+            oldest_age = (
+                (now - oldest_started.started_at).total_seconds()
+                if oldest_started
+                else None
+            )
+            last_event_agg = qs.aggregate(
+                last_started=Max("started_at"),
+                last_finished=Max("finished_at"),
+            )
+            event_candidates = [
+                v
+                for v in (
+                    last_event_agg["last_started"],
+                    last_event_agg["last_finished"],
+                )
+                if v
+            ]
+            last_event_at = max(event_candidates).isoformat() if event_candidates else None
+
+            rows.append(
+                {
+                    "name": worker,
+                    "online": worker in inspect_by_name,
+                    "active_count": inspect_row["active_count"] if inspect_row else None,
+                    "reserved_count": inspect_row["reserved_count"] if inspect_row else None,
+                    "started_still": started_still,
+                    "slow_completed": slow_completed,
+                    "oldest_started_age_seconds": oldest_age,
+                    "last_event_at": last_event_at,
+                }
+            )
+        return rows
 
     def _task_stats(self, task_name, hours):
         try:
@@ -345,6 +450,7 @@ class Command(BaseCommand):
         """
         try:
             from core.models_celery_telemetry import CeleryTaskEvent
+            from django.db.models import Max
         except Exception:
             return {"count": 0, "samples": [], "note": "import failed"}
 
@@ -364,15 +470,36 @@ class Command(BaseCommand):
             )
             .order_by("started_at")[:20]
         )
-        samples = [
-            {
-                "task_id": row.task_id,
-                "started_at": row.started_at.isoformat(),
-                "age_seconds": (timezone.now() - row.started_at).total_seconds(),
-                "worker": row.worker,
-            }
-            for row in qs
-        ]
+        # Session 1161 (B): for each hung row, look up the most recent event
+        # from the same worker (across all task_names) as a heartbeat proxy.
+        # If worker_last_event_at == started_at, the worker has done nothing
+        # since the hung task started — strong signal that the worker process
+        # itself is stuck. If it's later, the task is wedged but the worker
+        # is alive. Single Max() per distinct worker.
+        sample_workers = sorted({row.worker for row in qs if row.worker})
+        worker_last_seen = {}
+        for worker in sample_workers:
+            agg = CeleryTaskEvent.objects.filter(worker=worker).aggregate(
+                last_started=Max("started_at"),
+                last_finished=Max("finished_at"),
+            )
+            candidates = [
+                v for v in (agg["last_started"], agg["last_finished"]) if v
+            ]
+            worker_last_seen[worker] = max(candidates) if candidates else None
+
+        samples = []
+        for row in qs:
+            last_seen = worker_last_seen.get(row.worker)
+            samples.append(
+                {
+                    "task_id": row.task_id,
+                    "started_at": row.started_at.isoformat(),
+                    "age_seconds": (timezone.now() - row.started_at).total_seconds(),
+                    "worker": row.worker,
+                    "worker_last_event_at": last_seen.isoformat() if last_seen else None,
+                }
+            )
         return {"count": len(samples), "samples": samples}
 
     # ---- Advisory flag logic ----
@@ -515,6 +642,27 @@ class Command(BaseCommand):
                 f"{workers['total_reserved']} reserved"
             )
 
+        # Session 1161 (B): per-worker rollup
+        per_worker = report.get("per_worker") or []
+        if isinstance(per_worker, dict) and "error" in per_worker:
+            write(f"per-worker:   error — {per_worker['error']}")
+        elif per_worker:
+            write(f"per-worker:   {len(per_worker)} worker(s)")
+            for row in per_worker:
+                online_marker = "online" if row["online"] else "OFFLINE"
+                oldest = row.get("oldest_started_age_seconds")
+                oldest_str = f"oldest_started={oldest:.0f}s" if oldest else "oldest_started=–"
+                last_seen = row.get("last_event_at") or "—"
+                write(
+                    f"  - {row['name']}  [{online_marker}]  "
+                    f"started_still={row['started_still']} "
+                    f"slow_completed={row['slow_completed']} "
+                    f"{oldest_str} "
+                    f"last_event_at={last_seen}"
+                )
+        else:
+            write("per-worker:   no workers or events in window")
+
         stats = report["task_stats"]
         if "error" in stats:
             write(f"task stats:   error — {stats['error']}")
@@ -564,9 +712,11 @@ class Command(BaseCommand):
         if hang["count"] > 0:
             write(f"hang signature:  {hang['count']} task(s) — INVESTIGATE")
             for row in hang["samples"][:5]:
+                last_seen = row.get("worker_last_event_at") or "—"
                 write(
                     f"  - {row['task_id'][:8]} age={row['age_seconds']:.0f}s "
-                    f"started_at={row['started_at']} worker={row['worker']}"
+                    f"started_at={row['started_at']} worker={row['worker']} "
+                    f"worker_last_event_at={last_seen}"
                 )
         else:
             write("hang signature:  0 — clean")
