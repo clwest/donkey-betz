@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen).
+> **Change reason:** Jan 21 fix summary for a specific incident. The fix landed in code; this is the historical writeup.
+> **Preserved because:** historical fix record. Useful as build-history; do NOT cite for current state.
+
 # 🔐 Login/Logout Fix Summary
 **Date:** October 2, 2025
 **Status:** ✅ FIXED

@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (sole authoritative spider counts) + [`docs/narratives/SIGNAL_INTELLIGENCE.md`](../narratives/SIGNAL_INTELLIGENCE.md) (narrative C — signal pipeline operator-handbook).
+> **Change reason:** Jan 21 spider inventory snapshot. Current spider list lives in `ai_core/spiders/spider_registry.py`; counts in `PLATFORM_INVENTORY.md`.
+> **Preserved because:** historical spider-inventory record. Useful as build-history; do NOT cite for current state.
+
 # Spider Inventory
 
 - **angellist** — `BaseIntelligenceSpider` (category: *freelance*, priority: 3, rate_limit: 1.0)
