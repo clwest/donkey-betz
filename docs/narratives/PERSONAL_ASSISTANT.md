@@ -245,13 +245,32 @@ on the dedicated `pa` Celery queue with `time_limit=300 s` /
 
 **Execution path (function calling, default).**
 `message → _build_context() → _build_messages_array() →
-GPT-5.2 Responses API with 106 schemas → if tool_calls execute
-via ToolDispatcher → loop up to 5 iterations → if text,
-enrichment by intent → PAResponse`.
+Responses API with the tool schema list → if tool_calls execute
+via ToolDispatcher → loop up to N iterations (current cap 5) → if text,
+enrichment by intent → PAResponse`. Current model: GPT-5.2 (the
+default; configurable via provider registry). Schema count and
+iteration cap are constants in code — treat them as authoritative
+over this prose.
 
-**Context-building timeouts.** Profile 5 s, knowledge 3 s,
-stats 5 s, docs (RAG) 5 s, history (sync) 5 s with
-`SET LOCAL statement_timeout`. Each step degrades gracefully.
+**Routing Truth (canonical entry → debug entrypoints).**
+
+| Question | Canonical answer |
+|---|---|
+| What request path does an interactive PA call take? | `POST /api/pa/chat/` → `process_pa_chat_task` on the `pa` Celery queue → `UnifiedPAEntrypoint` agentic loop → GPT-5.2 function calling (`PA_USE_FUNCTION_CALLING=true` is the default). |
+| Is there a legacy path? | Yes. The 506-line keyword router still exists, gated by `PA_USE_FUNCTION_CALLING=false`. It is not the default and should not be relied on. |
+| If a tool call is "not registered" — where? | `core/services/tool_dispatcher.py`. Tool registration is per-process at import; restart workers AND daphne after schema or handler changes. |
+| If a context-build step times out — where? | `_build_context()` in `core/services/unified_pa_entrypoint.py` — each step is wrapped in `asyncio.wait_for` (profile / knowledge / stats / docs / history). Adjust per-step timeouts in code, not in prose. |
+| If a fleet app gets 401 — where? | HMAC sign-key validation in `core/views/pa_chat.py` (or equivalent). Key must be `sha256(raw_secret).hexdigest()`, not the raw secret. |
+| If conversation cache discount is missing mid-thread — where? | `ChatConversation.metadata.response_id` was not threaded into the next turn's `previous_response_id`. Check `_apply_response_id()` or equivalent in the entrypoint. |
+
+
+**Context-building timeouts.** Profile, knowledge, stats, docs
+(RAG), and history each get `asyncio.wait_for` wrappers. Current
+values (as-of 2026-05-25): profile 5 s, knowledge 3 s, stats 5 s,
+docs 5 s, history 5 s with `SET LOCAL statement_timeout`. The
+constants live in `_build_context()` — treat the code as
+authoritative; this prose is a snapshot. Each step degrades
+gracefully (PA continues if any one step times out).
 
 **Enrichment pipeline (8 services).** intelligence_enricher,
 blog_performance, domain_context (9 domains), spider_trends,
@@ -271,7 +290,9 @@ Celery worker recycling.
 **Scopes.** `global` (default) and `workspace`. Workspace
 activates only on explicit `workspace_id` /
 `AssistantProfile.workspace` / workspace-aware UI context.
-Never inferred from message text.
+Workspace scope should not be inferred from message text — if you
+observe message-text scope inference, that is a regression; file
+it against the entrypoint's scope-resolution path.
 
 **Fleet identity.** Every fleet-app→PA call must HMAC-sign with
 `sha256(raw_secret).hexdigest()` as the key, not the raw secret.
@@ -450,3 +471,31 @@ reset state when tool registration changes during development.
 - `platform_config_tool overview` (PA tool, in chat) — confirm
   `service_context: local` before any local PA work. Session-
   open ritual per the LOCAL-vs-PROD trap rule.
+
+---
+
+## 8. Canonical sources (for future editors)
+
+> **Reading this doc for ops decisions?** Treat code and config as
+> canonical, not prose. The narrative captures *why* the PA is
+> the shape it is; runtime captures *what she is now*.
+
+| Question | Canonical source (code/config wins over prose) |
+|---|---|
+| Tool schema + handler counts (104 / 106 / 169 / 171) | `python manage.py generate_platform_inventory` |
+| LLM model + provider (e.g., "GPT-5.2") | Provider registry config — model is configurable |
+| Context-build timeouts (5 s / 3 s / 5 s / 5 s / 5 s) | Constants in `_build_context()` |
+| Multi-tool iteration cap (currently 5) | Constant in `UnifiedPAEntrypoint` agentic loop |
+| Frontend poll cadence (every 2 s) | Constant in the frontend PA chat client |
+| Railway proxy timeout (~30 s) | Railway platform config, not application code |
+| Enrichment char caps (1500–2000) | Constants in enrichment service modules |
+| Cached-input discount math (90%) | OpenAI Responses-API pricing — see provider docs |
+| Fleet HMAC sign-key recipe | `sha256(raw_secret).hexdigest()` — code path in `core/services/fleet_*` |
+| `PA_USE_FUNCTION_CALLING` default | Env var; default is `true` on Railway + locally |
+| PA-chat audit table mode (warn vs reject) | Config flag + the audit middleware |
+
+If you spot drift between this doc and code/config, **code wins**
+and this doc should be corrected. See
+[`docs/narratives/EDITING_GUARDRAILS.md`](EDITING_GUARDRAILS.md)
+for the editing contract.
+
