@@ -27,6 +27,13 @@ summary groups PA-relevant workers in full detail and collapses idle
 workers (other queues) to a single line; the JSON output keeps every
 worker for debug visibility.
 
+Session 1162 (cosmetic, second pass): each report carries both UTC
+(`generated_at`, ISO 8601) AND Mountain time (`generated_at_mt`, human
+"YYYY-MM-DD HH:MM:SS MDT" form) so operators reading JSONL during the
+acks watch can correlate snapshots against wall-clock work hours
+without an in-head TZ conversion. UTC stays canonical for sorting and
+machine parsing.
+
 Usage:
     python manage.py pa_acks_health
     python manage.py pa_acks_health --hours 24
@@ -58,9 +65,15 @@ the summary output, not a failure signal).
 import json
 import os
 from datetime import datetime, timedelta, timezone as _dt_timezone
+from zoneinfo import ZoneInfo
 from django.core.management.base import BaseCommand
 from django.db.models import Count, Q
 from django.utils import timezone
+
+# Session 1162 cosmetic: operator-readable Mountain time alongside the
+# canonical UTC timestamp. Matches `TIME_ZONE = 'America/Denver'` in
+# core/settings.py + the beat schedule's "America/Denver" wall clock.
+_MT_ZONE = ZoneInfo("America/Denver")
 
 
 class Command(BaseCommand):
@@ -171,8 +184,12 @@ class Command(BaseCommand):
 
         task_stats = self._task_stats(task_name, hours)
         workers_snapshot = self._worker_snapshot()
+        now_utc = timezone.now()
         report = {
-            "generated_at": timezone.now().isoformat(),
+            "generated_at": now_utc.isoformat(),
+            "generated_at_mt": now_utc.astimezone(_MT_ZONE).strftime(
+                "%Y-%m-%d %H:%M:%S %Z"
+            ),
             "window_hours": hours,
             "queue": queue,
             "task_name": task_name,
@@ -658,6 +675,8 @@ class Command(BaseCommand):
         write = self.stdout.write
         write(f"PA acks-health snapshot  [status: {report['status']}]")
         write(f"  generated_at:        {report['generated_at']}")
+        if report.get("generated_at_mt"):
+            write(f"  generated_at (MT):   {report['generated_at_mt']}")
         write(f"  window:              last {report['window_hours']}h")
         write(f"  queue:               {report['queue']}")
         write(f"  task_name:           {report['task_name']}")
