@@ -11239,7 +11239,11 @@ def claude_code_agent_respond(conversation_id, message_text, source):
     return handle_message(conversation_id, message_text, source)
 
 
-@shared_task(bind=True, time_limit=300, soft_time_limit=280)
+# Session 1159: acks_late=False overrides global CELERY_TASK_ACKS_LATE=True for PA chat.
+# Global acks-late + unstable macOS broker conn → tasks complete but post-task ack drops →
+# stuck in `unacked` until visibility_timeout (1h). Acking on receipt is the right tradeoff
+# for chat: a lost message on worker crash is preferable to UI stuck waiting an hour.
+@shared_task(bind=True, time_limit=300, soft_time_limit=280, acks_late=False)
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task
     return _impl_process_pa_chat_task(self, user_id, message, context, generate_audio, conversation_id, source, platform)
