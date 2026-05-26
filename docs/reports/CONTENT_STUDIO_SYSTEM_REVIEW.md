@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/narratives/CONTENT_PIPELINE.md`](../narratives/CONTENT_PIPELINE.md) (narrative B — operator-handbook layer) + [`docs/topics/content-pipeline.md`](../topics/content-pipeline.md) (current-state topic doc).
+> **Change reason:** Jan 21 subsystem review; the content studio architecture has been substantially rebuilt via the Session 964 deliberation pipeline (v2) and the Session 1033 finishing loop. See narrative B for the current shape.
+> **Preserved because:** historical subsystem review. Useful as build-history record; do NOT cite for current state.
+
 # Content Studio System Review
 
 ## Executive Summary

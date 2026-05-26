@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative).
+> **Change reason:** Jan 21 local Ollama repo-review output. Snapshot, not authoritative review.
+> **Preserved because:** historical local-LLM review output. Useful as build-history; do NOT cite for current state.
+
 # Repo Review (local Ollama: qwen2.5:14b-instruct)
 
 ### Repository Review Summary

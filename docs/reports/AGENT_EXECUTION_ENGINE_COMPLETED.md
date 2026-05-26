@@ -1,6 +1,10 @@
-<!-- DOC-POINTER-V1 -->
-> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge.
-> **Note:** Agent counts (149) significantly stale; concept still valid but specifics need verification against topics/agent-system.md. Per Session 1143 Phase 4 (Chris Q4=Y): PLATFORM_INVENTORY + docs/INDEX are the only authoritative counts.
+<!-- DOC-POINTER-V2 (Session 1160 — upgraded from V1) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (sole authoritative agent counts) + [`docs/narratives/AGENTS_AND_AUTONOMY.md`](../narratives/AGENTS_AND_AUTONOMY.md) (narrative A — agent system operator-handbook).
+> **Change reason:** Original "149 passive agents" framing is significantly stale (current registry per `AGENT_MAP` in `core/agent_router.py`). The concept of an "execution engine over the agent registry" is still valid, but counts and specific agent names should be verified against the inventory and the agent narrative.
+> **Preserved because:** historical implementation report from the era when the agent-execution boundary was first formalized. Useful as build-history record; do NOT cite for current state.
+> **V1 → V2 upgrade:** done as part of Session 1160 reports cleanup mechanical pass; matches the canonical V2 pattern established by Session 1143 PR #2197.
 
 # Agent Execution Engine - Completion Report
 ## Transforming 149 Passive Agents into Active Revenue Generators

@@ -1,3 +1,10 @@
+<!-- DOC-POINTER-V2 (Session 1160) -->
+> **Status:** Superseded
+> **Last verified:** Session 1160 (2026-05-26)
+> **Current canon:** [`docs/PLATFORM_INVENTORY.md`](../PLATFORM_INVENTORY.md) (runtime-derived, autogen) + [`docs/PLATFORM_WHAT_IT_IS.md`](../PLATFORM_WHAT_IT_IS.md) (narrative) + [`docs/topics/*`](../topics/) (subsystem deep-dives).
+> **Change reason:** Jan 21 / Nov 19 verification snapshot from Session 128. Historical "fully operational" claim is point-in-time; do not cite for current state.
+> **Preserved because:** historical record of when 3D generation (Replicate TRELLIS) was first wired up. Useful as build-history record; do NOT cite for current state.
+
 # 3D Generation System Verification Report
 
 **Date:** November 19, 2025
