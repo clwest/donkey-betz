@@ -262,6 +262,8 @@ over this prose.
 | If a context-build step times out — where? | `_build_context()` in `core/services/unified_pa_entrypoint.py` — each step is wrapped in `asyncio.wait_for` (profile / knowledge / stats / docs / history). Adjust per-step timeouts in code, not in prose. |
 | If a fleet app gets 401 — where? | HMAC sign-key validation in `core/views/pa_chat.py` (or equivalent). Key must be `sha256(raw_secret).hexdigest()`, not the raw secret. |
 | If conversation cache discount is missing mid-thread — where? | `ChatConversation.metadata.response_id` was not threaded into the next turn's `previous_response_id`. Check `_apply_response_id()` or equivalent in the entrypoint. |
+| If tool calls never fire / Responses API returns 429 or 5xx — where? | Provider registry config (model selection + rate limits) and the Responses-API call site in `UnifiedPAEntrypoint`. Check request logging around the model call; check for provider-side rate-limit headers. |
+| If output truncates after tool calls / model stops early — where? | Multi-tool iteration cap (currently 5) in the agentic loop. Check whether the cap was hit (count `metadata.tool_calls` entries) and whether the truncation matches the cap constant. |
 
 
 **Context-building timeouts.** Profile, knowledge, stats, docs
@@ -331,9 +333,11 @@ reset state when tool registration changes during development.
   `metadata.response_id` is being threaded into the next
   `previous_response_id`. If absent, follow-up pays full
   input price.
-- Hangs on context-build for 134 s → pre-Session-1035 state.
-  Should never happen now; if it does, check the
-  `asyncio.wait_for` timeouts on profile/stats/docs.
+- Hangs on context-build for ~2+ minutes → pre-Session-1035
+  state. Should not happen on current code; if it does, check the
+  `asyncio.wait_for` timeouts on profile/stats/docs — one of the
+  wrappers was likely removed or the underlying query is bypassing
+  the `SET LOCAL statement_timeout`.
 - "Search the docs" answers feel hallucinated → check
   `search_docs` returns. If empty, the embedding chunk wasn't
   found; the corpus may have drifted from the index. Run
