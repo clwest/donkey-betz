@@ -1,5 +1,5 @@
 ---
-title: "Workspaces and scope — narrative (batch P, draft)"
+title: "Workspaces and scoping — narrative (batch P, draft)"
 status: draft (batch P of Session 1162 corpus-narrative program — Chris/Rigby review pending)
 last_updated: 2026-05-26
 session: 1162
@@ -14,10 +14,10 @@ companion_docs:
   - docs/PLATFORM_INVENTORY.md
   - docs/narratives/EDITING_GUARDRAILS.md
 provenance_confidence: HIGH (anchored to code paths + PLATFORM_INVENTORY 2026-05-26 + named session handoffs)
-provenance_note: First-draft narrative addressing the workspace coverage gap identified by Chris in Session 1162. Prior narratives reference "workspace" 60+ times across 9 files but no single doc covers what a workspace IS (the model), how one gets created (5 paths), what scoping means (mode discriminator, FK propagation), or the lifecycle (is_active boolean + WorkspaceConfig status enum — two separate state machines). Two drifts surfaced by the survey are flagged inline as Open Questions §6 rather than restated as canonical. Counts anchored to PLATFORM_INVENTORY 2026-05-26 (git HEAD 25b2198a). Status is "draft pending Rigby review" per the co-authored doc pattern from Session 1124.
+provenance_note: First-draft narrative addressing the workspace coverage gap identified by Chris in Session 1162. Prior narratives reference "workspace" frequently across multiple files (verify with `rg "workspace" docs/narratives/*.md`) but no single doc covers what a workspace IS (the model), how one gets created (creation paths enumerated in §3M8), what scoping means (mode discriminator, FK propagation), or the lifecycle (`is_active` boolean + `WorkspaceConfig.status` enum — two separate state machines). Two drifts surfaced by the survey are flagged inline as Open Questions §6 rather than restated as canonical. Counts anchored to PLATFORM_INVENTORY 2026-05-26 (git HEAD 25b2198a). Status is "draft pending Rigby review" per the co-authored doc pattern from Session 1124.
 ---
 
-# Workspaces and scope
+# Workspaces and scoping
 
 > **What this doc is.** Workspaces are the platform's primary
 > unit of scope. They bound which files an agent can write to,
@@ -57,20 +57,25 @@ A workspace is a per-user, optionally-active scope. It carries:
    destructive action.
 3. A **PA scoping hook** — when `AssistantProfile.workspace` is
    set, the PA operates in workspace mode and workspace-scoped
-   tools (initiative_list, deliverable_list, file_tool) only
-   return rows tied to that workspace.
+   tools (initiative_list, deliverable_list, the file read/write
+   actions on `workspace_tool`) only return or affect rows tied
+   to that workspace.
 4. A **context-injection key** — `workspace_id` threads through
    request → PA → agent context → tool argument so downstream
    work knows what scope to honor.
 
-Workspaces are **opt-in**. There is no signal that auto-creates a
-workspace on user signup; a user remains in "global mode" until
-they create one (via a template, a PA tool call, an agent service
-handler, or a backfill mgmt command). The "Donkey Betz" workspace
-referenced in operator memory is a **convention**, not a
-hardcoded singleton — it's the default parameter on the backfill
-command (`backfill_deliverable_workspaces --workspace "Donkey Betz"`)
-and a brand-identity reference, not a row guaranteed to exist.
+Workspaces are **opt-in**. As-of 2026-05-26, there is no known
+signal that auto-creates a workspace on user signup; a user
+remains in "global mode" until they create one (via a template,
+a PA tool call, an agent service handler, or a backfill mgmt
+command). **If you see a workspace appear immediately on signup**,
+search for post-save hooks on `User` or onboarding template
+provisioning triggers — those are the natural places such a
+behavior would live. The "Donkey Betz" workspace referenced in
+operator memory is a **convention**, not a hardcoded singleton —
+it's the default parameter on the backfill command
+(`backfill_deliverable_workspaces --workspace "Donkey Betz"`) and
+a brand-identity reference, not a row guaranteed to exist.
 
 The platform also caches a separate `WorkspaceContext` per
 workspace — a read-only snapshot of the project's file tree, key
@@ -89,11 +94,11 @@ intent.
 | **`WorkspaceContext`** | The companion cache model (`core/models_skin_layer.py:516`). `OneToOneField` to `ProjectWorkspace`. Carries `file_tree`, `key_files`, `coding_patterns`, `dependencies`, `import_aliases`, `directory_purposes`, statistics, and scan metadata. Read-only from the agent's perspective; rebuilt on rescan. |
 | **`AssistantProfile.workspace`** | The optional FK on `AssistantProfile` (`core/models_assistant_profile.py`) that scopes Rigby to a single workspace when set. `null=True` — most profiles are workspace-free and PA operates in global mode. |
 | **Workspace mode (PA)** | The PA mode discriminator. `global` = no workspace_id; `workspace` = explicit context (workspace_id from request, `AssistantProfile.workspace`, or a workspace-aware UI store). Workspace-scoped tools honor it. Covered in narrative D's vocabulary table. |
-| **`workspace_type`** | Enum on `ProjectWorkspace`: `local`, `git_remote`, `sandbox`, `container`. Distinguishes "a local-disk project I own" from "a sandboxed scratch area" from "a containerized environment." Permission gates default differently per type. |
+| **`workspace_type`** | Enum field on `ProjectWorkspace` distinguishing "a local-disk project I own" from "a sandboxed scratch area" from "a containerized environment." Permission gates default differently per type. See the field definition in `core/models_skin_layer.py` for the canonical value set; treat the model as the source of truth. |
 | **Permission grid** | The four boolean fields on `ProjectWorkspace` (`allow_file_write`, `allow_file_delete`, `allow_command_execution`, `allow_git_operations`) plus `allow_autonomous_writes` (Session 327, controls whether autonomous agents can target this workspace as fallback). The executor checks these before acting. |
 | **`is_active` (Session-1034 self-healing)** | Single-active-per-user constraint. `unique_active_workspace_per_user` index on `(user, is_active)`. `ProjectWorkspace.save()` deactivates all other rows for the same user when one is set active. Session 1034 added path self-healing for the case where a developer syncs DB from prod and the macOS path no longer resolves. |
 | **`WORKSPACE_AWARE_AGENTS`** | The constant tuple in `core/epa_handlers_tools.py:~3873` listing the agents that can write files into a user workspace via `BaseAgent.execute_with_workspace()`. As-of PLATFORM_INVENTORY 2026-05-26: 20 agents. Treat the constant as canonical; this prose may drift. |
-| **`WorkspaceConfig` status** | A separate model (`core/models_workspace_templates.py:125`) attached to `ProjectWorkspace`. Carries `status` enum: `setup`, `active`, `paused`, `archived`. Distinct from `ProjectWorkspace.is_active` — see §3 milestone 4 for why two state machines exist. |
+| **`WorkspaceConfig` status** | A separate model (`core/models_workspace_templates.py:125`) attached to `ProjectWorkspace`. Carries a `status` enum field (see `core/models_workspace_templates.py:155-160` for canonical values). Distinct from `ProjectWorkspace.is_active` — see §3 milestone 4 for why two state machines exist. |
 | **`WorkspaceTemplate`** | The provisioning shape (`core/models_workspace_templates.py:97`). `.provision(user, name, description)` creates a `ProjectWorkspace` + `WorkspaceConfig` pair. Triggered by template-driven onboarding (e.g., "Create Newsletter Business"). |
 | **`workspace_id` propagation** | The string-key flow: HTTP request → PA entry point → user_context → agent context → tool arguments. Five representative call sites are listed in §3 milestone 5. PA *injects* `workspace_id` into tool calls if the tool needs it and the caller didn't include it. |
 | **Workspace path self-healing (Session 1034)** | `_get_workspace_for_skin_layer()` (`core/services/...`) auto-detects stale macOS paths in the DB, recomputes from `__file__`, and updates the row. Handles the Railway-vs-local mismatch when a developer's DB gets synced from prod. Covered in narrative N. |
@@ -119,8 +124,11 @@ wants to do anything destructive must first consult this grid.
 The `Meta` block carries the `unique_active_workspace_per_user`
 constraint — only one row per user can be `is_active=True`. The
 custom `save()` enforces it: setting one row active deactivates
-all others. This is the simplest possible answer to "which
-workspace is current?" — there's exactly one.
+all others. The intent is **exactly one active workspace per user**
+(enforced by the unique constraint + `save()` deactivation). **If
+you observe multiple actives for a single user**, check DB
+constraint state + recent migrations + any bypass paths that call
+`update()` instead of `save()`.
 
 ### Milestone 2 — `WorkspaceContext` as a cached project understanding (Session 695)
 
@@ -154,11 +162,13 @@ the context per turn.
 
 The FK is `null=True`. Most profiles are workspace-free; PA stays
 in global mode. When set, `AssistantProfile.has_workspace_scope()`
-returns `True` and tools honor it. Per narrative D's rule (rule 5
-in EDITING_GUARDRAILS: should not infer scope from text, only from
-explicit context), the PA never derives workspace_id from prompt
-content — only from this FK, the request payload, or a frontend
-workspace-aware UI store.
+returns `True` and tools honor it. Per narrative D's rule, the
+PA **should not** derive `workspace_id` from prompt content; it
+resolves scope from the FK, the request payload, or a
+workspace-aware frontend store. **If you observe text-derived
+scoping**, file a regression against the scope-resolution path
+and inspect `_extract_workspace_id_from_context(...)` in
+`core/services/unified_pa_entrypoint.py`.
 
 ### Milestone 4 — Two lifecycle state machines (`is_active` boolean and `WorkspaceConfig.status` enum)
 
@@ -172,11 +182,12 @@ are *two* state machines.
   `archived_at` timestamp; no soft-delete. Either it's currently
   active for the user, or it isn't.
 
-- **`WorkspaceConfig.status`** (enum: `setup`, `active`, `paused`,
-  `archived`) — the business-state enum for template-provisioned
-  workspaces. A workspace can be `is_active=True` (the user's
-  current focus) while its `WorkspaceConfig.status='paused'`
-  (paused as a business unit). The two are orthogonal.
+- **`WorkspaceConfig.status`** (enum field — canonical values at
+  `core/models_workspace_templates.py:155-160`) — the
+  business-state enum for template-provisioned workspaces. A
+  workspace can be `is_active=True` (the user's current focus)
+  while its `WorkspaceConfig.status` is paused (paused as a
+  business unit). The two are orthogonal.
 
 The drift trap: someone writes a query that filters
 `ProjectWorkspace.is_active=True` and expects "non-archived"
@@ -209,11 +220,15 @@ debugging entry point when scope feels wrong:
    *silently* injects `workspace_id` into tool calls (e.g.,
    `deliverable_tool`, `work_tool`) when the model omitted it
    but the workspace scope is known. The tool author doesn't
-   need to plumb the arg manually.
+   need to plumb the arg manually. **Tools that perform writes
+   should still validate `workspace_id` against the request
+   user**; silent injection is a convenience, not a substitute
+   for authorization checks.
 
 5. **Per-agent retrieval** — `distribution_agent.py` and the
-   workspace-aware agents call
-   `ProjectWorkspace.objects.filter(workspace_id=...)` to load
+   workspace-aware agents load the workspace row by ID
+   (e.g., `ProjectWorkspace.objects.get(id=workspace_id)` —
+   Django default PK is `id`) and then apply
    workspace-specific tone/audience/permissions for their LLM
    pipeline.
 
@@ -391,14 +406,19 @@ no.
 the workspace lookup returns null, run
 `python manage.py backfill_deliverable_workspaces` to materialize.
 
-### 6.5 Two state machines (`is_active` vs `WorkspaceConfig.status`)
+### 6.5 Two state machines — pitfall pointer
 
 The orthogonality of `ProjectWorkspace.is_active` (boolean) and
-`WorkspaceConfig.status` (enum) is correct but easy to miss. A
-query that filters one and ignores the other will give the wrong
-answer for half the cases. Possible cleanup: collapse to a single
-state machine, or document why the split is permanent. Either
-needs a Rigby call.
+`WorkspaceConfig.status` (enum) is canonical-explained in §3
+milestone 4. Surfacing here as an Open Question only because the
+"collapse to one state machine vs document why the split is
+permanent" call is unresolved.
+
+**Common bug class:** queries that filter
+`ProjectWorkspace.is_active=True` and expect "non-archived"
+workspaces. The archival state lives on `WorkspaceConfig.status`,
+not on `is_active`. See §3M4 for the full mental model + the
+remediation pointer (`core/models_workspace_templates.py:125-248`).
 
 ---
 
@@ -456,8 +476,9 @@ This narrative is NOT authoritative for:
   §6.2. If Rigby ratifies, the STRATEGY narrative should get a
   follow-on edit to mark those claims aspirational rather than
   current.
-- Naming: "WORKSPACES_AND_SCOPE" picks up the framing that this
-  doc is about *both* the concept (workspace) and the propagation
-  pattern (scope). Open to renaming.
+- Naming: "WORKSPACES_AND_SCOPING" — picked up Session 1162
+  per Rigby review. "-ING" beat "-E" because "scoping" is the
+  operator verb (used repeatedly in §1 + §3M3 + §5) and greps
+  better than "scope."
 - Letter assignment: batch P (next available after the 15
   Session 1158 narratives A-O).
