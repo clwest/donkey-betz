@@ -13,4 +13,4 @@
 # has been using in the ChatUI.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=e3c7276f00f12b77bda365c7c186577cd854cf2a
-python tools/pa_chat.py "$@" --tools --conversation pa-d19c1674b936
+python tools/pa_chat.py "$@" --tools --conversation pa-f93d77e34f5d
