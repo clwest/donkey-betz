@@ -2282,15 +2282,16 @@ class OpsHandlersMixin:
             }
 
         elif action == 'latest_overrides_snapshot':
-            # Most recent PolicyArbitrator snapshot.
-            # Honest exposure of the single-row overwrite storage: the
-            # patent-disclosure FinalAppliedOverrides model is not built
-            # as described — see Disclosure L §14 addendum + narrative
+            # PolicyArbitrator snapshot — latest, or time-travel via `at`.
+            # Session 1163 B-style storage (append-only per-cycle rows in
+            # FinalAppliedOverrides). See Disclosure L §14.7 + narrative
             # SELF_TUNING_AND_EXPERIMENTATION.md §6.4.
             from core.services.ops_autopilot import PolicyArbitrator
 
             arbitrator = PolicyArbitrator()
-            snapshot = arbitrator.get_latest_snapshot()
+            snapshot = arbitrator.get_latest_snapshot(
+                at=payload.get('at'),
+            )
             return {
                 'action': 'latest_overrides_snapshot',
                 **snapshot,

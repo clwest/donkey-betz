@@ -8,7 +8,7 @@ last_updated: 2026-03-16
 originating_session: pre-session-tracking (March 16, 2026 batch)
 inventor: Chris West (DonkeyKing)
 provenance_confidence: HIGH
-provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass. Operator-facing narrative `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` shipped Session 1162 (PR #2280); §13 addendum appended Session 1163 morning to record class-path drift; §14 addendum appended Session 1163 afternoon to record a deeper mechanism drift (the `FinalAppliedOverrides` model in §5 Component 4 is aspirational — as-built is a single-row overwrite in `SystemConfiguration`). Counsel call queued in §14.3. Disclosure body §1–§12 unchanged from original draft.
+provenance_note: One of 12 invention disclosures drafted as a single March 16, 2026 batch. Frontmatter added Session 1160 (2026-05-26) as part of the patents preservation pass. Operator-facing narrative `docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md` shipped Session 1162 (PR #2280); §13 addendum appended Session 1163 morning to record class-path drift; §14 addendum appended Session 1163 afternoon to record a deeper mechanism drift (the `FinalAppliedOverrides` model in §5 Component 4 was aspirational — as-built was a single-row overwrite in `SystemConfiguration`). §14.7 appended Session 1163 late afternoon when the B-style correct fix shipped: per-cycle `FinalAppliedOverrides` table now exists, time-travel queries via `at` argument supported, 90-day retention, §10(g) counsel call de-escalated from "amendment-to-match-reality" to "amendment-to-strengthen". Disclosure body §1–§12 unchanged from original draft.
 maps_to_narratives:
   - docs/narratives/SELF_TUNING_AND_EXPERIMENTATION.md
 companion_docs:
@@ -525,3 +525,38 @@ The tool exists so operators can answer "what's configured right now?" without a
 - **No novelty-hook changes.** §6(e) is preserved verbatim — the disclosure as filed remains the historical record.
 - **No mechanism changes to §5.** §5 Component 4 stays as the original mechanism description; §14 records the divergence.
 - **No editing of §1–§13.** Frozen-artifact convention preserved.
+
+### 14.7 B-style storage shipped — `FinalAppliedOverrides` per-cycle table (Session 1163 late afternoon)
+
+The §14.4 planned correct-fix shipped same-session. The mechanism §5 Component 4 originally described (per-cycle `FinalAppliedOverrides` rows with `cycle_id` / `cycle_ts` / `knob_count` / `applied_values` fields) now exists as built.
+
+**Code anchors (as-of 2026-05-26 post-merge):**
+
+- Model: `core/models_final_applied_overrides.py` — `FinalAppliedOverrides`. Table: `core_final_applied_overrides`. Fields match §5 Component 4: `id` (UUID PK), `cycle_id` (UUID unique), `cycle_ts` (DateTimeField, btree-indexed descending), `knob_count` (IntegerField), `applied_values` (JSONField), plus a Django-managed `created_at` for row-mtime debugging.
+- Migration: `core/migrations/0354_session_1163_b_final_applied_overrides.py`. Creates the table + `fao_cycle_ts_desc` index + runs an idempotent backfill that copies the existing single-row `SystemConfiguration(key='policy_arbitrator_snapshot')` into one `FinalAppliedOverrides` row so the reader does not regress to `found: false` immediately after deploy.
+- Writer: `PolicyArbitrator.record_overrides_snapshot(now, cycle_id)` (`core/services/ops_autopilot/governance.py`) now calls `FinalAppliedOverrides.objects.create(...)` once per cycle. The pre-Session-1163 `SystemConfiguration.update_or_create(key='policy_arbitrator_snapshot', ...)` write is removed — the legacy row is a no-write, no-read artifact until a separate cleanup PR removes it.
+- Reader: `PolicyArbitrator.get_latest_snapshot(at=None)`. With `at` (datetime or ISO 8601 string), runs `filter(cycle_ts__lte=at).order_by('-cycle_ts').first()` — the exact recipe the narrative §6.4 invalidly described before this PR shipped.
+- PA tool: `autopilot_tool action=latest_overrides_snapshot` accepts optional `at=<ISO 8601>` argument. Response payload's `storage.mechanism` field reads `"append-only per-cycle row (90-day retention)"`.
+- Retention: `core.tasks.purge_finaloverrides_older_than_90d` runs daily at 02:40 MST via Celery beat (`purge-finaloverrides-90d` entry in `core/celery.py`). Hard-deletes rows where `cycle_ts < now - 90d`. Returns `{deleted: int, retention_days: 90}`.
+- Tests: `core/tests/test_policy_arbitrator_latest_snapshot.py` pins all paths — latest-only, time-travel between rows, no-row-before-`at`, unparseable `at` fail-loud, dispatcher `at` pass-through, retention purge boundary.
+
+**Implications for §10(g) — possibly resolved.**
+
+The independent claim §10(g) reads:
+
+> "(g) recording, at the end of each policy cycle, a snapshot of all active configuration overrides for time-series auditability."
+
+With B-style storage shipped, the as-built mechanism now satisfies the "time-series auditability" clause that the §14.3 counsel call previously flagged: each cycle creates a queryable row in `core_final_applied_overrides`, bounded by the 90-day retention window. Counsel's call (whether the §10(g) language is sufficient as-written, or wants amendment to specify the retention window) is now an *amendment-to-strengthen* question rather than an *amendment-to-match-reality* question — counsel may still choose to amend, but the disclosure is no longer materially divergent from the as-built mechanism.
+
+**Backfill provenance for the patent record.**
+
+The single legacy `SystemConfiguration` row at deploy time was preserved by the migration's `RunPython` data backfill (function `backfill_latest_snapshot_into_new_model`). The backfilled row's `cycle_id` was preserved if the legacy payload's `cycle_id` parsed as a valid UUID, otherwise a new UUID was generated. The `cycle_ts` was preserved from the legacy payload's `ts` field if parseable, otherwise from the `SystemConfiguration` row's `updated_at`. Future archeology against the table's earliest row can identify the backfill provenance from those preserved fields — and from the row being the only one without a matching `AutopilotAction` from the same cycle.
+
+**Counsel-facing summary for the patent record.**
+
+- §5 Component 4 mechanism description: matches as-built post-Session-1163.
+- §6(e) novelty hook ("FinalAppliedOverrides snapshot per cycle"): matches as-built.
+- §10(g) claim text: matches as-built; counsel may opt to amend for clarity on retention.
+- §8 "Time-travel debugging" operational benefit: matches as-built within the 90-day window.
+
+The §14.1-§14.6 record above is preserved unchanged as the historical lineage from disclosure-time intent → C-style honest interim → B-style correct fix.
