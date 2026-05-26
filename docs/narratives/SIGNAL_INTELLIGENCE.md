@@ -31,14 +31,17 @@ provenance_note: Batch C narrative. Covers the full signal chain — spiders →
 ## 1. What this is
 
 The Signal Intelligence pipeline turns the open internet into the
-platform's work queue. Spiders crawl 80 sources across ~18–41
-categories (news, financial, tech, legal, education, social,
-sports, weather, etc.). Their output lands in `SpiderData` rows
-with embeddings and relevance scores. A scheduled job
-(`scan_spider_opportunities`, every 30 minutes) aggregates the
-last 72 hours of data into `SignalCluster` rows by topic and
-keyword. Clusters above a minimum size become `AutoTopic` rows
-with rationale and suggested agents. Topics that survive a
+platform's work queue. Spiders crawl sources across a couple
+dozen categories (news, financial, tech, legal, education,
+social, sports, weather, etc.); current counts are in
+`PLATFORM_INVENTORY.md` (as-of 2026-05-25: 80 working spiders).
+Their output lands in `SpiderData` rows with embeddings and
+relevance scores. A scheduled job (`scan_spider_opportunities`)
+aggregates the most recent window of data into `SignalCluster`
+rows by topic and keyword — see the beat schedule entry for the
+current cadence (as-of 2026-05-25: every 30 min, 72-h window).
+Clusters above a minimum size become `AutoTopic` rows with
+rationale and suggested agents. Topics that survive a
 quality gate trigger a `HiveMindSession` — a multi-agent
 conversation — which can produce an `Initiative`: a tracked
 project with five execution stages and structured action items.
@@ -65,7 +68,7 @@ reasons the next step's guards were added.
 | **Spider** | A collector. 80 are registered in `ai_core/spiders/spider_registry.py`. Each spider has a name, a category, a `Spider` class, a priority (1 or 2), and an HTTP method (RSS / API / JSON / Playwright). Output is normalized into `SpiderData` rows. ~1.14M `SpiderItemHash` rows record what was seen and when. |
 | **`SpiderData`** | The raw collection row in `core.models_unified_system`. Carries `spider_name`, `source_url`, `data_type`, `raw_data` (JSON), `processed_data` (JSON), `relevance_score` (0–100), `insights` (JSON list), `embedding` (1536-dim pgvector), `item_embeddings`, `is_processed`, `is_actionable`. The `data_type` field is constrained to a fixed vocabulary (opportunity, job_posting, market_data, competitor_info, trend_data, news, research, etc.) — invented types like `market_alert` or `breaking_news` do not exist and will not match queries. **Common failure:** queries for `data_type='market_alert'` silently return empty; use `market_data` or `news` instead. Treat the `data_type` enum/CHOICES in code as canonical. |
 | **`SignalCluster`** | The aggregated grouping. `SignalAggregationService.aggregate_signals()` extracts keywords/topics from the last 72h of `SpiderData`, groups by topic (primary) or keywords (secondary), filters clusters below `MIN_CLUSTER_SIZE=3`, and computes three metrics: strength, confidence, novelty. |
-| **Strength / confidence / novelty** | Cluster metrics, each 0–1. **Strength** = signal count (40%) + source diversity (40%) + relevance (20%). **Confidence** = source count / 4 (needs ≥ 2 sources to exceed 0.3). **Novelty** decays over 24h based on average signal age. Together they decide whether a cluster is worth promoting to a topic. |
+| **Strength / confidence / novelty** | Cluster metrics, each 0–1. Current weighting (as-of 2026-05-25): **strength** = signal count + source diversity + relevance (roughly 40/40/20); **confidence** scales with distinct source count (needs ≥ 2 sources to clear ~0.3); **novelty** decays over ~24h based on average signal age. The exact weights and formulas live in `SignalAggregationService.aggregate_signals()` — treat the function as canonical, not these ratios. Together they decide whether a cluster is worth promoting to a topic. |
 | **Pattern types** | Currently 10 enumerated in `PATTERN_TYPE_CHOICES`. As-of 2026-05-25: demand_spike, trend_emergence, sentiment_shift, opportunity_window, knowledge_gap, competitive_signal, market_movement, skill_demand, content_gap, user_need. **Drift procedure:** if the topic doc / older audit says "7 pattern types," treat `PATTERN_TYPE_CHOICES` as canonical. Enum in code wins; docs mentioning 7 are stale. |
 | **`AutoTopic`** | A promoted cluster. `generate_auto_topics()` reads clusters, applies a topic-name filter (Session 1010 — stopwords stripped: "new", "now", "how to", "want", "need", etc.; comma separator instead of "and"; falls back to cluster name when no meaningful keywords remain), and produces an AutoTopic row with rationale and suggested agents. |
 | **`HiveMindSession`** | A multi-agent conversation triggered by an AutoTopic. Linked to the topic via FK + to the signal cluster via FK. Auto-selects relevant agents via `AgentRouter`. The discussion output is the basis for an initiative if the quality gate (Session 994) is passed. |
