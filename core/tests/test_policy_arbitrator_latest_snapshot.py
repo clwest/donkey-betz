@@ -32,6 +32,7 @@ class GetLatestSnapshotTests(TestCase):
         self.assertFalse(result['found'])
         self.assertIsNone(result['cycle_id'])
         self.assertIsNone(result['ts'])
+        self.assertIsNone(result['row_updated_at'])
         self.assertEqual(result['knob_count'], 0)
         self.assertEqual(result['knobs'], {})
         self.assertEqual(result['storage']['key'], 'policy_arbitrator_snapshot')
@@ -67,6 +68,10 @@ class GetLatestSnapshotTests(TestCase):
         self.assertTrue(result['found'])
         self.assertEqual(result['cycle_id'], 'test-cycle-uuid-1234')
         self.assertEqual(result['ts'], '2026-05-26T20:00:00+00:00')
+        self.assertIsNotNone(result['row_updated_at'])
+        # row_updated_at is the DB row's updated_at, surfaced for
+        # operator-side freshness checks ("is this snapshot stale?")
+        # without needing to infer from cycle cadence.
         self.assertEqual(result['knob_count'], 2)
         self.assertEqual(
             result['knobs']['budget_hard_limit_pct']['owner'],

@@ -458,7 +458,7 @@ This implies a Django model `FinalAppliedOverrides` with at least `cycle_id`, `c
 
 No Django model named `FinalAppliedOverrides` exists in the codebase. Verify: `grep -rn "^class FinalAppliedOverrides" core/` returns zero matches.
 
-The snapshot is written by `PolicyArbitrator.record_overrides_snapshot()` (currently at `core/services/ops_autopilot/governance.py:1607` after the §14 follow-on `get_latest_snapshot()` method was inserted; pre-Session-1163 the writer was at `governance.py:1525`). The writer uses `update_or_create` on a **single** `SystemConfiguration` row:
+The snapshot is written by `PolicyArbitrator.record_overrides_snapshot()` (currently at `core/services/ops_autopilot/governance.py:1616` after the Session 1163 follow-on `get_latest_snapshot()` method was inserted; pre-Session-1163 the writer was at `governance.py:1525`). The writer uses `update_or_create` on a **single** `SystemConfiguration` row:
 
 ```python
 SystemConfiguration.objects.update_or_create(
@@ -503,6 +503,7 @@ Shipped in the same Session 1163 PR as this addendum. `core.services.ops_autopil
   "found": true,
   "cycle_id": "…",
   "ts": "2026-…",
+  "row_updated_at": "2026-…",
   "knob_count": N,
   "knobs": {…},
   "storage": {
@@ -510,9 +511,11 @@ Shipped in the same Session 1163 PR as this addendum. `core.services.ops_autopil
     "key": "policy_arbitrator_snapshot",
     "mechanism": "single-row overwrite per cycle (no per-cycle history)"
   },
-  "note": "Per-cycle history is not stored; time-travel queries are not supported by the current implementation. See Disclosure L §14 addendum for the drift record."
+  "note": "Per-cycle history is not stored; time-travel queries are not supported by the current implementation. row_updated_at carries the database row mtime so callers can answer \"is this fresh?\" without inferring from cycle cadence. See Disclosure L §14 addendum for the drift record."
 }
 ```
+
+The `row_updated_at` field (added during Session 1163 review per Rigby's nit) lets callers answer "is this snapshot fresh?" without having to know the cycle cadence. `ts` is the timestamp the arbitrator captured into the JSON payload (from `now.isoformat()` inside `record_overrides_snapshot`); `row_updated_at` is the database row's `updated_at` (Django auto-managed). The two are usually milliseconds apart; if they ever diverge significantly that itself is a debugging signal.
 
 The tool exists so operators can answer "what's configured right now?" without an ORM recipe. It does NOT pretend to support time-travel. The intent is C-style honest exposure that does not lock in the as-built mechanism — when §14.4 ships, the same tool can be extended to accept a `time` argument without renaming.
 
