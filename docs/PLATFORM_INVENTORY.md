@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-05-26 12:47:48
-**Git HEAD:** `1670436d`
+**Generated:** 2026-05-27 16:38:24
+**Git HEAD:** `d3493510`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -13,10 +13,10 @@
 | [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 155 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
 | [Services](#services) | 112 `*Service` classes across 338 files in core/services/ |
-| [Celery Tasks](#celery-tasks) | 402 user-defined Celery tasks (excludes celery.* internals) |
-| [Celery Beat — Scheduled Tasks](#beat-schedule) | 81 enabled + 0 disabled = 81 PeriodicTask rows |
+| [Celery Tasks](#celery-tasks) | 403 user-defined Celery tasks (excludes celery.* internals) |
+| [Celery Beat — Scheduled Tasks](#beat-schedule) | 82 enabled + 0 disabled = 82 PeriodicTask rows |
 | [Personal Assistant (PA) Tools](#pa-tools) | 106 tool schemas + 171 registered handlers; 8 enrichment services |
-| [Database Models](#database-models) | 585 concrete models across 23 apps |
+| [Database Models](#database-models) | 586 concrete models across 23 apps |
 | [URL Routes](#url-routes) | 1857 path() patterns across all core/urls*.py files |
 | [Django View Files](#views-files) | 208 files matching core/views*.py |
 | [Django Management Commands](#management-commands) | 183 management commands in core/management/commands/ |
@@ -29,7 +29,7 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,049 Python files, 996,439 lines across core/ + ai_core/ + intelligence/ |
+| [Code Statistics](#code-stats) | 2,052 Python files, 997,229 lines across core/ + ai_core/ + intelligence/ |
 | [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
 
 ## Table of Contents
@@ -368,11 +368,11 @@
 <a id="celery-tasks"></a>
 ## Celery Tasks
 
-**Headline:** 402 user-defined Celery tasks (excludes celery.* internals)
+**Headline:** 403 user-defined Celery tasks (excludes celery.* internals)
 
 **Code location:** `core/tasks.py + siblings`
 
-**Notes:** Top 10 modules by task count: core.tasks=334, intelligence.tasks=14, sports=8, (top-level)=7, core.tasks_agents=6, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
+**Notes:** Top 10 modules by task count: core.tasks=335, intelligence.tasks=14, sports=8, (top-level)=7, core.tasks_agents=6, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
 
 | Task |
 |---|
@@ -776,12 +776,12 @@
 |  |
 |  |
 |  |
-| ... | _(2 more rows truncated)_ |
+| ... | _(3 more rows truncated)_ |
 
 <a id="beat-schedule"></a>
 ## Celery Beat — Scheduled Tasks
 
-**Headline:** 81 enabled + 0 disabled = 81 PeriodicTask rows
+**Headline:** 82 enabled + 0 disabled = 82 PeriodicTask rows
 
 **Code location:** `django_celery_beat.PeriodicTask + core/tasks_schedule.py`
 
@@ -852,6 +852,7 @@
 | process-human-attention-lifecycle | core.tasks.process_human_attention_lifecycle | yes | default |
 | process-spider-actions | core.tasks.process_spider_actions | yes | long_running |
 | promote-to-shared-knowledge | core.tasks.promote_to_shared_knowledge | yes | default |
+| purge-finaloverrides-90d | core.tasks.purge_finaloverrides_older_than_90d | yes | broadcast |
 | reap-zombie-work | core.tasks.reap_zombie_work | yes | default |
 | reconcile-experiment-status-outcome | core.tasks.reconcile_experiment_status_outcome | yes | long_running |
 | report-pending-review-metrics | core.tasks.report_pending_review_metrics | yes | default |
@@ -990,9 +991,9 @@
 <a id="database-models"></a>
 ## Database Models
 
-**Headline:** 585 concrete models across 23 apps
+**Headline:** 586 concrete models across 23 apps
 
-**Notes:** By app: core=476, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
+**Notes:** By app: core=477, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
 
 | Model | App | DB Table |
 |---|---|---|
@@ -1251,6 +1252,7 @@
 | FailurePrescription | core |  |
 | FailureSignature | core |  |
 | FeedbackItem | core |  |
+| FinalAppliedOverrides | core |  |
 | FleetArtifact | core |  |
 | FleetAuthAuditLog | core |  |
 | FleetEvent | core |  |
@@ -1395,8 +1397,7 @@
 | ProjectPresence | core |  |
 | ProjectRepo | core |  |
 | ProjectResearchFeedback | core |  |
-| ProjectSpiderPriority | core |  |
-| ... | _(185 more rows truncated)_ |
+| ... | _(186 more rows truncated)_ |
 
 <a id="url-routes"></a>
 ## URL Routes
@@ -2044,14 +2045,14 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,049 Python files, 996,439 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,052 Python files, 997,229 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1643 | 830042 |
+| core | 1646 | 830832 |
 | ai_core | 295 | 119912 |
 | intelligence | 111 | 46485 |
-| TOTAL (python) | 2049 | 996439 |
+| TOTAL (python) | 2052 | 997229 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
