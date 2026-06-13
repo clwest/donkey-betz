@@ -1,0 +1,227 @@
+{
+  "main": {
+    "id": "52e9dfb13df1e9dc",
+    "type": "split",
+    "children": [
+      {
+        "id": "857a56f55470c4a6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "96a89b015bbcf06e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/PLATFORM_WHAT_IT_IS.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "PLATFORM_WHAT_IT_IS"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "186cdf27447c0509",
+    "type": "split",
+    "children": [
+      {
+        "id": "c4cfbf7099b6921f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ce618ceff87f9fc9",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "c2463bf75ce8c1d3",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "1b605f0794aaac59",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "c6e7fa749c184f4a",
+    "type": "split",
+    "children": [
+      {
+        "id": "39d7e1db3ba08af9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "cb7885a101874b75",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "docs/PLATFORM_WHAT_IT_IS.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for PLATFORM_WHAT_IT_IS"
+            }
+          },
+          {
+            "id": "ef43fb1fc5e97815",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "docs/PLATFORM_WHAT_IT_IS.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from PLATFORM_WHAT_IT_IS"
+            }
+          },
+          {
+            "id": "afe59cc62aec630c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "85c642cc4a272a5a",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "8e8d473765294422",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "docs/PLATFORM_WHAT_IT_IS.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of PLATFORM_WHAT_IT_IS"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "96a89b015bbcf06e",
+  "lastOpenFiles": [
+    "temp-85206.rdb",
+    "core/services/__pycache__/action_item_parser.cpython-311.pyc",
+    "core/services/__pycache__/semantic_drift_detector.cpython-311.pyc",
+    "core/services/__pycache__/model_registry.cpython-311.pyc",
+    "core/services/__pycache__/agent_model_router.cpython-311.pyc",
+    "core/services/__pycache__/search_strategy_service.cpython-311.pyc",
+    "core/services/__pycache__/trace_attachment_service.cpython-311.pyc",
+    "core/services/priority/__pycache__/agent_tags.cpython-311.pyc",
+    "docs/00-START-HERE/README.md",
+    "temp-82783.rdb",
+    "docs/00-START-HERE/INDEX.md",
+    "CLAUDE.md",
+    "U-D-B/Untitled.base",
+    "U-D-B/Untitled 2.canvas",
+    "U-D-B/2026-06-12.md",
+    "U-D-B/Untitled 1.canvas",
+    "core/management/commands/__pycache__/cleanup_agents.cpython-311.pyc",
+    "README.md",
+    "docs/PLATFORM_INVENTORY.md",
+    "docs/architecture/MULTI_AGENT_ARCHITECTURE.md",
+    "docs/architecture/INDEX.md",
+    "docs/architecture/AI_ASSISTANT_ARCHITECTURE.md",
+    "docs/apps/mentorforge_BRIEF.md",
+    "docs/apps/dealflowtracker_BRIEF.md",
+    "docs/apps/contract_concierge_BRIEF.md",
+    "docs/apps/colorado_family_law_concierge_FUTURE_CONCEPT.md",
+    "docs/apps/compliancesentinel_BRIEF.md",
+    "docs/apis/INDEX.md",
+    "docs/apis/DAVINCI_RESOLVE_FFMPEG.md",
+    "docs/agents/README.md",
+    "docs/agents/AGENT_INFRASTRUCTURE_REALITY_CHECK.md",
+    "docs/archive/superseded-2026-05/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md",
+    "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md",
+    "docs/archive/superseded-2026-05/agents/CREATIVEDIRECTOR_AGENT_IMPLEMENTATION.md",
+    "docs/agents/CREATIVEDIRECTOR_AGENT_IMPLEMENTATION.md",
+    "docs/agents/INDEX.md",
+    "docs/agents/STRATEGIC_AGENT_ANALYSIS.md",
+    "docs/agents/CTO_AGENT_INFRASTRUCTURE_ANALYSIS.md"
+  ]
+}

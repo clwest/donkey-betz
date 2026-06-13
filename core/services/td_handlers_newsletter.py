@@ -472,65 +472,44 @@ class NewsletterHandlersMixin:
         """View or update newsletter configuration."""
         from core.models_deliverables import Deliverable
 
-        # Store config as a special deliverable
         config_title = 'Newsletter Config — Autopilot Ops'
-        try:
-            config_del = Deliverable.objects.get(
-                title=config_title,
-                category='Newsletter',
-            )
-        except Deliverable.DoesNotExist:
-            config_del = None
+        defaults = {
+            'newsletter_config': True,
+            'provider': 'substack_manual',
+            'subscribe_url': 'https://autopilotops.substack.com',
+            'sponsor_email': 'sponsor@autopilotops.com',
+            'publication_name': 'Autopilot Ops',
+        }
 
-        # If updating — only accept non-empty values (PA may send empty strings)
         updates = {}
         for key in ['provider', 'subscribe_url', 'sponsor_email', 'publication_name', 'publication_slug']:
             val = payload.get(key)
             if val is not None and val != '':
                 updates[key] = val
 
-        if updates:
-            if not config_del:
-                from core.services.deliverable_factory import create_deliverable
-                config_del = create_deliverable(
-                    title=config_title,
-                    content='Newsletter configuration — see metadata.',
-                    agent_name='NewsletterTool',
-                    category='Newsletter',
-                    deliverable_type='document',
-                    content_format='text',
-                    is_saved=True,
-                    metadata={'newsletter_config': True, **updates},
-                    user_id=user_id,
-                )
-            else:
-                meta = config_del.metadata or {}
-                meta.update(updates)
-                config_del.metadata = meta
-                config_del.save(update_fields=['metadata'])
+        config_del, created = Deliverable.objects.get_or_create(
+            title=config_title,
+            category='Newsletter',
+            defaults={
+                'content': 'Newsletter configuration — see metadata.',
+                'agent_name': 'NewsletterTool',
+                'deliverable_type': 'document',
+                'content_format': 'text',
+                'is_saved': True,
+                'metadata': {**defaults, **updates},
+            },
+        )
 
-            return {
-                'action': 'config',
-                'updated': True,
-                'config': config_del.metadata,
-            }
-
-        # Read current config
-        if config_del:
-            return {
-                'action': 'config',
-                'config': config_del.metadata,
-            }
+        meta = config_del.metadata or {}
+        meta = {**defaults, **meta, **updates}
+        config_del.metadata = meta
+        config_del.save(update_fields=['metadata'])
 
         return {
             'action': 'config',
-            'config': {
-                'provider': 'substack_manual',
-                'subscribe_url': 'https://autopilotops.substack.com',
-                'sponsor_email': 'sponsor@autopilotops.com',
-                'publication_name': 'Autopilot Ops',
-            },
-            'note': 'No config saved yet. Pass provider/subscribe_url/etc. to save.',
+            'updated': bool(updates) or created,
+            'created': created,
+            'config': config_del.metadata or {},
         }
 
     # ── sources ─────────────────────────────────────────────────────────────

@@ -299,6 +299,12 @@ from ..models_workspace_templates import WorkspaceTemplate, WorkspaceConfig, Pip
 # Newsletter subscriber model (Operator Edge)
 from ..models_newsletter import NewsletterSubscriber
 
+from core.models_nervous import (
+    NervousPulse,
+    NervousStatus,
+    WebSocketConnectionLog,
+)
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models

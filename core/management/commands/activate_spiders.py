@@ -286,7 +286,7 @@ class Command(BaseCommand):
         stats = connector.get_routing_statistics()
         self.stdout.write(f'  Success rate: {stats["success_rate"]:.1f}%')
         self.stdout.write(f'  Total spider data: {stats["total_spider_data"]}')
-        self.stdout.write(f'  Unprocessed remaining: {stats["unprocessed_data"]}')
+        self.stdout.write(f'  Unprocessed remaining: {stats.get("unprocessed_data", 0)}')
 
         # List notified agents
         if agents_notified:

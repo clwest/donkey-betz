@@ -48,9 +48,18 @@ class ToolCallRecord(models.Model):
         null=True, blank=True, db_index=True,
         help_text="Session trace ID for linking related tool calls"
     )
-    conversation_id = models.UUIDField(
-        null=True, blank=True, db_index=True,
-        help_text="Conversation ID if from chat context"
+    conversation_id = models.CharField(
+
+        max_length=100,
+
+        null=True,
+
+        blank=True,
+
+        db_index=True,
+
+        help_text="Conversation/session identifier; PA uses pa-* ids, not UUIDs.",
+
     )
 
     # Agent info

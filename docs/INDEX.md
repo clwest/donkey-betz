@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-05-27 16:39
+**Generated:** 2026-06-12 21:17
 **Current Session:** 1164
 **Total Documentation:** 2644 files | 696,042 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,598 |
+| Total cross-references | 4,588 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 189 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 177 | Platform Master Inventory |
 | `docs/INDEX.md` | 121 | INDEX |
-| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 117 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/audit/README.md` | 117 | Audit Workspace |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 66 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -190,7 +190,7 @@
 | [PA_TOOL_AUDIT.md](PA_TOOL_AUDIT.md) | 2,105 | 2026-05-12 |
 | [PERSONAL_ASSISTANT_ARCHITECTURE.md](PERSONAL_ASSISTANT_ARCHITECTURE.md) | 312 | 2026-05-24 |
 | [PERSONA_AGENTS.md](PERSONA_AGENTS.md) | 8 | 2026-05-24 |
-| [PLATFORM_INVENTORY.md](PLATFORM_INVENTORY.md) | 2,105 | 2026-05-27 |
+| [PLATFORM_INVENTORY.md](PLATFORM_INVENTORY.md) | 2,105 | 2026-06-12 |
 | [PLATFORM_WHAT_IT_IS.md](PLATFORM_WHAT_IT_IS.md) | 514 | 2026-05-24 |
 | [RAILWAY_WORKER_CONSOLIDATION_AUDIT.md](RAILWAY_WORKER_CONSOLIDATION_AUDIT.md) | 8 | 2026-05-24 |
 | [RAILWAY_WORKER_CONSOLIDATION_CHECKLIST.md](RAILWAY_WORKER_CONSOLIDATION_CHECKLIST.md) | 8 | 2026-05-24 |
@@ -247,10 +247,10 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| AGENTS.md | docs | 1,683 | 2026-05-27 16:39 |
-| PLATFORM_INVENTORY.md | docs | 2,105 | 2026-05-27 16:38 |
+| PLATFORM_INVENTORY.md | docs | 2,105 | 2026-06-12 17:15 |
+| INDEX.md | docs | 391 | 2026-05-27 16:40 |
+| AGENTS.md | docs | 1,683 | 2026-05-27 16:40 |
 | SESSION_1163_DISCLOSURE_L_DRIFT_CORRECTION_ARC.md | handoffs | 225 | 2026-05-27 16:34 |
-| INDEX.md | docs | 391 | 2026-05-27 16:34 |
 | DISCLOSURE_L_SELF_TUNING_EXPERIMENTATION.md | patents | 562 | 2026-05-26 15:07 |
 | SELF_TUNING_AND_EXPERIMENTATION.md | narratives | 681 | 2026-05-26 15:07 |
 | SESSION_1162_NARRATIVE_TRIPLE_AND_PA_ACKS_OBSERVATION_PHASE.md | handoffs | 306 | 2026-05-26 12:49 |
