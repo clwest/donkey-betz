@@ -567,4 +567,10 @@ def execute_agent(name: str, task_data: Dict[str, Any]) -> Optional[str]:
 
 
 # Initialize the global registry
-agent_registry = get_agent_registry()
+# agent_registry = get_agent_registry()
+# Do not initialize at import time.
+
+# Import-time ORM access can happen inside ASGI async contexts and trigger
+
+# SynchronousOnlyOperation.
+agent_registry = None
