@@ -88,7 +88,10 @@ class AgentRegistry:
         }
 
         # Initialize registry
-        self._refresh_agent_cache()
+        # self._refresh_agent_cache()
+        # Do not refresh during __init__.
+        # Refresh lazily from sync-safe call sites instead.
+        # self._refresh_agent_cache()
 
     def _refresh_agent_cache(self):
         """Refresh agent cache from database"""
