@@ -229,6 +229,172 @@ Running the data sniff for COO #1 required:
 
 ---
 
+## Rollback / disable levers (per Rigby's Session 1165 close-out review)
+
+Operational escape hatches if any of the three MUSTs misbehaves in production. Documented here so a future operator can disable a single primitive without rolling the whole session.
+
+### #2295 — DB safety defaults
+
+**Location:** `core/settings.py:268` — the `options` connection string.
+
+**Soften (recommended emergency lever):**
+```python
+# raise statement_timeout from 60000 → 120000 ms (2 min)
+'options': (
+    '-c search_path=studio,public,dbao,shared'
+    ' -c statement_timeout=120000'
+    ' -c idle_in_transaction_session_timeout=120000'
+),
+```
+Then restart daphne + celery to flush old PG connections. Existing connections honor the OLD settings until they cycle (CONN_MAX_AGE=60).
+
+**Fully disable:**
+```python
+# revert to pre-1165 state — no statement_timeout, no idle_in_tx
+'options': '-c search_path=studio,public,dbao,shared',
+```
+
+**Per-tx override** (when a single tx legitimately needs to exceed the timeout — e.g., heavy backfill):
+```python
+from django.db import transaction, connection
+with transaction.atomic():
+    with connection.cursor() as c:
+        c.execute("SET LOCAL statement_timeout = '0'")
+        # ... long-running work ...
+```
+`SET LOCAL` is scoped to the transaction only; safe under `CONN_MAX_AGE=60` connection reuse.
+
+**Task-boundary `close_old_connections()`:** the postrun/failure hooks in `core/celery_telemetry.py` are wrapped in `try/except` blocks that swallow any errors — they cannot break task execution. To disable, comment out the two `close_old_connections()` `try:` blocks added at the end of `on_task_postrun` and `on_task_failure`.
+
+### #2296 — Singleton-task locks
+
+**Lock key format:** `singleton_lock:<task_name>`. The `<task_name>` is the string passed to `@singleton_task(...)` — NOT the dotted Celery name. Example: the decorator `@singleton_task("capture-pa-acks-health-snapshot", ttl=300)` writes to Redis key `singleton_lock:capture-pa-acks-health-snapshot`.
+
+**Bypass a lock for emergency run** (manual delete via Django shell):
+```python
+from django.core.cache import cache
+from core.services.redis_lock import LOCK_PREFIX
+cache.delete(LOCK_PREFIX + "capture-pa-acks-health-snapshot")
+# now the next fire of the task will acquire cleanly
+```
+
+**Enumerate active locks** (find what's currently held):
+```python
+import redis
+r = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'))
+keys = [k.decode() for k in r.scan_iter(match='*singleton_lock:*')]
+for k in keys:
+    print(k, '→', r.get(k))
+# value carries task_id when @singleton_task wrapped a bind=True task
+```
+
+**Owner-aware semantics caveat:** TTL-only release per Rigby's Session 1165 design — we do NOT explicitly delete the key on task completion. The TTL is the only release path. If you manually delete a lock that a long-running task still holds, a second acquirer can take the lock; when the first task finally finishes, it does NOT delete the new acquirer's lock (no implicit release on context exit). Race is bounded to the TTL window.
+
+**Fully disable** `@singleton_task` on a specific task: comment out the decorator line, restart workers (`pkill -9 -f celery; rm -f .celery*.pid; make celery`). Task reverts to pre-1165 stampede-prone behavior.
+
+### #2297 — Retry budgets
+
+**Budget key format:** `retry_budget:<task_name>[:<fingerprint>]`. The `<task_name>` is the string passed to `check_retry_budget(...)`, NOT necessarily the dotted Celery name.
+
+**Identify "budget exhausted" vs real failures in logs:**
+- Budget denial: log line `[TASK] retry DENIED — budget_exhausted: N/M retries in 3600s window (key=retry_budget:...)`. Task returns `{"retry_denied": True, "reason": ..., "original_exc": ...}` payload — marked SUCCESS by Celery, not FAILURE.
+- Real failure (budget allows): log line `[retry_policy] <task> scheduling retry K/M at +Xs (allowed: K/N ...)`. Task remains in `RETRY` state.
+- Find recent denials: `grep "retry DENIED" celery*.log`.
+- Count denials per task in 24h: `grep "retry DENIED" celery*.log | awk -F"—" '{print $1}' | sort | uniq -c | sort -rn`.
+
+**Temporarily raise budget for a specific task** — edit the callsite's `max_retries` argument:
+```python
+# core/tasks_financial.py line ~672 (aggregate_roi_metrics_daily)
+allowed, reason = check_retry_budget(
+    "aggregate_roi_metrics_daily",
+    window_seconds=3600,
+    max_retries=20,  # was 5 — emergency raise
+)
+```
+Restart celery workers to pick up the change. Lower priority alternative: increase `window_seconds` to 7200 so the budget resets twice as fast in absolute terms while the per-window cap stays the same.
+
+**Manually reset a budget counter** (ops escape hatch from the primitive):
+```python
+from core.services.retry_policy import reset_retry_budget
+reset_retry_budget("aggregate_roi_metrics_daily")
+# returns True if a counter was cleared, False if it didn't exist
+```
+
+**Fully disable budget gating on a specific task:** revert the callsite from the new pattern back to `raise self.retry(exc=e)`. No new tests required; the helper functions remain available for re-application later.
+
+---
+
+## What to watch in the first 24h post-merge
+
+Lightweight observability checks for the first day after the Session 1165 PRs go live overnight. Rigby's recommendation: one AM check around 7:30–9:00 AM MST, then trust the existing observation surfaces.
+
+### 1. PG connection state — should stay quiet
+
+```bash
+.venv/bin/python manage.py dbshell -- -c "
+SELECT state, count(*) FROM pg_stat_activity
+WHERE datname='unified_donkey_betz' GROUP BY state ORDER BY count DESC;"
+```
+**Expect:** total ~30–60 connections, `idle in transaction` count = 0. If `idle in transaction` > 0, something held a tx past the new 60s timeout — investigate.
+
+### 2. `statement_timeout` terminations — count + offenders
+
+```bash
+# count of statement_timeout errors today
+grep -i "canceling statement due to statement timeout" /opt/homebrew/var/log/postgresql@15.log 2>/dev/null | wc -l
+
+# which task triggered (from Django logs)
+grep -i "statement_timeout\|canceling statement" celery*.log daphne*.log 2>/dev/null | head -20
+```
+**Expect:** zero or near-zero. Each one is a signal that a real query is hitting the 60s cap — either a legitimate long query that needs `SET LOCAL statement_timeout = '0'` per-tx, or a runaway query that the timeout caught (good).
+
+### 3. Singleton-lock skips for the 9 protected tasks
+
+```bash
+# from celery worker logs — every time @singleton_task refused a fire
+grep -i "singleton_task.*skipping\|concurrent run detected" celery*.log | head -30
+
+# count by task
+grep -i "singleton_task.*skipping" celery*.log | grep -oE "skipping [a-z-]+" | sort | uniq -c | sort -rn
+```
+**Expect:** zero or low counts for `monitor-celery-health`, `cleanup-stale-agent-executions`, `capture-pa-acks-health-snapshot`. Higher counts for `run-spider-network` or `scan-spider-opportunities` are normal if those tasks legitimately take longer than their fire interval. Investigate if a task that should be fast (e.g., `monitor-celery-health`, 600s TTL) is hitting the lock — means it ran > 600s, which is itself a finding.
+
+### 4. Retry-budget denials by task
+
+```bash
+# all denials today
+grep "retry DENIED" celery*.log | head -30
+
+# count by task
+grep "retry DENIED" celery*.log | awk -F"]" '{print $1}' | sort | uniq -c | sort -rn
+```
+**Expect:** zero unless an upstream is down. Each denial means a task hit `max_retries=5` within a 1h window — investigate the root cause (broken API, DB outage, etc.) and use `reset_retry_budget(task_name)` to clear after fixing.
+
+### 5. Celery queue depth around 3:00–5:00 AM MST — stagger validation
+
+```bash
+# from cockpit_tool.queue_lengths via PA chat OR direct redis
+redis-cli LLEN celery
+redis-cli LLEN long_running
+redis-cli LLEN broadcast
+redis-cli LLEN pa
+
+# pa_acks_health JSONL for the overnight window
+tail -20 logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | .venv/bin/python -c "
+import json, sys
+for line in sys.stdin:
+    d = json.loads(line)
+    print(d['generated_at_mt'], 'status:', d['status'], 'depth:', d.get('queue_depth', {}).get('depth'))
+"
+```
+**Expect:** no backlog cliff at 3:00 or 4:00 MST. With the stagger, queues should grow gradually as each minute fires its task rather than 9 tasks slamming the worker pool at :00.
+
+### AM check execution plan
+
+Around 7:30–9:00 AM MST, run all 5 checks above. Total expected time: <10 minutes. If everything is clean (zero unexpected terminations, zero retry denials, expected stampede-skip counts), document the result in the next session handoff and the operational surfaces can be trusted going forward. If any check surfaces unexpected behavior, use the rollback levers above to soften/disable while investigating.
+
+---
+
 ## Open items carrying into Session 1166
 
 ### MUST tier
