@@ -666,7 +666,23 @@ def _impl_aggregate_roi_metrics_daily(self):
 
     except Exception as e:
         logger.error(f"📊 [SESSION 475] ROI aggregation failed: {e}")
-        raise self.retry(exc=e)
+        # Session 1165 (COO #6): budget-gated, exponentially-backed-off retry.
+        from core.services.retry_policy import (
+            check_retry_budget,
+            compute_retry_countdown,
+        )
+        allowed, reason = check_retry_budget(
+            "aggregate_roi_metrics_daily",
+            window_seconds=3600,
+            max_retries=5,
+        )
+        if not allowed:
+            logger.warning(f"📊 [ROI] retry DENIED — {reason}")
+            return {"retry_denied": True, "reason": reason, "original_exc": str(e)}
+        raise self.retry(
+            exc=e,
+            countdown=compute_retry_countdown(self.request.retries, base=60),
+        )
 
 
 
@@ -2401,7 +2417,23 @@ def _impl_evaluate_ml_predictions(self):
 
     except Exception as e:
         logger.error(f"[ML-EVAL] Failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        # Session 1165 (COO #6): budget-gated, exponentially-backed-off retry.
+        from core.services.retry_policy import (
+            check_retry_budget,
+            compute_retry_countdown,
+        )
+        allowed, reason = check_retry_budget(
+            "evaluate_ml_predictions",
+            window_seconds=3600,
+            max_retries=5,
+        )
+        if not allowed:
+            logger.warning(f"[ML-EVAL] retry DENIED — {reason}")
+            return {"retry_denied": True, "reason": reason, "original_exc": str(e)}
+        raise self.retry(
+            exc=e,
+            countdown=compute_retry_countdown(self.request.retries, base=60),
+        )
 
 
 
