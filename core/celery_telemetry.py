@@ -11,7 +11,12 @@ import logging
 import os
 
 import psutil
-from celery.signals import task_prerun, task_postrun, task_failure
+from celery.signals import (
+    before_task_publish,
+    task_failure,
+    task_postrun,
+    task_prerun,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,3 +170,17 @@ def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, *
         check_and_notify(task_id=task_id, state='FAILURE', error=exception)
     except Exception:
         logger.debug(f"Celery telemetry: task failure notification failed for {task_id}", exc_info=True)
+
+
+@before_task_publish.connect
+def stamp_sent_at(headers=None, **kwargs):
+    """Stamp `headers["sent_at"]` at enqueue so cockpit_tool.queue_lengths can
+    compute backlog age. Celery's default message envelope carries no
+    timestamp, which leaves queue-pressure age computation blind. Idempotent:
+    won't overwrite if upstream already set it.
+    """
+    import time
+    if not isinstance(headers, dict):
+        return
+    if headers.get('sent_at') is None:
+        headers['sent_at'] = time.time()
