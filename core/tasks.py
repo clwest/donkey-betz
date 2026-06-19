@@ -5734,7 +5734,23 @@ def verify_betting_outcomes(self):
 
     except Exception as e:
         logger.error(f"[OUTCOME-VERIFY] Failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        # Session 1165 (COO #6): budget-gated, exponentially-backed-off retry.
+        from core.services.retry_policy import (
+            check_retry_budget,
+            compute_retry_countdown,
+        )
+        allowed, reason = check_retry_budget(
+            "verify_betting_outcomes",
+            window_seconds=3600,
+            max_retries=5,
+        )
+        if not allowed:
+            logger.warning(f"[OUTCOME-VERIFY] retry DENIED — {reason}")
+            return {"retry_denied": True, "reason": reason, "original_exc": str(e)}
+        raise self.retry(
+            exc=e,
+            countdown=compute_retry_countdown(self.request.retries, base=60),
+        )
 
 
 @shared_task(bind=True, max_retries=1, default_retry_delay=300, queue='default')
