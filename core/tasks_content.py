@@ -3173,7 +3173,23 @@ def _impl_generate_daily_betting_brief(self):
 
     except Exception as e:
         logger.error(f"[BETTING-BRIEF] Failed: {e}", exc_info=True)
-        raise self.retry(exc=e)
+        # Session 1165 (COO #6): budget-gated, exponentially-backed-off retry.
+        from core.services.retry_policy import (
+            check_retry_budget,
+            compute_retry_countdown,
+        )
+        allowed, reason = check_retry_budget(
+            "generate_daily_betting_brief",
+            window_seconds=3600,
+            max_retries=5,
+        )
+        if not allowed:
+            logger.warning(f"[BETTING-BRIEF] retry DENIED — {reason}")
+            return {"retry_denied": True, "reason": reason, "original_exc": str(e)}
+        raise self.retry(
+            exc=e,
+            countdown=compute_retry_countdown(self.request.retries, base=120),
+        )
 
 
 
