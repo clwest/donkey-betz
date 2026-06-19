@@ -41,7 +41,7 @@ import os
 import time
 import uuid
 import asyncio
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, cast
 from dataclasses import dataclass, asdict
 from functools import wraps
 
@@ -654,7 +654,7 @@ class GatewayHandlersMixin:
                         'task_status — check a specific task by ID',
                         'worker_health — active workers, queues, concurrency',
                         'recent_failures — failed tasks with errors',
-                        'queue_lengths — current queue depths',
+                        'queue_lengths — broker depth + pressure state (GREEN/YELLOW/RED/CRITICAL) per queue + overall',
                         'trigger_task — manually dispatch an allowlisted Celery task',
                         'revoke_task — cancel/revoke a running or queued task by task_id',
                     ],
@@ -757,11 +757,69 @@ class GatewayHandlersMixin:
                 }
 
             if action == 'queue_lengths':
+                # Queue Pressure Telemetry (Phase 5, Top-10 #C).
+                # Backward-compat: keeps `active` and `reserved` counts from
+                # celery inspect. Adds true broker depth via Redis LLEN,
+                # sample-based oldest_age_seconds (null + parse_error when
+                # messages lack a timestamp header), and per-queue + overall
+                # GREEN/YELLOW/RED/CRITICAL classification.
+                import json
+                import time as _time
+
                 from core.celery import app as celery_app
+
+                QUEUE_ALLOWLIST = [
+                    'default', 'long_running', 'pa', 'content',
+                    'broadcast', 'ml', 'workflow', 'celery',
+                ]
+                SAMPLE_SIZE = 20
+                STATE_ORDER = {'GREEN': 0, 'YELLOW': 1, 'RED': 2, 'CRITICAL': 3}
+
+                def _classify(depth, age):
+                    reasons = []
+                    if depth >= 500 or (age is not None and age >= 1800):
+                        state = 'CRITICAL'
+                        if depth >= 500:
+                            reasons.append('depth>=500')
+                        if age is not None and age >= 1800:
+                            reasons.append('oldest_age>=1800s')
+                    elif depth >= 200 or (age is not None and age >= 600):
+                        state = 'RED'
+                        if depth >= 200:
+                            reasons.append('depth>=200')
+                        if age is not None and age >= 600:
+                            reasons.append('oldest_age>=600s')
+                    elif depth >= 50 or (age is not None and age >= 120):
+                        state = 'YELLOW'
+                        if depth >= 50:
+                            reasons.append('depth>=50')
+                        if age is not None and age >= 120:
+                            reasons.append('oldest_age>=120s')
+                    else:
+                        state = 'GREEN'
+                    return state, reasons
+
+                def _extract_timestamp(raw_item):
+                    try:
+                        obj = json.loads(raw_item)
+                    except Exception:
+                        return None
+                    props = obj.get('properties') or {}
+                    val = props.get('timestamp')
+                    if isinstance(val, (int, float)):
+                        return float(val)
+                    headers = obj.get('headers') or {}
+                    for field in ('sent_at', 'timestamp', 'enqueued_at'):
+                        v = headers.get(field)
+                        if isinstance(v, (int, float)):
+                            return float(v)
+                    return None
+
+                # 1) Inspect: active/reserved counts (kept for backward compat)
                 inspector = celery_app.control.inspect(timeout=5)
                 active = inspector.active() or {}
                 reserved = inspector.reserved() or {}
-                queues = {}
+                queues: Dict[str, Dict[str, Any]] = {}
                 for worker_name in set(list(active) + list(reserved)):
                     for task in active.get(worker_name, []):
                         q = task.get('delivery_info', {}).get('routing_key', 'unknown')
@@ -771,7 +829,112 @@ class GatewayHandlersMixin:
                         q = task.get('delivery_info', {}).get('routing_key', 'unknown')
                         queues.setdefault(q, {'active': 0, 'reserved': 0})
                         queues[q]['reserved'] += 1
-                return {'action': 'queue_lengths', 'queues': queues}
+
+                # 2) Broker depth + oldest_age via Redis (degrade gracefully)
+                now = _time.time()
+                redis_error = None
+                try:
+                    import redis as redis_lib
+                    from django.conf import settings as django_settings
+                    r = redis_lib.from_url(
+                        django_settings.CELERY_BROKER_URL,
+                        socket_connect_timeout=2,
+                        socket_timeout=2,
+                    )
+                    for q in QUEUE_ALLOWLIST:
+                        info = queues.setdefault(q, {'active': 0, 'reserved': 0})
+                        try:
+                            depth = int(r.llen(q) or 0)  # type: ignore[arg-type]
+                        except Exception as e:
+                            info['depth'] = None
+                            info['oldest_age_seconds'] = None
+                            info['estimated'] = False
+                            info['sample_size'] = 0
+                            info['parse_error'] = f'llen_failed: {type(e).__name__}'
+                            info['state'] = 'GREEN'
+                            info['reasons'] = ['depth_unknown']
+                            continue
+
+                        info['depth'] = depth
+                        oldest_age = None
+                        sample_used = 0
+                        parse_error = None
+
+                        if depth > 0:
+                            # Redis transport: messages are LPUSHed and BRPOPped
+                            # from the tail, so LRANGE -SAMPLE -1 yields the
+                            # oldest items.
+                            try:
+                                sample_items: List[Any] = cast(List[Any], r.lrange(q, -SAMPLE_SIZE, -1)) or []
+                                sample_used = len(sample_items)
+                                timestamps = []
+                                for raw in sample_items:
+                                    ts = _extract_timestamp(raw)
+                                    if ts is not None:
+                                        timestamps.append(ts)
+                                if timestamps:
+                                    oldest_age = max(0.0, now - min(timestamps))
+                                else:
+                                    parse_error = 'no_timestamp_field'
+                            except Exception as e:
+                                parse_error = f'lrange_failed: {type(e).__name__}'
+
+                        info['oldest_age_seconds'] = oldest_age
+                        info['estimated'] = oldest_age is not None
+                        info['sample_size'] = sample_used
+                        if parse_error:
+                            info['parse_error'] = parse_error
+
+                        state, reasons = _classify(depth, oldest_age)
+                        if depth > 0 and oldest_age is None:
+                            reasons = reasons + ['age_unknown']
+                        info['state'] = state
+                        info['reasons'] = reasons
+                except Exception as e:
+                    redis_error = f'{type(e).__name__}: {str(e)[:200]}'
+                    logger.warning(
+                        '[queue_lengths] Redis pressure check failed: %s',
+                        redis_error,
+                    )
+
+                # 3) System-level rollup
+                overall_state = 'GREEN'
+                ranked = []
+                for q_name, q_info in queues.items():
+                    st = q_info.get('state', 'GREEN')
+                    if STATE_ORDER.get(st, 0) > STATE_ORDER.get(overall_state, 0):
+                        overall_state = st
+                    if st in ('YELLOW', 'RED', 'CRITICAL'):
+                        ranked.append({
+                            'queue': q_name,
+                            'state': st,
+                            'depth': q_info.get('depth'),
+                            'oldest_age_seconds': q_info.get('oldest_age_seconds'),
+                        })
+                ranked.sort(
+                    key=lambda d: (
+                        -STATE_ORDER.get(d['state'], 0),
+                        -(d.get('depth') or 0),
+                        -(d.get('oldest_age_seconds') or 0),
+                    )
+                )
+                overall_reasons = []
+                for d in ranked[:3]:
+                    age = d.get('oldest_age_seconds')
+                    age_str = f'{int(age)}s' if age is not None else 'unknown'
+                    overall_reasons.append(
+                        f"{d['queue']}={d['state']} (depth={d.get('depth')}, age={age_str})"
+                    )
+
+                result = {
+                    'action': 'queue_lengths',
+                    'queues': queues,
+                    'overall_state': overall_state,
+                    'overall_reasons': overall_reasons,
+                }
+                if redis_error:
+                    result['redis_error'] = redis_error
+                return result
 
             if action == 'trigger_task':
                 task_name = payload.get('task_name', '').strip()
