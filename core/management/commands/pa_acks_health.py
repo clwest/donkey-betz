@@ -684,6 +684,15 @@ class Command(BaseCommand):
     # failure-driven).
     _SUSTAIN_TRIGGERS = ("no_workers", "depth_crit")
 
+    # Session 1164 PR #2: cadence-aware adjacency check. The
+    # `capture_pa_acks_health_snapshot` beat task fires every 30 minutes;
+    # accept a previous snapshot only if it lands within 2× that interval
+    # (60 min). Outside that window a "previous" exists but is stale —
+    # treating it as adjacent would falsely flip status after a scheduler
+    # pause + restart.
+    _EXPECTED_INTERVAL_SECONDS = 1800
+    _SUSTAIN_ADJACENCY_FACTOR = 2
+
     @staticmethod
     def _trips_no_workers(report):
         return ((report or {}).get("workers") or {}).get("count", 0) == 0
@@ -692,6 +701,26 @@ class Command(BaseCommand):
     def _trips_depth_crit(cls, report):
         depth = ((report or {}).get("queue_depth") or {}).get("depth")
         return isinstance(depth, int) and depth >= cls._CRIT_QUEUE_DEPTH
+
+    @classmethod
+    def _is_previous_adjacent(cls, report, previous_report):
+        """True iff `previous_report` is recent enough to count as 'consecutive'."""
+        if not previous_report:
+            return False
+        cur_ts_str = (report or {}).get("generated_at")
+        prev_ts_str = previous_report.get("generated_at")
+        if not (cur_ts_str and prev_ts_str):
+            return False
+        from datetime import datetime
+        try:
+            cur_ts = datetime.fromisoformat(str(cur_ts_str).replace("Z", "+00:00"))
+            prev_ts = datetime.fromisoformat(str(prev_ts_str).replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return False
+        delta = (cur_ts - prev_ts).total_seconds()
+        if delta < 0:
+            return False
+        return delta <= cls._EXPECTED_INTERVAL_SECONDS * cls._SUSTAIN_ADJACENCY_FACTOR
 
     def _compute_status(self, report, previous_report=None):
         """
@@ -717,19 +746,39 @@ class Command(BaseCommand):
         worker_count = (report.get("workers") or {}).get("count", 0) or 0
 
         # Sustain-window gate. When previous_report is None (first ever
-        # snapshot, no prior state), default to non-sustained → triggers
-        # do not fire. This matches Rigby's intent that B should never
-        # auto-escalate on first run.
+        # snapshot, no prior state) or stale (outside adjacency window),
+        # default to non-sustained → triggers do not fire. This matches
+        # Rigby's intent that B should never auto-escalate on first run
+        # and should not falsely escalate after a long scheduler pause.
+        previous_adjacent = self._is_previous_adjacent(report, previous_report)
         no_workers_sustained = (
             worker_count == 0
-            and previous_report is not None
+            and previous_adjacent
             and self._trips_no_workers(previous_report)
         )
         depth_crit_sustained = (
             depth >= self._CRIT_QUEUE_DEPTH
-            and previous_report is not None
+            and previous_adjacent
             and self._trips_depth_crit(previous_report)
         )
+
+        # Session 1164 PR #2: sustain-gating observability. Record on the
+        # snapshot itself which sustain-eligible triggers were gated this
+        # tick — without this the JSONL only shows the *outcome* status,
+        # not the reason a single tripped trigger didn't fire. Threshold-
+        # tuning (item C: WARN-persist escalation) needs adjacency evidence
+        # to be measurable.
+        gated_triggers = []
+        if worker_count == 0 and not no_workers_sustained:
+            gated_triggers.append("no_workers")
+        if depth >= self._CRIT_QUEUE_DEPTH and not depth_crit_sustained:
+            gated_triggers.append("depth_crit")
+        report["sustain_gating"] = {
+            "previous_adjacent": previous_adjacent,
+            "expected_interval_seconds": self._EXPECTED_INTERVAL_SECONDS,
+            "adjacency_factor": self._SUSTAIN_ADJACENCY_FACTOR,
+            "gated_triggers": gated_triggers,
+        }
 
         # CRIT conditions first — short-circuit on any hit.
         if (
