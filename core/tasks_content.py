@@ -2403,11 +2403,19 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
     from datetime import timedelta
     from django.utils import timezone
 
-    # Session 1062: Only one deliberation at a time — prevents OOM on celery-content
-    from django.core.cache import cache
-    lock_key = 'deliberation_blog_running'
-    if not cache.add(lock_key, self.request.id, timeout=300):
-        logger.info(f"[Phase 4] Skipping deliberation — another is already running (lock={lock_key})")
+    # Session 1062: Only one deliberation at a time — prevents OOM on celery-content.
+    # Session 1165 (COO Backlog item #3): migrated from ad-hoc
+    # `cache.add('deliberation_blog_running', ...)` to canonical singleton_lock
+    # primitive. Behavior-preserving. Namespace prefix changes from
+    # `deliberation_blog_running` → `singleton_lock:deliberation-blog-running`.
+    from django.core.cache import cache  # noqa: F401 — still used elsewhere
+    from core.services.redis_lock import (
+        acquire_singleton_lock,
+        release_singleton_lock,
+    )
+    lock_name = 'deliberation-blog-running'
+    if not acquire_singleton_lock(lock_name, ttl=300, value=self.request.id):
+        logger.info(f"[Phase 4] Skipping deliberation — another is already running (lock={lock_name})")
         return {'success': False, 'skipped': True, 'reason': 'concurrent deliberation already running'}
 
     # Session 1088: Budget-aware scheduling preflight
@@ -2415,7 +2423,7 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
         from core.services.ops_autopilot import BudgetAwareScheduler
         pf = BudgetAwareScheduler().preflight('core.tasks.generate_self_blog_deliberation_task')
         if pf['decision'] == 'defer':
-            cache.delete(lock_key)
+            release_singleton_lock(lock_name)
             logger.info(f"[Phase 4] Budget preflight: DEFER — {pf['reason']}")
             return {'success': False, 'deferred': True, 'reason': pf['reason']}
     except Exception as _e:
@@ -2577,7 +2585,7 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
         return {'success': False, 'error': str(e), 'failure_reason_code': reason_code}
 
     finally:
-        cache.delete(lock_key)
+        release_singleton_lock(lock_name)
 
 
 # =============================================================================
