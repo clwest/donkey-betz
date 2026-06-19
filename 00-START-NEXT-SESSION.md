@@ -97,44 +97,69 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1165 — CURRENT ENTRY POINT
+## SESSION 1166 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Check the PA stack is healthy + cadence task is producing new-schema JSONL.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d` (Session 1164 ran on a fresh thread `pa-7684c8f93185` opened by Chris — check with Rigby whether to keep that one or fall back).
+**Verify the Session 1165 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d`.
 
 **Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
 
-**Session 1164 cadence-on-new-code check (item C precondition):**
+**Session 1165 post-merge sanity check** — verify the three MUST primitives are loaded:
 ```bash
-.venv/bin/python -c "import json; [print(json.loads(l).get('sustain_gating')) for l in open('logs/pa_acks_health/$(date +%Y-%m-%d).jsonl').readlines()[-5:]]"
+# (1) statement_timeout is live on fresh Django connections
+.venv/bin/python -c "
+import django, os; os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings'); django.setup()
+from django.db import connection
+with connection.cursor() as c:
+    c.execute('SHOW statement_timeout;'); print('statement_timeout:', c.fetchone()[0])
+    c.execute('SHOW idle_in_transaction_session_timeout;'); print('idle_in_tx:', c.fetchone()[0])
+"
+# Expect: statement_timeout: 1min, idle_in_tx: 1min
+
+# (2) singleton_lock and retry_policy primitives importable
+.venv/bin/python -c "
+from core.services.redis_lock import singleton_task, singleton_lock
+from core.services.retry_policy import compute_retry_countdown, check_retry_budget
+print('Session 1165 primitives loaded OK')
+"
+
+# (3) @singleton_task decorators visible to celery workers
+.venv/bin/celery -A core inspect registered 2>&1 | grep -E "capture_pa_acks_health_snapshot|run_spider_network" | head -2
 ```
-Expect: 5 lines each carrying `{previous_adjacent: bool, expected_interval_seconds: 1800, adjacency_factor: 2, gated_triggers: [...]}`. If any line lacks `sustain_gating`, the workers didn't restart after #2292 and you need to do: `pkill -9 -f celery; rm -f .celery*.pid; make celery`.
 
-### PRIORITY 1 — COO Nervous System Backlog item #1 (DB safety defaults)
+If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`.
 
-**Source deliverable:** `1be2cf55-2ece-4ffa-8c2b-27b777ee54c7` ("Rigby: COO Nervous System Stabilization — 10-Item Implementation Backlog + Claude Code Session Order (Corrected v1)", workspace chris-personal). Rigby's June 14 ranking. Session 1164 closed item #8 (SHOULD: queue depth/backlog per queue); item #1 is the highest-priority MUST.
+**Cadence check (Session 1164 carryover, now actionable):**
+```bash
+wc -l logs/pa_acks_health/$(date +%Y-%m-%d).jsonl
+```
+Expect ~48 lines. If yes, item C (WARN persists 2 snapshots → escalate to CRIT) is now evaluable — see "Active items" below.
 
-**Item #1 quote** (Rigby's wording, deliverable §1):
-> MUST — DB safety defaults: `statement_timeout` + `idle_in_transaction_session_timeout` + task-boundary connection hygiene
-> Likely files: `core/settings.py`, `core/celery.py` and/or `core/tasks.py`
-> Acceptance criteria: slow queries terminated; no idle-in-tx linger; connection counts don't climb under bursts.
-> Verify locally: run slow query; confirm timeout + `pg_stat_activity`; burst enqueue tasks; confirm stable connection count.
+### PRIORITY 1 — COO Nervous System Backlog item #2 (Per-process Postgres `application_name` tagging)
 
-**Concrete scope sketch** (Session 1164 close note):
-- `core/settings.py` `DATABASES['default']['OPTIONS']` — add `statement_timeout` + `idle_in_transaction_session_timeout` (Postgres `SET` via the `options` connection string). Current OPTIONS has `application_name`, `client_encoding`, `connect_timeout`, `options='-c search_path=...'` only. Strategy: extend the existing `options` string with `-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000` (or whatever survives the local p95 sniff test).
-- Task-boundary `close_old_connections()` hook — most natural placement is a `@task_postrun` signal in `core/celery.py` (or wherever post-task hooks already live). Verify there isn't already one being misnamed.
-- Acceptance smoke (do these in order, all locally):
-  1. `EXPLAIN ANALYZE pg_sleep(45)` via Django shell — confirm terminates ~30s with timeout.
-  2. Open a transaction, leave it idle 75s — confirm terminated, no row in `pg_stat_activity` of state `idle in transaction`.
-  3. Enqueue ~100 short tasks via `core.tasks.aggregate_tool_call_stats` or similar — monitor `SELECT count(*) FROM pg_stat_activity WHERE datname='unified_donkey_betz'` stays flat (no climb past the natural concurrency).
-  4. No regression: `python manage.py pa_acks_health --json` returns `status: OK`.
+**Source deliverable:** `1be2cf55-2ece-4ffa-8c2b-27b777ee54c7` ("Rigby: COO Nervous System Stabilization — 10-Item Implementation Backlog + Claude Code Session Order (Corrected v1)", workspace chris-personal). Rigby's June 14 ranking. Session 1165 closed items #1, #3, #6; item #2 is the smallest open MUST and Rigby's recommended next-quick-win.
 
-**Numbers to pick by data, not vibes:** before setting `statement_timeout=30000`, sniff p99 via `pg_stat_statements` or recent slow-query log. Same for `idle_in_transaction_session_timeout=60000` — confirm no legitimate workflow holds a transaction past that. Route both through Rigby before committing.
+**Item #2 (Rigby's wording, deliverable §2):**
+> MUST — Per-process Postgres `application_name` tagging
+> Currently only global `'unified_donkey_betz'`. Operator can't see which service / queue / worker holds which connection in `pg_stat_activity`.
+> Likely files: `core/settings.py`, `Procfile` and/or `core/celery.py`
+> Acceptance criteria: `SELECT application_name, count(*) FROM pg_stat_activity GROUP BY 1` shows per-component breakdown; e.g. `daphne`, `celery-pa`, `celery-broadcast`, `celery-long-running`, `celery-default`, `celery-beat`.
+
+**Concrete scope sketch:**
+- `core/settings.py` `DATABASES['default']['OPTIONS']['application_name']` is currently the static string `'unified_donkey_betz'`. Replace with a function call that picks the value from an env var (default to the existing string).
+- Procfile entries set `APP_NAME=<service>` per process. Six Procfile entries: `web` (daphne), `worker` (default queue), `pa` (pa queue), `content`, `long-running`, `long-running-2`, `broadcast`, `beat`, plus `release` + `code-worker` + `resolve-node` = 11 entries total.
+- Alternative for celery workers: derive `application_name` from `CELERY_QUEUES` at runtime via `core/celery.py` `setup_logging` signal or similar — avoids Procfile changes.
+- Acceptance smoke:
+  1. `psql ... -c "SELECT application_name, count(*) FROM pg_stat_activity WHERE datname='unified_donkey_betz' GROUP BY 1 ORDER BY 2 DESC"` shows per-component breakdown.
+  2. Verify daphne shows `daphne` (or similar), each celery worker shows its queue tag, beat shows `beat`.
+  3. No regression: `python manage.py pa_acks_health --json` returns `status: OK`.
+
+Route the env-var naming convention + alternative (Procfile vs `core/celery.py` runtime hook) through Rigby before code.
 
 ### PRIORITY 2 — Session 1164 item C (now actionable after ~24h telemetry)
 
-Once `wc -l logs/pa_acks_health/2026-06-20.jsonl` shows ~48 lines AND each carries the `sustain_gating` block (Session 1164 PR #2292 schema), item C is evaluable:
+After ~48 lines of new-schema JSONL accumulate (one full day since the Session 1164 PR #2292 worker restart), item C becomes evaluable:
 
 **Item C:** WARN persists 2 consecutive snapshots → escalate to CRIT. Net-new logic. Rigby's spec (Session 1164 conversation `pa-7684c8f93185`): "after we've got at least a day of data *with* the new observability field." That field is `sustain_gating.previous_adjacent` + `sustain_gating.gated_triggers`.
 
@@ -143,15 +168,24 @@ Surface candidates:
 - New CRIT trigger: `(status == WARN) and prev_adjacent and prev_was_warn` → escalate.
 - Truth-table additions to `core/tests/test_pa_acks_health_thresholds.py`.
 
-Don't ship #1 + C in the same PR; #1 is settings + signal-handler, C is logic on the sustain mechanism.
+Don't ship #2 + C in the same PR; #2 is settings + Procfile / signal-handler, C is logic on the sustain mechanism.
 
 ### Active items carrying forward (Chris-call priority)
 
-- **Item #3** (Periodic-task stampede prevention — singleton locks + jitter) — Rigby's recommended order after #1. Needs `core/services/redis_lock.py` (doesn't exist).
-- **Item #2** (Per-process Postgres `application_name` tagging) — currently only the global `'unified_donkey_betz'` value; needs service/queue/worker variation via Procfile entry or settings hook.
-- **Item #6** (Retry-storm prevention — exponential backoff + retry budgets) — needs `core/services/retry_policy.py` (doesn't exist).
 - **Item #5** (Memory telemetry + automatic downshift) — caps already exist via Procfile; this adds visibility + throttle hook.
 - **Item #7** (Top Consumers ops endpoint) — pairs naturally with the queue_pressure surface Session 1164 added; could be folded into a single ops snapshot rather than a separate gateway.
+
+### Consolidation / deferred from Session 1165 (focused follow-on PRs)
+
+- **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296. Behavior-preserving but bigger blast radius — deferred from PR #2296.
+- **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge. Worth its own focused PR.
+- **Agent-task family retry budgets.** Wire the `retry_policy` primitive from PR #2297 to the agent task family. Needs fingerprinting strategy first (`agent_name + user_id + workspace_id`) to avoid global suppression during transient incidents.
+- **Bulk migration of ~5 linear/fixed countdown sites** (`core/tasks_agents.py` family) to `compute_retry_countdown` from PR #2297.
+
+### Aspirational follow-ons (from Session 1165)
+
+- **`pg_stat_statements` on staging/prod.** Installed locally in Session 1165 for the COO #1 threshold sniff. Same change to `postgresql.conf` (`shared_preload_libraries = 'pg_stat_statements'`) + `brew services restart postgresql@<v>` + `CREATE EXTENSION` would enable live p99-based threshold reviews in non-local environments.
+- **`capture_pa_acks_health_snapshot` slow-task investigation.** Rigby flagged 36-min max, 18-min avg as suspicious for a "snapshot" workload (likely (a) heavy DB reads/scans, (b) slow external calls, (c) lock waits, or (d) telemetry/file I/O contention). Now also a canary for the new 60s `statement_timeout` — if it starts failing under the timeout, that's the symptom telling you what was slow.
 
 ### Carryover small follow-ons from Session 1163 (still queued)
 
@@ -166,7 +200,7 @@ Don't ship #1 + C in the same PR; #1 is settings + signal-handler, C is logic on
 6. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
 7. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
 8. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
-9. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern.
+9. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern. Session 1165's two new services (`redis_lock.py` + `retry_policy.py`) intentionally avoided adding more inline clients.
 
 ### Chris-call-only carryovers (still parked)
 
@@ -176,7 +210,37 @@ Don't ship #1 + C in the same PR; #1 is settings + signal-handler, C is logic on
 
 ---
 
-## SESSION 1164 CLOSED — queue_pressure rollup + pa_acks_health threshold tuning (2026-06-19)
+## SESSION 1165 CLOSED — COO Backlog triple-MUST close (#1, #3, #6) (2026-06-19)
+
+**4 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1165_COO_BACKLOG_TRIPLE_MUST_CLOSE.md`](docs/handoffs/SESSION_1165_COO_BACKLOG_TRIPLE_MUST_CLOSE.md).
+
+| PR | Theme | SHA |
+|----|------|-----|
+| **#2294** | `fix(session-1165)` — `pa_local.sh` wrapper repointed at chris's token (donkeyking user removed locally) | `053631c8` |
+| **#2295** | **COO #1 (MUST):** DB safety defaults — `statement_timeout=60s` + `idle_in_transaction_session_timeout=60s` + task-boundary `close_old_connections()` | `43933cfe` |
+| **#2296** | **COO #3 (MUST):** singleton-task stampede prevention (`core/services/redis_lock.py` + 9 task applies + 2 ad-hoc migrations) + hour=3/4 beat stagger | `65b37fc3` |
+| **#2297** | **COO #6 (MUST):** retry-storm prevention (`core/services/retry_policy.py` + 4 task applies) | `f5a080b3` |
+
+**Three MUSTs from Rigby's June 14 corrected-v1 COO Backlog closed end-to-end.** Numbers picked from real `pg_stat_statements` data (installed locally mid-session under Chris's explicit auth) — slowest observed query 2.4s → 60s `statement_timeout` = ~25× headroom. Two new canonical primitives shipped (`redis_lock.py` + `retry_policy.py`); both use Django cache (Redis under the hood) to sidestep the Session 1144 Redis-pooling-sweep backlog. Hour=4 :00 beat cluster went from 9 simultaneous tasks → 1.
+
+**New persistent artifacts:**
+- `core/services/redis_lock.py` (~165 lines + 12 tests in `core/tests/test_redis_lock.py`).
+- `core/services/retry_policy.py` (~215 lines + 19 tests in `core/tests/test_retry_policy.py`).
+- Combined: 31 tests, all pass via `SimpleTestCase` (no DB dependency).
+
+**New gotchas captured:**
+- **Decorators that catch exceptions collide with Celery's `Retry` machinery.** First-draft `@with_retry_policy` decorator was discarded for explicit helpers because `self.retry()` raises `celery.exceptions.Retry` (an `Exception` subclass), which a generic wrapper would re-catch and double-retry.
+- **Stale wrapper tokens silently 401 on session entry.** Memory rule `feedback_pa_local_verify_ownership.md` predicted this exact failure mode.
+- **`pg_stat_statements` is a multi-step install requiring Postgres restart.** Edit `postgresql.conf` → `brew services restart` → superuser `CREATE EXTENSION` → wait for stats. Local Homebrew `postgresql@15` is separate from Docker `unified-postgres`.
+
+**Coverage gaps closed:**
+1. COO Backlog item #1 (MUST: DB safety defaults) — closed end-to-end, 4-step acceptance smoke green.
+2. COO Backlog item #3 (MUST: singleton locks + jitter) — closed end-to-end.
+3. COO Backlog item #6 (MUST: retry-storm prevention) — closed end-to-end.
+4. Local Postgres observability — `pg_stat_statements` now live locally.
+5. `pa_local.sh` drift — wrapper repointed at chris's token.
+
+### Session 1164 CLOSED — queue_pressure rollup + pa_acks_health threshold tuning (2026-06-19)
 
 **3 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1164_QUEUE_PRESSURE_ROLLUP_AND_PA_ACKS_THRESHOLD_TUNING.md`](docs/handoffs/SESSION_1164_QUEUE_PRESSURE_ROLLUP_AND_PA_ACKS_THRESHOLD_TUNING.md).
 
@@ -281,11 +345,11 @@ Don't ship #1 + C in the same PR; #1 is settings + signal-handler, C is logic on
 
 ---
 
-## 🚨 ACTIVE ISSUES carrying into Session 1165
+## 🚨 ACTIVE ISSUES carrying into Session 1166
 
 ### 1. GitHub Actions billing — still down
 
-Same annotation as Sessions 1149-1163. Multi-day outage until Chris funds account.
+Same annotation as Sessions 1149-1165. Multi-day outage until Chris funds account.
 
 **Self-merge protocol during outage** (Sessions 1149 + 1150 + 1158-1163 pattern):
 
@@ -306,24 +370,25 @@ Self-merge with bypass requires:
 
 Session 1157 PR #2243 closed the code-level footgun. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1164+.
 
-### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED + THRESHOLDS TUNED
+### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED + THRESHOLDS TUNED + STAMPEDE-LOCKED
 
-Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2292 closed the threshold-tuning portion (items A + B + the time-adjacency + sustain observability follow-on). Remaining: item C (WARN persists 2 snapshots → CRIT escalation) — now evaluable after ~24h of new-schema telemetry post-#2292.
+Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2292 closed the threshold-tuning portion. Session 1165 PR #2296 added `@singleton_task("capture-pa-acks-health-snapshot", ttl=300)` so the cadence task cannot self-stampede. Remaining: item C (WARN persists 2 snapshots → CRIT escalation) — now evaluable after ~24h of new-schema telemetry post-#2292.
 
 - `logs/pa_acks_health/YYYY-MM-DD.jsonl` grows by ~48 lines/day (`*/30` cadence).
-- Each snapshot now carries the Session 1164 `sustain_gating` block alongside the prior fields (UTC + MT timestamps, queue depth, per-worker rollup with `is_pa_relevant` flag, `oldest_queued`, `inflight_estimate`, `slow_tasks`, `hang_signature` samples + `worker_last_event_at` heartbeat).
+- Each snapshot carries the Session 1164 `sustain_gating` block alongside the prior fields (UTC + MT timestamps, queue depth, per-worker rollup with `is_pa_relevant` flag, `oldest_queued`, `inflight_estimate`, `slow_tasks`, `hang_signature` samples + `worker_last_event_at` heartbeat).
 - WARN-level log line fires in celery-broadcast log whenever `status != OK`.
 
-**Session 1164 close state (2026-06-19):** workers restarted post-#2292; manual fire of `capture_pa_acks_health_snapshot` confirmed the new `sustain_gating` schema writes to JSONL. Item C becomes actionable after ~48 cadence ticks (one full day) on the new code.
+**Session 1165 close state (2026-06-19):** workers restarted twice (after PR #2296 and again after PR #2297). Singleton lock + DB safety defaults + retry policy all live. Item C becomes actionable after ~48 cadence ticks (one full day) of stable new-code operation.
 
-**What Session 1165 should check on entry:**
+**What Session 1166 should check on entry:**
 - `wc -l logs/pa_acks_health/$(date +%Y-%m-%d).jsonl` — confirm overnight cadence ran.
-- Tail a few JSONL lines and confirm each carries `sustain_gating` (if any line lacks the field, the workers didn't restart and item C is blocked — see Session 1165 FIRST THING above).
+- Tail a few JSONL lines and confirm each carries `sustain_gating` (if any line lacks the field, the workers didn't restart and item C is blocked — see Session 1166 FIRST THING above).
 - `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` should be empty unless a status changed.
+- `grep -i "retry_denied\|singleton_task" celery*.log` may surface budget exhaustion or stampede skips from PRs #2296 / #2297 — good observability signal, not necessarily a bug.
 
 ---
 
-### Cross-session lessons (Sessions 1145–1164)
+### Cross-session lessons (Sessions 1145–1165)
 
 - **Recon before sweep.** Multiple back-to-back sessions where mid-recon findings flipped the PR plan.
 - **Narratives become canon; topic docs get corrected to match** (1158).
@@ -361,11 +426,17 @@ Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2
 - **NEW (1164)** **Pre-merge nit-as-spec splits scope cleanly.** Rigby's two pre-merge nits on PR #2291 (log-tail order + time adjacency) acted as a scope-splitter: one was already correct (lex == chrono for date-prefixed filenames), one became PR #2292's entire scope. The nit format made the boundary easy to draw and kept #2291 from sprawling.
 - **NEW (1164)** **Observability fields belong on the same artifact as the decision.** PR #2292 puts `sustain_gating` on every snapshot rather than in a separate audit log. Downstream tuning (item C: WARN-persist escalation) can read one file; ops dashboards see decision context next to outcome. If you find yourself drafting a new audit table for "why did this status fire?", check whether the field can live next to the status itself.
 - **NEW (1164)** **Backward-compatible signatures + conservative defaults absorb mid-arc design changes.** `_compute_status(report, previous_report=None)` kept PR #2290's test factories working unchanged when #2291 added the second argument, and made first-run / no-prior-state cases safe by default (sustain triggers never fire when there's nothing to compare against). Same trick worked again when #2292 added adjacency: still backward-compatible, still safe-on-None, no test churn.
+- **NEW (1165)** **"Data wins over vibes" pays off twice for threshold picks.** COO #1's 60s timeout was data-backed via `pg_stat_statements` (slowest observed 2.4s → 25× headroom). Same discipline let me pick `@singleton_task` TTLs from observed task durations (Session 1164 sniff) and `retry_policy` budget caps from observed failure patterns. Two new primitives shipped in one session with calibrated defaults; tuning surface visible from the start.
+- **NEW (1165)** **Primitives + opt-in apply list is the right Phase 1 scope for stampede / retry-storm prevention.** PRs #2296 and #2297 both followed this shape: ship the canonical primitive + tests + apply to a hand-picked set, defer bulk migration. Reduces blast radius; gives ops a chance to spot regressions on a small set before fanning out. Operator_edge + circuit_breaker + agent-family migrations queued as focused follow-on PRs.
+- **NEW (1165)** **Manual stagger beats `before_task_publish` jitter for v1.** Rigby's explicit verdict: deterministic manual rewrite over a clever invisible-modifier interceptor. Operator surprise + debugging complexity were the named tradeoffs. The manual stagger is also self-documenting in the beat_schedule definition itself.
+- **NEW (1165)** **Drop one decorator's worth of magic when explicit helpers do the job.** First-draft `@with_retry_policy` decorator was discarded for `compute_retry_countdown` + `check_retry_budget`. Bug discovered during design: `self.retry()` raises `celery.exceptions.Retry` (an Exception subclass) which a wrapper's generic `except Exception` would catch and double-retry. Two helpers + explicit callsite usage keeps control flow transparent.
+- **NEW (1165)** **Pre-implementation Rigby review at every MUST scope is the gating step.** Not just "is this a good idea" but "scope A vs B, storage backend, apply list, lock/budget semantics, error contracts." Single-session triple-MUST closes only work when the scope is locked before code. Without it, the apply-list arguments would have eaten the session.
 
 ---
 
 ## RECENT SESSION ARCS
 
+- **Session 1165** — COO Backlog triple-MUST close (#1 DB safety defaults + #3 singleton locks + jitter + #6 retry-storm prevention) + wrapper fix. 4 PRs merged. Two new canonical primitives shipped (`redis_lock.py` + `retry_policy.py`). `pg_stat_statements` installed locally.
 - **Session 1164** — queue_pressure rollup in `ops_tool.overview` + pa_acks_health threshold tuning A+B + time-adjacency + sustain observability. 3 PRs merged. Closed COO Backlog item #8 (SHOULD) end-to-end.
 - **Session 1163** — Disclosure L drift correction arc (path-move addendum + C-style honest tool + tool-name dogfood loop + B-style FinalAppliedOverrides per-cycle table). 4 PRs merged.
 - **Session 1162** — narrative triple (workspace + initiative + self-tuning) + PA acks observation completion. 8 PRs merged.
