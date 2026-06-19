@@ -1,14 +1,17 @@
 """
-Session 1164 PR #1 (item A + B) — pa_acks_health threshold tuning.
+Session 1164 PR #1 (item A + B) + PR #2 (time adjacency + observability)
+— pa_acks_health threshold tuning.
 
 Asserts:
 - A: _WARN_QUEUE_DEPTH raised 1 → 5 (no flip on single-message blip).
 - B: binary infra triggers (no_workers, depth>=CRIT) require BOTH current
-     AND previous snapshot to trip — single transient dip no longer flips
-     CRIT/WARN.
+     AND previous-adjacent snapshot to trip — single transient dip no
+     longer flips CRIT/WARN; stale previous snapshot does not falsely
+     count as adjacent.
 - failure / hang triggers stay single-snapshot.
-- previous_report=None → sustain triggers default to never-fire (safe
-  first-run behavior).
+- previous_report=None → sustain triggers default to never-fire.
+- Observability: `sustain_gating` field on every report records the
+  adjacency decision + which sustain-eligible triggers were gated.
 
 Tests stub the report dict shape directly and call _compute_status — no
 Redis / Celery / DB needed.
@@ -16,16 +19,30 @@ Redis / Celery / DB needed.
 Run: python manage.py test core.tests.test_pa_acks_health_thresholds -v2
 """
 
+from datetime import datetime, timedelta, timezone
+
 from django.test import SimpleTestCase
 
 from core.management.commands.pa_acks_health import Command
 
 
-def _report(*, depth=0, worker_count=4, failures=0, hang_count=0, oldest_hang_age=0.0):
+_BASE_TS = datetime(2026, 6, 19, 18, 0, 0, tzinfo=timezone.utc)
+
+
+def _report(
+    *,
+    depth=0,
+    worker_count=4,
+    failures=0,
+    hang_count=0,
+    oldest_hang_age=0.0,
+    generated_at=_BASE_TS,
+):
     samples = []
     if hang_count > 0:
         samples = [{"age_seconds": oldest_hang_age} for _ in range(hang_count)]
     return {
+        "generated_at": generated_at.isoformat(),
         "queue_depth": {"depth": depth},
         "workers": {"count": worker_count},
         "task_stats": {"failure": failures},
@@ -178,3 +195,136 @@ class TestFailureAndDepthCombined(SimpleTestCase):
         r = _report(depth=10, failures=1)
         cmd._compute_status(r, previous_report=None)
         self.assertEqual(r["status"], "WARN")
+
+
+# Session 1164 PR #2 — time adjacency + sustain observability.
+
+
+class TestPreviousAdjacency(SimpleTestCase):
+
+    def test_previous_within_30min_is_adjacent(self):
+        cmd = Command()
+        prev = _report(worker_count=0, generated_at=_BASE_TS)
+        cur = _report(worker_count=0, generated_at=_BASE_TS + timedelta(minutes=30))
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        self.assertTrue(cur["sustain_gating"]["previous_adjacent"])
+
+    def test_previous_at_60min_boundary_is_adjacent(self):
+        # 2 * expected_interval (1800s × 2 = 3600s) is the upper bound.
+        cmd = Command()
+        prev = _report(worker_count=0, generated_at=_BASE_TS)
+        cur = _report(worker_count=0, generated_at=_BASE_TS + timedelta(seconds=3600))
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        self.assertTrue(cur["sustain_gating"]["previous_adjacent"])
+
+    def test_previous_at_65min_is_stale(self):
+        cmd = Command()
+        prev = _report(worker_count=0, generated_at=_BASE_TS)
+        cur = _report(worker_count=0, generated_at=_BASE_TS + timedelta(minutes=65))
+        cmd._compute_status(cur, previous_report=prev)
+        # Stale previous → sustain check fails → status stays OK and the
+        # gated trigger is recorded.
+        self.assertEqual(cur["status"], "OK")
+        self.assertFalse(cur["sustain_gating"]["previous_adjacent"])
+        self.assertIn("no_workers", cur["sustain_gating"]["gated_triggers"])
+
+    def test_previous_in_future_is_not_adjacent(self):
+        # Clock skew defense — negative delta is treated as not adjacent.
+        cmd = Command()
+        prev = _report(worker_count=0, generated_at=_BASE_TS + timedelta(minutes=30))
+        cur = _report(worker_count=0, generated_at=_BASE_TS)
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "OK")
+        self.assertFalse(cur["sustain_gating"]["previous_adjacent"])
+
+    def test_previous_missing_generated_at_is_not_adjacent(self):
+        cmd = Command()
+        prev = _report(worker_count=0)
+        prev.pop("generated_at")
+        cur = _report(worker_count=0)
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "OK")
+        self.assertFalse(cur["sustain_gating"]["previous_adjacent"])
+
+    def test_previous_malformed_timestamp_is_not_adjacent(self):
+        cmd = Command()
+        prev = _report(worker_count=0)
+        prev["generated_at"] = "not-an-iso-string"
+        cur = _report(worker_count=0)
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "OK")
+        self.assertFalse(cur["sustain_gating"]["previous_adjacent"])
+
+
+class TestSustainGatingObservability(SimpleTestCase):
+
+    def test_sustain_gating_field_present_on_every_snapshot(self):
+        cmd = Command()
+        r = _report()
+        cmd._compute_status(r, previous_report=None)
+        self.assertIn("sustain_gating", r)
+        self.assertIn("previous_adjacent", r["sustain_gating"])
+        self.assertIn("expected_interval_seconds", r["sustain_gating"])
+        self.assertIn("adjacency_factor", r["sustain_gating"])
+        self.assertIn("gated_triggers", r["sustain_gating"])
+
+    def test_no_gated_triggers_when_no_triggers_fired(self):
+        cmd = Command()
+        r = _report()  # healthy
+        cmd._compute_status(r, previous_report=None)
+        self.assertEqual(r["sustain_gating"]["gated_triggers"], [])
+
+    def test_no_workers_gated_on_first_run(self):
+        cmd = Command()
+        r = _report(worker_count=0)
+        cmd._compute_status(r, previous_report=None)
+        self.assertEqual(r["status"], "OK")
+        self.assertIn("no_workers", r["sustain_gating"]["gated_triggers"])
+        self.assertFalse(r["sustain_gating"]["previous_adjacent"])
+
+    def test_depth_crit_gated_on_first_run(self):
+        cmd = Command()
+        r = _report(depth=25)
+        cmd._compute_status(r, previous_report=None)
+        # depth=25 → WARN (depth >= _WARN_QUEUE_DEPTH), CRIT gated.
+        self.assertEqual(r["status"], "WARN")
+        self.assertIn("depth_crit", r["sustain_gating"]["gated_triggers"])
+
+    def test_both_triggers_gated_simultaneously(self):
+        cmd = Command()
+        r = _report(worker_count=0, depth=25)
+        cmd._compute_status(r, previous_report=None)
+        self.assertEqual(set(r["sustain_gating"]["gated_triggers"]), {"no_workers", "depth_crit"})
+
+    def test_observability_records_constants(self):
+        cmd = Command()
+        r = _report()
+        cmd._compute_status(r, previous_report=None)
+        self.assertEqual(r["sustain_gating"]["expected_interval_seconds"], 1800)
+        self.assertEqual(r["sustain_gating"]["adjacency_factor"], 2)
+
+
+class TestIsPreviousAdjacentHelper(SimpleTestCase):
+
+    def test_returns_false_for_none(self):
+        self.assertFalse(Command._is_previous_adjacent({"generated_at": _BASE_TS.isoformat()}, None))
+
+    def test_returns_false_for_empty_dict(self):
+        self.assertFalse(Command._is_previous_adjacent({"generated_at": _BASE_TS.isoformat()}, {}))
+
+    def test_returns_true_for_30min_delta(self):
+        prev = {"generated_at": _BASE_TS.isoformat()}
+        cur = {"generated_at": (_BASE_TS + timedelta(minutes=30)).isoformat()}
+        self.assertTrue(Command._is_previous_adjacent(cur, prev))
+
+    def test_returns_false_for_61min_delta(self):
+        prev = {"generated_at": _BASE_TS.isoformat()}
+        cur = {"generated_at": (_BASE_TS + timedelta(minutes=61)).isoformat()}
+        self.assertFalse(Command._is_previous_adjacent(cur, prev))
+
+    def test_returns_false_for_negative_delta(self):
+        prev = {"generated_at": (_BASE_TS + timedelta(minutes=30)).isoformat()}
+        cur = {"generated_at": _BASE_TS.isoformat()}
+        self.assertFalse(Command._is_previous_adjacent(cur, prev))
