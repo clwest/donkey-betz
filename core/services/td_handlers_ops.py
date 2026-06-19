@@ -164,6 +164,15 @@ class OpsHandlersMixin:
             except Exception as e:
                 result['slo_status'] = {'error': f'{type(e).__name__}: {e}'}
             try:
+                result['queue_pressure'] = self._ops_queue_pressure_rollup(
+                    user_id, trace_id,
+                )
+            except Exception as e:
+                result['queue_pressure'] = {
+                    'overall_state': 'UNKNOWN',
+                    'error': f'{type(e).__name__}: {str(e)[:200]}',
+                }
+            try:
                 result['failure_signatures'] = self._ops_failure_signatures(
                     window, 5, trace_id, since=None,
                 )
@@ -665,6 +674,70 @@ class OpsHandlersMixin:
             'celery_task_failures': celery_failures,
             'total_signatures': len(signatures),
         }
+
+
+    def _ops_queue_pressure_rollup(
+        self, user_id: Optional[int], trace_id: str,
+    ) -> Dict[str, Any]:
+        """System-level queue pressure rollup for ops_tool.overview.
+
+        Phase 2 of the COO Operator Report queue-pressure work (Phase 1 was
+        cockpit_tool.queue_lengths in PR #2289). Reuses the classifier in
+        cockpit so thresholds stay single-source-of-truth — this is a
+        reduction, never a re-classification.
+        """
+        from django.utils import timezone
+
+        STATE_ORDER = {'GREEN': 0, 'YELLOW': 1, 'RED': 2, 'CRITICAL': 3, 'UNKNOWN': -1}
+
+        cockpit = self._handle_cockpit(
+            'cockpit_tool', {'action': 'queue_lengths'}, user_id, trace_id,
+        )
+        if not isinstance(cockpit, dict) or 'queues' not in cockpit:
+            return {
+                'overall_state': 'UNKNOWN',
+                'error': cockpit.get('error', 'cockpit queue_lengths returned no queues') if isinstance(cockpit, dict) else 'cockpit queue_lengths returned non-dict',
+                'generated_at': timezone.now().isoformat(),
+            }
+
+        queues = cockpit.get('queues') or {}
+        overall_state = cockpit.get('overall_state', 'UNKNOWN')
+
+        critical_count = 0
+        red_count = 0
+        offenders: list = []
+        for q_name, q_info in queues.items():
+            st = (q_info or {}).get('state', 'GREEN')
+            if st == 'CRITICAL':
+                critical_count += 1
+            elif st == 'RED':
+                red_count += 1
+            if st in ('YELLOW', 'RED', 'CRITICAL'):
+                offenders.append({
+                    'queue': q_name,
+                    'state': st,
+                    'depth': q_info.get('depth'),
+                    'oldest_age_seconds': q_info.get('oldest_age_seconds'),
+                    'reasons': q_info.get('reasons', []),
+                })
+        offenders.sort(
+            key=lambda d: (
+                -STATE_ORDER.get(d['state'], 0),
+                -(d.get('depth') or 0),
+                -(d.get('oldest_age_seconds') or 0),
+            )
+        )
+
+        rollup: Dict[str, Any] = {
+            'overall_state': overall_state,
+            'queues_critical_count': critical_count,
+            'queues_red_count': red_count,
+            'top_offenders': offenders[:3],
+            'generated_at': timezone.now().isoformat(),
+        }
+        if cockpit.get('redis_error'):
+            rollup['redis_error'] = cockpit['redis_error']
+        return rollup
 
 
     # ── Session 1100: Ops observability helpers ─────────────────────────────
