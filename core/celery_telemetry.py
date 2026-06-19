@@ -117,6 +117,18 @@ def on_task_postrun(sender=None, task_id=None, task=None, state=None, retval=Non
     except Exception:
         logger.debug(f"Celery telemetry: task notification failed for {task_id}", exc_info=True)
 
+    # Session 1165 (COO Backlog item #1): close old DB connections at the
+    # task boundary so connection counts don't climb under bursts. In
+    # `finally`-style placement (after telemetry + notification) so
+    # cleanup runs even if either of those failed. CONN_MAX_AGE=60 still
+    # holds in steady state; this is the explicit hygiene call for
+    # workers that ran a task and won't immediately run another.
+    try:
+        from django.db import close_old_connections
+        close_old_connections()
+    except Exception:
+        logger.debug(f"Celery telemetry: close_old_connections failed for {task_id}", exc_info=True)
+
 
 @task_failure.connect
 def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, **kwargs):
@@ -170,6 +182,15 @@ def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, *
         check_and_notify(task_id=task_id, state='FAILURE', error=exception)
     except Exception:
         logger.debug(f"Celery telemetry: task failure notification failed for {task_id}", exc_info=True)
+
+    # Session 1165 (COO Backlog item #1): same task-boundary connection
+    # hygiene as on_task_postrun. Placed after telemetry + notification
+    # so cleanup runs even when either failed.
+    try:
+        from django.db import close_old_connections
+        close_old_connections()
+    except Exception:
+        logger.debug(f"Celery telemetry: close_old_connections failed for {task_id}", exc_info=True)
 
 
 @before_task_publish.connect

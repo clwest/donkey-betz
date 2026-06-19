@@ -261,11 +261,23 @@ else:
 # Database-specific configuration
 if 'postgresql' in os.environ.get('DATABASE_URL', ''):
     # PostgreSQL specific configuration
+    # Session 1165 (COO Backlog item #1, MUST): add statement_timeout +
+    # idle_in_transaction_session_timeout to the existing options string.
+    # Both at 60000ms (60s) — picked from data: pg_stat_statements showed
+    # slowest observed query = 2.4s; p99 max = 83ms (~25× headroom).
+    # Current idle-in-tx count = 0 under Django autocommit, so a 60s
+    # idle-in-tx limit is a guardrail against pathology, not a regression
+    # surface. Tasks that legitimately need >60s can wrap in
+    # `SET LOCAL statement_timeout = '0'` per transaction.
     DATABASES['default']['OPTIONS'] = {
         'application_name': 'unified_donkey_betz',
         'client_encoding': 'UTF8',
         'connect_timeout': 10,
-        'options': '-c search_path=studio,public,dbao,shared'  # Include all schemas
+        'options': (
+            '-c search_path=studio,public,dbao,shared'
+            ' -c statement_timeout=60000'
+            ' -c idle_in_transaction_session_timeout=60000'
+        ),
     }
     # Session 1144: Replace Session 142's `CONN_MAX_AGE=0` (every query
     # opened a fresh socket → ~24K TIME_WAIT sockets to :5432 on macOS dev
