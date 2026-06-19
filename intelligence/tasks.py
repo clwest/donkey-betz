@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
+from core.services.redis_lock import singleton_task  # Session 1165 stampede prevention
 from .realtime_engine import intelligence_engine
 
 # Session 642: Import shared_memory task to ensure Celery discovers it
@@ -1563,6 +1564,7 @@ def execute_agent_task(agent_id: int, task: str, context: dict = None):
 
 
 @shared_task(bind=True, soft_time_limit=900, time_limit=960)
+@singleton_task("scan-spider-opportunities", ttl=1800)
 def scan_spider_opportunities(self):
     """
     CRITICAL FIX: Scheduled task to scan spider network for opportunities
