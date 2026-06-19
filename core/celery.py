@@ -97,7 +97,8 @@ app.conf.beat_schedule = {
     },
     'cleanup-celery-task-events': {
         'task': 'core.tasks.cleanup_celery_task_events',
-        'schedule': crontab(minute=0, hour=4, day_of_week='sunday'),
+        # Session 1165 (COO #3): staggered 4:00 → 4:50 to relieve hour=4 :00 cluster
+        'schedule': crontab(minute=50, hour=4, day_of_week='sunday'),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-boardroom-junk': {
@@ -107,12 +108,14 @@ app.conf.beat_schedule = {
     },
     'cleanup-junk-initiatives': {
         'task': 'core.tasks.cleanup_junk_initiatives',
-        'schedule': crontab(minute=0, hour=4),
+        # Session 1165 (COO #3): staggered 4:00 → 4:05 (hour=4 :00 cluster relief)
+        'schedule': crontab(minute=5, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-conversation-duplicates': {
         'task': 'core.tasks.cleanup_conversation_duplicates_task',
-        'schedule': crontab(minute=30, hour=4),
+        # Session 1165 (COO #3): staggered 4:30 → 4:33 (hour=4 :30 cluster relief)
+        'schedule': crontab(minute=33, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-stale-content': {
@@ -122,12 +125,14 @@ app.conf.beat_schedule = {
     },
     'cleanup-expired-uploads': {
         'task': 'core.tasks.cleanup_expired_uploads',
-        'schedule': crontab(minute=30, hour=4),
+        # Session 1165 (COO #3): staggered 4:30 → 4:36 (hour=4 :30 cluster relief)
+        'schedule': crontab(minute=36, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'enforce-data-retention': {
         'task': 'core.tasks.enforce_data_retention',
-        'schedule': crontab(minute=0, hour=4),
+        # Session 1165 (COO #3): staggered 4:00 → 4:55 (heavy retention → end of hour)
+        'schedule': crontab(minute=55, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'enforce-db-retention-daily': {
@@ -142,24 +147,28 @@ app.conf.beat_schedule = {
     },
     'cleanup-old-notifications': {
         'task': 'core.tasks.cleanup_old_notifications',
-        'schedule': crontab(minute=30, hour=3),
+        # Session 1165 (COO #3): staggered 3:30 → 3:35
+        'schedule': crontab(minute=35, hour=3),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-spider-item-hashes': {
         'task': 'core.tasks.cleanup_spider_item_hashes',
-        'schedule': crontab(minute=30, hour=3),
+        # Session 1165 (COO #3): staggered 3:30 → 3:40 (isolate heavy hash sweep)
+        'schedule': crontab(minute=40, hour=3),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Apr 2026: SpiderData retention — trim raw_data >7d, delete >30d
     # Prevents raw JSON blobs (~440KB/row) from filling the database
     'spider-data-retention': {
         'task': 'core.tasks.spider_data_retention',
-        'schedule': crontab(minute=0, hour=4),  # Daily at 4 AM
+        # Session 1165 (COO #3): staggered 4:00 → 4:58 (heavy long_running, end-of-hour anchor)
+        'schedule': crontab(minute=58, hour=4),
         'options': {'queue': 'long_running', 'expires': 3600},
     },
     'cleanup-expired-pa-insights': {
         'task': 'core.tasks.cleanup_expired_pa_insights',
-        'schedule': crontab(minute=0, hour=3),
+        # Session 1165 (COO #3): staggered 3:00 → 3:10 (hour=3 :00 cluster relief)
+        'schedule': crontab(minute=10, hour=3),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-stale-dreams': {
@@ -169,7 +178,8 @@ app.conf.beat_schedule = {
     },
     'cleanup-old-resolve-jobs': {
         'task': 'core.tasks.cleanup_old_resolve_jobs',
-        'schedule': crontab(minute=0, hour=4),
+        # Session 1165 (COO #3): staggered 4:00 → 4:25
+        'schedule': crontab(minute=25, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-resolved-signatures': {
@@ -179,7 +189,8 @@ app.conf.beat_schedule = {
     },
     'cleanup-learning-readback': {
         'task': 'core.tasks.cleanup_learning_readback_events',
-        'schedule': crontab(minute=0, hour=4),
+        # Session 1165 (COO #3): staggered 4:00 → 4:10
+        'schedule': crontab(minute=10, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Session 1085: Weekly pattern decay — stale/ineffective patterns lose confidence
@@ -205,17 +216,20 @@ app.conf.beat_schedule = {
     },
     'cleanup-old-predictions': {
         'task': 'sports.cleanup_old_predictions',
-        'schedule': crontab(minute=0, hour=3, day_of_week=1),
+        # Session 1165 (COO #3): staggered 3:00 → 3:25 (Mon-only; hour 3 cluster relief)
+        'schedule': crontab(minute=25, hour=3, day_of_week=1),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-opportunities-daily': {
         'task': 'intelligence.tasks.cleanup_old_opportunities',
-        'schedule': crontab(minute=0, hour=3),
+        # Session 1165 (COO #3): staggered 3:00 → 3:20
+        'schedule': crontab(minute=20, hour=3),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'cleanup-expired-signals': {
         'task': 'cleanup_expired_signals',
-        'schedule': crontab(minute=30, hour=4),
+        # Session 1165 (COO #3): staggered 4:30 → 4:39
+        'schedule': crontab(minute=39, hour=4),
         'options': {'queue': 'default', 'expires': 3600},
     },
     'auto-archive-stale-deliverables': {
@@ -390,7 +404,8 @@ app.conf.beat_schedule = {
     # Cleanup auto-generated Discussion-prefixed conversation artifacts
     'cleanup-automated-conversation-artifacts': {
         'task': 'core.tasks.cleanup_automated_conversation_artifacts',
-        'schedule': crontab(hour=3, minute=0),  # 3:00 AM Denver
+        # Session 1165 (COO #3): staggered 3:00 → 3:05 (hour 3 :00 cluster relief)
+        'schedule': crontab(hour=3, minute=5),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Cleanup boardroom items past retention (default 7 days)
@@ -484,9 +499,10 @@ app.conf.beat_schedule = {
         'options': {'queue': 'default', 'expires': 21600},
     },
     # Weekly: promote high-confidence AgentKnowledgeSource → SharedKnowledge
+    # Session 1165 (COO #3): staggered 4:00 → 4:52 (Mon-only; end of hour 4)
     'promote-to-shared-knowledge': {
         'task': 'core.tasks.promote_to_shared_knowledge',
-        'schedule': crontab(hour=4, minute=0, day_of_week='monday'),  # Mon 04:00 Denver
+        'schedule': crontab(hour=4, minute=52, day_of_week='monday'),  # Mon 04:52 Denver (staggered)
         'options': {'queue': 'default', 'expires': 7200},
     },
     # Daily ContentDistribution analytics aggregation
@@ -498,13 +514,15 @@ app.conf.beat_schedule = {
     # Daily document namespace isolation progress snapshot
     'monitor-isolation-progress': {
         'task': 'core.tasks.monitor_isolation_progress',
-        'schedule': crontab(hour=4, minute=30),  # 04:30 Denver
+        # Session 1165 (COO #3): staggered 4:30 → 4:48 (hour 4 :30 cluster relief)
+        'schedule': crontab(hour=4, minute=48),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Daily MythPattern frequency rollup (docstring: "Runs daily at 4am")
     'update-mythology-pattern-statistics': {
         'task': 'core.tasks.update_mythology_pattern_statistics',
-        'schedule': crontab(hour=4, minute=0),  # 04:00 Denver
+        # Session 1165 (COO #3): staggered 4:00 → 4:20
+        'schedule': crontab(hour=4, minute=20),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Sync style/voice performance insights to collective intelligence (docstring: "every 6 hours")
@@ -528,7 +546,8 @@ app.conf.beat_schedule = {
     # Archive low-score AgentDreams (composite_score < 0.3 after 7d, < 0.5 after 14d)
     'maintain-dream-backlog': {
         'task': 'core.tasks.maintain_dream_backlog',
-        'schedule': crontab(hour=4, minute=30),  # 04:30 Denver
+        # Session 1165 (COO #3): staggered 4:30 → 4:42
+        'schedule': crontab(hour=4, minute=42),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Daily pending-review metrics log (Session 589)
@@ -553,7 +572,8 @@ app.conf.beat_schedule = {
     # Daily duplicate-initiative detection (similarity-based; no LLM)
     'detect-duplicate-initiatives': {
         'task': 'core.tasks.detect_duplicate_initiatives',
-        'schedule': crontab(hour=4, minute=15),  # 04:15 Denver
+        # Session 1165 (COO #3): staggered 4:15 → 4:18 (isolate DB-scan from llm-call-logs)
+        'schedule': crontab(hour=4, minute=18),
         'options': {'queue': 'default', 'expires': 3600},
     },
     # Operating rhythm health check (read-only) — Session 914.7

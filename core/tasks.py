@@ -19,6 +19,12 @@ from typing import Dict, Any
 import os
 # Session 850: Smart truncation for cleaner synthesis display
 from core.api_helpers import smart_truncate
+# Session 1165 (COO Backlog item #3): singleton-task stampede prevention
+from core.services.redis_lock import (
+    acquire_singleton_lock,
+    release_singleton_lock,
+    singleton_task,
+)
 
 from django.db import models  # Session 1083
 
@@ -398,6 +404,7 @@ def _circuit_breaker_record_timeout(agent_name: str, task: str):
 
 
 @shared_task(bind=True)
+@singleton_task("cleanup-stale-agent-executions", ttl=600)
 def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
     from core.tasks_agents import _impl_cleanup_stale_agent_executions
     return _impl_cleanup_stale_agent_executions(self, minutes_threshold)
@@ -1194,6 +1201,7 @@ def process_core_spider_data():
     from core.tasks_spiders import _impl_process_core_spider_data
     return _impl_process_core_spider_data()
 @shared_task(bind=True)
+@singleton_task("run-spider-network", ttl=7200)
 def run_spider_network(self):
     from core.tasks_spiders import _impl_run_spider_network
     return _impl_run_spider_network(self)
@@ -4030,6 +4038,7 @@ def cleanup_spider_item_hashes(days_to_keep: int = 90):
     soft_time_limit=540,
     ignore_result=True,
 )
+@singleton_task("spider-data-retention", ttl=1800)
 def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
     """
     Apr 2026: Prevent SpiderData table from filling the database.
@@ -5967,6 +5976,7 @@ def _send_halt_discord_notification(experiment, reason):
 # =============================================================================
 
 @shared_task(name='core.tasks.monitor_celery_health')
+@singleton_task("monitor-celery-health", ttl=600)
 def monitor_celery_health():
     from core.tasks_ops import _impl_monitor_celery_health
     return _impl_monitor_celery_health()
@@ -7398,6 +7408,7 @@ def maintain_knowledge_freshness():
 
 
 @shared_task(name='core.tasks.promote_to_shared_knowledge')
+@singleton_task("promote-to-shared-knowledge", ttl=1800)
 def promote_to_shared_knowledge(min_confidence: float = 0.7):
     """
     Session 767: Promote high-confidence knowledge to SharedKnowledge.
@@ -11073,6 +11084,7 @@ def process_initiative_auto_progression(self):
     from core.tasks_initiatives import _impl_process_initiative_auto_progression
     return _impl_process_initiative_auto_progression(self)
 @shared_task(bind=True, queue='default')
+@singleton_task("detect-duplicate-initiatives", ttl=1800)
 def detect_duplicate_initiatives(self):
     from core.tasks_initiatives import _impl_detect_duplicate_initiatives
     return _impl_detect_duplicate_initiatives(self)
@@ -11295,7 +11307,11 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
 
     User = get_user_model()
     user_hash = hashlib.md5(str(user_id).encode()).hexdigest()
-    lock_key = f"pa_ctx:rebuild_lock:{user_hash}"
+    # Session 1165 (COO Backlog item #3): migrated from ad-hoc
+    # `cache.add(f"pa_ctx:rebuild_lock:{user_hash}", ...)` to the
+    # canonical singleton_lock primitive. Behavior-preserving; namespace
+    # prefix changes from `pa_ctx:rebuild_lock:` to `singleton_lock:`.
+    lock_name = f"pa-ctx-rebuild:{user_hash}"
 
     def _get_rss_mb():
         """Current RSS in MB (cross-platform)."""
@@ -11311,9 +11327,13 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
             )
             return None
 
-    # Stampede lock — skip if another rebuild is already running
-    lock_acquired = cache.add(lock_key, '1', timeout=90)
-    if not lock_acquired:
+    # Stampede lock — skip if another rebuild is already running.
+    # Session 1165: uses canonical singleton_lock primitive. Manual
+    # acquire/release (not `@singleton_task` decorator) because the
+    # per-user-hash lock name is computed inside the function body,
+    # not at module load. Explicit release on completion via
+    # `release_singleton_lock`.
+    if not acquire_singleton_lock(lock_name, ttl=90):
         logger.info(
             "PA_CONTEXT_REBUILD status=lock_suppressed lock_acquired=false "
             "user_id=%s reason=%s",
@@ -11393,7 +11413,7 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
         )
         return {'success': False, 'error': str(e)}
     finally:
-        cache.delete(lock_key)
+        release_singleton_lock(lock_name)
 
 
 # Session 1077: Background TTS task — offloaded from process_pa_chat_task
@@ -11841,6 +11861,7 @@ _RETENTION_DAYS = {
 
 
 @shared_task(ignore_result=True)
+@singleton_task("enforce-data-retention", ttl=3600)
 def enforce_data_retention():
     """Nightly job: archive/delete artifacts by data_sensitivity + age.
 
@@ -12683,6 +12704,7 @@ def cleanup_expired_fleet_events():
     soft_time_limit=60,
     time_limit=90,
 )
+@singleton_task("capture-pa-acks-health-snapshot", ttl=300)
 def capture_pa_acks_health_snapshot():
     """Run a pa_acks_health snapshot and append it to a date-rotated JSONL log.
 
