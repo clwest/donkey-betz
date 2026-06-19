@@ -214,8 +214,52 @@ class Command(BaseCommand):
         }
 
         self._flag_advisory(report)
-        self._compute_status(report)
+        previous_report = self._read_previous_snapshot()
+        self._compute_status(report, previous_report=previous_report)
         return report
+
+    def _read_previous_snapshot(self):
+        """Return the most recently written JSONL snapshot, or None.
+
+        Looks at `logs/pa_acks_health/*.jsonl` (most recent file by name,
+        then last line). Returns None on first-ever run or any I/O / parse
+        error — sustain-window semantics fall back to never-fire when no
+        prior state is available, which is the correct conservative default
+        (see `_compute_status`).
+
+        Session 1164 PR #1 item B. Rigby's design choice: JSONL is the
+        existing source of truth, deterministic, easier to audit ("why
+        did it escalate?") than Redis state.
+        """
+        try:
+            from pathlib import Path
+            log_dir = Path("logs") / "pa_acks_health"
+            if not log_dir.is_dir():
+                return None
+            files = sorted(log_dir.glob("*.jsonl"))
+            for jsonl in reversed(files):
+                try:
+                    with open(jsonl, "rb") as f:
+                        f.seek(0, 2)
+                        size = f.tell()
+                        if size == 0:
+                            continue
+                        # Tail-read: walk back from EOF to find the last
+                        # newline. Caps at 64 KiB to bound the scan even
+                        # on a corrupted append.
+                        chunk = min(size, 65536)
+                        f.seek(-chunk, 2)
+                        buf = f.read(chunk)
+                    text = buf.decode("utf-8", errors="replace")
+                    lines = [ln for ln in text.splitlines() if ln.strip()]
+                    if not lines:
+                        continue
+                    return json.loads(lines[-1])
+                except (OSError, ValueError):
+                    continue
+        except Exception:
+            return None
+        return None
 
     # ---- Data gatherers (read-only) ----
 
@@ -618,7 +662,10 @@ class Command(BaseCommand):
     # WARN thresholds — any of these conditions trips WARN.
     _WARN_HANG_COUNT = 1            # any current hang is suspicious
     _WARN_FAILURE_COUNT = 1         # any failure in the window
-    _WARN_QUEUE_DEPTH = 1           # any queued message at snapshot time
+    # Session 1164 (PR #1, item A): raised 1 → 5. 7 days of JSONL telemetry
+    # showed depth=0 across 331/331 snapshots; a single stray queued message
+    # should not flip status, but a small backlog should.
+    _WARN_QUEUE_DEPTH = 5
     _WARN_NO_WORKERS = True         # zero workers = WARN at minimum
 
     # CRIT thresholds — any of these escalates from WARN to CRIT.
@@ -628,11 +675,34 @@ class Command(BaseCommand):
     _CRIT_QUEUE_DEPTH = 20          # serious backlog
     _CRIT_NO_WORKERS = True         # zero workers = CRIT if sustained
 
-    def _compute_status(self, report):
+    # Session 1164 (PR #1, item B): sustain-window triggers. The binary
+    # infra-ish triggers (zero workers, depth>=CRIT) require the *previous*
+    # snapshot to have tripped the same condition — a single transient dip
+    # no longer flips CRIT/WARN. Hang/failure triggers stay single-snapshot
+    # because failure spikes are spiky by nature and sustain-window would
+    # mask the signal we actually use (12/12 CRIT events in last 7d were
+    # failure-driven).
+    _SUSTAIN_TRIGGERS = ("no_workers", "depth_crit")
+
+    @staticmethod
+    def _trips_no_workers(report):
+        return ((report or {}).get("workers") or {}).get("count", 0) == 0
+
+    @classmethod
+    def _trips_depth_crit(cls, report):
+        depth = ((report or {}).get("queue_depth") or {}).get("depth")
+        return isinstance(depth, int) and depth >= cls._CRIT_QUEUE_DEPTH
+
+    def _compute_status(self, report, previous_report=None):
         """
         Roll the snapshot into a single OK / WARN / CRIT verdict so downstream
         tooling can act on the result without parsing the advisory_flags list.
         Per Rigby's Session 1160 feedback on PR #2266.
+
+        Session 1164: optional `previous_report` enables sustain-window
+        semantics for binary infra triggers (no workers, depth>=CRIT).
+        When None, falls back to single-snapshot semantics (preserves the
+        original behavior for callers that don't supply prior state).
         """
         depth = (report.get("queue_depth") or {}).get("depth")
         depth = depth if isinstance(depth, int) else 0
@@ -646,23 +716,41 @@ class Command(BaseCommand):
         ) if hang_samples else 0.0
         worker_count = (report.get("workers") or {}).get("count", 0) or 0
 
+        # Sustain-window gate. When previous_report is None (first ever
+        # snapshot, no prior state), default to non-sustained → triggers
+        # do not fire. This matches Rigby's intent that B should never
+        # auto-escalate on first run.
+        no_workers_sustained = (
+            worker_count == 0
+            and previous_report is not None
+            and self._trips_no_workers(previous_report)
+        )
+        depth_crit_sustained = (
+            depth >= self._CRIT_QUEUE_DEPTH
+            and previous_report is not None
+            and self._trips_depth_crit(previous_report)
+        )
+
         # CRIT conditions first — short-circuit on any hit.
         if (
             hang_count >= self._CRIT_HANG_COUNT
             or failures >= self._CRIT_FAILURE_COUNT
             or oldest_hang_age >= self._CRIT_HANG_AGE_SEC
-            or depth >= self._CRIT_QUEUE_DEPTH
-            or (worker_count == 0 and self._CRIT_NO_WORKERS)
+            or depth_crit_sustained
+            or (no_workers_sustained and self._CRIT_NO_WORKERS)
         ):
             report["status"] = "CRIT"
             return
 
-        # WARN conditions.
+        # WARN conditions. Depth-based WARN stays single-snapshot — it's
+        # informational ("backlog forming"), not a binary infra trigger.
+        # no_workers WARN inherits the sustain check (same trigger as CRIT,
+        # same sustain semantics).
         if (
             hang_count >= self._WARN_HANG_COUNT
             or failures >= self._WARN_FAILURE_COUNT
             or depth >= self._WARN_QUEUE_DEPTH
-            or (worker_count == 0 and self._WARN_NO_WORKERS)
+            or (no_workers_sustained and self._WARN_NO_WORKERS)
         ):
             report["status"] = "WARN"
             return
