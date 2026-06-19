@@ -8,9 +8,18 @@
 # UI. Memory rule: pa_chat.py defaults to PROD; this wrapper forces
 # LOCAL + the right user.
 #
+# Session 1165 update: the local DB no longer has a `donkeyking` user
+# (only `chris`, `system`, `system_autonomous`). The wrapper now points
+# at chris's token + conversation; both pinned conversations
+# (pa-f93d77e34f5d and pa-7684c8f93185) are owned by chris. Rigby's
+# Session 1165 verdict on the drift: "Unexpected — flag it. Token +
+# conversation ownership should match `chris` if that's the operator
+# account." Memory rule: feedback_pa_local_verify_ownership.md.
+#
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value matches what donkeyking
-# has been using in the ChatUI.
+# the --conversation flag below. Current value matches what chris has
+# been using in the ChatUI (Rigby confirmed Session 1165 that
+# pa-f93d77e34f5d context is healthy and worth keeping).
 export PA_API_URL=http://localhost:8000
-export PA_API_TOKEN=e3c7276f00f12b77bda365c7c186577cd854cf2a
+export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 python tools/pa_chat.py "$@" --tools --conversation pa-f93d77e34f5d
