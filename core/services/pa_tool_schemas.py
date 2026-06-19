@@ -3493,7 +3493,7 @@ PA_TOOL_SCHEMAS = [
                         "task_status: check a specific Celery task by ID. "
                         "worker_health: active workers, queues, concurrency. "
                         "recent_failures: failed tasks with error messages. "
-                        "queue_lengths: current depth of all queues. "
+                        "queue_lengths: broker depth + active/reserved counts per queue, plus per-queue state (GREEN/YELLOW/RED/CRITICAL) with reasons, and system-level overall_state + overall_reasons (top 3 offenders). Sample-based oldest_age_seconds when messages carry a timestamp header (otherwise null + parse_error=no_timestamp_field, classification falls back to depth-only). "
                         "trigger_task: manually dispatch an allowlisted Celery task (use task_name param). "
                         "revoke_task: cancel/revoke a running or queued task by task_id (optionally terminate running tasks). "
                         "help: list all actions."
