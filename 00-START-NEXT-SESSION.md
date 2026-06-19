@@ -97,7 +97,112 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1163 CLOSED — Disclosure L drift correction arc (C-style + B-style) (2026-05-26 → 2026-05-27)
+## SESSION 1165 — CURRENT ENTRY POINT
+
+### FIRST THING this session
+
+**Check the PA stack is healthy + cadence task is producing new-schema JSONL.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d` (Session 1164 ran on a fresh thread `pa-7684c8f93185` opened by Chris — check with Rigby whether to keep that one or fall back).
+
+**Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
+
+**Session 1164 cadence-on-new-code check (item C precondition):**
+```bash
+.venv/bin/python -c "import json; [print(json.loads(l).get('sustain_gating')) for l in open('logs/pa_acks_health/$(date +%Y-%m-%d).jsonl').readlines()[-5:]]"
+```
+Expect: 5 lines each carrying `{previous_adjacent: bool, expected_interval_seconds: 1800, adjacency_factor: 2, gated_triggers: [...]}`. If any line lacks `sustain_gating`, the workers didn't restart after #2292 and you need to do: `pkill -9 -f celery; rm -f .celery*.pid; make celery`.
+
+### PRIORITY 1 — COO Nervous System Backlog item #1 (DB safety defaults)
+
+**Source deliverable:** `1be2cf55-2ece-4ffa-8c2b-27b777ee54c7` ("Rigby: COO Nervous System Stabilization — 10-Item Implementation Backlog + Claude Code Session Order (Corrected v1)", workspace chris-personal). Rigby's June 14 ranking. Session 1164 closed item #8 (SHOULD: queue depth/backlog per queue); item #1 is the highest-priority MUST.
+
+**Item #1 quote** (Rigby's wording, deliverable §1):
+> MUST — DB safety defaults: `statement_timeout` + `idle_in_transaction_session_timeout` + task-boundary connection hygiene
+> Likely files: `core/settings.py`, `core/celery.py` and/or `core/tasks.py`
+> Acceptance criteria: slow queries terminated; no idle-in-tx linger; connection counts don't climb under bursts.
+> Verify locally: run slow query; confirm timeout + `pg_stat_activity`; burst enqueue tasks; confirm stable connection count.
+
+**Concrete scope sketch** (Session 1164 close note):
+- `core/settings.py` `DATABASES['default']['OPTIONS']` — add `statement_timeout` + `idle_in_transaction_session_timeout` (Postgres `SET` via the `options` connection string). Current OPTIONS has `application_name`, `client_encoding`, `connect_timeout`, `options='-c search_path=...'` only. Strategy: extend the existing `options` string with `-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000` (or whatever survives the local p95 sniff test).
+- Task-boundary `close_old_connections()` hook — most natural placement is a `@task_postrun` signal in `core/celery.py` (or wherever post-task hooks already live). Verify there isn't already one being misnamed.
+- Acceptance smoke (do these in order, all locally):
+  1. `EXPLAIN ANALYZE pg_sleep(45)` via Django shell — confirm terminates ~30s with timeout.
+  2. Open a transaction, leave it idle 75s — confirm terminated, no row in `pg_stat_activity` of state `idle in transaction`.
+  3. Enqueue ~100 short tasks via `core.tasks.aggregate_tool_call_stats` or similar — monitor `SELECT count(*) FROM pg_stat_activity WHERE datname='unified_donkey_betz'` stays flat (no climb past the natural concurrency).
+  4. No regression: `python manage.py pa_acks_health --json` returns `status: OK`.
+
+**Numbers to pick by data, not vibes:** before setting `statement_timeout=30000`, sniff p99 via `pg_stat_statements` or recent slow-query log. Same for `idle_in_transaction_session_timeout=60000` — confirm no legitimate workflow holds a transaction past that. Route both through Rigby before committing.
+
+### PRIORITY 2 — Session 1164 item C (now actionable after ~24h telemetry)
+
+Once `wc -l logs/pa_acks_health/2026-06-20.jsonl` shows ~48 lines AND each carries the `sustain_gating` block (Session 1164 PR #2292 schema), item C is evaluable:
+
+**Item C:** WARN persists 2 consecutive snapshots → escalate to CRIT. Net-new logic. Rigby's spec (Session 1164 conversation `pa-7684c8f93185`): "after we've got at least a day of data *with* the new observability field." That field is `sustain_gating.previous_adjacent` + `sustain_gating.gated_triggers`.
+
+Surface candidates:
+- Add a `_was_warn_last_snapshot()` helper that re-evaluates the WARN tier against the previous report (using the same factory-style probes added in #2291 + #2292).
+- New CRIT trigger: `(status == WARN) and prev_adjacent and prev_was_warn` → escalate.
+- Truth-table additions to `core/tests/test_pa_acks_health_thresholds.py`.
+
+Don't ship #1 + C in the same PR; #1 is settings + signal-handler, C is logic on the sustain mechanism.
+
+### Active items carrying forward (Chris-call priority)
+
+- **Item #3** (Periodic-task stampede prevention — singleton locks + jitter) — Rigby's recommended order after #1. Needs `core/services/redis_lock.py` (doesn't exist).
+- **Item #2** (Per-process Postgres `application_name` tagging) — currently only the global `'unified_donkey_betz'` value; needs service/queue/worker variation via Procfile entry or settings hook.
+- **Item #6** (Retry-storm prevention — exponential backoff + retry budgets) — needs `core/services/retry_policy.py` (doesn't exist).
+- **Item #5** (Memory telemetry + automatic downshift) — caps already exist via Procfile; this adds visibility + throttle hook.
+- **Item #7** (Top Consumers ops endpoint) — pairs naturally with the queue_pressure surface Session 1164 added; could be folded into a single ops snapshot rather than a separate gateway.
+
+### Carryover small follow-ons from Session 1163 (still queued)
+
+1. **Legacy `SystemConfiguration(key='policy_arbitrator_snapshot')` row cleanup** — small migration to hard-delete the legacy row after one or more new-model cycles have been observed (single-PR scope).
+2. **`cycle_id` joinability fix** — `_policy_policy_arbitrator` in `core.py:2658` accepts the run-cycle's `cycle_id` instead of generating its own (single-file edit; joins `FinalAppliedOverrides` against `AutopilotAction`).
+3. **Opportunistic narrative §4 + §5 cleanup of stale `FinalAppliedOverrides` mentions** — wait for the next time someone touches those sections.
+
+### Deferred infrastructure track (avoid during offline-CI window)
+
+4. **`celery-beat-schedule` CONFLICT — detector tuning** (preferred) or 36-file token-pattern phrasing sweep (fallback).
+5. **Pre-existing PeriodicTask drift** (Session 1163 added 1 entry).
+6. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
+7. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
+8. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
+9. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern.
+
+### Chris-call-only carryovers (still parked)
+
+10. **Decision Command backend cleanup** — 5 Python files (regressed feature).
+11. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
+12. **Mission refresh PR #2190** — preserved branch.
+
+---
+
+## SESSION 1164 CLOSED — queue_pressure rollup + pa_acks_health threshold tuning (2026-06-19)
+
+**3 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1164_QUEUE_PRESSURE_ROLLUP_AND_PA_ACKS_THRESHOLD_TUNING.md`](docs/handoffs/SESSION_1164_QUEUE_PRESSURE_ROLLUP_AND_PA_ACKS_THRESHOLD_TUNING.md).
+
+| PR | Theme | SHA |
+|---|---|---|
+| **#2290** | `queue_pressure` rollup in `ops_tool.overview` — calls `cockpit_tool.queue_lengths` and reduces (no re-classification) | `e69aa5cf` |
+| **#2291** | `_WARN_QUEUE_DEPTH` raised 1 → 5 + sustain-window for binary infra triggers (no_workers, depth_crit) | `0951222f` |
+| **#2292** | Time-adjacency check (stale previous ≠ "consecutive") + `sustain_gating` observability field on every snapshot | `420ae6d7` |
+
+**End-to-end verified post-merge + restart:** workers restarted with new code (`pkill -9 -f celery; rm -f .celery*.pid; make celery`); manual fire of `capture_pa_acks_health_snapshot` wrote a JSONL line at `2026-06-19T22:22:01` carrying the new `sustain_gating` block. Item C (WARN persists 2 snapshots → CRIT) now evaluable after ~24h of new-schema telemetry.
+
+**New persistent artifacts:**
+- `core/services/td_handlers_ops.py:_ops_queue_pressure_rollup` (cockpit-reducer for ops surface).
+- `core/management/commands/pa_acks_health.py`: `_WARN_QUEUE_DEPTH=5`, `_EXPECTED_INTERVAL_SECONDS=1800`, `_SUSTAIN_ADJACENCY_FACTOR=2`, `_is_previous_adjacent`, `_trips_no_workers`, `_trips_depth_crit`, `_read_previous_snapshot`, `_compute_status(report, previous_report=None)`, `sustain_gating` block on every emitted report.
+- `core/tests/test_ops_queue_pressure_rollup.py` (8 tests) + `core/tests/test_pa_acks_health_thresholds.py` (36 tests).
+
+**Coverage gaps closed:**
+1. Queue pressure visible in `ops_tool.overview` (operators no longer drill into cockpit for system-level health).
+2. pa_acks_health no longer flips CRIT on transient infra dips (single-snapshot zero-workers or depth>=20 from a healthy state).
+3. Scheduler-pause-then-restart no longer falsely triggers CRIT on the first post-restart snapshot (time-adjacency defense).
+4. Sustain-decision provenance recorded on every snapshot — item C tuning has explicit adjacency evidence to work from.
+5. **COO Nervous System Backlog item #8 (SHOULD) closed end-to-end.** Remaining MUSTs (#1, #3, #5, #6) + SHOULD (#7) carry forward.
+
+**New gotchas captured:** none surfaced this session — the design contract (cockpit single-source-of-truth + JSONL-as-state for low-frequency observability) held cleanly through all three PRs. Rigby's pre-merge nit pattern (#2291 → #2292) worked well as scope-splitter.
+
+### Session 1163 CLOSED — Disclosure L drift correction arc (C-style + B-style) (2026-05-26 → 2026-05-27)
 
 **4 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1163_DISCLOSURE_L_DRIFT_CORRECTION_ARC.md`](docs/handoffs/SESSION_1163_DISCLOSURE_L_DRIFT_CORRECTION_ARC.md).
 
@@ -176,7 +281,7 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## 🚨 ACTIVE ISSUES carrying into Session 1164
+## 🚨 ACTIVE ISSUES carrying into Session 1165
 
 ### 1. GitHub Actions billing — still down
 
@@ -201,95 +306,24 @@ Self-merge with bypass requires:
 
 Session 1157 PR #2243 closed the code-level footgun. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1164+.
 
-### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED
+### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED + THRESHOLDS TUNED
 
-Sessions 1161 + 1162 together closed the instrumentation gap. The watch produces durable JSONL data with all expected fields. Session 1163 entry-check pattern carries forward.
+Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2292 closed the threshold-tuning portion (items A + B + the time-adjacency + sustain observability follow-on). Remaining: item C (WARN persists 2 snapshots → CRIT escalation) — now evaluable after ~24h of new-schema telemetry post-#2292.
 
 - `logs/pa_acks_health/YYYY-MM-DD.jsonl` grows by ~48 lines/day (`*/30` cadence).
-- Each snapshot carries: UTC + MT timestamps, queue depth, per-worker rollup (with `is_pa_relevant` flag), `oldest_queued`, `inflight_estimate`, `slow_tasks` list, `hang_signature` samples (with `worker_last_event_at` heartbeat).
+- Each snapshot now carries the Session 1164 `sustain_gating` block alongside the prior fields (UTC + MT timestamps, queue depth, per-worker rollup with `is_pa_relevant` flag, `oldest_queued`, `inflight_estimate`, `slow_tasks`, `hang_signature` samples + `worker_last_event_at` heartbeat).
 - WARN-level log line fires in celery-broadcast log whenever `status != OK`.
 
-**Session 1163 close state (2026-05-27):** cadence ran clean through both Session 1163 daphne+celery restarts (one mid-day, one late-afternoon). Local rolled into 2026-05-27 during B-style verification. 24h+ of clean data is now available — **threshold tuning (item 6 below) becomes actionable as of Session 1164.**
+**Session 1164 close state (2026-06-19):** workers restarted post-#2292; manual fire of `capture_pa_acks_health_snapshot` confirmed the new `sustain_gating` schema writes to JSONL. Item C becomes actionable after ~48 cadence ticks (one full day) on the new code.
 
-**What Session 1164 should check on entry:**
-- `wc -l logs/pa_acks_health/*.jsonl` — confirm overnight growth without errors.
-- `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` — any WARN lines?
-- 24h+ of clean data should now exist; threshold tuning is actionable.
+**What Session 1165 should check on entry:**
+- `wc -l logs/pa_acks_health/$(date +%Y-%m-%d).jsonl` — confirm overnight cadence ran.
+- Tail a few JSONL lines and confirm each carries `sustain_gating` (if any line lacks the field, the workers didn't restart and item C is blocked — see Session 1165 FIRST THING above).
+- `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` should be empty unless a status changed.
 
 ---
 
-## SESSION 1164 — CURRENT ENTRY POINT
-
-### FIRST THING this session
-
-**Check the PA stack is healthy.** Run `platform_config_tool overview` through Rigby to confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d` (carried from Sessions 1159-1163 — update the wrapper if Chris opened a new conversation).
-
-**Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
-
-**JSONL cadence check (continued from Session 1161-1163):** `wc -l logs/pa_acks_health/*.jsonl` should now show ~48 lines per full day across at least two days. `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` should be empty unless a status changed. 24h+ of clean data should be available — threshold tuning (item 6) is actionable.
-
-**Session 1163 B-style verification check:** `autopilot_tool action=latest_overrides_snapshot` should return `found: true` with `storage.table=core_final_applied_overrides`. The arbitrator beat cycle runs roughly every 10 min; if `found=false` past the first cycle of the session, check `celery-beat.log` for errors and `core/celery.py` for the cycle cadence — see Session 1163 handoff §"Carryover" item #2 (cycle_id joinability) for context.
-
-### Queue is clear; Session 1163 closed the four self-tuning follow-on items (#3 → shipped as B + counsel call optional, #4 → shipped as §13, #5 still queued, #6 → shipped as autopilot_tool action)
-
-No items are blocked on Chris-decision at session open. Chris can pick any of the active items below.
-
-### Observation-mode items (may not produce a PR)
-
-1. **JSONL review** — sample a handful of snapshots, confirm no errors. The Session 1161 cadence wrapper runs every 30 min and emits WARN log lines on non-OK transitions.
-2. **EDITING_GUARDRAILS opportunistic rollout** to narratives A / E / F / G / H / I / J / K / M / N / O. Pick up when next editing each narrative; not a batch.
-
-### Session 1163 small follow-on candidates (clean ~15-30-min PR each)
-
-3. **Legacy `SystemConfiguration(key='policy_arbitrator_snapshot')` row cleanup** — small migration to hard-delete the legacy row after one or more new-model cycles have been observed. Per Rigby's Session 1163 "Pick (b) backfill + (c) cleanup later" recommendation. Local has 2 new-model cycles observed; prod has 0 yet (gated on next Railway deploy + at least one cycle there). Single-migration PR, no model/code changes. Doc tweak: narrative §6.4 lineage table can mention "legacy row removed" once shipped.
-
-4. **`cycle_id` joinability fix** — make `_policy_policy_arbitrator` in `core.py:2658` accept the run-cycle's `cycle_id` instead of generating its own `_uuid.uuid4()`. Single-file edit. Makes `FinalAppliedOverrides.cycle_id` joinable against `AutopilotAction` records emitted in the same cycle. Test: extend `test_policy_arbitrator_latest_snapshot.py` to assert the `cycle_id` matches the run-cycle's `cycle_id` end-to-end.
-
-5. **Opportunistic narrative §4 + §5 cleanup of stale `FinalAppliedOverrides` mentions** — §6.4 lineage table is the canonical correction source, but §4 (operational benefits "Time-travel auditability") and §5 (current state snapshot — "FinalAppliedOverrides. Treat the governance.py write site as canonical") still describe the pre-Session-1163 framing. Wait for the next time someone touches those sections; do not batch-edit.
-
-### Carryover small follow-ons from Session 1162 (still queued)
-
-6. **Threshold tuning** — fold `pa_acks_health` action thresholds into `_compute_status()`. Now actionable per Session 1163 close-state (24h+ clean JSONL).
-   - WARN on queue depth ≥ 5 (currently ≥ 1).
-   - CRIT "no workers sustained" — explicit sustain window (≥ 2 consecutive snapshots).
-   - CRIT queue depth ≥ 20 — pair with second condition (workers < 2 OR oldest queued age > 120s).
-   - **WARN persists 2 consecutive snapshots** → escalate. Net new logic (requires comparing adjacent JSONL snapshots).
-
-7. **STRATEGY correction PR** — `WORKSPACES_AND_SCOPING.md` §6.1 + §6.2 flagged two STRATEGY narrative drifts (`LLMCallLog.workspace` FK + fleet "scoped workspace bootstrap" both named as implemented but aren't). Convert "is" → "planned / not yet implemented" on both; link back to the workspace narrative §6.
-
-8. **TRIAGE policy PR** — `INITIATIVES_AND_LIFECYCLE.md` §6.2. Rigby's verdict: real gap (operational hygiene), not bug. Two conservative options:
-   - opt-in archive rule (TRIAGE older than N days *only if* no action items + no stage docs + low confidence → ARCHIVED)
-   - review queue surfacing (TRIAGE older than N days → `HumanAttentionItem`)
-
-### Larger follow-on candidates
-
-9. **Per-module `ops_autopilot` narratives** — `SELF_TUNING_AND_EXPERIMENTATION.md` §6.3 explicitly scoped out the other 7 files (budget/engagement/impact/intelligence/remediation/revenue/verification). Each is a future-narrative candidate; pick one. Patent-rooted pattern applies where relevant (budget → disclosures J + K). Rigby's verdict: separate per-module narratives, not an umbrella.
-
-10. **(C) UI spinner proxy** — confirm `ChatConversation` (or similar) shape first; should be cheap to query for "request received but no assistant response after N minutes." Then implement as `pa_acks_health` field or a separate tool action.
-
-11. **Counsel-side amendment to Disclosure L claim §10(g)** — now optional per Session 1163 §14.7 (de-escalated from "amendment-to-match-reality" to "amendment-to-strengthen"). Not a code change; counsel call.
-
-### Active queue (Chris's call on priority)
-
-12. **Old `docs/topics/` sweep** — 7 Feb-March docs deferred from Session 1147 #2221.
-13. **Cosmetic `load_all_agents_advisors.py 149→139` fix** — queued from Session 1149.
-
-### Deferred infrastructure track (avoid during offline-CI window)
-
-14. **`celery-beat-schedule` CONFLICT — detector tuning** (preferred) or 36-file token-pattern phrasing sweep (fallback).
-15. **Pre-existing PeriodicTask drift** (now 81 DB rows vs 79 entries in `core/celery.py` — Session 1163 added 1 beat entry `purge-finaloverrides-90d`). Folds into #14.
-16. **`exists_on_disk: false` flag** in `_provenance.json` — 326 dead paths. Schema bump v1 → v2.
-17. **Beat-schedule the regens** — weekly Celery beat task for `_provenance.json` + 8 `build_*_audit` commands.
-18. **Fix `build_learning_bridge_audit.py` generator** — falsely flags "ABC unused".
-19. **Redis pooling sweep** (~40 inline `redis.Redis.from_url(...)` sites) — mirror Session 1144 OpenAI/Anthropic factory pattern from PR #2201.
-
-### Chris-call-only carryovers (still parked)
-
-20. **Decision Command backend cleanup** — 5 Python files (regressed feature).
-21. **DaVinci route removal** — `core/views_davinci.py` still routed from `core/urls.py`.
-22. **Mission refresh PR #2190** — preserved branch.
-
-### Cross-session lessons (Sessions 1145–1163)
+### Cross-session lessons (Sessions 1145–1164)
 
 - **Recon before sweep.** Multiple back-to-back sessions where mid-recon findings flipped the PR plan.
 - **Narratives become canon; topic docs get corrected to match** (1158).
@@ -321,11 +355,18 @@ No items are blocked on Chris-decision at session open. Chris can pick any of th
 - **NEW (1163)** **Self-referential dogfood loop continues — corrective PRs can introduce their own drift.** PR #2284 corrected the narrative §6.4 to be honest about `FinalAppliedOverrides` not existing, AND in the correction misnamed the tool namespace (`ops_tool` instead of `autopilot_tool`). Caught by Rigby's post-merge smoke test, fixed in PR #2285. Same family as Session 1159 #2256 → #2257. Rule extension to the 00-START dogfood line: *"if your PR introduces a tool surface, invoke the tool against your own docs before merge."*
 - **NEW (1163)** **Hand-written migrations beat auto-generated when scope matters.** `makemigrations` produced a 606-line migration including unrelated `AlterField` ops across multiple subsystems. The focused hand-written one was 168 lines, only the new model + index + idempotent backfill. For scoped subsystem PRs, prefer hand-written migrations — the auto-generated version pulls in every subsystem's pending drift as scope-creep.
 - **NEW (1163)** **Idempotent backfills are cheap insurance.** The Session 1163 migration's `if FinalAppliedOverrides.objects.exists(): return` check makes re-running the migration safe and turns the backfill into a one-shot no-op if rows already exist. Per Rigby: "Pick (b) backfill + (c) cleanup later" is the safe pattern — never leave a post-deploy data gap, never foreclose the rollback path. The legacy source row stays put until ≥ 1 new-model cycle is observed.
+- **NEW (1164)** **Reduce, never re-classify, when consuming a sibling surface.** PR #2290 wires `ops_tool.overview` to call `cockpit_tool.queue_lengths` and project a rollup — thresholds live in cockpit's `_classify` only. The cost of duplicating thresholds for "one little ops field" is zero today and unbounded the moment someone tunes cockpit. Same pattern applies any time gateway A wants what gateway B already computes: proxy + reduce.
+- **NEW (1164)** **JSONL-as-state is the right substrate for low-frequency observability.** PA acks_health sustain semantics needed prior state; the cadence task already wrote durable JSONL; introducing Redis for one-bit-of-state would have added a dependency to the very signal we're stabilizing. Rule of thumb: if the cadence is in minutes and the artifact is already a structured log, the log IS the state store.
+- **NEW (1164)** **Distribution-first tuning beats vibes.** PR #2291 raised `_WARN_QUEUE_DEPTH` from 1 to 5 only after observing 331 consecutive snapshots at depth=0. The cutoff is still preemptive — but the direction (raise, not lower) was data-validated. The same data-walk decided NOT to touch `failures >= 3`: 12/12 real CRITs came from that trigger; sustain semantics would have masked the only signal doing work.
+- **NEW (1164)** **Pre-merge nit-as-spec splits scope cleanly.** Rigby's two pre-merge nits on PR #2291 (log-tail order + time adjacency) acted as a scope-splitter: one was already correct (lex == chrono for date-prefixed filenames), one became PR #2292's entire scope. The nit format made the boundary easy to draw and kept #2291 from sprawling.
+- **NEW (1164)** **Observability fields belong on the same artifact as the decision.** PR #2292 puts `sustain_gating` on every snapshot rather than in a separate audit log. Downstream tuning (item C: WARN-persist escalation) can read one file; ops dashboards see decision context next to outcome. If you find yourself drafting a new audit table for "why did this status fire?", check whether the field can live next to the status itself.
+- **NEW (1164)** **Backward-compatible signatures + conservative defaults absorb mid-arc design changes.** `_compute_status(report, previous_report=None)` kept PR #2290's test factories working unchanged when #2291 added the second argument, and made first-run / no-prior-state cases safe by default (sustain triggers never fire when there's nothing to compare against). Same trick worked again when #2292 added adjacency: still backward-compatible, still safe-on-None, no test churn.
 
 ---
 
 ## RECENT SESSION ARCS
 
+- **Session 1164** — queue_pressure rollup in `ops_tool.overview` + pa_acks_health threshold tuning A+B + time-adjacency + sustain observability. 3 PRs merged. Closed COO Backlog item #8 (SHOULD) end-to-end.
 - **Session 1163** — Disclosure L drift correction arc (path-move addendum + C-style honest tool + tool-name dogfood loop + B-style FinalAppliedOverrides per-cycle table). 4 PRs merged.
 - **Session 1162** — narrative triple (workspace + initiative + self-tuning) + PA acks observation completion. 8 PRs merged.
 - **Session 1161** — PA acks_late watch instrumentation + 30-min cadence. 3 PRs merged.
