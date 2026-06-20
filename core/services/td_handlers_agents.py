@@ -1911,7 +1911,40 @@ class AgentHandlersMixin:
             }
 
         elif action == 'update':
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'update')
+            # Session 1168 bug #2 fix: payload.workspace_id has two meanings —
+            # (a) the workspace SCOPE filter applied to base_qs at the top of
+            # this handler, and (b) the NEW value to assign (attach intent).
+            # For orphan deliverables (workspace_id=NULL), the scope filter
+            # excludes them, so _resolve_deliverable raises "not found"
+            # before the workspace-assignment branch (lines below) ever runs.
+            # When payload provides a workspace_id, rebuild a workspace-
+            # agnostic lookup queryset that still respects user-ownership
+            # (mirrors the staff/non-staff logic at the top of this handler)
+            # so orphans + cross-workspace deliverables can be attached.
+            attach_intent_ws = payload.get('workspace_id') or payload.get('workspace')
+            if attach_intent_ws:
+                update_lookup_qs = Deliverable.objects.all()
+                if user_id:
+                    from django.contrib.auth import get_user_model
+                    _UserUp = get_user_model()
+                    try:
+                        _ru = _UserUp.objects.get(id=user_id)
+                        _is_pa_or_staff = (
+                            _ru.is_staff
+                            or _ru.is_superuser
+                            or _ru.username == 'pa-service'
+                        )
+                    except _UserUp.DoesNotExist:
+                        _is_pa_or_staff = False
+                    if not _is_pa_or_staff:
+                        update_lookup_qs = update_lookup_qs.filter(
+                            Q(user_id=user_id) | Q(user__isnull=True)
+                        )
+                obj, disambiguation = _resolve_deliverable(
+                    update_lookup_qs, payload, 'update',
+                )
+            else:
+                obj, disambiguation = _resolve_deliverable(base_qs, payload, 'update')
             if disambiguation:
                 return disambiguation
 
