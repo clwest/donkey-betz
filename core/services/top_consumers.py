@@ -64,6 +64,14 @@ MAX_LIMIT = 50
 # Same window vocabulary the rest of ops_tool uses.
 _WINDOW_HOURS = {"1h": 1, "6h": 6, "24h": 24, "7d": 168, "30d": 720}
 
+# Session 1169 — group_by dimension. 'task' is the original v1 behavior
+# (aggregate by task_name); 'agent' uses the new agent_name dim
+# (CeleryTaskEvent.agent_name, populated by the task_prerun signal). The
+# agent variant filters out empty agent_name so non-agent tasks don't
+# show up as an "" bucket. Default stays 'task' for backwards compat.
+_VALID_GROUP_BY = ("task", "agent")
+_GROUP_BY_COLUMN = {"task": "task_name", "agent": "agent_name"}
+
 
 def _resolve_window(window: str) -> int:
     """Return window in hours. Raises ValueError on unknown window."""
@@ -93,9 +101,10 @@ def compute_top_consumers(
     window: str = "24h",
     limit: Optional[int] = None,
     *,
+    group_by: str = "task",
     now: Optional[datetime] = None,
 ) -> Dict[str, Any]:
-    """Aggregate wall-clock consumption per ``task_name`` over the window.
+    """Aggregate wall-clock consumption per task_name or agent_name.
 
     Single PostgreSQL aggregate query — uses
     ``percentile_cont(0.95) WITHIN GROUP`` so the p95 is computed
@@ -105,15 +114,24 @@ def compute_top_consumers(
     Args:
         window: ``"1h"``, ``"6h"``, ``"24h"``, ``"7d"``, ``"30d"``.
         limit: max rows (clamped to ``[1, MAX_LIMIT]``; default 20).
+        group_by: ``"task"`` (default — aggregates by ``task_name``)
+            or ``"agent"`` (aggregates by ``agent_name``, filters out
+            non-agent rows). Session 1169 addition.
         now: timestamp override for testing. UTC-naive auto-promoted.
 
     Raises:
-        ValueError: on unknown ``window`` argument.
+        ValueError: on unknown ``window`` or ``group_by`` argument.
     """
     from django.db import connection
 
     hours = _resolve_window(window)
     limit = _clamp_limit(limit)
+
+    if group_by not in _VALID_GROUP_BY:
+        raise ValueError(
+            f"Unknown group_by {group_by!r}. Valid: {list(_VALID_GROUP_BY)}"
+        )
+    group_column = _GROUP_BY_COLUMN[group_by]
 
     if now is None:
         now = datetime.now(_dt_timezone.utc)
@@ -121,9 +139,20 @@ def compute_top_consumers(
         now = now.replace(tzinfo=_dt_timezone.utc)
     cutoff = now - timedelta(hours=hours)
 
-    sql = """
+    # When grouping by agent_name, drop the synthetic empty-string bucket
+    # that holds every non-agent task. The agent dim is intentionally
+    # gradual-fill, so '' = "either pre-Session-1169 row or not an agent
+    # task" — including it in the top would dominate the result and
+    # hide the actual agent signal.
+    agent_filter_sql = ""
+    if group_by == "agent":
+        agent_filter_sql = "AND agent_name <> ''"
+
+    # The group column comes from a validated allowlist (_GROUP_BY_COLUMN),
+    # so format-interpolation here is safe from SQL injection.
+    sql = f"""
         SELECT
-            task_name,
+            {group_column} AS dim_value,
             COUNT(*) AS count,
             COALESCE(SUM(duration_seconds), 0)::float AS total_seconds,
             COALESCE(AVG(duration_seconds), 0)::float AS mean_seconds,
@@ -135,7 +164,8 @@ def compute_top_consumers(
         FROM core_celerytaskevent
         WHERE started_at >= %s
           AND duration_seconds IS NOT NULL
-        GROUP BY task_name
+          {agent_filter_sql}
+        GROUP BY {group_column}
         ORDER BY total_seconds DESC
         LIMIT %s
     """
@@ -144,16 +174,20 @@ def compute_top_consumers(
         cur.execute(sql, [cutoff, limit])
         rows = cur.fetchall()
 
+    # Field key in the per-row dict matches the dimension so callers can
+    # always read consumers[i][group_by + "_name"] regardless of which
+    # dim they asked for.
+    row_key = "task_name" if group_by == "task" else "agent_name"
     consumers: List[Dict[str, Any]] = [
         {
-            "task_name": task_name,
+            row_key: dim_value,
             "count": int(count),
             "total_seconds": round(float(total), 3),
             "mean_seconds": round(float(mean), 3),
             "max_seconds": round(float(mx), 3),
             "p95_seconds": round(float(p95), 3),
         }
-        for (task_name, count, total, mean, mx, p95) in rows
+        for (dim_value, count, total, mean, mx, p95) in rows
     ]
 
     return {
@@ -161,6 +195,7 @@ def compute_top_consumers(
         "action": "top_consumers",
         "window": window,
         "window_seconds": hours * 3600,
+        "group_by": group_by,
         "generated_at": now.isoformat(),
         "since": cutoff.isoformat(),
         "limit": limit,
