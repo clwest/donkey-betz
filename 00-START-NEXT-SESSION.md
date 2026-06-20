@@ -136,7 +136,15 @@ If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`
 
 All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164-1167. No items remain. **The backlog is complete.**
 
-### PRIORITY 1 — Follow-on items from Session 1167 PRs
+### PRIORITY 1 — Ops cleanup arc (chris-personal SHIP items)
+
+Three deliverables surfaced from the Session 1167 recon of `chris-personal` workspace (50 deliverables, all stale ~6 days; 29 archived end-of-1167 in PR #2308's batch). Rigby triaged + sequenced these as a coherent ops-cleanup arc. Recommended order:
+
+1. **`3973c817-68cc-4706-9797-ff28a95d21a8` — Known Bugs Claude Code Follow-up Queue** — read FIRST. The consolidated bug triage doc Rigby maintained over the past sessions. Triage drives scoping for the next two items + may surface additional small PRs.
+2. **`f92ab8bb-5e40-4249-8927-a19cda7b7418` — BUG: Orphan Newsletter Deliverables Readable but Not Updatable/Attachable** — real platform defect. Claude Code fixes the data-model/update path (probably a permissions / workspace_id check); Rigby verifies the UX flow.
+3. **`7c332f0d-0ac5-4da9-b03b-83df0a31052e` — Local-safe Celery Beat schedule (dev laptop guardrails)** — env-gated task registration + dev-safe default schedule so `make celery` locally doesn't fire production-shaped cadence tasks (e.g. `scan-income-spider-orchestrator` was the original Rigby trigger). **Scope cap (Rigby explicit):** env-gated + dev-safe default. Don't let it sprawl into "perfect."
+
+### PRIORITY 2 — Follow-on items from Session 1167 PRs
 
 Direct extensions of PR #2305 + #2306 work, all small. Route through Rigby for ordering at session start:
 
@@ -146,7 +154,14 @@ Direct extensions of PR #2305 + #2306 work, all small. Route through Rigby for o
 4. **Operator playbook snippet:** *"If a monitor task is in `top_consumers`, treat it as P1 reliability debt."* — Rigby's standing follow-up. Single doc edit in `docs/topics/celery-workers.md`.
 5. **Agent dim on `CeleryTaskEvent`** — single migration to add `agent_name` + signal-handler tweak. Then a `top_consumers` variant aggregating by agent. Deferred from Session 1167 per Rigby's skip-joins-in-v1 rule.
 
-### PRIORITY 2 — Consolidation / deferred from Session 1165 (focused follow-on PRs)
+### Session 1169 — Digest product arc (parked for separate session)
+
+Held out of Session 1168 because it's a bigger product decision needing its own design pass + likely 2-3 PRs:
+
+- **`a4a2697d-0882-4583-be94-10f8ac56694e` — Weekend Digest Autopilot — Spec & Acceptance Criteria.** Spec written Session 1166-or-earlier, never built. If you still want the digest product, this becomes the Session 1169 build.
+- **`2a2ea6e3-0f9e-4989-8e1f-5790e91d4324` — Claude Code Help Tickets — Weekend-Safe Stocks + Crypto Digest.** Implementation plan companion to the spec.
+
+### PRIORITY 3 — Consolidation / deferred from Session 1165 (focused follow-on PRs)
 
 - **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
 - **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
