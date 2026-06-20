@@ -97,9 +97,116 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1167 — CURRENT ENTRY POINT
+## SESSION 1168 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
+
+**Verify the Session 1167 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d`.
+
+**Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
+
+**Session 1167 post-merge sanity check** — verify the three PRs are loaded + active:
+
+```bash
+# (1) worker-memory-capture cadence is firing — should be ~288 lines/day at */5
+wc -l logs/worker_memory/$(date -u +%Y-%m-%d).jsonl
+# Expect: steady accrual. First-day expectation lower (session started mid-day).
+
+# (2) schema_version=1 + sustain_gating block on every line
+tail -1 logs/worker_memory/$(date -u +%Y-%m-%d).jsonl | .venv/bin/python -m json.tool | head -20
+# Expect: schema_version=1, cadence_seconds=300, sustain_gating with 5 fields.
+
+# (3) Any sustained CRIT escalations
+grep -o '"escalated_triggers":\[[^]]*\]' logs/worker_memory/$(date -u +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn
+# Expect: bulk empty lists. Any non-empty = real downshift-recommendation event.
+
+# (4) ops_tool.top_consumers SQL stays bounded
+.venv/bin/python manage.py dbshell -- -c "
+EXPLAIN ANALYZE
+SELECT task_name, percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_seconds)
+FROM core_celerytaskevent
+WHERE started_at >= now() - interval '24 hours' AND duration_seconds IS NOT NULL
+GROUP BY task_name ORDER BY 2 DESC LIMIT 20;"
+# Expect: index scan on celery_evt_name_time. < 50ms at current scale.
+```
+
+If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery` + `python manage.py add_critical_celery_tasks`. Then re-run.
+
+### COO Nervous System Backlog — CLOSED 2026-06-19
+
+All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164-1167. No items remain. **The backlog is complete.**
+
+### PRIORITY 1 — Follow-on items from Session 1167 PRs
+
+Direct extensions of PR #2305 + #2306 work, all small. Route through Rigby for ordering at session start:
+
+1. **`memory_pressure_state` rollup indicator on `ops_tool.overview`** — small extension: GREEN/YELLOW/RED + top-offender + %cap. Defer-approved by Rigby in PR #2305 design pass.
+2. **`cap_coverage_pct` field on `ops_tool.memory_pressure`** — fraction of sampled workers with a parseable `--max-memory-per-child` cap. Rigby's late add to the 24h watch ask. 4 lines.
+3. **Targeted remediation for `monitor_celery_health` + `capture_pa_acks_health_snapshot`** — both flagged by PR #2306 live smoke at p95=1048s and p95=1880s respectively. Queue placement + timeouts + probe decomposition. Pairs with the Session 1165 carryover slow-task investigation.
+4. **Operator playbook snippet:** *"If a monitor task is in `top_consumers`, treat it as P1 reliability debt."* — Rigby's standing follow-up. Single doc edit in `docs/topics/celery-workers.md`.
+5. **Agent dim on `CeleryTaskEvent`** — single migration to add `agent_name` + signal-handler tweak. Then a `top_consumers` variant aggregating by agent. Deferred from Session 1167 per Rigby's skip-joins-in-v1 rule.
+
+### PRIORITY 2 — Consolidation / deferred from Session 1165 (focused follow-on PRs)
+
+- **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
+- **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
+- **Agent-task family retry budgets.** Wire the `retry_policy` primitive from PR #2297 to the agent task family. Needs fingerprinting strategy first (`agent_name + user_id + workspace_id`).
+- **Bulk migration of ~5 linear/fixed countdown sites** (`core/tasks_agents.py` family) to `compute_retry_countdown` from PR #2297.
+
+### Aspirational follow-ons (still queued)
+
+- **`pg_stat_statements` on staging/prod.** Installed locally Session 1165.
+- **`capture_pa_acks_health_snapshot` slow-task investigation.** Now concretely top of `ops_tool.top_consumers` 24h (p95=1880s = 31 min). Data exists; investigation overdue.
+
+---
+
+## SESSION 1167 CLOSED — COO #5 + #7 close (2026-06-19)
+
+**3 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1167_COO_BACKLOG_5_AND_7_CLOSE.md`](docs/handoffs/SESSION_1167_COO_BACKLOG_5_AND_7_CLOSE.md).
+
+| PR | Theme | SHA |
+|---|---|---|
+| **#2304** | `docs` — fix 00-START FIRST THING date suffix to UTC (caught false-positive on session entry) | `4e9e08af` |
+| **#2305** | **COO #5 (SHOULD):** worker memory telemetry + soft downshift signal — `core/services/memory_telemetry.py` + JSONL-as-state at `logs/worker_memory/` + `ops_tool.memory_pressure` + 40 tests | `d7f27218` |
+| **#2306** | **COO #7 (SHOULD):** top wall-clock consumers ops endpoint — `core/services/top_consumers.py` with server-side `percentile_cont(0.95)` + `ops_tool.top_consumers` + 18 tests | `cc838c4e` |
+
+**COO Backlog state after Session 1167:**
+
+| Item | Tier | Closed in |
+|---|---|---|
+| #1 DB safety defaults | MUST | Session 1165 (#2295) |
+| #2 Per-process Postgres `application_name` tagging | MUST | Session 1166 (#2301) |
+| #3 Singleton locks + jitter | MUST | Session 1165 (#2296) |
+| #5 Memory telemetry + automatic downshift | SHOULD | **Session 1167 (#2305)** |
+| #6 Retry-storm prevention | MUST | Session 1165 (#2297) |
+| #7 Top Consumers ops endpoint | SHOULD | **Session 1167 (#2306)** |
+| #8 Queue depth + backlog age per queue | SHOULD | Session 1164 |
+
+**All 4 MUSTs + all 3 SHOULDs from Rigby's June 14 corrected v1 closed. Backlog is complete.**
+
+**End-to-end verified post-merge:**
+- PR #2304: all 4 `date -u +%Y-%m-%d` occurrences land on the UTC-dated JSONL the cadence writer creates.
+- PR #2305: first JSONL line written at `2026-06-20T02:05:02 UTC` with `schema_version=1` + `cadence_seconds=300` + `sustain_gating` block; 4 local workers sampled with correct `pool_kind` classification.
+- PR #2306: PA-dispatch test of `ops_tool.top_consumers` returned populated schema-v1 payloads for `window=1h, limit=5` and `window=24h, limit=10` end-to-end through the PA path. Live smoke surfaced `capture_pa_acks_health_snapshot` at p95=1880s and `monitor_celery_health` at p95=1048s as top long-tail offenders.
+
+**New persistent artifacts:**
+- `core/services/memory_telemetry.py` (canonical sampler + sustain semantics)
+- `core/services/top_consumers.py` (PG aggregator with server-side p95)
+- `core/management/commands/worker_memory_health.py`
+- `core.tasks.capture_worker_memory_snapshot` (`@singleton_task` cadence, broadcast queue)
+- Beat schedule entry `worker-memory-capture` every 5 min
+- `ops_tool.memory_pressure` + `ops_tool.top_consumers` actions
+- `logs/worker_memory/YYYY-MM-DD.jsonl` UTC-dated rotation
+- `docs/topics/celery-workers.md` — new "Memory telemetry" subsection
+- 5 new test files, 58 tests total
+
+**New gotchas captured:** none — both designs followed established Session 1164/1165/1166 patterns. The 00-START playbook UTC-vs-local nit was a one-off paper cut, fixed in #2304 with explanatory NOTE block.
+
+---
+
+## SESSION 1166 CLOSED — COO #2 + pa_acks_health item C (2026-06-19)
+
+### FIRST THING (preserved for reference — Session 1167 sanity checks supersede this)
 
 **Verify the Session 1166 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d`.
 
@@ -142,6 +249,8 @@ grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date -u +%Y-%m-%d
 ```
 
 If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Then re-run.
+
+### (Session 1166-era priorities — superseded; preserved for context)
 
 ### PRIORITY 1 — COO Nervous System Backlog item #5 (Memory telemetry + automatic downshift)
 
