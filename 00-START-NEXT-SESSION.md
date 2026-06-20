@@ -117,7 +117,7 @@ WHERE datname='unified_donkey_betz' GROUP BY 1 ORDER BY 2 DESC;"
 # A handful of unified_donkey_betz rows is fine (ad-hoc shells).
 
 # (2) item C escalated_triggers field on every new JSONL line
-tail -3 logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | .venv/bin/python -c "
+tail -3 logs/pa_acks_health/$(date -u +%Y-%m-%d).jsonl | .venv/bin/python -c "
 import json, sys
 for i, line in enumerate(sys.stdin, start=1):
     d = json.loads(line)
@@ -132,9 +132,13 @@ for i, line in enumerate(sys.stdin, start=1):
 # Expect: "OK: every Procfile entry sets PG_APPLICATION_NAME=dbz:<role>."
 
 # (4) Look for any warn_persist:* escalations in the past 24h
-grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn
+grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date -u +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn
 # Expect: bulk under "escalated_triggers":[]. Any non-empty list is a
 # real CRIT escalation worth investigating per the Session 1166 handoff.
+# NOTE: the cadence task names files in UTC (core/tasks.py:12741 uses
+# Django timezone.now().strftime — Django runs USE_TZ=True so this is
+# UTC). Use `date -u` to match the writer; `date` alone returns local
+# and points at yesterday's file during evening hours west of UTC.
 ```
 
 If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Then re-run.
@@ -410,9 +414,9 @@ Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2
 **Session 1166 close state (2026-06-19):** workers restarted twice (after PR #2301 and again after PR #2302). All four MUSTs from Rigby's June 14 corrected v1 backlog now closed. Item C live; any `warn_persist:*` label appearing in `escalated_triggers` is a CRIT escalation worth investigating per the handoff.
 
 **What Session 1167 should check on entry:**
-- `wc -l logs/pa_acks_health/$(date +%Y-%m-%d).jsonl` — confirm overnight cadence ran.
+- `wc -l logs/pa_acks_health/$(date -u +%Y-%m-%d).jsonl` — confirm overnight cadence ran (file named in UTC).
 - Tail a few JSONL lines and confirm each carries `escalated_triggers` (if any line lacks the field, the workers didn't restart post-#2302 and the new code is dormant — see Session 1167 FIRST THING above).
-- `grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn` — bulk should be empty lists; any non-empty list is a real warn-persist CRIT escalation.
+- `grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date -u +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn` — bulk should be empty lists; any non-empty list is a real warn-persist CRIT escalation.
 - `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` should be empty unless a status changed.
 - `grep -i "retry_denied\|singleton_task" celery*.log` may surface budget exhaustion or stampede skips from PRs #2296 / #2297 — good observability signal, not necessarily a bug.
 
