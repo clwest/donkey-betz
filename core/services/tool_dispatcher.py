@@ -618,7 +618,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             emit_tool_started,
             emit_tool_completed,
         )
-        emit_tool_started(
+        await emit_tool_started(
             pa_trace_id=pa_trace_id,
             conversation_id=str(conversation_id) if conversation_id else None,
             tool_call_id=trace_id,
@@ -651,7 +651,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                                 agent_name=agent_name,
                                 conversation_id=conversation_id,
                             )
-                        emit_tool_completed(
+                        await emit_tool_completed(
                             pa_trace_id=pa_trace_id,
                             conversation_id=str(conversation_id) if conversation_id else None,
                             tool_call_id=trace_id,
@@ -682,7 +682,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
-            emit_tool_completed(
+            await emit_tool_completed(
                 pa_trace_id=pa_trace_id,
                 conversation_id=str(conversation_id) if conversation_id else None,
                 tool_call_id=trace_id,
@@ -770,7 +770,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
-            emit_tool_completed(
+            await emit_tool_completed(
                 pa_trace_id=pa_trace_id,
                 conversation_id=str(conversation_id) if conversation_id else None,
                 tool_call_id=trace_id,
@@ -799,7 +799,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
-            emit_tool_completed(
+            await emit_tool_completed(
                 pa_trace_id=pa_trace_id,
                 conversation_id=str(conversation_id) if conversation_id else None,
                 tool_call_id=trace_id,
@@ -828,7 +828,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
-            emit_tool_completed(
+            await emit_tool_completed(
                 pa_trace_id=pa_trace_id,
                 conversation_id=str(conversation_id) if conversation_id else None,
                 tool_call_id=trace_id,
