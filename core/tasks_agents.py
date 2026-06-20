@@ -1787,12 +1787,23 @@ self,
                 input_data=input_data,
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
-            # Session 1100: Set initial heartbeat (graceful if migration not yet applied)
+            # Optional fields that depend on migrations being applied.
+            # Session 1100: last_heartbeat_at — long-running liveness signal.
+            # Session 1174 PR-1: conversation_id — PA conversation that
+            # triggered this dispatch. Gates the agent-follow-up wake feature
+            # (docs/handoffs/SESSION_1174_PRIMING_AGENT_FOLLOWUP.md). Stored
+            # as NULL for non-PA dispatches (autonomous beat tasks, direct
+            # router calls); the Phase 1 invariant is that only persisted
+            # conversation_id rows + explicit subscription may post follow-up.
+            _optional_kwargs = {
+                'last_heartbeat_at': timezone.now(),
+                'conversation_id': context.get('conversation_id') or None,
+            }
             try:
-                _create_kwargs['last_heartbeat_at'] = timezone.now()
-                execution_record = AgentExecution.objects.create(**_create_kwargs)
+                execution_record = AgentExecution.objects.create(
+                    **_create_kwargs, **_optional_kwargs,
+                )
             except Exception:
-                _create_kwargs.pop('last_heartbeat_at', None)
                 execution_record = AgentExecution.objects.create(**_create_kwargs)
 
             # Session 1084: Temporary writer-attribution log so PR #1887 can

@@ -954,6 +954,16 @@ class AgentHandlersMixin:
         top_level_ws = payload.get('workspace_id')
         if top_level_ws and 'workspace_id' not in context:
             context['workspace_id'] = top_level_ws
+        # Session 1174 PR-1: promote conversation_id too. The PA entrypoint
+        # injects it at the payload root (unified_pa_entrypoint.py:1549) for
+        # every tool call; _handle_agent_tool gets it via _CONTEXT_PROMOTE_KEYS
+        # but this universal-agent handler doesn't share that promotion. Without
+        # this line, universal_agent_tool dispatches would persist NULL on
+        # AgentExecution.conversation_id and silently opt out of the follow-up
+        # wake design.
+        top_level_conv = payload.get('conversation_id')
+        if top_level_conv and 'conversation_id' not in context:
+            context['conversation_id'] = top_level_conv
 
         if not task_text:
             raise ValueError("task is required")
