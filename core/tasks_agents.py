@@ -138,7 +138,11 @@ def create_implicit_followup_subscription(execution_record, context):
             conversation_id=conv_id,
             defaults={
                 'state': AgentFollowupSubscription.STATE_ARMED,
-                'expires_at': timezone.now() + timedelta(seconds=30),
+                # Session 1178 follow-up: TTL pulled from the model constant
+                # so Phase 1 explicit + Phase 2 auto-wake share one source of
+                # truth. Live verify caught the original 30s firing 2 seconds
+                # before a typical ResearchAgent completion.
+                'expires_at': timezone.now() + timedelta(seconds=AgentFollowupSubscription.DEFAULT_TTL_SECONDS),
             },
         )
         logger.info(
