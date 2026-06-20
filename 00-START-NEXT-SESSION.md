@@ -97,61 +97,82 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1178 — CURRENT ENTRY POINT
+## SESSION 1179 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1177 closed with 3 PRs merged to main.** F1 + F3 root causes from Session 1176 both fixed (PR #2342 + PR #2343). Failed-banner visual confirmation done — both branches of the follow-up wake feature are fully wired end-to-end. Close handoff: [`docs/handoffs/SESSION_1177_AGENT_DISPATCH_DEFENSE.md`](docs/handoffs/SESSION_1177_AGENT_DISPATCH_DEFENSE.md).
+**Session 1178 closed with Phase 2 auto-wake LIVE and verified end-to-end on main.** Four PRs merged: #2345 (Phase 2 feature), #2347 (TTL hotfix bump 30→60s caught via live verify), #2348 (cross-path invariant test), #2346 (docs close). Workers were already restarted at Session 1178 close. Close handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce` — still healthy from Session 1177): `platform_config_tool overview` → confirm `service_context: local`.
-3. Sanity that the feature is alive on main:
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce` — still healthy from Session 1178): `platform_config_tool overview` → confirm `service_context: local`.
+3. Auto-wake spot check — last 24h subscription create + fire rate:
+   ```bash
+   USE_PGBOUNCER=1 .venv/bin/python manage.py shell -c "
+   from core.models_unified_system import AgentFollowupSubscription
+   from datetime import timedelta
+   from django.utils import timezone
+   since = timezone.now() - timedelta(hours=24)
+   s = AgentFollowupSubscription.objects.filter(created_at__gte=since)
+   print(f'last 24h: total={s.count()} fired={s.filter(state=\"fired\").count()} armed={s.filter(state=\"armed\").count()} expired={s.filter(state=\"expired\").count()}')"
+   ```
+4. Any `[auto_followup] fail-open` lines in worker logs since last session?
+   ```bash
+   grep '\[auto_followup\] fail-open' celery-long-running.log celery*.log 2>/dev/null
+   # Expect: empty. If non-empty, each line has execution=<uuid> conv=<id> for fast correlation.
+   ```
 
-```bash
-# Verify the wake feature is still wired end-to-end
-.venv/bin/python manage.py shell -c "
-from core.models_unified_system import AgentExecution, AgentFollowupSubscription
-from core.models.conversations.models import ChatConversation
-from datetime import timedelta
-from django.utils import timezone
-since = timezone.now() - timedelta(hours=24)
-print(f'AgentExecution.conversation_id field: {[f.name for f in AgentExecution._meta.fields if f.name == \"conversation_id\"]}')
-print(f'AgentFollowupSubscription rows: {AgentFollowupSubscription.objects.count()}')
-print(f'agent_completion ChatConversation rows last 24h: {ChatConversation.objects.filter(created_at__gte=since, metadata__contains={\"kind\": \"agent_completion\"}).count()}')
-"
-# Expect: field present, subscription rows > 0, completion ChatConversation rows > 0.
+### PRIORITY 1 — Pick next agent work thread (with Rigby)
 
-# schedule_followup tool registered
-.venv/bin/python manage.py shell -c "
-import core.services.pa_tool_schemas as m
-import inspect
-src = inspect.getsource(m)
-print('schedule_followup in schemas:', 'schedule_followup' in src)
-"
-```
+Phase 2 auto-wake is the natural close of the "make Rigby tell you when an agent finishes" thread from Session 1174. Open follow-ups (Rigby's ranked Session 1178 order):
 
-If something is missing → re-read the Session 1175 close handoff's 24h watch checklist for diagnostics.
-
-### PRIORITY 1 — Check in with Rigby on agent work direction
-
-Chris's explicit instruction at Session 1177 close: "check back in with Rigby on where we are working with the Agents and what's next on the list."
-
-Rigby has agent-side context she may have queued during Session 1177's three PRs landing. Recommended kickoff prompt:
-> "Session 1178 kickoff. Session 1177 shipped 3 PRs (#2341 docs handoff, #2342 F1 fix, #2343 F3 fix). Both branches of the follow-up wake feature now fully wired. What's next on the agent work list from your perspective?"
-
-Three concrete directions the conversation can route to:
-
-| Direction | Why | Effort |
+| Item | Why deferred from Session 1178 | Lean |
 |---|---|---|
-| **A.** Session 1175 deferred open queue: conv-ID divergence recon / banner artifact-pointer click-through / Phase 2 c1 auto-wake | Original Session 1175 close items, all on the follow-up wake feature. The auto-wake is the highest leverage but needs Rigby design ratification on dedupe + opt-out. | varies |
-| **B.** Continue Session 1176's Pass B matrix (Cells 3-8) — revoke, refresh-mid-run, second-tab, media-artifact | More stress-test coverage on the Session 1175 vertical slice. Tracking deliverable `61247479` has the scaffold ready. | 1-2h |
-| **C.** Stress-test more of the PA tool catalogue beyond agent dispatch — pick high-value tools (gateway_tool / ops_tool actions / governance_tool) and run the same "find half-wired paths" pattern that surfaced F1 + F3 | Broaden the recon outside the follow-up wake feature; Rigby tools she avoids calling = a good filter | varies |
-| **D.** EditorAgent observability follow-up (C3) — ops dashboard for "X% of EditorAgent calls used dispatcher gather" + per-call provenance review | Builds on Session 1177's PR #2343 (C1 surfaced the data; C3 makes it operator-visible) | several hours |
+| **1.** `auto_followup_skipped` traceability stamp on AgentExecution.output_data when opt-out path taken | Pulled to keep PR #2345 scope narrow | 1-file follow-up PR; Rigby's optional Session 1178 add |
+| **2.** Phase 1 open follow-up #6 — banner enrichment with artifact_pointer click-through | Visual nice-to-have; deferred | Pick after live-verify confirms Phase 2 stable |
+| **3.** Phase 1 open follow-up #4 — multi-agent fan-out rollup | Bigger design work; needs subscription rollup helper + new tool variant | Defer until Chris has a real "I dispatched 3 agents" pain |
+| **4.** Session 1175 Pass B matrix cells 3-8 — revoke, refresh-mid-run, second-tab, media-artifact | Stress-test coverage on Phase 1 vertical slice; tracking deliverable `61247479` ready | Resume only if F1+F3 surface new regressions in the wild |
+| **5.** EditorAgent observability dashboard (C3 from Session 1177) | Builds on PR #2343 `content_provenance` | Picks up steam if Chris asks for it |
+| **6.** Per-agent / global auto-wake config | Phase 3; needs config table or AssistantProfile field | Defer until per-call opt-out proves insufficient |
 
-### Carryover from Sessions 1171–1174 (not yet acted on)
+Recommended kickoff with Rigby:
+> "Session 1179 kickoff. Phase 2 PR #2345 [merged/open]. [Live verify result]. From the carry-forward in Session 1178's close handoff, what's the highest-leverage next thread?"
 
-The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172–1177 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1177_*`. Review there if any are now blocking; otherwise they continue to ride.
+### Carryover from Sessions 1171–1175 (not yet acted on, still riding)
+
+PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1178_*`. Review there if any are now blocking; otherwise they continue to ride.
+
+---
+
+## SESSION 1178 CLOSED — Phase 2 auto-wake LIVE + conv-ID recon closed + TTL hotfix shipped (2026-06-20)
+
+**4 PRs merged.** Full handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
+
+| PR | Theme | SHA |
+|---|---|---|
+| **#2345** | `feat(session-1178-agent-wake)` — Phase 2 auto-wake (implicit follow-up subscription + per-call opt-out) | `9c5c944b` |
+| **#2347** | `fix(session-1178-agent-wake)` — TTL bump 30s→60s + shared model constants (caught by live verify) | `039435fe` |
+| **#2348** | `test(session-1178-agent-wake)` — cross-path invariant test (Phase 1 + 2 can't drift again) | `3185beb7` |
+| **#2346** | `docs(session-1178)` — close handoff + 00-START-NEXT-SESSION.md reset | (this PR) |
+
+**Source-only, no migrations.** Every PA-originated agent dispatch now auto-creates an armed `AgentFollowupSubscription` at `execute_agent_task` entry (60s TTL — bumped from 30s after live verify caught a 2-second race against ResearchAgent runtime). Rigby no longer has to call `schedule_followup` explicitly — the user gets the completion banner + Rigby-authored chat bubble by default. The explicit tool remains as an override (custom TTL up to `MAX_TTL_SECONDS = 600`).
+
+**Dedupe is DB-guaranteed** via existing `unique_together = [('execution', 'conversation_id')]` on `AgentFollowupSubscription`. `get_or_create` is race-safe with explicit `schedule_followup` for free.
+
+**Single source of truth for TTL contract** (post-PR-#2347 + #2348): `AgentFollowupSubscription.DEFAULT_TTL_SECONDS` (60) + `MAX_TTL_SECONDS` (600). Both Phase 1 explicit + Phase 2 implicit read from there. New CI test `test_default_after_seconds_matches_model_constant` fails if drift recurs.
+
+**Ratified design card (Rigby sign-off Session 1178, with D2 overruled by reality):** D1=augment / **D2=60s default** (was 30s in original ratification) / D3=PA-only via conv_id NULL gate / D4=per-call opt-out (`auto_followup: false`) / D5=one banner per agent / D6=at `execute_agent_task` entry.
+
+**Conv-ID divergence recon (Session 1175 open follow-up #1):** Closed as "wrapper hygiene, not a bug." Code walk through `process_pa_chat_task → UnifiedPAEntrypoint → run_agent → execute_agent_task → AgentFollowupSubscription` proved conv_id is invariant within a turn.
+
+**Live verify trail (post-merge to main):**
+- Execution `d7fc8c50` (pre-hotfix, TTL=30s) — caught the bug: sub expired 2s before completion, silent no-op.
+- Execution `2b1892c1`, sub `92c8eed2` (post-hotfix, TTL=60s) — sub created 23:26:55, fired 23:27:25, ChatConversation row 588 persisted. Zero explicit `schedule_followup` calls.
+- Execution `06f63afe` (opt-out path) — `auto_followup=false` flowed through PA schema → `_CONTEXT_PROMOTE_KEYS` → context. Zero subscriptions created. Silent skip.
+
+**Carry-forward for Session 1179:** none required. Phase 2 is live and verified. Pick next thread per the priority list above.
+
+**Conversations:** `pa-9b82bcc72e1945ce` healthy at close (85/100 in mid-session). Six exchanges across the session.
 
 ---
 
