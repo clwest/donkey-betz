@@ -573,7 +573,16 @@ RESEARCH DATA:
                 except _User.DoesNotExist:
                     pass
 
-            from core.services.deliverable_factory import create_deliverable
+            # Session 1169 — Layer C Phase 1: opt in to typed exception
+            # so the gate rejection (previously swallowed by the broad
+            # except Exception below as an unhelpful AttributeError on
+            # the next str(deliverable.id) line) is logged with structured
+            # reason_code instead. Broad except still catches DB / other
+            # failures unchanged.
+            from core.services.deliverable_factory import (
+                create_deliverable,
+                DeliverableGatedError,
+            )
             deliverable = create_deliverable(
                 title=title,
                 content=generated_content,
@@ -594,9 +603,16 @@ RESEARCH DATA:
                     'trace_id': trace_id,
                 },
                 slug=slug,
+                raise_on_gated=True,
             )
             deliverable_id = str(deliverable.id)
             logger.info(f"[{trace_id}] Research-and-create saved deliverable: {deliverable_id}")
+        except DeliverableGatedError as gate_err:
+            logger.info(
+                f"[{trace_id}] Research-and-create gated by quality check: "
+                f"reason_code={gate_err.reason_code} reason={gate_err.reason}"
+            )
+            deliverable_id = None
         except Exception as e:
             logger.error(f"[{trace_id}] Failed to save deliverable: {e}")
             deliverable_id = None
