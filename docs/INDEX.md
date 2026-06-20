@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-19 23:58
+**Generated:** 2026-06-20 00:37
 **Current Session:** 1171
 **Total Documentation:** 2651 files | 698,771 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,606 |
+| Total cross-references | 4,574 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 189 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 177 | Platform Master Inventory |
 | `docs/INDEX.md` | 122 | INDEX |
-| `docs/archive/SYSTEM_CAPABILITIES-original/07_Neural_Visualization/README.md` | 117 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
+| `docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md` | 117 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 66 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -170,7 +170,7 @@
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 8 | 2026-05-24 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 8 | 2026-05-24 |
 | [HANDOFF_NUMBERING_GAPS.md](HANDOFF_NUMBERING_GAPS.md) | 45 | 2026-05-22 |
-| [INDEX.md](INDEX.md) | 391 | 2026-06-19 |
+| [INDEX.md](INDEX.md) | 391 | 2026-06-20 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 8 | 2026-05-24 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEARNING_BRIDGE_AUDIT.md](LEARNING_BRIDGE_AUDIT.md) | 154 | 2026-05-25 |
@@ -222,7 +222,7 @@
 
 | Session | Document | Folder | Modified |
 |---------|----------|--------|----------|
-| 1170 | SESSION_1170_AGENT_DIM_AND_CACHED_COST.md | handoffs | 2026-06-19 |
+| 1170 | SESSION_1170_AGENT_DIM_AND_CACHED_COST.md | handoffs | 2026-06-20 |
 | 1169 | SESSION_1169_CARRYOVER_QUEUE_CLOSE.md | handoffs | 2026-06-19 |
 | 1168 | SESSION_1168_BUGS_AND_OPS_VISIBILITY.md | handoffs | 2026-06-19 |
 | 1167 | SESSION_1167_COO_BACKLOG_5_AND_7_CLOSE.md | handoffs | 2026-06-19 |
@@ -247,8 +247,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1170_AGENT_DIM_AND_CACHED_COST.md | handoffs | 236 | 2026-06-19 23:57 |
-| INDEX.md | docs | 391 | 2026-06-19 23:52 |
+| SESSION_1170_AGENT_DIM_AND_CACHED_COST.md | handoffs | 236 | 2026-06-20 00:00 |
+| INDEX.md | docs | 391 | 2026-06-20 00:00 |
 | celery-workers.md | topics | 305 | 2026-06-19 23:44 |
 | SESSION_1169_CARRYOVER_QUEUE_CLOSE.md | handoffs | 248 | 2026-06-19 23:19 |
 | SESSION_1168_BUGS_AND_OPS_VISIBILITY.md | handoffs | 248 | 2026-06-19 21:59 |
