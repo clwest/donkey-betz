@@ -160,5 +160,37 @@ class ScheduleFollowupReturnShapeTests(TestCase):
         })
         self._assert_stable_shape(result)
         self.assertTrue(result['success'])
-        # Phase 1 D4 cap is 600.
-        self.assertEqual(result['after_seconds'], 600)
+        # Session 1178 follow-up: cap pulled from the model constant so a
+        # future bump propagates automatically. Both Phase 1 explicit and
+        # Phase 2 implicit must read from the same source of truth.
+        self.assertEqual(
+            result['after_seconds'],
+            AgentFollowupSubscription.MAX_TTL_SECONDS,
+        )
+
+    def test_default_after_seconds_matches_model_constant(self):
+        """Cross-path invariant — when the caller passes no `after_seconds`,
+        the explicit `schedule_followup` default MUST equal the model's
+        `DEFAULT_TTL_SECONDS`. Phase 2 auto-wake reads the same constant; if
+        these two ever drift again, dispatches that don't call
+        `schedule_followup` will get a different window than dispatches that
+        do — exactly the silent-failure mode the Session 1178 hotfix closed
+        (PR #2347, model constants on AgentFollowupSubscription)."""
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='pa-task',
+            status='in_progress', conversation_id=self.conversation_id,
+        )
+        # No after_seconds in payload → handler uses its default.
+        result = self._invoke({
+            'conversation_id': self.conversation_id,
+            'execution_id': str(execution.id),
+        })
+        self._assert_stable_shape(result)
+        self.assertTrue(result['success'])
+        self.assertEqual(
+            result['after_seconds'],
+            AgentFollowupSubscription.DEFAULT_TTL_SECONDS,
+            'Phase 1 explicit-tool default drifted from the model constant. '
+            'Both Phase 1 and Phase 2 read from AgentFollowupSubscription.DEFAULT_TTL_SECONDS — '
+            'if you changed one without updating the other, this test caught the bug.',
+        )
