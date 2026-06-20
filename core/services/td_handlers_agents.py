@@ -1873,47 +1873,51 @@ class AgentHandlersMixin:
             # (min content length) that this is a legitimate PA-initiated save,
             # not background noise. Without this, short PA saves trip the gate
             # and the factory silently returns None.
-            obj = create_deliverable(
-                title=title[:255],
-                content=content,
-                agent_name=agent_name,
-                category=category,
-                deliverable_type=dtype,
-                user=resolved_user,
-                workspace_id=str(resolved_workspace.id) if resolved_workspace else None,
-                trace_id=trace_id,
-                tags=tags,
-                content_format=content_format,
-                quality_score=float(payload.get('quality_score', 0.7)),
-                confidence_score=float(payload.get('confidence_score', 0.8)),
-                is_saved=True,
-                is_pinned=is_pinned,
-                metadata={
-                    'source': 'pa_deliverables_tool',
-                    'trigger_source': 'pa_tool',
-                    'trace_id': trace_id,
-                },
-                slug=slug,
-                preview_content=preview,
-                status='completed',
-                data_sensitivity=data_sensitivity,
-                workspace=resolved_workspace,
-            )
-            # Session 1168: the factory returns None when its quality gate
-            # rejects (smoke-test title pattern OR sub-300-char content with
-            # non-allowlisted trigger_source). The handler used to do
-            # str(obj.id) immediately, which crashed with the unhelpful
-            # 'NoneType' object has no attribute 'id'. Surface a structured
-            # gated response instead. Factory contract migration to a typed
-            # exception is queued as a follow-on (Layer C).
-            if obj is None:
+            # Session 1169 — Layer C Phase 1: opt in to typed exception
+            # so the gated response carries the factory's actual
+            # reason_code (gate_1_media_stub / gate_2_smoke_pattern /
+            # gate_3_min_length) instead of the previous generic
+            # 'unknown_gate'. The retry hint stays callable-built so
+            # the user always sees something actionable, but now the
+            # machine-parseable reason_code matches the actual gate
+            # that fired.
+            from core.services.deliverable_factory import DeliverableGatedError
+            try:
+                obj = create_deliverable(
+                    title=title[:255],
+                    content=content,
+                    agent_name=agent_name,
+                    category=category,
+                    deliverable_type=dtype,
+                    user=resolved_user,
+                    workspace_id=str(resolved_workspace.id) if resolved_workspace else None,
+                    trace_id=trace_id,
+                    tags=tags,
+                    content_format=content_format,
+                    quality_score=float(payload.get('quality_score', 0.7)),
+                    confidence_score=float(payload.get('confidence_score', 0.8)),
+                    is_saved=True,
+                    is_pinned=is_pinned,
+                    metadata={
+                        'source': 'pa_deliverables_tool',
+                        'trigger_source': 'pa_tool',
+                        'trace_id': trace_id,
+                    },
+                    slug=slug,
+                    preview_content=preview,
+                    status='completed',
+                    data_sensitivity=data_sensitivity,
+                    workspace=resolved_workspace,
+                    raise_on_gated=True,
+                )
+            except DeliverableGatedError as e:
                 return {
                     'action': 'create',
                     'ok': False,
                     'id': None,
                     'error_code': 'deliverable_gated',
-                    'reason_code': 'unknown_gate',
-                    'reason_hint': 'gate_2_smoke_pattern_or_gate_3_min_length',
+                    'reason_code': e.reason_code,
+                    'reason': e.reason,
                     'human_message': (
                         'Deliverable creation was blocked by the quality gate. '
                         'The title may have matched smoke-test patterns '
@@ -1928,6 +1932,17 @@ class AgentHandlersMixin:
                     ],
                     'trace_id': trace_id,
                 }
+            # Defensive: a non-opted-in code path (e.g., dedup hit) can
+            # still return an existing Deliverable. The factory itself
+            # never returns None when raise_on_gated=True, so this
+            # branch is unreachable under the current contract — keep
+            # the assertion-style guard so a future regression in the
+            # factory's dedup logic doesn't reintroduce the silent crash.
+            if obj is None:  # pragma: no cover
+                raise RuntimeError(
+                    "deliverable_factory.create_deliverable returned None "
+                    "despite raise_on_gated=True — internal contract violation"
+                )
             return {
                 'action': 'create',
                 'ok': True,

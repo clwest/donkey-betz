@@ -34,6 +34,43 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+# Session 1169 — Layer C Phase 1. Typed exception for quality-gate
+# rejection. Callers that opt in via raise_on_gated=True can build
+# structured error responses (with reason_code) instead of inferring
+# the rejection from a silent None return. Default behavior preserved:
+# create_deliverable still returns None on gate reject for callers
+# that haven't opted in (the existing 27 production caller sites all
+# stay on the legacy contract until Phase 2 migrates them in batches).
+class DeliverableGatedError(Exception):
+    """Raised when ``create_deliverable``'s quality gate rejects input.
+
+    Attributes:
+        reason: Human-readable reason ("smoke test pattern in title").
+        reason_code: Machine-parseable code from the gate that fired.
+            One of: gate_1_media_stub, gate_2_smoke_pattern,
+            gate_3_min_length, unknown_gate.
+        title: The title that was rejected (truncated to 120 chars).
+        agent_name: The agent_name argument that was passed in.
+    """
+
+    def __init__(
+        self,
+        reason: str,
+        reason_code: str = 'unknown_gate',
+        title: str = '',
+        agent_name: str = '',
+    ):
+        self.reason = reason
+        self.reason_code = reason_code
+        self.title = (title or '')[:120]
+        self.agent_name = agent_name or ''
+        super().__init__(
+            f"Deliverable gated: {reason} "
+            f"(reason_code={reason_code}, "
+            f"title={self.title!r}, agent={self.agent_name!r})"
+        )
+
+
 def _content_hash(title: str, content: str, agent_name: str) -> str:
     """
     Generate a deterministic hash from deliverable content for dedup.
@@ -70,31 +107,36 @@ def _should_create_deliverable(
     content: str,
     agent_name: str,
     metadata: Optional[dict] = None,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, str]:
     """
     Quality gate: decide whether this deliverable is worth persisting.
 
-    Returns (should_create, reason). If should_create is False, the
-    factory logs the skip and returns None.
+    Returns ``(should_create, reason, reason_code)``. If
+    ``should_create`` is False, the factory logs the skip and either
+    returns None (legacy contract) or raises
+    ``DeliverableGatedError`` (Session 1169 opt-in via
+    ``raise_on_gated=True``). The ``reason_code`` is machine-parseable:
+    ``gate_1_media_stub`` / ``gate_2_smoke_pattern`` /
+    ``gate_3_min_length`` / ``passed``.
     """
     content_len = len(content or '')
     title_lower = (title or '').lower()
 
     # Gate 1: Media stubs — tiny content from media agents
     if agent_name in MEDIA_STUB_AGENTS and content_len < MIN_CONTENT_LENGTH:
-        return False, f"media stub ({content_len} chars from {agent_name})"
+        return False, f"media stub ({content_len} chars from {agent_name})", "gate_1_media_stub"
 
     # Gate 2: Smoke tests — diagnostic titles that shouldn't persist
     if any(pattern in title_lower for pattern in SMOKE_TEST_PATTERNS):
-        return False, f"smoke test pattern in title"
+        return False, f"smoke test pattern in title", "gate_2_smoke_pattern"
 
     # Gate 3: Minimum content length (skip for user-triggered work)
     trigger = (metadata or {}).get('trigger_source', '')
     if trigger not in ('user_request', 'pa_tool', 'user_chat', 'direct'):
         if content_len < MIN_CONTENT_LENGTH:
-            return False, f"below minimum content length ({content_len} < {MIN_CONTENT_LENGTH})"
+            return False, f"below minimum content length ({content_len} < {MIN_CONTENT_LENGTH})", "gate_3_min_length"
 
-    return True, "passed"
+    return True, "passed", "passed"
 
 
 # ── Session 1088: BLOCKED content detection ───────────────────────────
@@ -296,6 +338,7 @@ def create_deliverable(
     dream_id: Optional[str] = None,
     source_operation_id: Optional[str] = None,
     publish_intent: Optional[str] = None,  # Session 1095: explicit override
+    raise_on_gated: bool = False,  # Session 1169: opt-in typed exception
     # Pass-through for any additional model fields
     **extra_fields,
 ) -> Any:
@@ -305,12 +348,21 @@ def create_deliverable(
     This is the ONLY function that should create Deliverables going forward.
     All 23+ existing creation paths should migrate to this factory.
 
-    Returns the created Deliverable instance.
+    Returns the created Deliverable instance, or ``None`` when the
+    quality gate rejects (default behavior — legacy contract).
+
+    Session 1169 — Layer C Phase 1: callers can opt in to typed
+    rejection via ``raise_on_gated=True``. When set, gate rejection
+    raises ``DeliverableGatedError`` carrying ``reason``, ``reason_code``,
+    ``title``, and ``agent_name``. Default stays ``False`` so the 27
+    existing production caller sites keep working unchanged. Phase 2
+    migrates remaining callers in batches; Phase 3 (later) flips the
+    default and removes the None return path.
     """
     from core.models_deliverables import Deliverable
 
     # --- Session 1088: Quality gate — reject noise before any DB work ---
-    should_create, gate_reason = _should_create_deliverable(
+    should_create, gate_reason, gate_reason_code = _should_create_deliverable(
         title=title, content=content, agent_name=agent_name, metadata=metadata,
     )
     if not should_create:
@@ -318,6 +370,13 @@ def create_deliverable(
             "[DeliverableFactory] GATE REJECT: %s — %s (title=%s)",
             agent_name, gate_reason, title[:60],
         )
+        if raise_on_gated:
+            raise DeliverableGatedError(
+                reason=gate_reason,
+                reason_code=gate_reason_code,
+                title=title,
+                agent_name=agent_name,
+            )
         return None
 
     # --- Provenance dedupe guard ---
