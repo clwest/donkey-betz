@@ -11,6 +11,8 @@ Events pushed to clients:
 - message.created: New message from any participant (user, claude-code, pa)
 - participant.typing: Typing indicator
 - participant.joined: A participant connected
+- rigby.tool.started: PA started a tool call (Session 1172, live ticker)
+- rigby.tool.completed: PA finished a tool call (Session 1172, live ticker)
 
 Broadcast from backend via:
     from channels.layers import get_channel_layer
@@ -121,4 +123,35 @@ class PAConversationConsumer(AsyncWebsocketConsumer):
             "participant": event.get("participant", ""),
             "source": event.get("source", ""),
             "timestamp": event.get("timestamp", ""),
+        }))
+
+    # Session 1172: live tool-lifecycle ticker for the chat UI. Emits are
+    # sourced from core.services.pa_status_events (called from
+    # tool_dispatcher.execute when a PA pipeline threads its pa_trace_id).
+    # Group events use dotted names; channels maps dots to underscores
+    # for handler method dispatch, so "rigby.tool.started" → this method.
+
+    async def rigby_tool_started(self, event):
+        """Push a `rigby.tool.started` ticker event to the WebSocket client."""
+        await self.send(text_data=json.dumps({
+            "type": "rigby.tool.started",
+            "trace_id": event.get("trace_id", ""),
+            "seq": event.get("seq", 0),
+            "tool_call_id": event.get("tool_call_id", ""),
+            "tool_name": event.get("tool_name", ""),
+            "started_at": event.get("started_at", ""),
+            "arg_summary": event.get("arg_summary", ""),
+        }))
+
+    async def rigby_tool_completed(self, event):
+        """Push a `rigby.tool.completed` ticker event to the WebSocket client."""
+        await self.send(text_data=json.dumps({
+            "type": "rigby.tool.completed",
+            "trace_id": event.get("trace_id", ""),
+            "seq": event.get("seq", 0),
+            "tool_call_id": event.get("tool_call_id", ""),
+            "tool_name": event.get("tool_name", ""),
+            "latency_ms": event.get("latency_ms", 0),
+            "status": event.get("status", "ok"),
+            "result_summary": event.get("result_summary", ""),
         }))

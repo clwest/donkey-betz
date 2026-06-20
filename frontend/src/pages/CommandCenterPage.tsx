@@ -23,6 +23,7 @@ import { useWebSocket } from '@/hooks/useWebSocket'
 import PAConversationSidebar from '@/components/PAConversationSidebar'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
 import AsyncJobTracker from '@/components/AsyncJobTracker'
+import { RigbyToolTicker } from '@/components/RigbyToolTicker'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -657,6 +658,10 @@ export default function CommandCenterPage() {
   const toggleChatSidebar = usePAStore((s) => s.toggleSidebar)
   const startNewConversation = usePAStore((s) => s.startNewConversation)
   const fetchConversations = usePAStore((s) => s.fetchConversations)
+  // Session 1172: tool-lifecycle ticker actions
+  const handleToolStarted = usePAStore((s) => s.handleToolStarted)
+  const handleToolCompleted = usePAStore((s) => s.handleToolCompleted)
+  const clearToolTicker = usePAStore((s) => s.clearToolTicker)
 
   // VIP context — get display name for chat label
   const { data: vipContext } = useQuery({ queryKey: ['vip-context'], queryFn: getVipContext, staleTime: 300_000 })
@@ -669,12 +674,49 @@ export default function CommandCenterPage() {
     [paMessages],
   )
 
-  // Real-time 3-way chat WebSocket — receives messages from all participants
+  // Real-time 3-way chat WebSocket — receives messages from all participants.
+  // Session 1172: also receives rigby.tool.started / rigby.tool.completed
+  // events so the chat UI can show a live tool ticker (RigbyToolTicker).
   const wsEndpoint = activeConversationId ? `/pa/conversations/${activeConversationId}` : ''
   useWebSocket(wsEndpoint, {
     autoConnect: !!activeConversationId,
     onMessage: useCallback((data: unknown) => {
-      const event = data as { type?: string; message?: { id?: string; role?: string; content?: string; source?: string; tools_used?: string[]; timestamp?: string } }
+      const event = data as {
+        type?: string
+        message?: { id?: string; role?: string; content?: string; source?: string; tools_used?: string[]; timestamp?: string }
+        trace_id?: string
+        seq?: number
+        tool_call_id?: string
+        tool_name?: string
+        started_at?: string
+        latency_ms?: number
+        status?: 'ok' | 'error'
+      }
+
+      // Session 1172: tool ticker
+      if (event?.type === 'rigby.tool.started' && event.trace_id && event.tool_call_id && event.tool_name) {
+        handleToolStarted({
+          trace_id: event.trace_id,
+          seq: event.seq || 0,
+          tool_call_id: event.tool_call_id,
+          tool_name: event.tool_name,
+          started_at: event.started_at || new Date().toISOString(),
+        })
+        return
+      }
+      if (event?.type === 'rigby.tool.completed' && event.trace_id && event.tool_call_id && event.tool_name) {
+        handleToolCompleted({
+          trace_id: event.trace_id,
+          seq: event.seq || 0,
+          tool_call_id: event.tool_call_id,
+          tool_name: event.tool_name,
+          started_at: event.started_at || new Date().toISOString(),
+          latency_ms: event.latency_ms,
+          status: event.status,
+        })
+        return
+      }
+
       if (event?.type === 'message.created' && event.message) {
         const msg = event.message
         // Avoid duplicating messages we already have (from our own send flow)
@@ -688,9 +730,14 @@ export default function CommandCenterPage() {
             source: msg.source,
             tools_used: msg.tools_used,
           })
+          // Session 1172: when the assistant reply lands, the FC turn is
+          // done — clear any lingering ticker so we don't show stale state.
+          if (msg.role === 'assistant') {
+            clearToolTicker()
+          }
         }
       }
-    }, [paMessages, addPAMessage]),
+    }, [paMessages, addPAMessage, handleToolStarted, handleToolCompleted, clearToolTicker]),
   })
 
   // Chat state
@@ -1893,6 +1940,8 @@ export default function CommandCenterPage() {
 
           {/* Composer — sticky at bottom of chat panel */}
           <div className="shrink-0 border-t border-dark-border pt-3 pb-1">
+            {/* Session 1172: live tool-lifecycle ticker — silent when idle */}
+            <RigbyToolTicker />
             {/* Attachment chips */}
             {attachments.length > 0 && (
               <div className="px-1 pb-2 flex flex-wrap gap-1.5">
