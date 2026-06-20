@@ -40,6 +40,22 @@ interface ConversationSummary {
   preview: string
 }
 
+// Session 1172: Live tool-lifecycle ticker. The chat surface stays silent
+// between user submit and final reply otherwise; a multi-tool turn looks
+// indistinguishable from a stalled worker. `activeTool` holds the
+// currently-running tool (or null); `recentTool` holds the last completed
+// tool for a brief fade-out display. `seenSeqs` dedupes on WebSocket
+// reconnect using (trace_id, seq) per the 1172-1 event contract.
+interface ToolTickerEvent {
+  trace_id: string
+  seq: number
+  tool_call_id: string
+  tool_name: string
+  started_at: string
+  latency_ms?: number
+  status?: 'ok' | 'error'
+}
+
 interface PAState {
   // User scoping — prevents conversation bleed between users
   userId: number | null
@@ -63,6 +79,11 @@ interface PAState {
   isSidebarOpen: boolean
   conversationsLoading: boolean
 
+  // Session 1172: Tool ticker
+  activeTool: ToolTickerEvent | null
+  recentTool: ToolTickerEvent | null
+  seenSeqs: Record<string, number[]>
+
   // Actions
   syncUser: (userId: number | null) => void
   toggleDock: () => void
@@ -84,6 +105,11 @@ interface PAState {
   fetchConversations: () => Promise<void>
   toggleSidebar: () => void
   setActiveConversationId: (id: string | null) => void
+
+  // Session 1172: Tool ticker actions
+  handleToolStarted: (event: ToolTickerEvent) => void
+  handleToolCompleted: (event: ToolTickerEvent) => void
+  clearToolTicker: () => void
 }
 
 // Guard against concurrent setActiveConversation calls (two sync queries racing)
@@ -103,6 +129,11 @@ export const usePAStore = create<PAState>()(
       conversations: [],
       isSidebarOpen: false,
       conversationsLoading: false,
+
+      // Session 1172: Tool ticker initial state
+      activeTool: null,
+      recentTool: null,
+      seenSeqs: {},
 
       // User scoping: when user changes, wipe conversation state to prevent bleed
       syncUser: (newUserId: number | null) => {
@@ -249,6 +280,39 @@ export const usePAStore = create<PAState>()(
       },
 
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+
+      // Session 1172: Tool ticker actions. Dedupe by (trace_id, seq) so
+      // out-of-order or duplicate WebSocket deliveries don't flicker the
+      // ticker. Keep seenSeqs bounded per trace_id (last 32 seqs).
+      handleToolStarted: (event) => set((state) => {
+        const seen = state.seenSeqs[event.trace_id] || []
+        if (seen.includes(event.seq)) return state
+        const nextSeen = [...seen, event.seq].slice(-32)
+        return {
+          activeTool: event,
+          recentTool: null,
+          seenSeqs: { ...state.seenSeqs, [event.trace_id]: nextSeen },
+        }
+      }),
+
+      handleToolCompleted: (event) => set((state) => {
+        const seen = state.seenSeqs[event.trace_id] || []
+        if (seen.includes(event.seq)) return state
+        const nextSeen = [...seen, event.seq].slice(-32)
+        // Clear `activeTool` only if it matches this completion's
+        // tool_call_id — otherwise the user may have started another tool
+        // already and we'd erase the live spinner mid-flight.
+        const stillActive = state.activeTool && state.activeTool.tool_call_id !== event.tool_call_id
+          ? state.activeTool
+          : null
+        return {
+          activeTool: stillActive,
+          recentTool: event,
+          seenSeqs: { ...state.seenSeqs, [event.trace_id]: nextSeen },
+        }
+      }),
+
+      clearToolTicker: () => set({ activeTool: null, recentTool: null }),
     }),
     {
       name: 'pa-dock-state',
@@ -294,3 +358,7 @@ export const usePAStore = create<PAState>()(
 // Selector hooks
 export const useIsDockOpen = () => usePAStore((s) => s.isDockOpen)
 export const usePAMessages = () => usePAStore((s) => s.messages)
+
+// Session 1172: Tool ticker selectors
+export const usePAActiveTool = () => usePAStore((s) => s.activeTool)
+export const usePARecentTool = () => usePAStore((s) => s.recentTool)

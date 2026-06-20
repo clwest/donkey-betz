@@ -710,6 +710,7 @@ class UnifiedPAEntrypoint:
                         timeout=tool_timeout,
                         agent_name='PersonalAssistant',
                         conversation_id=self.conversation_id,
+                        pa_trace_id=trace_id,  # Session 1172: live ticker join key
                     )
                     logger.info(f"[{trace_id}] Step 3a tool_dispatch: {int((time.time()-t1)*1000)}ms ok={tool_result.ok}")
                     tool_runs.append(tool_result.to_dict())
@@ -1580,6 +1581,7 @@ class UnifiedPAEntrypoint:
                     # row has the right agent_name + conversation_id.
                     agent_name='PersonalAssistant',
                     conversation_id=self.conversation_id,
+                    pa_trace_id=trace_id,  # Session 1172: live ticker join key
                 )
 
                 # Session 1077: Auto-retry when gateway returns wrong action.
@@ -1607,6 +1609,7 @@ class UnifiedPAEntrypoint:
                         timeout=tool_timeout,
                         agent_name='PersonalAssistant',
                         conversation_id=self.conversation_id,
+                        pa_trace_id=trace_id,  # Session 1172: live ticker join key
                     )
 
                 tool_runs.append(tool_result.to_dict())
