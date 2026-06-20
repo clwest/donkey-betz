@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-20 13:39
+**Generated:** 2026-06-20 14:02
 **Current Session:** 1175
 **Total Documentation:** 2656 files | 699,378 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,585 |
+| Total cross-references | 4,580 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 190 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 177 | Platform Master Inventory |
 | `docs/INDEX.md` | 123 | INDEX |
-| `docs/architecture/README.md` | 117 | README |
+| `docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md` | 117 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 66 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -247,8 +247,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md | handoffs | 180 | 2026-06-20 13:39 |
 | INDEX.md | docs | 391 | 2026-06-20 13:39 |
-| SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md | handoffs | 180 | 2026-06-20 13:38 |
 | SESSION_1174_PRIMING_AGENT_FOLLOWUP.md | handoffs | 92 | 2026-06-20 11:52 |
 | SESSION_1173_PGBOUNCER.md | handoffs | 185 | 2026-06-20 11:22 |
 | SESSION_1172_RIGBY_LIVE_TOOL_STATUS.md | handoffs | 158 | 2026-06-20 10:40 |

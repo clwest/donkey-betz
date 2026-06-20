@@ -4408,6 +4408,38 @@ class AgentHandlersMixin:
     # (signal handler at terminal-state save) + AgentFollowupSubscription model.
     # Full design: docs/handoffs/SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md.
 
+    @staticmethod
+    def _make_followup_response(
+        success: bool,
+        *,
+        mode: Optional[str] = None,
+        subscription_id: Optional[str] = None,
+        execution_id: Optional[str] = None,
+        execution_status: Optional[str] = None,
+        state: Optional[str] = None,
+        expires_at: Optional[str] = None,
+        fired_at: Optional[str] = None,
+        after_seconds: Optional[int] = None,
+        message: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        # Session 1175 PR-2b-2: stable 11-key contract for schedule_followup. Rigby's
+        # PR-2b-1 review ask — every return path (success or error) emits the full key
+        # set with None where not applicable, so callers can treat the shape as fixed.
+        return {
+            'success': success,
+            'mode': mode,
+            'subscription_id': subscription_id,
+            'execution_id': execution_id,
+            'execution_status': execution_status,
+            'state': state,
+            'expires_at': expires_at,
+            'fired_at': fired_at,
+            'after_seconds': after_seconds,
+            'message': message,
+            'error': error,
+        }
+
     def _handle_schedule_followup(
         self,
         tool_name: str,
@@ -4446,10 +4478,10 @@ class AgentHandlersMixin:
             or (payload.get('context') or {}).get('conversation_id')
         )
         if not conversation_id:
-            return {
-                'success': False,
-                'error': 'schedule_followup requires a PA conversation context (no conversation_id available).',
-            }
+            return self._make_followup_response(
+                success=False,
+                error='schedule_followup requires a PA conversation context (no conversation_id available).',
+            )
 
         # 2. Parse + validate after_seconds. Cap at 600. Coerce missing/invalid to default.
         try:
@@ -4467,40 +4499,42 @@ class AgentHandlersMixin:
         execution_id = (payload.get('execution_id') or '').strip()
         task_id = (payload.get('task_id') or '').strip()
         if not execution_id and not task_id:
-            return {
-                'success': False,
-                'error': 'schedule_followup requires execution_id OR task_id.',
-            }
+            return self._make_followup_response(
+                success=False,
+                error='schedule_followup requires execution_id OR task_id.',
+            )
 
         execution = None
         if execution_id:
             execution = AgentExecution.objects.filter(id=execution_id).first()
             if not execution:
-                return {
-                    'success': False,
-                    'error': f'No AgentExecution found with execution_id={execution_id}.',
-                }
+                return self._make_followup_response(
+                    success=False,
+                    error=f'No AgentExecution found with execution_id={execution_id}.',
+                )
         else:
             execution = AgentExecution.objects.filter(
                 input_data__celery_task_id=task_id,
             ).order_by('-created_at').first()
             if not execution:
-                return {
-                    'success': False,
-                    'error': f'No AgentExecution found with celery task_id={task_id}.',
-                }
+                return self._make_followup_response(
+                    success=False,
+                    error=f'No AgentExecution found with celery task_id={task_id}.',
+                )
 
         # 4. Reject non-PA dispatches (NULL conversation_id) — the signal handler's
         # scope-rules invariant means non-PA executions can't fire follow-up. Subscribing
         # to one is always nonsense (the resulting row would never transition out of armed).
         if not execution.conversation_id:
-            return {
-                'success': False,
-                'error': (
+            return self._make_followup_response(
+                success=False,
+                execution_id=str(execution.id),
+                execution_status=execution.status,
+                error=(
                     f'Cannot subscribe: execution {execution.id} was not dispatched from a PA '
                     'conversation (conversation_id is NULL). Follow-up requires a PA-originated dispatch.'
                 ),
-            }
+            )
 
         # 5. Reject cross-conversation subscriptions — the signal handler fires only on
         # subscriptions whose conversation_id matches the execution's stamped conversation_id.
@@ -4508,14 +4542,16 @@ class AgentHandlersMixin:
         # worse UX than rejecting the call. Phase 2 cross-conversation follow-up (different
         # design) would lift this restriction with a separate mechanism.
         if execution.conversation_id != conversation_id:
-            return {
-                'success': False,
-                'error': (
+            return self._make_followup_response(
+                success=False,
+                execution_id=str(execution.id),
+                execution_status=execution.status,
+                error=(
                     f'Cross-conversation subscription rejected: execution {execution.id} was '
                     f'dispatched from {execution.conversation_id!r}, but this call is from '
                     f'{conversation_id!r}. Subscribe from the same conversation that dispatched.'
                 ),
-            }
+            )
 
         # 6. Subscribe-after-terminal: if execution is already done, fire immediately
         # rather than creating an armed-but-doomed subscription. Per Rigby's after_seconds
@@ -4540,19 +4576,20 @@ class AgentHandlersMixin:
                 # Atomically fire it via the existing helper (handles dedupe + broadcast).
                 fire_agent_followup_subscriptions(execution)
                 sub.refresh_from_db()
-            return {
-                'success': True,
-                'mode': 'delivered_immediately',
-                'subscription_id': str(sub.id),
-                'execution_id': str(execution.id),
-                'execution_status': execution.status,
-                'state': sub.state,
-                'fired_at': sub.fired_at.isoformat() if sub.fired_at else None,
-                'message': (
+            return self._make_followup_response(
+                success=True,
+                mode='delivered_immediately',
+                subscription_id=str(sub.id),
+                execution_id=str(execution.id),
+                execution_status=execution.status,
+                state=sub.state,
+                fired_at=sub.fired_at.isoformat() if sub.fired_at else None,
+                after_seconds=after_seconds,
+                message=(
                     f'Agent {execution.agent.name if execution.agent_id else "?"} already finished '
                     f'(status={execution.status}); follow-up delivered immediately.'
                 ),
-            }
+            )
 
         # 5. Normal path: create an armed subscription with TTL.
         now = timezone.now()
@@ -4567,22 +4604,24 @@ class AgentHandlersMixin:
                 },
             )
         except IntegrityError as e:
-            return {
-                'success': False,
-                'error': f'Subscription create failed: {e}',
-            }
+            return self._make_followup_response(
+                success=False,
+                execution_id=str(execution.id),
+                execution_status=execution.status,
+                error=f'Subscription create failed: {e}',
+            )
 
-        return {
-            'success': True,
-            'mode': 'subscribed' if created else 'already_subscribed',
-            'subscription_id': str(sub.id),
-            'execution_id': str(execution.id),
-            'execution_status': execution.status,
-            'state': sub.state,
-            'expires_at': sub.expires_at.isoformat() if sub.expires_at else None,
-            'after_seconds': after_seconds,
-            'message': (
+        return self._make_followup_response(
+            success=True,
+            mode='subscribed' if created else 'already_subscribed',
+            subscription_id=str(sub.id),
+            execution_id=str(execution.id),
+            execution_status=execution.status,
+            state=sub.state,
+            expires_at=sub.expires_at.isoformat() if sub.expires_at else None,
+            after_seconds=after_seconds,
+            message=(
                 f'Subscribed to {execution.agent.name if execution.agent_id else "?"} completion; '
                 f"you'll get an inline notification when it finishes (or in {after_seconds}s if not, whichever first)."
             ),
-        }
+        )
