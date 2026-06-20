@@ -97,83 +97,89 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1166 — CURRENT ENTRY POINT
+## SESSION 1167 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify the Session 1165 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d`.
+**Verify the Session 1166 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d`.
 
 **Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
 
-**Session 1165 post-merge sanity check** — verify the three MUST primitives are loaded:
+**Session 1166 post-merge sanity check** — verify the two PRs are loaded + active:
+
 ```bash
-# (1) statement_timeout is live on fresh Django connections
-.venv/bin/python -c "
-import django, os; os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings'); django.setup()
-from django.db import connection
-with connection.cursor() as c:
-    c.execute('SHOW statement_timeout;'); print('statement_timeout:', c.fetchone()[0])
-    c.execute('SHOW idle_in_transaction_session_timeout;'); print('idle_in_tx:', c.fetchone()[0])
-"
-# Expect: statement_timeout: 1min, idle_in_tx: 1min
+# (1) PG_APPLICATION_NAME tagging is live — ≥80% of connections under dbz:* tags
+.venv/bin/python manage.py dbshell -- -c "
+SELECT application_name, count(*) FROM pg_stat_activity
+WHERE datname='unified_donkey_betz' GROUP BY 1 ORDER BY 2 DESC;"
+# Expect: dbz:web (daphne), dbz:celery-pa, dbz:celery-broadcast,
+# dbz:celery-long-running, dbz:celery-worker, dbz:celery-beat dominate.
+# A handful of unified_donkey_betz rows is fine (ad-hoc shells).
 
-# (2) singleton_lock and retry_policy primitives importable
-.venv/bin/python -c "
-from core.services.redis_lock import singleton_task, singleton_lock
-from core.services.retry_policy import compute_retry_countdown, check_retry_budget
-print('Session 1165 primitives loaded OK')
-"
+# (2) item C escalated_triggers field on every new JSONL line
+tail -3 logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | .venv/bin/python -c "
+import json, sys
+for i, line in enumerate(sys.stdin, start=1):
+    d = json.loads(line)
+    sg = d.get('sustain_gating', {})
+    has_new = 'escalated_triggers' in sg
+    print(f'  line {i}: status={d.get(\"status\")} has_escalated_triggers={has_new}')"
+# Expect: every line has_escalated_triggers=True. If False, workers
+# need restart: pkill -9 -f celery; rm -f .celery*.pid; make celery.
 
-# (3) @singleton_task decorators visible to celery workers
-.venv/bin/celery -A core inspect registered 2>&1 | grep -E "capture_pa_acks_health_snapshot|run_spider_network" | head -2
+# (3) Procfile coverage verifier still passes
+.venv/bin/python scripts/verify_repo_guardrails.py --inventory-advisory 2>&1 | grep -A 1 "Procfile PG_APPLICATION_NAME"
+# Expect: "OK: every Procfile entry sets PG_APPLICATION_NAME=dbz:<role>."
+
+# (4) Look for any warn_persist:* escalations in the past 24h
+grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn
+# Expect: bulk under "escalated_triggers":[]. Any non-empty list is a
+# real CRIT escalation worth investigating per the Session 1166 handoff.
 ```
 
-If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`.
+If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Then re-run.
 
-**Cadence check (Session 1164 carryover, now actionable):**
-```bash
-wc -l logs/pa_acks_health/$(date +%Y-%m-%d).jsonl
-```
-Expect ~48 lines. If yes, item C (WARN persists 2 snapshots → escalate to CRIT) is now evaluable — see "Active items" below.
+### PRIORITY 1 — COO Nervous System Backlog item #5 (Memory telemetry + automatic downshift)
 
-### PRIORITY 1 — COO Nervous System Backlog item #2 (Per-process Postgres `application_name` tagging)
+**Source deliverable:** `1be2cf55-2ece-4ffa-8c2b-27b777ee54c7` ("Rigby: COO Nervous System Stabilization — 10-Item Implementation Backlog + Claude Code Session Order (Corrected v1)", workspace chris-personal). With Session 1166 closing #2, **all four MUSTs from Rigby's June 14 corrected v1 are now closed**. Item #5 is the highest-tier SHOULD remaining.
 
-**Source deliverable:** `1be2cf55-2ece-4ffa-8c2b-27b777ee54c7` ("Rigby: COO Nervous System Stabilization — 10-Item Implementation Backlog + Claude Code Session Order (Corrected v1)", workspace chris-personal). Rigby's June 14 ranking. Session 1165 closed items #1, #3, #6; item #2 is the smallest open MUST and Rigby's recommended next-quick-win.
+**Item #5 (Rigby's wording, deliverable §5):**
+> SHOULD — Memory telemetry + automatic downshift
+> Procfile caps memory per child (`--max-memory-per-child=150000`/etc.) — but we have NO visibility into how close we get to those caps before the kill fires. And no automatic concurrency downshift when a worker pool is consistently pressing the cap.
+> Likely files: `core/celery.py`, `core/services/td_handlers_ops.py` (new ops surface), possibly a new `core/services/memory_telemetry.py`.
+> Acceptance criteria: ops surface shows per-worker RSS + % of cap; sustained > 80% triggers a soft downshift signal (Procfile `--concurrency` not auto-edited, but a flag surfaces).
 
-**Item #2 (Rigby's wording, deliverable §2):**
-> MUST — Per-process Postgres `application_name` tagging
-> Currently only global `'unified_donkey_betz'`. Operator can't see which service / queue / worker holds which connection in `pg_stat_activity`.
-> Likely files: `core/settings.py`, `Procfile` and/or `core/celery.py`
-> Acceptance criteria: `SELECT application_name, count(*) FROM pg_stat_activity GROUP BY 1` shows per-component breakdown; e.g. `daphne`, `celery-pa`, `celery-broadcast`, `celery-long-running`, `celery-default`, `celery-beat`.
+**Pre-implementation design needs Rigby pass first.** Three open questions:
+1. **Where does memory telemetry live?** Celery `worker_init` + periodic `psutil.Process(...).memory_info()` sample → JSONL like pa_acks_health? Or extend the existing `cockpit_tool.queue_lengths`-style ops surface?
+2. **What's the downshift signal surface?** A new `ops_tool.memory_pressure` rollup? A field on existing `ops_tool.overview`? PA tool action?
+3. **Is the throttle "soft" (flag only) or "hard" (kill-and-restart-with-lower-concurrency)?** Per Rigby's spec the cap is the kill — this is observation + signal, not an auto-modifier.
 
-**Concrete scope sketch:**
-- `core/settings.py` `DATABASES['default']['OPTIONS']['application_name']` is currently the static string `'unified_donkey_betz'`. Replace with a function call that picks the value from an env var (default to the existing string).
-- Procfile entries set `APP_NAME=<service>` per process. Six Procfile entries: `web` (daphne), `worker` (default queue), `pa` (pa queue), `content`, `long-running`, `long-running-2`, `broadcast`, `beat`, plus `release` + `code-worker` + `resolve-node` = 11 entries total.
-- Alternative for celery workers: derive `application_name` from `CELERY_QUEUES` at runtime via `core/celery.py` `setup_logging` signal or similar — avoids Procfile changes.
-- Acceptance smoke:
-  1. `psql ... -c "SELECT application_name, count(*) FROM pg_stat_activity WHERE datname='unified_donkey_betz' GROUP BY 1 ORDER BY 2 DESC"` shows per-component breakdown.
-  2. Verify daphne shows `daphne` (or similar), each celery worker shows its queue tag, beat shows `beat`.
-  3. No regression: `python manage.py pa_acks_health --json` returns `status: OK`.
+Route all three through Rigby before code. Don't ship #5 + #7 in the same PR.
 
-Route the env-var naming convention + alternative (Procfile vs `core/celery.py` runtime hook) through Rigby before code.
+### PRIORITY 2 — COO Nervous System Backlog item #7 (Top Consumers ops endpoint)
 
-### PRIORITY 2 — Session 1164 item C (now actionable after ~24h telemetry)
+**Item #7 (Rigby's wording, deliverable §7):**
+> SHOULD — Top Consumers ops endpoint
+> No quick way to find "which task is using the most DB connections / CPU / wall-time in the last 1h / 24h."
+> Likely files: `core/services/td_handlers_ops.py`, possibly `core/services/cockpit_tool.py` if it folds in.
 
-After ~48 lines of new-schema JSONL accumulate (one full day since the Session 1164 PR #2292 worker restart), item C becomes evaluable:
+Naturally pairs with the queue_pressure surface Session 1164 added — could fold into a single ops snapshot (`ops_tool.overview` extension via reduce-from-cockpit pattern) rather than a separate gateway. **Per Session 1164 lesson: reduce, never re-classify, when consuming a sibling surface.**
 
-**Item C:** WARN persists 2 consecutive snapshots → escalate to CRIT. Net-new logic. Rigby's spec (Session 1164 conversation `pa-7684c8f93185`): "after we've got at least a day of data *with* the new observability field." That field is `sustain_gating.previous_adjacent` + `sustain_gating.gated_triggers`.
+Pre-implementation Rigby ask: separate `ops_tool.top_consumers` action OR roll into `ops_tool.overview`? My lean (un-ratified): separate action, because the "overview" surface is already getting busy and `top_consumers` is a list-rather-than-rollup shape that won't fit cleanly under reduce-and-summarize.
 
-Surface candidates:
-- Add a `_was_warn_last_snapshot()` helper that re-evaluates the WARN tier against the previous report (using the same factory-style probes added in #2291 + #2292).
-- New CRIT trigger: `(status == WARN) and prev_adjacent and prev_was_warn` → escalate.
-- Truth-table additions to `core/tests/test_pa_acks_health_thresholds.py`.
+### Active items carrying forward (priority-of-attention)
 
-Don't ship #2 + C in the same PR; #2 is settings + Procfile / signal-handler, C is logic on the sustain mechanism.
+#### Consolidation / deferred from Session 1165 (focused follow-on PRs)
 
-### Active items carrying forward (Chris-call priority)
+- **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
+- **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
+- **Agent-task family retry budgets.** Wire the `retry_policy` primitive from PR #2297 to the agent task family. Needs fingerprinting strategy first.
+- **Bulk migration of ~5 linear/fixed countdown sites** (`core/tasks_agents.py` family) to `compute_retry_countdown` from PR #2297.
 
-- **Item #5** (Memory telemetry + automatic downshift) — caps already exist via Procfile; this adds visibility + throttle hook.
-- **Item #7** (Top Consumers ops endpoint) — pairs naturally with the queue_pressure surface Session 1164 added; could be folded into a single ops snapshot rather than a separate gateway.
+#### Aspirational follow-ons (from Sessions 1165 + 1166)
+
+- **`pg_stat_statements` on staging/prod.** Installed locally in Session 1165.
+- **`capture_pa_acks_health_snapshot` slow-task investigation.** 36-min max, 18-min avg suspicious. Now also a canary for the 60s `statement_timeout` from #2295.
 
 ### Consolidation / deferred from Session 1165 (focused follow-on PRs)
 
@@ -210,7 +216,30 @@ Don't ship #2 + C in the same PR; #2 is settings + Procfile / signal-handler, C 
 
 ---
 
-## SESSION 1165 CLOSED — COO Backlog triple-MUST close (#1, #3, #6) (2026-06-19)
+## SESSION 1166 CLOSED — COO #2 + pa_acks_health item C (2026-06-19)
+
+**2 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1166_COO_2_AND_WARN_PERSIST_ESCALATION.md`](docs/handoffs/SESSION_1166_COO_2_AND_WARN_PERSIST_ESCALATION.md).
+
+| PR | Theme | SHA |
+|----|------|-----|
+| **#2301** | **COO #2 (MUST):** per-process Postgres `application_name` tagging — `PG_APPLICATION_NAME=dbz:<role>` env var + 11 Procfile entries + Makefile + strict verifier + infrastructure.md note | `512c7922` |
+| **#2302** | **pa_acks_health item C:** WARN-persist 2 snapshots → CRIT escalation — 3 new factory-style probes + `sustain_gating.escalated_triggers` field + 15 truth-table tests | `47de895c` |
+
+**All four MUSTs from Rigby's June 14 corrected v1 COO Backlog now closed.** Only SHOULD-tier items remain. Item C closed the Session 1164 deferred work after ≥24h of new-schema telemetry confirmed the substrate was stable.
+
+**End-to-end verified post-merge:**
+- `pg_stat_activity` shows 6/6 process classes tagged (`dbz:web`, `dbz:celery-pa`, `dbz:celery-broadcast`, `dbz:celery-long-running`, `dbz:celery-worker`, `dbz:celery-beat`); ad-hoc shells correctly fall through to legacy `unified_donkey_betz` default.
+- Cadence task post-restart wrote JSONL line at `2026-06-20T00:48:01` carrying the new `escalated_triggers=[]` field (healthy state).
+- 52/52 pa_acks_health threshold tests pass; 30/30 verifier tests pass.
+
+**New persistent artifacts:**
+- `PG_APPLICATION_NAME` env var convention (`dbz:<role>`, regex-enforced via `scripts/verify_repo_guardrails.py`).
+- `core/management/commands/pa_acks_health.py`: 3 new `_trips_warn_*` factory-style probes + `sustain_gating.escalated_triggers` field + warn-persist escalation in `_compute_status`.
+- `docs/topics/infrastructure.md` "Postgres application_name tagging" subsection.
+
+**New gotchas captured:** none — both designs followed established Session 1164/1165 patterns (factory-style probes + reduce/no-re-classify + primitives + opt-in apply list + backward-compatible signatures).
+
+### Session 1165 CLOSED — COO Backlog triple-MUST close (#1, #3, #6) (2026-06-19)
 
 **4 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1165_COO_BACKLOG_TRIPLE_MUST_CLOSE.md`](docs/handoffs/SESSION_1165_COO_BACKLOG_TRIPLE_MUST_CLOSE.md).
 
@@ -345,13 +374,13 @@ Don't ship #2 + C in the same PR; #2 is settings + Procfile / signal-handler, C 
 
 ---
 
-## 🚨 ACTIVE ISSUES carrying into Session 1166
+## 🚨 ACTIVE ISSUES carrying into Session 1167
 
 ### 1. GitHub Actions billing — still down
 
-Same annotation as Sessions 1149-1165. Multi-day outage until Chris funds account.
+Same annotation as Sessions 1149-1166. Multi-day outage until Chris funds account.
 
-**Self-merge protocol during outage** (Sessions 1149 + 1150 + 1158-1163 pattern):
+**Self-merge protocol during outage** (Sessions 1149 + 1150 + 1158-1166 pattern):
 
 For every PR, run local mirrors before push:
 ```bash
@@ -364,25 +393,26 @@ Self-merge with bypass requires:
 2. Only failure is the pre-existing `celery-beat-schedule` CONFLICT.
 3. Merge commit body documents the bypass with both `billing outage` and `pre-existing CONFLICT` named.
 4. PR scope is documentation or low-risk verifier baselines (no production code changes).
-5. Production-code changes need explicit per-PR Chris-authorization in-session (Session 1159 PR #2255 + Session 1163 PR #2286 precedent).
+5. Production-code changes need explicit per-PR Chris-authorization in-session (Session 1159 PR #2255 + Session 1163 PR #2286 + Session 1166 PRs #2301 / #2302 precedent).
 
 ### 2. `celery-beat-schedule` CONFLICT — detector signal pending
 
 Session 1157 PR #2243 closed the code-level footgun. Context-kit CONFLICT signal still flags because its detector heuristic is keyword/path-based across ~36 files. Queued for Session 1164+.
 
-### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED + THRESHOLDS TUNED + STAMPEDE-LOCKED
+### 3. PA `acks_late=False` observation phase — FULLY INSTRUMENTED + THRESHOLDS TUNED + STAMPEDE-LOCKED + WARN-PERSIST ESCALATION LIVE
 
-Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2292 closed the threshold-tuning portion. Session 1165 PR #2296 added `@singleton_task("capture-pa-acks-health-snapshot", ttl=300)` so the cadence task cannot self-stampede. Remaining: item C (WARN persists 2 snapshots → CRIT escalation) — now evaluable after ~24h of new-schema telemetry post-#2292.
+Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2292 closed the threshold-tuning portion. Session 1165 PR #2296 added `@singleton_task("capture-pa-acks-health-snapshot", ttl=300)` so the cadence task cannot self-stampede. **Session 1166 PR #2302 closed item C — WARN-persist 2 snapshots → CRIT escalation is now live in `_compute_status`.** The acks_late observation surface is feature-complete.
 
 - `logs/pa_acks_health/YYYY-MM-DD.jsonl` grows by ~48 lines/day (`*/30` cadence).
-- Each snapshot carries the Session 1164 `sustain_gating` block alongside the prior fields (UTC + MT timestamps, queue depth, per-worker rollup with `is_pa_relevant` flag, `oldest_queued`, `inflight_estimate`, `slow_tasks`, `hang_signature` samples + `worker_last_event_at` heartbeat).
+- Each snapshot carries the full `sustain_gating` block: `previous_adjacent`, `expected_interval_seconds`, `adjacency_factor`, `gated_triggers` (suppression), and `escalated_triggers` (boost, Session 1166 NEW).
 - WARN-level log line fires in celery-broadcast log whenever `status != OK`.
 
-**Session 1165 close state (2026-06-19):** workers restarted twice (after PR #2296 and again after PR #2297). Singleton lock + DB safety defaults + retry policy all live. Item C becomes actionable after ~48 cadence ticks (one full day) of stable new-code operation.
+**Session 1166 close state (2026-06-19):** workers restarted twice (after PR #2301 and again after PR #2302). All four MUSTs from Rigby's June 14 corrected v1 backlog now closed. Item C live; any `warn_persist:*` label appearing in `escalated_triggers` is a CRIT escalation worth investigating per the handoff.
 
-**What Session 1166 should check on entry:**
+**What Session 1167 should check on entry:**
 - `wc -l logs/pa_acks_health/$(date +%Y-%m-%d).jsonl` — confirm overnight cadence ran.
-- Tail a few JSONL lines and confirm each carries `sustain_gating` (if any line lacks the field, the workers didn't restart and item C is blocked — see Session 1166 FIRST THING above).
+- Tail a few JSONL lines and confirm each carries `escalated_triggers` (if any line lacks the field, the workers didn't restart post-#2302 and the new code is dormant — see Session 1167 FIRST THING above).
+- `grep -o '"escalated_triggers":\[[^]]*\]' logs/pa_acks_health/$(date +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn` — bulk should be empty lists; any non-empty list is a real warn-persist CRIT escalation.
 - `grep "pa_acks_health" celery-broadcast.log | grep -v "succeeded\|received"` should be empty unless a status changed.
 - `grep -i "retry_denied\|singleton_task" celery*.log` may surface budget exhaustion or stampede skips from PRs #2296 / #2297 — good observability signal, not necessarily a bug.
 
@@ -436,6 +466,7 @@ Sessions 1161 + 1162 closed the instrumentation gap; Session 1164 PRs #2291 + #2
 
 ## RECENT SESSION ARCS
 
+- **Session 1166** — COO #2 (per-process Postgres `application_name` tagging) + pa_acks_health item C (WARN-persist → CRIT escalation). 2 PRs merged. All 4 MUSTs from June 14 corrected v1 COO Backlog now closed.
 - **Session 1165** — COO Backlog triple-MUST close (#1 DB safety defaults + #3 singleton locks + jitter + #6 retry-storm prevention) + wrapper fix. 4 PRs merged. Two new canonical primitives shipped (`redis_lock.py` + `retry_policy.py`). `pg_stat_statements` installed locally.
 - **Session 1164** — queue_pressure rollup in `ops_tool.overview` + pa_acks_health threshold tuning A+B + time-adjacency + sustain observability. 3 PRs merged. Closed COO Backlog item #8 (SHOULD) end-to-end.
 - **Session 1163** — Disclosure L drift correction arc (path-move addendum + C-style honest tool + tool-name dogfood loop + B-style FinalAppliedOverrides per-cycle table). 4 PRs merged.
