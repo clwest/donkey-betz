@@ -12759,3 +12759,58 @@ def capture_pa_acks_health_snapshot():
         'inflight_delta': (report.get('inflight_estimate') or {}).get('delta'),
         'log_path': str(log_path),
     }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Session 1167 — COO Nervous System Backlog item #5 (SHOULD tier).
+# Worker memory pressure: per-host RSS + cap (parsed from
+# --max-memory-per-child) + sustained-pressure CRIT detection + soft
+# downshift recommendation. JSONL-as-state mirroring pa_acks_health.
+# ──────────────────────────────────────────────────────────────────────
+
+
+@shared_task(
+    name='core.tasks.capture_worker_memory_snapshot',
+    ignore_result=False,
+    queue='broadcast',
+    soft_time_limit=60,
+    time_limit=90,
+)
+@singleton_task("capture-worker-memory-snapshot", ttl=300)
+def capture_worker_memory_snapshot():
+    """Sample worker RSS via psutil + write to date-rotated JSONL log.
+
+    Scheduled every 5 minutes via ``app.conf.beat_schedule``. Returns a
+    small summary so the celery task event itself is searchable; the
+    full per-worker report (including ``suggested_concurrency_by_worker``
+    and ``recommended_actions``) lives in
+    ``logs/worker_memory/YYYY-MM-DD.jsonl`` (UTC-dated).
+
+    Soft-only — emits the signal, never auto-edits Procfile concurrency.
+    """
+    from core.services.memory_telemetry import build_snapshot, jsonl_path_for
+
+    report = build_snapshot()
+
+    log_path = jsonl_path_for()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, 'a') as f:
+        f.write(json.dumps(report, default=str) + '\n')
+
+    overall_status = report.get('overall_status', 'OK')
+    if overall_status != 'OK':
+        logger.warning(
+            "worker_memory_health: overall_status=%s downshift_recommended=%s "
+            "top_offenders=%s",
+            overall_status,
+            report.get('downshift_recommended_global'),
+            [o.get('hostname') for o in (report.get('top_offenders') or [])],
+        )
+
+    return {
+        'overall_status': overall_status,
+        'worker_count': report.get('worker_count'),
+        'downshift_recommended': report.get('downshift_recommended_global'),
+        'escalated_triggers': (report.get('sustain_gating') or {}).get('escalated_triggers'),
+        'log_path': str(log_path),
+    }
