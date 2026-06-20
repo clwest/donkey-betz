@@ -56,6 +56,26 @@ interface ToolTickerEvent {
   status?: 'ok' | 'error'
 }
 
+// Session 1175 PR-2b-3: Agent-completion banner event. Fired from the
+// PA WS consumer when `fire_agent_followup_subscriptions` atomically
+// flips an armed subscription to fired (backend persists the Rigby-authored
+// ChatConversation row at the same moment — banner is the live signal,
+// chat history is the load-bearing record).
+//
+// Dedupe at the store layer: the backend's atomic queryset update only
+// fires ONCE per (execution_id, conversation_id), but if the WS reconnects
+// mid-fade or a stale event lands, we don't want to re-flash the banner.
+// `seenCompletions` is a bounded ring of execution_ids in arrival order.
+interface AgentCompletionEvent {
+  execution_id: string
+  agent_name: string
+  status: string
+  completed_at: string
+  error_signature?: string | null
+  artifact_pointers?: Record<string, string[]>
+  timestamp?: string
+}
+
 interface PAState {
   // User scoping — prevents conversation bleed between users
   userId: number | null
@@ -84,6 +104,10 @@ interface PAState {
   recentTool: ToolTickerEvent | null
   seenSeqs: Record<string, number[]>
 
+  // Session 1175 PR-2b-3: Agent-completion banner
+  recentAgentCompletion: AgentCompletionEvent | null
+  seenCompletions: string[]  // bounded ring of execution_ids for dedupe
+
   // Actions
   syncUser: (userId: number | null) => void
   toggleDock: () => void
@@ -110,6 +134,10 @@ interface PAState {
   handleToolStarted: (event: ToolTickerEvent) => void
   handleToolCompleted: (event: ToolTickerEvent) => void
   clearToolTicker: () => void
+
+  // Session 1175 PR-2b-3: Agent-completion banner actions
+  handleAgentCompleted: (event: AgentCompletionEvent) => void
+  clearAgentCompletion: () => void
 }
 
 // Guard against concurrent setActiveConversation calls (two sync queries racing)
@@ -134,6 +162,10 @@ export const usePAStore = create<PAState>()(
       activeTool: null,
       recentTool: null,
       seenSeqs: {},
+
+      // Session 1175 PR-2b-3: Agent-completion banner initial state
+      recentAgentCompletion: null,
+      seenCompletions: [],
 
       // User scoping: when user changes, wipe conversation state to prevent bleed
       syncUser: (newUserId: number | null) => {
@@ -313,6 +345,17 @@ export const usePAStore = create<PAState>()(
       }),
 
       clearToolTicker: () => set({ activeTool: null, recentTool: null }),
+
+      // Session 1175 PR-2b-3: Agent-completion banner actions
+      handleAgentCompleted: (event) => set((state) => {
+        if (state.seenCompletions.includes(event.execution_id)) return state
+        return {
+          recentAgentCompletion: event,
+          seenCompletions: [...state.seenCompletions, event.execution_id].slice(-50),
+        }
+      }),
+
+      clearAgentCompletion: () => set({ recentAgentCompletion: null }),
     }),
     {
       name: 'pa-dock-state',
@@ -362,3 +405,6 @@ export const usePAMessages = () => usePAStore((s) => s.messages)
 // Session 1172: Tool ticker selectors
 export const usePAActiveTool = () => usePAStore((s) => s.activeTool)
 export const usePARecentTool = () => usePAStore((s) => s.recentTool)
+
+// Session 1175 PR-2b-3: Agent-completion banner selector
+export const usePARecentAgentCompletion = () => usePAStore((s) => s.recentAgentCompletion)
