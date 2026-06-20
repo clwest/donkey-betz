@@ -253,7 +253,15 @@ class ContentHandlersMixin:
 
         action = payload.get('action', 'list')
         # Session 1075: GPT-5.2 often calls approve/reject instead of publish/archive
-        ACTION_ALIASES = {'approve': 'publish', 'reject': 'archive', 'get': 'details'}
+        # Session 1170: + mark_complete / mark_completed / done → complete
+        ACTION_ALIASES = {
+            'approve': 'publish',
+            'reject': 'archive',
+            'get': 'details',
+            'mark_complete': 'complete',
+            'mark_completed': 'complete',
+            'done': 'complete',
+        }
         action = ACTION_ALIASES.get(action, action)
         limit = payload.get('limit', 10)
         content_type = payload.get('type')  # blog, document, report, analysis, etc.
@@ -562,9 +570,54 @@ class ContentHandlersMixin:
                 'success': True,
             }
 
+        elif action == 'complete':
+            # Session 1170: closes the tool gap discovered during the
+            # publish-ready backlog triage — Deliverable.status='completed'
+            # was a valid terminal state per the schema but no PA action
+            # could flip to it. Rigby's stop-gap (title prefix + tag
+            # convention) worked but lost the queryability of a real
+            # status. This action mirrors `archive`'s shape (no precondition
+            # on current status, feedback persisted to metadata) but flips
+            # to `completed` instead. Use for one-shot analyses + ops
+            # snapshots whose terminal state is "done, keep for reference"
+            # rather than "rejected, hide".
+            deliverable_id = payload.get('id')
+            feedback = payload.get('feedback', 'Marked completed via PA')
+
+            if not deliverable_id:
+                raise ValueError("id is required for complete action")
+
+            deliverable = base_qs.filter(id=deliverable_id).first()
+            if not deliverable:
+                raise ValueError(f"Deliverable {deliverable_id} not found")
+
+            deliverable.status = 'completed'
+            if deliverable.metadata is None:
+                deliverable.metadata = {}
+            deliverable.metadata['complete_reason'] = feedback
+            deliverable.save(update_fields=['status', 'metadata', 'updated_at'])
+
+            self._record_content_feedback(
+                agent_name=deliverable.agent_name,
+                action='complete',
+                details={
+                    'title': deliverable.title,
+                    'feedback_summary': f'Content marked completed — reason: {feedback}',
+                },
+                user_id=user_id,
+            )
+
+            return {
+                'action': 'complete',
+                'id': str(deliverable_id),
+                'title': deliverable.title,
+                'new_status': 'completed',
+                'success': True,
+            }
+
         else:
             raise ValueError(
-                f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive (aliases: approve=publish, reject=archive)"
+                f"Unknown action: {action}. Valid actions: list, stats, details, publish, archive, complete (aliases: approve=publish, reject=archive, mark_complete/done=complete)"
             )
 
     def _handle_blog_query(
@@ -3903,6 +3956,13 @@ class ContentHandlersMixin:
             'details': 'content_detail',
             'approve': 'content_approve',
             'reject': 'content_reject',
+            # Session 1170: terminal-state action for one-shot analyses
+            # (ops snapshots, daily diagnostics) where 'archive' would
+            # discard useful history. Maps to status='completed'.
+            'complete': 'content_complete',
+            'mark_complete': 'content_complete',
+            'mark_completed': 'content_complete',
+            'done': 'content_complete',
         }
         if action in ACTION_ALIASES:
             action = ACTION_ALIASES[action]
@@ -3942,6 +4002,9 @@ class ContentHandlersMixin:
             'content_recent': 'recent',
             'content_approve': 'approve',
             'content_reject': 'reject',
+            # Session 1170: terminal-state action for one-shot analyses
+            # — see _handle_content_review elif action == 'complete'.
+            'content_complete': 'complete',
         }
 
         if action in CONTENT_REVIEW_MAP:
