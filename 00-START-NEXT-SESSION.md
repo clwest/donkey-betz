@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-f93d77e34f5d` (set Session 1159; carried into 1160).
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-9b82bcc72e1945ce` (set Session 1176 close, carrying into 1177; prior thread `pa-58c916edf96044cc` retired at health 25/100).
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -97,15 +97,15 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1176 — CURRENT ENTRY POINT
+## SESSION 1177 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**The Session 1174+1175 follow-up wake vertical slice is fully shipped.** All 5 PRs in main: #2334 / #2336 / #2337 / #2338 / #2339. Close handoff: [`docs/handoffs/SESSION_1175_FOLLOWUP_WAKE_CLOSE.md`](docs/handoffs/SESSION_1175_FOLLOWUP_WAKE_CLOSE.md). 60s demo script: [`docs/handoffs/SESSION_1175_AGENT_FOLLOWUP_DEMO.md`](docs/handoffs/SESSION_1175_AGENT_FOLLOWUP_DEMO.md).
+**Session 1176 closed cleanly via Rigby.** 3 findings filed in deliverable `61247479` (Local QA workspace). Success path of the follow-up wake feature is fully verified end-to-end; failed-branch verified at backend; visual confirmation deferred (see F3). Close handoff: [`docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md`](docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-58c916edf96044cc`): `platform_config_tool overview` → confirm `service_context: local`.
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce`): `platform_config_tool overview` → confirm `service_context: local`.
 3. Sanity that the feature is alive on main:
 
 ```bash
@@ -133,29 +133,49 @@ print('schedule_followup in schemas:', 'schedule_followup' in src)
 
 If something is missing → re-read the Session 1175 close handoff's 24h watch checklist for diagnostics.
 
-### PRIORITY 1 — Pick from the follow-up wake open queue OR start a fresh thread
+### PRIORITY 1 — Pick up Session 1176 deferred items (pick one by appetite)
 
-Per the close handoff §"Open follow-ups", three high-leverage options (not blocking, pick by appetite):
+Per [`docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md`](docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md), three items deferred (not blocking):
 
-| Option | Why | Effort |
+| Item | Why | Effort |
 |---|---|---|
-| **A. Conv-ID divergence recon** (Item #1 from handoff) | Smallest scope, builds context on `unified_pa_entrypoint`'s conv_id plumbing. If real divergence exists, that's a correctness flag worth surfacing. If stale-pin only, close with a note. | 1-2 hours |
-| **B. Banner artifact-pointer enrichment** (Item #6) | Direct user-visible UX upgrade. Banner already gets `artifact_pointers` in the payload — wire them as click-through links to deliverable detail. | 2-3 hours |
-| **C. Phase 2 c1 auto-wake** (Item #3) | Highest architecture leverage: every PA-originated dispatch creates an implicit subscription so the user gets completion messages without Rigby calling the tool. | 4-6 hours, needs Rigby design ratification on dedupe + opt-out |
+| **A. Visual confirmation of FAILED-status banner** | Backend verified `mode=delivered_immediately, state=fired` on `status=failed` (execution `6e9e42ad`); F3 EditorAgent non-determinism blocked visual repro. Use ContentWriterAgent with deliberately-missing required field, or Django shell to mark a fresh PA-originated execution as failed manually. Then schedule_followup + watch browser. | 30 min |
+| **B. F1 root cause — `deliverable_tool update` silent fallback** | Two repros at ~7100 (nested JSON) and ~7260 (clean prose) both fell back to `action=list` instead of updating. Strong signal for size-based threshold. Read `deliverable_tool` dispatcher (likely `core/services/td_handlers_deliverables.py` or similar), trace the silent fallback. Workaround in place (`append`) — fix is correctness, not blocking. | 1-2 hours |
+| **C. F3 root cause — EditorAgent non-deterministic on empty content** | Two runs, IDENTICAL input, 5x runtime delta: one fail-loud (3.6s), one generation-fallback (17.7s). Per `feedback_editor_fail_loud` memory rule, fix belongs at dispatcher layer not agent body. Trace generation-fallback path; gate at `tool_dispatcher` for empty content. | 2-3 hours, may need design discussion |
 
-Or start a completely fresh thread — no carryover priority is blocking.
+Or pick from the previously-deferred Session 1175 open queue (still on the table): conv-ID divergence recon, banner artifact-pointer enrichment (wire `artifact_pointers` as click-through links), Phase 2 c1 auto-wake.
 
-### PRIORITY 2 — WorkflowAgent → Local QA artifacts (re-check after wake feature ships)
+### PRIORITY 2 — Cells 3-8 of Pass B matrix (optional continuation)
 
-Rigby's morning agent-collaboration test (WorkflowAgent execution `ea82e075-af7c-4747-b880-694a065ce588`, completed 18:14:15 UTC on 2026-06-20) produced two deliverables in the Local QA workspace:
-- `d57b0fa7-8bfb-4e79-b06b-af920edbee7e` (ResearchAgent — Phase A/B summary)
-- `c105205b-ad0a-4fdf-a7c6-fe334e81a498` (ContentWriterAgent — "Platform QA Pass 1 (Local) — Agent Collaboration Report")
-
-Now that the wake feature is shipped: re-dispatch through Rigby + schedule_followup; the new banner should surface these. If BUG-UI-001 (deliverable→initiative link not showing) is still blocking the workspace view, it remains a separate ticket.
+Session 1176's tracking deliverable `61247479` has the Cells 3-8 scaffold ready: revoke/cancel terminal, refresh-mid-run WS reconnect, second-tab dedup, media-artifact agent path. Resume per the cell-by-cell pattern (Claude drafts shape + verifies; Rigby owns dispatch + verification) if more stress-test coverage is wanted on the Session 1175 vertical slice.
 
 ### Carryover from Sessions 1171–1174 (not yet acted on)
 
-The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172–1175 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1175_*`. Review there if any are now blocking; otherwise they continue to ride.
+The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172–1176 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1176_*`. Review there if any are now blocking; otherwise they continue to ride.
+
+---
+
+## SESSION 1176 CLOSED — Agent dispatch + follow-up wake stress-test recon (2026-06-20)
+
+**3 findings filed, 2 cells of the Pass B matrix verified end-to-end.** Full handoff: [`docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md`](docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md). Tracking deliverable: `61247479-1976-4ba8-bc8a-ea67f66ead45` (Local QA workspace, 10017 chars).
+
+| What | Evidence |
+|---|---|
+| **Success path verified end-to-end** (backend → WS → AgentCompletionBanner) | 3 banner sightings in browser. Executions: `2935f7bb` (ResearchAgent), `660f9234` (EditorAgent unexpected success). |
+| **Failed branch verified at backend** | `6e9e42ad` (EditorAgent failed 3.6s) → schedule_followup returned `mode=delivered_immediately, state=fired`. Visual deferred (F3). |
+| **PR-1 conv_id gate verified working** | Non-PA execution `5c103be3` (ContentWriterAgent watchdog timeout) cleanly rejected: "Cannot subscribe: ... conversation_id is NULL." |
+
+**Findings filed in deliverable:**
+- **F1** — `deliverable_tool update` silent fallback to `action=list` above ~6-7kB content. Workaround: `append`. Bisect needed.
+- **F2** — Non-PA-originated executions can't surface via follow-up (PR-1 gate, by-design coverage gap before any "Rigby will tell me when things break" user-facing claim).
+- **F3** — EditorAgent non-deterministic on empty content. Same input, two runs: fail-loud (3.6s, correct) vs generation-fallback (17.7s, masks caller bugs). Exactly the failure mode `feedback_editor_fail_loud` memory warned about.
+
+**Session-structure notes worth carrying:**
+- `feedback_rigby_deliverable_content` pattern (Claude writes Cell 1, Rigby extends one-at-a-time with `update + detail` verify) worked cleanly for the matrix scaffold.
+- `feedback_rigby_tool_verification` validated: Rigby's initial claim "`deliverable_tool update` is broken" was wrong (small-payload SCRATCH test proved otherwise) — the real bug is F1's size threshold.
+- When Rigby is asked for "a deterministic failure," be specific about the mechanism in the prompt — left open, she once dispatched a success-path task by mistake.
+
+**Conversations:** `pa-58c916edf96044cc` retired at health 25/100 (43 turns, ~21.5k tokens, 9 topics). Successor `pa-9b82bcc72e1945ce` ("Session 1177 — TBD") created via `session_tool create_fresh`; `tools/pa_local.sh` updated to pin it.
 
 ---
 
