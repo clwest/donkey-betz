@@ -51,6 +51,26 @@ release: python manage.py migrate --noinput && python manage.py sync_celery_beat
 - New external models MUST have `app_label = 'core'` in Meta
 - DO NOT add imports to `core/models.py` — it's dead code
 
+### Postgres `application_name` tagging (Session 1166, COO #2)
+
+Every long-lived process tags its DB connection so `pg_stat_activity` shows a per-component breakdown instead of one undifferentiated `unified_donkey_betz` bucket.
+
+- **Env var:** `PG_APPLICATION_NAME`
+- **Format:** `dbz:<role>` — lowercase + digits + hyphens only, enforced by `scripts/verify_repo_guardrails.py` (regex `^dbz:[a-z0-9\-]+$`)
+- **Set in:** every Procfile entry (strict) + every `Makefile` celery / daphne launch (advisory)
+- **Default:** ad-hoc shells and one-off `manage.py` invocations that don't set the env var keep the legacy `unified_donkey_betz` tag — by design.
+
+Verify:
+
+```sql
+SELECT application_name, count(*)
+FROM pg_stat_activity
+WHERE datname='unified_donkey_betz'
+GROUP BY 1 ORDER BY 2 DESC;
+```
+
+Expect rows like `dbz:web`, `dbz:celery-pa`, `dbz:celery-beat`, `dbz:celery-broadcast`, `dbz:celery-long-running`, `dbz:celery-worker`. The PA worker tag binds lazily (first task → first DB connection).
+
 ## GPT-5-mini Configuration
 
 ```python

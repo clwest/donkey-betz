@@ -5,7 +5,9 @@ import unittest
 from scripts.verify_repo_guardrails import (
     classify_docs_index_autogen,
     classify_failures,
+    classify_makefile_pg_application_name,
     classify_platform_inventory_freshness,
+    classify_procfile_pg_application_name,
 )
 
 
@@ -77,6 +79,122 @@ class DocsIndexAutogenMarkerTests(unittest.TestCase):
         self.assertIn("DOC-AUTOGEN marker", message)
 
 
+class ProcfilePgApplicationNameTests(unittest.TestCase):
+    """Session 1166: every Procfile entry must set PG_APPLICATION_NAME=dbz:<role>."""
+
+    def test_passes_on_canonical_procfile_entry(self) -> None:
+        ok, messages = classify_procfile_pg_application_name(
+            ["web: PG_APPLICATION_NAME=dbz:web daphne -b 0.0.0.0 -p 8000\n"]
+        )
+
+        self.assertTrue(ok)
+        self.assertIn("Procfile entry `web`: dbz:web", messages)
+
+    def test_fails_when_entry_missing_tag(self) -> None:
+        ok, messages = classify_procfile_pg_application_name(
+            ["web: daphne -b 0.0.0.0 -p 8000\n"]
+        )
+
+        self.assertFalse(ok)
+        self.assertTrue(
+            any("missing PG_APPLICATION_NAME=dbz:<role>" in m for m in messages),
+            messages,
+        )
+
+    def test_skips_comment_and_blank_lines(self) -> None:
+        ok, messages = classify_procfile_pg_application_name(
+            [
+                "# top-of-file comment\n",
+                "\n",
+                "web: PG_APPLICATION_NAME=dbz:web daphne -b 0.0.0.0 -p 8000\n",
+            ]
+        )
+
+        self.assertTrue(ok)
+        self.assertEqual(
+            [m for m in messages if "Procfile entry" in m],
+            ["Procfile entry `web`: dbz:web"],
+        )
+
+    def test_rejects_tag_with_uppercase(self) -> None:
+        ok, _ = classify_procfile_pg_application_name(
+            ["web: PG_APPLICATION_NAME=dbz:WEB daphne -b 0.0.0.0 -p 8000\n"]
+        )
+
+        self.assertFalse(ok)
+
+    def test_accepts_tag_with_digits_and_hyphens(self) -> None:
+        ok, messages = classify_procfile_pg_application_name(
+            [
+                "celery-long-running-2: PG_APPLICATION_NAME=dbz:celery-long-running-2 "
+                "celery -A core worker\n"
+            ]
+        )
+
+        self.assertTrue(ok)
+        self.assertIn(
+            "Procfile entry `celery-long-running-2`: dbz:celery-long-running-2",
+            messages,
+        )
+
+    def test_reports_empty_procfile(self) -> None:
+        ok, messages = classify_procfile_pg_application_name(["# only a comment\n"])
+
+        self.assertFalse(ok)
+        self.assertIn("Procfile has no parseable entries", messages)
+
+
+class MakefilePgApplicationNameTests(unittest.TestCase):
+    """Session 1166: Makefile launches that lack PG_APPLICATION_NAME are advisory-flagged."""
+
+    def test_passes_when_celery_launch_has_tag_inline(self) -> None:
+        content = (
+            "celery:\n"
+            "\tPG_APPLICATION_NAME=dbz:celery-pa celery -A core worker --queues=pa\n"
+        )
+        ok, messages = classify_makefile_pg_application_name(content)
+
+        self.assertTrue(ok)
+        self.assertIn(
+            "Makefile celery/daphne launches all set PG_APPLICATION_NAME", messages
+        )
+
+    def test_passes_when_tag_set_on_preceding_continuation_line(self) -> None:
+        content = (
+            "celery:\n"
+            "\tPG_APPLICATION_NAME=dbz:celery-pa SKIP_NLP_MODELS=1 \\\n"
+            "\tcelery -A core worker --queues=pa\n"
+        )
+        ok, _ = classify_makefile_pg_application_name(content)
+
+        self.assertTrue(ok)
+
+    def test_flags_celery_launch_without_tag(self) -> None:
+        content = (
+            "celery:\n"
+            "\tcelery -A core worker --queues=pa\n"
+        )
+        ok, messages = classify_makefile_pg_application_name(content)
+
+        self.assertFalse(ok)
+        self.assertTrue(
+            any("missing PG_APPLICATION_NAME" in m for m in messages), messages
+        )
+
+    def test_does_not_false_positive_on_pkill(self) -> None:
+        content = (
+            "celery-stop:\n"
+            "\tpkill -9 -f celery 2>/dev/null || true\n"
+        )
+        ok, messages = classify_makefile_pg_application_name(content)
+
+        # No celery/daphne launches matched at all; ok defaults to True.
+        self.assertTrue(ok)
+        self.assertIn(
+            "Makefile has no daphne/celery launches matched by detector", messages
+        )
+
+
 class ClassifyFailuresStrictModeTests(unittest.TestCase):
     """Default strict mode: every blocker should produce a failure entry."""
 
@@ -88,6 +206,7 @@ class ClassifyFailuresStrictModeTests(unittest.TestCase):
             inventory_blocking=False,
             autogen_blocking=False,
             conflict_blocking=False,
+            procfile_tag_blocking=False,
         )
         base.update(overrides)
         return base
@@ -114,6 +233,16 @@ class ClassifyFailuresStrictModeTests(unittest.TestCase):
         failures = classify_failures(**self._kwargs(conflict_blocking=True))
         self.assertEqual(failures, ["context-kit has CONFLICT findings"])
 
+    def test_strict_fails_on_procfile_tag_gap(self):
+        failures = classify_failures(**self._kwargs(procfile_tag_blocking=True))
+        self.assertEqual(
+            failures,
+            [
+                "one or more Procfile entries are missing "
+                "PG_APPLICATION_NAME=dbz:<role>"
+            ],
+        )
+
     def test_strict_aggregates_multiple_blockers(self):
         failures = classify_failures(
             **self._kwargs(
@@ -121,13 +250,19 @@ class ClassifyFailuresStrictModeTests(unittest.TestCase):
                 inventory_blocking=True,
                 autogen_blocking=True,
                 conflict_blocking=True,
+                procfile_tag_blocking=True,
             )
         )
         self.assertIn("tracked generated paths are present", failures)
         self.assertIn("platform inventory is stale", failures)
         self.assertIn("docs/INDEX.md is missing the DOC-AUTOGEN marker", failures)
         self.assertIn("context-kit has CONFLICT findings", failures)
-        self.assertEqual(len(failures), 4)
+        self.assertIn(
+            "one or more Procfile entries are missing "
+            "PG_APPLICATION_NAME=dbz:<role>",
+            failures,
+        )
+        self.assertEqual(len(failures), 5)
 
 
 class ClassifyFailuresInventoryAdvisoryTests(unittest.TestCase):
@@ -146,6 +281,7 @@ class ClassifyFailuresInventoryAdvisoryTests(unittest.TestCase):
             inventory_blocking=False,
             autogen_blocking=False,
             conflict_blocking=False,
+            procfile_tag_blocking=False,
         )
         base.update(overrides)
         return base
@@ -195,6 +331,7 @@ class ClassifyFailuresNoStrictTests(unittest.TestCase):
             inventory_blocking=True,
             autogen_blocking=True,
             conflict_blocking=True,
+            procfile_tag_blocking=True,
         )
         self.assertEqual(failures, [])
 
