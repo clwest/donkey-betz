@@ -97,11 +97,73 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1170 — CURRENT ENTRY POINT
+## SESSION 1171 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify the Session 1169 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-639751f029bc432f` (Session 1168 + 1169 thread — at Session 1169 close it had carried 11+ design/verification rounds; **strongly consider minting a fresh thread at session entry** via Rigby's `session_tool.create_fresh`). Disk check: `df -h /System/Volumes/Data`.
+**Verify the Session 1170 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-639751f029bc432f` (legacy — Session 1170 was conducted on a fresh thread `pa-96a6d49c933e444a` at Chris's request; consider whether to repoint the wrapper or mint another fresh thread). Disk check: `df -h /System/Volumes/Data`.
+
+### Session 1170 post-merge sanity check
+
+```bash
+# (1) agent_name dim populates for claude_code_agent_respond fires (PR #2322)
+.venv/bin/python manage.py shell -c "
+from core.models_celery_telemetry import CeleryTaskEvent
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+rows = CeleryTaskEvent.objects.filter(
+    started_at__gte=since,
+    task_name='core.tasks.claude_code_agent_respond',
+)
+total = rows.count()
+populated = rows.exclude(agent_name='').count()
+print(f'claude_code_agent_respond fires last 24h: {total}, with agent_name: {populated}')
+"
+# Expect: populated == total (or total == 0 if no Claude Code calls happened).
+
+# (2) cost_estimator_version tag on new openai CostTracking rows (PR #2323)
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import CostTracking
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+rows = list(CostTracking.objects.filter(provider='openai', timestamp__gte=since)[:50])
+total = len(rows)
+v2 = sum(1 for r in rows if (r.metadata or {}).get('cost_estimator_version') == 'v2_cached_tokens')
+print(f'openai CostTracking 24h: {total}, tagged v2_cached_tokens: {v2}')
+"
+# Expect: v2 == total.
+
+# (3) cached_input_tokens populated on at least one cache-heavy call
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import CostTracking
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+rows = CostTracking.objects.filter(provider='openai', timestamp__gte=since)
+cached_hits = [r for r in rows if (r.metadata or {}).get('cached_input_tokens', 0) > 0]
+print(f'rows with cached_input_tokens > 0: {len(cached_hits)}')
+"
+# Expect: >0 once long PA threads have accumulated previous_response_id chains.
+
+# (4) Internal openai 24h aggregate vs OpenAI dashboard
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import CostTracking
+from django.db.models import Sum
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+total = CostTracking.objects.filter(provider='openai', timestamp__gte=since).aggregate(s=Sum('estimated_cost_usd'))['s']
+print(f'Internal estimated openai cost last 24h: \${total}')
+"
+# Compare against OpenAI dashboard for the same UTC window — convergence
+# is the success signal.
+```
+
+Full Session 1170 24h watch + rollback levers live in [`docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md`](docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md).
+
+### Session 1169 post-merge sanity check (preserved for reference)
 
 ### Session 1169 post-merge sanity check
 
@@ -215,7 +277,15 @@ All 3 SHIP items closed in Session 1168 (PRs #2310, #2311, #2314). The Queue + i
 
 All 5 carryover items closed in Session 1169 in Rigby's B-C-E-A-D-1 stretch order: items 2 / 3 / F / D / 1 (PRs #2316 / #2317 / #2318 / #2319 / #2320). Full handoff: [`docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`](docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md).
 
-### PRIORITY 1 — Layer C completion (Session 1169 follow-on)
+### Session 1170 — CLOSED 2026-06-20 (agent dim caller fix + cached-cost estimator)
+
+PR #2322 (`f709f422`) closed the agent_name dim gap discovered during entry sanity (block 4 of the 1169 verification). PR #2323 (`fe72a369`) closed the OpenAI dashboard cost-spike mismatch — internal estimator was overestimating cached input by ~9.7×. Live validation row showed pre-fix overestimated by 4.1× ($0.0729 vs actual $0.0176). Full handoff: [`docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md`](docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md).
+
+### PRIORITY 1 — execute_agent_task caller sweep (Session 1170 Phase 2)
+
+PR #2322 shipped Phase 1 of the kwargs-form migration (covered `claude_code_agent_respond`). The `core.tasks.execute_agent_task` family — ~15 callers across `core/services/td_handlers_*`, `conversation_action_dispatcher.py`, `tool_dispatcher.py`, `metrics_action_trigger.py`, `scheduled_diagnostic_runner.py`, `views_diagnostics.py`, `tasks_ops.py` — still uses positional / args-based dispatch. Until that lands, `top_consumers(group_by='agent')` undercounts that family. Bundle in 2–3 focused PRs by file family per "primitives + opt-in apply list" pattern.
+
+### PRIORITY 2 — Layer C completion (Session 1169 follow-on)
 
 PR #2320 shipped Phase 1 of Layer C (DeliverableGatedError primitive + 3 hot-path opt-ins). The migration plan needs Phase 2 + Phase 3 to actually close the silent-None footgun on the remaining 24 production callers.
 
@@ -227,7 +297,7 @@ PR #2320 shipped Phase 1 of Layer C (DeliverableGatedError primitive + 3 hot-pat
    - Each batch small enough to audit per-caller pattern (broad-except vs None-guard vs blind `.id`).
 2. **Layer C Phase 3 — flip default OR add deprecation log.** Decision point after Phase 2 sweeps complete. Either delete the legacy None contract (clean invariant), or keep both and emit a deprecation warning when the factory returns None so we can measure remaining legacy callers before the flip.
 
-### PRIORITY 2 — Real fix for capture_pa_acks_health_snapshot p95=1880s
+### PRIORITY 3 — Real fix for capture_pa_acks_health_snapshot p95=1880s
 
 Session 1169 PR #2319 added decorator timeouts to `monitor_celery_health` but documented that `capture_pa_acks_health_snapshot` has carried `soft_time_limit=60, time_limit=90` since Session 1161 and STILL measured p95=1880s on PR #2306. The real fix is **probe decomposition**:
 
@@ -238,7 +308,7 @@ Session 1169 PR #2319 added decorator timeouts to `monitor_celery_health` but do
 
 Touches `core/tasks.py` (split task) + `core/management/commands/pa_acks_health.py` (build_report refactor) + `core/celery.py` (beat schedule entries). Likely 2-3 PRs.
 
-### PRIORITY 3 — Schema-drift reconciliation (deliverable `b58b20b3`)
+### PRIORITY 4 — Schema-drift reconciliation (deliverable `b58b20b3`)
 
 Session 1169 PR #2318's `makemigrations` surfaced pre-existing model drift unrelated to the agent_name change. Quarantined into deliverable `b58b20b3` on chris-personal workspace. Three clusters:
 
@@ -246,14 +316,18 @@ Session 1169 PR #2318's `makemigrations` surfaced pre-existing model drift unrel
 2. **Cluster B — Intentional, ship when convenient.** `CuratedSignalEntry.action_status` adds `needs_regen` choice (likely Session 1140 era ops work). Confirm intent + ship migration.
 3. **Cluster C — Cosmetic, safe to batch or ignore.** Help_text and default tweaks on `CuratedSignalEntry`, `FinalAppliedOverrides`, `FleetPaChatAuditRow`, `AgentExecution`. No DDL impact (AgentExecution indexes are correctly in production per migration `0336` — drift is help_text-only).
 
-### PRIORITY 4 — Digest product arc (parked since Session 1168)
+### PRIORITY 5 — Digest product arc (parked since Session 1168)
 
 Held out of Session 1168 + 1169 because it's a bigger product decision. At Session 1170 entry: do we still want the digest product, or has the priority shifted? Route through Rigby.
 
 - **`a4a2697d-0882-4583-be94-10f8ac56694e` — Weekend Digest Autopilot — Spec & Acceptance Criteria.** Spec written Session 1166-or-earlier, never built.
 - **`2a2ea6e3-0f9e-4989-8e1f-5790e91d4324` — Claude Code Help Tickets — Weekend-Safe Stocks + Crypto Digest.** Implementation companion to the spec.
 
-### PRIORITY 5 — Consolidation / deferred from Session 1165 (focused follow-on PRs, still queued)
+### PRIORITY 6 — gpt-5.2 rate refresh + multi-provider cost audits (Session 1170 follow-on)
+
+Session 1170's cached-cost fix kept the existing Session 1036 rate constants ($1.75 input / $14 output / $0.18 cached for gpt-5.2). Verify against current OpenAI pricing page or a known invoice line item. If rates have drifted, ship a constant update as a focused PR. In parallel, audit `_call_anthropic` + the Together AI cost paths for the same cached-discount blind spot — the structural pattern (discount documented in comment but not applied in formula) is provider-independent.
+
+### PRIORITY 7 — Consolidation / deferred from Session 1165 (focused follow-on PRs, still queued)
 
 - **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
 - **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
