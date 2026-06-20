@@ -41,7 +41,7 @@ start: ## Start Redis (if needed) and Daphne (background). Wait for health endpo
 	@if [ -f $(PIDFILE) ]; then \
 		echo "Warning: $(PIDFILE) exists; Daphne may already be running. Continuing..."; \
 	fi
-	@nohup daphne -b $(HOST) -p $(PORT) $(ASGI_APP) > $(LOG) 2>&1 & echo $$! > $(PIDFILE)
+	@PG_APPLICATION_NAME=dbz:web nohup daphne -b $(HOST) -p $(PORT) $(ASGI_APP) > $(LOG) 2>&1 & echo $$! > $(PIDFILE)
 	@echo "-> Waiting for health endpoint http://$(HOST):$(PORT)$(HEALTH_PATH) (timeout $(START_TIMEOUT)s)..."
 	@i=0; \
 	while ! curl -sf "http://$(HOST):$(PORT)$(HEALTH_PATH)" >/dev/null 2>&1; do \
@@ -245,7 +245,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery default worker already running"; \
 	else \
 		echo "-> Starting Celery default worker (solo, ML-free queues)..."; \
-		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
+		PG_APPLICATION_NAME=dbz:celery-worker SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
 			--queues=default,agents,content \
 			--hostname=default@%h > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
@@ -256,7 +256,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery pa worker already running"; \
 	else \
 		echo "-> Starting Celery pa worker (solo, pa queue only)..."; \
-		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
+		PG_APPLICATION_NAME=dbz:celery-pa SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
 			--queues=pa \
 			--hostname=pa@%h > celery-pa.log 2>&1 & echo $$! > .celery-pa.pid; \
@@ -267,7 +267,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery long_running worker already running"; \
 	else \
 		echo "-> Starting Celery long_running worker (2 threads)..."; \
-		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
+		PG_APPLICATION_NAME=dbz:celery-long-running SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
 			--queues=long_running \
 			--hostname=long_running@%h > $(CELERY_LONG_RUNNING_LOG) 2>&1 & echo $$! > $(CELERY_LONG_RUNNING_PIDFILE); \
@@ -278,7 +278,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery broadcast worker already running"; \
 	else \
 		echo "-> Starting Celery broadcast worker (2 threads)..."; \
-		SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
+		PG_APPLICATION_NAME=dbz:celery-broadcast SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
 			--queues=broadcast \
 			--hostname=broadcast@%h > $(CELERY_BROADCAST_LOG) 2>&1 & echo $$! > $(CELERY_BROADCAST_PIDFILE); \
@@ -289,7 +289,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Celery beat already running"; \
 	else \
 		echo "-> Starting Celery beat (background)..."; \
-		nohup .venv/bin/celery -A core beat --loglevel=info > $(CELERY_BEAT_LOG) 2>&1 & echo $$! > $(CELERY_BEAT_PIDFILE); \
+		PG_APPLICATION_NAME=dbz:celery-beat nohup .venv/bin/celery -A core beat --loglevel=info > $(CELERY_BEAT_LOG) 2>&1 & echo $$! > $(CELERY_BEAT_PIDFILE); \
 		sleep 1; \
 	fi
 	@echo "✓ Celery services started (3 workers + beat)."
