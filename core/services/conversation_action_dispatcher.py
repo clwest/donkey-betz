@@ -498,22 +498,44 @@ class ConversationActionDispatcher:
                         task_context['blog_id'],
                     )
 
-            if (
-                agent_name == 'EditorAgent'
-                and 'content' not in task_context
-                and 'blog_id' not in task_context
-            ):
-                gathered = _gather_workspace_content_for_editor(
-                    workspace_id=task_context.get('workspace_id')
-                                  or task_context.get('workspace'),
-                    task_text=task,
+            # Session 1177 F3 (C1+C2): mirror the tool_dispatcher provenance
+            # capture + strict_content_required opt-in so both dispatch paths
+            # surface the same metadata and honor the same opt-in flag.
+            if agent_name == 'EditorAgent':
+                from core.services.editor_dispatch_helpers import build_content_provenance
+                has_caller_content = bool(
+                    task_context.get('content') or task_context.get('blog_id')
                 )
-                if gathered:
-                    task_context['content'] = gathered
-                    logger.info(
-                        f"[EditorAgent dispatch] Pre-injected workspace content "
-                        f"({len(gathered.get('sections') or [])} sections) before enqueue"
+                strict_content_required = bool(
+                    task_context.get('strict_content_required', False)
+                )
+                if has_caller_content:
+                    content_provenance = build_content_provenance(mode='caller_provided')
+                elif strict_content_required:
+                    content_provenance = build_content_provenance(mode='none')
+                else:
+                    gathered = _gather_workspace_content_for_editor(
+                        workspace_id=task_context.get('workspace_id')
+                                      or task_context.get('workspace'),
+                        task_text=task,
                     )
+                    if gathered:
+                        task_context['content'] = gathered
+                        content_provenance = build_content_provenance(
+                            mode='gathered_workspace_deliverable',
+                            gathered=gathered,
+                            gather_window_minutes=60,
+                        )
+                        logger.info(
+                            f"[EditorAgent dispatch] Pre-injected workspace content "
+                            f"({len(gathered.get('sections') or [])} sections) before enqueue"
+                        )
+                    else:
+                        content_provenance = build_content_provenance(
+                            mode='task_text_fallback',
+                            gather_window_minutes=60,
+                        )
+                task_context.setdefault('_dispatch_metadata', {})['content_provenance'] = content_provenance
 
             # Session 875: Log context at pre-enqueue stage (before Celery serializes it)
             tracer = ContextTracer(source=f"conversation_action_dispatch:{conversation_id}")

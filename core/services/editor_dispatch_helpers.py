@@ -48,6 +48,80 @@ logger = logging.getLogger(__name__)
 # synthesis" instruction won't misfire because "synthesis" here is the
 # object, not the verb.
 
+# ─────────────── Session 1177 F3: content provenance ─────────────── #
+#
+# Surface what the dispatcher actually fed the editor as `content`.
+# Callers (Rigby, test harnesses, ops dashboards) need to know whether
+# the agent edited their content, a workspace deliverable the dispatcher
+# auto-injected, or the task text as last-resort. The Session 1176 F3
+# "non-determinism" was actually the dispatcher's gather succeeding on
+# one run and failing on another — the agent was deterministic given
+# its inputs, but inputs depended on workspace state at call time.
+# Shape ratified by Rigby in Session 1177.
+
+CONTENT_PROVENANCE_MODES = {
+    'caller_provided',                # caller passed content/blog_id directly
+    'gathered_workspace_deliverable', # dispatcher's gather found a deliverable
+    'task_text_fallback',             # gather found nothing — task text used
+    'none',                           # strict mode active, no content injected
+}
+
+
+def build_content_provenance(
+    *,
+    mode: str,
+    gathered: Optional[Dict[str, Any]] = None,
+    caller_content_overridden: bool = False,
+    gather_window_minutes: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Produce the typed content_provenance dict for dispatcher metadata.
+
+    Args:
+        mode: one of CONTENT_PROVENANCE_MODES. Required.
+        gathered: gather_workspace_content_for_editor's return value. Used
+            to pull primary-source id/title/score when mode is
+            'gathered_workspace_deliverable'. Ignored otherwise.
+        caller_content_overridden: True when the dispatcher injected
+            workspace content despite the caller already providing some.
+            Rare; surfaces as `warning` in the envelope so it's instantly
+            visible in logs/dashboards.
+        gather_window_minutes: recency cap that was applied to the gather
+            (default 60). Carried through so operators don't have to grep
+            for the constant in the gather helper.
+    """
+    if mode not in CONTENT_PROVENANCE_MODES:
+        raise ValueError(
+            f"Unknown provenance mode {mode!r}; "
+            f"expected one of {sorted(CONTENT_PROVENANCE_MODES)}"
+        )
+    provenance: Dict[str, Any] = {
+        'mode': mode,
+        'source_deliverable_id': None,
+        'source_title': None,
+        'score': None,
+        'score_reason': None,
+        'gather_window_minutes': gather_window_minutes,
+    }
+    if mode == 'gathered_workspace_deliverable' and gathered:
+        primary = gathered.get('primary_source')
+        if not primary:
+            sources = gathered.get('sources') or []
+            primary = sources[0] if sources else None
+        if primary:
+            source_id = primary.get('id')
+            provenance['source_deliverable_id'] = (
+                str(source_id) if source_id else None
+            )
+            provenance['source_title'] = primary.get('title')
+            provenance['score'] = primary.get('score')
+            provenance['score_reason'] = primary.get('score_reason')
+    if caller_content_overridden:
+        provenance['warning'] = 'caller_content_overridden'
+    return provenance
+
+
+# ──────────────────────────────────────────────────────────────────────── #
+
 SYNTHESIS_INTENT_PATTERN = re.compile(
     r'\b(?:synthesiz|synthesis|combine|merge|consolidat|integrat)[a-z]*\b'
     r'.{0,60}?'
