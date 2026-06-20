@@ -79,6 +79,22 @@ def _is_local_env():
     return not os.environ.get('RAILWAY_ENVIRONMENT')
 
 
+def _effective_local_deny_set():
+    """Return ``LOCAL_DENY_TASKS`` minus any ``ENABLE_BEAT_TASKS`` overrides.
+
+    Shared between the canonical-schedule filter (prevents new denylisted
+    rows from being materialized) and the enforce-disabled step (re-asserts
+    ``enabled=False`` on any existing rows that match the effective deny
+    set). Both consumers must see the same override accounting.
+    """
+    overrides = {
+        n.strip()
+        for n in os.environ.get('ENABLE_BEAT_TASKS', '').split(',')
+        if n.strip()
+    }
+    return LOCAL_DENY_TASKS - overrides
+
+
 def _filter_local_safe(canonical):
     """Apply the local-safe filter to the canonical beat schedule.
 
@@ -89,17 +105,42 @@ def _filter_local_safe(canonical):
     """
     if not _is_local_env():
         return canonical, []
-    overrides = {
-        n.strip()
-        for n in os.environ.get('ENABLE_BEAT_TASKS', '').split(',')
-        if n.strip()
-    }
-    effective_deny = LOCAL_DENY_TASKS - overrides
+    effective_deny = _effective_local_deny_set()
     filtered = {
         n: e for n, e in canonical.items() if n not in effective_deny
     }
     skipped = sorted(n for n in canonical if n in effective_deny)
     return filtered, skipped
+
+
+def _enforce_disabled_local(dry_run=False):
+    """On local-safe mode, re-assert ``enabled=False`` on existing
+    ``PeriodicTask`` rows that match the effective denylist.
+
+    PR #2314 (Session 1168) prevented new denylisted rows from being
+    materialized; this step closes the loop by toggling any already-
+    enabled denylisted rows back to ``enabled=False``. Idempotent —
+    rows already at ``enabled=False`` are not touched.
+
+    Returns ``(count, names)``: the number of rows that were (or
+    would be, on dry-run) toggled, plus the names sorted alphabetically.
+    Returns ``(0, [])`` on non-local environments or when nothing
+    needs toggling.
+
+    Session 1169 — Rigby's late add from the Session 1168 handoff close.
+    """
+    if not _is_local_env():
+        return 0, []
+    effective_deny = _effective_local_deny_set()
+    if not effective_deny:
+        return 0, []
+    qs = PeriodicTask.objects.filter(name__in=effective_deny, enabled=True)
+    names = sorted(qs.values_list('name', flat=True))
+    if not names:
+        return 0, []
+    if not dry_run:
+        qs.update(enabled=False)
+    return len(names), names
 
 
 def _coerce_crontab_field(value):
@@ -266,6 +307,26 @@ class Command(BaseCommand):
                 )
             )
             for n in locally_skipped:
+                self.stdout.write(f"      - {n}")
+            self.stdout.write("")
+
+        # Session 1169: idempotent enforce-disabled. The Session 1168
+        # filter prevents NEW denylisted rows from being added; this
+        # step toggles any already-enabled denylisted rows back to
+        # enabled=False. Without it, a row enabled before PR #2314
+        # merged stays enabled and beat keeps firing it.
+        enforce_count, enforce_names = _enforce_disabled_local(
+            dry_run=dry_run,
+        )
+        if enforce_names:
+            verb = "Would disable" if dry_run else "Disabled"
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  Local-safe enforce: {verb} {enforce_count} "
+                    f"existing denylisted row(s):"
+                )
+            )
+            for n in enforce_names:
                 self.stdout.write(f"      - {n}")
             self.stdout.write("")
 
