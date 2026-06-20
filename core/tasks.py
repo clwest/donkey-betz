@@ -1205,8 +1205,16 @@ def process_core_spider_data():
 def run_spider_network(self):
     from core.tasks_spiders import _impl_run_spider_network
     return _impl_run_spider_network(self)
-@shared_task(ignore_result=True)
-def backfill_spider_embeddings(batch_size: int = 50):
+# Session 1171 #3 guardrail: depth-gate threshold. Above this, the task no-ops
+# (fail-open) so a stalled-drain situation can't rebuild the ~533-msg backlog we
+# purged. 50 msgs ≈ 12hr of normal */15 cadence; trips on accumulation.
+BACKFILL_SPIDER_EMBEDDINGS_DEPTH_GATE = 50
+BACKFILL_SPIDER_EMBEDDINGS_QUEUE = "ml"
+
+
+@shared_task(bind=True, ignore_result=True)
+@singleton_task("backfill-spider-embeddings", ttl=600)
+def backfill_spider_embeddings(self, batch_size: int = 50):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
     Session 394: Increased default batch size from 50 to 200 for faster processing.
@@ -1217,11 +1225,49 @@ def backfill_spider_embeddings(batch_size: int = 50):
     Apr 2026: Removed hours=168 window — triage_spider_embeddings deduped the
     historical backlog so all remaining unembedded records are worth processing.
 
+    Session 1171: wrapped in `@singleton_task` (Session 1165 redis_lock primitive)
+    plus a fail-open ml-queue depth gate. Together they prevent the 06-14 → 06-19
+    incident (533-msg accumulation, see SESSION_1171 handoff) from recurring even
+    if beat cadence outpaces worker drain.
+
     Runs every 15 minutes via Celery Beat to gradually build embedding coverage.
     Uses the SpiderSemanticSearch service.
 
     Now also marks entries with no items as 'empty' so they're skipped in future runs.
     """
+    # Session 1171 #3 guardrail B — depth-gate (fail-open). If the ml broker
+    # queue has accumulated past BACKFILL_SPIDER_EMBEDDINGS_DEPTH_GATE, no-op
+    # this fire so we don't pile work onto an already-saturated worker. Any
+    # Redis error falls through (we'd rather run than block on infra hiccup).
+    try:
+        import os
+        import redis as _redis
+        broker_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+        _r = _redis.Redis.from_url(f"{broker_url.rstrip('/')}/2", socket_timeout=2)
+        _depth = _r.llen(BACKFILL_SPIDER_EMBEDDINGS_QUEUE)
+        if _depth is not None and _depth > BACKFILL_SPIDER_EMBEDDINGS_DEPTH_GATE:
+            logger.warning(
+                "[backfill_spider_embeddings] depth-gate tripped: "
+                "queue_key=%s broker_db=2 depth=%s threshold=%s task_id=%s — skipping",
+                BACKFILL_SPIDER_EMBEDDINGS_QUEUE,
+                _depth,
+                BACKFILL_SPIDER_EMBEDDINGS_DEPTH_GATE,
+                self.request.id,
+            )
+            return {
+                "skipped": True,
+                "reason": "queue_depth_above_threshold",
+                "queue": BACKFILL_SPIDER_EMBEDDINGS_QUEUE,
+                "depth": _depth,
+                "threshold": BACKFILL_SPIDER_EMBEDDINGS_DEPTH_GATE,
+            }
+    except Exception as _gate_exc:
+        logger.info(
+            "[backfill_spider_embeddings] depth-gate check skipped (%s: %s) — "
+            "fail-open, proceeding with backfill",
+            type(_gate_exc).__name__, _gate_exc,
+        )
+
     logger.info("🧠 Starting spider embedding backfill...")
 
     try:

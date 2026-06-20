@@ -15,10 +15,22 @@ from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from urllib.parse import parse_qs
 
-from .api_responses import api_unauthorized, api_forbidden
+from .api_responses import api_unauthorized, api_forbidden, api_error
 from functools import wraps
 
 logger = logging.getLogger(__name__)
+
+
+class TokenValidationInfrastructureError(Exception):
+    """Raised by `validate_token` when the auth backend (Postgres/Redis/cache)
+    is unreachable during token lookup.
+
+    Session 1171 #4: the previous implementation swallowed all non-
+    `Token.DoesNotExist` exceptions in `validate_token` and returned None,
+    producing false 401 'Invalid authentication token' responses during
+    Postgres pressure events. This typed exception lets callers
+    distinguish 'no such token' (401) from 'backend down' (503).
+    """
 
 
 def token_auth_required(view_func):
@@ -567,7 +579,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
                 return None  # Already authenticated via session
             token = self.extract_token(request)
             if token:
-                user = self.validate_token(token)
+                try:
+                    user = self.validate_token(token)
+                except TokenValidationInfrastructureError:
+                    # Optional-auth path: fail open. If auth backend is
+                    # down we still allow the anon code path through;
+                    # the strict path (below) is the one that 503s.
+                    user = None
                 if user:
                     request.user = user
             return None  # Allow through regardless
@@ -610,8 +628,26 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
             logger.warning(f"No authentication provided for {request.path}")
             return api_unauthorized("Authentication required")
 
-        # Validate token and get user
-        user = self.validate_token(token)
+        # Validate token and get user.
+        # Session 1171 #4: separate "token not in DB" (→ 401) from "auth backend
+        # unreachable" (→ 503). Before this fix, a Postgres OperationalError
+        # (e.g., 'too many clients already') was swallowed in `validate_token`
+        # and returned None — indistinguishable from a real Token.DoesNotExist
+        # — producing a false 401 'Invalid authentication token'. Discovered
+        # while debugging session 1171's ml-queue flood. See
+        # docs/handoffs/SESSION_1171_ML_QUEUE_FLOOD_AND_AUTH_MIDDLEWARE.md.
+        try:
+            user = self.validate_token(token)
+        except TokenValidationInfrastructureError as infra_exc:
+            logger.error(
+                "Auth backend unreachable while validating token for %s: %s",
+                request.path, infra_exc,
+            )
+            return api_error(
+                "Authentication backend unavailable, please retry",
+                error_code="auth_backend_unavailable",
+                status_code=503,
+            )
 
         if not user:
             logger.warning(f"Invalid authentication token for {request.path}")
@@ -662,22 +698,38 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         return None
     
     def validate_token(self, token_value: str) -> Optional[User]:
-        """Validate authentication token and return user"""
+        """Validate authentication token and return user.
+
+        Session 1171 #4: distinguishes 'no such token' (return None → caller
+        emits 401) from 'auth backend unreachable' (raise
+        `TokenValidationInfrastructureError` → caller emits 503). The
+        previous `except Exception: return None` swallowed Postgres
+        OperationalError ('too many clients already') and produced false
+        401 'Invalid authentication token' responses during DB pressure
+        events. See SESSION_1171 handoff for the discovery incident.
+        """
         try:
             token = Token.objects.select_related('user').get(key=token_value)
-            
+
             # Check if user is active
             if not token.user.is_active:
                 logger.warning(f"Token belongs to inactive user: {token.user.username}")
                 return None
-            
+
             return token.user
-            
+
         except Token.DoesNotExist:
             return None
         except Exception as e:
-            logger.error(f"Error validating token: {str(e)}")
-            return None
+            # Postgres / Redis / cache failures land here. Re-raise as a
+            # typed infrastructure error so callers can return 503 instead
+            # of misleading the client with a 401 "Invalid token" when the
+            # token might be perfectly valid.
+            logger.error(
+                "Auth backend error while validating token: %s: %s",
+                type(e).__name__, e,
+            )
+            raise TokenValidationInfrastructureError(str(e)) from e
 
 
 class WebSocketAuthenticationMiddleware(BaseMiddleware):
