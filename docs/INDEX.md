@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-20 13:24
+**Generated:** 2026-06-20 13:37
 **Current Session:** 1171
 **Total Documentation:** 2655 files | 699,364 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,582 |
+| Total cross-references | 4,591 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 190 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 177 | Platform Master Inventory |
 | `docs/INDEX.md` | 122 | INDEX |
-| `docs/docs-pattern/fleet-network/README.md` | 116 | Fleet Network Pattern |
+| `docs/archive/old-structure/completions/README.md` | 117 | COMPLETIONS |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 66 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -247,7 +247,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 391 | 2026-06-20 13:09 |
+| INDEX.md | docs | 391 | 2026-06-20 13:37 |
 | SESSION_1174_PRIMING_AGENT_FOLLOWUP.md | handoffs | 92 | 2026-06-20 11:52 |
 | SESSION_1173_PGBOUNCER.md | handoffs | 185 | 2026-06-20 11:22 |
 | SESSION_1172_RIGBY_LIVE_TOOL_STATUS.md | handoffs | 158 | 2026-06-20 10:40 |
