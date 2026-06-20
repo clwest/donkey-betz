@@ -1052,6 +1052,17 @@ class AgentFollowupSubscription(models.Model):
         (STATE_CANCELLED, 'Cancelled (explicit cancel from user, Phase 2)'),
     ]
 
+    # Session 1178 Phase 2 follow-up — single source of truth for the default
+    # TTL window. Both Phase 1 (`_handle_schedule_followup` default for the
+    # explicit `schedule_followup` tool) and Phase 2 (`create_implicit_followup_subscription`
+    # for auto-wake) read from here so the two paths never drift apart again.
+    # Live verify in Session 1178 caught a 30s default firing 2 seconds before
+    # a typical ResearchAgent completion (33s). 60s gives ResearchAgent
+    # comfortable headroom while keeping the "Rigby has clearly moved on"
+    # expiry semantics for slow / failed agents.
+    DEFAULT_TTL_SECONDS = 60
+    MAX_TTL_SECONDS = 600
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     execution = models.ForeignKey(

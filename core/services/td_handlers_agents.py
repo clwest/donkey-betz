@@ -4473,8 +4473,11 @@ class AgentHandlersMixin:
         from core.models_unified_system import AgentExecution, AgentFollowupSubscription
         from core.tasks_agents import fire_agent_followup_subscriptions
 
-        AFTER_SECONDS_CAP = 600
-        AFTER_SECONDS_DEFAULT = 60
+        # Session 1178 follow-up: pulled from AgentFollowupSubscription model
+        # constants so Phase 1 explicit + Phase 2 auto-wake share one source
+        # of truth and can't drift apart again.
+        AFTER_SECONDS_CAP = AgentFollowupSubscription.MAX_TTL_SECONDS
+        AFTER_SECONDS_DEFAULT = AgentFollowupSubscription.DEFAULT_TTL_SECONDS
 
         # 1. Conversation_id from PA context (promoted into payload root by
         # unified_pa_entrypoint at line 1549; also promoted into payload['context']

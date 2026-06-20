@@ -68,11 +68,19 @@ class AutoFollowupSubscriptionTests(TestCase):
         self.assertEqual(sub.conversation_id, self.conversation_id)
         self.assertEqual(sub.state, AgentFollowupSubscription.STATE_ARMED)
 
-        # TTL is 30s per D2.
-        expected_expiry = timezone.now() + timedelta(seconds=30)
+        # TTL matches AgentFollowupSubscription.DEFAULT_TTL_SECONDS — the model
+        # constant is the single source of truth for both Phase 1 explicit and
+        # Phase 2 auto-wake (bumped from 30s → 60s after Session 1178 live verify
+        # caught ResearchAgent regularly exceeding the original 30s window).
+        expected_expiry = timezone.now() + timedelta(
+            seconds=AgentFollowupSubscription.DEFAULT_TTL_SECONDS,
+        )
         delta_seconds = abs((sub.expires_at - expected_expiry).total_seconds())
-        self.assertLess(delta_seconds, 5,
-                        f'expires_at should be ~30s from now, drift={delta_seconds}s')
+        self.assertLess(
+            delta_seconds, 5,
+            f'expires_at should be ~{AgentFollowupSubscription.DEFAULT_TTL_SECONDS}s '
+            f'from now, drift={delta_seconds}s',
+        )
 
         # Persisted in DB.
         self.assertEqual(
@@ -140,8 +148,10 @@ class AutoFollowupSubscriptionTests(TestCase):
             status='in_progress', conversation_id=self.conversation_id,
         )
         # Simulate explicit schedule_followup having already armed the sub
-        # with a custom TTL (120s, not the implicit default 30s).
-        explicit_expiry = timezone.now() + timedelta(seconds=120)
+        # with a custom TTL (300s, deliberately different from the implicit
+        # default DEFAULT_TTL_SECONDS so the assert below can prove the
+        # explicit window survives intact when implicit reuses the row).
+        explicit_expiry = timezone.now() + timedelta(seconds=300)
         explicit_sub = AgentFollowupSubscription.objects.create(
             execution=execution,
             conversation_id=self.conversation_id,
@@ -163,8 +173,11 @@ class AutoFollowupSubscriptionTests(TestCase):
         # Explicit TTL should be preserved (defaults dict doesn't update on reuse).
         explicit_sub.refresh_from_db()
         delta = abs((explicit_sub.expires_at - explicit_expiry).total_seconds())
-        self.assertLess(delta, 5,
-                        'explicit 120s TTL must not be clobbered by implicit 30s default')
+        self.assertLess(
+            delta, 5,
+            f'explicit 300s TTL must not be clobbered by implicit '
+            f'{AgentFollowupSubscription.DEFAULT_TTL_SECONDS}s default',
+        )
 
     def test_implicit_then_explicit_yields_one_row(self):
         """Implicit auto-sub created first; explicit get_or_create reuses it."""
