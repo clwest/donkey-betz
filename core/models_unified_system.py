@@ -967,6 +967,17 @@ class AgentExecution(models.Model):
     parent_execution_id = models.UUIDField(null=True, blank=True, db_index=True)
     root_execution_id = models.UUIDField(null=True, blank=True, db_index=True)
 
+    # Session 1174 PR-1: PA conversation that triggered this dispatch.
+    # Gating field for the agent-follow-up wake design (SESSION_1174_PRIMING_AGENT_FOLLOWUP.md).
+    # Indexed because the post-completion signal handler joins on it to find the
+    # conversation channel to ping. NULL for dispatches that didn't originate from a
+    # PA conversation (autonomous beat tasks, direct router calls, etc.) — the
+    # follow-up subscription invariant ("only persisted-conversation_id + explicit
+    # subscription may post") means NULL rows never trigger follow-up.
+    conversation_id = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True,
+    )
+
     class Meta:
         app_label = 'core'
 
