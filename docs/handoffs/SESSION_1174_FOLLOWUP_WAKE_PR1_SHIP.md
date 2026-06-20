@@ -5,6 +5,20 @@
 **Prior priming doc:** [SESSION_1174_PRIMING_AGENT_FOLLOWUP.md](./SESSION_1174_PRIMING_AGENT_FOLLOWUP.md)
 **Driving question:** "How can Rigby follow up with agents after they begin work?"
 
+> **Session 1175 addendum (2026-06-20, post-Session-1174 close):** Session 1174
+> ended with #2334, #2336, and #2337 OPEN-but-unmerged. Session 1175 morning
+> sanity check caught the drift (handoff said "SHIPPED"; `main` did not have
+> the commits or migrations). All three merged to main early in Session 1175:
+> - #2334 → squash-merge `a3af6131`
+> - #2336 → squash-merge `6722e0bf` (resolved an `docs/INDEX.md` conflict by regenerating per DOC-AUTOGEN policy)
+> - #2337 → squash-merge `c11b1600` (same INDEX regeneration pattern)
+>
+> Local DB had migrations 0357 + 0358 already applied (from Session 1174
+> branch-local testing), so no migration run was needed post-merge. Workers
+> were restarted to pick up the new code per the worker-restart memory rule.
+> Treat any "SHIPPED" / "merged-ready" wording below as Session 1174's
+> *prepared* state — the actual `main`-merge happened Session 1175.
+
 ## TL;DR
 
 The agent-follow-up wake design is fully ratified end-to-end. PR-1 ships the gating schema change (`AgentExecution.conversation_id`). PR-2 builds the actual follow-up loop (signal handler → consumer → `schedule_followup` tool → Rigby-authored completion chat message + banner) on top of that field.
