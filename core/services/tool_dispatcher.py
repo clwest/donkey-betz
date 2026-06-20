@@ -1007,6 +1007,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         'content_type', 'tone', 'target_audience', 'word_count',
         'topic', 'keywords', 'blog_id', 'focus_areas',
         'content', 'research', 'research_summary',
+        # Session 1178 Phase 2 — auto-wake per-call opt-out. When Rigby passes
+        # auto_followup=false in tool args (e.g. test-harness dispatches), the
+        # flag has to reach execute_agent_task's context dict so the implicit
+        # AgentFollowupSubscription is skipped.
+        'auto_followup',
     }
 
     def _handle_agent_tool(

@@ -1182,6 +1182,24 @@ PA_TOOL_SCHEMAS = [
                         "content_type, tone, blog_id, research, etc."
                     ),
                 },
+                "auto_followup": {
+                    "type": "boolean",
+                    "description": (
+                        "Session 1178 Phase 2 — control the implicit "
+                        "completion-banner subscription. Defaults to true: "
+                        "every PA dispatch auto-creates an armed "
+                        "AgentFollowupSubscription so the user sees a banner "
+                        "and Rigby-authored chat bubble when the agent "
+                        "finishes (within a 30s TTL window). Pass false to "
+                        "suppress the implicit subscription — useful for "
+                        "test-harness dispatches, sub-tasks that are part of "
+                        "a larger orchestrated flow, or any case where the "
+                        "completion event would be noise. The explicit "
+                        "schedule_followup tool can still be called to "
+                        "override after_seconds or schedule a delayed wake."
+                    ),
+                    "default": True,
+                },
             },
             "required": ["agent_name", "task"],
         },
