@@ -265,6 +265,15 @@ class OpsHandlersMixin:
             # thresholds). No re-sampling here — reduce-from-JSONL.
             return self._ops_memory_pressure(trace_id)
 
+        elif action == 'top_consumers':
+            # Session 1167: COO Nervous System Backlog item #7. Per
+            # task_name aggregation over CeleryTaskEvent.duration_seconds
+            # for one window (default 24h). p95 computed server-side via
+            # PostgreSQL percentile_cont — single aggregate query.
+            window = payload.get('window', '24h')
+            limit = payload.get('limit')
+            return self._ops_top_consumers(window, limit, trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -801,6 +810,37 @@ class OpsHandlersMixin:
             'sustain_gating': snapshot.get('sustain_gating', {}),
             'generated_at': timezone.now().isoformat(),
         }
+
+
+    def _ops_top_consumers(
+        self, window: str, limit, trace_id: str,
+    ) -> Dict[str, Any]:
+        """Top wall-clock consumers per task_name — single SQL aggregate.
+
+        Session 1167 — COO Nervous System Backlog item #7. Reduces to
+        ``core.services.top_consumers.compute_top_consumers``; the
+        service module is single-source-of-truth for the SQL + window
+        vocabulary + p95 computation.
+        """
+        from django.utils import timezone
+
+        try:
+            from core.services.top_consumers import compute_top_consumers
+        except ImportError as e:
+            return {
+                'action': 'top_consumers',
+                'error': f'top_consumers module unavailable: {e}',
+                'generated_at': timezone.now().isoformat(),
+            }
+
+        try:
+            return compute_top_consumers(window=window, limit=limit)
+        except ValueError as e:
+            return {
+                'action': 'top_consumers',
+                'error': str(e),
+                'generated_at': timezone.now().isoformat(),
+            }
 
 
     # ── Session 1100: Ops observability helpers ─────────────────────────────

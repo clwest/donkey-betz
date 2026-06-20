@@ -2261,7 +2261,7 @@ PA_TOOL_SCHEMAS = [
                         "noise_metrics", "conversation_metrics",
                         "focus_mode_status", "focus_mode_update",
                         "celery_task_history", "execution_detail", "execution_search",
-                        "memory_pressure",
+                        "memory_pressure", "top_consumers",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2293,7 +2293,13 @@ PA_TOOL_SCHEMAS = [
                         "sustained-pressure CRIT detection and a soft downshift recommendation "
                         "(no auto Procfile edits). Reads the latest snapshot from "
                         "logs/worker_memory/*.jsonl. Use when asked about worker memory, OOM kills, "
-                        "concurrency tuning, --max-memory-per-child, or pressure near caps."
+                        "concurrency tuning, --max-memory-per-child, or pressure near caps. "
+                        "top_consumers: per-task_name aggregation over CeleryTaskEvent for one "
+                        "window. Returns count, total_seconds, mean_seconds, max_seconds, "
+                        "p95_seconds (p95 computed server-side via PostgreSQL percentile_cont). "
+                        "Single SQL aggregate query per call. Use when asked which task is eating "
+                        "workers / hogging wall-clock / top by duration. Default window 24h, "
+                        "default limit 20 (max 50)."
                     ),
                 },
                 "window": {
