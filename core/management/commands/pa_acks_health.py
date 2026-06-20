@@ -702,6 +702,26 @@ class Command(BaseCommand):
         depth = ((report or {}).get("queue_depth") or {}).get("depth")
         return isinstance(depth, int) and depth >= cls._CRIT_QUEUE_DEPTH
 
+    # Session 1166 (item C): factory-style WARN-tier probes for the
+    # warn-persist-2-snapshots → CRIT escalation. Match the no_workers /
+    # depth_crit pattern from Session 1164. no_workers is intentionally
+    # NOT in this set — it has its own sustain → CRIT machinery above and
+    # would double-escalate.
+    @classmethod
+    def _trips_warn_hang(cls, report):
+        hang_count = ((report or {}).get("hang_signature") or {}).get("count", 0) or 0
+        return hang_count >= cls._WARN_HANG_COUNT
+
+    @classmethod
+    def _trips_warn_failures(cls, report):
+        failures = ((report or {}).get("task_stats") or {}).get("failure", 0) or 0
+        return failures >= cls._WARN_FAILURE_COUNT
+
+    @classmethod
+    def _trips_warn_depth(cls, report):
+        depth = ((report or {}).get("queue_depth") or {}).get("depth", 0)
+        return isinstance(depth, int) and depth >= cls._WARN_QUEUE_DEPTH
+
     @classmethod
     def _is_previous_adjacent(cls, report, previous_report):
         """True iff `previous_report` is recent enough to count as 'consecutive'."""
@@ -773,11 +793,37 @@ class Command(BaseCommand):
             gated_triggers.append("no_workers")
         if depth >= self._CRIT_QUEUE_DEPTH and not depth_crit_sustained:
             gated_triggers.append("depth_crit")
+        # Session 1166 (item C): WARN-persist escalation. If a WARN
+        # sub-trigger (hang, failures, or depth) fires on BOTH the current
+        # AND a time-adjacent previous snapshot, escalate to CRIT. Per-
+        # sub-trigger semantics (hang↔hang, failures↔failures, depth↔depth)
+        # — cross-trigger drift (e.g. depth then hang) is NOT counted as
+        # persistence because the signal isn't the same one continuing.
+        # no_workers is intentionally excluded — its sustain machinery
+        # already escalates to CRIT above; including it here would double-
+        # escalate. Specific labels (warn_persist:<sub>) make the JSONL
+        # greppable when tuning thresholds later.
+        escalated_triggers: list[str] = []
+        if previous_adjacent:
+            if self._trips_warn_hang(report) and self._trips_warn_hang(
+                previous_report
+            ):
+                escalated_triggers.append("warn_persist:hang")
+            if self._trips_warn_failures(report) and self._trips_warn_failures(
+                previous_report
+            ):
+                escalated_triggers.append("warn_persist:failures")
+            if self._trips_warn_depth(report) and self._trips_warn_depth(
+                previous_report
+            ):
+                escalated_triggers.append("warn_persist:depth")
+
         report["sustain_gating"] = {
             "previous_adjacent": previous_adjacent,
             "expected_interval_seconds": self._EXPECTED_INTERVAL_SECONDS,
             "adjacency_factor": self._SUSTAIN_ADJACENCY_FACTOR,
             "gated_triggers": gated_triggers,
+            "escalated_triggers": escalated_triggers,
         }
 
         # CRIT conditions first — short-circuit on any hit.
@@ -787,6 +833,7 @@ class Command(BaseCommand):
             or oldest_hang_age >= self._CRIT_HANG_AGE_SEC
             or depth_crit_sustained
             or (no_workers_sustained and self._CRIT_NO_WORKERS)
+            or escalated_triggers
         ):
             report["status"] = "CRIT"
             return
