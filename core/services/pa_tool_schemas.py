@@ -3073,7 +3073,7 @@ PA_TOOL_SCHEMAS = [
             "Replaces content_review_tool, generate_blog_tool, and deliverables_tool. "
             "Use content_stats for a full content pipeline overview. "
             "Use content_list/content_search/content_detail to browse blogs and deliverables. "
-            "Use content_approve/content_reject to publish or archive content. "
+            "Use content_approve/content_reject/content_complete to publish, archive, or mark-completed content. "
             "Use generate_blog to create a new blog via the deliberation pipeline. "
             "Use deliverable_* actions for the deliverables library (documents, scripts, plans)."
         ),
@@ -3085,7 +3085,7 @@ PA_TOOL_SCHEMAS = [
                     "enum": [
                         "content_stats", "content_list", "content_detail",
                         "content_search", "content_recent",
-                        "content_approve", "content_reject",
+                        "content_approve", "content_reject", "content_complete",
                         "generate_blog", "generate_newsletter",
                         "bulk_archive", "bulk_archive_published", "run_cleanup",
                         "deliverable_list", "deliverable_detail",
@@ -3104,6 +3104,7 @@ PA_TOOL_SCHEMAS = [
                         "content_recent: recently created content (any status). "
                         "content_approve: publish a ready deliverable. "
                         "content_reject: archive a deliverable with feedback. "
+                        "content_complete: mark a deliverable completed with feedback — terminal state for one-shot analyses (ops snapshots, daily diagnostics) you want to keep as historical reference, NOT for content meant to be published externally. "
                         "generate_blog: create a new blog post via deliberation pipeline. "
                         "generate_newsletter: generate an Operator Edge newsletter from recent signal clusters (supports dry_run=true for preview). "
                         "bulk_archive: archive multiple deliverables by filter (dry_run preview by default). "
