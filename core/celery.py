@@ -73,6 +73,19 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 240},
     },
 
+    # Session 1174 PR-2a — Expire stale AgentFollowupSubscription rows.
+    # Subscriptions are created with after_seconds<=600 TTL. If the
+    # corresponding execution never reaches terminal status before
+    # expires_at, the row stays armed. This task transitions stale rows
+    # to expired. Every 2 minutes is well below the 600s cap so any
+    # expired row is reaped within one cadence cycle. Atomic queryset
+    # update is race-safe against concurrent fire_agent_followup_subscriptions.
+    'expire-stale-followup-subscriptions': {
+        'task': 'core.tasks.expire_stale_followup_subscriptions',
+        'schedule': crontab(minute='*/2'),
+        'options': {'queue': 'broadcast', 'expires': 90},
+    },
+
     # Session 1129 Move 2 Round 2 — Soft-delete expired fleet artifacts.
     # Daily run is the spec'd default. Staging may want hourly; if so,
     # change schedule to crontab(minute=0).

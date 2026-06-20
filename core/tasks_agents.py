@@ -96,6 +96,86 @@ def send_execution_update(execution_id: str, update_data: Dict[str, Any]):
         logger.error(f"Failed to send WebSocket update: {e}")
 
 
+def fire_agent_followup_subscriptions(execution_record):
+    """Session 1174 PR-2a: fire any armed AgentFollowupSubscription rows for this execution.
+
+    Called at every terminal-state save site in _impl_execute_agent_task (completed / failed /
+    SoftTimeLimitExceeded / generic-exception / dedup-skip). Bridges the canonical AgentExecution
+    completion to the pa_conversation_<conversation_id> channel — which closes the channels-don't-meet
+    gap identified in SESSION_1174_PRIMING_AGENT_FOLLOWUP.md.
+
+    Atomic queryset update with state='armed' AND expires_at > now() in the filter ensures dedupe
+    even under concurrent calls (rowcount=1 wins). Fail-open per Session 1172 lessons — never
+    raise from this helper; the dispatch path must remain reliable even if the broadcast layer
+    or DB index briefly hiccups.
+
+    Scope rules invariant: if execution_record.conversation_id is NULL (non-PA dispatch), no
+    subscription can possibly match (denormalized conversation_id on the subscription is NOT NULL
+    via unique_together). Bail out early to avoid pointless queries.
+    """
+    try:
+        conv_id = getattr(execution_record, 'conversation_id', None)
+        if not conv_id:
+            return  # Non-PA dispatch; nothing to fire
+
+        from core.models_unified_system import AgentFollowupSubscription
+
+        now = timezone.now()
+
+        # Payload contract (Phase 1 invariant). artifact_pointers stays empty in PR-2a;
+        # PR-2b populates it from the consumer once we wire up deliverable lookup.
+        payload = {
+            'execution_id': str(execution_record.id),
+            'agent_name': execution_record.agent.name if getattr(execution_record, 'agent_id', None) else None,
+            'status': execution_record.status,
+            'completed_at': execution_record.completed_at.isoformat() if execution_record.completed_at else None,
+            'error_signature': (execution_record.error_message or '')[:200] if execution_record.status == 'failed' else None,
+            'artifact_pointers': {},
+        }
+
+        # Atomic state transition — armed → fired only if still armed AND not expired.
+        # The rowcount tells us whether we actually fired (0 if expired, already-fired,
+        # or no subscription exists). Multiple concurrent calls into this helper will all
+        # filter on state='armed'; only the first one's UPDATE actually flips the row.
+        fired_count = AgentFollowupSubscription.objects.filter(
+            execution=execution_record,
+            conversation_id=conv_id,
+            state=AgentFollowupSubscription.STATE_ARMED,
+            expires_at__gt=now,
+        ).update(
+            state=AgentFollowupSubscription.STATE_FIRED,
+            fired_at=now,
+            result_payload=payload,
+        )
+
+        if fired_count == 0:
+            return  # No armed-and-eligible subscription; nothing to broadcast
+
+        # Broadcast to the PA conversation channel — PAConversationConsumer.agent_completed
+        # handler picks this up and persists a Rigby-authored ChatConversation row + emits
+        # the banner event to the frontend.
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"pa_conversation_{conv_id}",
+                {
+                    "type": "agent.completed",
+                    "execution_id": payload['execution_id'],
+                    "agent_name": payload['agent_name'],
+                    "status": payload['status'],
+                    "completed_at": payload['completed_at'],
+                    "error_signature": payload['error_signature'],
+                    "artifact_pointers": payload['artifact_pointers'],
+                    "timestamp": now.isoformat(),
+                }
+            )
+    except Exception as e:
+        logger.warning(
+            f"[fire_agent_followup_subscriptions] fail-open: {e}",
+            exc_info=True,
+        )
+
+
 @shared_task(bind=True, base=AgentExecutionTask, max_retries=3)
 def execute_agent(self, execution_id: str, **kwargs):
     """
@@ -1787,12 +1867,23 @@ self,
                 input_data=input_data,
                 experiment=experiment,  # Session 841: Link to experiment for scoped metrics
             )
-            # Session 1100: Set initial heartbeat (graceful if migration not yet applied)
+            # Optional fields that depend on migrations being applied.
+            # Session 1100: last_heartbeat_at — long-running liveness signal.
+            # Session 1174 PR-1: conversation_id — PA conversation that
+            # triggered this dispatch. Gates the agent-follow-up wake feature
+            # (docs/handoffs/SESSION_1174_PRIMING_AGENT_FOLLOWUP.md). Stored
+            # as NULL for non-PA dispatches (autonomous beat tasks, direct
+            # router calls); the Phase 1 invariant is that only persisted
+            # conversation_id rows + explicit subscription may post follow-up.
+            _optional_kwargs = {
+                'last_heartbeat_at': timezone.now(),
+                'conversation_id': context.get('conversation_id') or None,
+            }
             try:
-                _create_kwargs['last_heartbeat_at'] = timezone.now()
-                execution_record = AgentExecution.objects.create(**_create_kwargs)
+                execution_record = AgentExecution.objects.create(
+                    **_create_kwargs, **_optional_kwargs,
+                )
             except Exception:
-                _create_kwargs.pop('last_heartbeat_at', None)
                 execution_record = AgentExecution.objects.create(**_create_kwargs)
 
             # Session 1084: Temporary writer-attribution log so PR #1887 can
@@ -1836,6 +1927,8 @@ self,
                 execution_record.save(update_fields=[
                     'status', 'output_data', 'completed_at',
                 ])
+                # Session 1174 PR-2a: fire any armed follow-up subscriptions.
+                fire_agent_followup_subscriptions(execution_record)
             return {
                 'success': True,
                 'agent_name': agent_name,
@@ -2061,6 +2154,8 @@ self,
                 _update_fields.append('error_message')
             execution_record.completed_at = timezone.now()
             execution_record.save(update_fields=_update_fields)
+            # Session 1174 PR-2a: fire any armed follow-up subscriptions.
+            fire_agent_followup_subscriptions(execution_record)
 
             # Update agent metrics
             Agent.objects.filter(pk=agent_obj.pk).update(
@@ -2140,6 +2235,8 @@ self,
             execution_record.save(update_fields=[
                 'status', 'error_message', 'execution_time_ms', 'completed_at',
             ])
+            # Session 1174 PR-2a: fire any armed follow-up subscriptions (failure path).
+            fire_agent_followup_subscriptions(execution_record)
         return {
             'success': False,
             'agent_name': agent_name,
@@ -2165,6 +2262,8 @@ self,
             execution_record.save(update_fields=[
                 'status', 'error_message', 'execution_time_ms', 'completed_at',
             ])
+            # Session 1174 PR-2a: fire any armed follow-up subscriptions (failure path).
+            fire_agent_followup_subscriptions(execution_record)
 
         # Retry on certain errors
         if self.request.retries < self.max_retries:
