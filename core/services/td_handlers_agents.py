@@ -1840,6 +1840,10 @@ class AgentHandlersMixin:
             is_pinned = bool(payload.get('is_pinned', False))
 
             from core.services.deliverable_factory import create_deliverable
+            # Session 1168: trigger_source='pa_tool' tells the factory's gate 3
+            # (min content length) that this is a legitimate PA-initiated save,
+            # not background noise. Without this, short PA saves trip the gate
+            # and the factory silently returns None.
             obj = create_deliverable(
                 title=title[:255],
                 content=content,
@@ -1855,15 +1859,49 @@ class AgentHandlersMixin:
                 confidence_score=float(payload.get('confidence_score', 0.8)),
                 is_saved=True,
                 is_pinned=is_pinned,
-                metadata={'source': 'pa_deliverables_tool', 'trace_id': trace_id},
+                metadata={
+                    'source': 'pa_deliverables_tool',
+                    'trigger_source': 'pa_tool',
+                    'trace_id': trace_id,
+                },
                 slug=slug,
                 preview_content=preview,
                 status='completed',
                 data_sensitivity=data_sensitivity,
                 workspace=resolved_workspace,
             )
+            # Session 1168: the factory returns None when its quality gate
+            # rejects (smoke-test title pattern OR sub-300-char content with
+            # non-allowlisted trigger_source). The handler used to do
+            # str(obj.id) immediately, which crashed with the unhelpful
+            # 'NoneType' object has no attribute 'id'. Surface a structured
+            # gated response instead. Factory contract migration to a typed
+            # exception is queued as a follow-on (Layer C).
+            if obj is None:
+                return {
+                    'action': 'create',
+                    'ok': False,
+                    'id': None,
+                    'error_code': 'deliverable_gated',
+                    'reason_code': 'unknown_gate',
+                    'reason_hint': 'gate_2_smoke_pattern_or_gate_3_min_length',
+                    'human_message': (
+                        'Deliverable creation was blocked by the quality gate. '
+                        'The title may have matched smoke-test patterns '
+                        '(e.g. "smoke test", "sanity check"), or the content '
+                        'was below the 300-character minimum for this trigger '
+                        'source. Try a non-smoke-test title and ensure the '
+                        'content is substantial, then retry.'
+                    ),
+                    'retry_suggestions': [
+                        'Rename the title to avoid words like smoke test / sanity check / heartbeat',
+                        'Ensure content is at least 300 characters',
+                    ],
+                    'trace_id': trace_id,
+                }
             return {
                 'action': 'create',
+                'ok': True,
                 'id': str(obj.id),
                 'title': obj.title,
                 'deliverable_type': obj.deliverable_type,
