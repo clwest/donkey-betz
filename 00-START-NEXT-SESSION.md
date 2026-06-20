@@ -145,8 +145,10 @@ Full design + plan: [`docs/handoffs/SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md`](doc
 - Failure path: failures fire `agent.completed` with `status=error` + short `error_signature`.
 
 **PR split (so partial progress is shippable):**
-- **PR-2a:** subscription model + signal handler bridge + `PAConversationConsumer.agent_completed` handler + beat-scheduled expiry cleanup. Backend foundation; no UI, no tool yet.
-- **PR-2b:** `schedule_followup` PA tool schema + handler + banner UI component + 60s demo.
+- **PR-2a (SHIPPED #2336):** subscription model + signal handler bridge + `PAConversationConsumer.agent_completed` handler + beat-scheduled expiry cleanup. Backend foundation; no UI.
+- **PR-2b-1 (SHIPPED #2337):** `schedule_followup` PA tool + handler + subscribe-after-terminal immediate-fire. Backend-only. Rigby live-verified the tool through her FC loop.
+- **PR-2b-2 (NEXT — this session's primary work):** ChatConversation server-side persistence + Q-C side-effect investigation pass (token accounting / embeddings / `last_message_at` / unread counters) + Rigby's return-shape-stability cleanup on `schedule_followup` (always emit standard keys with nulls where not applicable, instead of bare `{success: false, error: ...}` on error paths).
+- **PR-2b-3:** banner UI component + 60s demo script.
 
 **Files to touch (estimate):**
 - `core/models_unified_system.py` (or new `core/models_followup.py`) + migration 0358 — `AgentFollowupSubscription`.

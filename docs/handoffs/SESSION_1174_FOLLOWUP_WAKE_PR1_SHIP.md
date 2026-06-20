@@ -97,20 +97,21 @@ Estimated 4-6 backend files, no frontend.
 5. **Cleanup task** — beat-scheduled `expire_stale_followup_subscriptions` per memory rule "Observation cadence belongs in Celery beat, not OS cron". Reaps subscriptions where `state=armed AND expires_at < now()`.
 6. **Tests + handoff section for PR-2a.**
 
-### PR-2b — Tool + UI + demo
+### PR-2b — Tool + UI + demo (now split into 2b-1 / 2b-2 / 2b-3)
 
-Estimated 2-3 backend files + 2-3 frontend files + demo script.
+**PR-2b-1 (SHIPPED #2337):** `schedule_followup` PA tool + subscribe-after-terminal immediate-fire. Backend-only. Stacks on #2336.
 
-1. **`schedule_followup` PA tool schema** in `core/services/pa_tool_schemas.py`. Signature: `schedule_followup(execution_id: str OR task_id: str, after_seconds: int = 60)`. Cap `after_seconds <= 600`.
-2. **`schedule_followup` handler** in `core/services/tool_dispatcher.py`:
-   - Resolve `execution_id` (lookup via `task_id` if needed).
-   - Pull `conversation_id` from PA context.
-   - Validate `AgentExecution` exists.
-   - If status already terminal → fire immediately with payload contract, return `{status: 'delivered_immediately', execution_id}`.
-   - Else → upsert `AgentFollowupSubscription(state='armed', expires_at=now+after_seconds)`, return `{status: 'subscribed', subscription_id, expires_at}`.
-3. **Banner UI component** (frontend `agentStore` or extension of `bodyStore` + new `<AgentCompletionBanner />` in chat surface). Separate semantic from Session 1172's tool-ticker per D3.
-4. **60s demo script:** dispatch ResearchAgent → call `schedule_followup` → wait → completion banner appears + Rigby-authored chat message lands without any user input.
-5. **Update memory rules** if any new patterns emerge.
+**PR-2b-2 (next session):** ChatConversation server-side persistence so the Rigby-authored "agent finished" message survives a page refresh. Requires Q-C investigation pass first (token accounting, embeddings, `last_message_at`, unread counters — pattern of bypassed side effects when writing assistant rows outside the FC loop).
+
+**PR-2b-3 (next session):** banner UI component (`agentStore` or `bodyStore` extension + new `<AgentCompletionBanner />`) + 60s demo script (dispatch → schedule_followup → wait → completion appears in chat without user input).
+
+#### PR-2b-2 cleanup item from Rigby's PR-2b-1 review
+
+Rigby flagged 4 verification points on #2337; 3 of 4 were met as-shipped. The one remaining item to land in PR-2b-2:
+
+- **Return shape stability across all paths.** Today `schedule_followup` returns the standard keys (`mode, subscription_id, state, expires_at, after_seconds, execution_id, execution_status, message`) on success paths but ONLY `{success: false, error: <msg>}` on error paths. Rigby's ask: always include the standard keys (as nulls where not applicable) so callers can treat the response shape as a stable contract. Lift the `_handle_schedule_followup` error-return helpers into a single `_make_response(success, mode=None, ...)` helper that always emits the full shape.
+
+PR-2b-2 is the natural spot for this since it's already touching this handler to wire up the immediate-fire path's `result_payload` / artifact_pointers.
 
 ### Files to touch (estimate)
 
