@@ -5991,9 +5991,31 @@ def _send_halt_discord_notification(experiment, reason):
 # Session 865: Celery Health Monitoring Task
 # =============================================================================
 
-@shared_task(name='core.tasks.monitor_celery_health')
+@shared_task(
+    name='core.tasks.monitor_celery_health',
+    queue='broadcast',
+    soft_time_limit=60,
+    time_limit=90,
+)
 @singleton_task("monitor-celery-health", ttl=600)
 def monitor_celery_health():
+    # Session 1169 — decorator-side queue + timeouts. Pre-Session-1169,
+    # this task got its queue from the beat schedule's options block
+    # ('queue': 'broadcast') and had NO time_limit / soft_time_limit at all,
+    # which meant any direct .delay() / .apply_async() call ran with the
+    # global Celery defaults (no time limit). PR #2306 live smoke
+    # measured p95=1048s on this task; the missing decorator-side
+    # timeouts were one of the failure modes. Matches the
+    # capture_pa_acks_health_snapshot pattern locked Session 1161
+    # (commit bbf9f7552).
+    #
+    # Note: timeouts alone are NOT sufficient when the task body fans
+    # out to broker inspect / Redis comms — `soft_time_limit` raises
+    # SoftTimeLimitExceeded only between Python bytecode ops, so a
+    # blocking C-level call doesn't yield. The real fix for monitor
+    # tasks that exhibit this pattern is probe decomposition (split
+    # into per-check cadence tasks). See docs/topics/celery-workers.md
+    # for the operator playbook addendum.
     from core.tasks_ops import _impl_monitor_celery_health
     return _impl_monitor_celery_health()
 @shared_task
