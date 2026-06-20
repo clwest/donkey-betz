@@ -97,15 +97,15 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1177 — CURRENT ENTRY POINT
+## SESSION 1178 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1176 closed cleanly via Rigby.** 3 findings filed in deliverable `61247479` (Local QA workspace). Success path of the follow-up wake feature is fully verified end-to-end; failed-branch verified at backend; visual confirmation deferred (see F3). Close handoff: [`docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md`](docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md).
+**Session 1177 closed with 3 PRs merged to main.** F1 + F3 root causes from Session 1176 both fixed (PR #2342 + PR #2343). Failed-banner visual confirmation done — both branches of the follow-up wake feature are fully wired end-to-end. Close handoff: [`docs/handoffs/SESSION_1177_AGENT_DISPATCH_DEFENSE.md`](docs/handoffs/SESSION_1177_AGENT_DISPATCH_DEFENSE.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce`): `platform_config_tool overview` → confirm `service_context: local`.
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce` — still healthy from Session 1177): `platform_config_tool overview` → confirm `service_context: local`.
 3. Sanity that the feature is alive on main:
 
 ```bash
@@ -133,25 +133,45 @@ print('schedule_followup in schemas:', 'schedule_followup' in src)
 
 If something is missing → re-read the Session 1175 close handoff's 24h watch checklist for diagnostics.
 
-### PRIORITY 1 — Pick up Session 1176 deferred items (pick one by appetite)
+### PRIORITY 1 — Check in with Rigby on agent work direction
 
-Per [`docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md`](docs/handoffs/SESSION_1176_AGENT_DISPATCH_RECON_CLOSE.md), three items deferred (not blocking):
+Chris's explicit instruction at Session 1177 close: "check back in with Rigby on where we are working with the Agents and what's next on the list."
 
-| Item | Why | Effort |
+Rigby has agent-side context she may have queued during Session 1177's three PRs landing. Recommended kickoff prompt:
+> "Session 1178 kickoff. Session 1177 shipped 3 PRs (#2341 docs handoff, #2342 F1 fix, #2343 F3 fix). Both branches of the follow-up wake feature now fully wired. What's next on the agent work list from your perspective?"
+
+Three concrete directions the conversation can route to:
+
+| Direction | Why | Effort |
 |---|---|---|
-| **A. Visual confirmation of FAILED-status banner** | Backend verified `mode=delivered_immediately, state=fired` on `status=failed` (execution `6e9e42ad`); F3 EditorAgent non-determinism blocked visual repro. Use ContentWriterAgent with deliberately-missing required field, or Django shell to mark a fresh PA-originated execution as failed manually. Then schedule_followup + watch browser. | 30 min |
-| **B. F1 root cause — `deliverable_tool update` silent fallback** | Two repros at ~7100 (nested JSON) and ~7260 (clean prose) both fell back to `action=list` instead of updating. Strong signal for size-based threshold. Read `deliverable_tool` dispatcher (likely `core/services/td_handlers_deliverables.py` or similar), trace the silent fallback. Workaround in place (`append`) — fix is correctness, not blocking. | 1-2 hours |
-| **C. F3 root cause — EditorAgent non-deterministic on empty content** | Two runs, IDENTICAL input, 5x runtime delta: one fail-loud (3.6s), one generation-fallback (17.7s). Per `feedback_editor_fail_loud` memory rule, fix belongs at dispatcher layer not agent body. Trace generation-fallback path; gate at `tool_dispatcher` for empty content. | 2-3 hours, may need design discussion |
-
-Or pick from the previously-deferred Session 1175 open queue (still on the table): conv-ID divergence recon, banner artifact-pointer enrichment (wire `artifact_pointers` as click-through links), Phase 2 c1 auto-wake.
-
-### PRIORITY 2 — Cells 3-8 of Pass B matrix (optional continuation)
-
-Session 1176's tracking deliverable `61247479` has the Cells 3-8 scaffold ready: revoke/cancel terminal, refresh-mid-run WS reconnect, second-tab dedup, media-artifact agent path. Resume per the cell-by-cell pattern (Claude drafts shape + verifies; Rigby owns dispatch + verification) if more stress-test coverage is wanted on the Session 1175 vertical slice.
+| **A.** Session 1175 deferred open queue: conv-ID divergence recon / banner artifact-pointer click-through / Phase 2 c1 auto-wake | Original Session 1175 close items, all on the follow-up wake feature. The auto-wake is the highest leverage but needs Rigby design ratification on dedupe + opt-out. | varies |
+| **B.** Continue Session 1176's Pass B matrix (Cells 3-8) — revoke, refresh-mid-run, second-tab, media-artifact | More stress-test coverage on the Session 1175 vertical slice. Tracking deliverable `61247479` has the scaffold ready. | 1-2h |
+| **C.** Stress-test more of the PA tool catalogue beyond agent dispatch — pick high-value tools (gateway_tool / ops_tool actions / governance_tool) and run the same "find half-wired paths" pattern that surfaced F1 + F3 | Broaden the recon outside the follow-up wake feature; Rigby tools she avoids calling = a good filter | varies |
+| **D.** EditorAgent observability follow-up (C3) — ops dashboard for "X% of EditorAgent calls used dispatcher gather" + per-call provenance review | Builds on Session 1177's PR #2343 (C1 surfaced the data; C3 makes it operator-visible) | several hours |
 
 ### Carryover from Sessions 1171–1174 (not yet acted on)
 
-The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172–1176 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1176_*`. Review there if any are now blocking; otherwise they continue to ride.
+The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172–1177 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1177_*`. Review there if any are now blocking; otherwise they continue to ride.
+
+---
+
+## SESSION 1177 CLOSED — Agent dispatch defense (F1 + F3 root causes closed) (2026-06-20)
+
+**3 PRs merged.** Full handoff: [`docs/handoffs/SESSION_1177_AGENT_DISPATCH_DEFENSE.md`](docs/handoffs/SESSION_1177_AGENT_DISPATCH_DEFENSE.md).
+
+| PR | Theme | SHA |
+|---|---|---|
+| **#2341** | `docs(session-1176)` — close handoff (carried over) | `fba55cc5` |
+| **#2342** | `fix(session-1177)` — F1 root cause: surface LLM tool-call args parse failure as typed error | `e9967bc8` |
+| **#2343** | `fix(session-1177)` — F3 root cause: EditorAgent dispatcher `content_provenance` + opt-in `strict_content_required` | `75993feb` |
+
+**Item A (failed-banner visual) verified end-to-end:** manual-mutation pattern (Django shell `.update()` on a completed execution → set status=failed → schedule_followup → watch browser). First attempt → no banner because WS hadn't connected to the new conversation `pa-9b82bcc72e1945ce` yet. After `Cmd+Shift+R` → banner + chat bubble rendered correctly with status=failed and error message. **F4** (UI filters failed) and **F4b** (immediate-fire path lacks persistence) both falsified — both branches of the Session 1175 wake feature handle failure correctly.
+
+**Scope B' (per-handler arg validation) investigated and skipped:** `_resolve_deliverable` at `td_handlers_agents.py:1644` and per-action `ValueError` raises already defend `deliverable_tool.update`/`create`/`append`/`detail`/`delete`/`export_pdf`. The only silent-fallback path that existed was the JSON parse swallow PR #2342 closed.
+
+**Carry-forward diagnostic:** WS broadcasts to empty groups vanish silently — by design in Channels. If "where's the banner?" comes up again, first check WS connection state on the right conversation before deeper bisect.
+
+**Conversations:** `pa-9b82bcc72e1945ce` still healthy at close — Session 1178 should reuse it unless Rigby flags otherwise.
 
 ---
 
