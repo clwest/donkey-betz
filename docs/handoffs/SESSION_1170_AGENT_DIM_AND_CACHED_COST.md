@@ -21,8 +21,10 @@ After PR #2322 (the dim caller fix) merged and validation passed, the session pi
 |---|---|---|
 | **#2322** | `fix` — agent_name dim populates for `claude_code_agent_respond` (Phase 1 of kwargs-form migration) | `f709f422` |
 | **#2323** | `fix` — apply cached-input pricing to GPT-5.2 cost estimator (`v2_cached_tokens`) | `fe72a369` |
+| **#2325** | `fix` — attach local `long_running` worker to `ml` queue (Makefile topology match) | `d339de9e` |
+| **#2326** | `feat` — `content_tool.content_complete` PA action (closes terminal-state tool gap) | `3d194185` |
 
-**21 new tests** total across 2 new test files; all pass green.
+**33 new tests** total across 3 new test files; all pass green.
 
 ---
 
@@ -233,4 +235,50 @@ Deliverable `b58b20b3` on chris-personal workspace. Three clusters: Cluster A (N
 
 ---
 
-**End of Session 1170 handoff.**
+---
+
+## Addendum — PR #2325 + #2326 (added after initial handoff merged)
+
+Two more PRs landed at session close after the operational red-items surfaced via Rigby:
+
+### PR #2325 — attach local `long_running` worker to `ml` queue
+
+The local Makefile launched the long_running worker with `--queues=long_running` only, despite `docs/topics/celery-workers.md` documenting it as ml's consumer on Railway. Any ml-routed task on local would silently pile up indefinitely. ml depth happened to be 0 at session entry only because producer tasks are also disabled — the structural gap was the issue.
+
+Single Makefile line change: `--queues=long_running` → `--queues=long_running,ml`. Verified live via `celery -A core inspect active_queues` post-restart.
+
+### PR #2326 — `content_tool.content_complete` PA action
+
+`Deliverable.status='completed'` was a valid terminal state per the schema (`archived` / `blocked` / `completed` / `ready`) but no PA tool action surfaced the transition. Discovered during the publish-ready backlog triage when Rigby couldn't flip two COO diagnostics out of `ready` and fell back to a title-prefix `"COMPLETED — …"` + tag convention — functional but lost queryability of the real status.
+
+New action mirrors `content_reject`'s shape: no precondition on current status, feedback persisted to `metadata['complete_reason']`, emits `_record_content_feedback` row with `action='complete'`. Aliases: `mark_complete` / `mark_completed` / `done` → `complete`. 12 new tests. Schema added to `pa_tool_schemas.py` so GPT-5.2 can call it.
+
+**Live verification post-merge:** Rigby fired `content_tool.content_complete` on the two COO diagnostics:
+- `adcfac88` → `status=completed` ✓ + `metadata.complete_reason='Acted on; closing loop — Session 1170 tool-gap PR landed'`
+- `48a8bd2a` → same ✓
+
+Both flipped from the title-prefix workaround to true terminal state. End-to-end loop closed on the publish-ready backlog triage from session entry.
+
+### New behavioral invariant (post-#2326)
+
+7. **`Deliverable.status='completed'` is reachable via PA tool.** `content_tool.content_complete(id, feedback)` flips any deliverable to terminal `completed` and persists `feedback` to `metadata['complete_reason']`. Use for one-shot analyses + ops snapshots whose terminal state is "done, keep for reference" rather than "rejected, hide" (`archive`) or "publish externally" (`publish`). Three aliases: `mark_complete` / `mark_completed` / `done`.
+
+### New 24h watch (add to PR #2322/#2323 checklist)
+
+```bash
+# (5) content_complete action is callable + flips to true status='completed'
+.venv/bin/python manage.py shell -c "
+from core.models import Deliverable
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+completed_w_reason = Deliverable.objects.filter(
+    status='completed',
+    metadata__has_key='complete_reason',
+    updated_at__gte=since,
+)
+print(f'completed via PA in last 24h: {completed_w_reason.count()}')
+"
+```
+
+**End of Session 1170 handoff (with #2325 + #2326 addendum).**
