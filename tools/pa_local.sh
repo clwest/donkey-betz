@@ -22,4 +22,4 @@
 # pa-f93d77e34f5d context is healthy and worth keeping).
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-f93d77e34f5d
+python tools/pa_chat.py "$@" --tools --conversation pa-639751f029bc432f
