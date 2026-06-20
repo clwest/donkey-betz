@@ -4389,6 +4389,43 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── Session 1174 PR-2b-1: Follow-up subscription ────────────────────────
+    {
+        "type": "function",
+        "name": "schedule_followup",
+        "description": (
+            "Subscribe THIS conversation to a completion notification for a previously "
+            "dispatched async agent task. Call this RIGHT AFTER you dispatch a long-running "
+            "agent (run_agent / workflow_orchestration_agent / etc.) so the user gets an "
+            "automatic 'agent finished' message in this same conversation when the task "
+            "completes — instead of you going silent until the user manually asks. "
+            "Pass `execution_id` (UUID returned by execution_history_tool) when you have it, "
+            "or `task_id` (Celery task_id returned by the dispatch tool) as a convenience "
+            "lookup. after_seconds is a TTL — if the agent hasn't finished in that window, "
+            "the subscription quietly expires. Cap 600s. If the agent is already done at "
+            "subscribe time, the notification fires immediately. Safe to call multiple times "
+            "with the same IDs — a unique constraint dedupes per (execution, conversation)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "execution_id": {
+                    "type": "string",
+                    "description": "Canonical UUID of the AgentExecution row (from execution_history_tool detail/recent).",
+                },
+                "task_id": {
+                    "type": "string",
+                    "description": "Celery task_id from the dispatch tool (e.g. run_agent's task_id). Used as fallback lookup if execution_id isn't known yet.",
+                },
+                "after_seconds": {
+                    "type": "integer",
+                    "description": "TTL window in seconds (default 60, max 600). Subscription auto-expires if no completion in this window.",
+                },
+            },
+            "required": [],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──

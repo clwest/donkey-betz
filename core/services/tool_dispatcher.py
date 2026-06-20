@@ -351,6 +351,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Universal tools
         self.register("universal_agent_tool", self._handle_universal_agent)
+        # Session 1174 PR-2b-1: agent-follow-up wake subscription tool.
+        self.register("schedule_followup", self._handle_schedule_followup)
         self.register("workspace_tool", self._handle_workspace)
         self.register("media_tool", self._handle_media)
         self.register("voice_clone_tool", self._handle_voice_clone)
