@@ -97,50 +97,78 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1179 — CURRENT ENTRY POINT
+## SESSION 1180 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1178 closed with Phase 2 auto-wake LIVE and verified end-to-end on main.** Four PRs merged: #2345 (Phase 2 feature), #2347 (TTL hotfix bump 30→60s caught via live verify), #2348 (cross-path invariant test), #2346 (docs close). Workers were already restarted at Session 1178 close. Close handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
+**Session 1179 closed with Pass B matrix Cells 3-8 drafted in deliverable `61247479-1976-4ba8-bc8a-ea67f66ead45`.** No code changes. No PRs. The matrix now has 5 predicted findings backed by specific file:line code-walk references. Session 1180 = live execution + PASS/FAIL evidence collection.
+
+**Pinned conversation rotated** — `pa-9b82bcc72e1945ce` retired at 60/100; successor `pa-a5fecc400c0f4152` ("Session 1180 — Pass B matrix execution + evidence") is in `tools/pa_local.sh`. Verify ownership belongs to chris before first use per `feedback_pa_local_verify_ownership` memory.
+
+Close handoff: [`docs/handoffs/SESSION_1179_PASS_B_MATRIX_DRAFTED.md`](docs/handoffs/SESSION_1179_PASS_B_MATRIX_DRAFTED.md). Session 1178 (Phase 2 auto-wake): [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce` — still healthy from Session 1178): `platform_config_tool overview` → confirm `service_context: local`.
-3. Auto-wake spot check — last 24h subscription create + fire rate:
-   ```bash
-   USE_PGBOUNCER=1 .venv/bin/python manage.py shell -c "
-   from core.models_unified_system import AgentFollowupSubscription
-   from datetime import timedelta
-   from django.utils import timezone
-   since = timezone.now() - timedelta(hours=24)
-   s = AgentFollowupSubscription.objects.filter(created_at__gte=since)
-   print(f'last 24h: total={s.count()} fired={s.filter(state=\"fired\").count()} armed={s.filter(state=\"armed\").count()} expired={s.filter(state=\"expired\").count()}')"
-   ```
-4. Any `[auto_followup] fail-open` lines in worker logs since last session?
-   ```bash
-   grep '\[auto_followup\] fail-open' celery-long-running.log celery*.log 2>/dev/null
-   # Expect: empty. If non-empty, each line has execution=<uuid> conv=<id> for fast correlation.
-   ```
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-a5fecc400c0f4152` — fresh thread for Pass B execution): `platform_config_tool overview` → confirm `service_context: local`.
+3. Pull the Pass B matrix scaffold from deliverable `61247479-1976-4ba8-bc8a-ea67f66ead45`. Skim Cells 3-8 + their "Watch" + "Pass" + "Fail signature" sections so the predicted findings are top-of-mind during execution.
 
-### PRIORITY 1 — Pick next agent work thread (with Rigby)
+### PRIORITY 1 — Live-execute the Pass B matrix (Cells 3-8)
 
-Phase 2 auto-wake is the natural close of the "make Rigby tell you when an agent finishes" thread from Session 1174. Open follow-ups (Rigby's ranked Session 1178 order):
+Walk each cell's "Dispatch sequence" + "Watch" sections in the browser + DB + worker log. Record PASS/FAIL with concrete evidence (execution_ids, subscription_ids, SQL counts, log snippets, screenshots). Estimated ~1 hour total (~10 min per cell including write-up). Recommended order (highest-prediction-confidence first):
 
-| Item | Why deferred from Session 1178 | Lean |
+| Order | Cell | Theme | Predicted finding (code:line) | Why first |
+|---|---|---|---|---|
+| 1 | **5** | Second-tab dedupe | `consumers_pa_conversation.py:103-139` — `create_completion_row` is `.create()` not `.get_or_create()` | Single SQL count assertion = easiest to verify |
+| 2 | **3** | Revoke/cancel terminal | `agent_router.py:1584-1597` — cancel path doesn't call `fire_agent_followup_subscriptions` | Backend-only, no UI dependency |
+| 3 | **4** | Refresh-mid-run + WS reconnect | `paStore.ts:48` — no "fetch missed since" replay | Clean WS reconnect test |
+| 4 | **7a** | 2-agent fanout | `paStore.ts:350-356` — `recentAgentCompletion` single state slot, no queue | Banner overwrite is visually reproducible |
+| 5 | **8** | Media-artifact agent | `tasks_agents.py:133` — `artifact_pointers={}` hardcoded | image_generation_agent runtime is biggest unknown |
+| 6 | **6** | Tab-not-focused | (behavioral test, no defect predicted) | Persistence proof, lowest defect probability |
+
+Cells 1-2 are already PASS from Session 1176; no need to re-run.
+
+### PRIORITY 2 — After execution, ship the Phase 3 follow-up PRs
+
+Each predicted FAIL becomes a focused PR:
+
+| PR scope | File:line | Estimated effort |
 |---|---|---|
-| **1.** `auto_followup_skipped` traceability stamp on AgentExecution.output_data when opt-out path taken | Pulled to keep PR #2345 scope narrow | 1-file follow-up PR; Rigby's optional Session 1178 add |
-| **2.** Phase 1 open follow-up #6 — banner enrichment with artifact_pointer click-through | Visual nice-to-have; deferred | Pick after live-verify confirms Phase 2 stable |
-| **3.** Phase 1 open follow-up #4 — multi-agent fan-out rollup | Bigger design work; needs subscription rollup helper + new tool variant | Defer until Chris has a real "I dispatched 3 agents" pain |
-| **4.** Session 1175 Pass B matrix cells 3-8 — revoke, refresh-mid-run, second-tab, media-artifact | Stress-test coverage on Phase 1 vertical slice; tracking deliverable `61247479` ready | Resume only if F1+F3 surface new regressions in the wild |
-| **5.** EditorAgent observability dashboard (C3 from Session 1177) | Builds on PR #2343 `content_provenance` | Picks up steam if Chris asks for it |
-| **6.** Per-agent / global auto-wake config | Phase 3; needs config table or AssistantProfile field | Defer until per-call opt-out proves insufficient |
+| Add `fire_agent_followup_subscriptions(execution_record)` to cancel path | `agent_router.py:1597` | 1-file fix + test |
+| `create_completion_row` → `get_or_create` + DB partial unique index on `(conversation_id, metadata->>'execution_id')` | `consumers_pa_conversation.py:103-139` + migration | 1-file fix + migration + test |
+| `paStore.handleAgentCompleted` → queue + banner displays head, fades 6s per item | `paStore.ts:350-356` + `AgentCompletionBanner.tsx` | small frontend PR |
+| `fire_agent_followup_subscriptions` populates `artifact_pointers` from `AgentExecution.output_data` + banner renders click-through | `tasks_agents.py:127-134` + banner | moderate scope |
+| `GET /api/pa/conversations/<id>/completions?since=<timestamp>` + paStore calls on WS reconnect | new endpoint + paStore | longest of the 5 |
 
-Recommended kickoff with Rigby:
-> "Session 1179 kickoff. Phase 2 PR #2345 [merged/open]. [Live verify result]. From the carry-forward in Session 1178's close handoff, what's the highest-leverage next thread?"
+Order by ROI: cell-3 cancel fix is 1 file, ships fastest. Then bubble dedupe (cell-5). Then banner queue (cell-7). Artifact pointers + WS replay take more design.
+
+### Carryover (still riding from Sessions 1171-1178)
+
+PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Plus Session 1178 deferred items: `auto_followup_skipped` traceability stamp, EditorAgent observability dashboard (C3 from #2343).
 
 ### Carryover from Sessions 1171–1175 (not yet acted on, still riding)
 
 PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1178_*`. Review there if any are now blocking; otherwise they continue to ride.
+
+---
+
+## SESSION 1179 CLOSED — Pass B matrix Cells 3-8 drafted in deliverable 61247479 (2026-06-20)
+
+**0 PRs.** Full handoff: [`docs/handoffs/SESSION_1179_PASS_B_MATRIX_DRAFTED.md`](docs/handoffs/SESSION_1179_PASS_B_MATRIX_DRAFTED.md).
+
+| Cell | Theme | Predicted finding (code:line) |
+|---|---|---|
+| **3** | Revoke/cancel terminal | `agent_router.py:1584-1597` — cancel path doesn't call `fire_agent_followup_subscriptions` (5 sites in `tasks_agents.py` do) |
+| **4** | Refresh-mid-run + WS reconnect | Banner missed; no "fetch missed since" replay. Bubble persists via `/api/pa/conversations/<id>/` re-fetch |
+| **5** | Second-tab dedupe | `consumers_pa_conversation.py:103-139` — `create_completion_row` is plain `.create()`, two consumers = two rows |
+| **6** | Tab-not-focused | Persistence proof, no defect predicted |
+| **7** | Multi-agent fanout (2→3) | `paStore.ts:350-356` — `recentAgentCompletion` single state slot, no banner queue |
+| **8** | Media-artifact agent | `tasks_agents.py:133` — `artifact_pointers={}` hardcoded since PR-2a; never wired up |
+
+Five of six cells have specific file:line code-walk references predicting their fail signature. Session 1180 = live execution + PASS/FAIL evidence collection (~1 hour, ~10 min/cell). Each predicted FAIL becomes a focused Phase 3 PR.
+
+**Deliverable `61247479-1976-4ba8-bc8a-ea67f66ead45` grew from 13,171 → 33,138 chars across 7 `deliverable_tool append` calls (6 cells + Rigby's auto-summary footer).** `feedback_deliverable_tool_use_append_for_large_payloads` reaffirmed — `update` would have rejected at least Cells 4-8.
+
+**Conversations:** `pa-9b82bcc72e1945ce` retired at 60/100 (~30 turns, ~15k tokens, 10 topics — `suggest_fresh` per `session_tool health_check`). Successor `pa-a5fecc400c0f4152` ("Session 1180 — Pass B matrix execution + evidence") created; `tools/pa_local.sh` updated.
 
 ---
 
