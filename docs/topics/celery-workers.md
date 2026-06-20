@@ -228,9 +228,29 @@ Procfile caps memory per worker child (`--max-memory-per-child=150000` etc., kil
 
 **PA surface:** `ops_tool` action `memory_pressure` reads the latest JSONL line (reduce-from-source-of-truth) and projects per-worker rows + `overall_status` + `top_offenders` + `recommended_actions`. No re-classification — the cadence task owns thresholds.
 
+**Rollup on `ops_tool.overview` (Session 1168, PR #2312):** `_ops_memory_pressure_rollup` projects the same snapshot to `{overall_state, top_offender, worker_count, downshift_recommended}` for embedding in the default ops snapshot. Same source taxonomy (`OK`/`WARN`/`CRIT`) — never re-classifies (Session 1164 rule). Parallel to `_ops_queue_pressure_rollup`.
+
+**`cap_coverage_pct` on `ops_tool.memory_pressure` (Session 1168, PR #2312):** fraction (`0.0`–`100.0` or `None`) of sampled workers whose `--max-memory-per-child` cap parsed successfully. Distinguishes "OK because we sampled them and they're fine" from "OK because no caps were parsed at all" — important when reading the rollup on local dev where Procfile caps aren't applied (see local development gotcha below).
+
 **On-demand CLI:** `python manage.py worker_memory_health` (add `--json` for machine output) calls the same `build_snapshot()` for live inspection without waiting for the next 5-min fire.
 
-**Local development gotcha:** `make celery` doesn't pass `--max-memory-per-child` (that's a Procfile/Honcho concept). Locally `cap_bytes` is parsed as `None`, RSS is still recorded, but `pct` is `None` and status stays `OK` regardless of pressure. This is correct degraded-mode behavior — production runtime (Railway/Heroku reading Procfile) is where the cap actually applies.
+**Local development gotcha:** `make celery` doesn't pass `--max-memory-per-child` (that's a Procfile/Honcho concept). Locally `cap_bytes` is parsed as `None`, RSS is still recorded, but `pct` is `None` and status stays `OK` regardless of pressure. `cap_coverage_pct` will be `0.0` on local. This is correct degraded-mode behavior — production runtime (Railway/Heroku reading Procfile) is where the cap actually applies.
+
+### Wall-clock telemetry — top_consumers (Session 1167 — COO Backlog #7)
+
+`ops_tool` action `top_consumers` (also bundled into `ops_tool.overview`) per-`task_name` aggregation over `CeleryTaskEvent.duration_seconds` for one window (default 24h), `p95` computed server-side via PostgreSQL `percentile_cont`. Single aggregate query; no Python-side sort.
+
+**Operator playbook — monitor tasks in top_consumers ⇒ P1 reliability debt (Rigby's standing rule):**
+
+If a *monitor* task (`monitor_celery_health`, `capture_pa_acks_health_snapshot`, `capture_worker_memory_snapshot`, etc.) appears in `top_consumers` for any window, treat it as **P1 reliability debt** and queue remediation. Reasoning: monitor tasks are supposed to be small and bounded (the whole point is "snapshot quickly, write, exit"). A monitor task at the top of wall-clock consumption means either (a) the probe has grown unbounded internal work, (b) the queue placement is wrong (monitor on a busy queue, contending with real work), or (c) the timeout isn't tight enough and a stalled probe fire is occupying the slot for minutes.
+
+The remediation pattern is always the same:
+
+1. **Queue placement:** move the monitor to a dedicated low-traffic queue (`broadcast` or a custom `ops` queue) so it can't get stuck behind real workload.
+2. **Timeouts:** set both `soft_time_limit` and `time_limit` on the `@shared_task` decorator — monitors should never need more than 30-60s.
+3. **Probe decomposition:** split any monitor that does multiple things (DB query + Redis check + filesystem scan) into separate cadence tasks so a single slow leg doesn't drag the others.
+
+Session 1167 PR #2306 live smoke first surfaced this on `monitor_celery_health` (`p95=1048s`) and `capture_pa_acks_health_snapshot` (`p95=1880s`). Both are queued as Session 1169 work per `00-START-NEXT-SESSION.md`.
 
 ## ML Import Chain
 
