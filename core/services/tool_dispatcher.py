@@ -572,6 +572,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         agent_name: str = 'Direct',
         conversation_id: Optional[Any] = None,
         record_telemetry: bool = True,
+        pa_trace_id: Optional[str] = None,
     ) -> ToolResult:
         """
         Execute a tool with full error handling.
@@ -593,6 +594,13 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 these rows, leaving every other caller in a telemetry
                 blind spot. Pass False if the caller wants exclusive
                 control over recording (legacy path).
+            pa_trace_id: Session 1172 — PA's own trace_id (e.g. "pa-1-..."),
+                used as the join key when emitting rigby.tool.started /
+                rigby.tool.completed events to the chat UI ticker.
+                Optional; when None (default), no live status events are
+                emitted (backward-compatible for non-PA dispatch paths).
+                When provided alongside `conversation_id`, lifecycle
+                events flow to `pa_conversation_<conversation_id>`.
 
         Returns:
             ToolResult with structured response (never raises)
@@ -603,6 +611,19 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         action = payload.get('action', '_default') if isinstance(payload, dict) else '_default'
 
         logger.info(f"[{trace_id}] Executing tool: {tool_name}")
+
+        # Session 1172: live status ticker for the chat UI. Fire-and-forget;
+        # no-op when pa_trace_id / conversation_id are absent.
+        from core.services.pa_status_events import (
+            emit_tool_started,
+            emit_tool_completed,
+        )
+        emit_tool_started(
+            pa_trace_id=pa_trace_id,
+            conversation_id=str(conversation_id) if conversation_id else None,
+            tool_call_id=trace_id,
+            tool_name=tool_name,
+        )
 
         # Server-side tool access enforcement via AssistantProfile
         if user_id:
@@ -630,6 +651,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                                 agent_name=agent_name,
                                 conversation_id=conversation_id,
                             )
+                        emit_tool_completed(
+                            pa_trace_id=pa_trace_id,
+                            conversation_id=str(conversation_id) if conversation_id else None,
+                            tool_call_id=trace_id,
+                            tool_name=tool_name,
+                            latency_ms=latency_ms,
+                            status="error",
+                        )
                         return result_obj
             except Exception as e:
                 logger.debug(f"[{trace_id}] AssistantProfile check skipped: {e}")
@@ -653,6 +682,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
+            emit_tool_completed(
+                pa_trace_id=pa_trace_id,
+                conversation_id=str(conversation_id) if conversation_id else None,
+                tool_call_id=trace_id,
+                tool_name=tool_name,
+                latency_ms=latency_ms,
+                status="error",
+            )
             return result_obj
 
         try:
@@ -733,6 +770,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
+            emit_tool_completed(
+                pa_trace_id=pa_trace_id,
+                conversation_id=str(conversation_id) if conversation_id else None,
+                tool_call_id=trace_id,
+                tool_name=tool_name,
+                latency_ms=latency_ms,
+                status="ok",
+            )
             return result_obj
 
         except asyncio.TimeoutError:
@@ -754,6 +799,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
+            emit_tool_completed(
+                pa_trace_id=pa_trace_id,
+                conversation_id=str(conversation_id) if conversation_id else None,
+                tool_call_id=trace_id,
+                tool_name=tool_name,
+                latency_ms=latency_ms,
+                status="error",
+            )
             return result_obj
 
         except Exception as e:
@@ -775,6 +828,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     agent_name=agent_name,
                     conversation_id=conversation_id,
                 )
+            emit_tool_completed(
+                pa_trace_id=pa_trace_id,
+                conversation_id=str(conversation_id) if conversation_id else None,
+                tool_call_id=trace_id,
+                tool_name=tool_name,
+                latency_ms=latency_ms,
+                status="error",
+            )
             return result_obj
 
     # ── ToolCallRecord telemetry (Session 1115 finding 17) ─────────────────
