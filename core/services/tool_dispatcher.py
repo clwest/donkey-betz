@@ -1070,18 +1070,48 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # name in the task text but doesn't include the actual content.
         # Fix: gather recent deliverables from the workspace and concatenate
         # them as the content to edit.
-        if agent_name == 'EditorAgent' and 'content' not in context and 'blog_id' not in context:
+        #
+        # Session 1177 F3 (C1+C2): the gather behavior was previously silent —
+        # callers couldn't tell whether the agent edited their content or a
+        # random workspace doc the dispatcher auto-injected. Now we (1) capture
+        # provenance metadata about what the dispatcher actually fed the agent
+        # and stash it under context['_dispatch_metadata']['content_provenance']
+        # for the agent to surface in AgentResult, and (2) honor an opt-in
+        # `strict_content_required=True` flag that skips gather entirely so the
+        # agent fail-louds on caller bugs. Default behavior unchanged (gather
+        # ON, fallback to task text) to avoid breaking production flows.
+        if agent_name == 'EditorAgent':
+            from core.services.editor_dispatch_helpers import build_content_provenance
+            has_caller_content = bool(context.get('content') or context.get('blog_id'))
+            strict_content_required = bool(context.get('strict_content_required', False))
             workspace_id = context.get('workspace_id') or context.get('workspace')
-            gathered_content = self._gather_workspace_content_for_editor(workspace_id, task_text)
-            if gathered_content:
-                context['content'] = gathered_content
+            if has_caller_content:
+                content_provenance = build_content_provenance(mode='caller_provided')
+            elif strict_content_required:
+                # Opt-in skip — let the agent fail-loud per `feedback_editor_fail_loud`.
+                content_provenance = build_content_provenance(mode='none')
             else:
-                # Last resort: use task text itself
-                context['content'] = {
-                    'title': task_text[:120],
-                    'full_text': task_text,
-                    'sections': [],
-                }
+                gathered_content = self._gather_workspace_content_for_editor(workspace_id, task_text)
+                if gathered_content:
+                    context['content'] = gathered_content
+                    content_provenance = build_content_provenance(
+                        mode='gathered_workspace_deliverable',
+                        gathered=gathered_content,
+                        gather_window_minutes=60,
+                    )
+                else:
+                    # Last resort: use task text itself
+                    context['content'] = {
+                        'title': task_text[:120],
+                        'full_text': task_text,
+                        'sections': [],
+                    }
+                    content_provenance = build_content_provenance(
+                        mode='task_text_fallback',
+                        gather_window_minutes=60,
+                    )
+            dispatch_metadata = context.setdefault('_dispatch_metadata', {})
+            dispatch_metadata['content_provenance'] = content_provenance
 
         # Session 1090: ContentWriterAgent uses context['research'] as source
         # material.  When Rigby dispatches it referencing workspace deliverables

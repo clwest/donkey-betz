@@ -256,6 +256,13 @@ The brief is your rubric. The draft is what you're grading."""
                         agent_name=self.name,
                     )
 
+            # Session 1177 F3 (C1): pick up the provenance the dispatcher
+            # stashed under context['_dispatch_metadata']. Surfaced in the
+            # AgentResult below so callers can tell whether the agent
+            # edited their content, a dispatcher-gathered workspace
+            # deliverable, or fell back to task text.
+            dispatch_metadata = dict(context.get('_dispatch_metadata') or {})
+
             if not content:
                 # EditorAgent's job is to EDIT, not generate. If the caller
                 # didn't pass content (or a resolvable blog_id), the caller
@@ -269,6 +276,7 @@ The brief is your rubric. The draft is what you're grading."""
                     message="No content provided. Include 'blog_id' or 'content' in context.",
                     error="No content provided. Include 'blog_id' or 'content' in context.",
                     agent_name=self.name,
+                    data={'dispatch_metadata': dispatch_metadata} if dispatch_metadata else {},
                 )
 
             # Determine focus areas
@@ -363,6 +371,11 @@ The brief is your rubric. The draft is what you're grading."""
                     'focus_areas': focus_areas,
                     'blog_id': str(blog_id) if blog_id else None,
                     'saved': context.get('save', False),
+                    # Session 1177 F3 (C1): surface dispatcher provenance
+                    # so callers can tell whether the agent edited their
+                    # content or a workspace deliverable the dispatcher
+                    # auto-injected.
+                    'dispatch_metadata': dispatch_metadata,
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time,
