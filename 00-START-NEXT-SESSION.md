@@ -97,71 +97,92 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1168 — CURRENT ENTRY POINT
+## SESSION 1169 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify the Session 1167 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-f93d77e34f5d`.
+**Verify the Session 1168 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-639751f029bc432f` (created Session 1168 entry; consider fresh thread if health < 50). Disk check: `df -h /System/Volumes/Data` (Session 1168 close: 110 GiB free).
 
-**Disk check:** `df -h /System/Volumes/Data`. If < 10 GiB free, run cleanup playbook from `feedback_pa_hang_from_disk_pressure.md`.
-
-**Session 1167 post-merge sanity check** — verify the three PRs are loaded + active:
+**Session 1168 post-merge sanity check** — verify the five PRs are loaded + active:
 
 ```bash
-# (1) worker-memory-capture cadence is firing — should be ~288 lines/day at */5
-wc -l logs/worker_memory/$(date -u +%Y-%m-%d).jsonl
-# Expect: steady accrual. First-day expectation lower (session started mid-day).
+# (1) PR #2310 + #2311 — deliverable create/update through live PA via Rigby:
+#       deliverable_tool.create(title="Quick test", content="Short body.")  → ok=true
+#       deliverable_tool.create(title="Smoke test", content="anything")     → ok=false, error_code=deliverable_gated
+#       deliverable_tool.update(id="<any-orphan>", workspace_id="<chris-personal>") → ok=true with 'workspace' in updated_fields
+# (Carry-over verification list lives in docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md "24h watch checklist")
 
-# (2) schema_version=1 + sustain_gating block on every line
-tail -1 logs/worker_memory/$(date -u +%Y-%m-%d).jsonl | .venv/bin/python -m json.tool | head -20
-# Expect: schema_version=1, cadence_seconds=300, sustain_gating with 5 fields.
+# (2) PR #2312 — ops_tool.overview returns a memory_pressure block:
+#       Through Rigby: ops_tool.overview → expect result['memory_pressure'] = {overall_state, top_offender, worker_count, downshift_recommended, ...}
+#       Through Rigby: ops_tool.memory_pressure → expect cap_coverage_pct field (float or None)
 
-# (3) Any sustained CRIT escalations
-grep -o '"escalated_triggers":\[[^]]*\]' logs/worker_memory/$(date -u +%Y-%m-%d).jsonl | sort | uniq -c | sort -rn
-# Expect: bulk empty lists. Any non-empty = real downshift-recommendation event.
+# (3) PR #2314 — local-safe beat denylist held on local DB:
+.venv/bin/python manage.py shell -c "
+from django_celery_beat.models import PeriodicTask
+from core.management.commands.add_critical_celery_tasks import LOCAL_DENY_TASKS
+rows = list(PeriodicTask.objects.filter(name__in=LOCAL_DENY_TASKS).values('name', 'enabled'))
+print('Denylist rows ({}/{}):'.format(len(rows), len(LOCAL_DENY_TASKS)))
+for r in sorted(rows, key=lambda r: r['name']):
+    flag = '✗' if r['enabled'] else '✓'
+    print(f'  {flag} {r[\"name\"]} (enabled={r[\"enabled\"]})')
+"
+# Expect: all 6 with ✓ (enabled=False). Any ✗ = re-enabled somewhere; investigate.
 
-# (4) ops_tool.top_consumers SQL stays bounded
-.venv/bin/python manage.py dbshell -- -c "
-EXPLAIN ANALYZE
-SELECT task_name, percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_seconds)
-FROM core_celerytaskevent
-WHERE started_at >= now() - interval '24 hours' AND duration_seconds IS NOT NULL
-GROUP BY task_name ORDER BY 2 DESC LIMIT 20;"
-# Expect: index scan on celery_evt_name_time. < 50ms at current scale.
+# (4) No denylisted tasks fired in the last 24h:
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import CeleryTaskEvent
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+denied_dotted = [
+    'intelligence.tasks.scan_income_spider_orchestrator',
+    'intelligence.tasks.scan_spider_opportunities',
+    'core.tasks.run_spider_network',
+    'ai_core.tasks.warm_up_spider_network',
+    'core.tasks.backfill_spider_embeddings',
+]
+hits = CeleryTaskEvent.objects.filter(task_name__in=denied_dotted, started_at__gte=since)
+print(f'Denied-task firings in last 24h: {hits.count()}')
+for h in hits[:10]:
+    print(f'  - {h.task_name} @ {h.started_at}')
+"
+# Expect: zero hits.
 ```
 
-If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery` + `python manage.py add_critical_celery_tasks`. Then re-run.
+If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery` + `python manage.py add_critical_celery_tasks`. Then re-run. Full Session 1168 24h watch checklist lives in [`docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md`](docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md).
 
 ### COO Nervous System Backlog — CLOSED 2026-06-19
 
-All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164-1167. No items remain. **The backlog is complete.**
+All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164-1167. No items remain.
 
-### PRIORITY 1 — Ops cleanup arc (chris-personal SHIP items)
+### chris-personal Known Bugs Queue — CLOSED 2026-06-20
 
-Three deliverables surfaced from the Session 1167 recon of `chris-personal` workspace (50 deliverables, all stale ~6 days; 29 archived end-of-1167 in PR #2308's batch). Rigby triaged + sequenced these as a coherent ops-cleanup arc. Recommended order:
+All 3 SHIP items closed in Session 1168 (PRs #2310, #2311, #2314). The Queue + its companion deliverables (`3973c817`, `f92ab8bb`, `7c332f0d`) are ready for archive / `status=resolved`.
 
-1. **`3973c817-68cc-4706-9797-ff28a95d21a8` — Known Bugs Claude Code Follow-up Queue** — read FIRST. The consolidated bug triage doc Rigby maintained over the past sessions. Triage drives scoping for the next two items + may surface additional small PRs.
-2. **`f92ab8bb-5e40-4249-8927-a19cda7b7418` — BUG: Orphan Newsletter Deliverables Readable but Not Updatable/Attachable** — real platform defect. Claude Code fixes the data-model/update path (probably a permissions / workspace_id check); Rigby verifies the UX flow.
-3. **`7c332f0d-0ac5-4da9-b03b-83df0a31052e` — Local-safe Celery Beat schedule (dev laptop guardrails)** — env-gated task registration + dev-safe default schedule so `make celery` locally doesn't fire production-shaped cadence tasks (e.g. `scan-income-spider-orchestrator` was the original Rigby trigger). **Scope cap (Rigby explicit):** env-gated + dev-safe default. Don't let it sprawl into "perfect."
+### PRIORITY 1 — Session 1168 carryover (small but real)
 
-### PRIORITY 2 — Follow-on items from Session 1167 PRs
+Direct extensions of this session's work. Recommended order — route through Rigby for ratification at entry:
 
-Direct extensions of PR #2305 + #2306 work, all small. Route through Rigby for ordering at session start:
+1. **Layer C — `DeliverableFactory` typed exception + caller sweep.** Promote `core/services/deliverable_factory.py:create_deliverable`'s silent `None` return (line 321) to a typed `DeliverableGatedError` exception, then audit + migrate the 23+ documented call sites. PR #2310's Layer A only hardens the PA dispatcher path; every other caller is still vulnerable to `NoneType.X` crashes on gate rejection. Scope is broader than the chris-personal bug warranted — that's why it was deferred.
+2. **Idempotent enforce-disabled in `add_critical_celery_tasks` (Rigby's late add).** Currently the materializer only PREVENTS new denylisted rows from being added; it doesn't toggle existing rows back to `enabled=False`. Session 1168's post-merge one-time disable was manual. On local-safe mode, the materializer should re-assert `enabled=False` for any denylisted rows it finds. Single-line addition to the `handle()` loop. Small PR.
+3. **Symmetric attach-aware lookup for `append` / `delete` / `link_initiative`.** PR #2311 is update-only. If the newsletter flow exercises append-to-orphan or link-to-orphan, those paths still hit the original `base_qs` filter and fail with "not found." Trigger: a live PA exercise of one of those actions on an orphan.
+4. **Live PA verification of `ops_tool.overview` memory_pressure block + `ops_tool.memory_pressure` cap_coverage_pct field.** Rigby ran the merge-side smoke tests in PR #2312 but didn't dispatch the PA tools post-restart to capture the live shape. Trivially done at Session 1169 open as part of the FIRST THING block above.
 
-1. **`memory_pressure_state` rollup indicator on `ops_tool.overview`** — small extension: GREEN/YELLOW/RED + top-offender + %cap. Defer-approved by Rigby in PR #2305 design pass.
-2. **`cap_coverage_pct` field on `ops_tool.memory_pressure`** — fraction of sampled workers with a parseable `--max-memory-per-child` cap. Rigby's late add to the 24h watch ask. 4 lines.
-3. **Targeted remediation for `monitor_celery_health` + `capture_pa_acks_health_snapshot`** — both flagged by PR #2306 live smoke at p95=1048s and p95=1880s respectively. Queue placement + timeouts + probe decomposition. Pairs with the Session 1165 carryover slow-task investigation.
-4. **Operator playbook snippet:** *"If a monitor task is in `top_consumers`, treat it as P1 reliability debt."* — Rigby's standing follow-up. Single doc edit in `docs/topics/celery-workers.md`.
-5. **Agent dim on `CeleryTaskEvent`** — single migration to add `agent_name` + signal-handler tweak. Then a `top_consumers` variant aggregating by agent. Deferred from Session 1167 per Rigby's skip-joins-in-v1 rule.
+### PRIORITY 2 — Carryover from Session 1167 (still real, now Priority 1 candidates)
 
-### Session 1169 — Digest product arc (parked for separate session)
+These were Priority 2 in Session 1168's 00-START and didn't get touched. Promoted to Priority 1 candidates here:
 
-Held out of Session 1168 because it's a bigger product decision needing its own design pass + likely 2-3 PRs:
+1. **D — Targeted remediation for `monitor_celery_health` (p95=1048s) + `capture_pa_acks_health_snapshot` (p95=1880s).** Both flagged by PR #2306 live smoke. Per the operator playbook locked in PR #2313: monitor tasks in `top_consumers` are P1 reliability debt. Queue placement + timeouts + probe decomposition. Pairs with Session 1165's slow-task investigation carryover.
+2. **F — `agent_name` dim on `CeleryTaskEvent`.** Single migration + signal-handler tweak. Then a `top_consumers` variant aggregating by agent. Deferred from Session 1167 per Rigby's skip-joins-in-v1 rule.
 
-- **`a4a2697d-0882-4583-be94-10f8ac56694e` — Weekend Digest Autopilot — Spec & Acceptance Criteria.** Spec written Session 1166-or-earlier, never built. If you still want the digest product, this becomes the Session 1169 build.
-- **`2a2ea6e3-0f9e-4989-8e1f-5790e91d4324` — Claude Code Help Tickets — Weekend-Safe Stocks + Crypto Digest.** Implementation plan companion to the spec.
+### Session 1169 — Digest product arc (was parked for this session)
 
-### PRIORITY 3 — Consolidation / deferred from Session 1165 (focused follow-on PRs)
+Held out of Session 1168 because it's a bigger product decision. At Session 1169 entry: do we still want the digest product, or has the priority shifted? Route through Rigby.
+
+- **`a4a2697d-0882-4583-be94-10f8ac56694e` — Weekend Digest Autopilot — Spec & Acceptance Criteria.** Spec written Session 1166-or-earlier, never built.
+- **`2a2ea6e3-0f9e-4989-8e1f-5790e91d4324` — Claude Code Help Tickets — Weekend-Safe Stocks + Crypto Digest.** Implementation companion to the spec.
+
+### PRIORITY 3 — Consolidation / deferred from Session 1165 (focused follow-on PRs, still queued)
 
 - **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
 - **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
@@ -171,7 +192,46 @@ Held out of Session 1168 because it's a bigger product decision needing its own 
 ### Aspirational follow-ons (still queued)
 
 - **`pg_stat_statements` on staging/prod.** Installed locally Session 1165.
-- **`capture_pa_acks_health_snapshot` slow-task investigation.** Now concretely top of `ops_tool.top_consumers` 24h (p95=1880s = 31 min). Data exists; investigation overdue.
+
+---
+
+## SESSION 1168 CLOSED — chris-personal SHIP arc + B-C-E-A ops visibility (2026-06-20)
+
+**5 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md`](docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md).
+
+| PR | Theme | SHA |
+|---|---|---|
+| **#2310** | `fix` — **Bug #1:** harden `deliverable_tool.create` against silent factory `None` gate-reject + pass `trigger_source=pa_tool` | `94b034b2` |
+| **#2311** | `fix` — **Bug #2:** allow orphan deliverables to be attached to a workspace via `deliverable_tool.update` | `1e492404` |
+| **#2312** | `feat` — **B + C:** `memory_pressure` rollup on `ops_tool.overview` + `cap_coverage_pct` on `ops_tool.memory_pressure` | `95822679` |
+| **#2313** | `docs` — **E:** operator playbook snippet — monitor tasks in `top_consumers` = P1 reliability debt | `711f4e40` |
+| **#2314** | `feat` — **A:** local-safe Celery beat schedule (chris-personal SHIP `7c332f0d`) | `bf84e415` |
+
+**chris-personal Known Bugs Queue state after Session 1168:** all 3 SHIP items closed (Bug #1 + Bug #2 + Local-safe Beat).
+
+**Post-merge one-time toggle (manual, not in any PR):** 5 already-enabled denylisted `PeriodicTask` rows on chris-personal local DB toggled `enabled=False` (the 6th, `scan-income-spider-orchestrator`, was already off). Rigby authorized as a safe-toggle (not a delete) — reversible via `update(enabled=True)`.
+
+**End-to-end verified post-merge:**
+- PR #2310: live PA smoke on both `deliverable_tool.create` and `content_tool.deliverable_create` — short content → ok=true with real id (Layer B working); smoke-test titles → structured `deliverable_gated` dict, no crash (Layer A working).
+- PR #2311: live PA `deliverable_tool.update(id='810cc75c-...', workspace_id='33aa1e08-...')` against orphan — ok=true, `updated_fields: [tags, workspace]`; follow-up detail confirms `is_orphan: false`. Definitive attach test passed.
+- PR #2312: 8 new tests + 4 regression all green.
+- PR #2313: docs only — re-indexed via `build_docs_index`.
+- PR #2314: live dry-run smoke confirmed the 6 prod-noise tasks under "Local-safe mode: skipped"; post-merge DB toggle verified all 6 rows `enabled=False`.
+
+**New persistent artifacts:**
+- `core/tests/test_deliverable_create_gated.py` (Bug #1 — 4 tests)
+- `core/tests/test_deliverable_update_orphan_attach.py` (Bug #2 — 4 tests)
+- `core/tests/test_ops_memory_pressure_rollup.py` (B + C — 8 tests)
+- `core/tests/test_local_safe_beat_filter.py` (A — 11 tests)
+- `core/services/td_handlers_ops.py:_ops_memory_pressure_rollup` (new helper)
+- `core/management/commands/add_critical_celery_tasks.py:LOCAL_DENY_TASKS` + `_filter_local_safe` (new env-gated layer)
+- `docs/topics/celery-workers.md` — new "Wall-clock telemetry" subsection + operator playbook snippet
+- `docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md`
+
+**New gotchas captured (queued for memory):**
+- `payload.<field>` as both filter AND value = always a bug (Bug #2 pattern)
+- Silent `None` return from a factory pre-disposes every caller to a `NoneType.X` crash (Bug #1 pattern)
+- `make status` shows correct PIDs even when first health-probe path is wrong — `/admin/` HTTP 302 is the right liveness check, not `/api/health/`
 
 ---
 
