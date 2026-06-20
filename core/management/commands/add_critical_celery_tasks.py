@@ -27,6 +27,7 @@ Usage:
 
 import json
 import logging
+import os
 
 from celery.schedules import crontab as CrontabSpec
 from django.core.management.base import BaseCommand, CommandError
@@ -37,6 +38,68 @@ from django_celery_beat.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ── Session 1168: Local-safe beat schedule (chris-personal 7c332f0d) ─
+#
+# Beat tasks that hit external APIs or burn LLM budget. Skipped on local
+# (RAILWAY_ENVIRONMENT unset) so `make celery` on a dev laptop doesn't
+# fire prod-shaped cadence. Override with `ENABLE_BEAT_TASKS=<csv>` if
+# you genuinely need one of these on local — per-task escape hatch.
+#
+# Rule for adding entries: the task either (a) calls a third-party API
+# (spider scrapers, LLM providers), (b) costs money on the prod runtime,
+# or (c) drives a heavy orchestration that's expensive even read-only.
+# Internal cleanup / housekeeping / monitor tasks stay ON locally —
+# Rigby's standing rule (Session 1168 design pass, conv
+# pa-639751f029bc432f).
+#
+# Scope cap from Chris + Rigby: env-gated registration only. No
+# cadence-lengthening on local. If a task is dev-noisy, deny it; don't
+# half-deny it.
+LOCAL_DENY_TASKS = frozenset({
+    'scan-income-spider-orchestrator',     # 00-START's named trigger
+    'scan-spider-opportunities',           # intelligence orchestrator
+    'run-spider-network',                  # full spider network run
+    'warm-up-spiders',                     # spider warmup pings externals
+    'backfill-spider-embeddings',          # OpenAI embedding spend
+    'generate-operator-edge-newsletter',   # LLM newsletter generation
+})
+
+
+def _is_local_env():
+    """Default local-safe when not on Railway.
+
+    Matches the existing convention used across views_diagnostics.py,
+    views_app_manifest.py, and platform_config_tool — an unset (or
+    empty) ``RAILWAY_ENVIRONMENT`` means "this is a laptop / dev
+    environment." Anything else (production / staging / preview / etc.)
+    keeps the full schedule.
+    """
+    return not os.environ.get('RAILWAY_ENVIRONMENT')
+
+
+def _filter_local_safe(canonical):
+    """Apply the local-safe filter to the canonical beat schedule.
+
+    Returns ``(filtered_dict, skipped_names)``. When on local, removes
+    entries listed in ``LOCAL_DENY_TASKS`` unless individually opted in
+    via ``ENABLE_BEAT_TASKS=<csv>``. On prod / staging, returns the
+    input dict unchanged.
+    """
+    if not _is_local_env():
+        return canonical, []
+    overrides = {
+        n.strip()
+        for n in os.environ.get('ENABLE_BEAT_TASKS', '').split(',')
+        if n.strip()
+    }
+    effective_deny = LOCAL_DENY_TASKS - overrides
+    filtered = {
+        n: e for n, e in canonical.items() if n not in effective_deny
+    }
+    skipped = sorted(n for n in canonical if n in effective_deny)
+    return filtered, skipped
 
 
 def _coerce_crontab_field(value):
@@ -187,6 +250,23 @@ class Command(BaseCommand):
             )
             for msg in translate_errors:
                 self.stdout.write(f"      - {msg}")
+            self.stdout.write("")
+
+        # Session 1168: local-safe filter. On dev laptops
+        # (RAILWAY_ENVIRONMENT unset), prod-noise tasks are skipped
+        # entirely so beat doesn't fire scrapers / LLM jobs on local.
+        # On prod / staging, canonical passes through unchanged.
+        canonical, locally_skipped = _filter_local_safe(canonical)
+        if locally_skipped:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  Local-safe mode: skipped {len(locally_skipped)} "
+                    f"prod-noise task(s). Set "
+                    f"ENABLE_BEAT_TASKS=<csv> to opt back in."
+                )
+            )
+            for n in locally_skipped:
+                self.stdout.write(f"      - {n}")
             self.stdout.write("")
 
         existing = set(PeriodicTask.objects.values_list('name', flat=True))
