@@ -275,6 +275,22 @@ For monitor tasks exhibiting this pattern, the real fix is **probe decomposition
 
 **Operator playbook addendum:** if `top_consumers(group_by="agent")` shows a monitor/ops agent as a top offender, treat it as P1 reliability debt — same remediation pattern as the task-dim case (queue placement, timeouts, probe decomposition).
 
+#### Caller contract (Session 1170 follow-on)
+
+The extractor only reads the **kwargs** dict of the prerun signal payload — positional args are invisible. Callers that want their task represented in the agent dim must dispatch using one of the canonical kwarg keys (`agent_name` / `agent_class` / `agent` / `agent_type`). Concrete patterns:
+
+```python
+# ✓ Populates dim — kwargs form
+task.delay(conversation_id=..., agent_name='claude-code')
+task.apply_async(kwargs={'agent_name': 'MyAgent', ...}, queue='long_running')
+
+# ✗ Does NOT populate dim — positional form (regression risk)
+task.delay(conversation_id, message, source)
+task.apply_async(args=[agent_name, task_text, context])
+```
+
+Session 1170 migrated `core.tasks.claude_code_agent_respond` (signature gained `agent_name='claude-code'` default + both PA-view dispatch sites in `core/views_personal_assistant.py` switched to kwargs form). Queued for a separate Phase 2 follow-on PR: ~15 caller sites for `core.tasks.execute_agent_task` across `core/services/td_handlers_*`, `core/services/conversation_action_dispatcher.py`, `core/services/tool_dispatcher.py`, `core/views_diagnostics.py`, and `core/tasks_ops.py`. Until that sweep lands, `top_consumers(group_by='agent')` undercounts the `execute_agent_task` family.
+
 ## ML Import Chain
 
 ALL heavy ML imports (torch, sklearn, transformers) MUST be lazy — inside methods or wrapped in `try/except ImportError`. Module-level imports loaded ~800MB into Celery parent process. `ml_engine.py` uses `_detect_device()` helper for lazy torch.

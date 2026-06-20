@@ -476,7 +476,12 @@ def unified_pa_chat(request):
             from core.services.claude_code_agent import should_claude_code_respond
             if should_claude_code_respond(message, source):
                 from core.tasks import claude_code_agent_respond
-                claude_code_agent_respond.delay(conversation_id, message, source)
+                claude_code_agent_respond.delay(
+                    conversation_id=conversation_id,
+                    message_text=message,
+                    source=source,
+                    agent_name='claude-code',
+                )
                 logger.info(f"[ClaudeCodeAgent] Dispatched from view for conversation {conversation_id}")
         except Exception as e:
             logger.warning(f"[ClaudeCodeAgent] View dispatch failed: {e}")
@@ -580,7 +585,12 @@ def pa_conversation_post_message(request, conversation_id):
             from core.tasks import claude_code_agent_respond
             from core.services.claude_code_agent import should_claude_code_respond
             if should_claude_code_respond(message, source):
-                claude_code_agent_respond.delay(conversation_id, message, source)
+                claude_code_agent_respond.delay(
+                    conversation_id=conversation_id,
+                    message_text=message,
+                    source=source,
+                    agent_name='claude-code',
+                )
         except Exception:
             pass  # Non-critical
 
