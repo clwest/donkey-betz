@@ -1,6 +1,6 @@
-# Session 1178 — Phase 2 auto-wake shipped (PR #2345 open at close)
+# Session 1178 — Phase 2 auto-wake shipped + live-verified + TTL hotfix
 
-**Status:** PR-1 open and review-clean. Both Rigby review nits addressed in a follow-up commit on the same branch (`64a81ab9`). Recommended path α (merge-then-verify on main) — local stack would have needed worker restart to verify on the feature branch, which was deemed disruptive mid-session.
+**Status:** All four PRs merged to main. Phase 2 auto-wake live and working end-to-end (both happy-path and opt-out verified backend-side). One real bug caught 4 minutes after the first merge — TTL hotfix shipped in the same session. Single-source-of-truth contract for the TTL window now enforced via CI test.
 **Date:** 2026-06-20
 **Driving question:** "Check back in with Rigby on where we are working with the Agents and what's next on the list." (Chris's Session 1177 close instruction.)
 **Prior session handoffs:**
@@ -22,8 +22,33 @@ Conv-ID recon (Session 1175 open follow-up #1) was done as part of the kickoff �
 | Item | Where | Status |
 |---|---|---|
 | Conv-ID divergence recon (open #1) | This handoff § "Conv-ID recon" | **Findings filed; closes #1 as "wrapper hygiene, not a bug"** |
-| Phase 2 PR-1 — auto-wake | [PR #2345](https://github.com/clwest/donkey-betz-platform/pull/2345) — branch `feat/session-1178-agent-auto-wake` | **Open at close.** 6/6 unit tests green. Rigby review nits addressed (commit `64a81ab9`). |
+| Phase 2 PR-1 — auto-wake | [PR #2345](https://github.com/clwest/donkey-betz-platform/pull/2345) merged at `9c5c944b` | **MERGED.** 6/6 unit tests green. Rigby review nits addressed (commit `64a81ab9`). |
+| **Hotfix — TTL bump 30s→60s + shared model constants** | [PR #2347](https://github.com/clwest/donkey-betz-platform/pull/2347) merged at `039435fe` | **MERGED.** Caught by live verify; single source of truth on `AgentFollowupSubscription`. |
+| **Cross-path invariant test** | [PR #2348](https://github.com/clwest/donkey-betz-platform/pull/2348) merged at `3185beb7` | **MERGED.** CI-enforced: Phase 1 and Phase 2 defaults can't drift again. |
 | Demo doc Phase 2 section | `docs/handoffs/SESSION_1175_AGENT_FOLLOWUP_DEMO.md` | Appended (happy path + opt-out variant) |
+
+## Contract update — D2 superseded by live verify
+
+The original Session 1178 design card D2 ratified **30s** as the implicit auto-wake default. **Live verify caught that as wrong 4 minutes after the original merge** — ResearchAgent completion at 23:19:05 vs subscription expiry at 23:19:03 → 2-second race → sub stuck `armed`, no banner, no Rigby bubble. The exact silent-failure mode Phase 2 was meant to eliminate.
+
+**Current contract (post-hotfix #2347):**
+
+- `AgentFollowupSubscription.DEFAULT_TTL_SECONDS = 60` (was 30 in PR #2345)
+- `AgentFollowupSubscription.MAX_TTL_SECONDS = 600` (unchanged; Phase 1 D4)
+- **Both Phase 1 explicit (`_handle_schedule_followup`) and Phase 2 implicit (`create_implicit_followup_subscription`) read from these model constants — no hardcoded TTL literals elsewhere in the codebase.**
+- Future changes to either constant require touching one place (the model class). CI test `test_default_after_seconds_matches_model_constant` (Phase 1 suite) fails if the explicit-tool default drifts from the model constant.
+
+## Live verify trail (post-merge to main)
+
+Two-pass verification, fully end-to-end:
+
+| Pass | Execution ID | TTL config | Result |
+|---|---|---|---|
+| #1 (initial #2345 merge) | `d7fc8c50-...` | 30s | ❌ Sub expired 2s before completion. `fire_*` filter `expires_at__gt=now` returned 0 rows. Silent no-op. Bug confirmed. |
+| #2 (post-hotfix #2347) | `2b1892c1-...`, sub `92c8eed2-...` | 60s | ✅ Sub created 23:26:55 (TTL 60s), flipped `armed → fired` at 23:27:25, ChatConversation row 588 persisted at 23:27:25. **Zero explicit `schedule_followup` calls.** |
+| #3 (opt-out, post-hotfix) | `06f63afe-...` | n/a | ✅ `input_data.context.auto_followup = False` flowed through PA schema → `_CONTEXT_PROMOTE_KEYS` → context. Subscription count: 0. Silent skip. |
+
+Browser side: ChatConversation row 588 exists in conv `pa-9b82bcc72e1945ce`. Chris's browser refresh shows the Rigby completion bubble for the ResearchAgent dispatch. The banner is a 6s-auto-fade transient UI element — not reproducible post-hoc but the persistent bubble is the load-bearing record.
 
 ## Conv-ID recon — Open follow-up #1 close-out
 
@@ -72,8 +97,8 @@ Conversation `pa-9b82bcc72e1945ce`. Three exchanges:
 
 1. **Every PA-originated agent dispatch with `conversation_id` stamped auto-creates an armed subscription** unless `context['auto_followup'] is False`.
 2. **At most one subscription per `(execution, conversation_id)` pair** — DB-level via `unique_together = [('execution', 'conversation_id')]` on `AgentFollowupSubscription` (unchanged since Session 1174 PR-2a).
-3. **30s default TTL on the implicit auto-sub; explicit `schedule_followup` can override up to 600s** (Phase 1 D4 cap unchanged).
-4. **Auto-sub creation never blocks dispatch** — fail-open warning includes `execution=` and `conv=` for correlation, then continues.
+3. **60s default TTL on the implicit auto-sub** (`AgentFollowupSubscription.DEFAULT_TTL_SECONDS`, model constant); **explicit `schedule_followup` can override up to 600s** (`MAX_TTL_SECONDS`, same model class). Bumped from 30s in PR #2347 after live verify caught a 2-second race against typical ResearchAgent runtime.
+4. **Auto-sub creation never blocks dispatch** — fail-open warning includes `execution=` and `conv=` for correlation, then continues. **Incident grep:** `grep '\[auto_followup\] fail-open' .logs/celery*.log` surfaces all fail-open events with execution_id and conv_id; absence of this string means the helper path is healthy.
 5. **Explicit `schedule_followup` racing the implicit auto-sub never produces a duplicate row** — `get_or_create` returns the existing row unchanged; whoever lands first keeps their TTL.
 6. **All Phase 1 invariants are preserved** — atomic armed → fired transition, scope-rules NULL-conv gate, banner-fire-then-bubble-persist order, ChatConversation row metadata shape.
 

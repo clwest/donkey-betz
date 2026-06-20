@@ -101,55 +101,30 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ### FIRST THING this session
 
-**Session 1178 closed with PR #2345 open for review.** Phase 2 auto-wake (implicit follow-up subscription + per-call opt-out) ratified by Rigby and shipped to a feature branch. 6/6 unit tests green locally. Live verify deferred to post-merge per Rigby's lean (α path). Close handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
+**Session 1178 closed with Phase 2 auto-wake LIVE and verified end-to-end on main.** Four PRs merged: #2345 (Phase 2 feature), #2347 (TTL hotfix bump 30→60s caught via live verify), #2348 (cross-path invariant test), #2346 (docs close). Workers were already restarted at Session 1178 close. Close handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
 2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-9b82bcc72e1945ce` — still healthy from Session 1178): `platform_config_tool overview` → confirm `service_context: local`.
-3. PR #2345 status — merged or still open?
+3. Auto-wake spot check — last 24h subscription create + fire rate:
    ```bash
-   gh pr view 2345 --json state,mergedAt,reviewDecision
+   USE_PGBOUNCER=1 .venv/bin/python manage.py shell -c "
+   from core.models_unified_system import AgentFollowupSubscription
+   from datetime import timedelta
+   from django.utils import timezone
+   since = timezone.now() - timedelta(hours=24)
+   s = AgentFollowupSubscription.objects.filter(created_at__gte=since)
+   print(f'last 24h: total={s.count()} fired={s.filter(state=\"fired\").count()} armed={s.filter(state=\"armed\").count()} expired={s.filter(state=\"expired\").count()}')"
+   ```
+4. Any `[auto_followup] fail-open` lines in worker logs since last session?
+   ```bash
+   grep '\[auto_followup\] fail-open' celery-long-running.log celery*.log 2>/dev/null
+   # Expect: empty. If non-empty, each line has execution=<uuid> conv=<id> for fast correlation.
    ```
 
-### PRIORITY 1 — Merge PR #2345 + live verify Phase 2
+### PRIORITY 1 — Pick next agent work thread (with Rigby)
 
-If PR #2345 still open: review → merge → restart workers → live verify in browser.
-
-```bash
-# After merge to main:
-git checkout main && git pull
-
-# Restart workers — Phase 2 adds `create_implicit_followup_subscription` which is a new
-# module-level helper imported by execute_agent_task. Per the worker sys.modules cache rule
-# (feedback_new_shared_task_needs_worker_restart memory), workers MUST restart.
-pkill -9 -f celery; rm -f .celery*.pid; make celery
-
-# Live verify happy path — dispatch via Rigby WITHOUT calling schedule_followup
-tools/pa_local.sh "Run ResearchAgent on this task: summarize one sentence about Phase 2 auto-wake. Do not call schedule_followup."
-
-# Expect (~5-30s later): AgentCompletionBanner flashes in composer footer + Rigby
-# completion bubble appears in chat. NO explicit schedule_followup tool run in the
-# verbose ticker.
-
-# Verify the auto-sub row
-USE_PGBOUNCER=1 .venv/bin/python manage.py shell --command "
-from core.models_unified_system import AgentFollowupSubscription
-s = AgentFollowupSubscription.objects.order_by('-created_at').first()
-print(f'{s.id} state={s.state} delta_s={(s.expires_at - s.created_at).total_seconds():.0f}')
-"
-# Expect: state='fired' (or 'armed' if you're fast), delta ≈ 30.
-
-# Live verify opt-out
-tools/pa_local.sh "Run ResearchAgent on this short task. Pass auto_followup=false on the run_agent call."
-
-# Expect: no banner, no Rigby bubble; AgentFollowupSubscription.objects.filter(execution=<this exec>).count() == 0.
-```
-
-If anything diverges from the expected behavior → see § "Post-merge live verify" + § "24h watch checklist" in the Session 1178 close handoff.
-
-### PRIORITY 2 — Pick next agent work thread (with Rigby)
-
-Phase 2 PR-1 closes the main thread of "make Rigby tell you when an agent finishes" from Session 1174. Open follow-ups (Rigby's ranked Session 1178 order):
+Phase 2 auto-wake is the natural close of the "make Rigby tell you when an agent finishes" thread from Session 1174. Open follow-ups (Rigby's ranked Session 1178 order):
 
 | Item | Why deferred from Session 1178 | Lean |
 |---|---|---|
@@ -169,25 +144,35 @@ PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry
 
 ---
 
-## SESSION 1178 CLOSED — Phase 2 auto-wake shipped + conv-ID recon closed (2026-06-20)
+## SESSION 1178 CLOSED — Phase 2 auto-wake LIVE + conv-ID recon closed + TTL hotfix shipped (2026-06-20)
 
-**1 PR open at close.** Full handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
+**4 PRs merged.** Full handoff: [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
 
-| PR | Theme | SHA / Status |
+| PR | Theme | SHA |
 |---|---|---|
-| **#2345** | `feat(session-1178-agent-wake)` — Phase 2 auto-wake (implicit follow-up subscription + per-call opt-out) | OPEN at close. Branch `feat/session-1178-agent-auto-wake`. 6/6 unit tests green. Two Rigby review nits addressed in commit `64a81ab9`. |
+| **#2345** | `feat(session-1178-agent-wake)` — Phase 2 auto-wake (implicit follow-up subscription + per-call opt-out) | `9c5c944b` |
+| **#2347** | `fix(session-1178-agent-wake)` — TTL bump 30s→60s + shared model constants (caught by live verify) | `039435fe` |
+| **#2348** | `test(session-1178-agent-wake)` — cross-path invariant test (Phase 1 + 2 can't drift again) | `3185beb7` |
+| **#2346** | `docs(session-1178)` — close handoff + 00-START-NEXT-SESSION.md reset | (this PR) |
 
-**Source-only, no migrations.** Every PA-originated agent dispatch now auto-creates an armed `AgentFollowupSubscription` at `execute_agent_task` entry (30s TTL). Rigby no longer has to call `schedule_followup` explicitly — the user gets the completion banner + Rigby-authored chat bubble by default. The explicit tool remains as an override.
+**Source-only, no migrations.** Every PA-originated agent dispatch now auto-creates an armed `AgentFollowupSubscription` at `execute_agent_task` entry (60s TTL — bumped from 30s after live verify caught a 2-second race against ResearchAgent runtime). Rigby no longer has to call `schedule_followup` explicitly — the user gets the completion banner + Rigby-authored chat bubble by default. The explicit tool remains as an override (custom TTL up to `MAX_TTL_SECONDS = 600`).
 
-**Dedupe is DB-guaranteed** via existing `unique_together = [('execution', 'conversation_id')]` on `AgentFollowupSubscription` (`core/models_unified_system.py:1089`). `get_or_create` is race-safe with explicit `schedule_followup` for free.
+**Dedupe is DB-guaranteed** via existing `unique_together = [('execution', 'conversation_id')]` on `AgentFollowupSubscription`. `get_or_create` is race-safe with explicit `schedule_followup` for free.
 
-**Ratified design card (Rigby sign-off Session 1178):** D1=augment / D2=30s default / D3=PA-only via conv_id NULL gate / D4=per-call opt-out (`auto_followup: false`) / D5=one banner per agent / D6=at `execute_agent_task` entry.
+**Single source of truth for TTL contract** (post-PR-#2347 + #2348): `AgentFollowupSubscription.DEFAULT_TTL_SECONDS` (60) + `MAX_TTL_SECONDS` (600). Both Phase 1 explicit + Phase 2 implicit read from there. New CI test `test_default_after_seconds_matches_model_constant` fails if drift recurs.
 
-**Conv-ID divergence recon (Session 1175 open follow-up #1):** Closed as "wrapper hygiene, not a bug." Code walk through `process_pa_chat_task → UnifiedPAEntrypoint → run_agent → execute_agent_task → AgentFollowupSubscription` proved conv_id is invariant within a turn. Session 1175's "divergence" was the test harness wrapper pinning being stale across two separate requests, not within one turn.
+**Ratified design card (Rigby sign-off Session 1178, with D2 overruled by reality):** D1=augment / **D2=60s default** (was 30s in original ratification) / D3=PA-only via conv_id NULL gate / D4=per-call opt-out (`auto_followup: false`) / D5=one banner per agent / D6=at `execute_agent_task` entry.
 
-**Carry-forward for Session 1179:** merge PR #2345 → restart workers (`pkill -9 -f celery; rm -f .celery*.pid; make celery`) → live verify in browser per § "Post-merge live verify" in the close handoff.
+**Conv-ID divergence recon (Session 1175 open follow-up #1):** Closed as "wrapper hygiene, not a bug." Code walk through `process_pa_chat_task → UnifiedPAEntrypoint → run_agent → execute_agent_task → AgentFollowupSubscription` proved conv_id is invariant within a turn.
 
-**Conversations:** `pa-9b82bcc72e1945ce` still healthy at close. Three exchanges (kickoff + recon report, dedupe sub-card, PR review request).
+**Live verify trail (post-merge to main):**
+- Execution `d7fc8c50` (pre-hotfix, TTL=30s) — caught the bug: sub expired 2s before completion, silent no-op.
+- Execution `2b1892c1`, sub `92c8eed2` (post-hotfix, TTL=60s) — sub created 23:26:55, fired 23:27:25, ChatConversation row 588 persisted. Zero explicit `schedule_followup` calls.
+- Execution `06f63afe` (opt-out path) — `auto_followup=false` flowed through PA schema → `_CONTEXT_PROMOTE_KEYS` → context. Zero subscriptions created. Silent skip.
+
+**Carry-forward for Session 1179:** none required. Phase 2 is live and verified. Pick next thread per the priority list above.
+
+**Conversations:** `pa-9b82bcc72e1945ce` healthy at close (85/100 in mid-session). Six exchanges across the session.
 
 ---
 
