@@ -229,6 +229,18 @@ Running the data sniff for COO #1 required:
 
 ---
 
+## Behavioral contracts / invariants (post-merge, system-wide)
+
+Three statements that should now always be true. If any of these is violated under normal operation, that's a signal worth investigating — not a bug to silently patch around.
+
+1. **No SQL statement should run longer than 60 seconds** unless the executing transaction has explicitly opted out via `SET LOCAL statement_timeout = '0'`. Any uncaught long query is either (a) a workload the timeout was specifically designed to catch (good — root-cause it), or (b) a legitimate batch operation that needs the per-tx escape and a comment explaining why.
+2. **No task wrapped with `@singleton_task(name, ttl)` should ever overlap itself.** The lock guarantees at most one in-flight instance per task name across all workers. If you see two concurrent runs of the same protected task in `CeleryTaskEvent`, the lock primitive itself has regressed (or someone removed the decorator) — verify via `cache.get('singleton_lock:<name>')` and the `@singleton_task` decorator on the task definition.
+3. **Retry-budget denials should not fire under normal conditions.** A `retry DENIED — budget_exhausted` log line implies one of: (a) an upstream dependency is down (broken API, DB outage, rate limit), (b) a real bug in the task itself burning retries on the same exception, or (c) the budget cap is set too tight for the task's natural failure rate. Each denial is a signal to investigate the root cause and either fix the upstream, fix the bug, or raise the cap with rationale.
+
+These three invariants are the post-merge "should always be true" companion to the rollback levers below ("how to break them in an emergency") and the 24h watch checklist further down ("how to verify they hold").
+
+---
+
 ## Rollback / disable levers (per Rigby's Session 1165 close-out review)
 
 Operational escape hatches if any of the three MUSTs misbehaves in production. Documented here so a future operator can disable a single primitive without rolling the whole session.
