@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-19 23:40
+**Generated:** 2026-06-19 23:50
 **Current Session:** 1170
 **Total Documentation:** 2650 files | 698,461 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,581 |
+| Total cross-references | 4,594 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 189 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 177 | Platform Master Inventory |
 | `docs/INDEX.md` | 122 | INDEX |
-| `docs/apis/README.md` | 116 | README |
+| `docs/architecture/README.md` | 117 | README |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 66 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -247,9 +247,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| celery-workers.md | topics | 305 | 2026-06-19 23:39 |
+| celery-workers.md | topics | 305 | 2026-06-19 23:44 |
+| INDEX.md | docs | 391 | 2026-06-19 23:44 |
 | SESSION_1169_CARRYOVER_QUEUE_CLOSE.md | handoffs | 248 | 2026-06-19 23:19 |
-| INDEX.md | docs | 391 | 2026-06-19 23:19 |
 | SESSION_1168_BUGS_AND_OPS_VISIBILITY.md | handoffs | 248 | 2026-06-19 21:59 |
 | SESSION_1167_COO_BACKLOG_5_AND_7_CLOSE.md | handoffs | 319 | 2026-06-19 20:21 |
 | SESSION_1166_COO_2_AND_WARN_PERSIST_ESCALATION.md | handoffs | 384 | 2026-06-19 19:11 |
