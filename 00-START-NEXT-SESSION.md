@@ -97,80 +97,65 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1175 — CURRENT ENTRY POINT
+## SESSION 1176 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify PR #2334 merged cleanly + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-58c916edf96044cc` (Session 1174 implementation thread). Disk check: `df -h /System/Volumes/Data`.
+**The Session 1174+1175 follow-up wake vertical slice is fully shipped.** All 5 PRs in main: #2334 / #2336 / #2337 / #2338 / #2339. Close handoff: [`docs/handoffs/SESSION_1175_FOLLOWUP_WAKE_CLOSE.md`](docs/handoffs/SESSION_1175_FOLLOWUP_WAKE_CLOSE.md). 60s demo script: [`docs/handoffs/SESSION_1175_AGENT_FOLLOWUP_DEMO.md`](docs/handoffs/SESSION_1175_AGENT_FOLLOWUP_DEMO.md).
+
+Standard FIRST THING checks:
+1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-58c916edf96044cc`): `platform_config_tool overview` → confirm `service_context: local`.
+3. Sanity that the feature is alive on main:
 
 ```bash
-# (1) AgentExecution.conversation_id field is populated on PA-dispatched rows (PR #2334)
+# Verify the wake feature is still wired end-to-end
 .venv/bin/python manage.py shell -c "
-from core.models_unified_system import AgentExecution
+from core.models_unified_system import AgentExecution, AgentFollowupSubscription
+from core.models.conversations.models import ChatConversation
 from datetime import timedelta
 from django.utils import timezone
 since = timezone.now() - timedelta(hours=24)
-total = AgentExecution.objects.filter(created_at__gte=since).count()
-with_conv = AgentExecution.objects.filter(created_at__gte=since).exclude(conversation_id__isnull=True).count()
-print(f'AgentExecution rows last 24h: {total}, with conversation_id: {with_conv}')
+print(f'AgentExecution.conversation_id field: {[f.name for f in AgentExecution._meta.fields if f.name == \"conversation_id\"]}')
+print(f'AgentFollowupSubscription rows: {AgentFollowupSubscription.objects.count()}')
+print(f'agent_completion ChatConversation rows last 24h: {ChatConversation.objects.filter(created_at__gte=since, metadata__contains={\"kind\": \"agent_completion\"}).count()}')
 "
-# Expect: with_conv > 0 if any PA dispatches happened. Ratio depends on PA-vs-autonomous mix.
+# Expect: field present, subscription rows > 0, completion ChatConversation rows > 0.
 
-# (2) DB index present
-.venv/bin/python manage.py dbshell -- -c "
-SELECT indexname FROM pg_indexes WHERE tablename='core_agentexecution' AND indexdef LIKE '%conversation_id%';"
-# Expect: core_agentexecution_conversation_id_12cfe0ed + LIKE-index.
-
-# (3) Long-running worker is loaded with new code
-.venv/bin/celery -A core inspect registered | grep execute_agent_task
-# Expect: core.tasks.execute_agent_task registered.
+# schedule_followup tool registered
+.venv/bin/python manage.py shell -c "
+import core.services.pa_tool_schemas as m
+import inspect
+src = inspect.getsource(m)
+print('schedule_followup in schemas:', 'schedule_followup' in src)
+"
 ```
 
-If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Then re-run.
+If something is missing → re-read the Session 1175 close handoff's 24h watch checklist for diagnostics.
 
-### PRIORITY 1 — Session 1174 PR-2: Follow-up wake vertical slice
+### PRIORITY 1 — Pick from the follow-up wake open queue OR start a fresh thread
 
-Full design + plan: [`docs/handoffs/SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md`](docs/handoffs/SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md). PR-1 (#2334, merged 2026-06-20) shipped the `AgentExecution.conversation_id` gating schema. PR-2 builds the actual follow-up loop on top of it.
+Per the close handoff §"Open follow-ups", three high-leverage options (not blocking, pick by appetite):
 
-**Ratified design (don't re-derive):**
-- **c2 explicit `schedule_followup` PA tool**, keyed on `execution_id` (accept `task_id` as lookup).
-- **Banner + Rigby-authored chat message** (chat bubble is load-bearing per Chris's stated UX).
-- **`after_seconds` cap 600s = TTL window.** Subscription eligible immediately on creation. If execution already terminal at subscribe time → deliver immediately + dedupe. No Celery ETA dependency. States: `armed | expired | fired`.
-- **D5 user-moved-on:** still post follow-up, tagged "Background completion."
+| Option | Why | Effort |
+|---|---|---|
+| **A. Conv-ID divergence recon** (Item #1 from handoff) | Smallest scope, builds context on `unified_pa_entrypoint`'s conv_id plumbing. If real divergence exists, that's a correctness flag worth surfacing. If stale-pin only, close with a note. | 1-2 hours |
+| **B. Banner artifact-pointer enrichment** (Item #6) | Direct user-visible UX upgrade. Banner already gets `artifact_pointers` in the payload — wire them as click-through links to deliverable detail. | 2-3 hours |
+| **C. Phase 2 c1 auto-wake** (Item #3) | Highest architecture leverage: every PA-originated dispatch creates an implicit subscription so the user gets completion messages without Rigby calling the tool. | 4-6 hours, needs Rigby design ratification on dedupe + opt-out |
 
-**Phase 1 invariants (must-haves, all blocking on PR-2):**
-- Dedupe at most one `agent.completed` event per `(execution_id, conversation_id)` pair. Idempotent via atomic `armed → fired` queryset update with `state='armed'` in filter.
-- Scope rules: only rows with persisted `conversation_id` AND explicit `AgentFollowupSubscription` may post.
-- Payload contract: `{execution_id, agent_name, status, completed_at, artifact_pointers}`.
-- Failure path: failures fire `agent.completed` with `status=error` + short `error_signature`.
+Or start a completely fresh thread — no carryover priority is blocking.
 
-**PR split (so partial progress is shippable):**
-- **PR-2a (SHIPPED #2336):** subscription model + signal handler bridge + `PAConversationConsumer.agent_completed` handler + beat-scheduled expiry cleanup. Backend foundation; no UI.
-- **PR-2b-1 (SHIPPED #2337):** `schedule_followup` PA tool + handler + subscribe-after-terminal immediate-fire. Backend-only. Rigby live-verified the tool through her FC loop.
-- **PR-2b-2 (NEXT — this session's primary work):** ChatConversation server-side persistence + Q-C side-effect investigation pass (token accounting / embeddings / `last_message_at` / unread counters) + Rigby's return-shape-stability cleanup on `schedule_followup` (always emit standard keys with nulls where not applicable, instead of bare `{success: false, error: ...}` on error paths).
-- **PR-2b-3:** banner UI component + 60s demo script.
-
-**Files to touch (estimate):**
-- `core/models_unified_system.py` (or new `core/models_followup.py`) + migration 0358 — `AgentFollowupSubscription`.
-- `core/tasks_agents.py` — signal handler bridge (extend existing `send_execution_update`, don't replace).
-- `core/consumers_pa_conversation.py` — `agent_completed` handler (banner event + server-side Rigby message persistence).
-- `core/services/pa_tool_schemas.py` + `core/services/tool_dispatcher.py` — `schedule_followup` tool.
-- `core/celery.py` + `core/tasks.py` — `expire_stale_followup_subscriptions` beat task.
-- `frontend/src/stores/agentStore.ts` + `frontend/src/components/AgentCompletionBanner.tsx` (new).
-
-**Out of scope (deferred Phase 2):** rate-limiting (unless local testing shows spam), auto-linking deliverable→initiative→workspace (waiting on BUG-UI-001 read-side), c1 auto-wake, multi-agent fan-out, cross-conversation follow-up.
-
-### PRIORITY 2 — Address WorkflowAgent → Local QA artifacts (carried from Session 1174)
+### PRIORITY 2 — WorkflowAgent → Local QA artifacts (re-check after wake feature ships)
 
 Rigby's morning agent-collaboration test (WorkflowAgent execution `ea82e075-af7c-4747-b880-694a065ce588`, completed 18:14:15 UTC on 2026-06-20) produced two deliverables in the Local QA workspace:
 - `d57b0fa7-8bfb-4e79-b06b-af920edbee7e` (ResearchAgent — Phase A/B summary)
 - `c105205b-ad0a-4fdf-a7c6-fe334e81a498` (ContentWriterAgent — "Platform QA Pass 1 (Local) — Agent Collaboration Report")
 
-Pre-PR-2-merge they were not visible end-to-end in the workspace UI (BUG-UI-001 — deliverable→initiative link not showing). Once PR-2 lands, re-check whether the follow-up wake messaging surfaces these via the new banner + Rigby chat path. If BUG-UI-001 is still blocking, it remains a separate ticket.
+Now that the wake feature is shipped: re-dispatch through Rigby + schedule_followup; the new banner should surface these. If BUG-UI-001 (deliverable→initiative link not showing) is still blocking the workspace view, it remains a separate ticket.
 
 ### Carryover from Sessions 1171–1174 (not yet acted on)
 
-The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172 and 1173 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*`, `SESSION_1172_*`, `SESSION_1173_*`. Review there if any are now blocking; otherwise they continue to ride.
+The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172–1175 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1175_*`. Review there if any are now blocking; otherwise they continue to ride.
 
 ---
 
