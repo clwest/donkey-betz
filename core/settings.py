@@ -269,8 +269,21 @@ if 'postgresql' in os.environ.get('DATABASE_URL', ''):
     # idle-in-tx limit is a guardrail against pathology, not a regression
     # surface. Tasks that legitimately need >60s can wrap in
     # `SET LOCAL statement_timeout = '0'` per transaction.
+    #
+    # Session 1166 (COO Backlog item #2, MUST): per-process Postgres
+    # application_name tagging. Each Procfile / Makefile process sets
+    # PG_APPLICATION_NAME=dbz:<role> so `SELECT application_name,
+    # count(*) FROM pg_stat_activity GROUP BY 1` shows a per-component
+    # breakdown. Default keeps the legacy 'unified_donkey_betz' string
+    # for any process that doesn't set the env var (e.g. ad-hoc shells,
+    # one-off `python manage.py` invocations). Verifier:
+    # scripts/verify_repo_guardrails.py enforces the env var on every
+    # Procfile entry (strict) and surfaces missing Makefile coverage
+    # (advisory).
     DATABASES['default']['OPTIONS'] = {
-        'application_name': 'unified_donkey_betz',
+        'application_name': os.environ.get(
+            'PG_APPLICATION_NAME', 'unified_donkey_betz'
+        ),
         'client_encoding': 'UTF8',
         'connect_timeout': 10,
         'options': (

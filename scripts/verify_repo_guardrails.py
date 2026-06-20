@@ -33,6 +33,21 @@ DOCS_INDEX_AUTOGEN_PATTERN = re.compile(
     r"<!--\s*DOC-AUTOGEN:.*build_docs_index", re.IGNORECASE
 )
 
+# Session 1166 (COO Backlog item #2, MUST): per-process Postgres
+# application_name tagging. Each Procfile entry must set
+# PG_APPLICATION_NAME=dbz:<role> so `SELECT application_name, count(*)
+# FROM pg_stat_activity GROUP BY 1` shows a per-component breakdown.
+# Procfile check is strict; Makefile coverage is advisory because local
+# dev workflows vary.
+PROCFILE_PATH = REPO_ROOT / "Procfile"
+MAKEFILE_PATH = REPO_ROOT / "Makefile"
+PG_APP_NAME_TAG_PATTERN = re.compile(
+    r"PG_APPLICATION_NAME=(dbz:[a-z0-9\-]+)\b"
+)
+MAKEFILE_LAUNCH_PATTERN = re.compile(
+    r"\b(daphne\s+-b|celery\s+-A\s+core\s+(worker|beat))\b"
+)
+
 # Session 1115 — extra DOC-AUTOGEN files emitted by the capability audits.
 # Each has its own `build_<x>_audit` command; CI/strict mode catches
 # hand-edits to any of them by requiring the first non-blank line to carry
@@ -299,6 +314,103 @@ def check_audit_autogen_markers() -> tuple[bool, list[str]]:
     return all_ok, messages
 
 
+def classify_procfile_pg_application_name(
+    lines: list[str],
+) -> tuple[bool, list[str]]:
+    """Validate every Procfile entry sets PG_APPLICATION_NAME=dbz:<role>.
+
+    Pure function so tests can exercise the parse without filesystem access.
+    Returns ``(all_ok, per-entry messages)``. ``all_ok`` is False if any
+    Procfile entry lacks a matching tag.
+    """
+    messages: list[str] = []
+    all_ok = True
+    saw_entry = False
+    for raw in lines:
+        line = raw.rstrip("\n").strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        entry, _, command = line.partition(":")
+        entry = entry.strip()
+        if not entry or any(ch in entry for ch in (" ", "/", "=")):
+            continue  # not a Procfile entry header
+        saw_entry = True
+        match = PG_APP_NAME_TAG_PATTERN.search(command)
+        if not match:
+            all_ok = False
+            messages.append(
+                f"Procfile entry `{entry}` is missing "
+                "PG_APPLICATION_NAME=dbz:<role>"
+            )
+        else:
+            messages.append(f"Procfile entry `{entry}`: {match.group(1)}")
+    if not saw_entry:
+        all_ok = False
+        messages.append("Procfile has no parseable entries")
+    return all_ok, messages
+
+
+def check_procfile_pg_application_name() -> tuple[bool, list[str]]:
+    if not PROCFILE_PATH.exists():
+        return False, ["Procfile is missing"]
+    with PROCFILE_PATH.open("r", encoding="utf-8", errors="replace") as fh:
+        lines = fh.readlines()
+    return classify_procfile_pg_application_name(lines)
+
+
+def classify_makefile_pg_application_name(
+    content: str,
+) -> tuple[bool, list[str]]:
+    """Report Makefile celery/daphne launches that lack PG_APPLICATION_NAME.
+
+    Advisory only — local dev workflows vary so we don't fail strict mode
+    on Makefile drift. Pure function so tests can exercise the parse.
+    Handles backslash continuations so an env block on a preceding shell
+    line counts as covering the celery/daphne call on the next.
+    Returns ``(all_ok, messages)``.
+    """
+    messages: list[str] = []
+    all_ok = True
+    logical: list[str] = []
+    buffer = ""
+    for line in content.splitlines():
+        if line.endswith("\\"):
+            buffer += line[:-1] + " "
+        else:
+            logical.append(buffer + line)
+            buffer = ""
+    if buffer:
+        logical.append(buffer)
+    saw_launch = False
+    for line in logical:
+        if MAKEFILE_LAUNCH_PATTERN.search(line):
+            saw_launch = True
+            if PG_APP_NAME_TAG_PATTERN.search(line):
+                continue
+            all_ok = False
+            snippet = line.strip()[:120]
+            messages.append(
+                "Makefile launch missing PG_APPLICATION_NAME: "
+                f"`{snippet}`"
+            )
+    if saw_launch and all_ok:
+        messages.append(
+            "Makefile celery/daphne launches all set PG_APPLICATION_NAME"
+        )
+    elif not saw_launch:
+        messages.append(
+            "Makefile has no daphne/celery launches matched by detector"
+        )
+    return all_ok, messages
+
+
+def check_makefile_pg_application_name() -> tuple[bool, list[str]]:
+    if not MAKEFILE_PATH.exists():
+        return True, ["Makefile is missing (skipping advisory check)"]
+    content = MAKEFILE_PATH.read_text(encoding="utf-8", errors="replace")
+    return classify_makefile_pg_application_name(content)
+
+
 def check_platform_inventory_freshness() -> tuple[bool, str]:
     if not PLATFORM_INVENTORY.exists():
         return False, "docs/PLATFORM_INVENTORY.md is missing"
@@ -333,6 +445,7 @@ def classify_failures(
     autogen_blocking: bool,
     conflict_blocking: bool,
     audit_autogen_blocking: bool = False,
+    procfile_tag_blocking: bool = False,
 ) -> list[str]:
     """Return the strict-mode failure list given the per-check booleans.
 
@@ -361,6 +474,11 @@ def classify_failures(
         )
     if strict and conflict_blocking:
         failures.append("context-kit has CONFLICT findings")
+    if strict and procfile_tag_blocking:
+        failures.append(
+            "one or more Procfile entries are missing "
+            "PG_APPLICATION_NAME=dbz:<role>"
+        )
     return failures
 
 
@@ -439,6 +557,18 @@ def main() -> int:
         "\n".join(audit_autogen_messages),
     )
 
+    procfile_tag_ok, procfile_tag_messages = check_procfile_pg_application_name()
+    print_block(
+        "Procfile PG_APPLICATION_NAME coverage",
+        "\n".join(procfile_tag_messages),
+    )
+
+    makefile_tag_ok, makefile_tag_messages = check_makefile_pg_application_name()
+    print_block(
+        "Makefile PG_APPLICATION_NAME coverage (advisory)",
+        "\n".join(makefile_tag_messages),
+    )
+
     tracked_blocking = bool(tracked)
     if tracked:
         print("WARNING: tracked generated paths were found.")
@@ -479,6 +609,29 @@ def main() -> int:
     if doc_only_count:
         print(f"WARNING: context-kit reported {doc_only_count} DOC_ONLY finding(s) (advisory).")
 
+    procfile_tag_blocking = not procfile_tag_ok
+    if not procfile_tag_ok:
+        print(
+            "WARNING: one or more Procfile entries are missing "
+            "PG_APPLICATION_NAME=dbz:<role> (see the "
+            "'Procfile PG_APPLICATION_NAME coverage' block above)."
+        )
+    else:
+        print(
+            "OK: every Procfile entry sets PG_APPLICATION_NAME=dbz:<role>."
+        )
+
+    if not makefile_tag_ok:
+        print(
+            "WARNING: one or more Makefile celery/daphne launches are "
+            "missing PG_APPLICATION_NAME (advisory — local dev only)."
+        )
+    else:
+        print(
+            "OK: Makefile celery/daphne launches set "
+            "PG_APPLICATION_NAME (advisory check)."
+        )
+
     failures = classify_failures(
         strict=args.strict,
         inventory_advisory=args.inventory_advisory,
@@ -487,6 +640,7 @@ def main() -> int:
         autogen_blocking=autogen_blocking,
         audit_autogen_blocking=audit_autogen_blocking,
         conflict_blocking=conflict_blocking,
+        procfile_tag_blocking=procfile_tag_blocking,
     )
 
     pass_fail = "FAIL" if failures else "PASS"
@@ -510,6 +664,11 @@ def main() -> int:
     print(f"- docs/INDEX.md autogen marker: {autogen_ok}")
     print(f"- context-kit CONFLICT findings: {conflict_count}")
     print(f"- context-kit DOC_ONLY findings: {doc_only_count}")
+    print(f"- Procfile PG_APPLICATION_NAME coverage: {procfile_tag_ok}")
+    print(
+        f"- Makefile PG_APPLICATION_NAME coverage (advisory): "
+        f"{makefile_tag_ok}"
+    )
     print(f"- strict mode: {'on' if args.strict else 'off'}")
     print("- Phase 4B keeps strict mode on by default and leaves DOC_ONLY/inspect/large-file checks advisory.")
     return 1 if failures else 0
