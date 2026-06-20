@@ -1667,6 +1667,35 @@ class AgentHandlersMixin:
                 'matches': items,
             }
 
+        # Session 1169 — id-based mutation actions (detail, save, unsave,
+        # update, append, delete, export_pdf) need a lookup queryset that
+        # respects user-ownership but does NOT apply the workspace scope
+        # filter from base_qs. Otherwise orphans (workspace_id NULL) and
+        # cross-workspace deliverables are unfindable for the user who
+        # legitimately passed their id. PR #2311 added this only for
+        # `update` when payload had workspace_id; this is the symmetric
+        # extension to the rest of the id-based actions. (link_initiative
+        # has a different — unscoped — lookup pattern in
+        # td_handlers_content.py and is intentionally not touched.)
+        def _id_lookup_qs():
+            qs = Deliverable.objects.all()
+            if not user_id:
+                return qs
+            from django.contrib.auth import get_user_model
+            _UserId = get_user_model()
+            try:
+                _ru = _UserId.objects.get(id=user_id)
+                _is_pa_or_staff = (
+                    _ru.is_staff
+                    or _ru.is_superuser
+                    or _ru.username == 'pa-service'
+                )
+            except _UserId.DoesNotExist:
+                return qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+            if _is_pa_or_staff:
+                return qs
+            return qs.filter(Q(user_id=user_id) | Q(user__isnull=True))
+
         if action == 'list':
             qs = _apply_common_filters(base_qs)
             total = qs.count()
@@ -1698,7 +1727,7 @@ class AgentHandlersMixin:
             }
 
         elif action == 'detail':
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'detail')
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'detail')
             if disambiguation:
                 return disambiguation
 
@@ -1762,7 +1791,7 @@ class AgentHandlersMixin:
             })
 
         elif action == 'save':
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'save')
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'save')
             if disambiguation:
                 return disambiguation
             obj.is_saved = True
@@ -1781,7 +1810,7 @@ class AgentHandlersMixin:
             return {'action': 'save', 'id': str(obj.id), 'title': obj.title, 'saved': True}
 
         elif action == 'unsave':
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'unsave')
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'unsave')
             if disambiguation:
                 return disambiguation
             obj.is_saved = False
@@ -1911,40 +1940,13 @@ class AgentHandlersMixin:
             }
 
         elif action == 'update':
-            # Session 1168 bug #2 fix: payload.workspace_id has two meanings —
-            # (a) the workspace SCOPE filter applied to base_qs at the top of
-            # this handler, and (b) the NEW value to assign (attach intent).
-            # For orphan deliverables (workspace_id=NULL), the scope filter
-            # excludes them, so _resolve_deliverable raises "not found"
-            # before the workspace-assignment branch (lines below) ever runs.
-            # When payload provides a workspace_id, rebuild a workspace-
-            # agnostic lookup queryset that still respects user-ownership
-            # (mirrors the staff/non-staff logic at the top of this handler)
-            # so orphans + cross-workspace deliverables can be attached.
-            attach_intent_ws = payload.get('workspace_id') or payload.get('workspace')
-            if attach_intent_ws:
-                update_lookup_qs = Deliverable.objects.all()
-                if user_id:
-                    from django.contrib.auth import get_user_model
-                    _UserUp = get_user_model()
-                    try:
-                        _ru = _UserUp.objects.get(id=user_id)
-                        _is_pa_or_staff = (
-                            _ru.is_staff
-                            or _ru.is_superuser
-                            or _ru.username == 'pa-service'
-                        )
-                    except _UserUp.DoesNotExist:
-                        _is_pa_or_staff = False
-                    if not _is_pa_or_staff:
-                        update_lookup_qs = update_lookup_qs.filter(
-                            Q(user_id=user_id) | Q(user__isnull=True)
-                        )
-                obj, disambiguation = _resolve_deliverable(
-                    update_lookup_qs, payload, 'update',
-                )
-            else:
-                obj, disambiguation = _resolve_deliverable(base_qs, payload, 'update')
+            # Session 1168 bug #2 + Session 1169 item 3: use the
+            # _id_lookup_qs helper which respects user-ownership but
+            # doesn't apply workspace scoping. Covers both the
+            # explicit attach intent (payload has workspace_id) and the
+            # latent case where AssistantProfile's workspace would have
+            # excluded an orphan the user owns.
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'update')
             if disambiguation:
                 return disambiguation
 
@@ -2034,7 +2036,8 @@ class AgentHandlersMixin:
         elif action == 'append':
             # Session 1077: Dedicated append action — simpler than update for GPT.
             # Only appends text; never replaces content or touches other fields.
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'append')
+            # Session 1169: use _id_lookup_qs (orphan-inclusive) to match update.
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'append')
             if disambiguation:
                 return disambiguation
             text = payload.get('content', '') or payload.get('text', '') or payload.get('append', '')
@@ -2054,7 +2057,8 @@ class AgentHandlersMixin:
             }
 
         elif action == 'delete':
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'delete')
+            # Session 1169: use _id_lookup_qs (orphan-inclusive) to match update.
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'delete')
             if disambiguation:
                 return disambiguation
 
@@ -2069,7 +2073,8 @@ class AgentHandlersMixin:
             }
 
         elif action == 'export_pdf':
-            obj, disambiguation = _resolve_deliverable(base_qs, payload, 'export_pdf')
+            # Session 1169: use _id_lookup_qs (orphan-inclusive) to match update.
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'export_pdf')
             if disambiguation:
                 return disambiguation
             from core.services.pdf_export_service import export_deliverable_to_pdf
