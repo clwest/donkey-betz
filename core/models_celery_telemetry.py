@@ -32,6 +32,19 @@ class CeleryTaskEvent(models.Model):
 
     task_id = models.CharField(max_length=255, unique=True, db_index=True)
     task_name = models.CharField(max_length=255, db_index=True)
+    # Session 1169 — populated by the task_prerun signal handler when the
+    # task kwargs include one of `agent_name` / `agent_class` / `agent`
+    # (str only) / `agent_type` (first non-empty wins). Empty string means
+    # 'not an agent task' or 'pre-Session-1169 row' (no backfill — gradual
+    # fill is per Rigby's skip-joins-in-v1 stance). Indexed because the
+    # top_consumers ops surface aggregates on it.
+    agent_name = models.CharField(
+        max_length=255, blank=True, default='', db_index=True,
+        help_text=(
+            'Session 1169: agent dim sourced from task kwargs at prerun. '
+            'Empty = non-agent task or pre-migration row.'
+        ),
+    )
     queue = models.CharField(max_length=100, blank=True, default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='STARTED', db_index=True)
     worker = models.CharField(max_length=255, blank=True, default='')

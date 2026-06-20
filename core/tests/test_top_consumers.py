@@ -213,3 +213,112 @@ class PayloadShapeTests(TestCase):
     def test_unknown_window_raises_via_service(self):
         with self.assertRaises(ValueError):
             compute_top_consumers(window="weird")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Session 1169 — group_by='agent' dimension
+# ──────────────────────────────────────────────────────────────────────
+
+
+def _create_event_with_agent(
+    task_name: str,
+    agent_name: str,
+    duration: float,
+    started_at: datetime,
+):
+    return CeleryTaskEvent.objects.create(
+        task_id=f"{task_name}-{agent_name}-{started_at.isoformat()}-{duration}",
+        task_name=task_name,
+        agent_name=agent_name,
+        status="SUCCESS",
+        started_at=started_at,
+        finished_at=started_at + timedelta(seconds=duration),
+        duration_seconds=duration,
+    )
+
+
+class GroupByAgentTests(TestCase):
+    """Session 1169 — agent dimension on top_consumers."""
+
+    def setUp(self):
+        self.now = timezone.now()
+        CeleryTaskEvent.objects.all().delete()
+
+    def test_default_group_by_is_task(self):
+        """Backwards compat: omitting group_by yields the original
+        task_name keys + default 'task' group_by metadata."""
+        _create_event_with_agent(
+            "core.tasks.run_agent_task", "MyAgent", 5.0,
+            self.now - timedelta(minutes=5),
+        )
+        result = compute_top_consumers(window="24h", now=self.now)
+        self.assertEqual(result["group_by"], "task")
+        self.assertIn("task_name", result["consumers"][0])
+        self.assertEqual(
+            result["consumers"][0]["task_name"], "core.tasks.run_agent_task",
+        )
+
+    def test_group_by_agent_returns_agent_name_keyed_rows(self):
+        _create_event_with_agent(
+            "core.tasks.run_agent_task", "AgentAlpha", 10.0,
+            self.now - timedelta(minutes=5),
+        )
+        _create_event_with_agent(
+            "core.tasks.run_agent_task", "AgentBeta", 5.0,
+            self.now - timedelta(minutes=5),
+        )
+        result = compute_top_consumers(
+            window="24h", group_by="agent", now=self.now,
+        )
+        self.assertEqual(result["group_by"], "agent")
+        self.assertIn("agent_name", result["consumers"][0])
+        # Alpha total > Beta total, so Alpha first.
+        self.assertEqual(result["consumers"][0]["agent_name"], "AgentAlpha")
+        self.assertEqual(result["consumers"][1]["agent_name"], "AgentBeta")
+
+    def test_group_by_agent_filters_out_empty_agent_rows(self):
+        """The agent dim is gradual-fill (pre-Session-1169 rows have
+        agent_name=''). Those rows must NOT show up as an '' bucket
+        in the top_consumers_by_agent result."""
+        # Agent row
+        _create_event_with_agent(
+            "core.tasks.run_agent_task", "AgentAlpha", 5.0,
+            self.now - timedelta(minutes=5),
+        )
+        # Non-agent row (or pre-migration row) — empty agent_name
+        _create_event_with_agent(
+            "core.tasks.cleanup", "", 5.0,
+            self.now - timedelta(minutes=5),
+        )
+        result = compute_top_consumers(
+            window="24h", group_by="agent", now=self.now,
+        )
+        agents = [c["agent_name"] for c in result["consumers"]]
+        self.assertIn("AgentAlpha", agents)
+        self.assertNotIn("", agents)
+
+    def test_group_by_agent_p95_computed_per_agent(self):
+        # 100 events for one agent, durations 1..100 → p95 ≈ 95
+        for i in range(1, 101):
+            _create_event_with_agent(
+                "t.run", "AgentP", float(i),
+                self.now - timedelta(minutes=i),
+            )
+        result = compute_top_consumers(
+            window="24h", group_by="agent", now=self.now,
+        )
+        agent_p = next(c for c in result["consumers"] if c["agent_name"] == "AgentP")
+        self.assertEqual(agent_p["count"], 100)
+        self.assertAlmostEqual(agent_p["p95_seconds"], 95.05, delta=0.5)
+
+    def test_unknown_group_by_raises(self):
+        with self.assertRaises(ValueError):
+            compute_top_consumers(window="24h", group_by="weird")
+
+    def test_group_by_task_payload_still_has_group_by_metadata(self):
+        """Schema additive: existing callers see the new group_by field
+        even when they don't pass it. Not a breaking change because
+        every existing assertion on top_consumers payloads tests keys
+        that still exist + values that didn't change."""
+        result = compute_top_consumers(window="24h", now=self.now)
+        self.assertEqual(result["group_by"], "task")
