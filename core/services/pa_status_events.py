@@ -54,7 +54,6 @@ import threading
 from datetime import datetime, timezone
 from typing import Optional
 
-from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)
@@ -89,14 +88,20 @@ def _group_name(conversation_id: str) -> str:
     return f"pa_conversation_{conversation_id}"
 
 
-def _emit(group: str, payload: dict) -> None:
-    """Fire-and-forget push to the channel layer. Never raises."""
+async def _emit(group: str, payload: dict) -> None:
+    """Fire-and-forget push to the channel layer. Never raises.
+
+    Async because `tool_dispatcher.execute()` (our primary caller) runs
+    inside an async event loop. Using `async_to_sync(channel_layer.group_send)`
+    from there triggers `RuntimeError: You cannot use AsyncToSync in the same
+    thread as an async event loop` — we must await the async API directly.
+    """
     try:
         layer = get_channel_layer()
         if layer is None:
             logger.debug("[pa_status_events] no channel layer configured — skip emit")
             return
-        async_to_sync(layer.group_send)(group, payload)
+        await layer.group_send(group, payload)
     except Exception as exc:
         # Channels failures must never block tool execution.
         logger.warning(
@@ -108,7 +113,7 @@ def _emit(group: str, payload: dict) -> None:
         )
 
 
-def emit_tool_started(
+async def emit_tool_started(
     *,
     pa_trace_id: Optional[str],
     conversation_id: Optional[str],
@@ -127,7 +132,7 @@ def emit_tool_started(
     if not pa_trace_id or not conversation_id:
         return None
     seq = _next_seq(pa_trace_id)
-    _emit(
+    await _emit(
         _group_name(str(conversation_id)),
         {
             "type": "rigby.tool.started",
@@ -142,7 +147,7 @@ def emit_tool_started(
     return seq
 
 
-def emit_tool_completed(
+async def emit_tool_completed(
     *,
     pa_trace_id: Optional[str],
     conversation_id: Optional[str],
@@ -161,7 +166,7 @@ def emit_tool_completed(
     if not pa_trace_id or not conversation_id:
         return None
     seq = _next_seq(pa_trace_id)
-    _emit(
+    await _emit(
         _group_name(str(conversation_id)),
         {
             "type": "rigby.tool.completed",
