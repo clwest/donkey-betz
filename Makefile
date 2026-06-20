@@ -262,14 +262,18 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 			--hostname=pa@%h > celery-pa.log 2>&1 & echo $$! > .celery-pa.pid; \
 		sleep 1; \
 	fi
-	@# Start long_running queue worker (slow tasks)
+	@# Start long_running queue worker (slow tasks + ml — Session 1170 PR #2325)
+	@# Session 1170: ml queue had no consumer locally — tasks routed there
+	@# would silently pile up. docs/topics/celery-workers.md has long_running
+	@# documented as ml's consumer (per Procfile pattern on Railway); local
+	@# Makefile now matches that topology.
 	@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then \
 		echo "-> Celery long_running worker already running"; \
 	else \
-		echo "-> Starting Celery long_running worker (2 threads)..."; \
+		echo "-> Starting Celery long_running worker (2 threads, queues=long_running+ml)..."; \
 		PG_APPLICATION_NAME=dbz:celery-long-running SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
-			--queues=long_running \
+			--queues=long_running,ml \
 			--hostname=long_running@%h > $(CELERY_LONG_RUNNING_LOG) 2>&1 & echo $$! > $(CELERY_LONG_RUNNING_PIDFILE); \
 		sleep 1; \
 	fi
