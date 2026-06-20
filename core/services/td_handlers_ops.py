@@ -173,6 +173,13 @@ class OpsHandlersMixin:
                     'error': f'{type(e).__name__}: {str(e)[:200]}',
                 }
             try:
+                result['memory_pressure'] = self._ops_memory_pressure_rollup(trace_id)
+            except Exception as e:
+                result['memory_pressure'] = {
+                    'overall_state': 'UNKNOWN',
+                    'error': f'{type(e).__name__}: {str(e)[:200]}',
+                }
+            try:
                 result['failure_signatures'] = self._ops_failure_signatures(
                     window, 5, trace_id, since=None,
                 )
@@ -756,6 +763,61 @@ class OpsHandlersMixin:
         return rollup
 
 
+    def _ops_memory_pressure_rollup(self, trace_id: str) -> Dict[str, Any]:
+        """Compact memory-pressure rollup for ops_tool.overview.
+
+        Session 1168 (defer-approved in PR #2305 design pass). Reduces
+        the latest ``logs/worker_memory/*.jsonl`` snapshot to a single
+        ``overall_state`` + top offender + worker count. Reuses the
+        source taxonomy (OK/WARN/CRIT) — never re-classifies
+        (Session 1164 rule). Parallel to ``_ops_queue_pressure_rollup``.
+        """
+        from django.utils import timezone
+
+        try:
+            from core.services.memory_telemetry import read_recent_snapshots, LOG_DIR
+        except ImportError as e:
+            return {
+                'overall_state': 'UNKNOWN',
+                'error': f'memory_telemetry module unavailable: {e}',
+                'generated_at': timezone.now().isoformat(),
+            }
+
+        latest = read_recent_snapshots(LOG_DIR, count=1)
+        if not latest:
+            return {
+                'overall_state': 'UNKNOWN',
+                'note': (
+                    'No JSONL snapshot found at logs/worker_memory/. '
+                    'The capture_worker_memory_snapshot beat task may '
+                    'not have fired yet (5-min cadence) or workers may '
+                    'need restart to pick up the new task.'
+                ),
+                'generated_at': timezone.now().isoformat(),
+            }
+
+        snapshot = latest[0]
+        offenders = snapshot.get('top_offenders') or []
+        top_offender = None
+        if offenders:
+            o = offenders[0]
+            top_offender = {
+                'hostname': o.get('hostname'),
+                'pct_of_cap_max': o.get('pct_of_cap_max'),
+                'status': o.get('status'),
+            }
+        return {
+            'overall_state': snapshot.get('overall_status', 'UNKNOWN'),
+            'worker_count': snapshot.get('worker_count'),
+            'top_offender': top_offender,
+            'downshift_recommended': snapshot.get(
+                'downshift_recommended_global', False,
+            ),
+            'snapshot_generated_at': snapshot.get('generated_at'),
+            'snapshot_generated_at_mt': snapshot.get('generated_at_mt'),
+            'generated_at': timezone.now().isoformat(),
+        }
+
     def _ops_memory_pressure(self, trace_id: str) -> Dict[str, Any]:
         """Worker memory pressure surface — reduce-from-JSONL.
 
@@ -792,6 +854,19 @@ class OpsHandlersMixin:
             }
 
         snapshot = latest[0]
+        # Session 1168: cap_coverage_pct — fraction of sampled workers
+        # with a parseable --max-memory-per-child cap. Surfaces when the
+        # rollup says OK because no caps were parsed (silent unknown vs
+        # explicit "we sampled them and they're fine"). Per Rigby's late
+        # add to the 24h watch ask.
+        workers = snapshot.get('workers') or []
+        worker_count = len(workers)
+        capped = sum(
+            1 for w in workers if w.get('cap_bytes') is not None
+        )
+        cap_coverage_pct = (
+            round(100.0 * capped / worker_count, 1) if worker_count else None
+        )
         return {
             'action': 'memory_pressure',
             'schema_version': snapshot.get('schema_version'),
@@ -800,6 +875,7 @@ class OpsHandlersMixin:
             'cadence_seconds': snapshot.get('cadence_seconds'),
             'overall_status': snapshot.get('overall_status', 'OK'),
             'worker_count': snapshot.get('worker_count'),
+            'cap_coverage_pct': cap_coverage_pct,
             'workers': snapshot.get('workers', []),
             'top_offenders': snapshot.get('top_offenders', []),
             'downshift_recommended': snapshot.get('downshift_recommended_global', False),
