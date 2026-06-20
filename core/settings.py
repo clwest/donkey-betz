@@ -292,15 +292,63 @@ if 'postgresql' in os.environ.get('DATABASE_URL', ''):
             ' -c idle_in_transaction_session_timeout=60000'
         ),
     }
-    # Session 1144: Replace Session 142's `CONN_MAX_AGE=0` (every query
-    # opened a fresh socket → ~24K TIME_WAIT sockets to :5432 on macOS dev
-    # within ~20 min, exhausting ephemeral ports). Django 4.1+ ships
-    # CONN_HEALTH_CHECKS which pre-validates pooled connections before
-    # reuse, solving the stale-connection failure mode that Session 142
-    # was working around. 60s reuse window keeps held connections well
-    # under Postgres `max_connections=100` (≈10-20 in steady state).
-    DATABASES['default']['CONN_MAX_AGE'] = 60
-    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    # Session 1173: opt into PgBouncer (transaction-pool mode) by setting
+    # USE_PGBOUNCER=1. When enabled, the default alias routes through
+    # 127.0.0.1:5433 (PgBouncer) instead of :5432 (PG directly). A separate
+    # `migrations` alias is also defined that always talks to PG directly
+    # so `manage.py migrate --database=migrations` and any session-state-
+    # dependent maintenance avoid the transaction-pool restrictions.
+    #
+    # Why this matters: dashboard mount fires ~30 parallel API calls.
+    # CONN_MAX_AGE=60 + 30-call bursts + steady-state celery = >100 server
+    # conns, breaching PG's old max_connections=100 ceiling (Session 1173
+    # incident at 11:02:50 MDT). PgBouncer absorbs the burst at the app
+    # layer; PG sees a stable, small number of server conns.
+    #
+    # Required pairing for transaction pool_mode: DISABLE_SERVER_SIDE_CURSORS=True
+    # (server-side cursors require session affinity, which we don't have
+    # under transaction pooling). One trade-off: Django's .iterator() falls
+    # back to client-side, which can increase memory on very large querysets.
+    # Audit candidate but no known callsite >10K rows in a single iter.
+    if os.environ.get('USE_PGBOUNCER', '').lower() in ('1', 'true', 'yes'):
+        # Route default → PgBouncer on :5433.
+        DATABASES['default']['PORT'] = 5433
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+        # CONN_MAX_AGE=0 because PgBouncer pools server conns;
+        # Django holding its own persistent conns would defeat the purpose
+        # AND break transaction-pool affinity. Each request opens a fresh
+        # client conn to PgBouncer (cheap), PgBouncer hands out a pooled
+        # server conn (also cheap).
+        DATABASES['default']['CONN_MAX_AGE'] = 0
+        DATABASES['default']['CONN_HEALTH_CHECKS'] = False
+        # Drop the `options=` startup parameter — PgBouncer rejects it
+        # under transaction pool. The same settings (search_path +
+        # statement_timeout + idle_in_transaction_session_timeout) are
+        # applied at the PG layer via PgBouncer's `connect_query` on the
+        # database entry in /opt/homebrew/etc/pgbouncer.ini.
+        DATABASES['default']['OPTIONS'] = {
+            k: v for k, v in DATABASES['default']['OPTIONS'].items()
+            if k != 'options'
+        }
+
+        # Direct-to-PG alias for migrations / long transactions /
+        # session-state-dependent maintenance.
+        DATABASES['migrations'] = dict(DATABASES['default'])
+        DATABASES['migrations']['OPTIONS'] = dict(DATABASES['default']['OPTIONS'])
+        DATABASES['migrations']['PORT'] = 5432
+        DATABASES['migrations']['DISABLE_SERVER_SIDE_CURSORS'] = False
+        DATABASES['migrations']['CONN_MAX_AGE'] = 60
+        DATABASES['migrations']['CONN_HEALTH_CHECKS'] = True
+    else:
+        # Session 1144: Replace Session 142's `CONN_MAX_AGE=0` (every query
+        # opened a fresh socket → ~24K TIME_WAIT sockets to :5432 on macOS dev
+        # within ~20 min, exhausting ephemeral ports). Django 4.1+ ships
+        # CONN_HEALTH_CHECKS which pre-validates pooled connections before
+        # reuse, solving the stale-connection failure mode that Session 142
+        # was working around. 60s reuse window keeps held connections well
+        # under Postgres `max_connections=100` (≈10-20 in steady state).
+        DATABASES['default']['CONN_MAX_AGE'] = 60
+        DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
     # SQLite configuration
     DATABASES['default']['OPTIONS'] = {}
