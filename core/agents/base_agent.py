@@ -4372,36 +4372,42 @@ Consider this current data when formulating your response."""
                         f'{_append_exc}'
                     )
 
-            deliverable = create_deliverable(
-                title=resolved_title,
-                content=content or '',
-                agent_name=self.name,
-                category=category,
-                deliverable_type=deliverable_type,
-                user=resolved_user,
-                workspace_id=str(resolved_ws_id) if resolved_ws_id else None,
-                trace_id=trace_id,
-                parent_execution_id=str(parent_exec_id) if parent_exec_id else None,
-                parent_object_type='agent_execution',
-                tags=tags or [],
-                content_format=content_format,
-                quality_score=quality_score,
-                confidence_score=confidence_score,
-                is_saved=should_save,
-                agent_task=getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else '',
-                metadata=metadata or {},
-                status='ready',
-                initiative_id=str(resolved_initiative_id) if resolved_initiative_id else None,
-            )
-
-            # Session 1094: `create_deliverable` returns None when the
-            # Session 1088 quality gate rejects the content (see
-            # deliverable_factory.py:280). Without this guard the next line
-            # crashes with AttributeError on NoneType.id.
-            if deliverable is None:
+            # Session 1169 — Layer C Phase 1: opt in to typed exception
+            # so the gate rejection log carries the actual reason_code
+            # (gate_1_media_stub / gate_2_smoke_pattern / gate_3_min_length).
+            # Behavior identical to the previous if-None guard from Session
+            # 1094 — agent still returns None on rejection — just with
+            # structured logging instead of inferred-from-None handling.
+            from core.services.deliverable_factory import DeliverableGatedError
+            try:
+                deliverable = create_deliverable(
+                    title=resolved_title,
+                    content=content or '',
+                    agent_name=self.name,
+                    category=category,
+                    deliverable_type=deliverable_type,
+                    user=resolved_user,
+                    workspace_id=str(resolved_ws_id) if resolved_ws_id else None,
+                    trace_id=trace_id,
+                    parent_execution_id=str(parent_exec_id) if parent_exec_id else None,
+                    parent_object_type='agent_execution',
+                    tags=tags or [],
+                    content_format=content_format,
+                    quality_score=quality_score,
+                    confidence_score=confidence_score,
+                    is_saved=should_save,
+                    agent_task=getattr(self, '_current_task', '')[:1000] if hasattr(self, '_current_task') else '',
+                    metadata=metadata or {},
+                    status='ready',
+                    initiative_id=str(resolved_initiative_id) if resolved_initiative_id else None,
+                    raise_on_gated=True,
+                )
+            except DeliverableGatedError as e:
                 logger.info(
                     f"[{self.name}] Deliverable not persisted — "
-                    f"rejected by quality gate (title={resolved_title[:60]!r}, "
+                    f"rejected by quality gate "
+                    f"(reason_code={e.reason_code}, reason={e.reason}, "
+                    f"title={resolved_title[:60]!r}, "
                     f"content_len={len(content or '')})"
                 )
                 return None

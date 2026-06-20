@@ -58,10 +58,17 @@ class DeliverableCreateGatedTests(TestCase):
 
     # ── Layer A: caller hardening ───────────────────────────────────────
 
-    def test_handler_returns_gated_dict_when_factory_returns_none(self):
-        """When create_deliverable returns None (gate rejection), handler
-        must return a structured 'deliverable_gated' error dict, not
-        raise AttributeError on str(None.id)."""
+    def test_handler_returns_gated_dict_when_factory_raises_gated(self):
+        """When create_deliverable raises DeliverableGatedError, handler
+        must return a structured 'deliverable_gated' error dict carrying
+        the factory's actual reason_code (Session 1169 Layer C Phase 1).
+        Pre-Layer-C the handler also handled the legacy None return; that
+        path is now exercised at the unit level by
+        test_deliverable_factory_raises_with_reason_code, since the PA
+        dispatcher opts in via raise_on_gated=True and cannot receive a
+        None for gate-rejected input."""
+        from core.services.deliverable_factory import DeliverableGatedError
+
         payload = {
             'action': 'create',
             'title': 'Real legitimate title',
@@ -70,7 +77,12 @@ class DeliverableCreateGatedTests(TestCase):
         }
         with mock.patch(
             'core.services.deliverable_factory.create_deliverable',
-            return_value=None,
+            side_effect=DeliverableGatedError(
+                reason='smoke test pattern in title',
+                reason_code='gate_2_smoke_pattern',
+                title='Real legitimate title',
+                agent_name='PersonalAssistant',
+            ),
         ):
             result = self.dispatcher._handle_deliverables(
                 'deliverables_tool', payload, self.user.id, self.trace_id,
@@ -80,8 +92,10 @@ class DeliverableCreateGatedTests(TestCase):
         self.assertEqual(result['ok'], False)
         self.assertIsNone(result['id'])
         self.assertEqual(result['error_code'], 'deliverable_gated')
-        self.assertEqual(result['reason_code'], 'unknown_gate')
-        self.assertIn('reason_hint', result)
+        # Layer C Phase 1: machine-parseable reason_code comes from the
+        # factory's exception rather than the generic 'unknown_gate'.
+        self.assertEqual(result['reason_code'], 'gate_2_smoke_pattern')
+        self.assertEqual(result['reason'], 'smoke test pattern in title')
         self.assertIn('quality gate', result['human_message'])
         self.assertIsInstance(result['retry_suggestions'], list)
         self.assertEqual(result['trace_id'], self.trace_id)
@@ -108,7 +122,10 @@ class DeliverableCreateGatedTests(TestCase):
     def test_handler_passes_trigger_source_pa_tool_to_factory(self):
         """The PA create branch must pass metadata['trigger_source']='pa_tool'
         so legitimate short-content saves don't trip the factory's gate 3
-        (min content length 300)."""
+        (min content length 300). Session 1169: also asserts raise_on_gated=True
+        is now passed (Layer C Phase 1 opt-in)."""
+        from core.services.deliverable_factory import DeliverableGatedError
+
         payload = {
             'action': 'create',
             'title': 'Short PA save',
@@ -116,12 +133,19 @@ class DeliverableCreateGatedTests(TestCase):
             'workspace_id': str(self.workspace.id),
         }
         captured_metadata = {}
+        captured_kwargs = {}
 
         def _capture(*args, **kwargs):
             captured_metadata.update(kwargs.get('metadata') or {})
-            # Mimic gate-rejected return — we don't care, we just want to
-            # observe the metadata that the handler passed.
-            return None
+            captured_kwargs.update(kwargs)
+            # Mimic gate-rejected raise. The dispatcher now expects the
+            # typed exception, not a None return — Layer C contract.
+            raise DeliverableGatedError(
+                reason='probed',
+                reason_code='gate_3_min_length',
+                title=str(kwargs.get('title') or ''),
+                agent_name='PersonalAssistant',
+            )
 
         with mock.patch(
             'core.services.deliverable_factory.create_deliverable',
@@ -133,6 +157,8 @@ class DeliverableCreateGatedTests(TestCase):
         self.assertEqual(captured_metadata.get('trigger_source'), 'pa_tool')
         # Pre-existing key still present for backwards compat
         self.assertEqual(captured_metadata.get('source'), 'pa_deliverables_tool')
+        # Session 1169: dispatcher must opt in to typed-exception contract.
+        self.assertEqual(captured_kwargs.get('raise_on_gated'), True)
 
     def test_short_pa_content_now_passes_factory_gate(self):
         """End-to-end: a short PA-initiated save (which would have tripped
