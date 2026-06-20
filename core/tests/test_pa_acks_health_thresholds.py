@@ -328,3 +328,227 @@ class TestIsPreviousAdjacentHelper(SimpleTestCase):
         prev = {"generated_at": (_BASE_TS + timedelta(minutes=30)).isoformat()}
         cur = {"generated_at": _BASE_TS.isoformat()}
         self.assertFalse(Command._is_previous_adjacent(cur, prev))
+
+
+# Session 1166 (item C): WARN-persist 2 snapshots → CRIT escalation.
+
+
+class TestWarnTierProbes(SimpleTestCase):
+    """Factory-style probes matching the _trips_no_workers / _trips_depth_crit pattern."""
+
+    def test_trips_warn_hang_helper(self):
+        self.assertFalse(
+            Command._trips_warn_hang({"hang_signature": {"count": 0}})
+        )
+        self.assertTrue(
+            Command._trips_warn_hang({"hang_signature": {"count": 1}})
+        )
+        self.assertTrue(
+            Command._trips_warn_hang({"hang_signature": {"count": 5}})
+        )
+        # Missing/malformed.
+        self.assertFalse(Command._trips_warn_hang({}))
+        self.assertFalse(Command._trips_warn_hang({"hang_signature": {}}))
+
+    def test_trips_warn_failures_helper(self):
+        self.assertFalse(
+            Command._trips_warn_failures({"task_stats": {"failure": 0}})
+        )
+        self.assertTrue(
+            Command._trips_warn_failures({"task_stats": {"failure": 1}})
+        )
+        self.assertTrue(
+            Command._trips_warn_failures({"task_stats": {"failure": 2}})
+        )
+        self.assertFalse(Command._trips_warn_failures({}))
+        self.assertFalse(Command._trips_warn_failures({"task_stats": {}}))
+
+    def test_trips_warn_depth_helper(self):
+        self.assertFalse(
+            Command._trips_warn_depth({"queue_depth": {"depth": 0}})
+        )
+        self.assertFalse(
+            Command._trips_warn_depth({"queue_depth": {"depth": 4}})
+        )
+        self.assertTrue(
+            Command._trips_warn_depth({"queue_depth": {"depth": 5}})
+        )
+        self.assertTrue(
+            Command._trips_warn_depth({"queue_depth": {"depth": 19}})
+        )
+        # Depth at CRIT threshold still trips the WARN probe — they are
+        # nested thresholds, not mutually exclusive.
+        self.assertTrue(
+            Command._trips_warn_depth({"queue_depth": {"depth": 20}})
+        )
+        self.assertFalse(Command._trips_warn_depth({}))
+
+
+class TestWarnPersistEscalation(SimpleTestCase):
+    """Per-sub-trigger WARN-persist → CRIT escalation."""
+
+    def _adjacent_pair(self, **kwargs):
+        """Build (prev, cur) with cur 30 min after prev — both inside the 60-min window."""
+        prev = _report(generated_at=_BASE_TS, **kwargs)
+        cur = _report(
+            generated_at=_BASE_TS + timedelta(minutes=30), **kwargs
+        )
+        return prev, cur
+
+    def test_depth_warn_persisting_two_snapshots_fires_crit(self):
+        cmd = Command()
+        prev, cur = self._adjacent_pair(depth=10)
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        self.assertIn(
+            "warn_persist:depth", cur["sustain_gating"]["escalated_triggers"]
+        )
+
+    def test_depth_warn_single_snapshot_stays_warn(self):
+        cmd = Command()
+        # Previous healthy, current depth=10 → WARN, no persist.
+        prev = _report(depth=0, generated_at=_BASE_TS)
+        cur = _report(depth=10, generated_at=_BASE_TS + timedelta(minutes=30))
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "WARN")
+        self.assertNotIn(
+            "warn_persist:depth", cur["sustain_gating"]["escalated_triggers"]
+        )
+
+    def test_failures_warn_persisting_two_snapshots_fires_crit(self):
+        cmd = Command()
+        prev, cur = self._adjacent_pair(failures=1)
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        self.assertIn(
+            "warn_persist:failures", cur["sustain_gating"]["escalated_triggers"]
+        )
+
+    def test_failures_warn_then_clear_stays_warn(self):
+        cmd = Command()
+        prev = _report(failures=0, generated_at=_BASE_TS)
+        cur = _report(failures=1, generated_at=_BASE_TS + timedelta(minutes=30))
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "WARN")
+        self.assertNotIn(
+            "warn_persist:failures", cur["sustain_gating"]["escalated_triggers"]
+        )
+
+    def test_hang_warn_persisting_two_snapshots_fires_crit(self):
+        cmd = Command()
+        # hang_count=1, oldest_hang_age low — single-snapshot WARN, not CRIT
+        # from the existing oldest_hang_age threshold.
+        prev = _report(hang_count=1, oldest_hang_age=10, generated_at=_BASE_TS)
+        cur = _report(
+            hang_count=1,
+            oldest_hang_age=10,
+            generated_at=_BASE_TS + timedelta(minutes=30),
+        )
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        self.assertIn(
+            "warn_persist:hang", cur["sustain_gating"]["escalated_triggers"]
+        )
+
+    def test_hang_single_snapshot_stays_warn(self):
+        cmd = Command()
+        prev = _report(hang_count=0, generated_at=_BASE_TS)
+        cur = _report(
+            hang_count=1,
+            oldest_hang_age=10,
+            generated_at=_BASE_TS + timedelta(minutes=30),
+        )
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "WARN")
+        self.assertNotIn(
+            "warn_persist:hang", cur["sustain_gating"]["escalated_triggers"]
+        )
+
+    def test_persist_with_stale_previous_does_not_escalate(self):
+        # 65 min between snapshots → previous not adjacent → no escalation.
+        cmd = Command()
+        prev = _report(depth=10, generated_at=_BASE_TS)
+        cur = _report(
+            depth=10, generated_at=_BASE_TS + timedelta(minutes=65)
+        )
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "WARN")
+        self.assertEqual(cur["sustain_gating"]["escalated_triggers"], [])
+
+    def test_persist_with_no_previous_does_not_escalate(self):
+        cmd = Command()
+        cur = _report(depth=10)
+        cmd._compute_status(cur, previous_report=None)
+        self.assertEqual(cur["status"], "WARN")
+        self.assertEqual(cur["sustain_gating"]["escalated_triggers"], [])
+
+    def test_cross_trigger_drift_does_not_escalate(self):
+        # Previous: depth WARN. Current: failures WARN. Different signals;
+        # neither persists per-sub-trigger.
+        cmd = Command()
+        prev = _report(depth=10, generated_at=_BASE_TS)
+        cur = _report(
+            failures=1, generated_at=_BASE_TS + timedelta(minutes=30)
+        )
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "WARN")
+        self.assertEqual(cur["sustain_gating"]["escalated_triggers"], [])
+
+    def test_multiple_persist_triggers_all_recorded(self):
+        # Both depth and failures persist — both reasons captured in
+        # the escalated_triggers list.
+        cmd = Command()
+        prev = _report(depth=10, failures=1, generated_at=_BASE_TS)
+        cur = _report(
+            depth=10,
+            failures=1,
+            generated_at=_BASE_TS + timedelta(minutes=30),
+        )
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        self.assertEqual(
+            set(cur["sustain_gating"]["escalated_triggers"]),
+            {"warn_persist:depth", "warn_persist:failures"},
+        )
+
+    def test_no_workers_persist_not_double_escalated_via_warn_persist(self):
+        # no_workers already goes CRIT via the existing sustain machinery
+        # — it must NOT appear in escalated_triggers because that path is
+        # excluded by design.
+        cmd = Command()
+        prev, cur = self._adjacent_pair(worker_count=0)
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        # gated_triggers also empty because no_workers_sustained=True →
+        # the gating block records it as escalated via its own path.
+        self.assertEqual(
+            cur["sustain_gating"]["escalated_triggers"],
+            [],
+            "no_workers must not appear in warn_persist escalated_triggers",
+        )
+
+    def test_escalated_triggers_field_always_present(self):
+        cmd = Command()
+        r = _report()  # healthy
+        cmd._compute_status(r, previous_report=None)
+        self.assertIn("escalated_triggers", r["sustain_gating"])
+        self.assertEqual(r["sustain_gating"]["escalated_triggers"], [])
+
+    def test_crit_short_circuit_preserves_higher_severity(self):
+        # CRIT-tier failures spike fires CRIT on its own — warn_persist
+        # path shouldn't matter for the verdict, but the escalation field
+        # should still record what persisted.
+        cmd = Command()
+        prev = _report(failures=1, generated_at=_BASE_TS)
+        cur = _report(
+            failures=3,  # CRIT tier on single snapshot
+            generated_at=_BASE_TS + timedelta(minutes=30),
+        )
+        cmd._compute_status(cur, previous_report=prev)
+        self.assertEqual(cur["status"], "CRIT")
+        # failures=3 trips _trips_warn_failures too, and previous had failures=1
+        # → warn_persist:failures fires alongside the CRIT-tier trigger.
+        self.assertIn(
+            "warn_persist:failures",
+            cur["sustain_gating"]["escalated_triggers"],
+        )
