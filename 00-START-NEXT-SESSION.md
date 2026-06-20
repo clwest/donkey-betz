@@ -97,246 +97,80 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1171 — CURRENT ENTRY POINT
+## SESSION 1175 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify the Session 1170 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-639751f029bc432f` (legacy — Session 1170 was conducted on a fresh thread `pa-96a6d49c933e444a` at Chris's request; consider whether to repoint the wrapper or mint another fresh thread). Disk check: `df -h /System/Volumes/Data`.
-
-### Session 1170 post-merge sanity check
+**Verify PR #2334 merged cleanly + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-58c916edf96044cc` (Session 1174 implementation thread). Disk check: `df -h /System/Volumes/Data`.
 
 ```bash
-# (1) agent_name dim populates for claude_code_agent_respond fires (PR #2322)
+# (1) AgentExecution.conversation_id field is populated on PA-dispatched rows (PR #2334)
 .venv/bin/python manage.py shell -c "
-from core.models_celery_telemetry import CeleryTaskEvent
+from core.models_unified_system import AgentExecution
 from datetime import timedelta
 from django.utils import timezone
 since = timezone.now() - timedelta(hours=24)
-rows = CeleryTaskEvent.objects.filter(
-    started_at__gte=since,
-    task_name='core.tasks.claude_code_agent_respond',
-)
-total = rows.count()
-populated = rows.exclude(agent_name='').count()
-print(f'claude_code_agent_respond fires last 24h: {total}, with agent_name: {populated}')
+total = AgentExecution.objects.filter(created_at__gte=since).count()
+with_conv = AgentExecution.objects.filter(created_at__gte=since).exclude(conversation_id__isnull=True).count()
+print(f'AgentExecution rows last 24h: {total}, with conversation_id: {with_conv}')
 "
-# Expect: populated == total (or total == 0 if no Claude Code calls happened).
+# Expect: with_conv > 0 if any PA dispatches happened. Ratio depends on PA-vs-autonomous mix.
 
-# (2) cost_estimator_version tag on new openai CostTracking rows (PR #2323)
-.venv/bin/python manage.py shell -c "
-from core.models_unified_system import CostTracking
-from datetime import timedelta
-from django.utils import timezone
-since = timezone.now() - timedelta(hours=24)
-rows = list(CostTracking.objects.filter(provider='openai', timestamp__gte=since)[:50])
-total = len(rows)
-v2 = sum(1 for r in rows if (r.metadata or {}).get('cost_estimator_version') == 'v2_cached_tokens')
-print(f'openai CostTracking 24h: {total}, tagged v2_cached_tokens: {v2}')
-"
-# Expect: v2 == total.
+# (2) DB index present
+.venv/bin/python manage.py dbshell -- -c "
+SELECT indexname FROM pg_indexes WHERE tablename='core_agentexecution' AND indexdef LIKE '%conversation_id%';"
+# Expect: core_agentexecution_conversation_id_12cfe0ed + LIKE-index.
 
-# (3) cached_input_tokens populated on at least one cache-heavy call
-.venv/bin/python manage.py shell -c "
-from core.models_unified_system import CostTracking
-from datetime import timedelta
-from django.utils import timezone
-since = timezone.now() - timedelta(hours=24)
-rows = CostTracking.objects.filter(provider='openai', timestamp__gte=since)
-cached_hits = [r for r in rows if (r.metadata or {}).get('cached_input_tokens', 0) > 0]
-print(f'rows with cached_input_tokens > 0: {len(cached_hits)}')
-"
-# Expect: >0 once long PA threads have accumulated previous_response_id chains.
-
-# (4) Internal openai 24h aggregate vs OpenAI dashboard
-.venv/bin/python manage.py shell -c "
-from core.models_unified_system import CostTracking
-from django.db.models import Sum
-from datetime import timedelta
-from django.utils import timezone
-since = timezone.now() - timedelta(hours=24)
-total = CostTracking.objects.filter(provider='openai', timestamp__gte=since).aggregate(s=Sum('estimated_cost_usd'))['s']
-print(f'Internal estimated openai cost last 24h: \${total}')
-"
-# Compare against OpenAI dashboard for the same UTC window — convergence
-# is the success signal.
+# (3) Long-running worker is loaded with new code
+.venv/bin/celery -A core inspect registered | grep execute_agent_task
+# Expect: core.tasks.execute_agent_task registered.
 ```
 
-Full Session 1170 24h watch + rollback levers live in [`docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md`](docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md).
+If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`. Then re-run.
 
-### Session 1169 post-merge sanity check (preserved for reference)
+### PRIORITY 1 — Session 1174 PR-2: Follow-up wake vertical slice
 
-### Session 1169 post-merge sanity check
+Full design + plan: [`docs/handoffs/SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md`](docs/handoffs/SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md). PR-1 (#2334, merged 2026-06-20) shipped the `AgentExecution.conversation_id` gating schema. PR-2 builds the actual follow-up loop on top of it.
 
-```bash
-# (1) Layer C Phase 1 — factory legacy contract still works for non-opted-in callers
-.venv/bin/python manage.py shell -c "
-from core.services.deliverable_factory import create_deliverable
-result = create_deliverable(
-    title='Smoke test legacy contract',
-    content='x' * 400,
-    agent_name='SomeAgent',
-    metadata={'trigger_source': 'pa_tool'},
-)
-print('legacy contract result:', result)
-"
-# Expect: None.
+**Ratified design (don't re-derive):**
+- **c2 explicit `schedule_followup` PA tool**, keyed on `execution_id` (accept `task_id` as lookup).
+- **Banner + Rigby-authored chat message** (chat bubble is load-bearing per Chris's stated UX).
+- **`after_seconds` cap 600s = TTL window.** Subscription eligible immediately on creation. If execution already terminal at subscribe time → deliver immediately + dedupe. No Celery ETA dependency. States: `armed | expired | fired`.
+- **D5 user-moved-on:** still post follow-up, tagged "Background completion."
 
-# (2) Layer C Phase 1 — PA dispatcher carries actual reason_code through Rigby:
-#       deliverable_tool.create(title='Smoke test verify', content='anything short')
-#     Expected: reason_code='gate_2_smoke_pattern' (NOT 'unknown_gate').
+**Phase 1 invariants (must-haves, all blocking on PR-2):**
+- Dedupe at most one `agent.completed` event per `(execution_id, conversation_id)` pair. Idempotent via atomic `armed → fired` queryset update with `state='armed'` in filter.
+- Scope rules: only rows with persisted `conversation_id` AND explicit `AgentFollowupSubscription` may post.
+- Payload contract: `{execution_id, agent_name, status, completed_at, artifact_pointers}`.
+- Failure path: failures fire `agent.completed` with `status=error` + short `error_signature`.
 
-# (3) Denylist Celery rows stay disabled
-.venv/bin/python manage.py shell -c "
-from django_celery_beat.models import PeriodicTask
-from core.management.commands.add_critical_celery_tasks import LOCAL_DENY_TASKS
-rows = list(PeriodicTask.objects.filter(name__in=LOCAL_DENY_TASKS).values('name', 'enabled'))
-for r in sorted(rows, key=lambda r: r['name']):
-    flag = '✗' if r['enabled'] else '✓'
-    print(f'  {flag} {r[\"name\"]} (enabled={r[\"enabled\"]})')
-"
-# Expect: all 6 with ✓.
+**PR split (so partial progress is shippable):**
+- **PR-2a (SHIPPED #2336):** subscription model + signal handler bridge + `PAConversationConsumer.agent_completed` handler + beat-scheduled expiry cleanup. Backend foundation; no UI.
+- **PR-2b-1 (SHIPPED #2337):** `schedule_followup` PA tool + handler + subscribe-after-terminal immediate-fire. Backend-only. Rigby live-verified the tool through her FC loop.
+- **PR-2b-2 (NEXT — this session's primary work):** ChatConversation server-side persistence + Q-C side-effect investigation pass (token accounting / embeddings / `last_message_at` / unread counters) + Rigby's return-shape-stability cleanup on `schedule_followup` (always emit standard keys with nulls where not applicable, instead of bare `{success: false, error: ...}` on error paths).
+- **PR-2b-3:** banner UI component + 60s demo script.
 
-# (4) Agent dim populating on new CeleryTaskEvent rows
-.venv/bin/python manage.py shell -c "
-from core.models_celery_telemetry import CeleryTaskEvent
-from datetime import timedelta
-from django.utils import timezone
-since = timezone.now() - timedelta(hours=24)
-agent_rows = CeleryTaskEvent.objects.filter(started_at__gte=since).exclude(agent_name='')
-print(f'Rows with agent_name in last 24h: {agent_rows.count()}')
-"
-# Expect: non-zero if agent dispatches happened post-merge.
+**Files to touch (estimate):**
+- `core/models_unified_system.py` (or new `core/models_followup.py`) + migration 0358 — `AgentFollowupSubscription`.
+- `core/tasks_agents.py` — signal handler bridge (extend existing `send_execution_update`, don't replace).
+- `core/consumers_pa_conversation.py` — `agent_completed` handler (banner event + server-side Rigby message persistence).
+- `core/services/pa_tool_schemas.py` + `core/services/tool_dispatcher.py` — `schedule_followup` tool.
+- `core/celery.py` + `core/tasks.py` — `expire_stale_followup_subscriptions` beat task.
+- `frontend/src/stores/agentStore.ts` + `frontend/src/components/AgentCompletionBanner.tsx` (new).
 
-# (5) monitor_celery_health decorator timeouts
-.venv/bin/python manage.py shell -c "
-from core.tasks import monitor_celery_health
-print('queue:', monitor_celery_health.queue, 'soft:', monitor_celery_health.soft_time_limit, 'hard:', monitor_celery_health.time_limit)
-"
-# Expect: broadcast / 60 / 90.
-```
+**Out of scope (deferred Phase 2):** rate-limiting (unless local testing shows spam), auto-linking deliverable→initiative→workspace (waiting on BUG-UI-001 read-side), c1 auto-wake, multi-agent fan-out, cross-conversation follow-up.
 
-Full Session 1169 24h watch checklist lives in [`docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`](docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md). Run the relevant blocks per item below as you decide where to start.
+### PRIORITY 2 — Address WorkflowAgent → Local QA artifacts (carried from Session 1174)
 
-**Session 1168 post-merge sanity check** — verify the five PRs are loaded + active:
+Rigby's morning agent-collaboration test (WorkflowAgent execution `ea82e075-af7c-4747-b880-694a065ce588`, completed 18:14:15 UTC on 2026-06-20) produced two deliverables in the Local QA workspace:
+- `d57b0fa7-8bfb-4e79-b06b-af920edbee7e` (ResearchAgent — Phase A/B summary)
+- `c105205b-ad0a-4fdf-a7c6-fe334e81a498` (ContentWriterAgent — "Platform QA Pass 1 (Local) — Agent Collaboration Report")
 
-```bash
-# (1) PR #2310 + #2311 — deliverable create/update through live PA via Rigby:
-#       deliverable_tool.create(title="Quick test", content="Short body.")  → ok=true
-#       deliverable_tool.create(title="Smoke test", content="anything")     → ok=false, error_code=deliverable_gated
-#       deliverable_tool.update(id="<any-orphan>", workspace_id="<chris-personal>") → ok=true with 'workspace' in updated_fields
-# (Carry-over verification list lives in docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md "24h watch checklist")
+Pre-PR-2-merge they were not visible end-to-end in the workspace UI (BUG-UI-001 — deliverable→initiative link not showing). Once PR-2 lands, re-check whether the follow-up wake messaging surfaces these via the new banner + Rigby chat path. If BUG-UI-001 is still blocking, it remains a separate ticket.
 
-# (2) PR #2312 — ops_tool.overview returns a memory_pressure block:
-#       Through Rigby: ops_tool.overview → expect result['memory_pressure'] = {overall_state, top_offender, worker_count, downshift_recommended, ...}
-#       Through Rigby: ops_tool.memory_pressure → expect cap_coverage_pct field (float or None)
+### Carryover from Sessions 1171–1174 (not yet acted on)
 
-# (3) PR #2314 — local-safe beat denylist held on local DB:
-.venv/bin/python manage.py shell -c "
-from django_celery_beat.models import PeriodicTask
-from core.management.commands.add_critical_celery_tasks import LOCAL_DENY_TASKS
-rows = list(PeriodicTask.objects.filter(name__in=LOCAL_DENY_TASKS).values('name', 'enabled'))
-print('Denylist rows ({}/{}):'.format(len(rows), len(LOCAL_DENY_TASKS)))
-for r in sorted(rows, key=lambda r: r['name']):
-    flag = '✗' if r['enabled'] else '✓'
-    print(f'  {flag} {r[\"name\"]} (enabled={r[\"enabled\"]})')
-"
-# Expect: all 6 with ✓ (enabled=False). Any ✗ = re-enabled somewhere; investigate.
-
-# (4) No denylisted tasks fired in the last 24h:
-.venv/bin/python manage.py shell -c "
-from core.models_unified_system import CeleryTaskEvent
-from datetime import timedelta
-from django.utils import timezone
-since = timezone.now() - timedelta(hours=24)
-denied_dotted = [
-    'intelligence.tasks.scan_income_spider_orchestrator',
-    'intelligence.tasks.scan_spider_opportunities',
-    'core.tasks.run_spider_network',
-    'ai_core.tasks.warm_up_spider_network',
-    'core.tasks.backfill_spider_embeddings',
-]
-hits = CeleryTaskEvent.objects.filter(task_name__in=denied_dotted, started_at__gte=since)
-print(f'Denied-task firings in last 24h: {hits.count()}')
-for h in hits[:10]:
-    print(f'  - {h.task_name} @ {h.started_at}')
-"
-# Expect: zero hits.
-```
-
-If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery` + `python manage.py add_critical_celery_tasks`. Then re-run. Full Session 1168 24h watch checklist lives in [`docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md`](docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md).
-
-### COO Nervous System Backlog — CLOSED 2026-06-19
-
-All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164–1167. No items remain.
-
-### chris-personal Known Bugs Queue — CLOSED 2026-06-20
-
-All 3 SHIP items closed in Session 1168 (PRs #2310, #2311, #2314). The Queue + its companion deliverables (`3973c817`, `f92ab8bb`, `7c332f0d`) are ready for archive / `status=resolved`.
-
-### Session 1168 + 1167 carryover queue — CLOSED 2026-06-20
-
-All 5 carryover items closed in Session 1169 in Rigby's B-C-E-A-D-1 stretch order: items 2 / 3 / F / D / 1 (PRs #2316 / #2317 / #2318 / #2319 / #2320). Full handoff: [`docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`](docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md).
-
-### Session 1170 — CLOSED 2026-06-20 (agent dim caller fix + cached-cost estimator)
-
-PR #2322 (`f709f422`) closed the agent_name dim gap discovered during entry sanity (block 4 of the 1169 verification). PR #2323 (`fe72a369`) closed the OpenAI dashboard cost-spike mismatch — internal estimator was overestimating cached input by ~9.7×. Live validation row showed pre-fix overestimated by 4.1× ($0.0729 vs actual $0.0176). Full handoff: [`docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md`](docs/handoffs/SESSION_1170_AGENT_DIM_AND_CACHED_COST.md).
-
-### PRIORITY 1 — execute_agent_task caller sweep (Session 1170 Phase 2)
-
-PR #2322 shipped Phase 1 of the kwargs-form migration (covered `claude_code_agent_respond`). The `core.tasks.execute_agent_task` family — ~15 callers across `core/services/td_handlers_*`, `conversation_action_dispatcher.py`, `tool_dispatcher.py`, `metrics_action_trigger.py`, `scheduled_diagnostic_runner.py`, `views_diagnostics.py`, `tasks_ops.py` — still uses positional / args-based dispatch. Until that lands, `top_consumers(group_by='agent')` undercounts that family. Bundle in 2–3 focused PRs by file family per "primitives + opt-in apply list" pattern.
-
-### PRIORITY 2 — Layer C completion (Session 1169 follow-on)
-
-PR #2320 shipped Phase 1 of Layer C (DeliverableGatedError primitive + 3 hot-path opt-ins). The migration plan needs Phase 2 + Phase 3 to actually close the silent-None footgun on the remaining 24 production callers.
-
-1. **Layer C Phase 2 — sweep remaining 24 production callers of `create_deliverable`** in batches by file category. Route through Rigby to confirm batch boundaries before each PR.
-   - `services/*` — ~10 sites: `td_handlers_newsletter`, `td_handlers_core` (2 of 3 left), `deliverable_envelope`, `mission_control_executor`, `conversation_deliverable_extractor`, `deliverable_append_service`, `workspace_pipeline_runner`, `conversation_initiative_pipeline`, `implementation_executor` x2
-   - `tasks_*.py` — ~5 sites: `tasks_content`, `tasks_initiatives` x2, `tasks_conversations`
-   - `views_*.py` — ~3 sites: `views_diagnostics` x2, `views_workspace_templates`, `views_demo_pipeline`
-   - `management/commands/*.py` — ~6 sites: 5 external-repo commands + `import_patent_disclosures`
-   - Each batch small enough to audit per-caller pattern (broad-except vs None-guard vs blind `.id`).
-2. **Layer C Phase 3 — flip default OR add deprecation log.** Decision point after Phase 2 sweeps complete. Either delete the legacy None contract (clean invariant), or keep both and emit a deprecation warning when the factory returns None so we can measure remaining legacy callers before the flip.
-
-### PRIORITY 3 — Real fix for capture_pa_acks_health_snapshot p95=1880s
-
-Session 1169 PR #2319 added decorator timeouts to `monitor_celery_health` but documented that `capture_pa_acks_health_snapshot` has carried `soft_time_limit=60, time_limit=90` since Session 1161 and STILL measured p95=1880s on PR #2306. The real fix is **probe decomposition**:
-
-- Split `capture_pa_acks_health_snapshot` body into 4 separate cadence tasks (queue depth, workers inspect, hang signature, inflight estimate)
-- Each gets its own `@shared_task` with timeouts + its own beat entry
-- A stuck `inspect()` then only kills its own slot, not the whole monitor
-- Aggregate the 4 JSONL streams into a single combined report (post-write) for the existing `pa_acks_health` consumer surface
-
-Touches `core/tasks.py` (split task) + `core/management/commands/pa_acks_health.py` (build_report refactor) + `core/celery.py` (beat schedule entries). Likely 2-3 PRs.
-
-### PRIORITY 4 — Schema-drift reconciliation (deliverable `b58b20b3`)
-
-Session 1169 PR #2318's `makemigrations` surfaced pre-existing model drift unrelated to the agent_name change. Quarantined into deliverable `b58b20b3` on chris-personal workspace. Three clusters:
-
-1. **Cluster A — REAL drift, needs owner.** Narrative subsystem: 4 CreateModel ops (Narrative + NarrativeEvidence + NarrativeShift + NarrativeAlert) + 2 indexes. Whole product feature landed in models without migrations. Find the owner; needs its own migration PR with rollout notes.
-2. **Cluster B — Intentional, ship when convenient.** `CuratedSignalEntry.action_status` adds `needs_regen` choice (likely Session 1140 era ops work). Confirm intent + ship migration.
-3. **Cluster C — Cosmetic, safe to batch or ignore.** Help_text and default tweaks on `CuratedSignalEntry`, `FinalAppliedOverrides`, `FleetPaChatAuditRow`, `AgentExecution`. No DDL impact (AgentExecution indexes are correctly in production per migration `0336` — drift is help_text-only).
-
-### PRIORITY 5 — Digest product arc (parked since Session 1168)
-
-Held out of Session 1168 + 1169 because it's a bigger product decision. At Session 1170 entry: do we still want the digest product, or has the priority shifted? Route through Rigby.
-
-- **`a4a2697d-0882-4583-be94-10f8ac56694e` — Weekend Digest Autopilot — Spec & Acceptance Criteria.** Spec written Session 1166-or-earlier, never built.
-- **`2a2ea6e3-0f9e-4989-8e1f-5790e91d4324` — Claude Code Help Tickets — Weekend-Safe Stocks + Crypto Digest.** Implementation companion to the spec.
-
-### PRIORITY 6 — gpt-5.2 rate refresh + multi-provider cost audits (Session 1170 follow-on)
-
-Session 1170's cached-cost fix kept the existing Session 1036 rate constants ($1.75 input / $14 output / $0.18 cached for gpt-5.2). Verify against current OpenAI pricing page or a known invoice line item. If rates have drifted, ship a constant update as a focused PR. In parallel, audit `_call_anthropic` + the Together AI cost paths for the same cached-discount blind spot — the structural pattern (discount documented in comment but not applied in formula) is provider-independent.
-
-### PRIORITY 7 — Consolidation / deferred from Session 1165 (focused follow-on PRs, still queued)
-
-- **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
-- **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
-- **Agent-task family retry budgets.** Wire the `retry_policy` primitive from PR #2297 to the agent task family. Needs fingerprinting strategy first (`agent_name + user_id + workspace_id`).
-- **Bulk migration of ~5 linear/fixed countdown sites** (`core/tasks_agents.py` family) to `compute_retry_countdown` from PR #2297.
-
-### Aspirational follow-ons (still queued)
-
-- **`pg_stat_statements` on staging/prod.** Installed locally Session 1165.
+The Session 1171 entry-point notes (PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds) carried through Sessions 1172 and 1173 without being formally re-priorited. Live handoffs: `docs/handoffs/SESSION_1171_*`, `SESSION_1172_*`, `SESSION_1173_*`. Review there if any are now blocking; otherwise they continue to ride.
 
 ---
 
