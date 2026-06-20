@@ -70,6 +70,51 @@ def _detect_memory_intent(message: str) -> str | None:
     return None
 
 
+TOOL_ARGS_MALFORMED_ERROR_CODE = 'TOOL_ARGS_JSON_MALFORMED'
+
+
+def _build_tool_args_malformed_envelope(
+    *, tool_name: str, raw_args: str, parse_err: Exception
+) -> dict:
+    """Build the typed error envelope returned when an LLM tool-call's
+    `arguments` JSON fails to parse. Extracted from the agentic loop so it
+    can be unit-tested without standing up the full PA stack.
+
+    Shape ratified by Rigby in Session 1177 (see
+    docs/handoffs/SESSION_1177_*). Critical invariant: callers must NOT
+    invoke the tool handler when this is returned — handler defaults
+    (e.g. deliverable_tool action='list') would mask the parse failure
+    as a benign success.
+    """
+    raw_args = raw_args or ''
+    args_len = len(raw_args)
+    args_tail = raw_args[-200:] if args_len > 200 else raw_args
+    parse_err_str = f"{type(parse_err).__name__}: {parse_err}"
+    retry_hint_action = (
+        f"{tool_name}.append" if tool_name.endswith('_tool') else None
+    )
+    return {
+        'ok': False,
+        'error_code': TOOL_ARGS_MALFORMED_ERROR_CODE,
+        'tool_name': tool_name,
+        'message': (
+            'Tool-call arguments JSON could not be parsed (likely '
+            'truncated by the LLM output token budget). Retry with a '
+            'smaller payload — for large content writes prefer the '
+            '*_append action over update.'
+        ),
+        'meta': {
+            'arguments_len': args_len,
+            'parse_error': parse_err_str,
+            'arguments_excerpt_tail': args_tail,
+        },
+        'retry_hint': {
+            'recommended_action': retry_hint_action,
+            'max_chunk_chars_suggestion': 2000,
+        },
+    }
+
+
 @dataclass
 class PAResponse:
     """Structured response from PA."""
@@ -1519,8 +1564,51 @@ class UnifiedPAEntrypoint:
 
                 try:
                     arguments = json.loads(fn.get('arguments', '{}'))
-                except (json.JSONDecodeError, TypeError):
-                    arguments = {}
+                except (json.JSONDecodeError, TypeError) as parse_err:
+                    # Session 1177 F1 root-cause fix. The LLM's tool-call
+                    # `arguments` JSON can be truncated mid-stream when a long
+                    # content payload pushes past the output token budget. The
+                    # prior `arguments = {}` silent fallback let an empty dict
+                    # flow into `_handle_deliverable_direct`, which then
+                    # defaulted `action` to `'list'` — so an attempted update
+                    # silently returned a list of deliverables and Rigby's
+                    # write was lost without any caller-visible signal.
+                    # Surface as a typed tool-error envelope so the agentic
+                    # loop sees ok=False and Rigby can self-correct.
+                    raw_args = fn.get('arguments', '') or ''
+                    error_envelope = _build_tool_args_malformed_envelope(
+                        tool_name=tool_name,
+                        raw_args=raw_args,
+                        parse_err=parse_err,
+                    )
+                    logger.warning(
+                        f"[{trace_id}] tool args JSON parse failed: "
+                        f"tool_name={tool_name} "
+                        f"args_len={error_envelope['meta']['arguments_len']} "
+                        f"parse_err={error_envelope['meta']['parse_error']} "
+                        f"tail={error_envelope['meta']['arguments_excerpt_tail']!r}"
+                    )
+                    fc_metadata.append({
+                        'name': tool_name,
+                        'arguments': {},  # honest: nothing parseable
+                        'call_id': call_id,
+                        'ok': False,
+                    })
+                    tool_result_inputs.append({
+                        'type': 'function_call_output',
+                        'call_id': call_id,
+                        'output': json.dumps(error_envelope),
+                    })
+                    tool_runs.append({
+                        'ok': False,
+                        'tool': tool_name,
+                        'latency_ms': 0,
+                        'error_code': TOOL_ARGS_MALFORMED_ERROR_CODE,
+                        'error_message': error_envelope['message'],
+                        'trace_id': trace_id,
+                        'result': None,
+                    })
+                    continue
 
                 logger.info(f"[{trace_id}] FC calling tool: {tool_name}({list(arguments.keys())})")
 
