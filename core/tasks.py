@@ -11316,8 +11316,14 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
 
 
 @shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
-def claude_code_agent_respond(conversation_id, message_text, source):
-    """Autonomous Claude Code agent — responds when addressed in a conversation."""
+def claude_code_agent_respond(conversation_id, message_text, source, agent_name='claude-code'):
+    """Autonomous Claude Code agent — responds when addressed in a conversation.
+
+    Session 1170: `agent_name` kwarg lets the CeleryTaskEvent telemetry signal
+    extractor (core/celery_telemetry.py:_extract_agent_name) populate the
+    agent dimension. Default 'claude-code' keeps the dim filled even on
+    callers that haven't been updated yet. Body does not consume it.
+    """
     from core.services.claude_code_agent import handle_message
     return handle_message(conversation_id, message_text, source)
 
