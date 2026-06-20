@@ -155,3 +155,28 @@ class PAConversationConsumer(AsyncWebsocketConsumer):
             "status": event.get("status", "ok"),
             "result_summary": event.get("result_summary", ""),
         }))
+
+    # Session 1174 PR-2a: agent-completion event handler. Fired from
+    # core.tasks_agents.fire_agent_followup_subscriptions when a terminal-state
+    # AgentExecution has an armed AgentFollowupSubscription for this conversation.
+    # Channels maps dots to underscores so "agent.completed" → this method.
+    #
+    # PR-2a scope is WebSocket-only — the frontend banner component (PR-2b) consumes
+    # this event and renders the inline completion notice. Server-side ChatConversation
+    # persistence (so the message survives a page refresh) is deferred to PR-2b along
+    # with the schedule_followup PA tool; the open question on Q-C side effects
+    # (token accounting / embeddings / last_message_at / unread counters) needs one
+    # more pass before we start writing rows that bypass the FC loop.
+
+    async def agent_completed(self, event):
+        """Push an `agent.completed` event to the WebSocket client (PR-2a foundation)."""
+        await self.send(text_data=json.dumps({
+            "type": "agent.completed",
+            "execution_id": event.get("execution_id", ""),
+            "agent_name": event.get("agent_name", ""),
+            "status": event.get("status", ""),
+            "completed_at": event.get("completed_at", ""),
+            "error_signature": event.get("error_signature"),
+            "artifact_pointers": event.get("artifact_pointers", {}),
+            "timestamp": event.get("timestamp", ""),
+        }))
