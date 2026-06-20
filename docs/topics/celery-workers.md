@@ -252,6 +252,16 @@ The remediation pattern is always the same:
 
 Session 1167 PR #2306 live smoke first surfaced this on `monitor_celery_health` (`p95=1048s`) and `capture_pa_acks_health_snapshot` (`p95=1880s`). Both are queued as Session 1169 work per `00-START-NEXT-SESSION.md`.
 
+### Decorator-side timeouts on monitor tasks (Session 1169 — partial close of carryover D)
+
+`monitor_celery_health` previously got its queue routing from the beat schedule's `options` block (`'queue': 'broadcast'`) and had NO `time_limit` / `soft_time_limit` on the `@shared_task` decorator at all. That meant any direct `.delay()` / `.apply_async()` call dispatched outside beat ran with the Celery defaults (no time limit) — one of the failure modes behind PR #2306 live smoke's `p95=1048s` measurement.
+
+**Fix:** `@shared_task(name=..., queue='broadcast', soft_time_limit=60, time_limit=90)` on the decorator itself. Beat scheduling unchanged. Matches the pattern locked Session 1161 for `capture_pa_acks_health_snapshot`.
+
+**Critical operator insight — timeouts alone are NOT sufficient for monitor tasks that fan out to broker / Redis inspect calls.** `soft_time_limit` raises `SoftTimeLimitExceeded` only between Python bytecode operations; a blocking C-level call (broker `inspect()`, Redis `BLPOP`, etc.) doesn't yield, so the timeout fires only after the C call returns. `capture_pa_acks_health_snapshot` has carried `soft_time_limit=60, time_limit=90` since Session 1161 (commit `bbf9f7552`) and STILL measured `p95=1880s` on PR #2306 — that's the evidence.
+
+For monitor tasks exhibiting this pattern, the real fix is **probe decomposition** — split the body into per-check cadence tasks (queue depth, workers inspect, hang signature, inflight estimate as 4 separate tasks), each with its own timeout. A stuck `inspect()` then only kills its own slot, not the whole monitor. `capture_pa_acks_health_snapshot` probe decomposition is queued as a Session 1170 (or later) carryover.
+
 ### Agent dimension on top_consumers (Session 1169 — closes carryover F)
 
 `ops_tool.top_consumers` now accepts an optional `group_by` arg. Values:
