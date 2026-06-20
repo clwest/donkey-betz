@@ -61,6 +61,18 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 1800},
     },
 
+    # Session 1167 — COO Nervous System Backlog item #5. Every 5 min,
+    # sample per-worker RSS via psutil and compare to the cap parsed
+    # from each worker's --max-memory-per-child cmdline flag. Writes
+    # logs/worker_memory/YYYY-MM-DD.jsonl (UTC). Sustained pressure
+    # (>=80% of cap on N=3 consecutive adjacent samples) → CRIT +
+    # downshift recommendation. Soft signal only — no auto-restart.
+    'worker-memory-capture': {
+        'task': 'core.tasks.capture_worker_memory_snapshot',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'broadcast', 'expires': 240},
+    },
+
     # Session 1129 Move 2 Round 2 — Soft-delete expired fleet artifacts.
     # Daily run is the spec'd default. Staging may want hourly; if so,
     # change schedule to crontab(minute=0).

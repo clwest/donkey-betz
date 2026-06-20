@@ -258,6 +258,13 @@ class OpsHandlersMixin:
             # Session 1100: Search recent executions by agent name / status
             return self._ops_execution_search(payload, trace_id)
 
+        elif action == 'memory_pressure':
+            # Session 1167: COO Nervous System Backlog item #5. Reads
+            # the latest snapshot from logs/worker_memory/*.jsonl (the
+            # cadence task is single-source-of-truth for sampling and
+            # thresholds). No re-sampling here — reduce-from-JSONL.
+            return self._ops_memory_pressure(trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -738,6 +745,62 @@ class OpsHandlersMixin:
         if cockpit.get('redis_error'):
             rollup['redis_error'] = cockpit['redis_error']
         return rollup
+
+
+    def _ops_memory_pressure(self, trace_id: str) -> Dict[str, Any]:
+        """Worker memory pressure surface — reduce-from-JSONL.
+
+        Session 1167 — COO Nervous System Backlog item #5. Reads the
+        latest line from ``logs/worker_memory/YYYY-MM-DD.jsonl`` (UTC).
+        The cadence task in ``core.tasks.capture_worker_memory_snapshot``
+        is single-source-of-truth for sampling, cap parsing, and status
+        thresholds. This handler projects + thin-renames for the PA
+        tool surface; it does NOT re-classify (Session 1164 rule).
+        """
+        from django.utils import timezone
+
+        try:
+            from core.services.memory_telemetry import read_recent_snapshots, LOG_DIR
+        except ImportError as e:
+            return {
+                'action': 'memory_pressure',
+                'error': f'memory_telemetry module unavailable: {e}',
+                'generated_at': timezone.now().isoformat(),
+            }
+
+        latest = read_recent_snapshots(LOG_DIR, count=1)
+        if not latest:
+            return {
+                'action': 'memory_pressure',
+                'overall_status': 'UNKNOWN',
+                'note': (
+                    'No JSONL snapshot found at logs/worker_memory/. '
+                    'The capture_worker_memory_snapshot beat task may '
+                    'not have fired yet (5-min cadence) or workers may '
+                    'need restart to pick up the new task.'
+                ),
+                'generated_at': timezone.now().isoformat(),
+            }
+
+        snapshot = latest[0]
+        return {
+            'action': 'memory_pressure',
+            'schema_version': snapshot.get('schema_version'),
+            'snapshot_generated_at': snapshot.get('generated_at'),
+            'snapshot_generated_at_mt': snapshot.get('generated_at_mt'),
+            'cadence_seconds': snapshot.get('cadence_seconds'),
+            'overall_status': snapshot.get('overall_status', 'OK'),
+            'worker_count': snapshot.get('worker_count'),
+            'workers': snapshot.get('workers', []),
+            'top_offenders': snapshot.get('top_offenders', []),
+            'downshift_recommended': snapshot.get('downshift_recommended_global', False),
+            'suggested_concurrency_by_worker': snapshot.get(
+                'suggested_concurrency_by_worker', {}
+            ),
+            'recommended_actions': snapshot.get('recommended_actions', []),
+            'sustain_gating': snapshot.get('sustain_gating', {}),
+            'generated_at': timezone.now().isoformat(),
+        }
 
 
     # ── Session 1100: Ops observability helpers ─────────────────────────────
