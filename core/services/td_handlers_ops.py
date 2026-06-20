@@ -277,9 +277,14 @@ class OpsHandlersMixin:
             # task_name aggregation over CeleryTaskEvent.duration_seconds
             # for one window (default 24h). p95 computed server-side via
             # PostgreSQL percentile_cont — single aggregate query.
+            # Session 1169: optional group_by='agent' switches the
+            # dimension to the new agent_name field (populated by the
+            # task_prerun signal). Default group_by='task' preserves
+            # backwards-compatible behavior.
             window = payload.get('window', '24h')
             limit = payload.get('limit')
-            return self._ops_top_consumers(window, limit, trace_id)
+            group_by = payload.get('group_by', 'task')
+            return self._ops_top_consumers(window, limit, trace_id, group_by=group_by)
 
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
@@ -889,14 +894,15 @@ class OpsHandlersMixin:
 
 
     def _ops_top_consumers(
-        self, window: str, limit, trace_id: str,
+        self, window: str, limit, trace_id: str, *, group_by: str = 'task',
     ) -> Dict[str, Any]:
-        """Top wall-clock consumers per task_name — single SQL aggregate.
+        """Top wall-clock consumers per task or agent — single SQL aggregate.
 
-        Session 1167 — COO Nervous System Backlog item #7. Reduces to
-        ``core.services.top_consumers.compute_top_consumers``; the
+        Session 1167 — COO Nervous System Backlog item #7 (task dim).
+        Session 1169 — agent dim added (closes carryover item F). Reduces
+        to ``core.services.top_consumers.compute_top_consumers``; the
         service module is single-source-of-truth for the SQL + window
-        vocabulary + p95 computation.
+        vocabulary + p95 computation + dimension allowlist.
         """
         from django.utils import timezone
 
@@ -910,7 +916,9 @@ class OpsHandlersMixin:
             }
 
         try:
-            return compute_top_consumers(window=window, limit=limit)
+            return compute_top_consumers(
+                window=window, limit=limit, group_by=group_by,
+            )
         except ValueError as e:
             return {
                 'action': 'top_consumers',
