@@ -17,10 +17,10 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1174 follow-up
-# wake design + implementation thread (pa-58c916edf96044cc, created
-# Session 1175 after the prior daily-chat thread pa-639751f029bc432f
-# hit health score 25/100 with 49 turns / ~24.5k tokens / 9 topics).
+# the --conversation flag below. Current value: Session 1177 thread
+# (pa-9b82bcc72e1945ce, created Session 1176 close after the prior
+# Session 1174-1176 thread pa-58c916edf96044cc hit health score 25/100
+# with 43 turns / ~21.5k tokens / 9 topics).
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-58c916edf96044cc
+python tools/pa_chat.py "$@" --tools --conversation pa-9b82bcc72e1945ce
