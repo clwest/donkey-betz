@@ -1014,6 +1014,87 @@ class AgentExecution(models.Model):
     # warning pointing to the empty alternative.
 
 
+class AgentFollowupSubscription(models.Model):
+    """
+    Session 1174 PR-2a: subscription record for the agent-follow-up wake design.
+
+    When Rigby dispatches an agent and calls `schedule_followup(execution_id, after_seconds)`,
+    a row is inserted here in state='armed'. The signal handler in tasks_agents.send_execution_update
+    looks up matching armed-and-not-expired rows on terminal AgentExecution status transitions
+    and atomically flips them to 'fired' (queryset update with state='armed' in filter, rowcount=1 wins),
+    then broadcasts to pa_conversation_<conversation_id>. PAConversationConsumer.agent_completed
+    persists a Rigby-authored ChatConversation row + emits a banner event.
+
+    after_seconds semantics: TTL window, capped at 600s. Subscription is eligible immediately on
+    creation. If execution is already terminal at subscribe time, the schedule_followup handler
+    fires immediately (and never creates an 'armed' row). See SESSION_1174_FOLLOWUP_WAKE_PR1_SHIP.md
+    for the full ratified design.
+
+    Phase 1 invariants enforced here:
+    - Dedupe via unique_together (execution, conversation_id) — DB-level guarantee that at most
+      one subscription exists per (execution, conversation) pair, so even concurrent
+      schedule_followup calls produce at most one row.
+    - Scope rules — the signal handler only joins on AgentExecution rows where conversation_id IS
+      NOT NULL (the PR-1 gate); a subscription must reference a real PA-originated execution.
+
+    State machine: armed → fired (via signal handler or subscribe-after-terminal direct fire)
+                   armed → expired (via beat-scheduled cleanup when now() > expires_at)
+                   armed → cancelled (reserved for explicit user cancel in Phase 2)
+    """
+    STATE_ARMED = 'armed'
+    STATE_FIRED = 'fired'
+    STATE_EXPIRED = 'expired'
+    STATE_CANCELLED = 'cancelled'
+    STATE_CHOICES = [
+        (STATE_ARMED, 'Armed (waiting for completion event)'),
+        (STATE_FIRED, 'Fired (completion event delivered to conversation)'),
+        (STATE_EXPIRED, 'Expired (TTL window elapsed before completion)'),
+        (STATE_CANCELLED, 'Cancelled (explicit cancel from user, Phase 2)'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    execution = models.ForeignKey(
+        'AgentExecution',
+        on_delete=models.CASCADE,
+        related_name='followup_subscriptions',
+    )
+    # Denormalized from execution.conversation_id for signal-handler lookup speed.
+    # Kept in sync on create only — the signal handler reads this, never execution.conversation_id,
+    # so even if the execution row gets weird, the subscription's bound channel is stable.
+    conversation_id = models.CharField(max_length=64, db_index=True)
+
+    state = models.CharField(
+        max_length=16,
+        choices=STATE_CHOICES,
+        default=STATE_ARMED,
+        db_index=True,
+    )
+    expires_at = models.DateTimeField(
+        db_index=True,
+        help_text="now() + after_seconds at creation; beat-scheduled cleanup expires this row when now() > expires_at and state='armed'.",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    fired_at = models.DateTimeField(null=True, blank=True)
+
+    # Snapshot of the agent.completed payload contract at fire time
+    # ({execution_id, agent_name, status, completed_at, artifact_pointers}).
+    # Stored so the consumer can replay / inspect what was delivered without
+    # re-querying AgentExecution (which may have evolved since fire).
+    result_payload = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        unique_together = [('execution', 'conversation_id')]
+        indexes = [
+            models.Index(fields=['state', 'expires_at']),
+        ]
+
+    def __str__(self):
+        return f"FollowupSubscription({self.execution_id} → {self.conversation_id} [{self.state}])"
+
+
 class Collaboration(models.Model):
     """
     Tracks collaborations between agents and/or advisors

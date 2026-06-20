@@ -12888,3 +12888,46 @@ def capture_worker_memory_snapshot():
         'escalated_triggers': (report.get('sustain_gating') or {}).get('escalated_triggers'),
         'log_path': str(log_path),
     }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Session 1174 PR-2a — Expire stale AgentFollowupSubscription rows
+# ──────────────────────────────────────────────────────────────────────
+# AgentFollowupSubscription rows are created in state="armed" with an
+# expires_at = now() + after_seconds (capped 600s). If the corresponding
+# AgentExecution never reaches a terminal state before expires_at, the
+# row stays armed indefinitely. This task transitions stale rows to
+# "expired" so the table doesnt accumulate dead subscriptions.
+#
+# Beat-scheduled per memory rule "Observation cadence belongs in Celery
+# beat, not OS cron" + the canonical Session 1161 capture_pa_acks_health
+# pattern. The atomic queryset update is race-safe against concurrent
+# fire_agent_followup_subscriptions calls (both filter on state=armed;
+# whichever runs first wins).
+# ──────────────────────────────────────────────────────────────────────
+
+
+@shared_task(
+    name="core.tasks.expire_stale_followup_subscriptions",
+    ignore_result=False,
+    queue="broadcast",
+    soft_time_limit=30,
+    time_limit=60,
+)
+def expire_stale_followup_subscriptions():
+    """Transition AgentFollowupSubscription rows past their expires_at from armed → expired.
+
+    Returns {expired: int} for celery task event searchability.
+    """
+    from core.models_unified_system import AgentFollowupSubscription
+    now = timezone.now()
+    expired_count = AgentFollowupSubscription.objects.filter(
+        state=AgentFollowupSubscription.STATE_ARMED,
+        expires_at__lte=now,
+    ).update(state=AgentFollowupSubscription.STATE_EXPIRED)
+    if expired_count:
+        logger.info(
+            "[expire_stale_followup_subscriptions] expired %d armed subscriptions past TTL",
+            expired_count,
+        )
+    return {"expired": expired_count}
