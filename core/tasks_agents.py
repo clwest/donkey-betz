@@ -96,6 +96,65 @@ def send_execution_update(execution_id: str, update_data: Dict[str, Any]):
         logger.error(f"Failed to send WebSocket update: {e}")
 
 
+def create_implicit_followup_subscription(execution_record, context):
+    """Session 1178 Phase 2 c1 — auto-wake: create an armed follow-up sub at dispatch.
+
+    Called from _impl_execute_agent_task right after AgentExecution.create with
+    conversation_id stamped. Makes the wake feature happen by default on every
+    PA-originated dispatch — Rigby no longer has to call schedule_followup
+    explicitly for the user to see a completion banner + Rigby-authored bubble.
+
+    Invariants:
+    - Dedupe is DB-guaranteed via unique_together = [('execution', 'conversation_id')]
+      on AgentFollowupSubscription (core/models_unified_system.py:1089). If an
+      explicit schedule_followup race already created a row, get_or_create returns
+      it unchanged.
+    - Non-PA dispatches (execution.conversation_id IS NULL) are skipped — the
+      PR-1 invariant gates Phase 1, and Phase 2 inherits it.
+    - Per-call opt-out: context['auto_followup'] is False suppresses the
+      subscription (useful for test harnesses or sub-tasks where the completion
+      banner would be noise).
+    - Fail-open per Session 1172 lessons — dispatch must never break because
+      auto-sub failed.
+
+    TTL: 30s default (matches Phase 1 schedule_followup default + Session 1178 D2
+    ratified by Rigby). Callers wanting a longer window still use
+    schedule_followup; Phase 2 auto-sub is the "I forgot to ask, just tell me"
+    default.
+    """
+    if execution_record is None:
+        return
+    conv_id = getattr(execution_record, 'conversation_id', None)
+    if not conv_id:
+        return  # Non-PA dispatch; PR-1 gate.
+    if context.get('auto_followup', True) is False:
+        return  # Explicit per-call opt-out.
+
+    try:
+        from core.models_unified_system import AgentFollowupSubscription
+
+        sub, created = AgentFollowupSubscription.objects.get_or_create(
+            execution=execution_record,
+            conversation_id=conv_id,
+            defaults={
+                'state': AgentFollowupSubscription.STATE_ARMED,
+                'expires_at': timezone.now() + timedelta(seconds=30),
+            },
+        )
+        logger.info(
+            "[auto_followup] %s subscription=%s execution=%s conv=%s",
+            'created' if created else 'reused',
+            sub.id, execution_record.id, conv_id,
+        )
+        return sub
+    except Exception as e:
+        logger.warning(
+            "[auto_followup] fail-open (%s: %s) — dispatch continues",
+            type(e).__name__, e,
+        )
+        return None
+
+
 def fire_agent_followup_subscriptions(execution_record):
     """Session 1174 PR-2a: fire any armed AgentFollowupSubscription rows for this execution.
 
@@ -1892,6 +1951,9 @@ self,
                 f"[execution_record_created_by=tasks_agents] agent={agent_name} "
                 f"execution_id={getattr(execution_record, 'id', None)}"
             )
+
+            # Session 1178 Phase 2 c1 — auto-wake implicit follow-up subscription.
+            create_implicit_followup_subscription(execution_record, context)
 
         # Session 1031: Routing override — reroute specialist tasks away from
         # non-specialist agents.  E.g. "competitor audit" should never go to
