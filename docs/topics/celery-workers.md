@@ -201,6 +201,37 @@ Two REST endpoints + PA tool for one-click task load analysis, querying `CeleryT
 
 **Window options:** 15m, 60m, 2h, 6h, 24h. **Percentile calculation:** Python-side from sorted duration lists (manageable data volume).
 
+### Memory telemetry (Session 1167 — COO Backlog #5)
+
+Procfile caps memory per worker child (`--max-memory-per-child=150000` etc., kilobytes) — celery kills the child when RSS exceeds the cap. Pre-Session 1167 there was no visibility into how close workers got to those caps before the kill fired, and no signal to operators that downshifting concurrency was needed.
+
+**Cadence task:** `core.tasks.capture_worker_memory_snapshot` runs every 5 min on the `broadcast` queue. Calls `core.services.memory_telemetry.build_snapshot()` which:
+
+1. Reads `app.control.inspect().stats()` for per-host `pid` + `pool.processes` (child PIDs for prefork; None for threads/solo, falls back to parent).
+2. For each leaf PID, samples `psutil.Process(pid).memory_info().rss`.
+3. Parses `--max-memory-per-child=<N>` from each parent's `psutil.Process.cmdline()` (no env-var injection required).
+4. Computes `pct_of_cap_max = rss_max / cap_bytes` per worker.
+5. Writes a JSONL line to `logs/worker_memory/YYYY-MM-DD.jsonl` (UTC-dated).
+
+**Sustained-pressure semantics (borrowed from `pa_acks_health` item C):**
+
+- **WARN** on any single sample at `pct_of_cap >= 0.80`.
+- **CRIT** when the same worker stays above the threshold for **N=3 consecutive adjacent samples** (cadence 5min × adjacency factor 2 = 600s tolerance per pair). First-run / stale-prior cases never auto-escalate.
+- `sustain_gating.escalated_triggers` records labels like `crit_persist_3samples:<host>` for greppable observability.
+
+**Soft downshift signal (no auto-restart):**
+
+- `downshift_recommended_global: bool` set when any worker is CRIT.
+- `suggested_concurrency_by_worker: {host: int}` populated only for CRIT workers above the concurrency floor.
+- Concurrency floor is **1 universally**. Workers already at 1 in CRIT state get a `recommended_action` to investigate the leak / raise `--max-memory-per-child` / split queues — no further downshift possible.
+- Procfile is **never** auto-edited; this is a flag-only signal.
+
+**PA surface:** `ops_tool` action `memory_pressure` reads the latest JSONL line (reduce-from-source-of-truth) and projects per-worker rows + `overall_status` + `top_offenders` + `recommended_actions`. No re-classification — the cadence task owns thresholds.
+
+**On-demand CLI:** `python manage.py worker_memory_health` (add `--json` for machine output) calls the same `build_snapshot()` for live inspection without waiting for the next 5-min fire.
+
+**Local development gotcha:** `make celery` doesn't pass `--max-memory-per-child` (that's a Procfile/Honcho concept). Locally `cap_bytes` is parsed as `None`, RSS is still recorded, but `pct` is `None` and status stays `OK` regardless of pressure. This is correct degraded-mode behavior — production runtime (Railway/Heroku reading Procfile) is where the cap actually applies.
+
 ## ML Import Chain
 
 ALL heavy ML imports (torch, sklearn, transformers) MUST be lazy — inside methods or wrapped in `try/except ImportError`. Module-level imports loaded ~800MB into Celery parent process. `ml_engine.py` uses `_detect_device()` helper for lazy torch.

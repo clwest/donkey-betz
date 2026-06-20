@@ -2261,6 +2261,7 @@ PA_TOOL_SCHEMAS = [
                         "noise_metrics", "conversation_metrics",
                         "focus_mode_status", "focus_mode_update",
                         "celery_task_history", "execution_detail", "execution_search",
+                        "memory_pressure",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2287,7 +2288,12 @@ PA_TOOL_SCHEMAS = [
                         "execution_detail: look up a single AgentExecution by ID, includes last_heartbeat_at "
                         "and seconds_since_heartbeat. Pass execution_id. "
                         "execution_search: search recent AgentExecutions by agent_name/status/window. "
-                        "Returns list with heartbeat info."
+                        "Returns list with heartbeat info. "
+                        "memory_pressure: per-worker RSS vs --max-memory-per-child cap, with "
+                        "sustained-pressure CRIT detection and a soft downshift recommendation "
+                        "(no auto Procfile edits). Reads the latest snapshot from "
+                        "logs/worker_memory/*.jsonl. Use when asked about worker memory, OOM kills, "
+                        "concurrency tuning, --max-memory-per-child, or pressure near caps."
                     ),
                 },
                 "window": {
