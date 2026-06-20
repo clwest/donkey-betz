@@ -36,6 +36,52 @@ except ImportError:
     logger.warning("Prompt registry not available, using fallback prompts")
 
 
+# Session 1170: stable tag identifying which estimator math produced a cost.
+# Bumped whenever the formula changes so we can segment analytics across
+# the cutover. v1 (pre-1170) charged every input token at the full rate;
+# v2 reads cache hits and applies the cached discount.
+COST_ESTIMATOR_VERSION = 'v2_cached_tokens'
+
+
+def _extract_cached_input_tokens(usage, total_input_cap: int) -> int:
+    """Best-effort read of cached prompt tokens from an OpenAI usage object.
+
+    OpenAI exposes cache hits at one of two paths depending on the API:
+    - Responses API: ``usage.input_tokens_details.cached_tokens``
+    - Chat Completions: ``usage.prompt_tokens_details.cached_tokens``
+
+    Either may be absent (older SDKs, models without caching). Returns 0
+    when neither path is present or readable. Clamps the value to
+    ``total_input_cap`` so a buggy API report (cached > total) can never
+    drive ``uncached_input`` negative downstream.
+    """
+    if usage is None:
+        return 0
+    raw = 0
+    for attr in ('input_tokens_details', 'prompt_tokens_details'):
+        details = getattr(usage, attr, None)
+        if details is None:
+            continue
+        cached = getattr(details, 'cached_tokens', None)
+        if cached is None:
+            # Some SDKs expose details as a dict.
+            try:
+                cached = details.get('cached_tokens')  # type: ignore[union-attr]
+            except (AttributeError, TypeError):
+                cached = None
+        if cached is not None:
+            try:
+                raw = int(cached)
+            except (TypeError, ValueError):
+                raw = 0
+            break
+    if raw <= 0:
+        return 0
+    if total_input_cap > 0 and raw > total_input_cap:
+        return total_input_cap
+    return raw
+
+
 class LLMEnforcer:
     """
     Enforces REAL LLM usage across the entire platform
@@ -286,6 +332,8 @@ class LLMEnforcer:
                 latency_ms=latency_ms,
                 success=True,
                 trace_id=trace_id,
+                cached_input_tokens=response.get('cached_input_tokens', 0),
+                cost_estimator_version=response.get('cost_estimator_version', COST_ESTIMATOR_VERSION),
             )
 
             result = {
@@ -464,6 +512,7 @@ class LLMEnforcer:
 
         # Calculate usage and cost for GPT-5.2
         usage = response.usage if hasattr(response, 'usage') else None
+        cached_input_tokens = 0
         if usage:
             # GPT-5.2 pricing: $1.75/1M input, $14.00/1M output
             # Cached input (via previous_response_id): $0.18/1M (90% discount)
@@ -471,12 +520,28 @@ class LLMEnforcer:
             output_tokens = usage.output_tokens if hasattr(usage, 'output_tokens') else 0
             reasoning_tokens = usage.reasoning_tokens if hasattr(usage, 'reasoning_tokens') else 0
 
-            # Calculate cost (reasoning tokens count toward input cost)
+            # Session 1170: cached input tokens were silently charged at the
+            # full $1.75/1M rate, materially overestimating cost on every
+            # call that benefited from the previous_response_id cache.
+            # OpenAI exposes cache hits at usage.input_tokens_details
+            # .cached_tokens (Responses API) — fall back to
+            # prompt_tokens_details.cached_tokens for older Chat
+            # Completions shapes. See _extract_cached_input_tokens.
             total_input = input_tokens + reasoning_tokens
-            cost = (total_input * 1.75 / 1_000_000) + (output_tokens * 14.00 / 1_000_000)
+            cached_input_tokens = _extract_cached_input_tokens(usage, total_input)
+            uncached_input = max(0, total_input - cached_input_tokens)
+
+            cost = (
+                uncached_input * 1.75 / 1_000_000
+                + cached_input_tokens * 0.18 / 1_000_000
+                + output_tokens * 14.00 / 1_000_000
+            )
             total_tokens = input_tokens + output_tokens + reasoning_tokens
 
-            logger.info(f"💰 GPT-5.2 usage: {input_tokens} input + {reasoning_tokens} reasoning + {output_tokens} output = {total_tokens} total tokens (${cost:.6f})")
+            logger.info(
+                "💰 GPT-5.2 usage: %d input (%d cached) + %d reasoning + %d output = %d total ($%.6f, estimator=v2_cached_tokens)",
+                input_tokens, cached_input_tokens, reasoning_tokens, output_tokens, total_tokens, cost,
+            )
         else:
             total_tokens = 0
             cost = 0.0
@@ -501,6 +566,11 @@ class LLMEnforcer:
             'input_tokens': input_tokens if usage else 0,
             'output_tokens': output_tokens if usage else 0,
             'reasoning_tokens': reasoning_tokens if usage else 0,
+            # Session 1170: cache hits surfaced for downstream attribution
+            # + estimator drift audits. Zero on cache-miss or older usage
+            # shapes; never larger than the total input total.
+            'cached_input_tokens': cached_input_tokens,
+            'cost_estimator_version': COST_ESTIMATOR_VERSION,
         }
 
         # Add response_id for chain of thought passing
@@ -622,6 +692,8 @@ class LLMEnforcer:
         success: bool = True,
         error_message: str = "",
         trace_id: str = "",
+        cached_input_tokens: int = 0,
+        cost_estimator_version: str = COST_ESTIMATOR_VERSION,
     ) -> None:
         """
         Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
@@ -666,9 +738,14 @@ class LLMEnforcer:
                 estimated_cost_usd=cost,
                 # TODO(Session 1064): populate tenant= once request-context
                 # tenant resolution is available in the LLM call path.
+                # Session 1170: cached_input_tokens + cost_estimator_version
+                # surface the cache discount applied to this row so analytics
+                # can audit drift over time without a schema change.
                 metadata={
                     'agent_name': agent_name,
                     'model': model,
+                    'cached_input_tokens': cached_input_tokens,
+                    'cost_estimator_version': cost_estimator_version,
                 },
             )
         except Exception as e:
