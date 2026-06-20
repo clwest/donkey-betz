@@ -24,6 +24,7 @@ import PAConversationSidebar from '@/components/PAConversationSidebar'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
 import AsyncJobTracker from '@/components/AsyncJobTracker'
 import { RigbyToolTicker } from '@/components/RigbyToolTicker'
+import { AgentCompletionBanner } from '@/components/AgentCompletionBanner'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw, Activity,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -662,6 +663,7 @@ export default function CommandCenterPage() {
   const handleToolStarted = usePAStore((s) => s.handleToolStarted)
   const handleToolCompleted = usePAStore((s) => s.handleToolCompleted)
   const clearToolTicker = usePAStore((s) => s.clearToolTicker)
+  const handleAgentCompleted = usePAStore((s) => s.handleAgentCompleted)
 
   // VIP context — get display name for chat label
   const { data: vipContext } = useQuery({ queryKey: ['vip-context'], queryFn: getVipContext, staleTime: 300_000 })
@@ -690,7 +692,15 @@ export default function CommandCenterPage() {
         tool_name?: string
         started_at?: string
         latency_ms?: number
-        status?: 'ok' | 'error'
+        status?: 'ok' | 'error' | string
+        // Session 1175 PR-2b-3: agent.completed event payload contract
+        // (mirrors AgentCompletionEvent in paStore.ts).
+        execution_id?: string
+        agent_name?: string
+        completed_at?: string
+        error_signature?: string | null
+        artifact_pointers?: Record<string, string[]>
+        timestamp?: string
       }
 
       // Session 1172: tool ticker
@@ -712,7 +722,24 @@ export default function CommandCenterPage() {
           tool_name: event.tool_name,
           started_at: event.started_at || new Date().toISOString(),
           latency_ms: event.latency_ms,
-          status: event.status,
+          status: event.status as 'ok' | 'error' | undefined,
+        })
+        return
+      }
+
+      // Session 1175 PR-2b-3: agent-completion banner. Backend persists a
+      // Rigby-authored ChatConversation row at the same moment (PR-2b-2),
+      // so the chat history is the load-bearing record — this is the live
+      // notification surface.
+      if (event?.type === 'agent.completed' && event.execution_id) {
+        handleAgentCompleted({
+          execution_id: event.execution_id,
+          agent_name: event.agent_name || '',
+          status: event.status || 'completed',
+          completed_at: event.completed_at || '',
+          error_signature: event.error_signature ?? null,
+          artifact_pointers: event.artifact_pointers || {},
+          timestamp: event.timestamp,
         })
         return
       }
@@ -737,7 +764,7 @@ export default function CommandCenterPage() {
           }
         }
       }
-    }, [paMessages, addPAMessage, handleToolStarted, handleToolCompleted, clearToolTicker]),
+    }, [paMessages, addPAMessage, handleToolStarted, handleToolCompleted, clearToolTicker, handleAgentCompleted]),
   })
 
   // Chat state
@@ -1942,6 +1969,10 @@ export default function CommandCenterPage() {
           <div className="shrink-0 border-t border-dark-border pt-3 pb-1">
             {/* Session 1172: live tool-lifecycle ticker — silent when idle */}
             <RigbyToolTicker />
+            {/* Session 1175 PR-2b-3: agent-completion banner — fires on `agent.completed`
+                WS event (which pairs with the persisted ChatConversation row written by
+                PR-2b-2). Silent when no recent completion; auto-fades after 6s. */}
+            <AgentCompletionBanner />
             {/* Attachment chips */}
             {attachments.length > 0 && (
               <div className="px-1 pb-2 flex flex-wrap gap-1.5">
