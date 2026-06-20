@@ -97,11 +97,63 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1169 — CURRENT ENTRY POINT
+## SESSION 1170 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Verify the Session 1168 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-639751f029bc432f` (created Session 1168 entry; consider fresh thread if health < 50). Disk check: `df -h /System/Volumes/Data` (Session 1168 close: 110 GiB free).
+**Verify the Session 1169 PRs are still healthy on main + workers are running the new code.** Run `platform_config_tool overview` through Rigby; confirm `service_context: local`. PA conversation pinned in `tools/pa_local.sh`: `pa-639751f029bc432f` (Session 1168 + 1169 thread — at Session 1169 close it had carried 11+ design/verification rounds; **strongly consider minting a fresh thread at session entry** via Rigby's `session_tool.create_fresh`). Disk check: `df -h /System/Volumes/Data`.
+
+### Session 1169 post-merge sanity check
+
+```bash
+# (1) Layer C Phase 1 — factory legacy contract still works for non-opted-in callers
+.venv/bin/python manage.py shell -c "
+from core.services.deliverable_factory import create_deliverable
+result = create_deliverable(
+    title='Smoke test legacy contract',
+    content='x' * 400,
+    agent_name='SomeAgent',
+    metadata={'trigger_source': 'pa_tool'},
+)
+print('legacy contract result:', result)
+"
+# Expect: None.
+
+# (2) Layer C Phase 1 — PA dispatcher carries actual reason_code through Rigby:
+#       deliverable_tool.create(title='Smoke test verify', content='anything short')
+#     Expected: reason_code='gate_2_smoke_pattern' (NOT 'unknown_gate').
+
+# (3) Denylist Celery rows stay disabled
+.venv/bin/python manage.py shell -c "
+from django_celery_beat.models import PeriodicTask
+from core.management.commands.add_critical_celery_tasks import LOCAL_DENY_TASKS
+rows = list(PeriodicTask.objects.filter(name__in=LOCAL_DENY_TASKS).values('name', 'enabled'))
+for r in sorted(rows, key=lambda r: r['name']):
+    flag = '✗' if r['enabled'] else '✓'
+    print(f'  {flag} {r[\"name\"]} (enabled={r[\"enabled\"]})')
+"
+# Expect: all 6 with ✓.
+
+# (4) Agent dim populating on new CeleryTaskEvent rows
+.venv/bin/python manage.py shell -c "
+from core.models_celery_telemetry import CeleryTaskEvent
+from datetime import timedelta
+from django.utils import timezone
+since = timezone.now() - timedelta(hours=24)
+agent_rows = CeleryTaskEvent.objects.filter(started_at__gte=since).exclude(agent_name='')
+print(f'Rows with agent_name in last 24h: {agent_rows.count()}')
+"
+# Expect: non-zero if agent dispatches happened post-merge.
+
+# (5) monitor_celery_health decorator timeouts
+.venv/bin/python manage.py shell -c "
+from core.tasks import monitor_celery_health
+print('queue:', monitor_celery_health.queue, 'soft:', monitor_celery_health.soft_time_limit, 'hard:', monitor_celery_health.time_limit)
+"
+# Expect: broadcast / 60 / 90.
+```
+
+Full Session 1169 24h watch checklist lives in [`docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`](docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md). Run the relevant blocks per item below as you decide where to start.
 
 **Session 1168 post-merge sanity check** — verify the five PRs are loaded + active:
 
@@ -153,36 +205,55 @@ If anything is missing → `pkill -9 -f celery; rm -f .celery*.pid; make celery`
 
 ### COO Nervous System Backlog — CLOSED 2026-06-19
 
-All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164-1167. No items remain.
+All 4 MUSTs (#1 / #2 / #3 / #6) and all 3 SHOULDs (#5 / #7 / #8) from Rigby's June 14 corrected v1 backlog are now closed across Sessions 1164–1167. No items remain.
 
 ### chris-personal Known Bugs Queue — CLOSED 2026-06-20
 
 All 3 SHIP items closed in Session 1168 (PRs #2310, #2311, #2314). The Queue + its companion deliverables (`3973c817`, `f92ab8bb`, `7c332f0d`) are ready for archive / `status=resolved`.
 
-### PRIORITY 1 — Session 1168 carryover (small but real)
+### Session 1168 + 1167 carryover queue — CLOSED 2026-06-20
 
-Direct extensions of this session's work. Recommended order — route through Rigby for ratification at entry:
+All 5 carryover items closed in Session 1169 in Rigby's B-C-E-A-D-1 stretch order: items 2 / 3 / F / D / 1 (PRs #2316 / #2317 / #2318 / #2319 / #2320). Full handoff: [`docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`](docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md).
 
-1. **Layer C — `DeliverableFactory` typed exception + caller sweep.** Promote `core/services/deliverable_factory.py:create_deliverable`'s silent `None` return (line 321) to a typed `DeliverableGatedError` exception, then audit + migrate the 23+ documented call sites. PR #2310's Layer A only hardens the PA dispatcher path; every other caller is still vulnerable to `NoneType.X` crashes on gate rejection. Scope is broader than the chris-personal bug warranted — that's why it was deferred.
-2. **Idempotent enforce-disabled in `add_critical_celery_tasks` (Rigby's late add).** Currently the materializer only PREVENTS new denylisted rows from being added; it doesn't toggle existing rows back to `enabled=False`. Session 1168's post-merge one-time disable was manual. On local-safe mode, the materializer should re-assert `enabled=False` for any denylisted rows it finds. Single-line addition to the `handle()` loop. Small PR.
-3. **Symmetric attach-aware lookup for `append` / `delete` / `link_initiative`.** PR #2311 is update-only. If the newsletter flow exercises append-to-orphan or link-to-orphan, those paths still hit the original `base_qs` filter and fail with "not found." Trigger: a live PA exercise of one of those actions on an orphan.
-4. **Live PA verification of `ops_tool.overview` memory_pressure block + `ops_tool.memory_pressure` cap_coverage_pct field.** Rigby ran the merge-side smoke tests in PR #2312 but didn't dispatch the PA tools post-restart to capture the live shape. Trivially done at Session 1169 open as part of the FIRST THING block above.
+### PRIORITY 1 — Layer C completion (Session 1169 follow-on)
 
-### PRIORITY 2 — Carryover from Session 1167 (still real, now Priority 1 candidates)
+PR #2320 shipped Phase 1 of Layer C (DeliverableGatedError primitive + 3 hot-path opt-ins). The migration plan needs Phase 2 + Phase 3 to actually close the silent-None footgun on the remaining 24 production callers.
 
-These were Priority 2 in Session 1168's 00-START and didn't get touched. Promoted to Priority 1 candidates here:
+1. **Layer C Phase 2 — sweep remaining 24 production callers of `create_deliverable`** in batches by file category. Route through Rigby to confirm batch boundaries before each PR.
+   - `services/*` — ~10 sites: `td_handlers_newsletter`, `td_handlers_core` (2 of 3 left), `deliverable_envelope`, `mission_control_executor`, `conversation_deliverable_extractor`, `deliverable_append_service`, `workspace_pipeline_runner`, `conversation_initiative_pipeline`, `implementation_executor` x2
+   - `tasks_*.py` — ~5 sites: `tasks_content`, `tasks_initiatives` x2, `tasks_conversations`
+   - `views_*.py` — ~3 sites: `views_diagnostics` x2, `views_workspace_templates`, `views_demo_pipeline`
+   - `management/commands/*.py` — ~6 sites: 5 external-repo commands + `import_patent_disclosures`
+   - Each batch small enough to audit per-caller pattern (broad-except vs None-guard vs blind `.id`).
+2. **Layer C Phase 3 — flip default OR add deprecation log.** Decision point after Phase 2 sweeps complete. Either delete the legacy None contract (clean invariant), or keep both and emit a deprecation warning when the factory returns None so we can measure remaining legacy callers before the flip.
 
-1. **D — Targeted remediation for `monitor_celery_health` (p95=1048s) + `capture_pa_acks_health_snapshot` (p95=1880s).** Both flagged by PR #2306 live smoke. Per the operator playbook locked in PR #2313: monitor tasks in `top_consumers` are P1 reliability debt. Queue placement + timeouts + probe decomposition. Pairs with Session 1165's slow-task investigation carryover.
-2. **F — `agent_name` dim on `CeleryTaskEvent`.** Single migration + signal-handler tweak. Then a `top_consumers` variant aggregating by agent. Deferred from Session 1167 per Rigby's skip-joins-in-v1 rule.
+### PRIORITY 2 — Real fix for capture_pa_acks_health_snapshot p95=1880s
 
-### Session 1169 — Digest product arc (was parked for this session)
+Session 1169 PR #2319 added decorator timeouts to `monitor_celery_health` but documented that `capture_pa_acks_health_snapshot` has carried `soft_time_limit=60, time_limit=90` since Session 1161 and STILL measured p95=1880s on PR #2306. The real fix is **probe decomposition**:
 
-Held out of Session 1168 because it's a bigger product decision. At Session 1169 entry: do we still want the digest product, or has the priority shifted? Route through Rigby.
+- Split `capture_pa_acks_health_snapshot` body into 4 separate cadence tasks (queue depth, workers inspect, hang signature, inflight estimate)
+- Each gets its own `@shared_task` with timeouts + its own beat entry
+- A stuck `inspect()` then only kills its own slot, not the whole monitor
+- Aggregate the 4 JSONL streams into a single combined report (post-write) for the existing `pa_acks_health` consumer surface
+
+Touches `core/tasks.py` (split task) + `core/management/commands/pa_acks_health.py` (build_report refactor) + `core/celery.py` (beat schedule entries). Likely 2-3 PRs.
+
+### PRIORITY 3 — Schema-drift reconciliation (deliverable `b58b20b3`)
+
+Session 1169 PR #2318's `makemigrations` surfaced pre-existing model drift unrelated to the agent_name change. Quarantined into deliverable `b58b20b3` on chris-personal workspace. Three clusters:
+
+1. **Cluster A — REAL drift, needs owner.** Narrative subsystem: 4 CreateModel ops (Narrative + NarrativeEvidence + NarrativeShift + NarrativeAlert) + 2 indexes. Whole product feature landed in models without migrations. Find the owner; needs its own migration PR with rollout notes.
+2. **Cluster B — Intentional, ship when convenient.** `CuratedSignalEntry.action_status` adds `needs_regen` choice (likely Session 1140 era ops work). Confirm intent + ship migration.
+3. **Cluster C — Cosmetic, safe to batch or ignore.** Help_text and default tweaks on `CuratedSignalEntry`, `FinalAppliedOverrides`, `FleetPaChatAuditRow`, `AgentExecution`. No DDL impact (AgentExecution indexes are correctly in production per migration `0336` — drift is help_text-only).
+
+### PRIORITY 4 — Digest product arc (parked since Session 1168)
+
+Held out of Session 1168 + 1169 because it's a bigger product decision. At Session 1170 entry: do we still want the digest product, or has the priority shifted? Route through Rigby.
 
 - **`a4a2697d-0882-4583-be94-10f8ac56694e` — Weekend Digest Autopilot — Spec & Acceptance Criteria.** Spec written Session 1166-or-earlier, never built.
 - **`2a2ea6e3-0f9e-4989-8e1f-5790e91d4324` — Claude Code Help Tickets — Weekend-Safe Stocks + Crypto Digest.** Implementation companion to the spec.
 
-### PRIORITY 3 — Consolidation / deferred from Session 1165 (focused follow-on PRs, still queued)
+### PRIORITY 5 — Consolidation / deferred from Session 1165 (focused follow-on PRs, still queued)
 
 - **Operator_edge lock consolidation** (`core/tasks_content.py:4216` + 6 release sites). Migrate the third ad-hoc `cache.add()` site to the canonical `singleton_lock` primitive from PR #2296.
 - **`_circuit_breaker_check` step-3 lock consolidation.** Symmetric to operator_edge.
@@ -192,6 +263,50 @@ Held out of Session 1168 because it's a bigger product decision. At Session 1169
 ### Aspirational follow-ons (still queued)
 
 - **`pg_stat_statements` on staging/prod.** Installed locally Session 1165.
+
+---
+
+## SESSION 1169 CLOSED — Carryover queue close (B-C-E-A-D-1 stretch path, 2026-06-20)
+
+**5 PRs merged via bypass mode.** Full handoff: [`docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`](docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md).
+
+| PR | Theme | SHA |
+|---|---|---|
+| **#2316** | `feat` — **Item 2:** idempotent enforce-disabled for denylisted PeriodicTask rows on local | `d421d1de` |
+| **#2317** | `fix` — **Item 3:** symmetric attach-aware lookup for id-based deliverable mutations (detail/save/unsave/append/delete/export_pdf) | `93e4e436` |
+| **#2318** | `feat` — **Item F:** `agent_name` dim on `CeleryTaskEvent` + `top_consumers(group_by='agent')` | `1bc96909` |
+| **#2319** | `fix` — **Item D:** decorator-side timeouts on `monitor_celery_health` + probe-decomposition operator note | `362960db` |
+| **#2320** | `feat` — **Item 1:** `DeliverableGatedError` + `raise_on_gated` kwarg (Layer C Phase 1) | `a71b5a3e` |
+
+**Session 1168 + 1167 carryover queue state after Session 1169:** all 5 items closed. Layer C completion (Phase 2 + Phase 3) and `capture_pa_acks_health_snapshot` probe decomposition queued as Session 1170 Priority 1 + 2.
+
+**End-to-end verified post-merge:**
+- PR #2316: live `add_critical_celery_tasks --dry-run` then real-run on a re-enabled denylist row — dry-run reported "Would disable 1", real run reported "Disabled 1" + DB confirmed `enabled=False`.
+- PR #2317: 9 new tests + 8 regression pass; covers detail/save/unsave/append/delete for non-staff users + security regression (non-staff cannot touch other users' orphans).
+- PR #2318: migration applied cleanly; live PA dispatch verified `group_by='agent'` returns populated `consumers` with `agent_name` keys (Session 1169 close).
+- PR #2319: 4 new decorator-pin tests pass; `monitor_celery_health.queue == 'broadcast'`, `soft_time_limit == 60`, `time_limit == 90` verified.
+- PR #2320: live PA `deliverable_tool.create(title='Smoke test from Session 1169 verification', content='anything short')` returned `reason_code='gate_2_smoke_pattern'` (NOT generic `'unknown_gate'`) — Layer C Phase 1's actual value visible end-to-end.
+
+**New persistent artifacts:**
+- `core/services/deliverable_factory.py:DeliverableGatedError` (typed exception class with `reason` / `reason_code` / `title` / `agent_name`)
+- `core/services/deliverable_factory.py:_should_create_deliverable` (now returns 3-tuple including `reason_code`)
+- `core/services/td_handlers_agents.py:_id_lookup_qs` (closure used across 7 id-based actions)
+- `core/management/commands/add_critical_celery_tasks.py:_enforce_disabled_local` (new helper)
+- `core/management/commands/add_critical_celery_tasks.py:_effective_local_deny_set` (extracted shared helper between filter + enforce)
+- `core/models_celery_telemetry.py:CeleryTaskEvent.agent_name` (indexed CharField)
+- `core/migrations/0355_session_1169_celerytaskevent_agent_name.py` (surgical migration)
+- `core/celery_telemetry.py:_extract_agent_name` (4-key fallback helper)
+- `core/services/top_consumers.py:compute_top_consumers(group_by=...)` (now accepts 'task' or 'agent')
+- 5 new test files: `test_enforce_disabled_local.py` / `test_deliverable_orphan_mutations_symmetric.py` / `test_celery_telemetry_agent_extract.py` / `test_monitor_celery_health_timeouts.py` / `test_deliverable_factory_gated_exception.py`
+- `docs/topics/celery-workers.md` — 3 new subsections (Wall-clock telemetry / Decorator-side timeouts / Agent dimension)
+- `docs/handoffs/SESSION_1169_CARRYOVER_QUEUE_CLOSE.md`
+- Tracking deliverable `b58b20b3` on chris-personal: schema-drift reconciliation backlog (Cluster A Narrative subsystem + Cluster B `CuratedSignalEntry.action_status` + Cluster C cosmetic AlterFields)
+
+**Patterns captured in handoff "Session-level patterns worth noting":**
+- `makemigrations` bundles every drift it sees — quarantine surgical migrations
+- Decorator-side options matter even when beat options look right
+- Timeouts alone don't bound monitor tasks that block in C-level calls
+- Phased migrations beat single-PR sweeps when caller count is high
 
 ---
 
