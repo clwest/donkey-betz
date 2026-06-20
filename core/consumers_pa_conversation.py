@@ -32,6 +32,113 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+# Session 1175 PR-2b-2: module-level helpers for agent-completion persistence.
+# Split out so tests can drive them directly with a real DB and skip the async
+# / channels machinery. The consumer wraps each via database_sync_to_async in
+# its async agent_completed handler.
+
+def compose_completion_body(
+    *, execution_id, agent_name, status, error_signature, artifact_pointers, is_background,
+):
+    """Pure-sync, no-DB. The text Rigby authors for an agent-completion follow-up.
+
+    Idempotent: the "Background completion: " prefix is added at most once per call
+    (and the consumer's flow only invokes this once per agent_completed event), so
+    rerunning the helper on the same inputs always produces the same body.
+    """
+    if status == 'completed':
+        body = f"Agent **{agent_name}** finished (execution `{execution_id}`)."
+    elif status == 'failed':
+        err = f" — `{error_signature}`" if error_signature else ""
+        body = f"Agent **{agent_name}** failed (execution `{execution_id}`){err}."
+    else:
+        body = f"Agent **{agent_name}** ended with status `{status}` (execution `{execution_id}`)."
+
+    ptr_lines = []
+    for kind in ('deliverable_ids', 'blog_ids', 'media_ids'):
+        ids = (artifact_pointers or {}).get(kind) or []
+        if ids:
+            ptr_lines.append(f"- {kind.replace('_', ' ')}: {', '.join(str(i) for i in ids[:5])}")
+    if ptr_lines:
+        body += "\n\nArtifacts:\n" + "\n".join(ptr_lines)
+
+    if is_background:
+        body = "Background completion: " + body
+    return body
+
+
+def check_background_completion(*, conversation_id, execution_id):
+    """Rigby's stricter "user moved on" detector (sync, DB-bound).
+
+    True iff there exists a ChatConversation in this conversation_id with:
+    - user_message non-empty (real user turn, not a structured/system message)
+    - created_at > subscription.created_at (post-dispatch)
+    - metadata.kind != 'agent_completion' (so prior follow-ups don't self-trigger)
+
+    metadata.kind exclusion uses ``__contains`` (Postgres JSONB containment) rather
+    than ``metadata__kind=...`` because the latter treats rows where ``metadata={}``
+    (no ``kind`` key) as NULL → NOT excluded in Postgres ternary logic. ``__contains``
+    only matches rows whose JSONB actually contains the ``{'kind': 'agent_completion'}``
+    subset, so default-metadata rows are correctly kept.
+    """
+    from core.models.conversations.models import ChatConversation
+    from core.models_unified_system import AgentFollowupSubscription
+    try:
+        sub = AgentFollowupSubscription.objects.filter(
+            execution_id=execution_id,
+            conversation_id=conversation_id,
+        ).only('created_at').first()
+        if not sub:
+            return False
+        return ChatConversation.objects.filter(
+            conversation_id=conversation_id,
+            created_at__gt=sub.created_at,
+        ).exclude(user_message='').exclude(
+            metadata__contains={'kind': 'agent_completion'},
+        ).exists()
+    except Exception:
+        return False
+
+
+def create_completion_row(
+    *, user, conversation_id, execution_id, agent_name, status, completed_at,
+    error_signature, artifact_pointers, assistant_response,
+):
+    """Write the Rigby-authored completion row (sync, DB-bound).
+
+    Uses assistant_response (renders as Rigby bubble) per the ratified Session 1175
+    design — existing precedent in collaboration_protocol uses user_message which
+    would misattribute the message as a user turn. source='pa' matches other Rigby
+    turns. Q-C investigation found ChatConversation has zero post_save signals, so
+    the .create() is fire-and-forget — no token/embedding/unread side effects to
+    mirror.
+    """
+    from core.models.conversations.models import ChatConversation
+    from core.models_unified_system import AgentFollowupSubscription
+    sub = AgentFollowupSubscription.objects.filter(
+        execution_id=execution_id,
+        conversation_id=conversation_id,
+    ).only('id').first()
+    return ChatConversation.objects.create(
+        user=user if (user and getattr(user, 'is_authenticated', False)) else None,
+        conversation_id=conversation_id,
+        user_message='',
+        assistant_response=assistant_response,
+        source='pa',
+        platform='api',
+        metadata={
+            'kind': 'agent_completion',
+            'execution_id': execution_id,
+            'subscription_id': str(sub.id) if sub else None,
+            'agent_name': agent_name,
+            'status': status,
+            'completed_at': completed_at,
+            'error_signature': error_signature,
+            'artifact_pointers': artifact_pointers,
+        },
+    )
+
+
 class PAConversationConsumer(AsyncWebsocketConsumer):
     """
     WebSocket consumer for real-time PA conversation streaming.
@@ -161,22 +268,72 @@ class PAConversationConsumer(AsyncWebsocketConsumer):
     # AgentExecution has an armed AgentFollowupSubscription for this conversation.
     # Channels maps dots to underscores so "agent.completed" → this method.
     #
-    # PR-2a scope is WebSocket-only — the frontend banner component (PR-2b) consumes
-    # this event and renders the inline completion notice. Server-side ChatConversation
-    # persistence (so the message survives a page refresh) is deferred to PR-2b along
-    # with the schedule_followup PA tool; the open question on Q-C side effects
-    # (token accounting / embeddings / last_message_at / unread counters) needs one
-    # more pass before we start writing rows that bypass the FC loop.
+    # Session 1175 PR-2b-2 extends this to ALSO persist a Rigby-authored ChatConversation
+    # row so the completion message survives page refresh (the load-bearing D3 chat
+    # bubble per the ratified design). The WS broadcast (existing PR-2a behavior) is kept
+    # for the live banner in PR-2b-3. Q-C investigation (Session 1175) confirmed
+    # ChatConversation has no post_save signals + no tokens/cost/embedding fields wired,
+    # so the direct .create() is safe — no side-effect avalanche.
+    #
+    # Invariants honored (Rigby ratification, Session 1175):
+    # 1. Non-PA dispatch keeps conversation_id NULL — fire_agent_followup_subscriptions
+    #    already bails on NULL conv_id, so by the time we land here the dispatch was PA-
+    #    originated and the WS room (pa_conversation_<conversation_id>) already matches.
+    # 2. The fire helper does the atomic armed → fired transition; we just persist + send.
+    # 3. Background-completion tagging: prepend "Background completion: " to the message
+    #    if the user has posted to this conversation *after* the subscription was created
+    #    (and the post itself is not another agent_completion row, to avoid self-trigger).
 
     async def agent_completed(self, event):
-        """Push an `agent.completed` event to the WebSocket client (PR-2a foundation)."""
+        """Persist a Rigby-authored ChatConversation row + push the live banner event."""
+        execution_id = event.get("execution_id", "")
+        agent_name = event.get("agent_name", "") or "agent"
+        status = event.get("status", "") or "completed"
+        completed_at = event.get("completed_at", "")
+        error_signature = event.get("error_signature")
+        artifact_pointers = event.get("artifact_pointers", {}) or {}
+
+        # 1. Persist the Rigby-authored completion message server-side so it survives refresh.
+        # Fail-open: if persistence breaks for any reason, still send the live banner event —
+        # users would rather see the completion live and lose the history than miss it entirely.
+        try:
+            is_background = await database_sync_to_async(check_background_completion)(
+                conversation_id=self.conversation_id,
+                execution_id=execution_id,
+            )
+            assistant_response = compose_completion_body(
+                execution_id=execution_id,
+                agent_name=agent_name,
+                status=status,
+                error_signature=error_signature,
+                artifact_pointers=artifact_pointers,
+                is_background=is_background,
+            )
+            await database_sync_to_async(create_completion_row)(
+                user=self.user,
+                conversation_id=self.conversation_id,
+                execution_id=execution_id,
+                agent_name=agent_name,
+                status=status,
+                completed_at=completed_at,
+                error_signature=error_signature,
+                artifact_pointers=artifact_pointers,
+                assistant_response=assistant_response,
+            )
+        except Exception as e:
+            logger.warning(
+                f"[PA-WS agent_completed] persist fail-open: execution={execution_id} err={e}",
+                exc_info=True,
+            )
+
+        # 2. Live banner event for the connected client (existing PR-2a behavior unchanged).
         await self.send(text_data=json.dumps({
             "type": "agent.completed",
-            "execution_id": event.get("execution_id", ""),
-            "agent_name": event.get("agent_name", ""),
-            "status": event.get("status", ""),
-            "completed_at": event.get("completed_at", ""),
-            "error_signature": event.get("error_signature"),
-            "artifact_pointers": event.get("artifact_pointers", {}),
+            "execution_id": execution_id,
+            "agent_name": agent_name,
+            "status": status,
+            "completed_at": completed_at,
+            "error_signature": error_signature,
+            "artifact_pointers": artifact_pointers,
             "timestamp": event.get("timestamp", ""),
         }))
