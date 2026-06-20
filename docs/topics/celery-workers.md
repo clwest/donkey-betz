@@ -252,6 +252,19 @@ The remediation pattern is always the same:
 
 Session 1167 PR #2306 live smoke first surfaced this on `monitor_celery_health` (`p95=1048s`) and `capture_pa_acks_health_snapshot` (`p95=1880s`). Both are queued as Session 1169 work per `00-START-NEXT-SESSION.md`.
 
+### Agent dimension on top_consumers (Session 1169 — closes carryover F)
+
+`ops_tool.top_consumers` now accepts an optional `group_by` arg. Values:
+
+- `group_by="task"` (default — backwards compatible) — original v1 behavior, aggregates by `task_name`.
+- `group_by="agent"` (new) — aggregates by `CeleryTaskEvent.agent_name`, populated by the `task_prerun` signal handler from the task's kwargs. Empty `agent_name` rows (non-agent tasks + pre-migration rows) are filtered out so the result surfaces real agent-level signal, not a synthetic `""` bucket.
+
+**Extraction order in the signal handler:** `agent_name` → `agent_class` → `agent` (string only — instance objects skipped) → `agent_type`. First non-empty string wins; otherwise the field stays `''`. Best-effort: the outer try/except in `on_task_prerun` swallows any inspection failure so telemetry never breaks task execution.
+
+**Backfill:** none. Per Rigby's skip-joins-in-v1 stance the agent dim fills gradually as new tasks fire. Pre-Session-1169 rows stay `agent_name=''` and just don't surface in the by-agent view.
+
+**Operator playbook addendum:** if `top_consumers(group_by="agent")` shows a monitor/ops agent as a top offender, treat it as P1 reliability debt — same remediation pattern as the task-dim case (queue placement, timeouts, probe decomposition).
+
 ## ML Import Chain
 
 ALL heavy ML imports (torch, sklearn, transformers) MUST be lazy — inside methods or wrapped in `try/except ImportError`. Module-level imports loaded ~800MB into Celery parent process. `ml_engine.py` uses `_detect_device()` helper for lazy torch.

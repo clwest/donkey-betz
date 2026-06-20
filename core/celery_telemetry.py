@@ -33,6 +33,30 @@ def _get_rss_mb():
         return None
 
 
+# Session 1169 — extraction order Rigby ratified in conv pa-639751f029bc432f.
+# Order matters: explicit name beats class beats generic key. The `agent` key
+# is intentionally accepted only when it's a string (callers sometimes pass an
+# instance object, which we don't want to coerce to a meaningless repr).
+_AGENT_NAME_KWARG_KEYS = ('agent_name', 'agent_class', 'agent', 'agent_type')
+
+
+def _extract_agent_name(task_kwargs):
+    """Find the first non-empty string under any of the known agent-name keys.
+
+    Returns ``''`` when nothing usable is present — that's the model's default
+    and signals 'not an agent task' to the top_consumers aggregator.
+    """
+    if not isinstance(task_kwargs, dict):
+        return ''
+    for key in _AGENT_NAME_KWARG_KEYS:
+        if key not in task_kwargs:
+            continue
+        val = task_kwargs[key]
+        if isinstance(val, str) and val.strip():
+            return val.strip()[:255]
+    return ''
+
+
 @task_prerun.connect
 def on_task_prerun(sender=None, task_id=None, task=None, **kwargs):
     """Create a STARTED row when a task begins execution."""
@@ -52,10 +76,16 @@ def on_task_prerun(sender=None, task_id=None, task=None, **kwargs):
         if hasattr(task, 'request') and hasattr(task.request, 'hostname'):
             worker = task.request.hostname or ''
 
+        # Session 1169: agent_name dim. task_prerun's signal payload
+        # carries the per-task kwargs at the 'kwargs' key. Best-effort —
+        # extractor returns '' on any inspection failure.
+        agent_name = _extract_agent_name(kwargs.get('kwargs'))
+
         CeleryTaskEvent.objects.update_or_create(
             task_id=task_id,
             defaults={
                 'task_name': task.name if task else str(sender),
+                'agent_name': agent_name,
                 'queue': queue,
                 'status': 'STARTED',
                 'worker': worker,
