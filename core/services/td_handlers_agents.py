@@ -965,6 +965,13 @@ class AgentHandlersMixin:
         if top_level_conv and 'conversation_id' not in context:
             context['conversation_id'] = top_level_conv
 
+        # Session 1178 Phase 2 — auto-wake opt-out kwarg. Same plumbing pattern
+        # as conversation_id above; this handler doesn't share _CONTEXT_PROMOTE_KEYS
+        # with _handle_agent_tool, so promote explicitly. False is meaningful
+        # (skip auto-sub), so test for membership rather than truthiness.
+        if 'auto_followup' in payload and 'auto_followup' not in context:
+            context['auto_followup'] = payload['auto_followup']
+
         if not task_text:
             raise ValueError("task is required")
 
