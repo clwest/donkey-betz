@@ -149,7 +149,8 @@ def create_implicit_followup_subscription(execution_record, context):
         return sub
     except Exception as e:
         logger.warning(
-            "[auto_followup] fail-open (%s: %s) — dispatch continues",
+            "[auto_followup] fail-open execution=%s conv=%s (%s: %s) — dispatch continues",
+            getattr(execution_record, 'id', None), conv_id,
             type(e).__name__, e,
         )
         return None
