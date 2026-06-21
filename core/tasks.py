@@ -10855,6 +10855,32 @@ def poll_processing_videos():
 def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
     from core.tasks_initiatives import _impl_advance_initiative_pipeline
     return _impl_advance_initiative_pipeline(limit, auto_approve)
+
+
+# Session 1191: cheap, no-LLM staleness sweep. Scheduled via
+# `app.conf.beat_schedule` in core/celery.py. Singleton-locked so a
+# slow run can't be lapped by the next beat tick. Pairs with the
+# populate_initiatives_api auto-bootstrap fix + the
+# backfill_initiative_activity mgmt command. See Rigby's Session 1191
+# fix-shape verdict (option B) for design rationale.
+@shared_task(
+    name='core.tasks.initiative_activity_tick',
+    ignore_result=False,
+    queue='default',
+    soft_time_limit=120,
+    time_limit=180,
+    # Session 1191 — Rigby's pre-PR amendment #2: explicit max_retries=0
+    # so a future maintainer adding autoretry_for can't accidentally
+    # trigger a retry storm against the singleton lock. Best-effort
+    # task; if a run fails, the next */30 tick covers it.
+    max_retries=0,
+)
+@singleton_task("initiative-activity-tick", ttl=300)
+def initiative_activity_tick(stale_after_hours: int = 24, hard_cap: int = 100):
+    from core.tasks_initiatives import _impl_initiative_activity_tick
+    return _impl_initiative_activity_tick(stale_after_hours, hard_cap)
+
+
 def _get_stage_document_type(stage_num: int) -> str:
     """Get the document type for a given stage number."""
     doc_types = {

@@ -73,6 +73,24 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 240},
     },
 
+    # Session 1191 — Initiative activity tick. Cheap, no-LLM staleness
+    # sweep that refreshes `last_activity_at` for Initiatives where the
+    # field is NULL or older than 24h, based on cheap signals only (max
+    # of initiative.updated_at + linked action_items.updated_at + linked
+    # deliverables.updated_at). Hard-capped at 100 Initiatives per run.
+    # Pairs with the populate_initiatives_api auto-bootstrap fix + the
+    # `backfill_initiative_activity` mgmt command (one-shot for historical
+    # NULL rows). Singleton-locked via redis_lock primitive — TTL=300s
+    # comfortably covers expected runtime (~1-2s per Initiative * 100 cap).
+    # Per Rigby's Session 1162 §6.4 invariant this task ONLY touches the
+    # read-side staleness signal — advance_initiative_pipeline remains the
+    # only path that writes stages or invokes LLM/content generation.
+    'initiative-activity-tick': {
+        'task': 'core.tasks.initiative_activity_tick',
+        'schedule': crontab(minute='*/30'),
+        'options': {'queue': 'default', 'expires': 1500},
+    },
+
     # Session 1174 PR-2a — Expire stale AgentFollowupSubscription rows.
     # Subscriptions are created with after_seconds<=600 TTL. If the
     # corresponding execution never reaches terminal status before

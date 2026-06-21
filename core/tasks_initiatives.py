@@ -3065,3 +3065,94 @@ def _impl_surface_top_dreams(max_items=5, min_composite=0.85):
 
 
 
+
+
+# =============================================================================
+# Session 1191: Initiative activity tick — cheap, no-LLM staleness sweep
+# =============================================================================
+
+
+def _impl_initiative_activity_tick(stale_after_hours: int = 24, hard_cap: int = 100):
+    """Refresh `last_activity_at` on Initiatives based on cheap signals only.
+
+    Scope (per Rigby's Session 1191 fix-shape verdict — option B):
+    - Pick Initiatives where `last_activity_at IS NULL` OR is older than
+      `stale_after_hours` hours.
+    - For each, compute `max(initiative.updated_at,
+      max(action_items.updated_at), max(deliverables.updated_at))` —
+      pure signal aggregation, no LLM, no doc generation, no stage
+      changes.
+    - If that max is newer than the current `last_activity_at`, write it.
+    - Cap per run via `hard_cap` so a backlog can't stampede the worker.
+
+    Preserves the Session 1162 §6.4 invariant: `advance_initiative_pipeline`
+    remains the only path that writes stages or invokes content
+    generation. This task only touches the read-side staleness signal.
+    """
+    from django.db.models import Max, Q
+    from core.models_document_registry import Initiative, InitiativeActionItem
+    from core.models_deliverables import Deliverable
+
+    cutoff = timezone.now() - timedelta(hours=stale_after_hours)
+
+    candidates = (
+        Initiative.objects
+        .filter(Q(last_activity_at__isnull=True) | Q(last_activity_at__lt=cutoff))
+        .exclude(status='ARCHIVED')
+        .order_by('last_activity_at')[:hard_cap]
+    )
+
+    refreshed = 0
+    skipped_no_signal = 0
+    examined = 0
+
+    for initiative in candidates.iterator():
+        examined += 1
+
+        action_max = InitiativeActionItem.objects.filter(
+            initiative_id=initiative.id
+        ).aggregate(m=Max('updated_at'))['m']
+        deliverable_max = Deliverable.objects.filter(
+            initiative_id=initiative.id
+        ).aggregate(m=Max('updated_at'))['m']
+
+        signal_candidates = [
+            initiative.updated_at,
+            action_max,
+            deliverable_max,
+        ]
+        signal_max = max((t for t in signal_candidates if t is not None), default=None)
+
+        current = initiative.last_activity_at
+
+        if signal_max is None:
+            # No signals at all — this Initiative literally has no linked
+            # action items / deliverables and hasn't been touched since
+            # creation. Skip; the auto-populate bootstrap write should
+            # have set last_activity_at = created_at via Session 1191
+            # backfill / view fix. If it's still NULL here, an older row
+            # slipped through — log and move on.
+            skipped_no_signal += 1
+            continue
+
+        if current is None or signal_max > current:
+            initiative.last_activity_at = signal_max
+            initiative.save(
+                update_fields=['last_activity_at'],
+                skip_invariant_check=True,
+            )
+            refreshed += 1
+
+    logger.info(
+        "[INITIATIVE-TICK] examined=%s refreshed=%s skipped_no_signal=%s "
+        "stale_after_hours=%s hard_cap=%s",
+        examined, refreshed, skipped_no_signal, stale_after_hours, hard_cap,
+    )
+
+    return {
+        'examined': examined,
+        'refreshed': refreshed,
+        'skipped_no_signal': skipped_no_signal,
+        'stale_after_hours': stale_after_hours,
+        'hard_cap': hard_cap,
+    }
