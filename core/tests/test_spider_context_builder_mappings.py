@@ -35,15 +35,23 @@ class ExplicitAgentMappingTests(SimpleTestCase):
         self.assertEqual(cats, ['tech', 'news', 'science', 'financial'])
         self.assertNotEqual(cats, SpiderContextBuilder.AGENT_SPIDER_MAPPINGS['default'])
 
-    def test_image_agent_explicit_key_matches_substring_outcome(self):
+    def test_image_agent_uses_real_data_type_categories(self):
+        """PR-2: ImageAgent retuned off the dead 'creative' key to the real
+        creative-domain SpiderData.data_type values (design / visual_trends /
+        video) per Rigby's supply recon."""
         cats = self.builder._get_agent_categories('ImageAgent')
-        self.assertEqual(cats, ['creative', 'tech', 'entertainment'])
+        self.assertEqual(cats, ['design', 'visual_trends', 'video', 'tech', 'entertainment'])
+        self.assertNotIn('creative', cats)
 
-    def test_research_agent_explicit_key_matches_substring_outcome(self):
+    def test_research_agent_picks_up_high_supply_buckets(self):
+        """PR-2: ResearchAgent additionally picks up `ai_ml` (364 actionable
+        in 30d) and `business` (92) — the largest research-relevant supply
+        buckets it was previously missing."""
         cats = self.builder._get_agent_categories('ResearchAgent')
         self.assertEqual(
             cats,
-            ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health'],
+            ['tech', 'news', 'social', 'community', 'financial', 'legal',
+             'science', 'health', 'ai_ml', 'business'],
         )
 
     def test_explicit_keys_precede_substring_keys_in_dict(self):
