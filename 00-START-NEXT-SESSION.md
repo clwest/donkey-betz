@@ -97,49 +97,59 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1181 — CURRENT ENTRY POINT
+## SESSION 1182 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1180 closed Pass B with 3 structural fixes merged + 6 cells closed.** PRs #2350/#2351/#2352 are live on main. The agent follow-up wake loop now has the architectural contract "lifecycle-bound, not connection/runtime-bound" enforced top-to-bottom. Two Phase 3 PRs + 1 separate finding queued (none blocking).
+**Session 1181 drained the Phase 3 queue from Session 1180.** PR #2354 (artifact_pointers extractor — Cell 8 fix) and PR #2355 (banner queue / toast stack — Cell 7 frontend fix) both merged + live-verified. The agent wake/persistence/UI loop is now end-to-end correct. **Pass B is fully closed.**
 
-**Pinned conversation:** `pa-a5fecc400c0f4152` is still active and healthy. Used heavily Session 1180 (~15 Rigby tool calls). Run `session_tool health_check` early Session 1181 to see if rotation is due.
+Only Finding #4 (threaded-worker SIGTERM revoke limitation) remains as an open Phase 3 item — deferred per Rigby until it causes real pain. Not blocking anything.
 
-Close handoff: [`docs/handoffs/SESSION_1180_PASS_B_EXECUTION.md`](docs/handoffs/SESSION_1180_PASS_B_EXECUTION.md). Prior: [`docs/handoffs/SESSION_1179_PASS_B_MATRIX_DRAFTED.md`](docs/handoffs/SESSION_1179_PASS_B_MATRIX_DRAFTED.md), [`docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md`](docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md).
+**Pinned conversation:** `pa-a5fecc400c0f4152` — still active, ~25 turns since Session 1180 start, was 70/100 at session start. Run `session_tool health_check` early — likely 60-70 range; threshold for rotate is 60. If `suggest_fresh`, rotate to a Session 1182 thread.
+
+Close handoff: [`docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md`](docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md). Prior: [`docs/handoffs/SESSION_1180_PASS_B_EXECUTION.md`](docs/handoffs/SESSION_1180_PASS_B_EXECUTION.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
 2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-a5fecc400c0f4152`): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on `pa-a5fecc400c0f4152` — rotate if past 60/100.
-4. Spot-check Session 1180 24h watch (see handoff §"24h watch checklist"):
+3. `session_tool health_check` on `pa-a5fecc400c0f4152` — rotate to fresh Session 1182 thread if past 60/100.
+4. Spot-check Session 1180+1181 24h watch (see Session 1181 handoff §"24h watch checklist"):
    - Tail `celery-long-running.log | grep '\[auto_followup\]'` — `created` lines fire, `fail-open` absent
    - `SELECT COUNT(*) FROM core_agentfollowupsubscription WHERE state='armed' AND expires_at IS NULL AND created_at < NOW() - INTERVAL '6 hours'` — should be 0 (or <10)
+   - **NEW** Spot-check `chat_conversations.metadata.artifact_pointers` is non-empty for ImageAgent / EditorAgent completions in the last day (PR #2354 verification)
 
-### PRIORITY 1 — Phase 3 PRs from Pass B (pick by ROI)
+### What's queued (pick by Chris's priority)
 
-The 3 fixes shipped Session 1180 closed the structural defects. Three follow-ups remain — all are UX/extender work, none block correctness. Order by ROI / Chris preference:
+**No urgent items.** With Pass B closed and all 5 PRs (#2350-#2355) live, the wake/persistence/UI loop is correct. Session 1182 is a green-field session — pick from any of:
 
-| PR | Scope | Effort | Why pick |
-|---|---|---|---|
-| **PR5** — populate `artifact_pointers` in fire helper | Extract `media_ids`/`deliverable_ids` from `execution_record.output_data` per-agent (`ImageAgent → output_data.metadata.images`, etc) + bubble click-through render | ~30 min backend + small frontend | Closes Cell 8 FAIL. Without it, image/media agent completions appear in bubbles with no link to the actual artifact — visible regression for users. |
-| **PR4** — banner queue / toast stack for multi-agent fanout | `paStore.ts:350-356` — replace single `recentAgentCompletion` slot with a queue; head fades over ~6s, then next item shows | ~20 min frontend | Closes Cell 7 visual finding. Bubbles already persist correctly (Cell 7 PASS); this is purely live-banner UX. |
-| **Finding #4** — threaded-worker SIGTERM revoke can't kill Python threads | `long_running` queue is `--pool=threads --concurrency=2`. Options: switch to `--pool=prefork` (test-impact analysis required), document the limitation, OR add a workaround `cancel_agent_execution` PA tool that updates DB + fires helper directly | ~variable depending on path chosen | Real-world cancel reliability concern. PA Cancel buttons are best-effort on this queue. |
-
-Rigby's lean Session 1180 close: PR5 first (most user-visible), PR4 second (1 file frontend), Finding #4 third (needs scope discussion before implementation).
-
-### PRIORITY 2 — Optional UX hardening (was deferred / now optional thanks to PR #2352)
-
-These were originally planned as Pass B remediation PRs but became optional once PR #2352 made persistence execution-lifecycle-dependent:
-
-| Item | Status | Justification |
+| Item | Status | When to pick |
 |---|---|---|
-| `GET /api/pa/conversations/<id>/completions?since=<ts>` replay endpoint | Optional | Original Cell 4 fix scope. Now optional because server-side persistence guarantees the row exists on history re-fetch. Would still improve "banner replay" UX. |
-| WS connection-state UI per conversation | Optional | Original Cell 5 Run 2 finding. Now optional because missing-live-banner is recoverable from history. Would still help users understand when they'll miss the live notification. |
-| JSON-expression partial unique index on `chat_conversations((metadata->>'execution_id'), conversation_id) WHERE metadata->>'kind'='agent_completion'` | Hardening | App-level idempotency from PR #2350 is the v1 path. DB-level constraint would belt-and-suspender. Deferred per Rigby ratification because of JSON expression-index portability concerns. |
+| **Finding #4** — threaded-worker SIGTERM revoke limitation | Deferred (no pain yet) | Real cancel reliability concern. Pick if you start seeing hung tasks, runaway CPU on long_running queue, or users complaining that Cancel doesn't work. Rigby's Session 1181 framing: start with "what failure mode are we optimizing for?" (cannot kill threads vs revoke queued vs cooperative checkpoints), then pick from: switch `long_running` to `--pool=prefork`, add cooperative cancellation checkpoints in long tasks, or accept limitation + clearer UI wording. |
+| **Wake-loop UX polish bundle** | Optional | Rigby's Session 1181 mentions: hover-to-pause toast timer, "Clear all" button when queue > 1, click-toast → scroll-to-bubble, click-artifact-id → open media/blog viewer. Could be 1 bundled PR if Chris wants a feature day. |
+| **Optional UX hardening still on the table** | Subsumed by PR #2352 architecture | `GET /completions?since=` replay endpoint, WS connection-state UI per conversation, JSON-expression partial unique index. All would-be-nice but none required after server-side persistence landed. |
+| **`auto_followup_skipped` traceability stamp** | Session 1178 deferred | Tiny 1-file PR if Chris wants observability on which dispatches opt out. |
+| **EditorAgent observability dashboard** (C3 from #2343) | Session 1178 deferred | Workspace dashboard surfacing EditorAgent quality-gate rejects. |
+
+Or genuinely new work — Pass B's done, Session 1180+1181 left the wake loop clean.
 
 ### Carryover (still riding from Sessions 1171-1178)
 
-PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Plus Session 1178 deferred items: `auto_followup_skipped` traceability stamp, EditorAgent observability dashboard (C3 from #2343). Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1180_*`.
+PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1181_*`.
+
+---
+
+## SESSION 1181 CLOSED — Phase 3 queue drained: artifact_pointers extractor + banner queue (2026-06-20)
+
+**2 PRs merged.** Full handoff: [`docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md`](docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md).
+
+| PR | Theme | SHA | Verified live |
+|---|---|---|---|
+| **#2354** | `fix(session-1181-agent-wake)` — populate `artifact_pointers` in fire helper from `execution.output_data` | `f2eeadfc` | ImageAgent dispatch → `media_ids` populated end-to-end in result_payload + chat_conversations + bubble text |
+| **#2355** | `fix(session-1181-agent-wake)` — banner queue for multi-agent fanout (replaces single slot) | `5eb05dde` | 2x ImageAgent in one Rigby turn → 2 stacked toasts in browser ("yes saw both stacked") |
+
+Both PRs are downstream applications of the lifecycle-bound contract from Session 1180. No new architectural decisions, no migrations, both revert-safe.
+
+**Phase 3 queue post-Session-1181:** only Finding #4 (threaded-revoke limitation) remains. Deferred until pain.
 
 ---
 
