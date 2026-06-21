@@ -216,9 +216,60 @@ def fire_agent_followup_subscriptions(execution_record):
         if fired_count == 0:
             return  # No armed-and-eligible subscription; nothing to broadcast
 
+        # Session 1180 Pass B Cell 4 fix: persist the Rigby-authored completion
+        # row server-side, BEFORE broadcasting. Previously this only happened
+        # inside PAConversationConsumer.agent_completed when a consumer received
+        # the group_send event — which meant any refresh/disconnect during the
+        # agent runtime caused both banner AND bubble to be lost (no consumer at
+        # fire time = group_send to empty group = no row written = no history
+        # for later page-load to display). Completion persistence is now
+        # execution-lifecycle-dependent, not WS-connection-dependent.
+        #
+        # The consumer-side call to create_completion_row remains as a no-op
+        # safety net (the idempotency check from PR #2350 returns the existing
+        # row). Fail-open here — we still broadcast even if persistence fails,
+        # so an actively-connected consumer can render the banner.
+        try:
+            from core.consumers_pa_conversation import (
+                check_background_completion,
+                compose_completion_body,
+                create_completion_row,
+            )
+            is_background = check_background_completion(
+                conversation_id=conv_id,
+                execution_id=str(execution_record.id),
+            )
+            assistant_response = compose_completion_body(
+                execution_id=payload['execution_id'],
+                agent_name=payload['agent_name'],
+                status=payload['status'],
+                error_signature=payload['error_signature'],
+                artifact_pointers=payload['artifact_pointers'],
+                is_background=is_background,
+            )
+            create_completion_row(
+                user=getattr(execution_record, 'user', None),
+                conversation_id=conv_id,
+                execution_id=str(execution_record.id),
+                agent_name=payload['agent_name'],
+                status=payload['status'],
+                completed_at=payload['completed_at'],
+                error_signature=payload['error_signature'],
+                artifact_pointers=payload['artifact_pointers'],
+                assistant_response=assistant_response,
+            )
+        except Exception as persist_exc:
+            logger.warning(
+                "[fire_agent_followup_subscriptions] server-side persist fail-open: "
+                "execution=%s conv=%s (%s: %s) — broadcasting anyway",
+                execution_record.id, conv_id,
+                type(persist_exc).__name__, persist_exc,
+            )
+
         # Broadcast to the PA conversation channel — PAConversationConsumer.agent_completed
-        # handler picks this up and persists a Rigby-authored ChatConversation row + emits
-        # the banner event to the frontend.
+        # handler still runs for any actively-connected consumer (renders the live banner +
+        # calls create_completion_row, which is a no-op via PR #2350 idempotency since the
+        # row was already written above).
         channel_layer = get_channel_layer()
         if channel_layer:
             async_to_sync(channel_layer.group_send)(
