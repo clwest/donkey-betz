@@ -291,6 +291,77 @@ class AutoFollowupSubscriptionTests(TestCase):
         mock_a2s.assert_not_called()
 
 
+class CancelTerminalFollowupFireTests(TestCase):
+    """Session 1180 Pass B Cell 3 fix — verify that the cancel terminal path
+    drives completion-wake semantics. Without the fire helper call in
+    agent_router.py:1597, auto-wake subs (P1 NULL-expiry) stay armed forever
+    after a cancel because (a) the cancel path bypasses the 5 terminal-save
+    sites in tasks_agents.py that DO call fire, and (b) NULL-expiry subs are
+    immune to the beat hygiene job.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='cancel-fire-test', email='cancel@example.com', password='x',
+        )
+        self.agent, _ = Agent.objects.get_or_create(
+            name='ResearchAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+        self.conversation_id = 'pa-cancel-fire-test-001'
+
+    def test_cancelled_terminal_fires_followup_subscription(self):
+        """Cancel terminal must transition an armed NULL-expiry sub to fired
+        and emit the agent.completed broadcast (asserted via mocked group_send).
+        Mirrors the agent_router.py cancel-path sequence: _complete_execution →
+        status='cancelled' UPDATE → fire_agent_followup_subscriptions.
+        """
+        from unittest import mock
+        from core.tasks_agents import (
+            create_implicit_followup_subscription,
+            fire_agent_followup_subscriptions,
+        )
+        from core.agent_router import AgentRouter
+
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='cancel-test',
+            status='in_progress', conversation_id=self.conversation_id,
+        )
+        sub = create_implicit_followup_subscription(execution, context={})
+        self.assertIsNotNone(sub)
+        self.assertIsNone(sub.expires_at, 'P1: auto-wake sub must be NULL-expiry')
+        self.assertEqual(sub.state, AgentFollowupSubscription.STATE_ARMED)
+
+        # Simulate the cancel path: _complete_execution(success=False) +
+        # UPDATE status='cancelled' + fire_agent_followup_subscriptions.
+        router = AgentRouter()
+        router._complete_execution(
+            execution, 'ResearchAgent',
+            success=False, execution_time_ms=5000,
+            error_message='cancelled: simulated cancel for unit test',
+        )
+        AgentExecution.objects.filter(id=execution.id).update(status='cancelled')
+        execution.refresh_from_db()
+
+        with mock.patch('core.tasks_agents.get_channel_layer') as mock_layer, \
+             mock.patch('core.tasks_agents.async_to_sync') as mock_a2s:
+            mock_layer.return_value = mock.MagicMock()
+            mock_a2s.return_value = mock.MagicMock()
+            fire_agent_followup_subscriptions(execution)
+
+        sub.refresh_from_db()
+        self.assertEqual(
+            sub.state, AgentFollowupSubscription.STATE_FIRED,
+            'cancel terminal must transition sub armed→fired',
+        )
+        self.assertIsNotNone(sub.fired_at)
+        # group_send was called once (broadcast happened).
+        mock_a2s.assert_called_once()
+        # Payload should carry status='cancelled' (consumer uses this to render
+        # the cancellation bubble correctly).
+        self.assertEqual(sub.result_payload.get('status'), 'cancelled')
+
+
 class ExpireStaleSubscriptionBeatTaskTests(TestCase):
     """Session 1180 P1 — verify the beat cleanup task skips NULL-expiry rows
     so auto-wake (execution-lifecycle-bound) subs are never killed by hygiene.
