@@ -101,42 +101,40 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1192 — CURRENT ENTRY POINT
+## SESSION 1193 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1191 closed clean — 1 PR merged (#2392) — Initiative system P1 done.** Full handoff: [`SESSION_1191_INITIATIVE_ACTIVITY_TICK.md`](docs/handoffs/SESSION_1191_INITIATIVE_ACTIVITY_TICK.md).
+**Session 1192 closed clean — workspace consolidation Steps 4-7 done.** 156 deliverables consolidated into Donkey Betz. All 6 source workspaces drained + deactivated. 1 follow-up deliverable filed for known regression vector. Full handoff: [`SESSION_1192_WORKSPACE_CONSOLIDATION_CLOSE.md`](docs/handoffs/SESSION_1192_WORKSPACE_CONSOLIDATION_CLOSE.md).
 
-**Headline:** Two-layered root cause for Initiative.last_activity_at=null. Recon found (1) `populate_initiatives_api` never called `update_activity()` after create (cold-born) + (2) `advance_initiative_pipeline` intentionally not beat-scheduled per §6.4 (no driver). Rigby's fix-shape verdict = option B (bootstrap + cheap tick) preserved the §6.4 invariant. PR #2392 shipped both halves + backfill mgmt command + 9 tests. Live-verified: `examined=30 refreshed=14`, stuck row `f9eb535f-...` → non-null. New beat task `initiative_activity_tick` runs every */30 on default queue, singleton-locked, `max_retries=0`. Three new memories saved.
+**Headline:** Carryover Steps 4-7 finished via mixed approach — first 3 batches (16 items) through Rigby with triage decision cards, then bulk-migrated 122 remaining via direct Django ORM after Rigby hit a 5-call-per-turn tool cap (`feedback_rigby_scope.md` "Rigby blocker → Claude lane" exception). Established precedent: triage decisions (status) are independent of workspace decisions; `content_reject` only changes status, not workspace. Active workspaces now reduced from 2 to 2 (Donkey Betz + System Autonomous) — System Autonomous left active intentionally per Rigby's option C (deactivating would break `_ensure_system_workspace` auto-fallback). Producer-reroute filed as follow-up deliverable `780a8d15-...` (P2).
 
-**Active conversation:** `pa-55d90b2a34524bf9` (Session 1190 thread, continued through 1191; healthy at session-end). Rotate or reuse — operator's call.
+**Active conversation:** `pa-55d90b2a34524bf9` (Session 1190+1191+1192 thread; getting long, rotate for Session 1193). Last health check was 75/100 at Session 1191 open; likely ~85-90 now after consolidation chatter.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` (still the canonical consolidation target — Steps 4-7 carry forward).
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — now the single canonical workspace (156 deliverables).
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Continue workspace consolidation (Steps 4-7)** | **P1** | Carryover from Session 1190. ~74 deliverables remain to triage + migrate to Donkey Betz (`b4503364-...`). Mix: ~50 chris-personal (real specs + Quick-note throwaways), ~22 Local QA, ~5 across Session 1171/1172. Then Step 6 = deactivate other workspaces, Step 7 = verify. Conservative default: keep+migrate unless clearly stale. **chris-personal IS in scope.** |
+| **Initiative-tick 24h watch** | **P1 (time-gated)** | Start **2026-06-22 19:48 UTC** (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]` — expect summary lines every ~30 min. After 24h `refreshed` should drift toward 0 in steady state. Confirm `Initiative.objects.filter(last_activity_at__isnull=True).count() == 0`. Playbook below. |
 | **7d AC watches** | **P1 (time-gated)** | Start **2026-06-28** — first meaningful read after a full week of real traffic. ORM-queryable from `AgentExecution.input_data['spider_context']`. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388 descriptions. If session opens before 2026-06-28, defer and pick another item. |
-| **Initiative-tick 24h watch** | **P1 (time-gated)** | Start **2026-06-22 19:48 UTC** (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]` — expect `examined`/`refreshed` summary lines every ~30 min. After 24h `refreshed` should drift toward 0 in steady state. Confirm `Initiative.objects.filter(last_activity_at__isnull=True).count() == 0`. |
+| **Producer reroute** | P2 | Session 1192 follow-up. Deliverable `780a8d15-9ca0-4d91-970f-6934a24fc08d` in Donkey Betz. Real engineering — `core/services/workspace_manager.py:1728-1773` `_ensure_system_workspace` auto-recreates System Autonomous + force-reactivates is_active=True. Three fix shapes documented in deliverable (rename SA workspace, add config flag, add schema is_system flag). Without this, new agent-created deliverables continue landing in System Autonomous over time. |
 | **PR-D contract flip** | P2 | Deliverable `9d9db48a-4819-4e2b-9548-998c0fe2f8f5`. 24h WARN-volume eligibility gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
 | **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P2 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
 | **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer. Wire or stop crawling. C deliverable § Action implications #4. |
 | **Adjacent C-trace investigations (Session 1187)** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken; 5-min look. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface `SpiderItemHash item_title='Unknown'` — spider extractor bug. |
+| **Daily detector for workspace regressions** | P3 | Rigby's Session 1192 suggestion. Lightweight beat task that alerts when deliverables land in System Autonomous or with NULL workspace_id. Bridge until producer reroute lands. Reuses cheap-staleness-aggregator pattern from `feedback_cheap_staleness_aggregator_pattern.md`. |
+| **Bulk tool action** | P3 | Rigby's Session 1192 suggestion. Build a `deliverable_tool.bulk_update_workspace` to avoid the per-turn cap problem on future drain operations. Optional now that consolidation is done — only matters for next consolidation. |
 | **Bucket follow-up — Rigby pruned these** | P3 | If 7d AC shows under-served agents, consider rolling out `business` (92), `government` (87), `blockchain` (79), `gaming` (55), `entertainment` (71), `science` (71). Same one-line-per-agent pattern as PR-3B. |
 | **DM-system bug** | P3 | Deliverable `9a00667b-...`. Three symptoms; Rigby's two leads: thread reuse since 2026-06-13, `sender_type: rigby` mislabel. |
 | **Dedicated inventory-refresh PR** | P3 | Reconcile the `Agents count claims` CONFLICT so future PRs don't need `--admin` bypass. |
 
-### Workspace consolidation cheat sheet (still active from Session 1190)
+### Workspace consolidation — CLOSED Session 1192
 
-7-step plan. Done: Steps 1-3 + partial 4-5. Remaining:
-- **Step 4 continue:** triage remaining ~74 candidates. Use `deliverable_tool action=update workspace_id=b4503364-...` to migrate; `content_tool action=content_complete` to close.
-- **Step 5 mechanics (proven):** `deliverable_tool action=update workspace_id=<new>` works end-to-end. `updated_fields: ["tags", "workspace"]` confirms persistence.
-- **Step 6:** deactivate other workspaces via `is_active=False`.
-- **Step 7:** verify no orphans + Donkey Betz contains the expected set.
+All 7 steps done. Final state: 156 deliverables in Donkey Betz (`b4503364-...`). All 6 source workspaces have count=0 + is_active=False. Active workspaces = Donkey Betz + System Autonomous (intentional). 68 of 156 deliverables have initiative_id FKs preserved per Session 1190 rule (none stripped). See Session 1192 handoff for full verification table + 6/6 PASS results.
 
-**Don't strip `initiative_id` FKs on migrated deliverables** — forensic metadata still needed (Rigby's Session 1190 call, Chris ratified). Note: Session 1191 fix means `last_activity_at` will now auto-populate even on Initiatives whose deliverables get migrated, so the FK has more meaning than before.
+**Known regression vector (filed):** System Autonomous Workspace auto-recreates via `core/services/workspace_manager.py:1739` — any agent creating a deliverable without explicit workspace_id will land there, not Donkey Betz. Filed as `780a8d15-...` for producer-reroute follow-up (P2).
 
 ### Initiative-tick 24h watch playbook
 
@@ -198,8 +196,8 @@ AgentExecution.objects.filter(
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
 2. Through Rigby (use `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-chris-token>` explicitly — `tools/pa_local.sh` is pinned to a stale conv): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on current conversation `pa-55d90b2a34524bf9` (Session 1190+1191 thread; ended healthy at ~80/100). Rotate to fresh Session 1192 thread if over 60/100.
-4. `gh pr list --author @me --state open` — expected empty (PR #2392 merged via `--admin` bypass at session close).
+3. `session_tool health_check` on conversation `pa-55d90b2a34524bf9` (Session 1190+1191+1192 thread; ~85-90/100 estimated). **Strongly recommend rotating** to a fresh Session 1193 thread — this one's getting long.
+4. `gh pr list --author @me --state open` — expected empty (PR #2392 and docs PR from Session 1191 merged).
 
 ### Stacked-PR footgun reminder (still active)
 
@@ -208,6 +206,33 @@ AgentExecution.objects.filter(
 ### Pre-existing CONFLICT — `--admin` bypass still required
 
 `context-kit verify` `Agents count claims` CONFLICT still on main. Strict mode Repo Guardrails fails on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. Worth a dedicated inventory-refresh PR if anyone has the bandwidth.
+
+---
+
+## SESSION 1192 CLOSED — Workspace consolidation Steps 4-7 closed (2026-06-21)
+
+**0 PRs — data-layer ops only. 156 deliverables consolidated into Donkey Betz. 1 follow-up filed.** Full handoff: [`SESSION_1192_WORKSPACE_CONSOLIDATION_CLOSE.md`](docs/handoffs/SESSION_1192_WORKSPACE_CONSOLIDATION_CLOSE.md).
+
+**Migration breakdown:**
+- 16 items via Rigby (chris-personal batches 1-3 + 1 newsletter tag + 4 content_reject) before hitting tool-call-per-turn cap
+- 122 items via direct Django ORM (25 chris-personal + 65 Local QA + 6 small-ws + 29 System Autonomous + 2 NULL orphans)
+
+**Final state — all 6 Step 7 checks PASS:**
+- Donkey Betz: **156** (was 29 pre-session)
+- All 6 drained workspaces: count=0 + is_active=False
+- Active workspaces: Donkey Betz + System Autonomous only
+- Orphans: 0 | NULL workspace_id: 0
+- initiative_id preservation: 68 with FK, 88 without (none stripped)
+
+**Key precedent established (Session 1192):** triage decisions (status) are independent of workspace decisions. `content_tool action=content_reject` only changes status; it does NOT move workspace. For "delete" intent, need both `content_reject` AND `deliverable_tool.update workspace_id=<target>`. Hard-delete is NOT exposed in the toolset.
+
+**Filed follow-up:** `780a8d15-9ca0-4d91-970f-6934a24fc08d` in Donkey Betz — Producer-reroute fix for `_ensure_system_workspace` regression vector. P2.
+
+**Two memory candidates** (non-blocking, assess at session-end review):
+1. Bulk operations: ORM > per-item dispatch when N>10. Plan ORM migration path upfront for drain ops of 100+ items.
+2. Daily detector for workspace regressions: lightweight beat task flagging deliverables landing in System Autonomous / NULL workspace_id, until producer reroute lands.
+
+**Pinned conversation:** `pa-55d90b2a34524bf9` (Session 1190+1191+1192 thread; rotate for Session 1193).
 
 ---
 
