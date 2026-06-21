@@ -101,33 +101,56 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1185 — CURRENT ENTRY POINT
+## SESSION 1186 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1184 shipped two stacked PRs.** PR #2362 (Stage 1 — factory synthesis + `provenance` read block, closes deliverable `e4f4e12f` AC1–AC5 for PA-direct creates) and PR #2363 (Stage 2 — BaseAgent `_execution_context` root-cause fix that covers all ~80 routable agents in one line, plus 5 named integration tests + §1 enumeration table). Both ship to PR-C (Phase 3 — sweep the remaining ⚠️ WARN bucket of ~17 non-agent callers, then flip factory to hard-require).
+**Session 1185 shipped 8 PRs** closing the F1+F2 forensic follow-ons + 5 of 6 PR-C sweep buckets. Full handoff: [`SESSION_1185_PROVENANCE_CALLER_SWEEP.md`](docs/handoffs/SESSION_1185_PROVENANCE_CALLER_SWEEP.md).
 
-**Both PRs live-verified via Rigby on `pa-a60842917d36`** after the FC env regression diagnosis. PR-B 7/7 tests pass; full deliverable suite (48 tests) clean. See [`docs/specs/deliverable_creation_paths.md`](docs/specs/deliverable_creation_paths.md) for the bucketed callsite map.
+| PR | Theme |
+|---|---|
+| [#2367](https://github.com/clwest/donkey-betz-platform/pull/2367) | F2 execution_history_tool reverse-link |
+| [#2368](https://github.com/clwest/donkey-betz-platform/pull/2368) | PR-C bucket 1 (5 mgmt commands) |
+| [#2369](https://github.com/clwest/donkey-betz-platform/pull/2369) | F1 ContentWriterAgent diagnostic_mode |
+| [#2370](https://github.com/clwest/donkey-betz-platform/pull/2370) | PR-C bucket 2 (4 web views) |
+| [#2371](https://github.com/clwest/donkey-betz-platform/pull/2371) | PR-C bucket 3A (3 service helpers + envelope audit) |
+| [#2372](https://github.com/clwest/donkey-betz-platform/pull/2372) | PR-C bucket 3B-1 (conversation pipelines thread orchestration AgentExecution) |
+| [#2373](https://github.com/clwest/donkey-betz-platform/pull/2373) | PR-C bucket 3B-2 (per-stage AgentExecution rows in workspace pipeline runner) |
+| [#2374](https://github.com/clwest/donkey-betz-platform/pull/2374) | PR-C bucket 5 (competitor_comparison_tool opt-in + append_service audit) |
 
-**Pinned conversation:** `pa-a60842917d36` — fresh Session 1184 thread; `pa-f4644aa2fd1b` retired (refusal loop from FC env regression, not health). Run `session_tool health_check` early.
+**Pinned conversation:** `pa-10df024c0bd8` — bucket 3 design recon thread + F1/F2 forensic validation. Run `session_tool health_check` early.
 
-Close handoffs: [`SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md) (PR #2362) + [`SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md`](docs/handoffs/SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md) (PR #2363). Prior: [`SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md).
+### Bucket 4 is the ONLY remaining sweep work
 
-Standard FIRST THING checks:
+3 celery task callsites per [`docs/specs/deliverable_creation_paths.md`](docs/specs/deliverable_creation_paths.md) § Celery tasks:
+
+| Callsite | Agent | Notes |
+|---|---|---|
+| `core/tasks_content.py:244` | `VideoContentPackAgent` | Has Celery task context, no AgentExecution row |
+| `core/tasks_initiatives.py:2149` | `TechnicalDocumentAgent` | In initiative stage flow — has Initiative + stage_num |
+| `core/tasks_initiatives.py:2770` | `InitiativePipeline` | Same |
+
+**Per-callsite design call needed via Rigby on `pa-10df024c0bd8` BEFORE implementing** (similar to bucket 3B recon — see Session 1185 handoff for the design pattern). Each celery task has different inputs/context; choose per-task between (a) thread execution_id from task args, (b) create AgentExecution at task start, (c) per-stage rows like 3B-2.
+
+### Standard FIRST THING checks
+
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-a60842917d36`): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.**
-3. `session_tool health_check` on `pa-a60842917d36` — rotate to fresh Session 1185 thread if past 60/100.
-4. **24h WARN-volume watch on PR #2363** (load-bearing for PR-C scope decisions):
-   ```bash
-   grep "No parent_execution_id" /tmp/celery-*.log | \
-     awk -F'caller=' '{print $2}' | awk -F' ' '{print $1}' | \
-     sort | uniq -c | sort -rn
-   ```
-   Expected: BaseAgent path stops contributing entirely; remaining WARNs come from the ~17 non-agent callers in `docs/specs/deliverable_creation_paths.md`. The grouped output IS the PR-C work queue.
-   - Spot-check 2-3 recent agent-dispatch deliverables via `deliverable_tool action=detail` — `provenance.synthesized=false` + non-null `origin_execution_id` proves the BaseAgent fix is firing live.
-5. **Real 24h watch on PR #2357 — DAY 2** (continuing from Session 1183):
-   - `grep -c 'server-side persist fail-open' celery-long-running.log` — should still be **0**.
-   - Session 1181 invariants: `[auto_followup] created` lines fire; armed-subs with NULL expires_at older than 6h stay at 0.
+2. Through Rigby (`tools/pa_local.sh`, pinned conv **`pa-10df024c0bd8`**): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.** Note: `tools/pa_local.sh` currently pins `pa-a60842917d36` — bucket-4 work should pivot to `pa-10df024c0bd8` (where the 1185 design recon lives) by either editing the wrapper or invoking pa_chat.py with `--conversation pa-10df024c0bd8` directly.
+3. `session_tool health_check` on `pa-10df024c0bd8` — rotate to fresh Session 1186 thread if past 60/100.
+4. `gh pr list --author @me --state open` — confirm 8 PRs from Session 1185 (or count how many merged since session close).
+5. **If any of #2367, #2369, #2371, #2372, #2373, #2374 merged:** `pkill -9 -f celery; rm -f .celery*.pid; make celery` — per the worker-restart matrix in Session 1185 handoff.
+6. **Bucket 4 design call**: dispatch Rigby with the 3 callsite specs + per-task design Qs (thread vs synthesize vs per-stage rows like 3B-2). See Session 1185 handoff "What's still open" section.
+
+### Then proceed with bucket 4 implementation
+
+After Rigby's per-callsite design call, implement bucket 4 mirroring the bucket 3B-2 pattern where appropriate. Then queue:
+- **Spec doc consolidation PR** — `docs/specs/deliverable_creation_paths.md` Coverage summary: move all PR-C rows from ⚠️ WARN → 🟡 synthesized / ✅ wired
+- **Inventory refresh PR** — `python manage.py generate_platform_inventory --write` + fix 2 high drifts in `load_all_agents_advisors.py`
+- **PR-D contract flip** — after 24h WARN-volume = 0, flip factory from `logger.warning(...)` to `raise DeliverableProvenanceMissingError(...)` for non-PA contexts.
+
+### Smoke verification for the 8 Session 1185 PRs (post-merge)
+
+See Session 1185 handoff § "Smoke verification (post-merge across all 8 PRs)" — 8-step checklist on pa-10df024c0bd8.
 
 ### Suggested next item (Session 1184 close)
 
