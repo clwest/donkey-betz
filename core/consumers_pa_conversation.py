@@ -104,14 +104,17 @@ def create_completion_row(
     *, user, conversation_id, execution_id, agent_name, status, completed_at,
     error_signature, artifact_pointers, assistant_response,
 ):
-    """Write the Rigby-authored completion row (sync, DB-bound).
+    """Write the Rigby-authored completion row (sync, DB-bound). Idempotent per
+    (conversation_id, execution_id) pair — Session 1180 P1: when multiple
+    PAConversationConsumer instances (one per browser tab) all receive the same
+    channels group_send agent.completed event, each calls this helper; the
+    metadata-lookup short-circuit prevents N tabs from writing N duplicate rows.
 
     Uses assistant_response (renders as Rigby bubble) per the ratified Session 1175
     design — existing precedent in collaboration_protocol uses user_message which
     would misattribute the message as a user turn. source='pa' matches other Rigby
     turns. Q-C investigation found ChatConversation has zero post_save signals, so
-    the .create() is fire-and-forget — no token/embedding/unread side effects to
-    mirror.
+    the write is fire-and-forget — no token/embedding/unread side effects to mirror.
     """
     from core.models.conversations.models import ChatConversation
     from core.models_unified_system import AgentFollowupSubscription
@@ -119,6 +122,16 @@ def create_completion_row(
         execution_id=execution_id,
         conversation_id=conversation_id,
     ).only('id').first()
+    # Idempotency check: if another consumer already wrote the completion row for
+    # this (conversation_id, execution_id), reuse it. No DB-level unique constraint
+    # yet (JSON-expression partial index deferred to a later PR per Session 1180
+    # Rigby ratification); app-level get_or_create-equivalent is the v1 path.
+    existing = ChatConversation.objects.filter(
+        conversation_id=conversation_id,
+        metadata__contains={'kind': 'agent_completion', 'execution_id': execution_id},
+    ).first()
+    if existing is not None:
+        return existing
     return ChatConversation.objects.create(
         user=user if (user and getattr(user, 'is_authenticated', False)) else None,
         conversation_id=conversation_id,
