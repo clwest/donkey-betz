@@ -37,6 +37,12 @@ CATEGORY_ALIASES: Dict[str, List[str]] = {
     'creative': ['design', 'visual_trends', 'video'],
     'crypto': ['blockchain'],
     'sports': ['sports_odds', 'sports_news'],
+    # Session 1189 PR-3B: `security` was the original mapping value for
+    # cto/code_generator/code_review/devops/autonomous_content_studio but
+    # the real SpiderData.data_type bucket is `cybersecurity` (15
+    # actionable / 30d). Soft transition — those agents keep `'security'`
+    # in their per-agent lists; the alias auto-expands.
+    'security': ['cybersecurity'],
 }
 
 # Session 1189 PR-3A: snapshot of real SpiderData.data_type values
@@ -92,7 +98,8 @@ class SpiderContextBuilder:
         # Broader vocabulary-bridge work (PR-3) tracked separately.
         'imageagent': ['design', 'visual_trends', 'video', 'tech', 'entertainment'],
         'researchagent': ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health', 'ai_ml', 'business'],
-        'thinkingagent': ['tech', 'news', 'science', 'financial'],
+        # Session 1189 PR-3B: + ai_ml (364 actionable / 30d, top: huggingface 331)
+        'thinkingagent': ['tech', 'news', 'science', 'financial', 'ai_ml'],
 
         # Creative agents need design trends
         'image': ['creative', 'tech', 'entertainment'],
@@ -104,49 +111,68 @@ class SpiderContextBuilder:
 
         # Research agents need broad data - Session 936: Add ALL categories
         'research': ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health'],
-        'content_writer': ['tech', 'news', 'social', 'financial', 'sports', 'entertainment', 'lifestyle', 'science', 'health', 'education'],
-        'technical_document': ['tech', 'science'],
+        # Session 1189 PR-3B: + ai_ml, + content
+        'content_writer': ['tech', 'news', 'social', 'financial', 'sports', 'entertainment', 'lifestyle', 'science', 'health', 'education', 'ai_ml', 'content'],
+        # Session 1189 PR-3B: + ai_ml
+        'technical_document': ['tech', 'science', 'ai_ml'],
 
         # Strategy agents need market intelligence
-        'content_strategy': ['tech', 'news', 'social', 'creative', 'entertainment'],
+        # Session 1189 PR-3B: + ai_ml, + content
+        'content_strategy': ['tech', 'news', 'social', 'creative', 'entertainment', 'ai_ml', 'content'],
         'brand_identity': ['creative', 'social', 'community'],
-        'brand_strategy': ['tech', 'news', 'social', 'creative'],
+        # Session 1189 PR-3B: + ai_ml
+        'brand_strategy': ['tech', 'news', 'social', 'creative', 'ai_ml'],
         'seo_optimizer': ['tech', 'news'],
         'social_media': ['social', 'community', 'news', 'entertainment'],
-        'marketing_strategy': ['tech', 'news', 'social'],
+        # Session 1189 PR-3B: + ai_ml, + content
+        'marketing_strategy': ['tech', 'news', 'social', 'ai_ml', 'content'],
 
         # Executive agents need broad awareness
-        'cto': ['tech', 'news', 'financial', 'security'],
-        'coo': ['tech', 'news', 'jobs', 'financial'],
+        # Session 1189 PR-3B: + ai_ml, + training, + legislation
+        'cto': ['tech', 'news', 'financial', 'security', 'ai_ml', 'training', 'legislation'],
+        # Session 1189 PR-3B: + ai_ml, + remote_work, + training, + legislation
+        'coo': ['tech', 'news', 'jobs', 'financial', 'ai_ml', 'remote_work', 'training', 'legislation'],
         'creative_director': ['creative', 'tech', 'social', 'entertainment'],
 
         # Analysis agents need specific domain data
-        'trend_analysis': ['tech', 'news', 'social', 'creative', 'financial', 'sports'],
+        # Session 1189 PR-3B: + ai_ml
+        'trend_analysis': ['tech', 'news', 'social', 'creative', 'financial', 'sports', 'ai_ml'],
         'opportunity_scoring': ['tech', 'jobs', 'financial', 'sports'],
-        'market_intelligence': ['financial', 'tech', 'news', 'crypto'],
-        'competitor_analysis': ['tech', 'news', 'social'],
+        # Session 1189 PR-3B: + ai_ml, + legislation
+        'market_intelligence': ['financial', 'tech', 'news', 'crypto', 'ai_ml', 'legislation'],
+        # Session 1189 PR-3B: + ai_ml
+        'competitor_analysis': ['tech', 'news', 'social', 'ai_ml'],
         'customer_research': ['social', 'community', 'news'],
 
         # Financial/market agents - Session 936: Add sports for betting
         'stock': ['financial', 'news', 'crypto'],
-        'prediction_market': ['financial', 'news', 'social', 'sports'],
+        # Session 1189 PR-3B: + prediction_markets (was missing its own bucket)
+        'prediction_market': ['financial', 'news', 'social', 'sports', 'prediction_markets'],
         'sports_odds': ['sports', 'news', 'financial'],
         'arbitrage': ['financial', 'sports', 'crypto'],
         'blockchain': ['crypto', 'financial', 'tech'],
         'whale_watcher': ['crypto', 'financial'],
 
         # Development agents need tech trends
-        'code_generator': ['tech', 'security'],
-        'full_stack_developer': ['tech', 'jobs'],
-        'code_review': ['tech', 'security'],
-        'devops': ['tech', 'security'],
+        # Session 1189 PR-3B: + ai_ml, + training
+        'code_generator': ['tech', 'security', 'ai_ml', 'training'],
+        # Session 1189 PR-3B: + ai_ml, + training, + remote_work
+        'full_stack_developer': ['tech', 'jobs', 'ai_ml', 'training', 'remote_work'],
+        # Session 1189 PR-3B: + ai_ml
+        'code_review': ['tech', 'security', 'ai_ml'],
+        # Session 1189 PR-3B: + ai_ml
+        'devops': ['tech', 'security', 'ai_ml'],
 
         # Content studio agents - Session 936: Comprehensive category access
-        'autonomous_content_studio': ['tech', 'news', 'social', 'creative', 'financial', 'sports', 'entertainment', 'science'],
-        'topic_miner': ['tech', 'news', 'social', 'financial', 'sports', 'entertainment', 'science', 'lifestyle'],
+        # Session 1189 PR-3B: + ai_ml, + content
+        'autonomous_content_studio': ['tech', 'news', 'social', 'creative', 'financial', 'sports', 'entertainment', 'science', 'ai_ml', 'content'],
+        # Session 1189 PR-3B: + ai_ml, + content
+        'topic_miner': ['tech', 'news', 'social', 'financial', 'sports', 'entertainment', 'science', 'lifestyle', 'ai_ml', 'content'],
         'contrarian': ['news', 'social', 'community', 'financial'],
-        'performance_analyst': ['tech', 'news', 'financial'],
-        'content_diversity': ['tech', 'news', 'social', 'creative', 'jobs', 'financial', 'sports', 'entertainment', 'science', 'lifestyle', 'health', 'education'],
+        # Session 1189 PR-3B: + ai_ml
+        'performance_analyst': ['tech', 'news', 'financial', 'ai_ml'],
+        # Session 1189 PR-3B: + ai_ml
+        'content_diversity': ['tech', 'news', 'social', 'creative', 'jobs', 'financial', 'sports', 'entertainment', 'science', 'lifestyle', 'health', 'education', 'ai_ml'],
 
         # Podcast agents
         'podcast': ['tech', 'news', 'social', 'entertainment'],
@@ -154,12 +180,15 @@ class SpiderContextBuilder:
         'moderator': ['news', 'social'],
 
         # Job/career agents
-        'job': ['jobs', 'tech'],
-        'career': ['jobs', 'tech', 'news', 'education'],
+        # Session 1189 PR-3B: + remote_work (345 actionable / 30d)
+        'job': ['jobs', 'tech', 'remote_work'],
+        # Session 1189 PR-3B: + remote_work, + training
+        'career': ['jobs', 'tech', 'news', 'education', 'remote_work', 'training'],
 
         # Legal agents (Session 744 enhancement)
-        'legal': ['legal', 'news'],
-        'legal_doc': ['legal', 'news'],
+        # Session 1189 PR-3B: + legislation (331 actionable / 30d)
+        'legal': ['legal', 'news', 'legislation'],
+        'legal_doc': ['legal', 'news', 'legislation'],
 
         # Session 936: Sports/betting agents
         'sports': ['sports', 'news', 'financial'],
@@ -170,7 +199,8 @@ class SpiderContextBuilder:
         'science': ['science', 'tech', 'news'],
 
         # Session 936: Education agents
-        'education': ['education', 'tech', 'news'],
+        # Session 1189 PR-3B: + training (334 actionable / 30d, discord_training top)
+        'education': ['education', 'tech', 'news', 'training'],
 
         # Default for unmatched agents - Session 936: Broader default coverage
         'default': ['tech', 'news', 'financial', 'social'],
