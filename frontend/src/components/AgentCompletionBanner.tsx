@@ -2,45 +2,48 @@
  * Session 1175 PR-2b-3 — Agent-completion banner.
  *
  * The transient live signal half of the follow-up wake design. The chat
- * bubble (persisted ChatConversation row written by the PR-2b-2 consumer)
- * is the load-bearing record that survives a page refresh; this banner is
- * the "pay attention, something finished" pop-up that fires the moment the
- * WS `agent.completed` event lands, so the user notices even if they're
- * scrolled away from the bottom of the chat.
+ * bubble (persisted ChatConversation row written server-side by the fire
+ * helper post-PR #2352) is the load-bearing record that survives a page
+ * refresh; this banner is the "pay attention, something finished" pop-up
+ * that fires the moment the WS `agent.completed` event lands, so the user
+ * notices even if they're scrolled away from the bottom of the chat.
  *
- * Subscribes to `usePARecentAgentCompletion` from the PA store, which is
- * driven by the `agent.completed` WebSocket event handler in
- * CommandCenterPage. Mirrors the RigbyToolTicker (Session 1172) pattern:
- * non-intrusive, fade-out after a short window, click to dismiss early,
- * returns null when idle.
+ * Session 1181 PR4 — banner queue: when two or more agents complete in
+ * close succession (multi-agent fanout — Pass B Cell 7), each gets its
+ * own toast in a vertical stack rather than the newer one silently
+ * overwriting the older. Each toast carries its own 6s fade timer + an
+ * X dismiss control. Order is newest-first; queue capped at 10 by the
+ * store.
  */
 import { useEffect, useState } from 'react'
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react'
-import { usePARecentAgentCompletion, usePAStore } from '@/stores/paStore'
+import { usePAAgentCompletionQueue, usePAStore } from '@/stores/paStore'
 
-// The banner shows agent name + execution_id + status. A 6-second window
-// is longer than RigbyToolTicker's 2.5s because the user needs time to
-// read the agent name and decide whether to scroll to the new chat
-// message. Manually dismissable.
+// 6-second window: longer than RigbyToolTicker's 2.5s because the user
+// needs time to read the agent name and decide whether to scroll to the
+// new chat message. Manually dismissable.
 const FADE_MS = 6000
 
-export function AgentCompletionBanner() {
-  const completion = usePARecentAgentCompletion()
-  const clearAgentCompletion = usePAStore((s) => s.clearAgentCompletion)
-  const [visible, setVisible] = useState(false)
+interface AgentCompletion {
+  execution_id: string
+  agent_name: string
+  status: string
+  error_signature?: string | null
+}
+
+function CompletionToast({ completion }: { completion: AgentCompletion }) {
+  const dismissAgentCompletion = usePAStore((s) => s.dismissAgentCompletion)
+  const [visible, setVisible] = useState(true)
 
   useEffect(() => {
-    if (completion) {
-      setVisible(true)
-      const t = setTimeout(() => {
-        setVisible(false)
-        clearAgentCompletion()
-      }, FADE_MS)
-      return () => clearTimeout(t)
-    }
-  }, [completion, clearAgentCompletion])
+    const t = setTimeout(() => {
+      setVisible(false)
+      dismissAgentCompletion(completion.execution_id)
+    }, FADE_MS)
+    return () => clearTimeout(t)
+  }, [completion.execution_id, dismissAgentCompletion])
 
-  if (!completion || !visible) return null
+  if (!visible) return null
 
   const isError = completion.status === 'failed'
   const Icon = isError ? AlertTriangle : CheckCircle2
@@ -49,7 +52,7 @@ export function AgentCompletionBanner() {
 
   const handleDismiss = () => {
     setVisible(false)
-    clearAgentCompletion()
+    dismissAgentCompletion(completion.execution_id)
   }
 
   return (
@@ -74,6 +77,20 @@ export function AgentCompletionBanner() {
       >
         <X className="w-3 h-3" />
       </button>
+    </div>
+  )
+}
+
+export function AgentCompletionBanner() {
+  const queue = usePAAgentCompletionQueue()
+
+  if (queue.length === 0) return null
+
+  return (
+    <div className="flex flex-col">
+      {queue.map((completion) => (
+        <CompletionToast key={completion.execution_id} completion={completion} />
+      ))}
     </div>
   )
 }

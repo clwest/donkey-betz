@@ -105,7 +105,12 @@ interface PAState {
   seenSeqs: Record<string, number[]>
 
   // Session 1175 PR-2b-3: Agent-completion banner
+  // Session 1181 PR4: queue replaces single slot so multi-agent fanout doesn't
+  // overwrite earlier completions before the user notices. recentAgentCompletion
+  // retained as a derived alias for the queue head (back-compat with any caller
+  // that reads it directly; the canonical source is agentCompletionQueue).
   recentAgentCompletion: AgentCompletionEvent | null
+  agentCompletionQueue: AgentCompletionEvent[]
   seenCompletions: string[]  // bounded ring of execution_ids for dedupe
 
   // Actions
@@ -136,7 +141,10 @@ interface PAState {
   clearToolTicker: () => void
 
   // Session 1175 PR-2b-3: Agent-completion banner actions
+  // Session 1181 PR4: dismissAgentCompletion pops a single item by execution_id;
+  // clearAgentCompletion still clears the whole queue (back-compat).
   handleAgentCompleted: (event: AgentCompletionEvent) => void
+  dismissAgentCompletion: (execution_id: string) => void
   clearAgentCompletion: () => void
 }
 
@@ -164,7 +172,10 @@ export const usePAStore = create<PAState>()(
       seenSeqs: {},
 
       // Session 1175 PR-2b-3: Agent-completion banner initial state
+      // Session 1181 PR4: queue replaces single slot; recentAgentCompletion
+      // is a derived alias for queue[0] kept in sync for back-compat.
       recentAgentCompletion: null,
+      agentCompletionQueue: [],
       seenCompletions: [],
 
       // User scoping: when user changes, wipe conversation state to prevent bleed
@@ -347,15 +358,39 @@ export const usePAStore = create<PAState>()(
       clearToolTicker: () => set({ activeTool: null, recentTool: null }),
 
       // Session 1175 PR-2b-3: Agent-completion banner actions
+      // Session 1181 PR4: append to queue (newest first) instead of overwriting
+      // single slot. Multi-agent fanout previously dropped earlier completions
+      // before the user noticed (Cell 7 finding). Queue is capped at 10 items
+      // — burst of more than 10 concurrent completions drops oldest, which is
+      // acceptable since the bubble chat-history row remains the load-bearing
+      // record (server-side persisted via PR #2352).
       handleAgentCompleted: (event) => set((state) => {
         if (state.seenCompletions.includes(event.execution_id)) return state
+        const nextQueue = [event, ...state.agentCompletionQueue].slice(0, 10)
         return {
-          recentAgentCompletion: event,
+          agentCompletionQueue: nextQueue,
+          recentAgentCompletion: nextQueue[0] ?? null,
           seenCompletions: [...state.seenCompletions, event.execution_id].slice(-50),
         }
       }),
 
-      clearAgentCompletion: () => set({ recentAgentCompletion: null }),
+      // Pop a specific completion (e.g., user clicked dismiss on one toast, or
+      // its auto-fade timer elapsed). Other queued completions keep their own
+      // independent fade timers.
+      dismissAgentCompletion: (execution_id) => set((state) => {
+        const nextQueue = state.agentCompletionQueue.filter(
+          (c) => c.execution_id !== execution_id,
+        )
+        return {
+          agentCompletionQueue: nextQueue,
+          recentAgentCompletion: nextQueue[0] ?? null,
+        }
+      }),
+
+      clearAgentCompletion: () => set({
+        agentCompletionQueue: [],
+        recentAgentCompletion: null,
+      }),
     }),
     {
       name: 'pa-dock-state',
@@ -408,3 +443,7 @@ export const usePARecentTool = () => usePAStore((s) => s.recentTool)
 
 // Session 1175 PR-2b-3: Agent-completion banner selector
 export const usePARecentAgentCompletion = () => usePAStore((s) => s.recentAgentCompletion)
+// Session 1181 PR4: queue selector for multi-agent fanout — banner renders the
+// whole stack (each item gets its own fade timer + dismiss). recentAgentCompletion
+// remains as a derived alias for queue[0] for any other reader.
+export const usePAAgentCompletionQueue = () => usePAStore((s) => s.agentCompletionQueue)
