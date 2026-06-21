@@ -543,6 +543,18 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("heartbeat_history_tool", self._handle_heartbeat_history)
         self.register("infra_health_tool", self._handle_infra_health)
 
+        # Session 1189 Item 3: SpiderData aggregation (group-by data_type
+        # over a windowed range with optional spider_name + data_type
+        # filters + top contributors). Recurring tooling gap surfaced
+        # twice across Sessions 1187/1188 — handled here so Rigby no
+        # longer needs Django-shell one-offs to verify supply.
+        from core.services.spider_data_aggregation_tool import (
+            handle_spider_data_aggregation,
+        )
+        self.register(
+            "spider_data_aggregation_tool", handle_spider_data_aggregation
+        )
+
         # R2-6: KB / embedding browsing
         self.register("kb_tool", self._handle_kb_browse)
         # Session 1142: chunked /docs/ retrieval via .rag/corpus.jsonl
