@@ -11,7 +11,8 @@ This agent searches for information. That's ALL it does.
 It has NO access to creation, editing, or generation tools.
 
 Tools Available:
-    - web_search: Search the web using Serper API
+    - intelligence_tool (action=search, source=web): Search the web via the
+      intelligence gateway (Serper-backed)
     - spider_query: Query the spider network for data
     - analyze_trends: Analyze trending topics from spiders
 
@@ -62,7 +63,7 @@ class ResearchAgent(BaseAgent):
 
 Your ONLY job is to research topics and gather information. You do NOT create content.
 You have these tools:
-- web_search: Search the web for current information
+- intelligence_tool (action=search, source=web): Search the web for current information via the intelligence gateway
 - spider_query: Query cached spider data (70 spiders, but only 15 Reddit subreddits)
 - reddit_search: Search ANY Reddit subreddit in real-time (use for specific communities!)
 - analyze_trends: Analyze trending topics from spider data
@@ -104,7 +105,7 @@ Use reddit_search for specific communities not in spider cache:
 
 When given a research task:
 1. For INTERNAL system analysis (experiments, failures, executions), use query_internal_data FIRST
-2. For current events/news, prefer web_search
+2. For current events/news, prefer intelligence_tool with action=search, source=web
 3. For trends/opportunities, prefer spider_query
 4. For specific Reddit communities, use reddit_search
 5. Synthesize findings into a clear summary with ACTUAL DATA
@@ -511,7 +512,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         queries: List[Dict[str, Any]],
         tool_calls_log: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Execute a round of search queries via web_search and spider_query."""
+        """Execute a round of search queries via intelligence_tool (web) and spider_query."""
         results = []
 
         for q in queries:
@@ -519,17 +520,19 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             if not query_text:
                 continue
 
-            # Web search
+            # Web search via intelligence_tool gateway (Session 1183 migration from web_search)
             try:
-                web_result = self._execute_tool_call('web_search', {
+                web_result = self._execute_tool_call('intelligence_tool', {
+                    'action': 'search',
+                    'source': 'web',
                     'query': query_text,
-                    'num_results': 8,
+                    'limit': 8,
                 })
                 if not isinstance(web_result, dict):
                     web_result = {'success': False, 'data': web_result}
                 tool_calls_log.append({
-                    'tool': 'web_search',
-                    'arguments': {'query': query_text},
+                    'tool': 'intelligence_tool',
+                    'arguments': {'action': 'search', 'source': 'web', 'query': query_text},
                     'result': web_result,
                     'strategy': q.get('strategy', 'unknown'),
                 })
@@ -539,8 +542,11 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                         results.extend(data['results'])
                     elif isinstance(data, list):
                         results.extend(data)
+                elif 'results' in web_result:
+                    # intelligence_tool returns results at top level when handler is _handle_web_search
+                    results.extend(web_result.get('results', []))
             except Exception as e:
-                logger.warning("web_search failed for %r: %s", query_text[:60], e)
+                logger.warning("intelligence_tool web search failed for %r: %s", query_text[:60], e)
 
             # Spider query (only for first 3 queries to avoid over-querying)
             source_hint = q.get('source_hint', 'search')
@@ -2126,12 +2132,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
     ) -> Dict[str, Any]:
         """Execute a tool call for research."""
 
-        if tool_name == "web_search":
-            # Session 1090: Deprecated — fall through to BaseAgent universal handler
-            logger.warning(f"[{self.__class__.__name__}] web_search is deprecated — falling through to BaseAgent handler")
-            return super()._execute_tool_call(tool_name, arguments)
-
-        elif tool_name == "spider_query":
+        if tool_name == "spider_query":
             try:
                 results = self.spider_service.search_spider_data(
                     query=arguments.get('query', ''),

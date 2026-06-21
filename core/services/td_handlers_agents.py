@@ -364,12 +364,25 @@ class AgentHandlersMixin:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle web search tool — synchronous via Serper API."""
+        """Handle web search — synchronous via Serper API.
+
+        Serves both the legacy `web_search` tool name and the gateway
+        `intelligence_tool` with `action=search, source=web` path. Honors a
+        caller-supplied `limit` (gateway convention) or `num_results` (legacy
+        convention) so the gateway migration doesn't silently regress callers
+        that requested more results. Clamped to a hard ceiling of 10 to keep
+        Serper cost/latency bounded for any oversized request.
+        """
         from core.tools.web_search import WebSearchTool
 
         query = payload.get('query', '')
+        raw_max = payload.get('limit') or payload.get('num_results') or 5
+        try:
+            max_results = min(int(raw_max), 10)
+        except (ValueError, TypeError):
+            max_results = 5
         search_tool = WebSearchTool()
-        result = search_tool.execute(query=query, max_results=5, search_type='text')
+        result = search_tool.execute(query=query, max_results=max_results, search_type='text')
 
         if result.get('success'):
             data = result.get('data', {})
