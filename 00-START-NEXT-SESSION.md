@@ -105,28 +105,42 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ### FIRST THING this session
 
-**Session 1184 shipped Deliverable → Execution provenance linkage** (zero schema, factory synthesis for PA-direct creates, normalized `provenance` block on `deliverable_tool.detail`). Closes Rigby's deliverable `e4f4e12f-bd77-4611-a3d6-1a50fd3b9412`. 4 unit tests pass + live-verified through Rigby on `pa-a60842917d36`. Bonus debug: `PA_USE_FUNCTION_CALLING=true` env regression on manual worker restarts (see READ THIS FIFTH above + `feedback_pa_worker_function_calling_env.md`).
+**Session 1184 shipped two stacked PRs.** PR #2362 (Stage 1 — factory synthesis + `provenance` read block, closes deliverable `e4f4e12f` AC1–AC5 for PA-direct creates) and PR #2363 (Stage 2 — BaseAgent `_execution_context` root-cause fix that covers all ~80 routable agents in one line, plus 5 named integration tests + §1 enumeration table). Both ship to PR-C (Phase 3 — sweep the remaining ⚠️ WARN bucket of ~17 non-agent callers, then flip factory to hard-require).
 
-**Pinned conversation:** `pa-a60842917d36` — fresh thread Session 1184; `pa-f4644aa2fd1b` retired (refusal loop from FC env regression, not health). Run `session_tool health_check` early.
+**Both PRs live-verified via Rigby on `pa-a60842917d36`** after the FC env regression diagnosis. PR-B 7/7 tests pass; full deliverable suite (48 tests) clean. See [`docs/specs/deliverable_creation_paths.md`](docs/specs/deliverable_creation_paths.md) for the bucketed callsite map.
 
-Close handoff: [`docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md). Prior: [`docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md).
+**Pinned conversation:** `pa-a60842917d36` — fresh Session 1184 thread; `pa-f4644aa2fd1b` retired (refusal loop from FC env regression, not health). Run `session_tool health_check` early.
+
+Close handoffs: [`SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md) (PR #2362) + [`SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md`](docs/handoffs/SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md) (PR #2363). Prior: [`SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
 2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-a60842917d36`): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.**
 3. `session_tool health_check` on `pa-a60842917d36` — rotate to fresh Session 1185 thread if past 60/100.
-4. **24h watch on Session 1184 provenance work** (optional, additive code, easy levers in handoff):
-   - `grep "No parent_execution_id" /tmp/celery-*.log | wc -l` — if hundreds/day, downgrade WARN to debug or start the Phase 2 caller sweep.
-   - Spot-check 2-3 recent agent-dispatch deliverables via `deliverable_tool action=detail` — `provenance.synthesized=false` + non-null `origin_execution_id` proves the agent-dispatch path also flows through.
+4. **24h WARN-volume watch on PR #2363** (load-bearing for PR-C scope decisions):
+   ```bash
+   grep "No parent_execution_id" /tmp/celery-*.log | \
+     awk -F'caller=' '{print $2}' | awk -F' ' '{print $1}' | \
+     sort | uniq -c | sort -rn
+   ```
+   Expected: BaseAgent path stops contributing entirely; remaining WARNs come from the ~17 non-agent callers in `docs/specs/deliverable_creation_paths.md`. The grouped output IS the PR-C work queue.
+   - Spot-check 2-3 recent agent-dispatch deliverables via `deliverable_tool action=detail` — `provenance.synthesized=false` + non-null `origin_execution_id` proves the BaseAgent fix is firing live.
 5. **Real 24h watch on PR #2357 — DAY 2** (continuing from Session 1183):
    - `grep -c 'server-side persist fail-open' celery-long-running.log` — should still be **0**.
    - Session 1181 invariants: `[auto_followup] created` lines fire; armed-subs with NULL expires_at older than 6h stay at 0.
 
 ### Suggested next item (Session 1184 close)
 
-**Phase 2 provenance caller sweep (deferred from this session).** 31 sites call `create_deliverable()`; many don't pass `parent_execution_id` — they currently land in the soft-enforce WARN bucket. Migration priority: agents that produce publish-candidate work (ContentWriter, BlogWriter, Editor). Use the WARN log to find them. Once swept, flip factory contract to hard-require `parent_execution_id` in non-PA contexts.
+**PR-C — provenance sweep of the ⚠️ WARN bucket.** Once the 24h watch confirms BaseAgent path has stopped contributing WARNs, work through the remaining ~17 non-agent callers per the table in `docs/specs/deliverable_creation_paths.md`:
+- Management commands (5): opt into synthesis via `trigger_source='direct'`
+- Web views (4): user actions opt into synthesis via `trigger_source='user_request'`; incident writes use `trigger_source='direct'`
+- Celery tasks (3): create an `AgentExecution` per task at task start, thread `execution.id` into `create_deliverable`
+- Service helpers (5): per-helper decision — thread from caller or opt into synthesis
+- Other tools (2): `competitor_comparison_tool` → synthesize as `pa_tool`; `deliverable_append_service` fallback already accepts `execution_id`
 
-Alternative: **inventory refresh PR (still open from Session 1183 close)** — `verify_doc_claims --only-drift` still reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` and `PLATFORM_INVENTORY.md` is now 11 sessions stale. Mechanical but substantive.
+After PR-C lands and the WARN log reaches steady-state-zero, **PR-D** flips the factory contract from `logger.warning(...)` to `raise DeliverableProvenanceMissingError(...)` for non-PA contexts. Per Rigby's PR-A close-out: 24h cooldown between PR-C merge and PR-D flip.
+
+Alternative: **inventory refresh PR (still open from Session 1183 close)** — `verify_doc_claims --only-drift` still reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` and `PLATFORM_INVENTORY.md` is now 11 sessions stale. Mechanical but substantive. Could ride alongside PR-C if you want a full housekeeping session.
 
 ### What's queued (carried from Session 1183 — pick by Chris's priority)
 
@@ -149,17 +163,25 @@ PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry
 
 ---
 
-## SESSION 1184 CLOSED — Deliverable → Execution provenance linkage + PA worker FC env gotcha (2026-06-20)
+## SESSION 1184 CLOSED — Deliverable → Execution provenance (2 stacked PRs) + PA worker FC env gotcha + 3 new memories (2026-06-20)
 
-**1 feature PR ready (provenance linkage) + 1 ops finding written to memory.** Full handoff: [`docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md).
+**2 PRs open (stacked) + 1 ops finding + 3 new memories.** Closes Rigby's deliverable `e4f4e12f` (flipped to `completed` via `content_tool action=content_complete` — see new memory). Full handoffs: [`SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md) (PR-A) + [`SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md`](docs/handoffs/SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md) (PR-B).
 
-| Change | Theme | Verified |
+| PR | Theme | Verified |
 |---|---|---|
-| `feat(session-1184)` — Deliverable → Execution provenance | Factory synthesizes `AgentExecution` receipt for PA-direct creates; new `build_provenance_block` helper; normalized `provenance` block on `deliverable_tool.detail`; zero schema | 4/4 unit tests pass; live-verified through Rigby on `pa-a60842917d36` with `origin_execution_id`, `trigger_source=pa_tool`, `synthesized=true`, `legacy_no_provenance=false` |
+| **#2362** (PR-A) | `feat(session-1184)` — factory synthesizes `AgentExecution` receipt for PA-direct creates; new `build_provenance_block` helper; normalized `provenance` block on `deliverable_tool.detail`; zero schema | 4/4 unit tests + live Rigby invocation on `pa-a60842917d36` shows `origin_execution_id`, `trigger_source=pa_tool`, `synthesized=true`, `legacy_no_provenance=false` |
+| **#2363** (PR-B, stacked on #2362) | `feat(session-1184-pr-b)` — root-cause fix: `base_agent.py:4266` was reading `_current_execution_id` (nothing sets it) instead of `_execution_context['execution_id']` (router writes it). Plus router hoist for workspace path. Plus WARN caller-fingerprint for PR-C triage. Plus §1 enumeration table | 7/7 new tests + 48 deliverable-suite total clean; ~80 BaseAgent agents now wired in one line |
 
-Closes Rigby's deliverable `e4f4e12f-bd77-4611-a3d6-1a50fd3b9412` (AC1–AC5 all met). Reused Session 843's `parent_object_type`+`parent_object_id` (Rigby ratified all 4 design Qs). Soft-enforced — PA/user-direct paths always get a receipt; autonomous-agent missing-context cases log WARN for incremental Phase 2 sweep.
+**Per Rigby's design Qs (all ratified):** reuse Session 843 fields not new schema (Q1A) / synthesize AgentExecution for PA-direct (Q2A) / derive tool_calls via trace_id pivot — no new FK (Q3C) / soft-enforce now, hard-required later (Q4C) / read-via-tool sufficient — UI optional (Q5).
 
-**Bonus debug — PA worker FC env regression:** manual PA worker restart without `PA_USE_FUNCTION_CALLING=true` env caused 30-min "Rigby refusal loop" mid-session. `make celery` sets the var; ad-hoc `nohup celery ...` does not. Without it, source=claude-code messages fall through keyword routing with no `claude_code_coordination` branch → no tools dispatched → text-only refusals. Saved as `feedback_pa_worker_function_calling_env.md`; `tools/pa_local.sh` doc-block warns future-me; READ THIS FIFTH section above flags it at session open.
+**Deliverable e4f4e12f status:** flipped to `completed` via `content_tool action=content_complete` (NOT `deliverable_tool action=update` — see [`feedback_deliverable_status_via_content_complete.md`](../../../.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_deliverable_status_via_content_complete.md)). Closing note appended via `action=append` (2295 chars) with PR links + AC table + Phase 3 (PR-C/D) follow-ons.
+
+**Bonus debug — PA worker FC env regression:** manual PA worker restart without `PA_USE_FUNCTION_CALLING=true` env caused 30-min "Rigby refusal loop" mid-session. `make celery` sets the var; ad-hoc `nohup celery ...` does not. Without it, source=claude-code messages fall through keyword routing with no `claude_code_coordination` branch → no tools dispatched → text-only refusals. Saved as [`feedback_pa_worker_function_calling_env.md`](../../../.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_pa_worker_function_calling_env.md); `tools/pa_local.sh` doc-block warns future-me; READ THIS FIFTH section above flags it at session open.
+
+**New memories (3):**
+- `feedback_pa_worker_function_calling_env.md` — manual restart needs `PA_USE_FUNCTION_CALLING=true`
+- `feedback_deliverable_status_via_content_complete.md` — status transitions use `content_tool` not `deliverable_tool.update`
+- (carry from PR description) Caller fingerprint pattern in soft-enforce WARNs for fast sweep triage
 
 ---
 
