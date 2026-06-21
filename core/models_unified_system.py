@@ -1052,14 +1052,15 @@ class AgentFollowupSubscription(models.Model):
         (STATE_CANCELLED, 'Cancelled (explicit cancel from user, Phase 2)'),
     ]
 
-    # Session 1178 Phase 2 follow-up — single source of truth for the default
-    # TTL window. Both Phase 1 (`_handle_schedule_followup` default for the
-    # explicit `schedule_followup` tool) and Phase 2 (`create_implicit_followup_subscription`
-    # for auto-wake) read from here so the two paths never drift apart again.
-    # Live verify in Session 1178 caught a 30s default firing 2 seconds before
-    # a typical ResearchAgent completion (33s). 60s gives ResearchAgent
-    # comfortable headroom while keeping the "Rigby has clearly moved on"
-    # expiry semantics for slow / failed agents.
+    # Session 1180 P1 — auto-wake subscriptions are now execution-lifecycle-bound
+    # (expires_at=NULL) instead of wall-clock-bound. Both Session 1178's 30s and
+    # the 60s hotfix raced against slow agents (ResearchAgent ~33s, ThinkingAgent
+    # ~67s); decoupling expiry from runtime closes the race structurally.
+    #
+    # DEFAULT_TTL_SECONDS / MAX_TTL_SECONDS remain as the contract for the
+    # explicit `schedule_followup(after_seconds=N)` delayed-reminder tool, which
+    # keeps its time-bounded semantic (different use case from completion wake).
+    # The auto-wake path no longer reads DEFAULT_TTL_SECONDS — it writes NULL.
     DEFAULT_TTL_SECONDS = 60
     MAX_TTL_SECONDS = 600
 
@@ -1082,8 +1083,16 @@ class AgentFollowupSubscription(models.Model):
         db_index=True,
     )
     expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
         db_index=True,
-        help_text="now() + after_seconds at creation; beat-scheduled cleanup expires this row when now() > expires_at and state='armed'.",
+        help_text=(
+            "When the subscription expires and becomes ineligible to fire. "
+            "NULL = execution-lifecycle-bound (auto-wake default — fires on terminal "
+            "regardless of runtime). Non-NULL = explicit schedule_followup delayed-wake "
+            "(now() + after_seconds at creation; beat-scheduled cleanup expires non-NULL "
+            "rows whose state='armed' and now() > expires_at)."
+        ),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
