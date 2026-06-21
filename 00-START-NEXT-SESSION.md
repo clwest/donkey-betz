@@ -101,26 +101,48 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1190 — CURRENT ENTRY POINT
+## SESSION 1191 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1189 shipped 4 PRs** completing Rigby's ratified `1 → 3 → 2 → 4` sequence end-to-end on spider context (AC instrumentation → PR-3A alias layer → SpiderData aggregation PA tool → PR-3B semantic retune). Full handoff: [`SESSION_1189_SPIDER_CONTEXT_AC_VOCABULARY_TOOL_AND_ROLLOUT.md`](docs/handoffs/SESSION_1189_SPIDER_CONTEXT_AC_VOCABULARY_TOOL_AND_ROLLOUT.md).
+**Session 1190 was a partial — 1 PR shipped + workspace consolidation kicked off + Initiative system confirmed broken.** Full handoff: [`SESSION_1190_PARTIAL_WORKSPACE_CONSOLIDATION_AND_SCRUBBER_FIX.md`](docs/handoffs/SESSION_1190_PARTIAL_WORKSPACE_CONSOLIDATION_AND_SCRUBBER_FIX.md).
 
-**Headline:** every agent dispatch now records `AgentExecution.input_data['spider_context']` with per-category `items_returned_by_category` + `has_data_by_category` + `build_ms` (Item 1 = #2385). `creative`/`crypto`/`sports`/`security` are auto-expanding aliases (PR-3A = #2386 + PR-3B = #2388). Rigby has a first-class `spider_data_aggregation_tool` PA tool (Item 3 = #2387) and used it live to drive PR-3B recon. 19 agents got `ai_ml`, 5 high-supply buckets rolled out to relevant agents (PR-3B = #2388).
+**Headline:** Chris asked for workspace consolidation into a single canonical "Donkey Betz" workspace. Pre-consolidation inventory blocked on `Agent-Testing` workspace_id getting returned as `"59af4248-70b9-4472-[REDACTED_CC]"` — root cause = credit-card regex false-positive on UUID digit-tail. Shipped scrubber fix as PR #2390 with UUID-masking strategy (18 tests). Created "Donkey Betz" workspace `b4503364-2573-4401-9e28-61a739e0ce50`. Triaged 3 highest-signal chris-personal deliverables (COO Operator Report **CLOSED** as superseded; Known Bugs queue + COO Backlog **MIGRATED** with verification notes citing shipped Session 1184/1165/1166 work). Initiative system recon: 30 records exist but lifecycle engine isn't running (most stuck at stage 1, `last_activity_at: null`).
+
+**Active conversation:** `pa-55d90b2a34524bf9` (Session 1190 thread; ended healthy 100/100). Reuse if continuing consolidation directly; rotate to fresh Session 1191 thread if pivoting to Initiative recon.
+
+**Donkey Betz workspace_id (pin for the session):** `b4503364-2573-4401-9e28-61a739e0ce50`
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
+| **Continue workspace consolidation (Steps 4-7)** | **P1** | ~74 deliverables remain to triage + migrate to Donkey Betz (`b4503364-...`). Mix: ~50 chris-personal (real specs + Quick-note throwaways), ~22 Local QA, ~5 across Session 1171/1172. Then Step 6 = deactivate other workspaces, Step 7 = verify. Conservative default per Chris: keep+migrate unless clearly stale. **Note: chris-personal IS in scope** (Chris corrected this mid-session; it contains real strategic work). |
+| **Initiative system lifecycle fix** | **P1** | Rigby's 3a/3b recon confirmed broken in observable ways — records exist but lifecycle engine isn't driving forward. Targeted fix PR scope: make stage advancement + action-item coupling + event-driven updates actually wire into the work loop. Multi-session epic possible if scheduler hooks are missing wholesale. Start with one focused scope before estimating. |
 | **7d AC watches** | **P1 (time-gated)** | Start **2026-06-28** — first meaningful read after a full week of real traffic. ORM-queryable from `AgentExecution.input_data['spider_context']`. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388 descriptions. If session opens before 2026-06-28, defer this and pick another item. |
 | **PR-D contract flip** | P2 | Deliverable `9d9db48a-4819-4e2b-9548-998c0fe2f8f5`. 24h WARN-volume eligibility gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
 | **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P2 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
 | **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer. Wire or stop crawling. C deliverable § Action implications #4. |
 | **Adjacent C-trace investigations (Session 1187)** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken; 5-min look. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface `SpiderItemHash item_title='Unknown'` — spider extractor bug. |
-| **Bucket follow-up — Rigby pruned these** | P3 | If 7d AC shows under-served agents, consider rolling out `business` (92), `government` (87), `blockchain` (79), `gaming` (55), `entertainment` (71), `science` (71) to relevant agents. Same one-line-per-agent pattern as PR-3B. |
-| **DM-system bug** | P3 | Deliverable `9a00667b-...`. Three symptoms (reply-delivery / no UI notifier / single-thread collapse). Rigby's two leads: thread reuse since 2026-06-13, `sender_type: rigby` mislabel. |
-| **Dedicated inventory-refresh PR** | P3 | Reconcile the `Agents count claims` CONFLICT so future PRs don't need `--admin` bypass. 220+ canonical claims, 2914 supporting, 7948 historical. Painful — defer unless someone has bandwidth. |
+| **Bucket follow-up — Rigby pruned these** | P3 | If 7d AC shows under-served agents, consider rolling out `business` (92), `government` (87), `blockchain` (79), `gaming` (55), `entertainment` (71), `science` (71). Same one-line-per-agent pattern as PR-3B. |
+| **DM-system bug** | P3 | Deliverable `9a00667b-...`. Three symptoms; Rigby's two leads: thread reuse since 2026-06-13, `sender_type: rigby` mislabel. |
+| **Dedicated inventory-refresh PR** | P3 | Reconcile the `Agents count claims` CONFLICT so future PRs don't need `--admin` bypass. |
+
+### Workspace consolidation cheat sheet
+
+7-step plan from Session 1190. Done so far: Steps 1-3 + partial 4-5. Remaining:
+- **Step 4 continue:** triage remaining ~74 candidates. Use deliverable_tool action=update workspace_id=`b4503364-...` to migrate; content_tool action=content_complete to close.
+- **Step 5 mechanics (proven):** `deliverable_tool action=update workspace_id=<new>` works end-to-end. `updated_fields: ["tags", "workspace"]` confirms persistence.
+- **Step 6:** deactivate other workspaces via `is_active=False`.
+- **Step 7:** verify no orphans + Donkey Betz contains the expected set.
+
+### Initiative system recon notes (from Session 1190)
+
+- 30 Initiatives (11 ACTIVE, 12 TRIAGE, 7 COMPLETED), 42 action items (27 pending, 14 cancelled, 1 completed)
+- Most stuck at `current_stage=1`, `last_activity_at: null`, `pending_actions: 0`
+- Pattern: auto-populated from N deliverables in some workspace, then never advanced
+- Failure mode: lifecycle engine not running (stage advancement, action-item coupling, event-driven updates)
+- **Don't strip `initiative_id` foreign keys on migrated deliverables** — forensic metadata needed for the fix PR (Rigby's call, Chris ratified)
 
 ### 7d AC watches that start 2026-06-28
 
@@ -165,6 +187,48 @@ AgentExecution.objects.filter(
 ### Pre-existing CONFLICT — `--admin` bypass still required
 
 `context-kit verify` `Agents count claims` CONFLICT (220+ canonical, 2914 supporting, 7948 historical) still on main. Strict mode Repo Guardrails fails on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. Worth a dedicated inventory-refresh PR if anyone has the bandwidth.
+
+---
+
+## SESSION 1190 CLOSED PARTIAL — Scrubber UUID fix + workspace consolidation kicked off + Initiative confirmed broken (2026-06-21)
+
+**1 PR merged + workspace consolidation Steps 1-3 done + 3 priority deliverables triaged + Initiative recon complete.** Full handoff: [`SESSION_1190_PARTIAL_WORKSPACE_CONSOLIDATION_AND_SCRUBBER_FIX.md`](docs/handoffs/SESSION_1190_PARTIAL_WORKSPACE_CONSOLIDATION_AND_SCRUBBER_FIX.md).
+
+| PR | Commit | Theme |
+|---|---|---|
+| **#2390** | `680aa5d4` | `fix(session-1190-scrubber)` — protect UUIDs from CC regex false-positive. New `_UUID_PATTERN` + mask/restore in `scrub()`. 18 tests. Resolved un-addressable Agent-Testing workspace UUID (`59af4248-70b9-4472-8062-810452446698` now intact). |
+
+**Workspace consolidation status (7-step plan, ratified mid-session):**
+
+| # | Step | Status |
+|---|---|---|
+| 1 | Scrubber UUID fix | ✅ shipped (#2390) |
+| 2 | Create "Donkey Betz" workspace | ✅ created (`b4503364-...`) |
+| 3 | Inventory refresh | ✅ done (~77 candidates) |
+| 4 | Triage priority deliverables | ◐ 3 of ~74 done |
+| 5 | Migrate survivors | ◐ 2 of ~74 migrated |
+| 6 | Deactivate other workspaces | ⏳ Session 1191 |
+| 7 | Post-migration verification | ⏳ Session 1191 |
+
+**3 priority deliverables triaged:**
+- `644877f1-...` COO Operator Report → **CLOSED** as superseded by 10-item backlog
+- `3973c817-...` Known Bugs queue → **MIGRATED** to Donkey Betz + appended Session 1184 PR #2362 resolution note for item #2
+- `1be2cf55-...` COO 10-item Backlog → **MIGRATED** to Donkey Betz + appended file:line verification notes for items #1, #2, #10
+
+**Spot-check evidence cited in append notes** (live grep):
+- #1 DB safety defaults: `core/settings.py:264-292` (statement_timeout + idle_in_transaction_session_timeout, Session 1165 comment)
+- #2 PG application_name tagging: Procfile lines 16-33 (all 11 processes tagged, Session 1166 comment)
+- #10 Provenance receipt: `core/services/deliverable_provenance.py` + `deliverable_factory.py` + `td_handlers_agents.py`
+
+**Initiative system recon (Chris's other P1 ask):** confirmed broken in observable ways. 30 records exist, 11 ACTIVE / 12 TRIAGE / 7 COMPLETED. Most stuck at `current_stage=1`, `last_activity_at: null`. Pattern: auto-populated from N deliverables but never advanced. Failure mode: lifecycle engine isn't wiring stage advancement / action-item coupling / event-driven updates into the work loop. Targeted fix PR scope for Session 1191.
+
+**Workspace-system finding:** `deliverable_tool action=update workspace_id=<new>` is the move verb. End-to-end verified on 2 migrations. `updated_fields: ["tags", "workspace"]` confirms persistence.
+
+**Two course corrections worth preserving** (memory candidates):
+1. Workspace-name assumptions are unreliable. Claude assumed `chris-personal` = scratch; Chris corrected — contains real strategic specs (MLB Run Line Desk, COO Operator Report, Revenue Desk + Product Velocity Desk charter, Agent Validation Plan, etc.).
+2. Regex false-positives from structure collisions. CC regex `\b\d{4}-\d{4}-\d{4}-\d{4}\b` matched UUID digit-tails. Lookbehind/lookahead tweaks don't help at tail position. Fix pattern: detect protected entities first, mask with placeholders, run scrub, restore.
+
+**Pinned conversation:** `pa-55d90b2a34524bf9` (Session 1190 thread, healthy at pause). Donkey Betz workspace_id: `b4503364-2573-4401-9e28-61a739e0ce50`.
 
 ---
 
