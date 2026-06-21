@@ -1595,6 +1595,24 @@ class AgentRouter:
                             "[router-cancel] status=cancelled update failed; "
                             "leaving row as failed with cancelled message"
                         )
+                    # Session 1180 Pass B Cell 3 fix: the cancel path is one of
+                    # the 6 terminal-save sites that must drive completion-wake
+                    # semantics. Without this call, auto-wake subs with P1
+                    # NULL-expiry stay armed forever (immune to beat hygiene),
+                    # leaking armed rows and silently dropping the cancelled-
+                    # status bubble. Call after status flip so the broadcast
+                    # payload reflects status='cancelled'.
+                    try:
+                        execution_record.refresh_from_db(fields=['status'])
+                        from core.tasks_agents import fire_agent_followup_subscriptions
+                        fire_agent_followup_subscriptions(execution_record)
+                    except Exception as fire_exc:
+                        logger.warning(
+                            "[router-cancel] fire_agent_followup_subscriptions "
+                            "fail-open execution=%s (%s: %s)",
+                            execution_record.id,
+                            type(fire_exc).__name__, fire_exc,
+                        )
                 logger.info(
                     f"Agent execution cancelled ({agent_name}): {e}"
                 )
