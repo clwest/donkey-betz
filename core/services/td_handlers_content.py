@@ -2909,6 +2909,20 @@ class ContentHandlersMixin:
             else:
                 truncated = output
 
+            # Session 1185 F2: Reverse-link — surface deliverables produced by
+            # this execution. Forward link (deliverable→execution) is in
+            # provenance.origin_execution_id; this is the missing reverse pivot.
+            # Cap at 25 to bound payload; document in tool schema description.
+            from core.models_deliverables import Deliverable
+            deliverables = list(
+                Deliverable.objects.filter(
+                    parent_object_id=execution.id,
+                    parent_object_type='agent_execution',
+                ).order_by('-created_at').values(
+                    'id', 'title', 'category', 'created_at', 'is_saved',
+                )[:25]
+            )
+
             return {
                 'action': 'detail',
                 'id': str(execution.id),
@@ -2921,6 +2935,7 @@ class ContentHandlersMixin:
                 'completed_at': getattr(execution, 'completed_at', None),
                 'output_data': truncated,
                 'input_data_keys': list((execution.input_data or {}).keys()),
+                'deliverables': deliverables,
             }
 
         else:
