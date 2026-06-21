@@ -101,11 +101,13 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1186 — CURRENT ENTRY POINT
+## SESSION 1187 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1185 shipped 8 PRs** closing the F1+F2 forensic follow-ons + 5 of 6 PR-C sweep buckets. Full handoff: [`SESSION_1185_PROVENANCE_CALLER_SWEEP.md`](docs/handoffs/SESSION_1185_PROVENANCE_CALLER_SWEEP.md).
+**Session 1186 shipped PR #2376** closing the FINAL PR-C bucket (bucket 4 — 3 celery task callsites). Full handoff: [`SESSION_1186_PR_C_BUCKET_4_CELERY_TASKS.md`](docs/handoffs/SESSION_1186_PR_C_BUCKET_4_CELERY_TASKS.md).
+
+**All 9 Session 1185 + 1186 PRs are now open + CI-green** (#2367-#2376). After they merge to main, the PR-C sweep is complete and PR-D (factory contract flip) becomes eligible after a 24h WARN-volume watch.
 
 | PR | Theme |
 |---|---|
@@ -117,83 +119,80 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 | [#2372](https://github.com/clwest/donkey-betz-platform/pull/2372) | PR-C bucket 3B-1 (conversation pipelines thread orchestration AgentExecution) |
 | [#2373](https://github.com/clwest/donkey-betz-platform/pull/2373) | PR-C bucket 3B-2 (per-stage AgentExecution rows in workspace pipeline runner) |
 | [#2374](https://github.com/clwest/donkey-betz-platform/pull/2374) | PR-C bucket 5 (competitor_comparison_tool opt-in + append_service audit) |
+| [#2376](https://github.com/clwest/donkey-betz-platform/pull/2376) | **PR-C bucket 4 (3 celery task callsites — final bucket)** |
 
-**Pinned conversation:** `pa-10df024c0bd8` — bucket 3 design recon thread + F1/F2 forensic validation. Run `session_tool health_check` early.
+**Pinned conversation:** `pa-10df024c0bd8` — bucket 3/4 design recon + F1/F2 forensic validation. Health was 75/100 at Session 1186 close; likely rotate to fresh Session 1187 thread.
 
-### Bucket 4 is the ONLY remaining sweep work
+### Session 1186 follow-up deliverables filed in Local QA (2026-06-21)
 
-3 celery task callsites per [`docs/specs/deliverable_creation_paths.md`](docs/specs/deliverable_creation_paths.md) § Celery tasks:
-
-| Callsite | Agent | Notes |
-|---|---|---|
-| `core/tasks_content.py:244` | `VideoContentPackAgent` | Has Celery task context, no AgentExecution row |
-| `core/tasks_initiatives.py:2149` | `TechnicalDocumentAgent` | In initiative stage flow — has Initiative + stage_num |
-| `core/tasks_initiatives.py:2770` | `InitiativePipeline` | Same |
-
-**Per-callsite design call needed via Rigby on `pa-10df024c0bd8` BEFORE implementing** (similar to bucket 3B recon — see Session 1185 handoff for the design pattern). Each celery task has different inputs/context; choose per-task between (a) thread execution_id from task args, (b) create AgentExecution at task start, (c) per-stage rows like 3B-2.
+| Deliverable ID | Title | Priority | Sketch |
+|---|---|---|---|
+| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Thread initiative + stage + workspace context into TechnicalDocumentAgent's internal `_save_to_deliverable` so the agent produces the Initiative-shaped row directly. Then drop the external save at `tasks_initiatives.py:2149` + `:2770`. Currently 2 deliverables per stage; this collapses to 1. AC1-AC4 in deliverable. |
+| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | After PR #2376 merges + 24h, watch the WARN log for any remaining `[DeliverableFactory] No parent_execution_id for agent=...` lines. If zero, flip factory from `logger.warning(...)` to `raise DeliverableProvenanceMissingError(...)` for non-PA contexts. AC1-AC4 in deliverable. Gates the final factory contract change. |
 
 ### Standard FIRST THING checks
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (`tools/pa_local.sh`, pinned conv **`pa-10df024c0bd8`**): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.** Note: `tools/pa_local.sh` currently pins `pa-a60842917d36` — bucket-4 work should pivot to `pa-10df024c0bd8` (where the 1185 design recon lives) by either editing the wrapper or invoking pa_chat.py with `--conversation pa-10df024c0bd8` directly.
-3. `session_tool health_check` on `pa-10df024c0bd8` — rotate to fresh Session 1186 thread if past 60/100.
-4. `gh pr list --author @me --state open` — confirm 8 PRs from Session 1185 (or count how many merged since session close).
-5. **If any of #2367, #2369, #2371, #2372, #2373, #2374 merged:** `pkill -9 -f celery; rm -f .celery*.pid; make celery` — per the worker-restart matrix in Session 1185 handoff.
-6. **Bucket 4 design call**: dispatch Rigby with the 3 callsite specs + per-task design Qs (thread vs synthesize vs per-stage rows like 3B-2). See Session 1185 handoff "What's still open" section.
+2. Through Rigby (`tools/pa_local.sh`, pinned conv **`pa-10df024c0bd8`**): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.** Note: `tools/pa_local.sh` currently pins `pa-a60842917d36` — Session 1187 work should pivot to `pa-10df024c0bd8` (where the 1185-1186 design recon lives) by either editing the wrapper or invoking pa_chat.py with `--conversation pa-10df024c0bd8` directly. If health hits 60/100, rotate to a fresh Session 1187 thread.
+3. `gh pr list --author @me --state open` — check how many of the 9 PRs from Sessions 1185-1186 merged (#2367-#2376).
+4. **If any merged:** `pkill -9 -f celery; rm -f .celery*.pid; make celery` — per the worker-restart matrix in SESSION_1185 + SESSION_1186 handoffs. (Bucket 4's PR #2376 requires restart — both task files are imported by celery worker task bodies.)
+5. **24h WARN-volume watch (PR-D eligibility gate):** once all 9 PRs are merged + 24h elapsed, run:
+   ```bash
+   grep "No parent_execution_id" /tmp/celery-*.log | \
+     awk -F'caller=' '{print $2}' | awk -F' ' '{print $1}' | \
+     sort | uniq -c | sort -rn
+   ```
+   Expected: zero non-agent WARNs (modulo any approved exemption list). If zero, PR-D becomes ready to open. See follow-up deliverable `9d9db48a-...` for AC1-AC4.
 
-### Then proceed with bucket 4 implementation
+### Pick this session
 
-After Rigby's per-callsite design call, implement bucket 4 mirroring the bucket 3B-2 pattern where appropriate. Then queue:
-- **Spec doc consolidation PR** — `docs/specs/deliverable_creation_paths.md` Coverage summary: move all PR-C rows from ⚠️ WARN → 🟡 synthesized / ✅ wired
-- **Inventory refresh PR** — `python manage.py generate_platform_inventory --write` + fix 2 high drifts in `load_all_agents_advisors.py`
-- **PR-D contract flip** — after 24h WARN-volume = 0, flip factory from `logger.warning(...)` to `raise DeliverableProvenanceMissingError(...)` for non-PA contexts.
+After watch checks, choose by Chris's priority:
 
-### Smoke verification for the 8 Session 1185 PRs (post-merge)
-
-See Session 1185 handoff § "Smoke verification (post-merge across all 8 PRs)" — 8-step checklist on pa-10df024c0bd8.
-
-### Suggested next item (Session 1184 close)
-
-**PR-C — provenance sweep of the ⚠️ WARN bucket.** Once the 24h watch confirms BaseAgent path has stopped contributing WARNs, work through the remaining ~17 non-agent callers per the table in `docs/specs/deliverable_creation_paths.md`:
-- Management commands (5): opt into synthesis via `trigger_source='direct'`
-- Web views (4): user actions opt into synthesis via `trigger_source='user_request'`; incident writes use `trigger_source='direct'`
-- Celery tasks (3): create an `AgentExecution` per task at task start, thread `execution.id` into `create_deliverable`
-- Service helpers (5): per-helper decision — thread from caller or opt into synthesis
-- Other tools (2): `competitor_comparison_tool` → synthesize as `pa_tool`; `deliverable_append_service` fallback already accepts `execution_id`
-
-After PR-C lands and the WARN log reaches steady-state-zero, **PR-D** flips the factory contract from `logger.warning(...)` to `raise DeliverableProvenanceMissingError(...)` for non-PA contexts. Per Rigby's PR-A close-out: 24h cooldown between PR-C merge and PR-D flip.
-
-Alternative: **inventory refresh PR (still open from Session 1183 close)** — `verify_doc_claims --only-drift` still reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` and `PLATFORM_INVENTORY.md` is now 11 sessions stale. Mechanical but substantive. Could ride alongside PR-C if you want a full housekeeping session.
-
-### Session 1184 forensic follow-ons (filed as deliverables in Local QA workspace, 2026-06-21)
-
-Surfaced by Section 6 forensic validation on conversation `pa-10df024c0bd8` after PR #2362 / #2364 / #2365 merged. Provenance mechanism PASSES (Steps A, B, C, G all green). These are separate bugs that don't block provenance but do break adjacent flows:
-
-| Deliverable ID | Title | Priority | Sketch |
-|---|---|---|---|
-| `c511e6e4-0b00-4ee0-bd19-9ee64c5a8e60` | **F1** — ContentWriterAgent ignores diagnostic instructions and runs full content-production pipeline regardless | P2 (breaks forensic test workflows) | Agent treats "include this nonce verbatim" / "keep to 200 words" / "state X exactly" as topic words, not directives. Proposed fix: `diagnostic_mode=true` flag that bypasses content production pipeline. See deliverable for AC1-AC4. |
-| `6523a071-1142-4ae1-9eed-4b247ab887d5` | **F2** — `execution_history_tool` detail doesn't surface produced `deliverable_ids` — reverse-link API gap | P2 (read-API parity gap) | Forward link works (deliverable→execution via provenance.origin_execution_id). Reverse link (execution→deliverables) requires a separate DB query. Proposed fix: compute `Deliverable.objects.filter(parent_object_id=execution.id)[:25]` at read time in `execution_history_tool.detail`. See deliverable for AC1-AC5. Read-layer only, no schema change. |
-
-Plus 1 known limitation already documented in the SESSION_1184 PR-A handoff: dispatcher trace IDs (`tool-N-hex` format) aren't UUIDs, so the factory drops them — `provenance.trace_id` stays null on those dispatches and the trace_id pivot for `tool_calls` doesn't fire. Future work: standardize trace IDs on UUIDs everywhere OR add a non-UUID column.
-
-### What's queued (carried from Session 1183 — pick by Chris's priority)
-
-**No urgent items.** Pass B is closed (Session 1181), watch finding is fixed (Session 1182), CI is green without bypass (Session 1183), workers are loaded with PR #2357 (Session 1183 close). Session 1184 is a green-field session — pick from any of:
-
-| Item | Status | When to pick |
+| Item | Priority | Why now |
 |---|---|---|
-| **Finding #4** — threaded-worker SIGTERM revoke limitation | Deferred (no pain yet) | Real cancel reliability concern. Pick if you start seeing hung tasks, runaway CPU on long_running queue, or users complaining that Cancel doesn't work. Rigby's Session 1181 framing: start with "what failure mode are we optimizing for?" (cannot kill threads vs revoke queued vs cooperative checkpoints), then pick from: switch `long_running` to `--pool=prefork`, add cooperative cancellation checkpoints in long tasks, or accept limitation + clearer UI wording. |
-| **Wake-loop UX polish bundle** | Optional | Rigby's Session 1181 mentions: hover-to-pause toast timer, "Clear all" button when queue > 1, click-toast → scroll-to-bubble, click-artifact-id → open media/blog viewer. Could be 1 bundled PR if Chris wants a feature day. |
-| **Phase 4: FK on `AgentFollowupSubscription`** | Session 1182 deferred | Add user FK → remove 2-query conv-owner fallback + enable user-keyed subscription analytics. Not load-bearing today; pick up if conv-owner fallback shows up as a hotspot. |
-| **Optional UX hardening still on the table** | Subsumed by PR #2352 architecture | `GET /completions?since=` replay endpoint, WS connection-state UI per conversation, JSON-expression partial unique index. All would-be-nice but none required after server-side persistence landed. |
-| **`auto_followup_skipped` traceability stamp** | Session 1178 deferred | Tiny 1-file PR if Chris wants observability on which dispatches opt out. |
-| **EditorAgent observability dashboard** (C3 from #2343) | Session 1178 deferred | Workspace dashboard surfacing EditorAgent quality-gate rejects. |
+| **PR-D contract flip** | P2 (per follow-up deliverable) | If 24h watch shows zero WARNs after all 9 PRs merge. Flips factory to raise `DeliverableProvenanceMissingError` for non-PA contexts. ~4-5 test PR. |
+| **Spec doc consolidation PR** | P3 (mechanical) | `docs/specs/deliverable_creation_paths.md` Coverage summary: move all PR-C rows from ⚠️ WARN → 🟡 synthesized / ✅ wired. Status header bump to Session 1186/1187. Tests count update. |
+| **B.1 unify-deliverables PR** | P3 (per follow-up deliverable `48b73b04-...`) | Long-term right fix for the two-deliverables-per-stage hazard found in bucket 4. Thread initiative context into agent's internal save, drop external. |
+| **Inventory refresh PR (still open from Session 1183)** | P3 (mechanical) | `verify_doc_claims --only-drift` still reports 2 high drifts on `load_all_agents_advisors.py`; `PLATFORM_INVENTORY.md` is now 12+ sessions stale. |
+| **Carryover backlog** | varies | PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, COO consolidation deferreds. Live handoffs: `SESSION_1171_*` through `SESSION_1186_*`. |
 
-Or genuinely new work.
+### Smoke verification for the 9 Session 1185+1186 PRs (post-merge)
 
-### Carryover (still riding from Sessions 1171-1178)
+- Session 1185 PRs (#2367-#2374): see SESSION_1185 handoff § "Smoke verification (post-merge across all 8 PRs)" — 8-step checklist on pa-10df024c0bd8.
+- Session 1186 PR (#2376 bucket 4): see SESSION_1186 handoff § "Smoke verification (post-merge)" — 3-step checklist (A direct synthesis, B initiative pipeline external receipt, C stage generation external receipt).
 
-PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1183_*`.
+---
+
+## SESSION 1186 CLOSED — PR-C bucket 4 (final celery-task callsites) shipped as PR #2376 + 2 follow-up deliverables filed (2026-06-21)
+
+**1 PR shipped, 3/3 CI green at close.** Closes the FINAL PR-C bucket from `docs/specs/deliverable_creation_paths.md` § Celery tasks. Full handoff: [`SESSION_1186_PR_C_BUCKET_4_CELERY_TASKS.md`](docs/handoffs/SESSION_1186_PR_C_BUCKET_4_CELERY_TASKS.md).
+
+| PR | Commit | Theme |
+|---|---|---|
+| **#2376** | `00641c70` | `feat(session-1186-pr-c-bucket-4)` — 3 celery task callsites get provenance (A direct synthesis + B/C external receipt via `_create_initiative_external_execution_receipt` helper). +463 LoC, +10 tests. |
+
+**Design call routed through Rigby on pa-10df024c0bd8** (one round-trip): both initiative pipeline tasks already create TWO Deliverables per stage (internal agent save + external task save with different tags/FKs). Threading one execution_id through both would collapse them via the factory's dedupe-by-(parent_object_type, parent_object_id) and silently lose the Initiative-shaped row. Rigby's pick: **B.2 — provenance the EXTERNAL save only via a NEW receipt distinct from the agent's internal execution**. Two follow-ups filed in Local QA (B.1 unify long-term + PR-D 24h watch — see entry block above).
+
+**21 total provenance tests pass** when run alongside the PR-A (#2362) + PR-B (#2364) suites: 4 PR-A + 7 PR-B + 10 bucket-4.
+
+---
+
+## SESSION 1185 CLOSED — 8 PRs shipped (F1+F2 forensic follow-ons + 5 of 6 PR-C sweep buckets) (2026-06-21)
+
+**8 PRs shipped (#2367-#2374), all CI-green at close.** Took both Session 1184 forensic follow-ons (F1 ContentWriterAgent diagnostic_mode + F2 execution_history_tool reverse-link) plus 5 of the 6 PR-C sweep buckets to PR-ready state in a single session. Bucket 4 (3 celery task callsites) deferred to Session 1186 (now closed via PR #2376). Full handoff: [`SESSION_1185_PROVENANCE_CALLER_SWEEP.md`](docs/handoffs/SESSION_1185_PROVENANCE_CALLER_SWEEP.md).
+
+| # | PR | Theme | LoC | Tests |
+|---|---|---|---|---|
+| 1 | [#2367](https://github.com/clwest/donkey-betz-platform/pull/2367) | F2 execution_history_tool reverse-link to deliverables | +174 | +4 |
+| 2 | [#2368](https://github.com/clwest/donkey-betz-platform/pull/2368) | PR-C bucket 1 — 5 mgmt commands opt into synthesis | +109 | +4 |
+| 3 | [#2369](https://github.com/clwest/donkey-betz-platform/pull/2369) | F1 ContentWriterAgent `diagnostic_mode` bypass | +290 | +7 |
+| 4 | [#2370](https://github.com/clwest/donkey-betz-platform/pull/2370) | PR-C bucket 2 — 4 web views opt into synthesis | +187 | +7 |
+| 5 | [#2371](https://github.com/clwest/donkey-betz-platform/pull/2371) | PR-C bucket 3A — 3 service helpers + envelope audit | +178 | +6 |
+| 6 | [#2372](https://github.com/clwest/donkey-betz-platform/pull/2372) | PR-C bucket 3B-1 — conversation pipelines thread orchestration AgentExecution | +387 | +6 |
+| 7 | [#2373](https://github.com/clwest/donkey-betz-platform/pull/2373) | PR-C bucket 3B-2 — per-stage AgentExecution rows in workspace pipeline runner | +283 | +5 |
+| 8 | [#2374](https://github.com/clwest/donkey-betz-platform/pull/2374) | PR-C bucket 5 — competitor_comparison_tool opt-in + append_service audit | +128 | +4 |
+
+**Structural finding in bucket 3B-1**: 2 conversation pipelines were silently in legacy_no_provenance bucket (set `Deliverable.parent_object_type='conversation'` which read helper didn't recognize). Grep confirmed zero downstream readers — risk-free flip. Now uses Session 843 `AgentExecution(parent_object_type='conversation')` pattern as intermediate hop.
 
 ---
 
