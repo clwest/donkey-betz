@@ -2398,6 +2398,7 @@ def cockpit_create_incident_note(request):
                 'source_type': source_type,
                 'source_id': source_id,
                 'created_via': 'cockpit-remediation',
+                'trigger_source': 'direct',
             },
             slug=slug,
             status='ready',
@@ -3341,7 +3342,11 @@ def _execute_action(proposal, request):
             category='Incident', deliverable_type='document',
             tags=['incident', 'autopilot'],
             content_format='markdown',
-            metadata={'source': 'autopilot', 'reason': reason},
+            metadata={
+                'source': 'autopilot',
+                'reason': reason,
+                'trigger_source': 'direct',
+            },
             slug=slug, status='ready',
         )
         _audit_log(request, 'autopilot.incident_note', 'Deliverable', str(deliverable.id),

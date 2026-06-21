@@ -205,6 +205,7 @@ def _execute_demo_pipeline(run_id: str, topic: str, user_id: int):
                     'demo_run_id': run_id,
                     'demo_ttl_days': 7,
                     'topic': topic,
+                    'trigger_source': 'direct',
                 },
             )
             deliverable_id = str(deliverable.id)
