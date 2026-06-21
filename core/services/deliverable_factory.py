@@ -335,6 +335,36 @@ def resolve_publish_intent(agent_name: str, explicit: Optional[str] = None) -> s
 _PA_DIRECT_TRIGGERS = {'pa_tool', 'user_request', 'user_chat', 'direct'}
 
 
+# Session 1184 PR-B: walk the stack to find the FUNCTION that decided to
+# write a deliverable, skipping helper plumbing (factory + base_agent path).
+# Rigby's PR-A guardrail — gives PR-B sweep work a fast triage signal so we
+# don't have to grep blindly for callers.
+_CALLER_SKIP_FILES = (
+    'core/services/deliverable_factory.py',
+    'core/agents/base_agent.py',
+    'core/services/deliverable_append_service.py',
+)
+
+
+def _resolve_caller_fingerprint() -> str:
+    """Return ``<short_filename>:<lineno>:<funcname>`` for the first stack
+    frame outside the deliverable plumbing. Returns ``'unknown'`` if it
+    can't walk the stack (e.g. in odd async contexts)."""
+    try:
+        import sys
+        frame = sys._getframe(1)
+        while frame is not None:
+            fname = frame.f_code.co_filename
+            if not any(skip in fname for skip in _CALLER_SKIP_FILES):
+                # Trim absolute path to project-relative for readable logs
+                short = fname.rsplit('/unified-donkey-betz/', 1)[-1]
+                return f"{short}:{frame.f_lineno}:{frame.f_code.co_name}"
+            frame = frame.f_back
+        return 'unknown'
+    except Exception:
+        return 'unknown'
+
+
 def _is_pa_direct_context(agent_name: str, trigger_source: str) -> bool:
     """True when this create looks like a PA/user-initiated direct tool call."""
     from core.services.pa_identity import PA_IDENTITY
@@ -613,11 +643,17 @@ def create_deliverable(
                 parent_object_type = parent_object_type or 'agent_execution'
                 metadata['origin_execution_synthesized'] = True
         else:
+            # Session 1184 PR-B: include caller fingerprint so PR-B sweep
+            # triage is fast and not guessy. The factory itself + base_agent
+            # are skipped — we want the FUNCTION that decided to write a
+            # deliverable, not the helper plumbing.
             logger.warning(
                 "[DeliverableFactory] No parent_execution_id for agent=%s "
-                "trigger_source=%s — deliverable will have no provenance link. "
-                "Caller should pass parent_execution_id (title=%r).",
-                agent_name, metadata.get('trigger_source', 'unknown'), title[:60],
+                "trigger_source=%s caller=%s — deliverable will have no "
+                "provenance link. Caller should pass parent_execution_id "
+                "(title=%r).",
+                agent_name, metadata.get('trigger_source', 'unknown'),
+                _resolve_caller_fingerprint(), title[:60],
             )
 
     # --- Session 1088: BLOCKED content detection ---
