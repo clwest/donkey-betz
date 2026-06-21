@@ -4262,8 +4262,22 @@ Consider this current data when formulating your response."""
             # Auto-save when workspace is resolved (unless explicitly ephemeral)
             should_save = bool(resolved_ws_id) and not force_ephemeral
 
-            # Get parent execution ID for provenance dedupe
-            parent_exec_id = getattr(self, '_current_execution_id', None)
+            # Get parent execution ID for provenance dedupe + Session 1184
+            # provenance linkage. agent_router._dispatch wires the running
+            # AgentExecution.id into `self._execution_context['execution_id']`
+            # (see core/agent_router.py:1442 + 1395). Prior to Session 1184
+            # PR-B this read looked at `self._current_execution_id` which no
+            # production code populates — every dispatch's deliverable came
+            # out with parent_execution_id=None, tripping the soft-enforce
+            # WARN. Reads from _execution_context with an explicit dict-guard
+            # in case a future subclass assigns something odd; falls back to
+            # the legacy attr name for test compat (only one test mocks it).
+            _exec_ctx = getattr(self, '_execution_context', None)
+            parent_exec_id = (
+                _exec_ctx.get('execution_id')
+                if isinstance(_exec_ctx, dict)
+                else None
+            ) or getattr(self, '_current_execution_id', None)
 
             # Session 1098 Fix B-minimal: resolve initiative_id from (in
             # order) the explicit kwarg, the agent's execution context, or

@@ -1423,6 +1423,14 @@ class AgentRouter:
             _router_start = _router_time.time()
 
             def _run_agent_execute():
+                # Session 1184 PR-B: hoisted out of the per-branch path so
+                # execute_with_workspace also exposes the running execution
+                # id to BaseAgent._save_to_deliverable (which reads
+                # _execution_context['execution_id'] for provenance linkage).
+                # Previously only the standard execute() branch set this,
+                # leaving workspace-routed agents with NULL origin_execution_id
+                # on every deliverable they wrote.
+                agent._execution_context = context
                 if has_workspace and write_to_workspace and hasattr(agent, 'execute_with_workspace'):
                     logger.info(f"📁 [Session 908] Using execute_with_workspace for {agent_name}")
                     enriched_context = {
@@ -1439,7 +1447,6 @@ class AgentRouter:
                     )
                 if not has_workspace:
                     logger.debug(f"[Session 908] No workspace for {agent_name}, using standard execute")
-                agent._execution_context = context
                 return agent.execute(
                     task=task,
                     context=context,
