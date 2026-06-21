@@ -784,6 +784,22 @@ For this {content_type}, ensure:
                         execution_time_ms=execution_time
                     )
 
+                # === Session 1185 F1: DIAGNOSTIC MODE ===
+                # When `diagnostic_mode=true` is set, bypass the full content
+                # production pipeline (build_content_prompt → flagship injection
+                # → LLM → quality scoring → provenance) and render the task spec
+                # verbatim as the deliverable body. Required by forensic
+                # validation flows (Session 1184 Section 6) which need
+                # deterministic, verbatim handling of explicit-content
+                # directives (nonces, word caps, "state X exactly").
+                # Surfaced by deliverable c511e6e4-0b00-4ee0-bd19-9ee64c5a8e60.
+                if context.get('diagnostic_mode'):
+                    return self._execute_diagnostic(
+                        task=task,
+                        context=context,
+                        start_time=start_time,
+                    )
+
                 # Extract parameters — workspace_brief overrides defaults
                 workspace_brief = context.get('workspace_brief', {})
                 if not isinstance(workspace_brief, dict):
@@ -1629,6 +1645,79 @@ This is the FINAL version — make it great."""
                 agent_name=self.name,
                 execution_time_ms=int((time.time() - start_time) * 1000),
             )
+
+    def _execute_diagnostic(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        start_time: float,
+    ) -> 'AgentResult':
+        """Session 1185 F1 — diagnostic_mode bypass.
+
+        Renders the task spec verbatim as the deliverable body. No LLM call,
+        no flagship injection, no quality scoring. This is the deterministic
+        path required by forensic validation flows (Session 1184 Section 6),
+        which need: explicit-content directives (nonces, "include X exactly")
+        to land verbatim, word-cap directives to be honored, and the produced
+        deliverable to be reproducible from the same task input.
+
+        Acceptance criteria from deliverable c511e6e4-0b00-4ee0-bd19-9ee64c5a8e60:
+        - AC1: content matches the task spec verbatim (no LLM rewrite)
+        - AC2: word-cap directives are honored (caller's spec is preserved)
+        - AC3: explicit-include directives land verbatim
+        - AC4: forensic flow can deterministically re-test with the same nonce
+
+        Optional context fields:
+        - `diagnostic_title`: explicit title override (str). Else uses
+          'Diagnostic Dispatch'.
+        - `diagnostic_category`: deliverable category. Else 'Platform Diagnostics'.
+        - `diagnostic_tags`: deliverable tag list. Else ['diagnostic', 'forensic'].
+        """
+        diagnostic_title = (
+            context.get('diagnostic_title')
+            or 'Diagnostic Dispatch'
+        )
+        diagnostic_category = (
+            context.get('diagnostic_category') or 'Platform Diagnostics'
+        )
+        diagnostic_tags = context.get('diagnostic_tags') or ['diagnostic', 'forensic']
+
+        body = task or ''
+        word_count = len(body.split())
+        execution_time = int((time.time() - start_time) * 1000)
+
+        logger.info(
+            "[ContentWriterAgent DIAGNOSTIC] verbatim render — "
+            "title=%r words=%d category=%r",
+            diagnostic_title[:60], word_count, diagnostic_category,
+        )
+
+        self._save_to_deliverable(
+            title=diagnostic_title,
+            content=body,
+            deliverable_type='document',
+            category=diagnostic_category,
+            tags=diagnostic_tags,
+            metadata={
+                'diagnostic_mode': True,
+                'task': task[:200] if task else '',
+                'word_count': word_count,
+            },
+        )
+
+        return AgentResult(
+            success=True,
+            message=f"Diagnostic dispatch ({word_count} words, verbatim)",
+            data={
+                'content_type': 'diagnostic',
+                'diagnostic_mode': True,
+                'title': diagnostic_title,
+                'word_count': word_count,
+                'content': {'full_text': body},
+            },
+            agent_name=self.name,
+            execution_time_ms=execution_time,
+        )
 
     def _execute_directed(
         self,
