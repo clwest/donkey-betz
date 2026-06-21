@@ -357,6 +357,11 @@ class DeliverableEnvelopeService:
             metadata={
                 'file_path': operation.file_path,
                 'operation_type': operation.operation_type,
+                # Session 1185 PR-C bucket 3A Group C: backfill mgmt command is
+                # the only external caller of `wrap_from_operation`. Direct opt-in
+                # is correct here; future external callers of `wrap()` should
+                # pass `metadata={'trigger_source': ...}` matching their context.
+                'trigger_source': 'direct',
             }
         )
 
