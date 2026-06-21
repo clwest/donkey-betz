@@ -40,12 +40,18 @@ class SpiderContextBuilder:
     AGENT_SPIDER_MAPPINGS = {
         # Session 1188 (C-trace remediation #3): explicit Hot-agent keys
         # placed before substring fallbacks so traces show the explicit key
-        # that fired. ImageAgent/ResearchAgent mirror their substring outcomes
-        # (no functional change); ThinkingAgent was falling to 'default' and
-        # now gets reasoning-oriented categories. Rigby's PR-1 spec lives in
-        # deliverable 51062b8c-0fdf-4ca9-855a-264962e2506c.
-        'imageagent': ['creative', 'tech', 'entertainment'],
-        'researchagent': ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health'],
+        # that fired. Mappings tuned via PR-2 (Rigby's supply recon) to use
+        # real SpiderData.data_type values — `creative` had 0 actionable
+        # supply in 30d; the real creative-domain buckets are design (31),
+        # visual_trends (32), video (24). ResearchAgent additionally picks
+        # up `ai_ml` (364) and `business` (92) — the largest research-relevant
+        # buckets it was previously missing. ThinkingAgent kept on a curated
+        # reasoning set (off the `default` fallback). Specs in deliverables
+        # 51062b8c-0fdf-4ca9-855a-264962e2506c (PR-1) and conversation
+        # pa-6658d90a3e4942b3 (PR-2 supply recon).
+        # Broader vocabulary-bridge work (PR-3) tracked separately.
+        'imageagent': ['design', 'visual_trends', 'video', 'tech', 'entertainment'],
+        'researchagent': ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health', 'ai_ml', 'business'],
         'thinkingagent': ['tech', 'news', 'science', 'financial'],
 
         # Creative agents need design trends
