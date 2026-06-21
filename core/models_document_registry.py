@@ -703,7 +703,7 @@ class Initiative(models.Model):
 
         super().save(*args, **kwargs)
 
-    def update_activity(self):
+    def update_activity(self, reason: 'str | None' = None):
         """
         Session 945: Update last_activity_at timestamp.
 
@@ -711,10 +711,21 @@ class Initiative(models.Model):
         - Conversation completed
         - Action item created/updated
         - Stage document attached
+
+        Session 1191: `reason` is an optional caller-supplied hint logged
+        at DEBUG. Backward-compatible (default None). The
+        `initiative_activity_tick` beat task uses this to distinguish
+        bootstrap writes ("auto_populate_create") from cheap-signal sweeps
+        ("activity_tick_signal_max") in audit logs.
         """
         from django.utils import timezone
         self.last_activity_at = timezone.now()
         self.save(update_fields=['last_activity_at'], skip_invariant_check=True)
+        if reason:
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "Initiative.update_activity id=%s reason=%s", self.id, reason
+            )
 
     def is_complete(self):
         """Check if all 5 stages are approved."""

@@ -1128,6 +1128,7 @@ CELERY_TASK_ROUTES = {
     'core.tasks.execute_initiative_stage_task': {'queue': 'long_running'},  # Session 1040: Heavy LLM pipeline execution
     'core.tasks.advance_initiative_pipeline': {'queue': 'content'},
     'core.tasks.auto_kickstart_stuck_initiatives': {'queue': 'content'},
+    'core.tasks.initiative_activity_tick': {'queue': 'default'},  # Session 1191 — cheap, no-LLM
     'core.tasks.execute_dream_implementations': {'queue': 'long_running'},  # Session 1040: Heavy LLM processing
     # Session 1009: Removed 4 phantom routes (tasks don't exist):
     #   autonomous_studio.run_main_loop, generate_podcast_task, generate_image_task, generate_video_task
