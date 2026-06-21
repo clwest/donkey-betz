@@ -444,6 +444,7 @@ class Command(BaseCommand):
             "anchor_docs_read": list(anchor_docs.keys()),
             "repo_id": profile_metadata.get("repo_id", repo_id),
             "schema_version": 1,
+            "trigger_source": "direct",
         }
         snapshot = create_deliverable(
             title=f"Repo Snapshot: {workspace.name} — {refreshed_at[:10]}",
