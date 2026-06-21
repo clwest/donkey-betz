@@ -101,76 +101,75 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1188 — CURRENT ENTRY POINT
+## SESSION 1189 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1187 ran a Utilization Recon.** No code shipped. 7 deliverables filed in Local QA workspace mapping every agent + spider + the wiring between them. Full handoff: [`SESSION_1187_UTILIZATION_RECON.md`](docs/handoffs/SESSION_1187_UTILIZATION_RECON.md).
+**Session 1188 shipped 2 PRs** acting on Session 1187 C-trace remediation #3 (Hot-agent spider context wiring). Full handoff: [`SESSION_1188_SPIDER_CONTEXT_VOCABULARY_RECON_AND_RETUNE.md`](docs/handoffs/SESSION_1188_SPIDER_CONTEXT_VOCABULARY_RECON_AND_RETUNE.md).
 
-**The recon answer:** Chris's framing of "agents running wild" was inverted. Agents are dormant (56/83 = 0 dispatches in 30d); spiders are cranking (198,678 items/30d); the wiring layer is broken. The huggingface E2E trace found **3 distinct break points** in `SpiderContextBuilder`/`AgentSpiderConnection`/`AGENT_SPIDER_MAPPINGS`. **0 of 92 recent dispatches reference huggingface despite 331 fully-embedded SpiderData rows being available with `is_actionable=True`.**
+**Headline:** Rigby's PR-prep recon inverted the framing — only ThinkingAgent was the actual miss (ImageAgent + ResearchAgent already substring-matched). PR-2 supply recon then surfaced a **platform-wide vocabulary mismatch**: AGENT_SPIDER_MAPPINGS uses semantic names (`creative`, `crypto`, `sports`) that don't match real `SpiderData.data_type` values (`design`/`visual_trends`/`video`, `blockchain`, `sports_odds`/`sports_news`). `ai_ml` (364 actionable/30d, 2nd-largest tech-adjacent bucket) wasn't referenced by any agent. PR-2 fixed Image+Research; PR-3 covers the rest.
 
-### Recon deliverables (Local QA workspace)
+### Pick this session — Rigby's PR-3 spec is ready
 
-**Read the master first:** `88952c54-a4a4-47e8-9fe1-85b3d747be03` (Session 1187 Utilization Recon — Master Tracking).
+| Item | Priority | Where it's defined |
+|---|---|---|
+| **PR-3 — vocabulary bridge for `AGENT_SPIDER_MAPPINGS`** | **P1** | Rigby's deliverable `a48e1164-edc6-49d8-bc70-135bedb614a9`. Recommended split: PR-3A (alias layer + drop dead keys), PR-3B (systematic retune + `ai_ml` rollout). **Read Rigby's spec first**, then route scope through her before code. |
+| **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P1 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
+| **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer. Wire or stop crawling. C deliverable § Action implications #4. |
+| **Build SpiderData aggregation PA tool** | P2 | Spec appended to missing-PA-tools deliverable `13032820-1f36-4a1c-8843-6a9d53653405`. Recurring need — came up twice in two sessions. Group-by `data_type` with `is_actionable` + window filters, optional samples per group. |
+| **Adjacent investigations from C trace** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface SpiderItemHash `item_title='Unknown'` — spider extractor bug. |
 
-| Axis | deliverable_id |
-|---|---|
-| A — Agent Utilization | `3fe30a8e-8c53-4b59-ba3c-ebd61d1ad7ea` |
-| A2 — Intent vs Reality | `bb9d7437-3cb5-45c8-9d60-db875c4a98f6` |
-| B — Spider Utilization | `623dcf5c-6c15-44af-8b20-6456959712f2` |
-| B2 — Spider→Agent Linkage | `13c6bd32-67eb-4d89-a7d7-3935e4fa65c5` |
-| **C — Huggingface E2E trace (3 break points)** | `1f548d38-8971-4780-a798-03e79399f322` |
-| D — Output Utilization | `518a77c5-13a9-4d09-a763-f15db39a0369` |
-| Missing PA Tools (build queue) | `13032820-1f36-4a1c-8843-6a9d53653405` |
+### 7d AC watches (post-merge from Session 1188 PRs)
 
-**Pinned conversation:** `pa-10df024c0bd8` — Session 1184-1187 thread. Health at 60-75/100 at Session 1187 close; rotate to fresh Session 1188 thread.
+**Starts 2026-06-28** — measure these via `AgentExecution.input_data['spider_context']` or equivalent:
 
-### Pick this session — the work Chris explicitly named for "fresh session to begin"
+- **PR #2380 / #2382** combined ACs:
+  - ImageAgent: `categories_queried` includes `design`/`visual_trends`/`video`; ≥1 dispatch with `has_data=True` against any of those.
+  - ResearchAgent: `categories_queried` includes `ai_ml`+`business`; ≥1 dispatch with `has_data=True` against `ai_ml` specifically.
+  - ThinkingAgent: ≥3 dispatches with spider context built, ≥1 with `has_data=True`.
 
-Chris said *"we can start a fresh session to begin working"* — referring to acting on the recon findings. The C trace named **4 concrete remediation items** + the missing PA tools build queue. Pick by Chris's priority:
-
-| Item | Priority | Why now | Where it's defined |
-|---|---|---|---|
-| **C-trace remediation #3 — register missing Hot agents in AGENT_SPIDER_MAPPINGS** | P1 (highest signal/effort ratio) | ImageAgent, ResearchAgent, ThinkingAgent are 3 of the 9 Hot agents and aren't in the in-code mapping. Adding them is a small code change with measurable runtime impact (more spider context → richer dispatches). | C deliverable `1f548d38-...` § Action implications #3 |
-| **C-trace remediation #1 — unify wiring source of truth** | P1 (structural) | `AgentSpiderConnection` (DB) vs `AGENT_SPIDER_MAPPINGS` (code) — only the code one is read. Pick one, delete the other, document the contract. Larger blast radius — needs design call. | C deliverable § Action implications #1 |
-| **C-trace remediation #2 — bridge category vocabulary** | P2 (structural) | `SpiderCategory.name` ("AI & Creative Tools") vs builder query keys (`'tech'`, `'creative'`) — pick one taxonomy. Likely a single mapping table + builder change. | C deliverable § Action implications #2 |
-| **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer in AGENT_SPIDER_MAPPINGS. Either wire them or stop crawling (waste of compute). | C deliverable § Action implications #4 |
-| **Build Rigby's missing PA tools** | P2-P3 (depends on need) | 6 tools blocked the recon from being repeatable by Rigby. Recommended build order: `agent_telemetry_tool.utilization` first (biggest unblock). | Missing tools deliverable `13032820-...` § Recommended build order |
-| **Adjacent investigations from C trace** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken; 5-min look. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface SpiderItemHash `item_title='Unknown'` — spider extractor bug. | Session 1187 handoff § Adjacent investigations |
-
-### Carryover from Session 1186 (Local QA deliverables)
+### Carryover from Session 1186/1187
 
 | Deliverable ID | Title | Priority | Status |
 |---|---|---|---|
-| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Pending — wait for `bucket 4 B/C` paths to settle before unifying |
-| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | PR #2376 merged 2026-06-21 ~16:00. **24h watch starts then.** Run the grep at AC1 after 2026-06-22 16:00. |
+| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Pending |
+| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | 24h elapsed 2026-06-22 16:00. Run the grep at AC1 to confirm zero non-agent WARNs, then open PR-D if clean. |
+| `88952c54-a4a4-47e8-9fe1-85b3d747be03` | Session 1187 Utilization Recon — Master Tracking | — | C-trace #3 closed via Session 1188 PRs; #1/#2/#4 open per table above. |
 
 ### Standard FIRST THING checks
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (`tools/pa_local.sh`, pinned conv `pa-10df024c0bd8` OR fresh Session 1188 thread): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` — rotate to fresh Session 1188 thread if over 60/100.
-4. `gh pr list --author @me --state open` — expected empty (all 11 Sessions 1185+1186 PRs merged; Session 1187 was recon-only).
-5. **24h WARN-volume watch (PR-D eligibility gate, started 2026-06-21 16:00):** once 24h elapsed, run:
-   ```bash
-   grep "No parent_execution_id" /tmp/celery-*.log | \
-     awk -F'caller=' '{print $2}' | awk -F' ' '{print $1}' | \
-     sort | uniq -c | sort -rn
-   ```
-   Expected: zero non-agent WARNs. If zero, PR-D becomes ready to open.
+2. Through Rigby (use `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-donkeyking-token>` explicitly — `tools/pa_local.sh` is pinned to a stale conv): `platform_config_tool overview` → confirm `service_context: local`.
+3. `session_tool health_check` on current conversation `pa-6658d90a3e4942b3` (Session 1188 thread). Rotate to fresh Session 1189 thread if over 60/100.
+4. `gh pr list --author @me --state open` — expected empty (both Session 1188 PRs merged via `--admin` bypass on pre-existing CONFLICT).
 
-### Re-run a recon verifier
+### Stacked-PR footgun reminder (new from Session 1188)
 
-All 4 verifier scripts live in `/tmp/` (not committed by design — workspace-private; deliverables hold the captured results):
+`gh pr merge --delete-branch` on a parent PR **auto-closes child PRs unrecoverably** when their base branch is deleted. `gh pr reopen` fails ("Could not open the pull request"). Workaround: retarget child PR's base to `main` BEFORE merging the parent (`gh pr edit <child> --base main`). Session 1188 hit this with #2381 → had to open fresh #2382.
 
-| Script | Re-verifies |
-|---|---|
-| `/tmp/recon_proper.py` | A + B + B2 + D — SQL queries |
-| `/tmp/a2_agent_introspect.py` | A2 — AGENT_MAP introspection |
-| `/tmp/c_trace_huggingface.py` | C — full 8-step E2E trace |
-| Inline `manage.py shell` probes | C break points #1, #2, #3 (see C deliverable § Verifier) |
+### Pre-existing CONFLICT — `--admin` bypass still required
 
-If scripts have been cleared, the deliverables contain enough detail to reconstruct.
+The `context-kit verify` `Agents count claims` CONFLICT (220+ canonical doc claims, 2914 supporting, 7948 historical mentions of varying counts) is still pre-existing on main. Strict mode Repo Guardrails will fail on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. **Worth a dedicated inventory-refresh PR at some point** to remove the bypass requirement.
+
+---
+
+## SESSION 1188 CLOSED — Spider context Hot-agent wiring: 2 PRs merged (PR-1 explicit keys + PR-2 vocabulary retune) + PR-3 spec filed (2026-06-21)
+
+**2 PRs merged, both `--admin` bypass on pre-existing CONFLICT (Chris-approved blanket).** Full handoff: [`SESSION_1188_SPIDER_CONTEXT_VOCABULARY_RECON_AND_RETUNE.md`](docs/handoffs/SESSION_1188_SPIDER_CONTEXT_VOCABULARY_RECON_AND_RETUNE.md).
+
+| PR | Commit | Theme |
+|---|---|---|
+| **#2380** (PR-1) | `6691d408` | `feat(session-1188-spider-context)` — explicit `imageagent`/`researchagent`/`thinkingagent` keys in `AGENT_SPIDER_MAPPINGS`. ThinkingAgent moved off `default` fallback to `['tech','news','science','financial']`; Image/Research mirror substring outcomes (no functional change). |
+| **#2382** (PR-2) | `ab9274e3` | `feat(session-1188-spider-context)` — retunes `imageagent` → `['design','visual_trends','video','tech','entertainment']` (drops dead `'creative'` which had 0 actionable in 30d); `researchagent` adds `'ai_ml'` (364 actionable) + `'business'` (92). **Replaces #2381** which auto-closed when its base branch was deleted on PR-1 merge. |
+
+**Headline finding:** AGENT_SPIDER_MAPPINGS vocabulary doesn't match real `SpiderData.data_type` values. `'creative'`, `'crypto'`, `'sports'` are dead keys (zero supply); `'ai_ml'` (364 actionable/30d, 2nd-largest tech-adjacent bucket) wasn't referenced by any agent. PR-2 fixed ImageAgent+ResearchAgent; broader fix lives in PR-3 spec deliverable `a48e1164-edc6-49d8-bc70-135bedb614a9` (Session 1189 pickup).
+
+**Collaboration shape:** every recon routed to Rigby first per scope rule (`feedback_rigby_scope.md`). She owned PR-prep mapping audit + 30d telemetry baselines + AC drafting + scope-call decisions + Chris direct message on CI bypass. Tool gap (SpiderData category aggregation) surfaced and filed (appended +2491 chars to deliverable `13032820-...`) — not silently bridged. Claude owned code edits + one-off Django shell execution (where Rigby tools genuinely lacked the capability) + PR opening + admin merge.
+
+**New memory candidates** (capture at next session-end review):
+1. PR stacking + base-branch deletion footgun (`gh pr merge --delete-branch` on parent auto-closes child unrecoverably; retarget child to main first).
+2. Substring-matching dicts hide "missing" entries (`SpiderContextBuilder._get_agent_categories` uses `if pattern in agent_lower` — check matching mechanism before concluding entry is missing).
+3. Vocabulary mismatch between mapping dicts and runtime data (mapping uses semantic names; read path queries by runtime `data_type` values — they drift).
 
 ---
 
