@@ -272,6 +272,7 @@ class Command(BaseCommand):
             "llm_usage": usage,
             "drafted_at": now.isoformat(timespec="seconds"),
             "schema_version": 1,
+            "trigger_source": "direct",
         }
 
         deliverable = create_deliverable(

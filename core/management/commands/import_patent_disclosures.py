@@ -194,6 +194,7 @@ class Command(BaseCommand):
                 'data_sensitivity': 'confidential',
                 'is_pinned': True,
                 'workspace': workspace,
+                'metadata': {'trigger_source': 'direct'},
             }
 
             existing = Deliverable.objects.filter(slug=slug).first()
