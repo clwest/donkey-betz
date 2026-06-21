@@ -4106,6 +4106,81 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1189 Item 3: SpiderData Aggregation Tool ───────────────────────
+    {
+        "type": "function",
+        "name": "spider_data_aggregation_tool",
+        "description": (
+            "Group-by counts of SpiderData rows by data_type over a windowed "
+            "time range, with optional spider_name + data_type filters and "
+            "top contributors per bucket. Use to verify spider supply per "
+            "category (e.g., 'how many actionable ai_ml items in the last "
+            "30d?'), to validate Session 1188 AC watches, or to drive "
+            "PR-3B retuning decisions. v1 is counts-only — no per-row "
+            "samples, no text search, no source-domain breakdowns."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["aggregate"],
+                    "description": "v1 supports only 'aggregate'.",
+                },
+                "days_back": {
+                    "type": "integer",
+                    "description": "Lookback window in days. Default 30, min 1, max 90.",
+                },
+                "actionable_only": {
+                    "type": "boolean",
+                    "description": (
+                        "When true (default), the response counts and "
+                        "sorts by is_actionable=True rows. total_count is "
+                        "still returned for every bucket either way."
+                    ),
+                },
+                "data_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional whitelist of SpiderData.data_type values "
+                        "to include (e.g., ['ai_ml', 'design']). Null/omitted "
+                        "= aggregate across every data_type seen in-window."
+                    ),
+                },
+                "spider_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional whitelist of spider_name values to "
+                        "include. Useful for debugging a single feed."
+                    ),
+                },
+                "include_top_spiders": {
+                    "type": "boolean",
+                    "description": (
+                        "When true (default), each data_type bucket includes "
+                        "a top_spiders array ranked by the same actionable "
+                        "filter as the parent."
+                    ),
+                },
+                "top_spiders_limit": {
+                    "type": "integer",
+                    "description": "Max spiders per bucket. Default 5, min 1, max 25.",
+                },
+                "include_totals": {
+                    "type": "boolean",
+                    "description": (
+                        "When true (default), the response includes a "
+                        "top-level totals block (actionable_count, "
+                        "total_count, distinct_data_types, distinct_spiders)."
+                    ),
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1035-Audit: Spider Status Tool ─────────────────────────────────
     {
         "type": "function",
@@ -4587,6 +4662,7 @@ TOOL_ENRICHMENT_MAP = {
     'code_job_tool': [],
     # Session 1035-Audit: 4 new tools
     'spider_status_tool': [],
+    'spider_data_aggregation_tool': [],
     'agent_memory_tool': [],
     'heartbeat_history_tool': [],
     'infra_health_tool': [],
@@ -4698,6 +4774,7 @@ TOOL_TO_INTENT_MAP = {
     'newsletter_tool': 'content_review',
     # Session 1035-Audit: 4 new tools
     'spider_status_tool': 'system_overview',
+    'spider_data_aggregation_tool': 'system_overview',
     'agent_memory_tool': 'agent_introspection',
     'heartbeat_history_tool': 'system_health',
     'infra_health_tool': 'system_health',
