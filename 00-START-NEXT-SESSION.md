@@ -101,41 +101,64 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1193 — CURRENT ENTRY POINT
+## SESSION 1194 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1192 closed clean — workspace consolidation Steps 4-7 done.** 156 deliverables consolidated into Donkey Betz. All 6 source workspaces drained + deactivated. 1 follow-up deliverable filed for known regression vector. Full handoff: [`SESSION_1192_WORKSPACE_CONSOLIDATION_CLOSE.md`](docs/handoffs/SESSION_1192_WORKSPACE_CONSOLIDATION_CLOSE.md).
+**Session 1193 wrapped clean.** ~107 deliverables tagged across Newsletter/Content Writing/Platform Diagnostics/Ops/Platform Ops/Utilization Recon/small-categories. 7 new audit + follow-up deliverables filed (incl. 2 new P2s). COO Backlog audit corrected the Session 1167 "complete" claim — #4 + #9 properly tracked now. Full handoff: [`SESSION_1193_DELIVERABLE_TAGGING_AND_PROJECT_CLUSTERING_INSIGHT.md`](docs/handoffs/SESSION_1193_DELIVERABLE_TAGGING_AND_PROJECT_CLUSTERING_INSIGHT.md).
 
-**Headline:** Carryover Steps 4-7 finished via mixed approach — first 3 batches (16 items) through Rigby with triage decision cards, then bulk-migrated 122 remaining via direct Django ORM after Rigby hit a 5-call-per-turn tool cap (`feedback_rigby_scope.md` "Rigby blocker → Claude lane" exception). Established precedent: triage decisions (status) are independent of workspace decisions; `content_reject` only changes status, not workspace. Active workspaces now reduced from 2 to 2 (Donkey Betz + System Autonomous) — System Autonomous left active intentionally per Rigby's option C (deactivating would break `_ensure_system_workspace` auto-fallback). Producer-reroute filed as follow-up deliverable `780a8d15-...` (P2).
+**Chris's late-Session-1193 insight (THIS SESSION'S P1):** the flat-deliverable model isn't capturing natural project clusters. At least 8 obvious project shapes hiding in the 164 Donkey Betz deliverables (Session 1171 ML queue triage, Session 1184 provenance, Session 1192 follow-ups, COO daily diagnostics, Orchestration Control Plane Mapping, Track Business News blog variants, MLB Run Line Desk, Weekend Digest Autopilot). Chris explicitly asked for **fresh conversation threads for both Claude AND Rigby** for this session — strategic-design work needs clean canvas.
 
-**Active conversation:** `pa-55d90b2a34524bf9` (Session 1190+1191+1192 thread; getting long, rotate for Session 1193). Last health check was 75/100 at Session 1191 open; likely ~85-90 now after consolidation chatter.
+**Active conversation:** START FRESH on Claude side. Rigby's fresh thread already spun: **`pa-e11847db632a4ee8`** titled "Session 1194 — Project-clustering recon (Donkey Betz deliverables)". First ping into that thread.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — now the single canonical workspace (156 deliverables).
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded), 49 untagged (48 Research + 3 Newsletter remainder per Chris's intentional carve-outs).
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Initiative-tick 24h watch** | **P1 (time-gated)** | Start **2026-06-22 19:48 UTC** (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]` — expect summary lines every ~30 min. After 24h `refreshed` should drift toward 0 in steady state. Confirm `Initiative.objects.filter(last_activity_at__isnull=True).count() == 0`. Playbook below. |
-| **7d AC watches** | **P1 (time-gated)** | Start **2026-06-28** — first meaningful read after a full week of real traffic. ORM-queryable from `AgentExecution.input_data['spider_context']`. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388 descriptions. If session opens before 2026-06-28, defer and pick another item. |
-| **Producer reroute** | P2 | Session 1192 follow-up. Deliverable `780a8d15-9ca0-4d91-970f-6934a24fc08d` in Donkey Betz. Real engineering — `core/services/workspace_manager.py:1728-1773` `_ensure_system_workspace` auto-recreates System Autonomous + force-reactivates is_active=True. Three fix shapes documented in deliverable (rename SA workspace, add config flag, add schema is_system flag). Without this, new agent-created deliverables continue landing in System Autonomous over time. |
-| **Initiative populate redesign** | P2 | Session 1192 follow-up. Deliverable `ae5251f1-4863-4319-9c82-a82b6cfc52c2` in Donkey Betz. Real engineering. `populate_initiatives_api` currently creates ACTIVE category-bucket Initiatives, conflicting with the canonical Initiative-as-5-stage-project semantic + bypassing the TRIAGE quality gate. Two fix shapes documented (A: populate creates TRIAGE candidates needing manual promotion, B: separate Collections/Folders entity for tag-based grouping). Recommended: A short-term, B long-term. Chris + Rigby will research/discuss before picking direction. |
-| **PR-D contract flip** | P2 | Deliverable `9d9db48a-4819-4e2b-9548-998c0fe2f8f5`. 24h WARN-volume eligibility gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
-| **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P2 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
-| **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer. Wire or stop crawling. C deliverable § Action implications #4. |
-| **Adjacent C-trace investigations (Session 1187)** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken; 5-min look. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface `SpiderItemHash item_title='Unknown'` — spider extractor bug. |
-| **Daily detector for workspace regressions** | P3 | Rigby's Session 1192 suggestion. Lightweight beat task that alerts when deliverables land in System Autonomous or with NULL workspace_id. Bridge until producer reroute lands. Reuses cheap-staleness-aggregator pattern from `feedback_cheap_staleness_aggregator_pattern.md`. |
-| **Bulk tool action** | P3 | Rigby's Session 1192 suggestion. Build a `deliverable_tool.bulk_update_workspace` to avoid the per-turn cap problem on future drain operations. Optional now that consolidation is done — only matters for next consolidation. |
-| **Bucket follow-up — Rigby pruned these** | P3 | If 7d AC shows under-served agents, consider rolling out `business` (92), `government` (87), `blockchain` (79), `gaming` (55), `entertainment` (71), `science` (71). Same one-line-per-agent pattern as PR-3B. |
-| **DM-system bug** | P3 | Deliverable `9a00667b-...`. Three symptoms; Rigby's two leads: thread reuse since 2026-06-13, `sender_type: rigby` mislabel. |
-| **Dedicated inventory-refresh PR** | P3 | Reconcile the `Agents count claims` CONFLICT so future PRs don't need `--admin` bypass. |
+| **Project-clustering recon** | **P1** | Session 1193 carryover insight. Identify natural project clusters in the 164 Donkey Betz deliverables. Propose per cluster: real Initiatives now (5-stage project arc) vs Collections/Folders later (per `ae5251f1` spec). 8 visible clusters identified in Session 1193 handoff. Chris ratifies shapes. |
+| **Initiative-tick 24h watch** | P1 (time-gated) | Start 2026-06-22 19:48 UTC (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]`. Confirm steady-state drift to 0. Playbook below. |
+| **7d AC watches** | P1 (time-gated) | Start 2026-06-28. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388. |
+| **PA LLM iteration cap silent failure** | **P2** | Session 1193 follow-up. Deliverable `c2bac9c0-...`. Real engineering. `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8` leaves 7 effective tool-call iterations. On forced-text final iteration, LLM emits unexecuted tool-call JSON as text body. Silent failure mode that bit us mid-Session-1193 on tagging-heavy turns. Two-part fix: raise cap to 12 + detect tool-call JSON in final-iteration text. |
+| **Producer reroute** | P2 | Session 1192 follow-up. Deliverable `780a8d15-...`. `core/services/workspace_manager.py:1728-1773`. Three fix shapes documented. |
+| **Initiative populate redesign** | P2 | Session 1192 follow-up. Deliverable `ae5251f1-...`. **Directly connected to this session's project-clustering recon.** Two fix shapes documented (TRIAGE candidates / Collections/Folders entity). |
+| **PR-D contract flip** | P2 | Deliverable `9d9db48a-...`. 24h WARN-volume gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
+| **COO Backlog #4 prefetch normalization** | P3 | Session 1193 follow-up. Deliverable `e17950d8-...`. Per-worker `--prefetch-multiplier=1` in Procfile for long_running/content/code. |
+| **COO Backlog #9 tool-call telemetry rollup** | P3 | Session 1193 follow-up. Deliverable `bebd6794-...`. Mirror Session 1167 #7 (`top_consumers.py`) pattern for tools. |
+| **deliverable_tool tooling improvements** | P3 | Session 1192 follow-up. Deliverable `c942274b-...`. `tags_add`/`tags_remove`/`bulk_update_workspace` actions. |
+| **Research category tagging** | P3 | 48 items still untouched per Chris's "do last with Claude" pick. Strategic batch — same `shelf:content` vs `shelf:platform` split pattern + likely creates Research-subdomain tags. Could fold into project-clustering recon if research items group by topic. |
+| **Newsletter remainder** | P3 | 3 items still untagged (vs the original 13). Trivial cleanup if it falls out of project-clustering. |
+| **C-trace remediation #1, #4 (Session 1187)** | P2 (structural) | Larger blast radius — needs design call with Rigby. |
+| **Adjacent C-trace investigations** | P3 (small) | (a) MarketingStrategyAgent only agent inheriting execute() — likely broken. (b) AgentExecution.owner_agent empty ~75%. (c) huggingface SpiderItemHash item_title='Unknown'. |
+| **DM-system bug** | P3 | Deliverable `9a00667b-...`. |
+| **Dedicated inventory-refresh PR** | P3 | Reconcile `Agents count claims` CONFLICT. |
+| **Daily detector for workspace regressions** | P3 | Rigby's Session 1192 suggestion. Lightweight beat task. |
 
-### Workspace consolidation — CLOSED Session 1192
+### Project-clustering recon scope (Session 1194 P1)
 
-All 7 steps done. Final state: 156 deliverables in Donkey Betz (`b4503364-...`). All 6 source workspaces have count=0 + is_active=False. Active workspaces = Donkey Betz + System Autonomous (intentional). 68 of 156 deliverables have initiative_id FKs preserved per Session 1190 rule (none stripped). See Session 1192 handoff for full verification table + 6/6 PASS results.
+Sample of 8 visible clusters from Session 1193 close — needs full enumeration this session:
 
-**Known regression vector (filed):** System Autonomous Workspace auto-recreates via `core/services/workspace_manager.py:1739` — any agent creating a deliverable without explicit workspace_id will land there, not Donkey Betz. Filed as `780a8d15-...` for producer-reroute follow-up (P2).
+1. **Session 1171 — ML Queue + Auth Middleware Triage** (4 deliverables, PR #2328)
+2. **Session 1184 — Provenance Linkage** (5+ deliverables, PRs #2362/#2364/#2365)
+3. **Session 1187/1188/1189 — Spider Context Utilization** (6 Axis recon + 4 PRs + retune list)
+4. **Session 1192 — Workspace Consolidation Follow-ups** (4 P2/P3 deliverables)
+5. **COO Operations Diagnostics** (5 daily COO Analysis runs — should be ONE recurring artifact)
+6. **Orchestration Control Plane Mapping** (CTO ×3 + DevOps ×4 + COO ×1 + Research ×3 = 11 parallel runs on the SAME investigation)
+7. **Track Business News in June 2026** (3-4 ContentWriterAgent blog variants)
+8. **MLB Run Line Desk v1** (product spec — real Initiative-shape)
+
+4 natural relationship patterns:
+- Time-bounded engineering projects (Session NNNN themes)
+- Recurring artifacts (daily diagnostics, weekend digests)
+- Investigation workstreams (1 question → N parallel agent answers)
+- Product specs that need execution (MLB Run Line, Revenue Desk, Weekend Digest)
+
+### Workspace consolidation — CLOSED Session 1192 + Session 1193
+
+All shelf-tagged: 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded). Real-untagged: 49 (48 Research + 3 Newsletter remainder). Initiative state: ACTIVE=2, TRIAGE=12, COMPLETED=7, ARCHIVED=9 (down from 11 ACTIVE before Session 1192 zombie cleanup). System Autonomous left active intentionally per Rigby's option C.
+
+**Known regression vector (still filed, not yet shipped):** `core/services/workspace_manager.py:1739` `_ensure_system_workspace` auto-recreates. See `780a8d15-...`.
 
 ### Initiative-tick 24h watch playbook
 
@@ -197,8 +220,8 @@ AgentExecution.objects.filter(
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
 2. Through Rigby (use `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-chris-token>` explicitly — `tools/pa_local.sh` is pinned to a stale conv): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on conversation `pa-55d90b2a34524bf9` (Session 1190+1191+1192 thread; ~85-90/100 estimated). **Strongly recommend rotating** to a fresh Session 1193 thread — this one's getting long.
-4. `gh pr list --author @me --state open` — expected empty (PR #2392 and docs PR from Session 1191 merged).
+3. **Use Rigby's pre-spun fresh thread `pa-e11847db632a4ee8`** ("Session 1194 — Project-clustering recon (Donkey Betz deliverables)"). Chris explicitly asked for fresh threads on BOTH sides for this session. Don't reuse `pa-89b8f02deccc4f17`.
+4. `gh pr list --author @me --state open` — expected empty.
 
 ### Stacked-PR footgun reminder (still active)
 
@@ -207,6 +230,34 @@ AgentExecution.objects.filter(
 ### Pre-existing CONFLICT — `--admin` bypass still required
 
 `context-kit verify` `Agents count claims` CONFLICT still on main. Strict mode Repo Guardrails fails on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. Worth a dedicated inventory-refresh PR if anyone has the bandwidth.
+
+---
+
+## SESSION 1193 CLOSED — Deliverable tagging + COO Backlog audit + project-clustering insight (2026-06-21)
+
+**0 PRs — data-layer ops + audit + filings.** Full handoff: [`SESSION_1193_DELIVERABLE_TAGGING_AND_PROJECT_CLUSTERING_INSIGHT.md`](docs/handoffs/SESSION_1193_DELIVERABLE_TAGGING_AND_PROJECT_CLUSTERING_INSIGHT.md).
+
+**Tagging:** ~107 deliverables tagged. Final shelf coverage on Donkey Betz (164 total): 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded), 49 untagged (48 Research + 3 Newsletter remainder).
+
+**7 new deliverables filed in Donkey Betz:**
+
+| ID | Title | Priority |
+|---|---|---|
+| `c2bac9c0` | PA LLM iteration cap — raise from 7 + surface silent fallback | **P2** |
+| `c942274b` | deliverable_tool tooling improvements (tags_add/remove + bulk) | P3 |
+| `b47a76b4` | COO Backlog spot-check audit — items #3-9 | audit |
+| `e17950d8` | COO Backlog #4 — Prefetch normalization | P3 |
+| `bebd6794` | COO Backlog #9 — Tool-call telemetry rollup | P3 |
+
+Plus 780a8d15 and ae5251f1 carried from Session 1192.
+
+**Bug surfaced:** PA LLM iteration cap silent failure pattern. On forced-text final iteration, LLM emits tool-call JSON in response body — zero writes land but user sees what looks like a response. Captured fully in c2bac9c0 deliverable.
+
+**Chris's late-session insight (queued for Session 1194):** flat-deliverable model isn't capturing project clusters. 8 obvious clusters identified. Both sides start fresh threads. See Session 1193 handoff §"Chris's late-session insight" for the 4 natural relationship patterns.
+
+**Two precedents locked:**
+1. Shelf taxonomy split: `shelf:content` for content artifacts, `shelf:platform` for engineering/diagnostics, tooltests get `tooltest`+`test_artifact` and NO shelf.
+2. Bundle pattern for cap-aware tagging: Rigby fetches details → emits APPLY-BATCH list → Claude ORM-applies. Avoids per-turn cap.
 
 ---
 
