@@ -120,6 +120,7 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 | **Initiative-tick 24h watch** | **P1 (time-gated)** | Start **2026-06-22 19:48 UTC** (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]` — expect summary lines every ~30 min. After 24h `refreshed` should drift toward 0 in steady state. Confirm `Initiative.objects.filter(last_activity_at__isnull=True).count() == 0`. Playbook below. |
 | **7d AC watches** | **P1 (time-gated)** | Start **2026-06-28** — first meaningful read after a full week of real traffic. ORM-queryable from `AgentExecution.input_data['spider_context']`. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388 descriptions. If session opens before 2026-06-28, defer and pick another item. |
 | **Producer reroute** | P2 | Session 1192 follow-up. Deliverable `780a8d15-9ca0-4d91-970f-6934a24fc08d` in Donkey Betz. Real engineering — `core/services/workspace_manager.py:1728-1773` `_ensure_system_workspace` auto-recreates System Autonomous + force-reactivates is_active=True. Three fix shapes documented in deliverable (rename SA workspace, add config flag, add schema is_system flag). Without this, new agent-created deliverables continue landing in System Autonomous over time. |
+| **Initiative populate redesign** | P2 | Session 1192 follow-up. Deliverable `ae5251f1-4863-4319-9c82-a82b6cfc52c2` in Donkey Betz. Real engineering. `populate_initiatives_api` currently creates ACTIVE category-bucket Initiatives, conflicting with the canonical Initiative-as-5-stage-project semantic + bypassing the TRIAGE quality gate. Two fix shapes documented (A: populate creates TRIAGE candidates needing manual promotion, B: separate Collections/Folders entity for tag-based grouping). Recommended: A short-term, B long-term. Chris + Rigby will research/discuss before picking direction. |
 | **PR-D contract flip** | P2 | Deliverable `9d9db48a-4819-4e2b-9548-998c0fe2f8f5`. 24h WARN-volume eligibility gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
 | **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P2 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
 | **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer. Wire or stop crawling. C deliverable § Action implications #4. |
@@ -226,7 +227,11 @@ AgentExecution.objects.filter(
 
 **Key precedent established (Session 1192):** triage decisions (status) are independent of workspace decisions. `content_tool action=content_reject` only changes status; it does NOT move workspace. For "delete" intent, need both `content_reject` AND `deliverable_tool.update workspace_id=<target>`. Hard-delete is NOT exposed in the toolset.
 
-**Filed follow-up:** `780a8d15-9ca0-4d91-970f-6934a24fc08d` in Donkey Betz — Producer-reroute fix for `_ensure_system_workspace` regression vector. P2.
+**Filed follow-ups (both in Donkey Betz):**
+- `780a8d15-9ca0-4d91-970f-6934a24fc08d` — Producer-reroute fix for `_ensure_system_workspace` regression vector. P2.
+- `ae5251f1-4863-4319-9c82-a82b6cfc52c2` — Initiative populate redesign (TRIAGE candidates + Collections/Folders option). P2. Filed after Chris paused on the UI "create initiatives from deliverables" button.
+
+**Post-close Initiative cleanup (same session):** Chris asked what the populate button does. Code trace + preview showed it'd create 11 ACTIVE category-bucket Initiatives, conflicting with the canonical project semantic. Routed to Rigby; her recon found 9 existing "Auto-populated From N X" zombie Initiatives. **Archived all 9** via ORM. Final Initiative status totals: ACTIVE=2, TRIAGE=12, COMPLETED=7, ARCHIVED=9 (was 0).
 
 **Two memory candidates** (non-blocking, assess at session-end review):
 1. Bulk operations: ORM > per-item dispatch when N>10. Plan ORM migration path upfront for drain ops of 100+ items.

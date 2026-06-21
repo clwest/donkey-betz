@@ -87,6 +87,26 @@ System Autonomous Workspace was intentionally **NOT deactivated** in Step 6 per 
 - **Initiative FKs preserved:** 68 of 156 (43.6%)
 - **Active workspaces remaining:** 2 (Donkey Betz + System Autonomous)
 
+## Post-close addendum (same session) — Initiative semantics + zombie cleanup
+
+After the consolidation close, Chris paused before clicking the "create initiatives from deliverables" UI button (`POST /api/initiatives/populate/`) and asked what it actually does. Code trace + live preview showed it would create 11 category-bucket Initiatives ("Donkey Betz: Research", "Donkey Betz: Platform Diagnostics", etc.) at `status=ACTIVE current_stage=1`, conflicting with the canonical Initiative-as-5-stage-project semantic from `docs/narratives/INITIATIVES_AND_LIFECYCLE.md` AND bypassing the TRIAGE quality gate that every other Initiative creation path uses.
+
+**Routed the design question to Rigby.** Her recon:
+- Initiative semantics have NOT drifted — still 5-stage research-to-pilot project model.
+- `populate_initiatives_api` (Session 1085) creates ACTIVE buckets, philosophically opposite the platform's quality-gate posture.
+- Only 9 of the 30 existing Initiatives match the "Auto-populated From N X" zombie pattern (not 30 as initially assumed).
+- Her recommendation: **don't click the button**. Define Initiatives as "coherent projects Chris (or signal intelligence) intentionally creates." Use tags + category as the grouping layer.
+
+**Chris picked option III (zombie cleanup + spec redesign).** Two ops executed:
+
+1. **Zombie cleanup.** Investigated all 9 auto-populated bucket Initiatives. Found 8 with no signal of evolution (no stages, no action items, last_activity_at == Session 1191 bootstrap timestamp). 1 was flagged for "late activity" (`bd50d724-...`); investigation revealed false positive — Session 1192's consolidation move of deliverable `644877f1` (COO Operator Report) triggered the `initiative_activity_tick` to refresh `last_activity_at`. Not real evolution. **Archived all 9** via ORM (`Initiative.objects.filter(id__in=[...]).update(status='ARCHIVED')`).
+
+**Final Initiative status totals:** ACTIVE=2, TRIAGE=12, COMPLETED=7, ARCHIVED=9 (was 0). The 2 remaining ACTIVE are real Initiatives.
+
+2. **Populate-redesign spec filed.** Deliverable `ae5251f1-4863-4319-9c82-a82b6cfc52c2` in Donkey Betz. Tags: `p2`, `initiative-redesign`, `populate-rescope`, `session-1192-followup`. Rigby's recommended path: option A short-term (populate creates TRIAGE candidate initiatives that must be promoted manually), option B long-term (separate Collections/Folders entity for tag-based grouping). Body captures current-state + two fix shapes + AC.
+
+**Net result for Session 1193+:** the "create initiatives from deliverables" button is now safe to ignore — the 9 buckets it would have collided with are archived, and the redesign spec is queued. The Initiative model semantics are clean.
+
 ---
 
-**No PR for this session.** Data-layer consolidation only. All migrations are reversible via the same `deliverable_tool.update` mechanic.
+**No PR for this session.** Data-layer consolidation only. All migrations are reversible via the same `deliverable_tool.update` mechanic. The Initiative archive op (9 rows) is reversible via `Initiative.objects.filter(id__in=[...]).update(status='ACTIVE')`.
