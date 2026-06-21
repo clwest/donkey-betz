@@ -37,6 +37,87 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
 )
 
 
+def _create_initiative_external_execution_receipt(
+    agent_name: str,
+    initiative,
+    stage_num: int,
+    stage_label: str,
+    celery_task_name: str,
+    content: str,
+    self_blog_id: str,
+    extra_input: Optional[dict] = None,
+) -> Optional[str]:
+    """Session 1186 PR-C bucket 4 (B + C): create an AgentExecution receipt
+    for the EXTERNAL Initiative→Deliverable save that lives in
+    `_impl_run_initiative_pipeline_task` (callsite B) and
+    `_impl_run_stage_generation_task` (callsite C).
+
+    Why a separate receipt: both tasks invoke an agent (directly via
+    `.execute()` for B, via `router.route()` for C) that internally calls
+    `_save_to_deliverable`. The factory's dedupe-by-(parent_object_type,
+    parent_object_id) at deliverable_factory.py:509 would collapse the two
+    deliverables to one if they shared an execution_id — silently losing
+    the Initiative-shaped tags/FKs on the external row that the Initiatives
+    UI keys on. This receipt is the B.2 shape — distinct from the internal
+    agent execution — so the two saves stay independent.
+
+    Follow-up B.1: thread initiative context into the agent's internal save
+    so we can collapse to one deliverable per stage with the right FKs.
+
+    Returns receipt execution_id as a string, or None on failure (caller
+    falls through to factory's WARN bucket — pipeline doesn't block).
+    """
+    try:
+        from core.models_unified_system import Agent, AgentExecution
+        from django.utils import timezone as _tz
+
+        agent_record, _ = Agent.objects.get_or_create(
+            name=agent_name,
+            defaults={
+                'agent_type': 'routable',
+                'description': f'{agent_name} - initiative pipeline external deliverable receipts',
+                'specialization': '',
+                'is_active': True,
+            },
+        )
+
+        input_data = {
+            'source': 'initiative_pipeline_task_external_save',
+            'execution_kind': 'orchestration_stage',
+            'celery_task_name': celery_task_name,
+            'initiative_id': str(initiative.id),
+            'stage_num': stage_num,
+            'stage_label': stage_label,
+            'self_blog_id': self_blog_id,
+            'agent_invoked': agent_name,
+        }
+        if extra_input:
+            input_data.update(extra_input)
+
+        receipt = AgentExecution.objects.create(
+            agent=agent_record,
+            user=None,
+            task=(f'Initiative {initiative.id} stage {stage_num} ({stage_label}) external deliverable receipt')[:500],
+            status='completed',
+            owner_agent=agent_name,
+            parent_object_type='initiative',
+            parent_object_id=initiative.id,
+            input_data=input_data,
+            output_data={'kind': 'deliverable_receipt', 'summary': content[:500]},
+            last_heartbeat_at=_tz.now(),
+            completed_at=_tz.now(),
+        )
+        return str(receipt.id)
+    except Exception as exc:
+        logger.warning(
+            "[INITIATIVE→DELIVERABLE] Failed to create external "
+            "AgentExecution receipt for initiative=%s stage=%d "
+            "(%s: %s) — deliverable will fall through to factory's WARN bucket",
+            initiative.id, stage_num, type(exc).__name__, exc,
+        )
+        return None
+
+
 
 def _impl_cleanup_junk_initiatives(stale_days: int = 7):
     """
@@ -2145,6 +2226,20 @@ Requirements:
                     if not Deliverable.objects.filter(
                         self_blog=blog, initiative=init,
                     ).exists():
+                        # Session 1186 PR-C bucket 4 callsite B — see
+                        # _create_initiative_external_execution_receipt
+                        # docstring for the B.2 design rationale.
+                        _external_exec_id = _create_initiative_external_execution_receipt(
+                            agent_name='TechnicalDocumentAgent',
+                            initiative=init,
+                            stage_num=stage_num,
+                            stage_label=stage_name,
+                            celery_task_name='run_initiative_pipeline_task',
+                            content=content,
+                            self_blog_id=str(blog.id),
+                            extra_input={'doc_type': doc_type},
+                        )
+
                         from core.services.deliverable_factory import create_deliverable
                         create_deliverable(
                             title=doc_title,
@@ -2163,6 +2258,8 @@ Requirements:
                             initiative=init,
                             self_blog=blog,
                             workspace=init.workspace,
+                            parent_execution_id=_external_exec_id,
+                            parent_object_type='agent_execution' if _external_exec_id else '',
                         )
                         logger.info(f"📦 [INITIATIVE→DELIVERABLE] Linked deliverable for {init.name[:30]} Stage {stage_num}")
                 except Exception as del_err:
@@ -2766,11 +2863,25 @@ Stage {stage_num} ({config['template']}) should include:
             if not Deliverable.objects.filter(
                 self_blog=document, initiative=initiative,
             ).exists():
+                # Session 1186 PR-C bucket 4 callsite C — see
+                # _create_initiative_external_execution_receipt
+                # docstring for the B.2 design rationale.
+                _ext_agent_name = config.get('agent', 'InitiativePipeline')
+                _external_exec_id = _create_initiative_external_execution_receipt(
+                    agent_name=_ext_agent_name,
+                    initiative=initiative,
+                    stage_num=stage_num,
+                    stage_label=config['template'],
+                    celery_task_name='generate_initiative_stage_document',
+                    content=document_content,
+                    self_blog_id=str(document.id),
+                )
+
                 from core.services.deliverable_factory import create_deliverable
                 create_deliverable(
                     title=_doc_title,
                     content=document_content,
-                    agent_name=config.get('agent', 'InitiativePipeline'),
+                    agent_name=_ext_agent_name,
                     category=f"Initiative — Stage {stage_num}",
                     deliverable_type='document',
                     tags=['initiative', f'stage-{stage_num}', initiative.program or 'general'],
@@ -2784,6 +2895,8 @@ Stage {stage_num} ({config['template']}) should include:
                     initiative=initiative,
                     self_blog=document,
                     workspace=initiative.workspace,
+                    parent_execution_id=_external_exec_id,
+                    parent_object_type='agent_execution' if _external_exec_id else '',
                 )
                 logger.info(f"📦 [INITIATIVE→DELIVERABLE] Linked deliverable for {initiative.name[:30]} Stage {stage_num}")
         except Exception as del_err:
