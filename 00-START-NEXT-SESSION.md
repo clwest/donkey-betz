@@ -101,65 +101,94 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1187 — CURRENT ENTRY POINT
+## SESSION 1188 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1186 shipped PR #2376** closing the FINAL PR-C bucket (bucket 4 — 3 celery task callsites). Full handoff: [`SESSION_1186_PR_C_BUCKET_4_CELERY_TASKS.md`](docs/handoffs/SESSION_1186_PR_C_BUCKET_4_CELERY_TASKS.md).
+**Session 1187 ran a Utilization Recon.** No code shipped. 7 deliverables filed in Local QA workspace mapping every agent + spider + the wiring between them. Full handoff: [`SESSION_1187_UTILIZATION_RECON.md`](docs/handoffs/SESSION_1187_UTILIZATION_RECON.md).
 
-**All 9 Session 1185 + 1186 PRs are now open + CI-green** (#2367-#2376). After they merge to main, the PR-C sweep is complete and PR-D (factory contract flip) becomes eligible after a 24h WARN-volume watch.
+**The recon answer:** Chris's framing of "agents running wild" was inverted. Agents are dormant (56/83 = 0 dispatches in 30d); spiders are cranking (198,678 items/30d); the wiring layer is broken. The huggingface E2E trace found **3 distinct break points** in `SpiderContextBuilder`/`AgentSpiderConnection`/`AGENT_SPIDER_MAPPINGS`. **0 of 92 recent dispatches reference huggingface despite 331 fully-embedded SpiderData rows being available with `is_actionable=True`.**
 
-| PR | Theme |
+### Recon deliverables (Local QA workspace)
+
+**Read the master first:** `88952c54-a4a4-47e8-9fe1-85b3d747be03` (Session 1187 Utilization Recon — Master Tracking).
+
+| Axis | deliverable_id |
 |---|---|
-| [#2367](https://github.com/clwest/donkey-betz-platform/pull/2367) | F2 execution_history_tool reverse-link |
-| [#2368](https://github.com/clwest/donkey-betz-platform/pull/2368) | PR-C bucket 1 (5 mgmt commands) |
-| [#2369](https://github.com/clwest/donkey-betz-platform/pull/2369) | F1 ContentWriterAgent diagnostic_mode |
-| [#2370](https://github.com/clwest/donkey-betz-platform/pull/2370) | PR-C bucket 2 (4 web views) |
-| [#2371](https://github.com/clwest/donkey-betz-platform/pull/2371) | PR-C bucket 3A (3 service helpers + envelope audit) |
-| [#2372](https://github.com/clwest/donkey-betz-platform/pull/2372) | PR-C bucket 3B-1 (conversation pipelines thread orchestration AgentExecution) |
-| [#2373](https://github.com/clwest/donkey-betz-platform/pull/2373) | PR-C bucket 3B-2 (per-stage AgentExecution rows in workspace pipeline runner) |
-| [#2374](https://github.com/clwest/donkey-betz-platform/pull/2374) | PR-C bucket 5 (competitor_comparison_tool opt-in + append_service audit) |
-| [#2376](https://github.com/clwest/donkey-betz-platform/pull/2376) | **PR-C bucket 4 (3 celery task callsites — final bucket)** |
+| A — Agent Utilization | `3fe30a8e-8c53-4b59-ba3c-ebd61d1ad7ea` |
+| A2 — Intent vs Reality | `bb9d7437-3cb5-45c8-9d60-db875c4a98f6` |
+| B — Spider Utilization | `623dcf5c-6c15-44af-8b20-6456959712f2` |
+| B2 — Spider→Agent Linkage | `13c6bd32-67eb-4d89-a7d7-3935e4fa65c5` |
+| **C — Huggingface E2E trace (3 break points)** | `1f548d38-8971-4780-a798-03e79399f322` |
+| D — Output Utilization | `518a77c5-13a9-4d09-a763-f15db39a0369` |
+| Missing PA Tools (build queue) | `13032820-1f36-4a1c-8843-6a9d53653405` |
 
-**Pinned conversation:** `pa-10df024c0bd8` — bucket 3/4 design recon + F1/F2 forensic validation. Health was 75/100 at Session 1186 close; likely rotate to fresh Session 1187 thread.
+**Pinned conversation:** `pa-10df024c0bd8` — Session 1184-1187 thread. Health at 60-75/100 at Session 1187 close; rotate to fresh Session 1188 thread.
 
-### Session 1186 follow-up deliverables filed in Local QA (2026-06-21)
+### Pick this session — the work Chris explicitly named for "fresh session to begin"
 
-| Deliverable ID | Title | Priority | Sketch |
+Chris said *"we can start a fresh session to begin working"* — referring to acting on the recon findings. The C trace named **4 concrete remediation items** + the missing PA tools build queue. Pick by Chris's priority:
+
+| Item | Priority | Why now | Where it's defined |
 |---|---|---|---|
-| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Thread initiative + stage + workspace context into TechnicalDocumentAgent's internal `_save_to_deliverable` so the agent produces the Initiative-shaped row directly. Then drop the external save at `tasks_initiatives.py:2149` + `:2770`. Currently 2 deliverables per stage; this collapses to 1. AC1-AC4 in deliverable. |
-| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | After PR #2376 merges + 24h, watch the WARN log for any remaining `[DeliverableFactory] No parent_execution_id for agent=...` lines. If zero, flip factory from `logger.warning(...)` to `raise DeliverableProvenanceMissingError(...)` for non-PA contexts. AC1-AC4 in deliverable. Gates the final factory contract change. |
+| **C-trace remediation #3 — register missing Hot agents in AGENT_SPIDER_MAPPINGS** | P1 (highest signal/effort ratio) | ImageAgent, ResearchAgent, ThinkingAgent are 3 of the 9 Hot agents and aren't in the in-code mapping. Adding them is a small code change with measurable runtime impact (more spider context → richer dispatches). | C deliverable `1f548d38-...` § Action implications #3 |
+| **C-trace remediation #1 — unify wiring source of truth** | P1 (structural) | `AgentSpiderConnection` (DB) vs `AGENT_SPIDER_MAPPINGS` (code) — only the code one is read. Pick one, delete the other, document the contract. Larger blast radius — needs design call. | C deliverable § Action implications #1 |
+| **C-trace remediation #2 — bridge category vocabulary** | P2 (structural) | `SpiderCategory.name` ("AI & Creative Tools") vs builder query keys (`'tech'`, `'creative'`) — pick one taxonomy. Likely a single mapping table + builder change. | C deliverable § Action implications #2 |
+| **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer in AGENT_SPIDER_MAPPINGS. Either wire them or stop crawling (waste of compute). | C deliverable § Action implications #4 |
+| **Build Rigby's missing PA tools** | P2-P3 (depends on need) | 6 tools blocked the recon from being repeatable by Rigby. Recommended build order: `agent_telemetry_tool.utilization` first (biggest unblock). | Missing tools deliverable `13032820-...` § Recommended build order |
+| **Adjacent investigations from C trace** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken; 5-min look. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface SpiderItemHash `item_title='Unknown'` — spider extractor bug. | Session 1187 handoff § Adjacent investigations |
+
+### Carryover from Session 1186 (Local QA deliverables)
+
+| Deliverable ID | Title | Priority | Status |
+|---|---|---|---|
+| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Pending — wait for `bucket 4 B/C` paths to settle before unifying |
+| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | PR #2376 merged 2026-06-21 ~16:00. **24h watch starts then.** Run the grep at AC1 after 2026-06-22 16:00. |
 
 ### Standard FIRST THING checks
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (`tools/pa_local.sh`, pinned conv **`pa-10df024c0bd8`**): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.** Note: `tools/pa_local.sh` currently pins `pa-a60842917d36` — Session 1187 work should pivot to `pa-10df024c0bd8` (where the 1185-1186 design recon lives) by either editing the wrapper or invoking pa_chat.py with `--conversation pa-10df024c0bd8` directly. If health hits 60/100, rotate to a fresh Session 1187 thread.
-3. `gh pr list --author @me --state open` — check how many of the 9 PRs from Sessions 1185-1186 merged (#2367-#2376).
-4. **If any merged:** `pkill -9 -f celery; rm -f .celery*.pid; make celery` — per the worker-restart matrix in SESSION_1185 + SESSION_1186 handoffs. (Bucket 4's PR #2376 requires restart — both task files are imported by celery worker task bodies.)
-5. **24h WARN-volume watch (PR-D eligibility gate):** once all 9 PRs are merged + 24h elapsed, run:
+2. Through Rigby (`tools/pa_local.sh`, pinned conv `pa-10df024c0bd8` OR fresh Session 1188 thread): `platform_config_tool overview` → confirm `service_context: local`.
+3. `session_tool health_check` — rotate to fresh Session 1188 thread if over 60/100.
+4. `gh pr list --author @me --state open` — expected empty (all 11 Sessions 1185+1186 PRs merged; Session 1187 was recon-only).
+5. **24h WARN-volume watch (PR-D eligibility gate, started 2026-06-21 16:00):** once 24h elapsed, run:
    ```bash
    grep "No parent_execution_id" /tmp/celery-*.log | \
      awk -F'caller=' '{print $2}' | awk -F' ' '{print $1}' | \
      sort | uniq -c | sort -rn
    ```
-   Expected: zero non-agent WARNs (modulo any approved exemption list). If zero, PR-D becomes ready to open. See follow-up deliverable `9d9db48a-...` for AC1-AC4.
+   Expected: zero non-agent WARNs. If zero, PR-D becomes ready to open.
 
-### Pick this session
+### Re-run a recon verifier
 
-After watch checks, choose by Chris's priority:
+All 4 verifier scripts live in `/tmp/` (not committed by design — workspace-private; deliverables hold the captured results):
 
-| Item | Priority | Why now |
-|---|---|---|
-| **PR-D contract flip** | P2 (per follow-up deliverable) | If 24h watch shows zero WARNs after all 9 PRs merge. Flips factory to raise `DeliverableProvenanceMissingError` for non-PA contexts. ~4-5 test PR. |
-| **Spec doc consolidation PR** | P3 (mechanical) | `docs/specs/deliverable_creation_paths.md` Coverage summary: move all PR-C rows from ⚠️ WARN → 🟡 synthesized / ✅ wired. Status header bump to Session 1186/1187. Tests count update. |
-| **B.1 unify-deliverables PR** | P3 (per follow-up deliverable `48b73b04-...`) | Long-term right fix for the two-deliverables-per-stage hazard found in bucket 4. Thread initiative context into agent's internal save, drop external. |
-| **Inventory refresh PR (still open from Session 1183)** | P3 (mechanical) | `verify_doc_claims --only-drift` still reports 2 high drifts on `load_all_agents_advisors.py`; `PLATFORM_INVENTORY.md` is now 12+ sessions stale. |
-| **Carryover backlog** | varies | PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, COO consolidation deferreds. Live handoffs: `SESSION_1171_*` through `SESSION_1186_*`. |
+| Script | Re-verifies |
+|---|---|
+| `/tmp/recon_proper.py` | A + B + B2 + D — SQL queries |
+| `/tmp/a2_agent_introspect.py` | A2 — AGENT_MAP introspection |
+| `/tmp/c_trace_huggingface.py` | C — full 8-step E2E trace |
+| Inline `manage.py shell` probes | C break points #1, #2, #3 (see C deliverable § Verifier) |
 
-### Smoke verification for the 9 Session 1185+1186 PRs (post-merge)
+If scripts have been cleared, the deliverables contain enough detail to reconstruct.
 
-- Session 1185 PRs (#2367-#2374): see SESSION_1185 handoff § "Smoke verification (post-merge across all 8 PRs)" — 8-step checklist on pa-10df024c0bd8.
-- Session 1186 PR (#2376 bucket 4): see SESSION_1186 handoff § "Smoke verification (post-merge)" — 3-step checklist (A direct synthesis, B initiative pipeline external receipt, C stage generation external receipt).
+---
+
+## SESSION 1187 CLOSED — Utilization Recon: 7 deliverables filed in Local QA, 3 spider→agent wiring break points found, 0 code changes (2026-06-21)
+
+**Strategic pivot session.** No PRs. Recon-only per Chris's scope: *"go through all of the Agents, right now we have them but they aren't really doing anything. We also need to verify that the spiders are actually pulling in data to feed the system."* Full handoff: [`SESSION_1187_UTILIZATION_RECON.md`](docs/handoffs/SESSION_1187_UTILIZATION_RECON.md).
+
+**Headline finding:** the framing was inverted. Agents are dormant (56/83 = 0 dispatches in 30d, only 9 Hot, 0 Warm). Spiders are cranking (198,678 items/30d across 78 spiders). The break is in the wiring layer — `SpiderContextBuilder.AGENT_SPIDER_MAPPINGS` (in-code, 51 agents) is the actual driver but doesn't route any huggingface/ai_ml data to any agent; the parallel `AgentSpiderConnection` table (DB, 55 rows) is dead code in the read path; the category vocabulary doesn't bridge between the two sources. **Confirmed at runtime: 0 of 92 recent dispatches reference huggingface despite 331 fully-embedded SpiderData rows being available.**
+
+**7 deliverables in Local QA workspace** (master + 5 axes + missing-tools list) with per-axis AC checklists + verifier commands. Master: `88952c54-a4a4-47e8-9fe1-85b3d747be03`. Same alignment-with-reality contract as `verify_doc_claims` for docs.
+
+**Collaboration shape:** Rigby surfaced a real blocker (6 missing PA tools to do the recon herself); Chris instructed *"If Rigby doesn't have tools she needs make notes of them so we can build them later"*; Claude ran SQL via Django ORM as the hybrid X path, Rigby's role contracted to scope-confirmation + create-deliverable. Filed missing-tools list as separate deliverable `13032820-...` with proposed signatures + build order.
+
+**Two mid-session structural drift findings, both surfaced via `feedback_corpus_walks_surface_mechanism_drift.md`** instead of silently bridged:
+- `AgentExecution.owner_agent` is empty in ~75% of local rows; had to re-query by `agent.name` FK
+- `SpiderContextBuilder.AGENT_SPIDER_MAPPINGS` (in-code) is the actual driver, not `AgentSpiderConnection` (DB) which was assumed to be the source of truth
+
+**Remediation work explicitly deferred per Chris's scope.** 4-item action queue (unify wiring / bridge vocabulary / register missing agents / audit orphan spiders) lives in C deliverable for Session 1188 pickup.
 
 ---
 
