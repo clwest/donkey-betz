@@ -471,6 +471,187 @@ class ServerSidePersistenceTests(TestCase):
         )
 
 
+class ArtifactPointerExtractorTests(TestCase):
+    """Session 1181 PR5 — verify _extract_artifact_pointers covers known agent
+    output shapes and fails closed on unknown / malformed inputs.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='artifact-extract-test', email='art@example.com', password='x',
+        )
+        self.image_agent, _ = Agent.objects.get_or_create(
+            name='ImageAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+        self.editor_agent, _ = Agent.objects.get_or_create(
+            name='EditorAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+        self.research_agent, _ = Agent.objects.get_or_create(
+            name='ResearchAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+
+    def _make_execution(self, agent, output_data):
+        return AgentExecution.objects.create(
+            agent=agent, user=self.user, task='extractor-test',
+            status='completed', conversation_id='pa-extractor-test',
+            completed_at=timezone.now(),
+            output_data=output_data,
+        )
+
+    def test_image_agent_extracts_image_ids_into_media_ids(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.image_agent, {
+            'content': 'Generated 2 image(s)',
+            'metadata': {
+                'task': 'test',
+                'count': 2,
+                'images': [
+                    {'image_id': 'aaa', 'file_path': '/p/a.png', 'image_url': '/m/a.png', 'batch_index': 1},
+                    {'image_id': 'bbb', 'file_path': '/p/b.png', 'image_url': '/m/b.png', 'batch_index': 2},
+                ],
+            },
+        })
+        self.assertEqual(
+            _extract_artifact_pointers(execution),
+            {'media_ids': ['aaa', 'bbb']},
+        )
+
+    def test_image_agent_dedupes_repeated_image_ids(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.image_agent, {
+            'metadata': {
+                'images': [
+                    {'image_id': 'dup'},
+                    {'image_id': 'dup'},
+                    {'image_id': 'other'},
+                ],
+            },
+        })
+        self.assertEqual(
+            _extract_artifact_pointers(execution),
+            {'media_ids': ['dup', 'other']},
+        )
+
+    def test_editor_agent_extracts_blog_id(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.editor_agent, {
+            'metadata': {'blog_id': 'blog-uuid-1', 'saved': True},
+        })
+        self.assertEqual(
+            _extract_artifact_pointers(execution),
+            {'blog_ids': ['blog-uuid-1']},
+        )
+
+    def test_editor_agent_null_blog_id_returns_empty(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.editor_agent, {
+            'metadata': {'blog_id': None, 'saved': False},
+        })
+        self.assertEqual(_extract_artifact_pointers(execution), {})
+
+    def test_canonical_passthrough_when_agent_writes_buckets_directly(self):
+        """If a future agent writes the three buckets directly into metadata,
+        the extractor copies them through without needing a per-agent branch."""
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.research_agent, {
+            'metadata': {
+                'deliverable_ids': ['d1', 'd2'],
+                'media_ids': ['m1'],
+            },
+        })
+        self.assertEqual(
+            _extract_artifact_pointers(execution),
+            {'deliverable_ids': ['d1', 'd2'], 'media_ids': ['m1']},
+        )
+
+    def test_unknown_agent_no_artifacts_returns_empty(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.research_agent, {
+            'content': 'analytical-only',
+            'metadata': {'query': 'test', 'results': []},
+        })
+        self.assertEqual(_extract_artifact_pointers(execution), {})
+
+    def test_shape_robust_against_none_output_data(self):
+        """Mock an execution-like with output_data=None — the helper must not
+        raise even though the model itself enforces NOT NULL. Defends against
+        future field changes or in-memory ORM races."""
+        from unittest.mock import MagicMock
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = MagicMock()
+        execution.output_data = None
+        execution.agent_id = self.image_agent.id
+        execution.agent = self.image_agent
+        self.assertEqual(_extract_artifact_pointers(execution), {})
+
+    def test_shape_robust_against_missing_metadata_key(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.image_agent, {'content': 'no-metadata'})
+        self.assertEqual(_extract_artifact_pointers(execution), {})
+
+    def test_shape_robust_against_malformed_images_list(self):
+        from core.tasks_agents import _extract_artifact_pointers
+        execution = self._make_execution(self.image_agent, {
+            'metadata': {
+                'images': [
+                    'not-a-dict',
+                    {'no_image_id': 'x'},
+                    {'image_id': 'valid'},
+                    None,
+                ],
+            },
+        })
+        self.assertEqual(
+            _extract_artifact_pointers(execution),
+            {'media_ids': ['valid']},
+        )
+
+    def test_fire_helper_payload_carries_extracted_pointers(self):
+        """End-to-end: ImageAgent fires → result_payload.artifact_pointers
+        contains extracted media_ids → server-side persisted row metadata
+        carries them too (consumed by compose_completion_body text render)."""
+        from unittest import mock
+        from core.models.conversations.models import ChatConversation
+        from core.tasks_agents import (
+            create_implicit_followup_subscription,
+            fire_agent_followup_subscriptions,
+        )
+
+        execution = self._make_execution(self.image_agent, {
+            'content': 'Generated 1 image(s)',
+            'metadata': {
+                'images': [{'image_id': 'img-end-to-end', 'image_url': '/m/x.png'}],
+            },
+        })
+        execution.conversation_id = 'pa-extractor-end-to-end'
+        execution.save(update_fields=['conversation_id'])
+
+        sub = create_implicit_followup_subscription(execution, context={})
+        self.assertIsNotNone(sub)
+
+        with mock.patch('core.tasks_agents.get_channel_layer', return_value=None):
+            fire_agent_followup_subscriptions(execution)
+
+        sub.refresh_from_db()
+        self.assertEqual(sub.state, AgentFollowupSubscription.STATE_FIRED)
+        self.assertEqual(
+            sub.result_payload.get('artifact_pointers'),
+            {'media_ids': ['img-end-to-end']},
+        )
+
+        row = ChatConversation.objects.get(
+            conversation_id='pa-extractor-end-to-end',
+            metadata__contains={'kind': 'agent_completion'},
+        )
+        self.assertEqual(
+            row.metadata.get('artifact_pointers'),
+            {'media_ids': ['img-end-to-end']},
+        )
+
+
 class ExpireStaleSubscriptionBeatTaskTests(TestCase):
     """Session 1180 P1 — verify the beat cleanup task skips NULL-expiry rows
     so auto-wake (execution-lifecycle-bound) subs are never killed by hygiene.
