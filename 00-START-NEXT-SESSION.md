@@ -97,39 +97,36 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1183 — CURRENT ENTRY POINT
+## SESSION 1184 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1182 caught a real regression in the 24h watch and shipped a tight fix.** PR #2357 (`fix(session-1182-server-persist)`) resolved PR #2352's silently-failing server-side persist path: `IntegrityError: null user_id` was being swallowed by fail-open. Consumer-side safety net was carrying the load; defense-in-depth is now actually two-deep.
+**Session 1183 closed the CI guardrail bypass cycle and unblocked PR #2357.** PR #2359 (`docs(session-1183)`) rephrased the Celery beat schedule docs into split-ownership language → `context-kit verify` now returns VERIFIED → CI Repo Guardrails passed cleanly in 1m5s (first PR since Session 1180 without `--admin` bypass). Then workers were restarted at 21:33 local because they'd been started 25 min before PR #2357 merged — running pre-fix code from `sys.modules` cache. Tomorrow's 24h watch is the **first** that actually tests PR #2357.
 
-**Pinned conversation:** `pa-8f8ef45338ce4a24` — created Session 1182 open after `pa-a5fecc400c0f4152` hit 55/100. Healthy at Session 1182 close. Run `session_tool health_check` early; rotate if past 60.
+**Pinned conversation:** `pa-8f8ef45338ce4a24` — health 90/100 at Session 1183 close (continue). Run `session_tool health_check` early; rotate if past 60.
 
-Close handoff: [`docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md`](docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md). Prior: [`docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md`](docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md).
+Close handoff: [`docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md). Prior: [`docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md`](docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
 2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-8f8ef45338ce4a24`): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on `pa-8f8ef45338ce4a24` — rotate to fresh Session 1183 thread if past 60/100.
-4. Spot-check 24h watch (Session 1182 updates):
-   - Tail `celery-long-running.log | grep '\[fire_agent_followup_subscriptions\] server-side persist fail-open'` — should be **zero** for the IntegrityError-on-user_id signature post-PR #2357.
-   - Tail `celery-long-running.log | grep persist_skipped_missing_user` — should appear rarely (only for genuinely-orphan conversations). Frequent → conv-owner fallback isn't holding for some real path.
+3. `session_tool health_check` on `pa-8f8ef45338ce4a24` — rotate to fresh Session 1184 thread if past 60/100.
+4. **Real 24h watch on PR #2357** (workers restarted 21:33 local Jun 20 — post-merge):
+   - `grep -c 'server-side persist fail-open' celery-long-running.log` — should be **0** since worker restart timestamp. If non-zero, capture the surrounding context (execution + conv + IntegrityError signature). A live recurrence means `_resolve_completion_user` isn't holding for some real path.
+   - `grep -c persist_skipped_missing_user celery-long-running.log` — rare/zero. Non-zero is fine if it's a genuinely-orphan conversation; capture one example to confirm fail-closed log key is firing as designed.
    - Session 1181 invariants still apply: `[auto_followup] created` lines fire; armed-subs with NULL expires_at older than 6h stay at 0; `artifact_pointers` populated for recent ImageAgent/EditorAgent.
 
-### Suggested first 10-minute item (per Rigby Session 1182 close)
+### Suggested first 10-minute item (per Rigby Session 1183 close)
 
-**Triage the pre-existing `Celery beat schedule ownership` CI guardrail conflict.** It's been failing `Repo Guardrails` on every PR merge since at least Session 1181 (#2354, #2355, #2356, #2357 all merged via `--admin` bypass). Not blocking — but it makes the watch loop noisier and obscures real CI regressions.
+**Decide on inventory-refresh PR.** `verify_doc_claims --only-drift` reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` (`persona_agent_count: expected 155 / actual 84`; `total_agent_count_claim: expected 238 / actual 167`) and `PLATFORM_INVENTORY.md` hasn't been regenerated since `d3493510` (10 sessions ago). Either:
 
-Three options spelled out in the Session 1182 handoff §"Known issues":
-- **A**: Update the canonical doc claim to reflect actual multi-file ownership (the beat schedule IS genuinely split across migrations + setup commands + runtime services).
-- **B**: Fix the guardrail's expectation that beat schedule ownership is single-file (it isn't, by design).
-- **C**: Accept the bypass indefinitely and document the rationale.
+- **A**: Regenerate the inventory + bump `load_all_agents_advisors.py` expected values to the new normal (84/167). Mechanical but substantive — captures all Sessions 1171-1182 drift in one doc-refresh PR. Recommended.
+- **B**: Run `load_all_agents_advisors` to reseed the Agent table back to 155 rows. Only if the row count drop reflects accidental cleanup rather than intentional restructure (Sessions 1166-1170 agent dim work suggests intentional).
+- **C**: Defer until verify_doc_claims drift bites again.
 
-`context-kit verify --json` will give the exact 20+ files claiming ownership. Pick the lane, fix it, get back to a green CI baseline.
+### What's queued (unchanged from Session 1183 close — pick by Chris's priority)
 
-### What's queued (pick by Chris's priority — unchanged from Session 1182)
-
-**No urgent items.** With Pass B closed (Session 1181) and the watch finding fixed (Session 1182 PR #2357), the wake/persistence/UI loop is correct + defense-in-depth is real. Session 1183 is a green-field session — pick from any of:
+**No urgent items.** Pass B is closed (Session 1181), watch finding is fixed (Session 1182), CI is green without bypass (Session 1183), workers are loaded with PR #2357 (Session 1183 close). Session 1184 is a green-field session — pick from any of:
 
 | Item | Status | When to pick |
 |---|---|---|
@@ -144,7 +141,23 @@ Or genuinely new work.
 
 ### Carryover (still riding from Sessions 1171-1178)
 
-PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1182_*`.
+PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1183_*`.
+
+---
+
+## SESSION 1183 CLOSED — Celery beat ownership doc fix breaks CI bypass cycle + worker restart unblocks PR #2357 (2026-06-20)
+
+**1 docs PR shipped (CI green without `--admin` bypass).** Full handoff: [`docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md).
+
+| PR | Theme | SHA | Verified |
+|---|---|---|---|
+| **#2359** | `docs(session-1183)` — reframe Celery beat schedule as split-owned to clear context-kit CONFLICT | _(pending squash-merge)_ | `context-kit verify` VERIFIED; CI Repo Guardrails PASS 1m5s; **no `--admin` bypass** (first such PR since Session 1180) |
+
+Two surgical edits to `docs/ARCHITECTURE.md:680` and `docs/topics/active-module-ownership-map.md:242` removed the verifier's `doc_exclusive_celery_claim` trigger words ("only" near "celery.py") and positively asserted the four-source split-ownership model the verifier already supports (primary static / runtime store / bridge / routing-config). ~24 lines, single-revert safe.
+
+**Worker restart ops cleanup:** PR #2357 (Session 1182 server-side persist fix) merged at 21:07 local AFTER workers had been restarted at 20:42 — running workers were on pre-fix code via `sys.modules` cache. Standard `pkill -9 -f celery; rm -f .celery*.pid; make celery` performed; 4 nodes back via inspect ping; baseline clean (0 fail-opens since restart). **Tomorrow's 24h watch is the first that actually tests PR #2357.**
+
+**Known issue carried into Session 1184:** Platform inventory stale (`d3493510` vs current HEAD) → 2 high drifts on `load_all_agents_advisors.py` (Agent table 155 → 84 rows from Sessions 1166-1170 agent dim restructure). CI carves this out via `--inventory-advisory`. Worth a dedicated inventory-refresh PR — see Session 1184 first 10-minute item.
 
 ---
 
