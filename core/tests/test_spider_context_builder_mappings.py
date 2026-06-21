@@ -31,8 +31,11 @@ class ExplicitAgentMappingTests(SimpleTestCase):
         self.builder = SpiderContextBuilder()
 
     def test_thinking_agent_no_longer_falls_to_default(self):
+        # PR-1 moved thinkingagent off the `default` fallback; PR-3B
+        # additionally added `ai_ml` (364 actionable / 30d) since the
+        # bucket is directly relevant to tech/science reasoning.
         cats = self.builder._get_agent_categories('ThinkingAgent')
-        self.assertEqual(cats, ['tech', 'news', 'science', 'financial'])
+        self.assertEqual(cats, ['tech', 'news', 'science', 'financial', 'ai_ml'])
         self.assertNotEqual(cats, SpiderContextBuilder.AGENT_SPIDER_MAPPINGS['default'])
 
     def test_image_agent_uses_real_data_type_categories(self):
@@ -67,3 +70,54 @@ class ExplicitAgentMappingTests(SimpleTestCase):
         that contain `image` but not `imageagent` as a substring."""
         cats = self.builder._get_agent_categories('ImageEditingAgent')
         self.assertEqual(cats, ['creative', 'tech', 'entertainment'])
+
+
+class PR3BAiMlRolloutTests(SimpleTestCase):
+    """Session 1189 PR-3B: verify ai_ml landed on every agent in
+    Rigby's 19-agent rollout list (deliverable b8ca4f5c-...)."""
+
+    AI_ML_AGENT_PATTERNS = [
+        'thinkingagent', 'technical_document', 'cto', 'coo',
+        'content_strategy', 'brand_strategy', 'marketing_strategy',
+        'content_writer', 'trend_analysis', 'market_intelligence',
+        'competitor_analysis', 'performance_analyst', 'topic_miner',
+        'autonomous_content_studio', 'content_diversity',
+        'code_generator', 'full_stack_developer', 'code_review', 'devops',
+    ]
+
+    def test_every_ai_ml_target_pattern_now_includes_ai_ml(self):
+        mappings = SpiderContextBuilder.AGENT_SPIDER_MAPPINGS
+        missing = [
+            pattern for pattern in self.AI_ML_AGENT_PATTERNS
+            if 'ai_ml' not in (mappings.get(pattern) or [])
+        ]
+        self.assertEqual(
+            missing, [],
+            f"PR-3B rollout incomplete — these patterns still lack ai_ml: {missing}",
+        )
+
+
+class PR3BBucketRolloutTests(SimpleTestCase):
+    """Session 1189 PR-3B: verify the 5 high-supply bucket rollouts
+    landed on the agents Rigby specced."""
+
+    EXPECTED = {
+        'remote_work': ['job', 'career', 'coo', 'full_stack_developer'],
+        'training': ['education', 'career', 'coo', 'cto', 'code_generator', 'full_stack_developer'],
+        'legislation': ['legal', 'legal_doc', 'cto', 'coo', 'market_intelligence'],
+        'prediction_markets': ['prediction_market'],
+        'content': ['content_writer', 'content_strategy', 'marketing_strategy', 'autonomous_content_studio', 'topic_miner'],
+    }
+
+    def test_every_bucket_landed_on_every_specced_agent(self):
+        mappings = SpiderContextBuilder.AGENT_SPIDER_MAPPINGS
+        problems = []
+        for bucket, patterns in self.EXPECTED.items():
+            for pattern in patterns:
+                cats = mappings.get(pattern)
+                if cats is None:
+                    problems.append(f"missing key '{pattern}'")
+                    continue
+                if bucket not in cats:
+                    problems.append(f"'{pattern}' missing '{bucket}'")
+        self.assertEqual(problems, [], f"PR-3B bucket rollout gaps: {problems}")
