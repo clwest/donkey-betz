@@ -38,6 +38,16 @@ class SpiderContextBuilder:
     # Format: agent_pattern -> list of spider categories
     # Session 936: Expanded to include ALL spider categories for comprehensive coverage
     AGENT_SPIDER_MAPPINGS = {
+        # Session 1188 (C-trace remediation #3): explicit Hot-agent keys
+        # placed before substring fallbacks so traces show the explicit key
+        # that fired. ImageAgent/ResearchAgent mirror their substring outcomes
+        # (no functional change); ThinkingAgent was falling to 'default' and
+        # now gets reasoning-oriented categories. Rigby's PR-1 spec lives in
+        # deliverable 51062b8c-0fdf-4ca9-855a-264962e2506c.
+        'imageagent': ['creative', 'tech', 'entertainment'],
+        'researchagent': ['tech', 'news', 'social', 'community', 'financial', 'legal', 'science', 'health'],
+        'thinkingagent': ['tech', 'news', 'science', 'financial'],
+
         # Creative agents need design trends
         'image': ['creative', 'tech', 'entertainment'],
         'video': ['creative', 'video', 'tech', 'entertainment'],
