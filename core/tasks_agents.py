@@ -117,10 +117,10 @@ def create_implicit_followup_subscription(execution_record, context):
     - Fail-open per Session 1172 lessons — dispatch must never break because
       auto-sub failed.
 
-    TTL: 30s default (matches Phase 1 schedule_followup default + Session 1178 D2
-    ratified by Rigby). Callers wanting a longer window still use
-    schedule_followup; Phase 2 auto-sub is the "I forgot to ask, just tell me"
-    default.
+    TTL: Session 1180 P1 — auto-wake subs are execution-lifecycle-bound (expires_at=NULL).
+    The fire helper treats NULL expires_at as "never expires" so completion fires regardless
+    of runtime. Explicit schedule_followup(after_seconds=N) keeps its time-bounded semantic
+    for delayed-reminder use cases (separate from completion wake).
     """
     if execution_record is None:
         return
@@ -138,11 +138,7 @@ def create_implicit_followup_subscription(execution_record, context):
             conversation_id=conv_id,
             defaults={
                 'state': AgentFollowupSubscription.STATE_ARMED,
-                # Session 1178 follow-up: TTL pulled from the model constant
-                # so Phase 1 explicit + Phase 2 auto-wake share one source of
-                # truth. Live verify caught the original 30s firing 2 seconds
-                # before a typical ResearchAgent completion.
-                'expires_at': timezone.now() + timedelta(seconds=AgentFollowupSubscription.DEFAULT_TTL_SECONDS),
+                'expires_at': None,
             },
         )
         logger.info(
@@ -168,8 +164,10 @@ def fire_agent_followup_subscriptions(execution_record):
     completion to the pa_conversation_<conversation_id> channel — which closes the channels-don't-meet
     gap identified in SESSION_1174_PRIMING_AGENT_FOLLOWUP.md.
 
-    Atomic queryset update with state='armed' AND expires_at > now() in the filter ensures dedupe
-    even under concurrent calls (rowcount=1 wins). Fail-open per Session 1172 lessons — never
+    Atomic queryset update with state='armed' AND (expires_at IS NULL OR expires_at > now()) in
+    the filter ensures dedupe even under concurrent calls (rowcount=1 wins). Auto-wake subs
+    write expires_at=NULL (Session 1180 P1) so they fire regardless of runtime; explicit
+    schedule_followup subs keep their TTL window. Fail-open per Session 1172 lessons — never
     raise from this helper; the dispatch path must remain reliable even if the broadcast layer
     or DB index briefly hiccups.
 
@@ -201,11 +199,14 @@ def fire_agent_followup_subscriptions(execution_record):
         # The rowcount tells us whether we actually fired (0 if expired, already-fired,
         # or no subscription exists). Multiple concurrent calls into this helper will all
         # filter on state='armed'; only the first one's UPDATE actually flips the row.
+        # Session 1180 P1: NULL expires_at = "no expiry, fire on terminal" (auto-wake default);
+        # non-NULL keeps the TTL window (explicit schedule_followup).
         fired_count = AgentFollowupSubscription.objects.filter(
             execution=execution_record,
             conversation_id=conv_id,
             state=AgentFollowupSubscription.STATE_ARMED,
-            expires_at__gt=now,
+        ).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=now),
         ).update(
             state=AgentFollowupSubscription.STATE_FIRED,
             fired_at=now,

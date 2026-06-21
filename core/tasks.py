@@ -12893,11 +12893,15 @@ def capture_worker_memory_snapshot():
 # ──────────────────────────────────────────────────────────────────────
 # Session 1174 PR-2a — Expire stale AgentFollowupSubscription rows
 # ──────────────────────────────────────────────────────────────────────
-# AgentFollowupSubscription rows are created in state="armed" with an
-# expires_at = now() + after_seconds (capped 600s). If the corresponding
-# AgentExecution never reaches a terminal state before expires_at, the
-# row stays armed indefinitely. This task transitions stale rows to
-# "expired" so the table doesnt accumulate dead subscriptions.
+# AgentFollowupSubscription rows are created in state="armed" with one of
+# two expiry semantics:
+#   - expires_at IS NULL → execution-lifecycle-bound (Session 1180 P1
+#     auto-wake default; fires on terminal regardless of runtime, never
+#     expired by this hygiene job)
+#   - expires_at = now() + after_seconds → explicit schedule_followup
+#     delayed-wake (capped 600s); expired by this job when past TTL
+# This task transitions only the NON-NULL stale rows so completion-bound
+# subs are never killed by hygiene.
 #
 # Beat-scheduled per memory rule "Observation cadence belongs in Celery
 # beat, not OS cron" + the canonical Session 1161 capture_pa_acks_health
@@ -12915,7 +12919,9 @@ def capture_worker_memory_snapshot():
     time_limit=60,
 )
 def expire_stale_followup_subscriptions():
-    """Transition AgentFollowupSubscription rows past their expires_at from armed → expired.
+    """Transition NON-NULL-TTL AgentFollowupSubscription rows past their expires_at
+    from armed → expired. NULL-expiry rows (Session 1180 P1 auto-wake) are immune —
+    they fire on execution terminal, regardless of wall-clock.
 
     Returns {expired: int} for celery task event searchability.
     """
@@ -12923,6 +12929,7 @@ def expire_stale_followup_subscriptions():
     now = timezone.now()
     expired_count = AgentFollowupSubscription.objects.filter(
         state=AgentFollowupSubscription.STATE_ARMED,
+        expires_at__isnull=False,
         expires_at__lte=now,
     ).update(state=AgentFollowupSubscription.STATE_EXPIRED)
     if expired_count:
