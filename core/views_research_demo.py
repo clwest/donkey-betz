@@ -1926,6 +1926,14 @@ def populate_initiatives_api(request):
                 current_stage=1,
             )
 
+            # Session 1191: bootstrap last_activity_at so freshly-created
+            # auto-populated Initiatives aren't born with NULL. Without this,
+            # the initiative_activity_tick beat task would treat every new
+            # auto-populated row as cold-stale and pick it up on first sweep
+            # — wasteful churn. update_activity() writes timezone.now()
+            # which is correct for "this row was just created."
+            initiative.update_activity(reason='auto_populate_create')
+
             # Link the deliverables
             updated = Deliverable.objects.filter(
                 initiative__isnull=True,
