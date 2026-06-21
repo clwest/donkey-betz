@@ -101,56 +101,98 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1189 — CURRENT ENTRY POINT
+## SESSION 1190 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1188 shipped 2 PRs** acting on Session 1187 C-trace remediation #3 (Hot-agent spider context wiring). Full handoff: [`SESSION_1188_SPIDER_CONTEXT_VOCABULARY_RECON_AND_RETUNE.md`](docs/handoffs/SESSION_1188_SPIDER_CONTEXT_VOCABULARY_RECON_AND_RETUNE.md).
+**Session 1189 shipped 4 PRs** completing Rigby's ratified `1 → 3 → 2 → 4` sequence end-to-end on spider context (AC instrumentation → PR-3A alias layer → SpiderData aggregation PA tool → PR-3B semantic retune). Full handoff: [`SESSION_1189_SPIDER_CONTEXT_AC_VOCABULARY_TOOL_AND_ROLLOUT.md`](docs/handoffs/SESSION_1189_SPIDER_CONTEXT_AC_VOCABULARY_TOOL_AND_ROLLOUT.md).
 
-**Headline:** Rigby's PR-prep recon inverted the framing — only ThinkingAgent was the actual miss (ImageAgent + ResearchAgent already substring-matched). PR-2 supply recon then surfaced a **platform-wide vocabulary mismatch**: AGENT_SPIDER_MAPPINGS uses semantic names (`creative`, `crypto`, `sports`) that don't match real `SpiderData.data_type` values (`design`/`visual_trends`/`video`, `blockchain`, `sports_odds`/`sports_news`). `ai_ml` (364 actionable/30d, 2nd-largest tech-adjacent bucket) wasn't referenced by any agent. PR-2 fixed Image+Research; PR-3 covers the rest.
+**Headline:** every agent dispatch now records `AgentExecution.input_data['spider_context']` with per-category `items_returned_by_category` + `has_data_by_category` + `build_ms` (Item 1 = #2385). `creative`/`crypto`/`sports`/`security` are auto-expanding aliases (PR-3A = #2386 + PR-3B = #2388). Rigby has a first-class `spider_data_aggregation_tool` PA tool (Item 3 = #2387) and used it live to drive PR-3B recon. 19 agents got `ai_ml`, 5 high-supply buckets rolled out to relevant agents (PR-3B = #2388).
 
-### Pick this session — Rigby's PR-3 spec is ready
+### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **PR-3 — vocabulary bridge for `AGENT_SPIDER_MAPPINGS`** | **P1** | Rigby's deliverable `a48e1164-edc6-49d8-bc70-135bedb614a9`. Recommended split: PR-3A (alias layer + drop dead keys), PR-3B (systematic retune + `ai_ml` rollout). **Read Rigby's spec first**, then route scope through her before code. |
-| **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P1 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
+| **7d AC watches** | **P1 (time-gated)** | Start **2026-06-28** — first meaningful read after a full week of real traffic. ORM-queryable from `AgentExecution.input_data['spider_context']`. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388 descriptions. If session opens before 2026-06-28, defer this and pick another item. |
+| **PR-D contract flip** | P2 | Deliverable `9d9db48a-4819-4e2b-9548-998c0fe2f8f5`. 24h WARN-volume eligibility gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
+| **C-trace remediation #1 — unify `AgentSpiderConnection` vs `AGENT_SPIDER_MAPPINGS`** | P2 (structural) | Session 1187 C deliverable `1f548d38-...` § Action implications #1. Larger blast radius — needs design call with Rigby. |
 | **C-trace remediation #4 — orphan spiders audit** | P2 | ~60 actionable spiders have no consumer. Wire or stop crawling. C deliverable § Action implications #4. |
-| **Build SpiderData aggregation PA tool** | P2 | Spec appended to missing-PA-tools deliverable `13032820-1f36-4a1c-8843-6a9d53653405`. Recurring need — came up twice in two sessions. Group-by `data_type` with `is_actionable` + window filters, optional samples per group. |
-| **Adjacent investigations from C trace** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface SpiderItemHash `item_title='Unknown'` — spider extractor bug. |
+| **Adjacent C-trace investigations (Session 1187)** | P3 (small) | (a) `MarketingStrategyAgent` only agent inheriting `execute()` — likely broken; 5-min look. (b) `AgentExecution.owner_agent` empty in ~75% of rows — schema drift to confirm. (c) huggingface `SpiderItemHash item_title='Unknown'` — spider extractor bug. |
+| **Bucket follow-up — Rigby pruned these** | P3 | If 7d AC shows under-served agents, consider rolling out `business` (92), `government` (87), `blockchain` (79), `gaming` (55), `entertainment` (71), `science` (71) to relevant agents. Same one-line-per-agent pattern as PR-3B. |
+| **DM-system bug** | P3 | Deliverable `9a00667b-...`. Three symptoms (reply-delivery / no UI notifier / single-thread collapse). Rigby's two leads: thread reuse since 2026-06-13, `sender_type: rigby` mislabel. |
+| **Dedicated inventory-refresh PR** | P3 | Reconcile the `Agents count claims` CONFLICT so future PRs don't need `--admin` bypass. 220+ canonical claims, 2914 supporting, 7948 historical. Painful — defer unless someone has bandwidth. |
 
-### 7d AC watches (post-merge from Session 1188 PRs)
+### 7d AC watches that start 2026-06-28
 
-**Starts 2026-06-28** — measure these via `AgentExecution.input_data['spider_context']` or equivalent:
+Session 1188 + 1189 PRs ship measurable AC backed by Item 1's `AgentExecution.input_data['spider_context']` blob. Query pattern:
 
-- **PR #2380 / #2382** combined ACs:
-  - ImageAgent: `categories_queried` includes `design`/`visual_trends`/`video`; ≥1 dispatch with `has_data=True` against any of those.
-  - ResearchAgent: `categories_queried` includes `ai_ml`+`business`; ≥1 dispatch with `has_data=True` against `ai_ml` specifically.
-  - ThinkingAgent: ≥3 dispatches with spider context built, ≥1 with `has_data=True`.
+```python
+AgentExecution.objects.filter(
+    owner_agent__iexact='<AgentName>',
+    created_at__gte=now - timedelta(days=7),
+    input_data__spider_context__has_data_by_category__<bucket>=True,
+).count()
+```
+
+**Per-PR AC summary:**
+
+- **#2380/#2382 (Session 1188):** ImageAgent — `design`/`visual_trends`/`video` present in `categories_queried` with ≥1 `has_data=True`; ResearchAgent — `ai_ml`+`business` present with ≥1 `True` against `ai_ml`; ThinkingAgent — ≥3 dispatches with spider context built, ≥1 `True`.
+- **#2386 PR-3A:** legacy substring-matched agents (e.g., `ImageEditingAgent`, `WhaleWatcherAgent`) show alias divergence — `creative`/`crypto` in `requested_categories` but resolved counterparts in `resolved_categories`.
+- **#2388 PR-3B:** `ai_ml` shows in `has_data_by_category` for the 19 specced agents with ≥1 `True` across dev/strategy/content tier. `remote_work` for job/career. `legislation` for legal/cto/coo. `content` for content_writer/topic_miner. `cybersecurity` for security-mapped agents (alias-divergence proof).
 
 ### Carryover from Session 1186/1187/1188
 
 | Deliverable ID | Title | Priority | Status |
 |---|---|---|---|
 | `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Pending |
-| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | 24h elapsed 2026-06-22 16:00. Run the grep at AC1 to confirm zero non-agent WARNs, then open PR-D if clean. |
-| `88952c54-a4a4-47e8-9fe1-85b3d747be03` | Session 1187 Utilization Recon — Master Tracking | — | C-trace #3 closed via Session 1188 PRs; #1/#2/#4 open per table above. |
-| `9a00667b-2206-4f25-8813-a42faf463439` | **BUG** — DM system: missing reply delivery + no UI notifier + thread collapsing | P3 | Chris-reported Session 1188 close. Three symptoms: (1) his replies to Rigby DMs aren't reaching her, (2) no UI notifier when new DM arrives, (3) all DMs collapse into one thread. Rigby diagnostics: thread `d5c32d7f-...` reused since 2026-06-13 (confirms #3); all messages stamped `sender_type: rigby` even when sender=chris (likely root cause of #1 read-path issue). Defer fix; flip to P1 only if Chris escalates. |
+| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | 24h elapsed 2026-06-22 16:00. If grep is clean, PR-D is ready. |
+| `88952c54-a4a4-47e8-9fe1-85b3d747be03` | Session 1187 Utilization Recon — Master Tracking | — | C-trace #3 fully closed across Sessions 1188+1189 (#2380/#2382/#2386/#2388). #1, #2, #4 still open per table above. |
+| `9a00667b-2206-4f25-8813-a42faf463439` | **BUG** — DM system: missing reply delivery + no UI notifier + thread collapsing | P3 | Three symptoms + two Rigby diagnostic leads. Defer fix; flip to P1 only if Chris escalates. |
+| `b8ca4f5c-2b3c-4095-ab3b-329e02b98c9e` | Session 1189 PR-3B retune list | — | Shipped via #2388. Reference doc for the 19-agent ai_ml rollout + 5-bucket map. |
+| `13032820-1f36-4a1c-8843-6a9d53653405` | Missing PA tools — SpiderData aggregation entry | — | CLOSED — built and shipped as `spider_data_aggregation_tool` v1 (#2387). Other missing-tool entries may still be open. |
 
 ### Standard FIRST THING checks
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (use `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-donkeyking-token>` explicitly — `tools/pa_local.sh` is pinned to a stale conv): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on current conversation `pa-6658d90a3e4942b3` (Session 1188 thread). Rotate to fresh Session 1189 thread if over 60/100.
-4. `gh pr list --author @me --state open` — expected empty (both Session 1188 PRs merged via `--admin` bypass on pre-existing CONFLICT).
+2. Through Rigby (use `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-chris-token>` explicitly — `tools/pa_local.sh` is pinned to a stale conv): `platform_config_tool overview` → confirm `service_context: local`.
+3. `session_tool health_check` on current conversation `pa-9dd0d784c41a4e4d` (Session 1189 thread; ended healthy). Rotate to fresh Session 1190 thread if over 60/100.
+4. `gh pr list --author @me --state open` — expected empty (all 4 Session 1189 PRs merged via `--admin` bypass).
 
-### Stacked-PR footgun reminder (new from Session 1188)
+### Stacked-PR footgun reminder
 
-`gh pr merge --delete-branch` on a parent PR **auto-closes child PRs unrecoverably** when their base branch is deleted. `gh pr reopen` fails ("Could not open the pull request"). Workaround: retarget child PR's base to `main` BEFORE merging the parent (`gh pr edit <child> --base main`). Session 1188 hit this with #2381 → had to open fresh #2382.
+`gh pr merge --delete-branch` on a parent PR **auto-closes child PRs unrecoverably** when their base branch is deleted. `gh pr reopen` fails. Workaround: retarget child PR's base to `main` BEFORE merging the parent (`gh pr edit <child> --base main`). Session 1188 hit this with #2381 → had to open fresh #2382. Session 1189 avoided entirely by opening every PR against `main` directly.
 
 ### Pre-existing CONFLICT — `--admin` bypass still required
 
-The `context-kit verify` `Agents count claims` CONFLICT (220+ canonical doc claims, 2914 supporting, 7948 historical mentions of varying counts) is still pre-existing on main. Strict mode Repo Guardrails will fail on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. **Worth a dedicated inventory-refresh PR at some point** to remove the bypass requirement.
+`context-kit verify` `Agents count claims` CONFLICT (220+ canonical, 2914 supporting, 7948 historical) still on main. Strict mode Repo Guardrails fails on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. Worth a dedicated inventory-refresh PR if anyone has the bandwidth.
+
+---
+
+## SESSION 1189 CLOSED — Spider context end-to-end: 4 PRs merged (AC + alias + tool + rollout) (2026-06-21)
+
+**4 PRs merged, all `--admin` bypass on pre-existing CONFLICT.** Full handoff: [`SESSION_1189_SPIDER_CONTEXT_AC_VOCABULARY_TOOL_AND_ROLLOUT.md`](docs/handoffs/SESSION_1189_SPIDER_CONTEXT_AC_VOCABULARY_TOOL_AND_ROLLOUT.md).
+
+| Item | PR | Commit | Theme |
+|---|---|---|---|
+| 1 — AC instrumentation | [#2385](https://github.com/clwest/donkey-betz-platform/pull/2385) | `403f836e` | Persist `spider_context` blob on `AgentExecution.input_data` with per-category breakdowns + `build_ms`. New helper `agent_router.build_spider_context_ac_blob`. |
+| 2 — PR-3A alias layer | [#2386](https://github.com/clwest/donkey-betz-platform/pull/2386) | `b6d80ff4` | `CATEGORY_ALIASES` + `KNOWN_DATA_TYPES` + `_normalize_categories`. `categories_requested` vs `categories_queried` divergence threaded through AC blob. |
+| 3 — SpiderData aggregation PA tool v1 | [#2387](https://github.com/clwest/donkey-betz-platform/pull/2387) | `29a5968f` | `spider_data_aggregation_tool` registered in dispatcher + pa_tool_schemas. Pure `aggregate_spider_data()` + dispatcher handler. Smoke-tested live by Rigby (83ms/20ms). |
+| 4 — PR-3B retune | [#2388](https://github.com/clwest/donkey-betz-platform/pull/2388) | `fb9b8539` | `security` → `cybersecurity` alias. `ai_ml` added to 19 agent mappings. 5 high-supply bucket rollouts (remote_work/training/legislation/prediction_markets/content). |
+
+**Sequence pushback (Rigby vs Chris's tool-first intuition) won the day.** Chris leaned tool-first; Rigby pushed back that AC-first sequencing makes 7d watches verifiable AND lets PR-3A ship immediately without new tools. Sequence ratified as 1→3→2→4. By the time Item 3 landed, Items 1+2 were already merged and Rigby drove Item 4 recon end-to-end through the new tool — zero Django shell scripts this session.
+
+**Collaboration shape:** every item routed scope through Rigby first per scope rule. She owned recon (call-chain audits, supply queries, mapping inventories), API design call for Item 3, agent-by-agent retune list for Item 4 (deliverable `b8ca4f5c-...`), security alias decision. Claude owned code edits, tests, branches, PRs, worker restart between Items 3 and 4, presenting design decisions at C-style pause points.
+
+**Capabilities now live:**
+1. AC observability — every dispatch records the spider_context blob; AC watches ORM-queryable
+2. Vocabulary bridge — creative/crypto/sports/security all auto-expand to real data_type values
+3. First-class supply recon via `spider_data_aggregation_tool` PA tool
+4. ai_ml now consumed by 19 agents (was 1); 5 buckets rolled out; prediction_market finally gets its own bucket
+
+**New memory candidates** (capture at next session-end review):
+1. Rigby pushes back on sequencing — listen. When two reasonable orderings exist, her counter often refines the choice.
+2. First-class observability fields make AC trivial. Item 1's requested-vs-resolved divergence wasn't just observability — it was a contract for Item 4's AC.
+3. Tool-handler pattern: pure function + dispatcher entry point. Item 3 separated `aggregate_spider_data()` (pure, testable) from the dispatcher handler. Unused interface args (tool_name/user_id) belong in the signature — don't underscore-rename.
 
 ---
 
