@@ -96,6 +96,94 @@ def send_execution_update(execution_id: str, update_data: Dict[str, Any]):
         logger.error(f"Failed to send WebSocket update: {e}")
 
 
+def _extract_artifact_pointers(execution_record):
+    """Session 1181 PR5 — extract artifact references from execution.output_data
+    into the canonical three-bucket shape (deliverable_ids / blog_ids / media_ids)
+    that compose_completion_body + frontend bubble renderer expect.
+
+    Per-agent shapes covered in v1:
+      - ImageAgent: output_data.metadata.images = [{image_id, ...}, ...] → media_ids
+      - EditorAgent: output_data.metadata.blog_id = <uuid or None> → blog_ids
+      - Canonical passthrough: if output_data.metadata.{deliverable_ids,blog_ids,
+        media_ids} is already a list, copy through (lets future agents skip the
+        per-agent branch by writing canonical buckets directly).
+
+    Shape-robust per Rigby's guardrails: output_data may be None, metadata may
+    be missing, list items may be malformed. Each bucket dedupes while preserving
+    first-seen order. Unknown agents / missing artifacts return empty dict.
+    Fails closed — any exception returns {} so the broadcast continues with the
+    same "bubble with no artifact link" semantic as pre-PR5 (no worse than today).
+
+    ContentWriterAgent, VideoAgent, AudioAgent shapes are deferred to a follow-up
+    PR pending real-world samples (current sample's output_data has no metadata
+    key for ContentWriter; no completed samples exist for Video/Audio).
+    """
+    try:
+        output_data = getattr(execution_record, 'output_data', None) or {}
+        if not isinstance(output_data, dict):
+            return {}
+        metadata = output_data.get('metadata') or {}
+        if not isinstance(metadata, dict):
+            return {}
+
+        pointers = {}
+
+        def _dedupe_preserving_order(seq):
+            seen = set()
+            out = []
+            for item in seq:
+                if item is None:
+                    continue
+                key = str(item)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(key)
+            return out
+
+        agent_name = (
+            execution_record.agent.name
+            if getattr(execution_record, 'agent_id', None) else None
+        )
+
+        # ImageAgent: metadata.images = [{image_id, file_path, image_url, ...}, ...]
+        if agent_name == 'ImageAgent':
+            images = metadata.get('images') or []
+            if isinstance(images, list):
+                ids = [
+                    img.get('image_id')
+                    for img in images
+                    if isinstance(img, dict) and img.get('image_id')
+                ]
+                ids = _dedupe_preserving_order(ids)
+                if ids:
+                    pointers['media_ids'] = ids
+
+        # EditorAgent: metadata.blog_id = <uuid or None>
+        if agent_name == 'EditorAgent':
+            blog_id = metadata.get('blog_id')
+            if blog_id:
+                pointers['blog_ids'] = [str(blog_id)]
+
+        # Canonical passthrough: agents writing the three buckets directly to
+        # metadata are honored without needing a per-agent branch.
+        for bucket in ('deliverable_ids', 'blog_ids', 'media_ids'):
+            raw = metadata.get(bucket)
+            if isinstance(raw, list) and raw:
+                merged = pointers.get(bucket, []) + [str(x) for x in raw if x is not None]
+                deduped = _dedupe_preserving_order(merged)
+                if deduped:
+                    pointers[bucket] = deduped
+
+        return pointers
+    except Exception as e:
+        logger.warning(
+            "[_extract_artifact_pointers] fail-closed execution=%s (%s: %s)",
+            getattr(execution_record, 'id', None), type(e).__name__, e,
+        )
+        return {}
+
+
 def create_implicit_followup_subscription(execution_record, context):
     """Session 1178 Phase 2 c1 — auto-wake: create an armed follow-up sub at dispatch.
 
@@ -184,15 +272,18 @@ def fire_agent_followup_subscriptions(execution_record):
 
         now = timezone.now()
 
-        # Payload contract (Phase 1 invariant). artifact_pointers stays empty in PR-2a;
-        # PR-2b populates it from the consumer once we wire up deliverable lookup.
+        # Payload contract. Session 1181 PR5: artifact_pointers now populated
+        # from execution.output_data via _extract_artifact_pointers — ImageAgent
+        # surfaces media_ids, EditorAgent surfaces blog_ids, canonical passthrough
+        # for agents writing the three buckets directly. Other agents get {} (no
+        # artifact link in bubble — same as pre-PR5 behavior, no regression).
         payload = {
             'execution_id': str(execution_record.id),
             'agent_name': execution_record.agent.name if getattr(execution_record, 'agent_id', None) else None,
             'status': execution_record.status,
             'completed_at': execution_record.completed_at.isoformat() if execution_record.completed_at else None,
             'error_signature': (execution_record.error_message or '')[:200] if execution_record.status == 'failed' else None,
-            'artifact_pointers': {},
+            'artifact_pointers': _extract_artifact_pointers(execution_record),
         }
 
         # Atomic state transition — armed → fired only if still armed AND not expired.
