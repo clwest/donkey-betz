@@ -240,6 +240,13 @@ Return ONLY valid JSON, no markdown fences."""
         ws, ws_saved = resolve_workspace()
 
         # Save as Deliverable
+        # Session 1186 PR-C bucket 4 callsite A: opt into factory synthesis
+        # via trigger_source='direct'. This is NOT a BaseAgent dispatch
+        # (direct OpenAI call inside the task body, 'VideoContentPackAgent'
+        # is a descriptive label only), so there's no execution to thread.
+        # Synthesis gives the deliverable a queryable AgentExecution receipt
+        # without standing up a fake agent dispatch. Metadata carries the
+        # celery task context for audit.
         from core.services.deliverable_factory import create_deliverable
         deliverable = create_deliverable(
             title=f"Content Pack: {video_title[:180]}",
@@ -256,6 +263,15 @@ Return ONLY valid JSON, no markdown fences."""
             preview_content=(content_pack.get('summary', '') or '')[:500],
             workspace=ws,
             is_saved=ws_saved,
+            metadata={
+                'trigger_source': 'direct',
+                'celery_task_name': 'generate_video_content_pack_task',
+                'video_id': str(video_id),
+                'user_id': str(user_id),
+                'language': language,
+                'llm_model': 'gpt-5-mini',
+                'transcript_id': str(transcript.id),
+            },
         )
 
         logger.info(f"Content pack generated for video {video_id}: deliverable {deliverable.id}")
