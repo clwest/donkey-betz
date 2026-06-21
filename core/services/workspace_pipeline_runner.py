@@ -389,10 +389,63 @@ def _run_agent_with_timeout(run, stage_idx, stage, router, workspace, config, br
                 logger.warning("Pipeline %s stage %d (%s) accepted with warnings: %s",
                                run.id, stage_idx, stage_name, validation['issues'])
 
+            # Session 1185 PR-C bucket 3B-2: per-stage orchestration AgentExecution.
+            # Each stage gets its own receipt row so downstream provenance reads
+            # can pivot from any stage deliverable back to (a) the stage execution,
+            # (b) the parent pipeline run, and (c) via F2 reverse-link, list
+            # deliverables produced by this stage. Per Rigby's #2 caution:
+            # agent_name is the actual invoked agent (e.g., TopicMinerAgent);
+            # stage_name lives in input_data/metadata only.
+            stage_execution_id: Optional[str] = None
+            try:
+                from core.models_unified_system import Agent, AgentExecution
+                from django.utils import timezone as _tz
+                _agent_record, _ = Agent.objects.get_or_create(
+                    name=agent_name or 'WorkspacePipelineStage',
+                    defaults={
+                        'agent_type': 'routable',
+                        'description': f'{agent_name} - workspace pipeline stage executions',
+                        'specialization': '',
+                        'is_active': True,
+                    },
+                )
+                _stage_execution = AgentExecution.objects.create(
+                    agent=_agent_record,
+                    user=run.triggered_by,
+                    task=(f'Pipeline {run.id} stage {stage_idx} ({stage_name}): {task_desc[:400]}')[:500],
+                    status='completed',
+                    owner_agent=agent_name or 'WorkspacePipelineStage',
+                    parent_object_type='pipeline_run',
+                    parent_object_id=run.id,
+                    input_data={
+                        'source': 'workspace_pipeline_runner',
+                        'execution_kind': 'orchestration_stage',
+                        'pipeline_run_id': str(run.id),
+                        'stage_name': stage_name,
+                        'stage_index': stage_idx,
+                        'workspace_id': str(workspace.id),
+                        'quality_score': validation['quality_score'],
+                    },
+                    output_data={'kind': 'pipeline_stage_receipt',
+                                 'summary': summary[:500]},
+                    last_heartbeat_at=_tz.now(),
+                    completed_at=_tz.now(),
+                )
+                stage_execution_id = str(_stage_execution.id)
+            except Exception as _exec_err:
+                logger.warning(
+                    "[workspace_pipeline_runner] Failed to create per-stage "
+                    "AgentExecution for pipeline=%s stage=%d (%s: %s) — "
+                    "deliverable will fall through to the factory's WARN bucket",
+                    run.id, stage_idx, type(_exec_err).__name__, _exec_err,
+                )
+
             deliverable_id = _save_stage_deliverable(
                 workspace=workspace, stage_name=stage_name, agent_name=agent_name,
                 content=content, brief=brief, run_id=str(run.id), user=run.triggered_by,
                 packet_id=getattr(run, '_packet_id', None),
+                stage_index=stage_idx,
+                stage_execution_id=stage_execution_id,
             )
 
             output = {
@@ -447,8 +500,17 @@ STAGE_TO_ROLE = {
 }
 
 
-def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, run_id, user, packet_id=None):
-    """Save stage output as a workspace-scoped Deliverable and link to content packet."""
+def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, run_id, user,
+                            packet_id=None, stage_index=None, stage_execution_id=None):
+    """Save stage output as a workspace-scoped Deliverable and link to content packet.
+
+    Session 1185 PR-C bucket 3B-2: accepts `stage_execution_id` (str) from
+    the per-stage AgentExecution receipt created in `_run_agent_with_timeout`.
+    When present, threads through to `create_deliverable` as
+    `parent_execution_id` so the factory wires
+    `parent_object_type='agent_execution'` and auto-tags
+    `trigger_source='agent_execution'`. Falls into legacy WARN bucket if None.
+    """
     try:
         from core.models_deliverables import Deliverable, ContentPacketItem, ContentPacket
         topic = brief.get('topic', workspace.name) if brief else workspace.name
@@ -462,8 +524,14 @@ def _save_stage_deliverable(workspace, stage_name, agent_name, content, brief, r
             user=user,
             content_format='markdown',
             is_saved=True,
-            metadata={'pipeline_run_id': run_id, 'stage_name': stage_name,
-                      'workspace_brief_topic': brief.get('topic', '') if brief else ''},
+            parent_execution_id=stage_execution_id,
+            metadata={
+                'pipeline_run_id': run_id,
+                'stage_name': stage_name,
+                'stage_index': stage_index,
+                'stage_agent': agent_name,
+                'workspace_brief_topic': brief.get('topic', '') if brief else '',
+            },
             workspace=workspace,
         )
 
