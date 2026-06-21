@@ -128,13 +128,14 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
   - ResearchAgent: `categories_queried` includes `ai_ml`+`business`; ≥1 dispatch with `has_data=True` against `ai_ml` specifically.
   - ThinkingAgent: ≥3 dispatches with spider context built, ≥1 with `has_data=True`.
 
-### Carryover from Session 1186/1187
+### Carryover from Session 1186/1187/1188
 
 | Deliverable ID | Title | Priority | Status |
 |---|---|---|---|
 | `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Pending |
 | `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | 24h elapsed 2026-06-22 16:00. Run the grep at AC1 to confirm zero non-agent WARNs, then open PR-D if clean. |
 | `88952c54-a4a4-47e8-9fe1-85b3d747be03` | Session 1187 Utilization Recon — Master Tracking | — | C-trace #3 closed via Session 1188 PRs; #1/#2/#4 open per table above. |
+| `9a00667b-2206-4f25-8813-a42faf463439` | **BUG** — DM system: missing reply delivery + no UI notifier + thread collapsing | P3 | Chris-reported Session 1188 close. Three symptoms: (1) his replies to Rigby DMs aren't reaching her, (2) no UI notifier when new DM arrives, (3) all DMs collapse into one thread. Rigby diagnostics: thread `d5c32d7f-...` reused since 2026-06-13 (confirms #3); all messages stamped `sender_type: rigby` even when sender=chris (likely root cause of #1 read-path issue). Defer fix; flip to P1 only if Chris escalates. |
 
 ### Standard FIRST THING checks
 
