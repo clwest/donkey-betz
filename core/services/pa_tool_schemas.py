@@ -1697,9 +1697,36 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "description": "Writing task (e.g. 'write a blog post about AI trends in 2026')",
                 },
+                # Session 1184 PR-D: promoted content_type to an explicit enum
+                # at the tool-call level. Previously it was buried inside the
+                # freeform `context` dict, which let GPT-5.2 pick invalid
+                # values (e.g. "deliverable" — the container, not a type).
+                # An invalid value failed the dispatch hard and broke
+                # provenance forensic runs. Now the enum constrains selection
+                # to the seven types ContentWriterAgent actually knows how to
+                # produce. Note: "internal_document" covers diagnostic/handoff
+                # docs, technical specs, planning notes — anything that's not
+                # one of the other six.
+                "content_type": {
+                    "type": "string",
+                    "enum": [
+                        "blog_post",
+                        "podcast_script",
+                        "video_script",
+                        "article",
+                        "social_thread",
+                        "newsletter",
+                        "internal_document",
+                    ],
+                    "description": (
+                        "Content format to produce. Use 'internal_document' for "
+                        "diagnostics, handoffs, planning notes, or any doc that "
+                        "isn't externally publishable."
+                    ),
+                },
                 "context": {
                     "type": "object",
-                    "description": "Additional context: content_type, tone, audience, word_count, keywords",
+                    "description": "Additional context: tone, audience, word_count, keywords",
                 },
             },
             "required": ["task"],
