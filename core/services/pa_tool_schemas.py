@@ -334,7 +334,10 @@ PA_TOOL_SCHEMAS = [
             "execution details, and full output data. Use when the user asks about "
             "what agents have done, execution logs, agent activity, run history, "
             "or wants to see the full output/report/result from a specific agent run. "
-            "Use action=detail with id or agent_name to get full output_data."
+            "Use action=detail with id or agent_name to get full output_data. "
+            "The detail response also includes a `deliverables` field listing up to "
+            "25 deliverables produced by the execution (reverse-link pivot to "
+            "deliverable_tool.detail provenance)."
         ),
         "parameters": {
             "type": "object",
