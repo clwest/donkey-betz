@@ -248,28 +248,128 @@ class CreateCompletionRowTests(TestCase):
         )
         self.assertIsNone(row.metadata['subscription_id'])
 
-    def test_unauthenticated_user_resolved_to_none(self):
-        # Defensive: if consumer.scope user is anonymous, the helper passes
-        # user=None to .create(). The consumer's .connect() actually rejects
-        # anonymous users with close(code=4001) so this path shouldn't fire
-        # in practice — but the guard catches accidental future regressions.
-        #
-        # The chat_conversations.user_id column currently has a NOT NULL
-        # constraint at the DB level despite the model allowing null=True
-        # (pre-existing schema drift); we verify the resolution logic by
-        # intercepting the .create() call rather than letting it hit the DB.
-        from unittest.mock import patch
-        from core.models.conversations.models import ChatConversation as CC
+    def test_unauthenticated_user_raises_typed_error(self):
+        # Session 1182 PR #2356 — the prior `user=user if (...) else None` silent
+        # fallback was a footgun: chat_conversations.user_id is NOT NULL, so the
+        # None case ALWAYS produced an IntegrityError downstream (harder to
+        # debug, looked like infra/data issue). Now the helper enforces its
+        # contract — caller MUST supply an authenticated user; anonymous /
+        # None inputs raise AnonymousCompletionRowError early.
+        from core.consumers_pa_conversation import AnonymousCompletionRowError
 
         class _Anon:
             is_authenticated = False
 
-        with patch.object(CC.objects, 'create', return_value=object()) as mock_create:
+        with self.assertRaises(AnonymousCompletionRowError):
             create_completion_row(
                 user=_Anon(), conversation_id=self.conversation_id,
                 execution_id=str(self.execution.id), agent_name='X',
                 status='completed', completed_at='', error_signature=None,
                 artifact_pointers={}, assistant_response='body',
             )
-        kwargs = mock_create.call_args.kwargs
-        self.assertIsNone(kwargs['user'])
+
+    def test_none_user_raises_typed_error(self):
+        # Same contract as above for the explicit None case.
+        from core.consumers_pa_conversation import AnonymousCompletionRowError
+
+        with self.assertRaises(AnonymousCompletionRowError):
+            create_completion_row(
+                user=None, conversation_id=self.conversation_id,
+                execution_id=str(self.execution.id), agent_name='X',
+                status='completed', completed_at='', error_signature=None,
+                artifact_pointers={}, assistant_response='body',
+            )
+
+
+class ResolveCompletionUserTests(TestCase):
+    """Session 1182 PR #2356 — fire helper attribution resolution.
+
+    Reproduces the 24h-watch finding from Session 1182 open: PR #2352's
+    server-side persist passed `getattr(execution_record, 'user', None)` which
+    returned None for PA-originated ImageAgent dispatches → IntegrityError on
+    chat_conversations.user_id NOT NULL → fail-open. The new resolver falls
+    back to the conversation thread owner so the architectural intent of
+    PR #2352 (decouple from WS consumer) holds even when execution.user is
+    missing.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='resolve-user-test', email='ru@example.com', password='x',
+        )
+        self.agent, _ = Agent.objects.get_or_create(
+            name='ImageAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+        self.conversation_id = 'pa-resolve-test-abc'
+
+    def test_returns_execution_user_when_authenticated(self):
+        from core.tasks_agents import _resolve_completion_user
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='fast-path',
+            status='completed', conversation_id=self.conversation_id,
+            completed_at=timezone.now(),
+        )
+        resolved = _resolve_completion_user(execution, self.conversation_id)
+        self.assertEqual(resolved.pk, self.user.pk)
+
+    def test_falls_back_to_conversation_owner_when_execution_user_missing(self):
+        # Repro of Session 1182's 24h-watch finding. Execution.user=None
+        # (the PA-originated ImageAgent path in normal operation). The
+        # resolver should pick up the user from the conversation's prior
+        # user-authored rows.
+        from core.tasks_agents import _resolve_completion_user
+        ChatConversation.objects.create(
+            user=self.user, conversation_id=self.conversation_id,
+            user_message='draw a cat', assistant_response='on it',
+            source='pa', platform='api',
+        )
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=None, task='no-attribution',
+            status='completed', conversation_id=self.conversation_id,
+            completed_at=timezone.now(),
+        )
+        resolved = _resolve_completion_user(execution, self.conversation_id)
+        self.assertIsNotNone(resolved)
+        self.assertEqual(resolved.pk, self.user.pk)
+
+    def test_returns_none_when_no_attribution_available(self):
+        # No execution.user AND no prior conversation rows → resolver returns
+        # None and the fire helper logs persist_skipped_missing_user instead
+        # of hitting IntegrityError.
+        from core.tasks_agents import _resolve_completion_user
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=None, task='orphan',
+            status='completed', conversation_id=self.conversation_id,
+            completed_at=timezone.now(),
+        )
+        resolved = _resolve_completion_user(execution, self.conversation_id)
+        self.assertIsNone(resolved)
+
+    def test_picks_latest_owner_when_multiple_rows_exist(self):
+        # Deterministic ordering: latest row with a non-null user wins.
+        # Use distinct users to confirm we pick the right one.
+        from core.tasks_agents import _resolve_completion_user
+        other_user = User.objects.create_user(
+            username='resolve-other', email='other@example.com', password='x',
+        )
+        older = ChatConversation.objects.create(
+            user=other_user, conversation_id=self.conversation_id,
+            user_message='earlier turn', assistant_response='',
+            source='pa', platform='api',
+        )
+        ChatConversation.objects.filter(id=older.id).update(
+            created_at=timezone.now() - timedelta(hours=1),
+        )
+        ChatConversation.objects.create(
+            user=self.user, conversation_id=self.conversation_id,
+            user_message='most recent', assistant_response='',
+            source='pa', platform='api',
+        )
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=None, task='multi',
+            status='completed', conversation_id=self.conversation_id,
+            completed_at=timezone.now(),
+        )
+        resolved = _resolve_completion_user(execution, self.conversation_id)
+        self.assertEqual(resolved.pk, self.user.pk)
