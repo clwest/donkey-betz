@@ -322,6 +322,7 @@ def _ensure_repo_profile_deliverable(config: dict, workspace: Any, user: Any, fo
         return existing
 
     from core.services.deliverable_factory import create_deliverable
+    metadata.setdefault("trigger_source", "direct")
     deliverable = create_deliverable(
         title=title,
         content=content,
