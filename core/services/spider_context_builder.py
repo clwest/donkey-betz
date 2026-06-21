@@ -20,6 +20,46 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+# Session 1189 PR-3A (C-trace remediation #2 — vocabulary bridge):
+# AGENT_SPIDER_MAPPINGS historically used human-semantic category names
+# (`creative`, `crypto`, `sports`) that don't match the values actually
+# stored in `SpiderData.data_type`. Session 1188's supply recon
+# (deliverable 13032820-... / a48e1164-...) found those three keys had
+# ZERO actionable rows in 30d while the real buckets (`design`,
+# `visual_trends`, `video`, `blockchain`, `sports_odds`, `sports_news`)
+# were unmapped from any agent that didn't explicitly list them.
+#
+# This alias map lets AGENT_SPIDER_MAPPINGS keep its semantic vocabulary
+# while `_normalize_categories` translates to real data_type keys at
+# query time. Soft transition — keys are KEPT (not removed) so any
+# external caller or hardcoded string still resolves.
+CATEGORY_ALIASES: Dict[str, List[str]] = {
+    'creative': ['design', 'visual_trends', 'video'],
+    'crypto': ['blockchain'],
+    'sports': ['sports_odds', 'sports_news'],
+}
+
+# Session 1189 PR-3A: snapshot of real SpiderData.data_type values
+# present in the 30d supply recon (Session 1188 PR-2). Used by
+# `_normalize_categories` to emit a one-time warning when a mapped
+# category is neither a known data_type nor a known alias — which
+# means that agent will silently receive no spider context for that
+# bucket. Intentionally a frozen snapshot, not a live query —
+# regenerate alongside PR-3B when new data_type buckets start
+# producing supply. Listed alphabetically.
+KNOWN_DATA_TYPES: frozenset = frozenset({
+    'ai_ml', 'blockchain', 'business', 'community', 'content',
+    'cybersecurity', 'defense_tech', 'design', 'education',
+    'entertainment', 'financial', 'food', 'freelance', 'gaming',
+    'government', 'health', 'healthtech', 'innovation', 'intelligence',
+    'jobs', 'legal', 'legislation', 'library', 'lifestyle',
+    'news', 'opportunity', 'parenting', 'prediction_markets',
+    'real_estate', 'remote_work', 'science', 'social',
+    'sports_news', 'sports_odds', 'startups', 'tech', 'training',
+    'travel', 'video', 'visual_trends', 'weather', 'web_development',
+})
+
+
 class SpiderContextBuilder:
     """
     Session 744: Automatically builds spider context for any agent.
@@ -358,6 +398,51 @@ class SpiderContextBuilder:
 
         return list(boosts)
 
+    # Session 1189 PR-3A: process-wide warn-once tracking so we don't
+    # flood logs every dispatch when an agent mapping references an
+    # unknown category.
+    _warned_unknown_categories: set = set()
+
+    def _normalize_categories(self, categories: List[str]) -> List[str]:
+        """Translate AGENT_SPIDER_MAPPINGS values to real SpiderData.data_type
+        keys via CATEGORY_ALIASES, deduplicating while preserving order.
+
+        Unknown categories (not in CATEGORY_ALIASES, not in KNOWN_DATA_TYPES)
+        pass through unchanged with a one-time WARN per process — they
+        will fetch nothing but we don't drop them in case a new data_type
+        is in flight and KNOWN_DATA_TYPES just hasn't been refreshed yet.
+        """
+        if not categories:
+            return []
+        resolved: List[str] = []
+        seen: set = set()
+        for cat in categories:
+            if not isinstance(cat, str):
+                continue
+            expansion = CATEGORY_ALIASES.get(cat)
+            if expansion is not None:
+                logger.debug(
+                    f"[session-1189-pr3a] alias '{cat}' → {expansion}"
+                )
+                for real in expansion:
+                    if real not in seen:
+                        seen.add(real)
+                        resolved.append(real)
+                continue
+            if cat not in KNOWN_DATA_TYPES and cat not in self._warned_unknown_categories:
+                self._warned_unknown_categories.add(cat)
+                logger.warning(
+                    f"[session-1189-pr3a] AGENT_SPIDER_MAPPINGS references "
+                    f"unknown category '{cat}' (neither alias nor known "
+                    f"SpiderData.data_type) — that bucket will return empty. "
+                    f"Add it to KNOWN_DATA_TYPES or CATEGORY_ALIASES if it's "
+                    f"a real bucket. Subsequent occurrences suppressed."
+                )
+            if cat not in seen:
+                seen.add(cat)
+                resolved.append(cat)
+        return resolved
+
     def build_context_for_agent(
         self,
         agent_name: str,
@@ -389,11 +474,18 @@ class SpiderContextBuilder:
             agent_categories = self._get_agent_categories(agent_name)
             task_boosts = self._get_task_category_boosts(task)
 
-            # Combine and deduplicate categories
-            all_categories = list(set(agent_categories + task_boosts))
+            # Combine and deduplicate categories (pre-alias — what was REQUESTED)
+            requested_categories = list(dict.fromkeys(agent_categories + task_boosts))
+
+            # Session 1189 PR-3A: normalize via CATEGORY_ALIASES so
+            # `creative`/`crypto`/`sports` etc. expand to real
+            # SpiderData.data_type keys before we hit the intelligence
+            # service. `all_categories` (post-alias) is what actually
+            # gets queried below.
+            all_categories = self._normalize_categories(requested_categories)
 
             logger.info(f"🕷️ [Session 744] Building spider context for {agent_name}")
-            logger.debug(f"  Categories: {all_categories}")
+            logger.debug(f"  Categories (requested → resolved): {requested_categories} → {all_categories}")
 
             context = {
                 'relevant_trends': [],
@@ -410,6 +502,10 @@ class SpiderContextBuilder:
                 },
                 'summary': '',
                 'has_data': False,
+                # Session 1189 PR-3A: split requested (pre-alias) vs queried
+                # (post-alias) so AC instrumentation can record the
+                # divergence introduced by CATEGORY_ALIASES.
+                'categories_requested': requested_categories,
                 'categories_queried': all_categories,
                 # Session 1189 (AC instrumentation): per-category breakdowns so
                 # AC like "has_data=True against ai_ml specifically" is queryable.
