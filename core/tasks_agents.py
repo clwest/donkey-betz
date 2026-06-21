@@ -244,6 +244,50 @@ def create_implicit_followup_subscription(execution_record, context):
         return None
 
 
+def _resolve_completion_user(execution_record, conversation_id):
+    """Session 1182 PR #2356 — resolve the user that should own a server-side
+    completion row. Returns an authenticated User or None.
+
+    Resolution order:
+    1. `execution_record.user` if present + authenticated (fast path; works for
+       most non-PA-originated dispatches).
+    2. Latest `ChatConversation` row for this conversation_id with a non-NULL
+       user (deterministic via `order_by('-created_at')`). PA-originated
+       conversations always have at least one prior user-authored row, so this
+       resolves cleanly in the common case the fast path misses.
+    3. None — caller must skip persist + log distinctly.
+
+    Sentinel for callers: a return of None means "no authoritative attribution
+    available, don't write the row". The consumer-side path (PAConversationConsumer
+    with self.scope['user']) remains the safety net for any actively-connected client.
+    """
+    user = getattr(execution_record, 'user', None)
+    if user and getattr(user, 'is_authenticated', False):
+        return user
+    try:
+        from core.models.conversations.models import ChatConversation
+        owner_id = (
+            ChatConversation.objects
+            .filter(conversation_id=conversation_id)
+            .exclude(user__isnull=True)
+            .order_by('-created_at', '-id')
+            .values_list('user_id', flat=True)
+            .first()
+        )
+        if owner_id is None:
+            return None
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        return User.objects.filter(pk=owner_id).first()
+    except Exception as e:
+        logger.warning(
+            "[_resolve_completion_user] lookup failed execution=%s conv=%s (%s: %s)",
+            getattr(execution_record, 'id', None), conversation_id,
+            type(e).__name__, e,
+        )
+        return None
+
+
 def fire_agent_followup_subscriptions(execution_record):
     """Session 1174 PR-2a: fire any armed AgentFollowupSubscription rows for this execution.
 
@@ -320,42 +364,60 @@ def fire_agent_followup_subscriptions(execution_record):
         # safety net (the idempotency check from PR #2350 returns the existing
         # row). Fail-open here — we still broadcast even if persistence fails,
         # so an actively-connected consumer can render the banner.
-        try:
-            from core.consumers_pa_conversation import (
-                check_background_completion,
-                compose_completion_body,
-                create_completion_row,
-            )
-            is_background = check_background_completion(
-                conversation_id=conv_id,
-                execution_id=str(execution_record.id),
-            )
-            assistant_response = compose_completion_body(
-                execution_id=payload['execution_id'],
-                agent_name=payload['agent_name'],
-                status=payload['status'],
-                error_signature=payload['error_signature'],
-                artifact_pointers=payload['artifact_pointers'],
-                is_background=is_background,
-            )
-            create_completion_row(
-                user=getattr(execution_record, 'user', None),
-                conversation_id=conv_id,
-                execution_id=str(execution_record.id),
-                agent_name=payload['agent_name'],
-                status=payload['status'],
-                completed_at=payload['completed_at'],
-                error_signature=payload['error_signature'],
-                artifact_pointers=payload['artifact_pointers'],
-                assistant_response=assistant_response,
-            )
-        except Exception as persist_exc:
+        # Session 1182 PR #2356 — resolve attribution before persist. The prior
+        # `user=getattr(execution_record, 'user', None)` produced None on PA-originated
+        # ImageAgent dispatches (execution.user wasn't reliably set in this path),
+        # which then hit chat_conversations.user_id NOT NULL → IntegrityError →
+        # fail-open. Restore the architectural intent of PR #2352 (server-side
+        # persist works without WS consumer) by resolving from the conversation
+        # owner when execution attribution is missing. If still unresolvable,
+        # skip persist with a distinct log key (`persist_skipped_missing_user`)
+        # rather than mislabeling as fail-open — the consumer-side safety net
+        # will catch any actively-connected client.
+        resolved_user = _resolve_completion_user(execution_record, conv_id)
+        if resolved_user is None:
             logger.warning(
-                "[fire_agent_followup_subscriptions] server-side persist fail-open: "
-                "execution=%s conv=%s (%s: %s) — broadcasting anyway",
+                "[fire_agent_followup_subscriptions] persist_skipped_missing_user: "
+                "execution=%s conv=%s — broadcasting only, consumer-side will persist if connected",
                 execution_record.id, conv_id,
-                type(persist_exc).__name__, persist_exc,
             )
+        else:
+            try:
+                from core.consumers_pa_conversation import (
+                    check_background_completion,
+                    compose_completion_body,
+                    create_completion_row,
+                )
+                is_background = check_background_completion(
+                    conversation_id=conv_id,
+                    execution_id=str(execution_record.id),
+                )
+                assistant_response = compose_completion_body(
+                    execution_id=payload['execution_id'],
+                    agent_name=payload['agent_name'],
+                    status=payload['status'],
+                    error_signature=payload['error_signature'],
+                    artifact_pointers=payload['artifact_pointers'],
+                    is_background=is_background,
+                )
+                create_completion_row(
+                    user=resolved_user,
+                    conversation_id=conv_id,
+                    execution_id=str(execution_record.id),
+                    agent_name=payload['agent_name'],
+                    status=payload['status'],
+                    completed_at=payload['completed_at'],
+                    error_signature=payload['error_signature'],
+                    artifact_pointers=payload['artifact_pointers'],
+                    assistant_response=assistant_response,
+                )
+            except Exception as persist_exc:
+                logger.warning(
+                    "[fire_agent_followup_subscriptions] server-side persist fail-open: "
+                    "execution=%s conv=%s (%s: %s) — broadcasting anyway",
+                    execution_record.id, conv_id,
+                    type(persist_exc).__name__, persist_exc,
+                )
 
         # Broadcast to the PA conversation channel — PAConversationConsumer.agent_completed
         # handler still runs for any actively-connected consumer (renders the live banner +
