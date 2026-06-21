@@ -2917,6 +2917,11 @@ RESEARCH DATA:
                     slug=slug,
                     preview_content=markdown_content[:500],
                     user_id=user_id,
+                    metadata={
+                        'trigger_source': 'pa_tool',
+                        'comparison_id': str(c.id),
+                        'competitor_name': c.competitor_name,
+                    },
                 )
                 deliverable_id = str(d.id)
 
