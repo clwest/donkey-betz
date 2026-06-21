@@ -1795,6 +1795,11 @@ class AgentHandlersMixin:
                 content_slice = full_content[:8000]
                 is_truncated = len(full_content) > 8000
 
+            # Session 1184: surface the canonical provenance chain on detail.
+            # origin_execution_id resolves to parent_object_id when
+            # parent_object_type='agent_execution' (or 'deliverable_factory'
+            # for PA-direct receipts). See core/services/deliverable_provenance.
+            from core.services.deliverable_provenance import build_provenance_block
             return _sanitize_deliverable({
                 'action': 'detail',
                 'id': str(obj.id),
@@ -1818,6 +1823,7 @@ class AgentHandlersMixin:
                 # call returned is_orphan=true, breaking workspace-flow-canary.
                 'workspace_id': str(obj.workspace_id) if obj.workspace_id else None,
                 'workspace__name': obj.workspace.name if obj.workspace_id and getattr(obj, 'workspace', None) else None,
+                'provenance': build_provenance_block(obj),
             })
 
         elif action == 'save':

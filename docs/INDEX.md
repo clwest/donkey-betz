@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-20 20:37
+**Generated:** 2026-06-20 21:51
 **Current Session:** 1184
 **Total Documentation:** 2666 files | 700,921 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,625 |
+| Total cross-references | 4,633 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 190 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 177 | Platform Master Inventory |
 | `docs/INDEX.md` | 123 | INDEX |
-| `docs/archive/SYSTEM_CAPABILITIES-original/01_Core_Intelligence/README.md` | 117 | 🧠 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligenc |
+| `docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md` | 117 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 66 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -247,11 +247,11 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md | handoffs | 144 | 2026-06-20 20:36 |
-| INDEX.md | docs | 391 | 2026-06-20 20:27 |
+| active-module-ownership-map.md | topics | 367 | 2026-06-20 20:41 |
+| SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md | handoffs | 144 | 2026-06-20 20:41 |
+| INDEX.md | docs | 391 | 2026-06-20 20:41 |
+| ARCHITECTURE.md | docs | 865 | 2026-06-20 20:41 |
 | PLATFORM_INVENTORY.md | docs | 2,105 | 2026-06-20 20:26 |
-| active-module-ownership-map.md | topics | 367 | 2026-06-20 20:23 |
-| ARCHITECTURE.md | docs | 865 | 2026-06-20 20:23 |
 | SESSION_1182_SERVER_PERSIST_USER_ID.md | handoffs | 219 | 2026-06-20 20:12 |
 | SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md | handoffs | 110 | 2026-06-20 19:40 |
 | SESSION_1180_PASS_B_EXECUTION.md | handoffs | 106 | 2026-06-20 19:19 |

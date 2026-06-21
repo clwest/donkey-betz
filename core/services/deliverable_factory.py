@@ -315,6 +315,100 @@ def resolve_publish_intent(agent_name: str, explicit: Optional[str] = None) -> s
     return _PUBLISH_INTENT_BY_AGENT.get(agent_name or '', 'internal_only')
 
 
+# =============================================================================
+# Session 1184: Provenance receipt synthesis
+# =============================================================================
+#
+# Deliverables created directly by Rigby/PA via deliverable_tool.create do not
+# arrive with an AgentExecution context — the PA tool dispatcher executes the
+# handler, not the agent_router. To honor the provenance contract ("every
+# deliverable has an origin execution id"), the factory synthesizes a
+# lightweight AgentExecution row marked status='completed' and attaches it via
+# the Session 843 parent_object_type/parent_object_id fields.
+#
+# Synthesis is bounded to trigger sources we KNOW are direct (pa_tool,
+# user_request, user_chat, direct) plus the PA_IDENTITY agent string. Other
+# missing-parent cases (scheduled tasks, agent dispatch that forgot to pass
+# parent_execution_id) get a WARN log with the caller info so we can sweep
+# incrementally — see Q4 in pa-f4644aa2fd1b for the soft-enforce rationale.
+
+_PA_DIRECT_TRIGGERS = {'pa_tool', 'user_request', 'user_chat', 'direct'}
+
+
+def _is_pa_direct_context(agent_name: str, trigger_source: str) -> bool:
+    """True when this create looks like a PA/user-initiated direct tool call."""
+    from core.services.pa_identity import PA_IDENTITY
+    if agent_name == PA_IDENTITY:
+        return True
+    return trigger_source in _PA_DIRECT_TRIGGERS
+
+
+def _synthesize_pa_execution_receipt(
+    agent_name: str,
+    task_summary: str,
+    trace_id: Optional[str],
+    user,
+    workspace_id: Optional[str],
+    metadata: Optional[dict] = None,
+) -> Optional[str]:
+    """Create a lightweight AgentExecution row marking the PA/tool-direct
+    creation of a Deliverable. Returns the new execution id as a string, or
+    None if synthesis failed (the create proceeds without a parent link and a
+    WARN is logged at the caller).
+
+    Reuses the live AgentExecution table in core.models_unified_system (the
+    one agent_router writes to). status='completed' from creation — this row
+    represents a synchronous tool-call receipt, not an in-flight dispatch.
+    """
+    try:
+        from django.utils import timezone
+        from core.models_unified_system import Agent, AgentExecution
+
+        agent_record, _created = Agent.objects.get_or_create(
+            name=agent_name,
+            defaults={
+                'agent_type': 'tool_direct',
+                'description': f'{agent_name} - direct tool-call receipts',
+                'specialization': '',
+                'is_active': True,
+            },
+        )
+
+        normalized_trace = None
+        if trace_id:
+            try:
+                normalized_trace = uuid.UUID(str(trace_id))
+            except (ValueError, AttributeError):
+                normalized_trace = None
+
+        receipt = AgentExecution.objects.create(
+            agent=agent_record,
+            user=user,
+            task=(task_summary or 'deliverable_tool.create')[:500],
+            status='completed',
+            input_data={
+                'source': 'deliverable_factory.synthesized_pa_receipt',
+                'trace_id': str(trace_id) if trace_id else None,
+                'workspace_id': str(workspace_id) if workspace_id else None,
+                'metadata': metadata or {},
+            },
+            output_data={'kind': 'deliverable_receipt'},
+            trace_id=normalized_trace,
+            owner_agent=agent_name,
+            parent_object_type='deliverable_factory',
+            last_heartbeat_at=timezone.now(),
+            completed_at=timezone.now(),
+        )
+        return str(receipt.id)
+    except Exception as exc:
+        logger.warning(
+            "[DeliverableFactory] PA receipt synthesis failed (%s: %s) — "
+            "deliverable will have no parent_object_id link",
+            type(exc).__name__, exc,
+        )
+        return None
+
+
 def create_deliverable(
     title: str,
     content: str,
@@ -498,6 +592,33 @@ def create_deliverable(
             metadata['trigger_source'] = 'agent_execution'
         else:
             metadata['trigger_source'] = 'beat_task'
+
+    # --- Session 1184: Provenance receipt for direct PA/tool creates ---
+    # If no parent_execution_id was passed AND this looks like a PA/user-direct
+    # tool call, synthesize an AgentExecution receipt so the deliverable still
+    # carries a queryable origin id (Q4: soft-enforce, Q2: synthesize). For
+    # autonomous agent-dispatch paths that *should* pass parent_execution_id
+    # but don't, we WARN instead — sweep is incremental, not blast-radius.
+    if not parent_execution_id:
+        if _is_pa_direct_context(agent_name, metadata.get('trigger_source', '')):
+            parent_execution_id = _synthesize_pa_execution_receipt(
+                agent_name=agent_name,
+                task_summary=agent_task or title or 'deliverable_tool.create',
+                trace_id=trace_id,
+                user=user,
+                workspace_id=workspace_id,
+                metadata=metadata,
+            )
+            if parent_execution_id:
+                parent_object_type = parent_object_type or 'agent_execution'
+                metadata['origin_execution_synthesized'] = True
+        else:
+            logger.warning(
+                "[DeliverableFactory] No parent_execution_id for agent=%s "
+                "trigger_source=%s — deliverable will have no provenance link. "
+                "Caller should pass parent_execution_id (title=%r).",
+                agent_name, metadata.get('trigger_source', 'unknown'), title[:60],
+            )
 
     # --- Session 1088: BLOCKED content detection ---
     blocked_reason = _detect_blocked_content(content)
