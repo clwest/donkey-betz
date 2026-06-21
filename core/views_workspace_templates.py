@@ -321,7 +321,11 @@ def workspace_config(request, workspace_id):
                     user=request.user,
                     content_format='markdown',
                     is_saved=True,
-                    metadata={'brief_version': True, 'workspace_id': str(workspace.id)},
+                    metadata={
+                        'brief_version': True,
+                        'workspace_id': str(workspace.id),
+                        'trigger_source': 'user_request',
+                    },
                     workspace=workspace,
                 )
             except Exception as e:

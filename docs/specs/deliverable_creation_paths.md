@@ -35,15 +35,15 @@ owner: rigby-and-claude (recon + table from Claude; sequencing input from Rigby 
 
 ## Coverage summary
 
-| Bucket | Count | Status after Session 1184 |
+| Bucket | Count | Status after Session 1185 |
 |---|---:|---|
 | BaseAgent-derived agents (via `_save_to_deliverable`) | ~80 | ✅ wired by PR-B (one-line fix in `base_agent.py:4266` + router hoist) |
 | PA-direct (deliverable_tool, content_tool, etc.) | 5 | 🟡 synthesized by PR-A (factory creates receipt) |
-| Management commands | 5 | ⚠️ WARN — PR-B sweep target |
-| Web views | 4 | ⚠️ WARN — PR-B sweep target |
-| Tasks (Celery) | 3 | ⚠️ WARN — PR-B sweep target |
-| Service-level helpers | 5 | ⚠️ WARN — PR-B sweep target |
-| Other tools | 2 | ⚠️ WARN — PR-B sweep target |
+| Management commands | 5 | 🟡 synthesized by PR-C bucket 1 (#2368) — `trigger_source='direct'` opt-in |
+| Web views | 4 | 🟡 synthesized by PR-C bucket 2 — `trigger_source='user_request'` (1) + `'direct'` (3) opt-in |
+| Tasks (Celery) | 3 | ⚠️ WARN — PR-C bucket 4 sweep target |
+| Service-level helpers | 7 | ⚠️ WARN — PR-C bucket 3 sweep target |
+| Other tools | 2 | ⚠️ WARN — PR-C bucket 5 sweep target |
 
 ## Wired paths (PR-B fix covers them)
 
