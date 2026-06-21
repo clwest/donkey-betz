@@ -142,6 +142,17 @@ After PR-C lands and the WARN log reaches steady-state-zero, **PR-D** flips the 
 
 Alternative: **inventory refresh PR (still open from Session 1183 close)** — `verify_doc_claims --only-drift` still reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` and `PLATFORM_INVENTORY.md` is now 11 sessions stale. Mechanical but substantive. Could ride alongside PR-C if you want a full housekeeping session.
 
+### Session 1184 forensic follow-ons (filed as deliverables in Local QA workspace, 2026-06-21)
+
+Surfaced by Section 6 forensic validation on conversation `pa-10df024c0bd8` after PR #2362 / #2364 / #2365 merged. Provenance mechanism PASSES (Steps A, B, C, G all green). These are separate bugs that don't block provenance but do break adjacent flows:
+
+| Deliverable ID | Title | Priority | Sketch |
+|---|---|---|---|
+| `c511e6e4-0b00-4ee0-bd19-9ee64c5a8e60` | **F1** — ContentWriterAgent ignores diagnostic instructions and runs full content-production pipeline regardless | P2 (breaks forensic test workflows) | Agent treats "include this nonce verbatim" / "keep to 200 words" / "state X exactly" as topic words, not directives. Proposed fix: `diagnostic_mode=true` flag that bypasses content production pipeline. See deliverable for AC1-AC4. |
+| `6523a071-1142-4ae1-9eed-4b247ab887d5` | **F2** — `execution_history_tool` detail doesn't surface produced `deliverable_ids` — reverse-link API gap | P2 (read-API parity gap) | Forward link works (deliverable→execution via provenance.origin_execution_id). Reverse link (execution→deliverables) requires a separate DB query. Proposed fix: compute `Deliverable.objects.filter(parent_object_id=execution.id)[:25]` at read time in `execution_history_tool.detail`. See deliverable for AC1-AC5. Read-layer only, no schema change. |
+
+Plus 1 known limitation already documented in the SESSION_1184 PR-A handoff: dispatcher trace IDs (`tool-N-hex` format) aren't UUIDs, so the factory drops them — `provenance.trace_id` stays null on those dispatches and the trace_id pivot for `tool_calls` doesn't fire. Future work: standardize trace IDs on UUIDs everywhere OR add a non-UUID column.
+
 ### What's queued (carried from Session 1183 — pick by Chris's priority)
 
 **No urgent items.** Pass B is closed (Session 1181), watch finding is fixed (Session 1182), CI is green without bypass (Session 1183), workers are loaded with PR #2357 (Session 1183 close). Session 1184 is a green-field session — pick from any of:
@@ -163,14 +174,17 @@ PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry
 
 ---
 
-## SESSION 1184 CLOSED — Deliverable → Execution provenance (2 stacked PRs) + PA worker FC env gotcha + 3 new memories (2026-06-20)
+## SESSION 1184 CLOSED — Deliverable → Execution provenance (3 PRs merged) + Section 6 forensic verification + 4 memories + 2 follow-on tickets (2026-06-20/21)
 
-**2 PRs open (stacked) + 1 ops finding + 3 new memories.** Closes Rigby's deliverable `e4f4e12f` (flipped to `completed` via `content_tool action=content_complete` — see new memory). Full handoffs: [`SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md) (PR-A) + [`SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md`](docs/handoffs/SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md) (PR-B).
+**3 PRs merged + 1 ops finding + 4 new memories + 2 forensic follow-on tickets.** Closes Rigby's deliverable `e4f4e12f` (flipped to `completed` via `content_tool action=content_complete` — see new memory). Full handoffs: [`SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md) (PR-A) + [`SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md`](docs/handoffs/SESSION_1184_PR_B_BASEAGENT_PROVENANCE_WIRING.md) (PR-B).
 
-| PR | Theme | Verified |
-|---|---|---|
-| **#2362** (PR-A) | `feat(session-1184)` — factory synthesizes `AgentExecution` receipt for PA-direct creates; new `build_provenance_block` helper; normalized `provenance` block on `deliverable_tool.detail`; zero schema | 4/4 unit tests + live Rigby invocation on `pa-a60842917d36` shows `origin_execution_id`, `trigger_source=pa_tool`, `synthesized=true`, `legacy_no_provenance=false` |
-| **#2363** (PR-B, stacked on #2362) | `feat(session-1184-pr-b)` — root-cause fix: `base_agent.py:4266` was reading `_current_execution_id` (nothing sets it) instead of `_execution_context['execution_id']` (router writes it). Plus router hoist for workspace path. Plus WARN caller-fingerprint for PR-C triage. Plus §1 enumeration table | 7/7 new tests + 48 deliverable-suite total clean; ~80 BaseAgent agents now wired in one line |
+| PR | Commit | Theme | Verified |
+|---|---|---|---|
+| **#2362** (PR-A) | `ce5aeb3a` | `feat(session-1184)` — factory synthesizes `AgentExecution` receipt for PA-direct creates; new `build_provenance_block` helper; normalized `provenance` block on `deliverable_tool.detail`; zero schema | 4/4 unit tests + live Rigby invocation on `pa-a60842917d36` shows `origin_execution_id`, `trigger_source=pa_tool`, `synthesized=true`, `legacy_no_provenance=false` |
+| **#2364** (PR-B) | `5555b8c6` | `feat(session-1184-pr-b)` — root-cause fix: `base_agent.py:4266` was reading `_current_execution_id` (nothing sets it) instead of `_execution_context['execution_id']` (router writes it). Plus router hoist for workspace path. Plus WARN caller-fingerprint for PR-C triage. Plus §1 enumeration table | 7/7 new tests + 48 deliverable-suite total clean; ~80 BaseAgent agents now wired in one line |
+| **#2365** (PR-C) | `2903f5e2` | `fix(session-1184)` — ContentWriterAgent `content_type` alias normalizer (14 misnomers) + PA tool schema enum constraint. Unblocked Rigby's forensic validation run that died on `Unknown content type: deliverable` | 5/5 unit tests + live Rigby re-dispatch on `pa-10df024c0bd8` post-merge succeeded |
+
+**Section 6 forensic validation (Rigby, post-merge on `pa-10df024c0bd8`):** Steps A, B, C, G all PASS — provenance mechanism firing live in production traffic. Step D + Step F FAIL — filed as F1 + F2 follow-on deliverables (see Session 1184 forensic follow-ons table above). Forensic report deliverable: `cee21256-576a-443c-a614-a2d697fe6aa1`.
 
 **Per Rigby's design Qs (all ratified):** reuse Session 843 fields not new schema (Q1A) / synthesize AgentExecution for PA-direct (Q2A) / derive tool_calls via trace_id pivot — no new FK (Q3C) / soft-enforce now, hard-required later (Q4C) / read-via-tool sufficient — UI optional (Q5).
 
