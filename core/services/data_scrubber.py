@@ -58,13 +58,38 @@ _PATTERNS = [
 ]
 
 
+# Session 1190: UUIDs (8-4-4-4-12 hex with dashes) frequently contain
+# digit-only sub-sequences that collide with the credit-card regex
+# (`\d{4}-\d{4}-\d{4}-\d{4}`). E.g., the workspace_id
+# `59af4248-70b9-4472-NNNN-NNNNNNNNNNNN` had its tail redacted as
+# `[REDACTED_CC]`, making the workspace un-addressable via the PA tool
+# surface. Lookbehind/lookahead tweaks on the CC regex don't help when
+# the match sits at the UUID's tail (no following digits to reject).
+#
+# The robust fix: detect UUIDs first, swap them out for placeholders,
+# run the scrub patterns, then restore. Placeholder uses control chars
+# unlikely to appear in legitimate input.
+_UUID_PATTERN = re.compile(
+    r'\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b'
+)
+
+
 def scrub(text: str) -> str:
     """Remove PII and secrets from text. Returns cleaned copy."""
     if not text:
         return text
-    result = text
+    # Mask UUIDs so they survive pattern application (Session 1190).
+    protected_uuids: list[str] = []
+
+    def _mask(match: 're.Match[str]') -> str:
+        protected_uuids.append(match.group(0))
+        return f'\x00UUID{len(protected_uuids) - 1}\x00'
+
+    result = _UUID_PATTERN.sub(_mask, text)
     for pattern, replacement in _PATTERNS:
         result = pattern.sub(replacement, result)
+    for i, original in enumerate(protected_uuids):
+        result = result.replace(f'\x00UUID{i}\x00', original)
     return result
 
 
