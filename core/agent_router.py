@@ -255,20 +255,30 @@ def build_spider_context_ac_blob(spider_context):
     AC watches (Session 1188 PRs #2380/#2382) can verify
     `categories_queried` and `has_data_by_category` without grepping logs.
 
+    Session 1189 PR-3A: `requested_categories` (pre-alias, what
+    AGENT_SPIDER_MAPPINGS asked for) and `resolved_categories`
+    (post-alias, what was actually queried) diverge whenever
+    CATEGORY_ALIASES expanded a value (e.g., `creative` → `[design,
+    visual_trends, video]`). When `categories_requested` is absent on
+    the input dict (older callers, fallback path), both fields fall
+    back to `categories_queried` for backward compat.
+
     Returns the blob dict, or None when there's nothing to record (e.g.,
-    spider_context wasn't a dict or had no categories). Caller is
-    responsible for persistence + fail-open handling.
+    spider_context wasn't a dict). Caller is responsible for persistence
+    + fail-open handling.
     """
     if not isinstance(spider_context, dict):
         return None
-    categories = spider_context.get('categories_queried') or []
+    queried = spider_context.get('categories_queried') or []
+    requested = spider_context.get('categories_requested')
+    if requested is None:
+        requested = queried
     items_by_category = spider_context.get('items_returned_by_category') or {}
     has_data_by_category = spider_context.get('has_data_by_category') or {}
     return {
-        'enabled': bool(categories),
-        'requested_categories': list(categories),
-        # PR-3A will introduce an alias layer; for this PR resolved == requested.
-        'resolved_categories': list(categories),
+        'enabled': bool(queried),
+        'requested_categories': list(requested),
+        'resolved_categories': list(queried),
         'items_returned_total': sum(items_by_category.values()),
         'items_returned_by_category': dict(items_by_category),
         'has_data': bool(spider_context.get('has_data')),

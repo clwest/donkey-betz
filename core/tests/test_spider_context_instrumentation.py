@@ -147,6 +147,42 @@ class BuildSpiderContextAcBlobTests(SimpleTestCase):
         self.assertEqual(blob['items_returned_total'], 0)
         self.assertEqual(blob['has_data'], False)
 
+    def test_blob_reports_alias_divergence(self):
+        """PR-3A: when CATEGORY_ALIASES expanded a value (e.g., `creative`
+        → `[design, visual_trends, video]`), the spider_context dict
+        carries BOTH `categories_requested` (pre-alias) and
+        `categories_queried` (post-alias). The blob must surface the
+        divergence so AC consumers can see what was asked vs what
+        actually got queried."""
+        spider_ctx = {
+            'categories_requested': ['creative', 'tech'],
+            'categories_queried': ['design', 'visual_trends', 'video', 'tech'],
+            'items_returned_by_category': {'design': 2, 'video': 0, 'tech': 5, 'visual_trends': 1},
+            'has_data_by_category': {'design': True, 'video': False, 'tech': True, 'visual_trends': True},
+            'has_data': True,
+            'build_ms': 33,
+        }
+        blob = build_spider_context_ac_blob(spider_ctx)
+        self.assertEqual(blob['requested_categories'], ['creative', 'tech'])
+        self.assertEqual(
+            blob['resolved_categories'],
+            ['design', 'visual_trends', 'video', 'tech'],
+        )
+
+    def test_blob_falls_back_when_categories_requested_missing(self):
+        """Backward compat: pre-PR-3A spider_context dicts only had
+        `categories_queried`. The blob should default `requested_categories`
+        to the queried list when `categories_requested` is absent."""
+        spider_ctx = {
+            'categories_queried': ['tech', 'news'],
+            'has_data': True,
+            'items_returned_by_category': {},
+            'has_data_by_category': {},
+        }
+        blob = build_spider_context_ac_blob(spider_ctx)
+        self.assertEqual(blob['requested_categories'], ['tech', 'news'])
+        self.assertEqual(blob['resolved_categories'], ['tech', 'news'])
+
 
 class BlobPersistsOnAgentExecutionTests(TestCase):
     """Persistence check: blob written into AgentExecution.input_data
