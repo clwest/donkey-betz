@@ -248,6 +248,35 @@ from core.agents.platform_audit_agent import PlatformAuditAgent
 
 logger = logging.getLogger(__name__)
 
+
+def build_spider_context_ac_blob(spider_context):
+    """Session 1189: build the structured spider_context blob that gets
+    written onto `AgentExecution.input_data['spider_context']` so the 7d
+    AC watches (Session 1188 PRs #2380/#2382) can verify
+    `categories_queried` and `has_data_by_category` without grepping logs.
+
+    Returns the blob dict, or None when there's nothing to record (e.g.,
+    spider_context wasn't a dict or had no categories). Caller is
+    responsible for persistence + fail-open handling.
+    """
+    if not isinstance(spider_context, dict):
+        return None
+    categories = spider_context.get('categories_queried') or []
+    items_by_category = spider_context.get('items_returned_by_category') or {}
+    has_data_by_category = spider_context.get('has_data_by_category') or {}
+    return {
+        'enabled': bool(categories),
+        'requested_categories': list(categories),
+        # PR-3A will introduce an alias layer; for this PR resolved == requested.
+        'resolved_categories': list(categories),
+        'items_returned_total': sum(items_by_category.values()),
+        'items_returned_by_category': dict(items_by_category),
+        'has_data': bool(spider_context.get('has_data')),
+        'has_data_by_category': dict(has_data_by_category),
+        'build_ms': spider_context.get('build_ms'),
+    }
+
+
 # Session 488: Semantic routing confidence threshold
 # If semantic match confidence is above this, use semantic routing
 # Otherwise fall back to keyword matching or default agent
@@ -1395,6 +1424,27 @@ class AgentRouter:
             if execution_record is not None and 'execution_id' not in context:
                 context['execution_id'] = execution_record.id
 
+            # Session 1189 (AC instrumentation): persist a structured
+            # spider_context blob on AgentExecution.input_data so the 7d
+            # AC watches (Session 1188 PRs #2380/#2382) can verify
+            # categories_queried / has_data_by_category without grepping
+            # logs. Fail-open — never break a dispatch over instrumentation.
+            if execution_record is not None:
+                sc_blob = build_spider_context_ac_blob(spider_context)
+                if sc_blob is not None:
+                    try:
+                        if not isinstance(execution_record.input_data, dict):
+                            execution_record.input_data = {}
+                        execution_record.input_data['spider_context'] = sc_blob
+                        execution_record.save(update_fields=['input_data'])
+                    except Exception as _ac_exc:
+                        logger.warning(
+                            f"[session-1189-ac-instrumentation] fail-open while "
+                            f"writing spider_context blob to execution_id="
+                            f"{getattr(execution_record, 'id', None)} "
+                            f"({type(_ac_exc).__name__}: {_ac_exc})"
+                        )
+
             # Session 908: Use execute_with_workspace when workspace is available
             # This ensures all agent outputs are written to the SKIN layer workspace
             has_workspace = workspace_context and workspace_context.get('has_workspace')
@@ -1701,6 +1751,11 @@ class AgentRouter:
         try:
             # Session 744: Use SpiderContextBuilder for agent-specific context
             if agent_name:
+                # Session 1189 (AC instrumentation): time the build so
+                # build_ms can be written into AgentExecution.input_data
+                # alongside the per-category breakdowns.
+                import time as _spider_ctx_time
+                _spider_ctx_start = _spider_ctx_time.monotonic()
                 context = self.spider_context_builder.build_context_for_agent(
                     agent_name=agent_name,
                     task=task,
@@ -1708,6 +1763,10 @@ class AgentRouter:
                     max_trends=10,
                     max_discussions=5
                 )
+                if isinstance(context, dict):
+                    context['build_ms'] = int(
+                        (_spider_ctx_time.monotonic() - _spider_ctx_start) * 1000
+                    )
                 logger.debug(f"🕷️ [Session 744] Spider context built for {agent_name}: has_data={context.get('has_data')}")
                 return context
 
