@@ -873,6 +873,47 @@ For this {content_type}, ensure:
                 if not keywords and workspace_brief.get('focus_areas'):
                     keywords = workspace_brief['focus_areas']
 
+                # Session 1184 PR-D: alias common misnomers before hard-rejecting.
+                # GPT-5.2 frequently picks the word "deliverable" from a prompt
+                # like "create a short diagnostic deliverable" — but
+                # "deliverable" is the CONTAINER (Deliverable row), not a
+                # content TYPE. Map the most common mistakes to the closest
+                # real type instead of failing the run. Surface a WARN so we
+                # can spot upstream callers (or model prompts) that should be
+                # tightened. Discovered Session 1184 via Rigby's forensic
+                # validation run 2aded481-4f62-45e0-b6b3-615cdcfc081e.
+                _CONTENT_TYPE_ALIASES = {
+                    'deliverable': 'internal_document',
+                    'doc': 'internal_document',
+                    'document': 'internal_document',
+                    'note': 'internal_document',
+                    'memo': 'internal_document',
+                    'report': 'internal_document',
+                    'brief': 'internal_document',
+                    'post': 'blog_post',
+                    'blog': 'blog_post',
+                    'social': 'social_thread',
+                    'thread': 'social_thread',
+                    'email': 'newsletter',
+                    'podcast': 'podcast_script',
+                    'video': 'video_script',
+                }
+                _alias_lower = (content_type or '').strip().lower()
+                if _alias_lower in _CONTENT_TYPE_ALIASES and _alias_lower not in CONTENT_TYPES:
+                    aliased = _CONTENT_TYPE_ALIASES[_alias_lower]
+                    logger.warning(
+                        "[ContentWriterAgent] content_type alias '%s' → '%s' "
+                        "(caller passed an invalid value; consider fixing the "
+                        "tool schema or upstream prompt)",
+                        content_type, aliased,
+                    )
+                    content_type = aliased
+                    # Recompute word_count default for the aliased type
+                    if not context.get('word_count'):
+                        word_count = CONTENT_TYPES.get(content_type, {}).get(
+                            'default_word_count', 1500,
+                        )
+
                 # Validate content type
                 if content_type not in CONTENT_TYPES:
                     execution_time = int((time.time() - start_time) * 1000)
