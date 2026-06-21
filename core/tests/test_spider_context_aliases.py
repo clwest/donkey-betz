@@ -36,6 +36,14 @@ class CategoryAliasesTests(SimpleTestCase):
     def test_sports_aliases_to_sports_odds_sports_news(self):
         self.assertEqual(CATEGORY_ALIASES['sports'], ['sports_odds', 'sports_news'])
 
+    def test_security_aliases_to_cybersecurity(self):
+        """PR-3B: `security` was used by cto/code_generator/code_review/
+        devops/autonomous_content_studio but isn't a real data_type
+        (real bucket is `cybersecurity` with 15 actionable / 30d). The
+        alias keeps the semantic mapping while resolving to the real
+        bucket at query time."""
+        self.assertEqual(CATEGORY_ALIASES['security'], ['cybersecurity'])
+
     def test_every_alias_expansion_is_a_known_data_type(self):
         """If an alias resolves to something not in KNOWN_DATA_TYPES the
         normalization will WARN downstream — guard the snapshot at the
@@ -72,6 +80,12 @@ class NormalizeCategoriesTests(SimpleTestCase):
             self.builder._normalize_categories(['tech', 'news', 'ai_ml']),
             ['tech', 'news', 'ai_ml'],
         )
+
+    def test_security_expands_to_cybersecurity(self):
+        """PR-3B: security agents (cto, code_review, devops...) keep
+        `security` in their per-agent lists; the normalizer expands at
+        query time so they actually hit cybersecurity (the real bucket)."""
+        self.assertEqual(self.builder._normalize_categories(['security']), ['cybersecurity'])
 
     def test_mixed_aliases_and_real_dedupe_and_preserve_order(self):
         # creative → design+visual_trends+video; tech passes through;
