@@ -352,12 +352,66 @@ class ConversationDeliverableExtractor:
             from core.services.deliverable_workspace_resolver import resolve_workspace
             ws, ws_saved = resolve_workspace()
 
+            # Session 1185 PR-C bucket 3B-1: orchestration AgentExecution row
+            # for the conversation → deliverable extraction. Same chain as
+            # conversation_initiative_pipeline: AgentExecution.parent_object_type
+            # ='conversation' carries linkage, Deliverable.parent_object_type=
+            # 'agent_execution' links to this execution. 2-hop chain-of-custody:
+            # Deliverable → AgentExecution → Conversation. Reuses Session 1174
+            # `conversation_id` field for PA wake-hook compatibility.
+            orchestrator_agent_name = participants[0] if participants else 'ConversationOrchestrator'
+            pipeline_execution_id: Optional[str] = None
+            try:
+                from core.models_unified_system import Agent, AgentExecution
+                from django.contrib.auth import get_user_model
+                _User = get_user_model()
+                _user = _User.objects.filter(id=user_id).first() if user_id else None
+                _agent_record, _ = Agent.objects.get_or_create(
+                    name=orchestrator_agent_name,
+                    defaults={
+                        'agent_type': 'orchestration',
+                        'description': f'{orchestrator_agent_name} - conversation extraction executions',
+                        'specialization': '',
+                        'is_active': True,
+                    },
+                )
+                _conv_uuid = uuid.UUID(conversation_id) if conversation_id else None
+                _pipeline_execution = AgentExecution.objects.create(
+                    agent=_agent_record,
+                    user=_user,
+                    task=(f'Conversation→Deliverable extraction: {topic or title or "untitled"}')[:500],
+                    status='completed',
+                    owner_agent=orchestrator_agent_name,
+                    parent_object_type='conversation',
+                    parent_object_id=_conv_uuid,
+                    conversation_id=conversation_id,
+                    input_data={
+                        'source': 'conversation_deliverable_extractor',
+                        'execution_kind': 'orchestration',
+                        'participants': participants,
+                        'topic': topic,
+                        'content_type': extracted.content_type,
+                        'source_message_idx': extracted.source_message_idx,
+                    },
+                    output_data={'kind': 'extraction_receipt'},
+                    last_heartbeat_at=timezone.now(),
+                    completed_at=timezone.now(),
+                )
+                pipeline_execution_id = str(_pipeline_execution.id)
+            except Exception as _exec_err:
+                logger.warning(
+                    "[conversation_deliverable_extractor] Failed to create "
+                    "orchestration AgentExecution (%s: %s) — deliverable will "
+                    "fall through to the factory's WARN bucket",
+                    type(_exec_err).__name__, _exec_err,
+                )
+
             # Create the Deliverable
             from core.services.deliverable_factory import create_deliverable
             deliverable = create_deliverable(
                 title=title,
                 content=extracted.content,
-                agent_name=participants[0] if participants else 'ConversationOrchestrator',
+                agent_name=orchestrator_agent_name,
                 category=extracted.category,
                 deliverable_type=extracted.content_type,
                 tags=extracted.tags,
@@ -365,6 +419,10 @@ class ConversationDeliverableExtractor:
                 quality_score=extracted.confidence,
                 confidence_score=extracted.confidence,
                 is_saved=ws_saved,
+                # Session 1185 PR-C bucket 3B-1: parent_execution_id threads
+                # the orchestration execution. Factory infers trigger_source=
+                # 'agent_execution' and wires parent_object_type/_id correctly.
+                parent_execution_id=pipeline_execution_id,
                 metadata={
                     'source': 'conversation_deliverable_extractor',
                     'session': '884',
@@ -372,11 +430,11 @@ class ConversationDeliverableExtractor:
                     'topic': topic,
                     'extracted_at': timezone.now().isoformat(),
                     'source_message_idx': extracted.source_message_idx,
+                    'conversation_id': conversation_id,
+                    'conversation_uuid': str(uuid.UUID(conversation_id)) if conversation_id else None,
                 },
                 slug=slug,
                 workspace=ws,
-                parent_object_type='conversation',
-                parent_object_id=uuid.UUID(conversation_id) if conversation_id else None,
             )
 
             result.deliverables_created = 1
