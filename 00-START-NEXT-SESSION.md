@@ -101,23 +101,46 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1194 — CURRENT ENTRY POINT
+## SESSION 1194 — CURRENT ENTRY POINT (PIVOTED MID-SESSION)
+
+### PIVOT NOTE — Initiatives-First Backbone is the new spine
+
+Session 1194 opened with project-clustering recon as P1 (Session 1193 carryover). **Chris pivoted mid-thread** to a deeper structural fix: make Initiatives the spine of the platform — agents/schedules/deliverables must attach to an Initiative to count as real work. Original clustering recon is **deferred** until backbone wiring lands.
+
+**Spec for the pivot:** [`docs/specs/INITIATIVES_FIRST_BACKBONE.md`](docs/specs/INITIATIVES_FIRST_BACKBONE.md) — wiring break evidence, 3 spine Initiatives (already persisted), engineering plan A→B→C→D, acceptance criteria AC1-AC10.
+
+**Preserves the deferred plan:** [`docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md`](docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md) — keeps the 8-cluster recon + 4 relationship patterns one click away so they're not lost. Clustering becomes a one-time migration once `initiative_id` is surfaced on read APIs and enforced on write paths.
+
+**3 spine Initiatives persisted by Rigby (2026-06-21 ~23:14 UTC):**
+
+| # | Name | UUID |
+|---|---|---|
+| 1 | Initiatives-First Wiring + No-Orphan Output | `6941372d-b13c-4631-91c8-749fa65c55a0` |
+| 2 | Agent Capability Map + Router Contracts | `2071a9c6-986f-4528-be90-8cccaa595f1e` |
+| 3 | Tool Migration Hardening (web_search → intelligence_tool) + Failure Fix | `7e23d621-4d0c-409a-a680-4fd2e015d04b` |
 
 ### FIRST THING this session
 
-**Session 1193 wrapped clean.** ~107 deliverables tagged across Newsletter/Content Writing/Platform Diagnostics/Ops/Platform Ops/Utilization Recon/small-categories. 7 new audit + follow-up deliverables filed (incl. 2 new P2s). COO Backlog audit corrected the Session 1167 "complete" claim — #4 + #9 properly tracked now. Full handoff: [`SESSION_1193_DELIVERABLE_TAGGING_AND_PROJECT_CLUSTERING_INSIGHT.md`](docs/handoffs/SESSION_1193_DELIVERABLE_TAGGING_AND_PROJECT_CLUSTERING_INSIGHT.md).
+**Now:** start at Plan A in `INITIATIVES_FIRST_BACKBONE.md` — reproduce the `deliverable_tool action=list → 0 items` vs `content_recent → many` audit gap. Without that fix, the rest of the backbone can't be verified.
 
-**Chris's late-Session-1193 insight (THIS SESSION'S P1):** the flat-deliverable model isn't capturing natural project clusters. At least 8 obvious project shapes hiding in the 164 Donkey Betz deliverables (Session 1171 ML queue triage, Session 1184 provenance, Session 1192 follow-ups, COO daily diagnostics, Orchestration Control Plane Mapping, Track Business News blog variants, MLB Run Line Desk, Weekend Digest Autopilot). Chris explicitly asked for **fresh conversation threads for both Claude AND Rigby** for this session — strategic-design work needs clean canvas.
+**Active conversation:** Rigby's pre-spun thread **`pa-e11847db632a4ee8`** (now relabeled "Session 1194 — Initiatives-First Backbone"). Claude side: this thread.
 
-**Active conversation:** START FRESH on Claude side. Rigby's fresh thread already spun: **`pa-e11847db632a4ee8`** titled "Session 1194 — Project-clustering recon (Donkey Betz deliverables)". First ping into that thread.
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded), 49 untagged (48 Research + 3 Newsletter remainder).
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded), 49 untagged (48 Research + 3 Newsletter remainder per Chris's intentional carve-outs).
+### Original Session 1194 P1 (DEFERRED — see pointer doc above)
+
+The flat-deliverable model isn't capturing natural project clusters. 8 obvious project shapes hiding in 164 Donkey Betz deliverables (Session 1171 ML queue triage, Session 1184 provenance, Session 1192 follow-ups, COO daily diagnostics, Orchestration Control Plane Mapping, Track Business News blog variants, MLB Run Line Desk, Weekend Digest Autopilot). Revive after backbone AC1-AC6 pass.
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Project-clustering recon** | **P1** | Session 1193 carryover insight. Identify natural project clusters in the 164 Donkey Betz deliverables. Propose per cluster: real Initiatives now (5-stage project arc) vs Collections/Folders later (per `ae5251f1` spec). 8 visible clusters identified in Session 1193 handoff. Chris ratifies shapes. |
+| **Initiatives-First Backbone — Plan A (auditability)** | **P1 (pivot)** | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.A. Reproduce + fix `deliverable_tool list = 0` vs `content_recent` divergence. Land `audit_deliverable_endpoints` mgmt command. AC1. |
+| **Initiatives-First Backbone — Plan B (read-path linkage)** | **P1 (pivot)** | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.B. Surface `initiative_id`/`target_workspace_id` on deliverable + content + initiative read APIs. AC2-AC4. |
+| **Initiatives-First Backbone — Plan C (write-path enforcement)** | **P1 (pivot)** | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.C. `create_deliverable()` requires initiative; backfill mgmt command. Needs Chris ratification on reject-vs-mark-diagnostic. AC5-AC6. |
+| **Initiatives-First Backbone — Plan D (governor gating)** | P2 (pivot) | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.D. Scheduler skips when no ACTIVE Initiative matches. AC7. |
+| **Tool Migration Hardening (Initiative 3)** | P2 (pivot, parallel) | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §4.3 + Initiative `7e23d621-…`. `web_search` → `intelligence_tool.search`; investigate ~50% gateway failure rate. AC9-AC10. |
+| **Project-clustering recon** | **DEFERRED** | `docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md`. Revive after backbone AC1-AC6 pass; becomes one-time migration exercise. |
 | **Initiative-tick 24h watch** | P1 (time-gated) | Start 2026-06-22 19:48 UTC (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]`. Confirm steady-state drift to 0. Playbook below. |
 | **7d AC watches** | P1 (time-gated) | Start 2026-06-28. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388. |
 | **PA LLM iteration cap silent failure** | **P2** | Session 1193 follow-up. Deliverable `c2bac9c0-...`. Real engineering. `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8` leaves 7 effective tool-call iterations. On forced-text final iteration, LLM emits unexecuted tool-call JSON as text body. Silent failure mode that bit us mid-Session-1193 on tagging-heavy turns. Two-part fix: raise cap to 12 + detect tool-call JSON in final-iteration text. |
