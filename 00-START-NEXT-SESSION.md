@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-9b82bcc72e1945ce` (set Session 1176 close, carrying into 1177; prior thread `pa-58c916edf96044cc` retired at health 25/100).
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-a60842917d36` (spun mid-Session 1184 after `pa-f4644aa2fd1b` hit a tool-refusal loop caused by a missing `PA_USE_FUNCTION_CALLING=true` env var on a manual PA worker restart — see READ THIS FIFTH below).
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -24,6 +24,10 @@ Memory: `feedback_pa_hang_from_disk_pressure.md`. If the PA worker processes exa
 ## READ THIS THIRD (NEW Session 1160) — `git show` IS THE FIRST MOVE FOR MTIME MYSTERIES
 
 If you see a cluster of doc mtimes within minutes of each other and wonder "what generated this?", run `git log --since="<timestamp - 1min>" --until="<timestamp + 1min>"` first. Session 1160's "May 25 09:36 batch" mystery resolved instantly via `git show 9d75f78f` — it was Chris's own Session 1143 PR #2197. Future similar questions should start with the git history before invoking Rigby's ops tools.
+
+## READ THIS FIFTH (NEW Session 1184) — MANUAL PA WORKER RESTART NEEDS `PA_USE_FUNCTION_CALLING=true`
+
+Memory: `feedback_pa_worker_function_calling_env.md`. `make celery` sets it; ad-hoc `nohup celery -A core worker ...` does NOT. Without it, the worker drops to keyword routing — and `source=claude-code` messages (every `pa_chat.py` call) short-circuit to `claude_code_coordination` intent which has NO `elif` branch in routing. Rigby returns text-only "I don't have tool access" responses that look like model refusal but are the system never offering tools. **Symptom:** `/tmp/celery-pa.log` shows `[PA_TASK_SUMMARY] ... tools=none tool_calls=0` every turn. **Fix:** always use `make celery`. If you must restart one worker by hand, include `PA_USE_FUNCTION_CALLING=true` in env. Session 1184 lost ~30 min on this.
 
 ## READ THIS FOURTH (NEW Session 1161, broadened Session 1162) — WORKER `sys.modules` CACHE ⇒ RESTART
 
@@ -97,34 +101,34 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1184 — CURRENT ENTRY POINT
+## SESSION 1185 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1183 closed the CI guardrail bypass cycle and unblocked PR #2357.** PR #2359 (`docs(session-1183)`) rephrased the Celery beat schedule docs into split-ownership language → `context-kit verify` now returns VERIFIED → CI Repo Guardrails passed cleanly in 1m5s (first PR since Session 1180 without `--admin` bypass). Then workers were restarted at 21:33 local because they'd been started 25 min before PR #2357 merged — running pre-fix code from `sys.modules` cache. Tomorrow's 24h watch is the **first** that actually tests PR #2357.
+**Session 1184 shipped Deliverable → Execution provenance linkage** (zero schema, factory synthesis for PA-direct creates, normalized `provenance` block on `deliverable_tool.detail`). Closes Rigby's deliverable `e4f4e12f-bd77-4611-a3d6-1a50fd3b9412`. 4 unit tests pass + live-verified through Rigby on `pa-a60842917d36`. Bonus debug: `PA_USE_FUNCTION_CALLING=true` env regression on manual worker restarts (see READ THIS FIFTH above + `feedback_pa_worker_function_calling_env.md`).
 
-**Pinned conversation:** `pa-8f8ef45338ce4a24` — health 90/100 at Session 1183 close (continue). Run `session_tool health_check` early; rotate if past 60.
+**Pinned conversation:** `pa-a60842917d36` — fresh thread Session 1184; `pa-f4644aa2fd1b` retired (refusal loop from FC env regression, not health). Run `session_tool health_check` early.
 
-Close handoff: [`docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md). Prior: [`docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md`](docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md).
+Close handoff: [`docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md). Prior: [`docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md`](docs/handoffs/SESSION_1183_CELERY_BEAT_OWNERSHIP_AND_WORKER_RESTART.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-8f8ef45338ce4a24`): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on `pa-8f8ef45338ce4a24` — rotate to fresh Session 1184 thread if past 60/100.
-4. **Real 24h watch on PR #2357** (workers restarted 21:33 local Jun 20 — post-merge):
-   - `grep -c 'server-side persist fail-open' celery-long-running.log` — should be **0** since worker restart timestamp. If non-zero, capture the surrounding context (execution + conv + IntegrityError signature). A live recurrence means `_resolve_completion_user` isn't holding for some real path.
-   - `grep -c persist_skipped_missing_user celery-long-running.log` — rare/zero. Non-zero is fine if it's a genuinely-orphan conversation; capture one example to confirm fail-closed log key is firing as designed.
-   - Session 1181 invariants still apply: `[auto_followup] created` lines fire; armed-subs with NULL expires_at older than 6h stay at 0; `artifact_pointers` populated for recent ImageAgent/EditorAgent.
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-a60842917d36`): `platform_config_tool overview` → confirm `service_context: local`. **If Rigby refuses tools, check `/tmp/celery-pa.log` for `tools=none` lines and re-restart the PA worker with `PA_USE_FUNCTION_CALLING=true` per READ THIS FIFTH.**
+3. `session_tool health_check` on `pa-a60842917d36` — rotate to fresh Session 1185 thread if past 60/100.
+4. **24h watch on Session 1184 provenance work** (optional, additive code, easy levers in handoff):
+   - `grep "No parent_execution_id" /tmp/celery-*.log | wc -l` — if hundreds/day, downgrade WARN to debug or start the Phase 2 caller sweep.
+   - Spot-check 2-3 recent agent-dispatch deliverables via `deliverable_tool action=detail` — `provenance.synthesized=false` + non-null `origin_execution_id` proves the agent-dispatch path also flows through.
+5. **Real 24h watch on PR #2357 — DAY 2** (continuing from Session 1183):
+   - `grep -c 'server-side persist fail-open' celery-long-running.log` — should still be **0**.
+   - Session 1181 invariants: `[auto_followup] created` lines fire; armed-subs with NULL expires_at older than 6h stay at 0.
 
-### Suggested first 10-minute item (per Rigby Session 1183 close)
+### Suggested next item (Session 1184 close)
 
-**Decide on inventory-refresh PR.** `verify_doc_claims --only-drift` reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` (`persona_agent_count: expected 155 / actual 84`; `total_agent_count_claim: expected 238 / actual 167`) and `PLATFORM_INVENTORY.md` hasn't been regenerated since `d3493510` (10 sessions ago). Either:
+**Phase 2 provenance caller sweep (deferred from this session).** 31 sites call `create_deliverable()`; many don't pass `parent_execution_id` — they currently land in the soft-enforce WARN bucket. Migration priority: agents that produce publish-candidate work (ContentWriter, BlogWriter, Editor). Use the WARN log to find them. Once swept, flip factory contract to hard-require `parent_execution_id` in non-PA contexts.
 
-- **A**: Regenerate the inventory + bump `load_all_agents_advisors.py` expected values to the new normal (84/167). Mechanical but substantive — captures all Sessions 1171-1182 drift in one doc-refresh PR. Recommended.
-- **B**: Run `load_all_agents_advisors` to reseed the Agent table back to 155 rows. Only if the row count drop reflects accidental cleanup rather than intentional restructure (Sessions 1166-1170 agent dim work suggests intentional).
-- **C**: Defer until verify_doc_claims drift bites again.
+Alternative: **inventory refresh PR (still open from Session 1183 close)** — `verify_doc_claims --only-drift` still reports 2 high drifts on `core/management/commands/load_all_agents_advisors.py` and `PLATFORM_INVENTORY.md` is now 11 sessions stale. Mechanical but substantive.
 
-### What's queued (unchanged from Session 1183 close — pick by Chris's priority)
+### What's queued (carried from Session 1183 — pick by Chris's priority)
 
 **No urgent items.** Pass B is closed (Session 1181), watch finding is fixed (Session 1182), CI is green without bypass (Session 1183), workers are loaded with PR #2357 (Session 1183 close). Session 1184 is a green-field session — pick from any of:
 
@@ -142,6 +146,20 @@ Or genuinely new work.
 ### Carryover (still riding from Sessions 1171-1178)
 
 PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1183_*`.
+
+---
+
+## SESSION 1184 CLOSED — Deliverable → Execution provenance linkage + PA worker FC env gotcha (2026-06-20)
+
+**1 feature PR ready (provenance linkage) + 1 ops finding written to memory.** Full handoff: [`docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md`](docs/handoffs/SESSION_1184_DELIVERABLE_PROVENANCE_LINKAGE.md).
+
+| Change | Theme | Verified |
+|---|---|---|
+| `feat(session-1184)` — Deliverable → Execution provenance | Factory synthesizes `AgentExecution` receipt for PA-direct creates; new `build_provenance_block` helper; normalized `provenance` block on `deliverable_tool.detail`; zero schema | 4/4 unit tests pass; live-verified through Rigby on `pa-a60842917d36` with `origin_execution_id`, `trigger_source=pa_tool`, `synthesized=true`, `legacy_no_provenance=false` |
+
+Closes Rigby's deliverable `e4f4e12f-bd77-4611-a3d6-1a50fd3b9412` (AC1–AC5 all met). Reused Session 843's `parent_object_type`+`parent_object_id` (Rigby ratified all 4 design Qs). Soft-enforced — PA/user-direct paths always get a receipt; autonomous-agent missing-context cases log WARN for incremental Phase 2 sweep.
+
+**Bonus debug — PA worker FC env regression:** manual PA worker restart without `PA_USE_FUNCTION_CALLING=true` env caused 30-min "Rigby refusal loop" mid-session. `make celery` sets the var; ad-hoc `nohup celery ...` does not. Without it, source=claude-code messages fall through keyword routing with no `claude_code_coordination` branch → no tools dispatched → text-only refusals. Saved as `feedback_pa_worker_function_calling_env.md`; `tools/pa_local.sh` doc-block warns future-me; READ THIS FIFTH section above flags it at session open.
 
 ---
 
