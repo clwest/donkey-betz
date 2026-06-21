@@ -411,6 +411,14 @@ class SpiderContextBuilder:
                 'summary': '',
                 'has_data': False,
                 'categories_queried': all_categories,
+                # Session 1189 (AC instrumentation): per-category breakdowns so
+                # AC like "has_data=True against ai_ml specifically" is queryable.
+                # Tracked across the trending-topics loop below. Per-category
+                # supply from secondary lookups (creative/tech/market/jobs) is
+                # not split here — those are aggregated wholesale into the
+                # respective context keys.
+                'items_returned_by_category': {},
+                'has_data_by_category': {},
             }
 
             # Collect trends from relevant categories
@@ -426,12 +434,17 @@ class SpiderContextBuilder:
                         limit=max_trends,
                         max_entries=50,
                     )
+                    count = len(trends) if trends else 0
+                    context['items_returned_by_category'][category] = count
+                    context['has_data_by_category'][category] = bool(count)
                     if trends:
                         all_trends.extend(trends)
                         for trend in trends:
                             sources_used.update(trend.get('sources', []))
                 except Exception as e:
                     logger.debug(f"Failed to get trends for {category}: {e}")
+                    context['items_returned_by_category'][category] = 0
+                    context['has_data_by_category'][category] = False
 
             # Deduplicate and rank trends
             seen_topics = set()
