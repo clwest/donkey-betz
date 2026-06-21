@@ -339,15 +339,29 @@ class ContentHandlersMixin:
 
             qs = base_qs.filter(created_at__gte=since)
 
+            # Session 1194 — honor workspace_id filter (AC1 of
+            # INITIATIVES_FIRST_BACKBONE.md). content_recent previously
+            # silently ignored workspace_id, so a Donkey-Betz-scoped query
+            # would return cross-workspace results and couldn't be diffed
+            # against deliverable_tool.list at the row level.
+            ws_id = payload.get('workspace_id') or payload.get('workspace')
+            if ws_id:
+                qs = qs.filter(workspace_id=ws_id)
+
             if content_type:
                 qs = qs.filter(deliverable_type=content_type)
             if category:
                 qs = qs.filter(category__icontains=category)
 
+            # Session 1194 — add initiative_id/workspace_id projection so
+            # the row shape matches deliverable_tool.list. Closes the
+            # measurement gap that triggered Plan A.
             items = list(
                 qs.order_by('-created_at')[:limit].values(
                     'id', 'title', 'deliverable_type', 'category',
-                    'agent_name', 'quality_score', 'created_at', 'status'
+                    'agent_name', 'quality_score', 'created_at', 'status',
+                    'initiative_id', 'initiative__name',
+                    'workspace_id', 'workspace__name',
                 )
             )
 
@@ -363,6 +377,12 @@ class ContentHandlersMixin:
                 'items': items,
                 'period_days': period_days,
                 'by_status': status_counts,
+                'filters_applied': {
+                    'workspace_id': ws_id,
+                    'type': content_type,
+                    'category': category,
+                    'days': period_days,
+                },
             }
 
         elif action == 'search':
