@@ -239,7 +239,7 @@ implementation modules:
 
 Two paths:
 
-1. **`tasks_agents` only — explicit import** in `core/celery.py`:
+1. **`tasks_agents` — explicit import (pinned at boot)** in `core/celery.py`:
    ```python
    # Session 919: Explicitly include task modules with non-standard names.
    # autodiscover_tasks() only finds tasks.py, not tasks_agents.py

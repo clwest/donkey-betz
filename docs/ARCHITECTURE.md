@@ -677,7 +677,7 @@ response = client.chat.completions.create(
 
 ### Celery Beat Schedules
 
-The Celery beat schedule is defined in `core/celery.py` (code-first single source of truth, Session 1157 option A). The `app.conf.beat_schedule` dict there is canonical; `core/management/commands/add_critical_celery_tasks` materializes/repairs `django-celery-beat` `PeriodicTask` rows from it and does not define scheduling semantics. Since Session 1077 the schedule has been in **minimal/token-conservation mode** — only essential health checks and DB-hygiene cleanups; the broader agent/spider/intelligence schedules from earlier sessions are preserved in git history but not active.
+The Celery beat schedule is split-owned across four sources by design: the primary static schedule lives in `core/celery.py` (`app.conf.beat_schedule` dict, code-first authoritative source per Session 1157 option A); the runtime store is `django-celery-beat`'s `PeriodicTask` rows; the bridge/bootstrap commands `core/management/commands/add_critical_celery_tasks` + `sync_celery_beat` + `sync_celery_schedules` materialize and repair those DB rows from the static dict without defining scheduling semantics; and `core/settings.py` carries the routing/config layer (`CELERY_BEAT_SCHEDULER = DatabaseScheduler`). Since Session 1077 the schedule has been in **minimal/token-conservation mode** — limited to essential health checks and DB-hygiene cleanups; the broader agent/spider/intelligence schedules from earlier sessions are preserved in git history but no longer active.
 
 Illustrative shape (live entries live in `core/celery.py:app.conf.beat_schedule`):
 
