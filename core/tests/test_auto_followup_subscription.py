@@ -362,6 +362,115 @@ class CancelTerminalFollowupFireTests(TestCase):
         self.assertEqual(sub.result_payload.get('status'), 'cancelled')
 
 
+class ServerSidePersistenceTests(TestCase):
+    """Session 1180 Pass B Cell 4 fix — verify completion-row persistence is
+    execution-lifecycle-dependent, not WS-connection-dependent. After PR #2352,
+    fire_agent_followup_subscriptions writes the ChatConversation row server-side
+    BEFORE broadcasting, so a refresh/disconnect during agent runtime no longer
+    drops the bubble.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='server-persist-test', email='server@example.com', password='x',
+        )
+        self.agent, _ = Agent.objects.get_or_create(
+            name='ResearchAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+        self.conversation_id = 'pa-server-persist-test-001'
+
+    def test_fire_helper_persists_completion_row_with_no_consumers(self):
+        """Mocks get_channel_layer to return None (simulates 0 connected
+        consumers / channel layer unavailable). Asserts:
+          - sub transitions armed → fired
+          - ChatConversation agent_completion row IS persisted server-side
+          - row metadata reflects the execution payload
+        Without this fix the row would only exist if a consumer was subscribed
+        at fire time (matrix Cell 5 Run 2 case).
+        """
+        from unittest import mock
+        from core.models.conversations.models import ChatConversation
+        from core.tasks_agents import (
+            create_implicit_followup_subscription,
+            fire_agent_followup_subscriptions,
+        )
+
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='server-persist-test',
+            status='completed', conversation_id=self.conversation_id,
+            completed_at=timezone.now(),
+        )
+        sub = create_implicit_followup_subscription(execution, context={})
+        self.assertIsNotNone(sub)
+        self.assertIsNone(sub.expires_at)
+
+        # Simulate "no consumers / channel layer unavailable" by returning None.
+        # The fire helper must STILL persist the completion row server-side.
+        with mock.patch(
+            'core.tasks_agents.get_channel_layer', return_value=None,
+        ):
+            fire_agent_followup_subscriptions(execution)
+
+        sub.refresh_from_db()
+        self.assertEqual(sub.state, AgentFollowupSubscription.STATE_FIRED)
+
+        rows = ChatConversation.objects.filter(
+            conversation_id=self.conversation_id,
+            metadata__contains={
+                'kind': 'agent_completion',
+                'execution_id': str(execution.id),
+            },
+        )
+        self.assertEqual(
+            rows.count(), 1,
+            'fire helper must persist completion row server-side even with 0 consumers',
+        )
+        row = rows.first()
+        self.assertEqual(row.metadata.get('agent_name'), 'ResearchAgent')
+        self.assertEqual(row.metadata.get('status'), 'completed')
+        self.assertEqual(row.metadata.get('execution_id'), str(execution.id))
+        self.assertEqual(row.source, 'pa')
+
+    def test_double_fire_does_not_create_duplicate_row(self):
+        """Idempotency: if fire_agent_followup_subscriptions is somehow called
+        twice for the same execution (e.g., race between terminal save sites),
+        the second call's atomic UPDATE returns fired_count=0 and exits before
+        persistence — so no second row. Pinned to prevent regression.
+        """
+        from unittest import mock
+        from core.models.conversations.models import ChatConversation
+        from core.tasks_agents import (
+            create_implicit_followup_subscription,
+            fire_agent_followup_subscriptions,
+        )
+
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='double-fire-test',
+            status='completed', conversation_id=self.conversation_id,
+            completed_at=timezone.now(),
+        )
+        create_implicit_followup_subscription(execution, context={})
+
+        with mock.patch(
+            'core.tasks_agents.get_channel_layer', return_value=None,
+        ):
+            fire_agent_followup_subscriptions(execution)
+            fire_agent_followup_subscriptions(execution)  # second call
+
+        self.assertEqual(
+            ChatConversation.objects.filter(
+                conversation_id=self.conversation_id,
+                metadata__contains={
+                    'kind': 'agent_completion',
+                    'execution_id': str(execution.id),
+                },
+            ).count(),
+            1,
+            'second fire must not create duplicate row (fired_count=0 short-circuit)',
+        )
+
+
 class ExpireStaleSubscriptionBeatTaskTests(TestCase):
     """Session 1180 P1 — verify the beat cleanup task skips NULL-expiry rows
     so auto-wake (execution-lifecycle-bound) subs are never killed by hygiene.
