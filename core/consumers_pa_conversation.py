@@ -37,6 +37,18 @@ logger = logging.getLogger(__name__)
 # / channels machinery. The consumer wraps each via database_sync_to_async in
 # its async agent_completed handler.
 
+
+class AnonymousCompletionRowError(ValueError):
+    """Session 1182 PR #2356: typed error raised when create_completion_row is
+    called without an authenticated user. The chat_conversations.user_id column
+    is NOT NULL, so the prior silent `else None` fallback only converted a
+    programmer-contract violation into a runtime IntegrityError downstream
+    (harder to debug, looks like infra/data issue). Both call sites — the WS
+    consumer (passes self.scope['user']) and the fire helper (resolves via
+    execution.user → conv-owner lookup) — are responsible for supplying an
+    authenticated user before calling this helper.
+    """
+
 def compose_completion_body(
     *, execution_id, agent_name, status, error_signature, artifact_pointers, is_background,
 ):
@@ -118,6 +130,14 @@ def create_completion_row(
     """
     from core.models.conversations.models import ChatConversation
     from core.models_unified_system import AgentFollowupSubscription
+    # Contract: caller MUST supply an authenticated user. chat_conversations.user_id
+    # is NOT NULL — there is no legal path where user=None. Raise typed early so
+    # callers see a clear programmer error instead of a downstream IntegrityError.
+    if not user or not getattr(user, 'is_authenticated', False):
+        raise AnonymousCompletionRowError(
+            f"create_completion_row requires an authenticated user "
+            f"(conversation_id={conversation_id}, execution_id={execution_id})"
+        )
     sub = AgentFollowupSubscription.objects.filter(
         execution_id=execution_id,
         conversation_id=conversation_id,
@@ -133,7 +153,7 @@ def create_completion_row(
     if existing is not None:
         return existing
     return ChatConversation.objects.create(
-        user=user if (user and getattr(user, 'is_authenticated', False)) else None,
+        user=user,
         conversation_id=conversation_id,
         user_message='',
         assistant_response=assistant_response,
