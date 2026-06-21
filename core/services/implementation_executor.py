@@ -360,6 +360,7 @@ class WorkflowUpdateHandler(BaseHandler):
                     'decision_type': decision.decision_type,
                     'impact_area': decision.impact_area,
                     'workflow_steps': workflow_steps,
+                    'trigger_source': 'direct',
                 },
                 preview_content=content[:500],
                 status='completed',
@@ -652,6 +653,7 @@ class ConfigUpdateHandler(BaseHandler):
                 metadata={
                     'source_pilot': str(implementation.pilot.id),
                     'requires_human': True,
+                    'trigger_source': 'direct',
                 },
                 preview_content=content[:500],
                 status='completed',
