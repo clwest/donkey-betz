@@ -8,6 +8,8 @@ Each test calls a non-mutating action and asserts a valid response shape.
 Run: python manage.py test core.tests.test_gateway_smoke -v2
 """
 
+import unittest
+
 from django.test import TestCase
 
 from core.services.tool_dispatcher import ToolDispatcher
@@ -233,3 +235,63 @@ class TestRemovedToolGuard(TestCase):
                 f"BOUNDARY FAILURE: {tool_name} is callable via execute_sync() — "
                 f"it should only be invoked internally by gateway handlers"
             )
+
+
+class TestWebSearchHandlerLimitPassthrough(unittest.TestCase):
+    """Session 1183 PR A2: _handle_web_search must honor caller-supplied
+    `limit` (gateway convention) and `num_results` (legacy convention), clamped
+    to 10. Prevents silent regression when ResearchAgent (or any other caller)
+    migrates from `web_search` to `intelligence_tool.search`.
+
+    Uses unittest.TestCase (not django.test.TestCase) so the test doesn't pull
+    in pytest-django DB setup — handler logic is mocked at the WebSearchTool
+    boundary and needs no DB.
+    """
+
+    def _invoke_handler(self, payload):
+        """Invoke _handle_web_search with WebSearchTool mocked to capture
+        max_results without making a real Serper call."""
+        from unittest.mock import patch, MagicMock
+        from core.services.tool_dispatcher import ToolDispatcher
+
+        captured = {}
+        mock_tool = MagicMock()
+
+        def fake_execute(*, query, max_results, search_type):
+            captured['query'] = query
+            captured['max_results'] = max_results
+            captured['search_type'] = search_type
+            return {'success': True, 'data': {'results': []}}
+
+        mock_tool.execute = fake_execute
+        with patch('core.tools.web_search.WebSearchTool', return_value=mock_tool):
+            ToolDispatcher()._handle_web_search(
+                'web_search', payload, user_id=1, trace_id='test'
+            )
+        return captured
+
+    def test_limit_param_honored(self):
+        captured = self._invoke_handler({'query': 'x', 'limit': 8})
+        self.assertEqual(captured['max_results'], 8)
+
+    def test_num_results_param_honored_for_legacy_callers(self):
+        captured = self._invoke_handler({'query': 'x', 'num_results': 7})
+        self.assertEqual(captured['max_results'], 7)
+
+    def test_limit_takes_precedence_over_num_results(self):
+        captured = self._invoke_handler(
+            {'query': 'x', 'limit': 9, 'num_results': 3}
+        )
+        self.assertEqual(captured['max_results'], 9)
+
+    def test_neither_param_falls_back_to_5(self):
+        captured = self._invoke_handler({'query': 'x'})
+        self.assertEqual(captured['max_results'], 5)
+
+    def test_oversized_limit_clamped_to_10(self):
+        captured = self._invoke_handler({'query': 'x', 'limit': 100})
+        self.assertEqual(captured['max_results'], 10)
+
+    def test_invalid_limit_falls_back_to_5(self):
+        captured = self._invoke_handler({'query': 'x', 'limit': 'bogus'})
+        self.assertEqual(captured['max_results'], 5)
