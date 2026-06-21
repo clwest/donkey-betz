@@ -266,19 +266,19 @@ def _resolve_completion_user(execution_record, conversation_id):
         return user
     try:
         from core.models.conversations.models import ChatConversation
-        owner = (
+        owner_id = (
             ChatConversation.objects
             .filter(conversation_id=conversation_id)
             .exclude(user__isnull=True)
-            .order_by('-created_at')
-            .values_list('user', flat=True)
+            .order_by('-created_at', '-id')
+            .values_list('user_id', flat=True)
             .first()
         )
-        if owner is None:
+        if owner_id is None:
             return None
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        return User.objects.filter(pk=owner).first()
+        return User.objects.filter(pk=owner_id).first()
     except Exception as e:
         logger.warning(
             "[_resolve_completion_user] lookup failed execution=%s conv=%s (%s: %s)",
