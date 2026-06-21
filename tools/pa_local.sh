@@ -17,11 +17,11 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1180 thread
-# (pa-a5fecc400c0f4152, created Session 1179 close after the prior
-# Session 1177-1179 thread pa-9b82bcc72e1945ce hit health score 60/100
-# with ~30 turns / ~15k tokens / 10 topics — retired at "suggest_fresh"
-# threshold ahead of the live Pass B matrix stress-test runs).
+# the --conversation flag below. Current value: Session 1182 thread
+# (pa-8f8ef45338ce4a24, created Session 1182 open after the prior
+# Session 1180-1181 thread pa-a5fecc400c0f4152 hit health score 55/100
+# with 39 turns / ~19.5k tokens / 6 topics — retired at "suggest_fresh"
+# threshold ahead of the post-Pass-B 24h watch + green-field work).
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-a5fecc400c0f4152
+python tools/pa_chat.py "$@" --tools --conversation pa-8f8ef45338ce4a24

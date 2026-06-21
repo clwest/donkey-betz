@@ -97,44 +97,72 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1182 — CURRENT ENTRY POINT
+## SESSION 1183 — CURRENT ENTRY POINT
 
 ### FIRST THING this session
 
-**Session 1181 drained the Phase 3 queue from Session 1180.** PR #2354 (artifact_pointers extractor — Cell 8 fix) and PR #2355 (banner queue / toast stack — Cell 7 frontend fix) both merged + live-verified. The agent wake/persistence/UI loop is now end-to-end correct. **Pass B is fully closed.**
+**Session 1182 caught a real regression in the 24h watch and shipped a tight fix.** PR #2357 (`fix(session-1182-server-persist)`) resolved PR #2352's silently-failing server-side persist path: `IntegrityError: null user_id` was being swallowed by fail-open. Consumer-side safety net was carrying the load; defense-in-depth is now actually two-deep.
 
-Only Finding #4 (threaded-worker SIGTERM revoke limitation) remains as an open Phase 3 item — deferred per Rigby until it causes real pain. Not blocking anything.
+**Pinned conversation:** `pa-8f8ef45338ce4a24` — created Session 1182 open after `pa-a5fecc400c0f4152` hit 55/100. Healthy at Session 1182 close. Run `session_tool health_check` early; rotate if past 60.
 
-**Pinned conversation:** `pa-a5fecc400c0f4152` — still active, ~25 turns since Session 1180 start, was 70/100 at session start. Run `session_tool health_check` early — likely 60-70 range; threshold for rotate is 60. If `suggest_fresh`, rotate to a Session 1182 thread.
-
-Close handoff: [`docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md`](docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md). Prior: [`docs/handoffs/SESSION_1180_PASS_B_EXECUTION.md`](docs/handoffs/SESSION_1180_PASS_B_EXECUTION.md).
+Close handoff: [`docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md`](docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md). Prior: [`docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md`](docs/handoffs/SESSION_1181_PHASE3_BANNER_QUEUE_AND_ARTIFACTS.md).
 
 Standard FIRST THING checks:
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-a5fecc400c0f4152`): `platform_config_tool overview` → confirm `service_context: local`.
-3. `session_tool health_check` on `pa-a5fecc400c0f4152` — rotate to fresh Session 1182 thread if past 60/100.
-4. Spot-check Session 1180+1181 24h watch (see Session 1181 handoff §"24h watch checklist"):
-   - Tail `celery-long-running.log | grep '\[auto_followup\]'` — `created` lines fire, `fail-open` absent
-   - `SELECT COUNT(*) FROM core_agentfollowupsubscription WHERE state='armed' AND expires_at IS NULL AND created_at < NOW() - INTERVAL '6 hours'` — should be 0 (or <10)
-   - **NEW** Spot-check `chat_conversations.metadata.artifact_pointers` is non-empty for ImageAgent / EditorAgent completions in the last day (PR #2354 verification)
+2. Through Rigby (canon: `tools/pa_local.sh`, pinned conv `pa-8f8ef45338ce4a24`): `platform_config_tool overview` → confirm `service_context: local`.
+3. `session_tool health_check` on `pa-8f8ef45338ce4a24` — rotate to fresh Session 1183 thread if past 60/100.
+4. Spot-check 24h watch (Session 1182 updates):
+   - Tail `celery-long-running.log | grep '\[fire_agent_followup_subscriptions\] server-side persist fail-open'` — should be **zero** for the IntegrityError-on-user_id signature post-PR #2357.
+   - Tail `celery-long-running.log | grep persist_skipped_missing_user` — should appear rarely (only for genuinely-orphan conversations). Frequent → conv-owner fallback isn't holding for some real path.
+   - Session 1181 invariants still apply: `[auto_followup] created` lines fire; armed-subs with NULL expires_at older than 6h stay at 0; `artifact_pointers` populated for recent ImageAgent/EditorAgent.
 
-### What's queued (pick by Chris's priority)
+### Suggested first 10-minute item (per Rigby Session 1182 close)
 
-**No urgent items.** With Pass B closed and all 5 PRs (#2350-#2355) live, the wake/persistence/UI loop is correct. Session 1182 is a green-field session — pick from any of:
+**Triage the pre-existing `Celery beat schedule ownership` CI guardrail conflict.** It's been failing `Repo Guardrails` on every PR merge since at least Session 1181 (#2354, #2355, #2356, #2357 all merged via `--admin` bypass). Not blocking — but it makes the watch loop noisier and obscures real CI regressions.
+
+Three options spelled out in the Session 1182 handoff §"Known issues":
+- **A**: Update the canonical doc claim to reflect actual multi-file ownership (the beat schedule IS genuinely split across migrations + setup commands + runtime services).
+- **B**: Fix the guardrail's expectation that beat schedule ownership is single-file (it isn't, by design).
+- **C**: Accept the bypass indefinitely and document the rationale.
+
+`context-kit verify --json` will give the exact 20+ files claiming ownership. Pick the lane, fix it, get back to a green CI baseline.
+
+### What's queued (pick by Chris's priority — unchanged from Session 1182)
+
+**No urgent items.** With Pass B closed (Session 1181) and the watch finding fixed (Session 1182 PR #2357), the wake/persistence/UI loop is correct + defense-in-depth is real. Session 1183 is a green-field session — pick from any of:
 
 | Item | Status | When to pick |
 |---|---|---|
 | **Finding #4** — threaded-worker SIGTERM revoke limitation | Deferred (no pain yet) | Real cancel reliability concern. Pick if you start seeing hung tasks, runaway CPU on long_running queue, or users complaining that Cancel doesn't work. Rigby's Session 1181 framing: start with "what failure mode are we optimizing for?" (cannot kill threads vs revoke queued vs cooperative checkpoints), then pick from: switch `long_running` to `--pool=prefork`, add cooperative cancellation checkpoints in long tasks, or accept limitation + clearer UI wording. |
 | **Wake-loop UX polish bundle** | Optional | Rigby's Session 1181 mentions: hover-to-pause toast timer, "Clear all" button when queue > 1, click-toast → scroll-to-bubble, click-artifact-id → open media/blog viewer. Could be 1 bundled PR if Chris wants a feature day. |
+| **Phase 4: FK on `AgentFollowupSubscription`** | Session 1182 deferred | Add user FK → remove 2-query conv-owner fallback + enable user-keyed subscription analytics. Not load-bearing today; pick up if conv-owner fallback shows up as a hotspot. |
 | **Optional UX hardening still on the table** | Subsumed by PR #2352 architecture | `GET /completions?since=` replay endpoint, WS connection-state UI per conversation, JSON-expression partial unique index. All would-be-nice but none required after server-side persistence landed. |
 | **`auto_followup_skipped` traceability stamp** | Session 1178 deferred | Tiny 1-file PR if Chris wants observability on which dispatches opt out. |
 | **EditorAgent observability dashboard** (C3 from #2343) | Session 1178 deferred | Workspace dashboard surfacing EditorAgent quality-gate rejects. |
 
-Or genuinely new work — Pass B's done, Session 1180+1181 left the wake loop clean.
+Or genuinely new work.
 
 ### Carryover (still riding from Sessions 1171-1178)
 
-PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1181_*`.
+PgBouncer follow-up verifications, narrative dedup, agent-name dim checks, retry-policy bulk migrations, `pg_stat_statements` on staging/prod, `capture_pa_acks_health_snapshot` slow-task investigation, COO consolidation deferreds. Live handoffs: `docs/handoffs/SESSION_1171_*` through `SESSION_1182_*`.
+
+---
+
+## SESSION 1182 CLOSED — 24h-watch finding → server-side persist user attribution fix (2026-06-20)
+
+**1 PR merged.** Full handoff: [`docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md`](docs/handoffs/SESSION_1182_SERVER_PERSIST_USER_ID.md).
+
+| PR | Theme | SHA | Verified |
+|---|---|---|---|
+| **#2357** | `fix(session-1182-server-persist)` — resolve user attribution in fire helper + tighten `create_completion_row` contract | `51fdfe55` | 18/18 tests green; chat_conversations row 661 proves consumer-side fallback was carrying the path pre-fix |
+
+24h watch surfaced a real regression in PR #2352's server-side persist path: `IntegrityError: null user_id` on PA-originated ImageAgent dispatches → fail-open silently swallowed it. UX wasn't broken (consumer-side safety net wrote the row), but the architectural intent of PR #2352 ("decouple completion persistence from WS consumer") was half-broken.
+
+Fix: 3-part patch — `_resolve_completion_user` helper (execution.user → conv-owner lookup → fail-closed), distinct `persist_skipped_missing_user` log key (not mislabeled fail-open), `AnonymousCompletionRowError(ValueError)` raised early in `create_completion_row` instead of silent None fallback. No migration. Single-revert safe.
+
+**New behavioral invariant:** Server-side persistence is fail-closed when ownership can't be resolved; WS consumer still persists for live sockets. The "no consumer + missing attribution" case is explicitly logged via `persist_skipped_missing_user` and skipped.
+
+**Known issue carried into Session 1183:** Pre-existing `Repo Guardrails` CI failure (`Celery beat schedule ownership` CONFLICT) — NOT caused by #2357, present on main since at least Session 1181. Merge required `--admin` bypass. Triage as Session 1183 first 10-minute item.
 
 ---
 
