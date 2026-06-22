@@ -288,13 +288,30 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 			--hostname=broadcast@%h > $(CELERY_BROADCAST_LOG) 2>&1 & echo $$! > $(CELERY_BROADCAST_PIDFILE); \
 		sleep 1; \
 	fi
-	@# Start Celery beat if not running
-	@if pgrep -f "celery.*beat" >/dev/null 2>&1; then \
+	@# Start Celery beat if not running.
+	@# Session 1205 (finding a4928480): pgrep pattern tightened from
+	@# "celery.*beat" to "celery -A core beat". The loose pattern matched
+	@# any process whose command line contained both "celery" and "beat" —
+	@# including `tail -F celery-beat.log` and similar observability
+	@# commands. That caused silent degradation: Makefile saw the tail
+	@# process, assumed beat was running, skipped startup, no error.
+	@if pgrep -f "celery -A core beat" >/dev/null 2>&1; then \
 		echo "-> Celery beat already running"; \
 	else \
 		echo "-> Starting Celery beat (background)..."; \
-		PG_APPLICATION_NAME=dbz:celery-beat nohup .venv/bin/celery -A core beat --loglevel=info > $(CELERY_BEAT_LOG) 2>&1 & echo $$! > $(CELERY_BEAT_PIDFILE); \
-		sleep 1; \
+		PG_APPLICATION_NAME=dbz:celery-beat nohup .venv/bin/celery -A core beat --loglevel=info --pidfile=$(CELERY_BEAT_PIDFILE) > $(CELERY_BEAT_LOG) 2>&1 & \
+		sleep 2; \
+	fi
+	@# Session 1205 (finding a4928480): defensive verification — loud
+	@# failure if beat didn't actually start. Without this, silent beat
+	@# death only surfaces hours later when a scheduled task is noticed
+	@# to have not fired.
+	@if ! pgrep -f "celery -A core beat" >/dev/null 2>&1; then \
+		echo "❌ FATAL: celery beat failed to start. Tail $(CELERY_BEAT_LOG) for errors."; \
+		echo "   Common causes: stale .celery-beat.pid (rm -f $(CELERY_BEAT_PIDFILE))"; \
+		echo "                  port/lock conflict from prior beat process"; \
+		echo "                  app import error (run: .venv/bin/celery -A core beat --loglevel=info  to see)"; \
+		exit 1; \
 	fi
 	@echo "✓ Celery services started (3 workers + beat)."
 	@echo "  - Default worker (4 threads): $(CELERY_LOG)"
@@ -342,10 +359,12 @@ celery-stop: ## Stop all Celery workers and beat
 	fi
 	@# Wait for graceful shutdown, then force kill any remaining
 	@sleep 2
-	@if pgrep -f "celery.*worker" >/dev/null 2>&1 || pgrep -f "celery.*beat" >/dev/null 2>&1; then \
+	@# Session 1205 (finding a4928480): tightened "celery.*beat" → "celery -A core beat"
+	@# to avoid matching observability commands like `tail -F celery-beat.log`.
+	@if pgrep -f "celery -A core worker" >/dev/null 2>&1 || pgrep -f "celery -A core beat" >/dev/null 2>&1; then \
 		echo "-> Force killing remaining Celery processes..."; \
-		pkill -9 -f "celery.*worker" 2>/dev/null || true; \
-		pkill -9 -f "celery.*beat" 2>/dev/null || true; \
+		pkill -9 -f "celery -A core worker" 2>/dev/null || true; \
+		pkill -9 -f "celery -A core beat" 2>/dev/null || true; \
 		sleep 1; \
 	fi
 	@echo "✓ Celery services stopped."
@@ -357,7 +376,7 @@ celery-status: ## Check Celery worker and beat status
 	@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then echo "  ✓ Long-running worker (slow tasks)"; else echo "  ✗ Long-running worker not running"; fi
 	@if pgrep -f "hostname=broadcast" >/dev/null 2>&1; then echo "  ✓ Broadcast worker (status updates)"; else echo "  ✗ Broadcast worker not running"; fi
 	@echo "Scheduler:"
-	@if pgrep -f "celery.*beat" >/dev/null 2>&1; then echo "  ✓ Celery beat running"; else echo "  ✗ Celery beat not running"; fi
+	@if pgrep -f "celery -A core beat" >/dev/null 2>&1; then echo "  ✓ Celery beat running"; else echo "  ✗ Celery beat not running"; fi
 	@echo ""
 	@echo "Celery processes:"
 	@ps aux | grep -E "celery" | grep -v grep || echo "  No Celery processes found"
