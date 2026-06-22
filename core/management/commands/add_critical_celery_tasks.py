@@ -64,6 +64,14 @@ LOCAL_DENY_TASKS = frozenset({
     'warm-up-spiders',                     # spider warmup pings externals
     'backfill-spider-embeddings',          # OpenAI embedding spend
     'generate-operator-edge-newsletter',   # LLM newsletter generation
+    # Session 1205 — Sports + market intelligence producers (Capability Audit
+    # finding 6869fa55). All four hit external APIs (theodds, kalshi) and/or
+    # invoke LLM-driven agents. Materialize on Railway only; opt-in on local
+    # via ENABLE_BEAT_TASKS=<csv> for explicit dev testing.
+    'market-intelligence-scan',            # SportsOddsAnalyst + ArbitrageDetector + PredictionMarketAnalyst
+    'generate-daily-betting-brief',        # SportsBettingCoordinator (5 sports agents) + GamePredictor
+    'collect-sports-odds-intelligence',    # theodds spider
+    'collect-kalshi-prediction-markets',   # kalshi spider
 })
 
 

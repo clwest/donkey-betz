@@ -668,6 +668,41 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=10),  # 10 min past every hour
         'options': {'queue': 'long_running', 'expires': 3600},
     },
+
+    # ────────────────────────────────────────────────────────────────────────
+    # Session 1205 — Sports + market intelligence producers (Capability Audit
+    # finding 6869fa55). All 7 sports-betting agents were classified DEAD on
+    # the Layer 1 dashboard (zero 30d invocations). Deep-dive revealed they
+    # are wired and code-functional but their producer beat tasks were never
+    # scheduled. `_impl_market_intelligence_scan` docstring even claimed
+    # "Scheduled to run every 2 hours" but no PeriodicTask row existed.
+    # These 4 entries materialize the missing trigger surface.
+    #
+    # All 4 are external-API / agent-orchestration tasks, added to
+    # LOCAL_DENY_TASKS in add_critical_celery_tasks.py so `make celery` on a
+    # dev laptop does not fire them. They activate on Railway production
+    # (RAILWAY_ENVIRONMENT set) by default.
+    # ────────────────────────────────────────────────────────────────────────
+    'market-intelligence-scan': {
+        'task': 'core.tasks.market_intelligence_scan',
+        'schedule': crontab(minute=0, hour='*/2'),  # every 2h on the hour
+        'options': {'queue': 'long_running', 'expires': 7200},
+    },
+    'generate-daily-betting-brief': {
+        'task': 'core.tasks.generate_daily_betting_brief',
+        'schedule': crontab(hour=7, minute=0),  # 7:00 AM MT daily — MLB Run Line Desk spec 46332cee
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+    'collect-sports-odds-intelligence': {
+        'task': 'core.tasks.collect_sports_odds_intelligence',
+        'schedule': crontab(minute='*/30'),  # every 30 min — keep theodds snapshot fresh
+        'options': {'queue': 'long_running', 'expires': 1800},
+    },
+    'collect-kalshi-prediction-markets': {
+        'task': 'core.tasks.collect_kalshi_prediction_markets',
+        'schedule': crontab(minute=15),  # every hour at :15 — offset from sports odds
+        'options': {'queue': 'long_running', 'expires': 3600},
+    },
 }
 
 # Task routing configuration
