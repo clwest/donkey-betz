@@ -356,6 +356,11 @@ class ContentHandlersMixin:
             # Session 1194 — add initiative_id/workspace_id projection so
             # the row shape matches deliverable_tool.list. Closes the
             # measurement gap that triggered Plan A.
+            # Session 1194 Plan B — `total` field added for parity with
+            # deliverable_tool.list. Rigby flagged in Plan A verification:
+            # caller couldn't distinguish "returned 5 of N matching" from
+            # "5 total matching" without a total field.
+            total = qs.count()
             items = list(
                 qs.order_by('-created_at')[:limit].values(
                     'id', 'title', 'deliverable_type', 'category',
@@ -374,6 +379,7 @@ class ContentHandlersMixin:
             return {
                 'action': 'recent',
                 'count': len(items),
+                'total': total,
                 'items': items,
                 'period_days': period_days,
                 'by_status': status_counts,
@@ -477,7 +483,7 @@ class ContentHandlersMixin:
             if not deliverable_id:
                 raise ValueError("id is required for details action")
 
-            deliverable = base_qs.filter(id=deliverable_id).first()
+            deliverable = base_qs.select_related('initiative', 'workspace').filter(id=deliverable_id).first()
             if deliverable:
                 return {
                     'action': 'details',
@@ -493,6 +499,14 @@ class ContentHandlersMixin:
                     'content_preview': (deliverable.content or '')[:1000],
                     'tags': deliverable.tags or [],
                     'created_at': deliverable.created_at.isoformat() if deliverable.created_at else None,
+                    # Session 1194 Plan B §3.B.1 — surface initiative + workspace
+                    # linkage on content_detail (was missing — round-trip query
+                    # required two calls). Closes AC2 of
+                    # INITIATIVES_FIRST_BACKBONE.md.
+                    'initiative_id': str(deliverable.initiative_id) if deliverable.initiative_id else None,
+                    'initiative_name': deliverable.initiative.name if deliverable.initiative_id and deliverable.initiative else None,
+                    'workspace_id': str(deliverable.workspace_id) if deliverable.workspace_id else None,
+                    'workspace_name': deliverable.workspace.name if deliverable.workspace_id and deliverable.workspace else None,
                 }
 
             # Session 1101: Fallback to SelfBlog if not found in Deliverables
@@ -1576,6 +1590,9 @@ class ContentHandlersMixin:
 
             # Session 1077: Annotate action item counts to avoid N+1 queries
             # (was 2 COUNT queries per initiative in the loop)
+            # Session 1194 Plan B §3.B.3 — add deliverable_count alongside,
+            # same pattern (annotation, not N+1). Cheap summary so callers
+            # don't need to query initiative_deliverables for a count.
             from django.db.models import Count, Q as _Q
             qs = qs.annotate(
                 pending_actions=Count(
@@ -1586,9 +1603,13 @@ class ContentHandlersMixin:
                     filter=_Q(action_items__status='pending', action_items__priority='critical'),
                     distinct=True,
                 ),
+                deliverable_count=Count('deliverables', distinct=True),
             )
 
             # Order + paginate (offset was missing before Session 1077)
+            # Session 1194 Plan B §3.B.2 — add target_workspace_id/name so the
+            # initiative-side workspace binding is observable from list responses.
+            # Closes AC3 of INITIATIVES_FIRST_BACKBONE.md.
             total_count = qs.count()
             start = int(offset)
             end = start + int(limit)
@@ -1600,7 +1621,8 @@ class ContentHandlersMixin:
                     'updated_at', 'last_activity_at',
                     'owner_id', 'owner_agent',
                     'human_id', 'seq_id',
-                    'pending_actions', 'critical_actions',
+                    'pending_actions', 'critical_actions', 'deliverable_count',
+                    'target_workspace_id', 'target_workspace__name',
                 )
             )
 
@@ -1851,6 +1873,21 @@ class ContentHandlersMixin:
             if initiative.owner_id:  # type: ignore[attr-defined]
                 owner_display = initiative.owner.username if initiative.owner else None
 
+            # Session 1194 Plan B §3.B.2 + §3.B.3 — surface workspace binding
+            # + cheap deliverable_count summary so the initiative-detail call
+            # carries everything a caller needs to decide whether to paginate
+            # initiative_deliverables. Closes AC3 + AC4 of
+            # INITIATIVES_FIRST_BACKBONE.md.
+            target_workspace_id = (
+                str(initiative.target_workspace_id) if initiative.target_workspace_id else None
+            )
+            target_workspace_name = (
+                initiative.target_workspace.name
+                if initiative.target_workspace_id and initiative.target_workspace
+                else None
+            )
+            deliverable_count = initiative.deliverables.count()  # type: ignore[attr-defined]
+
             return {
                 'action': 'details',
                 'id': str(initiative.id),
@@ -1868,9 +1905,82 @@ class ContentHandlersMixin:
                 'created_at': initiative.created_at.isoformat() if initiative.created_at else None,
                 'owner': owner_display,
                 'owner_agent': initiative.owner_agent,
+                'target_workspace_id': target_workspace_id,
+                'target_workspace_name': target_workspace_name,
+                'deliverable_count': deliverable_count,
                 'stages': stages,
                 'action_items': action_items,
                 'action_item_count': len(action_items),
+            }
+
+        elif action == 'initiative_deliverables':
+            # Session 1194 Plan B §3.B.3 — paginated reverse projection
+            # from initiative to its linked deliverables. Mirrors
+            # deliverable_tool.list shape so a caller can swap endpoints
+            # without changing row-level field handling. Closes AC4 of
+            # INITIATIVES_FIRST_BACKBONE.md.
+            #
+            # Per Session 1194 §6.3 design ratification: separate paginated
+            # action over embedding `deliverables: [...]` in initiative_detail
+            # — embedded would blow up for high-volume initiatives (e.g. the
+            # COO Diagnostics cluster).
+            from core.models_deliverables import Deliverable
+
+            init_id = payload.get('initiative_id') or payload.get('id')
+            if not init_id:
+                raise ValueError("initiative_id is required for initiative_deliverables action")
+
+            # Resolve initiative — accept UUID, human_id, or seq_id like detail does.
+            id_str = str(init_id).strip()
+            if id_str.upper().startswith('INIT-'):
+                initiative = Initiative.objects.filter(human_id__iexact=id_str).first()
+            elif id_str.isdigit():
+                initiative = Initiative.objects.filter(seq_id=int(id_str)).first()
+            else:
+                try:
+                    initiative = Initiative.objects.filter(id=init_id).first()
+                except (ValueError, Exception):
+                    initiative = None
+            if not initiative:
+                raise ValueError(f"Initiative {init_id} not found")
+
+            del_qs = Deliverable.objects.filter(initiative_id=initiative.id)
+            # Session 1194 Plan B — optional workspace_id filter so callers
+            # can scope cross-workspace linkages (Rigby's verification
+            # surfaced a ResearchAgent deliverable linked to spine
+            # Initiative #2 but living in System Autonomous workspace —
+            # the producer-reroute bug from Session 1192 deliverable
+            # 780a8d15-…). Plan C's no-orphan enforcement will fix the
+            # write path; this lets read-path callers filter today.
+            ws_filter = payload.get('workspace_id') or payload.get('workspace')
+            if ws_filter:
+                del_qs = del_qs.filter(workspace_id=ws_filter)
+            total = del_qs.count()
+            start = int(offset)
+            end = start + int(limit)
+            items = list(
+                del_qs.order_by('-created_at')[start:end].values(
+                    'id', 'title', 'deliverable_type', 'category',
+                    'agent_name', 'quality_score', 'is_saved', 'created_at', 'status',
+                    'workspace_id', 'workspace__name',
+                )
+            )
+            for it in items:
+                it['id'] = str(it['id'])
+                if it.get('created_at'):
+                    it['created_at'] = it['created_at'].isoformat()
+                if it.get('workspace_id'):
+                    it['workspace_id'] = str(it['workspace_id'])
+
+            return {
+                'action': 'initiative_deliverables',
+                'initiative_id': str(initiative.id),
+                'initiative_name': initiative.name,
+                'count': len(items),
+                'total': total,
+                'offset': start,
+                'limit': int(limit),
+                'items': items,
             }
 
         elif action == 'action_items':

@@ -2243,9 +2243,12 @@ RESEARCH DATA:
         action = payload.get('action', 'initiative_list')
 
         # Action name mapping: work_tool action → initiative_tool action + payload overrides
+        # Session 1194 Plan B §3.B.3 — initiative_deliverables wired through
+        # to _handle_initiative's new paginated reverse-projection branch.
         ACTION_MAP = {
             'initiative_list': ('list', {}),
             'initiative_detail': ('details', {}),
+            'initiative_deliverables': ('initiative_deliverables', {}),
             'initiative_create': ('create', {}),
             'initiative_promote': ('promote', {}),
             'initiative_update_status': ('update_status', {}),

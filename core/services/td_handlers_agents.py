@@ -1827,6 +1827,12 @@ class AgentHandlersMixin:
                 # call returned is_orphan=true, breaking workspace-flow-canary.
                 'workspace_id': str(obj.workspace_id) if obj.workspace_id else None,
                 'workspace__name': obj.workspace.name if obj.workspace_id and getattr(obj, 'workspace', None) else None,
+                # Session 1194 Plan B §3.B.1 — surface initiative linkage on
+                # detail so callers can do initiative ↔ deliverable round-trip
+                # without a follow-on query. Closes AC2 of
+                # INITIATIVES_FIRST_BACKBONE.md.
+                'initiative_id': str(obj.initiative_id) if obj.initiative_id else None,
+                'initiative__name': obj.initiative.name if obj.initiative_id and getattr(obj, 'initiative', None) else None,
                 'provenance': build_provenance_block(obj),
             })
 
