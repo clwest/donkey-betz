@@ -340,6 +340,23 @@ class TestSchemaHandlerDiff(DiagnosticsToolTestBase):
         # as handler_only_orphan.
         self.assertNotIn('run_agent', result.get('handler_only_orphan', []))
 
+    def test_diff_run_agent_classified_as_meta_tool_not_real_gap(self):
+        """Session 1202 v3 — Rigby caught this false positive on PR-2
+        smoke. `run_agent` IS a schema with no direct handler, but
+        unified_pa_entrypoint.py:1687 intercepts it before dispatch.
+        It should land in schema_only_meta_tool, NEVER in schema_only.
+        """
+        result = self._call({'action': 'schema_handler_diff'})
+
+        # The new meta-tool bucket exists and includes run_agent
+        self.assertIn('schema_only_meta_tool', result)
+        self.assertIn('run_agent', result['schema_only_meta_tool'])
+        self.assertEqual(result['totals']['schema_only_meta_tool'],
+                         len(result['schema_only_meta_tool']))
+
+        # CRITICAL: run_agent must NOT be in schema_only (the real-bug bucket)
+        self.assertNotIn('run_agent', result.get('schema_only', []))
+
 
 class TestLearningBridgeWrites(DiagnosticsToolTestBase):
 
