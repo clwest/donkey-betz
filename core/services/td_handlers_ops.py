@@ -5372,6 +5372,14 @@ class OpsHandlersMixin:
         '1d': 1, '7d': 7, '14d': 14, '30d': 30, '90d': 90,
     }
 
+    # Session 1202 v3 — schemas intercepted by the PA entrypoint
+    # (unified_pa_entrypoint.py:1687) before reaching the dispatcher.
+    # These appear as "schema without handler" to a naive diff but are
+    # by-design. Keep this list narrow — only entries that match the
+    # documented meta-tool pattern. New meta-tools added in the PA loop
+    # must be added here.
+    _SCHEMA_HANDLER_DIFF_META_TOOLS = {'run_agent'}
+
     def _diagnostics_resolve_window(self, payload: Dict[str, Any], default_days: int = 7) -> int:
         """Translate a `window` string ("7d", "30d", ...) into days; falls
         back to ``default_days`` for unknown values."""
@@ -5765,6 +5773,10 @@ class OpsHandlersMixin:
 
         - ``schema_only`` — schema defined, no registered handler
           (real bug: LLM can emit a call that fails)
+        - ``schema_only_meta_tool`` — schema defined, intercepted at
+          the PA entrypoint layer (``unified_pa_entrypoint.py:1687``)
+          before reaching the dispatcher. By design — NOT a bug.
+          Currently: ``run_agent``.
         - ``handler_only_gateway`` — handler bound to
           ``_handle_agent_tool`` but not directly named in schemas
           (gateway-pattern-by-design; LLM reaches it via ``run_agent``)
@@ -5805,7 +5817,16 @@ class OpsHandlersMixin:
 
         # Classifications
         both_direct = sorted(schema_names & handler_names)
-        schema_only = sorted(schema_names - handler_names)
+        # Session 1202 v3 — split schema_only into "real bug" vs
+        # "by-design meta-tool intercepted upstream." Rigby caught the
+        # false positive on the PR-2 smoke: run_agent has a schema but
+        # never reaches ToolDispatcher._tool_handlers because
+        # unified_pa_entrypoint.py:1687 unpacks `agent_name` and
+        # dispatches to the actual tool. Without this split, every
+        # schema_handler_diff run flagged run_agent as a bug.
+        schema_only_all = sorted(schema_names - handler_names)
+        schema_only_meta_tool = sorted(n for n in schema_only_all if n in self._SCHEMA_HANDLER_DIFF_META_TOOLS)
+        schema_only = sorted(set(schema_only_all) - set(schema_only_meta_tool))
         handler_only = handler_names - schema_names
         handler_only_gateway = sorted(
             n for n in handler_only if handler_meta[n]['is_gateway_agent_tool']
@@ -5822,15 +5843,20 @@ class OpsHandlersMixin:
                 'handlers': len(handler_names),
                 'both_direct': len(both_direct),
                 'schema_only': len(schema_only),
+                'schema_only_meta_tool': len(schema_only_meta_tool),
                 'handler_only_gateway': len(handler_only_gateway),
                 'handler_only_orphan': len(handler_only_orphan),
             },
             'schema_only': schema_only,
+            'schema_only_meta_tool': schema_only_meta_tool,
             'handler_only_gateway_sample': handler_only_gateway[:20],
             'handler_only_gateway_truncated': len(handler_only_gateway) > 20,
             'handler_only_orphan': handler_only_orphan,
             'note': (
                 'schema_only and handler_only_orphan are real gaps. '
+                'schema_only_meta_tool is by design — these schemas are '
+                'intercepted at the PA entrypoint layer before reaching '
+                'the dispatcher (see unified_pa_entrypoint.py:1687). '
                 'handler_only_gateway is by design — these handlers are '
                 "reachable via the 'run_agent' meta-tool gateway."
             ),
