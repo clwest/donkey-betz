@@ -2068,8 +2068,9 @@ def _impl_market_intelligence_scan():
         alerts = []
 
         # Run Sports Odds Analysis
+        # Session 1206: .run() writes AgentExecution telemetry row (Layer 1 audit)
         sports_analyst = SportsOddsAnalyst()
-        sports_result = sports_analyst.execute("Find high-value betting opportunities")
+        sports_result = sports_analyst.run("Find high-value betting opportunities")
         if sports_result.success:
             signals = sports_result.data.get('signals', [])
             tossups = [s for s in signals if s.get('type') == 'TOSS_UP']
@@ -2083,7 +2084,7 @@ def _impl_market_intelligence_scan():
 
         # Run Arbitrage Detection
         arb_detector = ArbitrageDetector()
-        arb_result = arb_detector.execute("Scan for arbitrage opportunities")
+        arb_result = arb_detector.run("Scan for arbitrage opportunities")
         if arb_result.success:
             arbs = arb_result.data.get('arbitrage_opportunities', [])
             hot_arbs = [a for a in arbs if a.get('rating') == 'HOT']
@@ -2097,7 +2098,7 @@ def _impl_market_intelligence_scan():
 
         # Run Prediction Markets Analysis
         pm_analyst = PredictionMarketAnalyst()
-        pm_result = pm_analyst.execute("Find high-volume uncertain markets")
+        pm_result = pm_analyst.run("Find high-volume uncertain markets")
         if pm_result.success:
             signals = pm_result.data.get('signals', [])
             research_opps = [s for s in signals if s.get('type') == 'RESEARCH_OPPORTUNITY']
