@@ -102,9 +102,20 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1204 — CURRENT ENTRY POINT
+## SESSION 1205 — CURRENT ENTRY POINT
 
-### SESSION 1203 CLOSED — Connectivity Roadmap Phase B.1 close (Producer Reroute Completion, 3 PRs landed + 1 deferred) (2026-06-22)
+### SESSION 1204 CLOSED — Phase B.2 close (drift gate + Stage 1 prompt fixed; 20 stale docs unblocked; 4 briefs regenerated) (2026-06-22)
+
+Full handoff: [`SESSION_1204_PHASE_B2_DRIFT_QUALITY_FIX_CLOSE.md`](docs/handoffs/SESSION_1204_PHASE_B2_DRIFT_QUALITY_FIX_CLOSE.md). **2 PRs merged** (#2453 drift threshold + #2454 Stage 1 prompt). **20 stale Stage-1 docs auto-unblocked** (BLOCKED → DRAFT with audit notes). **4 spine/MLB Stage 1 briefs regenerated to 100% quality score.**
+
+The roadmap's framing ("SEC/Kaggle evidence packs") was wrong at the surface but right at a deeper layer. Recon revealed three nested gates:
+1. **Drift threshold mis-calibration** (FIXED via PR #2453) — 29 of 33 Stage-1 rows BLOCKED on structural format mismatch
+2. **Stage 1 prompt forced "BLOCKED:" + external-only research** (FIXED via PR #2454) — internal-architecture topics had no honest path; replaced with "Unknowns / Verification Plan" section
+3. **Action-item completion gate** (Session 1205 follow-up) — Stage 1's action items block Stage 2 progression; design tension since Stage 1 items are typically deferred-to-later-stages
+
+**Plus a 4th finding**: evidence cards delivered to ResearchAgent are mostly empty / off-topic (MLB brief revealed [E1]-[E10] all "(no content)"). The roadmap's original intuition was correct at this deeper layer — filed as Session 1205 follow-up.
+
+### SESSION 1203 CLOSED — Phase B.1 close (Producer Reroute Completion, 3 PRs landed + 1 deferred) (2026-06-22)
 
 Full handoff: [`SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md`](docs/handoffs/SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md). **3 PRs merged.** Producer Reroute leak fully closed at code level + verified live in production — test Initiative `a0e23887-…` spawned auto-research deliverable `0fbddd89-…` at 19:50 UTC which landed in DBZ (`b4503364-…`), not SAW (`1f0d467e-…`). PR-2 deferred with documented rationale (file-sink helper, not producer-routing path).
 
@@ -134,9 +145,19 @@ print('SAW is_active:', saw.is_active, '— expected False')
 "
 ```
 
-### FIRST THING Session 1204
+### FIRST THING Session 1205
 
-**Phase B.1 24h watch** (above) + **Daily inference accuracy watch Day-2 (2026-06-23)**. Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` per runbook `cb9d8ae1-…`. With ~24h of post-restart traffic, accuracy signal should be measurable (Day-1 was zero traffic — ~23 min coverage only).
+**Revenue-surface recon** + **Phase B.1 24h watch** (~14:48 UTC 2026-06-23) + **Daily inference accuracy watch Day-2 (2026-06-23)**.
+
+Operator's stated goal at end of Session 1204: "get this platform to a place we can start actually using it to try and make some money." MLB Run Line Desk has a clean Stage 1 brief now; sports betting agents + theodds/kalshi/sports_news spiders exist in registry. **The recon is**: pick ONE surface that should already work and audit reality — does it produce real output? Where's the money? Smallest manual operation to start.
+
+Candidates:
+- **Sports betting** (MLB Run Line Desk active, BookmakerAgent / OddsAnalyst / ArbitrageDetector / GamePredictor in agent registry, theodds + kalshi + sports_news spiders registered)
+- **Stock signals** (StockAuditCoordinator + StockAnalystAgent + MarketIntelligenceCoordinator)
+- **Content publishing** (deliverables that are publish-ready)
+- **Advisor consulting** (0 invocations in 7d per Session 1202 finding — likely broken)
+
+For the daily watch: append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` per runbook `cb9d8ae1-…`. With ~24h of post-restart traffic, accuracy signal should be measurable (Day-1 was zero traffic — ~23 min coverage only).
 
 ```bash
 # A — total create_deliverable calls (denominator)
@@ -182,9 +203,9 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-d2d0f4c2b6284899` — spawned by Rigby via `session_tool action=create_fresh` at Session 1203 open (titled "Session 1203 — Phase B.1 (Producer Reroute, 3 PRs)"). Carries the Producer Reroute close-out + PR-2 defer context. `tools/pa_local.sh` is already pinned. You may want to spin a fresh Session 1204 thread on first Rigby ping if Phase B.2 work is a different arc. Prior threads retired: `pa-123b7d48f01043eb` (Session 1202 Phase A.2), `pa-1ccc494ea00b4e77` (Sessions 1200-1202 §A.1), `pa-ea12236c83eb4826` (Sessions 1197-1199).
+`pa-1871b37227054254` — spawned by Rigby via `session_tool action=create_fresh` at Session 1204 open (titled "Session 1204 — Phase B.2 (Auto-research evidence supplier fix)"). Carries the B.2 close-out + 3 follow-ups + revenue-recon framing. `tools/pa_local.sh` is already pinned. Revenue work is a different framing than the pipeline-plumbing arc — probably worth spinning a fresh Session 1205 thread on first Rigby ping. Prior threads retired: `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2), `pa-1ccc494ea00b4e77` (Sessions 1200-1202 §A.1).
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **49 Initiatives total** (Session 1202 was 46; net +3 across Session 1203 — test Initiative `a0e23887-…` archived; the rest from prior session backfills). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1203 was 49; net +1 from Rigby's smoke-test Initiative `a0e23887-…` which was archived). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
 **3 spine Initiatives — still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs):**
 
@@ -200,9 +221,12 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in handoff §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
+| **Revenue-surface recon** | **P1 (operator goal)** | Pick ONE: sports betting / stock signals / content / advisor. Verify reality (does it produce output? where's the money?). MLB Run Line Desk has a clean Stage 1 brief — natural starting point. |
+| **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md` §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
 | **Daily watch Day-2 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Day-2 should have real traffic signal (Day-1 was zero — 23 min coverage). Day-1 baseline: `default_only_projects=39`. Protocol: runbook `cb9d8ae1-…`. |
-| **Connectivity Roadmap Phase B.2 — Auto-research evidence supplier fix** | **P1 (Reality Map fix arc — promoted from P2)** | Roadmap §B.2. Unblocks 3 spine Initiatives (`6941372d-…`, `2071a9c6-…`, `7e23d621-…`) stuck at Stage 1 with irrelevant SEC/Kaggle evidence packs. Lean: option (b) — skip Stage 1 when no relevant evidence available (BLOCKED → DEFERRED with clear reason). |
+| **B.2 follow-up: action-item gate relaxation for Stage 1 only** | **P1 (Rigby concurred)** | `core/services/initiative_auto_progression.py:484-509`. Allow Stage 1 → Stage 2 progression even if Stage 1 action items are incomplete. Keep gate for Stage 2+ transitions. Unblocks the spines' full pipeline. |
+| **B.2 follow-up: beat schedule entry for process_initiative_auto_progression** | P2 | Service exists at `core/services/initiative_auto_progression.py` with documented "every 10 min" cadence, but no `PeriodicTask` row. Add via `add_critical_celery_tasks` or migration. |
+| **B.2 follow-up: evidence-card pipeline investigation** | P2 | MLB Stage 1 brief revealed [E1]-[E10] empty cards. The deeper "evidence supplier" issue from roadmap §B.2 framing. Investigate `core/tasks.py:_gather_initiative_research` + related. |
 | **Connectivity Roadmap Phase B.3 — NULL-workspace Initiative backfill (mgmt cmd)** | P2 | Roadmap §B.3. One-shot mgmt cmd for 31 of 46 Initiatives still NULL after Session 1196 backfill. Per-row resolution: parent inherit → creator user_workspace → default DBZ. |
 | **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
 | **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
@@ -213,6 +237,10 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 | **Phase B.1 PR-2 — re-scope as "generated_content sink / root_path contract" initiative** | P3 (optional) | Deferred Session 1203. See defer note on deliverable `8da895f0-…`. Only ship if a real consumer requires status reports landing in DBZ. |
 | **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). |
 | **Production rollout: Sessions 1196-1200 + Session 1203 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Local-only until then. |
+
+### Session 1204 close findings
+
+All 3 follow-ups (action-item gate, beat schedule, evidence-card pipeline) filed in the table above with concrete code pointers. Plus the revenue-recon work as P1 entry point.
 
 ### Session 1203 close findings
 
