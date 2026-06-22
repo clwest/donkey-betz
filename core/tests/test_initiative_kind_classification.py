@@ -278,3 +278,28 @@ class ReportCommandTest(TestCase):
         report = json.loads(out)
         self.assertEqual(report['prefix_clusters'], [])
         self.assertEqual(report['high_deliverable_projects'], [])
+
+    def test_default_only_projects_flagged(self):
+        """AC15 — project Initiatives not named in the apply SPEC are
+        surfaced as 'default-only' candidates for human review."""
+        rogue = Initiative.objects.create(
+            name=f'Rogue Project Not In SPEC {uuid.uuid4().hex[:6]}',
+            kind='project',
+            target_workspace=self.workspace,
+        )
+        # A row whose name IS in the SPEC — must NOT show up as default-only.
+        spec_named = Initiative.objects.create(
+            name='MLB Run Line Desk v1 — 24h Board + DM Alerts',
+            kind='project',
+            target_workspace=self.workspace,
+        )
+
+        out = _call(
+            'report_initiative_kinds',
+            '--workspace-id', str(self.workspace.id),
+            '--json-only',
+        )
+        report = json.loads(out)
+        default_only_ids = {r['id'] for r in report['default_only_projects']}
+        self.assertIn(str(rogue.id), default_only_ids)
+        self.assertNotIn(str(spec_named.id), default_only_ids)
