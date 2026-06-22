@@ -460,10 +460,54 @@ class Initiative(models.Model):
         help_text='Session 1043: Human-friendly ID (e.g., INIT-000001)'
     )
 
+    # Session 1196 — Plan C side-quest (Initiatives-First Backbone, P0).
+    # Annotation layer for Initiatives that violate the no-orphan
+    # contract by missing ``target_workspace_id``. Mirrors the Deliverable
+    # diagnostic block (Session 1195 PR #2402) so the same sweep + clear
+    # mental model applies. Phase 1 is label + TTL only — canonical
+    # ``status`` stays the lifecycle owner. The daily sweep flips
+    # ``status='ARCHIVED'`` when ``diagnostic_expires_at`` passes (sweep
+    # records reason inside ``diagnostic_payload``; it does NOT set
+    # ``diagnostic_status='archived'``, avoiding semantic collision with
+    # the canonical ARCHIVED lifecycle status). NULL diagnostic_status
+    # = ok. The update path clears all five fields back to NULL once
+    # ``target_workspace_id`` is set.
+    diagnostic_status = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = ok; 'diagnostic' = flagged for missing target_workspace_id",
+    )
+    diagnostic_code = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="e.g. 'missing_target_workspace_id'",
+    )
+    diagnostic_payload = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Structured details: created_by, callsite_hint, status_at_mark, trace, archive reason",
+    )
+    diagnostic_marked_at = models.DateTimeField(null=True, blank=True)
+    diagnostic_expires_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
         verbose_name_plural = 'Initiatives'
+        indexes = [
+            # Session 1196 — Plan C side-quest sweep query.
+            # 3-column composite per Rigby's PR #1 refinement: the sweep
+            # filters on (diagnostic_status, diagnostic_code,
+            # diagnostic_expires_at) so all future diagnostic codes don't
+            # share an index hot path with missing_target_workspace_id.
+            models.Index(
+                fields=['diagnostic_status', 'diagnostic_code', 'diagnostic_expires_at'],
+                name='init_diag_sweep_idx',
+            ),
+        ]
 
     def __str__(self):
         prefix = self.human_id or 'INIT-?'
