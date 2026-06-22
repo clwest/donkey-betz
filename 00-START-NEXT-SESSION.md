@@ -102,25 +102,25 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1202 — CURRENT ENTRY POINT
+## SESSION 1203 — CURRENT ENTRY POINT
 
-### SESSION 1201 CLOSED — Platform Connectivity Reality Map recon: 16 rows + 4 child Initiatives + completion roadmap (2026-06-22)
+### SESSION 1202 CLOSED — Connectivity Roadmap Phase A close (§A.1 + §A.2 shipped, 7 PRs) (2026-06-22)
 
-Full handoff: [`SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md`](docs/handoffs/SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md). **0 PRs merged** (recon-only session). **1 parent Initiative + 4 child Initiatives + 15 deliverables** created in DBZ; all bidirectionally linked. **Completion roadmap shipped:** [`docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md`](docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md) — sequences 6-8 sessions of fix work.
+Full handoff: [`SESSION_1202_ROADMAP_PHASE_A_CLOSE.md`](docs/handoffs/SESSION_1202_ROADMAP_PHASE_A_CLOSE.md). **7 PRs merged.** Both §A.1 (Initiative-Management Tools) and §A.2 (Diagnostic Telemetry Tools) closed end-to-end with Rigby live-stack verification at every PR boundary. Operator can now spawn + bind + link Initiatives via PA tool (no ORM bypass) and has 7 audit-grade `diagnostics_tool` actions for subsystem health grading.
 
-| Initiative | UUID | Kind | Holds |
+| Initiative | UUID | Status | Holds |
 |---|---|---|---|
-| **Platform Connectivity Reality Map** (parent) | `0ecd1bc2-9931-4464-8efa-495a28b58779` | investigation | 16-row drift map; spawned_from Spine 1 |
-| Producer Reroute Completion | `05931145-89d2-4923-946e-676e0db44e91` | project | 3 leak-site patches (agent_router, SKIN helper, activate_workspace) |
-| Initiative-Management Tool Surface Gaps | `f4cfe31e-366b-4d5e-802c-041ba66c7afb` | project | `work_tool.initiative_update` + `work_tool.initiative_link` |
-| Docs ↔ Runtime Alignment Layer | `1859dd51-ce3b-4689-bd4b-42d9de5793d8` | recurring_artifact | Close-session manifest + orient enhancement |
-| Diagnostic Telemetry Tool Surface Gaps | `50b7adf2-ec1c-4ef0-8245-ec026cff114f` | project | 7 missing diagnostic PA tool actions |
+| **Initiative-Management Tool Surface Gaps** | `f4cfe31e-366b-4d5e-802c-041ba66c7afb` | ready-to-close | `work_tool.initiative_update` + `initiative_link` shipped + verified |
+| **Diagnostic Telemetry Tool Surface Gaps** | `50b7adf2-ec1c-4ef0-8245-ec026cff114f` | ready-to-close | 7 `diagnostics_tool` actions shipped + verified |
+| **Platform Connectivity Reality Map** (parent) | `0ecd1bc2-9931-4464-8efa-495a28b58779` | ACTIVE | 2 of 4 children closeable; Producer Reroute + Docs↔Runtime still open |
+| Producer Reroute Completion | `05931145-89d2-4923-946e-676e0db44e91` | ACTIVE | **Now P1** — 3 leak-site patches (Phase B.1) |
+| Docs ↔ Runtime Alignment Layer | `1859dd51-ce3b-4689-bd4b-42d9de5793d8` | ACTIVE | Phase C — structural fixes |
 
-**Net result:** Chris's question "are agents + tools + learning + spiders + body systems actually wired together?" produced a 16-row drift map. Major findings: (1) Producer reroute Session 1199 fix was partial — 3 callsites still leak; (2) 67% of all Initiatives (31/46) have NULL `target_workspace_id`; (3) Initiative pipeline Stage 1 auto-research is broken since ≥2026-06-14 — every spawn BLOCKS on irrelevant SEC/Kaggle evidence; (4) Tool-surface gaps are 2-class (initiative-management + diagnostic-telemetry); (5) `108 vs 173` schema/handler framing in PLATFORM_INVENTORY creates false drift signal. All fix arcs sequenced in the roadmap.
+**Net result:** Phase A of the Connectivity Completion Roadmap is done. `schema_handler_diff` v3 returns **`schema_only=0, handler_only_orphan=0`** — platform has zero real schema/handler gaps detected. Two Rigby-surfaced findings deferred to Session 1203 (advisor invocations zero in 7d, discord_health zero in 7d — see Findings below).
 
-### FIRST THING Session 1202
+### FIRST THING Session 1203
 
-**Daily inference accuracy watch Day-1 (2026-06-23 — independent of Reality Map work).** Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` (DBZ workspace, linked to SPINE_1) per the runbook protocol at `cb9d8ae1-…`.
+**Daily inference accuracy watch Day-1 (2026-06-23).** Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` per the runbook protocol at `cb9d8ae1-…`. Independent of all other work this session.
 
 ```bash
 # A — total create_deliverable calls (denominator)
@@ -148,6 +148,30 @@ USE_PGBOUNCER=1 .venv/bin/python manage.py report_initiative_kinds
 
 Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`. Day 8 (2026-06-30) decision lands as follow-up deliverable tagged `session-1198-watch-result`.
 
+### 24h watch checklist for §A.1 + §A.2 invariants (run early)
+
+```bash
+# 1. Worker freshness — workers should be from 2026-06-22 13:51+
+ps -eo pid,lstart | grep celery | head -1
+
+# 2. work_tool.initiative_update idempotent
+tools/pa_local.sh "Run work_tool action=initiative_update id=<any> kind=project once; \
+  run it again; confirm second response has updated_fields=[]"
+
+# 3. work_tool.initiative_link bidirectional rule
+tools/pa_local.sh "Run work_tool action=initiative_link parent_id=<x> child_id=<y> relation=spawns; \
+  call initiative_detail on both and confirm related_initiatives populated on both sides"
+
+# 4. All 7 diagnostics_tool actions return structured JSON (no placeholder errors)
+tools/pa_local.sh "Run diagnostics_tool with each of: advisor_invocations, provider_calls, \
+  beat_schedule_health, workspace_metrics, schema_handler_diff, learning_bridge_writes, \
+  discord_health. Confirm none return pending_pr field"
+
+# 5. schema_handler_diff zero real gaps
+tools/pa_local.sh "Run diagnostics_tool action=schema_handler_diff; \
+  confirm totals.schema_only=0 AND totals.handler_only_orphan=0"
+```
+
 ### Time-gated watches active 2026-06-23
 
 | Watch | Cadence | Target |
@@ -164,11 +188,11 @@ Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`.
 
 ### Active conversation
 
-`pa-123b7d48f01043eb` — spun fresh mid-Session 1202 for Phase A.2 work (titled "Session 1202 — Phase A.2 (diagnostics_tool 7 actions)"). `tools/pa_local.sh` is already pinned. Prior thread `pa-1ccc494ea00b4e77` (Sessions 1200 + 1201 + 1202 §A.1) is retired; `pa-ea12236c83eb4826` (Sessions 1197-1199) before that.
+`pa-123b7d48f01043eb` — spun fresh mid-Session 1202 for Phase A.2 work (titled "Session 1202 — Phase A.2 (diagnostics_tool 7 actions)"). Carries Phase A close-out context. `tools/pa_local.sh` is already pinned. You may want to spin a fresh Session 1203 thread on first Rigby ping (the §A.1 + §A.2 close-out context is heavy and B.1 is a different fix arc). Prior thread `pa-1ccc494ea00b4e77` (Sessions 1200 + 1201 + 1202 §A.1) retired; `pa-ea12236c83eb4826` (Sessions 1197-1199) before that.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **46 Initiatives total** post-Session 1201 (was 42; +4 Reality Map children created), **15 in DBZ workspace** (was 11), kind dist: project=8 / recurring_artifact=4 / investigation=3 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (unchanged). **31 Initiatives still have NULL `target_workspace_id`** — backfill scheduled in roadmap §Phase B.3.
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **46 Initiatives total** (unchanged Session 1202; the 4 Reality Map children were created Session 1201). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
-**3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE, kind=project):**
+**3 spine Initiatives — still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs):**
 
 | # | Name | UUID |
 |---|---|---|
@@ -176,24 +200,33 @@ Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`.
 | 2 | Agent Capability Map + Router Contracts | `2071a9c6-986f-4528-be90-8cccaa595f1e` |
 | 3 | Tool Migration Hardening (web_search → intelligence_tool) + Failure Fix | `7e23d621-4d0c-409a-a680-4fd2e015d04b` |
 
-All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). **Spine 1 now has `spawns` → Reality Map `0ecd1bc2-…` linkage** (Reality Map is connectivity validation of Spine 1's scope). Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence supplier fix).
+Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence supplier fix).
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
 | **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Protocol: runbook `cb9d8ae1-…`. |
-| **Connectivity Roadmap Phase A.1 — `work_tool.initiative_update` + `initiative_link`** | **P1 (Reality Map fix arc)** | Unblocks operator from Claude ORM bypass. Initiative `f4cfe31e-…`. Spec: `docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md` §A.1 |
-| **Connectivity Roadmap Phase A.2 — 7 `diagnostics_tool` actions** | **P1 (Reality Map fix arc)** | Unblocks 6 of 8 telemetry-blocked rows. Initiative `50b7adf2-…`. Roadmap §A.2 |
+| **Connectivity Roadmap Phase B.1 — Producer Reroute Completion (3 PRs)** | **P1 (Reality Map fix arc — promoted from P2)** | 3 single-file patches: `agent_router.py:1083`, `tasks.py:7748`, `workspace_manager.py:1906`. Pattern identical to Session 1199 PR #2435 — Initiative `05931145-…`. Roadmap §B.1. |
+| **Status flip §A.1 + §A.2 Initiatives → COMPLETED** | **P1 (housekeeping)** | Use `content_tool action=content_complete id=<uuid>` per Session 1184 memory rule (NOT `work_tool action=initiative_update_status` — it silently ignores the status flip). Initiatives `f4cfe31e-…` and `50b7adf2-…`. |
+| **Finding 1 — advisor_invocations all zero in 7d** | **P2 (Session 1202 carryover)** | Investigate Row 10 refinement. Step 1: compare `set(Advisor.name)` vs `set(AgentExecution.objects.values_list('agent__name', flat=True))`. File as deliverable under Reality Map parent. |
+| **Finding 2 — discord_health zero invocations** | **P2 (Session 1202 carryover)** | `ps -ef | grep discord`; `grep -i discord celery*.log`. If bot is up but not writing CeleryTaskEvent, `discord_health` needs a different data source. File as deliverable under Reality Map parent. |
 | **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
 | **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
 | **Session 1196 7-day watch (2026-06-29)** | **P1 (time-gated)** | Re-run `backfill_initiative_workspace_links --json-only`; diff against 2026-06-22 baseline. |
-| **Connectivity Roadmap Phase B.1 — Producer Reroute Completion (3 PRs)** | P2 | Initiative `05931145-…`. Roadmap §B.1 |
 | **Connectivity Roadmap Phase B.2 — Auto-research evidence supplier fix** | P2 | Roadmap §B.2 (unblocks 3 spine Initiatives) |
 | **Connectivity Roadmap Phase B.3 — NULL-workspace Initiative backfill (mgmt cmd)** | P2 | Roadmap §B.3 (one-shot data fix for 31 Initiatives) |
 | **Connectivity Roadmap Phase C — Structural fixes (close-session manifest + orient enhancement)** | P3 | Initiative `1859dd51-…`. Roadmap §C |
 | **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). |
 | **Production rollout: Session 1196-1200 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Local-only until then. |
+
+### Session 1202 close findings (deferred to Session 1203)
+
+Both Rigby-surfaced during the §A.2 smoke arc. Tools work; findings are real platform-level gaps.
+
+**Finding 1 — `advisor_invocations` zero across all 30 advisors in 7d.** Refines Reality Map Row 10. Likely causes: (a) no advisor traffic at all; (b) name mismatch between `Agent.name` and `Advisor.name`; (c) invocations stored on a different `agent` row. Investigation step 1: `python manage.py shell -c "from core.models_unified_system import Advisor, AgentExecution; ...` — compare name sets.
+
+**Finding 2 — `discord_health` zero invocations in 7d, `last_alive_at=null`.** Refines Reality Map Row 16. Likely causes: (a) bot is down; (b) bot is up but its task names don't match `discord` icontains filter; (c) bot uses its own async loop, doesn't write `CeleryTaskEvent`. Investigation step 1: `ps -ef | grep discord` + tail any discord log file.
 
 ### Project-clustering recon scope (Session 1194 P1) — SHIPPED Session 1197
 
