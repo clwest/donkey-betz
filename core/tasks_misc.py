@@ -2539,8 +2539,9 @@ def _impl_scan_arbs_and_notify():
 
     try:
         # Run arbitrage detection
+        # Session 1206: .run() writes AgentExecution telemetry row (Layer 1 audit)
         detector = ArbitrageDetector()
-        result = detector.execute(
+        result = detector.run(
             task="Scan all sports for arbitrage opportunities",
             context={'min_profit_pct': 0.5}
         )

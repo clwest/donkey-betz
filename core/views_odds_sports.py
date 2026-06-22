@@ -320,8 +320,9 @@ def detect_arbitrage(request):
             min_profit = float(request.GET.get('min_profit', 0.5))
             limit = int(request.GET.get('limit', 10))
 
+            # Session 1206: .run() writes AgentExecution telemetry row (Layer 1 audit)
             detector = ArbitrageDetector()
-            result = detector.execute(
+            result = detector.run(
                 task="Scan for arbitrage opportunities",
                 context={
                     'sport': sport,

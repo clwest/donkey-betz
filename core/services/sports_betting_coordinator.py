@@ -117,8 +117,9 @@ class SportsBettingCoordinator:
         """Run SportsOddsAnalyst agent."""
         try:
             from core.agents.markets.sports_odds_analyst import SportsOddsAnalyst
+            # Session 1206: .run() writes AgentExecution telemetry row (Layer 1 audit)
             agent = SportsOddsAnalyst()
-            result = agent.execute(
+            result = agent.run(
                 task="Analyze today's betting markets for value opportunities",
                 context=context
             )

@@ -17,19 +17,23 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1204 Phase B.2
-# thread (pa-1871b37227054254, spawned by Rigby via `session_tool
-# action=create_fresh` at Session 1204 open — kicks off the auto-research
-# evidence supplier fix arc. Recon found the roadmap framing was wrong:
-# the real root cause is semantic drift detector threshold mis-calibration
-# at core/services/semantic_drift_detector.py — 29 of 33 Stage-1 rows
-# BLOCKED with similarity scores clustered just below the 65% threshold).
-# Titled "Session 1204 — Phase B.2 (Auto-research evidence supplier fix)".
-# Prior pins retired: pa-d2d0f4c2b6284899 (Session 1203 Phase B.1),
-# pa-123b7d48f01043eb (Session 1202 Phase A.2), pa-1ccc494ea00b4e77
-# (Sessions 1200-1202 §A.1), pa-ea12236c83eb4826 (Sessions 1196-1199),
-# pa-92bacb0fbcab44fb (Session 1195), pa-e11847db632a4ee8 (Session 1194),
-# pa-a60842917d36 (Session 1184), pa-8f8ef45338ce4a24 (Sessions 1182-83).
+# the --conversation flag below. Current value: Session 1206 Layer 1
+# Telemetry Fix arc (pa-234a75abfe374695, spawned by Rigby via
+# session_tool create_fresh at Session 1206 open). Addresses audit
+# finding 65f1299f-… (direct-constructor agent paths bypass
+# AgentExecution row writes → Layer 1 dashboard flat). Approach B:
+# add BaseAgent.run() concrete wrapper around abstract execute(),
+# migrate the 7 known bypass callsites (tasks_financial.py x3 +
+# sports_betting_coordinator.py + views_odds_sports.py +
+# discord_bot.py + tasks_misc.py).
+# Prior pins retired: pa-76aa5b61d0764d11 (Session 1205 Evidence-card
+# pipeline; PR #2456 closed the cardifier asymmetry),
+# pa-1871b37227054254 (Session 1204 Phase B.2),
+# pa-d2d0f4c2b6284899 (Session 1203 Phase B.1), pa-123b7d48f01043eb
+# (Session 1202 Phase A.2), pa-1ccc494ea00b4e77 (Sessions 1200-1202 §A.1),
+# pa-ea12236c83eb4826 (Sessions 1196-1199), pa-92bacb0fbcab44fb (Session 1195),
+# pa-e11847db632a4ee8 (Session 1194), pa-a60842917d36 (Session 1184),
+# pa-8f8ef45338ce4a24 (Sessions 1182-83).
 #
 # IF YOU MANUALLY RESTART A CELERY WORKER (not via `make celery`):
 # pass PA_USE_FUNCTION_CALLING=true in the env. Without it, the PA
@@ -40,4 +44,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-1871b37227054254
+python tools/pa_chat.py "$@" --tools --conversation pa-234a75abfe374695
