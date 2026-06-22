@@ -2213,7 +2213,8 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": [
-                        "initiative_list", "initiative_detail", "initiative_create",
+                        "initiative_list", "initiative_detail", "initiative_deliverables",
+                        "initiative_create",
                         "initiative_promote", "initiative_update_status",
                         "action_item_list", "action_item_start", "action_item_complete",
                         "action_item_cleanup", "bulk_cleanup",
@@ -2223,6 +2224,7 @@ PA_TOOL_SCHEMAS = [
                     "description": (
                         "initiative_list: list initiatives (filters: status, owner, stage). "
                         "initiative_detail: full details of one initiative (by id, human_id, seq_id, or name). "
+                        "initiative_deliverables: paginated reverse projection — list deliverables linked to a given initiative_id (Session 1194 Plan B). Use this when answering 'what work product belongs to initiative X?'. "
                         "initiative_create: create a new initiative (name, description). "
                         "initiative_promote: move TRIAGE/ON_HOLD → ACTIVE. "
                         "initiative_update_status: change initiative status (id + status: ACTIVE/TRIAGE/ON_HOLD/COMPLETED/ARCHIVED). Auto-cancels pending action items on COMPLETED/ARCHIVED. "
