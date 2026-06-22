@@ -527,6 +527,29 @@ def create_deliverable(
     """
     from core.models_deliverables import Deliverable
 
+    # --- Session 1200: factory-entry instrumentation ---
+    # Single structured line emitted before any gating so the inference
+    # accuracy watch can count (A) total calls, (B) eligible-for-inference
+    # subset where initiative_id is None at entry, and (C) the existing
+    # [INFERENCE-MATCH] emits below. Without this line, (B) is only
+    # observable as the noisy "unlinked at rest" DB proxy because
+    # inference may write the initiative_id before persistence.
+    try:
+        from core.services.tool_context import get_current_tool_context
+        _tc = get_current_tool_context() or {}
+        _tc_init = bool(_tc.get('initiative_id'))
+    except Exception:
+        _tc_init = False
+    logger.info(
+        "[DELIVERABLE-FACTORY-ENTRY] agent=%s workspace=%s "
+        "initiative_id_present=%s tool_context_initiative_id_present=%s "
+        "initiative_source=%s has_provenance=%s",
+        agent_name, workspace_id,
+        bool(initiative_id), _tc_init,
+        'explicit_kwarg' if initiative_id else 'none',
+        bool(parent_execution_id),
+    )
+
     # --- Session 1088: Quality gate — reject noise before any DB work ---
     should_create, gate_reason, gate_reason_code = _should_create_deliverable(
         title=title, content=content, agent_name=agent_name, metadata=metadata,
