@@ -50,6 +50,9 @@ from ..models_bankroll import *
 # Import document registry (Session 622)
 from ..models_document_registry import *
 
+# Import initiative inference models (Session 1198 — §6.2 Phase 2)
+from ..models_inference import *
+
 # Import pilot readiness models (Session 590)
 from ..models_pilot_readiness import *
 
