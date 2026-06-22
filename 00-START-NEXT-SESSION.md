@@ -102,7 +102,41 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1205 — CURRENT ENTRY POINT
+## SESSION 1206 — CURRENT ENTRY POINT
+
+### SESSION 1205 CLOSED — Evidence pipeline fix + Tiered Capability Audit + first organic spider fire (2026-06-22)
+
+Full handoff: [`SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md`](docs/handoffs/SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md). **4 PRs merged + 10 audit deliverables filed.** Platform end-to-end producer chain confirmed working for the first time in 48+ hours.
+
+| PR | What |
+|---|---|
+| **#2456** | Evidence cards fall back to title when snippet empty (closes Session 1204's MLB Stage 1 finding) |
+| **#2457** | 4 producer beat entries: sports/market intelligence (kalshi verified at 17:15 + 18:15) |
+| **#2458** | Re-enable `run-spider-network` (verified at 18:00 — 80 spiders, 1510 items, 0 errors) |
+| **#2459** | Makefile beat startup — tighten pgrep + defensive verification |
+
+**Capability Audit Initiative `29154d73-…` created** as the audit home. 4 layer dashboards + 6 deep-dive findings filed. **Spider freshness 0 → 63 FRESH (<1h)** in a single fire cycle. Layers 1/4 still flat in dashboard but root cause identified.
+
+### FIRST THING Session 1206
+
+**Layer 1 telemetry blind-spot fix** (single P1 PR, finding `65f1299f-…`). Add `AgentExecution` row creation to `BaseAgent.execute()` with idempotency guard. ~30 lines, one file.
+
+Why first: resolves Layer 1 flatness + cascades to fix Layer 4 (bridges fire on agent-execution signals); high-leverage; small scope. All audit dashboards become honest after this PR.
+
+Approach sketch:
+```python
+# core/agents/base_agent.py — BaseAgent.execute() entry
+if not context.get('_execution_record_id'):
+    rec = AgentExecution.objects.create(
+        agent=Agent.objects.filter(name=self.__class__.__name__).first(),
+        task=task, status='in_progress',
+        input_data={'context': context, ...},
+    )
+    context['_execution_record_id'] = str(rec.id)
+# ... at end: update status='completed'/'failed' with output_data
+```
+
+Verification path: re-run `_impl_market_intelligence_scan` post-merge → 3 new AgentExecution rows (SportsOddsAnalyst + ArbitrageDetector + PredictionMarketAnalyst) should land. Sports agents transition from UNTESTED → CONFIRMED WORKING.
 
 ### SESSION 1204 CLOSED — Phase B.2 close (drift gate + Stage 1 prompt fixed; 20 stale docs unblocked; 4 briefs regenerated) (2026-06-22)
 
@@ -145,19 +179,9 @@ print('SAW is_active:', saw.is_active, '— expected False')
 "
 ```
 
-### FIRST THING Session 1205
+### Session 1204 FIRST THING (historical — superseded by Session 1206 above)
 
-**Revenue-surface recon** + **Phase B.1 24h watch** (~14:48 UTC 2026-06-23) + **Daily inference accuracy watch Day-2 (2026-06-23)**.
-
-Operator's stated goal at end of Session 1204: "get this platform to a place we can start actually using it to try and make some money." MLB Run Line Desk has a clean Stage 1 brief now; sports betting agents + theodds/kalshi/sports_news spiders exist in registry. **The recon is**: pick ONE surface that should already work and audit reality — does it produce real output? Where's the money? Smallest manual operation to start.
-
-Candidates:
-- **Sports betting** (MLB Run Line Desk active, BookmakerAgent / OddsAnalyst / ArbitrageDetector / GamePredictor in agent registry, theodds + kalshi + sports_news spiders registered)
-- **Stock signals** (StockAuditCoordinator + StockAnalystAgent + MarketIntelligenceCoordinator)
-- **Content publishing** (deliverables that are publish-ready)
-- **Advisor consulting** (0 invocations in 7d per Session 1202 finding — likely broken)
-
-For the daily watch: append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` per runbook `cb9d8ae1-…`. With ~24h of post-restart traffic, accuracy signal should be measurable (Day-1 was zero traffic — ~23 min coverage only).
+**Revenue-surface recon** + **Phase B.1 24h watch** + **Daily inference accuracy watch Day-2**. Note: revenue-recon was paused in Session 1205 by operator directive ("we are not going to be working in production until we figure out how to get everything connected") in favor of the tiered audit + producer chain resurrection.
 
 ```bash
 # A — total create_deliverable calls (denominator)
@@ -203,9 +227,26 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-1871b37227054254` — spawned by Rigby via `session_tool action=create_fresh` at Session 1204 open (titled "Session 1204 — Phase B.2 (Auto-research evidence supplier fix)"). Carries the B.2 close-out + 3 follow-ups + revenue-recon framing. `tools/pa_local.sh` is already pinned. Revenue work is a different framing than the pipeline-plumbing arc — probably worth spinning a fresh Session 1205 thread on first Rigby ping. Prior threads retired: `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2), `pa-1ccc494ea00b4e77` (Sessions 1200-1202 §A.1).
+`pa-76aa5b61d0764d11` — Session 1205 evidence-card pipeline thread. Carries the full evidence-pipeline arc, audit setup, and producer-chain debugging. Probably worth a fresh Session 1206 thread on first Rigby ping (telemetry fix is a different arc than pipeline debugging). Prior threads retired: `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1203 was 49; net +1 from Rigby's smoke-test Initiative `a0e23887-…` which was archived). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
+
+### Session 1205 Capability Audit Initiative
+
+`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **10 deliverables** so far:
+
+| ID | Type | Title |
+|---|---|---|
+| `7d221aa4-…` | Dashboard | Layer 1 — Agent Capability Map (83 agents) |
+| `bb1e0a98-…` | Dashboard | Layer 2 — PA Tools + Dispatcher Handlers (109 schemas + 174 handlers) |
+| `6a200985-…` | Dashboard | Layer 3 — Spider Network (80 spiders) |
+| `dc970d99-…` | Dashboard | Layer 4 — Learning Bridges (8 bridges) |
+| `6869fa55-…` | Deep-dive | Sports Betting Agents — wired but unscheduled (RESOLVED PR #2457) |
+| `65f1299f-…` | **Finding** | **Telemetry blind spot — direct-constructor agent paths bypass AgentExecution** (Session 1206 P1) |
+| `2de3d8d6-…` | Finding | theodds spider returns 0 events |
+| `ed6a8f28-…` | Finding | SportsOddsAnalyst caller bug — None context |
+| `ea561389-…` | Finding | First Producer→Data Win (Kalshi) + memory spike warning |
+| `a4928480-…` | Finding | Makefile bug: make celery silently skips beat startup (RESOLVED PR #2459) |
 
 **3 spine Initiatives — still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs):**
 
@@ -221,12 +262,18 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Revenue-surface recon** | **P1 (operator goal)** | Pick ONE: sports betting / stock signals / content / advisor. Verify reality (does it produce output? where's the money?). MLB Run Line Desk has a clean Stage 1 brief — natural starting point. |
+| **Layer 1 telemetry blind-spot fix** | **P1 (Session 1206 entry point)** | `core/agents/base_agent.py` BaseAgent.execute() — create AgentExecution row with idempotency guard. Finding `65f1299f-…`. Cascades to fix Layer 4. |
 | **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md` §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
-| **Daily watch Day-2 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Day-2 should have real traffic signal (Day-1 was zero — 23 min coverage). Day-1 baseline: `default_only_projects=39`. Protocol: runbook `cb9d8ae1-…`. |
-| **B.2 follow-up: action-item gate relaxation for Stage 1 only** | **P1 (Rigby concurred)** | `core/services/initiative_auto_progression.py:484-509`. Allow Stage 1 → Stage 2 progression even if Stage 1 action items are incomplete. Keep gate for Stage 2+ transitions. Unblocks the spines' full pipeline. |
-| **B.2 follow-up: beat schedule entry for process_initiative_auto_progression** | P2 | Service exists at `core/services/initiative_auto_progression.py` with documented "every 10 min" cadence, but no `PeriodicTask` row. Add via `add_critical_celery_tasks` or migration. |
-| **B.2 follow-up: evidence-card pipeline investigation** | P2 | MLB Stage 1 brief revealed [E1]-[E10] empty cards. The deeper "evidence supplier" issue from roadmap §B.2 framing. Investigate `core/tasks.py:_gather_initiative_research` + related. |
+| **Spider freshness watch (Session 1205 add)** | **P1 (24h)** | Verify run-spider-network keeps firing every 30 min; SpiderData rows with last_emit < 1h should be 60+. If 0, beat is dead — see finding `a4928480-…` remediation. |
+| **Daily watch Day-3 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. |
+| **B.2 follow-up: action-item gate relaxation for Stage 1 only** | P2 | `core/services/initiative_auto_progression.py:484-509`. Allow Stage 1 → Stage 2 progression even if Stage 1 action items are incomplete. |
+| **B.2 follow-up: beat schedule entry for process_initiative_auto_progression** | P2 | Service exists with documented "every 10 min" cadence, but no `PeriodicTask` row. Use the PR #2457/2458 pattern. |
+| **Memory spike pattern investigation** | **P2 (Session 1205 finding)** | Finding `ea561389-…`. run_spider_network 444MB, collect_kalshi 345MB. Pattern: external-API fetch + bulk DB insert. Likely BeautifulSoup buffering or non-batched bulk_create. Worth a deep-dive once telemetry fix lands. |
+| **Serper failure instrumentation** | P2 | Add explicit logging: `serper_failed status=… falling_back_to=ddgs`. Surfaces the 60% intelligence_tool failure rate (Layer 2 BROKEN finding). |
+| **ContentWriterAgent 64% success rate deep-dive** | P2 | Only BROKEN agent in Layer 1 with significant 30d traffic. 9 done / 5 failed. Worth understanding what fails. |
+| **`intelligence_tool` 60% success rate fix** | P2 | Layer 2 BROKEN finding + Spine 3 (Tool Migration Hardening) work. |
+| **theodds spider 0-events investigation** | P3 | Finding `2de3d8d6-…`. May just be off-season / time-of-day filter; verify API key + spider implementation. |
+| **SportsOddsAnalyst None-context wiring** | P3 (cleanup) | Finding `ed6a8f28-…`. 10-line fix to pass `context={}` instead of None at 3 callsites. |
 | **Connectivity Roadmap Phase B.3 — NULL-workspace Initiative backfill (mgmt cmd)** | P2 | Roadmap §B.3. One-shot mgmt cmd for 31 of 46 Initiatives still NULL after Session 1196 backfill. Per-row resolution: parent inherit → creator user_workspace → default DBZ. |
 | **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
 | **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
@@ -237,6 +284,16 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 | **Phase B.1 PR-2 — re-scope as "generated_content sink / root_path contract" initiative** | P3 (optional) | Deferred Session 1203. See defer note on deliverable `8da895f0-…`. Only ship if a real consumer requires status reports landing in DBZ. |
 | **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). |
 | **Production rollout: Sessions 1196-1200 + Session 1203 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Local-only until then. |
+
+### Session 1205 close findings
+
+10 audit deliverables filed on Initiative `29154d73-…` (Platform Capability Audit). 4 layer dashboards (Agents/Tools/Spiders/Bridges) + 6 deep-dive findings. The dashboards are the trust trail — each row is a checklist item; deep-dives become verification stamps.
+
+Key Session 1206 inputs from the audit:
+- **3 BROKEN tools/agents flagged**: `intelligence_tool` (60% sr), `messaging_tool` (69% sr), `ContentWriterAgent` (64% sr)
+- **56 UNTESTED agents** (was DEAD before reframe) — many are likely just "wired but no scheduled trigger" — same pattern PR #2457 fixed for sports
+- **Telemetry blind spots** (Layers 1, 2, 4 flat in dashboard) — fixed by Session 1206 P1
+- **Memory spike pattern** on producer tasks (run_spider_network 444MB, kalshi 345MB)
 
 ### Session 1204 close findings
 
