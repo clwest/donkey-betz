@@ -137,7 +137,7 @@ Then merge order: **#2397 → #2398 → #2399**.
 
 After merges, **Plan C is the P1**. Read `INITIATIVES_FIRST_BACKBONE.md` §3.C end-to-end. §6.1 (Phase 1 mark-diagnostic + `[ORPHAN-DELIVERABLE]` log → Phase 2 hard-reject after 7d zero-emission window) is **already ratified Session 1194**. §6.2 (inference rule for missing `initiative_id`) is **open** — decide once the backfill mgmt command runs against real Donkey Betz data.
 
-**Active conversation:** `pa-e11847db632a4ee8` is the healthy Session 1194 thread with full backbone context loaded. Reuse OR spin a fresh thread depending on whether you want clean canvas for Plan C.
+**Active conversation:** Rigby's Session 1194 close-of-session recommendation: **spin fresh on both sides** for Session 1195. Plan C is iterative write-path enforcement + diagnostic classification work — deserves clean canvas. Carry forward as context: (1) Wiring Map summary, (2) Plan A/B verification outcomes, (3) the 2 diagnostics filed at close, (4) Session 1195 P1 + §6.2 inference-rule open decision. Handoff doc is source of truth. (`pa-e11847db632a4ee8` is healthy if you'd rather reuse — Rigby is fine either way.)
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. All 3 spine Initiatives bound here.
 
