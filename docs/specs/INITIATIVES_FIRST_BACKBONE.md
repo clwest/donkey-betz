@@ -161,8 +161,8 @@ Independent of the wiring backbone but parallel work:
 
 ## 5. Out of scope (deferred)
 
-- **Deliverable clustering recon** — the original Session 1194 P1. Once Sections 3.B and 3.C land, clustering becomes a one-time migration exercise (attach historical orphans → initiatives → reduce tag debt). Captured in [`DELIVERABLE_CLUSTERING_DEFERRED.md`](DELIVERABLE_CLUSTERING_DEFERRED.md) so the 8-cluster recon plan from Session 1193 isn't lost.
-- **Collections / Folders entity** — proposed by Rigby in Session 1192 (deliverable `ae5251f1-…`). Becomes relevant *after* the Initiatives-first backbone settles; orthogonal organizing layer.
+- **Deliverable clustering recon** — the original Session 1194 P1. Once Sections 3.B and 3.C land, clustering becomes a one-time migration exercise (attach historical orphans → initiatives → reduce tag debt). Captured in [`DELIVERABLE_CLUSTERING_DEFERRED.md`](DELIVERABLE_CLUSTERING_DEFERRED.md) so the 8-cluster recon plan from Session 1193 isn't lost. **Session 1197 update:** the 11-row classification of 9 clusters has shipped via `apply_initiative_kind_classification` mgmt cmd; clustering recon is no longer deferred-pending-backbone, it's executed against the locked design (see §6.4).
+- **Collections / Folders entity** — proposed by Rigby in Session 1192 (deliverable `ae5251f1-…`). Becomes relevant *after* the Initiatives-first backbone settles; orthogonal organizing layer. **Session 1197 update:** Rigby's design memo ruled against introducing a new model below Initiative — TRIAGE Initiatives + `kind` enum + lightweight `related_initiatives` JSON cover the use cases. Re-evaluate only if a workflow demands many-to-many membership, nested hierarchy, or rollups (see §6.4).
 - **Initiative populate redesign** (Session 1192 P2, deliverable `ae5251f1-…`) — partly subsumed by Section 3.B/C work; the rest is a follow-on once backbone APIs exist.
 
 ## 6. Open design decisions
@@ -175,6 +175,45 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 
 ### 6.3 Separate action vs embedded — RATIFIED Session 1194
 `work_tool action=initiative_deliverables` (paginated, separate) + `deliverable_count: int` on `initiative_detail`. Embedded `deliverables: [...]` was rejected because high-volume initiatives (e.g. the deferred COO Diagnostics cluster) would blow up the detail payload.
+
+### 6.4 Initiative `kind` enum + lightweight links — RATIFIED Session 1197
+
+**Decision:** Add `Initiative.kind` (TextChoices enum) as a semantic classification overlay, **orthogonal to `status`** (lifecycle). Add `Initiative.related_initiatives` (JSONField, list of `{id, relation, note}`) for sparse directional Initiative-to-Initiative links. **No new Collections/Folders model.**
+
+**Four kinds:**
+
+| Kind | Shape | Examples |
+|---|---|---|
+| `project` | 5-stage arc, time-bounded, finish-line semantics | MLB Run Line Desk v1; Session 1184 Provenance Linkage |
+| `recurring_artifact` | Periodic output stream, no finish line | COO Daily Analysis; Business News Tracker; Weekend Digest Issue Production |
+| `investigation` | Recon / mapping / question-driven workstream — has a "definition of done" (the question gets answered) but no implementation arc | Orchestration Mapping; Spider Context Utilization Recon |
+| `spec_backlog` | Container for follow-up engineering items that aren't a project arc but still need an attribution anchor | Session 1192 Workspace Consolidation Follow-ups |
+
+**Why kind ⊥ status:** A TRIAGE investigation ≠ TRIAGE project ≠ TRIAGE recurring_artifact. Collapsing semantics into status reverts TRIAGE to a junk drawer (Rigby's Session 1197 design memo).
+
+**Why no Collections/Folders model:** The justified use cases for that entity are (a) many-to-many membership (deliverable in multiple collections), (b) purely navigational grouping with zero lifecycle, or (c) nested hierarchy. None of those exist today. TRIAGE + kind covers the actual need; promote to a real model only when a workflow demands rollups, status propagation, or permissions.
+
+**Directional link convention** (`related_initiatives` JSON):
+
+```json
+[{"id": "<uuid>", "relation": "spawns" | "spawned_from", "note": "..."}]
+```
+
+- `spawns` — points DOWNSTREAM (what this Initiative led to / produced)
+- `spawned_from` — points UPSTREAM (what produced this Initiative)
+- Always written **bidirectionally** when wired by mgmt cmds (the apply cmd does this in a second pass).
+- Use sparingly — the schema isn't a tree; it's a list of named relations. If a workflow needs rollups/status-propagation/permissions, promote to a real model.
+
+**Hybrid cluster pattern:** Use a split-pair when one workstream produces a finish-line artifact AND an ongoing stream. The upstream row is `kind=project` or `kind=investigation` (status walks to COMPLETED); the downstream row is `kind=recurring_artifact` (status=ACTIVE indefinitely). Linked via the directional pair above. Two known cases at Session 1197 close:
+
+- Spider Context Utilization: Recon (investigation, COMPLETED) `spawns` Retune (project, TRIAGE)
+- Weekend Digest Autopilot: Build/Ship (project, TRIAGE) `spawns` Issue Production (recurring_artifact, ACTIVE)
+
+**Implementation:**
+- Schema: `core/migrations/0362_session_1197_initiative_kind.py`
+- Classifier: `apply_initiative_kind_classification` mgmt cmd (idempotent, --dry-run / --apply)
+- Backfill safety: `report_initiative_kinds` mgmt cmd (cross-tab + heuristic flags)
+- Default: new Initiative rows land at `kind=project`. Other kinds must be set explicitly (by the apply cmd, the create caller, or an admin).
 
 ## 7. Acceptance criteria (rollup)
 
@@ -192,9 +231,14 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 | AC8 | Round-trip traceability test (§4.1) passes | Unit test |
 | AC9 | Zero `web_search` literal references remain in agent code | `grep -r 'web_search' core/agents/ → 0 matches` |
 | AC10 | `intelligence_tool.search` success rate ≥ 90% (24h window post-fix) | Gateway telemetry grep |
+| AC11 | `Initiative.kind` field exists with 4 choices (project/recurring_artifact/investigation/spec_backlog) | Migration 0362 + ORM field introspection |
+| AC12 | `apply_initiative_kind_classification --apply` is idempotent (re-run = 0 net writes) | Mgmt cmd second-apply assertion in PR #5 |
+| AC13 | Split-pair `related_initiatives` written bidirectionally for clusters 3 and 9 | Mgmt cmd `--apply` output → 4 link writes (3a↔3b, 9a↔9b) |
+| AC14 | `report_initiative_kinds` flags zero project-prefix clusters in Donkey Betz post-apply | Mgmt cmd output assertion |
 
 ## 8. Provenance
 
 - **Session 1193** identified 8 visible deliverable clusters and queued project-clustering recon as Session 1194 P1 (preserved in [`DELIVERABLE_CLUSTERING_DEFERRED.md`](DELIVERABLE_CLUSTERING_DEFERRED.md)).
 - **Session 1194 pivot** — Chris ratified Initiatives-first backbone in conversation with Rigby on thread `pa-e11847db632a4ee8`; Rigby persisted the 3 spine Initiatives ~23:14 UTC.
 - This spec is the engineering artifact for that pivot. Implementation PRs will land under `feat/session-1194-initiatives-backbone-*` branches.
+- **Session 1197** added §6.4 (Initiative `kind` enum + lightweight links) per Rigby's design memo on conversation `pa-ea12236c83eb4826` + Chris's agree-all ratification. Implementation PRs under `feat/session-1197-initiative-kind-*` branches (migration → apply → report → docs → tests).
