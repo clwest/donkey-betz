@@ -152,7 +152,7 @@ Full protocol: [`docs/specs/INFERENCE_ACCURACY_WATCH.md`](docs/specs/INFERENCE_A
 
 ### Active conversation
 
-`pa-ea12236c83eb4826` (Sessions 1197+1198+1199 close). **Worth spinning fresh** for Session 1200 — focus shifts to watch tracking + Day-8 decision + potential PR3 heuristics design. Ask Rigby to recommend a fresh thread name.
+`pa-1ccc494ea00b4e77` — **fresh thread spun by Rigby at Session 1199 close** titled "Session 1200 — Watch Tracking + Phase 2 Gate (Plan C)". Update `tools/pa_local.sh` to pin this conversation at first ping. Prior thread `pa-ea12236c83eb4826` (Sessions 1197+1198+1199) is retired.
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (unchanged across Sessions 1197-1199), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (ResearchAgent + ClaudeCode; unchanged).
 
