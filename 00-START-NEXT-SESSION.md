@@ -101,63 +101,60 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1199 — CURRENT ENTRY POINT
 
-### SESSION 1198 CLOSED — §6.2 Phase 2 inference cascade + Repo Guardrails baseline fix: 6 PRs landed (2026-06-22)
+## SESSION 1200 — CURRENT ENTRY POINT
 
-Full handoff: [`SESSION_1198_INFERENCE_CASCADE_AND_BASELINE_FIX.md`](docs/handoffs/SESSION_1198_INFERENCE_CASCADE_AND_BASELINE_FIX.md). **6 PRs merged on `main`** — first repo PR series in recent history with clean CI through the entire stack (no `--admin` bypass needed once #2424 cleared the long-standing `Agents count claims` CONFLICT).
+### SESSION 1199 CLOSED — §6.2 Step 2 + PR-D contract flip + iteration cap fix + producer reroute + local test DB infra: 5 PRs landed (2026-06-22)
 
-| PR | Theme |
-|---|---|
-| **#2424** | Baseline fix — `00-START-NEXT-SESSION.md` truncated 1280→312 lines, clears `Agents count claims` CONFLICT (CI green without `--admin`) |
-| **#2425** | Migration 0363 — `AgentInitiativeAffinity` model + composite index for inference-time lookup |
-| **#2426** | `seed_agent_initiative_affinities` mgmt cmd — 2 conservative static seeds (ResearchAgent + ClaudeCode) |
-| **#2427** | `infer_initiative_id()` pure cascade — 5-step kind-aware policy gates |
-| **#2428** | Hook into `deliverable_factory.create_deliverable()` — emits `[INFERENCE-MATCH]` log on attach |
-| **#2429** | 19-case regression suite + §6.2 ratified in `INITIATIVES_FIRST_BACKBONE.md` + AC16-AC19 |
+Full handoff: [`SESSION_1199_INFERENCE_STEP2_PROVENANCE_FLIP_AND_INFRA_CLEANUP.md`](docs/handoffs/SESSION_1199_INFERENCE_STEP2_PROVENANCE_FLIP_AND_INFRA_CLEANUP.md). **5 PRs merged on `main`** — every PR clean CI, 3 prior-session deliverables closed, 4-session local-testing-infra blocker resolved.
 
-**Net result:** Phase 2 inference cascade now sits in front of the Plan C Phase 2 hard-reject gate (2026-06-29). Callers omitting `initiative_id` get deduced attachment via `(workspace, agent_name)` affinity instead of `OrphanDeliverableError`. ResearchAgent and ClaudeCode are seeded (covers ~35 of 77 known orphan creates); Rigby and ContentWriterAgent intentionally NOT seeded (coordinator agent + recurring-artifact target respectively).
+| PR | Theme | Deliverable closed |
+|---|---|---|
+| **#2432** | §6.2 Step 2 activation — tool-context propagation via contextvar; reads at `deliverable_factory.create_deliverable`; zero callsite changes for 30+ callers | — (design completion) |
+| **#2433** | PR-D contract flip — `DeliverableProvenanceMissingError` replaces Session 1184 PR-B soft WARN path | `9d9db48a` |
+| **#2434** | PA LLM iteration cap 8→12 + silent-fallback detector + `silent_fallback=true|false` in `PA_TASK_SUMMARY` | `c2bac9c0` |
+| **#2435** | Producer reroute — `_ensure_system_workspace` honors `DEFAULT_PRODUCER_WORKSPACE_ID` (defaults to Donkey Betz) | `780a8d15` |
+| **#2436** | Local test DB infra — bypass PgBouncer for `manage.py test`; restores TDD for every prior session's test files | — (4-session infra blocker) |
 
-### FIRST THING Session 1199
+**Net result:** §6.2 cascade fully populated through Step 3 (Step 2 activated #2432; Step 4 heuristics stubbed pending watch). PR-D contract flip hardens the no-provenance guard. Iteration cap fix surfaces the silent failure mode. Producer reroute sinks autonomous output into DBZ by default. Local test infra restored — every prior session's test files now run locally with `USE_PGBOUNCER=1`.
 
-**No code lift required.** All Session 1198 work is merged on main and verified end-to-end. Standard checks:
+### FIRST THING Session 1200
+
+**Start the inference accuracy watch (Day 1 — 2026-06-23).** No code lift required to start; daily appends go to deliverable `9ba58690-…` (Donkey Betz workspace, linked to spine Initiative 1).
 
 ```bash
-# Step 1 — confirm migrations applied + affinity table populated
-.venv/bin/python -c "
-import django, os
-os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings')
-django.setup()
-from core.models_inference import AgentInitiativeAffinity
-print('Affinity count:', AgentInitiativeAffinity.objects.count())
-"
-# Expected: 2
+# Step 1 — daily intake (Inference Accuracy Watch §1)
+grep "INFERENCE-MATCH" celery.log | wc -l
+grep "INFERENCE-MATCH" celery.log | grep -oE "agent=[A-Za-z]+" | sort | uniq -c
+grep "INFERENCE-MATCH" celery.log | grep -oE "step=[0-9]+" | sort | uniq -c
 
-# Step 2 — confirm inference cascade still works end-to-end
-.venv/bin/python -c "
-import django, os, logging
-os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings')
-django.setup()
-logging.basicConfig(level=logging.INFO)
-from core.services.deliverable_factory import create_deliverable
-d = create_deliverable(
-    title='Spider Context Utilization Retune Progress',
-    content=('Iterating on retune list. ' * 30),
-    agent_name='ResearchAgent',
-    workspace_id='b4503364-2573-4401-9e28-61a739e0ce50',
-    deliverable_type='document',
-)
-print(f'Result: id={d.id if d else None} initiative_id={d.initiative_id if d else None}')
-if d: d.delete()
-"
-# Expected: [INFERENCE-MATCH] log + initiative_id=23cf3acb-...
+# Step 2 — spot-check 5-10 events (watch spec §1)
+grep "INFERENCE-MATCH" celery.log | tail -10
+
+# Step 3 — append per template in watch spec §5 to deliverable 9ba58690
 ```
+
+Full protocol: [`docs/specs/INFERENCE_ACCURACY_WATCH.md`](docs/specs/INFERENCE_ACCURACY_WATCH.md). Day 8 (2026-06-30) decision lands as follow-up deliverable tagged `session-1198-watch-result`.
+
+### Time-gated watches active 2026-06-23
+
+| Watch | Cadence | Target |
+|---|---|---|
+| **Inference accuracy** (Sessions 1198/1199) | Daily 5-10 spot-checks | ≥80% precision per seed |
+| **`default_only_projects` detector** (Session 1197) | Daily `report_initiative_kinds` | New project Initiatives don't accumulate without explicit classification |
+
+### Time-gated watches firing 2026-06-29
+
+| Watch | Trigger |
+|---|---|
+| **Plan C 7-day watch + Phase 2 hard-reject flip** | Re-run `backfill_deliverable_initiative_links`; flip to `OrphanDeliverableError` if clean. §6.2 Step 2+3 now sit in front of reject point — flip is safer than pre-Session-1199. |
+| **Session 1196 7-day watch** | Re-run `backfill_initiative_workspace_links`; diff against 2026-06-22 baseline. |
 
 ### Active conversation
 
-`pa-ea12236c83eb4826` (Session 1197+1198 close). Likely worth spinning fresh given Session 1199's focus shifts to time-gated watches + carryover Phase 2 work. Ask Rigby to recommend.
+`pa-ea12236c83eb4826` (Sessions 1197+1198+1199 close). **Worth spinning fresh** for Session 1200 — focus shifts to watch tracking + Day-8 decision + potential PR3 heuristics design. Ask Rigby to recommend a fresh thread name.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (unchanged from Session 1197), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (ResearchAgent + ClaudeCode).
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (unchanged across Sessions 1197-1199), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (ResearchAgent + ClaudeCode; unchanged).
 
 **3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE, kind=project):**
 
@@ -173,50 +170,16 @@ All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage pro
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Plan C 7-day watch + Phase 2 hard-reject flip** | **P1 (time-gated)** | Start **2026-06-29**. With §6.2 inference cascade in front of the reject point (Session 1198 ship), the flip is safer than pre-Session-1198. Re-run `backfill_deliverable_initiative_links --workspace-id b4503364-… --json-only`; diff totals against the 2026-06-22 baseline. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
-| **Session 1196 7-day watch** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_initiative_workspace_links --json-only` and diff against 2026-06-22 baseline. Confirm archived count up, candidate_for_flag at 0, already_diagnostic decreasing for non-terminal rows. |
-| **Session 1197 `default_only_projects` 24h watch** | **P1 (time-gated)** | Start **2026-06-23** (today). Daily `report_initiative_kinds --workspace-id <DBZ>` re-run; confirm new project Initiatives aren't filed without classification. |
-| **Session 1198 inference accuracy watch** | **P1 (time-gated, NEW)** | Start **2026-06-23**. Grep `celery.log` for `[INFERENCE-MATCH]` lines + spot-check that the attached initiative_id is semantically correct. Aim for ≥80% precision in the first week before considering Step 4 heuristics. |
-| **Production rollout: Session 1196 + Session 1198 cumulative** | **P0 (carryover, gated)** | Operator runs `backfill_initiative_workspace_links --apply` + `apply_initiative_kind_classification --apply` + `seed_agent_initiative_affinities --apply` in prod + restarts celery workers. Locks production baseline matching local. No new `@shared_task` in 1197 or 1198, but worker restart still recommended for clean `sys.modules` state. |
-| **PR3 — Step 4 heuristics implementation** | P2 | After Step 3 affinity behavior settles (week of watching). Topic-overlap embedding + recency + owner_match per Rigby's §6.2 framing (see handoff §"What's deliberately NOT in scope"). |
-| **Tool-context propagation (Step 2 activation)** | P2 | Plumb `tool_context.initiative_id` through `create_deliverable` callers so Step 2 of cascade actually fires. Requires touching ~10 callsites. Currently no caller passes it. |
-| **Rigby + ContentWriterAgent affinity decision** | P2 | Currently unseeded by design (Rigby is coordinator, ContentWriterAgent's natural target is recurring_artifact which is blocked). After 1 week of inference observation, decide: pin to a specific Initiative via manual_pin, OR let them fall through to heuristics (PR3). |
-| **Manual pin mgmt cmd** | P3 | `affinity_pin --workspace X --agent Y --initiative Z --source manual_pin` — when actual operator demand surfaces. Documented in `seed_agent_initiative_affinities.py` docstring as escape hatch. |
-| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`. Re-surfaced AGAIN in Session 1198 PR #2429. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. |
-| **Migration drift audit (Set A + Set B)** | P2/P3 | Each Session 1196/1197/1198 migration trimmed these by hand. Time to actually fix the drift OR add an exclusion convention. Set A: 4 unmigrated Narrative* models. Set B: 16 AlterField ops. |
-| **PA LLM iteration cap silent failure** | P2 | Carryover from Session 1193 (`c2bac9c0-…`). Bit during Session 1197 memory cleanup. Still unfixed. `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8`. |
-| **Producer reroute** | P2 | Carryover from Session 1192 (`780a8d15-…`). `_ensure_system_workspace` auto-recreates. |
-| **PR-D contract flip** | P2 | Carryover from Session 1194 (`9d9db48a-…`). 24h WARN-volume gate elapsed 2026-06-22. |
-| **Workspace UI filter by kind** | P3 | Vertical-slice step 6 from Session 1197 decision card. Parked once kind enum beds in. Touches frontend `WorkspacePageNew.tsx`. |
-| **Initiative kind UI filter + affinity admin** | P3 | Frontend surface for the Session 1197+1198 backend work — let operators see kind classification + manage affinity pins from the workspace UI. |
-
-**Pick-this-session items below this line are still-relevant Session 1192/1193 carryover items — same as last session:**
-
-| Item | Priority | Where it's defined |
-|---|---|---|
-| **Plan C — backfill mgmt command** | _shipped Session 1195 PR #2407_ | `INITIATIVES_FIRST_BACKBONE.md` §3.C.1. |
-| **Plan C side-quest — `initiative_create` requires target_workspace_id** | P2 | Carry-over from Session 1194 spine-Initiative diagnostic. Fold into Plan C since both are write-path enforcement. |
-| **Plan D — governor gating** | P2 | `INITIATIVES_FIRST_BACKBONE.md` §3.D. Scheduler skips dispatch when no ACTIVE Initiative matches; `[GOVERNOR-SKIP]` log. AC7. Can land in parallel with Plan C. |
-| **Tool Migration Hardening (Initiative 3)** | P2 | §4.3 + Initiative `7e23d621-…`. `web_search` → `intelligence_tool.search` audit + gateway retry/backoff. ~50% failure rate to investigate. AC9-AC10. |
-| **AC8 round-trip traceability test** | P3 | §4.1 of the spec. Small unit-test follow-up. |
-| **Plan C Phase 2 hard-reject flip** | DEFERRED-7d | After Phase 1 ships, watch `grep '\[ORPHAN-DELIVERABLE\]' celery.log` for trailing 7d window. Zero emissions → flip to hard `OrphanDeliverableError`. AC5b/c. |
-| **Project-clustering recon** | DEFERRED | `DELIVERABLE_CLUSTERING_DEFERRED.md`. Revive after backbone AC5+AC6 pass. |
-| **Initiative-tick 24h watch** | P1 (time-gated) | Start 2026-06-22 19:48 UTC (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]`. Confirm steady-state drift to 0. Playbook below. |
-| **7d AC watches** | P1 (time-gated) | Start 2026-06-28. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388. |
-| **PA LLM iteration cap silent failure** | **P2** | Session 1193 follow-up. Deliverable `c2bac9c0-...`. Real engineering. `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8` leaves 7 effective tool-call iterations. On forced-text final iteration, LLM emits unexecuted tool-call JSON as text body. Silent failure mode that bit us mid-Session-1193 on tagging-heavy turns. Two-part fix: raise cap to 12 + detect tool-call JSON in final-iteration text. |
-| **Producer reroute** | P2 | Session 1192 follow-up. Deliverable `780a8d15-...`. `core/services/workspace_manager.py:1728-1773`. Three fix shapes documented. |
-| **Initiative populate redesign** | P2 | Session 1192 follow-up. Deliverable `ae5251f1-...`. **Directly connected to this session's project-clustering recon.** Two fix shapes documented (TRIAGE candidates / Collections/Folders entity). |
-| **PR-D contract flip** | P2 | Deliverable `9d9db48a-...`. 24h WARN-volume gate elapsed 2026-06-22 16:00. Run the grep at AC1; if clean, open PR-D. |
-| **COO Backlog #4 prefetch normalization** | P3 | Session 1193 follow-up. Deliverable `e17950d8-...`. Per-worker `--prefetch-multiplier=1` in Procfile for long_running/content/code. |
-| **COO Backlog #9 tool-call telemetry rollup** | P3 | Session 1193 follow-up. Deliverable `bebd6794-...`. Mirror Session 1167 #7 (`top_consumers.py`) pattern for tools. |
-| **deliverable_tool tooling improvements** | P3 | Session 1192 follow-up. Deliverable `c942274b-...`. `tags_add`/`tags_remove`/`bulk_update_workspace` actions. |
-| **Research category tagging** | P3 | 48 items still untouched per Chris's "do last with Claude" pick. Strategic batch — same `shelf:content` vs `shelf:platform` split pattern + likely creates Research-subdomain tags. Could fold into project-clustering recon if research items group by topic. |
-| **Newsletter remainder** | P3 | 3 items still untagged (vs the original 13). Trivial cleanup if it falls out of project-clustering. |
-| **C-trace remediation #1, #4 (Session 1187)** | P2 (structural) | Larger blast radius — needs design call with Rigby. |
-| **Adjacent C-trace investigations** | P3 (small) | (a) MarketingStrategyAgent only agent inheriting execute() — likely broken. (b) AgentExecution.owner_agent empty ~75%. (c) huggingface SpiderItemHash item_title='Unknown'. |
-| **DM-system bug** | P3 | Deliverable `9a00667b-...`. |
-| **Dedicated inventory-refresh PR** | P3 | Reconcile `Agents count claims` CONFLICT. |
-| **Daily detector for workspace regressions** | P3 | Rigby's Session 1192 suggestion. Lightweight beat task. |
+| **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append spot-checks to deliverable `9ba58690-…`. Protocol: `docs/specs/INFERENCE_ACCURACY_WATCH.md`. |
+| **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
+| **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Cascade catches most cases via Steps 1-3; reject is the residual guard. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
+| **Session 1196 7-day watch (2026-06-29)** | **P1 (time-gated)** | Re-run `backfill_initiative_workspace_links --json-only`; diff against 2026-06-22 baseline. |
+| **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). Topic-overlap embedding + recency + owner_match per Rigby's §6.2 framing. |
+| **Rigby + ContentWriterAgent affinity decision** | P2 | Post-Day-8. Pin via `manual_pin`, or let them fall through to heuristics (PR3). |
+| **Manual pin mgmt cmd** (`affinity_pin --workspace X --agent Y --initiative Z --source manual_pin`) | P3 | When operator demand surfaces. Documented as escape hatch in `seed_agent_initiative_affinities.py` docstring. |
+| **Migration drift audit (Set A + Set B)** | P2/P3 | Every Session 1196-1199 migration trimmed these by hand. Set A: 4 unmigrated Narrative* models. Set B: 16 AlterField ops. Time to fix at the source. |
+| **Initiative kind UI filter + affinity admin** | P3 | Frontend surface for Session 1197+1198+1199 backend work — operator visibility into kind classification + affinity pins from the workspace UI. |
+| **Production rollout: Session 1196-1199 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Apply the mgmt cmds + restart workers. Local-only until then. |
 
 ### Project-clustering recon scope (Session 1194 P1) — SHIPPED Session 1197
 
