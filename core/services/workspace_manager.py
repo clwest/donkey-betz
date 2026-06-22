@@ -1729,10 +1729,31 @@ class WorkspaceManager:
         """
         Session 855: Create or get default workspace for autonomous operations.
 
+        Session 1199: Honor ``settings.DEFAULT_PRODUCER_WORKSPACE_ID``
+        first — when set + the workspace exists + is active, return it
+        instead of force-reactivating "System Autonomous Workspace".
+        Closes deliverable 780a8d15 (Session 1192 regression vector).
+        Routes new autonomous producer output to Donkey Betz by default.
+
+        Falls through to the pre-1199 System Autonomous behavior when
+        the setting is missing / empty / points at a non-existent or
+        inactive workspace.
+
         Returns:
             ProjectWorkspace for system operations, or None if creation fails
         """
         try:
+            # Session 1199 — prefer the configured default producer workspace
+            # over the legacy "System Autonomous Workspace" name lookup.
+            from django.conf import settings as _settings
+            default_id = getattr(_settings, 'DEFAULT_PRODUCER_WORKSPACE_ID', '') or ''
+            if default_id:
+                default_ws = ProjectWorkspace.objects.filter(
+                    id=default_id, is_active=True,
+                ).first()
+                if default_ws:
+                    return default_ws
+
             # Check if system workspace already exists
             workspace = ProjectWorkspace.objects.filter(
                 user=self.user,

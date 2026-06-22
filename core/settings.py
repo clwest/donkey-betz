@@ -1541,6 +1541,22 @@ RECORDING_MODE = os.environ.get('RECORDING_MODE', 'off').lower()
 if RECORDING_MODE not in ('off', 'on', 'public_safe'):
     RECORDING_MODE = 'off'
 
+# Session 1199 — Default workspace for autonomous producers without an
+# explicit workspace_id. Closes deliverable 780a8d15 (Session 1192
+# regression vector). When set, `_ensure_system_workspace` returns this
+# workspace instead of creating/reactivating "System Autonomous
+# Workspace" — routes deliverables to Donkey Betz by default.
+#
+# Empty / unset / missing-workspace → falls through to the pre-1199
+# System Autonomous behavior (preserves backward compat for environments
+# that haven't pinned a default).
+#
+# Donkey Betz workspace UUID: b4503364-2573-4401-9e28-61a739e0ce50
+DEFAULT_PRODUCER_WORKSPACE_ID = os.environ.get(
+    'DEFAULT_PRODUCER_WORKSPACE_ID',
+    'b4503364-2573-4401-9e28-61a739e0ce50',  # Donkey Betz
+).strip()
+
 # Session 1098: DeliverableAppend canary rollout (Fix B-full).
 #
 # When both flags permit, BaseAgent._save_to_deliverable routes writes
