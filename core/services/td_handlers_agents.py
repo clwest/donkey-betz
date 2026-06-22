@@ -1628,9 +1628,13 @@ class AgentHandlersMixin:
         # Previously the list payload omitted any workspace identifier, which
         # made it impossible for Rigby to audit orphans through PA tools and
         # forced Django-shell round-trips for any deliverable→workspace check.
+        # Session 1194 — add `status` so deliverable_tool.list and
+        # content_tool.content_recent return the same shape (AC1 of
+        # INITIATIVES_FIRST_BACKBONE.md).
         _LIST_FIELDS = (
             'id', 'title', 'deliverable_type', 'category',
             'agent_name', 'quality_score', 'is_saved', 'created_at',
+            'status',
             'initiative_id', 'initiative__name',
             'workspace_id', 'workspace__name',
         )
