@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-22 10:44
+**Generated:** 2026-06-22 11:20
 **Current Session:** 1202
 **Total Documentation:** 2690 files | 703,789 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,656 |
+| Total cross-references | 4,661 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 192 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 182 | Platform Master Inventory |
 | `docs/INDEX.md` | 125 | INDEX |
-| `docs/topics/README.md` | 117 | README |
+| `docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md` | 117 | 💰 REVENUE GENERATION SYSTEMS - Autonomous Money-Ma |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 67 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -129,7 +129,7 @@
 | [247_LIVE_INTELLIGENCE_PANEL_SKETCH.md](247_LIVE_INTELLIGENCE_PANEL_SKETCH.md) | 544 | 2026-05-20 |
 | [24_7_GLOBAL_AI_APP_ATLAS.md](24_7_GLOBAL_AI_APP_ATLAS.md) | 543 | 2026-05-25 |
 | [ADVISOR_AUDIT.md](ADVISOR_AUDIT.md) | 643 | 2026-05-24 |
-| [AGENTS.md](AGENTS.md) | 1,683 | 2026-06-21 |
+| [AGENTS.md](AGENTS.md) | 1,683 | 2026-06-22 |
 | [AGENT_OUTPUT_TO_UI_MAPPING.md](AGENT_OUTPUT_TO_UI_MAPPING.md) | 8 | 2026-05-24 |
 | [AI_PIXAR_IMPLEMENTATION_PLAN.md](AI_PIXAR_IMPLEMENTATION_PLAN.md) | 8 | 2026-05-24 |
 | [API.md](API.md) | 8 | 2026-05-24 |
@@ -170,7 +170,7 @@
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 8 | 2026-05-24 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 8 | 2026-05-24 |
 | [HANDOFF_NUMBERING_GAPS.md](HANDOFF_NUMBERING_GAPS.md) | 45 | 2026-05-22 |
-| [INDEX.md](INDEX.md) | 391 | 2026-06-21 |
+| [INDEX.md](INDEX.md) | 391 | 2026-06-22 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 8 | 2026-05-24 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEARNING_BRIDGE_AUDIT.md](LEARNING_BRIDGE_AUDIT.md) | 154 | 2026-05-25 |
@@ -247,16 +247,16 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md | handoffs | 114 | 2026-06-22 10:44 |
-| CONNECTIVITY_COMPLETION_ROADMAP.md | specs | 263 | 2026-06-22 10:37 |
+| AGENTS.md | docs | 1,683 | 2026-06-22 11:18 |
+| CONNECTIVITY_COMPLETION_ROADMAP.md | specs | 263 | 2026-06-22 10:49 |
+| SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md | handoffs | 114 | 2026-06-22 10:49 |
+| INDEX.md | docs | 391 | 2026-06-22 10:49 |
 | SESSION_1200_DAY0_INFERENCE_WATCH_INSTRUMENTATION.md | handoffs | 109 | 2026-06-22 00:23 |
 | SESSION_1199_INFERENCE_STEP2_PROVENANCE_FLIP_AND_INFRA_CLEANUP.md | handoffs | 137 | 2026-06-21 23:39 |
-| INDEX.md | docs | 391 | 2026-06-21 23:39 |
 | INITIATIVES_FIRST_BACKBONE.md | specs | 305 | 2026-06-21 22:57 |
 | INFERENCE_ACCURACY_WATCH.md | specs | 171 | 2026-06-21 22:44 |
 | SESSION_1198_INFERENCE_CASCADE_AND_BASELINE_FIX.md | handoffs | 165 | 2026-06-21 22:34 |
 | SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md | handoffs | 159 | 2026-06-21 21:23 |
-| SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md | handoffs | 165 | 2026-06-21 20:37 |
 
 ## Documentation by Subsystem
 

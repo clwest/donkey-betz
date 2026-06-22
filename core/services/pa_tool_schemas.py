@@ -2216,6 +2216,7 @@ PA_TOOL_SCHEMAS = [
                         "initiative_list", "initiative_detail", "initiative_deliverables",
                         "initiative_create",
                         "initiative_promote", "initiative_update_status",
+                        "initiative_update", "initiative_link",
                         "action_item_list", "action_item_start", "action_item_complete",
                         "action_item_cleanup", "bulk_cleanup",
                         "agent_conversations", "workflows",
@@ -2228,6 +2229,8 @@ PA_TOOL_SCHEMAS = [
                         "initiative_create: create a new initiative (name, description). "
                         "initiative_promote: move TRIAGE/ON_HOLD → ACTIVE. "
                         "initiative_update_status: change initiative status (id + status: ACTIVE/TRIAGE/ON_HOLD/COMPLETED/ARCHIVED). Auto-cancels pending action items on COMPLETED/ARCHIVED. "
+                        "initiative_update: patch field(s) on an initiative — bind target_workspace_id, edit description, or set kind (project/recurring_artifact/investigation/spec_backlog). Idempotent: no-op write returns updated_fields=[]. Session 1202 §A.1. "
+                        "initiative_link: write bidirectional related_initiatives entry between parent_id and child_id with relation (spawns | spawned_from). Mirror direction is computed automatically per §6.4. Idempotent: re-running same (parent, child, relation) is a no-op. Session 1202 §A.1. "
                         "action_item_list: list action items (filters: status, priority, initiative_id). "
                         "action_item_start: mark an action item as in_progress. "
                         "action_item_complete: mark an action item as completed. "
@@ -2282,6 +2285,33 @@ PA_TOOL_SCHEMAS = [
                 },
                 "limit": {"type": "integer", "description": "Max results (default 50)."},
                 "offset": {"type": "integer", "description": "Skip first N results for pagination."},
+                # ── Session 1202 — Connectivity Roadmap §A.1 params ────────────
+                "target_workspace_id": {
+                    "type": "string",
+                    "description": "For initiative_update: UUID of ProjectWorkspace to bind. Pass empty string or null to unbind.",
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": ["project", "recurring_artifact", "investigation", "spec_backlog"],
+                    "description": "For initiative_update: semantic kind (orthogonal to status) per INITIATIVES_FIRST_BACKBONE.md §6.4.",
+                },
+                "parent_id": {
+                    "type": "string",
+                    "description": "For initiative_link: UUID of the upstream Initiative (the one that has `relation` written first).",
+                },
+                "child_id": {
+                    "type": "string",
+                    "description": "For initiative_link: UUID of the downstream Initiative. Must differ from parent_id.",
+                },
+                "relation": {
+                    "type": "string",
+                    "enum": ["spawns", "spawned_from"],
+                    "description": "For initiative_link: direction written on parent. `spawns` = parent led to child (downstream); `spawned_from` = parent was produced by child (upstream). Mirror written automatically.",
+                },
+                "note": {
+                    "type": "string",
+                    "description": "For initiative_link: optional context attached to both link entries.",
+                },
             },
             "required": ["action"],
         },
