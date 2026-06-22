@@ -102,21 +102,25 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1201 — CURRENT ENTRY POINT
+## SESSION 1202 — CURRENT ENTRY POINT
 
-### SESSION 1200 CLOSED — Day-0 inference watch pre-flight + factory-entry instrumentation: 1 PR landed (2026-06-22)
+### SESSION 1201 CLOSED — Platform Connectivity Reality Map recon: 16 rows + 4 child Initiatives + completion roadmap (2026-06-22)
 
-Full handoff: [`SESSION_1200_DAY0_INFERENCE_WATCH_INSTRUMENTATION.md`](docs/handoffs/SESSION_1200_DAY0_INFERENCE_WATCH_INSTRUMENTATION.md). **1 PR merged on `main`** — clean CI; runbook deliverable `cb9d8ae1-…` polished + shipped; mechanism drift on Step-2 firing surface surfaced + documented.
+Full handoff: [`SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md`](docs/handoffs/SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md). **0 PRs merged** (recon-only session). **1 parent Initiative + 4 child Initiatives + 15 deliverables** created in DBZ; all bidirectionally linked. **Completion roadmap shipped:** [`docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md`](docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md) — sequences 6-8 sessions of fix work.
 
-| PR | Theme | Deliverable closed |
-|---|---|---|
-| **#2439** | `deliverable_factory` entry-log instrumentation — single `[DELIVERABLE-FACTORY-ENTRY]` line at function entry; A/B/C now directly observable from logs | — (Day-0 watch readiness) |
+| Initiative | UUID | Kind | Holds |
+|---|---|---|---|
+| **Platform Connectivity Reality Map** (parent) | `0ecd1bc2-9931-4464-8efa-495a28b58779` | investigation | 16-row drift map; spawned_from Spine 1 |
+| Producer Reroute Completion | `05931145-89d2-4923-946e-676e0db44e91` | project | 3 leak-site patches (agent_router, SKIN helper, activate_workspace) |
+| Initiative-Management Tool Surface Gaps | `f4cfe31e-366b-4d5e-802c-041ba66c7afb` | project | `work_tool.initiative_update` + `work_tool.initiative_link` |
+| Docs ↔ Runtime Alignment Layer | `1859dd51-ce3b-4689-bd4b-42d9de5793d8` | recurring_artifact | Close-session manifest + orient enhancement |
+| Diagnostic Telemetry Tool Surface Gaps | `50b7adf2-ec1c-4ef0-8245-ec026cff114f` | project | 7 missing diagnostic PA tool actions |
 
-**Net result:** Watch protocol reframed from "raw INFERENCE-MATCH volume" to "accuracy conditional on eligibility (C/B)" after Day-0 verification revealed BaseAgent's 3-source `initiative_id` resolution forwards explicitly in most cases. PR #2439 instruments the entry boundary so A/B/C/D are countable directly from logs (no DB proxy). Runbook deliverable `cb9d8ae1-…` (8,728 chars, Ops category) reflects the log-based protocol post-merge. PR-D contract verified honest (no bypass — terminology mismatch on prior-session check was a false alarm). Phase 2 hard-reject flip on 2026-06-29 is safe to ship from this evidence.
+**Net result:** Chris's question "are agents + tools + learning + spiders + body systems actually wired together?" produced a 16-row drift map. Major findings: (1) Producer reroute Session 1199 fix was partial — 3 callsites still leak; (2) 67% of all Initiatives (31/46) have NULL `target_workspace_id`; (3) Initiative pipeline Stage 1 auto-research is broken since ≥2026-06-14 — every spawn BLOCKS on irrelevant SEC/Kaggle evidence; (4) Tool-surface gaps are 2-class (initiative-management + diagnostic-telemetry); (5) `108 vs 173` schema/handler framing in PLATFORM_INVENTORY creates false drift signal. All fix arcs sequenced in the roadmap.
 
-### FIRST THING Session 1201
+### FIRST THING Session 1202
 
-**Day-1 of the inference accuracy watch (2026-06-23).** Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` (DBZ workspace, linked to SPINE_1) per the runbook protocol at `cb9d8ae1-…`.
+**Daily inference accuracy watch Day-1 (2026-06-23 — independent of Reality Map work).** Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` (DBZ workspace, linked to SPINE_1) per the runbook protocol at `cb9d8ae1-…`.
 
 ```bash
 # A — total create_deliverable calls (denominator)
@@ -160,9 +164,9 @@ Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`.
 
 ### Active conversation
 
-`pa-1ccc494ea00b4e77` — continued across Session 1200 + 1201 (titled "Session 1200 — Watch Tracking + Phase 2 Gate (Plan C)"; reused for Session 1201 since the watch is the primary workstream). `tools/pa_local.sh` is already pinned. Prior thread `pa-ea12236c83eb4826` (Sessions 1197+1198+1199) is retired.
+`pa-1ccc494ea00b4e77` — continued across Sessions 1200 + 1201 (titled "Session 1200 — Watch Tracking + Phase 2 Gate (Plan C)"; can stay on this thread for Session 1202 or spin fresh — your call). `tools/pa_local.sh` is already pinned. Prior thread `pa-ea12236c83eb4826` (Sessions 1197+1198+1199) is retired.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (unchanged across Sessions 1197-1199), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (ResearchAgent + ClaudeCode; unchanged).
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **46 Initiatives total** post-Session 1201 (was 42; +4 Reality Map children created), **15 in DBZ workspace** (was 11), kind dist: project=8 / recurring_artifact=4 / investigation=3 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (unchanged). **31 Initiatives still have NULL `target_workspace_id`** — backfill scheduled in roadmap §Phase B.3.
 
 **3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE, kind=project):**
 
@@ -172,22 +176,24 @@ Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`.
 | 2 | Agent Capability Map + Router Contracts | `2071a9c6-986f-4528-be90-8cccaa595f1e` |
 | 3 | Tool Migration Hardening (web_search → intelligence_tool) + Failure Fix | `7e23d621-4d0c-409a-a680-4fd2e015d04b` |
 
-All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage progression is a separate workstream.
+All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). **Spine 1 now has `spawns` → Reality Map `0ecd1bc2-…` linkage** (Reality Map is connectivity validation of Spine 1's scope). Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence supplier fix).
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Protocol: runbook `cb9d8ae1-…` (post-PR #2439, log-based). |
+| **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Protocol: runbook `cb9d8ae1-…`. |
+| **Connectivity Roadmap Phase A.1 — `work_tool.initiative_update` + `initiative_link`** | **P1 (Reality Map fix arc)** | Unblocks operator from Claude ORM bypass. Initiative `f4cfe31e-…`. Spec: `docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md` §A.1 |
+| **Connectivity Roadmap Phase A.2 — 7 `diagnostics_tool` actions** | **P1 (Reality Map fix arc)** | Unblocks 6 of 8 telemetry-blocked rows. Initiative `50b7adf2-…`. Roadmap §A.2 |
 | **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
-| **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Cascade catches most cases via Steps 1-3; reject is the residual guard. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. PR-D contract verified honest Session 1200 — safe to ship. |
+| **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
 | **Session 1196 7-day watch (2026-06-29)** | **P1 (time-gated)** | Re-run `backfill_initiative_workspace_links --json-only`; diff against 2026-06-22 baseline. |
-| **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). Topic-overlap embedding + recency + owner_match per Rigby's §6.2 framing. |
-| **Rigby + ContentWriterAgent affinity decision** | P2 | Post-Day-8. Pin via `manual_pin`, or let them fall through to heuristics (PR3). |
-| **Manual pin mgmt cmd** (`affinity_pin --workspace X --agent Y --initiative Z --source manual_pin`) | P3 | When operator demand surfaces. Documented as escape hatch in `seed_agent_initiative_affinities.py` docstring. |
-| **Migration drift audit (Set A + Set B)** | P2/P3 | Every Session 1196-1199 migration trimmed these by hand. Set A: 4 unmigrated Narrative* models. Set B: 16 AlterField ops. Time to fix at the source. |
-| **Initiative kind UI filter + affinity admin** | P3 | Frontend surface for Session 1197+1198+1199 backend work — operator visibility into kind classification + affinity pins from the workspace UI. |
-| **Production rollout: Session 1196-1200 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Apply the mgmt cmds + restart workers. Local-only until then. |
+| **Connectivity Roadmap Phase B.1 — Producer Reroute Completion (3 PRs)** | P2 | Initiative `05931145-…`. Roadmap §B.1 |
+| **Connectivity Roadmap Phase B.2 — Auto-research evidence supplier fix** | P2 | Roadmap §B.2 (unblocks 3 spine Initiatives) |
+| **Connectivity Roadmap Phase B.3 — NULL-workspace Initiative backfill (mgmt cmd)** | P2 | Roadmap §B.3 (one-shot data fix for 31 Initiatives) |
+| **Connectivity Roadmap Phase C — Structural fixes (close-session manifest + orient enhancement)** | P3 | Initiative `1859dd51-…`. Roadmap §C |
+| **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). |
+| **Production rollout: Session 1196-1200 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Local-only until then. |
 
 ### Project-clustering recon scope (Session 1194 P1) — SHIPPED Session 1197
 
@@ -209,9 +215,9 @@ Design memo: [`INITIATIVES_FIRST_BACKBONE.md`](docs/specs/INITIATIVES_FIRST_BACK
 
 ### Workspace consolidation — CLOSED Session 1192 + Session 1193
 
-All shelf-tagged: 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded). Real-untagged: 49 (48 Research + 3 Newsletter remainder). Initiative state: ACTIVE=2, TRIAGE=12, COMPLETED=7, ARCHIVED=9 (down from 11 ACTIVE before Session 1192 zombie cleanup). System Autonomous left active intentionally per Rigby's option C.
+All shelf-tagged: 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded). Real-untagged: 49 (48 Research + 3 Newsletter remainder). Initiative state pre-1201: ACTIVE=2, TRIAGE=12, COMPLETED=7, ARCHIVED=9. System Autonomous left active intentionally per Rigby's option C.
 
-**Known regression vector (still filed, not yet shipped):** `core/services/workspace_manager.py:1739` `_ensure_system_workspace` auto-recreates. See `780a8d15-...`.
+**Producer reroute regression — now actively scoped Session 1201 (was `780a8d15-…`):** Session 1199 fix to `_ensure_system_workspace` was partial. 3 other callsites (`agent_router.py:1083`, `tasks.py:7748`, `workspace_manager.py:1906`) still bypass `DEFAULT_PRODUCER_WORKSPACE_ID`. Initiative `05931145-…` (Producer Reroute Completion, ACTIVE, project) holds the fix scope. Spec: `docs/specs/CONNECTIVITY_COMPLETION_ROADMAP.md` §B.1.
 
 ### Initiative-tick 24h watch playbook
 
@@ -258,16 +264,16 @@ AgentExecution.objects.filter(
 - **#2386 PR-3A:** legacy substring-matched agents (e.g., `ImageEditingAgent`, `WhaleWatcherAgent`) show alias divergence — `creative`/`crypto` in `requested_categories` but resolved counterparts in `resolved_categories`.
 - **#2388 PR-3B:** `ai_ml` shows in `has_data_by_category` for the 19 specced agents with ≥1 `True` across dev/strategy/content tier. `remote_work` for job/career. `legislation` for legal/cto/coo. `content` for content_writer/topic_miner. `cybersecurity` for security-mapped agents (alias-divergence proof).
 
-### Carryover from Session 1186/1187/1188/1190
+### Carryover from Session 1186/1187/1188/1190 *(reconciled Session 1201 against runtime — see roadmap §C.2)*
 
-| Deliverable ID | Title | Priority | Status |
+| Deliverable ID | Title | Runtime Status | Notes |
 |---|---|---|---|
-| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables (follow-on to PR #2376) | P3 | Pending |
-| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch after PR #2376 merge | P2 | 24h elapsed 2026-06-22 16:00. If grep is clean, PR-D is ready. |
-| `88952c54-a4a4-47e8-9fe1-85b3d747be03` | Session 1187 Utilization Recon — Master Tracking | — | C-trace #3 fully closed across Sessions 1188+1189. #1, #2, #4 still open per table above. |
-| `9a00667b-2206-4f25-8813-a42faf463439` | **BUG** — DM system: missing reply delivery + no UI notifier + thread collapsing | P3 | Three symptoms + two Rigby diagnostic leads. Defer fix; flip to P1 only if Chris escalates. |
-| `b8ca4f5c-2b3c-4095-ab3b-329e02b98c9e` | Session 1189 PR-3B retune list | — | Shipped via #2388. Reference doc for the 19-agent ai_ml rollout + 5-bucket map. |
-| `13032820-1f36-4a1c-8843-6a9d53653405` | Missing PA tools — SpiderData aggregation entry | — | CLOSED — built and shipped as `spider_data_aggregation_tool` v1 (#2387). |
+| `48b73b04-373a-4d25-b263-9925c7c1a084` | **B.1** — Unify Initiative-stage deliverables | ✅ `completed` | Closed per runtime; docs lag corrected Session 1201 |
+| `9d9db48a-4819-4e2b-9548-998c0fe2f8f5` | **PR-D contract flip** — 24h WARN-volume watch | ✅ `completed` | Closed per runtime; docs lag corrected Session 1201 |
+| `88952c54-a4a4-47e8-9fe1-85b3d747be03` | Session 1187 Utilization Recon — Master Tracking | `blocked` | Runtime shows blocked, not partial. Re-investigate or close. |
+| `9a00667b-2206-4f25-8813-a42faf463439` | **BUG** — DM system regression | ✅ `completed` | Closed per runtime; docs lag corrected Session 1201 |
+| `b8ca4f5c-2b3c-4095-ab3b-329e02b98c9e` | Session 1189 PR-3B retune list | ✅ `completed` | Reference only; shipped via #2388 |
+| `13032820-1f36-4a1c-8843-6a9d53653405` | Missing PA tools — SpiderData aggregation entry | ✅ `completed` | Shipped as `spider_data_aggregation_tool` v1 (#2387) |
 
 ### Standard FIRST THING checks
 
