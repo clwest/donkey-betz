@@ -678,10 +678,12 @@ app.conf.beat_schedule = {
     # "Scheduled to run every 2 hours" but no PeriodicTask row existed.
     # These 4 entries materialize the missing trigger surface.
     #
-    # All 4 are external-API / agent-orchestration tasks, added to
-    # LOCAL_DENY_TASKS in add_critical_celery_tasks.py so `make celery` on a
-    # dev laptop does not fire them. They activate on Railway production
-    # (RAILWAY_ENVIRONMENT set) by default.
+    # Operator directive (Session 1205): production rollout is gated on
+    # "everything connected first" — these fire on LOCAL too so we can
+    # verify the producer→consumer chain works end-to-end before
+    # promoting to Railway. NOT in LOCAL_DENY_TASKS. If local cost
+    # becomes a concern, add them to LOCAL_DENY_TASKS in
+    # add_critical_celery_tasks.py later.
     # ────────────────────────────────────────────────────────────────────────
     'market-intelligence-scan': {
         'task': 'core.tasks.market_intelligence_scan',

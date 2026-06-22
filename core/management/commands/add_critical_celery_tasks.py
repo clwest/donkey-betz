@@ -64,15 +64,18 @@ LOCAL_DENY_TASKS = frozenset({
     'warm-up-spiders',                     # spider warmup pings externals
     'backfill-spider-embeddings',          # OpenAI embedding spend
     'generate-operator-edge-newsletter',   # LLM newsletter generation
-    # Session 1205 — Sports + market intelligence producers (Capability Audit
-    # finding 6869fa55). All four hit external APIs (theodds, kalshi) and/or
-    # invoke LLM-driven agents. Materialize on Railway only; opt-in on local
-    # via ENABLE_BEAT_TASKS=<csv> for explicit dev testing.
-    'market-intelligence-scan',            # SportsOddsAnalyst + ArbitrageDetector + PredictionMarketAnalyst
-    'generate-daily-betting-brief',        # SportsBettingCoordinator (5 sports agents) + GamePredictor
-    'collect-sports-odds-intelligence',    # theodds spider
-    'collect-kalshi-prediction-markets',   # kalshi spider
 })
+
+# NOTE: Session 1205 — the sports + market intelligence producer beat tasks
+# (`market-intelligence-scan`, `generate-daily-betting-brief`,
+# `collect-sports-odds-intelligence`, `collect-kalshi-prediction-markets`)
+# are INTENTIONALLY NOT in LOCAL_DENY_TASKS. Operator directive: production
+# rollout is gated on "everything connected first" — these need to fire on
+# local so we can verify the producer→consumer chain works end-to-end before
+# enabling on Railway. Cost profile is bounded (theodds free tier, kalshi
+# free read-only, LLM ~$5-10/day at full cadence). If local cost becomes a
+# concern, add them here later or use `make celery` with a custom env that
+# disables them.
 
 
 def _is_local_env():
