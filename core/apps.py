@@ -103,6 +103,19 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Document processing signals not available
 
+        # Session 1196 PR #2 — Initiative no-orphan diagnostic signal.
+        # Post-save handler marks newly-created Initiative rows
+        # ``diagnostic`` when ``target_workspace_id`` is NULL. Mirrors
+        # Plan C Phase 1 (Session 1195 PR #2403) shape on Deliverable
+        # but routed through a signal because Initiative has 8+ create
+        # callsites with no single factory to wrap. Kill switch via
+        # ``INITIATIVE_DIAGNOSTICS_ENABLED`` (default True).
+        try:
+            from core.signals import connect_initiative_diagnostic_signals
+            connect_initiative_diagnostic_signals()
+        except ImportError:
+            pass  # Initiative diagnostic signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
