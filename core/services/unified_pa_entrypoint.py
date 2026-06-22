@@ -72,6 +72,43 @@ def _detect_memory_intent(message: str) -> str | None:
 
 TOOL_ARGS_MALFORMED_ERROR_CODE = 'TOOL_ARGS_JSON_MALFORMED'
 
+# Session 1199 — silent-fallback detector for the iteration-cap failure mode
+# documented in deliverable c2bac9c0. When the LLM runs out of tool-call
+# iterations and is forced to a text-only response on the final iteration,
+# it sometimes emits tool-call-shaped JSON in the response body instead of
+# actually invoking the tools. The user sees text that looks like work was
+# done; in reality nothing wrote.
+#
+# Pattern: `{"action": "<verb>"` is the unambiguous signal of a PA tool
+# payload. Legitimate conversational text very rarely contains this exact
+# structure (especially with the colon-space-quote sequence). Matches both
+# single-object dumps and array-of-objects dumps.
+_SILENT_TOOL_FALLBACK_PATTERN = re.compile(
+    r'\{\s*"action"\s*:\s*"\w+"',
+)
+
+# User-visible message when silent fallback is detected. Operator should
+# ping again to continue; no work was actually performed.
+_SILENT_FALLBACK_USER_MESSAGE = (
+    "I hit my iteration cap on this turn before I could finish writing the "
+    "results. I can see the work I planned (it's in my trace logs), but "
+    "nothing was saved. Please ping me again to continue and I'll keep "
+    "going from where I left off."
+)
+
+
+def _detect_silent_tool_call_fallback(text: str) -> bool:
+    """Return True if ``text`` looks like a PA tool-call JSON dump.
+
+    This is the silent-failure mode where the LLM emits tool-call-shaped
+    JSON as the response body instead of invoking the function-calling
+    channel. Caller (agentic loop final-text return path) uses this to
+    surface a clear error to the user + log a flag in PA_TASK_SUMMARY.
+    """
+    if not text:
+        return False
+    return _SILENT_TOOL_FALLBACK_PATTERN.search(text) is not None
+
 
 def _build_tool_args_malformed_envelope(
     *, tool_name: str, raw_args: str, parse_err: Exception
@@ -872,13 +909,16 @@ class UnifiedPAEntrypoint:
 
             # Structured task summary for cost/performance analysis
             tool_names = [r.get('tool', '') for r in tool_runs] if tool_runs else []
+            silent_fallback = bool(getattr(self, '_silent_fallback_detected', False))
             logger.info(
                 "[PA_TASK_SUMMARY] trace_id=%s latency_ms=%d llm_iterations=%d "
-                "tool_calls=%d tools=%s history_turns=%d intent=%s",
+                "tool_calls=%d tools=%s history_turns=%d intent=%s "
+                "silent_fallback=%s",
                 trace_id, latency_ms,
                 len(tool_call_metadata) if tool_call_metadata else 1,
                 len(tool_names), ','.join(tool_names) or 'none',
                 len(self._conversation_history), intent,
+                'true' if silent_fallback else 'false',
             )
 
             # Record learning readback event (Phase 1 + Phase 3 telemetry)
@@ -1295,7 +1335,7 @@ class UnifiedPAEntrypoint:
         message: str,
         context: Dict[str, Any],
         trace_id: str,
-        max_iterations: int = 8,  # Session 1075: raised from 5 to handle batch ops (15+ boardroom items)
+        max_iterations: int = 12,  # Session 1199: raised from 8 to handle tagging/bulk-ops turns (detail-fetch-merge-update needs ~2x read-only Q&A budget). Was Session 1075 raise from 5; was Session 1043 default 8.
         total_timeout: float = 120.0,
     ) -> tuple[str, List[Dict], List[Dict], Optional[str]]:
         """
@@ -1304,6 +1344,13 @@ class UnifiedPAEntrypoint:
         Returns (content, tool_runs, fc_metadata, response_id)
         where fc_metadata captures the GPT function call info (name, arguments, call_id).
         """
+        # Session 1199 — reset silent-fallback flag at top of each agentic
+        # loop run. Set to True deep inside the loop iff the LLM dumps
+        # tool-call JSON in its text response instead of invoking tools.
+        # Read by the chat method emitting PA_TASK_SUMMARY (deliverable
+        # c2bac9c0).
+        self._silent_fallback_detected = False
+
         all_schemas = self._get_live_tool_schemas()
         PA_TOOL_SCHEMAS = self._select_tool_schemas(message, all_schemas)
 
@@ -1465,6 +1512,29 @@ class UnifiedPAEntrypoint:
                         "I ran into an issue processing that request. Could you try again or rephrase?",
                         tool_runs, fc_metadata, response_id,
                     )
+                # Session 1199 — silent-fallback detection. When the LLM
+                # ran out of iterations and dumped tool-call JSON as text
+                # instead of invoking tools, scan the response and replace
+                # with a clear user-visible error + flag in PA_TASK_SUMMARY.
+                # Deliverable c2bac9c0 spec. Apply on every text-only
+                # return path (not just is_final) — the failure mode can
+                # technically fire on any iteration where the LLM chooses
+                # to emit JSON in text instead of a function call.
+                final_text = result.get('response', '')
+                if _detect_silent_tool_call_fallback(final_text):
+                    self._silent_fallback_detected = True
+                    logger.critical(
+                        "[PA_SILENT_FALLBACK_DETECTED] trace_id=%s "
+                        "iteration=%d/%d is_final=%s tool_runs_so_far=%d "
+                        "text_prefix=%r",
+                        trace_id, iteration + 1, max_iterations, is_final,
+                        len(tool_runs), final_text[:200],
+                    )
+                    return (
+                        _SILENT_FALLBACK_USER_MESSAGE,
+                        tool_runs, fc_metadata, response_id,
+                    )
+
                 # Session 1065: Auto-continue truncated text responses
                 if result.get('truncated') and response_id:
                     parts = [result.get('response', '')]
