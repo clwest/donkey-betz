@@ -170,8 +170,58 @@ Independent of the wiring backbone but parallel work:
 ### 6.1 Reject vs mark-diagnostic — RATIFIED Session 1194
 **Phased rollout** for orphan deliverable creation (§3.C). Phase 1 = mark-diagnostic + `[ORPHAN-DELIVERABLE]` log emission to provide soft landing for un-migrated agents. Phase 2 = hard reject (raise `OrphanDeliverableError`), gated on 7d zero-emission window. Pattern matches Session 1165 "primitives + opt-in apply list."
 
-### 6.2 Inference rules — OPEN (defer)
-For initiative attachment when payload omits `initiative_id` (§3.C). Options: workspace's single ACTIVE Initiative, topic-overlap scoring, agent's `owner_agent` linkage. Spec defers naming the rule until §3.A audit data tells us what the current data shape supports.
+### 6.2 Inference rules — RATIFIED Session 1198
+
+**Decision:** Phase 2 attaches inferred `initiative_id` via a 5-step cascade with **kind-aware policy gates**. Implementation lives in `core/services/initiative_inference.py:infer_initiative_id()`, called from `deliverable_factory.create_deliverable()` BEFORE the Phase 1 diagnostic / Phase 2 reject path.
+
+**Cascade:**
+
+```
+Step 1 — payload.initiative_id        → confidence 1.00  (authoritative)
+Step 2 — tool_context.initiative_id   → confidence 0.95  (propagated, deterministic-ish)
+Step 3 — AgentInitiativeAffinity      → confidence per row (kind-policy-aware)
+Step 4 — heuristics (topic overlap)   → PR3 follow-up (stub returns None)
+Step 5 — fall through                 → caller decides (Phase 1 diagnostic / Phase 2 reject)
+```
+
+**Kind-aware policy gates (Step 3):**
+
+| Initiative kind | Candidates | Recency | Confidence floor |
+|---|---|---|---|
+| `project` (STRICT) | exactly 1 | ≤ 7 days | ≥ 0.90 |
+| `investigation` (BOUNDED) | exactly 1 | ≤ 30 days | ≥ 0.70 |
+| `recurring_artifact` | — | — | **never** auto-attach |
+| `spec_backlog` | — | — | **never** auto-attach |
+
+Rationale: investigations are catch-all research buckets and tolerate looser attachment; projects have finish-line semantics and need tight confidence; recurring artifacts and spec backlogs are explicit-only containers (avoid the "junk drawer" failure mode).
+
+**Hard stops (all steps):**
+
+- **Cross-workspace** — `initiative.target_workspace_id != payload.workspace_id` → invalid, continue cascade.
+- **Multiple valid candidates at Step 3** → fall through (don't auto-pick — surfaces ambiguity via trace).
+- **Expired affinity rows** (`expires_at < now`) → ignored entirely.
+- **Authoritative-only sources** for Step 3: `static_seed` + `manual_pin`. `learned_suggestion` rows surface in operator reports but do NOT auto-attach (Rigby's Phase 2 v1 restriction).
+
+**Storage shape:** `AgentInitiativeAffinity` model — `(workspace, agent_name, initiative)` unique triple + `confidence` + `source` enum + `expires_at` + `notes`. Composite index on `(workspace, agent_name, expires_at)` for cheap inference-time lookup. See `core/models_inference.py`.
+
+**Trace shape:** `infer_initiative_id()` always returns `(initiative_id_or_none, trace_dict)`. Trace always populated with at least `step` and `reason`. Factory hook emits `[INFERENCE-MATCH] agent=X workspace=Y initiative=Z step=N confidence=F reason=R` log at INFO when a match fires — separate channel from `diagnostic_payload` so inference observability stays independent of orphan diagnostics.
+
+**Implementation pointers:**
+
+- Model: `core/models_inference.py:AgentInitiativeAffinity`
+- Cascade: `core/services/initiative_inference.py:infer_initiative_id`
+- Seed: `python manage.py seed_agent_initiative_affinities --apply`
+- Factory hook: `core/services/deliverable_factory.py:create_deliverable` (~line 684, right before kwargs build)
+- Tests: `core/tests/test_initiative_inference.py` (19 cases across 4 test classes)
+
+**Phase 2 v1 deliberately deferred (PR3):**
+
+- Step 4 heuristics (topic-overlap embedding + recency + owner_match) — stubbed.
+- Tool-context propagation (`tool_context.initiative_id` in `create_deliverable` callers) — requires touching every create callsite; design memo in PR1A→1E sequence notes this as a follow-on.
+- Learned-suggestion auto-attach. v1 keeps these advisory-only; promotion path needs a feedback signal we don't yet have.
+
+### 6.3 Separate action vs embedded — RATIFIED Session 1194
+`work_tool action=initiative_deliverables` (paginated, separate) + `deliverable_count: int` on `initiative_detail`. Embedded `deliverables: [...]` was rejected because high-volume initiatives (e.g. the deferred COO Diagnostics cluster) would blow up the detail payload.
 
 ### 6.3 Separate action vs embedded — RATIFIED Session 1194
 `work_tool action=initiative_deliverables` (paginated, separate) + `deliverable_count: int` on `initiative_detail`. Embedded `deliverables: [...]` was rejected because high-volume initiatives (e.g. the deferred COO Diagnostics cluster) would blow up the detail payload.
@@ -236,6 +286,10 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 | AC13 | Split-pair `related_initiatives` written bidirectionally for clusters 3 and 9 | Mgmt cmd `--apply` output → 4 link writes (3a↔3b, 9a↔9b) |
 | AC14 | `report_initiative_kinds` flags zero project-prefix clusters in Donkey Betz post-apply | Mgmt cmd output assertion |
 | AC15 | `report_initiative_kinds` surfaces a `default_only_projects` list — project rows not named in the apply cmd SPEC, so silent default-kind rot stays visible | Mgmt cmd output + unit test |
+| AC16 | `infer_initiative_id` Step 1 short-circuits cascade when payload carries explicit `initiative_id` (no affinity lookup, no log spam) | Unit test on cascade Step 1 |
+| AC17 | `infer_initiative_id` Step 3 never attaches `kind=recurring_artifact` or `kind=spec_backlog` even when the affinity row matches by `(workspace, agent_name)` | Unit test on kind policy block |
+| AC18 | `deliverable_factory.create_deliverable()` picks up the inferred `initiative_id` and the resulting Deliverable has `initiative_id` correctly set + emits `[INFERENCE-MATCH]` log | End-to-end factory test + log assertion |
+| AC19 | Inference failure / missing affinity falls through to the existing Plan C Phase 1 diagnostic path — deliverable still saves with `diagnostic_status='diagnostic'`; no exception escapes the factory | Unit test on fall-through path |
 
 ## 8. Provenance
 
@@ -243,3 +297,4 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 - **Session 1194 pivot** — Chris ratified Initiatives-first backbone in conversation with Rigby on thread `pa-e11847db632a4ee8`; Rigby persisted the 3 spine Initiatives ~23:14 UTC.
 - This spec is the engineering artifact for that pivot. Implementation PRs will land under `feat/session-1194-initiatives-backbone-*` branches.
 - **Session 1197** added §6.4 (Initiative `kind` enum + lightweight links) per Rigby's design memo on conversation `pa-ea12236c83eb4826` + Chris's agree-all ratification. Implementation PRs under `feat/session-1197-initiative-kind-*` branches (migration → apply → report → docs → tests).
+- **Session 1198** ratified §6.2 (Phase 2 inference cascade + kind-aware policy gates) per Rigby's design memo on the same conversation thread + Chris's agree-all. Implementation PRs under `feat/session-1198-affinity-*` and `feat/session-1198-inference-*` branches (model → seed → inference function → factory hook → tests). Phase 2 hard-reject flip remains gated to 2026-06-29 — inference cascade now sits in front of the reject point so callers omitting `initiative_id` get a deduced attach instead of an exception.
