@@ -105,12 +105,16 @@ grep 'code=ttl_auto_archive' celery.log | wc -l    # sweep archives
 
 **Keep "require explicit `initiative_id`" as default** (Rule 3 from the recon). Reason: workspace-based inference is 0% assignable in DBZ; any forced assignment would be arbitrary. The diagnostic + TTL + sweep stack means the system is stable while we design a richer signal.
 
-**Phase 2 inference options for later** (ranked by Rigby, least-risk first):
-1. **Agent → initiative affinity map** (explicit config): `ResearchAgent` runs under Initiative X by default; declarative, easy to audit.
-2. **Tool-context propagation**: require callers (agents/tools) to pass `initiative_id` explicitly; treat missing as defect, not as inference target.
-3. **Heuristics** (title/content/recency): last resort — noisy, will create silent mis-attribution.
+**Phase 2 attribution requires a new disambiguation signal. Four candidate directions — no commitment yet:**
 
-Top orphan creators (Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9) make affinity + propagation the fastest win.
+| Option | Shape | Notes |
+|---|---|---|
+| **Projects layer (structural)** | New organizational level between Workspace and Deliverables: `Workspace → Project → Deliverable → Initiative (or as overlay)` | **Chris's exploration direction.** Directly responsive to recon ambiguity: narrows the inference domain from "which initiative in the workspace" to "which initiative in *this project*." Bigger IA change. Not implemented; design phase. |
+| Agent → initiative affinity map (config) | Declarative table — e.g., `ResearchAgent` defaults to Initiative X unless overridden | Lower-risk, easy to audit. Rigby's lowest-risk pick if we don't take the structural route. |
+| Tool-context propagation | Caller (agents/tools) must pass `initiative_id` explicitly; treat missing as defect, not as inference target | Hardens contract at the cost of more friction at the call sites. |
+| Heuristics (title/content/recency) | Fuzzy match on deliverable signals | Last resort — noisy, creates silent mis-attribution. |
+
+Top orphan creators (Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9) are the input list for whichever direction we pick.
 
 ## Open items / what's next
 
@@ -120,7 +124,7 @@ Top orphan creators (Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAge
 | **P1 (time-gated)** | 7-day watch + Phase 2 hard-reject flip decision | Earliest 2026-06-29; playbook above |
 | **P2** | `load_all_agents_advisors` baseline fix (155 → 87) | Pre-existing CONFLICT keeping CI red on main; admin-bypass currently required |
 | **P2** | Local test DB infra (pgbouncer transaction pool blocks `CREATE DATABASE`) | Surfaces during Session 1195 PR #5; affects every `core/tests/*` file |
-| **P3** | §6.2 Phase 2 inference design (agent→initiative affinity map) | Eventual richer-signal replacement for Rule 3 |
+| **P3** | §6.2 Phase 2 attribution design — Projects layer (Chris's exploration) vs affinity map vs propagation vs heuristics | Eventual richer-signal replacement for Rule 3; structural Projects layer is Chris's lean per Rigby's Session 1195 close brief |
 | **P3** | Direct ORM `.save()` bypass | Phase 1 hooks only cover factory + update tool path; signal could close the gap |
 
 ## Carryover from Session 1194 still relevant

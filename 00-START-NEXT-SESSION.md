@@ -124,10 +124,13 @@ Full handoff: [`SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md`](docs/handoffs/SESSION_
 
 **Keep "require explicit `initiative_id`"** as default (Rule 3 from recon). Reason: workspace-based inference is **0% assignable** in DBZ because all 3 spine initiatives share the same `target_workspace_id`. Forced workspace inference would be arbitrary. The diagnostic + TTL + sweep stack keeps the system stable while we design a richer signal.
 
-**Phase 2 inference options for later** (least-risk first):
-1. Agent → initiative affinity map (explicit config)
-2. Tool-context propagation (caller must pass `initiative_id`)
-3. Heuristics (title/content/recency — last resort)
+**Phase 2 attribution requires a new disambiguation signal. Three candidate directions — no commitment yet:**
+
+| Option | Shape | Notes |
+|---|---|---|
+| **Projects layer (structural)** | New organizational level between Workspace and Deliverables: `Workspace → Project → Deliverable → Initiative (or as overlay)` | **Chris's exploration direction.** Directly responsive to recon ambiguity: narrows the inference domain from "which initiative in the workspace" to "which initiative in *this project*." Bigger IA change. |
+| Agent → initiative affinity map (config) | Declarative table — e.g., `ResearchAgent` defaults to Initiative X | Lower-risk, easy to audit. Rigby's lowest-risk pick if we don't take the structural route. |
+| Heuristics (title/content/recency) | Fuzzy match on deliverable signals | Last resort — noisy, creates silent mis-attribution. |
 
 ### FIRST THING Session 1196
 
