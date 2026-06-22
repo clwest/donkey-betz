@@ -46,6 +46,11 @@ from .document_processing_signals import (
     connect_document_processing_signals,
 )
 
+from .initiative_diagnostic_signals import (
+    mark_initiative_diagnostic_on_create,
+    connect_initiative_diagnostic_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -75,4 +80,7 @@ __all__ = [
     'on_document_created',
     'on_narrative_shift_created',
     'connect_document_processing_signals',
+    # Initiative no-orphan diagnostic signals (Session 1196 PR #2)
+    'mark_initiative_diagnostic_on_create',
+    'connect_initiative_diagnostic_signals',
 ]
