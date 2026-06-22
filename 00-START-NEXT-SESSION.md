@@ -101,56 +101,63 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1198 — CURRENT ENTRY POINT
+## SESSION 1199 — CURRENT ENTRY POINT
 
-### SESSION 1197 CLOSED — Initiative kind enum + Projects-in-Workspace layer: 7 PRs landed (2026-06-22)
+### SESSION 1198 CLOSED — §6.2 Phase 2 inference cascade + Repo Guardrails baseline fix: 6 PRs landed (2026-06-22)
 
-Full handoff: [`SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md`](docs/handoffs/SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md). **7 PRs opened against `main`** (all retargeted directly — no stacking footgun). Reviving the Session 1193 cluster-recon insight that had been parked DEFERRED-pending-backbone (backbone shipped Sessions 1194-1196).
+Full handoff: [`SESSION_1198_INFERENCE_CASCADE_AND_BASELINE_FIX.md`](docs/handoffs/SESSION_1198_INFERENCE_CASCADE_AND_BASELINE_FIX.md). **6 PRs merged on `main`** — first repo PR series in recent history with clean CI through the entire stack (no `--admin` bypass needed once #2424 cleared the long-standing `Agents count claims` CONFLICT).
 
 | PR | Theme |
 |---|---|
-| **#2416** | Migration 0362 — `Initiative.kind` enum (4 choices, default=project, db_indexed) + `related_initiatives` JSONField (default=list) |
-| **#2417** | `apply_initiative_kind_classification` mgmt cmd — 11-row SPEC, idempotent `--dry-run` / `--apply`, two-pass split-pair linker |
-| **#2418** | `report_initiative_kinds` mgmt cmd — cross-tab + heuristic flags |
-| **#2419** | §6.4 added to `INITIATIVES_FIRST_BACKBONE.md` + AC11-14 + provenance |
-| **#2420** | 14-case regression suite |
-| **#2421** | `docs/INDEX.md` rebuild |
-| **#2422** | Close-out additions: idempotency rule + "safe placeholder" sentence + `default_only_projects` detector + AC15 + test #15 |
+| **#2424** | Baseline fix — `00-START-NEXT-SESSION.md` truncated 1280→312 lines, clears `Agents count claims` CONFLICT (CI green without `--admin`) |
+| **#2425** | Migration 0363 — `AgentInitiativeAffinity` model + composite index for inference-time lookup |
+| **#2426** | `seed_agent_initiative_affinities` mgmt cmd — 2 conservative static seeds (ResearchAgent + ClaudeCode) |
+| **#2427** | `infer_initiative_id()` pure cascade — 5-step kind-aware policy gates |
+| **#2428** | Hook into `deliverable_factory.create_deliverable()` — emits `[INFERENCE-MATCH]` log on attach |
+| **#2429** | 19-case regression suite + §6.2 ratified in `INITIATIVES_FIRST_BACKBONE.md` + AC16-AC19 |
 
-**Net result:** 11 Initiative rows in Donkey Betz workspace carry intentional `kind` classification (5 project / 3 recurring_artifact / 2 investigation / 1 spec_backlog). Status remains lifecycle axis; kind names the work shape. Status orthogonality preserved — apply cmd does NOT touch status on existing rows.
+**Net result:** Phase 2 inference cascade now sits in front of the Plan C Phase 2 hard-reject gate (2026-06-29). Callers omitting `initiative_id` get deduced attachment via `(workspace, agent_name)` affinity instead of `OrphanDeliverableError`. ResearchAgent and ClaudeCode are seeded (covers ~35 of 77 known orphan creates); Rigby and ContentWriterAgent intentionally NOT seeded (coordinator agent + recurring-artifact target respectively).
 
-### FIRST THING Session 1198
+### FIRST THING Session 1199
 
-**Merge the 7 PRs.** All target `main` directly. Earliest-first (#2416 → ... → #2422) is cleanest but no PR hard-depends on a prior merge — each rebases cleanly. Then re-run the local verification commands to confirm idempotency post-merge:
+**No code lift required.** All Session 1198 work is merged on main and verified end-to-end. Standard checks:
 
 ```bash
-# Step 1 — confirm migration applied + kind field present
+# Step 1 — confirm migrations applied + affinity table populated
 .venv/bin/python -c "
 import django, os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings')
 django.setup()
-from core.models_document_registry import Initiative
-print('Kind choices:', [c[0] for c in Initiative.Kind.choices])
+from core.models_inference import AgentInitiativeAffinity
+print('Affinity count:', AgentInitiativeAffinity.objects.count())
 "
+# Expected: 2
 
-# Step 2 — confirm 11-row classification still in place (re-apply should be no-op)
-python manage.py apply_initiative_kind_classification --apply --workspace-id b4503364-2573-4401-9e28-61a739e0ce50
-
-# Step 3 — confirm default-only detector signals the 3 spine Initiatives (real long-arc projects, kind=project is correct)
-python manage.py report_initiative_kinds --workspace-id b4503364-2573-4401-9e28-61a739e0ce50 --json-only | jq '.default_only_projects'
+# Step 2 — confirm inference cascade still works end-to-end
+.venv/bin/python -c "
+import django, os, logging
+os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings')
+django.setup()
+logging.basicConfig(level=logging.INFO)
+from core.services.deliverable_factory import create_deliverable
+d = create_deliverable(
+    title='Spider Context Utilization Retune Progress',
+    content=('Iterating on retune list. ' * 30),
+    agent_name='ResearchAgent',
+    workspace_id='b4503364-2573-4401-9e28-61a739e0ce50',
+    deliverable_type='document',
+)
+print(f'Result: id={d.id if d else None} initiative_id={d.initiative_id if d else None}')
+if d: d.delete()
+"
+# Expected: [INFERENCE-MATCH] log + initiative_id=23cf3acb-...
 ```
-
-Production rollout (if/when Chris flips local-only off): same playbook — apply cmd is idempotent + safe to run; no worker restart needed (no new `@shared_task` in this session).
-
-### 24h watch — starts 2026-06-23 (NEW, time-gated)
-
-Re-run `report_initiative_kinds --workspace-id <DBZ>` daily for 1 week. Confirm `default_only_projects` count stays bounded — if new project rows appear that weren't in the SPEC, that's a callsite filing project Initiatives without classification → candidate for enforcement Phase 2.
 
 ### Active conversation
 
-`pa-ea12236c83eb4826` (Session 1197 close). Rigby will likely recommend spinning fresh given Session 1198's focus is on watches + Phase 2 design + carryover.
+`pa-ea12236c83eb4826` (Session 1197+1198 close). Likely worth spinning fresh given Session 1199's focus shifts to time-gated watches + carryover Phase 2 work. Ask Rigby to recommend.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (was 34 — added 8 via Session 1197 SPEC), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1.
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (unchanged from Session 1197), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (ResearchAgent + ClaudeCode).
 
 **3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE, kind=project):**
 
@@ -166,19 +173,22 @@ All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage pro
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Merge Session 1197 PRs + verify** | **P0** | 7 PRs at #2416-#2422. All on `main`. Verification commands in FIRST THING above. |
-| **Production rollout: Session 1196 `backfill_initiative_workspace_links --apply`** | **P0 (carryover)** | Operator runs in prod + restarts celery workers. Locks production baseline matching local. Playbook in [`SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md`](docs/handoffs/SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md) §"Production rollout playbook". |
-| **Plan C 7-day watch + Phase 2 hard-reject decision** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_deliverable_initiative_links --workspace-id b4503364-… --json-only`; diff totals against the 2026-06-22 baseline. If missing-initiative count trends down + sweep archive rate matches create rate → flip Phase 2 hard-reject (`OrphanDeliverableError` on `initiative_id=None`). Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
+| **Plan C 7-day watch + Phase 2 hard-reject flip** | **P1 (time-gated)** | Start **2026-06-29**. With §6.2 inference cascade in front of the reject point (Session 1198 ship), the flip is safer than pre-Session-1198. Re-run `backfill_deliverable_initiative_links --workspace-id b4503364-… --json-only`; diff totals against the 2026-06-22 baseline. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
 | **Session 1196 7-day watch** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_initiative_workspace_links --json-only` and diff against 2026-06-22 baseline. Confirm archived count up, candidate_for_flag at 0, already_diagnostic decreasing for non-terminal rows. |
-| **Session 1197 `default_only_projects` 24h watch** | **P1 (time-gated, NEW)** | Start **2026-06-23**. Daily `report_initiative_kinds` re-run; confirm new project Initiatives aren't filed without classification. |
-| **§6.2 Phase 2 inference design** | P2 | Rigby's option ranking (least-risk first): (1) agent→initiative affinity map; (2) tool-context propagation; (3) heuristics. Top orphan creators give the input list: Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9. **Newly informed by Session 1197** — defaults + kind enum give a richer signal shape than pre-1197 design assumed. |
-| **`load_all_agents_advisors` baseline fix (155 → 87)** | P2 | Pre-existing `Agents count claims` CONFLICT keeping main's `Repo Guardrails` CI red. Admin-bypass currently required on every PR. Either fix the seed script to actually load all 148 declared agents, OR update the expected baseline to match runtime. |
-| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`, blocks `manage.py test` for every `core/tests/*` file. Re-surfaced again in Session 1197 PRs #2420 + #2422. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. |
-| **Migration drift audit (Session 1196 parked)** | P2/P3 | Set A: 4 unmigrated Narrative* models in `models_narrative_drift.py`. Set B: 16 AlterField ops on AgentExecution/CuratedSignalEntry/FinalAppliedOverrides/FleetPaChatAuditRow. Session 1197 PR #2416 trimmed these from auto-output — they remain unaddressed. |
-| **PA LLM iteration cap silent failure** | P2 | Carryover from Session 1193 (`c2bac9c0-…`). `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8`. |
+| **Session 1197 `default_only_projects` 24h watch** | **P1 (time-gated)** | Start **2026-06-23** (today). Daily `report_initiative_kinds --workspace-id <DBZ>` re-run; confirm new project Initiatives aren't filed without classification. |
+| **Session 1198 inference accuracy watch** | **P1 (time-gated, NEW)** | Start **2026-06-23**. Grep `celery.log` for `[INFERENCE-MATCH]` lines + spot-check that the attached initiative_id is semantically correct. Aim for ≥80% precision in the first week before considering Step 4 heuristics. |
+| **Production rollout: Session 1196 + Session 1198 cumulative** | **P0 (carryover, gated)** | Operator runs `backfill_initiative_workspace_links --apply` + `apply_initiative_kind_classification --apply` + `seed_agent_initiative_affinities --apply` in prod + restarts celery workers. Locks production baseline matching local. No new `@shared_task` in 1197 or 1198, but worker restart still recommended for clean `sys.modules` state. |
+| **PR3 — Step 4 heuristics implementation** | P2 | After Step 3 affinity behavior settles (week of watching). Topic-overlap embedding + recency + owner_match per Rigby's §6.2 framing (see handoff §"What's deliberately NOT in scope"). |
+| **Tool-context propagation (Step 2 activation)** | P2 | Plumb `tool_context.initiative_id` through `create_deliverable` callers so Step 2 of cascade actually fires. Requires touching ~10 callsites. Currently no caller passes it. |
+| **Rigby + ContentWriterAgent affinity decision** | P2 | Currently unseeded by design (Rigby is coordinator, ContentWriterAgent's natural target is recurring_artifact which is blocked). After 1 week of inference observation, decide: pin to a specific Initiative via manual_pin, OR let them fall through to heuristics (PR3). |
+| **Manual pin mgmt cmd** | P3 | `affinity_pin --workspace X --agent Y --initiative Z --source manual_pin` — when actual operator demand surfaces. Documented in `seed_agent_initiative_affinities.py` docstring as escape hatch. |
+| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`. Re-surfaced AGAIN in Session 1198 PR #2429. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. |
+| **Migration drift audit (Set A + Set B)** | P2/P3 | Each Session 1196/1197/1198 migration trimmed these by hand. Time to actually fix the drift OR add an exclusion convention. Set A: 4 unmigrated Narrative* models. Set B: 16 AlterField ops. |
+| **PA LLM iteration cap silent failure** | P2 | Carryover from Session 1193 (`c2bac9c0-…`). Bit during Session 1197 memory cleanup. Still unfixed. `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8`. |
 | **Producer reroute** | P2 | Carryover from Session 1192 (`780a8d15-…`). `_ensure_system_workspace` auto-recreates. |
 | **PR-D contract flip** | P2 | Carryover from Session 1194 (`9d9db48a-…`). 24h WARN-volume gate elapsed 2026-06-22. |
-| **Workspace UI filter by kind** | P3 | Vertical-slice step 6 from Session 1197 decision card. Parked once kind enum beds in. Touches frontend `WorkspacePageNew.tsx` + adds `?kind=<value>` query param to `work_tool initiative_list`. |
+| **Workspace UI filter by kind** | P3 | Vertical-slice step 6 from Session 1197 decision card. Parked once kind enum beds in. Touches frontend `WorkspacePageNew.tsx`. |
+| **Initiative kind UI filter + affinity admin** | P3 | Frontend surface for the Session 1197+1198 backend work — let operators see kind classification + manage affinity pins from the workspace UI. |
 
 **Pick-this-session items below this line are still-relevant Session 1192/1193 carryover items — same as last session:**
 
@@ -299,9 +309,11 @@ AgentExecution.objects.filter(
 
 `gh pr merge --delete-branch` on a parent PR **auto-closes child PRs unrecoverably** when their base branch is deleted. `gh pr reopen` fails. Workaround: retarget child PR's base to `main` BEFORE merging the parent (`gh pr edit <child> --base main`). Session 1188 hit this with #2381 → had to open fresh #2382.
 
-### Pre-existing CONFLICT — `--admin` bypass still required
+### `Agents count claims` CONFLICT — RESOLVED Session 1198
 
-`context-kit verify` `Agents count claims` CONFLICT still on main. Strict mode Repo Guardrails fails on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. Worth a dedicated inventory-refresh PR if anyone has the bandwidth.
+PR #2424 cleared the long-standing CONFLICT that was forcing `--admin` bypass on every PR. Root cause: one Session 1187 historical-context line in `00-START-NEXT-SESSION.md` had `"(in-code, 51 agents)"` on a line containing "Headline finding:" — context-kit's `Headline` strong-token propagated total-dimension classification to the parenthetical 51, producing canonical totals `{83, 51}` → CONFLICT. Fix was truncating the stale historical session blocks (preserved in `docs/handoffs/`). CI now runs clean without `--admin`.
+
+Memory: [`feedback_context_kit_headline_propagates_total.md`](.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_context_kit_headline_propagates_total.md) for the gotcha + canonical-doc cleanliness rule.
 
 ---
 
