@@ -589,6 +589,111 @@ def cleanup_halted_experiments(days_old: int = 7):
 
 
 @shared_task
+def sweep_diagnostic_initiatives(dry_run: bool = False, max_per_run: int = 1000):
+    """Session 1196 — Plan C side-quest: archive TTL-expired diagnostic Initiatives.
+
+    Walks Initiative rows flagged by the create-mark signal (Session 1196 PR #2,
+    merge 14a3ad18) whose ``diagnostic_expires_at`` is in the past, and flips
+    ``status='ARCHIVED'`` to retire them from active triage. Non-destructive
+    — preserves all 5 diagnostic_* fields per the Plan C schema decision (no
+    ``diagnostic_status='archived'`` overload), and AUGMENTS ``diagnostic_payload``
+    with ``archived_by='diagnostic_sweep'`` + ``archived_reason='ttl_expired'``
+    + ``archived_at`` so attribution rollups can distinguish TTL-archived from
+    manually-archived rows.
+
+    Filter (Rigby-ratified):
+    - ``diagnostic_status='diagnostic'``
+    - ``diagnostic_code='missing_target_workspace_id'`` — keeps the sweep
+      selective when future diagnostic codes are added (per PR #1 review).
+    - ``diagnostic_expires_at <= now()``
+    - ``.exclude(status__in=['ARCHIVED', 'COMPLETED'])`` — terminal states
+      shouldn't be re-archived.
+
+    Mirror of ``sweep_diagnostic_deliverables`` (Session 1195) with the
+    Initiative-specific filter additions above.
+
+    Args:
+        dry_run: When True, log what would be archived without DB writes.
+        max_per_run: Safety cap on rows touched per invocation
+            (default 1000). Prevents runaway sweeps. 0 disables.
+
+    Returns:
+        Dict with archived, candidates, dry_run, max_per_run, sample_ids, capped.
+
+    Spec: ``docs/specs/INITIATIVES_FIRST_BACKBONE.md`` §3.C / §6.1.
+    """
+    from django.utils import timezone as _tz
+    from core.models_document_registry import Initiative
+
+    now = _tz.now()
+    qs = (
+        Initiative.objects
+        .filter(
+            diagnostic_status='diagnostic',
+            diagnostic_code='missing_target_workspace_id',
+            diagnostic_expires_at__lte=now,
+        )
+        .exclude(status__in=['ARCHIVED', 'COMPLETED'])
+        .order_by('diagnostic_expires_at')
+    )
+    candidates = qs.count()
+    if max_per_run and max_per_run > 0:
+        qs = qs[:max_per_run]
+    rows = list(qs.only(
+        'id', 'diagnostic_code', 'diagnostic_payload', 'diagnostic_expires_at',
+        'status',
+    ))
+
+    sample_ids: list = []
+    archived = 0
+    for init in rows:
+        if len(sample_ids) < 5:
+            sample_ids.append(str(init.id))
+        logger.info(
+            "[ORPHAN-INITIATIVE] code=ttl_auto_archive initiative_id=%s "
+            "diagnostic_code=%s status_was=%s diagnostic_expires_at=%s "
+            "archived_at=%s dry_run=%s",
+            str(init.id),
+            init.diagnostic_code,
+            init.status,
+            init.diagnostic_expires_at.isoformat() if init.diagnostic_expires_at else 'null',
+            now.isoformat(),
+            dry_run,
+        )
+        if dry_run:
+            continue
+        new_payload = dict(init.diagnostic_payload or {})
+        new_payload['archived_by'] = 'diagnostic_sweep'
+        new_payload['archived_reason'] = 'ttl_expired'
+        new_payload['archived_at'] = now.isoformat()
+        new_payload['status_was'] = init.status
+        # .update() instead of .save() to skip signal dispatch — the
+        # ws-set auto-clear handler (PR #3) wouldn't fire here anyway
+        # (no ws transition), but keeping the write tight is the
+        # Plan C precedent and dodges any future signal expansion.
+        Initiative.objects.filter(pk=init.pk).update(
+            status='ARCHIVED',
+            diagnostic_payload=new_payload,
+        )
+        archived += 1
+
+    summary = {
+        'candidates': candidates,
+        'archived': archived,
+        'dry_run': dry_run,
+        'max_per_run': max_per_run,
+        'sample_ids': sample_ids,
+        'capped': bool(max_per_run and max_per_run > 0 and candidates > max_per_run),
+    }
+    logger.info(
+        "[ORPHAN-INITIATIVE] sweep_complete archived=%s candidates=%s "
+        "dry_run=%s capped=%s",
+        archived, candidates, dry_run, summary['capped'],
+    )
+    return summary
+
+
+@shared_task
 def sweep_diagnostic_deliverables(dry_run: bool = False, max_per_run: int = 1000):
     """Session 1195 — Plan C Phase 1: archive TTL-expired diagnostic deliverables.
 
