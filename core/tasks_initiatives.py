@@ -2719,13 +2719,23 @@ def _impl_generate_initiative_stage_document(self, initiative_id: str, stage_num
 
         logger.info(f"📝 [STAGE-GEN] Stage 1 research topic: {research_topic[:100]}...")
 
-        # Session 923: Be explicit about using EXTERNAL research, not internal data queries
-        # Session 1016: Binding directive to prevent stage doc drift
-        prompt = f"""Research this topic using EXTERNAL sources (web_search, spider_query).
-DO NOT use query_internal_data - this is NOT about internal system analysis.
+        # Session 923: Use external research where available.
+        # Session 1016: Binding directive to prevent stage doc drift.
+        # Session 1204 (Phase B.2 PR-2): Removed the "return BLOCKED: [reason]"
+        # escape hatch. Internal-architecture topics (e.g., "Initiatives-First
+        # Wiring", "Tool Migration Hardening") legitimately lack external
+        # sources, and ResearchAgent was correctly following that directive —
+        # producing Stage 1 docs that started with "BLOCKED:". The downstream
+        # quality gate (evaluate_stage_quality) then tripped on the "blocked"
+        # keyword, capping confidence at 0.20 and stalling progression
+        # regardless of whether the drift gate passed. Replaced with an
+        # "Unknowns / Verification Plan" section so the agent has a clean
+        # honest output path for limited-evidence topics without using the
+        # blocking keyword. Initiative `05931145-…` → `6941372d-…` spine arc.
+        prompt = f"""Research this topic to advance the initiative.
 
 BINDING DIRECTIVE: Your output must directly advance THIS initiative: "{initiative.name}".
-If you cannot find relevant data for this specific topic, return "BLOCKED: [reason]" instead of writing about something else.
+Do not write about tangential topics. Always produce the Required Output sections below.
 
 ## Research Topic
 {research_topic}
@@ -2734,19 +2744,27 @@ If you cannot find relevant data for this specific topic, return "BLOCKED: [reas
 {initiative.description or 'Research this topic thoroughly.'}{enhanced_context}
 
 ## Instructions
-1. Use web_search to find current information about this topic from the internet
-2. Use spider_query to check recent news and trends from our spider network
-3. Synthesize the findings into actionable insights
+1. Use web_search to find current external information about this topic.
+2. Use spider_query to check recent news and trends from the spider network.
+3. For internal architecture / tooling topics where external sources are scarce,
+   use the project repo context, docs knowledge, and first-principles reasoning.
+4. Synthesize the findings into actionable insights.
 
 ## Required Output
-Provide a research brief with:
-1. **Research Findings** - Specific facts, statistics, and data points you discovered
-2. **Data Sources** - Which web sources and spider data you used
-3. **Key Insights** - 3-5 most important takeaways
-4. **Recommendation** - Should this project proceed? Why or why not?
-5. **Action Items** - Next steps with format "- AgentName: Task description (Timeline)"
+Provide a research brief with ALL of these sections (never omit Research Findings):
+1. **Research Findings** - Specific facts, observations, or design constraints discovered.
+   If external evidence is limited, state what is known from internal context and what
+   is reasoned from first principles.
+2. **Data Sources** - Web sources, spider data, repo files, or docs you used.
+3. **Key Insights** - 3-5 most important takeaways.
+4. **Recommendation** - Should this initiative proceed? Why or why not?
+5. **Unknowns / Verification Plan** - List the gaps in evidence and how to close them
+   (e.g., specific files to read, experiments to run, stakeholders to consult).
+   Use this section instead of refusing the task when evidence is limited.
+6. **Action Items** - Next steps with format "- AgentName: Task description (Timeline)"
 
-IMPORTANT: Use web_search as your PRIMARY tool. This is external market/topic research, NOT internal system analysis."""
+Prefer external evidence when available; fall back to internal context + first-principles
+reasoning when not. Do NOT emit "BLOCKED:" or refusal text — use the Unknowns section."""
     else:
         # Stages 2-5 use content-generating agents
         # Session 1016: Binding directive to prevent stage doc drift
