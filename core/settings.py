@@ -10,6 +10,7 @@ This configuration unifies:
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
@@ -310,7 +311,47 @@ if 'postgresql' in os.environ.get('DATABASE_URL', ''):
     # under transaction pooling). One trade-off: Django's .iterator() falls
     # back to client-side, which can increase memory on very large querysets.
     # Audit candidate but no known callsite >10K rows in a single iter.
-    if os.environ.get('USE_PGBOUNCER', '').lower() in ('1', 'true', 'yes'):
+    # Session 1199 — test-mode detection. PgBouncer's transaction pool
+    # rejects ``CREATE DATABASE`` (and a few other session-state-dependent
+    # statements), so Django's test runner can't spin up
+    # ``test_unified_donkey_betz`` when routed through it. Detect ``test``
+    # in argv (covers ``manage.py test``, ``python -m unittest``, and
+    # ``pytest --django``) and force the default alias to connect direct
+    # to PG for the duration of the test process. Closes the 4-session
+    # carryover blocker that surfaced in Sessions 1195/1196/1197/1198
+    # PR-5 test files.
+    #
+    # Override path: ``DJANGO_TEST_DATABASE_URL`` env var can point at a
+    # different non-pooled DSN entirely (e.g., a dedicated test instance
+    # at a different host). When set, that wins.
+    def _running_under_test() -> bool:
+        """Detect Django test runner / pytest / explicit env-var opt-in."""
+        argv0 = sys.argv[0] if sys.argv else ''
+        return (
+            'test' in sys.argv
+            or 'pytest' in argv0
+            or os.environ.get('DJANGO_TEST_RUNNER_ACTIVE') == '1'
+        )
+
+    _TEST_MODE = _running_under_test()
+
+    if _TEST_MODE:
+        # Force direct PG for the test process — bypass PgBouncer entirely.
+        test_dsn = os.environ.get('DJANGO_TEST_DATABASE_URL', '').strip()
+        if test_dsn:
+            # Explicit override DSN (e.g., dedicated test PG instance).
+            DATABASES['default'] = dj_database_url.parse(test_dsn)
+        else:
+            # Default: same DB credentials as DATABASE_URL but force
+            # PG port (5432) instead of PgBouncer's :5433.
+            DATABASES['default']['PORT'] = 5432
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = False
+        DATABASES['default']['CONN_MAX_AGE'] = 0
+        DATABASES['default']['CONN_HEALTH_CHECKS'] = False
+        # Skip the PgBouncer branch entirely when in test mode — even if
+        # USE_PGBOUNCER=1 is set in the env.
+
+    elif os.environ.get('USE_PGBOUNCER', '').lower() in ('1', 'true', 'yes'):
         # Route default → PgBouncer on :5433.
         DATABASES['default']['PORT'] = 5433
         DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
