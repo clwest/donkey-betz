@@ -1897,13 +1897,20 @@ class WorkspaceManager:
         # Session 1089: Deactivate ALL other workspaces first, then activate
         # the selected one. Previously only set is_active=True without
         # deactivating others, causing multiple active workspaces in the UI.
-        # Keep system workspaces (codebase, System Autonomous) untouched.
+        # Keep codebase workspaces untouched (they're immutable project refs).
+        #
+        # Session 1203 (Phase B.1 PR-3): removed the
+        # `name='System Autonomous Workspace'` exclusion. Previously SAW
+        # was force-kept-active when any other workspace was activated,
+        # which kept producer paths landing on it even after operators
+        # explicitly switched targets. Combined with PR-1 + PR-1b
+        # (agent_router fallback honors DEFAULT_PRODUCER_WORKSPACE_ID),
+        # this aligns the cross-cutting rule: "System Autonomous must
+        # stay deactivated when DBZ is target". Initiative 05931145-….
         ProjectWorkspace.objects.filter(is_active=True).exclude(
             id=workspace_id
         ).exclude(
             workspace_type='codebase'
-        ).exclude(
-            name='System Autonomous Workspace'
         ).update(is_active=False)
 
         workspace.is_active = True
