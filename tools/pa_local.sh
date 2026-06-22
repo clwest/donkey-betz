@@ -17,10 +17,11 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1195 thread
-# (pa-92bacb0fbcab44fb, spun fresh at Session 1195 open per Rigby's
-# Session 1194 close-recommendation to start Plan C work on a clean
-# canvas). Prior pins retired: pa-e11847db632a4ee8 (Session 1194),
+# the --conversation flag below. Current value: Session 1196 thread
+# (pa-ea12236c83eb4826, spun fresh at Session 1196 open per Rigby's
+# Session 1195 close-recommendation to start Phase 2 + initiative_create
+# enforcement on a clean canvas). Prior pins retired:
+# pa-92bacb0fbcab44fb (Session 1195), pa-e11847db632a4ee8 (Session 1194),
 # pa-a60842917d36 (Session 1184), pa-8f8ef45338ce4a24 (Sessions 1182-83).
 #
 # IF YOU MANUALLY RESTART A CELERY WORKER (not via `make celery`):
@@ -32,4 +33,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-92bacb0fbcab44fb
+python tools/pa_chat.py "$@" --tools --conversation pa-ea12236c83eb4826
