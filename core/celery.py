@@ -463,6 +463,19 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=3, minute=30),  # 3:30 AM Denver
         'options': {'queue': 'default', 'expires': 3600},
     },
+    # Session 1195 — Plan C Phase 1 (Initiatives-First Backbone).
+    # Archive TTL-expired diagnostic deliverables flagged by the
+    # factory/update hooks (PRs #2403/#2404). Non-destructive: flips
+    # canonical Deliverable.status='archived' and augments
+    # diagnostic_payload with archived_by/reason/at; preserves all
+    # diagnostic_* fields for attribution rollups. Staggered after
+    # the 3:30 cleanup-halted-experiments to land in the 3:00 maintenance
+    # cluster. Spec: docs/specs/INITIATIVES_FIRST_BACKBONE.md §3.C.
+    'sweep-diagnostic-deliverables': {
+        'task': 'core.tasks.sweep_diagnostic_deliverables',
+        'schedule': crontab(hour=3, minute=45),  # 3:45 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
     # Cleanup stale scoring requests (high-frequency queue hygiene)
     'cleanup-stale-scoring-requests': {
         'task': 'core.tasks.cleanup_stale_scoring_requests',
