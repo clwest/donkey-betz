@@ -626,6 +626,46 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         logger.info(f"[{trace_id}] Executing tool: {tool_name}")
 
+        # Session 1199 — Activate §6.2 Step 2 (tool-context propagation).
+        # Stash ``payload.initiative_id`` (if present) in a contextvar so
+        # deep callers of ``create_deliverable()`` can resolve it without
+        # every layer plumbing the value through explicitly. Cleared
+        # automatically when the scope exits. Safe in async + nested
+        # contexts (contextvars semantics).
+        from core.services.tool_context import tool_context_scope
+        with tool_context_scope(payload):
+            return await self._execute_inner(
+                tool_name=tool_name,
+                payload=payload,
+                user_id=user_id,
+                timeout=timeout,
+                agent_name=agent_name,
+                conversation_id=conversation_id,
+                record_telemetry=record_telemetry,
+                pa_trace_id=pa_trace_id,
+                trace_id=trace_id,
+                start_time=start_time,
+                action=action,
+            )
+
+    async def _execute_inner(
+        self,
+        *,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        timeout: int,
+        agent_name: str,
+        conversation_id: Optional[Any],
+        record_telemetry: bool,
+        pa_trace_id: Optional[str],
+        trace_id: str,
+        start_time: float,
+        action: str,
+    ) -> ToolResult:
+        """Original execute body, separated so the contextvar scope
+        wraps cleanly without indenting the whole method."""
+
         # Session 1172: live status ticker for the chat UI. Fire-and-forget;
         # no-op when pa_trace_id / conversation_id are absent.
         from core.services.pa_status_events import (
