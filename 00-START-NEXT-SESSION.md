@@ -102,25 +102,41 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1203 — CURRENT ENTRY POINT
+## SESSION 1204 — CURRENT ENTRY POINT
 
-### SESSION 1202 CLOSED — Connectivity Roadmap Phase A close (§A.1 + §A.2 shipped, 7 PRs) (2026-06-22)
+### SESSION 1203 CLOSED — Connectivity Roadmap Phase B.1 close (Producer Reroute Completion, 3 PRs landed + 1 deferred) (2026-06-22)
 
-Full handoff: [`SESSION_1202_ROADMAP_PHASE_A_CLOSE.md`](docs/handoffs/SESSION_1202_ROADMAP_PHASE_A_CLOSE.md). **7 PRs merged.** Both §A.1 (Initiative-Management Tools) and §A.2 (Diagnostic Telemetry Tools) closed end-to-end with Rigby live-stack verification at every PR boundary. Operator can now spawn + bind + link Initiatives via PA tool (no ORM bypass) and has 7 audit-grade `diagnostics_tool` actions for subsystem health grading.
+Full handoff: [`SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md`](docs/handoffs/SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md). **3 PRs merged.** Producer Reroute leak fully closed at code level + verified live in production — test Initiative `a0e23887-…` spawned auto-research deliverable `0fbddd89-…` at 19:50 UTC which landed in DBZ (`b4503364-…`), not SAW (`1f0d467e-…`). PR-2 deferred with documented rationale (file-sink helper, not producer-routing path).
 
-| Initiative | UUID | Status | Holds |
-|---|---|---|---|
-| **Initiative-Management Tool Surface Gaps** | `f4cfe31e-366b-4d5e-802c-041ba66c7afb` | ready-to-close | `work_tool.initiative_update` + `initiative_link` shipped + verified |
-| **Diagnostic Telemetry Tool Surface Gaps** | `50b7adf2-ec1c-4ef0-8245-ec026cff114f` | ready-to-close | 7 `diagnostics_tool` actions shipped + verified |
-| **Platform Connectivity Reality Map** (parent) | `0ecd1bc2-9931-4464-8efa-495a28b58779` | ACTIVE | 2 of 4 children closeable; Producer Reroute + Docs↔Runtime still open |
-| Producer Reroute Completion | `05931145-89d2-4923-946e-676e0db44e91` | ACTIVE | **Now P1** — 3 leak-site patches (Phase B.1) |
-| Docs ↔ Runtime Alignment Layer | `1859dd51-ce3b-4689-bd4b-42d9de5793d8` | ACTIVE | Phase C — structural fixes |
+| Initiative | UUID | Status |
+|---|---|---|
+| **Producer Reroute Completion** | `05931145-89d2-4923-946e-676e0db44e91` | **COMPLETED** (Session 1203) |
+| **Initiative-Management Tool Surface Gaps** | `f4cfe31e-366b-4d5e-802c-041ba66c7afb` | **COMPLETED** (housekeeping) |
+| **Diagnostic Telemetry Tool Surface Gaps** | `50b7adf2-ec1c-4ef0-8245-ec026cff114f` | **COMPLETED** (housekeeping) |
+| **Platform Connectivity Reality Map** (parent) | `0ecd1bc2-9931-4464-8efa-495a28b58779` | ACTIVE — 3 of 4 children closed; Docs↔Runtime + Phase B.2 still open |
+| Docs ↔ Runtime Alignment Layer | `1859dd51-ce3b-4689-bd4b-42d9de5793d8` | ACTIVE — Phase C |
 
-**Net result:** Phase A of the Connectivity Completion Roadmap is done. `schema_handler_diff` v3 returns **`schema_only=0, handler_only_orphan=0`** — platform has zero real schema/handler gaps detected. Two Rigby-surfaced findings deferred to Session 1203 (advisor invocations zero in 7d, discord_health zero in 7d — see Findings below).
+**Net result:** Phase B.1 done. Every autonomous-traffic dispatch now routes to DBZ (`b4503364-…`) instead of SAW (`1f0d467e-…`). SAW is `is_active=False`. PR-1 (#2449) + PR-1b (#2450) + PR-3 (#2451) merged. PR-2 deferred as separate "generated_content sink / root_path contract" scope.
 
-### FIRST THING Session 1203
+### Phase B.1 24h watch — fires 2026-06-23 ~14:48 UTC
 
-**Daily inference accuracy watch Day-1 (2026-06-23).** Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` per the runbook protocol at `cb9d8ae1-…`. Independent of all other work this session.
+Full checklist in handoff §"24h watch checklist". Headline invariant: **zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC**.
+
+```bash
+# Quick check
+tools/pa_local.sh "Run deliverable_tool action=list limit=100 — count items with workspace_id=1f0d467e-d950-46db-8c6e-a4098024aacd and created_at after 2026-06-22T19:48:00Z. Target: 0."
+
+# SAW state
+USE_PGBOUNCER=1 .venv/bin/python manage.py shell -c "
+from core.models_skin_layer import ProjectWorkspace
+saw = ProjectWorkspace.objects.get(id='1f0d467e-d950-46db-8c6e-a4098024aacd')
+print('SAW is_active:', saw.is_active, '— expected False')
+"
+```
+
+### FIRST THING Session 1204
+
+**Phase B.1 24h watch** (above) + **Daily inference accuracy watch Day-2 (2026-06-23)**. Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` per runbook `cb9d8ae1-…`. With ~24h of post-restart traffic, accuracy signal should be measurable (Day-1 was zero traffic — ~23 min coverage only).
 
 ```bash
 # A — total create_deliverable calls (denominator)
@@ -148,29 +164,7 @@ USE_PGBOUNCER=1 .venv/bin/python manage.py report_initiative_kinds
 
 Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`. Day 8 (2026-06-30) decision lands as follow-up deliverable tagged `session-1198-watch-result`.
 
-### 24h watch checklist for §A.1 + §A.2 invariants (run early)
-
-```bash
-# 1. Worker freshness — workers should be from 2026-06-22 13:51+
-ps -eo pid,lstart | grep celery | head -1
-
-# 2. work_tool.initiative_update idempotent
-tools/pa_local.sh "Run work_tool action=initiative_update id=<any> kind=project once; \
-  run it again; confirm second response has updated_fields=[]"
-
-# 3. work_tool.initiative_link bidirectional rule
-tools/pa_local.sh "Run work_tool action=initiative_link parent_id=<x> child_id=<y> relation=spawns; \
-  call initiative_detail on both and confirm related_initiatives populated on both sides"
-
-# 4. All 7 diagnostics_tool actions return structured JSON (no placeholder errors)
-tools/pa_local.sh "Run diagnostics_tool with each of: advisor_invocations, provider_calls, \
-  beat_schedule_health, workspace_metrics, schema_handler_diff, learning_bridge_writes, \
-  discord_health. Confirm none return pending_pr field"
-
-# 5. schema_handler_diff zero real gaps
-tools/pa_local.sh "Run diagnostics_tool action=schema_handler_diff; \
-  confirm totals.schema_only=0 AND totals.handler_only_orphan=0"
-```
+Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only post-restart); `default_only_projects=39`.
 
 ### Time-gated watches active 2026-06-23
 
@@ -188,9 +182,9 @@ tools/pa_local.sh "Run diagnostics_tool action=schema_handler_diff; \
 
 ### Active conversation
 
-`pa-123b7d48f01043eb` — spun fresh mid-Session 1202 for Phase A.2 work (titled "Session 1202 — Phase A.2 (diagnostics_tool 7 actions)"). Carries Phase A close-out context. `tools/pa_local.sh` is already pinned. You may want to spin a fresh Session 1203 thread on first Rigby ping (the §A.1 + §A.2 close-out context is heavy and B.1 is a different fix arc). Prior thread `pa-1ccc494ea00b4e77` (Sessions 1200 + 1201 + 1202 §A.1) retired; `pa-ea12236c83eb4826` (Sessions 1197-1199) before that.
+`pa-d2d0f4c2b6284899` — spawned by Rigby via `session_tool action=create_fresh` at Session 1203 open (titled "Session 1203 — Phase B.1 (Producer Reroute, 3 PRs)"). Carries the Producer Reroute close-out + PR-2 defer context. `tools/pa_local.sh` is already pinned. You may want to spin a fresh Session 1204 thread on first Rigby ping if Phase B.2 work is a different arc. Prior threads retired: `pa-123b7d48f01043eb` (Session 1202 Phase A.2), `pa-1ccc494ea00b4e77` (Sessions 1200-1202 §A.1), `pa-ea12236c83eb4826` (Sessions 1197-1199).
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **46 Initiatives total** (unchanged Session 1202; the 4 Reality Map children were created Session 1201). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **49 Initiatives total** (Session 1202 was 46; net +3 across Session 1203 — test Initiative `a0e23887-…` archived; the rest from prior session backfills). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
 **3 spine Initiatives — still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs):**
 
@@ -206,27 +200,23 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Protocol: runbook `cb9d8ae1-…`. |
-| **Connectivity Roadmap Phase B.1 — Producer Reroute Completion (3 PRs)** | **P1 (Reality Map fix arc — promoted from P2)** | 3 single-file patches: `agent_router.py:1083`, `tasks.py:7748`, `workspace_manager.py:1906`. Pattern identical to Session 1199 PR #2435 — Initiative `05931145-…`. Roadmap §B.1. |
-| **Status flip §A.1 + §A.2 Initiatives → COMPLETED** | **P1 (housekeeping)** | Use `content_tool action=content_complete id=<uuid>` per Session 1184 memory rule (NOT `work_tool action=initiative_update_status` — it silently ignores the status flip). Initiatives `f4cfe31e-…` and `50b7adf2-…`. |
-| **Finding 1 — advisor_invocations all zero in 7d** | **P2 (Session 1202 carryover)** | Investigate Row 10 refinement. Step 1: compare `set(Advisor.name)` vs `set(AgentExecution.objects.values_list('agent__name', flat=True))`. File as deliverable under Reality Map parent. |
-| **Finding 2 — discord_health zero invocations** | **P2 (Session 1202 carryover)** | `ps -ef | grep discord`; `grep -i discord celery*.log`. If bot is up but not writing CeleryTaskEvent, `discord_health` needs a different data source. File as deliverable under Reality Map parent. |
+| **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in handoff §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
+| **Daily watch Day-2 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Day-2 should have real traffic signal (Day-1 was zero — 23 min coverage). Day-1 baseline: `default_only_projects=39`. Protocol: runbook `cb9d8ae1-…`. |
+| **Connectivity Roadmap Phase B.2 — Auto-research evidence supplier fix** | **P1 (Reality Map fix arc — promoted from P2)** | Roadmap §B.2. Unblocks 3 spine Initiatives (`6941372d-…`, `2071a9c6-…`, `7e23d621-…`) stuck at Stage 1 with irrelevant SEC/Kaggle evidence packs. Lean: option (b) — skip Stage 1 when no relevant evidence available (BLOCKED → DEFERRED with clear reason). |
+| **Connectivity Roadmap Phase B.3 — NULL-workspace Initiative backfill (mgmt cmd)** | P2 | Roadmap §B.3. One-shot mgmt cmd for 31 of 46 Initiatives still NULL after Session 1196 backfill. Per-row resolution: parent inherit → creator user_workspace → default DBZ. |
 | **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
 | **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
 | **Session 1196 7-day watch (2026-06-29)** | **P1 (time-gated)** | Re-run `backfill_initiative_workspace_links --json-only`; diff against 2026-06-22 baseline. |
-| **Connectivity Roadmap Phase B.2 — Auto-research evidence supplier fix** | P2 | Roadmap §B.2 (unblocks 3 spine Initiatives) |
-| **Connectivity Roadmap Phase B.3 — NULL-workspace Initiative backfill (mgmt cmd)** | P2 | Roadmap §B.3 (one-shot data fix for 31 Initiatives) |
+| **Finding 1 — advisor_invocations all zero in 7d** | **P3 (Session 1202 carryover)** | Investigate Row 10 refinement. Step 1: compare `set(Advisor.name)` vs `set(AgentExecution.objects.values_list('agent__name', flat=True))`. File as deliverable under Reality Map parent. |
+| **Finding 2 — discord_health zero invocations** | **P3 (Session 1202 carryover)** | `ps -ef | grep discord`; `grep -i discord celery*.log`. If bot is up but not writing CeleryTaskEvent, `discord_health` needs a different data source. File as deliverable under Reality Map parent. |
 | **Connectivity Roadmap Phase C — Structural fixes (close-session manifest + orient enhancement)** | P3 | Initiative `1859dd51-…`. Roadmap §C |
+| **Phase B.1 PR-2 — re-scope as "generated_content sink / root_path contract" initiative** | P3 (optional) | Deferred Session 1203. See defer note on deliverable `8da895f0-…`. Only ship if a real consumer requires status reports landing in DBZ. |
 | **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). |
-| **Production rollout: Session 1196-1200 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Local-only until then. |
+| **Production rollout: Sessions 1196-1200 + Session 1203 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Local-only until then. |
 
-### Session 1202 close findings (deferred to Session 1203)
+### Session 1203 close findings
 
-Both Rigby-surfaced during the §A.2 smoke arc. Tools work; findings are real platform-level gaps.
-
-**Finding 1 — `advisor_invocations` zero across all 30 advisors in 7d.** Refines Reality Map Row 10. Likely causes: (a) no advisor traffic at all; (b) name mismatch between `Agent.name` and `Advisor.name`; (c) invocations stored on a different `agent` row. Investigation step 1: `python manage.py shell -c "from core.models_unified_system import Advisor, AgentExecution; ...` — compare name sets.
-
-**Finding 2 — `discord_health` zero invocations in 7d, `last_alive_at=null`.** Refines Reality Map Row 16. Likely causes: (a) bot is down; (b) bot is up but its task names don't match `discord` icontains filter; (c) bot uses its own async loop, doesn't write `CeleryTaskEvent`. Investigation step 1: `ps -ef | grep discord` + tail any discord log file.
+None deferred to Session 1204. PR-2 defer is documented + audit-trailed on deliverable `8da895f0-…`. Phase B.2 + B.3 + Phase C remain on the roadmap as separate scope.
 
 ### Project-clustering recon scope (Session 1194 P1) — SHIPPED Session 1197
 
