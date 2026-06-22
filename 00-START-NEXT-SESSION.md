@@ -102,41 +102,29 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1206 — CURRENT ENTRY POINT
+## SESSION 1207 — CURRENT ENTRY POINT
 
-### SESSION 1205 CLOSED — Evidence pipeline fix + Tiered Capability Audit + first organic spider fire (2026-06-22)
+### SESSION 1206 CLOSED — Layer 1 telemetry fix via `BaseAgent.run()` (2026-06-22)
 
-Full handoff: [`SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md`](docs/handoffs/SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md). **4 PRs merged + 10 audit deliverables filed.** Platform end-to-end producer chain confirmed working for the first time in 48+ hours.
+Full handoff: [`SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md`](docs/handoffs/SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md). **PR #2461 open (verified live in local before push).**
 
 | PR | What |
 |---|---|
-| **#2456** | Evidence cards fall back to title when snippet empty (closes Session 1204's MLB Stage 1 finding) |
-| **#2457** | 4 producer beat entries: sports/market intelligence (kalshi verified at 17:15 + 18:15) |
-| **#2458** | Re-enable `run-spider-network` (verified at 18:00 — 80 spiders, 1510 items, 0 errors) |
-| **#2459** | Makefile beat startup — tighten pgrep + defensive verification |
+| **#2461** | `BaseAgent.run()` concrete wrapper + 7 bypass-callsite migrations. Closes finding `65f1299f-…` (Telemetry blind spot — direct-constructor agent paths bypass AgentExecution). |
 
-**Capability Audit Initiative `29154d73-…` created** as the audit home. 4 layer dashboards + 6 deep-dive findings filed. **Spider freshness 0 → 63 FRESH (<1h)** in a single fire cycle. Layers 1/4 still flat in dashboard but root cause identified.
+**Recon-led pivot from sketch:** the START doc proposed putting the fix in `BaseAgent.execute()` — but that method is `@abstractmethod`. Rerouted through Rigby for the architectural call (A: 83-subclass rename / B: new `run()` wrapper / C: per-callsite `AgentExecutionTracker` patches). **Rigby picked B** + follow-up CI lint rule (`180f4e9f-…`) to prevent future drift. Live-verified: 3 new `AgentExecution` rows landed via `_impl_market_intelligence_scan`, **Layer 4 cascade confirmed** (learning_orchestrator triggered on `20b939f4-…`), idempotency guard verified separately. Audit deliverable `65f1299f-…` flipped to `completed` via `content_tool action=content_complete` (NOT `deliverable_tool action=update` — per Session 1184 status-flip rule).
 
-### FIRST THING Session 1206
+**Post-merge gotcha:** workers need restart (`pkill -9 -f celery; rm -f .celery*.pid; make celery`) because `tasks_financial.py` is celery-task-imported. Daphne does NOT need restart.
 
-**Layer 1 telemetry blind-spot fix** (single P1 PR, finding `65f1299f-…`). Add `AgentExecution` row creation to `BaseAgent.execute()` with idempotency guard. ~30 lines, one file.
+### FIRST THING Session 1207
 
-Why first: resolves Layer 1 flatness + cascades to fix Layer 4 (bridges fire on agent-execution signals); high-leverage; small scope. All audit dashboards become honest after this PR.
+Pick from the prioritized table below. The natural Session 1206 extensions:
 
-Approach sketch:
-```python
-# core/agents/base_agent.py — BaseAgent.execute() entry
-if not context.get('_execution_record_id'):
-    rec = AgentExecution.objects.create(
-        agent=Agent.objects.filter(name=self.__class__.__name__).first(),
-        task=task, status='in_progress',
-        input_data={'context': context, ...},
-    )
-    context['_execution_record_id'] = str(rec.id)
-# ... at end: update status='completed'/'failed' with output_data
-```
-
-Verification path: re-run `_impl_market_intelligence_scan` post-merge → 3 new AgentExecution rows (SportsOddsAnalyst + ArbitrageDetector + PredictionMarketAnalyst) should land. Sports agents transition from UNTESTED → CONFIRMED WORKING.
+1. **CI lint rule (`180f4e9f-…`)** — block `\.execute\(` outside `core/agents/`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Implementation candidates: pre-commit hook / ruff custom rule / `scripts/verify_repo_guardrails.py` extension / dedicated `manage.py` command in CI. Small PR.
+2. **Verify Layer 1 dashboard `7d221aa4-…` flips** — after PR #2461 lands AND workers restart AND the next `_impl_market_intelligence_scan` beat fires (every 2h), sports agents should transition UNTESTED → CONFIRMED WORKING. Re-run the dashboard refresh and confirm.
+3. **Phase B.1 24h watch fires ~14:48 UTC** — checklist in `SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md` §"24h watch checklist". Invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC.
+4. **Session 1206 24h watch fires ~23:35 UTC** — checklist in `SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md` §"24h watch checklist". Invariant: 3 sports agents land rows per beat cycle, no duplicate writes, no telemetry-write WARN spam.
+5. **Daily inference accuracy + `default_only_projects` watches** — Day-3 protocol per runbook `cb9d8ae1-…`.
 
 ### SESSION 1204 CLOSED — Phase B.2 close (drift gate + Stage 1 prompt fixed; 20 stale docs unblocked; 4 briefs regenerated) (2026-06-22)
 
@@ -227,13 +215,13 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-76aa5b61d0764d11` — Session 1205 evidence-card pipeline thread. Carries the full evidence-pipeline arc, audit setup, and producer-chain debugging. Probably worth a fresh Session 1206 thread on first Rigby ping (telemetry fix is a different arc than pipeline debugging). Prior threads retired: `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-234a75abfe374695` — Session 1206 Layer 1 Telemetry Fix arc. Carries the architectural call (A/B/C → B), live verification log, and audit deliverable updates. Probably worth a fresh Session 1207 thread on first Rigby ping (lint rule is a different arc than telemetry fix). Prior threads retired: `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
 ### Session 1205 Capability Audit Initiative
 
-`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **10 deliverables** so far:
+`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **11 deliverables** so far (was 10 end-of-Session-1205; +1 from Session 1206 — `180f4e9f-…` lint-rule follow-up):
 
 | ID | Type | Title |
 |---|---|---|
@@ -242,7 +230,8 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 | `6a200985-…` | Dashboard | Layer 3 — Spider Network (80 spiders) |
 | `dc970d99-…` | Dashboard | Layer 4 — Learning Bridges (8 bridges) |
 | `6869fa55-…` | Deep-dive | Sports Betting Agents — wired but unscheduled (RESOLVED PR #2457) |
-| `65f1299f-…` | **Finding** | **Telemetry blind spot — direct-constructor agent paths bypass AgentExecution** (Session 1206 P1) |
+| `65f1299f-…` | Finding | Telemetry blind spot — direct-constructor agent paths bypass AgentExecution (**RESOLVED PR #2461**) |
+| `180f4e9f-…` | **Follow-up** | **Lint rule: block `\.execute\(` outside `core/agents/`** (Session 1207 P1) |
 | `2de3d8d6-…` | Finding | theodds spider returns 0 events |
 | `ed6a8f28-…` | Finding | SportsOddsAnalyst caller bug — None context |
 | `ea561389-…` | Finding | First Producer→Data Win (Kalshi) + memory spike warning |
@@ -262,7 +251,9 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Layer 1 telemetry blind-spot fix** | **P1 (Session 1206 entry point)** | `core/agents/base_agent.py` BaseAgent.execute() — create AgentExecution row with idempotency guard. Finding `65f1299f-…`. Cascades to fix Layer 4. |
+| **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1207 entry point — natural follow-up to PR #2461)** | Deliverable `180f4e9f-…` on Initiative `29154d73-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
+| **Layer 1 dashboard refresh** | **P1 (post Session 1206)** | After PR #2461 merges + workers restart + next `_impl_market_intelligence_scan` beat (every 2h), refresh `7d221aa4-…` to flip sports agents from UNTESTED → CONFIRMED WORKING. |
+| **Session 1206 24h watch (fires 2026-06-23 ~23:35 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md` §"24h watch checklist". Invariants: 3 sports agents land rows per beat, no double-writes, no telemetry WARN spam. |
 | **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md` §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
 | **Spider freshness watch (Session 1205 add)** | **P1 (24h)** | Verify run-spider-network keeps firing every 30 min; SpiderData rows with last_emit < 1h should be 60+. If 0, beat is dead — see finding `a4928480-…` remediation. |
 | **Daily watch Day-3 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. |
