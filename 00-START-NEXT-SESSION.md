@@ -101,57 +101,58 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1197 — CURRENT ENTRY POINT
+## SESSION 1198 — CURRENT ENTRY POINT
 
-### SESSION 1196 CLOSED — Initiative no-orphan contract sealed: 6 PRs landed (2026-06-22)
+### SESSION 1197 CLOSED — Initiative kind enum + Projects-in-Workspace layer: 7 PRs landed (2026-06-22)
 
-Full handoff: [`SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md`](docs/handoffs/SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md). **6 PRs merged** mirroring Plan C Phase 1 shape but routed via post-save signal because Initiative has 8+ create callsites.
+Full handoff: [`SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md`](docs/handoffs/SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md). **7 PRs opened against `main`** (all retargeted directly — no stacking footgun). Reviving the Session 1193 cluster-recon insight that had been parked DEFERRED-pending-backbone (backbone shipped Sessions 1194-1196).
 
-| PR | Theme | Merge |
-|---|---|---|
-| **#2409** | Migration — 5 diagnostic fields + 3-col composite index on Initiative | `bf17a049` |
-| **#2410** | Post-save signal create-mark + `INITIATIVE_DIAGNOSTICS_ENABLED` kill switch + `[ORPHAN-INITIATIVE]` warn-log | `14a3ad18` |
-| **#2411** | Pre-save snapshot + post-save auto-clear on `target_workspace_id` NULL→set (uses `.update()` to dodge recursion) | `76483f9f` |
-| **#2412** | Daily sweep at 3:55 AM Denver + `sweep_diagnostic_initiatives` mgmt cmd | `c95625f6` |
-| **#2413** | 15-case regression test suite (12 design cases + Rigby's #11/#12/#13) | `557c80dd` |
-| **#2414** | `backfill_initiative_workspace_links` recon + idempotent `--apply` | `9d44012d` |
+| PR | Theme |
+|---|---|
+| **#2416** | Migration 0362 — `Initiative.kind` enum (4 choices, default=project, db_indexed) + `related_initiatives` JSONField (default=list) |
+| **#2417** | `apply_initiative_kind_classification` mgmt cmd — 11-row SPEC, idempotent `--dry-run` / `--apply`, two-pass split-pair linker |
+| **#2418** | `report_initiative_kinds` mgmt cmd — cross-tab + heuristic flags |
+| **#2419** | §6.4 added to `INITIATIVES_FIRST_BACKBONE.md` + AC11-14 + provenance |
+| **#2420** | 14-case regression suite |
+| **#2421** | `docs/INDEX.md` rebuild |
+| **#2422** | Close-out additions: idempotency rule + "safe placeholder" sentence + `default_only_projects` detector + AC15 + test #15 |
 
-**Initiative side of no-orphan contract is now live + observable:** create-path signal marks no-ws Initiatives diagnostic with TTL; ws-set from any path (admin/UI/scripts) auto-clears; 3:55 AM daily sweep archives expired ones non-destructively; 15 cases codify transitions; backfill flags pre-existing orphans retroactively.
+**Net result:** 11 Initiative rows in Donkey Betz workspace carry intentional `kind` classification (5 project / 3 recurring_artifact / 2 investigation / 1 spec_backlog). Status remains lifecycle axis; kind names the work shape. Status orthogonality preserved — apply cmd does NOT touch status on existing rows.
 
-### FIRST THING Session 1197
+### FIRST THING Session 1198
 
-**Operator runs `backfill_initiative_workspace_links --apply` in prod + restart celery workers.** This locks the production baseline matching local (30 pre-existing orphans flagged diagnostic, payload `backfilled=True`). Requires worker restart per `feedback_new_shared_task_needs_worker_restart.md`:
+**Merge the 7 PRs.** All target `main` directly. Earliest-first (#2416 → ... → #2422) is cleanest but no PR hard-depends on a prior merge — each rebases cleanly. Then re-run the local verification commands to confirm idempotency post-merge:
 
 ```bash
-# Step 1 — recon baseline
-python manage.py backfill_initiative_workspace_links --sample 5 --json-only > /tmp/2026-06-22-baseline.json
+# Step 1 — confirm migration applied + kind field present
+.venv/bin/python -c "
+import django, os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE','core.settings')
+django.setup()
+from core.models_document_registry import Initiative
+print('Kind choices:', [c[0] for c in Initiative.Kind.choices])
+"
 
-# Step 2 — apply retroactive flag
-python manage.py backfill_initiative_workspace_links --apply
+# Step 2 — confirm 11-row classification still in place (re-apply should be no-op)
+python manage.py apply_initiative_kind_classification --apply --workspace-id b4503364-2573-4401-9e28-61a739e0ce50
 
-# Step 3 — worker restart (PR #2412 added new @shared_task)
-pkill -9 -f celery; rm -f .celery*.pid; make celery
-
-# Step 4 — verify sweep is registered
-.venv/bin/celery -A core inspect registered | grep sweep_diagnostic_initiatives
-python manage.py sweep_diagnostic_initiatives --dry-run
+# Step 3 — confirm default-only detector signals the 3 spine Initiatives (real long-arc projects, kind=project is correct)
+python manage.py report_initiative_kinds --workspace-id b4503364-2573-4401-9e28-61a739e0ce50 --json-only | jq '.default_only_projects'
 ```
 
-Local already done (verified during Session 1196 close). Production rollout is the open lift.
+Production rollout (if/when Chris flips local-only off): same playbook — apply cmd is idempotent + safe to run; no worker restart needed (no new `@shared_task` in this session).
 
-### 7-day watch — starts 2026-06-29 (time-gated, NEW)
+### 24h watch — starts 2026-06-23 (NEW, time-gated)
 
-Re-run `backfill_initiative_workspace_links --json-only` and diff against `2026-06-22-baseline.json`. Expected: archived count goes up, candidate_for_flag stays at 0 (signal catches all new orphans), already_diagnostic for non-terminal rows decreases to 0 by sweep day.
-
-If trend looks good, Plan C Phase 2 hard-reject decision (DEFERRED-7d from Session 1195 close, also gated to 2026-06-29) can move forward.
+Re-run `report_initiative_kinds --workspace-id <DBZ>` daily for 1 week. Confirm `default_only_projects` count stays bounded — if new project rows appear that weren't in the SPEC, that's a callsite filing project Initiatives without classification → candidate for enforcement Phase 2.
 
 ### Active conversation
 
-`pa-ea12236c83eb4826` (Session 1196 close). Rigby will likely recommend spinning fresh given Session 1197's focus shifts to watch + Phase 2 design.
+`pa-ea12236c83eb4826` (Session 1197 close). Rigby will likely recommend spinning fresh given Session 1198's focus is on watches + Phase 2 design + carryover.
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 165 deliverables (recon snapshot at session close 2026-06-22).
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (was 34 — added 8 via Session 1197 SPEC), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1.
 
-**3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE):**
+**3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE, kind=project):**
 
 | # | Name | UUID |
 |---|---|---|
@@ -159,22 +160,25 @@ If trend looks good, Plan C Phase 2 hard-reject decision (DEFERRED-7d from Sessi
 | 2 | Agent Capability Map + Router Contracts | `2071a9c6-986f-4528-be90-8cccaa595f1e` |
 | 3 | Tool Migration Hardening (web_search → intelligence_tool) + Failure Fix | `7e23d621-4d0c-409a-a680-4fd2e015d04b` |
 
-All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage progression is itself a separate workstream — Plan C Phase 1 didn't touch it.
+All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage progression is a separate workstream.
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **`backfill_initiative_workspace_links --apply` in prod + worker restart** | **P0** | Session 1196 close lift. Locks production baseline matching local (30 pre-existing orphans flagged diagnostic). Worker restart required per `feedback_new_shared_task_needs_worker_restart.md`. Playbook in [`SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md`](docs/handoffs/SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md) §"Production rollout playbook". |
+| **Merge Session 1197 PRs + verify** | **P0** | 7 PRs at #2416-#2422. All on `main`. Verification commands in FIRST THING above. |
+| **Production rollout: Session 1196 `backfill_initiative_workspace_links --apply`** | **P0 (carryover)** | Operator runs in prod + restarts celery workers. Locks production baseline matching local. Playbook in [`SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md`](docs/handoffs/SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md) §"Production rollout playbook". |
 | **Plan C 7-day watch + Phase 2 hard-reject decision** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_deliverable_initiative_links --workspace-id b4503364-… --json-only`; diff totals against the 2026-06-22 baseline. If missing-initiative count trends down + sweep archive rate matches create rate → flip Phase 2 hard-reject (`OrphanDeliverableError` on `initiative_id=None`). Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
-| **Session 1196 7-day watch** | **P1 (time-gated, NEW)** | Start **2026-06-29**. Re-run `backfill_initiative_workspace_links --json-only` and diff against 2026-06-22 baseline. Confirm archived count up, candidate_for_flag at 0, already_diagnostic decreasing for non-terminal rows. |
-| **§6.2 Phase 2 inference design** | P2 | Rigby's option ranking (least-risk first): (1) agent→initiative affinity map; (2) tool-context propagation; (3) heuristics. Top orphan creators give the input list: Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9. |
+| **Session 1196 7-day watch** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_initiative_workspace_links --json-only` and diff against 2026-06-22 baseline. Confirm archived count up, candidate_for_flag at 0, already_diagnostic decreasing for non-terminal rows. |
+| **Session 1197 `default_only_projects` 24h watch** | **P1 (time-gated, NEW)** | Start **2026-06-23**. Daily `report_initiative_kinds` re-run; confirm new project Initiatives aren't filed without classification. |
+| **§6.2 Phase 2 inference design** | P2 | Rigby's option ranking (least-risk first): (1) agent→initiative affinity map; (2) tool-context propagation; (3) heuristics. Top orphan creators give the input list: Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9. **Newly informed by Session 1197** — defaults + kind enum give a richer signal shape than pre-1197 design assumed. |
 | **`load_all_agents_advisors` baseline fix (155 → 87)** | P2 | Pre-existing `Agents count claims` CONFLICT keeping main's `Repo Guardrails` CI red. Admin-bypass currently required on every PR. Either fix the seed script to actually load all 148 declared agents, OR update the expected baseline to match runtime. |
-| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`, blocks `manage.py test` for every `core/tests/*` file. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. Surfaced during Session 1195 PR #5, re-surfaced Session 1196 PR #5. |
-| **Migration drift audit (Session 1196 parked)** | P2/P3 | Set A: 4 unmigrated Narrative* models in `models_narrative_drift.py` (migrations 0103+0115 marked applied but tables missing). Set B: 16 AlterField ops on AgentExecution/CuratedSignalEntry/FinalAppliedOverrides/FleetPaChatAuditRow. Per Rigby Option A: scoped workspace ticket TBD. |
+| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`, blocks `manage.py test` for every `core/tests/*` file. Re-surfaced again in Session 1197 PRs #2420 + #2422. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. |
+| **Migration drift audit (Session 1196 parked)** | P2/P3 | Set A: 4 unmigrated Narrative* models in `models_narrative_drift.py`. Set B: 16 AlterField ops on AgentExecution/CuratedSignalEntry/FinalAppliedOverrides/FleetPaChatAuditRow. Session 1197 PR #2416 trimmed these from auto-output — they remain unaddressed. |
 | **PA LLM iteration cap silent failure** | P2 | Carryover from Session 1193 (`c2bac9c0-…`). `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8`. |
 | **Producer reroute** | P2 | Carryover from Session 1192 (`780a8d15-…`). `_ensure_system_workspace` auto-recreates. |
 | **PR-D contract flip** | P2 | Carryover from Session 1194 (`9d9db48a-…`). 24h WARN-volume gate elapsed 2026-06-22. |
+| **Workspace UI filter by kind** | P3 | Vertical-slice step 6 from Session 1197 decision card. Parked once kind enum beds in. Touches frontend `WorkspacePageNew.tsx` + adds `?kind=<value>` query param to `work_tool initiative_list`. |
 
 **Pick-this-session items below this line are still-relevant Session 1192/1193 carryover items — same as last session:**
 
@@ -204,24 +208,23 @@ All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage pro
 | **Dedicated inventory-refresh PR** | P3 | Reconcile `Agents count claims` CONFLICT. |
 | **Daily detector for workspace regressions** | P3 | Rigby's Session 1192 suggestion. Lightweight beat task. |
 
-### Project-clustering recon scope (Session 1194 P1)
+### Project-clustering recon scope (Session 1194 P1) — SHIPPED Session 1197
 
-Sample of 8 visible clusters from Session 1193 close — needs full enumeration this session:
+The 8-cluster recon (expanded to 9 + 2 split-pairs = 11 rows) shipped via Session 1197 PRs #2416-#2422. Each cluster now has an Initiative row with explicit `kind` classification.
 
-1. **Session 1171 — ML Queue + Auth Middleware Triage** (4 deliverables, PR #2328)
-2. **Session 1184 — Provenance Linkage** (5+ deliverables, PRs #2362/#2364/#2365)
-3. **Session 1187/1188/1189 — Spider Context Utilization** (6 Axis recon + 4 PRs + retune list)
-4. **Session 1192 — Workspace Consolidation Follow-ups** (4 P2/P3 deliverables)
-5. **COO Operations Diagnostics** (5 daily COO Analysis runs — should be ONE recurring artifact)
-6. **Orchestration Control Plane Mapping** (CTO ×3 + DevOps ×4 + COO ×1 + Research ×3 = 11 parallel runs on the SAME investigation)
-7. **Track Business News in June 2026** (3-4 ContentWriterAgent blog variants)
-8. **MLB Run Line Desk v1** (product spec — real Initiative-shape)
+| Original Cluster | Resolution |
+|---|---|
+| 1. Session 1171 ML Queue + Auth Middleware Triage | Existing `077ff8b4` (ARCHIVED), kind=project |
+| 2. Session 1184 Provenance Linkage | NEW Initiative, kind=project, status=COMPLETED |
+| 3. Session 1187/1188/1189 Spider Context Utilization | **Split** into 3a (Recon, kind=investigation, COMPLETED) + 3b (Retune, kind=project, TRIAGE) |
+| 4. Session 1192 Workspace Consolidation Follow-ups | NEW Initiative, kind=spec_backlog |
+| 5. COO Operations Diagnostics | NEW Initiative, kind=recurring_artifact |
+| 6. Orchestration Control Plane Mapping | NEW Initiative, kind=investigation |
+| 7. Track Business News in June 2026 | NEW Initiative, kind=recurring_artifact |
+| 8. MLB Run Line Desk v1 | Existing `997fb39b` (ACTIVE), kind=project |
+| 9. Weekend Digest Autopilot | **Split** into 9a (Build/Ship, kind=project) + 9b (Issue Production, kind=recurring_artifact) |
 
-4 natural relationship patterns:
-- Time-bounded engineering projects (Session NNNN themes)
-- Recurring artifacts (daily diagnostics, weekend digests)
-- Investigation workstreams (1 question → N parallel agent answers)
-- Product specs that need execution (MLB Run Line, Revenue Desk, Weekend Digest)
+Design memo: [`INITIATIVES_FIRST_BACKBONE.md`](docs/specs/INITIATIVES_FIRST_BACKBONE.md) §6.4. Full apply outcome + rollback levers: [`SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md`](docs/handoffs/SESSION_1197_INITIATIVE_KIND_CLASSIFICATION.md).
 
 ### Workspace consolidation — CLOSED Session 1192 + Session 1193
 
