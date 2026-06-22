@@ -589,6 +589,89 @@ def cleanup_halted_experiments(days_old: int = 7):
 
 
 @shared_task
+def sweep_diagnostic_deliverables(dry_run: bool = False, max_per_run: int = 1000):
+    """Session 1195 — Plan C Phase 1: archive TTL-expired diagnostic deliverables.
+
+    Walks deliverables flagged by PR #2 (factory create-path) or PR #3
+    (deliverable_tool.update path) whose ``diagnostic_expires_at`` is in
+    the past, and flips ``status='archived'`` to retire them from active
+    triage. Non-destructive — preserves all 5 diagnostic_* fields per
+    Rigby's option-b schema decision (avoid semantic collision with the
+    canonical 'archived' status), and AUGMENTS ``diagnostic_payload``
+    with ``archived_by='diagnostic_sweep'`` + ``archived_reason='ttl_expired'``
+    + ``archived_at`` so later rollups can distinguish TTL-archived from
+    manually-archived rows without a parallel status enum.
+
+    Args:
+        dry_run: When True, log what would be archived without DB writes.
+        max_per_run: Safety cap on rows touched per invocation
+            (default 1000). Prevents runaway sweeps on unexpected volume.
+            Set to 0 to disable the cap.
+
+    Returns:
+        Dict with archived, candidates, dry_run, max_per_run, sample_ids.
+
+    Spec: docs/specs/INITIATIVES_FIRST_BACKBONE.md §3.C / §6.1.
+    """
+    from django.utils import timezone as _tz
+    from core.models_deliverables import Deliverable
+
+    now = _tz.now()
+    qs = (
+        Deliverable.objects
+        .filter(diagnostic_status='diagnostic', diagnostic_expires_at__lte=now)
+        .exclude(status='archived')
+        .order_by('diagnostic_expires_at')
+    )
+    candidates = qs.count()
+    if max_per_run and max_per_run > 0:
+        qs = qs[:max_per_run]
+    rows = list(qs.only(
+        'id', 'diagnostic_code', 'diagnostic_payload', 'diagnostic_expires_at',
+    ))
+
+    sample_ids: list = []
+    archived = 0
+    for d in rows:
+        if len(sample_ids) < 5:
+            sample_ids.append(str(d.id))
+        logger.info(
+            "[ORPHAN-DELIVERABLE] code=ttl_auto_archive deliverable_id=%s "
+            "diagnostic_code=%s diagnostic_expires_at=%s archived_at=%s dry_run=%s",
+            str(d.id),
+            d.diagnostic_code,
+            d.diagnostic_expires_at.isoformat() if d.diagnostic_expires_at else 'null',
+            now.isoformat(),
+            dry_run,
+        )
+        if dry_run:
+            continue
+        new_payload = dict(d.diagnostic_payload or {})
+        new_payload['archived_by'] = 'diagnostic_sweep'
+        new_payload['archived_reason'] = 'ttl_expired'
+        new_payload['archived_at'] = now.isoformat()
+        d.status = 'archived'
+        d.diagnostic_payload = new_payload
+        d.save(update_fields=['status', 'diagnostic_payload', 'updated_at'])
+        archived += 1
+
+    summary = {
+        'candidates': candidates,
+        'archived': archived,
+        'dry_run': dry_run,
+        'max_per_run': max_per_run,
+        'sample_ids': sample_ids,
+        'capped': bool(max_per_run and max_per_run > 0 and candidates > max_per_run),
+    }
+    logger.info(
+        "[ORPHAN-DELIVERABLE] sweep_complete archived=%s candidates=%s "
+        "dry_run=%s capped=%s",
+        archived, candidates, dry_run, summary['capped'],
+    )
+    return summary
+
+
+@shared_task
 def cleanup_stale_running_experiments(
     hours_old: int = 72,
     dry_run: bool = False,
