@@ -2167,33 +2167,35 @@ class ContentHandlersMixin:
             updated_fields: list[str] = []
             changes: Dict[str, Any] = {}
 
-            # Session 1202 follow-up — `None`-vs-`""` distinction.
-            # GPT-5.2 frequently emits ``description: null`` or
-            # ``target_workspace_id: null`` as part of an unrelated
-            # update payload; the first cut treated both null and "" as
-            # explicit-clear, which silently wiped non-empty fields the
-            # caller never intended to touch. Rigby caught this on the
-            # PR #2442 smoke. New contract:
+            # Session 1202 v2 contract (LLM-safe defaults).
+            # GPT-5.2 emits ALL schema params on every function call,
+            # filling unset string fields with ``""`` (not omitting them
+            # and not passing ``null``). The PR #2442 v1 fix treated
+            # ``""`` as explicit-clear, which meant Rigby silently wiped
+            # description any time she meant to update a different
+            # field. Rigby's PR #2443 smoke confirmed: v1 closed the
+            # null-pass case but the LLM never actually uses null —
+            # she still got cleared because GPT sent ``""``.
+            # v2 contract (chosen 2026-06-22, Session 1202 Option A):
             #   • key absent from payload  → no-op
-            #   • key present with None    → no-op (treat null as "leave alone")
-            #   • key present with ""      → explicit clear (target_workspace
-            #                                 unbinds; description clears)
+            #   • key present with None    → no-op
+            #   • key present with ""      → no-op (LLM default; previously clear)
             #   • key present with value   → set
-            # ``kind`` has no "clear" semantic — empty string still
-            # fails the enum check, which is correct.
+            # The deliberate-clear case is rare-to-nonexistent in real
+            # workflows; if it ever surfaces, add an explicit
+            # ``clear_description: true`` / ``unbind_workspace: true``
+            # sentinel param. For now: bias toward "leave alone."
+            # ``kind`` was already null-tolerant via the explicit
+            # None branch + enum-validation rejecting "". v2 treats ""
+            # as no-op too, matching the other two fields.
 
-            # target_workspace_id — bind/unbind ProjectWorkspace FK
+            # target_workspace_id — bind ProjectWorkspace FK (no unbind via tool)
             if 'target_workspace_id' in payload:
                 from core.models_skin_layer import ProjectWorkspace
                 new_ws_id = payload.get('target_workspace_id')
                 old_ws_id = str(initiative.target_workspace_id) if initiative.target_workspace_id else None
-                if new_ws_id is None:
-                    pass  # explicit null → no-op
-                elif new_ws_id == '':
-                    if initiative.target_workspace_id is not None:
-                        initiative.target_workspace = None
-                        updated_fields.append('target_workspace')
-                        changes['target_workspace_id'] = {'old': old_ws_id, 'new': None}
+                if new_ws_id is None or new_ws_id == '':
+                    pass  # null or empty string → no-op (LLM-safe default)
                 else:
                     new_ws_id_str = str(new_ws_id)
                     if old_ws_id != new_ws_id_str:
@@ -2204,11 +2206,11 @@ class ContentHandlersMixin:
                         updated_fields.append('target_workspace')
                         changes['target_workspace_id'] = {'old': old_ws_id, 'new': new_ws_id_str}
 
-            # description — free text
+            # description — free text (no clear via tool)
             if 'description' in payload:
                 new_desc = payload.get('description')
-                if new_desc is None:
-                    pass  # explicit null → no-op
+                if new_desc is None or new_desc == '':
+                    pass  # null or empty string → no-op (LLM-safe default)
                 else:
                     new_desc_str = str(new_desc)
                     if new_desc_str != initiative.description:
@@ -2222,8 +2224,8 @@ class ContentHandlersMixin:
             # kind — semantic classification (§6.4)
             if 'kind' in payload:
                 new_kind = payload.get('kind')
-                if new_kind is None:
-                    pass  # explicit null → no-op
+                if new_kind is None or new_kind == '':
+                    pass  # null or empty string → no-op (LLM-safe default)
                 else:
                     valid_kinds = [c[0] for c in Initiative.Kind.choices]
                     if new_kind not in valid_kinds:
