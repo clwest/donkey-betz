@@ -293,9 +293,110 @@ class TestActionRouting(DiagnosticsToolTestBase):
         self.assertIn('error', result)
         self.assertIn('advisor_invocations', result['error'])
 
-    def test_pr2_actions_return_placeholder(self):
-        for action in ('schema_handler_diff', 'learning_bridge_writes', 'discord_health'):
+    def test_all_seven_actions_route_to_handler(self):
+        """PR-2 closes the 3 placeholder branches. Each should now
+        return a structured result (not a placeholder error)."""
+        for action in (
+            'advisor_invocations', 'provider_calls', 'beat_schedule_health',
+            'workspace_metrics', 'schema_handler_diff',
+            'learning_bridge_writes', 'discord_health',
+        ):
             result = self._call({'action': action})
             self.assertEqual(result['action'], action)
-            self.assertIn('error', result)
-            self.assertEqual(result.get('pending_pr'), 'session-1202-diagnostics-tool-pr2')
+            # PR-2 no longer emits the placeholder
+            self.assertNotEqual(
+                result.get('pending_pr'), 'session-1202-diagnostics-tool-pr2',
+                f'{action} should not return PR-2 placeholder anymore',
+            )
+
+
+class TestSchemaHandlerDiff(DiagnosticsToolTestBase):
+
+    def test_diff_classifies_gateway_pattern_correctly(self):
+        result = self._call({'action': 'schema_handler_diff'})
+
+        self.assertEqual(result['action'], 'schema_handler_diff')
+        totals = result['totals']
+        # Sanity invariants
+        self.assertGreater(totals['schemas'], 0)
+        self.assertGreater(totals['handlers'], 0)
+        self.assertGreaterEqual(totals['both_direct'], 0)
+        self.assertGreaterEqual(totals['schema_only'], 0)
+        self.assertGreaterEqual(totals['handler_only_gateway'], 0)
+        self.assertGreaterEqual(totals['handler_only_orphan'], 0)
+        # Schemas + handler_only equals total handlers
+        self.assertEqual(
+            totals['both_direct'] + totals['handler_only_gateway'] + totals['handler_only_orphan'],
+            totals['handlers'],
+        )
+        # The two real-gap lists are present
+        self.assertIn('schema_only', result)
+        self.assertIn('handler_only_orphan', result)
+
+    def test_diff_run_agent_is_in_schema(self):
+        result = self._call({'action': 'schema_handler_diff'})
+        # `run_agent` is a meta-tool — it's a schema. It may or may not
+        # have a direct handler; either way it should not be classified
+        # as handler_only_orphan.
+        self.assertNotIn('run_agent', result.get('handler_only_orphan', []))
+
+
+class TestLearningBridgeWrites(DiagnosticsToolTestBase):
+
+    def test_returns_all_eight_known_bridges(self):
+        result = self._call({'action': 'learning_bridge_writes'})
+
+        self.assertEqual(result['action'], 'learning_bridge_writes')
+        names = {b['name'] for b in result['bridges']}
+        # All 8 canonical bridges from learning_bridges/apps.py
+        for expected in (
+            'agent_execution_bridge', 'application_outcome_bridge',
+            'revenue_attribution_bridge', 'advisor_feedback_bridge',
+            'collaboration_bridge', 'personalization_bridge',
+            'sports_betting_bridge', 'spider_data_bridge',
+        ):
+            self.assertIn(expected, names)
+
+    def test_window_default_is_30d(self):
+        result = self._call({'action': 'learning_bridge_writes'})
+        self.assertEqual(result.get('window_days'), 30)
+
+    def test_explicit_window_honored(self):
+        result = self._call({'action': 'learning_bridge_writes', 'window': '7d'})
+        self.assertEqual(result.get('window_days'), 7)
+
+    def test_attribution_field_present_per_bridge(self):
+        result = self._call({'action': 'learning_bridge_writes'})
+        for b in result['bridges']:
+            self.assertIn(b.get('attribution'), ('precise', 'heuristic'))
+
+
+class TestDiscordHealth(DiagnosticsToolTestBase):
+
+    def test_shape_includes_invocations_and_last_alive(self):
+        result = self._call({'action': 'discord_health'})
+
+        self.assertEqual(result['action'], 'discord_health')
+        # Core shape — invocations + success/failure breakdown
+        self.assertIn('total_invocations_in_window', result)
+        self.assertIn('success_count', result)
+        self.assertIn('failure_count', result)
+        self.assertIn('success_rate_pct', result)
+        # Last-alive proxy fields
+        self.assertIn('last_alive_at', result)
+        self.assertIn('minutes_since_last_alive', result)
+        self.assertIn('per_task', result)
+
+    def test_default_window_is_7d(self):
+        result = self._call({'action': 'discord_health'})
+        self.assertEqual(result.get('window_days'), 7)
+
+    def test_zero_invocations_no_success_rate(self):
+        # With no fixtures, totals should be 0 and success_rate None
+        # (we don't seed any CeleryTaskEvent rows).
+        from core.models_celery_telemetry import CeleryTaskEvent
+        CeleryTaskEvent.objects.filter(task_name__icontains='discord').delete()
+
+        result = self._call({'action': 'discord_health'})
+        self.assertEqual(result.get('total_invocations_in_window'), 0)
+        self.assertIsNone(result.get('success_rate_pct'))

@@ -5401,19 +5401,12 @@ class OpsHandlersMixin:
         elif action == 'workspace_metrics':
             return self._diagnostics_workspace_metrics(payload, trace_id)
 
-        # PR-2 (Session 1202 follow-up): schema_handler_diff,
-        # learning_bridge_writes, discord_health. Return a clear
-        # placeholder so callers don't get a vague Unknown error.
-        if action in ('schema_handler_diff', 'learning_bridge_writes', 'discord_health'):
-            return {
-                'gateway': 'diagnostics_tool',
-                'action': action,
-                'error': (
-                    f"'{action}' is scoped in CONNECTIVITY_COMPLETION_ROADMAP.md §A.2 "
-                    f"but not yet implemented; landing in PR-2 of the §A.2 split."
-                ),
-                'pending_pr': 'session-1202-diagnostics-tool-pr2',
-            }
+        elif action == 'schema_handler_diff':
+            return self._diagnostics_schema_handler_diff(payload, trace_id)
+        elif action == 'learning_bridge_writes':
+            return self._diagnostics_learning_bridge_writes(payload, trace_id)
+        elif action == 'discord_health':
+            return self._diagnostics_discord_health(payload, trace_id)
 
         valid_actions = sorted([
             'advisor_invocations', 'provider_calls', 'beat_schedule_health',
@@ -5691,5 +5684,326 @@ class OpsHandlersMixin:
             'returned': len(workspaces_out),
             'has_more': (offset + len(workspaces_out)) < total_count,
             'workspaces': workspaces_out,
+        }
+
+    # Canonical Learning Bridge registry (per
+    # ``core/learning_bridges/apps.py``). Each entry maps a bridge to a
+    # heuristic that estimates its attributable writes. ``writes_to`` is
+    # the primary model the bridge persists into; ``filter_kwargs`` is
+    # the best-effort attribution filter. Precise per-bridge attribution
+    # would require a ``source_bridge`` field on the target model —
+    # tracked as a follow-up; for now, learning_domain / learning_source
+    # is the closest signal available.
+    _LEARNING_BRIDGES = [
+        {
+            'name': 'agent_execution_bridge',
+            'display_name': 'Agent Execution Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_source__in': ['success_pattern', 'failure_analysis', 'performance_tracking']},
+            'attribution': 'heuristic',
+        },
+        {
+            'name': 'application_outcome_bridge',
+            'display_name': 'Application Outcome Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_domain__in': ['opportunity_matching', 'salary_preferences', 'skill_preferences']},
+            'attribution': 'heuristic',
+        },
+        {
+            'name': 'revenue_attribution_bridge',
+            'display_name': 'Revenue Attribution Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_domain__in': ['revenue_optimization']},
+            'attribution': 'heuristic',
+        },
+        {
+            'name': 'advisor_feedback_bridge',
+            'display_name': 'Advisor Feedback Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_source__in': ['user_feedback', 'explicit_instruction']},
+            'attribution': 'heuristic',
+        },
+        {
+            'name': 'collaboration_bridge',
+            'display_name': 'Collaboration Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_domain__in': ['communication']},
+            'attribution': 'heuristic',
+        },
+        {
+            'name': 'personalization_bridge',
+            'display_name': 'Personalization Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_source__in': ['interaction_mining']},
+            'attribution': 'heuristic',
+        },
+        {
+            'name': 'sports_betting_bridge',
+            'display_name': 'Sports Betting Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_domain__startswith': 'sports_betting'},
+            'attribution': 'precise',
+        },
+        {
+            'name': 'spider_data_bridge',
+            'display_name': 'Spider Data Bridge',
+            'writes_to': 'UserAgentLearning',
+            'filter_kwargs': {'learning_domain__in': ['general']},
+            'attribution': 'heuristic',
+        },
+    ]
+
+    def _diagnostics_schema_handler_diff(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Programmatic schema↔handler gap detection.
+
+        Memory rule (Session 1201 P11): ``108 vs 173`` framing is false
+        drift because 80 handlers are gateway-routed via the
+        ``run_agent`` meta-tool, not directly mapped to schemas. This
+        action classifies the delta:
+
+        - ``schema_only`` — schema defined, no registered handler
+          (real bug: LLM can emit a call that fails)
+        - ``handler_only_gateway`` — handler bound to
+          ``_handle_agent_tool`` but not directly named in schemas
+          (gateway-pattern-by-design; LLM reaches it via ``run_agent``)
+        - ``handler_only_orphan`` — handler with no schema and not a
+          gateway agent_tool (real bug: dead handler)
+        - ``both_direct`` — schema + direct handler (the healthy case)
+
+        Read-only; no mutations.
+        """
+        from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
+
+        # Schema-side: function names
+        schema_names = {
+            (s.get('name') or '').strip()
+            for s in PA_TOOL_SCHEMAS
+            if s.get('type') == 'function' and s.get('name')
+        }
+        schema_names.discard('')
+
+        # Handler-side: name → (is_agent_tool, handler_repr)
+        try:
+            agent_tool_handler = self._handle_agent_tool  # type: ignore[attr-defined]
+        except AttributeError:
+            agent_tool_handler = None
+
+        handler_meta: Dict[str, Dict[str, Any]] = {}
+        # ``self`` is the dispatcher mixed-in; the registry lives on it.
+        for name, fn in getattr(self, '_tool_handlers', {}).items():
+            method_name = getattr(fn, '__name__', None) or repr(fn)
+            is_agent_tool = (
+                agent_tool_handler is not None and fn == agent_tool_handler
+            ) or method_name == '_handle_agent_tool'
+            handler_meta[name] = {
+                'method': method_name,
+                'is_gateway_agent_tool': is_agent_tool,
+            }
+        handler_names = set(handler_meta.keys())
+
+        # Classifications
+        both_direct = sorted(schema_names & handler_names)
+        schema_only = sorted(schema_names - handler_names)
+        handler_only = handler_names - schema_names
+        handler_only_gateway = sorted(
+            n for n in handler_only if handler_meta[n]['is_gateway_agent_tool']
+        )
+        handler_only_orphan = sorted(
+            n for n in handler_only if not handler_meta[n]['is_gateway_agent_tool']
+        )
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'schema_handler_diff',
+            'totals': {
+                'schemas': len(schema_names),
+                'handlers': len(handler_names),
+                'both_direct': len(both_direct),
+                'schema_only': len(schema_only),
+                'handler_only_gateway': len(handler_only_gateway),
+                'handler_only_orphan': len(handler_only_orphan),
+            },
+            'schema_only': schema_only,
+            'handler_only_gateway_sample': handler_only_gateway[:20],
+            'handler_only_gateway_truncated': len(handler_only_gateway) > 20,
+            'handler_only_orphan': handler_only_orphan,
+            'note': (
+                'schema_only and handler_only_orphan are real gaps. '
+                'handler_only_gateway is by design — these handlers are '
+                "reachable via the 'run_agent' meta-tool gateway."
+            ),
+        }
+
+    def _diagnostics_learning_bridge_writes(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Per-bridge attribution of UserAgentLearning writes over a
+        window.
+
+        Attribution is heuristic for 6 of 8 bridges (precise per-bridge
+        tagging would need a ``source_bridge`` field on
+        ``UserAgentLearning``). ``sports_betting_bridge`` is precise
+        because its ``learning_domain`` values are uniquely prefixed.
+        Each bridge entry carries an ``attribution`` field so callers
+        can weight the numbers appropriately.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count
+
+        from core.models_unified_system import UserAgentLearning
+
+        days = self._diagnostics_resolve_window(payload, default_days=30)
+        since = timezone.now() - timedelta(days=days)
+
+        total_writes = UserAgentLearning.objects.filter(updated_at__gte=since).count()
+
+        bridges_out = []
+        for bridge in self._LEARNING_BRIDGES:
+            try:
+                qs = UserAgentLearning.objects.filter(updated_at__gte=since, **bridge['filter_kwargs'])
+                count = qs.count()
+            except Exception as e:  # noqa: BLE001 — best-effort
+                count = -1
+                err = f'{type(e).__name__}: {e}'
+            else:
+                err = None
+            bridges_out.append({
+                'name': bridge['name'],
+                'display_name': bridge['display_name'],
+                'writes_to': bridge['writes_to'],
+                'attribution': bridge['attribution'],
+                'writes_in_window': count,
+                'attribution_filter': bridge['filter_kwargs'],
+                'error': err,
+            })
+
+        # Domain + source breakdowns (the ground truth available)
+        by_domain = dict(
+            UserAgentLearning.objects
+            .filter(updated_at__gte=since)
+            .values('learning_domain')
+            .annotate(c=Count('id'))
+            .values_list('learning_domain', 'c')
+        )
+        by_source = dict(
+            UserAgentLearning.objects
+            .filter(updated_at__gte=since)
+            .values('learning_source')
+            .annotate(c=Count('id'))
+            .values_list('learning_source', 'c')
+        )
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'learning_bridge_writes',
+            'window_days': days,
+            'since': since.isoformat(),
+            'total_writes_to_user_agent_learning': total_writes,
+            'bridges': bridges_out,
+            'by_domain': by_domain,
+            'by_source': by_source,
+            'note': (
+                'Per-bridge attribution is heuristic for 6 of 8 bridges; '
+                "precise tagging requires a future 'source_bridge' field "
+                'on UserAgentLearning. by_domain / by_source rollups are '
+                'the ground truth — bridges_out is the best-effort split.'
+            ),
+        }
+
+    def _diagnostics_discord_health(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Discord bot health snapshot.
+
+        Sources:
+        - ``CeleryTaskEvent`` rows where ``task_name`` matches the
+          Discord task family — total invocations + success/failure
+          breakdown over the window.
+        - The most-recent SUCCESS event timestamp is used as a rough
+          "last alive" proxy. Bot uptime in the strict sense (process
+          uptime) isn't stored anywhere queryable; the freshest event
+          is the best signal available.
+
+        Returns structured JSON; no mutations.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Q
+
+        from core.models_celery_telemetry import CeleryTaskEvent
+
+        days = self._diagnostics_resolve_window(payload, default_days=7)
+        since = timezone.now() - timedelta(days=days)
+
+        # Match anything in the discord task family
+        discord_q = (
+            Q(task_name__icontains='discord') |
+            Q(task_name__icontains='Discord')
+        )
+
+        qs = CeleryTaskEvent.objects.filter(discord_q, started_at__gte=since)
+        total_invocations = qs.count()
+        success_count = qs.filter(status='SUCCESS').count()
+        failure_count = qs.filter(status='FAILURE').count()
+        in_flight = qs.filter(status='STARTED').count()
+        success_rate_pct = (
+            round(100.0 * success_count / total_invocations, 1)
+            if total_invocations else None
+        )
+
+        # Per-task breakdown (which discord tasks are running)
+        per_task = list(
+            qs.values('task_name')
+            .annotate(
+                total=Count('id'),
+                successful=Count('id', filter=Q(status='SUCCESS')),
+                failed=Count('id', filter=Q(status='FAILURE')),
+            )
+            .order_by('-total')[:25]
+        )
+
+        # Last-alive proxy: most recent SUCCESS event regardless of window
+        latest_success = (
+            CeleryTaskEvent.objects
+            .filter(discord_q, status='SUCCESS')
+            .order_by('-started_at')
+            .values('task_name', 'started_at')
+            .first()
+        )
+        if latest_success:
+            last_alive_at = latest_success['started_at'].isoformat() if latest_success['started_at'] else None
+            last_alive_task = latest_success['task_name']
+            mins_since_alive = (
+                int((timezone.now() - latest_success['started_at']).total_seconds() / 60)
+                if latest_success['started_at'] else None
+            )
+        else:
+            last_alive_at = None
+            last_alive_task = None
+            mins_since_alive = None
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'discord_health',
+            'window_days': days,
+            'since': since.isoformat(),
+            'total_invocations_in_window': total_invocations,
+            'success_count': success_count,
+            'failure_count': failure_count,
+            'in_flight_count': in_flight,
+            'success_rate_pct': success_rate_pct,
+            'last_alive_at': last_alive_at,
+            'last_alive_task': last_alive_task,
+            'minutes_since_last_alive': mins_since_alive,
+            'per_task': per_task,
+            'note': (
+                "Uptime in the strict sense (bot process uptime) is not "
+                "queryable; minutes_since_last_alive is a proxy based "
+                "on the most-recent SUCCESS event for any discord task. "
+                "Stale (>60min) likely means the bot is down."
+            ),
         }
 
