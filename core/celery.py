@@ -476,6 +476,18 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=3, minute=45),  # 3:45 AM Denver
         'options': {'queue': 'default', 'expires': 3600},
     },
+    # Session 1196 — Plan C side-quest: archive TTL-expired diagnostic
+    # Initiatives (those created without target_workspace_id and unfixed
+    # for 7 days). Mirror of sweep-diagnostic-deliverables with the
+    # Initiative-specific filter (diagnostic_code='missing_target_workspace_id'
+    # + exclude status__in=['ARCHIVED','COMPLETED']). Staggered 10 min
+    # after the deliverable sweep so they don't compete for the default
+    # queue worker. Spec: docs/specs/INITIATIVES_FIRST_BACKBONE.md §3.C.
+    'sweep-diagnostic-initiatives': {
+        'task': 'core.tasks.sweep_diagnostic_initiatives',
+        'schedule': crontab(hour=3, minute=55),  # 3:55 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
     # Cleanup stale scoring requests (high-frequency queue hygiene)
     'cleanup-stale-scoring-requests': {
         'task': 'core.tasks.cleanup_stale_scoring_requests',
