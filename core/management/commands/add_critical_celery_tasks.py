@@ -66,6 +66,17 @@ LOCAL_DENY_TASKS = frozenset({
     'generate-operator-edge-newsletter',   # LLM newsletter generation
 })
 
+# NOTE: Session 1205 — the sports + market intelligence producer beat tasks
+# (`market-intelligence-scan`, `generate-daily-betting-brief`,
+# `collect-sports-odds-intelligence`, `collect-kalshi-prediction-markets`)
+# are INTENTIONALLY NOT in LOCAL_DENY_TASKS. Operator directive: production
+# rollout is gated on "everything connected first" — these need to fire on
+# local so we can verify the producer→consumer chain works end-to-end before
+# enabling on Railway. Cost profile is bounded (theodds free tier, kalshi
+# free read-only, LLM ~$5-10/day at full cadence). If local cost becomes a
+# concern, add them here later or use `make celery` with a custom env that
+# disables them.
+
 
 def _is_local_env():
     """Default local-safe when not on Railway.
