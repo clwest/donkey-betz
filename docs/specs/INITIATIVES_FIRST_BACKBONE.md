@@ -217,7 +217,7 @@ Rationale: investigations are catch-all research buckets and tolerate looser att
 **Phase 2 v1 deliberately deferred (PR3):**
 
 - Step 4 heuristics (topic-overlap embedding + recency + owner_match) — stubbed.
-- Tool-context propagation (`tool_context.initiative_id` in `create_deliverable` callers) — requires touching every create callsite; design memo in PR1A→1E sequence notes this as a follow-on.
+- ~~Tool-context propagation~~ — **ACTIVATED Session 1199.** Implemented via `core/services/tool_context.py` (contextvar-based, set at `ToolDispatcher.execute()`, read at `create_deliverable()`). Zero callsite changes required. See AC20-23.
 - Learned-suggestion auto-attach. v1 keeps these advisory-only; promotion path needs a feedback signal we don't yet have.
 
 ### 6.3 Separate action vs embedded — RATIFIED Session 1194
@@ -290,6 +290,10 @@ Rationale: investigations are catch-all research buckets and tolerate looser att
 | AC17 | `infer_initiative_id` Step 3 never attaches `kind=recurring_artifact` or `kind=spec_backlog` even when the affinity row matches by `(workspace, agent_name)` | Unit test on kind policy block |
 | AC18 | `deliverable_factory.create_deliverable()` picks up the inferred `initiative_id` and the resulting Deliverable has `initiative_id` correctly set + emits `[INFERENCE-MATCH]` log | End-to-end factory test + log assertion |
 | AC19 | Inference failure / missing affinity falls through to the existing Plan C Phase 1 diagnostic path — deliverable still saves with `diagnostic_status='diagnostic'`; no exception escapes the factory | Unit test on fall-through path |
+| AC20 | `tool_context_scope(payload)` sets contextvar on entry, clears on exit; nested scopes restore outer context correctly | Unit test on contextvar lifecycle |
+| AC21 | Step 2 of cascade fires when `tool_context` carries `initiative_id` — agent with NO affinity row still gets attachment via the propagated id | Unit test on inference function with tool_context |
+| AC22 | `deliverable_factory.create_deliverable()` reads contextvar at the inference call site (via `get_current_tool_context()`); unseeded agents inside a `tool_context_scope` get attached at Step 2 | End-to-end factory test with contextvar set |
+| AC23 | Tool dispatcher entry (`ToolDispatcher.execute`) wraps dispatch with `tool_context_scope(payload)` so the contextvar is automatically set for any tool call carrying `initiative_id` — no callsite changes required | Integration test through dispatcher |
 
 ## 8. Provenance
 
@@ -298,3 +302,4 @@ Rationale: investigations are catch-all research buckets and tolerate looser att
 - This spec is the engineering artifact for that pivot. Implementation PRs will land under `feat/session-1194-initiatives-backbone-*` branches.
 - **Session 1197** added §6.4 (Initiative `kind` enum + lightweight links) per Rigby's design memo on conversation `pa-ea12236c83eb4826` + Chris's agree-all ratification. Implementation PRs under `feat/session-1197-initiative-kind-*` branches (migration → apply → report → docs → tests).
 - **Session 1198** ratified §6.2 (Phase 2 inference cascade + kind-aware policy gates) per Rigby's design memo on the same conversation thread + Chris's agree-all. Implementation PRs under `feat/session-1198-affinity-*` and `feat/session-1198-inference-*` branches (model → seed → inference function → factory hook → tests). Phase 2 hard-reject flip remains gated to 2026-06-29 — inference cascade now sits in front of the reject point so callers omitting `initiative_id` get a deduced attach instead of an exception.
+- **Session 1199** activated §6.2 Step 2 (tool-context propagation). Implementation under `feat/session-1199-tool-context-propagation` — contextvar-based via new `core/services/tool_context.py`, set at `ToolDispatcher.execute()` entry, read at `deliverable_factory.create_deliverable()`. Zero callsite changes required. AC20-23 in §7.

@@ -687,6 +687,12 @@ def create_deliverable(
     # cascade. The function is pure + read-only, so it's safe to call
     # in the hot path.
     #
+    # Session 1199 — read the propagated tool_context (set at the tool
+    # dispatcher entry point via ``core/services/tool_context.py``).
+    # This activates §6.2 Step 2 — when the outer tool call had an
+    # ``initiative_id`` in its payload, deep callers don't need to
+    # plumb it through explicitly; the contextvar carries it.
+    #
     # Trace emission: every inference attempt (matched or unmatched)
     # writes a structured [INFERENCE-MATCH] log line at INFO so we can
     # monitor inference accuracy independently of the deliverable
@@ -696,11 +702,13 @@ def create_deliverable(
     if not initiative_id and workspace_id:
         try:
             from core.services.initiative_inference import infer_initiative_id
+            from core.services.tool_context import get_current_tool_context
             inferred_id, inference_trace = infer_initiative_id(
                 payload={
                     'workspace_id': workspace_id,
                     'initiative_id': initiative_id,
                 },
+                tool_context=get_current_tool_context(),
                 owner_agent=agent_name,
             )
             if inferred_id:
