@@ -109,7 +109,15 @@ class TestInitiativeUpdate(InitiativeManagementToolsTestBase):
         self.parent.refresh_from_db()
         self.assertEqual(self.parent.target_workspace_id, self.workspace.id)
 
-    def test_update_unbinds_workspace_with_empty_string(self):
+    def test_update_empty_string_is_noop_for_target_workspace(self):
+        """Session 1202 v2: empty string must NOT unbind workspace.
+
+        GPT-5.2 emits ``target_workspace_id: ""`` as a default for unset
+        params, never as a deliberate unbind. The v2 contract makes both
+        ``None`` and ``""`` no-ops for this field. Unbinding via the
+        tool is not supported; if the workflow ever needs it, add an
+        explicit ``unbind_workspace: true`` sentinel.
+        """
         self.parent.target_workspace = self.workspace
         self.parent.save(update_fields=['target_workspace'])
 
@@ -119,11 +127,11 @@ class TestInitiativeUpdate(InitiativeManagementToolsTestBase):
             'target_workspace_id': '',
         })
         self.assertTrue(result.get('success'))
-        self.assertEqual(result.get('updated_fields'), ['target_workspace'])
-        self.assertIsNone(result.get('target_workspace_id'))
+        self.assertEqual(result.get('updated_fields'), [])
+        self.assertEqual(result.get('changes'), {})
 
         self.parent.refresh_from_db()
-        self.assertIsNone(self.parent.target_workspace_id)
+        self.assertEqual(self.parent.target_workspace_id, self.workspace.id)
 
     def test_update_description_and_kind(self):
         result = self._call({
@@ -223,9 +231,16 @@ class TestInitiativeUpdate(InitiativeManagementToolsTestBase):
         self.assertEqual(self.parent.description, 'Survives the call.')
         self.assertEqual(self.parent.kind, Initiative.Kind.INVESTIGATION)
 
-    def test_update_empty_string_still_clears_description(self):
-        """Explicit empty string is still treated as 'clear' (deliberate caller intent)."""
-        self.parent.description = 'About to be cleared.'
+    def test_update_empty_string_is_noop_for_description(self):
+        """Session 1202 v2: empty string must NOT clear description.
+
+        v1 treated ``""`` as deliberate clear, which was the same bug
+        Rigby caught on PR #2443 — GPT-5.2 emits ``""`` as a default
+        for unset string params, never as a deliberate clear. v2
+        contract: both ``None`` and ``""`` are no-ops; deliberate
+        clearing is not supported via the tool.
+        """
+        self.parent.description = 'About to survive.'
         self.parent.save(update_fields=['description'])
 
         result = self._call({
@@ -234,10 +249,69 @@ class TestInitiativeUpdate(InitiativeManagementToolsTestBase):
             'description': '',
         })
         self.assertTrue(result.get('success'))
-        self.assertEqual(result.get('updated_fields'), ['description'])
+        self.assertEqual(result.get('updated_fields'), [])
+        self.assertEqual(result.get('changes'), {})
 
         self.parent.refresh_from_db()
-        self.assertEqual(self.parent.description, '')
+        self.assertEqual(self.parent.description, 'About to survive.')
+
+    def test_update_empty_string_is_noop_for_kind(self):
+        """Session 1202 v2: empty string must NOT raise or change kind.
+
+        v1 raised ValueError on ``kind: ""`` because empty string failed
+        the enum check. v2 treats empty string as no-op for ergonomic
+        symmetry with description + target_workspace_id.
+        """
+        original_kind = self.parent.kind
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'kind': '',
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), [])
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.kind, original_kind)
+
+    def test_update_rigby_smoke_payload_no_collateral_clears(self):
+        """Reproduces the exact GPT-5.2 payload shape that bit Rigby.
+
+        Rigby passed all 18 schema params on every initiative_update
+        call (the FC-keys-bloat pattern logged at celery-pa.log:2580
+        et al.). With the v1 contract, ``description: ""`` + intent
+        ``kind: investigation`` cleared the description as a side
+        effect. With v2, only ``kind`` writes.
+        """
+        self.parent.description = 'Survives the LLM payload bloat.'
+        self.parent.target_workspace = self.workspace
+        self.parent.save(update_fields=['description', 'target_workspace'])
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'name': '',                 # GPT bloat
+            'description': '',          # GPT bloat (v1 footgun)
+            'status': '',               # GPT bloat
+            'priority': '',             # GPT bloat
+            'initiative_id': '',        # GPT bloat
+            'owner': '',                # GPT bloat
+            'notes': '',                # GPT bloat
+            'target_workspace_id': '',  # GPT bloat (v1 footgun)
+            'kind': Initiative.Kind.INVESTIGATION,  # real intent
+            'parent_id': '',            # GPT bloat
+            'child_id': '',             # GPT bloat
+            'relation': '',             # GPT bloat
+            'note': '',                 # GPT bloat
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), ['kind'])
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.description, 'Survives the LLM payload bloat.')
+        self.assertEqual(self.parent.target_workspace_id, self.workspace.id)
+        self.assertEqual(self.parent.kind, Initiative.Kind.INVESTIGATION)
 
     def test_update_invalid_kind_raises(self):
         tool_result = self.dispatcher.execute_sync(

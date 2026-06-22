@@ -2288,12 +2288,12 @@ PA_TOOL_SCHEMAS = [
                 # ── Session 1202 — Connectivity Roadmap §A.1 params ────────────
                 "target_workspace_id": {
                     "type": "string",
-                    "description": "For initiative_update: UUID of ProjectWorkspace to bind. Pass empty string or null to unbind.",
+                    "description": "For initiative_update: UUID of ProjectWorkspace to bind. OMIT entirely (or pass empty string / null) to leave the current binding unchanged. Unbinding via this action is not supported — use a future explicit sentinel if you need it.",
                 },
                 "kind": {
                     "type": "string",
                     "enum": ["project", "recurring_artifact", "investigation", "spec_backlog"],
-                    "description": "For initiative_update: semantic kind (orthogonal to status) per INITIATIVES_FIRST_BACKBONE.md §6.4.",
+                    "description": "For initiative_update: semantic kind (orthogonal to status) per INITIATIVES_FIRST_BACKBONE.md §6.4. OMIT (or pass empty string / null) to leave the current kind unchanged.",
                 },
                 "parent_id": {
                     "type": "string",
