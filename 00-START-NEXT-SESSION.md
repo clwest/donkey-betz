@@ -101,21 +101,46 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1195 — CURRENT ENTRY POINT
+## SESSION 1196 — CURRENT ENTRY POINT
 
-### SESSION 1194 CLOSED — Initiatives-First Backbone pivot + Plans A + B shipped (2026-06-21)
+### SESSION 1195 CLOSED — Plan C Phase 1 COMPLETE: 10 PRs landed, no-orphan contract live (2026-06-22)
 
-Full handoff: [`SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md`](docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md). **3 PRs shipped**, AC1+AC2+AC3+AC4 of `INITIATIVES_FIRST_BACKBONE.md` closed.
+Full handoff: [`SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md`](docs/handoffs/SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md). **10 PRs merged** — 3 Session 1194 carryover + 1 inventory refresh + 6 Plan C PRs.
 
 | PR | Theme | Status |
 |---|---|---|
-| **#2397** | docs/spec — Initiatives-First Backbone pivot + deferred clustering pointer | merge-ready |
-| **#2398** | Plan A — close audit gap (field shape + workspace_id filter + `audit_deliverable_endpoints` mgmt cmd) | merge-ready (stacked on #2397 conceptually; targets main) |
-| **#2399** | Plan B — read-path initiative linkage + paginated `initiative_deliverables` action | merge-ready (stacked on #2398 — retarget to `main` before merging #2398) |
+| #2397/#2398/#2399 | Session 1194 carryover (spec + Plan A + Plan B) | merged |
+| #2401 | Inventory refresh after 5+ session drift | merged |
+| **#2402** | Plan C PR #1 — diagnostic-fields migration (5 fields + composite index) | merged `dc00255a` |
+| **#2403** | Plan C PR #2 — factory create-path Initiative-alignment hook | merged `9a4fa8d1` |
+| **#2404** | Plan C PR #3 — update-path hook with auto-clear (incl. `initiative_id` setter) | merged `5c516827` |
+| **#2405** | Plan C PR #4 — daily sweep beat task + mgmt cmd (3:45 AM Denver) | merged `11da856e` |
+| **#2406** | Plan C PR #5 — 10-case regression test suite (CI-gated; see local-run blocker) | merged `e5272230` |
+| **#2407** | Plan C PR #6 — `backfill_deliverable_initiative_links` recon → §6.2 input | merged `603f90d0` |
 
-**Spec (operating contract for this and future sessions):** [`docs/specs/INITIATIVES_FIRST_BACKBONE.md`](docs/specs/INITIATIVES_FIRST_BACKBONE.md). Deferred clustering pointer: [`docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md`](docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md).
+**No-orphan contract is now live + observable:** factory marks misaligned creates `diagnostic`; tool update auto-clears on alignment restored; daily sweep archives expired diagnostics non-destructively; tests codify all transitions; recon quantifies drift.
 
-**3 spine Initiatives — persisted + bound to Donkey Betz:**
+### §6.2 inference-rule decision (Rigby-ratified at Session 1195 close)
+
+**Keep "require explicit `initiative_id`"** as default (Rule 3 from recon). Reason: workspace-based inference is **0% assignable** in DBZ because all 3 spine initiatives share the same `target_workspace_id`. Forced workspace inference would be arbitrary. The diagnostic + TTL + sweep stack keeps the system stable while we design a richer signal.
+
+**Phase 2 attribution requires a new disambiguation signal. Three candidate directions — no commitment yet:**
+
+| Option | Shape | Notes |
+|---|---|---|
+| **Projects layer (structural)** | New organizational level between Workspace and Deliverables: `Workspace → Project → Deliverable → Initiative (or as overlay)` | **Chris's exploration direction.** Directly responsive to recon ambiguity: narrows the inference domain from "which initiative in the workspace" to "which initiative in *this project*." Bigger IA change. |
+| Agent → initiative affinity map (config) | Declarative table — e.g., `ResearchAgent` defaults to Initiative X | Lower-risk, easy to audit. Rigby's lowest-risk pick if we don't take the structural route. |
+| Heuristics (title/content/recency) | Fuzzy match on deliverable signals | Last resort — noisy, creates silent mis-attribution. |
+
+### FIRST THING Session 1196
+
+**`initiative_create` write-path requires `target_workspace_id` (P0).** The Session 1195 recon surfaced 68 DBZ deliverables linked to initiatives that have **no `target_workspace_id`** — Plan C cannot evaluate alignment for any of them, so this gap is now blocking full coverage. Until the write path enforces this, the no-orphan contract has a structural hole. Bake the requirement in (or warn-and-diagnose like Plan C Phase 1 did for deliverables), then re-run the recon.
+
+**Active conversation:** `pa-92bacb0fbcab44fb` (Session 1195 thread, healthy). Rigby will likely recommend spinning fresh again given the next focus is Phase 2 design — your call.
+
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 165 deliverables (recon snapshot at session close 2026-06-22).
+
+**3 spine Initiatives — persisted + bound to Donkey Betz (still ACTIVE):**
 
 | # | Name | UUID |
 |---|---|---|
@@ -123,30 +148,27 @@ Full handoff: [`SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md`](docs/handoffs
 | 2 | Agent Capability Map + Router Contracts | `2071a9c6-986f-4528-be90-8cccaa595f1e` |
 | 3 | Tool Migration Hardening (web_search → intelligence_tool) + Failure Fix | `7e23d621-4d0c-409a-a680-4fd2e015d04b` |
 
-`target_workspace_id` backfilled to Donkey Betz (`b4503364-…`) at session close for all 3 (Rigby's `initiative_create` write path doesn't yet require/infer it — Plan C side-quest).
-
-### FIRST THING Session 1195
-
-**Stacked-PR check.** Before merging anything, retarget #2399 base to `main` (its base is currently the #2398 branch — auto-close footgun per Session 1188 #2381 incident, memory `feedback_stacked_pr_base_deletion_footgun.md`):
-
-```bash
-gh pr edit 2399 --base main
-```
-
-Then merge order: **#2397 → #2398 → #2399**.
-
-After merges, **Plan C is the P1**. Read `INITIATIVES_FIRST_BACKBONE.md` §3.C end-to-end. §6.1 (Phase 1 mark-diagnostic + `[ORPHAN-DELIVERABLE]` log → Phase 2 hard-reject after 7d zero-emission window) is **already ratified Session 1194**. §6.2 (inference rule for missing `initiative_id`) is **open** — decide once the backfill mgmt command runs against real Donkey Betz data.
-
-**Active conversation:** Rigby's Session 1194 close-of-session recommendation: **spin fresh on both sides** for Session 1195. Plan C is iterative write-path enforcement + diagnostic classification work — deserves clean canvas. Carry forward as context: (1) Wiring Map summary, (2) Plan A/B verification outcomes, (3) the 2 diagnostics filed at close, (4) Session 1195 P1 + §6.2 inference-rule open decision. Handoff doc is source of truth. (`pa-e11847db632a4ee8` is healthy if you'd rather reuse — Rigby is fine either way.)
-
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. All 3 spine Initiatives bound here.
+All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage progression is itself a separate workstream — Plan C Phase 1 didn't touch it.
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Plan C — write-path enforcement (Phase 1)** | **P1** | `INITIATIVES_FIRST_BACKBONE.md` §3.C. `create_deliverable()` accepts-and-marks `publish_intent=diagnostic` + emits `[ORPHAN-DELIVERABLE]` log when no initiative resolves. AC5a. |
-| **Plan C — backfill mgmt command** | **P1** | `INITIATIVES_FIRST_BACKBONE.md` §3.C.1. `backfill_deliverable_initiative_links --workspace <uuid> --dry-run/--apply` — walks recent deliverables, proposes initiative attachments, reports attached/unmatched/ambiguous counts. AC6. |
+| **`initiative_create` requires `target_workspace_id`** | **P0** | Session 1195 recon: 68 DBZ rows blocked. Side-quest from Session 1194 close, now quantitatively measurable. Mirror Plan C Phase 1 shape: write-path warn + diagnostic mark, sweep follows. |
+| **Plan C 7-day watch + Phase 2 hard-reject decision** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_deliverable_initiative_links --workspace-id b4503364-… --json-only`; diff totals against the 2026-06-22 baseline. If missing-initiative count trends down + sweep archive rate matches create rate → flip Phase 2 hard-reject (`OrphanDeliverableError` on `initiative_id=None`). Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
+| **§6.2 Phase 2 inference design** | P2 | Rigby's option ranking (least-risk first): (1) agent→initiative affinity map; (2) tool-context propagation; (3) heuristics. Top orphan creators give the input list: Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9. |
+| **`load_all_agents_advisors` baseline fix (155 → 87)** | P2 | Pre-existing `Agents count claims` CONFLICT keeping main's `Repo Guardrails` CI red. Admin-bypass currently required on every PR. Either fix the seed script to actually load all 148 declared agents, OR update the expected baseline to match runtime. |
+| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`, blocks `manage.py test` for every `core/tests/*` file. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. Surfaced during Session 1195 PR #5. |
+| **Direct ORM `.save()` bypass** | P3 | Phase 1 hooks only cover factory + update tool path. A signal could close the gap. Low urgency — tool-mediated mutation is the bulk of production traffic. |
+| **PA LLM iteration cap silent failure** | P2 | Carryover from Session 1193 (`c2bac9c0-…`). `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8`. |
+| **Producer reroute** | P2 | Carryover from Session 1192 (`780a8d15-…`). `_ensure_system_workspace` auto-recreates. |
+| **PR-D contract flip** | P2 | Carryover from Session 1194 (`9d9db48a-…`). 24h WARN-volume gate elapsed 2026-06-22. |
+
+**Pick-this-session items below this line are still-relevant Session 1192/1193 carryover items — same as last session:**
+
+| Item | Priority | Where it's defined |
+|---|---|---|
+| **Plan C — backfill mgmt command** | _shipped Session 1195 PR #2407_ | `INITIATIVES_FIRST_BACKBONE.md` §3.C.1. |
 | **Plan C side-quest — `initiative_create` requires target_workspace_id** | P2 | Carry-over from Session 1194 spine-Initiative diagnostic. Fold into Plan C since both are write-path enforcement. |
 | **Plan D — governor gating** | P2 | `INITIATIVES_FIRST_BACKBONE.md` §3.D. Scheduler skips dispatch when no ACTIVE Initiative matches; `[GOVERNOR-SKIP]` log. AC7. Can land in parallel with Plan C. |
 | **Tool Migration Hardening (Initiative 3)** | P2 | §4.3 + Initiative `7e23d621-…`. `web_search` → `intelligence_tool.search` audit + gateway retry/backoff. ~50% failure rate to investigate. AC9-AC10. |
@@ -265,6 +287,25 @@ AgentExecution.objects.filter(
 ### Pre-existing CONFLICT — `--admin` bypass still required
 
 `context-kit verify` `Agents count claims` CONFLICT still on main. Strict mode Repo Guardrails fails on every PR until reconciled. Chris approved blanket `--admin` bypass for code-only PRs. Worth a dedicated inventory-refresh PR if anyone has the bandwidth.
+
+---
+
+## SESSION 1195 CLOSED — Plan C Phase 1 COMPLETE: no-orphan contract live, §6.2 unblocked (2026-06-22)
+
+**10 PRs merged.** Full handoff: [`SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md`](docs/handoffs/SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md).
+
+- Merged Session 1194 carryover: #2397/#2398/#2399 (spec + Plan A + Plan B).
+- Inventory refresh after 5-session drift: #2401.
+- Plan C Phase 1 — 6 atomic PRs (#2402–#2407): migration → factory hook → update hook with auto-clear → daily sweep + mgmt cmd → 10-case regression suite → `backfill_deliverable_initiative_links` recon.
+- §6.2 inference-rule decision data-informed at session close: **keep "require explicit `initiative_id`"** — workspace-based inference is 0% assignable in DBZ (3 spine initiatives share target workspace, so every match is ambiguous). Phase 2 needs a new signal (Rigby's ranking: agent→initiative affinity > tool-context propagation > heuristics).
+- Top orphan creators visible: Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9.
+- 68 DBZ deliverables linked to initiatives with no `target_workspace_id` — the `initiative_create` write-path side-quest is now quantitatively P0.
+
+---
+
+## SESSION 1194 CLOSED — Initiatives-First Backbone pivot + Plans A + B shipped (2026-06-21)
+
+**3 PRs landed.** Full handoff: [`SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md`](docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md). Pivot from project-clustering recon to Initiatives-First Backbone. Spec ratified, Plans A+B shipped, 3 spine Initiatives persisted + bound to Donkey Betz. AC1–AC4 closed. Plan C scoped + ratified for Session 1195.
 
 ---
 
