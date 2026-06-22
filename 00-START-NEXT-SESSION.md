@@ -101,42 +101,53 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1196 — CURRENT ENTRY POINT
+## SESSION 1197 — CURRENT ENTRY POINT
 
-### SESSION 1195 CLOSED — Plan C Phase 1 COMPLETE: 10 PRs landed, no-orphan contract live (2026-06-22)
+### SESSION 1196 CLOSED — Initiative no-orphan contract sealed: 6 PRs landed (2026-06-22)
 
-Full handoff: [`SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md`](docs/handoffs/SESSION_1195_PLAN_C_PHASE_1_COMPLETE.md). **10 PRs merged** — 3 Session 1194 carryover + 1 inventory refresh + 6 Plan C PRs.
+Full handoff: [`SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md`](docs/handoffs/SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md). **6 PRs merged** mirroring Plan C Phase 1 shape but routed via post-save signal because Initiative has 8+ create callsites.
 
-| PR | Theme | Status |
+| PR | Theme | Merge |
 |---|---|---|
-| #2397/#2398/#2399 | Session 1194 carryover (spec + Plan A + Plan B) | merged |
-| #2401 | Inventory refresh after 5+ session drift | merged |
-| **#2402** | Plan C PR #1 — diagnostic-fields migration (5 fields + composite index) | merged `dc00255a` |
-| **#2403** | Plan C PR #2 — factory create-path Initiative-alignment hook | merged `9a4fa8d1` |
-| **#2404** | Plan C PR #3 — update-path hook with auto-clear (incl. `initiative_id` setter) | merged `5c516827` |
-| **#2405** | Plan C PR #4 — daily sweep beat task + mgmt cmd (3:45 AM Denver) | merged `11da856e` |
-| **#2406** | Plan C PR #5 — 10-case regression test suite (CI-gated; see local-run blocker) | merged `e5272230` |
-| **#2407** | Plan C PR #6 — `backfill_deliverable_initiative_links` recon → §6.2 input | merged `603f90d0` |
+| **#2409** | Migration — 5 diagnostic fields + 3-col composite index on Initiative | `bf17a049` |
+| **#2410** | Post-save signal create-mark + `INITIATIVE_DIAGNOSTICS_ENABLED` kill switch + `[ORPHAN-INITIATIVE]` warn-log | `14a3ad18` |
+| **#2411** | Pre-save snapshot + post-save auto-clear on `target_workspace_id` NULL→set (uses `.update()` to dodge recursion) | `76483f9f` |
+| **#2412** | Daily sweep at 3:55 AM Denver + `sweep_diagnostic_initiatives` mgmt cmd | `c95625f6` |
+| **#2413** | 15-case regression test suite (12 design cases + Rigby's #11/#12/#13) | `557c80dd` |
+| **#2414** | `backfill_initiative_workspace_links` recon + idempotent `--apply` | `9d44012d` |
 
-**No-orphan contract is now live + observable:** factory marks misaligned creates `diagnostic`; tool update auto-clears on alignment restored; daily sweep archives expired diagnostics non-destructively; tests codify all transitions; recon quantifies drift.
+**Initiative side of no-orphan contract is now live + observable:** create-path signal marks no-ws Initiatives diagnostic with TTL; ws-set from any path (admin/UI/scripts) auto-clears; 3:55 AM daily sweep archives expired ones non-destructively; 15 cases codify transitions; backfill flags pre-existing orphans retroactively.
 
-### §6.2 inference-rule decision (Rigby-ratified at Session 1195 close)
+### FIRST THING Session 1197
 
-**Keep "require explicit `initiative_id`"** as default (Rule 3 from recon). Reason: workspace-based inference is **0% assignable** in DBZ because all 3 spine initiatives share the same `target_workspace_id`. Forced workspace inference would be arbitrary. The diagnostic + TTL + sweep stack keeps the system stable while we design a richer signal.
+**Operator runs `backfill_initiative_workspace_links --apply` in prod + restart celery workers.** This locks the production baseline matching local (30 pre-existing orphans flagged diagnostic, payload `backfilled=True`). Requires worker restart per `feedback_new_shared_task_needs_worker_restart.md`:
 
-**Phase 2 attribution requires a new disambiguation signal. Three candidate directions — no commitment yet:**
+```bash
+# Step 1 — recon baseline
+python manage.py backfill_initiative_workspace_links --sample 5 --json-only > /tmp/2026-06-22-baseline.json
 
-| Option | Shape | Notes |
-|---|---|---|
-| **Projects layer (structural)** | New organizational level between Workspace and Deliverables: `Workspace → Project → Deliverable → Initiative (or as overlay)` | **Chris's exploration direction.** Directly responsive to recon ambiguity: narrows the inference domain from "which initiative in the workspace" to "which initiative in *this project*." Bigger IA change. |
-| Agent → initiative affinity map (config) | Declarative table — e.g., `ResearchAgent` defaults to Initiative X | Lower-risk, easy to audit. Rigby's lowest-risk pick if we don't take the structural route. |
-| Heuristics (title/content/recency) | Fuzzy match on deliverable signals | Last resort — noisy, creates silent mis-attribution. |
+# Step 2 — apply retroactive flag
+python manage.py backfill_initiative_workspace_links --apply
 
-### FIRST THING Session 1196
+# Step 3 — worker restart (PR #2412 added new @shared_task)
+pkill -9 -f celery; rm -f .celery*.pid; make celery
 
-**`initiative_create` write-path requires `target_workspace_id` (P0).** The Session 1195 recon surfaced 68 DBZ deliverables linked to initiatives that have **no `target_workspace_id`** — Plan C cannot evaluate alignment for any of them, so this gap is now blocking full coverage. Until the write path enforces this, the no-orphan contract has a structural hole. Bake the requirement in (or warn-and-diagnose like Plan C Phase 1 did for deliverables), then re-run the recon.
+# Step 4 — verify sweep is registered
+.venv/bin/celery -A core inspect registered | grep sweep_diagnostic_initiatives
+python manage.py sweep_diagnostic_initiatives --dry-run
+```
 
-**Active conversation:** `pa-92bacb0fbcab44fb` (Session 1195 thread, healthy). Rigby will likely recommend spinning fresh again given the next focus is Phase 2 design — your call.
+Local already done (verified during Session 1196 close). Production rollout is the open lift.
+
+### 7-day watch — starts 2026-06-29 (time-gated, NEW)
+
+Re-run `backfill_initiative_workspace_links --json-only` and diff against `2026-06-22-baseline.json`. Expected: archived count goes up, candidate_for_flag stays at 0 (signal catches all new orphans), already_diagnostic for non-terminal rows decreases to 0 by sweep day.
+
+If trend looks good, Plan C Phase 2 hard-reject decision (DEFERRED-7d from Session 1195 close, also gated to 2026-06-29) can move forward.
+
+### Active conversation
+
+`pa-ea12236c83eb4826` (Session 1196 close). Rigby will likely recommend spinning fresh given Session 1197's focus shifts to watch + Phase 2 design.
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 165 deliverables (recon snapshot at session close 2026-06-22).
 
@@ -154,12 +165,13 @@ All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage pro
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **`initiative_create` requires `target_workspace_id`** | **P0** | Session 1195 recon: 68 DBZ rows blocked. Side-quest from Session 1194 close, now quantitatively measurable. Mirror Plan C Phase 1 shape: write-path warn + diagnostic mark, sweep follows. |
+| **`backfill_initiative_workspace_links --apply` in prod + worker restart** | **P0** | Session 1196 close lift. Locks production baseline matching local (30 pre-existing orphans flagged diagnostic). Worker restart required per `feedback_new_shared_task_needs_worker_restart.md`. Playbook in [`SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md`](docs/handoffs/SESSION_1196_INITIATIVE_DIAGNOSTIC_CONTRACT.md) §"Production rollout playbook". |
 | **Plan C 7-day watch + Phase 2 hard-reject decision** | **P1 (time-gated)** | Start **2026-06-29**. Re-run `backfill_deliverable_initiative_links --workspace-id b4503364-… --json-only`; diff totals against the 2026-06-22 baseline. If missing-initiative count trends down + sweep archive rate matches create rate → flip Phase 2 hard-reject (`OrphanDeliverableError` on `initiative_id=None`). Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
+| **Session 1196 7-day watch** | **P1 (time-gated, NEW)** | Start **2026-06-29**. Re-run `backfill_initiative_workspace_links --json-only` and diff against 2026-06-22 baseline. Confirm archived count up, candidate_for_flag at 0, already_diagnostic decreasing for non-terminal rows. |
 | **§6.2 Phase 2 inference design** | P2 | Rigby's option ranking (least-risk first): (1) agent→initiative affinity map; (2) tool-context propagation; (3) heuristics. Top orphan creators give the input list: Rigby=33, ResearchAgent=24, ClaudeCode=11, ContentWriterAgent=9. |
 | **`load_all_agents_advisors` baseline fix (155 → 87)** | P2 | Pre-existing `Agents count claims` CONFLICT keeping main's `Repo Guardrails` CI red. Admin-bypass currently required on every PR. Either fix the seed script to actually load all 148 declared agents, OR update the expected baseline to match runtime. |
-| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`, blocks `manage.py test` for every `core/tests/*` file. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. Surfaced during Session 1195 PR #5. |
-| **Direct ORM `.save()` bypass** | P3 | Phase 1 hooks only cover factory + update tool path. A signal could close the gap. Low urgency — tool-mediated mutation is the bulk of production traffic. |
+| **Local test DB infra** | P2 | pgbouncer transaction pool can't proxy `CREATE DATABASE`, blocks `manage.py test` for every `core/tests/*` file. Add `DJANGO_TEST_DATABASE_URL` support, OR document the docker-compose path. Surfaced during Session 1195 PR #5, re-surfaced Session 1196 PR #5. |
+| **Migration drift audit (Session 1196 parked)** | P2/P3 | Set A: 4 unmigrated Narrative* models in `models_narrative_drift.py` (migrations 0103+0115 marked applied but tables missing). Set B: 16 AlterField ops on AgentExecution/CuratedSignalEntry/FinalAppliedOverrides/FleetPaChatAuditRow. Per Rigby Option A: scoped workspace ticket TBD. |
 | **PA LLM iteration cap silent failure** | P2 | Carryover from Session 1193 (`c2bac9c0-…`). `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8`. |
 | **Producer reroute** | P2 | Carryover from Session 1192 (`780a8d15-…`). `_ensure_system_workspace` auto-recreates. |
 | **PR-D contract flip** | P2 | Carryover from Session 1194 (`9d9db48a-…`). 24h WARN-volume gate elapsed 2026-06-22. |
