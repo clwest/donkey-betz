@@ -102,39 +102,47 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1200 — CURRENT ENTRY POINT
+## SESSION 1201 — CURRENT ENTRY POINT
 
-### SESSION 1199 CLOSED — §6.2 Step 2 + PR-D contract flip + iteration cap fix + producer reroute + local test DB infra: 5 PRs landed (2026-06-22)
+### SESSION 1200 CLOSED — Day-0 inference watch pre-flight + factory-entry instrumentation: 1 PR landed (2026-06-22)
 
-Full handoff: [`SESSION_1199_INFERENCE_STEP2_PROVENANCE_FLIP_AND_INFRA_CLEANUP.md`](docs/handoffs/SESSION_1199_INFERENCE_STEP2_PROVENANCE_FLIP_AND_INFRA_CLEANUP.md). **5 PRs merged on `main`** — every PR clean CI, 3 prior-session deliverables closed, 4-session local-testing-infra blocker resolved.
+Full handoff: [`SESSION_1200_DAY0_INFERENCE_WATCH_INSTRUMENTATION.md`](docs/handoffs/SESSION_1200_DAY0_INFERENCE_WATCH_INSTRUMENTATION.md). **1 PR merged on `main`** — clean CI; runbook deliverable `cb9d8ae1-…` polished + shipped; mechanism drift on Step-2 firing surface surfaced + documented.
 
 | PR | Theme | Deliverable closed |
 |---|---|---|
-| **#2432** | §6.2 Step 2 activation — tool-context propagation via contextvar; reads at `deliverable_factory.create_deliverable`; zero callsite changes for 30+ callers | — (design completion) |
-| **#2433** | PR-D contract flip — `DeliverableProvenanceMissingError` replaces Session 1184 PR-B soft WARN path | `9d9db48a` |
-| **#2434** | PA LLM iteration cap 8→12 + silent-fallback detector + `silent_fallback=true|false` in `PA_TASK_SUMMARY` | `c2bac9c0` |
-| **#2435** | Producer reroute — `_ensure_system_workspace` honors `DEFAULT_PRODUCER_WORKSPACE_ID` (defaults to Donkey Betz) | `780a8d15` |
-| **#2436** | Local test DB infra — bypass PgBouncer for `manage.py test`; restores TDD for every prior session's test files | — (4-session infra blocker) |
+| **#2439** | `deliverable_factory` entry-log instrumentation — single `[DELIVERABLE-FACTORY-ENTRY]` line at function entry; A/B/C now directly observable from logs | — (Day-0 watch readiness) |
 
-**Net result:** §6.2 cascade fully populated through Step 3 (Step 2 activated #2432; Step 4 heuristics stubbed pending watch). PR-D contract flip hardens the no-provenance guard. Iteration cap fix surfaces the silent failure mode. Producer reroute sinks autonomous output into DBZ by default. Local test infra restored — every prior session's test files now run locally with `USE_PGBOUNCER=1`.
+**Net result:** Watch protocol reframed from "raw INFERENCE-MATCH volume" to "accuracy conditional on eligibility (C/B)" after Day-0 verification revealed BaseAgent's 3-source `initiative_id` resolution forwards explicitly in most cases. PR #2439 instruments the entry boundary so A/B/C/D are countable directly from logs (no DB proxy). Runbook deliverable `cb9d8ae1-…` (8,728 chars, Ops category) reflects the log-based protocol post-merge. PR-D contract verified honest (no bypass — terminology mismatch on prior-session check was a false alarm). Phase 2 hard-reject flip on 2026-06-29 is safe to ship from this evidence.
 
-### FIRST THING Session 1200
+### FIRST THING Session 1201
 
-**Start the inference accuracy watch (Day 1 — 2026-06-23).** No code lift required to start; daily appends go to deliverable `9ba58690-…` (Donkey Betz workspace, linked to spine Initiative 1).
+**Day-1 of the inference accuracy watch (2026-06-23).** Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…` (DBZ workspace, linked to SPINE_1) per the runbook protocol at `cb9d8ae1-…`.
 
 ```bash
-# Step 1 — daily intake (Inference Accuracy Watch §1)
-grep "INFERENCE-MATCH" celery.log | wc -l
-grep "INFERENCE-MATCH" celery.log | grep -oE "agent=[A-Za-z]+" | sort | uniq -c
-grep "INFERENCE-MATCH" celery.log | grep -oE "step=[0-9]+" | sort | uniq -c
+# A — total create_deliverable calls (denominator)
+grep '\[DELIVERABLE-FACTORY-ENTRY\]' celery*.log | wc -l
 
-# Step 2 — spot-check 5-10 events (watch spec §1)
-grep "INFERENCE-MATCH" celery.log | tail -10
+# B — eligible-for-inference subset (initiative_id=None at factory entry)
+grep '\[DELIVERABLE-FACTORY-ENTRY\]' celery*.log | grep 'initiative_id_present=False' | wc -l
 
-# Step 3 — append per template in watch spec §5 to deliverable 9ba58690
+# C — actual inference matches
+grep '\[INFERENCE-MATCH\] agent=' celery*.log | wc -l
+
+# D — post-cascade failures (orphan diagnostic)
+grep '\[ORPHAN-DELIVERABLE\] code=missing_initiative_id' celery*.log | wc -l
+
+# C/B = accuracy signal (target ≥80% precision per seed)
+# Step breakdown
+grep '\[INFERENCE-MATCH\] agent=' celery*.log | grep -oE 'step=[0-9]+' | sort | uniq -c
+
+# Spot-check 5-10 events
+grep '\[INFERENCE-MATCH\] agent=' celery*.log | tail -10
+
+# default_only_projects detector
+USE_PGBOUNCER=1 .venv/bin/python manage.py report_initiative_kinds
 ```
 
-Full protocol: [`docs/specs/INFERENCE_ACCURACY_WATCH.md`](docs/specs/INFERENCE_ACCURACY_WATCH.md). Day 8 (2026-06-30) decision lands as follow-up deliverable tagged `session-1198-watch-result`.
+Full daily protocol: runbook deliverable `cb9d8ae1-008e-42e8-b222-3f598e6b665e`. Day 8 (2026-06-30) decision lands as follow-up deliverable tagged `session-1198-watch-result`.
 
 ### Time-gated watches active 2026-06-23
 
@@ -152,7 +160,7 @@ Full protocol: [`docs/specs/INFERENCE_ACCURACY_WATCH.md`](docs/specs/INFERENCE_A
 
 ### Active conversation
 
-`pa-1ccc494ea00b4e77` — **fresh thread spun by Rigby at Session 1199 close** titled "Session 1200 — Watch Tracking + Phase 2 Gate (Plan C)". Update `tools/pa_local.sh` to pin this conversation at first ping. Prior thread `pa-ea12236c83eb4826` (Sessions 1197+1198+1199) is retired.
+`pa-1ccc494ea00b4e77` — continued across Session 1200 + 1201 (titled "Session 1200 — Watch Tracking + Phase 2 Gate (Plan C)"; reused for Session 1201 since the watch is the primary workstream). `tools/pa_local.sh` is already pinned. Prior thread `pa-ea12236c83eb4826` (Sessions 1197+1198+1199) is retired.
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **42 Initiatives total** (unchanged across Sessions 1197-1199), 11 in DBZ workspace, kind dist: project=5 / recurring_artifact=3 / investigation=2 / spec_backlog=1. **2 AgentInitiativeAffinity rows** (ResearchAgent + ClaudeCode; unchanged).
 
@@ -170,16 +178,16 @@ All 3 still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs). Stage pro
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append spot-checks to deliverable `9ba58690-…`. Protocol: `docs/specs/INFERENCE_ACCURACY_WATCH.md`. |
+| **Daily watch appends (inference accuracy + default-only-projects)** | **P1 (daily, active 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. Protocol: runbook `cb9d8ae1-…` (post-PR #2439, log-based). |
 | **Day-8 watch aggregation + decision (2026-06-30)** | **P1 (time-gated)** | Per-seed: keep / tighten / pull. File decision as deliverable tagged `session-1198-watch-result`. |
-| **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Cascade catches most cases via Steps 1-3; reject is the residual guard. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. |
+| **Plan C Phase 2 hard-reject flip (2026-06-29 gate)** | **P1 (time-gated)** | After 7-day watch is clean, replace Phase 1 diagnostic mark with `OrphanDeliverableError`. Cascade catches most cases via Steps 1-3; reject is the residual guard. Spec: `INITIATIVES_FIRST_BACKBONE.md` §6.1. PR-D contract verified honest Session 1200 — safe to ship. |
 | **Session 1196 7-day watch (2026-06-29)** | **P1 (time-gated)** | Re-run `backfill_initiative_workspace_links --json-only`; diff against 2026-06-22 baseline. |
 | **PR3 — Step 4 heuristics implementation** | P2 | After Day 8 watch decision (≥80% precision on Step 3 → unblock PR3). Topic-overlap embedding + recency + owner_match per Rigby's §6.2 framing. |
 | **Rigby + ContentWriterAgent affinity decision** | P2 | Post-Day-8. Pin via `manual_pin`, or let them fall through to heuristics (PR3). |
 | **Manual pin mgmt cmd** (`affinity_pin --workspace X --agent Y --initiative Z --source manual_pin`) | P3 | When operator demand surfaces. Documented as escape hatch in `seed_agent_initiative_affinities.py` docstring. |
 | **Migration drift audit (Set A + Set B)** | P2/P3 | Every Session 1196-1199 migration trimmed these by hand. Set A: 4 unmigrated Narrative* models. Set B: 16 AlterField ops. Time to fix at the source. |
 | **Initiative kind UI filter + affinity admin** | P3 | Frontend surface for Session 1197+1198+1199 backend work — operator visibility into kind classification + affinity pins from the workspace UI. |
-| **Production rollout: Session 1196-1199 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Apply the mgmt cmds + restart workers. Local-only until then. |
+| **Production rollout: Session 1196-1200 cumulative** | **P0 (carryover, gated)** | Operator's go signal needed. Apply the mgmt cmds + restart workers. Local-only until then. |
 
 ### Project-clustering recon scope (Session 1194 P1) — SHIPPED Session 1197
 
@@ -264,9 +272,9 @@ AgentExecution.objects.filter(
 ### Standard FIRST THING checks
 
 1. Disk: `df -h /System/Volumes/Data`. Swap: `sysctl vm.swapusage`.
-2. Through Rigby (use `PA_API_URL=http://localhost:8000 PA_API_TOKEN=<local-chris-token>` explicitly — `tools/pa_local.sh` is pinned to a stale conv): `platform_config_tool overview` → confirm `service_context: local`.
-3. **Use Rigby's pre-spun fresh thread `pa-e11847db632a4ee8`** ("Session 1194 — Project-clustering recon (Donkey Betz deliverables)"). Chris explicitly asked for fresh threads on BOTH sides for this session. Don't reuse `pa-89b8f02deccc4f17`.
-4. `gh pr list --author @me --state open` — expected empty.
+2. Through Rigby (`tools/pa_local.sh` is pinned to the current thread): `platform_config_tool overview` → confirm `service_context: local`.
+3. **Worker freshness check (Session 1200 added):** `ps -eo pid,lstart | grep celery` vs `git log -1 --format='%h %ci' main` — if workers predate latest main commit, restart via `pkill -9 -f 'celery -A core'; rm -f .celery*.pid; make celery` before any verification work.
+4. `gh pr list --author @me --state open` — expected empty (stale carryover PRs from April/May are unrelated).
 
 ### Stacked-PR footgun reminder (still active)
 
