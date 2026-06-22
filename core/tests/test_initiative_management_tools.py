@@ -156,6 +156,89 @@ class TestInitiativeUpdate(InitiativeManagementToolsTestBase):
         self.assertEqual(result.get('updated_fields'), [])
         self.assertEqual(result.get('changes'), {})
 
+    def test_update_none_is_noop_for_description(self):
+        """Session 1202 follow-up: ``description: None`` must NOT clear."""
+        self.parent.description = 'Pre-existing description that must survive.'
+        self.parent.save(update_fields=['description'])
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'description': None,
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), [])
+        self.assertEqual(result.get('changes'), {})
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.description, 'Pre-existing description that must survive.')
+
+    def test_update_none_is_noop_for_target_workspace(self):
+        """Session 1202 follow-up: ``target_workspace_id: None`` must NOT unbind."""
+        self.parent.target_workspace = self.workspace
+        self.parent.save(update_fields=['target_workspace'])
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'target_workspace_id': None,
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), [])
+        self.assertEqual(result.get('changes'), {})
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.target_workspace_id, self.workspace.id)
+
+    def test_update_none_is_noop_for_kind(self):
+        """Session 1202 follow-up: ``kind: None`` must NOT raise or change."""
+        original_kind = self.parent.kind
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'kind': None,
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), [])
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.kind, original_kind)
+
+    def test_update_none_with_other_field_only_writes_intended(self):
+        """null on unrelated field + real value on intended field — only the intended field writes."""
+        self.parent.description = 'Survives the call.'
+        self.parent.save(update_fields=['description'])
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'description': None,  # GPT-5.2 happens to include null
+            'kind': Initiative.Kind.INVESTIGATION,
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), ['kind'])
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.description, 'Survives the call.')
+        self.assertEqual(self.parent.kind, Initiative.Kind.INVESTIGATION)
+
+    def test_update_empty_string_still_clears_description(self):
+        """Explicit empty string is still treated as 'clear' (deliberate caller intent)."""
+        self.parent.description = 'About to be cleared.'
+        self.parent.save(update_fields=['description'])
+
+        result = self._call({
+            'action': 'initiative_update',
+            'id': str(self.parent.id),
+            'description': '',
+        })
+        self.assertTrue(result.get('success'))
+        self.assertEqual(result.get('updated_fields'), ['description'])
+
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.description, '')
+
     def test_update_invalid_kind_raises(self):
         tool_result = self.dispatcher.execute_sync(
             'work_tool',

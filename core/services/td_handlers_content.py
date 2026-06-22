@@ -2167,12 +2167,29 @@ class ContentHandlersMixin:
             updated_fields: list[str] = []
             changes: Dict[str, Any] = {}
 
+            # Session 1202 follow-up — `None`-vs-`""` distinction.
+            # GPT-5.2 frequently emits ``description: null`` or
+            # ``target_workspace_id: null`` as part of an unrelated
+            # update payload; the first cut treated both null and "" as
+            # explicit-clear, which silently wiped non-empty fields the
+            # caller never intended to touch. Rigby caught this on the
+            # PR #2442 smoke. New contract:
+            #   • key absent from payload  → no-op
+            #   • key present with None    → no-op (treat null as "leave alone")
+            #   • key present with ""      → explicit clear (target_workspace
+            #                                 unbinds; description clears)
+            #   • key present with value   → set
+            # ``kind`` has no "clear" semantic — empty string still
+            # fails the enum check, which is correct.
+
             # target_workspace_id — bind/unbind ProjectWorkspace FK
             if 'target_workspace_id' in payload:
                 from core.models_skin_layer import ProjectWorkspace
                 new_ws_id = payload.get('target_workspace_id')
                 old_ws_id = str(initiative.target_workspace_id) if initiative.target_workspace_id else None
-                if new_ws_id is None or new_ws_id == '':
+                if new_ws_id is None:
+                    pass  # explicit null → no-op
+                elif new_ws_id == '':
                     if initiative.target_workspace_id is not None:
                         initiative.target_workspace = None
                         updated_fields.append('target_workspace')
@@ -2189,27 +2206,34 @@ class ContentHandlersMixin:
 
             # description — free text
             if 'description' in payload:
-                new_desc = payload.get('description') or ''
-                if new_desc != initiative.description:
-                    changes['description'] = {
-                        'old_length': len(initiative.description or ''),
-                        'new_length': len(new_desc),
-                    }
-                    initiative.description = new_desc
-                    updated_fields.append('description')
+                new_desc = payload.get('description')
+                if new_desc is None:
+                    pass  # explicit null → no-op
+                else:
+                    new_desc_str = str(new_desc)
+                    if new_desc_str != initiative.description:
+                        changes['description'] = {
+                            'old_length': len(initiative.description or ''),
+                            'new_length': len(new_desc_str),
+                        }
+                        initiative.description = new_desc_str
+                        updated_fields.append('description')
 
             # kind — semantic classification (§6.4)
             if 'kind' in payload:
                 new_kind = payload.get('kind')
-                valid_kinds = [c[0] for c in Initiative.Kind.choices]
-                if new_kind not in valid_kinds:
-                    raise ValueError(
-                        f"Invalid kind '{new_kind}'. Valid: {', '.join(valid_kinds)}"
-                    )
-                if new_kind != initiative.kind:
-                    changes['kind'] = {'old': initiative.kind, 'new': new_kind}
-                    initiative.kind = new_kind
-                    updated_fields.append('kind')
+                if new_kind is None:
+                    pass  # explicit null → no-op
+                else:
+                    valid_kinds = [c[0] for c in Initiative.Kind.choices]
+                    if new_kind not in valid_kinds:
+                        raise ValueError(
+                            f"Invalid kind '{new_kind}'. Valid: {', '.join(valid_kinds)}"
+                        )
+                    if new_kind != initiative.kind:
+                        changes['kind'] = {'old': initiative.kind, 'new': new_kind}
+                        initiative.kind = new_kind
+                        updated_fields.append('kind')
 
             if updated_fields:
                 initiative.save(update_fields=updated_fields)
