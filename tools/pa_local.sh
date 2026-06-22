@@ -17,12 +17,15 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1200 thread
-# (pa-1ccc494ea00b4e77, spun by Rigby at Session 1199 close, titled
-# "Session 1200 — Watch Tracking + Phase 2 Gate (Plan C)"). Prior pins
-# retired: pa-ea12236c83eb4826 (Sessions 1196-1199),
-# pa-92bacb0fbcab44fb (Session 1195), pa-e11847db632a4ee8 (Session 1194),
-# pa-a60842917d36 (Session 1184), pa-8f8ef45338ce4a24 (Sessions 1182-83).
+# the --conversation flag below. Current value: Session 1202 Phase A.2
+# thread (pa-123b7d48f01043eb, spun by Rigby mid-Session 1202 after
+# pa-1ccc494ea00b4e77 carried Sessions 1200-1202 §A.1 context — got
+# heavy enough that we wanted a fresh thread for §A.2 diagnostics_tool
+# work). Titled "Session 1202 — Phase A.2 (diagnostics_tool 7 actions)".
+# Prior pins retired: pa-1ccc494ea00b4e77 (Sessions 1200-1202 §A.1),
+# pa-ea12236c83eb4826 (Sessions 1196-1199), pa-92bacb0fbcab44fb (Session
+# 1195), pa-e11847db632a4ee8 (Session 1194), pa-a60842917d36 (Session
+# 1184), pa-8f8ef45338ce4a24 (Sessions 1182-83).
 #
 # IF YOU MANUALLY RESTART A CELERY WORKER (not via `make celery`):
 # pass PA_USE_FUNCTION_CALLING=true in the env. Without it, the PA
@@ -33,4 +36,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-1ccc494ea00b4e77
+python tools/pa_chat.py "$@" --tools --conversation pa-123b7d48f01043eb

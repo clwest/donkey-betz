@@ -5358,3 +5358,338 @@ class OpsHandlersMixin:
     # Session 1031: Dream Tool — browse, approve, dismiss dreams via PA
     # =========================================================================
 
+    # =========================================================================
+    # Session 1202 — Phase A.2: Diagnostic Telemetry Tools
+    # =========================================================================
+    # Surfaces audit/inventory data Rigby needs to grade subsystem health
+    # without ORM bypass. Per CONNECTIVITY_COMPLETION_ROADMAP.md §A.2.
+    # PR-1 ships the 4 simple actions (advisor_invocations, provider_calls,
+    # beat_schedule_health, workspace_metrics); PR-2 will add the 3 medium-
+    # complex actions (schema_handler_diff, learning_bridge_writes,
+    # discord_health). Read-only — no new DB tables, no mutations.
+
+    _DIAGNOSTICS_WINDOW_DAYS = {
+        '1d': 1, '7d': 7, '14d': 14, '30d': 30, '90d': 90,
+    }
+
+    def _diagnostics_resolve_window(self, payload: Dict[str, Any], default_days: int = 7) -> int:
+        """Translate a `window` string ("7d", "30d", ...) into days; falls
+        back to ``default_days`` for unknown values."""
+        window = (payload.get('window') or f'{default_days}d').strip()
+        return self._DIAGNOSTICS_WINDOW_DAYS.get(window, default_days)
+
+    def _handle_diagnostics(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Session 1202 §A.2 — Diagnostic telemetry surface.
+
+        Returns structured JSON per action. Each branch is read-only and
+        bounded; no new DB tables, no mutations, no agent dispatches.
+        """
+        action = payload.get('action', '')
+
+        if action == 'advisor_invocations':
+            return self._diagnostics_advisor_invocations(payload, trace_id)
+        elif action == 'provider_calls':
+            return self._diagnostics_provider_calls(payload, trace_id)
+        elif action == 'beat_schedule_health':
+            return self._diagnostics_beat_schedule_health(payload, trace_id)
+        elif action == 'workspace_metrics':
+            return self._diagnostics_workspace_metrics(payload, trace_id)
+
+        # PR-2 (Session 1202 follow-up): schema_handler_diff,
+        # learning_bridge_writes, discord_health. Return a clear
+        # placeholder so callers don't get a vague Unknown error.
+        if action in ('schema_handler_diff', 'learning_bridge_writes', 'discord_health'):
+            return {
+                'gateway': 'diagnostics_tool',
+                'action': action,
+                'error': (
+                    f"'{action}' is scoped in CONNECTIVITY_COMPLETION_ROADMAP.md §A.2 "
+                    f"but not yet implemented; landing in PR-2 of the §A.2 split."
+                ),
+                'pending_pr': 'session-1202-diagnostics-tool-pr2',
+            }
+
+        valid_actions = sorted([
+            'advisor_invocations', 'provider_calls', 'beat_schedule_health',
+            'workspace_metrics', 'schema_handler_diff', 'learning_bridge_writes',
+            'discord_health',
+        ])
+        return {
+            'gateway': 'diagnostics_tool',
+            'error': f"Unknown diagnostics_tool action: '{action}'. Valid: {', '.join(valid_actions)}",
+        }
+
+    def _diagnostics_advisor_invocations(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Per-advisor invocation count over the requested window.
+
+        Source: ``AgentExecution`` rows where ``agent.name`` matches an
+        ``Advisor.name`` row. Both active and inactive advisors are
+        listed; advisors with zero invocations surface as 0 (the value
+        of this audit is finding *dead* advisors, not just busy ones).
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Q
+
+        from core.models_unified_system import Advisor, AgentExecution
+
+        days = self._diagnostics_resolve_window(payload, default_days=7)
+        since = timezone.now() - timedelta(days=days)
+
+        advisor_rows = list(
+            Advisor.objects.all().values('id', 'name', 'category', 'is_active', 'last_consultation')
+        )
+        advisor_names = [a['name'] for a in advisor_rows]
+
+        # One aggregate query: count invocations per agent.name in the window
+        invocation_counts = dict(
+            AgentExecution.objects
+            .filter(agent__name__in=advisor_names, created_at__gte=since)
+            .values('agent__name')
+            .annotate(c=Count('id'))
+            .values_list('agent__name', 'c')
+        )
+
+        advisors_out = []
+        zero_invocation = 0
+        for a in advisor_rows:
+            count = int(invocation_counts.get(a['name'], 0))
+            if count == 0:
+                zero_invocation += 1
+            advisors_out.append({
+                'id': str(a['id']),
+                'name': a['name'],
+                'category': a['category'],
+                'is_active': a['is_active'],
+                'last_consultation': a['last_consultation'].isoformat() if a['last_consultation'] else None,
+                'invocations_in_window': count,
+            })
+
+        # Sort by invocation count desc, then by name for deterministic output
+        advisors_out.sort(key=lambda r: (-r['invocations_in_window'], r['name']))
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'advisor_invocations',
+            'window_days': days,
+            'since': since.isoformat(),
+            'total_advisors': len(advisors_out),
+            'zero_invocation_advisors': zero_invocation,
+            'total_invocations_in_window': sum(r['invocations_in_window'] for r in advisors_out),
+            'advisors': advisors_out,
+        }
+
+    def _diagnostics_provider_calls(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Per-LLM-provider call count + success/cost rollup over the
+        requested window.
+
+        Source: ``LLMCallLog``. Reports every distinct provider seen in
+        the window, plus zero rows for providers registered but unused
+        (so 'dead' providers are visible).
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Sum, Q
+
+        from core.models_llm_routing import LLMCallLog
+
+        days = self._diagnostics_resolve_window(payload, default_days=7)
+        since = timezone.now() - timedelta(days=days)
+
+        rows = list(
+            LLMCallLog.objects
+            .filter(created_at__gte=since)
+            .values('provider')
+            .annotate(
+                total_calls=Count('id'),
+                successful_calls=Count('id', filter=Q(success=True)),
+                total_cost=Sum('cost'),
+                total_tokens=Sum('total_tokens'),
+            )
+            .order_by('-total_calls')
+        )
+
+        providers_out = []
+        for r in rows:
+            total = int(r['total_calls'] or 0)
+            ok = int(r['successful_calls'] or 0)
+            providers_out.append({
+                'provider': r['provider'],
+                'total_calls': total,
+                'successful_calls': ok,
+                'failure_calls': total - ok,
+                'success_rate_pct': round(100.0 * ok / total, 1) if total else None,
+                'total_tokens': int(r['total_tokens'] or 0),
+                'total_cost_usd': float(r['total_cost'] or 0.0),
+            })
+
+        # Flag zero-call providers from the LLMProviderRegistry (if accessible)
+        zero_call_providers = []
+        try:
+            from core.services.llm_provider_registry import LLMProviderRegistry
+            registered = set(LLMProviderRegistry.list_provider_names())
+            seen = {r['provider'] for r in providers_out}
+            zero_call_providers = sorted(registered - seen)
+        except Exception:  # noqa: BLE001 — best-effort enrichment
+            pass
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'provider_calls',
+            'window_days': days,
+            'since': since.isoformat(),
+            'total_providers_called': len(providers_out),
+            'zero_call_providers': zero_call_providers,
+            'providers': providers_out,
+        }
+
+    def _diagnostics_beat_schedule_health(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Beat schedule health snapshot.
+
+        Source: ``django_celery_beat.PeriodicTask``. Sorted by
+        ``last_run_at`` ascending so the staleest tasks surface first.
+        Flags rows with zero historical runs (``total_run_count == 0``)
+        separately — these have been registered but never fired.
+
+        Pagination via ``offset`` + ``limit`` (default 50, max 200).
+        Per-row payload stays small (8 fields); the count budget is the
+        intent.
+        """
+        from django_celery_beat.models import PeriodicTask
+
+        limit = min(int(payload.get('limit', 50) or 50), 200)
+        offset = max(int(payload.get('offset', 0) or 0), 0)
+        include_disabled = bool(payload.get('include_disabled', True))
+
+        qs = PeriodicTask.objects.all()
+        if not include_disabled:
+            qs = qs.filter(enabled=True)
+
+        total_count = qs.count()
+        enabled_count = qs.filter(enabled=True).count()
+        disabled_count = qs.filter(enabled=False).count()
+        zero_run_count = qs.filter(total_run_count=0).count()
+        zero_run_enabled = qs.filter(total_run_count=0, enabled=True).count()
+
+        # Stalest first (NULLs last via -last_run_at desc gives NULLs first;
+        # we want NULL last_run_at to be VERY stale, so order ASC and treat
+        # NULLs as oldest via .order_by('last_run_at') — Postgres puts NULLs
+        # last on ASC by default, so push them first with F+nulls_first.
+        from django.db.models import F
+        qs = qs.order_by(F('last_run_at').asc(nulls_first=True), 'name')
+
+        rows = list(
+            qs[offset:offset + limit].values(
+                'id', 'name', 'task', 'enabled', 'last_run_at',
+                'total_run_count', 'date_changed', 'one_off',
+            )
+        )
+
+        tasks_out = []
+        for r in rows:
+            tasks_out.append({
+                'id': r['id'],
+                'name': r['name'],
+                'task': r['task'],
+                'enabled': r['enabled'],
+                'last_run_at': r['last_run_at'].isoformat() if r['last_run_at'] else None,
+                'total_run_count': r['total_run_count'],
+                'date_changed': r['date_changed'].isoformat() if r['date_changed'] else None,
+                'one_off': r['one_off'],
+                'is_stale': r['last_run_at'] is None,
+                'never_ran': r['total_run_count'] == 0,
+            })
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'beat_schedule_health',
+            'total_count': total_count,
+            'enabled_count': enabled_count,
+            'disabled_count': disabled_count,
+            'zero_run_count': zero_run_count,
+            'zero_run_enabled_count': zero_run_enabled,
+            'limit': limit,
+            'offset': offset,
+            'returned': len(tasks_out),
+            'has_more': (offset + len(tasks_out)) < total_count,
+            'tasks': tasks_out,
+        }
+
+    def _diagnostics_workspace_metrics(
+        self, payload: Dict[str, Any], trace_id: str,
+    ) -> Dict[str, Any]:
+        """Per-workspace activity + deliverable count snapshot.
+
+        Source: ``ProjectWorkspace`` joined to its deliverables. Fields:
+        ``is_active``, ``allow_autonomous_writes``, ``last_operation_at``
+        (closest field to the spec's ``last_activity``), and an
+        annotated ``deliverable_count``. Pagination via ``offset`` +
+        ``limit``; ``include_inactive`` defaults to True.
+        """
+        from django.db.models import Count
+
+        from core.models_skin_layer import ProjectWorkspace
+
+        limit = min(int(payload.get('limit', 50) or 50), 200)
+        offset = max(int(payload.get('offset', 0) or 0), 0)
+        include_inactive = bool(payload.get('include_inactive', True))
+
+        qs = ProjectWorkspace.objects.all()
+        if not include_inactive:
+            qs = qs.filter(is_active=True)
+
+        qs = qs.annotate(deliverable_count=Count('deliverables', distinct=True))
+        total_count = qs.count()
+        active_count = qs.filter(is_active=True).count()
+        autonomous_count = qs.filter(allow_autonomous_writes=True).count()
+
+        rows = list(
+            qs.order_by('-last_operation_at', 'name')[offset:offset + limit].values(
+                'id', 'name', 'workspace_type', 'is_active',
+                'allow_autonomous_writes', 'last_operation_at',
+                'total_operations', 'total_files_written', 'total_commits',
+                'deliverable_count', 'created_at',
+            )
+        )
+
+        workspaces_out = []
+        for r in rows:
+            workspaces_out.append({
+                'id': str(r['id']),
+                'name': r['name'],
+                'workspace_type': r['workspace_type'],
+                'is_active': r['is_active'],
+                'allow_autonomous_writes': r['allow_autonomous_writes'],
+                'last_operation_at': r['last_operation_at'].isoformat() if r['last_operation_at'] else None,
+                'total_operations': r['total_operations'],
+                'total_files_written': r['total_files_written'],
+                'total_commits': r['total_commits'],
+                'deliverable_count': r['deliverable_count'],
+                'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+            })
+
+        return {
+            'gateway': 'diagnostics_tool',
+            'action': 'workspace_metrics',
+            'total_count': total_count,
+            'active_count': active_count,
+            'autonomous_count': autonomous_count,
+            'limit': limit,
+            'offset': offset,
+            'returned': len(workspaces_out),
+            'has_more': (offset + len(workspaces_out)) < total_count,
+            'workspaces': workspaces_out,
+        }
+
