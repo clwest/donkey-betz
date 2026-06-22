@@ -469,6 +469,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Session 1078: Ops tool — version, SLO status, failure signatures
         self.register("ops_tool", self._handle_ops)
+        # Session 1202 §A.2 — Diagnostic telemetry surface (read-only)
+        self.register("diagnostics_tool", self._handle_diagnostics)
 
         # Session 1080: Agent control tool — block/unblock/list agents (DB-backed)
         self.register("agent_control_tool", self._handle_agent_control)
