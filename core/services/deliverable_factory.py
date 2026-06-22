@@ -71,6 +71,48 @@ class DeliverableGatedError(Exception):
         )
 
 
+class DeliverableProvenanceMissingError(Exception):
+    """Raised when ``create_deliverable`` is called for a non-PA-direct
+    agent without ``parent_execution_id``.
+
+    Session 1199 PR-D contract flip — replaces the Session 1184 PR-B
+    soft WARN path with a hard exception. PA-direct contexts (e.g.,
+    ``deliverable_tool.create`` from the chat UI) still synthesize an
+    AgentExecution receipt and DO NOT raise. Non-PA agent-dispatch
+    paths MUST pass ``parent_execution_id`` — that's the no-orphan
+    provenance contract.
+
+    24h WARN-volume watch (deliverable ``9d9db48a-…``) showed zero
+    violations on local for the 24h window after PR #2376 merged, so
+    the flip is safe.
+
+    Attributes:
+        agent_name: Agent that tried to create without provenance.
+        title: Deliverable title (truncated to 120 chars).
+        trigger_source: ``metadata['trigger_source']`` if known.
+        caller: Caller fingerprint from ``_resolve_caller_fingerprint``.
+    """
+
+    def __init__(
+        self,
+        agent_name: str = '',
+        title: str = '',
+        trigger_source: str = 'unknown',
+        caller: str = 'unknown',
+    ):
+        self.agent_name = agent_name or ''
+        self.title = (title or '')[:120]
+        self.trigger_source = trigger_source or 'unknown'
+        self.caller = caller or 'unknown'
+        super().__init__(
+            f"Deliverable provenance missing for non-PA agent "
+            f"(agent={self.agent_name!r}, trigger_source={self.trigger_source!r}, "
+            f"caller={self.caller!r}, title={self.title!r}). "
+            f"Caller MUST pass parent_execution_id. Session 1199 PR-D "
+            f"contract — was a logger.warning() through Session 1198."
+        )
+
+
 def _content_hash(title: str, content: str, agent_name: str) -> str:
     """
     Generate a deterministic hash from deliverable content for dedup.
@@ -643,17 +685,26 @@ def create_deliverable(
                 parent_object_type = parent_object_type or 'agent_execution'
                 metadata['origin_execution_synthesized'] = True
         else:
-            # Session 1184 PR-B: include caller fingerprint so PR-B sweep
-            # triage is fast and not guessy. The factory itself + base_agent
-            # are skipped — we want the FUNCTION that decided to write a
-            # deliverable, not the helper plumbing.
-            logger.warning(
-                "[DeliverableFactory] No parent_execution_id for agent=%s "
-                "trigger_source=%s caller=%s — deliverable will have no "
-                "provenance link. Caller should pass parent_execution_id "
-                "(title=%r).",
-                agent_name, metadata.get('trigger_source', 'unknown'),
-                _resolve_caller_fingerprint(), title[:60],
+            # Session 1199 PR-D contract flip — replaces the Session 1184
+            # PR-B soft WARN with a hard exception. PA-direct contexts
+            # synthesize a receipt above and never hit this branch. Any
+            # non-PA agent-dispatch path that reaches here failed to pass
+            # parent_execution_id, violating the no-orphan provenance
+            # contract.
+            #
+            # 24h WARN-volume gate (deliverable 9d9db48a) elapsed
+            # 2026-06-22; local grep across all celery logs returned zero
+            # WARN lines for "No parent_execution_id for agent=", so the
+            # flip is safe. If this raises in production, the caller's
+            # entry point needs to plumb parent_execution_id through —
+            # the previous WARN-log shape would have surfaced the same
+            # caller but the create was succeeding silently with no
+            # provenance link.
+            raise DeliverableProvenanceMissingError(
+                agent_name=agent_name,
+                title=title,
+                trigger_source=metadata.get('trigger_source', 'unknown'),
+                caller=_resolve_caller_fingerprint(),
             )
 
     # --- Session 1088: BLOCKED content detection ---

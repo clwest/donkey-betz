@@ -137,16 +137,68 @@ class DeliverableProvenanceTests(TestCase):
         self.assertEqual(tool_names, {'search_web', 'summarize'})
 
     # AC5 — non-PA caller without execution gets soft-enforce WARN, not crash
-    def test_autonomous_agent_without_execution_is_marked_legacy(self):
-        d = create_deliverable(
-            title='Scheduled Agent Output Missing Execution',
-            content='## Data\n' + ('Beat-task style output. ' * 30),
-            agent_name='SchedulerlessAgent',
-            user=self.user,
-            workspace_id=str(self.workspace.id),
-            # No parent_execution_id, no PA trigger_source — soft-enforce path
+    def test_autonomous_agent_without_execution_raises_provenance_missing(self):
+        """Session 1199 PR-D contract flip — autonomous agents that omit
+        parent_execution_id MUST raise DeliverableProvenanceMissingError.
+
+        Was: legacy_no_provenance=True soft-enforce WARN path
+             (Session 1184 PR-B / kept through Session 1198).
+        Now: hard exception once the 24h WARN-volume gate elapsed clean
+             (deliverable 9d9db48a closed Session 1199).
+        """
+        from core.services.deliverable_factory import (
+            DeliverableProvenanceMissingError,
         )
-        self.assertIsNotNone(d, 'Soft-enforce must not block creation')
+        with self.assertRaises(DeliverableProvenanceMissingError) as cm:
+            create_deliverable(
+                title='Scheduled Agent Output Missing Execution',
+                content='## Data\n' + ('Beat-task style output. ' * 30),
+                agent_name='SchedulerlessAgent',
+                user=self.user,
+                workspace_id=str(self.workspace.id),
+                # No parent_execution_id, no PA trigger_source — Session 1199 PR-D
+                # raises instead of WARN+creating.
+            )
+        exc = cm.exception
+        self.assertEqual(exc.agent_name, 'SchedulerlessAgent')
+        self.assertIn('Scheduled Agent Output Missing Execution', exc.title)
+        self.assertNotEqual(exc.caller, 'unknown')
+
+    def test_legacy_orphans_in_db_still_surface_legacy_flag_on_read(self):
+        """Even after Session 1199 PR-D flip, old deliverables that
+        landed via the pre-flip WARN path (currently zero locally, but
+        could exist in production history) must still surface
+        legacy_no_provenance=True on the read side."""
+        # Direct ORM insert bypasses factory + its hard-exception path.
+        d = Deliverable.objects.create(
+            title='Pre-flip Orphan Deliverable',
+            content='Hypothetical pre-Session-1199 orphan.',
+            agent_name='LegacyAgent',
+            workspace_id=str(self.workspace.id),
+            # No parent_object_id, no parent_object_type
+        )
         block = build_provenance_block(d)
         self.assertTrue(block['legacy_no_provenance'])
         self.assertIsNone(block['origin_execution_id'])
+
+    def test_pa_direct_path_still_synthesizes_does_not_raise(self):
+        """Session 1199 PR-D flip preserves PA-direct synthesis path.
+        PA tool calls that don't supply parent_execution_id MUST still
+        get a synthesized AgentExecution receipt — the hard exception
+        only fires for non-PA agent-dispatch paths."""
+        d = create_deliverable(
+            title='PA Direct Create — Synthesis Path',
+            content='## Note\n' + ('PA-direct content. ' * 30),
+            agent_name=PA_IDENTITY,
+            user=self.user,
+            workspace_id=str(self.workspace.id),
+            metadata={'trigger_source': 'deliverable_tool.create'},
+            # No parent_execution_id, but PA-direct context → synthesize
+        )
+        self.assertIsNotNone(d, 'PA-direct path must NOT raise')
+        block = build_provenance_block(d)
+        self.assertFalse(
+            block['legacy_no_provenance'],
+            'Synthesis must produce a real origin_execution_id',
+        )
+        self.assertIsNotNone(block['origin_execution_id'])
