@@ -2317,6 +2317,78 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 1202 §A.2: Diagnostics Tool — per-subsystem audit telemetry ─
+    {
+        "type": "function",
+        "name": "diagnostics_tool",
+        "description": (
+            "Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2). "
+            "Distinct from ops_tool (which is SRE/SLO-focused on production reliability): "
+            "diagnostics_tool surfaces per-component invocation counts and inventory state "
+            "so Rigby can grade whether registered components are actually being used "
+            "(advisors, LLM providers, beat schedules, workspaces). Read-only — no mutations."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "advisor_invocations", "provider_calls",
+                        "beat_schedule_health", "workspace_metrics",
+                        "schema_handler_diff", "learning_bridge_writes",
+                        "discord_health",
+                    ],
+                    "description": (
+                        "advisor_invocations: per-advisor N-day invocation count from "
+                        "AgentExecution log. Surfaces zero-invocation advisors so dead "
+                        "personas are visible. Window via `window` (1d/7d/14d/30d/90d, default 7d). "
+                        "provider_calls: per-LLM-provider call count + success/cost rollup "
+                        "over the requested window. Flags registered providers that saw "
+                        "zero calls. Source: LLMCallLog. "
+                        "beat_schedule_health: PeriodicTask sorted by last_run_at ASC "
+                        "(stalest first, NULLs first). Reports zero-run + zero-run-enabled "
+                        "counts. Pagination via offset/limit. "
+                        "workspace_metrics: per-ProjectWorkspace last_operation_at + "
+                        "deliverable_count + is_active + allow_autonomous_writes. "
+                        "Pagination via offset/limit. "
+                        "schema_handler_diff: [PR-2 placeholder — not yet implemented]. "
+                        "Programmatic schema-vs-handler gap detection. "
+                        "learning_bridge_writes: [PR-2 placeholder — not yet implemented]. "
+                        "Per-bridge 30d write counts. "
+                        "discord_health: [PR-2 placeholder — not yet implemented]. "
+                        "Bot uptime + 7d invocation counts + error rate."
+                    ),
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["1d", "7d", "14d", "30d", "90d"],
+                    "description": (
+                        "Time window for advisor_invocations and provider_calls. "
+                        "Default 7d. Ignored by other actions."
+                    ),
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max rows returned (beat_schedule_health, workspace_metrics). Default 50, max 200.",
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Pagination offset (beat_schedule_health, workspace_metrics). Default 0.",
+                },
+                "include_disabled": {
+                    "type": "boolean",
+                    "description": "For beat_schedule_health: include disabled PeriodicTask rows (default true).",
+                },
+                "include_inactive": {
+                    "type": "boolean",
+                    "description": "For workspace_metrics: include inactive workspaces (default true).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1078: Ops Tool — version, SLO status, failure signatures ──────
     {
         "type": "function",
