@@ -1276,12 +1276,13 @@ class SpiderCommands(commands.Cog):
 
             @sync_to_async
             def run_arb_scan(sport_filter, min_pct):
+                # Session 1206: .run() writes AgentExecution telemetry row (Layer 1 audit)
                 detector = ArbitrageDetector()
                 context = {'min_profit_pct': min_pct}
                 if sport_filter:
                     context['sport'] = sport_filter.lower()
 
-                result = detector.execute(
+                result = detector.run(
                     task=f"Scan for arbitrage opportunities{' in ' + sport_filter.upper() if sport_filter else ''}",
                     context=context
                 )

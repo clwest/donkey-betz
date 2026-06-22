@@ -1083,6 +1083,114 @@ Use delegation when you need expertise outside your specialty. For example:
 - Need market analysis? Delegate to StockAnalystAgent
 """
 
+    # ==================== Canonical Entry (Session 1206) ====================
+
+    def run(
+        self,
+        task: str,
+        context: Optional[Dict[str, Any]] = None,
+        scifi_context: Optional[Dict[str, Any]] = None,
+        spider_context: Optional[Dict[str, Any]] = None,
+    ) -> 'AgentResult':
+        """
+        Canonical agent entry that writes an AgentExecution telemetry row.
+
+        Direct-constructor callers (beat tasks, Discord cogs, REST views)
+        should invoke .run() instead of .execute() so the Layer 1 audit
+        dashboard sees their work. Wrappers that already manage their
+        own AgentExecution row (router, AgentExecutionTracker,
+        SyncAgentExecutor) must set context['_execution_record_id']
+        before calling — .run() detects the guard and skips the write.
+
+        Idempotency: a populated context['_execution_record_id'] short-
+        circuits the row creation, so adopting .run() inside a tracker
+        context does not double-write.
+
+        Failure mode: telemetry write errors (missing Agent row, DB
+        hiccup) log a warning and fall through to execute(). Telemetry
+        never blocks agent work.
+
+        Closes audit finding 65f1299f-… (Session 1205 Tiered Capability
+        Audit, Layer 1 telemetry blind spot).
+        """
+        from django.utils import timezone
+        from core.models_unified_system import Agent, AgentExecution
+
+        ctx = dict(context) if context else {}
+        scifi = scifi_context if scifi_context is not None else {}
+        spider = spider_context if spider_context is not None else {}
+
+        if ctx.get('_execution_record_id'):
+            return self.execute(task, ctx, scifi, spider)
+
+        record = None
+        start_ts = time.time()
+        try:
+            agent_row = Agent.objects.filter(name=self.name).first()
+            if agent_row is not None:
+                record = AgentExecution.objects.create(
+                    agent=agent_row,
+                    user=self.user,
+                    task=task,
+                    status='in_progress',
+                    input_data={
+                        'context_keys': sorted(ctx.keys()),
+                        'source': 'BaseAgent.run',
+                    },
+                    output_data={},
+                )
+                ctx['_execution_record_id'] = str(record.id)
+            else:
+                logger.warning(
+                    "BaseAgent.run: no Agent DB row for name=%s — telemetry skipped",
+                    self.name,
+                )
+        except Exception as exc:
+            logger.warning(
+                "BaseAgent.run: failed to create AgentExecution row for %s: %s",
+                self.name, exc,
+            )
+
+        try:
+            result = self.execute(task, ctx, scifi, spider)
+        except Exception as exc:
+            if record is not None:
+                try:
+                    record.status = 'failed'
+                    record.error_message = str(exc)
+                    record.completed_at = timezone.now()
+                    record.execution_time_ms = int((time.time() - start_ts) * 1000)
+                    record.save(update_fields=[
+                        'status', 'error_message', 'completed_at', 'execution_time_ms',
+                    ])
+                except Exception:
+                    logger.exception(
+                        "BaseAgent.run: failed to persist failure telemetry for %s",
+                        self.name,
+                    )
+            raise
+
+        if record is not None:
+            try:
+                success = bool(getattr(result, 'success', True))
+                record.status = 'completed' if success else 'failed'
+                record.completed_at = timezone.now()
+                record.execution_time_ms = int((time.time() - start_ts) * 1000)
+                update_fields = ['status', 'completed_at', 'execution_time_ms']
+                if not success:
+                    err = getattr(result, 'error', None) or getattr(result, 'message', None)
+                    if err:
+                        record.error_message = str(err)
+                        update_fields.append('error_message')
+                record.save(update_fields=update_fields)
+            except Exception:
+                logger.exception(
+                    "BaseAgent.run: failed to persist completion telemetry for %s",
+                    self.name,
+                )
+
+        return result
+
     # ==================== Abstract Methods ====================
 
     @abstractmethod
