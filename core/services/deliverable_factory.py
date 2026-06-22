@@ -680,6 +680,49 @@ def create_deliverable(
         base_slug = slugify(title[:100]) if title else 'untitled'
         extra_fields['slug'] = f"{base_slug}-{_uuid.uuid4().hex[:8]}"
 
+    # --- Session 1198 — §6.2 Phase 2 inference cascade ---
+    # When the caller omitted ``initiative_id``, try to deduce it from
+    # the agent's affinity map BEFORE the orphan-detection path runs.
+    # See ``core/services/initiative_inference.py`` for the full
+    # cascade. The function is pure + read-only, so it's safe to call
+    # in the hot path.
+    #
+    # Trace emission: every inference attempt (matched or unmatched)
+    # writes a structured [INFERENCE-MATCH] log line at INFO so we can
+    # monitor inference accuracy independently of the deliverable
+    # record itself. The trace is NOT stored on the Deliverable —
+    # diagnostic_payload (Plan C scope) is for orphan diagnostics, not
+    # inference observability. Keep the channels separate.
+    if not initiative_id and workspace_id:
+        try:
+            from core.services.initiative_inference import infer_initiative_id
+            inferred_id, inference_trace = infer_initiative_id(
+                payload={
+                    'workspace_id': workspace_id,
+                    'initiative_id': initiative_id,
+                },
+                owner_agent=agent_name,
+            )
+            if inferred_id:
+                initiative_id = inferred_id
+                logger.info(
+                    "[INFERENCE-MATCH] agent=%s workspace=%s initiative=%s step=%s confidence=%s reason=%s",
+                    agent_name, workspace_id, inferred_id,
+                    inference_trace.get('step'),
+                    inference_trace.get('confidence'),
+                    inference_trace.get('reason'),
+                )
+        except Exception as _inf_exc:
+            # Defensive: inference is best-effort. Never block a
+            # deliverable write because the affinity table query
+            # failed or the inference module raised. Fall through
+            # to orphan-detection / diagnostic path.
+            logger.exception(
+                "[DeliverableFactory] Initiative inference failed (%s) — "
+                "falling through to orphan detection.",
+                _inf_exc,
+            )
+
     # Build creation kwargs
     kwargs = {
         'title': title[:500],  # Enforce max length
