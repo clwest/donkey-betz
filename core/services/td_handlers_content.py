@@ -2147,6 +2147,182 @@ class ContentHandlersMixin:
                 'auto_cancelled_action_items': cancelled_items,
             }
 
+        # Session 1202 — Connectivity Roadmap §A.1
+        # Field patcher for Initiative rows. Surfaces the three fields
+        # the operator (Rigby) needed to ORM-bypass during Session 1201:
+        # ``target_workspace_id`` (67% NULL across runtime — main pain),
+        # ``description`` (basic editing), ``kind`` (semantic classification
+        # per §6.4). Idempotent: a no-op write returns ``updated_fields=[]``.
+        # Distinct from ``update_status`` because ``status`` is governed by
+        # the lifecycle state machine + has auto-cancel side effects.
+        elif action == 'update':
+            initiative_id = payload.get('id') or payload.get('initiative_id')
+            if not initiative_id:
+                raise ValueError("'id' is required for update action")
+
+            initiative = Initiative.objects.filter(id=initiative_id).first()
+            if not initiative:
+                raise ValueError(f"Initiative {initiative_id} not found")
+
+            updated_fields: list[str] = []
+            changes: Dict[str, Any] = {}
+
+            # target_workspace_id — bind/unbind ProjectWorkspace FK
+            if 'target_workspace_id' in payload:
+                from core.models_skin_layer import ProjectWorkspace
+                new_ws_id = payload.get('target_workspace_id')
+                old_ws_id = str(initiative.target_workspace_id) if initiative.target_workspace_id else None
+                if new_ws_id is None or new_ws_id == '':
+                    if initiative.target_workspace_id is not None:
+                        initiative.target_workspace = None
+                        updated_fields.append('target_workspace')
+                        changes['target_workspace_id'] = {'old': old_ws_id, 'new': None}
+                else:
+                    new_ws_id_str = str(new_ws_id)
+                    if old_ws_id != new_ws_id_str:
+                        ws = ProjectWorkspace.objects.filter(id=new_ws_id_str).first()
+                        if not ws:
+                            raise ValueError(f"ProjectWorkspace {new_ws_id_str} not found")
+                        initiative.target_workspace = ws
+                        updated_fields.append('target_workspace')
+                        changes['target_workspace_id'] = {'old': old_ws_id, 'new': new_ws_id_str}
+
+            # description — free text
+            if 'description' in payload:
+                new_desc = payload.get('description') or ''
+                if new_desc != initiative.description:
+                    changes['description'] = {
+                        'old_length': len(initiative.description or ''),
+                        'new_length': len(new_desc),
+                    }
+                    initiative.description = new_desc
+                    updated_fields.append('description')
+
+            # kind — semantic classification (§6.4)
+            if 'kind' in payload:
+                new_kind = payload.get('kind')
+                valid_kinds = [c[0] for c in Initiative.Kind.choices]
+                if new_kind not in valid_kinds:
+                    raise ValueError(
+                        f"Invalid kind '{new_kind}'. Valid: {', '.join(valid_kinds)}"
+                    )
+                if new_kind != initiative.kind:
+                    changes['kind'] = {'old': initiative.kind, 'new': new_kind}
+                    initiative.kind = new_kind
+                    updated_fields.append('kind')
+
+            if updated_fields:
+                initiative.save(update_fields=updated_fields)
+
+            # Resolve target_workspace_name for response
+            target_workspace_name = None
+            if initiative.target_workspace_id:
+                initiative.refresh_from_db(fields=['target_workspace'])
+                if initiative.target_workspace:
+                    target_workspace_name = initiative.target_workspace.name
+
+            return {
+                'action': 'update',
+                'id': str(initiative.id),
+                'name': initiative.name,
+                'updated_fields': updated_fields,
+                'changes': changes,
+                'target_workspace_id': (
+                    str(initiative.target_workspace_id)
+                    if initiative.target_workspace_id else None
+                ),
+                'target_workspace_name': target_workspace_name,
+                'kind': initiative.kind,
+                'success': True,
+            }
+
+        # Session 1202 — Connectivity Roadmap §A.1
+        # Bidirectional Initiative-to-Initiative linker per
+        # INITIATIVES_FIRST_BACKBONE.md §6.4. Writes both sides of the
+        # relation in a single transaction. Idempotent: re-running with
+        # the same (parent_id, child_id, relation) tuple is a no-op.
+        # Allowed relations: ``spawns`` (parent→child = downstream) or
+        # ``spawned_from`` (parent→child = upstream). Mirror direction
+        # is computed automatically.
+        elif action == 'link':
+            from django.db import transaction as _tx
+
+            parent_id = payload.get('parent_id')
+            child_id = payload.get('child_id')
+            relation = (payload.get('relation') or 'spawns').strip()
+            note = (payload.get('note') or '').strip()
+
+            if not parent_id:
+                raise ValueError("'parent_id' is required for link action")
+            if not child_id:
+                raise ValueError("'child_id' is required for link action")
+            if str(parent_id) == str(child_id):
+                raise ValueError("'parent_id' and 'child_id' must differ")
+
+            VALID_RELATIONS = {'spawns', 'spawned_from'}
+            if relation not in VALID_RELATIONS:
+                raise ValueError(
+                    f"Invalid relation '{relation}'. Valid: {', '.join(sorted(VALID_RELATIONS))}"
+                )
+
+            mirror = 'spawned_from' if relation == 'spawns' else 'spawns'
+
+            with _tx.atomic():
+                parent = Initiative.objects.select_for_update().filter(id=parent_id).first()
+                if not parent:
+                    raise ValueError(f"Initiative {parent_id} (parent) not found")
+                child = Initiative.objects.select_for_update().filter(id=child_id).first()
+                if not child:
+                    raise ValueError(f"Initiative {child_id} (child) not found")
+
+                def _has(links, target_id, rel):
+                    for entry in links or []:
+                        if (
+                            str(entry.get('id', '')) == str(target_id)
+                            and entry.get('relation') == rel
+                        ):
+                            return True
+                    return False
+
+                parent_links = list(parent.related_initiatives or [])
+                child_links = list(child.related_initiatives or [])
+
+                wrote_parent = False
+                wrote_child = False
+
+                if not _has(parent_links, child.id, relation):
+                    entry = {'id': str(child.id), 'relation': relation}
+                    if note:
+                        entry['note'] = note
+                    parent_links.append(entry)
+                    parent.related_initiatives = parent_links
+                    parent.save(update_fields=['related_initiatives'])
+                    wrote_parent = True
+
+                if not _has(child_links, parent.id, mirror):
+                    entry = {'id': str(parent.id), 'relation': mirror}
+                    if note:
+                        entry['note'] = note
+                    child_links.append(entry)
+                    child.related_initiatives = child_links
+                    child.save(update_fields=['related_initiatives'])
+                    wrote_child = True
+
+            return {
+                'action': 'link',
+                'parent_id': str(parent.id),
+                'parent_name': parent.name,
+                'child_id': str(child.id),
+                'child_name': child.name,
+                'relation': relation,
+                'mirror_relation': mirror,
+                'note': note or None,
+                'wrote_parent': wrote_parent,
+                'wrote_child': wrote_child,
+                'idempotent_noop': (not wrote_parent and not wrote_child),
+                'success': True,
+            }
+
         elif action == 'advance':
             initiative_id = payload.get('id') or payload.get('initiative_id')
             if not initiative_id:
@@ -2566,8 +2742,9 @@ class ContentHandlersMixin:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: list, stats, details, "
-                f"action_items, flow_metrics, update_status, advance, start_action_item, "
-                f"complete_action_item, assign_owner, bulk_auto_assign, bulk_cleanup, create"
+                f"action_items, flow_metrics, update_status, update, link, advance, "
+                f"start_action_item, complete_action_item, assign_owner, "
+                f"bulk_auto_assign, bulk_cleanup, create"
             )
 
     # =========================================================================

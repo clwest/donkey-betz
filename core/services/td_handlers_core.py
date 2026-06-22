@@ -2252,6 +2252,9 @@ RESEARCH DATA:
             'initiative_create': ('create', {}),
             'initiative_promote': ('promote', {}),
             'initiative_update_status': ('update_status', {}),
+            # Session 1202 — Connectivity Roadmap §A.1
+            'initiative_update': ('update', {}),
+            'initiative_link': ('link', {}),
             'action_item_list': ('action_items', {}),
             'action_item_start': ('start_action_item', {}),
             'action_item_complete': ('complete_action_item', {}),
