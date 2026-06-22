@@ -751,6 +751,43 @@ def create_deliverable(
     if source_operation_id:
         kwargs['source_operation_id'] = source_operation_id
 
+    # --- Session 1195 — Plan C Phase 1: Initiatives-First no-orphan ---
+    # When this create lands without an Initiative link, or with a
+    # workspace that doesn't match the Initiative's target_workspace,
+    # mark the row diagnostic (label + TTL only — never reject).
+    # PR #3 implements auto-clear on the update path; PR #4 implements
+    # the daily sweep that flips canonical status='archived' once TTL
+    # passes (sweep records reason inside diagnostic_payload — it does
+    # NOT set diagnostic_status='archived', avoiding semantic collision
+    # with the existing lifecycle 'archived' status). Spec:
+    # docs/specs/INITIATIVES_FIRST_BACKBONE.md §3.C / §6.1.
+    diag_eval = _evaluate_initiative_alignment(
+        initiative_id=kwargs.get('initiative_id'),
+        workspace_id=workspace_id,
+    )
+    diag_payload_extras: Optional[dict] = None
+    if diag_eval is not None:
+        diag_code, expected_ws_id = diag_eval
+        ttl_hours = getattr(settings, 'DELIVERABLE_DIAGNOSTIC_TTL_HOURS', 168)
+        diag_now = tz.now()
+        kwargs['diagnostic_status'] = 'diagnostic'
+        kwargs['diagnostic_code'] = diag_code
+        kwargs['diagnostic_marked_at'] = diag_now
+        kwargs['diagnostic_expires_at'] = diag_now + timedelta(hours=ttl_hours)
+        diag_payload_extras = {
+            'initiative_id': str(kwargs.get('initiative_id')) if kwargs.get('initiative_id') else None,
+            'expected_workspace_id': str(expected_ws_id) if expected_ws_id else None,
+            'actual_workspace_id': str(workspace_id) if workspace_id else None,
+            'agent_name': agent_name,
+            'tool': metadata.get('trigger_source', 'deliverable_factory'),
+            'trace_id': trace_id,
+            'caller': _resolve_caller_fingerprint(),
+            'reason': diag_code.replace('_', ' '),
+            'marked_at': diag_now.isoformat(),
+            'ttl_hours': ttl_hours,
+        }
+        kwargs['diagnostic_payload'] = diag_payload_extras
+
     # Content hash for dedup (stored on model for future lookups)
     if content and len(content) > 50:
         kwargs['content_hash'] = _content_hash(title, content, agent_name)
@@ -779,6 +816,38 @@ def create_deliverable(
             f"(workspace={workspace_id or 'none'}, user={getattr(user, 'id', 'none')}, "
             f"initiative={kwargs.get('initiative_id', 'none')})"
         )
+        # Session 1195 — Plan C Phase 1: emit grep-friendly diagnostic
+        # log AFTER the create so we have a real deliverable_id.
+        if kwargs.get('diagnostic_status') == 'diagnostic' and diag_payload_extras is not None:
+            if kwargs['diagnostic_code'] == 'missing_initiative_id':
+                logger.warning(
+                    "[ORPHAN-DELIVERABLE] code=missing_initiative_id "
+                    "deliverable_id=%s agent_name=%s tool=%s caller=%s "
+                    "trace_id=%s workspace_id=%s ttl_hours=%s",
+                    str(deliverable.id),
+                    agent_name,
+                    diag_payload_extras['tool'],
+                    diag_payload_extras['caller'],
+                    diag_payload_extras['trace_id'] or '-',
+                    str(workspace_id) if workspace_id else 'null',
+                    diag_payload_extras['ttl_hours'],
+                )
+            else:  # workspace_mismatch
+                logger.warning(
+                    "[ORPHAN-DELIVERABLE] code=workspace_mismatch "
+                    "deliverable_id=%s agent_name=%s tool=%s caller=%s "
+                    "trace_id=%s initiative_id=%s "
+                    "expected_workspace_id=%s actual_workspace_id=%s ttl_hours=%s",
+                    str(deliverable.id),
+                    agent_name,
+                    diag_payload_extras['tool'],
+                    diag_payload_extras['caller'],
+                    diag_payload_extras['trace_id'] or '-',
+                    diag_payload_extras['initiative_id'] or 'null',
+                    diag_payload_extras['expected_workspace_id'] or 'null',
+                    diag_payload_extras['actual_workspace_id'] or 'null',
+                    diag_payload_extras['ttl_hours'],
+                )
         return deliverable
     except Exception as e:
         logger.error(
@@ -844,6 +913,57 @@ def _get_or_create_unassigned_workspace_id(user) -> Optional[str]:
             "deliverable_factory._get_or_create_unassigned_workspace_id "
             "failed (%s: %s) — returning None and orphans will leak",
             type(_e).__name__, _e,
+        )
+        return None
+
+
+def _evaluate_initiative_alignment(
+    initiative_id: Optional[str],
+    workspace_id: Optional[str],
+) -> Optional[tuple]:
+    """Session 1195 — Plan C Phase 1: Initiative-alignment check.
+
+    Returns:
+        ``None`` if the (initiative, workspace) pair aligns (or
+        alignment cannot be evaluated — e.g., initiative has no
+        target_workspace_id yet; the initiative_create write-path
+        enforcement is a separate side-quest in
+        ``INITIATIVES_FIRST_BACKBONE.md``).
+        ``(diag_code, expected_workspace_id)`` when the pair is
+        misaligned and the deliverable should be marked diagnostic.
+
+    Never raises — alignment-check failure must never block a
+    deliverable write. On unexpected error, logs and returns None
+    so the create path proceeds without a diagnostic mark.
+    """
+    if not initiative_id:
+        return ('missing_initiative_id', None)
+    try:
+        from core.models import Initiative
+        initiative = (
+            Initiative.objects
+            .only('id', 'target_workspace_id')
+            .filter(id=initiative_id)
+            .first()
+        )
+        if initiative is None:
+            return ('missing_initiative_id', None)
+        target_ws = (
+            str(initiative.target_workspace_id)
+            if initiative.target_workspace_id
+            else None
+        )
+        if target_ws is None:
+            return None
+        actual_ws = str(workspace_id) if workspace_id else None
+        if target_ws != actual_ws:
+            return ('workspace_mismatch', target_ws)
+        return None
+    except Exception as _e:
+        logger.exception(
+            "[deliverable_factory] _evaluate_initiative_alignment failed "
+            "(%s: %s) — skipping diagnostic mark for initiative_id=%s",
+            type(_e).__name__, _e, initiative_id,
         )
         return None
 
