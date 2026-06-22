@@ -1205,8 +1205,16 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             if canonical_url:
                 seen_urls.add(canonical_url)
 
-            # Extract the best quote or statistic from the snippet
-            evidence = self._extract_best_evidence(snippet)
+            # Session 1205: When search backends (DDGS for narrow queries,
+            # some spider sources) return results with a title but empty
+            # snippet/description/content, fall back to the title as the
+            # evidence text. Without this, `_extract_best_evidence("")`
+            # returns "(no content)" and the agent emits card bodies like
+            # `[E5] FINDING: (no content)` for every empty-snippet hit.
+            # This was the surface symptom of the MLB Stage 1 brief's
+            # `[E1]-[E10] (no content)` cluster (Session 1204 finding).
+            evidence_text = snippet or title
+            evidence = self._extract_best_evidence(evidence_text)
             card_idx += 1
 
             card = f"[E{card_idx}] "
