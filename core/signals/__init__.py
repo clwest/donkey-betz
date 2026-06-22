@@ -48,6 +48,8 @@ from .document_processing_signals import (
 
 from .initiative_diagnostic_signals import (
     mark_initiative_diagnostic_on_create,
+    stash_prior_target_workspace_id,
+    clear_initiative_diagnostic_on_workspace_set,
     connect_initiative_diagnostic_signals,
 )
 
@@ -80,7 +82,9 @@ __all__ = [
     'on_document_created',
     'on_narrative_shift_created',
     'connect_document_processing_signals',
-    # Initiative no-orphan diagnostic signals (Session 1196 PR #2)
+    # Initiative no-orphan diagnostic signals (Session 1196 PR #2 + PR #3)
     'mark_initiative_diagnostic_on_create',
+    'stash_prior_target_workspace_id',
+    'clear_initiative_diagnostic_on_workspace_set',
     'connect_initiative_diagnostic_signals',
 ]
