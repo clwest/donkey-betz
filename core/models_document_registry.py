@@ -493,6 +493,57 @@ class Initiative(models.Model):
     diagnostic_marked_at = models.DateTimeField(null=True, blank=True)
     diagnostic_expires_at = models.DateTimeField(null=True, blank=True)
 
+    # Session 1197 — Initiative `kind` enum (Projects-in-Workspace-layer
+    # design). Semantic classification orthogonal to lifecycle ``status``.
+    # Four values cover the four natural patterns surfaced by the
+    # Session 1193 cluster recon: real 5-stage projects, recurring
+    # artifact streams (daily/weekly outputs), investigation/recon
+    # workstreams, and spec/follow-up backlogs that aren't a project
+    # arc but still need an attribution container. Default = ``project``
+    # (the most common case); the Session 1197 mgmt cmd
+    # ``apply_initiative_kind_classification`` retro-labels existing
+    # rows so default-via-migration doesn't get treated as "we know this
+    # is a project."
+    class Kind(models.TextChoices):
+        PROJECT = 'project', 'Project (5-stage arc, time-bounded)'
+        RECURRING_ARTIFACT = 'recurring_artifact', 'Recurring artifact stream'
+        INVESTIGATION = 'investigation', 'Investigation / recon workstream'
+        SPEC_BACKLOG = 'spec_backlog', 'Spec / follow-up backlog'
+
+    kind = models.CharField(
+        max_length=24,
+        choices=Kind.choices,
+        default=Kind.PROJECT,
+        db_index=True,
+        help_text=(
+            'Session 1197: semantic kind of this Initiative. '
+            'Orthogonal to status (lifecycle). Default is project; '
+            'apply_initiative_kind_classification mgmt cmd retro-labels '
+            'existing rows per the locked classification table.'
+        ),
+    )
+
+    # Session 1197 — Lightweight directional Initiative-to-Initiative
+    # link list. Used for hybrid clusters that split into two rows
+    # (e.g., "Spider Context Utilization Recon" → "Retune & Impl"),
+    # or where one Initiative spawns another. Schema:
+    #   [{"id": "<uuid>", "relation": "spawns"|"spawned_from", "note": "..."}]
+    # We chose a JSON list here instead of a parent/child FK or M2M
+    # because the use cases today are sparse (2 known split pairs) and
+    # don't need rollups, status propagation, or permissions. If a
+    # workflow ever does, promote to a real model. Per Rigby's
+    # Session 1197 design memo: "Defer adding parent/child to the
+    # data model. Use a lightweight link first."
+    related_initiatives = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            'Session 1197: lightweight directional Initiative links. '
+            'List of {"id": "<uuid>", "relation": "spawns"|"spawned_from", '
+            '"note": "..."} entries. No FK — sparse use case.'
+        ),
+    )
+
     class Meta:
         ordering = ['-updated_at']
         verbose_name = 'Initiative'
