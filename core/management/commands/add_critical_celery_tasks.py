@@ -60,11 +60,21 @@ logger = logging.getLogger(__name__)
 LOCAL_DENY_TASKS = frozenset({
     'scan-income-spider-orchestrator',     # 00-START's named trigger
     'scan-spider-opportunities',           # intelligence orchestrator
-    'run-spider-network',                  # full spider network run
     'warm-up-spiders',                     # spider warmup pings externals
     'backfill-spider-embeddings',          # OpenAI embedding spend
     'generate-operator-edge-newsletter',   # LLM newsletter generation
 })
+
+# NOTE: Session 1205 (Capability Audit Layer 3 finding, deliverable `6a200985-…`)
+# removed `'run-spider-network'` from LOCAL_DENY_TASKS. The audit found 78 of 80
+# spiders are wireable but the producer beat task was disabled, so all consumers
+# (`process_core_spider_data`, `aggregate_spider_signals`, `process_spider_actions`,
+# `spider_data_retention`, `cleanup_spider_item_hashes`) were processing stale
+# Jun 20 data over and over with nothing fresh to chew on. Per operator directive
+# from Session 1205 ("if we need to set beat schedules local let's make sure we
+# do that"), the spider network producer fires on local too. Cadence: every 30
+# min from `core/celery.py` beat_schedule. If local cost (spider API hits) becomes
+# a concern, add back here later.
 
 # NOTE: Session 1205 — the sports + market intelligence producer beat tasks
 # (`market-intelligence-scan`, `generate-daily-betting-brief`,
