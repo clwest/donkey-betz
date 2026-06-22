@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-22 13:59
+**Generated:** 2026-06-22 14:48
 **Current Session:** 1204
 **Total Documentation:** 2692 files | 704,168 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,675 |
+| Total cross-references | 4,661 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 192 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 182 | Platform Master Inventory |
 | `docs/INDEX.md` | 125 | INDEX |
-| `docs/archive/sessions/README.md` | 117 | Session Documentation |
+| `docs/archive/old-structure/capabilities/README.md` | 116 | 🚀 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUME |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 67 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -247,10 +247,10 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md | handoffs | 179 | 2026-06-22 13:56 |
+| SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md | handoffs | 179 | 2026-06-22 14:01 |
+| INDEX.md | docs | 391 | 2026-06-22 14:01 |
 | SESSION_1202_ROADMAP_PHASE_A_CLOSE.md | handoffs | 170 | 2026-06-22 13:01 |
 | PLATFORM_INVENTORY.md | docs | 2,123 | 2026-06-22 13:01 |
-| INDEX.md | docs | 391 | 2026-06-22 13:01 |
 | AGENTS.md | docs | 1,683 | 2026-06-22 13:01 |
 | CONNECTIVITY_COMPLETION_ROADMAP.md | specs | 263 | 2026-06-22 10:49 |
 | SESSION_1201_CONNECTIVITY_RECON_16_ROWS.md | handoffs | 114 | 2026-06-22 10:49 |
