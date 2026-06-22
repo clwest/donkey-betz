@@ -1068,16 +1068,28 @@ class AgentRouter:
                 from core.models_skin_layer import ProjectWorkspace
                 # Session 1088: Deterministic workspace fallback.
                 # 1. Prefer the dispatching user's own active workspace
-                # 2. Fall back to System Autonomous Workspace
-                # 3. Last resort: any active workspace owned by a superuser
-                # The old code was .filter(is_active=True).first() with no
-                # ordering or user filter, which randomly picked test user
-                # workspaces like mobile_test-personal.
+                # 2. Session 1203 (Phase B.1 PR-1): DEFAULT_PRODUCER_WORKSPACE_ID
+                # 3. System Autonomous Workspace (legacy fallback)
+                # 4. Last resort: any active workspace owned by a superuser
+                #
+                # Session 1203 prepends the default-producer lookup between
+                # steps 1 and 2 — mirrors Session 1199 PR #2435 fix to
+                # `_ensure_system_workspace`. Closes the Producer Reroute
+                # leak at this callsite (Initiative 05931145-…) for
+                # autonomous traffic that has no active user workspace.
+                # Falls through to legacy on unset / missing / inactive.
                 active_ws = None
                 if self.user:
                     active_ws = ProjectWorkspace.objects.filter(
                         user=self.user, is_active=True
                     ).order_by('-updated_at').first()
+                if not active_ws:
+                    from django.conf import settings as _settings
+                    default_id = getattr(_settings, 'DEFAULT_PRODUCER_WORKSPACE_ID', '') or ''
+                    if default_id:
+                        active_ws = ProjectWorkspace.objects.filter(
+                            id=default_id, is_active=True,
+                        ).first()
                 if not active_ws:
                     active_ws = ProjectWorkspace.objects.filter(
                         name='System Autonomous Workspace', is_active=True
