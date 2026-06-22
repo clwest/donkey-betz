@@ -499,11 +499,15 @@ class Initiative(models.Model):
     # Session 1193 cluster recon: real 5-stage projects, recurring
     # artifact streams (daily/weekly outputs), investigation/recon
     # workstreams, and spec/follow-up backlogs that aren't a project
-    # arc but still need an attribution container. Default = ``project``
-    # (the most common case); the Session 1197 mgmt cmd
-    # ``apply_initiative_kind_classification`` retro-labels existing
-    # rows so default-via-migration doesn't get treated as "we know this
-    # is a project."
+    # arc but still need an attribution container.
+    #
+    # Default = ``project`` is a **safe placeholder, not a semantic
+    # assertion**. We expect classification to be applied immediately
+    # via ``apply_initiative_kind_classification`` (or by the create
+    # caller for new rows). The ``report_initiative_kinds`` cmd
+    # surfaces "default-only" project rows (project + not named in
+    # the apply SPEC) so silent "everything is project" rot stays
+    # visible.
     class Kind(models.TextChoices):
         PROJECT = 'project', 'Project (5-stage arc, time-bounded)'
         RECURRING_ARTIFACT = 'recurring_artifact', 'Recurring artifact stream'

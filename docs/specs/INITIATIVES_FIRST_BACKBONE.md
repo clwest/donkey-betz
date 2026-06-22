@@ -199,9 +199,9 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 [{"id": "<uuid>", "relation": "spawns" | "spawned_from", "note": "..."}]
 ```
 
-- `spawns` — points DOWNSTREAM (what this Initiative led to / produced)
-- `spawned_from` — points UPSTREAM (what produced this Initiative)
-- Always written **bidirectionally** when wired by mgmt cmds (the apply cmd does this in a second pass).
+- **Allowed `relation` values:** `spawns` (points DOWNSTREAM — what this Initiative led to / produced) or `spawned_from` (points UPSTREAM — what produced this Initiative). No other values.
+- **Bidirectional rule:** split-pair links must exist on both sides. If `A.related_initiatives` contains `{id: B, relation: "spawns"}`, then `B.related_initiatives` must contain `{id: A, relation: "spawned_from"}`. The apply cmd does this in a second pass.
+- **Idempotency rule:** writers MUST skip a link entry if the same `(id, relation)` pair already exists. The apply cmd checks via `(id, relation)` equality before appending. Re-running the apply cmd is a no-op.
 - Use sparingly — the schema isn't a tree; it's a list of named relations. If a workflow needs rollups/status-propagation/permissions, promote to a real model.
 
 **Hybrid cluster pattern:** Use a split-pair when one workstream produces a finish-line artifact AND an ongoing stream. The upstream row is `kind=project` or `kind=investigation` (status walks to COMPLETED); the downstream row is `kind=recurring_artifact` (status=ACTIVE indefinitely). Linked via the directional pair above. Two known cases at Session 1197 close:
@@ -213,7 +213,7 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 - Schema: `core/migrations/0362_session_1197_initiative_kind.py`
 - Classifier: `apply_initiative_kind_classification` mgmt cmd (idempotent, --dry-run / --apply)
 - Backfill safety: `report_initiative_kinds` mgmt cmd (cross-tab + heuristic flags)
-- Default: new Initiative rows land at `kind=project`. Other kinds must be set explicitly (by the apply cmd, the create caller, or an admin).
+- Default: new Initiative rows land at `kind=project`. **This is a safe placeholder, not a semantic assertion** — operationally we expect classification to be applied immediately via the apply cmd or by the create caller. The `report_initiative_kinds` "default-only" detector (post-apply) flags rows still sitting at default that weren't named in the SPEC, so silent "everything is project" rot is visible.
 
 ## 7. Acceptance criteria (rollup)
 
@@ -235,6 +235,7 @@ For initiative attachment when payload omits `initiative_id` (§3.C). Options: w
 | AC12 | `apply_initiative_kind_classification --apply` is idempotent (re-run = 0 net writes) | Mgmt cmd second-apply assertion in PR #5 |
 | AC13 | Split-pair `related_initiatives` written bidirectionally for clusters 3 and 9 | Mgmt cmd `--apply` output → 4 link writes (3a↔3b, 9a↔9b) |
 | AC14 | `report_initiative_kinds` flags zero project-prefix clusters in Donkey Betz post-apply | Mgmt cmd output assertion |
+| AC15 | `report_initiative_kinds` surfaces a `default_only_projects` list — project rows not named in the apply cmd SPEC, so silent default-kind rot stays visible | Mgmt cmd output + unit test |
 
 ## 8. Provenance
 

@@ -22,6 +22,12 @@ Three signals surfaced:
    (Heuristic only — a real long-arc project can also have many
    deliverables.)
 
+4. **Default-only projects** — project Initiatives not named in the
+   ``apply_initiative_kind_classification`` SPEC. Surfaces silent
+   "everything is project" rot from rows that got the default kind
+   at migration time but were never explicitly classified. Added
+   Session 1197 close-out per Rigby's design memo addendum.
+
 Usage:
 
   python manage.py report_initiative_kinds
@@ -71,6 +77,7 @@ class Command(BaseCommand):
         cross_tab = self._cross_tab(qs)
         prefix_clusters = self._prefix_clusters(qs)
         high_deliverable_projects = self._high_deliverable_projects(qs)
+        default_only_projects = self._default_only_projects(qs)
 
         report = {
             "scope": opts["workspace_id"] or "all_workspaces",
@@ -78,6 +85,7 @@ class Command(BaseCommand):
             "cross_tab": cross_tab,
             "prefix_clusters": prefix_clusters,
             "high_deliverable_projects": high_deliverable_projects,
+            "default_only_projects": default_only_projects,
         }
 
         if not opts["json_only"]:
@@ -128,6 +136,38 @@ class Command(BaseCommand):
                 })
         return sorted(results, key=lambda r: -r["deliverable_count"])
 
+    def _default_only_projects(self, qs):
+        """Project Initiatives not named in the apply SPEC — silent default rot.
+
+        Rationale (Rigby's Session 1197 close-out): default=project is a
+        safe placeholder, not a semantic assertion. Rows that received
+        the default via migration but were never explicitly classified
+        sit in a grey zone — they LOOK classified but operationally
+        weren't reviewed. This detector surfaces them so an operator can
+        confirm "yes, project is right" or reclassify.
+        """
+        # Late import — avoid hard coupling to the apply module at
+        # report-cmd import time (it's a peer mgmt cmd).
+        from core.management.commands.apply_initiative_kind_classification import (
+            SPEC as KIND_SPEC,
+        )
+        spec_names = {entry["name"] for entry in KIND_SPEC}
+        results = []
+        for init in qs.filter(kind="project"):
+            if init.name in spec_names:
+                continue
+            results.append({
+                "id": str(init.id),
+                "name": init.name,
+                "status": init.status,
+                "note": (
+                    "Project Initiative not named in apply SPEC — "
+                    "verify the classification is intentional, not "
+                    "default-rot from the migration."
+                ),
+            })
+        return results
+
     def _print_human(self, report):
         self.stdout.write("=" * 80)
         self.stdout.write(
@@ -165,5 +205,21 @@ class Command(BaseCommand):
                 f"  {project['id'][:8]} ({project['deliverable_count']:>3} deliverables) "
                 f"{project['name'][:60]}"
             )
+
+        self.stdout.write(
+            "\n[4] Project Initiatives not named in apply SPEC "
+            "(default-only — silent default-rot detector):"
+        )
+        default_only = report["default_only_projects"]
+        if not default_only:
+            self.stdout.write("  (none flagged — all project rows are SPEC-classified)")
+        else:
+            self.stdout.write(f"  {len(default_only)} project rows in scope but not in SPEC:")
+            for project in default_only[:10]:
+                self.stdout.write(
+                    f"    {project['id'][:8]} status={project['status']:10} {project['name'][:60]}"
+                )
+            if len(default_only) > 10:
+                self.stdout.write(f"    ... +{len(default_only) - 10} more")
 
         self.stdout.write("=" * 80)
