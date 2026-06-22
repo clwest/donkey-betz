@@ -357,6 +357,37 @@ class Deliverable(models.Model):
         db_index=True
     )
 
+    # Session 1195 — Plan C Phase 1 (Initiatives-First Backbone).
+    # Annotation layer for deliverables that violate the Initiative
+    # alignment contract: missing initiative_id, or workspace_id !=
+    # initiative.target_workspace_id. Phase 1 is label + TTL only —
+    # the canonical `status` field stays the lifecycle owner. The
+    # daily sweep flips status='archived' when expires_at passes and
+    # records the reason inside diagnostic_payload (it does NOT set
+    # diagnostic_status='archived'). NULL diagnostic_status = ok.
+    # When an update path resolves the violation, callers clear all
+    # five fields back to NULL (auto-clear ratified Session 1195).
+    diagnostic_status = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = ok; 'diagnostic' = flagged for Initiative-alignment violation",
+    )
+    diagnostic_code = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="e.g. 'missing_initiative_id', 'workspace_mismatch'",
+    )
+    diagnostic_payload = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Structured details: expected/actual workspace, agent, tool, trace, caller, archive reason",
+    )
+    diagnostic_marked_at = models.DateTimeField(null=True, blank=True)
+    diagnostic_expires_at = models.DateTimeField(null=True, blank=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -379,6 +410,13 @@ class Deliverable(models.Model):
             models.Index(fields=['dream', '-created_at']),
             # Session G2: Retention query index
             models.Index(fields=['data_sensitivity', '-created_at']),
+            # Session 1195 — Plan C Phase 1 sweep query.
+            # Composite hits the daily TTL sweep: WHERE
+            # diagnostic_status='diagnostic' AND diagnostic_expires_at <= now().
+            models.Index(
+                fields=['diagnostic_status', 'diagnostic_expires_at'],
+                name='deliv_diag_sweep_idx',
+            ),
         ]
 
     def __str__(self):

@@ -101,17 +101,21 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ---
 
-## SESSION 1194 — CURRENT ENTRY POINT (PIVOTED MID-SESSION)
+## SESSION 1195 — CURRENT ENTRY POINT
 
-### PIVOT NOTE — Initiatives-First Backbone is the new spine
+### SESSION 1194 CLOSED — Initiatives-First Backbone pivot + Plans A + B shipped (2026-06-21)
 
-Session 1194 opened with project-clustering recon as P1 (Session 1193 carryover). **Chris pivoted mid-thread** to a deeper structural fix: make Initiatives the spine of the platform — agents/schedules/deliverables must attach to an Initiative to count as real work. Original clustering recon is **deferred** until backbone wiring lands.
+Full handoff: [`SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md`](docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md). **3 PRs shipped**, AC1+AC2+AC3+AC4 of `INITIATIVES_FIRST_BACKBONE.md` closed.
 
-**Spec for the pivot:** [`docs/specs/INITIATIVES_FIRST_BACKBONE.md`](docs/specs/INITIATIVES_FIRST_BACKBONE.md) — wiring break evidence, 3 spine Initiatives (already persisted), engineering plan A→B→C→D, acceptance criteria AC1-AC10.
+| PR | Theme | Status |
+|---|---|---|
+| **#2397** | docs/spec — Initiatives-First Backbone pivot + deferred clustering pointer | merge-ready |
+| **#2398** | Plan A — close audit gap (field shape + workspace_id filter + `audit_deliverable_endpoints` mgmt cmd) | merge-ready (stacked on #2397 conceptually; targets main) |
+| **#2399** | Plan B — read-path initiative linkage + paginated `initiative_deliverables` action | merge-ready (stacked on #2398 — retarget to `main` before merging #2398) |
 
-**Preserves the deferred plan:** [`docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md`](docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md) — keeps the 8-cluster recon + 4 relationship patterns one click away so they're not lost. Clustering becomes a one-time migration once `initiative_id` is surfaced on read APIs and enforced on write paths.
+**Spec (operating contract for this and future sessions):** [`docs/specs/INITIATIVES_FIRST_BACKBONE.md`](docs/specs/INITIATIVES_FIRST_BACKBONE.md). Deferred clustering pointer: [`docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md`](docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md).
 
-**3 spine Initiatives persisted by Rigby (2026-06-21 ~23:14 UTC):**
+**3 spine Initiatives — persisted + bound to Donkey Betz:**
 
 | # | Name | UUID |
 |---|---|---|
@@ -119,28 +123,36 @@ Session 1194 opened with project-clustering recon as P1 (Session 1193 carryover)
 | 2 | Agent Capability Map + Router Contracts | `2071a9c6-986f-4528-be90-8cccaa595f1e` |
 | 3 | Tool Migration Hardening (web_search → intelligence_tool) + Failure Fix | `7e23d621-4d0c-409a-a680-4fd2e015d04b` |
 
-### FIRST THING this session
+`target_workspace_id` backfilled to Donkey Betz (`b4503364-…`) at session close for all 3 (Rigby's `initiative_create` write path doesn't yet require/infer it — Plan C side-quest).
 
-**Now:** start at Plan A in `INITIATIVES_FIRST_BACKBONE.md` — reproduce the `deliverable_tool action=list → 0 items` vs `content_recent → many` audit gap. Without that fix, the rest of the backbone can't be verified.
+### FIRST THING Session 1195
 
-**Active conversation:** Rigby's pre-spun thread **`pa-e11847db632a4ee8`** (now relabeled "Session 1194 — Initiatives-First Backbone"). Claude side: this thread.
+**Stacked-PR check.** Before merging anything, retarget #2399 base to `main` (its base is currently the #2398 branch — auto-close footgun per Session 1188 #2381 incident, memory `feedback_stacked_pr_base_deletion_footgun.md`):
 
-**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. 27 `shelf:content`, 74 `shelf:platform`, 14 tooltest (excluded), 49 untagged (48 Research + 3 Newsletter remainder).
+```bash
+gh pr edit 2399 --base main
+```
 
-### Original Session 1194 P1 (DEFERRED — see pointer doc above)
+Then merge order: **#2397 → #2398 → #2399**.
 
-The flat-deliverable model isn't capturing natural project clusters. 8 obvious project shapes hiding in 164 Donkey Betz deliverables (Session 1171 ML queue triage, Session 1184 provenance, Session 1192 follow-ups, COO daily diagnostics, Orchestration Control Plane Mapping, Track Business News blog variants, MLB Run Line Desk, Weekend Digest Autopilot). Revive after backbone AC1-AC6 pass.
+After merges, **Plan C is the P1**. Read `INITIATIVES_FIRST_BACKBONE.md` §3.C end-to-end. §6.1 (Phase 1 mark-diagnostic + `[ORPHAN-DELIVERABLE]` log → Phase 2 hard-reject after 7d zero-emission window) is **already ratified Session 1194**. §6.2 (inference rule for missing `initiative_id`) is **open** — decide once the backfill mgmt command runs against real Donkey Betz data.
+
+**Active conversation:** Rigby's Session 1194 close-of-session recommendation: **spin fresh on both sides** for Session 1195. Plan C is iterative write-path enforcement + diagnostic classification work — deserves clean canvas. Carry forward as context: (1) Wiring Map summary, (2) Plan A/B verification outcomes, (3) the 2 diagnostics filed at close, (4) Session 1195 P1 + §6.2 inference-rule open decision. Handoff doc is source of truth. (`pa-e11847db632a4ee8` is healthy if you'd rather reuse — Rigby is fine either way.)
+
+**Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — 164 deliverables. All 3 spine Initiatives bound here.
 
 ### Pick this session
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Initiatives-First Backbone — Plan A (auditability)** | **P1 (pivot)** | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.A. Reproduce + fix `deliverable_tool list = 0` vs `content_recent` divergence. Land `audit_deliverable_endpoints` mgmt command. AC1. |
-| **Initiatives-First Backbone — Plan B (read-path linkage)** | **P1 (pivot)** | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.B. Surface `initiative_id`/`target_workspace_id` on deliverable + content + initiative read APIs. AC2-AC4. |
-| **Initiatives-First Backbone — Plan C (write-path enforcement)** | **P1 (pivot)** | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.C. `create_deliverable()` requires initiative; backfill mgmt command. Needs Chris ratification on reject-vs-mark-diagnostic. AC5-AC6. |
-| **Initiatives-First Backbone — Plan D (governor gating)** | P2 (pivot) | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §3.D. Scheduler skips when no ACTIVE Initiative matches. AC7. |
-| **Tool Migration Hardening (Initiative 3)** | P2 (pivot, parallel) | `docs/specs/INITIATIVES_FIRST_BACKBONE.md` §4.3 + Initiative `7e23d621-…`. `web_search` → `intelligence_tool.search`; investigate ~50% gateway failure rate. AC9-AC10. |
-| **Project-clustering recon** | **DEFERRED** | `docs/specs/DELIVERABLE_CLUSTERING_DEFERRED.md`. Revive after backbone AC1-AC6 pass; becomes one-time migration exercise. |
+| **Plan C — write-path enforcement (Phase 1)** | **P1** | `INITIATIVES_FIRST_BACKBONE.md` §3.C. `create_deliverable()` accepts-and-marks `publish_intent=diagnostic` + emits `[ORPHAN-DELIVERABLE]` log when no initiative resolves. AC5a. |
+| **Plan C — backfill mgmt command** | **P1** | `INITIATIVES_FIRST_BACKBONE.md` §3.C.1. `backfill_deliverable_initiative_links --workspace <uuid> --dry-run/--apply` — walks recent deliverables, proposes initiative attachments, reports attached/unmatched/ambiguous counts. AC6. |
+| **Plan C side-quest — `initiative_create` requires target_workspace_id** | P2 | Carry-over from Session 1194 spine-Initiative diagnostic. Fold into Plan C since both are write-path enforcement. |
+| **Plan D — governor gating** | P2 | `INITIATIVES_FIRST_BACKBONE.md` §3.D. Scheduler skips dispatch when no ACTIVE Initiative matches; `[GOVERNOR-SKIP]` log. AC7. Can land in parallel with Plan C. |
+| **Tool Migration Hardening (Initiative 3)** | P2 | §4.3 + Initiative `7e23d621-…`. `web_search` → `intelligence_tool.search` audit + gateway retry/backoff. ~50% failure rate to investigate. AC9-AC10. |
+| **AC8 round-trip traceability test** | P3 | §4.1 of the spec. Small unit-test follow-up. |
+| **Plan C Phase 2 hard-reject flip** | DEFERRED-7d | After Phase 1 ships, watch `grep '\[ORPHAN-DELIVERABLE\]' celery.log` for trailing 7d window. Zero emissions → flip to hard `OrphanDeliverableError`. AC5b/c. |
+| **Project-clustering recon** | DEFERRED | `DELIVERABLE_CLUSTERING_DEFERRED.md`. Revive after backbone AC5+AC6 pass. |
 | **Initiative-tick 24h watch** | P1 (time-gated) | Start 2026-06-22 19:48 UTC (24h after PR #2392 merge). Grep `celery.log` for `[INITIATIVE-TICK]`. Confirm steady-state drift to 0. Playbook below. |
 | **7d AC watches** | P1 (time-gated) | Start 2026-06-28. Per-PR AC tables in #2380/#2382/#2385/#2386/#2387/#2388. |
 | **PA LLM iteration cap silent failure** | **P2** | Session 1193 follow-up. Deliverable `c2bac9c0-...`. Real engineering. `core/services/unified_pa_entrypoint.py:1298` `max_iterations=8` leaves 7 effective tool-call iterations. On forced-text final iteration, LLM emits unexecuted tool-call JSON as text body. Silent failure mode that bit us mid-Session-1193 on tagging-heavy turns. Two-part fix: raise cap to 12 + detect tool-call JSON in final-iteration text. |
