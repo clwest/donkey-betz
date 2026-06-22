@@ -1083,12 +1083,26 @@ class AgentRouter:
                     active_ws = ProjectWorkspace.objects.filter(
                         user=self.user, is_active=True
                     ).order_by('-updated_at').first()
+                # Session 1203 (Phase B.1 PR-1b): close the step-1 SAW leak.
+                # When self.user = system_autonomous, step 1 returns System
+                # Autonomous Workspace because that user OWNS it — bypassing
+                # the PR-1 prepend below. If DEFAULT_PRODUCER_WORKSPACE_ID
+                # is set and step 1 returned SAW, treat step 1 as a miss so
+                # the default-producer lookup gets a chance. Preserves
+                # human-dispatch semantics (Chris's non-SAW workspace still
+                # wins at step 1). Initiative 05931145-….
+                from django.conf import settings as _settings
+                _default_id = getattr(_settings, 'DEFAULT_PRODUCER_WORKSPACE_ID', '') or ''
+                if (
+                    active_ws is not None
+                    and active_ws.name == 'System Autonomous Workspace'
+                    and _default_id
+                ):
+                    active_ws = None
                 if not active_ws:
-                    from django.conf import settings as _settings
-                    default_id = getattr(_settings, 'DEFAULT_PRODUCER_WORKSPACE_ID', '') or ''
-                    if default_id:
+                    if _default_id:
                         active_ws = ProjectWorkspace.objects.filter(
-                            id=default_id, is_active=True,
+                            id=_default_id, is_active=True,
                         ).first()
                 if not active_ws:
                     active_ws = ProjectWorkspace.objects.filter(
