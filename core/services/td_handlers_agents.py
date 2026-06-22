@@ -2082,8 +2082,107 @@ class AgentHandlersMixin:
                             type(_e).__name__, _e,
                         )
 
+            # Session 1195 — Plan C Phase 1: support initiative_id updates so
+            # missing_initiative_id diagnostics can be resolved via the update
+            # path (auto-clear ratified). Mirrors the workspace setter pattern:
+            # if Initiative.objects.get() raises, log + degrade rather than
+            # block the update.
+            if 'initiative_id' in payload:
+                init_id = payload.get('initiative_id')
+                if init_id:
+                    try:
+                        from core.models import Initiative
+                        obj.initiative = Initiative.objects.get(id=init_id)
+                        update_fields.append('initiative')
+                    except Exception as _e:
+                        logger.warning(
+                            "td_handlers_agents._handle_deliverables: "
+                            "initiative_id=%s lookup failed (%s: %s) — "
+                            "dropping initiative update for deliverable=%s",
+                            init_id, type(_e).__name__, _e, obj.id,
+                        )
+
             if not update_fields:
-                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags, category, status, data_sensitivity, workspace_id")
+                raise ValueError("update requires at least one of: title, content, prepend, append, type, content_format, tags, category, status, data_sensitivity, workspace_id, initiative_id")
+
+            # Session 1195 — Plan C Phase 1: re-evaluate Initiative alignment
+            # after the user-requested field changes are applied to `obj`.
+            # Per Rigby's idempotency nudge: only emit transition logs
+            # (NULL → diagnostic, code A → code B). Auto-clear is silent
+            # except for an info log keyed code=auto_clear.
+            from core.services.deliverable_factory import _evaluate_initiative_alignment
+            from django.utils import timezone as _tz
+            from datetime import timedelta as _timedelta
+            from django.conf import settings as _settings
+
+            prior_diag_status = obj.diagnostic_status
+            prior_diag_code = obj.diagnostic_code
+            new_diag_eval = _evaluate_initiative_alignment(
+                initiative_id=str(obj.initiative_id) if obj.initiative_id else None,
+                workspace_id=str(obj.workspace_id) if obj.workspace_id else None,
+            )
+            DIAG_FIELDS = [
+                'diagnostic_status', 'diagnostic_code',
+                'diagnostic_payload', 'diagnostic_marked_at',
+                'diagnostic_expires_at',
+            ]
+            if new_diag_eval is None:
+                # Aligned now — auto-clear if previously diagnostic.
+                if prior_diag_status == 'diagnostic':
+                    obj.diagnostic_status = None
+                    obj.diagnostic_code = None
+                    obj.diagnostic_payload = None
+                    obj.diagnostic_marked_at = None
+                    obj.diagnostic_expires_at = None
+                    update_fields.extend(DIAG_FIELDS)
+                    logger.info(
+                        "[ORPHAN-DELIVERABLE] code=auto_clear "
+                        "deliverable_id=%s prior_code=%s trace_id=%s",
+                        str(obj.id), prior_diag_code, trace_id or '-',
+                    )
+            else:
+                new_code, expected_ws_id = new_diag_eval
+                # Mark diagnostic on transition (NULL → diagnostic OR code change).
+                if prior_diag_status != 'diagnostic' or prior_diag_code != new_code:
+                    ttl_hours = getattr(_settings, 'DELIVERABLE_DIAGNOSTIC_TTL_HOURS', 168)
+                    diag_now = _tz.now()
+                    obj.diagnostic_status = 'diagnostic'
+                    obj.diagnostic_code = new_code
+                    obj.diagnostic_marked_at = diag_now
+                    obj.diagnostic_expires_at = diag_now + _timedelta(hours=ttl_hours)
+                    obj.diagnostic_payload = {
+                        'initiative_id': str(obj.initiative_id) if obj.initiative_id else None,
+                        'expected_workspace_id': str(expected_ws_id) if expected_ws_id else None,
+                        'actual_workspace_id': str(obj.workspace_id) if obj.workspace_id else None,
+                        'agent_name': obj.agent_name,
+                        'tool': 'deliverable_tool.update',
+                        'trace_id': trace_id,
+                        'caller': 'td_handlers_agents._handle_deliverables',
+                        'reason': new_code.replace('_', ' '),
+                        'marked_at': diag_now.isoformat(),
+                        'ttl_hours': ttl_hours,
+                    }
+                    update_fields.extend(DIAG_FIELDS)
+                    if new_code == 'missing_initiative_id':
+                        logger.warning(
+                            "[ORPHAN-DELIVERABLE] code=missing_initiative_id "
+                            "deliverable_id=%s agent_name=%s tool=deliverable_tool.update "
+                            "caller=_handle_deliverables trace_id=%s workspace_id=%s ttl_hours=%s",
+                            str(obj.id), obj.agent_name, trace_id or '-',
+                            str(obj.workspace_id) if obj.workspace_id else 'null', ttl_hours,
+                        )
+                    else:  # workspace_mismatch
+                        logger.warning(
+                            "[ORPHAN-DELIVERABLE] code=workspace_mismatch "
+                            "deliverable_id=%s agent_name=%s tool=deliverable_tool.update "
+                            "caller=_handle_deliverables trace_id=%s initiative_id=%s "
+                            "expected_workspace_id=%s actual_workspace_id=%s ttl_hours=%s",
+                            str(obj.id), obj.agent_name, trace_id or '-',
+                            str(obj.initiative_id),
+                            str(expected_ws_id) if expected_ws_id else 'null',
+                            str(obj.workspace_id) if obj.workspace_id else 'null',
+                            ttl_hours,
+                        )
 
             obj.save(update_fields=update_fields)
             return {
