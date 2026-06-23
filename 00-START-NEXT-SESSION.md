@@ -119,7 +119,7 @@ Single-arc session executing Rigby's full §1-§6 spec from deliverable `ecddb62
 
 ### FIRST THING Session 1209 — Universal Receipt Contract (URC v0.1)
 
-**P0 entry point** decided at Session 1208 close (~22:40 MDT 2026-06-22) on Rigby's pa-2d74e36cc3a04787 thread after she shipped the Fleet Smoke Report `c5ccf3b1-51b2-4bbd-9ee6-6efa387eac86` (Platform Diagnostics, DBZ). Report headline: 36 agents succeeded / 7 "failed" in the smoke window — but only **3 are real failures** (CodeReviewAgent ×4, ContentWriterAgent contract violation ×1, MemoryIsolationAgent was a workflow-banner misattribution per Rigby's appended addendum).
+**P0 entry point** decided at Session 1208 close (~22:40 MDT 2026-06-22) on Rigby's pa-2d74e36cc3a04787 thread after she shipped the Fleet Smoke Report `c5ccf3b1-51b2-4bbd-9ee6-6efa387eac86` (Platform Diagnostics, DBZ). The smoke window showed 36 agent dispatches succeeded versus 7 marked "failed" — but only **3 are real failures** (CodeReviewAgent ×4, ContentWriterAgent contract violation ×1, MemoryIsolationAgent was a workflow-banner misattribution per Rigby's appended addendum). (See Session 1198's canonical-doc cleanliness memory for the strong-token pattern this paragraph deliberately avoids.)
 
 **Root cause Rigby surfaced:** "receipt-only" compliance is not enforceable by prompt alone. Need runner-level enforcement.
 
