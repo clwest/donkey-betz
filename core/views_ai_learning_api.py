@@ -50,8 +50,7 @@ def baseline_knowledge(request):
                 {"role": "system", "content": "You are conducting a thorough self-assessment of your knowledge."},
                 {"role": "user", "content": baseline_prompt}
             ],
-            temperature=0.3,
-            max_tokens=500
+            max_completion_tokens=500,
         )
 
         content = response.choices[0].message.content
@@ -153,8 +152,7 @@ def analyze_data(request):
                 {"role": "system", "content": "You are an AI learning specialist analyzing data for educational purposes."},
                 {"role": "user", "content": analysis_prompt}
             ],
-            temperature=0.7,
-            max_tokens=600
+            max_completion_tokens=600,
         )
 
         insights = response.choices[0].message.content
@@ -222,8 +220,7 @@ def synthesize_knowledge(request):
                 {"role": "system", "content": f"You are creating personalized learning content in {format_type} format."},
                 {"role": "user", "content": synthesis_prompt}
             ],
-            temperature=0.8,
-            max_tokens=800
+            max_completion_tokens=800,
         )
 
         content = response.choices[0].message.content
