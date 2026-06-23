@@ -286,6 +286,21 @@ class OpsHandlersMixin:
             group_by = payload.get('group_by', 'task')
             return self._ops_top_consumers(window, limit, trace_id, group_by=group_by)
 
+        elif action == 'zombie_thread_rate':
+            # Session 1220 P1: surface the wall-clock-timeout incidence
+            # captured by core/services/zombie_thread_monitor. Each fire
+            # spawns a zombie thread (Phase 3 deliverable cf80d413-…)
+            # that keeps running until the agent body returns naturally
+            # or the Celery child recycles. Spikes indicate a structural
+            # hang (e.g., upstream LLM provider degraded), not a one-off
+            # timeout. Suggested alert threshold: >5/hour for any single
+            # agent.
+            from core.services.zombie_thread_monitor import get_zombie_rate
+            hours = int(payload.get('hours', 24))
+            agent_name = payload.get('agent_name') or None
+            result = get_zombie_rate(hours=hours, agent_name=agent_name)
+            return {'action': 'zombie_thread_rate', **result}
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 

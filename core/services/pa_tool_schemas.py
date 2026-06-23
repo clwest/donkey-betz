@@ -2398,7 +2398,7 @@ PA_TOOL_SCHEMAS = [
                         "noise_metrics", "conversation_metrics",
                         "focus_mode_status", "focus_mode_update",
                         "celery_task_history", "execution_detail", "execution_search",
-                        "memory_pressure", "top_consumers",
+                        "memory_pressure", "top_consumers", "zombie_thread_rate",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2436,7 +2436,14 @@ PA_TOOL_SCHEMAS = [
                         "p95_seconds (p95 computed server-side via PostgreSQL percentile_cont). "
                         "Single SQL aggregate query per call. Use when asked which task is eating "
                         "workers / hogging wall-clock / top by duration. Default window 24h, "
-                        "default limit 20 (max 50)."
+                        "default limit 20 (max 50). "
+                        "zombie_thread_rate: per-agent, per-hour breakdown of wall-clock-timeout "
+                        "spawns (Session 1219 P3 / 1220 P1 monitor). Each entry is a thread that "
+                        "kept running after the agent's wall-clock fired because ThreadPoolExecutor "
+                        "can't kill threads — bounded by --max-tasks-per-child recycling. Use when "
+                        "asked about agent hangs, timeout rates, upstream-provider degradation. "
+                        "Pass hours (default 24, max 168) and optional agent_name to filter. "
+                        "Alert at >5/hour for any single agent."
                     ),
                 },
                 "window": {
