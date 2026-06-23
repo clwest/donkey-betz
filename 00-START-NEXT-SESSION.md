@@ -102,7 +102,49 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1214 — CURRENT ENTRY POINT
+## SESSION 1215 — CURRENT ENTRY POINT
+
+### SESSION 1214 CLOSED — OpenAI caller alignment Phase A+B complete: 22-of-21 sites cleared, async factory shipped, catalog deliverable live (8 PRs merged)
+
+Full handoff: [`SESSION_1214_OPENAI_CALLER_ALIGNMENT_PHASES_A_B.md`](docs/handoffs/SESSION_1214_OPENAI_CALLER_ALIGNMENT_PHASES_A_B.md). **8 PRs merged.** Phase A archive + 6 Phase B callsite PRs + 1 async factory infra PR. Catalog deliverable `bb775acb-…` created in Donkey Betz workspace (category Platform Capability Audit, pinned, 10.9KB final).
+
+| PR | Commit | What |
+|---|---|---|
+| **#2486** | `98297ab3` | Phase A: archived `ai_core/MAKE_MONEY_NOW_WITH_APIS.py` → `archive/old_experiments/` (pre-platform gpt-3.5-turbo demo, never live-imported). |
+| **#2487** | `97aca26e` | Phase B: `intelligence/real_agents.py:21` `BaseAgent.__init__` factory swap. Propagates to 9 subclasses. |
+| **#2488** | `cc5a18b4` | Phase B: `intelligence/agent_execution_pipeline.py` 3 sites (module cache + ContentCreator + dynamic RegistryAgent). |
+| **#2489** | — | Phase B: `intelligence/agent_factory.py` 2 sites (fallback BaseAgent + UnifiedAgentFactory). |
+| **#2490** | — | Phase B infra: `get_async_openai_client()` factory variant. Separate `_ASYNC_CLIENT_CACHE` + lock. Same contract (20/90/60/60s timeouts, 2 retries, forbidden kwargs, RuntimeError-on-no-key). |
+| **#2491** | — | Phase B: removed 11 vestigial `AsyncOpenAI()` from `real_work_delivery_engine.py` — `client` never invoked; actual dispatch flows through `agent_llm_integration.generate_for_agent`. |
+| **#2492** | — | Phase B: removed 4 vestigial `AsyncOpenAI()` from `ai_proposal_engine.py` (3) + `real_client_acquisition.py` (1) — same dead-code pattern. |
+| **#2493** | — | Phase B closing: `agent_llm_integration.py:38` `OpenAIProvider.__init__` central swap to `get_async_openai_client(api_key=...)`. Dropped stale openai-v0.x `openai.api_key` module mutation. +1 expanded scope target. |
+
+**Catalog deliverable `bb775acb-5805-4561-901f-497d2db2add9` ("OpenAI Call Site Catalog — Session 1214"):** pinned in Donkey Betz workspace, category Platform Capability Audit. Final 10,871 chars. Contains overview + methodology + verified counts + 5-phase plan + 7 per-callsite/PR entries logged on every PR close. Schema per Rigby: `file:line | model | client pattern | params | what it does | reasoning_contract: {ok | needs_max_completion_tokens | needs_temp_strip | needs_both | moot_removed | moot_archived | unknown | pre_existing_bug} | migration: <PR # + summary>`. Keep updated as Phase C/D/E land.
+
+**Spec deliverable `2b9aa447-…` status:** Phase A+B complete. Phase C/D/E remain. Still `accepted` for Session 1215+.
+
+**Pre-existing bug surfaced (NOT fixed Session 1214, Phase C/D follow-on):** `ai_core/agents/agent_llm_integration.py:43-108` — `OpenAIProvider.generate()` references undefined `messages` variable at L90 (would NameError if invoked) + accesses `.output_text`/`.id`/`.usage` on a string. Effectively unreachable in production (dispatch routes through `AsyncLLMAdapter` directly). Rigby's recommendation: delete (if truly unused) or fix + add a tiny unit smoke. Defer to Session 1215+.
+
+### FIRST THING Session 1215 — Phase C: max_tokens → max_completion_tokens per-callsite audit
+
+**P1 lead:** Continue Session 1214's spec deliverable `2b9aa447-c0c9-4ff3-8483-f92257eb0fcb`. Phase A+B done; Phase C is the next mechanical scope.
+
+**Why this scope:** gpt-5.x reasoning models (gpt-5, gpt-5-mini, gpt-5-nano) reject `max_tokens=`; the contract is `max_completion_tokens=`. Raw grep of `\bmax_tokens\s*=` returns **158 matches across 77 files** (active + archive). After filtering archive/ + tests/ + function signatures, expected real Phase C target is ~30-50 actual call kwargs across ~15-20 files. Per-site review required — no bulk sed (function defs vs call kwargs vs config dicts).
+
+**Phase C method (proposed):**
+1. **Re-grep** to refresh authoritative count on main @ post-#2493 HEAD.
+2. **Filter** to active call kwargs (exclude function signatures, exclude archive/, exclude tests/).
+3. **Group** by file. Each file becomes its own PR (smaller blast radius, per Session 1214 Phase B pattern).
+4. **Per-site review** — if model is gpt-5.x, migrate. If non-reasoning, leave or document.
+5. **Catalog entry per PR** to `bb775acb-…` using the schema.
+
+**Active conversation:** `pa-e37fe30dc7b941a6` — Session 1214 thread. Rigby has full Phase A+B context. Spin a fresh thread for Session 1215 if you want a clean slate; otherwise continue.
+
+**Carryover follow-ups (defer to Session 1216+ unless quick win):**
+- **Stale-thread dispatcher** (`777d9cd8-…`, P2) — ~$3.60/day savings, lean A (per-conversation `session_closed` flag).
+- **Continue URC adoption to next 3 agents** (Session 1211 carryover, P1) — 4 of ~10 done. Pattern stable.
+- **System prompt + tool schema size reduction** (P2) — non-smoke conversational turns still 35-68K tokens.
+- **`OpenAIProvider.generate()` brokenness** (P2, Session 1214 finding) — delete vs fix-and-smoke.
 
 ### SESSION 1213 CLOSED — Smoke context minimization shipped, AC-4 verified live, 31× context shrink on the worst-case agent (1 PR merged)
 
@@ -121,26 +163,6 @@ Full handoff: [`SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md`](docs/handoffs/SESSI
 - `1a8cde69-8f40-45d2-b841-4e88f76c9d7f` — runbook appended (+2033 chars) with minimal-context contract (AC-3)
 
 **Post-merge gotcha (cleared):** worker restart at 11:22-11:23 MDT (post-`3670cede`) — `smoke_dispatch.py` is imported by `tool_dispatcher.py` which is imported by celery task bodies. All 4 workers + beat alive on fresh PIDs (verified via `ps -eo lstart`).
-
-### FIRST THING Session 1214 — OpenAI caller alignment to gpt-5-mini reasoning contract (5-phase plan)
-
-**P1 lead:** Deliverable `2b9aa447-c0c9-4ff3-8483-f92257eb0fcb` (filed Session 1213 close) — **Spec: OpenAI Caller Alignment to gpt-5-mini Reasoning Contract**. Pivot from original gpt-5.4 migration spec per Chris course-correction: "let's not flip until right now, but since we know that there's places that we are not using gpt-5-mini (Reasoning Model), let's focus on getting that updated." gpt-5.4 flagship migration is deferred to a separate future deliverable (~$95/day projected cost increase at current volume).
-
-**Why this scope:** Session 1213 audit found ~150 hardcoded model literals + 74 bare `OpenAI()` instantiations bypassing the factory (per memory `feedback_openai_client_factory.md`) + ~90 callers using `max_tokens=` (forbidden by gpt-5.x reasoning models) + ~86 callers passing `temperature=` (also forbidden). Either those calls are silently broken today or routing to non-reasoning models. Alignment surfaces the truth + makes the eventual gpt-5.4 flip a one-line env change with zero parameter surprises.
-
-**Five phases (Session 1214 + possible spillover):**
-- **Phase A (~1h):** Kill non-gpt-5-mini active callers. `ai_core/MAKE_MONEY_NOW_WITH_APIS.py` (gpt-3.5-turbo, bare `openai.api_key` module-level) archived to `archive/old_experiments/` — not live-imported; pre-platform demo per Session 1214 catalog Phase A entry. Other stragglers TBD as discovered.
-- **Phase B (~3-4h, ~5-6 PRs):** 74 bare `OpenAI()` / `AsyncOpenAI()` → factory. PRIORITY SUBSET: 5 no-arg `OpenAI()` sites (intelligence/real_agents.py:21, intelligence/agent_execution_pipeline.py:19,35,306, intelligence/agent_factory.py:26,75, scripts/backfill_embeddings.py:61) — these inherit SDK 600s timeout = 10-min hangs on half-dead sockets.
-- **Phase C (~2-3h):** `max_tokens=` → `max_completion_tokens=` (~50-80 active files; per-site review, no bulk sed).
-- **Phase D (~2-3h):** `temperature=` audit (~86 sites); strip silently OR document-then-strip OR conditional-for-non-reasoning-fallback.
-- **Phase E (~1-2h):** CI lint (sibling to `tools/check_direct_llm_calls.py`) + runtime guard in `openai_client_factory.py` behind `OPENAI_REASONING_GUARD={warn,strip,error}` env flag.
-
-**Active conversation:** `pa-e37fe30dc7b941a6` — Session 1214 lean: continue on this thread; Rigby already has the spec in context.
-
-**Carryover follow-ups (defer to Session 1215+ unless quick win):**
-- **Stale-thread dispatcher** (`777d9cd8-…`, P2) — ~$3.60/day savings, 3 fix options listed; lean A (per-conversation `session_closed` flag).
-- **Continue Phase B URC adoption to next 3 agents** (Session 1211 carryover, P1) — 4 of ~10 candidates done. Pattern stable.
-- **System prompt + tool schema size reduction** (P2, NEW Session 1213 finding) — non-smoke conversational turns still 35-68K tokens; larger savings than smoke fix. No spec filed yet.
 
 ### Also fires this session
 
