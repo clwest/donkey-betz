@@ -707,7 +707,8 @@ Always provide status updates and be transparent about what's being created."""
             f'"{offer_name}".\n\n'
             f'Hard requirements:\n'
             f'- offer.min_deal_size_usd MUST be exactly 2000\n'
-            f'- offer.name MUST include "Automation Sprint"\n'
+            f'- offer.name MUST be exactly "{offer_name}" (case-insensitive '
+            f'match; do not append, prepend, or compound)\n'
             f'- offer.primary_outcome_bullets MUST have >= '
             f'{OUTBOUND_PACK_MIN_OUTCOME_BULLETS} non-empty entries\n'
             f'- segments[] MUST contain EXACTLY 2 entries with segment_keys: '
@@ -821,9 +822,19 @@ Always provide status updates and be transparent about what's being created."""
             offer_name = offer.get('name', '')
             if not isinstance(offer_name, str) or not offer_name.strip():
                 errors.append('offer.name is missing or empty')
-            elif 'automation sprint' not in offer_name.lower():
+            elif (
+                offer_name.strip().lower()
+                != OUTBOUND_PACK_OFFER_NAME.lower()
+            ):
+                # Tightened Session 1208 PR follow-up: exact match
+                # (case-insensitive). Old check accepted any value
+                # containing "automation sprint", which let the LLM
+                # return composites like "Automation Sprint — $2k
+                # Automation Sprint" and bleed into deterministic
+                # rendering paths.
                 errors.append(
-                    f'offer.name must include "Automation Sprint" '
+                    f'offer.name must be exactly '
+                    f'{OUTBOUND_PACK_OFFER_NAME!r} '
                     f'(got: {offer_name!r})'
                 )
             if offer.get('min_deal_size_usd') != 2000:
@@ -1043,6 +1054,26 @@ Always provide status updates and be transparent about what's being created."""
 
         return parts
 
+    @staticmethod
+    def _format_outbound_pack_title(date_str: Optional[str] = None) -> str:
+        """Return the deterministic outbound-pack title.
+
+        Locked to the constant offer name so the LLM's `offer.name` value
+        can never bleed into the title (see Rigby pa-2d74e36cc3a04787
+        review — LLM smoke returned "Automation Sprint — $2k Automation
+        Sprint" which would double-render under the old f-string).
+
+        Note: `deliverable_factory._clean_deliverable_title` will prepend
+        `CampaignOrchestratorAgent: ` to the persisted Deliverable.title
+        because the cleaner can't tell our title is already canonical.
+        That's a factory-level concern (affects all agents the same way,
+        documented as cosmetic follow-up in the Session 1208 handoff).
+        The post-prefix portion is locked here.
+        """
+        if not date_str:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+        return f'Outbound Pack — {OUTBOUND_PACK_OFFER_NAME} — {date_str}'
+
     def _render_outbound_pack_markdown(
         self,
         payload: Dict[str, Any],
@@ -1052,9 +1083,7 @@ Always provide status updates and be transparent about what's being created."""
     ) -> Tuple[str, str]:
         """Render §5 markdown body. Returns (title, body)."""
         offer = payload.get('offer') or {}
-        today = datetime.now().strftime('%Y-%m-%d')
-        offer_name = offer.get('name') or OUTBOUND_PACK_OFFER_NAME
-        title = f'Outbound Pack — {offer_name} — {today}'
+        title = self._format_outbound_pack_title()
 
         lines: List[str] = [f'# {title}', '']
 
