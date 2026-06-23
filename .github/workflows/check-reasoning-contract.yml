@@ -30,21 +30,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Phase E staged rollout — ships in --warn-only.
-      # Phase C+D close-out left zero violations on main, so this
-      # warn-only mode produces no false alarms. Promote to enforce
-      # mode once we've burned in 24h with no surprises.
-      #
-      # To switch to enforce mode:
-      #   1. Remove `--warn-only` below
-      #   2. Verify scan still returns 0 violations on main
-      #   3. Merge
-      - name: Run reasoning-contract checker (warn-only staged rollout)
+      # Session 1222 P3 — promoted from --warn-only to enforce mode.
+      # Phase E staged rollout (Session 1216) shipped --warn-only after
+      # Phase C+D close-out left zero violations on main. Session 1222
+      # P3 confirmed the violation count is still zero locally on main
+      # and flipped enforcement. From here on, PRs that introduce a
+      # forbidden kwarg to gpt-5.x reasoning models fail the check.
+      - name: Run reasoning-contract checker
         run: |
           python tools/check_reasoning_contract.py \
             --root . \
-            --whitelist .ci/reasoning_guard_whitelist.txt \
-            --warn-only
+            --whitelist .ci/reasoning_guard_whitelist.txt
 
       - name: Summarize in the job summary
         if: always()
@@ -52,9 +48,9 @@ jobs:
           {
             echo "## OpenAI reasoning-contract check"
             echo ""
-            echo "Session 1216 Phase E — running in **warn-only** mode during staged rollout."
+            echo "Session 1216 Phase E + Session 1222 P3 — running in **enforce** mode."
             echo ""
-            echo "Flags new \`chat.completions.create(model='gpt-5.x', max_tokens=..., temperature=...)\` patterns."
+            echo "Fails the PR when new \`chat.completions.create(model='gpt-5.x', max_tokens=..., temperature=...)\` patterns are introduced."
             echo "gpt-5.x reasoning models reject \`max_tokens\`/\`temperature\`/\`top_p\`/\`frequency_penalty\`/\`presence_penalty\`."
             echo ""
             echo "Companion to the runtime guard in \`core/services/openai_client_factory.py\` (env: \`OPENAI_REASONING_GUARD\`)."
