@@ -4508,10 +4508,12 @@ class ContentHandlersMixin:
             try:
                 from core.models_unified_system import AgentExecution
                 from django.db.models import Count
+                # Session 1222 P2 — trimmed 4 zero-execution names
+                # (ContrarianAgent, PerformanceAnalystAgent, VoiceCriticAgent,
+                # ContentDiversityOrchestrator). Agent class files remain in
+                # core/agents/ for future re-enable.
                 studio_agents = [
                     'AutonomousContentStudioCoordinator', 'TopicMinerAgent',
-                    'ContrarianAgent', 'PerformanceAnalystAgent',
-                    'VoiceCriticAgent', 'ContentDiversityOrchestrator',
                 ]
                 stats = list(AgentExecution.objects.filter(
                     agent__name__in=studio_agents
