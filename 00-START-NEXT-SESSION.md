@@ -102,7 +102,75 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1221 — CURRENT ENTRY POINT
+## SESSION 1222 — CURRENT ENTRY POINT
+
+### SESSION 1221 CLOSED — Tier 1 + Tier 2 from 7ae61cf7 shipped same-session
+
+Full handoff: [`SESSION_1221_TIER_1_PLUS_TIER_2_FROM_7AE61CF7.md`](docs/handoffs/SESSION_1221_TIER_1_PLUS_TIER_2_FROM_7AE61CF7.md). Both fixes from the Session 1220 P2 deliverable shipped end-to-end. PeriodicTask materialized + workers restarted + new task verified registered.
+
+| PR | Tier | What |
+|---|---|---|
+| **#2519** | 1 | Total-request bound on `BaseAgent._call_openai`. New `_run_openai_create_with_total_cap` helper. Cap = `max(180, llm_timeout * 2.5)`. Closes the httpx per-chunk loophole at source for ~80 agents. 6 smoke tests. |
+| **#2520** | 2 | `LLMCallEvent` cleanup watchdog. New `cleanup_stale_llm_calls` beat task (10-min cadence, broadcast queue, threshold 10 min). Catches zombies from non-BaseAgent paths via `ops_tool.failure_signatures`. 7 smoke tests. |
+| **(this PR)** | — | Session 1221 close handoff + this start-here. |
+
+**Defense-layer story is now end-to-end:** Tier 1 stops the leak at source, Tier 2 catches escapees, the early-save lands the AgentExecution row, the `task_failure` bridge catches Celery failures, the zombie-thread monitor surfaces structural-hang spikes, the original cleanup watchdog is the SIGKILL safety net.
+
+### FIRST THING Session 1222 — carryovers (no fresh blocker)
+
+The watchdog/timeout story closed cleanly this session. Session 1222 priorities are the queue of carryovers from earlier sessions — Chris picks which to lead with.
+
+#### Priority 1 — B2 follow-on for OpenAIProvider (deferred since Session 1217 PR #2507)
+
+Full removal of the `OpenAIProvider` class in `ai_core/agents/agent_llm_integration.py` + the `openai` branch in `AgentLLMIntegration.generate_for_agent`. Requires first proving the `real_*` agent paths are no longer exercised in production. Session 1214 handoff note: "the live path appears to use `AsyncLLMAdapter` directly."
+
+**Verification approach:**
+1. Query `AgentExecution.objects.filter(agent__name__in=['RealContentCreator','RealJobExecutor','RealWorkDeliveryEngine','RealClientAcquisition','AIProposalEngine','FreelanceJobAnalyzer'])` for any rows in the last 30d.
+2. Cross-reference with `LLMCallEvent.agent_name` for those same agent names.
+3. If both are empty → safe to delete. Open PR removing the class + the branch + the `real_*` files.
+4. If non-empty → understand the path before deleting. May need a separate session to refactor away from `OpenAIProvider`.
+
+Estimated PR size: ~80 LoC delete + smoke test removal. Single PR.
+
+#### Priority 2 — Trim remaining 9 zero-exec gateway-referenced classes (deferred since Session 1218 P2)
+
+The 9 zero-exec agent classes that stayed in the Session 1218 dispatcher trim because they're still referenced by gateway code:
+- `td_handlers_content.py:4160, 4175, 4513`: `ContentDiversityOrchestrator`, `ContrarianAgent`, `LineMovementAnalyzer`, `PerformanceAnalystAgent`, `SharpActionDetector`, `VoiceCriticAgent`
+- `td_handlers_ops.py:3472, 3477`: `ResolveAgent`, `TalkingCharacterAgent`, `WhaleWatcherAgent`
+
+Per-site decision per gateway dispatch — replace with a different agent, drop the gateway feature entirely, or upgrade the agent to actually be used. Bigger scope than Session 1218 P2 — likely needs 3-9 small PRs or one umbrella refactor.
+
+#### Priority 3 — Promote `check-reasoning-contract.yml` to enforce mode (P2 carryover from Session 1216)
+
+Currently ships `--warn-only`. Phase C+D close left zero violations on main. Flip to error mode once a clean CI run is verified post Tier 1 + Tier 2 merges.
+
+```yaml
+# .github/workflows/check-reasoning-contract.yml
+# Change `--warn-only` to nothing, set continue-on-error: false.
+```
+
+Estimated PR size: 2-line workflow change + verification run. Single PR.
+
+#### Priority 4 — Tier 3 from P2 deliverable (defer)
+
+Wrap the openai_client_factory clients' `chat.completions.create` at construction time with the same total-request bound. Mirror of the Session 1216 Phase E `reasoning_guard` surgery. Defers because Tier 1 + Tier 2 should be sufficient for the dominant code path — only ship Tier 3 if leakage to non-BaseAgent paths becomes a measurable problem post-merge.
+
+#### Priority 5 — Production observation window for the watchdog fixes
+
+Pre-merge state: 15 watchdog-killed AgentExecution rows last 7d, 2 stuck STARTED LLMCallEvent rows held 16-96h.
+
+Post-merge target: zero new stuck LLMCallEvent rows past 10 min, watchdog-kill rate down by ≥80%.
+
+Recommended check at start of Session 1222: pull the rates via `ops_tool` and compare against the deliverable `7ae61cf7-…` baselines.
+
+**Active conversation:** `pa-58737666f25741dc` — carried through Sessions 1217-1221.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Doc-vs-runtime drift triage (audit findings #6/#7/#8)
+- Critical-path hub markers (audit finding #4)
+- Atlas fleet positioning + narrative staleness (#9/#10)
+- Beat schedule disabled tasks classification (Rigby's A4)
+- Revenue pipeline aggregation audit (Rigby's C5)
 
 ### SESSION 1220 CLOSED — Zombie monitor (P1) + two detector fixes + OpenAI httpx investigation (P2)
 
