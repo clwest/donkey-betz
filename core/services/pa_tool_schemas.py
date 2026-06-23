@@ -116,6 +116,17 @@ PA_TOOL_SCHEMAS = [
                 "potential_revenue": {"type": "number", "description": "Estimated revenue in dollars (for create)"},
                 "status": {"type": "string", "description": "Filter by or set status (active, pending, applied, accepted, rejected, expired)"},
                 "limit": {"type": "integer", "description": "Max items (default 20)"},
+                "scope": {
+                    "type": "string",
+                    "enum": ["mine", "all"],
+                    "description": (
+                        "For list / stats actions only. Default 'mine' filters to the caller's "
+                        "opportunities (the safe-by-default 'your pipeline' view). Pass 'all' to "
+                        "see the platform-wide pool — useful for surfacing the spider-ingested "
+                        "lead pool (system-user-owned rows) when the user asks 'what leads has "
+                        "the platform discovered?'. Session 1222 P4 (audit C1)."
+                    ),
+                },
             },
             "required": ["action"],
         },
