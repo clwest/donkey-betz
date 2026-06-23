@@ -102,7 +102,83 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1210 — CURRENT ENTRY POINT
+## SESSION 1211 — CURRENT ENTRY POINT
+
+### SESSION 1210 CLOSED — URC v0.1 Phase B: receipt_only mode for CodeReviewAgent (1 PR merged)
+
+Full handoff: [`SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md`](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). **1 PR merged.** AC-1, AC-2, AC-3, AC-4 all verified live via 2-dispatch validation smoke.
+
+| PR | Commit | What |
+|---|---|---|
+| **#2476** | `4d0040af` | Phase B — `_is_receipt_only_mode(context)` static helper + early-return branch at top of `CodeReviewAgent.execute()` (before `time_travel_session` opens). Two recognized signals: `context['mode']=='receipt_only'` (primary) + `context['receipt_only'] is True` (forward-compat). Receipt shape: `data={skipped:True, status:'skipped', mode:'receipt_only', message:...}`. 14 unit tests (detector ×7, execute ×5, URC integration ×2). |
+
+**Smoke evidence:** receipt_only run `d0281cc8-477b-4099-aa21-10ad5439abfc` → `run_status='skipped'`, `data.skipped=True`, no tool_calls, no warnings, URC envelope fully populated (latency_ms=3616). Control run `042a8c0e-3b08-4a42-aea4-d997bde72253` → `run_status='success'`, 303 lines of python reviewed (normal path untouched).
+
+**AC-4 addendum:** Rigby filed +2601 chars on URC spec deliverable `6f09233c-…` capturing (a) Phase B definition (first agent-level integration; A+C are runner-level), (b) classification rule (`data['skipped'] is True` is the load-bearing Q1 marker), (c) schema nuance (`status='skipped'` is receipt-schema-valid but not sufficient on its own), (d) reference impl pointer `core/agents/code_review_agent.py:286-316`.
+
+**Drift surfaced + resolved in-session:** Spec text in `00-START` line 127 implied `data={'status': 'skipped'}` alone would trigger `run_status='skipped'` — Q1 predicate at `urc_envelope.py:50` actually requires `data['skipped'] is True`. Option A reconciliation per Rigby (`pa-61c7b47d201d4591`): agent emits both keys; URC core unchanged.
+
+**Post-merge gotcha (cleared):** worker restart required at 09:47 MDT (post-`4d0040af`) — `code_review_agent.py` is imported by `tasks_agents._impl_execute_agent_task` body. All 4 workers + beat alive on fresh PIDs.
+
+### FIRST THING Session 1211 — extend Phase B receipt_only pattern to other context-dependent agents
+
+**Natural follow-on** per URC spec `6f09233c-…` §7 + Session 1210 close §"Open follow-ups". Session 1209 fleet smoke deliverable `1a8cde69-…` surfaced ~10 agents that fail under `receipt_only` mode because their `execute()` paths require external context (files, APIs, scheduled data) they don't have in a capability-ping dispatch.
+
+Phase B set the pattern at `core/agents/code_review_agent.py:286-316`. Each new agent gets the same shape:
+
+```python
+@staticmethod
+def _is_receipt_only_mode(context: Dict[str, Any] | None) -> bool:
+    if not context:
+        return False
+    if context.get('mode') == 'receipt_only':
+        return True
+    if context.get('receipt_only') is True:
+        return True
+    return False
+
+def execute(self, task, context, scifi_context, spider_context):
+    import time
+    start_time = time.time()
+    if self._is_receipt_only_mode(context):
+        return AgentResult(
+            success=True,
+            message='receipt_only mode — no code inspection performed',  # ← customize per agent
+            data={'skipped': True, 'status': 'skipped', 'mode': 'receipt_only', 'message': ...},
+            agent_name=self.name,
+            execution_time_ms=int((time.time() - start_time) * 1000),
+            decisions_made=0,
+            tool_calls=[],
+        )
+    # ... existing logic
+```
+
+**First-pass target list** (pulled from Session 1209 fleet smoke "error" rows on context-dependent agents — Rigby has the full list on deliverable `1a8cde69-…`):
+- Agents that hard-require repo/file access (ContentWriterAgent already has its own receipt_only path that triggers `contract_violation` per Phase C — needs the same agent-level branch as Phase B).
+- Agents that hard-require live external APIs (TheOddsAnalyst, financial spiders' analytics agents, etc.).
+- Agents that hard-require scheduled spider data (sports-betting workflow agents).
+
+**Acceptance criteria** (mirror Phase B):
+- AC-1: Each adopted agent under `mode=receipt_only` returns `result.success=True` with `data.skipped=True, status='skipped'`. No external dependencies attempted.
+- AC-2: Post-fix fleet smoke shows the agents transition `run_status='error'` → `run_status='skipped'` for receipt_only dispatches.
+- AC-3: Outside `receipt_only` mode, each agent behaves identically to today.
+- AC-4: AC-4 addendum on `6f09233c-…` already captures the pattern — extend it with the list of adopting agents as evidence rows.
+
+**Scope estimate:** Per-agent ~30 min (helper + branch + ~5-10 unit tests). Bundle 3-5 agents per PR; keep blast radius small. Worker restart still required post-merge.
+
+**Active conversation:** `pa-61c7b47d201d4591` — carries Phase A+B+C design lock. Lean: continue on this thread if Session 1211 stays within URC adoption; spin fresh if pivoting to a different lane.
+
+### Also fires this session
+
+The **24h watches** are time-gated priorities:
+
+| Watch | Fires (MDT) | Fires (UTC) | Checklist |
+|---|---|---|---|
+| **Session 1208 (Outbound)** | (already fired ~22:45 MDT 2026-06-23) | (already fired ~04:45 UTC 2026-06-24) | [§"24h watch checklist" in 1208 handoff](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) — verify result |
+| **Session 1209 (URC)** | ~07:10 MDT 2026-06-24 | ~13:10 UTC 2026-06-24 | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) |
+| **Session 1210 (Phase B)** | ~08:48 MDT 2026-06-24 | ~14:48 UTC 2026-06-24 | [§"24h watch checklist" in 1210 handoff](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). Invariants A1-A4: receipt_only dispatches → `skipped`, no false-positive `skipped` on non-receipt_only callers, normal-mode rows produce `data.results`+`tool_calls`, `warnings=[]` on receipt_only rows. |
+
+Then pick from the priority table below.
 
 ### SESSION 1209 CLOSED — Universal Receipt Contract (URC v0.1) envelope + router-path coverage (2 PRs merged)
 
@@ -118,36 +194,6 @@ Full handoff: [`SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md`](docs/handoffs
 **Smoke evidence deliverable:** `1a8cde69-8f40-45d2-b841-4e88f76c9d7f` (Rigby; DBZ; Platform Diagnostics; pinned). Post-router-patch fleet smoke results — 52/52 URC envelope coverage, 39 success / 12 error / 1 contract_violation, all expected.
 
 **Post-merge gotcha (cleared):** worker restart required for both PRs (tasks_agents.py + agent_router.py both imported by celery task body). Done in-session at 00:09 MDT post-#2474.
-
-### FIRST THING Session 1210 — Phase B: `mode=receipt_only` capability ping for CodeReviewAgent
-
-**Natural follow-on** per URC spec `6f09233c-…` §7. CodeReviewAgent ×4 dispatched in Session 1209 fleet smoke stayed `run_status='error'` because they don't have a code-free path to satisfy the receipt schema. Phase B adds a `context.mode == 'receipt_only'` branch at the agent level:
-
-- When the caller passes `mode=receipt_only`, CodeReviewAgent skips its repo/file inspection and returns a minimal v0 receipt: `result.data={status: 'skipped', message: 'receipt_only mode — no code inspection performed'}`.
-- URC predicate at the writeback then classifies as `run_status='skipped'` (per Q1 precedence) — no longer `error`.
-- Other context-dependent agents (those that have a hard-coded "must access repo / external API" assumption) can adopt the same pattern as fleet smoke reveals.
-
-**Acceptance criteria:**
-- AC-1: CodeReviewAgent under `mode=receipt_only` returns `result.success=True` with `data.status='skipped'`. No code inspection attempted.
-- AC-2: Post-fix fleet smoke shows CodeReviewAgent ×N transition from `run_status='error'` → `run_status='skipped'`.
-- AC-3: Outside `receipt_only` mode, CodeReviewAgent behaves identically to today — no regression on its normal-mode runs.
-- AC-4: Pattern is documented in `docs/specs/` or as an addendum to deliverable `6f09233c-…` so other agents can adopt.
-
-**Scope estimate:** Small PR (~50-100 LoC). Target file `core/agents/code_review_agent.py`. New `_is_receipt_only_mode(context)` helper + early-return branch in `execute()`. ~30-45 min.
-
-**Active conversation:** `pa-61c7b47d201d4591` (Session 1209 close-state). Lean = continue on this thread for Phase B since it directly extends URC scope; spin fresh if Chris wants a clean Session 1210 lane.
-
-### Also fires this session
-
-The **24h watches** are time-gated priorities — three fire this session:
-
-| Watch | Fires (MDT) | Fires (UTC) | Checklist |
-|---|---|---|---|
-| **Session 1207 (MIC)** | (already fired ~21:50 MDT) | (already fired ~03:50 UTC) | [§"24h watch checklist" in 1207 handoff](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) — verify result |
-| **Session 1208 (Outbound)** | ~22:45 MDT 2026-06-23 | ~04:45 UTC 2026-06-24 | [§"24h watch checklist" in 1208 handoff](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) |
-| **Session 1209 (URC)** | ~07:10 MDT 2026-06-24 | ~13:10 UTC 2026-06-24 | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md). Invariants: URC envelope coverage stays at 100% on new rows; run_status distribution sane; **zero spurious contract_violations on non-receipt_only callers**; warnings list shape consistent. |
-
-Then pick from the priority table below.
 
 ### SESSION 1208 CLOSED — CampaignOrchestrator outbound-pack hardening ($2k Automation Sprint) (1 PR merged)
 
@@ -310,7 +356,7 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries the full URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke report `1a8cde69-…` (52/52 envelope coverage). Pinned in `tools/pa_local.sh`. **Lean for Session 1210: continue on this thread for Phase B (CodeReviewAgent receipt_only ping) since it directly extends URC scope; spin fresh if Chris wants a clean lane.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries the full URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke report `1a8cde69-…` (52/52 envelope coverage) + Phase B AC-4 addendum on spec deliverable `6f09233c-…`. Pinned in `tools/pa_local.sh`. **Lean for Session 1211: continue on this thread if extending URC adoption to other context-dependent agents; spin fresh if pivoting to a different lane.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
@@ -349,8 +395,10 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Phase B — `mode=receipt_only` capability ping for CodeReviewAgent** | **P0 (Session 1209 natural follow-on)** | URC spec `6f09233c-…` §7. CodeReviewAgent ×4 stay `run_status='error'` until this lands. Small PR (~50-100 LoC) at `core/agents/code_review_agent.py`. ACs: AC-1 receipt_only mode returns `data.status='skipped'` no inspection; AC-2 post-fix smoke flips CodeReview rows to `run_status='skipped'`; AC-3 normal mode unchanged; AC-4 pattern documented for other context-dependent agents. ~30-45 min. |
+| **Extend Phase B receipt_only pattern to other context-dependent agents** | **P0 (Session 1210 natural follow-on)** | Phase B pattern lives at `core/agents/code_review_agent.py:286-316`. ~10 agents on Session 1209 fleet smoke `1a8cde69-…` "error" rows are candidates. Each adoption: `_is_receipt_only_mode(context)` static helper + early-return branch before `time_travel_session`. Bundle 3-5 agents per PR. ACs mirror Phase B (AC-1 returns skipped receipt; AC-2 smoke flips error→skipped; AC-3 normal mode unchanged; AC-4 evidence row appended to addendum on `6f09233c-…`). |
+| **Session 1210 Phase B 24h watch (arms ~08:48 MDT / ~14:48 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1210`](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md) §"24h watch checklist". Invariants A1-A4: receipt_only → skipped; zero false-positive skipped from non-receipt callers; normal-mode rows produce `data.results`+`tool_calls`; `warnings=[]` on receipt_only rows. |
 | **Session 1209 URC 24h watch (fires ~07:10 MDT / ~13:10 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1209`](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) §"24h watch checklist". Invariants: URC envelope coverage 100% on new rows; run_status distribution sane; **zero spurious contract_violations on non-receipt_only callers** (the key new-feature invariant); warnings list shape consistent. |
+| **Standardize "skipped" semantics across agents (Session 1210 Rigby add)** | **P2 (defer)** | Decide whether future receipt_only agents must emit BOTH `data.skipped=True` AND `data.status='skipped'` (current Phase B pattern), or whether URC should expand its Q1 predicate to accept `data.status == 'skipped'`. Current pattern is safe; defer until ≥3 agents have adopted to see whether the dual-key requirement is friction. |
 | **Other writeback callsites adopt URC** | **P2 (Session 1209 follow-up)** | ~10 sites: `core/agent_execution_wrapper.py:93`, `ai_core/agents/sync_executor.py:109`, `core/services/content_executor.py:255`, `core/services/executor_registry.py:394`, `core/services/agent_collaboration.py:339`, `core/team_workflow_engine.py:494,517`, `core/services/collective_intelligence.py:1425`, `core/tasks_media.py:192`, `core/tasks_agents.py:706,2278`. The two paths patched (execute_agent_task + agent_router._complete_execution) cover Rigby's fleet smoke surfaces; the rest are narrower use cases. Use `core.services.urc_envelope.enrich_output_data()`. |
 | **Expose `parent_execution_id` filter in `ops_tool execution_search`** | **P2 (Session 1209 follow-up — Rigby surfaced)** | Rigby's fleet-smoke aggregation hit a tool gap — couldn't query "all AgentExecutions spawned by parent X". Session 1098 PR #4 added `parent_execution_id` + `root_execution_id` model fields; just need to surface them in the tool. ~30min PR. |
 | **Smoke context minimization convention** | **P3 (Session 1209 — Rigby Phase 3 idea)** | Define a minimal "smoke context" convention (`context.mode` only + tiny `context.smoke_id`) for Rigby's future fleet smokes. Avoids inflating execution records with multi-KB spec bodies under `context.research`. |
