@@ -102,7 +102,46 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1211 — CURRENT ENTRY POINT
+## SESSION 1212 — CURRENT ENTRY POINT
+
+### SESSION 1211 CLOSED — URC v0.1 Phase B extension to 3 more agents + media gate hotfix (2 PRs merged)
+
+Full handoff: [`SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md`](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md). **2 PRs merged.** Phase B now covers 4 agents total (CodeReviewAgent from Session 1210 + 3 new). AC-2 verified live on all 4 receipt_only rows; AC-3 verified via pattern proof + MeetingCoordinator control; AC-4 addendum extension filed (+2059 chars; deliverable `6f09233c-…` now 16800 chars).
+
+| PR | Commit | What |
+|---|---|---|
+| **#2478** | `94376083` | Phase B adoption on VideoEditingAgent, ImageEditingAgent, MeetingCoordinatorAgent. Each gets `_is_receipt_only_mode(context)` helper + early-return branch before any side effect (LLM, spider intel, `time_travel_session`). One consolidated parametrized test file (`test_phase_b_receipt_only_adopters.py`, 33 tests, 11 per agent). |
+| **#2479** | `c4d55b31` | **Hotfix.** Session 1036's `_is_media_task_blocked` gate at `tasks_agents.py:2079` rejected Video/Image receipt_only dispatches before Phase B could fire. 2-line context check bypasses the gate when receipt_only; helper stays pure. Admin-merged because GitHub Actions billing block prevented CI from running (NOT a code failure — diagnosis matched celery log fingerprint exactly). |
+
+**AC-2 evidence (DB-verified, 4 rows):** VideoEditingAgent `e69da447` (skipped, 2452ms), ImageEditingAgent `7ce2c54b` (skipped, 1081ms), MeetingCoordinatorAgent `dcba5633` (skipped, 9914ms) + `74512a1c` (skipped, 1290ms). All sub-10s confirms early-return fires before any LLM/IO.
+
+**AC-3 evidence:** MeetingCoordinatorAgent control `cb24ed13` → `run_status='success'` on empty context (normal path executed). Phase B is purely additive at the agent level; the contract is identical across all 3 adopters (proven by parametrized unit tests). Video/Image controls skipped — would just re-test the dispatcher gate bypass, which the receipt_only rows already proved.
+
+**Drift finding closed in-session:** the media gate had a receipt_only blind spot (gate rationale = save spend; receipt_only short-circuits before spend). Hotfix #2479 surgically adds context-aware bypass. Gate-audit P2 follow-up filed for other pre-execute guards.
+
+**Post-merge gotchas (cleared):** worker restarts at 10:08 MDT (post-#2478) AND 10:20 MDT (post-#2479) — both required because `tasks_agents.py` + the 3 new agent files are all celery-task-imported.
+
+### FIRST THING Session 1212 — pick lane
+
+Two natural follow-ons from Session 1211. Lean is **(A)** unless gate-audit feels more urgent.
+
+**(A) Continue Phase B adoption to more context-dependent agents** — Session 1209 fleet smoke deliverable `1a8cde69-…` still lists agents that fail under receipt_only mode. 4 of ~10 candidates adopted across Sessions 1210+1211. Pattern is fixed (`_is_receipt_only_mode` static helper + early-return + dual-key receipt). Bundle 3-5 agents per PR. ~30-45 min per agent. Ask Rigby for the next 3 picks from the smoke "error" rows.
+
+**(B) Gate-audit P2 follow-up — receipt_only blind spots in pre-execute guards** — Session 1211 hotfix #2479 fixed the media gate. Audit other pre-execute guards in `_impl_execute_agent_task` (`tasks_agents.py:2061+`) for similar blind spots: `_circuit_breaker_check` (line 2093), `_BLOCKED_AGENTS` (line 2065), any task-shape gates, allowlists/denylists. Decide per-guard whether receipt_only should bypass. Scope guideline: "ensure receipt_only can always reach agent `execute()` unless agent is explicitly disabled."
+
+**Active conversation:** `pa-61c7b47d201d4591` — carries URC v0.1 design lock + Phase B across 4 adopters. Lean: continue on this thread for both (A) and (B); spin fresh if pivoting away from URC.
+
+### Also fires this session
+
+The **24h watches** are time-gated priorities:
+
+| Watch | Fires (MDT) | Fires (UTC) | Checklist |
+|---|---|---|---|
+| **Session 1209 (URC)** | ~07:10 MDT 2026-06-24 | ~13:10 UTC 2026-06-24 | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) |
+| **Session 1210 (Phase B)** | ~08:48 MDT 2026-06-24 | ~14:48 UTC 2026-06-24 | [§"24h watch checklist" in 1210 handoff](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). Invariants A1-A4. |
+| **Session 1211 (Phase B extension)** | ~09:20 MDT 2026-06-24 | ~15:20 UTC 2026-06-24 | [§"24h watch checklist" in 1211 handoff](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md). Invariants B1-B4: receipt_only → skipped on all 4 adopters; zero false-positive skipped from non-receipt callers; normal-mode rows reach existing flow; media gate still fires on non-receipt non-generative tasks (bypass is narrow). |
+
+Then pick from the priority table below.
 
 ### SESSION 1210 CLOSED — URC v0.1 Phase B: receipt_only mode for CodeReviewAgent (1 PR merged)
 
@@ -119,66 +158,6 @@ Full handoff: [`SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md`](docs/hand
 **Drift surfaced + resolved in-session:** Spec text in `00-START` line 127 implied `data={'status': 'skipped'}` alone would trigger `run_status='skipped'` — Q1 predicate at `urc_envelope.py:50` actually requires `data['skipped'] is True`. Option A reconciliation per Rigby (`pa-61c7b47d201d4591`): agent emits both keys; URC core unchanged.
 
 **Post-merge gotcha (cleared):** worker restart required at 09:47 MDT (post-`4d0040af`) — `code_review_agent.py` is imported by `tasks_agents._impl_execute_agent_task` body. All 4 workers + beat alive on fresh PIDs.
-
-### FIRST THING Session 1211 — extend Phase B receipt_only pattern to other context-dependent agents
-
-**Natural follow-on** per URC spec `6f09233c-…` §7 + Session 1210 close §"Open follow-ups". Session 1209 fleet smoke deliverable `1a8cde69-…` surfaced ~10 agents that fail under `receipt_only` mode because their `execute()` paths require external context (files, APIs, scheduled data) they don't have in a capability-ping dispatch.
-
-Phase B set the pattern at `core/agents/code_review_agent.py:286-316`. Each new agent gets the same shape:
-
-```python
-@staticmethod
-def _is_receipt_only_mode(context: Dict[str, Any] | None) -> bool:
-    if not context:
-        return False
-    if context.get('mode') == 'receipt_only':
-        return True
-    if context.get('receipt_only') is True:
-        return True
-    return False
-
-def execute(self, task, context, scifi_context, spider_context):
-    import time
-    start_time = time.time()
-    if self._is_receipt_only_mode(context):
-        return AgentResult(
-            success=True,
-            message='receipt_only mode — no code inspection performed',  # ← customize per agent
-            data={'skipped': True, 'status': 'skipped', 'mode': 'receipt_only', 'message': ...},
-            agent_name=self.name,
-            execution_time_ms=int((time.time() - start_time) * 1000),
-            decisions_made=0,
-            tool_calls=[],
-        )
-    # ... existing logic
-```
-
-**First-pass target list** (pulled from Session 1209 fleet smoke "error" rows on context-dependent agents — Rigby has the full list on deliverable `1a8cde69-…`):
-- Agents that hard-require repo/file access (ContentWriterAgent already has its own receipt_only path that triggers `contract_violation` per Phase C — needs the same agent-level branch as Phase B).
-- Agents that hard-require live external APIs (TheOddsAnalyst, financial spiders' analytics agents, etc.).
-- Agents that hard-require scheduled spider data (sports-betting workflow agents).
-
-**Acceptance criteria** (mirror Phase B):
-- AC-1: Each adopted agent under `mode=receipt_only` returns `result.success=True` with `data.skipped=True, status='skipped'`. No external dependencies attempted.
-- AC-2: Post-fix fleet smoke shows the agents transition `run_status='error'` → `run_status='skipped'` for receipt_only dispatches.
-- AC-3: Outside `receipt_only` mode, each agent behaves identically to today.
-- AC-4: AC-4 addendum on `6f09233c-…` already captures the pattern — extend it with the list of adopting agents as evidence rows.
-
-**Scope estimate:** Per-agent ~30 min (helper + branch + ~5-10 unit tests). Bundle 3-5 agents per PR; keep blast radius small. Worker restart still required post-merge.
-
-**Active conversation:** `pa-61c7b47d201d4591` — carries Phase A+B+C design lock. Lean: continue on this thread if Session 1211 stays within URC adoption; spin fresh if pivoting to a different lane.
-
-### Also fires this session
-
-The **24h watches** are time-gated priorities:
-
-| Watch | Fires (MDT) | Fires (UTC) | Checklist |
-|---|---|---|---|
-| **Session 1208 (Outbound)** | (already fired ~22:45 MDT 2026-06-23) | (already fired ~04:45 UTC 2026-06-24) | [§"24h watch checklist" in 1208 handoff](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) — verify result |
-| **Session 1209 (URC)** | ~07:10 MDT 2026-06-24 | ~13:10 UTC 2026-06-24 | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) |
-| **Session 1210 (Phase B)** | ~08:48 MDT 2026-06-24 | ~14:48 UTC 2026-06-24 | [§"24h watch checklist" in 1210 handoff](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). Invariants A1-A4: receipt_only dispatches → `skipped`, no false-positive `skipped` on non-receipt_only callers, normal-mode rows produce `data.results`+`tool_calls`, `warnings=[]` on receipt_only rows. |
-
-Then pick from the priority table below.
 
 ### SESSION 1209 CLOSED — Universal Receipt Contract (URC v0.1) envelope + router-path coverage (2 PRs merged)
 
@@ -356,7 +335,7 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries the full URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke report `1a8cde69-…` (52/52 envelope coverage) + Phase B AC-4 addendum on spec deliverable `6f09233c-…`. Pinned in `tools/pa_local.sh`. **Lean for Session 1211: continue on this thread if extending URC adoption to other context-dependent agents; spin fresh if pivoting to a different lane.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries the full URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke `1a8cde69-…` + Phase B AC-4 addendum on spec deliverable `6f09233c-…` spanning 4 adopters (Sessions 1210-1211, +2601 + +2059 = +4660 chars total, deliverable now 16800 chars). Pinned in `tools/pa_local.sh`. **Lean for Session 1212: continue on this thread if extending Phase B to more agents or running the gate-audit P2 follow-up; spin fresh if pivoting away from URC.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
@@ -395,8 +374,11 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Extend Phase B receipt_only pattern to other context-dependent agents** | **P0 (Session 1210 natural follow-on)** | Phase B pattern lives at `core/agents/code_review_agent.py:286-316`. ~10 agents on Session 1209 fleet smoke `1a8cde69-…` "error" rows are candidates. Each adoption: `_is_receipt_only_mode(context)` static helper + early-return branch before `time_travel_session`. Bundle 3-5 agents per PR. ACs mirror Phase B (AC-1 returns skipped receipt; AC-2 smoke flips error→skipped; AC-3 normal mode unchanged; AC-4 evidence row appended to addendum on `6f09233c-…`). |
+| **Continue Phase B adoption to next 3 context-dependent agents** | **P0 (Session 1211 natural follow-on)** | 4 of ~10 candidates now adopted (CodeReview + Video + Image + MeetingCoordinator). Pattern is fixed (`_is_receipt_only_mode` static helper + early-return + dual-key receipt). Next picks pulled from Session 1209 fleet smoke `1a8cde69-…` "error" rows. ACs mirror Phase B. ~90 min for a bundle of 3. |
+| **Gate-audit P2 follow-up: receipt_only blind spots in pre-execute guards** | **P2 (Session 1211 Rigby surfaced)** | Hotfix #2479 fixed the media gate. Audit other pre-execute guards in `_impl_execute_agent_task` (`tasks_agents.py:2061+`): `_circuit_breaker_check` (line 2093), `_BLOCKED_AGENTS` (line 2065), any task-shape gates, allowlists/denylists. Decide per-guard whether receipt_only should bypass. Scope guideline: "ensure receipt_only can always reach agent `execute()` unless agent is explicitly disabled." |
+| **Session 1211 Phase B extension 24h watch (arms ~09:20 MDT / ~15:20 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1211`](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md) §"24h watch checklist". Invariants B1-B4: receipt_only → skipped on all 4 adopters; zero false-positive skipped from non-receipt callers; normal-mode reaches existing flow; media gate still fires on non-receipt non-generative tasks (bypass is narrow). |
 | **Session 1210 Phase B 24h watch (arms ~08:48 MDT / ~14:48 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1210`](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md) §"24h watch checklist". Invariants A1-A4: receipt_only → skipped; zero false-positive skipped from non-receipt callers; normal-mode rows produce `data.results`+`tool_calls`; `warnings=[]` on receipt_only rows. |
+| **GitHub Actions billing block resolution** | **P1 (operational, Chris-owned)** | Hotfix #2479 was admin-merged because CI runs were rejected with "recent account payments have failed or your spending limit needs to be increased." Future PRs need this resolved at the GitHub billing layer to avoid admin-bypass dependency. |
 | **Session 1209 URC 24h watch (fires ~07:10 MDT / ~13:10 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1209`](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) §"24h watch checklist". Invariants: URC envelope coverage 100% on new rows; run_status distribution sane; **zero spurious contract_violations on non-receipt_only callers** (the key new-feature invariant); warnings list shape consistent. |
 | **Standardize "skipped" semantics across agents (Session 1210 Rigby add)** | **P2 (defer)** | Decide whether future receipt_only agents must emit BOTH `data.skipped=True` AND `data.status='skipped'` (current Phase B pattern), or whether URC should expand its Q1 predicate to accept `data.status == 'skipped'`. Current pattern is safe; defer until ≥3 agents have adopted to see whether the dual-key requirement is friction. |
 | **Other writeback callsites adopt URC** | **P2 (Session 1209 follow-up)** | ~10 sites: `core/agent_execution_wrapper.py:93`, `ai_core/agents/sync_executor.py:109`, `core/services/content_executor.py:255`, `core/services/executor_registry.py:394`, `core/services/agent_collaboration.py:339`, `core/team_workflow_engine.py:494,517`, `core/services/collective_intelligence.py:1425`, `core/tasks_media.py:192`, `core/tasks_agents.py:706,2278`. The two paths patched (execute_agent_task + agent_router._complete_execution) cover Rigby's fleet smoke surfaces; the rest are narrower use cases. Use `core.services.urc_envelope.enrich_output_data()`. |
