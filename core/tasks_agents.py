@@ -2427,6 +2427,20 @@ self,
                 'error': result.error if not result.success else None,
                 'tool_calls': result.tool_calls if result.tool_calls else [],
             }
+            # Session 1207 (Rigby pa-33088358df304016 follow-up nits): lift
+            # `deliverable_id` and `warnings` from result.data to top-level
+            # output_data so downstream tooling (execution_history_tool, ops
+            # dashboards, audits) can discover artifacts and degradations
+            # without spelunking nested keys.
+            #   - `deliverable_id`: emitted only when the agent set it
+            #     (preserves backwards compat for agents that don't create
+            #      deliverables).
+            #   - `warnings`: ALWAYS emitted as a top-level list — empty
+            #     list when no warnings, populated list otherwise. Downstream
+            #     readers can rely on its presence without defensive guards.
+            if _result_data.get('deliverable_id'):
+                _raw_output['deliverable_id'] = _result_data['deliverable_id']
+            _raw_output['warnings'] = list(_result_data.get('warnings') or [])
             try:
                 execution_record.output_data = _json.loads(_json.dumps(_raw_output, default=str))
             except (TypeError, ValueError):
