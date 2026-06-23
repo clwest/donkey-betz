@@ -102,7 +102,72 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1222 — CURRENT ENTRY POINT
+## SESSION 1223 — CURRENT ENTRY POINT
+
+### SESSION 1222 CLOSED — Carryover queue clear: B2 + 9-class trim + reasoning-contract enforce, 4 PRs
+
+Full handoff: [`SESSION_1222_CARRYOVER_QUEUE_CLEAR.md`](docs/handoffs/SESSION_1222_CARRYOVER_QUEUE_CLEAR.md). All 4 deferred items from Sessions 1216-1218 closed.
+
+| PR | What | Carryover from |
+|---|---|---|
+| **#2522** | Remove OpenAIProvider class (verification: zero rows all-time across all real_* agents + concrete_executor; zero callers of attached methods) | Session 1217 PR #2507 (B2) |
+| **#2523** | Trim 4 zero-exec names from content_studio list + 3 from ops timeout config (Cat A+B) | Session 1218 P2 |
+| **#2524** | Drop 3 dormant gateway dispatch actions: `content_tool.sharp_action`, `content_tool.line_movements`, `studio_tool.generate_talking_video` (Cat C). Also removed the 2 unified_pa_entrypoint formatters with their Session-1075-drift sync/async shape mismatch. | Session 1218 P2 |
+| **#2525** | Promote `check-reasoning-contract.yml` from `--warn-only` to enforce. Zero violations on main pre-flip. | Session 1216 Phase E |
+| **(this PR)** | Session 1222 close handoff + this start-here. | — |
+
+Net delta: **~200 lines removed** from main.
+
+**Tool-surface change visible to users:** the 3 dropped gateway actions no longer appear in `studio_tool` / `content_tool` schemas. The surviving talking-video entry point is `studio_tool.create_talking_video` (different pipeline, generates image + video in one step).
+
+### FIRST THING Session 1223 — production observation window + light-touch carryovers
+
+The watchdog/timeout investigation arc closed in Session 1221; the carryover queue cleared in Session 1222. Session 1223 has no urgent fresh blocker. The natural priority is the observation window for the Session 1221 watchdog fixes (Tier 1 + Tier 2) since real signal needs the burn-in.
+
+#### Priority 1 — Production observation window for Tier 1 + Tier 2 (Session 1221)
+
+Tier 1 (PR #2519) added a total-request bound on `BaseAgent._call_openai`; Tier 2 (PR #2520) added the `LLMCallEvent` cleanup watchdog. Both merged ~2h before Session 1222 opened. Real signal needs 24-48h+ of production traffic.
+
+**Check at start of Session 1223** (pull via `ops_tool` + direct DB queries):
+
+1. **Zombie thread rate** — `ops_tool action=zombie_thread_rate hours=48` should still return mostly-empty `by_agent: {}`. Spikes (>5/hour for any single agent) signal structural hang. **Baseline pre-merge:** ~2 watchdog kills/day across all workers.
+
+2. **LLMCallEvent stuck STARTED population** — direct query `LLMCallEvent.objects.filter(status='STARTED', started_at__lt=now-10min).count()`. **Baseline pre-merge:** 2 stuck rows held 16h and 96h. **Post-Tier-2 target:** zero stuck rows past 10 min (the cleanup watchdog should sweep them).
+
+3. **`cleanup-stuck-llm-calls` beat task firing** — check `CeleryTaskEvent.objects.filter(task_name='core.tasks.cleanup_stale_llm_calls').order_by('-started_at')[:10]` — should see runs every 10 min, all SUCCESS.
+
+4. **Tier 1 timeout firing rate** — grep PA worker logs for `[base_agent._call_openai] OpenAI total-request timeout`. Should be rare or zero. Spikes signal Tier 1 cap is too tight for the agent's actual LLM call duration.
+
+5. **`ops_tool.failure_signatures window=24h`** — top signatures should not be dominated by `error_type='timeout'` with `watchdog_cleanup` in the message. If they are, Tier 2 is sweeping faster than agents can complete.
+
+If any of the 5 checks are red, queue a Session 1223 fix PR. If all green, the watchdog/timeout story is fully closed and the next priority is whichever queue Chris wants to lead with.
+
+#### Priority 2 — Verify the `check-reasoning-contract.yml` enforce flip didn't introduce false positives
+
+First 24-48h of PR CI runs are the canary. Check `gh pr list --state merged --limit 20` for any merged PRs that touched `**/*.py` and verify their `check-reasoning-contract` job passed. False positives → revert to `--warn-only` (single-line PR) and investigate the checker.
+
+**Rollback lever:** re-add `--warn-only` flag at `.github/workflows/check-reasoning-contract.yml:43`. Single-line revert.
+
+#### Priority 3 — Tier 3 from P2 deliverable `7ae61cf7-…` (defer unless observation surfaces leakage)
+
+Wrap the `openai_client_factory` clients at construction time with the same total-request bound that Tier 1 applies per-callsite. Heavier contract change. Defer unless Tier 1 + Tier 2 leakage to non-BaseAgent paths becomes a measurable production issue.
+
+#### Priority 4 — Delete the 9 dormant agent class files (deferred from Session 1222 P2 close)
+
+Per Rigby's recommendation in P2, the 9 agent classes (`SharpActionDetector`, `LineMovementAnalyzer`, `TalkingCharacterAgent`, `ContrarianAgent`, `PerformanceAnalystAgent`, `VoiceCriticAgent`, `ContentDiversityOrchestrator`, `ResolveAgent`, `WhaleWatcherAgent`) stay in `core/agents/` for future re-enable. Pre-flight grep for imports of each class first — they may still be referenced from registries or routing tables. Lower priority than the observation window.
+
+#### Priority 5 — Whatever Chris wants
+
+The deferred queue from Sessions 1216-1218 is empty. Session 1219-1221 watchdog/timeout work is in observation. Session 1222 closed. No fresh urgent items in the start-here.
+
+**Active conversation:** `pa-58737666f25741dc` — carried through Sessions 1217-1222.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Doc-vs-runtime drift triage (audit findings #6/#7/#8)
+- Critical-path hub markers (audit finding #4)
+- Atlas fleet positioning + narrative staleness (#9/#10)
+- Beat schedule disabled tasks classification (Rigby's A4)
+- Revenue pipeline aggregation audit (Rigby's C5)
 
 ### SESSION 1221 CLOSED — Tier 1 + Tier 2 from 7ae61cf7 shipped same-session
 
