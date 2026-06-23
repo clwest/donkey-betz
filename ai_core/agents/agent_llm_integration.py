@@ -8,10 +8,10 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-import openai
 import anthropic
 from abc import ABC, abstractmethod
 from ai_core.llm_adapter_async import AsyncLLMAdapter
+from core.services.openai_client_factory import get_async_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +34,10 @@ class OpenAIProvider(LLMProvider):
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         if self.api_key:
-            openai.api_key = self.api_key
-            self.client = openai.AsyncOpenAI(api_key=self.api_key)
+            try:
+                self.client = get_async_openai_client(api_key=self.api_key)
+            except (RuntimeError, ValueError):
+                self.client = None
         else:
             self.client = None
             logger.warning("OpenAI API key not found")
