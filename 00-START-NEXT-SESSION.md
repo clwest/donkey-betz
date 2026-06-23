@@ -102,7 +102,35 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1216 — CURRENT ENTRY POINT
+## SESSION 1217 — CURRENT ENTRY POINT
+
+### SESSION 1216 CLOSED — OpenAI caller alignment Phase E complete + SPEC CLOSED: 2 PRs merged, runtime guard + AST-based CI lint, catalog final at 17.1KB
+
+Full handoff: [`SESSION_1216_OPENAI_CALLER_ALIGNMENT_PHASE_E.md`](docs/handoffs/SESSION_1216_OPENAI_CALLER_ALIGNMENT_PHASE_E.md). **2 PRs merged.** Phase E closes the OpenAI caller alignment spec deliverable `2b9aa447-…` (status flipped to `completed`).
+
+| PR | Commit | What |
+|---|---|---|
+| **#2499** | `899a8c7c` | Phase E PR #1 — runtime guard in `core/services/openai_client_factory.py`. New public API: `apply_reasoning_guard()` + `ReasoningGuardViolation` + `_install_reasoning_guard()`. Factory-returned clients have `chat.completions.create` wrapped at construction. Env-gated `OPENAI_REASONING_GUARD={warn,strip,error}`, default `warn`. Trigger: `"gpt-5"` substring in model. Forbidden: max_tokens / temperature / top_p / frequency_penalty / presence_penalty. 13 unit tests pass. |
+| **#2500** | `9297864b` | Phase E PR #2 — AST-based `tools/check_reasoning_contract.py` + `.github/workflows/check-reasoning-contract.yml` + 10 unit tests. AST parsing avoids docstring false positives. Ships `--warn-only` since Phase C+D close left zero violations on main. **CLOSES spec deliverable 2b9aa447-….** |
+
+**Three-session OpenAI alignment arc final ledger (1214 + 1215 + 1216, all 2026-06-23): 15 PRs merged (12 work + 3 docs closes). ~30 call sites aligned to gpt-5-mini reasoning contract. Async factory + runtime guard + CI lint shipped. Catalog deliverable bb775acb-… pinned at 17.1KB.**
+
+### FIRST THING Session 1217 — Pick from the P2/P3 backlog
+
+**No spec lead this session.** OpenAI caller alignment spec is closed. The carryovers below are all P2/P3 and don't block anything.
+
+**P2 candidates (1-2h each):**
+
+1. **Promote `check-reasoning-contract.yml` to enforce mode** — drop `--warn-only` after 24h burn-in. Should be a 1-line PR. Trivial close.
+2. **`OpenAIProvider.generate()` cleanup** (`ai_core/agents/agent_llm_integration.py:43-108`) — references undefined `messages` variable at L90. Effectively unreachable in production (dispatch routes through `AsyncLLMAdapter`). Rigby's lean: either delete if truly unused, or fix + add a tiny unit smoke. Surfaced Session 1214 PR #2493 audit.
+3. **`content/ai_providers.py:114` factory adoption** — bare-with-kwargs `openai.OpenAI(api_key=..., timeout=..., max_retries=2)`. Has explicit 60s timeout (not 600s footgun), but doesn't route through `get_openai_client()`. Phase B follow-on. Migrating it would also get the reasoning guard for free.
+
+**P3 candidates:**
+
+- **Stale-thread dispatcher** (`777d9cd8-…`) — ~$3.60/day savings. Carryover since Session 1213. Lean A (per-conversation `session_closed` flag).
+- **System prompt + tool schema size reduction** — non-smoke conversational turns still 35-68K tokens. No spec filed yet. Would need design + investigation first.
+
+**Active conversation:** `pa-e37fe30dc7b941a6` continues but holds 3 full sessions of context. **Strong recommendation: spin a fresh thread for Session 1217** via `session_tool create_fresh` to keep system-prompt context lean. The closed-spec catalog deliverable `bb775acb-…` carries forward in the workspace regardless of which thread you use.
 
 ### SESSION 1215 CLOSED — OpenAI caller alignment Phase C+D complete: 3 PRs merged, double round-trip bug fixed, 3 endpoints unbroken, catalog at 16.1KB
 
