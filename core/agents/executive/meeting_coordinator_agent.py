@@ -172,6 +172,22 @@ You facilitate but don't make decisions - you synthesize and document."""
         }
     ]
 
+    @staticmethod
+    def _is_receipt_only_mode(context: Dict[str, Any] | None) -> bool:
+        """URC v0.1 receipt_only mode detector.
+
+        Recognized signals (Session 1211 Phase B adoption):
+          - context['mode'] == 'receipt_only'  (primary, URC spec)
+          - context.get('receipt_only') is True  (secondary, forward-compat)
+        """
+        if not context:
+            return False
+        if context.get('mode') == 'receipt_only':
+            return True
+        if context.get('receipt_only') is True:
+            return True
+        return False
+
     def execute(
         self,
         task: str,
@@ -181,6 +197,28 @@ You facilitate but don't make decisions - you synthesize and document."""
     ) -> AgentResult:
         """Execute meeting coordination based on the task."""
         start_time = time.time()
+
+        # Session 1211 Phase B: URC v0.1 receipt_only capability ping.
+        # Skip the coordination pipeline (calendar / meeting details
+        # access + spider intelligence extraction below) when the caller
+        # signals receipt_only mode. The Q1 predicate at
+        # urc_envelope._is_skipped checks data['skipped'] is True.
+        if self._is_receipt_only_mode(context):
+            return AgentResult(
+                success=True,
+                message='receipt_only mode — no meeting coordination performed',
+                data={
+                    'skipped': True,
+                    'status': 'skipped',
+                    'mode': 'receipt_only',
+                    'message': 'receipt_only mode — no meeting coordination performed',
+                },
+                agent_name=self.name,
+                execution_time_ms=int((time.time() - start_time) * 1000),
+                decisions_made=0,
+                tool_calls=[],
+            )
+
         tool_calls_made = []
 
         # Session 736: Extract spider intelligence for real-time data
