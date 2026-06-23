@@ -102,7 +102,32 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1208 — CURRENT ENTRY POINT
+## SESSION 1209 — CURRENT ENTRY POINT
+
+### SESSION 1208 CLOSED — CampaignOrchestrator outbound-pack hardening ($2k Automation Sprint) (1 PR merged)
+
+Full handoff: [`SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md`](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md). **1 PR merged (#2471, 2 commits).** All 5 acceptance criteria verified across 2 live smokes before merge.
+
+Single-arc session executing Rigby's full §1-§6 spec from deliverable `ecddb62d-…`. `CampaignOrchestratorAgent.execute()` now short-circuits into a hardened path when `context['mode']=='outbound_pack'` OR a narrow keyword trigger matches (`"outbound pack"` OR (`"$2k"` AND `"automation sprint"` AND outbound-ish token from cold/dm/email/outreach)). Hardened path: generate JSON → validate (§4) → retry up to 2× → render markdown → save ONE Deliverable. Legacy 5-phase pipeline (research/strategy/creation) untouched.
+
+| Commit | What |
+|---|---|
+| **`3b877a4d`** | Initial implementation (854 lines). New private methods: `_is_outbound_pack_request`, `_execute_outbound_pack`, `_run_outbound_hooks`, `_call_openai_json` (JSON-mode helper using `response_format={'type':'json_object'}` on gpt-5-mini), `_build_outbound_prompt` (3-attempt schedule: normal → +errors → +inline JSON skeleton), `_outbound_pack_skeleton`, `_validate_outbound_pack` (§4 hard rules + soft length warnings + §4.2 no-drift scan), `_collect_outbound_message_strings` (drift scan scoped to message content only — not metadata), `_render_outbound_pack_markdown` (§5 body shape). Short-circuit in `execute()` outside legacy `time_travel_session`. |
+| **`1ff25732`** | Rigby's PR-review gate fixes: title locked deterministically via `_format_outbound_pack_title()` constant (LLM's `offer.name` no longer bleeds into title/H1); validator tightened to exact-match `offer.name == OUTBOUND_PACK_OFFER_NAME` (LLM smoke had returned compound `"Automation Sprint — $2k Automation Sprint"`); `attempts_used` lifted to top-level `output_data` (same convention as PR #2469's `deliverable_id`/`warnings` — emitted only when set, kept at `data.attempts_used` for backcompat); `.gitignore` for `.obsidian/`. |
+
+**Smoke evidence:** Deliverable `a37a0c52-3c58-4e05-9f8e-7d410ae45464` (post-fix re-smoke) — title exactly `CampaignOrchestratorAgent: Outbound Pack — $2k Automation Sprint — 2026-06-22` (the agent-prefix is factory-level, affects all agents — documented as cosmetic follow-up). Body H1 `# Outbound Pack — $2k Automation Sprint — 2026-06-22`. `output_data['attempts_used']=2` lifted to top-level. Plus deliverable `6907bc78-…` (initial smoke, kept as audit baseline).
+
+### FIRST THING Session 1209
+
+The **24h watches** are the time-gated priorities — three fire this session:
+
+| Watch | Fires (MDT) | Fires (UTC) | Checklist |
+|---|---|---|---|
+| **Session 1207 (MIC)** | 2026-06-23 ~21:50 MDT | ~03:50 UTC 2026-06-24 | [§"24h watch checklist" in 1207 handoff](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) |
+| **Session 1208 (Outbound)** | 2026-06-23 ~22:45 MDT | ~04:45 UTC 2026-06-24 | [§"24h watch checklist" in 1208 handoff](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) |
+| **Session 1206 (Layer 1)** | ~23:35 UTC tonight (already fired) | — | [§"24h watch checklist" in 1206 handoff](docs/handoffs/SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md) |
+
+Then pick from the priority table below.
 
 ### SESSION 1207 CLOSED — MIC auto-deliverable + output_data hardening (3 PRs merged)
 
@@ -252,13 +277,13 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-33088358df304016` — Chris's pinned Session 1207 thread. Carries the MIC auto-deliverable arc + CampaignOrchestrator spec hand-off. Probably worth a fresh Session 1208 thread on first Rigby ping (CampaignOrchestrator is a substantial new arc, not a continuation). Prior threads retired: `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session by Chris's pin), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-2d74e36cc3a04787` — Rigby's `session_tool create_fresh` at Session 1208 open. Carries the full §1-§6 CampaignOrchestrator outbound-pack design discussion (Q1 entry-point precedence + Q2 JSON-mode + insertion-point stamp + PR review with three review-gate fixes). Pinned in `tools/pa_local.sh`. Worth deciding whether to spin a fresh Session 1209 thread on first Rigby ping or continue on this one (depends on whether the next arc is a CampaignOrchestrator extension or a separate concern). Prior threads retired: `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
 ### Session 1205 Capability Audit Initiative
 
-`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **13 deliverables** so far (10 end-of-Session-1205; +1 Session 1206 lint-rule `180f4e9f-…`; +1 Session 1206 Arc C `96b6a72a-…` workspace_id hallucination P0; +1 Session 1207 close `ecddb62d-…` CampaignOrchestrator hardening spec / Session 1208 entry):
+`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **13 deliverables** (10 end-of-Session-1205; +1 Session 1206 lint-rule `180f4e9f-…`; +1 Session 1206 Arc C `96b6a72a-…` workspace_id hallucination P0; +1 Session 1207 close `ecddb62d-…` CampaignOrchestrator hardening spec — **status remains as filed; spec was implemented in full by Session 1208 PR #2471 (commits `3b877a4d` + `1ff25732`)**):
 
 | ID | Type | Title |
 |---|---|---|
@@ -288,7 +313,10 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **CampaignOrchestrator delegation hardening** | **P0 (Session 1208 entry point — income-gen path)** | Deliverable `ecddb62d-ab01-4b3b-83c4-2601670395d3` carries Rigby's full spec (§1-§6). Outbound pack JSON schema validation, 2-retry semantics, ONE combined Deliverable. Workspace=DBZ, category=`Outbound`, title=`Outbound Pack — $2k Automation Sprint — YYYY-MM-DD`. Hard guardrail: NO blog/thumbnail generation. |
+| **Session 1207 MIC 24h watch (fires ~21:50 MDT / ~03:50 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1207`](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` always list shape. |
+| **Session 1208 Outbound-pack 24h watch (fires ~22:45 MDT / ~04:45 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1208`](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) §"24h watch checklist". Invariants: every successful outbound run lands ONE Deliverable, no double-writes, `warnings` shape consistent, drift-keyword false-positive rate stays at 0 on metadata-only mentions. |
+| **Title normalization at factory level** | **P1 (Session 1208 cosmetic follow-up)** | Both MIC + Outbound deliverables show `<AgentName>: ` auto-prefix from `deliverable_factory._clean_deliverable_title`. Worth one cross-agent factory PR (e.g. a `preserve_title=True` kwarg on `_save_to_deliverable` → `create_deliverable` that skips the cleaner) rather than per-agent workarounds. Rigby's stamp: "If we ever want to remove it globally, that's a separate platform-wide title policy decision." |
+| **Beat schedule for periodic outbound-pack generation** | **P2 (Session 1208 follow-up)** | Spec says "2 flagship outbound packs per week". Currently the path is only invocable on-demand (context['mode']='outbound_pack' or keyword trigger). Worth adding `PeriodicTask` via `add_critical_celery_tasks` if the cadence becomes desired. |
 | **Workspace_id hallucination root-cause trace** | **P0 (Session 1206 Arc C unfinished)** | Deliverable `96b6a72a-…`. Mitigated by PR #2465 guardrail; root cause open. Suspected call chain: PA tool → tool_dispatcher → tasks_agents → agent_router → create_deliverable. Grep `pa_tool_schemas` + `tool_dispatcher` for `workspace_id` parameters where LLM might pick the value. Verification metric: B2 guardrail WARN volume should drop to zero in 24h post-fix. |
 | **Session 1207 24h watch (fires 2026-06-23 ~03:50 UTC / 9:50 PM MDT)** | **P1 (time-gated)** | Run checklist in `SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md` §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` is always a list shape. |
 | **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1206 follow-up)** | Deliverable `180f4e9f-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
