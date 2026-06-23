@@ -17,16 +17,21 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1217 self-directed
-# audit experiment (Rigby's session_tool create_fresh post Session 1216
-# close: pa-58737666f25741dc — "Session 1217 — Self-directed audit
-# experiment"). Bounded experiment: Chris steps out of priority-setting
-# role, Claude + Rigby self-direct one half-session to produce a single
-# audit deliverable in Donkey Betz workspace. No code changes, no PRs —
-# pure analysis. Output template per finding: Finding / Evidence /
-# Why / Recommendation / Effort. Plan: agree on categories, each
-# independently scan 2-3 categories via tools, merge into one deliverable.
-# Prior pins retired: pa-e37fe30dc7b941a6 (Sessions 1214-1216 — OpenAI
+# the --conversation flag below. Current value: Session 1223 watchdog
+# burn-in + audit tail (Rigby's session_tool create_fresh post Session 1222
+# close: pa-17e0fa71fd25470a — "Session 1223 — Watchdog burn-in + audit
+# tail (P1-P4)"). Session 1223 priorities: (P1) verify the 5 watchdog
+# burn-in checks from #2519/#2520 are green after 24-48h, (P2) Operator
+# Edge newsletter Friday-1 dry-run check from #2530, (P3) audit #8 seed
+# baseline drift decision (Chris-pick: re-seed runtime to 155 or accept
+# 89 as canonical), (P4) audit #4/#9/#10 — critical-path gates, narrative
+# refresh, Atlas reconciliation. All deferred-but-still-open from the
+# 15-finding Session 1217 audit (deliverable bec077ed-…, 11/15 closed).
+# Prior pins retired: pa-58737666f25741dc (Sessions 1217-1222 — 6-session
+# continuous thread, ended at 44 msgs / 22k tokens / strongly_recommend_fresh;
+# Session 1217 self-directed audit experiment seeded the 15-finding
+# deliverable, Sessions 1218-1222 closed 11/15 + both CI lints flipped
+# to enforce mode), pa-e37fe30dc7b941a6 (Sessions 1214-1216 — OpenAI
 # caller alignment spec 2b9aa447-…, full 5-phase arc shipped across 3
 # single-day sessions, 15 PRs merged, catalog deliverable bb775acb-…
 # maintained at 17,068 chars; closed clean with all 6 Rigby AC signals
@@ -55,4 +60,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-58737666f25741dc
+python tools/pa_chat.py "$@" --tools --conversation pa-17e0fa71fd25470a
