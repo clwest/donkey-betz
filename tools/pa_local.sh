@@ -17,12 +17,15 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1208 (Rigby's
-# session_tool create_fresh at session open: pa-2d74e36cc3a04787 —
-# "Session 1208 — CampaignOrchestrator delegation hardening (Outbound
-# Pack)"). Carries the §1-§6 spec from deliverable
-# ecddb62d-ab01-4b3b-83c4-2601670395d3 (Initiative 29154d73-…).
-# Prior pins retired: pa-33088358df304016 (Session 1207 close —
+# the --conversation flag below. Current value: Session 1209 (Rigby's
+# session_tool create_fresh at session open: pa-61c7b47d201d4591 —
+# "Session 1209 — Universal Receipt Contract (URC v0.1) — Phase A + C").
+# Carries the URC v0.1 §1-§6 spec — applies to Initiative 29154d73-…
+# (Platform Capability Audit), continuation of Session 1208's
+# CampaignOrchestrator hardening pattern (deliverable ecddb62d-…).
+# Prior pins retired: pa-2d74e36cc3a04787 (Session 1208 — CampaignOrchestrator
+# delegation hardening outbound pack — design-anchor record),
+# pa-33088358df304016 (Session 1207 close —
 # MIC auto-deliverable + output_data hardening + CampaignOrchestrator
 # spec hand-off), pa-b2a99ff5b0ee47a6 (superseded mid-Session 1207),
 # pa-234a75abfe374695 (Session 1206 — 5 PRs +
@@ -44,4 +47,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-2d74e36cc3a04787
+python tools/pa_chat.py "$@" --tools --conversation pa-61c7b47d201d4591
