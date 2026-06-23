@@ -8,8 +8,10 @@ import json
 import logging
 from typing import Dict, Any
 from datetime import datetime
-from openai import OpenAI
+
 import numpy as np
+
+from core.services.openai_client_factory import get_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class BaseAgent:
     """Base class for all real agents"""
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
         self.agent_type = "base"
         os.makedirs("agent_outputs", exist_ok=True)
 
