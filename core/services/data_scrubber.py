@@ -37,8 +37,22 @@ _PATTERNS = [
     # Email addresses
     (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), '[REDACTED_EMAIL]'),
 
-    # Phone numbers (US format)
-    (re.compile(r'\b(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b'), '[REDACTED_PHONE]'),
+    # Phone numbers (US format) — Session 1220 fix: require at least one
+    # separator (parens, hyphen, dot, or whitespace) so bare 10-digit
+    # strings like YYYYMMDDHH timestamps (e.g. "2026062315" from
+    # zombie_thread_monitor's hour buckets) don't trip the redactor.
+    # Lookbehind/lookahead instead of `\b` because `\b` doesn't fire
+    # before `(` — `(555) 123-4567` would otherwise miss.
+    # Coverage loss: continuous `15551234567`-style entries no longer
+    # match — acceptable because unformatted 10-digit runs are far more
+    # often IDs/timestamps than real phone numbers in unstructured text.
+    (re.compile(
+        r'(?<!\d)'
+        r'(?:\+?1[-.\s]+)?'
+        r'(?:\(\d{3}\)\s?|\d{3}[-.\s])'
+        r'\d{3}[-.\s]?\d{4}'
+        r'(?!\d)'
+    ), '[REDACTED_PHONE]'),
 
     # SSN
     (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '[REDACTED_SSN]'),
