@@ -390,3 +390,9 @@ frontend/components/generated/
 /templates/agents/
 /templates/content/
 /templates/invoices/
+
+# Session 1208 (Rigby pa-2d74e36cc3a04787 review): ignore Obsidian
+# vault metadata. The .obsidian/ dir is workspace-private and was
+# triggering "Warning: 1 uncommitted change" on every PR open.
+.obsidian/
+**/.obsidian/

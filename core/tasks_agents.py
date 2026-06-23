@@ -2441,6 +2441,15 @@ self,
             if _result_data.get('deliverable_id'):
                 _raw_output['deliverable_id'] = _result_data['deliverable_id']
             _raw_output['warnings'] = list(_result_data.get('warnings') or [])
+            # Session 1208 (Rigby pa-2d74e36cc3a04787 review): lift
+            # `attempts_used` to top-level so ops dashboards / audits can
+            # filter retry-style agents without nested-key spelunking.
+            # Same convention as deliverable_id — only emitted when the
+            # agent set it (None or missing → key absent for backwards
+            # compat with single-attempt agents). MIC + Outbound + future
+            # retry-style agents all benefit.
+            if _result_data.get('attempts_used') is not None:
+                _raw_output['attempts_used'] = _result_data['attempts_used']
             try:
                 execution_record.output_data = _json.loads(_json.dumps(_raw_output, default=str))
             except (TypeError, ValueError):
