@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-06-23T18:23:54+00:00",
+    "generated": "2026-06-23T19:06:58+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b85321c92489",
+    "git_head": "6bceca1e7a17",
     "doc_count": 2156,
-    "commit_count": 7135,
+    "commit_count": 7141,
     "confidence_breakdown": {
       "HIGH": 1356,
       "MEDIUM": 336,
@@ -2351,9 +2351,11 @@
         1211,
         1212,
         1213,
-        1214
+        1214,
+        1216,
+        1217
       ],
-      "commit_count": 1026,
+      "commit_count": 1028,
       "prs": [
         10,
         11,
@@ -2688,7 +2690,8 @@
         2480,
         2481,
         2482,
-        2484
+        2484,
+        2502
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -6930,9 +6933,11 @@
         1153,
         1154,
         1155,
-        1156
+        1156,
+        1216,
+        1217
       ],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
         2213,
         2219,
@@ -6943,7 +6948,8 @@
         2235,
         2237,
         2239,
-        2241
+        2241,
+        2502
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
