@@ -9,7 +9,7 @@ The PA is the platform's conversational interface — a single `UnifiedPAEntrypo
 
 Three files handle everything (counts per PLATFORM_INVENTORY 2026-05-25):
 - `core/services/unified_pa_entrypoint.py` — Agentic loop, context building, enrichment orchestration
-- `core/services/tool_dispatcher.py` — **169 tool handlers** with guaranteed structured responses (ToolResult)
+- `core/services/tool_dispatcher.py` — **152 tool handlers** with guaranteed structured responses (ToolResult)
 - `core/services/pa_tool_schemas.py` — **104 OpenAI function-calling tool schemas** + enrichment map
 
 Rigby now has explicit `global` and `workspace` modes. Workspace mode activates only from explicit workspace context (`workspace_id`, `AssistantProfile.workspace`, or workspace-aware UI context). Do not infer workspace scope from the message text alone.

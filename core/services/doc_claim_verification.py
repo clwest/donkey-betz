@@ -835,7 +835,7 @@ def _pa_topics_handler_count() -> ClaimResult:
     from pathlib import Path
     src = (Path(__file__).resolve().parent / 'tool_dispatcher.py').read_text()
     matches = re.findall(r'^\s*self\.register\(', src, re.MULTILINE)
-    expected = 166  # refreshed Session 1100
+    expected = 150  # refreshed Session 1222 P7 (audit, side-effect of Sessions 1218 P2 + 1222 P2 Cat C dispatcher trims)
     actual = len(matches)
     if actual < expected:
         severity = 'high'
@@ -1081,7 +1081,7 @@ def _services_md_file_count() -> ClaimResult:
         p for p in services_dir.rglob('*.py')
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
-    expected = 336  # refreshed Session 1133 close — post 1131-1133 arc count
+    expected = 351  # refreshed Session 1222 P7 (audit #6) — +15 since Session 1133
     actual = len(py_files)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
@@ -1718,7 +1718,7 @@ def _backend_inv_mgmt() -> ClaimResult:
         if p.is_file() and p.suffix == '.py' and p.name != '__init__.py'
     ]
     actual = len(cmds)
-    expected = 182  # Session 1149 re-peg: +8 commands since 1126 baseline of 174
+    expected = 194  # Session 1222 P7 (audit #7) re-peg: +12 commands since Session 1149's 182 baseline
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 30 else 'high')
     return ClaimResult.build(
@@ -1935,7 +1935,7 @@ def _claude_services_count() -> ClaimResult:
         if '__pycache__' in py.parts or py.name == '__init__.py':
             continue
         module_count += 1
-    expected = 300  # refreshed Session 1100 — CLAUDE.md claims '~300'
+    expected = 351  # refreshed Session 1222 P7 (audit, paired with CLAUDE.md update from ~300 → ~351)
     drift = abs(module_count - expected)
     severity = 'ok' if drift <= 50 else ('medium' if drift <= 150 else 'high')
     return ClaimResult.build(

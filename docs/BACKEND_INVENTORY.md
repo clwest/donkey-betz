@@ -35,10 +35,10 @@ repeats the live summary table so it cannot drift independently.
 | **URL Endpoints** | 1,831 |
 | **Celery Tasks** | 365 |
 | **Agents** | 83 in AGENT_MAP + 223 DB persona-eligible rows = 306 total |
-| **Services** | 336 files / 112 `*Service` classes |
+| **Services** | 351 files / 112 `*Service` classes |
 | **Spiders** | 80 (172 files including management) |
 | **Views Files** | 200 |
-| **Management Commands** | 182 (see [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md)) |
+| **Management Commands** | 194 (see [`docs/MANAGEMENT_COMMAND_AUDIT.md`](MANAGEMENT_COMMAND_AUDIT.md)) |
 | **WebSocket Consumers** | 67 |
 | **Discord Commands** | 144 (96 `@*.command` + 48 `@app_commands.command`) |
 | **Script Files** | 311 (Jan 2026 snapshot) |
