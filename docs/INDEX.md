@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-23 16:43
+**Generated:** 2026-06-23 16:52
 **Current Session:** 1223
 **Total Documentation:** 2714 files | 709,650 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,736 |
+| Total cross-references | 4,725 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 194 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 183 | Platform Master Inventory |
 | `docs/INDEX.md` | 129 | INDEX |
-| `docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md` | 118 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/docs-pattern/README.md` | 118 | README |
 | `docs/AGENTS.md` | 70 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 68 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 44 | CAPABILITIES |
@@ -129,7 +129,7 @@
 | [247_LIVE_INTELLIGENCE_PANEL_SKETCH.md](247_LIVE_INTELLIGENCE_PANEL_SKETCH.md) | 544 | 2026-05-20 |
 | [24_7_GLOBAL_AI_APP_ATLAS.md](24_7_GLOBAL_AI_APP_ATLAS.md) | 543 | 2026-05-25 |
 | [ADVISOR_AUDIT.md](ADVISOR_AUDIT.md) | 643 | 2026-05-24 |
-| [AGENTS.md](AGENTS.md) | 1,683 | 2026-06-22 |
+| [AGENTS.md](AGENTS.md) | 1,683 | 2026-06-23 |
 | [AGENTS_REFERENCE.md](AGENTS_REFERENCE.md) | 1,595 | 2026-06-23 |
 | [AGENT_OUTPUT_TO_UI_MAPPING.md](AGENT_OUTPUT_TO_UI_MAPPING.md) | 8 | 2026-05-24 |
 | [AI_PIXAR_IMPLEMENTATION_PLAN.md](AI_PIXAR_IMPLEMENTATION_PLAN.md) | 8 | 2026-05-24 |
@@ -139,7 +139,7 @@
 | [AUDIT_FINDINGS.md](AUDIT_FINDINGS.md) | 1,290 | 2026-05-25 |
 | [AUDIT_INDEX.md](AUDIT_INDEX.md) | 29 | 2026-05-25 |
 | [AUTONOMOUS_SYSTEMS.md](AUTONOMOUS_SYSTEMS.md) | 698 | 2026-05-25 |
-| [BACKEND_INVENTORY.md](BACKEND_INVENTORY.md) | 652 | 2026-05-25 |
+| [BACKEND_INVENTORY.md](BACKEND_INVENTORY.md) | 652 | 2026-06-23 |
 | [BACKEND_REFERENCE.md](BACKEND_REFERENCE.md) | 1,619 | 2026-05-25 |
 | [BEAT_AUDIT.md](BEAT_AUDIT.md) | 747 | 2026-05-25 |
 | [BODY_SYSTEM_AUDIT.md](BODY_SYSTEM_AUDIT.md) | 103 | 2026-05-25 |
@@ -199,7 +199,7 @@
 | [ROADMAP_IDEAS.md](ROADMAP_IDEAS.md) | 8 | 2026-05-24 |
 | [RUNTIME_AUDIT.md](RUNTIME_AUDIT.md) | 213 | 2026-05-12 |
 | [SCIFI_FEATURES.md](SCIFI_FEATURES.md) | 8 | 2026-05-24 |
-| [SERVICES.md](SERVICES.md) | 832 | 2026-05-25 |
+| [SERVICES.md](SERVICES.md) | 832 | 2026-06-23 |
 | [SESSION_780_PLATFORM_STATUS.md](SESSION_780_PLATFORM_STATUS.md) | 8 | 2026-05-24 |
 | [SPIDERS.md](SPIDERS.md) | 644 | 2026-05-25 |
 | [SPIDER_AUDIT.md](SPIDER_AUDIT.md) | 1,217 | 2026-05-12 |
@@ -248,16 +248,16 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md | handoffs | 144 | 2026-06-23 16:42 |
+| AGENTS.md | docs | 1,683 | 2026-06-23 16:51 |
+| personal-assistant.md | topics | 148 | 2026-06-23 16:48 |
+| BACKEND_INVENTORY.md | docs | 652 | 2026-06-23 16:48 |
+| SERVICES.md | docs | 832 | 2026-06-23 16:48 |
+| SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md | handoffs | 144 | 2026-06-23 16:44 |
+| INDEX.md | docs | 392 | 2026-06-23 16:44 |
 | SESSION_1222_CARRYOVER_QUEUE_CLEAR.md | handoffs | 109 | 2026-06-23 16:00 |
-| INDEX.md | docs | 392 | 2026-06-23 16:00 |
 | SESSION_1221_TIER_1_PLUS_TIER_2_FROM_7AE61CF7.md | handoffs | 138 | 2026-06-23 15:16 |
 | SESSION_1220_ZOMBIE_MONITOR_PLUS_HTTPX_INVESTIGATION.md | handoffs | 124 | 2026-06-23 14:56 |
 | SESSION_1219_WATCHDOG_FIX_3_PHASE_SHIP.md | handoffs | 120 | 2026-06-23 14:24 |
-| SESSION_1218_WATCHDOG_INVESTIGATION_AND_DEAD_WEIGHT_TRIM.md | handoffs | 105 | 2026-06-23 14:05 |
-| SESSION_1217_BOUNDED_AUDIT_EXECUTION.md | handoffs | 114 | 2026-06-23 13:39 |
-| SESSION_1217_PREP_BOUNDED_AUDIT_EXPERIMENT.md | handoffs | 164 | 2026-06-23 13:07 |
-| SESSION_1216_OPENAI_CALLER_ALIGNMENT_PHASE_E.md | handoffs | 141 | 2026-06-23 12:22 |
 
 ## Documentation by Subsystem
 
