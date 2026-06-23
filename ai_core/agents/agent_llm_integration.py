@@ -1,6 +1,23 @@
 """
 Agent LLM Integration Module
-Connects AI agents to actual LLM providers for real intelligence
+Connects AI agents to actual LLM providers for real intelligence.
+
+Session 1222 P1 — OpenAIProvider removed. The Session 1217 PR #2507 audit
+left ``OpenAIProvider.generate`` as a deprecated stub raising
+``NotImplementedError`` while waiting for telemetry confirmation that no
+production path actually called it. Confirmation came in Session 1222
+P1 verification: every ``real_*`` agent (RealContentCreator,
+RealJobExecutor, RealWorkDeliveryEngine, RealClientAcquisition,
+AIProposalEngine, FreelanceJobAnalyzer, ConcreteExecutor) and the
+``concrete_executor`` runtime have **zero AgentExecution rows and zero
+LLMCallEvent rows all-time**. The ``enable_agent_with_llm``-attached
+``generate_llm_response`` / ``process_with_llm`` methods also have
+**zero callers across the codebase**. Live OpenAI dispatch goes through
+``core/services/openai_client_factory`` + ``AsyncLLMAdapter`` instead.
+
+The class is gone; ``AnthropicProvider`` and ``MockLLMProvider`` remain
+for any future caller that wants this surface. The default provider is
+``anthropic`` when ``ANTHROPIC_API_KEY`` is set, otherwise ``mock``.
 """
 import os
 import json
@@ -10,7 +27,6 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import anthropic
 from abc import ABC, abstractmethod
-from core.services.openai_client_factory import get_async_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -25,72 +41,6 @@ class LLMProvider(ABC):
     @abstractmethod
     def get_cost(self, tokens_in: int, tokens_out: int) -> float:
         pass
-
-
-class OpenAIProvider(LLMProvider):
-    """OpenAI GPT provider - Using Responses API for GPT-5 reasoning models"""
-
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        if self.api_key:
-            try:
-                self.client = get_async_openai_client(api_key=self.api_key)
-            except (RuntimeError, ValueError):
-                self.client = None
-        else:
-            self.client = None
-            logger.warning("OpenAI API key not found")
-
-    async def generate(self, prompt: str, model: str = "gpt-5-mini",
-                      reasoning_effort: str = "low",
-                      verbosity: str = "medium",
-                      max_output_tokens: int = 1000,
-                      previous_response_id: Optional[str] = None,
-                      **kwargs) -> Dict[str, Any]:
-        """Deprecated stub — kept to satisfy the LLMProvider ABC contract.
-
-        The original body referenced an undefined `messages` variable and was
-        therefore unreachable in any path that actually invoked it (would
-        raise NameError). Live OpenAI dispatch goes through
-        ``core/services/openai_client_factory.py`` + ``AsyncLLMAdapter`` —
-        not through this method. Raises NotImplementedError loudly so any
-        future caller that lands here gets a clear signal instead of a
-        silent NameError.
-
-        See Session 1217 Item 1 Bug B (audit deliverable
-        ``bec077ed-d89e-4c7c-935e-f06eefad7bec``).
-        """
-        logger.warning(
-            "OpenAIProvider.generate() is deprecated and unreachable; "
-            "use AsyncLLMAdapter / openai_client_factory instead."
-        )
-        raise NotImplementedError(
-            "OpenAIProvider.generate is deprecated/unreachable; "
-            "use core.services.openai_client_factory + AsyncLLMAdapter.chat."
-        )
-
-    def get_cost(self, tokens_in: int, tokens_out: int, reasoning_tokens: int = 0, model: str = "gpt-5-mini") -> float:
-        """Calculate cost for OpenAI usage including reasoning tokens
-
-        GPT-5 Pricing (per 1M tokens):
-        - gpt-5: $1.25 input / $10.00 output
-        - gpt-5-mini: $0.25 input / $2.00 output
-        - gpt-5-nano: $0.05 input / $0.40 output
-        """
-        pricing = {
-            'gpt-5': {'input': 1.25, 'output': 10.00},
-            'gpt-5-mini': {'input': 0.25, 'output': 2.00},
-            'gpt-5-nano': {'input': 0.05, 'output': 0.40}
-        }
-
-        model_pricing = pricing.get(model, pricing['gpt-5-mini'])
-
-        # Input tokens + reasoning tokens are both billed as input
-        total_input_tokens = tokens_in + reasoning_tokens
-        input_cost = (total_input_tokens / 1_000_000) * model_pricing['input']
-        output_cost = (tokens_out / 1_000_000) * model_pricing['output']
-
-        return input_cost + output_cost
 
 
 class AnthropicProvider(LLMProvider):
@@ -161,16 +111,15 @@ class AgentLLMIntegration:
 
     def __init__(self):
         self.providers = {
-            'openai': OpenAIProvider(),
             'anthropic': AnthropicProvider(),
             'mock': MockLLMProvider()
         }
 
-        # Default to mock if no API keys are configured
+        # Default to mock unless an Anthropic key is configured. OpenAI was
+        # removed in Session 1222 P1 (B2 follow-on) — live OpenAI dispatch
+        # uses core/services/openai_client_factory + AsyncLLMAdapter instead.
         self.default_provider = 'mock'
-        if os.getenv('OPENAI_API_KEY'):
-            self.default_provider = 'openai'
-        elif os.getenv('ANTHROPIC_API_KEY'):
+        if os.getenv('ANTHROPIC_API_KEY'):
             self.default_provider = 'anthropic'
 
         self.usage_stats = {
@@ -186,24 +135,12 @@ class AgentLLMIntegration:
     async def generate_for_agent(self, agent_name: str, prompt: str,
                                 provider: Optional[str] = None,
                                 learned_context: Optional[Dict[str, Any]] = None,
-                                reasoning_effort: str = "low",
-                                verbosity: str = "medium",
-                                max_output_tokens: int = 1000,
-                                previous_response_id: Optional[str] = None,
-                                model: str = "gpt-5-mini",
                                 **kwargs) -> Dict[str, Any]:
-        """Generate LLM response for a specific agent with proper GPT-5 reasoning configuration
+        """Generate LLM response for a specific agent.
 
-        Args:
-            agent_name: Name of the agent requesting generation
-            prompt: Input prompt for the model
-            provider: LLM provider to use (openai, anthropic, mock)
-            learned_context: Previous learning data to include in context
-            reasoning_effort: Reasoning level for GPT-5 (minimal, low, medium, high)
-            verbosity: Output verbosity (low, medium, high)
-            max_output_tokens: Maximum output tokens
-            previous_response_id: Previous response ID for chain of thought
-            model: Model to use (gpt-5, gpt-5-mini, gpt-5-nano)
+        Session 1222 P1: simplified after the OpenAIProvider removal. The
+        Anthropic and Mock providers share the same call shape, so the
+        branching that used to dispatch differently for OpenAI is gone.
         """
         provider_name = provider or self.default_provider
         llm_provider = self.providers.get(provider_name)
@@ -244,61 +181,19 @@ class AgentLLMIntegration:
 
             enhanced_prompt += prompt
 
-            # Generate response with proper GPT-5 configuration
-            if provider_name == 'openai':
-                result = await llm_provider.generate(
-                    enhanced_prompt,
-                    model=model,
-                    reasoning_effort=reasoning_effort,
-                    verbosity=verbosity,
-                    max_output_tokens=max_output_tokens,
-                    previous_response_id=previous_response_id,
-                    **kwargs
-                )
+            response = await llm_provider.generate(enhanced_prompt, **kwargs)
 
-                if result.get('error'):
-                    return {
-                        'success': False,
-                        'error': result.get('content'),
-                        'response': None
-                    }
+            self._track_usage(
+                agent_name, provider_name, len(enhanced_prompt), len(response),
+            )
 
-                # Track usage with reasoning tokens
-                usage = result.get('usage', {})
-                self._track_usage(
-                    agent_name,
-                    provider_name,
-                    usage.get('input_tokens', len(enhanced_prompt)),
-                    usage.get('output_tokens', len(result['content'])),
-                    usage.get('reasoning_tokens', 0),
-                    model
-                )
-
-                return {
-                    'success': True,
-                    'response': result['content'],
-                    'response_id': result.get('response_id'),  # For chain of thought
-                    'usage': usage,
-                    'provider': provider_name,
-                    'agent': agent_name,
-                    'model': model,
-                    'timestamp': datetime.now().isoformat()
-                }
-
-            else:
-                # For non-OpenAI providers (Anthropic, Mock)
-                response = await llm_provider.generate(enhanced_prompt, **kwargs)
-
-                # Track usage (estimated for non-OpenAI)
-                self._track_usage(agent_name, provider_name, len(enhanced_prompt), len(response))
-
-                return {
-                    'success': True,
-                    'response': response,
-                    'provider': provider_name,
-                    'agent': agent_name,
-                    'timestamp': datetime.now().isoformat()
-                }
+            return {
+                'success': True,
+                'response': response,
+                'provider': provider_name,
+                'agent': agent_name,
+                'timestamp': datetime.now().isoformat()
+            }
 
         except Exception as e:
             logger.error(f"LLM generation failed for {agent_name}: {e}")
@@ -338,19 +233,16 @@ class AgentLLMIntegration:
             return result
 
     def _track_usage(self, agent_name: str, provider: str,
-                    tokens_in: int, tokens_out: int,
-                    reasoning_tokens: int = 0, model: str = "gpt-5-mini"):
-        """Track LLM usage statistics including reasoning tokens"""
+                    tokens_in: int, tokens_out: int):
+        """Track LLM usage statistics. Session 1222 P1: simplified after the
+        OpenAIProvider removal — the reasoning-tokens / model-specific
+        accounting was only used by the deleted OpenAI branch."""
         self.usage_stats['total_requests'] += 1
         self.usage_stats['total_tokens_in'] += tokens_in
         self.usage_stats['total_tokens_out'] += tokens_out
 
-        # Calculate cost including reasoning tokens
         if provider in self.providers:
-            if provider == 'openai':
-                cost = self.providers[provider].get_cost(tokens_in, tokens_out, reasoning_tokens, model)
-            else:
-                cost = self.providers[provider].get_cost(tokens_in, tokens_out)
+            cost = self.providers[provider].get_cost(tokens_in, tokens_out)
             self.usage_stats['total_cost'] += cost
         else:
             cost = 0
@@ -361,7 +253,6 @@ class AgentLLMIntegration:
                 'requests': 0,
                 'tokens_in': 0,
                 'tokens_out': 0,
-                'reasoning_tokens': 0,
                 'cost': 0.0
             }
 
@@ -369,7 +260,6 @@ class AgentLLMIntegration:
         agent_stats['requests'] += 1
         agent_stats['tokens_in'] += tokens_in
         agent_stats['tokens_out'] += tokens_out
-        agent_stats['reasoning_tokens'] = agent_stats.get('reasoning_tokens', 0) + reasoning_tokens
         agent_stats['cost'] += cost
 
     def get_usage_stats(self) -> Dict[str, Any]:
