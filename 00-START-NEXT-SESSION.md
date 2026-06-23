@@ -102,69 +102,79 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1218 — CURRENT ENTRY POINT
+## SESSION 1219 — CURRENT ENTRY POINT
 
-### SESSION 1217 CLOSED — Bounded-audit execution: all 3 Chris-picked items closed in one session
+### SESSION 1218 CLOSED — Watchdog investigation + dead-weight trim, both shipped in one session
 
-Full handoff: [`SESSION_1217_BOUNDED_AUDIT_EXECUTION.md`](docs/handoffs/SESSION_1217_BOUNDED_AUDIT_EXECUTION.md). **2 code PRs open + 1 docs PR (this one).** All 3 items from the self-directed audit (deliverable `bec077ed-…`) closed.
+Full handoff: [`SESSION_1218_WATCHDOG_INVESTIGATION_AND_DEAD_WEIGHT_TRIM.md`](docs/handoffs/SESSION_1218_WATCHDOG_INVESTIGATION_AND_DEAD_WEIGHT_TRIM.md). Chris reordered Session 1218 priorities (P3 → P2). Both items shipped.
 
 | PR | What |
 |---|---|
-| **#2506** | Item 1 Bug A — `concrete_executor.py:511` dead `validated_result` guard removed. 1-line diff. |
-| **#2507** | Item 1 Bug B — `agent_llm_integration.py` `OpenAIProvider.generate` body replaced with deprecation log + `NotImplementedError`. Rigby ratified B1 over B2 (B2 would change `real_*` agent provider-selection). Drops unused `AsyncLLMAdapter` import. Adds smoke test (1 test, passes). |
-| **(this PR)** | Session 1217 close handoff + this start-here rewrite. |
+| **#2509** | INDEX.md regen after Session 1217 PR merges |
+| **#2510** | P2 — Trim 22 zero-execution agents from PA dispatcher. `run_agent` enum 80 → 58, handler count 174 → 152. Zero functional impact. |
+| **(this PR)** | Session 1218 close handoff + this start-here rewrite |
 
-**Investigation deliverables populated (no code changes):**
+**Investigation deliverable populated:**
 
 | ID | Title | Final size |
 |---|---|---|
-| `192a390c-…` | PA tool schema/handler delta classification (Item 2) | **6,208 chars** |
-| `b92c41d0-…` | PA tool top 10 failure signatures (Item 3) | **7,489 chars** |
+| `6b00c112-…` | Session 1218 P3 — Watchdog 3600s timeout root-cause investigation | **7,325 chars** |
 
-**Headline corrections from the original audit:**
-1. The "59 schemaless handlers" frame was wrong: actual is **66 handler-only** (start-here mixed raw `"name":` line count with unique handler count). All 66 are reachable via the `run_agent` enum — zero truly invisible handlers.
-2. **31 of 65 unique surplus agent classes have ZERO `AgentExecution` rows ever** — true dead-weight signal.
-3. Item 3 finding: every top-10 failure is **watchdog-timeout at ~3600s** inside the agent Celery task; PA dispatcher itself succeeds. Failing handlers all in 34/65 actively-used surplus set, none in the 31 dead-weight.
+**Headline findings:**
+1. **"3600s watchdog timeout" is NOT a single timeout.** It's the cleanup-watchdog beat tick (~30 min) catching `AgentExecution` rows whose 60-min staleness threshold has been exceeded. Empirical data (last 7d): 15 watchdog-killed rows, agent elapsed times exceed each agent's wall-clock timeout by 6-13× — wall-clock didn't fire for any of them.
+2. **The leak path:** `SoftTimeLimitExceeded` (3600s) and SIGKILL (3900s) bypass the normal `_FuturesTimeout` cleanup in `tasks_agents.py:2425`. The Celery `task_failure` signal updates `CeleryTaskEvent` but never touches `AgentExecution` — leaving rows orphaned until watchdog cleanup.
+3. **Recommended fix (documented, not shipped):** Add a `task_failure.connect` handler in `core/celery_telemetry.py` that marks AgentExecution rows associated with the failed Celery task_id as failed. ~30 line PR + smoke test. See deliverable `6b00c112-…` for full code stub.
+4. **Dead-weight trim:** original audit said 31 zero-exec classes; pre-flight grep found 9 still referenced by gateway code (`td_handlers_content.py`, `td_handlers_ops.py`, `td_handlers_core.py`). **22 truly safe → trimmed.**
 
-### FIRST THING Session 1218 — open items lifted from Session 1217 close handoff
+### FIRST THING Session 1219 — open items from Session 1218
 
-#### Priority 1 — Merge the 3 Session 1217 PRs
+#### Priority 1 — Ship the `task_failure.connect` watchdog fix (P3 follow-on)
 
-PRs #2506 + #2507 + the docs PR opened to close 1217. Standard review + merge. No special handling needed; both code PRs are surgical (1 line + ~20 line stub replacement).
+Lead deliverable for context: `6b00c112-5fa9-4414-acf2-6d1b05cd9a1f` (Session 1218 P3 investigation). The recommended fix is a small surgical PR (~30 lines + smoke test):
 
-#### Priority 2 — Trim 31 dead-weight agent classes (Item 2 follow-on cleanup)
+```python
+# core/celery_telemetry.py
+@task_failure.connect
+def on_agent_task_failure(sender=None, task_id=None, exception=None, **kwargs):
+    """Mark AgentExecution rows associated with the failed Celery task as failed.
+    Closes the gap where Celery hard/soft time-limits leave rows in 'in_progress'."""
+    try:
+        rows = AgentExecution.objects.filter(
+            status__in=('running', 'in_progress'),
+            input_data__celery_task_id=str(task_id),
+        )
+        rows.update(
+            status='failed',
+            error_message=f'Celery task failed: {type(exception).__name__}: {str(exception)[:200]}',
+            completed_at=timezone.now(),
+        )
+    except Exception:
+        logger.exception(f"[celery_telemetry] AgentExecution failover for {task_id} failed")
+```
 
-**Scope:** One PR with 3-file diff, 0 functional changes (all classes have zero `AgentExecution` rows historically).
+**Smoke test scope:** dispatch a task that raises a known exception (or triggers SoftTimeLimitExceeded), assert the AgentExecution row flips to status='failed' with the expected error_message format.
 
-**Files to change:**
-- `core/services/pa_tool_schemas.py:1069` — remove the 31 class names from the `run_agent` enum
-- `core/services/tool_dispatcher.py:246-...` — remove the corresponding `self.register("X", self._handle_agent_tool)` lines
-- `core/services/td_handlers_agents.py:84` — remove the matching `_tool_to_agent_name` entries
+**Caveats:**
+- Won't catch true SIGKILL cases (those are an unsolvable artifact of Celery's hard time_limit). But will catch all `SoftTimeLimitExceeded` cases and most `worker_lost` cases.
+- Doesn't address the deeper question of *why* per-agent wall-clock timeouts (`_future.result(timeout=300s)` for AudioAgent) don't fire when the agent runs 4000s. That's a separate investigation — defer.
 
-**Pre-flight check:** grep the 31 class names across `core/services/td_handlers_*.py` to confirm no gateway calls them by string. Surplus-handler list lives in Session 1217 handoff §Item 2 (Markets/Stock 6, Sports 3, Content Studio 5, Cultural/Narrative 4, Podcast/Debate 3, Blockchain Audit 4, Misc 6).
-
-**Why this is safe:** zero historical executions = zero observable behavior change. If a future operator wants any of these capabilities, re-add the enum entry + register line.
-
-#### Priority 3 — Investigate the 3600s watchdog timeout root cause (Item 3 follow-on)
-
-Every top-10 PA tool failure in the 7-day window traces to one root cause: agents getting watchdog-killed at ~3600s. Three hypotheses to test:
-
-1. **Celery soft-limit too aggressive** — check `core/celery.py` task soft/hard limits for the relevant queue
-2. **Agent body genuinely hanging** — pull a few `AgentExecution` rows with `error_message LIKE '%watchdog_cleanup%'` and inspect `output_data` for last-known progress
-3. **Downstream API timeout absorbed silently** — agents that call external services (TrainedCreationAgent, AudioAgent, SystemIntelligenceAgent all in failure top-10) might be hitting upstream timeouts that the agent body swallows but the watchdog catches
-
-**Lead with hypothesis 2** — the others can't be ruled out without seeing where the agents are actually stuck.
-
-#### Priority 4 — B2 follow-on for OpenAIProvider (deferred from PR #2507)
+#### Priority 2 — B2 follow-on for OpenAIProvider (deferred from Session 1217 PR #2507)
 
 Full removal of the `OpenAIProvider` class + `openai` branch in `generate_for_agent`. Requires first proving the `real_*` agent paths are no longer exercised in production. Session 1214 handoff note: "the live path appears to use `AsyncLLMAdapter` directly." Verify by checking `AgentExecution` rows for `real_content_creator`, `real_job_executor`, `real_work_delivery_engine`, `real_client_acquisition`, `ai_proposal_engine`, `freelance_job_analyzer`, `concrete_executor` agent names + cross-ref with the spec.
 
-#### Housekeeping after the PRs merge
+#### Priority 3 — Trim the remaining 9 zero-exec gateway-referenced classes
 
-- `python manage.py verify_doc_claims --only-drift` — confirm no doc drift from Item 1's two-line code changes.
-- `python manage.py build_docs_index` — per memory rule, after every code change.
+The 9 zero-exec classes that stayed in (Session 1218 P2 PR #2510 left them) because they're still dispatched by gateway code:
+- `ContentDiversityOrchestrator`, `ContrarianAgent`, `LineMovementAnalyzer`, `PerformanceAnalystAgent`, `SharpActionDetector`, `VoiceCriticAgent` (called from `td_handlers_content.py:4160, 4175, 4513`)
+- `ResolveAgent`, `TalkingCharacterAgent`, `WhaleWatcherAgent` (called from `td_handlers_ops.py:3472,3477` + `td_handlers_core.py:1009`)
 
-**Active conversation:** `pa-58737666f25741dc` — same thread carried through Sessions 1217-prep + 1217-execution. Continue here for Session 1218 unless you want a fresh thread.
+To remove them safely, refactor the gateway dispatch sites first. Bigger scope than Session 1218 P2 — needs per-site decision: replace with a different agent, drop the gateway feature entirely, or upgrade the agent to actually be used.
+
+#### Priority 4 — Investigate wall-clock-timeout non-firing (P3 deferred deeper question)
+
+Why do `_future.result(timeout=300s)` for AudioAgent (and similar for SystemIntelligenceAgent at 600s, ContentWriterAgent at 600s) not fire when the agent runs 4000s+? The ThreadPoolExecutor + future.result interaction with Celery's SoftTimeLimitExceeded signal is the suspected mechanism but needs analysis. Possibly: Celery raises SoftTimeLimitExceeded INTO the main thread while the agent body is in the worker thread; the main thread might catch + ignore it; the wall-clock timeout never gets a chance to fire because `_future.result(timeout=...)` has already raised.
+
+**Active conversation:** `pa-58737666f25741dc` — same thread carried through Sessions 1217-prep + 1217-execution + 1218. Continue here for Session 1219 unless you want a fresh thread.
 
 **Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
 - Promote `check-reasoning-contract.yml` to enforce mode (P2 carryover from Session 1216)
