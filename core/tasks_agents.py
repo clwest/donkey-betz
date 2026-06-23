@@ -1656,6 +1656,101 @@ def _impl_cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
 
 
 
+def _impl_cleanup_stale_llm_calls(self, minutes_threshold: int = 10):
+    """Mark ``LLMCallEvent`` rows in STARTED state past the threshold as failed.
+
+    Session 1221 P2 — Tier 2 from deliverable ``7ae61cf7-…``. Mirror of
+    :func:`_impl_cleanup_stale_agent_executions`. Each ``LLMCallEvent`` row
+    represents one outbound LLM API call; the agent body opens it with
+    ``status='STARTED'`` and is supposed to close it with SUCCESS or FAILED
+    on return. When the agent thread is killed mid-call (Session 1219 P3
+    zombie-thread mechanic) or the worker child recycles before the call
+    returns, the row gets orphaned in STARTED forever — the Session 1220 P2
+    investigation found rows held open for 96+ hours.
+
+    This sweeper runs every 10 minutes via beat (see ``core/celery.py``).
+    Default threshold is 10 minutes; any row whose ``started_at`` is older
+    than ``now - minutes_threshold`` and is still in STARTED state gets
+    flipped to FAILED with ``error_type='timeout'`` and
+    ``error_message='watchdog_cleanup'``. Surfaces via
+    ``ops_tool.failure_signatures`` without dashboard work.
+
+    Pairs with Session 1221 P1 (Tier 1 total-request bound). Tier 1 stops
+    the orphan from forming in the BaseAgent path; Tier 2 cleans up any
+    orphans that escape — including ones from non-BaseAgent code paths
+    that have their own LLM call sites.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_llm_telemetry import LLMCallEvent
+
+    task_id = self.request.id if self.request else 'unknown'
+    logger.info(
+        f"🧹 [LLMCALL_CLEANUP] Task {task_id} STARTED - threshold: "
+        f"{minutes_threshold} minutes"
+    )
+
+    try:
+        now = timezone.now()
+        cutoff_time = now - timedelta(minutes=minutes_threshold)
+
+        stale = LLMCallEvent.objects.filter(
+            status='STARTED',
+            started_at__lt=cutoff_time,
+        )
+        count = stale.count()
+        logger.info(
+            f"🧹 [LLMCALL_CLEANUP] Stale STARTED rows older than "
+            f"{minutes_threshold}min: {count}"
+        )
+
+        if count > 0:
+            # Sample a few for the logs so operators can spot a pattern
+            # (one agent or model dominating) without re-querying.
+            sample = list(
+                stale.values('call_id', 'agent_name', 'model', 'started_at')[:10]
+            )
+            for row in sample:
+                age_min = (now - row['started_at']).total_seconds() / 60
+                logger.info(
+                    f"🧹 [LLMCALL_CLEANUP] Marking stale call_id={row['call_id']} "
+                    f"agent={row['agent_name']} model={row['model']} "
+                    f"age={age_min:.0f}min"
+                )
+
+            updated = stale.update(
+                status='FAILED',
+                error_type='timeout',
+                error_message=(
+                    f'LLM call orphaned in STARTED state for '
+                    f'{minutes_threshold}+ minutes — marked failed by '
+                    f'watchdog_cleanup'
+                ),
+                finished_at=now,
+                cancelled=True,
+            )
+            logger.info(
+                f"🧹 [LLMCALL_CLEANUP] SUCCESS - swept {updated} stale "
+                f"LLMCallEvent rows"
+            )
+        else:
+            logger.info(
+                "🧹 [LLMCALL_CLEANUP] No stale STARTED rows - nothing to clean"
+            )
+
+        logger.info(
+            f"🧹 [LLMCALL_CLEANUP] Task {task_id} COMPLETED - cleaned: {count}"
+        )
+        return {'cleaned': count, 'task_id': task_id}
+
+    except Exception as e:
+        logger.error(
+            f"🧹 [LLMCALL_CLEANUP] Task {task_id} FAILED with error: {e}",
+            exc_info=True,
+        )
+        raise
+
+
 def _impl_auto_process_extracted_artifacts(
 stale_days: int = 7,
     archive_days: int = 14,

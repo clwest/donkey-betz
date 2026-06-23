@@ -408,6 +408,16 @@ def _circuit_breaker_record_timeout(agent_name: str, task: str):
 def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
     from core.tasks_agents import _impl_cleanup_stale_agent_executions
     return _impl_cleanup_stale_agent_executions(self, minutes_threshold)
+
+
+@shared_task(bind=True)
+@singleton_task("cleanup-stale-llm-calls", ttl=600)
+def cleanup_stale_llm_calls(self, minutes_threshold: int = 10):
+    """Session 1221 P2 — Tier 2 from deliverable 7ae61cf7. Sweep orphaned
+    ``LLMCallEvent.status='STARTED'`` rows. Beat-scheduled in
+    ``core/celery.py``. See ``_impl_cleanup_stale_llm_calls`` for details."""
+    from core.tasks_agents import _impl_cleanup_stale_llm_calls
+    return _impl_cleanup_stale_llm_calls(self, minutes_threshold)
 @shared_task(bind=True, ignore_result=True)
 def cleanup_stale_content(
     self,
