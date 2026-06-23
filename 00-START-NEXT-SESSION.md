@@ -102,7 +102,52 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1209 — CURRENT ENTRY POINT
+## SESSION 1210 — CURRENT ENTRY POINT
+
+### SESSION 1209 CLOSED — Universal Receipt Contract (URC v0.1) envelope + router-path coverage (2 PRs merged)
+
+Full handoff: [`SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md`](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md). **2 PRs merged.** Fleet smoke validated 52/52 URC envelope coverage post-fix (vs 0/21 router-path baseline).
+
+| PR | Commit | What |
+|---|---|---|
+| **#2473** | `3d95aea9` | Phase A+C URC v0.1 inline at `tasks_agents.execute_agent_task` writeback. Every celery-task-dispatched agent emits the 8-key envelope. ContentWriterAgent under `mode=receipt_only` flips to `contract_violation`. 39 unit tests. Includes context-kit headline strong-token fix in 00-START line 122 (re-triggered by Session 1208's close commit `8295ccca`). |
+| **#2474** | `7669a249` | Extracted URC helpers to `core/services/urc_envelope.py` (single source of truth). Refactored `tasks_agents.py` to use shared module. Added `enrich_output_data()` call to `agent_router._complete_execution` + raw context propagation to `input_data['context']`. 20 additional unit tests (59 total). Closes router-path coverage gap. |
+
+**Spec deliverable:** `6f09233c-c984-4303-87c4-e67b94390030` on Initiative `29154d73-…` (Platform Capability Audit). Q1-Q5 design locks captured verbatim in §6.
+
+**Smoke evidence deliverable:** `1a8cde69-8f40-45d2-b841-4e88f76c9d7f` (Rigby; DBZ; Platform Diagnostics; pinned). Post-router-patch fleet smoke results — 52/52 URC envelope coverage, 39 success / 12 error / 1 contract_violation, all expected.
+
+**Post-merge gotcha (cleared):** worker restart required for both PRs (tasks_agents.py + agent_router.py both imported by celery task body). Done in-session at 00:09 MDT post-#2474.
+
+### FIRST THING Session 1210 — Phase B: `mode=receipt_only` capability ping for CodeReviewAgent
+
+**Natural follow-on** per URC spec `6f09233c-…` §7. CodeReviewAgent ×4 dispatched in Session 1209 fleet smoke stayed `run_status='error'` because they don't have a code-free path to satisfy the receipt schema. Phase B adds a `context.mode == 'receipt_only'` branch at the agent level:
+
+- When the caller passes `mode=receipt_only`, CodeReviewAgent skips its repo/file inspection and returns a minimal v0 receipt: `result.data={status: 'skipped', message: 'receipt_only mode — no code inspection performed'}`.
+- URC predicate at the writeback then classifies as `run_status='skipped'` (per Q1 precedence) — no longer `error`.
+- Other context-dependent agents (those that have a hard-coded "must access repo / external API" assumption) can adopt the same pattern as fleet smoke reveals.
+
+**Acceptance criteria:**
+- AC-1: CodeReviewAgent under `mode=receipt_only` returns `result.success=True` with `data.status='skipped'`. No code inspection attempted.
+- AC-2: Post-fix fleet smoke shows CodeReviewAgent ×N transition from `run_status='error'` → `run_status='skipped'`.
+- AC-3: Outside `receipt_only` mode, CodeReviewAgent behaves identically to today — no regression on its normal-mode runs.
+- AC-4: Pattern is documented in `docs/specs/` or as an addendum to deliverable `6f09233c-…` so other agents can adopt.
+
+**Scope estimate:** Small PR (~50-100 LoC). Target file `core/agents/code_review_agent.py`. New `_is_receipt_only_mode(context)` helper + early-return branch in `execute()`. ~30-45 min.
+
+**Active conversation:** `pa-61c7b47d201d4591` (Session 1209 close-state). Lean = continue on this thread for Phase B since it directly extends URC scope; spin fresh if Chris wants a clean Session 1210 lane.
+
+### Also fires this session
+
+The **24h watches** are time-gated priorities — three fire this session:
+
+| Watch | Fires (MDT) | Fires (UTC) | Checklist |
+|---|---|---|---|
+| **Session 1207 (MIC)** | (already fired ~21:50 MDT) | (already fired ~03:50 UTC) | [§"24h watch checklist" in 1207 handoff](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) — verify result |
+| **Session 1208 (Outbound)** | ~22:45 MDT 2026-06-23 | ~04:45 UTC 2026-06-24 | [§"24h watch checklist" in 1208 handoff](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) |
+| **Session 1209 (URC)** | ~07:10 MDT 2026-06-24 | ~13:10 UTC 2026-06-24 | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md). Invariants: URC envelope coverage stays at 100% on new rows; run_status distribution sane; **zero spurious contract_violations on non-receipt_only callers**; warnings list shape consistent. |
+
+Then pick from the priority table below.
 
 ### SESSION 1208 CLOSED — CampaignOrchestrator outbound-pack hardening ($2k Automation Sprint) (1 PR merged)
 
@@ -116,53 +161,6 @@ Single-arc session executing Rigby's full §1-§6 spec from deliverable `ecddb62
 | **`1ff25732`** | Rigby's PR-review gate fixes: title locked deterministically via `_format_outbound_pack_title()` constant (LLM's `offer.name` no longer bleeds into title/H1); validator tightened to exact-match `offer.name == OUTBOUND_PACK_OFFER_NAME` (LLM smoke had returned compound `"Automation Sprint — $2k Automation Sprint"`); `attempts_used` lifted to top-level `output_data` (same convention as PR #2469's `deliverable_id`/`warnings` — emitted only when set, kept at `data.attempts_used` for backcompat); `.gitignore` for `.obsidian/`. |
 
 **Smoke evidence:** Deliverable `a37a0c52-3c58-4e05-9f8e-7d410ae45464` (post-fix re-smoke) — title exactly `CampaignOrchestratorAgent: Outbound Pack — $2k Automation Sprint — 2026-06-22` (the agent-prefix is factory-level, affects all agents — documented as cosmetic follow-up). Body H1 `# Outbound Pack — $2k Automation Sprint — 2026-06-22`. `output_data['attempts_used']=2` lifted to top-level. Plus deliverable `6907bc78-…` (initial smoke, kept as audit baseline).
-
-### FIRST THING Session 1209 — Universal Receipt Contract (URC v0.1)
-
-**P0 entry point** decided at Session 1208 close (~22:40 MDT 2026-06-22) on Rigby's pa-2d74e36cc3a04787 thread after she shipped the Fleet Smoke Report `c5ccf3b1-51b2-4bbd-9ee6-6efa387eac86` (Platform Diagnostics, DBZ). The smoke window showed 36 agent dispatches succeeded versus 7 marked "failed" — but only **3 are real failures** (CodeReviewAgent ×4, ContentWriterAgent contract violation ×1, MemoryIsolationAgent was a workflow-banner misattribution per Rigby's appended addendum). (See Session 1198's canonical-doc cleanliness memory for the strong-token pattern this paragraph deliberately avoids.)
-
-**Root cause Rigby surfaced:** "receipt-only" compliance is not enforceable by prompt alone. Need runner-level enforcement.
-
-**Plan (3 phases, locked by Q1-Q4 design call in pa-2d74e36cc3a04787):**
-
-| Phase | What | PR |
-|---|---|---|
-| **A** | Implement **Universal Receipt Contract v0.1** at runner (`tasks_agents._impl_execute_agent_task` writeback, lines ~2407-2445 area). Every agent gets top-level `output_data.{agent_name, run_status, latency_ms, attempts_used, warnings, error_signature, error_message, artifacts}` for free. Extends PR #2469 (deliverable_id+warnings lift) + PR #2471 (attempts_used lift). | One PR |
-| **C** | Bolt in `contract_violation` classification in same PR. When `context['mode']=='receipt_only'` AND the agent's raw payload (under `output_data.data`) doesn't conform to the receipt schema → `run_status='contract_violation'` + warning `{type:'RECEIPT_CONTRACT_VIOLATION', message:'…', meta:{reason}}`. | Same PR as A |
-| **B** | Add `mode=receipt_only` capability ping to CodeReviewAgent first; other context-dependent agents as smoke reveals need. | Follow-up PR |
-
-**URC v0.1 spec (locked in Rigby's reply):**
-- **Top-level `output_data` fields (always present unless noted):** `agent_name: str`, `run_status: "success"|"error"|"timeout"|"skipped"|"contract_violation"`, `started_at: iso (optional)`, `completed_at: iso (optional)`, `latency_ms: int|null`, `attempts_used: int|null` (already standardized PR #2471), `warnings: list[{type:str, message:str, meta?:object}]` (extends PR #2469 — keep `type`, add optional `meta`, NO migration to `code`), `error_signature: str|null` (normalized: `f"{exc.__class__.__name__}: {str(exc)[:80]}"` + strip UUIDs/long hex to `{id}`), `error_message: str|null`, `artifacts: list[{type:str, id?:str, url?:str, title?:str}]` (deliverable_id becomes `{type:'deliverable', id:<uuid>}`).
-- **Backcompat:** preserve `output_data.data` exactly as-is + mirror legacy fields (`deliverable_id`, `data.attempts_used`, `data.warnings`) into URC top-level.
-- **`run_status` precedence:** `skipped > timeout > error > contract_violation > success`. Error stays above contract_violation so real crashes aren't masked.
-- **`receipt_only` mode:** URC envelope is ALWAYS emitted. `receipt_only` just changes the **compliance predicate**: validate the agent's RAW payload (under `output_data.data`) against the receipt schema; runner owns the URC top-level fields and doesn't gate on those.
-
-**Session 1209 execution order:**
-1. Write URC v0.1 §1-§6 spec deliverable on Initiative `29154d73-…` (same pattern as `ecddb62d-…` for CampaignOrchestrator). ~10 min — sets contract precedent.
-2. Implement A + C in one PR. ~1.5h. Target file: `core/tasks_agents.py` writeback block.
-3. Rerun fleet smoke (Rigby executes). Expected: all 43 agents emit URC envelope; ContentWriterAgent shows `contract_violation`; CodeReviewAgent still `error` until B ships.
-4. Open PR + handoff + 00-START roll-forward to Session 1210.
-5. B (CodeReviewAgent capability ping) follow-up — separate PR, only if smoke validates A+C cleanly.
-
-**Active conversation for this work:** `pa-2d74e36cc3a04787` (Rigby's Session 1208 thread — already carries the full URC v0.1 design Q1-Q4 + smoke report + addendum). Continue here OR have Rigby spin a fresh Session 1209 thread on first ping.
-
-**Reference materials:**
-- Fleet Smoke Report: deliverable `c5ccf3b1-51b2-4bbd-9ee6-6efa387eac86` (Rigby; DBZ; Platform Diagnostics) — includes addendum correcting MemoryIsolationAgent misattribution.
-- Session 1208 patterns to extend: PR #2469 (deliverable_id + warnings lift), PR #2471 (attempts_used lift). Same writeback block.
-
----
-
-### Also fires this session
-
-The **24h watches** are the time-gated priorities — three fire this session:
-
-| Watch | Fires (MDT) | Fires (UTC) | Checklist |
-|---|---|---|---|
-| **Session 1207 (MIC)** | 2026-06-23 ~21:50 MDT | ~03:50 UTC 2026-06-24 | [§"24h watch checklist" in 1207 handoff](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) |
-| **Session 1208 (Outbound)** | 2026-06-23 ~22:45 MDT | ~04:45 UTC 2026-06-24 | [§"24h watch checklist" in 1208 handoff](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) |
-| **Session 1206 (Layer 1)** | ~23:35 UTC tonight (already fired) | — | [§"24h watch checklist" in 1206 handoff](docs/handoffs/SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md) |
-
-Then pick from the priority table below.
 
 ### SESSION 1207 CLOSED — MIC auto-deliverable + output_data hardening (3 PRs merged)
 
@@ -312,13 +310,13 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-2d74e36cc3a04787` — Rigby's `session_tool create_fresh` at Session 1208 open. Carries the full §1-§6 CampaignOrchestrator outbound-pack design discussion (Q1 entry-point precedence + Q2 JSON-mode + insertion-point stamp + PR review with three review-gate fixes). Pinned in `tools/pa_local.sh`. Worth deciding whether to spin a fresh Session 1209 thread on first Rigby ping or continue on this one (depends on whether the next arc is a CampaignOrchestrator extension or a separate concern). Prior threads retired: `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries the full URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke report `1a8cde69-…` (52/52 envelope coverage). Pinned in `tools/pa_local.sh`. **Lean for Session 1210: continue on this thread for Phase B (CodeReviewAgent receipt_only ping) since it directly extends URC scope; spin fresh if Chris wants a clean lane.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
 ### Session 1205 Capability Audit Initiative
 
-`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **13 deliverables** (10 end-of-Session-1205; +1 Session 1206 lint-rule `180f4e9f-…`; +1 Session 1206 Arc C `96b6a72a-…` workspace_id hallucination P0; +1 Session 1207 close `ecddb62d-…` CampaignOrchestrator hardening spec — **status remains as filed; spec was implemented in full by Session 1208 PR #2471 (commits `3b877a4d` + `1ff25732`)**):
+`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **15 deliverables** (10 end-of-Session-1205; +1 Session 1206 lint-rule `180f4e9f-…`; +1 Session 1206 Arc C `96b6a72a-…` workspace_id hallucination P0; +1 Session 1207 close `ecddb62d-…` CampaignOrchestrator hardening spec — implemented in full by Session 1208 PR #2471; +1 Session 1209 URC v0.1 spec `6f09233c-…` — implemented in full by Session 1209 PR #2473 + #2474; +1 Session 1209 fleet smoke evidence `1a8cde69-…`):
 
 | ID | Type | Title |
 |---|---|---|
@@ -333,6 +331,9 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 | `ed6a8f28-…` | Finding | SportsOddsAnalyst caller bug — None context |
 | `ea561389-…` | Finding | First Producer→Data Win (Kalshi) + memory spike warning |
 | `a4928480-…` | Finding | Makefile bug: make celery silently skips beat startup (RESOLVED PR #2459) |
+| `ecddb62d-…` | Spec | CampaignOrchestrator outbound-pack hardening spec (RESOLVED Session 1208 PR #2471) |
+| `6f09233c-…` | Spec | URC v0.1 §1-§6 spec (RESOLVED Session 1209 PR #2473 + PR #2474) |
+| `1a8cde69-…` | Diagnostic | Fleet Smoke Report — URC v0.1 Post-Router-Patch (Session 1209) — 52/52 envelope coverage |
 
 **3 spine Initiatives — still BLOCKED at Stage 1 (irrelevant SEC/Kaggle evidence packs):**
 
@@ -348,12 +349,17 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Session 1207 MIC 24h watch (fires ~21:50 MDT / ~03:50 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1207`](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` always list shape. |
+| **Phase B — `mode=receipt_only` capability ping for CodeReviewAgent** | **P0 (Session 1209 natural follow-on)** | URC spec `6f09233c-…` §7. CodeReviewAgent ×4 stay `run_status='error'` until this lands. Small PR (~50-100 LoC) at `core/agents/code_review_agent.py`. ACs: AC-1 receipt_only mode returns `data.status='skipped'` no inspection; AC-2 post-fix smoke flips CodeReview rows to `run_status='skipped'`; AC-3 normal mode unchanged; AC-4 pattern documented for other context-dependent agents. ~30-45 min. |
+| **Session 1209 URC 24h watch (fires ~07:10 MDT / ~13:10 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1209`](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) §"24h watch checklist". Invariants: URC envelope coverage 100% on new rows; run_status distribution sane; **zero spurious contract_violations on non-receipt_only callers** (the key new-feature invariant); warnings list shape consistent. |
+| **Other writeback callsites adopt URC** | **P2 (Session 1209 follow-up)** | ~10 sites: `core/agent_execution_wrapper.py:93`, `ai_core/agents/sync_executor.py:109`, `core/services/content_executor.py:255`, `core/services/executor_registry.py:394`, `core/services/agent_collaboration.py:339`, `core/team_workflow_engine.py:494,517`, `core/services/collective_intelligence.py:1425`, `core/tasks_media.py:192`, `core/tasks_agents.py:706,2278`. The two paths patched (execute_agent_task + agent_router._complete_execution) cover Rigby's fleet smoke surfaces; the rest are narrower use cases. Use `core.services.urc_envelope.enrich_output_data()`. |
+| **Expose `parent_execution_id` filter in `ops_tool execution_search`** | **P2 (Session 1209 follow-up — Rigby surfaced)** | Rigby's fleet-smoke aggregation hit a tool gap — couldn't query "all AgentExecutions spawned by parent X". Session 1098 PR #4 added `parent_execution_id` + `root_execution_id` model fields; just need to surface them in the tool. ~30min PR. |
+| **Smoke context minimization convention** | **P3 (Session 1209 — Rigby Phase 3 idea)** | Define a minimal "smoke context" convention (`context.mode` only + tiny `context.smoke_id`) for Rigby's future fleet smokes. Avoids inflating execution records with multi-KB spec bodies under `context.research`. |
+| **Promote `attempts_used` to canonical top-level on router-path writeback** | **P1 (Session 1208 carryover)** | PR #2469 + PR #2471 lifted it for `execute_agent_task`. The router-path canonical-shape writeback at `agent_router.py:1611` doesn't lift it. Small mirror — same convention. |
+| **Session 1207 MIC 24h watch (already fired ~03:50 UTC)** | **P1 (time-gated, verify result)** | Checklist in [`SESSION_1207`](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` always list shape. |
 | **Session 1208 Outbound-pack 24h watch (fires ~22:45 MDT / ~04:45 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1208`](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) §"24h watch checklist". Invariants: every successful outbound run lands ONE Deliverable, no double-writes, `warnings` shape consistent, drift-keyword false-positive rate stays at 0 on metadata-only mentions. |
 | **Title normalization at factory level** | **P1 (Session 1208 cosmetic follow-up)** | Both MIC + Outbound deliverables show `<AgentName>: ` auto-prefix from `deliverable_factory._clean_deliverable_title`. Worth one cross-agent factory PR (e.g. a `preserve_title=True` kwarg on `_save_to_deliverable` → `create_deliverable` that skips the cleaner) rather than per-agent workarounds. Rigby's stamp: "If we ever want to remove it globally, that's a separate platform-wide title policy decision." |
 | **Beat schedule for periodic outbound-pack generation** | **P2 (Session 1208 follow-up)** | Spec says "2 flagship outbound packs per week". Currently the path is only invocable on-demand (context['mode']='outbound_pack' or keyword trigger). Worth adding `PeriodicTask` via `add_critical_celery_tasks` if the cadence becomes desired. |
 | **Workspace_id hallucination root-cause trace** | **P0 (Session 1206 Arc C unfinished)** | Deliverable `96b6a72a-…`. Mitigated by PR #2465 guardrail; root cause open. Suspected call chain: PA tool → tool_dispatcher → tasks_agents → agent_router → create_deliverable. Grep `pa_tool_schemas` + `tool_dispatcher` for `workspace_id` parameters where LLM might pick the value. Verification metric: B2 guardrail WARN volume should drop to zero in 24h post-fix. |
-| **Session 1207 24h watch (fires 2026-06-23 ~03:50 UTC / 9:50 PM MDT)** | **P1 (time-gated)** | Run checklist in `SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md` §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` is always a list shape. |
 | **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1206 follow-up)** | Deliverable `180f4e9f-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
 | **Layer 1 dashboard refresh** | **P1 (post Session 1206)** | After workers restart + next `_impl_market_intelligence_scan` beat (every 2h), refresh `7d221aa4-…` to flip sports agents from UNTESTED → CONFIRMED WORKING. Layer 2/4 dashboards also need refresh — Wakeup Week dispatches have now generated real evidence including the first MIC deliverable. |
 | **Wakeup Week scoreboard update** | **P1 (immediate — Rigby ongoing)** | Rigby's tracking dispatches across sessions. Session 1207 added: MIC produces real deliverables (smoke evidence `758be167-…`). |
