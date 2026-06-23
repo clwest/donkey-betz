@@ -1191,6 +1191,15 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     len(gathered['sections']), len(context['research']),
                 )
 
+        # Session 1213: smoke-context minimization. When context.mode is a
+        # smoke mode (receipt_only / fleet_smoke), strip non-allowlisted keys
+        # so spec bodies + user_skills + research blobs don't round-trip
+        # through the AgentExecution row. ~4-5x per-call cost reduction on
+        # smoke turns (deliverable afe36715-...). No-op for non-smoke
+        # dispatches. SMOKE_CONTEXT_ENFORCEMENT_MODE env var ∈ warn|strip|error.
+        from core.services.smoke_dispatch import apply_smoke_allowlist
+        context, _smoke_meta = apply_smoke_allowlist(context)
+
         # Session 1088: Route to long_running (matches CELERY_TASK_ROUTES).
         # Was 'agents' queue which no worker consumes.
         celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='long_running')
