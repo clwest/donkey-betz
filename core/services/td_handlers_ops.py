@@ -3481,15 +3481,18 @@ class OpsHandlersMixin:
         from core.models.system import SystemConfiguration
 
         # Code defaults from tasks.py
+        # Session 1222 P2 — trimmed 3 zero-execution names
+        # (TalkingCharacterAgent, ResolveAgent, WhaleWatcherAgent). Agent
+        # class files remain in core/agents/ for future re-enable; the
+        # timeout config entries here are pure dashboard surface noise.
         code_defaults = {
             'AudioAgent': 300, 'ImageAgent': 300, 'VideoAgent': 600,
             'ThreeDAgent': 300, 'ImageEditingAgent': 300, 'VideoEditingAgent': 600,
-            'TalkingCharacterAgent': 600, 'ResolveAgent': 600,
             'ResearchAgent': 1500, 'SystemIntelligenceAgent': 600,
             'MarketingStrategyAgent': 600, 'CustomerResearchAgent': 1500,
             'CharacterTrainingAgent': 600, 'ContentWriterAgent': 600,
             'CompetitorAnalysisAgent': 600, 'BrandStrategyAgent': 600,
-            'ContentStrategyAgent': 600, 'WhaleWatcherAgent': 1500,
+            'ContentStrategyAgent': 600,
             'StockAuditCoordinator': 900, 'WorkflowOrchestrationAgent': 900,
         }
         global_default = 1200  # 20 min fallback
