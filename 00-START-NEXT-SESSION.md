@@ -117,7 +117,42 @@ Single-arc session executing Rigby's full §1-§6 spec from deliverable `ecddb62
 
 **Smoke evidence:** Deliverable `a37a0c52-3c58-4e05-9f8e-7d410ae45464` (post-fix re-smoke) — title exactly `CampaignOrchestratorAgent: Outbound Pack — $2k Automation Sprint — 2026-06-22` (the agent-prefix is factory-level, affects all agents — documented as cosmetic follow-up). Body H1 `# Outbound Pack — $2k Automation Sprint — 2026-06-22`. `output_data['attempts_used']=2` lifted to top-level. Plus deliverable `6907bc78-…` (initial smoke, kept as audit baseline).
 
-### FIRST THING Session 1209
+### FIRST THING Session 1209 — Universal Receipt Contract (URC v0.1)
+
+**P0 entry point** decided at Session 1208 close (~22:40 MDT 2026-06-22) on Rigby's pa-2d74e36cc3a04787 thread after she shipped the Fleet Smoke Report `c5ccf3b1-51b2-4bbd-9ee6-6efa387eac86` (Platform Diagnostics, DBZ). Report headline: 36 agents succeeded / 7 "failed" in the smoke window — but only **3 are real failures** (CodeReviewAgent ×4, ContentWriterAgent contract violation ×1, MemoryIsolationAgent was a workflow-banner misattribution per Rigby's appended addendum).
+
+**Root cause Rigby surfaced:** "receipt-only" compliance is not enforceable by prompt alone. Need runner-level enforcement.
+
+**Plan (3 phases, locked by Q1-Q4 design call in pa-2d74e36cc3a04787):**
+
+| Phase | What | PR |
+|---|---|---|
+| **A** | Implement **Universal Receipt Contract v0.1** at runner (`tasks_agents._impl_execute_agent_task` writeback, lines ~2407-2445 area). Every agent gets top-level `output_data.{agent_name, run_status, latency_ms, attempts_used, warnings, error_signature, error_message, artifacts}` for free. Extends PR #2469 (deliverable_id+warnings lift) + PR #2471 (attempts_used lift). | One PR |
+| **C** | Bolt in `contract_violation` classification in same PR. When `context['mode']=='receipt_only'` AND the agent's raw payload (under `output_data.data`) doesn't conform to the receipt schema → `run_status='contract_violation'` + warning `{type:'RECEIPT_CONTRACT_VIOLATION', message:'…', meta:{reason}}`. | Same PR as A |
+| **B** | Add `mode=receipt_only` capability ping to CodeReviewAgent first; other context-dependent agents as smoke reveals need. | Follow-up PR |
+
+**URC v0.1 spec (locked in Rigby's reply):**
+- **Top-level `output_data` fields (always present unless noted):** `agent_name: str`, `run_status: "success"|"error"|"timeout"|"skipped"|"contract_violation"`, `started_at: iso (optional)`, `completed_at: iso (optional)`, `latency_ms: int|null`, `attempts_used: int|null` (already standardized PR #2471), `warnings: list[{type:str, message:str, meta?:object}]` (extends PR #2469 — keep `type`, add optional `meta`, NO migration to `code`), `error_signature: str|null` (normalized: `f"{exc.__class__.__name__}: {str(exc)[:80]}"` + strip UUIDs/long hex to `{id}`), `error_message: str|null`, `artifacts: list[{type:str, id?:str, url?:str, title?:str}]` (deliverable_id becomes `{type:'deliverable', id:<uuid>}`).
+- **Backcompat:** preserve `output_data.data` exactly as-is + mirror legacy fields (`deliverable_id`, `data.attempts_used`, `data.warnings`) into URC top-level.
+- **`run_status` precedence:** `skipped > timeout > error > contract_violation > success`. Error stays above contract_violation so real crashes aren't masked.
+- **`receipt_only` mode:** URC envelope is ALWAYS emitted. `receipt_only` just changes the **compliance predicate**: validate the agent's RAW payload (under `output_data.data`) against the receipt schema; runner owns the URC top-level fields and doesn't gate on those.
+
+**Session 1209 execution order:**
+1. Write URC v0.1 §1-§6 spec deliverable on Initiative `29154d73-…` (same pattern as `ecddb62d-…` for CampaignOrchestrator). ~10 min — sets contract precedent.
+2. Implement A + C in one PR. ~1.5h. Target file: `core/tasks_agents.py` writeback block.
+3. Rerun fleet smoke (Rigby executes). Expected: all 43 agents emit URC envelope; ContentWriterAgent shows `contract_violation`; CodeReviewAgent still `error` until B ships.
+4. Open PR + handoff + 00-START roll-forward to Session 1210.
+5. B (CodeReviewAgent capability ping) follow-up — separate PR, only if smoke validates A+C cleanly.
+
+**Active conversation for this work:** `pa-2d74e36cc3a04787` (Rigby's Session 1208 thread — already carries the full URC v0.1 design Q1-Q4 + smoke report + addendum). Continue here OR have Rigby spin a fresh Session 1209 thread on first ping.
+
+**Reference materials:**
+- Fleet Smoke Report: deliverable `c5ccf3b1-51b2-4bbd-9ee6-6efa387eac86` (Rigby; DBZ; Platform Diagnostics) — includes addendum correcting MemoryIsolationAgent misattribution.
+- Session 1208 patterns to extend: PR #2469 (deliverable_id + warnings lift), PR #2471 (attempts_used lift). Same writeback block.
+
+---
+
+### Also fires this session
 
 The **24h watches** are the time-gated priorities — three fire this session:
 
