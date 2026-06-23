@@ -98,18 +98,14 @@ class AgentHandlersMixin:
             'research_agent': 'ResearchAgent',
             'trend_analysis_agent': 'TrendAnalysisAgent',
             'opportunity_scoring_agent': 'OpportunityScoringAgent',
-            'market_intelligence_agent': 'MarketIntelligenceAgent',
             'platform_audit_agent': 'PlatformAuditAgent',
             'thinking_agent': 'ThinkingAgent',
-            'decision_enforcer_agent': 'DecisionEnforcerAgent',
             # ── Strategy & Content ──
             'brand_identity_agent': 'BrandIdentityAgent',
             'seo_optimizer_agent': 'SEOOptimizerAgent',
             'social_media_agent': 'SocialMediaAgent',
             'editor_agent': 'EditorAgent',
             'content_audit_agent': 'ContentAuditAgent',
-            'prompt_engineering_agent': 'PromptEngineeringAgent',
-            'technical_document_agent': 'TechnicalDocumentAgent',
             'creative_director_agent': 'CreativeDirectorAgent',
             # ── Business Research ──
             'competitor_analysis_agent': 'CompetitorAnalysisAgent',
@@ -124,7 +120,6 @@ class AgentHandlersMixin:
             'meeting_coordinator_agent': 'MeetingCoordinatorAgent',
             'campaign_orchestrator_agent': 'CampaignOrchestratorAgent',
             'opportunity_pipeline_agent': 'OpportunityPipelineAgent',
-            'content_executor_agent': 'ContentExecutorAgent',
             'ai_series_workflow_agent': 'AISeriesWorkflowAgent',
             'workflow_orchestration_agent': 'WorkflowAgent',
             # ── Development (Session 1093 P3) ──
@@ -136,30 +131,17 @@ class AgentHandlersMixin:
             # ── Stock & Markets ──
             'stock_audit_coordinator': 'StockAuditCoordinator',
             'stock_analyst_agent': 'StockAnalystAgent',
-            'market_movement_monitor_agent': 'MarketMovementMonitorAgent',
-            'institutional_watcher_agent': 'InstitutionalWatcherAgent',
-            'market_anomaly_detector_agent': 'MarketAnomalyDetectorAgent',
-            'bull_case_agent': 'BullCaseAgent',
             'bear_case_agent': 'BearCaseAgent',
-            'signal_scanner_agent': 'SignalScannerAgent',
             'market_intelligence_coordinator': 'MarketIntelligenceCoordinator',
             # ── Sports & Betting ──
             'prediction_market_analyst': 'PredictionMarketAnalyst',
             'game_predictor': 'GamePredictor',
             'line_movement_analyzer': 'LineMovementAnalyzer',
             'sharp_action_detector': 'SharpActionDetector',
-            'bookmaker_agent': 'BookmakerAgent',
             # ── Blockchain Audit ──
             'blockchain_audit_coordinator': 'BlockchainAuditCoordinator',
-            'smart_contract_auditor_agent': 'SmartContractAuditorAgent',
-            'transaction_monitor_agent': 'TransactionMonitorAgent',
             'whale_watcher_agent': 'WhaleWatcherAgent',
-            'exploit_detector_agent': 'ExploitDetectorAgent',
             # ── Narrative Drift ──
-            'narrative_drift_coordinator': 'NarrativeDriftCoordinator',
-            'narrative_historian_agent': 'NarrativeHistorianAgent',
-            'trend_break_detector_agent': 'TrendBreakDetectorAgent',
-            'cultural_impact_agent': 'CulturalImpactAgent',
             # ── Content Studio ──
             'autonomous_content_studio_coordinator': 'AutonomousContentStudioCoordinator',
             'topic_miner_agent': 'TopicMinerAgent',
@@ -169,9 +151,6 @@ class AgentHandlersMixin:
             'content_diversity_orchestrator': 'ContentDiversityOrchestrator',
             # ── Podcast ──
             'podcast_coordinator_agent': 'PodcastCoordinatorAgent',
-            'debate_advocate_agent': 'DebateAdvocateAgent',
-            'debate_skeptic_agent': 'DebateSkepticAgent',
-            'moderator_agent': 'ModeratorAgent',
             # ── Training & Security ──
             'trained_creation_agent': 'TrainedCreationAgent',
             'memory_isolation_agent': 'MemoryIsolationAgent',

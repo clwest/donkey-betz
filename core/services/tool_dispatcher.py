@@ -264,10 +264,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("research_agent", self._handle_agent_tool)
         self.register("trend_analysis_agent", self._handle_agent_tool)
         self.register("opportunity_scoring_agent", self._handle_agent_tool)
-        self.register("market_intelligence_agent", self._handle_agent_tool)
         self.register("platform_audit_agent", self._handle_agent_tool)
         self.register("thinking_agent", self._handle_agent_tool)
-        self.register("decision_enforcer_agent", self._handle_agent_tool)
 
         # Strategy & Content agents
         self.register("brand_identity_agent", self._handle_agent_tool)
@@ -275,8 +273,6 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("social_media_agent", self._handle_agent_tool)
         self.register("editor_agent", self._handle_agent_tool)
         self.register("content_audit_agent", self._handle_agent_tool)
-        self.register("prompt_engineering_agent", self._handle_agent_tool)
-        self.register("technical_document_agent", self._handle_agent_tool)
         self.register("creative_director_agent", self._handle_agent_tool)
 
         # Executive & Orchestration agents
@@ -285,7 +281,6 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("meeting_coordinator_agent", self._handle_agent_tool)
         self.register("campaign_orchestrator_agent", self._handle_agent_tool)
         self.register("opportunity_pipeline_agent", self._handle_agent_tool)
-        self.register("content_executor_agent", self._handle_agent_tool)
         self.register("ai_series_workflow_agent", self._handle_agent_tool)
 
         # Development agents (Session 1093 P3 — was missing from tool registry)
@@ -294,12 +289,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Stock & Markets agents
         self.register("stock_audit_coordinator", self._handle_agent_tool)
         self.register("stock_analyst_agent", self._handle_agent_tool)
-        self.register("market_movement_monitor_agent", self._handle_agent_tool)
-        self.register("institutional_watcher_agent", self._handle_agent_tool)
-        self.register("market_anomaly_detector_agent", self._handle_agent_tool)
-        self.register("bull_case_agent", self._handle_agent_tool)
         self.register("bear_case_agent", self._handle_agent_tool)
-        self.register("signal_scanner_agent", self._handle_agent_tool)
         self.register("market_intelligence_coordinator", self._handle_agent_tool)
 
         # Sports & Betting agents
@@ -307,20 +297,12 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("game_predictor", self._handle_agent_tool)
         self.register("line_movement_analyzer", self._handle_agent_tool)
         self.register("sharp_action_detector", self._handle_agent_tool)
-        self.register("bookmaker_agent", self._handle_agent_tool)
 
         # Blockchain Audit agents
         self.register("blockchain_audit_coordinator", self._handle_agent_tool)
-        self.register("smart_contract_auditor_agent", self._handle_agent_tool)
-        self.register("transaction_monitor_agent", self._handle_agent_tool)
         self.register("whale_watcher_agent", self._handle_agent_tool)
-        self.register("exploit_detector_agent", self._handle_agent_tool)
 
         # Narrative Drift agents
-        self.register("narrative_drift_coordinator", self._handle_agent_tool)
-        self.register("narrative_historian_agent", self._handle_agent_tool)
-        self.register("trend_break_detector_agent", self._handle_agent_tool)
-        self.register("cultural_impact_agent", self._handle_agent_tool)
 
         # Content Studio agents
         self.register("autonomous_content_studio_coordinator", self._handle_agent_tool)
@@ -329,13 +311,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("performance_analyst_agent", self._handle_agent_tool)
         self.register("voice_critic_agent", self._handle_agent_tool)
         self.register("content_diversity_orchestrator", self._handle_agent_tool)
-        self.register("distribution_agent", self._handle_agent_tool)
 
         # Podcast agents
         self.register("podcast_coordinator_agent", self._handle_agent_tool)
-        self.register("debate_advocate_agent", self._handle_agent_tool)
-        self.register("debate_skeptic_agent", self._handle_agent_tool)
-        self.register("moderator_agent", self._handle_agent_tool)
 
         # Training & Security agents
         self.register("trained_creation_agent", self._handle_agent_tool)
