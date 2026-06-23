@@ -99,6 +99,32 @@ class OtherPatternsRegressionTests(SimpleTestCase):
     def test_phone(self):
         self.assertIn('[REDACTED_PHONE]', scrub('Call: 555-123-4567'))
 
+    def test_phone_accepts_common_us_formats(self):
+        """Common formatted US phone shapes still scrub."""
+        self.assertIn('[REDACTED_PHONE]', scrub('Call: 555-123-4567'))
+        self.assertIn('[REDACTED_PHONE]', scrub('Call: (555) 123-4567'))
+        self.assertIn('[REDACTED_PHONE]', scrub('Call: 555.123.4567'))
+        self.assertIn('[REDACTED_PHONE]', scrub('Call: 555 123 4567'))
+        self.assertIn('[REDACTED_PHONE]', scrub('Call: +1-555-123-4567'))
+
+    def test_phone_does_not_catch_yyyymmddhh_timestamp(self):
+        """Session 1220 fix: zombie_thread_monitor returns hour buckets
+        formatted as YYYYMMDDHH (10 digits) — these must not redact as
+        phones. Regression test for the from_hour / to_hour fields in
+        ops_tool.zombie_thread_rate output that were being scrubbed."""
+        timestamp = '2026062315'  # YYYYMMDDHH
+        scrubbed = scrub(f'Window from_hour: {timestamp}')
+        self.assertIn(timestamp, scrubbed)
+        self.assertNotIn('[REDACTED_PHONE]', scrubbed)
+
+    def test_phone_does_not_catch_bare_10_digit_ids(self):
+        """Other unformatted 10-digit strings (IDs, timestamps,
+        unix-millis truncations) should pass through untouched."""
+        for sample in ('1234567890', '9876543210', '1700000000'):
+            scrubbed = scrub(f'id={sample}')
+            self.assertIn(sample, scrubbed)
+            self.assertNotIn('[REDACTED_PHONE]', scrubbed)
+
     def test_ssn(self):
         self.assertIn('[REDACTED_SSN]', scrub('SSN: 123-45-6789'))
 
