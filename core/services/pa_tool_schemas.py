@@ -92,7 +92,13 @@ PA_TOOL_SCHEMAS = [
         "description": (
             "Manage opportunities: list, view details, get stats, create, or update status. "
             "Use when the user asks about opportunities, job listings, income "
-            "opportunities, or wants to track/update an opportunity."
+            "opportunities, or wants to track/update an opportunity. "
+            "SCOPE: Results are filtered to the calling user's opportunities when a "
+            "user is authenticated (the 'your pipeline' view, typically ~tens of rows). "
+            "The platform-wide spider-ingested lead pool (~thousands of unattributed "
+            "Opportunity rows owned by the system user) is visible only via "
+            "autopilot_tool.dry_run_report → revenue_pipeline.total_active. "
+            "Session 1222 P4 (audit C1) clarified this distinction."
         ),
         "parameters": {
             "type": "object",
