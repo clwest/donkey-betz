@@ -1,11 +1,30 @@
 ---
 title: "Donkey Betz Platform — What It Actually Is"
 status: active
-session: 1141
+session: 1223
 generated: 2026-05-24
-last_reviewed: 2026-05-24
+last_reviewed: 2026-06-23
 companion_doc: PLATFORM_INVENTORY.md
 ---
+
+> **Anchor refresh — Session 1223 close (2026-06-23):** narrative body
+> reviewed against handoffs SESSION_1142 → SESSION_1223 (81 sessions).
+> Count drift in the existing body reconciled in this refresh (PA tools
+> 101→109 schemas + 166→152 handlers; models 570→588; Celery tasks
+> 365→409; PeriodicTasks 305→92 after the noise-task cleanup arc;
+> frontend routes 60→61). No conceptual narrative changes — the platform
+> shape is unchanged. New since Session 1141:
+> - **1142-1160** — context-kit pattern formalized (`DOC_LIFECYCLE`, narrative anchors, runtime evidence), doc-claim verifier hardened, audit framework established
+> - **1161-1183** — primitives + opt-in apply-list pattern for new infra (canonical locks, retry policies, factories), `make celery` PID-cache fix, multiple worker-restart triggers documented
+> - **1184-1213** — PA tool maturity: conversation hygiene (`session_tool.create_fresh`), deliverable-tool large-payload pattern, agent fail-loud rules, fail-open helpers verified E2E
+> - **1214-1216** — **OpenAI caller alignment arc** (3 single-day sessions, 16 PRs, ~30 call sites, spec deliverable `2b9aa447-…` `completed`). See "OpenAI hardening" subsection under Current State Honesty for the full close.
+> - **1217-1222** — self-directed audit experiment (15-finding deliverable `bec077ed-…`), most-leverage picks shipped, both CI lints flipped to enforce mode (`check-llm-sdk.yml` + `check-reasoning-contract.yml`), 6-session continuous PA conversation thread
+> - **1219-1221** — watchdog/timeout arc (Tier 1 total-request bound at `BaseAgent._call_openai` PR #2519, Tier 2 `LLMCallEvent` cleanup watchdog PR #2520) — closes the `httpx.Timeout(read=90s)` per-chunk loophole
+> - **1223** — audit #8 close (seed baseline drift, PR #2534) — accepted 89 as canonical Agent table count; zero documented drift on agent counts for the first time since the audit framework existed
+>
+> Live runtime counts always come from `PLATFORM_INVENTORY.md`. All
+> count updates in this refresh derived from the autoblock + verifier;
+> any disagreement, the inventory wins.
 
 > **Anchor refresh — Session 1141 close (2026-05-24):** narrative body
 > reviewed against handoffs SESSION_1134 → SESSION_1141. No material
@@ -40,16 +59,16 @@ companion_doc: PLATFORM_INVENTORY.md
 > runtime-derived and regenerable (via `python manage.py generate_platform_inventory`)
 > — it tells you *what exists right now*. This doc tells you *what it all is,
 > why it exists, and how it fits together*. Numbers cited here are accurate
-> at time of writing (Session 1099 audit, 2026-04-18); regenerate the
+> at time of writing (Session 1223 refresh, 2026-06-23); regenerate the
 > inventory for a fresh snapshot.
 
 ---
 
 ## TL;DR — One Sentence
 
-You've built an autonomous multi-agent intelligence platform that ingests real-time data from **80 spiders**, clusters it into signals, routes signals through **83 specialized AI agents** deliberating in multi-reviewer pipelines with full citation provenance, surfaces everything through a GPT-5.2-powered personal assistant (**Rigby**) with **101 tools** and **8 enrichment services**, monitors itself via a **9-system "body" health metaphor**, and audits its own documentation against runtime reality.
+You've built an autonomous multi-agent intelligence platform that ingests real-time data from **80 spiders**, clusters it into signals, routes signals through **83 specialized AI agents** deliberating in multi-reviewer pipelines with full citation provenance, surfaces everything through a GPT-5.2-powered personal assistant (**Rigby**) with **109 tool schemas** and **8 enrichment services**, monitors itself via a **9-system "body" health metaphor**, and audits its own documentation against runtime reality.
 
-**Scale:** ~919K lines of app Python (core/ + ai_core/). 570 database tables. 365 Celery tasks. One conversational interface to all of it.
+**Scale:** ~919K lines of app Python (core/ + ai_core/). 588 database tables. 409 Celery tasks. One conversational interface to all of it.
 
 ---
 
@@ -152,8 +171,8 @@ Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give y
 The single conversational entry point. `UnifiedPAEntrypoint` in `core/services/unified_pa_entrypoint.py`.
 
 **Inventory:**
-- **101 tool schemas** visible to GPT-5.2 via OpenAI function calling
-- **166 tool handlers** in `ToolDispatcher` (`core/services/tool_dispatcher.py`)
+- **109 tool schemas** visible to GPT-5.2 via OpenAI function calling
+- **152 registered tool handlers** in `ToolDispatcher` (`core/services/tool_dispatcher.py`)
 - **6 gateway tools** consolidated in Session 1079:
   - `governance_tool` (boardroom, attention items, decisions, triage)
   - `work_tool` (initiatives, stages, action items)
@@ -258,8 +277,8 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 ### Layer 7 — Execution Plumbing (Celery + Redis)
 
 **Celery topology:**
-- 365 user-defined Celery tasks (excludes `celery.*` internals)
-- `core/celery.py` is the primary static source of beat definitions; `django-celery-beat` stores the 305 runtime `PeriodicTask` rows (258 enabled, 47 disabled)
+- 409 user-defined Celery tasks (excludes `celery.*` internals)
+- `core/celery.py` is the primary static source of beat definitions; `django-celery-beat` stores 92 runtime `PeriodicTask` rows (88 enabled, 4 disabled — down from 305 in Session 1099 after the Session 1142+ noise-task cleanup and Session 1222 B2 disabled-task classification arc)
 - `sync_celery_schedules`, `sync_celery_beat`, `add_critical_celery_tasks`, `setup_workspace_autopilot`, and `sync_task_queues` bridge or repair those definitions into database-backed runtime state
 - 11 Procfile entries: `release` + `web`, `celery-worker`, `celery-pa`, `celery-content`, `celery-long-running`, `celery-long-running-2`, `celery-broadcast`, `celery-beat`, `code-worker`, `resolve-node`
 - Per-task RSS memory telemetry (`CeleryTaskEvent.rss_delta_mb` with `[MEMORY] SPIKE` log markers at 50/100 MB thresholds)
@@ -298,7 +317,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 
 ### Layer 9 — Frontend (React + TypeScript + Vite + Tailwind)
 
-**Routes** — 60 `<Route>` entries in `App.tsx`. Key routes:
+**Routes** — 61 `<Route>` entries in `App.tsx`. Key routes:
 - `/` — Command Center (home, PA chat)
 - `/workspace` — 5-tab modular workspace (home, work, build, intelligence, system)
 - `/stocks` — Stock Intelligence dashboard
@@ -330,7 +349,7 @@ Overall health = weighted average (HEART 2×, SKIN 0.5×).
 
 ### Layer 11 — Storage (PostgreSQL + pgvector)
 
-**570 concrete Django models across 23 apps.** Key model families:
+**588 concrete Django models across 23 apps.** Key model families:
 
 | Family | Key Models | Location |
 |---|---|---|
@@ -361,8 +380,8 @@ Every Initiative traces back to originating SpiderData rows via `HiveMindSession
 ### 4. Learning Loop + XP Budget
 Agents track `AgentLearning`, accumulate XP, get performance feedback injected into their next prompt. `CoordinatorOutcome` has 17,500+ rows locally (live counter). The platform gets smarter at specific agents over time.
 
-### 5. Self-Aware System (Session 1099)
-The doc-vs-reality verifier + `PLATFORM_INVENTORY.md` means the platform now knows when its docs disagree with its code. It can audit itself. 65 claims registered, 45 drifts currently tracked, one command to regenerate the inventory.
+### 5. Self-Aware System (Session 1099, hardened through Session 1223)
+The doc-vs-reality verifier + `PLATFORM_INVENTORY.md` means the platform now knows when its docs disagree with its code. It can audit itself. 73 claims registered across 34 source files, **0 drifts** as of Session 1223 — the original Session 1099 audit flagged 45/65, and sustained closing-the-loop work across Sessions 1100→1223 brought that to zero (and held it there through the audit-framework expansion). One command to regenerate the inventory.
 
 ### 6. Body-Systems Health Metaphor
 The autonomic reflex layer is genuinely novel. No other Django platform models itself as human anatomy with autonomic responses.
@@ -383,21 +402,49 @@ Session 1087/1089 added a cost-governed dispatcher that throttles low-priority t
 
 ## Current State Honesty
 
-### Working well (as of Session 1099)
+### Working well (as of Session 1223)
 
-- Personal Assistant (Rigby) — 101 tools, GPT-5.2 function calling, local + prod both operational
-- Celery beat governor — 47 noise tasks disabled, budget gating live; schedule definitions primarily live in `core/celery.py` and are materialized or repaired into `PeriodicTask` rows by sync/bootstrap commands
-- DeliverableAppend canary (Session 1098) — green after Plan A injection, 24h observation window in progress
-- Content autonomy loop with EditorAgent repairs
-- Body systems monitoring — Railway health at 90-100%
-- Factory clients — all OpenAI + Anthropic clients migrated to proper factory wrappers
-- CTO diagnostic agent (Session 1093) + scheduled-agent-as-monitor primitive generalized (1094)
-- Mythology anti-spam safety rails (Session 1096) — severity escalation, daily post caps, HAI bridge
-- Governance redesign canary (Session 1098) — DeliverableAppend path working end-to-end
+- Personal Assistant (Rigby) — 109 tool schemas, GPT-5.2 function calling, local + prod both operational. Continuous 6-session conversation thread (`pa-58737666f25741dc`, Sessions 1217-1222) held cleanly before voluntary retirement at the `strongly_recommend_fresh` health signal — `session_tool.health_check` working as designed.
+- Celery beat governor — noise tasks classified and disabled (305→92 PeriodicTask rows), budget gating live; schedule definitions primarily live in `core/celery.py` and are materialized or repaired into `PeriodicTask` rows by sync/bootstrap commands. Both CI lints (`check-llm-sdk.yml` + `check-reasoning-contract.yml`) now in enforce mode after the Session 1222 P3 + P5 promotions.
+- Content autonomy loop with EditorAgent repairs.
+- Body systems monitoring — Railway health at 90-100%.
+- Factory clients — all OpenAI + Anthropic clients on proper factory wrappers (`get_openai_client()`, `get_async_openai_client()`, `get_anthropic_client()`). 600s default-timeout footguns eliminated.
+- CTO diagnostic agent (Session 1093) + scheduled-agent-as-monitor primitive generalized (1094).
+- Mythology anti-spam safety rails (Session 1096) — severity escalation, daily post caps, HAI bridge.
+- Governance redesign canary (Session 1098) — DeliverableAppend path working end-to-end.
+- Self-directed audit framework (Session 1217 → 1222) — 15-finding deliverable `bec077ed-…` drove 12 closures across 6 sessions; remaining 3 are M-effort docs-track.
 
-### Doc-claim verifier state (Session 1142, 2026-05-24)
+### OpenAI hardening — Sessions 1214-1216 + 1221
 
-Out of **73 registered claims across 34 source files**, **0 drift from reality** as of this refresh. Session 1099 (the original audit cited below) flagged 45/65 — sustained closing-the-loop work across sessions 1100→1142 brought that to zero.
+A four-session arc closed the platform's "direct OpenAI SDK usage" surface end-to-end. Single spec, single catalog deliverable maintained throughout, three single-day sessions then a separate follow-on for the zombie loophole.
+
+**Phase A+B — factory adoption + dead-code removal (Session 1214, 8 PRs)**
+- Audited 74 → 21 truly bare `OpenAI()` / `AsyncOpenAI()` no-arg instantiations across 6 active files
+- 6 factory swaps (`OpenAI()` → `get_openai_client()`) + 15 dead-code removals (vestigial async clients whose `client` variable was never invoked — dispatch routes through `agent_llm_integration.generate_for_agent`) + 1 central swap (`OpenAIProvider.__init__`)
+- New `get_async_openai_client()` factory infrastructure (PR #2490) — mirrors sync factory, isolated `_ASYNC_CLIENT_CACHE`, same 20/90/60/60s timeouts, same forbidden-kwargs guard
+- Net: 22 × 600s SDK timeout footguns eliminated, 50+ lines of vestigial dead code gone
+
+**Phase C+D — reasoning-contract fixes (Session 1215, 3 PRs)**
+- Scoping correction: raw `\bmax_tokens\s*=` grep returned 158 matches across 77 files, but `LLMRequest.max_tokens` is correctly abstracted by `llm_provider_registry.py` — most matches route through the registry abstraction and are NOT Phase C/D targets. Actual scope: 3 files, 8 sites.
+- **Top-impact win:** `content/ai_providers.py` was making 2 API round-trips on every gpt-5-mini call (try-with-wrong-params → fail → catch → retry-without-token-limit) — PR #2495 eliminated the wasted round-trip
+- `core/views_ai_learning_api.py` 3-site fix (PR #2496) — silent backend 500s replaced with correct calls
+- `agents/executors/base_executor.py` conditional `temperature` strip for gpt-5.x (PR #2497) — preserves sampling control for non-reasoning callers
+
+**Phase E — runtime guard + CI lint (Session 1216, 2 PRs)**
+- `apply_reasoning_guard()` + `ReasoningGuardViolation` + `_install_reasoning_guard()` in `core/services/openai_client_factory.py` — factory-returned clients have their `chat.completions.create` method wrapped at construction time, mode env-gated via `OPENAI_REASONING_GUARD={warn,strip,error}` (default `warn`)
+- AST-based `tools/check_reasoning_contract.py` + `.github/workflows/check-reasoning-contract.yml` — AST parsing avoids docstring false positives the regex lint produces. Shipped `--warn-only` (Phase C+D close left zero violations on main); flipped to enforce mode in Session 1222 P3 (PR #2525)
+- Spec deliverable `2b9aa447-…` flipped to `completed` via `content_tool.content_complete`
+
+**Tier 1 + Tier 2 — zombie LLM-call close (Session 1221, 2 PRs)**
+- Driven by Session 1220 P2 investigation deliverable `7ae61cf7-…` — `httpx.Timeout(read=90s)` only bounds per-chunk silence, not total request wall-clock; long-running streaming responses could go zombie indefinitely
+- **Tier 1** (PR #2519): total-request bound on `BaseAgent._call_openai` via `_run_openai_create_with_total_cap()` helper. Cap formula: `max(180.0, llm_timeout * 2.5)` per-agent. Floor of 180s sits above observed legitimate `ContentWriterAgent` 102.7s SUCCESS max.
+- **Tier 2** (PR #2520): `LLMCallEvent` cleanup watchdog (`cleanup-stuck-llm-calls` beat task, `*/10` minute cadence) catches zombies from non-`BaseAgent` paths. Mirror of the existing `_impl_cleanup_stale_agent_executions`.
+
+**Cumulative impact:** 16 PRs across Sessions 1214-1216 + 2 PRs in Session 1221 = **~30 call sites aligned, runtime guard + CI lint in place at both the contract layer (Phase E) and the total-wall-clock layer (Tier 1/2)**. Catalog deliverable `bb775acb-…` (Platform Capability Audit category, pinned in Donkey Betz workspace) grew from 6.3KB seed → 17,068 chars final, with per-callsite + per-PR provenance entries.
+
+### Doc-claim verifier state (Session 1223, 2026-06-23)
+
+Out of **73 registered claims across 34 source files**, **0 drift from reality** as of this refresh. Session 1099 (the original audit cited below) flagged 45/65 — sustained closing-the-loop work across sessions 1100→1142 brought that to zero, and the Sessions 1142→1223 expansion of the audit framework (Runtime Evidence promotion, narratives layer, EDITING_GUARDRAILS, patents README) held it there. Session 1223 audit #8 close (PR #2534) is what made the agent-count subset drift-clean for the first time.
 
 | Class of drift | Status |
 |---|---|
@@ -418,14 +465,21 @@ Original drift survey (preserved for context):
 | Architectural drift | topics/frontend.md claims 9 workspace tabs — code has 5 primary |
 | Scheduling drift | topics/agent-system.md claims 4 Intelligence Desks run daily — only 1 actually does |
 
-### Known issues queued for follow-up
+### Known issues queued for follow-up (Session 1223 active tail)
 
-- **Stock agent rotation**: 4/5 failed on 2026-04-17 18:46 rotation (StockAnalyst, BullCase, BearCase, MarketIntelligenceCoordinator) — not blocking but needs root-cause.
-- **Session 1098 canary test artifacts**: Deliverable `c7f4c940` + blog `b8a2b6a3` intentionally live until 24h observation window closes.
-- **Phase-2 initiative guard test**: validate `expected_initiative_id` mismatch handling on a blog with an initiative.
-- **SpiderData embedding coverage**: only 20.1% of spider data is embedded (memory is 97.6%) — semantic search is partial for spider intelligence.
-- **Dormant agents**: many agent records have zero executions in the last 30 days. Either wire them to real tasks or remove.
-- **0 Initiatives completed**: pipeline creates but doesn't finish work items. Fast Track auto-progression stalls at Stage 2.
+Audit deliverable `bec077ed-…` (Session 1217 self-directed, 15 findings) — **closed 12/15, 3 open**:
+
+- **#4 — Critical hub markers / gates** (M): reliability work — flag critical-path files for extra review, extend PR template + add CODEOWNERS / path-pattern gate
+- **#9 — Core orientation doc staleness** (M): _this doc_ — addressed in Session 1223 refresh (the one you're reading)
+- **#10 — Atlas fleet capabilities positioning** (M): narrow Phase 1 "fleet integration" claims in `docs/24_7_GLOBAL_AI_APP_ATLAS.md` to match runtime reality
+
+Historical follow-ups from Session 1099 (preserved for context — most have aged out):
+
+- **Stock agent rotation**: 4/5 failed on 2026-04-17 18:46 rotation (StockAnalyst, BullCase, BearCase, MarketIntelligenceCoordinator) — not blocking; resolution status unclear.
+- **Session 1098 canary test artifacts**: 24h observation window has long closed; canary path validated and shipped.
+- **Dormant agents**: addressed via Session 1217 audit B2 (4 keep-disabled with operator-readable reasons + 1 re-enabled with `dry_run=True` for 2-Friday burn-in per PR #2530).
+- **SpiderData embedding coverage** (originally 20.1%): unchanged status; still partial for spider intelligence semantic search.
+- **0 Initiatives completed**: pipeline creates but doesn't finish work items. Fast Track auto-progression stalls at Stage 2. Still true; not on the active arc.
 
 ---
 
@@ -437,8 +491,8 @@ Original drift survey (preserved for context):
 2. **[`docs/PLATFORM_WHAT_IT_IS.md`](PLATFORM_WHAT_IT_IS.md)** — this doc. Conceptual narrative.
 3. **[`CLAUDE.md`](../CLAUDE.md)** — AI session entry point + design intent. (Several stats drift; verifier catches those.)
 4. **[`00-START-NEXT-SESSION.md`](../00-START-NEXT-SESSION.md)** — current priorities per session.
-5. **[`docs/topics/`](topics/)** — 14 subsystem deep-dives (PA, content pipeline, body systems, etc.).
-6. **[`docs/audit-2026/`](audit-2026/)** — 13 subsystem dossiers with verified runtime evidence.
+5. **[`docs/topics/`](topics/)** — 19 subsystem deep-dives (PA, content pipeline, body systems, etc.).
+6. **[`docs/audit-2026/`](audit-2026/)** — 15 subsystem dossiers with verified runtime evidence.
 
 ### The three commands to remember
 
@@ -455,12 +509,21 @@ python manage.py build_docs_index
 
 ### Asking Rigby
 
+Use the local wrapper — it hardcodes the right token + active conversation:
+
 ```bash
-# Continuous conversation since Session 1094 (LOCAL)
+./tools/pa_local.sh "your question"
+```
+
+Or call directly if you want explicit env override (the script defaults to PROD — see Session 1184 trap in `00-START-NEXT-SESSION.md` "READ THIS FIRST"):
+
+```bash
 PA_API_URL=http://localhost:8000 \
 PA_API_TOKEN=<local-donkeyking-token> \
-.venv/bin/python tools/pa_chat.py "your question" --conversation pa-3c7ddc058db1
+.venv/bin/python tools/pa_chat.py "your question" --conversation <conversation-id>
 ```
+
+Conversation IDs rotate per session arc — current pin lives in `tools/pa_local.sh`. Health-check with `session_tool.health_check` before continuing a multi-session thread; pin gets retired when score reaches `strongly_recommend_fresh`.
 
 ### Restarting the platform
 
@@ -497,7 +560,7 @@ open http://localhost:8000/ai-studio/
 | **Initiative** | A platform project. Has 5 stages + provenance back to signals. |
 | **LUNGS budget** | Per-provider/per-agent token budget tracking. |
 | **PA / Rigby** | The Personal Assistant — `UnifiedPAEntrypoint`. Your single conversational interface. |
-| **PeriodicTask** | A django-celery-beat scheduled task row. 305 total, 258 enabled. |
+| **PeriodicTask** | A django-celery-beat scheduled task row. 92 total, 88 enabled (down from 305 in Session 1099 after the noise-task cleanup arc through Session 1222). |
 | **PlatformInventory** | The Session 1099 runtime-derived master doc. Companion to this one. |
 | **Priority Router** | Observer-mode priority gating system (Session 1087). |
 | **Provenance** | The full chain of evidence backing an agent's output — data sources, timestamps, validation. |
@@ -510,5 +573,5 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-*Last revised: Session 1099 (2026-04-18). When this doc drifts from reality,
+*Last revised: Session 1223 (2026-06-23). When this doc drifts from reality,
 regenerate `PLATFORM_INVENTORY.md` first — that's always authoritative.*
