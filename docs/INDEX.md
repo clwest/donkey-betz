@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-23 13:40
+**Generated:** 2026-06-23 14:02
 **Current Session:** 1218
 **Total Documentation:** 2708 files | 708,546 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,727 |
+| Total cross-references | 4,716 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 194 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 183 | Platform Master Inventory |
 | `docs/INDEX.md` | 128 | INDEX |
-| `docs/archive/old-structure/capabilities/04_Agent_Orchestra/README.md` | 118 | 🤖 AI AGENT ORCHESTRA - 149 Specialized Intelligenc |
+| `docs/archive/SYSTEM_CAPABILITIES-original/09_Self_Awareness/README.md` | 118 | 🔮 SELF-AWARENESS SYSTEMS - The AI That Knows Itsel |
 | `docs/AGENTS.md` | 70 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 67 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 44 | CAPABILITIES |
@@ -248,9 +248,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 392 | 2026-06-23 14:02 |
 | SESSION_1217_BOUNDED_AUDIT_EXECUTION.md | handoffs | 114 | 2026-06-23 13:39 |
 | SESSION_1217_PREP_BOUNDED_AUDIT_EXPERIMENT.md | handoffs | 164 | 2026-06-23 13:07 |
-| INDEX.md | docs | 392 | 2026-06-23 13:07 |
 | SESSION_1216_OPENAI_CALLER_ALIGNMENT_PHASE_E.md | handoffs | 141 | 2026-06-23 12:22 |
 | SESSION_1215_OPENAI_CALLER_ALIGNMENT_PHASE_CD.md | handoffs | 185 | 2026-06-23 12:05 |
 | SESSION_1214_OPENAI_CALLER_ALIGNMENT_PHASES_A_B.md | handoffs | 118 | 2026-06-23 11:46 |
