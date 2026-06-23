@@ -15,10 +15,10 @@ from django.conf import settings
 from celery import shared_task
 import redis
 try:
-    from openai import OpenAI
-    openai_client = OpenAI()
+    from core.services.openai_client_factory import get_openai_client
+    openai_client = get_openai_client()
     OPENAI_AVAILABLE = True
-except ImportError:
+except (ImportError, RuntimeError):
     openai_client = None
     OPENAI_AVAILABLE = False
 
@@ -32,7 +32,7 @@ class ContentCreatorAgent:
     """REAL Content Creator Agent using GPT-5-mini"""
 
     def __init__(self):
-        self.client = OpenAI()
+        self.client = get_openai_client()
         self.agent_type = "content-creator"
 
     async def execute(self, instruction):
@@ -303,7 +303,7 @@ class AgentExecutionPipeline:
             class RegistryAgent:
                 def __init__(self, agent_info):
                     self.agent_info = agent_info
-                    self.client = OpenAI() if openai_client else None
+                    self.client = get_openai_client() if openai_client else None
                     self.agent_type = agent_info.get('name')
 
                 async def execute(self, instruction):
