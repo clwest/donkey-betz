@@ -102,50 +102,48 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1213 — CURRENT ENTRY POINT
+## SESSION 1214 — CURRENT ENTRY POINT
 
-### SESSION 1212 CLOSED — Agents Reference doc + PA spend audit + 2 Session 1213 follow-ups filed (1 PR merged)
+### SESSION 1213 CLOSED — Smoke context minimization shipped, AC-4 verified live, 31× context shrink on the worst-case agent (1 PR merged)
 
-Full handoff: [`SESSION_1212_AGENTS_REFERENCE_AND_PA_SPEND_AUDIT.md`](docs/handoffs/SESSION_1212_AGENTS_REFERENCE_AND_PA_SPEND_AUDIT.md). **1 PR merged.** Two unrelated arcs, both Chris-initiated mid-session.
+Full handoff: [`SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md`](docs/handoffs/SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md). **1 PR merged.** Single-arc cost-reduction PR, closes Session 1212 spec deliverable `afe36715-…`.
 
 | PR | Commit | What |
 |---|---|---|
-| **#2481** | `d5a01ccc` | `python manage.py generate_agents_reference` mgmt command (sibling to Session 1115's `build_capability_audit`) + auto-generated `docs/AGENTS_REFERENCE.md` (1595 lines). Groups 83 agents by **category** (28 categories mirroring AGENT_MAP comment headings); per-agent card captures source file:line, status flags (Phase B / workspace-aware / sys-ctx), purpose, full tools list, and `actionable_config` (declared actions + payload_fields). Drift sentinel: new AGENT_MAP entries that aren't in CATEGORY_MAP cause the command to fail loud. Admin-merged through GitHub Actions billing block. |
+| **#2483** | `3670cede` | `core/services/smoke_dispatch.py` (+146 new) defines `SMOKE_CONTEXT_KEYS = {mode, smoke_id, receipt_only, user_id, conversation_id, workspace_id, auto_followup}` allowlist + `SMOKE_MODES = {receipt_only, fleet_smoke}` (outbound_pack intentionally NOT gated — CampaignOrchestratorAgent needs payload). Wrap at `tool_dispatcher.py:_handle_agent_tool:1196` right before `execute_agent_task.apply_async` (single PA-initiated agent dispatch choke point). `SMOKE_CONTEXT_BYTE_CAP = 200`B evaluated post-strip — soft cap in strip/warn (log-only), hard cap in error (raises `SmokeContextViolation`). Env var `SMOKE_CONTEXT_ENFORCEMENT_MODE ∈ {warn, strip, error}`, default strip. `smoke → smoke_id` alias rewrite. 18/18 unit tests green. Admin-merged through GitHub Actions billing block (same pattern as Session 1211 #2479). |
 
-**Arc A — Agents Reference doc** (Chris ask): "documentation listing every Agent and all params they take, what the expected outcome is etc." → schema-only first pass, one file grouped by category. Headline matches CLAUDE.md inventory: 83 agents · 74 enabled · 8 rerouted · 1 blocked · 4 Phase B receipt_only · 20 workspace-aware · 50 with `tools` · 18 with `actionable_config`.
+**Drift surfaced + resolved in-session:** spec named the seam as "Rigby's cockpit / execution_history dispatch path" — but `cockpit_tool` dispatches Celery tasks (not agents) and `execution_history_tool` is read-only. Real choke point is one location at `_handle_agent_tool:1196`. Pivoted there in coordination with Rigby; documented in handoff §"What shipped".
 
-**Arc B — PA spend audit** (Chris ask): "credits went down a couple dollars but we didn't make any API calls that I know of." Traced via `LLMCallLog` 24h aggregation: $9.91 / 592 PA calls / 23.5M tokens — **ALL 176 PA chat messages in 24h are `user=chris`**, no autonomous leak. Cost driver = per-call token bloat (35-68K tokens/turn). Two systemic issues surfaced and filed for Session 1213.
+**Live AC-4 evidence (validation smoke `session-1213-live-validate-2483`):** 3 agents (CodeReview + Research + ContentWriter) dispatched receipt_only post-merge. All 3 AgentExecution rows show allowlist-only context @ 210B (vs Session 1209 baseline `a14d4c7c` ContentWriterAgent @ 6572B = **31× shrink** on the same agent class). celery-pa.log shows 3 INFO `[smoke_dispatch] stripped_keys=['research']` + 3 WARNING soft-cap-over events. The 10B over-cap is chris's UUID-shaped `user_id` (expected, not a regression — int user_id flows would be ~140B).
 
-**Three Deliverables filed in Donkey Betz workspace:**
-- `b16bcc52-e193-445e-bac9-83c86b977dc7` — Agents Reference pinned doc (Arc A artifact)
-- `afe36715-721c-400f-b36f-4b9717467b66` — **Spec: Smoke Context Minimization** (Session 1213 P2 — define `SMOKE_CONTEXT_KEYS` allowlist; 4-5× per-call cost reduction expected)
-- `777d9cd8-5526-4acf-a167-374c05e6e425` — **Audit: Stale-Thread Conversation Action Dispatcher** (Session 1213 P2 — 24 of 41 24h dispatches landing on retired threads; ~$3.60/day burned; 3 fix options, lean A: `session_closed` flag)
+**Deliverables updated:**
+- `afe36715-721c-400f-b36f-4b9717467b66` — status: `accepted → completed` via `content_tool.content_complete`
+- `1a8cde69-8f40-45d2-b841-4e88f76c9d7f` — runbook appended (+2033 chars) with minimal-context contract (AC-3)
 
-**New memory entry:** `feedback_deliverable_factory_trigger_source_direct.md` — when creating a Deliverable from `manage.py shell`, pass `metadata={'trigger_source': 'direct'}` to bypass the Session 1199 PR-D provenance gate. The factory auto-synthesizes an AgentExecution receipt.
+**Post-merge gotcha (cleared):** worker restart at 11:22-11:23 MDT (post-`3670cede`) — `smoke_dispatch.py` is imported by `tool_dispatcher.py` which is imported by celery task bodies. All 4 workers + beat alive on fresh PIDs (verified via `ps -eo lstart`).
 
-**Post-merge gotcha:** none. PR #2481 is docs + a management command — neither imports into the celery task body, so no worker restart.
+### FIRST THING Session 1214 — pick one of the two carryover follow-ups
 
-### FIRST THING Session 1213 — pick one of the two filed follow-ups (or carryover Phase B work)
+Two natural pickup paths, both Session 1212 fillings. Lean is **(A)** — direct cost impact, well-scoped.
 
-Three natural pickup paths. Lean is **(A)** — direct cost impact, well-scoped.
+**(A) Stale-thread dispatcher audit + fix** (`777d9cd8-…`, P2) — Three options listed in the deliverable; lean A (per-conversation `session_closed` flag on `ChatConversation`). When `tools/pa_local.sh` repins to a new thread, retire prior via PA tool (`session_tool action=retire conversation_id=<prior>`); `dispatch_actions()` short-circuits with WARN if `is_active=False`. ACs: AC-1 dispatcher skips 4 currently-retired threads, AC-2 active thread unaffected, AC-3 24h watch shows zero dispatches on retired set. ~$3.60/day savings.
 
-**(A) Smoke context minimization** (`afe36715-…`, P2) — Define `SMOKE_CONTEXT_KEYS` allowlist + wrap Rigby's cockpit / execution_history dispatch path. Reject non-allowlisted keys in fleet-smoke dispatches (`context.mode in SMOKE_MODES`); log + strip in dev, hard-error in prod after 7-day soft-warn. ACs: AC-1 allowlist defined, AC-2 dispatch wrapping, AC-3 runbook update, AC-4 post-fix smoke shows `context` ≤200 bytes (vs current 5-15KB). Expected: 4-5× per-call cost reduction on smoke turns, ~$25-50 savings per smoke run. ~50-100 LoC PR + worker restart.
+**(B) Continue Phase B adoption to next 3 context-dependent agents** (Session 1211 carryover, P1) — 4 of ~10 candidates now adopted (CodeReview + Video + Image + MeetingCoordinator). Pattern fixed. Ask Rigby for next 3 picks from fleet smoke `1a8cde69-…`.
 
-**(B) Stale-thread dispatcher audit + fix** (`777d9cd8-…`, P2) — Three options listed in the deliverable; lean A (per-conversation `session_closed` flag on `ChatConversation`). When `tools/pa_local.sh` repins to a new thread, retire prior via PA tool (`session_tool action=retire conversation_id=<prior>`); `dispatch_actions()` short-circuits with WARN if `is_active=False`. ACs: AC-1 dispatcher skips 4 currently-retired threads, AC-2 active thread unaffected, AC-3 24h watch shows zero dispatches on retired set. ~$3.60/day savings.
+**(C) NEW Session 1213 finding — system prompt + tool schema size reduction** (P2) — Smoke context minimization shaved per-call cost on smokes, but Rigby's conversational turns are still 35-68K tokens because the system prompt carries 109 tool schemas + full conversation history. Far larger savings potential than the smoke-context fix. Scoped follow-up: spec which schemas can be lazy-loaded based on user intent (e.g., signal_studio tools only when chat mentions signals). No deliverable filed yet — would need a P2 deliverable + spec round before code.
 
-**(C) Continue Phase B adoption to next 3 context-dependent agents** (Session 1211 carryover, P1) — 4 of ~10 candidates now adopted. Pattern fixed. Ask Rigby for next 3 picks from fleet smoke `1a8cde69-…`.
-
-**Active conversation:** `pa-61c7b47d201d4591` — Session 1213 lean: continue on this thread for any of (A)/(B)/(C); spin fresh if pivoting away from URC/cost work.
+**Active conversation:** `pa-61c7b47d201d4591` — Session 1214 lean: continue on this thread for any of (A)/(B)/(C); spin fresh if pivoting away from cost work.
 
 ### Also fires this session
 
-**24h watches** — time-gated priorities. Three fire today (2026-06-24):
+**24h watches** — time-gated priorities. Four fire today (2026-06-24):
 
 | Watch | Fires (MDT) | Fires (UTC) | Checklist |
 |---|---|---|---|
 | **Session 1209 (URC)** | ~07:10 MDT | ~13:10 UTC | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) |
 | **Session 1210 (Phase B)** | ~08:48 MDT | ~14:48 UTC | [§"24h watch checklist" in 1210 handoff](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). Invariants A1-A4. |
 | **Session 1211 (Phase B extension)** | ~09:20 MDT | ~15:20 UTC | [§"24h watch checklist" in 1211 handoff](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md). Invariants B1-B4. |
+| **Session 1213 (smoke context min)** | ~10:30 MDT | ~16:30 UTC | [§"24h watch checklist" in 1213 handoff](docs/handoffs/SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md). Invariants A1-A4. |
 
 Then pick from the priority table below.
 
@@ -397,7 +395,9 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Smoke context minimization spec impl** | **P2 (Session 1212 NEW, lean A for Session 1213)** | Deliverable `afe36715-721c-400f-b36f-4b9717467b66`. Define `SMOKE_CONTEXT_KEYS` allowlist + wrap dispatch path to reject non-allowlisted keys in fleet-smoke dispatches. ACs: AC-1 allowlist defined, AC-2 dispatch wrapping, AC-3 smoke runbook updated, AC-4 post-fix `context` ≤200 bytes (vs current 5-15KB). Expected impact: 4-5× per-call cost reduction on smoke turns, ~$25-50/smoke run savings. ~50-100 LoC PR. |
+| ~~**Smoke context minimization spec impl**~~ | ✅ **Closed Session 1213** | PR #2483 (`3670cede`) — `core/services/smoke_dispatch.py`. Deliverable `afe36715-…` status=completed. AC-4 verified live: 6572B → 210B = **31× shrink** on the ContentWriterAgent worst-case class. Handoff: [`SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md`](docs/handoffs/SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md). |
+| **System prompt + tool schema size reduction** | **P2 (NEW Session 1213 finding)** | Smoke-context fix shaved smoke-turn cost; non-smoke conversational turns are still 35-68K tokens because the system prompt carries 109 tool schemas + full conversation history. Far larger savings potential. Scoped follow-up: spec which schemas can be lazy-loaded based on user intent. No deliverable filed yet — would need a P2 deliverable + spec round before code. |
+| **`outbound_pack` size cap (not allowlist)** | **P3 (NEW Session 1213)** | If outbound_pack ever spikes spend, add a size cap (e.g., 50KB max) rather than an allowlist, since CampaignOrchestrator legitimately needs payload. |
 | **Stale-thread dispatcher audit + fix** | **P2 (Session 1212 NEW)** | Deliverable `777d9cd8-5526-4acf-a167-374c05e6e425`. `conversation_action_dispatcher` fires 24 of 41 24h follow-ups on retired threads (~$3.60/day burned). Three fix options listed; lean A (per-conversation `session_closed` flag on `ChatConversation`). ACs: AC-1 dispatcher skips 4 currently-retired threads, AC-2 active thread unaffected, AC-3 24h watch shows zero on retired set. |
 | **Continue Phase B adoption to next 3 context-dependent agents** | **P1 (Session 1211 carryover)** | 4 of ~10 candidates now adopted (CodeReview + Video + Image + MeetingCoordinator). Pattern is fixed (`_is_receipt_only_mode` static helper + early-return + dual-key receipt). Next picks pulled from Session 1209 fleet smoke `1a8cde69-…` "error" rows. ACs mirror Phase B. ~90 min for a bundle of 3. |
 | **Gate-audit P2 follow-up: receipt_only blind spots in pre-execute guards** | **P2 (Session 1211 Rigby surfaced)** | Hotfix #2479 fixed the media gate. Audit other pre-execute guards in `_impl_execute_agent_task` (`tasks_agents.py:2061+`): `_circuit_breaker_check` (line 2093), `_BLOCKED_AGENTS` (line 2065), any task-shape gates, allowlists/denylists. Decide per-guard whether receipt_only should bypass. Scope guideline: "ensure receipt_only can always reach agent `execute()` unless agent is explicitly disabled." |
@@ -408,7 +408,7 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 | **Standardize "skipped" semantics across agents (Session 1210 Rigby add)** | **P2 (defer)** | Decide whether future receipt_only agents must emit BOTH `data.skipped=True` AND `data.status='skipped'` (current Phase B pattern), or whether URC should expand its Q1 predicate to accept `data.status == 'skipped'`. Current pattern is safe; defer until ≥3 agents have adopted to see whether the dual-key requirement is friction. |
 | **Other writeback callsites adopt URC** | **P2 (Session 1209 follow-up)** | ~10 sites: `core/agent_execution_wrapper.py:93`, `ai_core/agents/sync_executor.py:109`, `core/services/content_executor.py:255`, `core/services/executor_registry.py:394`, `core/services/agent_collaboration.py:339`, `core/team_workflow_engine.py:494,517`, `core/services/collective_intelligence.py:1425`, `core/tasks_media.py:192`, `core/tasks_agents.py:706,2278`. The two paths patched (execute_agent_task + agent_router._complete_execution) cover Rigby's fleet smoke surfaces; the rest are narrower use cases. Use `core.services.urc_envelope.enrich_output_data()`. |
 | **Expose `parent_execution_id` filter in `ops_tool execution_search`** | **P2 (Session 1209 follow-up — Rigby surfaced)** | Rigby's fleet-smoke aggregation hit a tool gap — couldn't query "all AgentExecutions spawned by parent X". Session 1098 PR #4 added `parent_execution_id` + `root_execution_id` model fields; just need to surface them in the tool. ~30min PR. |
-| **Smoke context minimization convention** | **P3 (Session 1209 — Rigby Phase 3 idea)** | Define a minimal "smoke context" convention (`context.mode` only + tiny `context.smoke_id`) for Rigby's future fleet smokes. Avoids inflating execution records with multi-KB spec bodies under `context.research`. |
+| ~~**Smoke context minimization convention**~~ | ✅ **Closed Session 1213** (was P3 Session 1209 idea, upgraded to P2 spec in Session 1212, shipped Session 1213). See above. |
 | **Promote `attempts_used` to canonical top-level on router-path writeback** | **P1 (Session 1208 carryover)** | PR #2469 + PR #2471 lifted it for `execute_agent_task`. The router-path canonical-shape writeback at `agent_router.py:1611` doesn't lift it. Small mirror — same convention. |
 | **Session 1207 MIC 24h watch (already fired ~03:50 UTC)** | **P1 (time-gated, verify result)** | Checklist in [`SESSION_1207`](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md) §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` always list shape. |
 | **Session 1208 Outbound-pack 24h watch (fires ~22:45 MDT / ~04:45 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1208`](docs/handoffs/SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md) §"24h watch checklist". Invariants: every successful outbound run lands ONE Deliverable, no double-writes, `warnings` shape consistent, drift-keyword false-positive rate stays at 0 on metadata-only mentions. |
