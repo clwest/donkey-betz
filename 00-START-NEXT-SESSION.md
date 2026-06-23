@@ -102,7 +102,52 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1212 — CURRENT ENTRY POINT
+## SESSION 1213 — CURRENT ENTRY POINT
+
+### SESSION 1212 CLOSED — Agents Reference doc + PA spend audit + 2 Session 1213 follow-ups filed (1 PR merged)
+
+Full handoff: [`SESSION_1212_AGENTS_REFERENCE_AND_PA_SPEND_AUDIT.md`](docs/handoffs/SESSION_1212_AGENTS_REFERENCE_AND_PA_SPEND_AUDIT.md). **1 PR merged.** Two unrelated arcs, both Chris-initiated mid-session.
+
+| PR | Commit | What |
+|---|---|---|
+| **#2481** | `d5a01ccc` | `python manage.py generate_agents_reference` mgmt command (sibling to Session 1115's `build_capability_audit`) + auto-generated `docs/AGENTS_REFERENCE.md` (1595 lines). Groups 83 agents by **category** (28 categories mirroring AGENT_MAP comment headings); per-agent card captures source file:line, status flags (Phase B / workspace-aware / sys-ctx), purpose, full tools list, and `actionable_config` (declared actions + payload_fields). Drift sentinel: new AGENT_MAP entries that aren't in CATEGORY_MAP cause the command to fail loud. Admin-merged through GitHub Actions billing block. |
+
+**Arc A — Agents Reference doc** (Chris ask): "documentation listing every Agent and all params they take, what the expected outcome is etc." → schema-only first pass, one file grouped by category. Headline matches CLAUDE.md inventory: 83 agents · 74 enabled · 8 rerouted · 1 blocked · 4 Phase B receipt_only · 20 workspace-aware · 50 with `tools` · 18 with `actionable_config`.
+
+**Arc B — PA spend audit** (Chris ask): "credits went down a couple dollars but we didn't make any API calls that I know of." Traced via `LLMCallLog` 24h aggregation: $9.91 / 592 PA calls / 23.5M tokens — **ALL 176 PA chat messages in 24h are `user=chris`**, no autonomous leak. Cost driver = per-call token bloat (35-68K tokens/turn). Two systemic issues surfaced and filed for Session 1213.
+
+**Three Deliverables filed in Donkey Betz workspace:**
+- `b16bcc52-e193-445e-bac9-83c86b977dc7` — Agents Reference pinned doc (Arc A artifact)
+- `afe36715-721c-400f-b36f-4b9717467b66` — **Spec: Smoke Context Minimization** (Session 1213 P2 — define `SMOKE_CONTEXT_KEYS` allowlist; 4-5× per-call cost reduction expected)
+- `777d9cd8-5526-4acf-a167-374c05e6e425` — **Audit: Stale-Thread Conversation Action Dispatcher** (Session 1213 P2 — 24 of 41 24h dispatches landing on retired threads; ~$3.60/day burned; 3 fix options, lean A: `session_closed` flag)
+
+**New memory entry:** `feedback_deliverable_factory_trigger_source_direct.md` — when creating a Deliverable from `manage.py shell`, pass `metadata={'trigger_source': 'direct'}` to bypass the Session 1199 PR-D provenance gate. The factory auto-synthesizes an AgentExecution receipt.
+
+**Post-merge gotcha:** none. PR #2481 is docs + a management command — neither imports into the celery task body, so no worker restart.
+
+### FIRST THING Session 1213 — pick one of the two filed follow-ups (or carryover Phase B work)
+
+Three natural pickup paths. Lean is **(A)** — direct cost impact, well-scoped.
+
+**(A) Smoke context minimization** (`afe36715-…`, P2) — Define `SMOKE_CONTEXT_KEYS` allowlist + wrap Rigby's cockpit / execution_history dispatch path. Reject non-allowlisted keys in fleet-smoke dispatches (`context.mode in SMOKE_MODES`); log + strip in dev, hard-error in prod after 7-day soft-warn. ACs: AC-1 allowlist defined, AC-2 dispatch wrapping, AC-3 runbook update, AC-4 post-fix smoke shows `context` ≤200 bytes (vs current 5-15KB). Expected: 4-5× per-call cost reduction on smoke turns, ~$25-50 savings per smoke run. ~50-100 LoC PR + worker restart.
+
+**(B) Stale-thread dispatcher audit + fix** (`777d9cd8-…`, P2) — Three options listed in the deliverable; lean A (per-conversation `session_closed` flag on `ChatConversation`). When `tools/pa_local.sh` repins to a new thread, retire prior via PA tool (`session_tool action=retire conversation_id=<prior>`); `dispatch_actions()` short-circuits with WARN if `is_active=False`. ACs: AC-1 dispatcher skips 4 currently-retired threads, AC-2 active thread unaffected, AC-3 24h watch shows zero dispatches on retired set. ~$3.60/day savings.
+
+**(C) Continue Phase B adoption to next 3 context-dependent agents** (Session 1211 carryover, P1) — 4 of ~10 candidates now adopted. Pattern fixed. Ask Rigby for next 3 picks from fleet smoke `1a8cde69-…`.
+
+**Active conversation:** `pa-61c7b47d201d4591` — Session 1213 lean: continue on this thread for any of (A)/(B)/(C); spin fresh if pivoting away from URC/cost work.
+
+### Also fires this session
+
+**24h watches** — time-gated priorities. Three fire today (2026-06-24):
+
+| Watch | Fires (MDT) | Fires (UTC) | Checklist |
+|---|---|---|---|
+| **Session 1209 (URC)** | ~07:10 MDT | ~13:10 UTC | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) |
+| **Session 1210 (Phase B)** | ~08:48 MDT | ~14:48 UTC | [§"24h watch checklist" in 1210 handoff](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). Invariants A1-A4. |
+| **Session 1211 (Phase B extension)** | ~09:20 MDT | ~15:20 UTC | [§"24h watch checklist" in 1211 handoff](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md). Invariants B1-B4. |
+
+Then pick from the priority table below.
 
 ### SESSION 1211 CLOSED — URC v0.1 Phase B extension to 3 more agents + media gate hotfix (2 PRs merged)
 
@@ -120,28 +165,6 @@ Full handoff: [`SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md`](docs/handoffs/S
 **Drift finding closed in-session:** the media gate had a receipt_only blind spot (gate rationale = save spend; receipt_only short-circuits before spend). Hotfix #2479 surgically adds context-aware bypass. Gate-audit P2 follow-up filed for other pre-execute guards.
 
 **Post-merge gotchas (cleared):** worker restarts at 10:08 MDT (post-#2478) AND 10:20 MDT (post-#2479) — both required because `tasks_agents.py` + the 3 new agent files are all celery-task-imported.
-
-### FIRST THING Session 1212 — pick lane
-
-Two natural follow-ons from Session 1211. Lean is **(A)** unless gate-audit feels more urgent.
-
-**(A) Continue Phase B adoption to more context-dependent agents** — Session 1209 fleet smoke deliverable `1a8cde69-…` still lists agents that fail under receipt_only mode. 4 of ~10 candidates adopted across Sessions 1210+1211. Pattern is fixed (`_is_receipt_only_mode` static helper + early-return + dual-key receipt). Bundle 3-5 agents per PR. ~30-45 min per agent. Ask Rigby for the next 3 picks from the smoke "error" rows.
-
-**(B) Gate-audit P2 follow-up — receipt_only blind spots in pre-execute guards** — Session 1211 hotfix #2479 fixed the media gate. Audit other pre-execute guards in `_impl_execute_agent_task` (`tasks_agents.py:2061+`) for similar blind spots: `_circuit_breaker_check` (line 2093), `_BLOCKED_AGENTS` (line 2065), any task-shape gates, allowlists/denylists. Decide per-guard whether receipt_only should bypass. Scope guideline: "ensure receipt_only can always reach agent `execute()` unless agent is explicitly disabled."
-
-**Active conversation:** `pa-61c7b47d201d4591` — carries URC v0.1 design lock + Phase B across 4 adopters. Lean: continue on this thread for both (A) and (B); spin fresh if pivoting away from URC.
-
-### Also fires this session
-
-The **24h watches** are time-gated priorities:
-
-| Watch | Fires (MDT) | Fires (UTC) | Checklist |
-|---|---|---|---|
-| **Session 1209 (URC)** | ~07:10 MDT 2026-06-24 | ~13:10 UTC 2026-06-24 | [§"24h watch checklist" in 1209 handoff](docs/handoffs/SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md) |
-| **Session 1210 (Phase B)** | ~08:48 MDT 2026-06-24 | ~14:48 UTC 2026-06-24 | [§"24h watch checklist" in 1210 handoff](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md). Invariants A1-A4. |
-| **Session 1211 (Phase B extension)** | ~09:20 MDT 2026-06-24 | ~15:20 UTC 2026-06-24 | [§"24h watch checklist" in 1211 handoff](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md). Invariants B1-B4: receipt_only → skipped on all 4 adopters; zero false-positive skipped from non-receipt callers; normal-mode rows reach existing flow; media gate still fires on non-receipt non-generative tasks (bypass is narrow). |
-
-Then pick from the priority table below.
 
 ### SESSION 1210 CLOSED — URC v0.1 Phase B: receipt_only mode for CodeReviewAgent (1 PR merged)
 
@@ -335,7 +358,7 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries the full URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke `1a8cde69-…` + Phase B AC-4 addendum on spec deliverable `6f09233c-…` spanning 4 adopters (Sessions 1210-1211, +2601 + +2059 = +4660 chars total, deliverable now 16800 chars). Pinned in `tools/pa_local.sh`. **Lean for Session 1212: continue on this thread if extending Phase B to more agents or running the gate-audit P2 follow-up; spin fresh if pivoting away from URC.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke `1a8cde69-…` + Phase B AC-4 addendum spanning 4 adopters (Sessions 1210-1211) + Session 1212 PA spend audit findings. Pinned in `tools/pa_local.sh`. **Lean for Session 1213: continue on this thread if pickup is one of the two filed follow-ups (smoke context minimization OR stale-thread audit); spin fresh if pivoting away from URC/cost work.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2). **The stale-thread audit deliverable `777d9cd8-…` proposes these retired threads stop accepting autonomous dispatches** — implementation in Session 1213 will close that leak.
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
@@ -374,7 +397,9 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Continue Phase B adoption to next 3 context-dependent agents** | **P0 (Session 1211 natural follow-on)** | 4 of ~10 candidates now adopted (CodeReview + Video + Image + MeetingCoordinator). Pattern is fixed (`_is_receipt_only_mode` static helper + early-return + dual-key receipt). Next picks pulled from Session 1209 fleet smoke `1a8cde69-…` "error" rows. ACs mirror Phase B. ~90 min for a bundle of 3. |
+| **Smoke context minimization spec impl** | **P2 (Session 1212 NEW, lean A for Session 1213)** | Deliverable `afe36715-721c-400f-b36f-4b9717467b66`. Define `SMOKE_CONTEXT_KEYS` allowlist + wrap dispatch path to reject non-allowlisted keys in fleet-smoke dispatches. ACs: AC-1 allowlist defined, AC-2 dispatch wrapping, AC-3 smoke runbook updated, AC-4 post-fix `context` ≤200 bytes (vs current 5-15KB). Expected impact: 4-5× per-call cost reduction on smoke turns, ~$25-50/smoke run savings. ~50-100 LoC PR. |
+| **Stale-thread dispatcher audit + fix** | **P2 (Session 1212 NEW)** | Deliverable `777d9cd8-5526-4acf-a167-374c05e6e425`. `conversation_action_dispatcher` fires 24 of 41 24h follow-ups on retired threads (~$3.60/day burned). Three fix options listed; lean A (per-conversation `session_closed` flag on `ChatConversation`). ACs: AC-1 dispatcher skips 4 currently-retired threads, AC-2 active thread unaffected, AC-3 24h watch shows zero on retired set. |
+| **Continue Phase B adoption to next 3 context-dependent agents** | **P1 (Session 1211 carryover)** | 4 of ~10 candidates now adopted (CodeReview + Video + Image + MeetingCoordinator). Pattern is fixed (`_is_receipt_only_mode` static helper + early-return + dual-key receipt). Next picks pulled from Session 1209 fleet smoke `1a8cde69-…` "error" rows. ACs mirror Phase B. ~90 min for a bundle of 3. |
 | **Gate-audit P2 follow-up: receipt_only blind spots in pre-execute guards** | **P2 (Session 1211 Rigby surfaced)** | Hotfix #2479 fixed the media gate. Audit other pre-execute guards in `_impl_execute_agent_task` (`tasks_agents.py:2061+`): `_circuit_breaker_check` (line 2093), `_BLOCKED_AGENTS` (line 2065), any task-shape gates, allowlists/denylists. Decide per-guard whether receipt_only should bypass. Scope guideline: "ensure receipt_only can always reach agent `execute()` unless agent is explicitly disabled." |
 | **Session 1211 Phase B extension 24h watch (arms ~09:20 MDT / ~15:20 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1211`](docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md) §"24h watch checklist". Invariants B1-B4: receipt_only → skipped on all 4 adopters; zero false-positive skipped from non-receipt callers; normal-mode reaches existing flow; media gate still fires on non-receipt non-generative tasks (bypass is narrow). |
 | **Session 1210 Phase B 24h watch (arms ~08:48 MDT / ~14:48 UTC 2026-06-24)** | **P1 (time-gated)** | Checklist in [`SESSION_1210`](docs/handoffs/SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md) §"24h watch checklist". Invariants A1-A4: receipt_only → skipped; zero false-positive skipped from non-receipt callers; normal-mode rows produce `data.results`+`tool_calls`; `warnings=[]` on receipt_only rows. |
