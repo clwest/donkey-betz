@@ -568,6 +568,54 @@ def create_deliverable(
             )
         return None
 
+    # --- Session 1206 (Finding B2): workspace_id existence validation ---
+    # When an upstream caller (PA tool, dispatcher) passes a workspace_id
+    # that doesn't actually exist in ProjectWorkspace, the deliverable
+    # INSERT later fails on the FK constraint
+    # `core_deliverables_workspace_id_4fb358f6_fk_core_proj`, which kills
+    # the entire save and orphans the agent's work.
+    #
+    # Observed Session 1206 (Rigby's Wakeup Week): ContentWriterAgent
+    # ran successfully and produced a 4KB document, but the deliverable
+    # save died because workspace_id=`b4503364-9323-4e3e-b600-b7a5aa85fa5d`
+    # (suffix-different from real DBZ `b4503364-2573-4401-9e28-61a739e0ce50`)
+    # didn't exist. Likely an LLM-hallucinated UUID where the dispatcher
+    # matched the prefix and corrupted the suffix.
+    #
+    # Defensive fix: validate workspace_id BEFORE any DB writes. If it
+    # doesn't resolve, emit a structured WARN with audit fields and
+    # treat as if workspace_id wasn't passed — existing fallback machinery
+    # at line ~648 (`_get_active_workspace_id` → `Unassigned` bucket) takes
+    # over so the deliverable still lands somewhere triage-able instead of
+    # being lost. Fail-OPEN: an unrelated DB hiccup on the validation
+    # query never blocks a real deliverable save.
+    if workspace_id:
+        try:
+            from core.models_skin_layer import ProjectWorkspace
+            workspace_exists = ProjectWorkspace.objects.filter(
+                id=workspace_id,
+            ).exists()
+            if not workspace_exists:
+                logger.warning(
+                    "[DeliverableFactory] workspace_id_invalid=true "
+                    "agent=%s workspace_id_received=%s "
+                    "workspace_id_fallback_used=auto_resolve "
+                    "title=%r — upstream caller passed a workspace_id that "
+                    "does not exist in ProjectWorkspace. Likely an LLM-"
+                    "hallucinated UUID (Session 1206 Finding B2). Falling "
+                    "back to caller's user.active_workspace or Unassigned "
+                    "bucket so the artifact isn't lost.",
+                    agent_name, workspace_id, title[:80],
+                )
+                workspace_id = None
+        except Exception as _ws_validation_exc:
+            # Fail-OPEN: never block a real save on a validation hiccup.
+            logger.debug(
+                "[DeliverableFactory] workspace_id validation query failed "
+                "(%s) — proceeding with caller's workspace_id=%s",
+                _ws_validation_exc, workspace_id,
+            )
+
     # --- Provenance dedupe guard ---
     # If a parent_execution_id is provided, check for existing deliverable
     # from the same execution to prevent duplicates from retries/replays.
