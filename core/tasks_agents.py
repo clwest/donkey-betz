@@ -2441,6 +2441,18 @@ self,
                 execution_id=execution_record.id if execution_record else None,
                 task_name='core.tasks.execute_agent_task',
             )
+            # Session 1220 P1: observability counter for the Phase 3
+            # "zombie thread" mechanic (deliverable cf80d413-…). Every
+            # wall-clock-timeout spawns a thread that keeps running
+            # until the agent body returns naturally or the Celery
+            # child process recycles. Track the rate per-agent,
+            # per-hour so ops_tool.zombie_thread_rate can surface
+            # structural-hang spikes (e.g., upstream LLM provider
+            # degraded). Fail-open inside the helper.
+            from core.services.zombie_thread_monitor import (
+                record_zombie_thread,
+            )
+            record_zombie_thread(agent_name)
             # Session 1095: Record timeout for circuit breaker
             _circuit_breaker_record_timeout(agent_name, task)
             _circuit_breaker_release(agent_name, task)
