@@ -17,13 +17,19 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1209 (Rigby's
-# session_tool create_fresh at session open: pa-61c7b47d201d4591 —
-# "Session 1209 — Universal Receipt Contract (URC v0.1) — Phase A + C").
-# Carries the URC v0.1 §1-§6 spec — applies to Initiative 29154d73-…
-# (Platform Capability Audit), continuation of Session 1208's
-# CampaignOrchestrator hardening pattern (deliverable ecddb62d-…).
-# Prior pins retired: pa-2d74e36cc3a04787 (Session 1208 — CampaignOrchestrator
+# the --conversation flag below. Current value: Session 1214 (Rigby's
+# session_tool create_fresh at Session 1213 close: pa-e37fe30dc7b941a6 —
+# "Session 1214 — OpenAI caller alignment to gpt-5-mini reasoning contract").
+# P1 lead deliverable: 2b9aa447-c0c9-4ff3-8483-f92257eb0fcb (5-phase
+# alignment spec — Phase A non-gpt-5-mini cleanup, B 74 bare→factory, C
+# max_tokens→max_completion_tokens, D temperature audit, E lint+runtime
+# guard). Initiative 29154d73-06a5-4630-abb4-3412cbdca5c5 (Platform
+# Capability Audit). Carries Session 1213's smoke context minimization
+# evidence (PR #2483 / 3670cede — 31× context shrink on the worst case).
+# Prior pins retired: pa-61c7b47d201d4591 (Sessions 1209-1213 — URC v0.1
+# spec + Phase B extension + smoke context minimization + agents reference
+# + PA spend audit; closed Session 1213 with 5+ PRs merged across the arc),
+# pa-2d74e36cc3a04787 (Session 1208 — CampaignOrchestrator
 # delegation hardening outbound pack — design-anchor record),
 # pa-33088358df304016 (Session 1207 close —
 # MIC auto-deliverable + output_data hardening + CampaignOrchestrator
@@ -38,6 +44,12 @@
 # pa-e11847db632a4ee8 (Session 1194), pa-a60842917d36 (Session 1184),
 # pa-8f8ef45338ce4a24 (Sessions 1182-83).
 #
+# NOTE on retirement: session_tool has no `retire` action (Rigby surfaced
+# at Session 1213 close). "Retirement" = stop using the old thread +
+# repin here. The fact that no explicit retire mechanism exists is exactly
+# what Session 1212 stale-thread dispatcher audit deliverable 777d9cd8-…
+# is about (~$3.60/day wasted on retired-thread dispatches). P2 carryover.
+#
 # IF YOU MANUALLY RESTART A CELERY WORKER (not via `make celery`):
 # pass PA_USE_FUNCTION_CALLING=true in the env. Without it, the PA
 # worker drops to keyword routing and source=claude-code messages
@@ -47,4 +59,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-61c7b47d201d4591
+python tools/pa_chat.py "$@" --tools --conversation pa-e37fe30dc7b941a6
