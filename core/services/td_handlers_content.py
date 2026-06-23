@@ -4153,35 +4153,11 @@ class ContentHandlersMixin:
                 logger.warning(f"Accuracy query failed: {e}")
                 return {'action': 'accuracy', 'overall': {}, 'by_sport': [], 'wager_stats': {}, 'days': payload.get('days', 30), 'error': str(e)}
 
-        elif action == 'sharp_action':
-            # Session 1075: Dispatch async — SharpActionDetector can exceed 30s tool timeout
-            from core.tasks import execute_agent_task
-            celery_task = execute_agent_task.apply_async(
-                args=['SharpActionDetector', 'Identify sharp betting action and stale lines',
-                      {'user_id': str(user_id) if user_id else None, 'limit': limit}],
-                queue='long_running',
-            )
-            return {
-                'task_id': str(celery_task.id),
-                'mode': 'async',
-                'action': 'sharp_action',
-                'message': f'Sharp action analysis dispatched (task {celery_task.id}). Use job_status to check progress.',
-            }
-
-        elif action == 'line_movements':
-            # Session 1075: Dispatch async — LineMovementAnalyzer can exceed 30s tool timeout
-            from core.tasks import execute_agent_task
-            celery_task = execute_agent_task.apply_async(
-                args=['LineMovementAnalyzer', 'Detect sharp money line movements',
-                      {'user_id': str(user_id) if user_id else None, 'limit': limit}],
-                queue='long_running',
-            )
-            return {
-                'task_id': str(celery_task.id),
-                'mode': 'async',
-                'action': 'line_movements',
-                'message': f'Line movement analysis dispatched (task {celery_task.id}). Use job_status to check progress.',
-            }
+        # Session 1222 P2 — removed 'sharp_action' + 'line_movements' actions
+        # (dispatched SharpActionDetector / LineMovementAnalyzer agents that
+        # had zero AgentExecution rows all-time). Agent class files remain
+        # in core/agents/markets/ for future re-enable; the dispatcher
+        # actions are removed because the surface was dormant.
 
         elif action == 'wagers':
             from core.models_betting import PlacedWager

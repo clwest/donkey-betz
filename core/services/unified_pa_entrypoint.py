@@ -5815,37 +5815,13 @@ Address the user by name occasionally."""
                         response += f"- **{matchup}** ({sport}): {winner} ({conf}% confidence)\n"
                     return response
 
-                elif action == 'sharp_action':
-                    items = tool_result.get('items', [])
-                    total = tool_result.get('total', 0)
-                    if total == 0:
-                        return f"No sharp action signals detected, {user_name}."
-                    response = f"Sharp Action Signals ({total} detected):\n\n"
-                    for s in items[:6]:
-                        matchup = s.get('matchup', '')
-                        rating = s.get('rating', '')
-                        sport = s.get('sport_name', '')
-                        svs = s.get('sharp_vs_soft', {})
-                        favors = svs.get('sharp_favors', '') if svs else ''
-                        div = svs.get('divergence', 0) if svs else 0
-                        response += f"- **[{rating}]** {matchup} ({sport})"
-                        if favors:
-                            response += f" — Sharps favor {favors} (divergence: {div} pts)"
-                        response += "\n"
-                    return response
-
-                elif action == 'line_movements':
-                    items = tool_result.get('items', [])
-                    total = tool_result.get('total', 0)
-                    if total == 0:
-                        return f"No significant line movements detected, {user_name}."
-                    response = f"Line Movements ({total} detected):\n\n"
-                    for m in items[:6]:
-                        matchup = m.get('matchup', '')
-                        rating = m.get('rating', '')
-                        changes = m.get('changes', [])
-                        response += f"- **[{rating}]** {matchup}: {'; '.join(changes[:2])}\n"
-                    return response
+                # Session 1222 P2 — removed 'sharp_action' + 'line_movements'
+                # formatters that paired with the removed dispatcher actions
+                # in td_handlers_content.py. The formatters assumed
+                # synchronous `{items, total}` shape, but the dispatcher
+                # was async (returned `{task_id, mode: 'async'}`) — a
+                # schema mismatch dating back to the Session 1075 async
+                # conversion. Both ends gone now.
 
                 elif action == 'wagers':
                     items = tool_result.get('items', [])
