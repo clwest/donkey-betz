@@ -129,7 +129,7 @@ Full handoff: [`SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md`](docs/handoffs/SESSI
 **Why this scope:** Session 1213 audit found ~150 hardcoded model literals + 74 bare `OpenAI()` instantiations bypassing the factory (per memory `feedback_openai_client_factory.md`) + ~90 callers using `max_tokens=` (forbidden by gpt-5.x reasoning models) + ~86 callers passing `temperature=` (also forbidden). Either those calls are silently broken today or routing to non-reasoning models. Alignment surfaces the truth + makes the eventual gpt-5.4 flip a one-line env change with zero parameter surprises.
 
 **Five phases (Session 1214 + possible spillover):**
-- **Phase A (~1h):** Kill non-gpt-5-mini active callers (`ai_core/MAKE_MONEY_NOW_WITH_APIS.py:35,69` gpt-3.5-turbo + any other stragglers).
+- **Phase A (~1h):** Kill non-gpt-5-mini active callers. `ai_core/MAKE_MONEY_NOW_WITH_APIS.py` (gpt-3.5-turbo, bare `openai.api_key` module-level) archived to `archive/old_experiments/` — not live-imported; pre-platform demo per Session 1214 catalog Phase A entry. Other stragglers TBD as discovered.
 - **Phase B (~3-4h, ~5-6 PRs):** 74 bare `OpenAI()` / `AsyncOpenAI()` → factory. PRIORITY SUBSET: 5 no-arg `OpenAI()` sites (intelligence/real_agents.py:21, intelligence/agent_execution_pipeline.py:19,35,306, intelligence/agent_factory.py:26,75, scripts/backfill_embeddings.py:61) — these inherit SDK 600s timeout = 10-min hangs on half-dead sockets.
 - **Phase C (~2-3h):** `max_tokens=` → `max_completion_tokens=` (~50-80 active files; per-site review, no bulk sed).
 - **Phase D (~2-3h):** `temperature=` audit (~86 sites); strip silently OR document-then-strip OR conditional-for-non-reasoning-fallback.
