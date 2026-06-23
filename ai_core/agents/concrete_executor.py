@@ -508,7 +508,7 @@ class ConcreteAgentExecutor:
                     'type': 'agent_result',
                     'agent_name': agent_instance.agent_name if 'agent_instance' in locals() else agent_name,
                     'task': task.get('task_description', 'Agent task'),
-                    'result': validated_result.get('result', result) if 'validated_result' in locals() else result,
+                    'result': result,
                     'success': True,
                     'execution_time': execution_time,
                     'ai_stats': ai_stats,
