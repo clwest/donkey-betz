@@ -90,6 +90,10 @@ core/management/commands/force_agent_cycle.py
 core/management/commands/fix_episode_titles.py
 core/management/commands/agent_introduction_party.py
 core/management/commands/backfill_decision_summaries.py
+# Session 1222 P5 (audit #3) — added during enforce flip
+core/management/commands/extract_initiatives_from_survey.py
+core/management/commands/draft_repo_verifier_claims.py
+core/management/commands/survey_external_repo.py
 
 
 # ── ai_core/ app — parallel agent tree (same migration strategy) ───────
@@ -176,3 +180,5 @@ scripts/testing/
 
 rag_docs.py
 style_memory/style_extractor.py
+# Session 1222 P5 (audit #3) — one-off script alongside the existing rag_docs.py whitelist
+scripts/one-off/rag_docs.py
