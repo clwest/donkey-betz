@@ -2076,7 +2076,17 @@ self,
     # Session 1036: Block non-generative tasks for media agents.
     # ImageAgent, VideoAgent, etc. can only generate/edit content — tasks like
     # "list recent images in workspace" waste API spend ($0.03+) for nothing.
-    if _is_media_task_blocked(agent_name, task):
+    #
+    # Session 1211 Phase B: receipt_only capability pings (URC v0.1) are
+    # not generative tasks but they DON'T waste spend — the agent
+    # short-circuits at the top of execute() before any LLM/IO. Bypass
+    # the media block when context signals receipt_only so the agent's
+    # Phase B branch can emit its skipped receipt.
+    _receipt_only_ctx = (
+        context.get('mode') == 'receipt_only'
+        or context.get('receipt_only') is True
+    )
+    if not _receipt_only_ctx and _is_media_task_blocked(agent_name, task):
         logger.info(
             f"[execute_agent_task] BLOCKED non-generative task for {agent_name}: "
             f"'{task[:60]}...'"
