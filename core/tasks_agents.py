@@ -7,6 +7,7 @@ Session 728: Migrated from agents/tasks.py to core/tasks_agents.py
 import logging
 import json
 import os  # noqa: F401
+import re as _re
 import time  # noqa: F401
 import traceback
 from datetime import datetime, timedelta
@@ -32,6 +33,89 @@ from core.models.agents_registry import (
 from content.ai_providers import AIProviderManager
 
 logger = logging.getLogger(__name__)
+
+
+# Session 1209 — Universal Receipt Contract (URC) v0.1 helpers.
+# Spec deliverable: 6f09233c-c984-4303-87c4-e67b94390030 on Initiative
+# 29154d73-… (Platform Capability Audit). Q1–Q5 locked on conversation
+# pa-61c7b47d201d4591. These helpers compute the URC top-level fields
+# layered into AgentExecution.output_data by the writeback block below.
+_URC_UUID_PATTERN = _re.compile(
+    r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+)
+_URC_LONG_HEX_PATTERN = _re.compile(r'[0-9a-f]{16,}')
+_URC_RECEIPT_VALID_STATUSES = frozenset({'ok', 'skipped', 'error'})
+
+
+def _urc_is_skipped(result) -> bool:
+    """Q1 lock: agent reports success with explicit skip marker in data."""
+    return (
+        result.success is True
+        and isinstance(result.data, dict)
+        and result.data.get('skipped') is True
+    )
+
+
+def _urc_is_timeout(result) -> bool:
+    """Q2 lock: string-match the wall-clock-timeout pattern set at L2390."""
+    return (
+        result.success is False
+        and bool(result.error)
+        and 'wall-clock timeout' in result.error
+    )
+
+
+def _urc_receipt_violation_reason(payload):
+    """Q3 lock: v0 minimal receipt schema check.
+
+    Returns None when the payload satisfies the receipt schema, else a
+    short reason string suitable for warning metadata.
+    """
+    if not isinstance(payload, dict):
+        return 'not_dict'
+    if 'status' not in payload:
+        return 'missing_status'
+    if payload['status'] not in _URC_RECEIPT_VALID_STATUSES:
+        return 'invalid_status'
+    if payload['status'] == 'error':
+        msg = payload.get('message')
+        if not (isinstance(msg, str) and msg.strip()):
+            return 'error_missing_message'
+    return None
+
+
+def _urc_normalize_error_signature(error_string):
+    """Q4 lock: string-only normalize. First line, strip UUIDs/long hex, ≤80 chars."""
+    if not error_string:
+        return None
+    s = str(error_string).split('\n', 1)[0]
+    s = _URC_UUID_PATTERN.sub('{id}', s)
+    s = _URC_LONG_HEX_PATTERN.sub('{hex}', s)
+    s = s.strip()
+    if len(s) > 80:
+        s = s[:80]
+    return s or None
+
+
+def _urc_compute_run_status(result, input_context):
+    """Q5 lock (Rigby tweak): defensive error path fires whenever result.error is non-empty.
+
+    Precedence: skipped > timeout > error > contract_violation > success.
+    Returns (status, violation_reason_or_None).
+    """
+    if _urc_is_skipped(result):
+        return ('skipped', None)
+    if _urc_is_timeout(result):
+        return ('timeout', None)
+    if (not result.success) or bool(result.error):
+        return ('error', None)
+    if isinstance(input_context, dict) and input_context.get('mode') == 'receipt_only':
+        reason = _urc_receipt_violation_reason(result.data)
+        if reason is not None:
+            return ('contract_violation', reason)
+    return ('success', None)
+
+
 from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _apply_task_routing_override,
     _circuit_breaker_check,
@@ -2450,6 +2534,53 @@ self,
             # retry-style agents all benefit.
             if _result_data.get('attempts_used') is not None:
                 _raw_output['attempts_used'] = _result_data['attempts_used']
+            # Session 1209 — Universal Receipt Contract (URC) v0.1 envelope.
+            # Spec deliverable 6f09233c-…; stamped on pa-61c7b47d201d4591.
+            # Phase A: every successful or failed agent run lands a uniform
+            # top-level envelope. Phase C: when context.mode == 'receipt_only',
+            # validate the agent's raw payload against the v0 receipt schema
+            # and classify failures as 'contract_violation' (distinct from
+            # real crashes). Precedence: skipped > timeout > error >
+            # contract_violation > success. Additive — every existing reader
+            # of output_data.{content,metadata,message,result_preview,data,
+            # error,tool_calls,deliverable_id,warnings,attempts_used} keeps
+            # working unchanged.
+            _input_ctx = {}
+            if isinstance(execution_record.input_data, dict):
+                _ctx_candidate = execution_record.input_data.get('context')
+                if isinstance(_ctx_candidate, dict):
+                    _input_ctx = _ctx_candidate
+            _urc_status, _urc_violation_reason = _urc_compute_run_status(result, _input_ctx)
+            if _urc_status == 'contract_violation' and _urc_violation_reason:
+                _raw_output['warnings'].append({
+                    'type': 'RECEIPT_CONTRACT_VIOLATION',
+                    'message': f'receipt_only mode: {_urc_violation_reason}',
+                    'meta': {'predicate': _urc_violation_reason},
+                })
+            if _urc_status == 'contract_violation':
+                _urc_err_msg = f'receipt_only mode: {_urc_violation_reason}'
+                _urc_err_sig_input = f'RECEIPT_CONTRACT_VIOLATION: {_urc_violation_reason}'
+            elif _urc_status in ('error', 'timeout'):
+                _urc_err_msg = result.error or result.message or None
+                _urc_err_sig_input = result.error or result.message
+            else:  # success or skipped
+                _urc_err_msg = None
+                _urc_err_sig_input = None
+            _raw_output['agent_name'] = agent_name
+            _raw_output['run_status'] = _urc_status
+            _raw_output['latency_ms'] = execution_time_ms
+            _raw_output['error_signature'] = _urc_normalize_error_signature(_urc_err_sig_input)
+            _raw_output['error_message'] = _urc_err_msg
+            _urc_artifacts = []
+            if _result_data.get('deliverable_id'):
+                _urc_artifacts.append({
+                    'type': 'deliverable',
+                    'id': _result_data['deliverable_id'],
+                })
+            _raw_output['artifacts'] = _urc_artifacts
+            if execution_record and getattr(execution_record, 'started_at', None):
+                _raw_output['started_at'] = execution_record.started_at.isoformat()
+            _raw_output['completed_at'] = timezone.now().isoformat()
             try:
                 execution_record.output_data = _json.loads(_json.dumps(_raw_output, default=str))
             except (TypeError, ValueError):
