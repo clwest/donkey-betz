@@ -1,10 +1,10 @@
-# Session 1206 — Layer 1 telemetry fix (`BaseAgent.run()` wrapper)
+# Session 1206 — Layer 1 telemetry fix + Wakeup Week cascade (5 PRs)
 
-**Status:** Closed clean. **1 PR open (#2461) — verified live in local before push.**
+**Status:** Closed clean. **5 PRs merged.** All live-verified in local before merge.
 **Date:** 2026-06-22
-**Active conversation:** `pa-234a75abfe374695` — Session 1206 Layer 1 Telemetry Fix arc. Prior thread `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline) retired.
+**Active conversation:** `pa-234a75abfe374695` — Session 1206 Layer 1 Telemetry Fix arc (also carries Wakeup Week mid-session expansion). Prior thread `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline) retired.
 **Prior session:** [`SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md`](./SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md).
-**Next session entry point:** Session 1207 — pick from carryover queue below. The Phase B.1 24h watch fires today (`2026-06-23 ~14:48 UTC`); the daily inference / `default_only_projects` watch is due; the lint-rule follow-up (`180f4e9f-…`) is the natural extension of this session's work.
+**Next session entry point:** Session 1207 — pick from carryover queue. Time-gated: Phase B.1 24h watch fires `2026-06-23 ~14:48 UTC`, Session 1206 24h watch fires `2026-06-23 ~23:35 UTC`. Natural follow-ups from this session: lint-rule (`180f4e9f-…`) and workspace_id hallucination root-cause trace (`96b6a72a-…`, P0).
 
 ## TL;DR
 
@@ -18,21 +18,64 @@ Plus minor: pa_local.sh thread pin updated to the new Session 1206 conversation;
 
 ## Session Manifest
 
-### PRs opened
+### PRs merged
 
-| # | Title | Files | Lines | Verified |
+| # | Arc | Title | Files | Verified |
 |---|---|---|---|---|
-| **#2461** | fix(session-1206): BaseAgent.run() closes Layer 1 telemetry blind spot | 7 (1 base_agent.py + 5 callsites + 1 pa_local.sh) | +138 / -21 | ✅ live (3 new AgentExecution rows, Layer 4 cascade confirmed, idempotency guard verified) |
+| **#2461** | Arc A: Telemetry fix | fix(session-1206): BaseAgent.run() closes Layer 1 telemetry blind spot | 7 (1 base_agent.py + 5 callsites + 1 pa_local.sh) | ✅ live (3 new AgentExecution rows, Layer 4 cascade confirmed, idempotency guard verified) |
+| **#2462** | Arc B: TheOdds loud-fail | fix(session-1206): TheOddsSpider loud-failure pattern — no more lying api_status rows | 1 | ✅ live (returns 1 fetch_failure row with circuit_breaker_engaged=True under dead key) |
+| **#2463** | Arc C: Finding B1 | fix(session-1206): tasks_agents writes canonical+legacy output_data shapes additively | 1 | ✅ live (PredictionMarketAnalyst execution `9be19cef-…` has all 7 keys) |
+| **#2464** | Arc C: Finding B3 | fix(session-1206): BLOCKED detector requires structural markers, not inline prose | 1 | ✅ 7-case test matrix (3 false-positives rejected, 4 true-positives extracted) |
+| **#2465** | Arc C: Finding B2 | fix(session-1206): workspace_id validation guardrail at deliverable_factory entry | 1 | ✅ live (fake UUID → WARN + fallback to real DBZ workspace, deliverable `71a2b6bf-…` created without FK violation) |
+
+**Arc A** was the planned session work. **Arc B** + **Arc C** emerged mid-session from a Rigby check-in — she'd kicked off Wakeup Week (manual agent dispatches) using the new BaseAgent.run() telemetry and found a cluster of downstream bugs that were previously invisible because no AgentExecution rows existed. **The telemetry fix is what made these visible.**
 
 ### Deliverables touched on Initiative `29154d73-06a5-4630-abb4-3412cbdca5c5` (Platform Capability Audit)
 
 | ID | Action | Note |
 |---|---|---|
 | `65f1299f-…` | **Resolution evidence appended + status flipped completed** | PR #2461 link + 3 verification row IDs + Layer 4 cascade confirmation; `content_tool action=content_complete` per Session 1184 status-flip pattern |
-| `180f4e9f-…` | **NEW (filed)** | "Lint rule: block .execute( outside core/agents/". Tagged `session-1206-followup`. Workspace=DBZ, Initiative=Capability Audit. |
-| `7d221aa4-…` | Annotated | Layer 1 dashboard appended Session 1206 note: sports agents flip is "pending next beat cycle for live confirmation" (`_impl_market_intelligence_scan` runs every 2h). |
+| `180f4e9f-…` | **NEW (filed)** | "Lint rule: block .execute( outside core/agents/". Tagged `session-1206-followup`. Workspace=DBZ. |
+| `7d221aa4-…` | Annotated | Layer 1 dashboard appended Session 1206 note: sports agents flip "pending next beat cycle for live confirmation". |
+| `96b6a72a-…` | **NEW (filed)** | **P0** — "Workspace_id hallucination source — root cause trace". Mitigated by PR #2465; root cause open. Tagged `session-1206-followup`, `workspace-integrity`, `P0`, `root-cause-open`. |
 
-Initiative is now at **11 deliverables** (was 10 end-of-Session-1205).
+Initiative is now at **12 deliverables** (was 10 end-of-Session-1205; +1 lint rule + +1 workspace hallucination trace).
+
+## Arc B: TheOdds loud-failure (PR #2462)
+
+**Trigger.** During Rigby check-in, the new telemetry surfaced GamePredictor failing with `"TheOddsSpider returned no events"` against a spider that the `spider_status_tool` reported as `active` with 86 runs in 7d. Investigation: the API key (Chris's billing-lapsed account) returns HTTP 401; Session 1083 circuit breaker engages correctly; but `fetch_data` was then falling back to the requested-sports list and persisting `api_status` rows claiming `sports_fetched: 48, futures_fetched: 11` — **materially lying about work having happened.**
+
+**Fix.** On `_get_active_sports()` empty (auth or upstream failure), emit `data_type='fetch_failure'` row with `reason`, `error_summary`, `events_fetched=0`, `circuit_breaker_engaged`. No fallback to requested-sports list. Healthy `api_status` rows now include explicit `events_fetched` count. New `_build_failure_row()` helper. Downstream `tasks_financial.py:2175` already guards with `if not game_id` — `fetch_failure` rows (no event_id) filtered correctly. No consumer change needed.
+
+**Chris-owned action item:** renew `THE_ODDS_API_KEY` when billing permits. Independent of this PR — the spider now signals honest outage either way.
+
+**Related:** closes Session 1205 finding `2de3d8d6-…` ("theodds spider returns 0 events"). Root cause confirmed as billing-lapse, not seasonal/code.
+
+## Arc C: Finding B (output_data shape + BLOCKED detector + workspace_id validation)
+
+**Trigger.** Same Rigby check-in. Wakeup Week dispatches showed `ContentWriterAgent` and `MarketIntelligenceCoordinator` completing successfully with `_full_size_bytes: 11124` / `418992` output_data blobs but Rigby's `execution_history_tool` reported `message: "", result_preview: "", data: {}, deliverables: []`.
+
+Deep dive surfaced **three distinct root causes**, each shipped as a separate PR:
+
+### B1 — Non-canonical output_data shape (PR #2463)
+
+`core/tasks_agents.py:2405` (the celery task path) overwrote `agent_router._complete_execution`'s canonical `{result_preview, data, message, error, tool_calls}` shape with non-canonical `{content, metadata}`. Downstream readers (execution_history_tool, deliverable_factory, frontend renderers) expected canonical, saw empty.
+
+**Fix.** Write BOTH shapes additively. Old readers (Session 1181 PR5 artifact_pointers, `views_platform_command:532`) keep working; new canonical keys land alongside.
+
+### B3 — BLOCKED detector matches inline prose (PR #2464)
+
+Session 1088 `_detect_blocked_content` used a permissive regex (`BLOCKED\s*(?:ON)?[:\s]*(.{10,150})` case-insensitive) that matched the literal word "BLOCKED" in legitimate prose — including ContentWriterAgent's wakeup document containing `"NOT-ROUTABLE/REROUTED/BLOCKED, producing a practical readiness map..."` (BLOCKED as one enum value in a classification rubric).
+
+**Fix.** Strict structural markers only: `**BLOCKED ON:**`, `[BLOCKED: reason]`, or line-anchored `^BLOCKED ON:` / `^BLOCKED:`. Case-SENSITIVE.
+
+### B2 — Hallucinated workspace_id kills deliverable saves (PR #2465)
+
+ContentWriterAgent's deliverable save died on FK constraint with `workspace_id=b4503364-9323-4e3e-b600-b7a5aa85fa5d` — a UUID that doesn't exist. Real DBZ is `b4503364-2573-4401-9e28-61a739e0ce50`. Same prefix, different suffix: classic LLM hallucination pattern (model matched first 8 chars of a remembered UUID then fabricated the rest).
+
+**Defensive guardrail.** Validate `workspace_id` existence at `create_deliverable` entry. If invalid: emit `WARNING` with structured fields (`workspace_id_invalid`, `workspace_id_received`, `workspace_id_fallback_used`), set `workspace_id=None`, let existing fallback machinery resolve to user.active_workspace or Unassigned bucket. Fail-OPEN on validation hiccups.
+
+**Out of scope:** root cause trace (which LLM/dispatcher is fabricating UUIDs). Filed as P0 deliverable `96b6a72a-…` with suspected call chain + grep targets + verification metric (WARN volume → zero in 24h post-fix). The guardrail stops artifact loss now; root cause stays open.
 
 ## Behavioral invariants — what's now true post-merge
 
