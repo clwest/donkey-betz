@@ -1431,7 +1431,10 @@ class AgentRouter:
             experiment_id = context.get('experiment_id')
             if create_execution_record:
                 execution_record = self._create_execution_record(
-                    agent_name, task, context_summary=context_summary, experiment_id=experiment_id
+                    agent_name, task,
+                    context_summary=context_summary,
+                    experiment_id=experiment_id,
+                    context=context,  # Session 1209: raw context for URC Phase C predicate
                 )
                 if execution_record is not None:
                     logger.info(
@@ -2672,6 +2675,7 @@ class AgentRouter:
         self, agent_name: str, task: str,
         context_summary: dict = None, experiment_id=None,
         parent_execution_id=None,
+        context: dict = None,
     ):
         """
         Create an execution record for tracking.
@@ -2683,6 +2687,15 @@ class AgentRouter:
         agent dispatches a child, the child records the parent's
         execution_id so cancel + budget checks can walk the ancestry.
         ``root_execution_id`` is computed from the parent's root.
+
+        Session 1209 follow-up: ``context`` (raw caller dict) is now
+        persisted to ``input_data['context']`` so URC v0.1's Phase C
+        contract_violation predicate can read ``context.mode ==
+        'receipt_only'`` regardless of which dispatch path created the
+        row. Pre-fix, only the celery-task path stored the raw context;
+        router-direct dispatches only stored the observability summary
+        under ``input_data['context_injected']``, so Phase C never fired
+        on the router path even when callers passed mode=receipt_only.
         """
         try:
             from core.models_unified_system import Agent, AgentExecution
@@ -2700,10 +2713,15 @@ class AgentRouter:
             )
 
             # Session 758: Build input_data with context tracking
+            # Session 1209 follow-up: also stash raw caller context under
+            # 'context' key so URC v0.1 receipt_only predicate works on
+            # both dispatch paths (celery + router).
             input_data = {
                 'task': task,
                 'context_injected': context_summary or {},
             }
+            if isinstance(context, dict) and context:
+                input_data['context'] = context
 
             # Session 841: Resolve experiment from ID if provided
             experiment = None
@@ -2926,6 +2944,7 @@ class AgentRouter:
         """
         try:
             from core.models_unified_system import Agent
+            from core.services.urc_envelope import enrich_output_data as _urc_enrich
 
             # Update execution record
             if execution_record:
@@ -2947,9 +2966,62 @@ class AgentRouter:
                     'status', 'execution_time_ms', 'completed_at',
                     'tokens_used', 'cost',
                 ]
-                if output_data:
-                    execution_record.output_data = output_data
-                    _update_fields.append('output_data')
+                # Session 1209 follow-up: layer URC v0.1 envelope onto
+                # output_data so the router-synchronous dispatch path emits
+                # the same contract as tasks_agents.execute_agent_task.
+                # The original Phase A implementation (PR #2473) only
+                # covered the celery-task writeback; WorkflowAgent's
+                # sub-dispatches (which go through router.dispatch ->
+                # _complete_execution) were missing all 8 URC keys until
+                # this hotfix. Always enrich — even when caller passed
+                # output_data=None (failure paths at L1670, L1720) — so
+                # the envelope is guaranteed across every router exit.
+                #
+                # Inputs derived from the bare _complete_execution args
+                # plus a peek into execution_record.input_data for the
+                # receipt_only mode predicate. Helper is shared with
+                # tasks_agents.py via core.services.urc_envelope.
+                _base_output = dict(output_data) if output_data else {}
+                _enrich_data = _base_output.get('data') or {}
+                _enrich_message = _base_output.get('message') or ''
+                _enrich_error = _base_output.get('error') or error_message
+                _input_ctx = {}
+                _started_iso = None
+                _input_data = getattr(execution_record, 'input_data', None)
+                if isinstance(_input_data, dict):
+                    # Router-created rows store context under 'context_injected'
+                    # (Session 758 convention); celery-task-created rows store
+                    # under 'context'. URC mode predicate honors either name.
+                    for _ctx_key in ('context', 'context_injected'):
+                        _ctx_candidate = _input_data.get(_ctx_key)
+                        if isinstance(_ctx_candidate, dict) and _ctx_candidate:
+                            _input_ctx = _ctx_candidate
+                            break
+                _started = getattr(execution_record, 'started_at', None)
+                if _started:
+                    _started_iso = _started.isoformat()
+                _deliverable_id = None
+                _attempts_used = None
+                if isinstance(_enrich_data, dict):
+                    _deliverable_id = _enrich_data.get('deliverable_id')
+                    _attempts_used = _enrich_data.get('attempts_used')
+                _enriched_output = _urc_enrich(
+                    _base_output,
+                    agent_name=agent_name,
+                    success=bool(success),
+                    error=_enrich_error,
+                    message=_enrich_message,
+                    data=_enrich_data,
+                    execution_time_ms=execution_time_ms,
+                    input_context=_input_ctx,
+                    started_at_iso=_started_iso,
+                    completed_at_iso=execution_record.completed_at.isoformat()
+                        if execution_record.completed_at else None,
+                    deliverable_id=_deliverable_id,
+                    attempts_used=_attempts_used,
+                )
+                execution_record.output_data = _enriched_output
+                _update_fields.append('output_data')
                 if error_message:
                     execution_record.error_message = error_message[:500]
                     _update_fields.append('error_message')
