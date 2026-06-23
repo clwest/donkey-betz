@@ -115,22 +115,75 @@ Full handoff: [`SESSION_1216_OPENAI_CALLER_ALIGNMENT_PHASE_E.md`](docs/handoffs/
 
 **Three-session OpenAI alignment arc final ledger (1214 + 1215 + 1216, all 2026-06-23): 15 PRs merged (12 work + 3 docs closes). ~30 call sites aligned to gpt-5-mini reasoning contract. Async factory + runtime guard + CI lint shipped. Catalog deliverable bb775acb-… pinned at 17.1KB.**
 
-### FIRST THING Session 1217 — Pick from the P2/P3 backlog
+### FIRST THING Session 1217 — Chris-picked plan from the self-directed audit (3 items)
 
-**No spec lead this session.** OpenAI caller alignment spec is closed. The carryovers below are all P2/P3 and don't block anything.
+**Lead deliverable for context:** `bec077ed-d89e-4c7c-935e-f06eefad7bec` ("Self-directed audit — what Chris should look at next"). The bounded self-direction experiment produced 15 findings across ops/governance/revenue/code/architecture; Chris picked these 3 to act on:
 
-**P2 candidates (1-2h each):**
+#### Item 1 — Fix the two undefined-variable bugs (cheap, removes uncertainty)
 
-1. **Promote `check-reasoning-contract.yml` to enforce mode** — drop `--warn-only` after 24h burn-in. Should be a 1-line PR. Trivial close.
-2. **`OpenAIProvider.generate()` cleanup** (`ai_core/agents/agent_llm_integration.py:43-108`) — references undefined `messages` variable at L90. Effectively unreachable in production (dispatch routes through `AsyncLLMAdapter`). Rigby's lean: either delete if truly unused, or fix + add a tiny unit smoke. Surfaced Session 1214 PR #2493 audit.
-3. **`content/ai_providers.py:114` factory adoption** — bare-with-kwargs `openai.OpenAI(api_key=..., timeout=..., max_retries=2)`. Has explicit 60s timeout (not 600s footgun), but doesn't route through `get_openai_client()`. Phase B follow-on. Migrating it would also get the reasoning guard for free.
+**Action:** Fix, no investigation needed.
 
-**P3 candidates:**
+- **Bug A:** `ai_core/agents/concrete_executor.py:511` — `validated_result` referenced but never defined. Guarded by `if 'validated_result' in locals()` so it silently always falls through to `result`. Dead code masquerading as a feature.
+  - **Lean:** Either restore `validated_result` assignment upstream (if validation was intended) or delete the guarded branch (rename to plain `result`). Likely the latter — grep for any callers expecting validated behavior.
+- **Bug B:** `ai_core/agents/agent_llm_integration.py:92` — `OpenAIProvider.generate()` references undefined `messages` variable. Unreachable in production (dispatch routes through `AsyncLLMAdapter` directly), but landmine if any future caller routes through `OpenAIProvider.generate()`.
+  - **Lean:** Delete the method (Rigby's Session 1214 recommendation) since it's structurally unreachable, OR fix + add a unit smoke. Cheaper to delete.
 
-- **Stale-thread dispatcher** (`777d9cd8-…`) — ~$3.60/day savings. Carryover since Session 1213. Lean A (per-conversation `session_closed` flag).
-- **System prompt + tool schema size reduction** — non-smoke conversational turns still 35-68K tokens. No spec filed yet. Would need design + investigation first.
+**Expected scope:** 2 PRs, ~30 min each. Single-session.
 
-**Active conversation:** `pa-e37fe30dc7b941a6` continues but holds 3 full sessions of context. **Strong recommendation: spin a fresh thread for Session 1217** via `session_tool create_fresh` to keep system-prompt context lean. The closed-spec catalog deliverable `bb775acb-…` carries forward in the workspace regardless of which thread you use.
+#### Item 2 — Investigate (do NOT fix) the 59-handler schema/handler delta
+
+**Action:** Classify only. Produce a deliverable cataloging what those 59 handlers actually are.
+
+**Data points:**
+- `core/services/pa_tool_schemas.py` exposes 115 tool schemas (grep `"name":`).
+- `core/services/tool_dispatcher.py` registers 174 handlers (count `self.register(` calls).
+- Delta: **59 handlers without schemas.**
+
+**Questions to answer:**
+- Which 59 handler names? List them.
+- Categorize: infra-only (Rigby should never see)? Deprecated dead weight? Internal-only that should still have schemas?
+- Cross-reference each against last-used telemetry (`AgentExecution`/`ToolCallRecord`/`LLMCallEvent`) — when was each last invoked?
+- Are any of the 59 still actively dispatched by code paths (search for direct `tool_dispatcher.execute(...)` calls)?
+
+**Expected output:** Placeholder deliverable **already filed by Rigby** — `192a390c-ebb6-4574-8d29-6f6e60fd2778` ("PA tool schema/handler delta classification — 59 surplus handlers (Session 1217 Item 2)"). Status: draft. Category: Platform Capability Audit. NO code changes — pure investigation. Populate via `deliverable_tool.append` as findings accrue.
+
+**Expected scope:** 1-2 hours.
+
+#### Item 3 — Pull top 10 PA tool FAILURE signatures (not success rate)
+
+**Action:** Surface the actual exceptions driving the 74.5% success rate breach.
+
+**What Rigby's earlier finding (B3) reported:** Aggregate "PA tool success rate ~74.5% (589/791 successes)" vs SLO ≥99.9%. **This is the wrong granularity for fixing.**
+
+**What Chris wants for next session:** Top 10 actual failure exceptions, with:
+- Exception class + message pattern
+- Frequency over a defined window (last 7 days suggested; specify)
+- Which handler(s) raise each
+- Whether the handler is in the 59-schemaless surplus (cross-link to Item 2)
+
+**Canonical data source (Rigby pre-confirmed):**
+- **Primary:** `ops_tool.failure_signatures` with `window=7d` — ranked top failure patterns + counts
+- **Drill-down:** `ops_tool.execution_search` (`status=failed`, `window=7d`) + `ops_tool.execution_detail` on the top recurring failures to extract exception class + handler info
+
+**Expected output:** Placeholder deliverable **already filed by Rigby** — `b92c41d0-e886-4586-84c6-61206034668a` ("PA tool top 10 failure signatures (Session 1217 Item 3)"). Status: draft. Category: Platform Capability Audit. Populate via `deliverable_tool.append` as the failure analysis lands. Cross-link to Item 2's `192a390c-…` when handlers in the 59 surplus show up in failure top-10.
+
+**Expected scope:** 1-2 hours (Rigby-led; Claude assists with code-side cross-referencing).
+
+#### Session 1217 sequencing recommendation
+
+- Item 1 first (cheap, clears noise) — ~1 hour
+- Item 2 + Item 3 in parallel — Items 2+3 share data (the 59 list informs Item 3's handler classification). Rigby pulls failure signatures while Claude grinds through the schema/handler audit.
+- Aim to close session with both investigation deliverables + Item 1's 2 PRs merged.
+
+**Active conversation:** `pa-58737666f25741dc` (Session 1217 fresh thread, spun by Rigby for the self-direction experiment). Already has full context of the audit + Chris's picks. Continue here.
+
+**Not in Chris's pick — DO NOT touch unless time allows + Chris re-prioritizes:**
+- Promote `check-reasoning-contract.yml` to enforce mode (P2 carryover)
+- Doc-vs-runtime drift triage (#6/#7/#8 from audit)
+- Critical-path hub markers (#4 from audit)
+- Atlas fleet positioning + narrative staleness (#9/#10)
+- Beat schedule disabled tasks classification (Rigby's A4)
+- Revenue pipeline aggregation audit (Rigby's C5)
 
 ### SESSION 1215 CLOSED — OpenAI caller alignment Phase C+D complete: 3 PRs merged, double round-trip bug fixed, 3 endpoints unbroken, catalog at 16.1KB
 
