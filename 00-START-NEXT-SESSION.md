@@ -102,7 +102,40 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1207 — CURRENT ENTRY POINT
+## SESSION 1208 — CURRENT ENTRY POINT
+
+### SESSION 1207 CLOSED — MIC auto-deliverable + output_data hardening (3 PRs merged)
+
+Full handoff: [`SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md`](docs/handoffs/SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md). **3 PRs merged.** Wakeup-Week-driven session: Rigby surfaced that MIC ran successfully but produced no Deliverable; the brief was stranded in `AgentExecution.output_data`. Closed that gap.
+
+| PR | What |
+|---|---|
+| **#2467** | MIC auto-creates exactly 1 Deliverable per successful brief gen. Spec: workspace=DBZ, category=`Market Intelligence`, title=`Market Intel Brief — YYYY-MM-DD`, sensitivity=`internal`, body=provenance markdown + executive summary + structured sections. Includes hook isolation (`_record_learning_outcome` + `_create_execution_memory` in both success and failure branches wrapped in try/except so post-result-construction failures can't flip `result.success`). |
+| **#2468** | `pa_local.sh` thread pin update — from Rigby's auto-spawned `pa-b2a99ff5b0ee47a6` to Chris's preferred `pa-33088358df304016`. Pure dev ergonomics. |
+| **#2469** | Lifts `deliverable_id` + `warnings` from `result.data` to top-level `output_data` in `tasks_agents.execute_agent_task` writeback. Establishes structured warnings convention: `{type: <stable_key>, message: <str>}`. Stable keys: `deliverable_persist_failed`, `deliverable_gated`. Other agents can adopt the same shape. |
+
+**Smoke evidence:** First-ever MIC auto-deliverable `758be167-f9c9-4e03-822d-516a7449f675` landed in DBZ (kept as audit baseline).
+
+### FIRST THING Session 1208
+
+**CampaignOrchestrator delegation hardening** — outbound pack generation for the **$2k Automation Sprint** offer, hardened with JSON schema validation + retry + single combined Deliverable.
+
+Full spec is preserved as deliverable **`ecddb62d-ab01-4b3b-83c4-2601670395d3`** ("Rigby: CampaignOrchestrator delegation hardening — outbound pack spec") on Initiative `29154d73-…`. Read it FIRST — Rigby spec'd §1 (scope), §2 (AC-1 through AC-5), §3 (outbound pack JSON schema with `offer` + `segments[]` + `global` blocks), §4 (validation rules + retry semantics: 2 retries with corrective instructions), §5 (deliverable body shape), §6 (additional notes). ~10KB body.
+
+Acceptance criteria summary (full versions in the deliverable):
+- **AC-1:** ONE combined Deliverable per successful run (workspace=DBZ, category=`Outbound`, sensitivity=`internal`, title=`Outbound Pack — $2k Automation Sprint — YYYY-MM-DD`).
+- **AC-2:** Strict JSON schema enforced — no drift into blogs/thumbnails.
+- **AC-3:** Validation + retry semantics — 2 retries with corrective prompts; mark failure (no deliverable) after 3 total attempts fail.
+- **AC-4:** Provenance block in body + no regression on `output_data.message` / `result_preview`.
+- **AC-5:** Short + long variants for every message type (opener + follow-ups + objections + breakup).
+
+Two segments: `smb_founder` + `agency_owner`. Each segment carries `initial_outreach`, `follow_up_1`, `follow_up_2`, `breakup`, `objection_handling[]`, `cta`.
+
+**Approach hint** (not in deliverable, learned from Session 1207 MIC pattern):
+- Wrap the structured-output LLM call in a validate-then-retry loop in the agent's `execute()`.
+- Use `_save_to_deliverable` (gets PR #2465 guardrail + PR #2464 BLOCKED + dedup for free).
+- Set `result.data['deliverable_id']` + `result.data['warnings']` per the convention in PR #2469.
+- Hook isolation pattern from PR #2467 — wrap learning hooks in try/except so they can't flip `result.success`.
 
 ### SESSION 1206 CLOSED — Layer 1 telemetry + Wakeup Week cascade (5 PRs merged)
 
@@ -219,13 +252,13 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-234a75abfe374695` — Session 1206 Layer 1 Telemetry Fix arc. Carries the architectural call (A/B/C → B), live verification log, and audit deliverable updates. Probably worth a fresh Session 1207 thread on first Rigby ping (lint rule is a different arc than telemetry fix). Prior threads retired: `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
+`pa-33088358df304016` — Chris's pinned Session 1207 thread. Carries the MIC auto-deliverable arc + CampaignOrchestrator spec hand-off. Probably worth a fresh Session 1208 thread on first Rigby ping (CampaignOrchestrator is a substantial new arc, not a continuation). Prior threads retired: `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session by Chris's pin), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2).
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
 ### Session 1205 Capability Audit Initiative
 
-`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **12 deliverables** so far (was 10 end-of-Session-1205; +1 from Session 1206 — `180f4e9f-…` lint-rule follow-up; +1 from Session 1206 Arc C — `96b6a72a-…` workspace_id hallucination P0 root-cause trace):
+`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **13 deliverables** so far (10 end-of-Session-1205; +1 Session 1206 lint-rule `180f4e9f-…`; +1 Session 1206 Arc C `96b6a72a-…` workspace_id hallucination P0; +1 Session 1207 close `ecddb62d-…` CampaignOrchestrator hardening spec / Session 1208 entry):
 
 | ID | Type | Title |
 |---|---|---|
@@ -255,12 +288,15 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **Workspace_id hallucination root-cause trace** | **P0 (Session 1207 carryover, Session 1206 Arc C unfinished)** | Deliverable `96b6a72a-…`. Mitigated by PR #2465 guardrail; root cause open. Suspected call chain: PA tool → tool_dispatcher → tasks_agents → agent_router → create_deliverable. Grep `pa_tool_schemas` + `tool_dispatcher` for `workspace_id` parameters where LLM might pick the value. Verification metric: B2 guardrail WARN volume should drop to zero in 24h post-fix. |
-| **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1207 entry point — natural follow-up to PR #2461)** | Deliverable `180f4e9f-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
-| **Layer 1 dashboard refresh** | **P1 (post Session 1206)** | After workers restart + next `_impl_market_intelligence_scan` beat (every 2h), refresh `7d221aa4-…` to flip sports agents from UNTESTED → CONFIRMED WORKING. Layer 2/4 dashboards also need refresh — Wakeup Week dispatches have now generated real evidence. |
-| **Wakeup Week re-dispatch verification** | **P1 (immediate — Rigby in flight)** | Rigby re-dispatched 3 Day-1 agents post all-5-merged: ContentWriterAgent task `549c96b3-…`, MarketIntelligenceCoordinator `45877b0a-…`, GamePredictor `d953dba3-…`. Scoreboard update pending — should show non-empty `result_preview`, real deliverables, no BLOCKED false positives, no FK violations. |
+| **CampaignOrchestrator delegation hardening** | **P0 (Session 1208 entry point — income-gen path)** | Deliverable `ecddb62d-ab01-4b3b-83c4-2601670395d3` carries Rigby's full spec (§1-§6). Outbound pack JSON schema validation, 2-retry semantics, ONE combined Deliverable. Workspace=DBZ, category=`Outbound`, title=`Outbound Pack — $2k Automation Sprint — YYYY-MM-DD`. Hard guardrail: NO blog/thumbnail generation. |
+| **Workspace_id hallucination root-cause trace** | **P0 (Session 1206 Arc C unfinished)** | Deliverable `96b6a72a-…`. Mitigated by PR #2465 guardrail; root cause open. Suspected call chain: PA tool → tool_dispatcher → tasks_agents → agent_router → create_deliverable. Grep `pa_tool_schemas` + `tool_dispatcher` for `workspace_id` parameters where LLM might pick the value. Verification metric: B2 guardrail WARN volume should drop to zero in 24h post-fix. |
+| **Session 1207 24h watch (fires 2026-06-23 ~03:50 UTC / 9:50 PM MDT)** | **P1 (time-gated)** | Run checklist in `SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md` §"24h watch checklist". Invariants: every successful MIC run lands a Deliverable (ratio = 1.0), no per-execution duplicates, `output_data.warnings` is always a list shape. |
+| **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1206 follow-up)** | Deliverable `180f4e9f-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
+| **Layer 1 dashboard refresh** | **P1 (post Session 1206)** | After workers restart + next `_impl_market_intelligence_scan` beat (every 2h), refresh `7d221aa4-…` to flip sports agents from UNTESTED → CONFIRMED WORKING. Layer 2/4 dashboards also need refresh — Wakeup Week dispatches have now generated real evidence including the first MIC deliverable. |
+| **Wakeup Week scoreboard update** | **P1 (immediate — Rigby ongoing)** | Rigby's tracking dispatches across sessions. Session 1207 added: MIC produces real deliverables (smoke evidence `758be167-…`). |
 | **Session 1206 24h watch (fires 2026-06-23 ~23:35 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md` §"24h watch checklist". Invariants: 3 sports agents land rows per beat, no double-writes, no telemetry WARN spam. Add: B2 guardrail WARN count (should be present if hallucinations continue; zero after root-cause fix). |
 | **TheOdds API key renewal** | **P2 (Chris-owned, billing-gated)** | Renew at the-odds-api.com, update `.env` `THE_ODDS_API_KEY`, restart workers. Spider's loud-failure pattern (PR #2462) makes the outage honest in the meantime. |
+| **Warnings convention adoption across other agents** | **P3 (Session 1207 follow-up)** | PR #2469 established `result.data['warnings'] = [{type, message}, ...]` for MIC. Pattern is generalizable — sub-agent dispatch failures in coordinators, LLM hallucination warnings, cache miss / stale-data warnings. Worth a Session 1209+ pass. |
 | **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md` §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
 | **Spider freshness watch (Session 1205 add)** | **P1 (24h)** | Verify run-spider-network keeps firing every 30 min; SpiderData rows with last_emit < 1h should be 60+. If 0, beat is dead — see finding `a4928480-…` remediation. |
 | **Daily watch Day-3 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. |
