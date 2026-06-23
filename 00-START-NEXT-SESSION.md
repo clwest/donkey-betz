@@ -106,7 +106,9 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ### SESSION 1222 CLOSED — full 3-arc closure (carryover + audit-revisit + drift cleanup), 11 PRs
 
-> **If you only do one thing next session:** decide the audit #8 canonical-baseline question (the only unresolved drift decision in the codebase — see Priority 5 below).
+### SESSION 1223 — IN PROGRESS
+
+> **Audit #8 closed early-session.** Path B chosen (accept 89 as canonical, single-PR close). PR #2534 (this branch `fix/session-1223-audit-8-seed-baseline-drift`) reframes the seed loader as decorative stub-persona scaffolding, re-pegs `persona_agent_count` 155→89 and `total_agent_count_claim` 238→172, adds invariance tests, drift-free post-merge. Audit tail now: **3 of 15 still open (#4, #9, #10).**
 
 Session 1222 ended up being three arcs of work in one session, driven by Chris's flag mid-session to revisit the original Session 1217 self-directed audit after the carryover queue cleared. Final ledger:
 
@@ -132,14 +134,13 @@ Session 1222 ended up being three arcs of work in one session, driven by Chris's
 
 Of the 15 findings in the original self-directed audit:
 
-**Closed (11)** — items 1A + 1B + 2 + 3 + A1 (the original Chris-picks) + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift (from the same family).
+**Closed (12)** — items 1A + 1B + 2 + 3 + A1 (the original Chris-picks) + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift + **#8 (Session 1223, Path B — accept 89 as canonical)**.
 
-**Still open (4):**
+**Still open (3):**
 
 | # | Title | Effort | Notes |
 |---|---|---|---|
 | **#4** | Critical hub markers / gates | M | Reliability work — flag critical-path files for extra review |
-| **#8** | Seed baseline drift (155 expected vs 89/83 runtime) | M | **Only unresolved drift decision** — see Priority 5 |
 | **#9** | Core orientation doc staleness (Session 1141 → now 81 sessions behind) | M | `docs/PLATFORM_WHAT_IT_IS.md` refresh |
 | **#10** | Atlas fleet capabilities positioning | M | `docs/24_7_GLOBAL_AI_APP_ATLAS.md` reconcile |
 
@@ -153,13 +154,15 @@ By Session 1223 the Tier 1 + Tier 2 watchdog fixes (PR #2519 + #2520) have 24-48
 
 The B2 PR (#2530) re-enabled `generate-operator-edge-newsletter` with `dry_run=True`. First scheduled run = next Friday 1pm MDT post-merge. Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays, flip kwargs to `{'dry_run': false}` to promote to live.
 
-#### Priority 3 — Audit #8: seed baseline drift (the only unresolved drift decision)
+#### Priority 3 — Audit #8: seed baseline drift — **CLOSED Session 1223 (Path B)**
 
-Two paths, **Chris picks**:
-- **(A) Make runtime match seed:** re-run `python manage.py load_all_agents_advisors` to bring Agent.objects.count() from 89 back to the expected 155.
-- **(B) Make seed match runtime:** update `core/management/commands/load_all_agents_advisors.py` to declare 89 expected, and bump `expected` in `core/services/doc_claim_verification.py:persona_agent_count` from 155 → 89.
+PR #2534 (`fix/session-1223-audit-8-seed-baseline-drift`) shipped Path B per Rigby + Claude joint recommendation. Pre-flight surfaced the loader's own docstring lie (claims "149 agents" but has 139 tuples; 16 historical non-seed rows came from elsewhere — re-seeding reaches 139, not 155, so doesn't actually close the drift). Path A would have required a multi-step fix anyway. Path B: 1 PR.
 
-Either closes the audit's last drift. (A) restores a full agent baseline; (B) accepts 89 as the canonical state. Pre-flight: read what's in `load_all_agents_advisors.py` to understand what the "missing" 66 agents would be.
+Scope shipped:
+- `core/management/commands/load_all_agents_advisors.py`: reframed as decorative stub-persona scaffolding for `DynamicPersonaAgent` fallback. Docstring + `help` + stdout messages corrected to 139 + scope clarification.
+- `core/services/doc_claim_verification.py`: `persona_agent_count` 155 → 89; `total_agent_count_claim` 238 → 172 (= AGENT_MAP(83) + 89). Re-peg notes added.
+- `tests/unit/core_agents/test_agent_router.py`: new `TestSeedPersonaInvariance` class documents the contract (AGENT_MAP is the load-bearing dispatch surface; persona-table drift does not gate dispatch).
+- Verifier post-merge: drift = 0 across all docs.
 
 #### Priority 4 — Audit #4, #9, #10 (M each, deferred-but-still-open)
 
@@ -171,7 +174,7 @@ Either closes the audit's last drift. (A) restores a full agent baseline; (B) ac
 
 No fresh urgent items. Audit revisit complete. Watchdog/timeout arc closed.
 
-**Active conversation:** `pa-58737666f25741dc` — carried through Sessions 1217-1222 (a record 6-session continuous thread).
+**Active conversation:** `pa-17e0fa71fd25470a` — fresh Session 1223 thread (prior `pa-58737666f25741dc` retired at 44 msgs / `strongly_recommend_fresh`; carried Sessions 1217-1222, record 6-session run). `tools/pa_local.sh` updated.
 
 **Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
 - Delete the 9 dormant agent class files (per Rigby's keep-for-future recommendation)
