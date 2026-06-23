@@ -1,6 +1,20 @@
 """
-Load ALL 149 Agents and 25 Legendary Advisors into the System
-This is where 18 months of work comes together!
+Seed 139 stub persona prompts + 25 stub advisor prompts into the Agent /
+Advisor tables. These are **decorative fallback scaffolding** for
+`DynamicPersonaAgent` — not LLM-backed implementations.
+
+Runtime dispatchable agents live in `core/agent_router.AGENT_MAP`
+(83 entries as of Session 1223). The Agent / Advisor table rows seeded
+here exist only as persona-prompt strings consulted when AGENT_MAP
+doesn't contain a requested name.
+
+Session 1223 audit #8 close: the original "149 Agents and 25 Legendary
+Advisors" framing in this file was historical aspiration. The actual
+agents_data list has always contained 139 tuples (Session 1149 audit).
+Runtime Agent.objects.count() = 89 has operated cleanly for ~80 sessions
+with no downstream breakage; the seed is not load-bearing. Baseline
+re-pegged to 89 in `core/services/doc_claim_verification.py` rather
+than re-seeding to a number no consumer needs.
 """
 
 from django.core.management.base import BaseCommand
@@ -8,7 +22,7 @@ from core.models import Agent, Advisor, AgentCategory
 import json
 
 class Command(BaseCommand):
-    help = 'Load all 149 agents and 25 advisors into the unified system'
+    help = 'Seed 139 stub persona prompts + 25 stub advisor prompts (DynamicPersonaAgent fallback scaffolding — not load-bearing)'
 
     def handle(self, *args, **options):
         self.stdout.write("🚀 LOADING THE COMPLETE AI ECOSYSTEM!")
@@ -24,7 +38,7 @@ class Command(BaseCommand):
         self.load_legendary_advisors()
 
         self.stdout.write("=" * 80)
-        self.stdout.write(self.style.SUCCESS("✅ COMPLETE AI ECOSYSTEM LOADED!"))
+        self.stdout.write(self.style.SUCCESS("✅ Stub persona scaffolding loaded (139 agents + 25 advisors). Runtime dispatch lives in AGENT_MAP."))
         self.stdout.write(f"📊 Total Agents: {Agent.objects.count()}")
         self.stdout.write(f"👥 Total Advisors: {Advisor.objects.count()}")
 
@@ -83,7 +97,7 @@ class Command(BaseCommand):
         return categories
 
     def load_all_agents(self, categories):
-        """Load all 149 specialized agents"""
+        """Seed 139 stub persona prompts (DynamicPersonaAgent fallback)."""
 
         agents_data = [
             # INCOME GENERATION AGENTS (20)
@@ -248,7 +262,7 @@ class Command(BaseCommand):
             ('Quality Assurance Expert', 'business', 'Ensures quality', 85),
         ]
 
-        self.stdout.write("\n📦 Loading 149 Specialized Agents...")
+        self.stdout.write("\n📦 Loading 139 stub persona prompts (DynamicPersonaAgent fallback)...")
 
         for name, category_slug, description, effectiveness in agents_data:
             agent, created = Agent.objects.get_or_create(
@@ -275,7 +289,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"  ⏭️  Exists: {name}")
 
     def load_legendary_advisors(self):
-        """Load 25 legendary advisors"""
+        """Seed 25 stub advisor persona prompts (decorative scaffolding)."""
 
         advisors_data = [
             # INVESTMENT LEGENDS

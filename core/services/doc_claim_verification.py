@@ -314,39 +314,44 @@ def _agent_map_count() -> ClaimResult:
     db_required=True,
 )
 def _persona_agent_count() -> ClaimResult:
-    """Count rows in Agent table — these are the agents the AgentRouter
-    falls back to via DynamicPersonaAgent when AGENT_MAP doesn't contain
-    the requested name.
+    """Count rows in Agent table — decorative persona-prompt scaffolding
+    consulted by `DynamicPersonaAgent` when AGENT_MAP doesn't contain
+    the requested name. **Not load-bearing**: runtime dispatch lives in
+    `core/agent_router.AGENT_MAP` (83 entries Session 1223). Platform
+    has operated cleanly at 87-89 rows for ~80 sessions.
 
-    Session 1100 hardcoded `223` as expected — but that number doesn't
-    appear in current CLAUDE.md and didn't match any code path. Session
-    1115 re-pegged to `148` against an assumed canonical seed. Session
-    1149 audit: `load_all_agents_advisors.agents_data` actually contains
-    139 tuples (the command's own '149 Specialized Agents' log text is
-    stale copy from an earlier version). The remaining 16 rows
-    (139 seed → 155 actual) come from non-seed paths (other commands,
-    migrations, runtime DynamicPersonaAgent inserts). Re-pegged to 155 to
-    reflect the current floor; growth beyond ±5 will surface here.
+    Session 1100 hardcoded `223` — no code path matched. Session 1115
+    re-pegged to `148` against an assumed canonical seed. Session 1149
+    audit: `load_all_agents_advisors.agents_data` actually contains
+    139 tuples (the command's '149 Specialized Agents' log text was
+    historical aspiration). The 16-row gap (139 seed → 155 actual)
+    came from other commands / migrations / runtime DynamicPersonaAgent
+    inserts. Session 1223 audit #8 close: re-pegged from 155 → 89 to
+    match operational reality. Re-seeding to 139 reaches a different
+    number than the historical 155, doesn't restore the gap, and
+    serves no dispatch path. See `load_all_agents_advisors.py` docstring
+    for the full rationale.
     """
     from core.models_unified_system import Agent
     actual = Agent.objects.count()
-    expected = 155  # Session 1149 re-peg: current Agent.objects.count() floor
+    expected = 89  # Session 1223 re-peg: operational floor, audit #8 close
     drift = abs(actual - expected)
-    # Tolerate ±5 from the seed baseline; >5 means agents were added/removed.
+    # Tolerate ±5 from the operational floor; >5 means agents were added/removed.
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
         expected=expected,
         actual=actual,
         severity=severity,
         note=(
-            f"Agent.objects.count() = {actual}. Canonical seed: "
-            f"`python manage.py load_all_agents_advisors` "
-            f"(148 agents declared in the script)."
+            f"Agent.objects.count() = {actual}. Seed scaffolding "
+            f"(`load_all_agents_advisors`) declares 139 stub personas; "
+            f"runtime floor is 89 (decorative — not load-bearing)."
         ),
         fix_suggestion=(
-            f"If {actual} is the new canonical seed count, update "
-            f"`load_all_agents_advisors.py` + bump `expected` here. "
-            f"If rows are missing, run the seed command."
+            f"If {actual} represents drift from the Session 1223 floor "
+            f"(89), investigate whether persona rows were added/deleted "
+            f"and re-peg `expected` here. Re-seeding is rarely the right "
+            f"answer — runtime dispatch lives in AGENT_MAP, not this table."
             if severity != 'ok' else None
         ),
     )
@@ -364,15 +369,18 @@ def _total_agent_count_claim() -> ClaimResult:
     Session 1100 hardcoded `306` against a CLAUDE.md value that no longer
     exists. Session 1115 re-pegged to the seed-driven baseline
     AGENT_MAP(83) + Agent rows(148) = 231. Session 1149 re-pegged to
-    AGENT_MAP(83) + Agent rows(155) = 238 — see `_persona_agent_count`
-    for the seed-vs-actual reconciliation.
+    AGENT_MAP(83) + Agent rows(155) = 238. Session 1223 audit #8 close:
+    re-pegged to AGENT_MAP(83) + Agent rows(89) = 172 to match
+    operational reality — see `_persona_agent_count` for full context.
+    Note that only AGENT_MAP is load-bearing; persona rows are
+    decorative DynamicPersonaAgent fallback scaffolding.
     """
     from core.agent_router import AgentRouter
     from core.models_unified_system import Agent
     routable = len(AgentRouter().AGENT_MAP)
     personas = Agent.objects.count()
     actual_total = routable + personas
-    expected = 238  # Session 1149 re-peg: AGENT_MAP(83) + Agent rows(155)
+    expected = 172  # Session 1223 re-peg: AGENT_MAP(83) + Agent rows(89), audit #8 close
     drift = abs(actual_total - expected)
     severity = 'ok' if drift <= 5 else ('medium' if drift <= 50 else 'high')
     return ClaimResult.build(
@@ -381,8 +389,10 @@ def _total_agent_count_claim() -> ClaimResult:
         severity=severity,
         note=f"AGENT_MAP({routable}) + Agent rows({personas}) = {actual_total}",
         fix_suggestion=(
-            f"Either re-run `load_all_agents_advisors` or update the "
-            f"expected baseline if the seed has changed."
+            f"AGENT_MAP changes or persona-row drift will surface here. "
+            f"Re-peg `expected` after intentional changes to either; "
+            f"re-seeding is rarely the right answer (persona rows are "
+            f"not load-bearing — see `_persona_agent_count` docstring)."
             if severity != 'ok' else None
         ),
     )
