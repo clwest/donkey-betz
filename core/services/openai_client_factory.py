@@ -4,6 +4,21 @@ Session 1084 round 51: Mirror of ``anthropic_client_factory.py``. Centralize
 OpenAI client construction so every call site in the platform gets the same
 timeout + retry configuration and cannot drift back to the SDK defaults.
 
+Session 1216 (Phase E): factory-returned clients also install a
+**reasoning-contract guard** on their ``chat.completions.create`` methods.
+The guard inspects outbound kwargs for params that gpt-5.x reasoning models
+reject (``max_tokens``, ``temperature``, ``top_p``, ``frequency_penalty``,
+``presence_penalty``) and acts per the ``OPENAI_REASONING_GUARD`` env var:
+
+- ``warn`` (default) — log a structured warning, leave kwargs unchanged
+- ``strip`` — remove forbidden kwargs + log, then dispatch
+- ``error`` — raise ``ReasoningGuardViolation`` before any network call
+
+Guard only fires when the ``model`` kwarg contains substring ``"gpt-5"`` —
+non-reasoning callers see no behavior change. See ``apply_reasoning_guard``
+for the pure-function form, and ``_install_reasoning_guard`` for the
+method-wrapping behavior applied to factory-returned clients.
+
 Why this exists
 ---------------
 OpenAI's Python SDK defaults to a **600 second** request timeout with 2
@@ -55,6 +70,127 @@ OPENAI_POOL_TIMEOUT_S = 60.0
 OPENAI_MAX_RETRIES = 2
 
 _FORBIDDEN_KWARGS = ("timeout", "max_retries", "api_key")
+
+# Session 1216 Phase E: reasoning-contract guard
+_REASONING_FORBIDDEN_KWARGS = (
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "frequency_penalty",
+    "presence_penalty",
+)
+_REASONING_MODEL_SUBSTRING = "gpt-5"
+_REASONING_GUARD_ENV = "OPENAI_REASONING_GUARD"
+_REASONING_GUARD_MODES = ("warn", "strip", "error")
+_REASONING_GUARD_DEFAULT_MODE = "warn"
+_REASONING_GUARD_LOGGER = logging.getLogger("openai_client_factory.reasoning_guard")
+
+
+class ReasoningGuardViolation(ValueError):
+    """Raised when ``OPENAI_REASONING_GUARD=error`` and a forbidden kwarg
+    is passed to a gpt-5.x reasoning model. The exception fires before the
+    SDK makes any network call. Subclasses ``ValueError`` so existing
+    catch-ValueError sites still see the violation."""
+
+
+def _resolve_guard_mode() -> str:
+    """Read OPENAI_REASONING_GUARD; default ``warn``; unknown values
+    coerced to ``warn`` with a one-time deprecation log."""
+    raw = (os.getenv(_REASONING_GUARD_ENV) or "").strip().lower()
+    if not raw:
+        return _REASONING_GUARD_DEFAULT_MODE
+    if raw not in _REASONING_GUARD_MODES:
+        _REASONING_GUARD_LOGGER.warning(
+            "Unknown %s=%r; falling back to %r. Valid modes: %s",
+            _REASONING_GUARD_ENV, raw,
+            _REASONING_GUARD_DEFAULT_MODE,
+            ",".join(_REASONING_GUARD_MODES),
+        )
+        return _REASONING_GUARD_DEFAULT_MODE
+    return raw
+
+
+def apply_reasoning_guard(
+    kwargs: Dict[str, object],
+    model: Optional[str],
+    caller_label: str = "",
+) -> Dict[str, object]:
+    """Inspect ``kwargs`` for params that gpt-5.x reasoning models reject.
+
+    Mode controlled by the ``OPENAI_REASONING_GUARD`` env var:
+
+    - ``warn`` (default): log a structured warning, return ``kwargs`` unchanged.
+    - ``strip``: remove forbidden keys, log what was removed, return modified dict.
+    - ``error``: raise ``ReasoningGuardViolation`` before the SDK call.
+
+    The guard only fires when ``model`` contains substring ``"gpt-5"``. If
+    ``model`` is missing or None, returns ``kwargs`` unchanged — avoids
+    false positives on non-OpenAI provider routing.
+
+    Returns the (possibly modified) kwargs dict. Caller dispatches to the
+    SDK with the result.
+    """
+    if not model or _REASONING_MODEL_SUBSTRING not in model.lower():
+        return kwargs
+
+    present = [k for k in _REASONING_FORBIDDEN_KWARGS if k in kwargs]
+    if not present:
+        return kwargs
+
+    mode = _resolve_guard_mode()
+    label = caller_label or "unknown"
+
+    if mode == "error":
+        raise ReasoningGuardViolation(
+            f"{label}: gpt-5.x reasoning model {model!r} rejects "
+            f"{present!r}. Use 'max_completion_tokens'; omit "
+            f"temperature/top_p/penalties."
+        )
+
+    if mode == "strip":
+        stripped = {k: kwargs[k] for k in present}
+        new_kwargs = {k: v for k, v in kwargs.items() if k not in present}
+        _REASONING_GUARD_LOGGER.warning(
+            "[reasoning_guard] mode=strip caller=%s model=%s stripped=%s",
+            label, model, list(stripped.keys()),
+        )
+        return new_kwargs
+
+    # warn (default)
+    _REASONING_GUARD_LOGGER.warning(
+        "[reasoning_guard] mode=warn caller=%s model=%s forbidden_present=%s",
+        label, model, present,
+    )
+    return kwargs
+
+
+def _install_reasoning_guard(client, async_create: bool = False) -> None:
+    """Wrap ``client.chat.completions.create`` with the reasoning guard.
+
+    Applied once per client at construction time. The wrapped method
+    forwards all args/kwargs to the original after guarding. Cached
+    clients (per the factory's ``(api_key, base_url)`` cache) get the
+    guard installed exactly once.
+    """
+    completions = client.chat.completions
+    original_create = completions.create
+
+    if async_create:
+        async def _guarded_async_create(*args, **kwargs):
+            model = kwargs.get("model")
+            kwargs = apply_reasoning_guard(
+                kwargs, model, caller_label="async_chat.completions.create",
+            )
+            return await original_create(*args, **kwargs)
+        completions.create = _guarded_async_create
+    else:
+        def _guarded_sync_create(*args, **kwargs):
+            model = kwargs.get("model")
+            kwargs = apply_reasoning_guard(
+                kwargs, model, caller_label="chat.completions.create",
+            )
+            return original_create(*args, **kwargs)
+        completions.create = _guarded_sync_create
 
 # Session 1144: per-process client cache. Every ``OpenAI(...)`` instance
 # carries its own internal httpx connection pool — so calling the factory
@@ -136,6 +272,7 @@ def get_openai_client(
     ctor_kwargs.update(kwargs)  # safe — forbidden keys already rejected above
 
     client = OpenAI(**ctor_kwargs)
+    _install_reasoning_guard(client, async_create=False)
     if not kwargs:
         with _CLIENT_CACHE_LOCK:
             # Double-check after acquiring the lock to avoid two concurrent
@@ -200,6 +337,7 @@ def get_async_openai_client(
     ctor_kwargs.update(kwargs)
 
     client = AsyncOpenAI(**ctor_kwargs)
+    _install_reasoning_guard(client, async_create=True)
     if not kwargs:
         with _ASYNC_CLIENT_CACHE_LOCK:
             existing = _ASYNC_CLIENT_CACHE.get(cache_key)
