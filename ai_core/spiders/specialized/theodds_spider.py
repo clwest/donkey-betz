@@ -215,9 +215,32 @@ class TheOddsSpider:
 
         # First, get list of in-season sports
         active_sports = self._get_active_sports()
+
+        # Session 1206 loud-failure: when /sports returns nothing (401 dead key,
+        # billing lapse, rate limit, upstream outage), prior behavior fell back
+        # to the requested sports list and persisted an `api_status` row with
+        # `sports_fetched: 48` — a row that LIED about work having happened
+        # and masked the underlying outage from downstream consumers
+        # (GamePredictor, SportsOddsAnalyst). Emit an explicit `fetch_failure`
+        # row instead and return early. Surfaces in ops_tool.failure_signatures.
         if not active_sports:
-            logger.warning("Could not fetch active sports list")
-            active_sports = sports  # Fall back to requested sports
+            reason = (
+                'auth_failure_circuit_breaker' if self._auth_failed
+                else 'active_sports_empty'
+            )
+            summary = (
+                'TheOdds API auth failed (HTTP 401 / circuit breaker engaged). '
+                'Check THE_ODDS_API_KEY billing/quota.'
+                if self._auth_failed
+                else 'TheOdds /sports endpoint returned empty list (possible '
+                     'rate limit, network, or upstream outage).'
+            )
+            logger.warning(
+                "TheOddsSpider: %s — emitting fetch_failure row "
+                "(events_fetched=0, no fallback)",
+                reason,
+            )
+            return [self._build_failure_row(reason=reason, summary=summary)]
 
         # Filter to only active sports from our list
         sports_to_fetch = [s for s in sports if s in active_sports]
@@ -264,7 +287,10 @@ class TheOddsSpider:
                         if normalized:
                             results.append(normalized)
 
-        # Add metadata
+        # Session 1206: include explicit events_fetched count in healthy-path
+        # api_status row so downstream can never infer "0 events = work happened"
+        # from the absence of a count field.
+        events_fetched = len(results)
         results.append({
             'data_type': 'api_status',
             'spider_name': self.name,
@@ -272,11 +298,31 @@ class TheOddsSpider:
             'requests_used': self.requests_used,
             'sports_fetched': len(sports_to_fetch),
             'futures_fetched': len(futures_sports) if include_futures else 0,
+            'events_fetched': events_fetched,
             'timestamp': datetime.utcnow().isoformat(),
         })
 
-        logger.info(f"TheOddsSpider fetched {len(results)-1} events, API requests remaining: {self.requests_remaining}")
+        logger.info(f"TheOddsSpider fetched {events_fetched} events, API requests remaining: {self.requests_remaining}")
         return results
+
+    def _build_failure_row(self, reason: str, summary: str) -> Dict[str, Any]:
+        """
+        Session 1206: emit a loud failure row instead of a misleading
+        api_status row. Downstream (GamePredictor, SportsOddsAnalyst,
+        ops_tool.failure_signatures) can distinguish API outage from
+        legitimate "no events in season".
+        """
+        return {
+            'data_type': 'fetch_failure',
+            'spider_name': self.name,
+            'reason': reason,
+            'error_summary': summary,
+            'events_fetched': 0,
+            'circuit_breaker_engaged': self._auth_failed,
+            'requests_remaining': self.requests_remaining,
+            'requests_used': self.requests_used,
+            'timestamp': datetime.utcnow().isoformat(),
+        }
 
     def _get_active_sports(self) -> List[str]:
         """Get list of currently active/in-season sports."""
