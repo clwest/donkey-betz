@@ -1055,11 +1055,11 @@ PA_TOOL_SCHEMAS = [
         "name": "run_agent",
         "description": (
             "Delegate a task to a specialized agent. Use when the user asks to "
-            "Run any of 72 specialized agents across 12 domains: "
+            "Run any of 58 specialized agents across 10 domains: "
             "media creation/editing, research & analysis, strategy & content, "
             "executive & orchestration, stock & markets, sports & betting, "
-            "blockchain audit, narrative drift, content studio, podcast, "
-            "training & security, and system intelligence."
+            "blockchain audit, content studio, podcast, and training & security. "
+            "(Session 1218 P2: 22 zero-execution agents trimmed from the enum.)"
         ),
         "parameters": {
             "type": "object",
@@ -1076,13 +1076,13 @@ PA_TOOL_SCHEMAS = [
                         # ── Research & Analysis ──
                         "research_agent",
                         "trend_analysis_agent", "opportunity_scoring_agent",
-                        "market_intelligence_agent", "platform_audit_agent",
-                        "thinking_agent", "decision_enforcer_agent",
+                        "platform_audit_agent",
+                        "thinking_agent",
                         # ── Strategy & Content ──
                         "brand_identity_agent", "seo_optimizer_agent",
                         "social_media_agent", "editor_agent",
-                        "content_audit_agent", "prompt_engineering_agent",
-                        "technical_document_agent", "creative_director_agent",
+                        "content_audit_agent",
+                        "creative_director_agent",
                         # ── Business Research ──
                         "competitor_analysis_agent", "customer_research_agent",
                         "brand_strategy_agent", "content_strategy_agent",
@@ -1091,7 +1091,7 @@ PA_TOOL_SCHEMAS = [
                         "cto_agent", "coo_agent",
                         "meeting_coordinator_agent",
                         "campaign_orchestrator_agent",
-                        "opportunity_pipeline_agent", "content_executor_agent",
+                        "opportunity_pipeline_agent",
                         "ai_series_workflow_agent",
                         "workflow_orchestration_agent",
                         "system_intelligence_agent",
@@ -1101,50 +1101,35 @@ PA_TOOL_SCHEMAS = [
                         "code_review_agent",
                         # ── Stock & Markets ──
                         "stock_audit_coordinator", "stock_analyst_agent",
-                        "market_movement_monitor_agent",
-                        "institutional_watcher_agent",
-                        "market_anomaly_detector_agent",
-                        "bull_case_agent", "bear_case_agent",
-                        "signal_scanner_agent",
+                        "bear_case_agent",
                         "market_intelligence_coordinator",
                         # ── Sports & Betting ──
                         "prediction_market_analyst",
                         "game_predictor", "line_movement_analyzer",
-                        "sharp_action_detector", "bookmaker_agent",
+                        "sharp_action_detector",
                         # ── Blockchain Audit ──
                         "blockchain_audit_coordinator",
-                        "smart_contract_auditor_agent",
-                        "transaction_monitor_agent",
-                        "whale_watcher_agent", "exploit_detector_agent",
-                        # ── Narrative Drift ──
-                        "narrative_drift_coordinator",
-                        "narrative_historian_agent",
-                        "trend_break_detector_agent",
-                        "cultural_impact_agent",
+                        "whale_watcher_agent",
                         # ── Content Studio ──
                         "autonomous_content_studio_coordinator",
                         "topic_miner_agent", "contrarian_agent",
                         "performance_analyst_agent", "voice_critic_agent",
                         "content_diversity_orchestrator",
-                        "distribution_agent",  # Session 1115: closes orphan-handler finding 2
                         # ── Podcast ──
                         "podcast_coordinator_agent",
-                        "debate_advocate_agent", "debate_skeptic_agent",
-                        "moderator_agent",
                         # ── Training & Security ──
                         "trained_creation_agent", "memory_isolation_agent", "security_agent",
                     ],
                     "description": (
-                        "Which agent to run. 72 agents across 12 domains. "
+                        "Which agent to run. 58 agents across 10 domains. "
                         "Media: image/video/audio/3D generation & editing, resolve (DaVinci). "
                         "Research: research, trend analysis, opportunity scoring, thinking. "
-                        "Strategy: brand identity, SEO, social media, content audit, prompt engineering. "
-                        "Markets: stock analyst, bull/bear case, signal scanner, market anomaly. "
-                        "Sports: game predictor, line movement, sharp action, bookmaker. "
-                        "Blockchain: smart contract auditor, transaction monitor, whale watcher. "
-                        "Narrative: drift coordinator, historian, trend break, cultural impact. "
-                        "Studio: topic miner, contrarian, performance analyst, voice critic. "
-                        "Podcast: coordinator, debate advocate/skeptic, moderator. "
+                        "Strategy: brand identity, SEO, social media, content audit, editor, creative director. "
+                        "Markets: stock analyst, bear case, market intelligence coordinator. "
+                        "Sports: game predictor, line movement, sharp action, prediction market analyst. "
+                        "Blockchain: blockchain audit coordinator, whale watcher. "
+                        "Studio: topic miner, contrarian, performance analyst, voice critic, content diversity orchestrator. "
+                        "Podcast: coordinator. "
                         "system_intelligence_agent = platform health reports."
                     ),
                 },
