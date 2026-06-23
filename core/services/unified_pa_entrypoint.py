@@ -104,10 +104,48 @@ def _detect_silent_tool_call_fallback(text: str) -> bool:
     JSON as the response body instead of invoking the function-calling
     channel. Caller (agentic loop final-text return path) uses this to
     surface a clear error to the user + log a flag in PA_TASK_SUMMARY.
+
+    Note: callers should pair this with the ``tool_runs`` history check —
+    see :func:`_should_trigger_silent_fallback`. A bare True from this
+    function does NOT mean the LLM silently fell back; it means the
+    response contains a JSON shape that *could* indicate fallback.
     """
     if not text:
         return False
     return _SILENT_TOOL_FALLBACK_PATTERN.search(text) is not None
+
+
+def _should_trigger_silent_fallback(text: str, tool_runs: list) -> bool:
+    """Return True only when a silent-fallback was the most likely cause.
+
+    Session 1220 false-positive fix. The bare detector
+    :func:`_detect_silent_tool_call_fallback` matches any text containing
+    a ``{"action": "<verb>"`` JSON shape. That's too permissive: when the
+    LLM successfully invoked a tool via the function-call channel and is
+    now producing a final-text response that **quotes or echoes that
+    result**, the tool's own ``{"action": "..."}`` payload shows up in
+    the text and trips the regex.
+
+    The genuine silent-fallback mode (Session 1199 deliverable c2bac9c0)
+    fires when the model emits tool-call JSON in text *instead of*
+    invoking the function-call channel. So the guard is simple: if any
+    successful tool ran in this turn, a JSON shape in the response is a
+    legitimate echo, not a fallback. Skip the alarm.
+
+    The strictly-correct check would scope to "successful tool ran on
+    *this* iteration's prior step." In practice the LLM only finishes
+    with a text-only response after tools have already produced results
+    to summarize, so any successful run in the cumulative ``tool_runs``
+    list is sufficient evidence.
+    """
+    if not _detect_silent_tool_call_fallback(text):
+        return False
+    if not tool_runs:
+        return True
+    return not any(
+        bool(run.get('ok')) for run in tool_runs
+        if isinstance(run, dict)
+    )
 
 
 def _build_tool_args_malformed_envelope(
@@ -1520,8 +1558,17 @@ class UnifiedPAEntrypoint:
                 # return path (not just is_final) — the failure mode can
                 # technically fire on any iteration where the LLM chooses
                 # to emit JSON in text instead of a function call.
+                #
+                # Session 1220 — false-positive guard. When the LLM
+                # already invoked a tool successfully and is summarizing
+                # the result, its echo of the tool's ``{"action": ...}``
+                # payload trips the regex despite no real fallback. The
+                # _should_trigger_silent_fallback helper checks
+                # ``tool_runs`` for any prior success before firing the
+                # alarm. See ops_tool.zombie_thread_rate live-test for
+                # the canonical case that surfaced this.
                 final_text = result.get('response', '')
-                if _detect_silent_tool_call_fallback(final_text):
+                if _should_trigger_silent_fallback(final_text, tool_runs):
                     self._silent_fallback_detected = True
                     logger.critical(
                         "[PA_SILENT_FALLBACK_DETECTED] trace_id=%s "
@@ -1533,6 +1580,17 @@ class UnifiedPAEntrypoint:
                     return (
                         _SILENT_FALLBACK_USER_MESSAGE,
                         tool_runs, fc_metadata, response_id,
+                    )
+                elif _detect_silent_tool_call_fallback(final_text):
+                    # Detector matched but at least one tool succeeded —
+                    # treat as legitimate result echo. Log at INFO so the
+                    # skip is auditable without paging on it.
+                    logger.info(
+                        "[PA_SILENT_FALLBACK_SKIPPED] trace_id=%s "
+                        "iteration=%d/%d tool_runs_so_far=%d (≥1 ok) — "
+                        "JSON in text is a legitimate tool-result echo",
+                        trace_id, iteration + 1, max_iterations,
+                        len(tool_runs),
                     )
 
                 # Session 1065: Auto-continue truncated text responses
