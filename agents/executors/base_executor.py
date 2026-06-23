@@ -485,15 +485,22 @@ class BaseAgentExecutor(ABC):
         if 'openai' not in self.api_clients:
             raise RuntimeError("OpenAI client not available")
 
+        # Session 1215 Phase D: gpt-5.x reasoning models reject `temperature=`.
+        # Only forward the kwarg to non-reasoning models. Default model is
+        # gpt-5-mini so the common path skips it; callers passing a
+        # non-reasoning model still get sampling control.
+        create_kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_completion_tokens": max_tokens,
+        }
+        if 'gpt-5' not in model.lower():
+            create_kwargs["temperature"] = temperature
+
         try:
             response = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: self.api_clients['openai'].chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_completion_tokens=max_tokens,
-                    temperature=temperature
-                )
+                lambda: self.api_clients['openai'].chat.completions.create(**create_kwargs)
             )
 
             # Track API usage and cost
