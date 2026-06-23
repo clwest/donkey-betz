@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-23 08:55
+**Generated:** 2026-06-23 09:05
 **Current Session:** 1211
 **Total Documentation:** 2699 files | 705,604 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,708 |
+| Total cross-references | 4,699 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 192 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 182 | Platform Master Inventory |
 | `docs/INDEX.md` | 126 | INDEX |
-| `docs/archive/superseded-2026-05/apis/README.md` | 117 | API Integration References |
+| `docs/archive/old-structure/content-studio/README.md` | 116 | 🎨 Content Studio Documentation |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 67 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -247,8 +247,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md | handoffs | 110 | 2026-06-23 08:52 |
-| INDEX.md | docs | 391 | 2026-06-23 08:47 |
+| SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md | handoffs | 110 | 2026-06-23 08:57 |
+| INDEX.md | docs | 391 | 2026-06-23 08:57 |
 | SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md | handoffs | 231 | 2026-06-23 07:56 |
 | SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md | handoffs | 216 | 2026-06-22 22:26 |
 | SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md | handoffs | 144 | 2026-06-22 21:02 |
