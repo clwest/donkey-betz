@@ -9,7 +9,6 @@ No more simulations - this creates actual work that clients pay for.
 import asyncio
 import logging
 import json
-import openai
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -127,8 +126,6 @@ class RealWorkDeliveryEngine:
         """Break down project into specific, actionable deliverables"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             deliverable_prompt = f"""
             Break down this freelance project into specific, actionable deliverables:
 
@@ -237,8 +234,6 @@ class RealWorkDeliveryEngine:
         """Execute Python development work"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             code_prompt = f"""
             Create Python code for this deliverable:
 
@@ -312,8 +307,6 @@ class RealWorkDeliveryEngine:
         """Execute content writing work"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             content_prompt = f"""
             Write high-quality content for this deliverable:
 
@@ -385,8 +378,6 @@ class RealWorkDeliveryEngine:
         """Execute data analysis work"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             analysis_prompt = f"""
             Create a comprehensive data analysis for this deliverable:
 
@@ -448,8 +439,6 @@ class RealWorkDeliveryEngine:
         """Execute virtual assistance work"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             va_prompt = f"""
             Complete this virtual assistance task:
 
@@ -508,8 +497,6 @@ class RealWorkDeliveryEngine:
                                      agent: str) -> bool:
         """Execute web development work"""
         try:
-            client = openai.AsyncOpenAI()
-
             web_prompt = f"""
             Create web development code for this deliverable:
 
@@ -555,8 +542,6 @@ class RealWorkDeliveryEngine:
                                   agent: str) -> bool:
         """Execute design work"""
         try:
-            client = openai.AsyncOpenAI()
-
             design_prompt = f"""
             Create a comprehensive design deliverable:
 
@@ -602,8 +587,6 @@ class RealWorkDeliveryEngine:
                                agent: str) -> bool:
         """Execute SEO work"""
         try:
-            client = openai.AsyncOpenAI()
-
             seo_prompt = f"""
             Create comprehensive SEO deliverable:
 
@@ -649,8 +632,6 @@ class RealWorkDeliveryEngine:
                                      agent: str) -> bool:
         """Execute marketing work"""
         try:
-            client = openai.AsyncOpenAI()
-
             marketing_prompt = f"""
             Create comprehensive marketing deliverable:
 
@@ -697,8 +678,6 @@ class RealWorkDeliveryEngine:
         """Execute general work that doesn't fit other categories"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             general_prompt = f"""
             Complete this work deliverable:
 
@@ -753,8 +732,6 @@ class RealWorkDeliveryEngine:
         try:
             if not deliverable.content:
                 return 5.0
-
-            client = openai.AsyncOpenAI()
 
             quality_prompt = f"""
             Assess the quality of this deliverable on a scale of 1-10:
