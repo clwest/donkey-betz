@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-23 07:52
+**Generated:** 2026-06-23 08:44
 **Current Session:** 1210
 **Total Documentation:** 2698 files | 705,446 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,708 |
+| Total cross-references | 4,700 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 192 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 182 | Platform Master Inventory |
 | `docs/INDEX.md` | 125 | INDEX |
-| `docs/archive/old-structure/priorities/README.md` | 117 | PRIORITIES |
+| `docs/features/README.md` | 116 | README |
 | `docs/AGENTS.md` | 69 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 67 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 43 | CAPABILITIES |
@@ -170,7 +170,7 @@
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 8 | 2026-05-24 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 8 | 2026-05-24 |
 | [HANDOFF_NUMBERING_GAPS.md](HANDOFF_NUMBERING_GAPS.md) | 45 | 2026-05-22 |
-| [INDEX.md](INDEX.md) | 391 | 2026-06-22 |
+| [INDEX.md](INDEX.md) | 391 | 2026-06-23 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 8 | 2026-05-24 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEARNING_BRIDGE_AUDIT.md](LEARNING_BRIDGE_AUDIT.md) | 154 | 2026-05-25 |
@@ -247,9 +247,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md | handoffs | 231 | 2026-06-23 07:48 |
+| SESSION_1209_URC_V01_ENVELOPE_AND_ROUTER_PATH.md | handoffs | 231 | 2026-06-23 07:56 |
+| INDEX.md | docs | 391 | 2026-06-23 07:56 |
 | SESSION_1208_CAMPAIGN_ORCHESTRATOR_OUTBOUND_PACK_HARDENING.md | handoffs | 216 | 2026-06-22 22:26 |
-| INDEX.md | docs | 391 | 2026-06-22 22:26 |
 | SESSION_1207_MIC_AUTO_DELIVERABLE_AND_OUTPUT_DATA_HARDENING.md | handoffs | 144 | 2026-06-22 21:02 |
 | SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md | handoffs | 163 | 2026-06-22 19:49 |
 | SESSION_1205_EVIDENCE_PIPELINE_PLUS_CAPABILITY_AUDIT.md | handoffs | 199 | 2026-06-22 17:21 |
