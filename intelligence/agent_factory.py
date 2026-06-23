@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Core dependencies
-from openai import OpenAI
+from core.services.openai_client_factory import get_openai_client
 
 # Local imports
 try:
@@ -23,8 +23,8 @@ except ImportError:
     class BaseAgent:
         def __init__(self):
             try:
-                self.client = OpenAI() if os.getenv('OPENAI_API_KEY') else None
-            except:
+                self.client = get_openai_client() if os.getenv('OPENAI_API_KEY') else None
+            except (RuntimeError, Exception):
                 self.client = None
             self.agent_type = "base"
             os.makedirs("agent_outputs", exist_ok=True)
@@ -72,7 +72,10 @@ class UnifiedAgentFactory:
     def __init__(self, config: AgentConfig = None):
         self.config = config or AgentConfig()
         self.agents = {}
-        self.client = OpenAI() if self.config.use_real_apis else None
+        try:
+            self.client = get_openai_client() if self.config.use_real_apis else None
+        except RuntimeError:
+            self.client = None
         self.register_all_agents()
 
     def register_all_agents(self):
