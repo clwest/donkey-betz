@@ -1,3 +1,5 @@
+# CRITICAL_PATH_HUB — see docs/CRITICAL_PATH_HUBS.md
+# Changes here can break the whole platform. Request Chris review before merge.
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
 =====================================================================
