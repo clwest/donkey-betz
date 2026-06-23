@@ -189,20 +189,48 @@ def _detect_blocked_content(content: str) -> Optional[str]:
     incomplete work due to missing evidence/data.
 
     Returns the blocked reason string if found, None if content is clean.
+
+    Session 1206 (Finding B3): the pre-fix regex
+    ``BLOCKED\\s*(?:ON)?[:\\s]*(.{10,150})`` (case-insensitive) matched
+    the literal word "BLOCKED" anywhere in prose, including legitimate
+    classification rubrics like "READY / WORKS-BUT-NEEDS-DATA / BROKEN /
+    NOT-ROUTABLE / REROUTED / BLOCKED, producing a practical readiness
+    map..." — which is normal text using BLOCKED as one of several
+    enum values, NOT a blocker marker. ContentWriterAgent's wakeup-week
+    document was rejected on this false positive.
+
+    Strict markers (one must be present for the gate to fire):
+      - ``**BLOCKED ON:**`` / ``**BLOCKED**`` (markdown bold preamble)
+      - ``[BLOCKED]`` / ``[BLOCKED: reason]`` (bracketed tag)
+      - Line-anchored ``BLOCKED ON: reason`` (start of a line, mandatory ``ON:``)
+      - Line-anchored ``BLOCKED:`` (start of a line, mandatory colon)
+
+    Inline mentions like ``...or BLOCKED, producing...`` no longer fire.
     """
     import re
     if not content:
         return None
 
-    # Match patterns like "BLOCKED ON: missing domain evidence"
-    # or "**BLOCKED ON: missing source URL**"
-    match = re.search(
-        r'BLOCKED\s*(?:ON)?[:\s]*([^\n\*]{10,150})',
-        content,
-        re.IGNORECASE,
-    )
-    if match:
-        return match.group(1).strip()
+    # Strict patterns — each must be a structural blocker marker, not
+    # inline prose. Capture group 1 (or 2 for line-anchored) is the
+    # human-readable reason.
+    patterns = [
+        # **BLOCKED ON:** reason  or  **BLOCKED:** reason  or  **BLOCKED** reason
+        r'\*\*BLOCKED(?:\s+ON)?[:\s]\*\*\s*([^\n\*]{5,200})',
+        # [BLOCKED: reason]  or  [BLOCKED] reason
+        r'\[BLOCKED(?::\s*([^\]\n]{5,200}))?\](?:\s*([^\n]{5,200}))?',
+        # Line-anchored: ^BLOCKED ON: reason   (multiline mode)
+        r'(?m)^BLOCKED\s+ON[:\s]+([^\n]{5,200})',
+        # Line-anchored: ^BLOCKED: reason
+        r'(?m)^BLOCKED[:\s]+([^\n]{5,200})',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, content)  # case-SENSITIVE — markers are uppercase
+        if match:
+            # Pick the first non-None capture group as the reason.
+            groups = [g for g in match.groups() if g]
+            return groups[0].strip() if groups else 'blocker marker present'
 
     return None
 
