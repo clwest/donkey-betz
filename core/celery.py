@@ -138,6 +138,16 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),
         'options': {'queue': 'broadcast', 'expires': 600},
     },
+    # Session 1221 P2 — Tier 2 from deliverable 7ae61cf7. Sweep orphaned
+    # LLMCallEvent.status='STARTED' rows. Same 10-min cadence + broadcast
+    # queue as the agent-execution cleanup so they tend to fire in the
+    # same beat tick. Default threshold 10 min — well above the longest
+    # observed legitimate call (102.7s) and the Tier 1 cap floor (180s).
+    'cleanup-stuck-llm-calls': {
+        'task': 'core.tasks.cleanup_stale_llm_calls',
+        'schedule': crontab(minute='*/10'),
+        'options': {'queue': 'broadcast', 'expires': 600},
+    },
     'cleanup-celery-task-events': {
         'task': 'core.tasks.cleanup_celery_task_events',
         # Session 1165 (COO #3): staggered 4:00 → 4:50 to relieve hour=4 :00 cluster
