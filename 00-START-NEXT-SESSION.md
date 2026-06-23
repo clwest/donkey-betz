@@ -134,14 +134,12 @@ Session 1222 ended up being three arcs of work in one session, driven by Chris's
 
 Of the 15 findings in the original self-directed audit:
 
-**Closed (12)** — items 1A + 1B + 2 + 3 + A1 (the original Chris-picks) + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift + **#8 (Session 1223, Path B — accept 89 as canonical)**.
+**Closed (14)** — items 1A + 1B + 2 + 3 + A1 (the original Chris-picks) + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift + **#8 (Session 1223 PR #2534, Path B — accept 89 as canonical)** + **#9 (Session 1223 PR #2535 — PLATFORM_WHAT_IT_IS.md refresh + OpenAI hardening section)** + **#4 (Session 1223 PR #2536 — CRITICAL_PATH_HUBS.md + 4 file markers + PR template checklist)**.
 
-**Still open (3):**
+**Still open (1):**
 
 | # | Title | Effort | Notes |
 |---|---|---|---|
-| **#4** | Critical hub markers / gates | M | Reliability work — flag critical-path files for extra review |
-| **#9** | Core orientation doc staleness (Session 1141 → now 81 sessions behind) | M | `docs/PLATFORM_WHAT_IT_IS.md` refresh |
 | **#10** | Atlas fleet capabilities positioning | M | `docs/24_7_GLOBAL_AI_APP_ATLAS.md` reconcile |
 
 ### FIRST THING Session 1223

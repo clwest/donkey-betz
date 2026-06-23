@@ -1,3 +1,5 @@
+# CRITICAL_PATH_HUB — see docs/CRITICAL_PATH_HUBS.md
+# Changes here can break the whole platform. Request Chris review before merge.
 """Shared factory for OpenAI SDK client instances.
 
 Session 1084 round 51: Mirror of ``anthropic_client_factory.py``. Centralize
