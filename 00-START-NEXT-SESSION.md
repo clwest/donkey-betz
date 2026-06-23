@@ -104,17 +104,21 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1207 — CURRENT ENTRY POINT
 
-### SESSION 1206 CLOSED — Layer 1 telemetry fix via `BaseAgent.run()` (2026-06-22)
+### SESSION 1206 CLOSED — Layer 1 telemetry + Wakeup Week cascade (5 PRs merged)
 
-Full handoff: [`SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md`](docs/handoffs/SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md). **PR #2461 open (verified live in local before push).**
+Full handoff: [`SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md`](docs/handoffs/SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md). **5 PRs merged.** All live-verified before merge.
 
-| PR | What |
-|---|---|
-| **#2461** | `BaseAgent.run()` concrete wrapper + 7 bypass-callsite migrations. Closes finding `65f1299f-…` (Telemetry blind spot — direct-constructor agent paths bypass AgentExecution). |
+| PR | Arc | What |
+|---|---|---|
+| **#2461** | Telemetry | `BaseAgent.run()` concrete wrapper + 7 bypass-callsite migrations. Closes finding `65f1299f-…`. |
+| **#2462** | TheOdds | Loud-failure pattern — emit `fetch_failure` row when API auth dies, no more lying `api_status` rows with fake `sports_fetched: 48`. Closes finding `2de3d8d6-…` (root cause: billing-lapsed key, code now signals honest outage). |
+| **#2463** | Finding B1 | `tasks_agents.execute_agent_task` writes BOTH canonical `{message, result_preview, data, error, tool_calls}` AND legacy `{content, metadata}` shapes — Rigby's `execution_history_tool` now reads non-empty preview for text-output agents. |
+| **#2464** | Finding B3 | BLOCKED detector tightened to structural markers only (`**BLOCKED ON:**`, `[BLOCKED]`, line-anchored). Stops false-positive rejection of prose mentioning BLOCKED as an enum value. Case-sensitive. |
+| **#2465** | Finding B2 | Workspace_id validation guardrail at `create_deliverable` entry. Hallucinated UUID → WARN with structured audit fields + fallback to user.active_workspace. Stops FK-violation artifact loss. Root cause filed as P0 `96b6a72a-…`. |
 
-**Recon-led pivot from sketch:** the START doc proposed putting the fix in `BaseAgent.execute()` — but that method is `@abstractmethod`. Rerouted through Rigby for the architectural call (A: 83-subclass rename / B: new `run()` wrapper / C: per-callsite `AgentExecutionTracker` patches). **Rigby picked B** + follow-up CI lint rule (`180f4e9f-…`) to prevent future drift. Live-verified: 3 new `AgentExecution` rows landed via `_impl_market_intelligence_scan`, **Layer 4 cascade confirmed** (learning_orchestrator triggered on `20b939f4-…`), idempotency guard verified separately. Audit deliverable `65f1299f-…` flipped to `completed` via `content_tool action=content_complete` (NOT `deliverable_tool action=update` — per Session 1184 status-flip rule).
+**Mid-session pivot from sketch:** PR #2461 (the planned work) unblocked Rigby's Wakeup Week, which immediately surfaced 4 downstream bugs the telemetry made visible. Arc B (TheOdds) and Arc C (Findings B1/B2/B3) were all dispatched, scoped with Rigby, shipped, and merged in the same session — without the Layer 1 fix they would have stayed invisible.
 
-**Post-merge gotcha:** workers need restart (`pkill -9 -f celery; rm -f .celery*.pid; make celery`) because `tasks_financial.py` is celery-task-imported. Daphne does NOT need restart.
+**Post-merge gotcha:** workers MUST restart after each merge of celery-task-imported code (`tasks_agents.py`, `tasks_financial.py`, `deliverable_factory.py`). All 5 PRs touched such code; workers restarted last at 20:43 MDT post all-5-merged. Daphne untouched.
 
 ### FIRST THING Session 1207
 
@@ -221,7 +225,7 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Session 1205 Capability Audit Initiative
 
-`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **11 deliverables** so far (was 10 end-of-Session-1205; +1 from Session 1206 — `180f4e9f-…` lint-rule follow-up):
+`29154d73-06a5-4630-abb4-3412cbdca5c5` — Platform Capability Audit (Tiered Pass: Agents / Tools / Spiders / Learning). Child of Reality Map `0ecd1bc2-…`, workspace=DBZ, kind=investigation. **12 deliverables** so far (was 10 end-of-Session-1205; +1 from Session 1206 — `180f4e9f-…` lint-rule follow-up; +1 from Session 1206 Arc C — `96b6a72a-…` workspace_id hallucination P0 root-cause trace):
 
 | ID | Type | Title |
 |---|---|---|
@@ -251,9 +255,12 @@ Spine progression unblocked by roadmap §Phase B.2 (auto-research evidence suppl
 
 | Item | Priority | Where it's defined |
 |---|---|---|
-| **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1207 entry point — natural follow-up to PR #2461)** | Deliverable `180f4e9f-…` on Initiative `29154d73-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
-| **Layer 1 dashboard refresh** | **P1 (post Session 1206)** | After PR #2461 merges + workers restart + next `_impl_market_intelligence_scan` beat (every 2h), refresh `7d221aa4-…` to flip sports agents from UNTESTED → CONFIRMED WORKING. |
-| **Session 1206 24h watch (fires 2026-06-23 ~23:35 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md` §"24h watch checklist". Invariants: 3 sports agents land rows per beat, no double-writes, no telemetry WARN spam. |
+| **Workspace_id hallucination root-cause trace** | **P0 (Session 1207 carryover, Session 1206 Arc C unfinished)** | Deliverable `96b6a72a-…`. Mitigated by PR #2465 guardrail; root cause open. Suspected call chain: PA tool → tool_dispatcher → tasks_agents → agent_router → create_deliverable. Grep `pa_tool_schemas` + `tool_dispatcher` for `workspace_id` parameters where LLM might pick the value. Verification metric: B2 guardrail WARN volume should drop to zero in 24h post-fix. |
+| **CI lint rule: block `\.execute\(` outside `core/agents/`** | **P1 (Session 1207 entry point — natural follow-up to PR #2461)** | Deliverable `180f4e9f-…`. Allowlist: `core/agents/`, tests, `core/agent_execution_wrapper.py`, `ai_core/agents/sync_executor.py`. Prevents future direct-constructor bypasses of `BaseAgent.run()`. |
+| **Layer 1 dashboard refresh** | **P1 (post Session 1206)** | After workers restart + next `_impl_market_intelligence_scan` beat (every 2h), refresh `7d221aa4-…` to flip sports agents from UNTESTED → CONFIRMED WORKING. Layer 2/4 dashboards also need refresh — Wakeup Week dispatches have now generated real evidence. |
+| **Wakeup Week re-dispatch verification** | **P1 (immediate — Rigby in flight)** | Rigby re-dispatched 3 Day-1 agents post all-5-merged: ContentWriterAgent task `549c96b3-…`, MarketIntelligenceCoordinator `45877b0a-…`, GamePredictor `d953dba3-…`. Scoreboard update pending — should show non-empty `result_preview`, real deliverables, no BLOCKED false positives, no FK violations. |
+| **Session 1206 24h watch (fires 2026-06-23 ~23:35 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1206_LAYER1_TELEMETRY_BASEAGENT_RUN.md` §"24h watch checklist". Invariants: 3 sports agents land rows per beat, no double-writes, no telemetry WARN spam. Add: B2 guardrail WARN count (should be present if hallucinations continue; zero after root-cause fix). |
+| **TheOdds API key renewal** | **P2 (Chris-owned, billing-gated)** | Renew at the-odds-api.com, update `.env` `THE_ODDS_API_KEY`, restart workers. Spider's loud-failure pattern (PR #2462) makes the outage honest in the meantime. |
 | **Phase B.1 24h watch (fires 2026-06-23 14:48 UTC)** | **P1 (time-gated)** | Run checklist in `SESSION_1203_PHASE_B1_PRODUCER_REROUTE_CLOSE.md` §"24h watch checklist". Headline invariant: zero new deliverables with `workspace_id=1f0d467e-…` (SAW) created after 2026-06-22 19:48 UTC. |
 | **Spider freshness watch (Session 1205 add)** | **P1 (24h)** | Verify run-spider-network keeps firing every 30 min; SpiderData rows with last_emit < 1h should be 60+. If 0, beat is dead — see finding `a4928480-…` remediation. |
 | **Daily watch Day-3 (inference accuracy + default-only-projects)** | **P1 (daily, 2026-06-23)** | Append A/B/C/D + `report_initiative_kinds` to deliverable `9ba58690-…`. |
