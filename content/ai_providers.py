@@ -138,45 +138,22 @@ class OpenAIProvider(BaseAIProvider):
                 "stream": False
             }
             
-            # Handle GPT-5 models differently - they have different parameters
-            try:
-                if 'gpt-5-mini' in model.lower():
-                    # GPT-4o models use standard parameters
-                    completion_params["max_tokens"] = config.get('max_tokens', 4000)
-                    completion_params["temperature"] = config.get('temperature', 0.7)
-                    # Add other standard parameters if needed
-                    if config.get('top_p') is not None:
-                        completion_params["top_p"] = config.get('top_p')
-                    if config.get('frequency_penalty') is not None:
-                        completion_params["frequency_penalty"] = config.get('frequency_penalty')
-                    if config.get('presence_penalty') is not None:
-                        completion_params["presence_penalty"] = config.get('presence_penalty')
-                elif 'gpt-5' in model.lower():
-                    # GPT-5 models (for future use when available)
-                    # For now, treat them like GPT-4o
-                    completion_params["max_tokens"] = config.get('max_tokens', 4000)
-                    completion_params["temperature"] = config.get('temperature', 0.7)
-                else:
-                    # Other models use standard parameters
-                    completion_params["max_tokens"] = config.get('max_tokens', 2000)
-                    completion_params["temperature"] = config.get('temperature', 0.7)
-                    completion_params["top_p"] = config.get('top_p', 1.0)
-                    completion_params["frequency_penalty"] = config.get('frequency_penalty', 0.0)
-                    completion_params["presence_penalty"] = config.get('presence_penalty', 0.0)
-                
-                response = self.client.chat.completions.create(**completion_params)
-            except Exception as e:
-                # If max_completion_tokens fails, try without any token limit
-                if 'gpt-5' in model.lower() and 'max_completion_tokens' in str(e):
-                    logger.warning(f"Retrying GPT-5 without token limit due to: {e}")
-                    completion_params = {
-                        "model": model,
-                        "messages": messages,
-                        "stream": False
-                    }
-                    response = self.client.chat.completions.create(**completion_params)
-                else:
-                    raise
+            # Session 1215 Phase C+D: gpt-5.x reasoning models require
+            # `max_completion_tokens` (not `max_tokens`) and reject
+            # `temperature`/`top_p`/`frequency_penalty`/`presence_penalty`.
+            # Non-reasoning models keep the legacy kwarg shape.
+            if 'gpt-5' in model.lower():
+                completion_params["max_completion_tokens"] = config.get(
+                    'max_completion_tokens', config.get('max_tokens', 4000)
+                )
+            else:
+                completion_params["max_tokens"] = config.get('max_tokens', 2000)
+                completion_params["temperature"] = config.get('temperature', 0.7)
+                completion_params["top_p"] = config.get('top_p', 1.0)
+                completion_params["frequency_penalty"] = config.get('frequency_penalty', 0.0)
+                completion_params["presence_penalty"] = config.get('presence_penalty', 0.0)
+
+            response = self.client.chat.completions.create(**completion_params)
             
             generation_time = int((time.time() - start_time) * 1000)
             
@@ -241,27 +218,19 @@ class OpenAIProvider(BaseAIProvider):
             if not content or len(str(content).strip()) == 0:
                 logger.warning(f"Empty content after all processing for {model}")
 
-                # For GPT-4o models, provide helpful guidance
                 if 'gpt-5-mini' in model.lower():
-                    logger.error(f"GPT-4o failed to generate content - retrying with fallback")
-                    content = ""  # Don't show error message, let fallback handle it
+                    logger.error(f"GPT-5-mini failed to generate content - letting caller fallback handle")
+                    content = ""
                 else:
-                    # Try a simpler retry for other models
+                    # Try a simpler retry for non-gpt-5-mini models
                     try:
                         logger.info(f"Attempting simplified retry for {model}")
-                        # Use correct parameter for GPT-5
+                        retry_kwargs = {"model": model, "messages": messages}
                         if 'gpt-5' in model.lower():
-                            retry_response = self.client.chat.completions.create(
-                                model=model,
-                                messages=messages,
-                                max_completion_tokens=300
-                            )
+                            retry_kwargs["max_completion_tokens"] = 300
                         else:
-                            retry_response = self.client.chat.completions.create(
-                                model=model,
-                                messages=messages,
-                                max_completion_tokens=300
-                            )
+                            retry_kwargs["max_tokens"] = 300
+                        retry_response = self.client.chat.completions.create(**retry_kwargs)
                         content = retry_response.choices[0].message.content or ""
                         if content:
                             logger.info(f"Simplified retry successful for {model}")
