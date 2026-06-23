@@ -28,23 +28,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Staged rollout — Session 1098 PR #A2 ships in --warn-only mode.
-      # The repo currently has ~60 legacy direct-SDK call sites; they will
-      # migrate to the wrapper over subsequent PRs. Once the violation
-      # count is under ~10 (just the whitelist tail), drop --warn-only
-      # and the job starts failing on new direct-SDK code.
-      #
-      # To switch to enforce mode:
-      #   1. Remove `--warn-only` below
-      #   2. Shrink .ci/llm_whitelist.txt to just the wrapper / tests /
-      #      legitimate adapter boundaries
-      #   3. Merge
-      - name: Run direct-LLM-call checker (warn-only staged rollout)
+      # Session 1222 P5 (audit #3) — promoted from --warn-only to enforce.
+      # The "~60 legacy call sites" the original comment expected had
+      # already migrated down to 6 by the time of the flip. The 2 runtime
+      # sites (campaign_orchestrator_agent.py, curated_action_card_generator.py)
+      # were migrated to llm_call_span in the same PR; the 4 operator-only
+      # sites (3 management commands + scripts/one-off/rag_docs.py) were
+      # added to .ci/llm_whitelist.txt. The whitelist tail still tracks
+      # the ~50 legacy direct-SDK files that pre-date the wrapper —
+      # remediate per tier as they're touched, but they don't block CI.
+      - name: Run direct-LLM-call checker
         run: |
           python tools/check_direct_llm_calls.py \
             --root . \
-            --whitelist .ci/llm_whitelist.txt \
-            --warn-only
+            --whitelist .ci/llm_whitelist.txt
 
       - name: Summarize violations in the job summary
         if: always()
@@ -52,7 +49,7 @@ jobs:
           {
             echo "## Direct LLM SDK call check"
             echo ""
-            echo "Session 1098 PR #A2 — running in **warn-only** mode during staged rollout."
+            echo "Session 1098 PR #A2 + Session 1222 P5 — running in **enforce** mode."
             echo ""
             echo "Every direct provider-SDK call should migrate to"
             echo "\`core/services/llm_call_wrapper.py\` for telemetry + cancellation."

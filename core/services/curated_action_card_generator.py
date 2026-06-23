@@ -240,16 +240,26 @@ def _llm_generate_card(cluster: SignalCluster) -> tuple[dict, str]:
     'fallback_placeholder' so the caller can persist regardless.
     """
     try:
+        # Session 1222 P5 (audit #3) — migrated to llm_call_wrapper so the
+        # call lands an LLMCallEvent telemetry row. Pairs with the
+        # check-llm-sdk.yml enforce flip in the same PR.
         from core.services.openai_client_factory import get_openai_client
+        from core.services.llm_call_wrapper import llm_call_span
         client = get_openai_client()
-        response = client.chat.completions.create(
+        with llm_call_span(
+            provider='openai',
             model=GENERATOR_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": _build_user_prompt(cluster)},
-            ],
-            max_completion_tokens=MAX_OUTPUT_TOKENS,
-        )
+            agent_name='curated_action_card_generator',
+        ) as _span:
+            response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                model=GENERATOR_MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": _build_user_prompt(cluster)},
+                ],
+                max_completion_tokens=MAX_OUTPUT_TOKENS,
+            )
+            _span.attach_response(response)
         text = response.choices[0].message.content or ""
     except Exception as e:
         logger.warning(
