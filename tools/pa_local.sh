@@ -17,16 +17,13 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1206 Layer 1
-# Telemetry Fix arc (pa-234a75abfe374695, spawned by Rigby via
-# session_tool create_fresh at Session 1206 open). Addresses audit
-# finding 65f1299f-… (direct-constructor agent paths bypass
-# AgentExecution row writes → Layer 1 dashboard flat). Approach B:
-# add BaseAgent.run() concrete wrapper around abstract execute(),
-# migrate the 7 known bypass callsites (tasks_financial.py x3 +
-# sports_betting_coordinator.py + views_odds_sports.py +
-# discord_bot.py + tasks_misc.py).
-# Prior pins retired: pa-76aa5b61d0764d11 (Session 1205 Evidence-card
+# the --conversation flag below. Current value: Session 1207 Quick
+# Fixes / Hybrid A+B pivot (pa-b2a99ff5b0ee47a6, spawned by Rigby via
+# session_tool create_fresh at Session 1207 open). Carries forward
+# Session 1206 close summary (PRs #2461-#2465 + #2466 docs) + Wakeup
+# Week re-dispatch evidence + workspace_id hallucination P0 trace.
+# Prior pins retired: pa-234a75abfe374695 (Session 1206 — 5 PRs +
+# docs; closed clean), pa-76aa5b61d0764d11 (Session 1205 Evidence-card
 # pipeline; PR #2456 closed the cardifier asymmetry),
 # pa-1871b37227054254 (Session 1204 Phase B.2),
 # pa-d2d0f4c2b6284899 (Session 1203 Phase B.1), pa-123b7d48f01043eb
@@ -44,4 +41,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-234a75abfe374695
+python tools/pa_chat.py "$@" --tools --conversation pa-b2a99ff5b0ee47a6

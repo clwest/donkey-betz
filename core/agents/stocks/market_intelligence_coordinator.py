@@ -279,23 +279,87 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                 execution_time_ms=execution_time
             )
 
-            # === Session 462: Priority 5 - Learning Infrastructure ===
-            # Record outcome for XP and pattern learning
-            self._record_learning_outcome(
-                result=result,
-                task=task,
-                context=context,
-                spider_data_used=True,  # Uses Yahoo Finance spider for stock data
-                scifi_context_used=False
-            )
+            # Session 1207: Persist the brief as a Deliverable on every
+            # successful run, per Rigby's acceptance criteria
+            # (pa-b2a99ff5b0ee47a6). Gated on result.success so failures
+            # don't create empty/misleading deliverables. Body =
+            # provenance markdown + executive_summary + structured
+            # sections. Workspace pinned to DBZ. Routes through
+            # self._save_to_deliverable → create_deliverable so
+            # PR #2465's workspace_id guardrail + PR #2464's tightened
+            # BLOCKED detector + dedup machinery all apply. Wrapped in
+            # try/except so deliverable persist failure never blocks
+            # the agent's return.
+            if result.success:
+                try:
+                    deliverable_body = self._format_brief_for_deliverable(
+                        brief=brief,
+                        provenance_markdown=provenance.to_markdown_block(),
+                    )
+                    deliverable_title = f"Market Intel Brief — {brief.get('date', datetime.now().strftime('%Y-%m-%d'))}"
+                    self._save_to_deliverable(
+                        title=deliverable_title,
+                        content=deliverable_body,
+                        deliverable_type='analysis',
+                        category='Market Intelligence',
+                        tags=['market-intelligence', 'daily-brief'],
+                        content_format='markdown',
+                        workspace_id='b4503364-2573-4401-9e28-61a739e0ce50',  # DBZ
+                        provenance=provenance.to_dict(),
+                        quality_score=0.85,
+                        confidence_score=0.8,
+                        metadata={
+                            'sensitivity': 'internal',
+                            'desk': 'market_intelligence',
+                            'date': brief.get('date'),
+                            'total_stocks_analyzed': brief.get('total_stocks_analyzed', 0),
+                            'total_prediction_markets': brief.get('total_prediction_markets', 0),
+                            'trigger_source': context.get('trigger_source') or 'scheduled',
+                        },
+                    )
+                except Exception as _dlv_exc:
+                    logger.warning(
+                        "MarketIntelligenceCoordinator: deliverable persist "
+                        "failed (non-blocking — agent result still returned): %s",
+                        _dlv_exc,
+                    )
 
-            # Create memory of successful execution
-            self._create_execution_memory(
-                result=result,
-                task=task,
-                memory_type="success",
-                importance=0.8  # High importance - daily brief with market insights
-            )
+            # === Session 462: Priority 5 - Learning Infrastructure ===
+            # Session 1207 (Rigby pa-b2a99ff5b0ee47a6): bookkeeping hooks
+            # are best-effort — they MUST NOT flip result.success or cause
+            # the outer except to rebuild a failed AgentResult after a
+            # successful brief was generated and persisted. Wrap each
+            # hook call individually so one hook's failure doesn't skip
+            # the others either.
+            try:
+                self._record_learning_outcome(
+                    result=result,
+                    task=task,
+                    context=context,
+                    spider_data_used=True,  # Uses Yahoo Finance spider for stock data
+                    scifi_context_used=False
+                )
+            except Exception as _learn_exc:
+                logger.warning(
+                    "MarketIntelligenceCoordinator: _record_learning_outcome "
+                    "hook failed (non-blocking — brief + deliverable already "
+                    "persisted): %s",
+                    _learn_exc,
+                )
+
+            try:
+                self._create_execution_memory(
+                    result=result,
+                    task=task,
+                    memory_type="success",
+                    importance=0.8  # High importance - daily brief with market insights
+                )
+            except Exception as _mem_exc:
+                logger.warning(
+                    "MarketIntelligenceCoordinator: _create_execution_memory "
+                    "hook failed (non-blocking): %s",
+                    _mem_exc,
+                )
 
             return result
 
@@ -311,22 +375,35 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             )
 
             # === Session 462: Priority 5 - Learning Infrastructure ===
-            # Record failed outcome for learning
-            self._record_learning_outcome(
-                result=result,
-                task=task,
-                context=context or {},
-                spider_data_used=True,
-                scifi_context_used=False
-            )
+            # Session 1207: same isolation as the success branch — best-
+            # effort bookkeeping must not cascade into another raise that
+            # propagates past the agent boundary.
+            try:
+                self._record_learning_outcome(
+                    result=result,
+                    task=task,
+                    context=context or {},
+                    spider_data_used=True,
+                    scifi_context_used=False
+                )
+            except Exception as _learn_exc:
+                logger.warning(
+                    "MarketIntelligenceCoordinator: failure-path "
+                    "_record_learning_outcome hook failed: %s", _learn_exc,
+                )
 
-            # Create memory of failure to learn from
-            self._create_execution_memory(
-                result=result,
-                task=task,
-                memory_type="failure",
-                importance=0.9  # Very high importance - learn from failures
-            )
+            try:
+                self._create_execution_memory(
+                    result=result,
+                    task=task,
+                    memory_type="failure",
+                    importance=0.9  # Very high importance - learn from failures
+                )
+            except Exception as _mem_exc:
+                logger.warning(
+                    "MarketIntelligenceCoordinator: failure-path "
+                    "_create_execution_memory hook failed: %s", _mem_exc,
+                )
 
             return result
 
@@ -1022,6 +1099,111 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
         except Exception as e:
             logger.error(f"❌ [SESSION 465] Spoken brief generation error: {e}")
             return None
+
+    def _format_brief_for_deliverable(
+        self,
+        brief: Dict[str, Any],
+        provenance_markdown: str = '',
+    ) -> str:
+        """
+        Session 1207: render the daily brief as a markdown body suitable
+        for persistence via _save_to_deliverable. Includes the provenance
+        block at the top, the executive summary, then structured sections
+        for each opportunity tier so the deliverable is readable on its
+        own without joining back to AgentExecution.output_data.
+
+        Per Rigby's acceptance criteria on pa-b2a99ff5b0ee47a6:
+        "Body: full report text + any provenance/source blocks."
+        """
+        date_str = brief.get('date', datetime.now().strftime('%Y-%m-%d'))
+        parts: List[str] = []
+
+        if provenance_markdown:
+            parts.append(provenance_markdown.rstrip())
+            parts.append('')
+
+        parts.append(f"# Market Intel Brief — {date_str}")
+        parts.append('')
+        parts.append(brief.get('executive_summary', '_No executive summary._').rstrip())
+        parts.append('')
+
+        def _section(title: str, items: List[Dict[str, Any]], empty_note: str) -> None:
+            parts.append(f"## {title}")
+            if not items:
+                parts.append(f"_{empty_note}_")
+                parts.append('')
+                return
+            for item in items:
+                ticker = item.get('ticker', 'UNKNOWN')
+                recommendation = item.get('recommendation', '')
+                confidence = item.get('confidence', '')
+                reasoning = item.get('reasoning', '')
+                line = f"- **{ticker}**"
+                if recommendation:
+                    line += f" — {recommendation}"
+                if confidence:
+                    line += f" ({confidence} confidence)"
+                if reasoning:
+                    line += f": {reasoning}"
+                parts.append(line)
+            parts.append('')
+
+        _section(
+            'High Conviction Opportunities',
+            brief.get('high_conviction', []),
+            'None today.',
+        )
+        _section(
+            'Debate Zone (high disagreement — most interesting)',
+            brief.get('debate_zone', []),
+            'None today.',
+        )
+        _section(
+            'Bullish Opportunities',
+            brief.get('bullish_opportunities', []),
+            'None today.',
+        )
+        _section(
+            'Bearish Warnings',
+            brief.get('bearish_warnings', []),
+            'None today.',
+        )
+        _section(
+            'Risk Alerts',
+            brief.get('risk_alerts', []),
+            'None today.',
+        )
+
+        # Prediction markets — Session 558 data
+        pm = brief.get('prediction_markets', {}) or {}
+        parts.append('## Prediction Market Signals (Kalshi)')
+        pm_total = pm.get('total_markets', 0)
+        if pm_total == 0:
+            parts.append('_No Kalshi data this cycle._')
+            parts.append('')
+        else:
+            parts.append(f"- Total markets analyzed: **{pm_total}**")
+            for insight in (pm.get('insights') or [])[:5]:
+                parts.append(f"- {insight}")
+            parts.append('')
+
+        # Changes from yesterday
+        changes = brief.get('changes_from_yesterday', {}) or {}
+        parts.append('## Changes From Yesterday')
+        changes_msg = changes.get('message') if isinstance(changes, dict) else None
+        parts.append(changes_msg or '_No prior brief to diff against._')
+        parts.append('')
+
+        # Footer metadata
+        parts.append('---')
+        parts.append(
+            f"Generated by MarketIntelligenceCoordinator — "
+            f"{brief.get('total_stocks_analyzed', 0)} stocks, "
+            f"{brief.get('total_prediction_markets', 0)} prediction markets, "
+            f"GPT success rate: {brief.get('gpt_success_rate', 0.0):.1f}%."
+        )
+
+        return '\n'.join(parts)
 
     def _prepare_delivery(self, brief: Dict, context: Dict) -> Dict[str, Any]:
         """Prepare brief for multi-channel delivery and actually send it."""
