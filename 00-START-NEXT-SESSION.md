@@ -104,7 +104,74 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1223 — CURRENT ENTRY POINT
 
-### SESSION 1222 CLOSED — Carryover queue clear: B2 + 9-class trim + reasoning-contract enforce, 4 PRs
+### SESSION 1222 CLOSED (v2 — audit revisit arc) — C1 + #3 + B2 from Rigby's top-3 lean shipped same-session
+
+Full handoff: [`SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md`](docs/handoffs/SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md). Same session as the v1 carryover-queue close — Chris asked us to revisit the original Session 1217 audit deliverable (`bec077ed-…`, 15 findings) after the queue cleared. Rigby's gap analysis + my PR-ledger cross-check produced 8 still-open findings. Chris agree-all'd Rigby's top-3 leverage picks.
+
+| PR | What | Audit finding |
+|---|---|---|
+| **#2527** | Opportunity pipeline scope clarification (label-only, 3 sites) | C1 |
+| **#2528** | `scope='mine'|'all'` param on `opportunity_manager_tool` + owner_breakdown when scope=all | C1 |
+| **#2529** | `check-llm-sdk.yml` flipped to enforce (migrated 2 runtime sites, whitelisted 4 operator-only) | #3 |
+| **#2530** | Migration 0364 — annotate 4 keep-disabled beat tasks + re-enable `generate-operator-edge-newsletter` w/ `dry_run=True` | B2 |
+| **(this PR)** | Session 1222 v2 close handoff + this start-here rewrite | — |
+
+**Both CI checks now in enforce mode:** `check-reasoning-contract.yml` (Session 1222 P3 / PR #2525) + `check-llm-sdk.yml` (this arc / PR #2529).
+
+**Headline finding from C1:** the "2,631 vs 47 inconsistency" was a labeling problem, not a data problem. 2,584 Opportunity rows owned by the `system` user (spider-ingested freelance listings, all <30d) + 47 owned by `chris` (curated subset). Both queries correct; tool surfaces now make scope visible.
+
+**Headline finding from B2:** 5 disabled beat tasks classified per Chris's picks. 4 keep-disabled with operator-readable reason. `generate-operator-edge-newsletter` re-enabled with `dry_run=True` for 2-Friday burn-in then flip to live.
+
+### FIRST THING Session 1223 — pick from the deprioritized audit tail or the watchdog observation window
+
+Two threads worth picking up. Both are quick wins; Rigby's lean is on #6+#7 (S+S) as the natural next quick win after the v2 arc.
+
+#### Priority 1 — Production observation window for Session 1221 Tier 1 + Tier 2 (carryover from v1 close)
+
+Tier 1 (PR #2519) added a total-request bound on `BaseAgent._call_openai`; Tier 2 (PR #2520) added the `LLMCallEvent` cleanup watchdog. Both merged earlier in Session 1222. Real signal needs 24-48h+ of production traffic — by Session 1223 there should be enough data.
+
+The 5 specific checks documented in the v1 close:
+1. **Zombie thread rate** — `ops_tool action=zombie_thread_rate hours=48` should still be mostly empty
+2. **`LLMCallEvent` stuck STARTED population** — `LLMCallEvent.objects.filter(status='STARTED', started_at__lt=now-10min).count()` should be zero
+3. **`cleanup-stuck-llm-calls` beat task firing** — `CeleryTaskEvent` should show runs every 10 min, all SUCCESS
+4. **Tier 1 timeout firing rate** — grep PA worker logs for `[base_agent._call_openai] OpenAI total-request timeout`
+5. **`ops_tool.failure_signatures window=24h`** — top signatures should not be dominated by `error_type='timeout'` with `watchdog_cleanup`
+
+If any of the 5 are red, queue a Session 1223 fix PR. If all green, the watchdog/timeout story is fully closed.
+
+#### Priority 2 — #6 + #7 docs drift (S+S quick win, Rigby's lean for "small but real")
+
+The Session 1217 audit findings:
+- **#6** — `verify_doc_claims --only-drift` shows SERVICES counts drift
+- **#7** — Documented 182 management commands vs actual 194 (+12 undocumented)
+
+Both are quick reconciliations:
+1. Run `python manage.py verify_doc_claims --only-drift` to see the current drift state.
+2. For #6: regenerate the SERVICES count and update the relevant doc.
+3. For #7: regenerate the management-command audit (`python manage.py build_management_command_audit` or similar) and either document or delete the 12 undocumented commands.
+
+Both fit as a single PR or two small PRs. ~S+S total effort.
+
+#### Priority 3 — #4 critical hub markers / gates (M)
+
+Audit #4 — reliability work. Flag critical-path files so PRs touching them require extra review. Concrete shape: extend the existing GitHub PR template + add a CODEOWNERS or path-pattern gate. Not blocking but raises the safety bar.
+
+#### Priority 4 — #8 seed baseline drift (M)
+
+`load_all_agents_advisors.py` expectation mismatch — 155 expected agents vs 89 Agent table + 83 AGENT_MAP routable. Re-run seed in a controlled env; update the seed script or drift checker.
+
+#### Priority 5 — #9/#10 narrative + Atlas staleness (M)
+
+`docs/PLATFORM_WHAT_IT_IS.md` frontmatter last reviewed Session 1141 (now 81 sessions behind). `docs/24_7_GLOBAL_AI_APP_ATLAS.md` Phase 1 fleet-integration claims wider than runtime. Refresh + reconcile.
+
+**Active conversation:** `pa-58737666f25741dc` — carried through Sessions 1217-1222.
+
+**Not in audit / deferred / NOT TOUCH:**
+- Tier 3 from P2 deliverable (factory-level wrap) — defer per the deliverable
+- `scan-spider-opportunities` resume (B2 Mode B chose curate-now)
+- Delete the 9 dormant agent class files (per Rigby's keep-for-future recommendation)
+
+### SESSION 1222 CLOSED (v1 — carryover-clear arc) — B2 + 9-class trim + reasoning-contract enforce, 4 PRs
 
 Full handoff: [`SESSION_1222_CARRYOVER_QUEUE_CLEAR.md`](docs/handoffs/SESSION_1222_CARRYOVER_QUEUE_CLEAR.md). All 4 deferred items from Sessions 1216-1218 closed.
 
