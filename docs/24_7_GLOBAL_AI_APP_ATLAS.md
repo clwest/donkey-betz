@@ -1,7 +1,7 @@
 <!-- DOC-POINTER-V1 (Session 1146) -->
 > **Canonical strategy anchor — refresh-in-place; do not move.**
 > Listed in `CLAUDE.md` + `00-START-NEXT-SESSION.md` as the platform's strategy anchor. Counts in this doc are narrative (Atlas-level: phase definitions, pricing bands, graduation rules); for runtime platform counts see [`docs/PLATFORM_INVENTORY.md`](PLATFORM_INVENTORY.md) (per `DOC_LIFECYCLE.md` §2c sole-counts-source rule).
-> **Last reviewed for drift labeling:** Session 1146 (2026-05-25)
+> **Last reviewed for drift labeling:** Session 1223 (2026-06-23) — narrowed Tier 5 + TL;DR #6 fleet-integration language per audit #10 (deliverable `bec077ed-…`). Prior review: Session 1146 (2026-05-25).
 > **Companion canon:** [`docs/canon/INDEX.md`](canon/INDEX.md) (canon registry) + [`docs/INDEX.md`](INDEX.md) (doc corpus index) + [`docs/PLATFORM_WHAT_IT_IS.md`](PLATFORM_WHAT_IT_IS.md) (narrative anchor).
 
 # 24/7 Global AI — App Atlas (v1)
@@ -48,7 +48,7 @@
 3. **Phase 1 flagship: Rigby = "24/7 Global AI", shipped standalone.** Text only, no avatar, no vertical add-ons. The personal AI assistant with 101 tools, 80 spiders feeding it, 83 agents it can dispatch. Ship one polished product before fragmenting attention across verticals.
 4. **Hard prerequisite:** the 4 ✗ rows in `COST_SURVIVAL_AUDIT.md` § A get fixed *before* any external SaaS launch. Without per-workspace cost attribution, multi-tenant pricing is uninsurable.
 5. **Two-thirds of the existing monolith is *not* customer-facing.** Spider network, body systems, signal aggregation, advisor council, initiative pipeline, self-awareness — these are *infrastructure that powers the apps*, not apps themselves. The Atlas separates the two cleanly.
-6. **8 standalone sibling apps already exist outside this repo.** They're part of the answer, not the problem. Some plug into 24/7 Global AI; some stay independent.
+6. **8 standalone sibling apps already exist outside this repo.** They're an asset — cross-sell surface + future integration targets. **As of Session 1223 (2026-06-23), the only live cross-app integration in runtime is the Signal Studio F1 paid-interest demand-gate** (Session 1138); everything else is aspirational pending connectivity (`fleet_health`: 7/7 sibling apps `UNREACHABLE`; `paid_interest_status(signal-studio) = not_yet` with 0 signals). See Tier 5 below for the current-state vs roadmap split.
 7. **Character OS merge is parked.** The architectural design (`MERGE_PROPOSAL_CHARACTER_OS_NATIVE.md`) stays in tree as a v2 unlock for when Rigby has revenue and customers ask for a face. Slice 3 (general-purpose video finishing layers) is the only piece that could ship independently — and only if Phase 1 has bandwidth left over (it won't).
 8. **Verticals (Markets, Content, Studio, Legal) defer to Phase 3+.** They exist in the platform today and stay reachable inside Rigby's tool surface for power users — they just aren't packaged as paid products until after Rigby converts paying customers.
 
@@ -301,6 +301,10 @@ These power the apps above. Don't sell them — sell what they enable.
 **Decision:** internal stays internal. Maybe expose Boardroom as a power-user feature inside Rigby ("ask the council") — but not as a standalone app.
 
 ### Tier 5 — Standalone Sibling Apps (external repos)
+
+Sibling apps that already exist outside this repo and can become **distribution + cross-sell** surfaces for Atlas. The **"Plug into 24/7 Global AI?"** column below is **roadmap intent**, not a statement that integration is currently live.
+
+**Current runtime boundary (as of Session 1223, 2026-06-23):** the only shipped cross-app linkage is the **Signal Studio F1 paid-interest demand-gate** (Session 1138, `FleetPaidInterest` model + HMAC POST + `paid_interest_status` PA tool). The broader fleet-connectivity layer (`fleet_health`, `signal_studio_judge_stats`) has handlers wired in u-d-b but the sibling apps aren't actively running — `fleet_health` reports **7/7 sibling apps `UNREACHABLE`** from this service (connection refused on localhost:8002-8008), and `paid_interest_status(signal-studio)` returns `trigger_state=not_yet` with **0 signals**. Per Session 1217 audit #10 + Session 1223 close: do not read this section as "integration is live and humming" — read it as "the substrate exists; lighting it up is a future build."
 
 Already exist at `/Users/donkeyking/development/{name}`:
 
