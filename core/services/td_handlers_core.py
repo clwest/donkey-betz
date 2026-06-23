@@ -988,32 +988,13 @@ RESEARCH DATA:
                 'message': f'Video generation dispatched (task {celery_task.id}). Use job_status to check progress.',
             }
 
-        if action == 'generate_talking_video':
-            # Dispatch to Celery async — pipeline is long-running (TTS + video + lip sync)
-            from core.tasks import execute_agent_task
-            raw_script = payload.get('script') or payload.get('prompt', '')
-            task_text = f'Generate talking character video: {raw_script}'
-            context = {
-                'image_url': payload.get('image_url', ''),
-                'script': raw_script,
-                'voice': payload.get('voice', 'Rachel'),
-                'duration': payload.get('duration', 10),
-                'lipsync_model': payload.get('lipsync_model', 'auto'),
-                'mode': payload.get('mode', 'multi_clip'),
-                'sync_mode': payload.get('sync_mode', 'cut_off'),
-                'color_grade': payload.get('color_grade'),
-            }
-            if user_id:
-                context['user_id'] = str(user_id)
-            celery_task = execute_agent_task.apply_async(
-                args=['TalkingCharacterAgent', task_text, context], queue='long_running',
-            )
-            return {
-                'task_id': str(celery_task.id),
-                'mode': 'async',
-                'agent': 'TalkingCharacterAgent',
-                'message': f'Talking character video dispatched (task {celery_task.id}). Use job_status to check progress.',
-            }
+        # Session 1222 P2 — removed 'generate_talking_video' action
+        # (dispatched TalkingCharacterAgent which had zero AgentExecution rows
+        # all-time). The 'create_talking_video' action below remains — it uses
+        # the separate create_talking_video_task pipeline and is the canonical
+        # entry point for talking-head video generation. Agent class file
+        # remains in core/agents/talking_character_agent.py for future
+        # re-enable.
 
         if action == 'create_talking_video':
             # Pipeline: generate character image → talking video in one task
