@@ -102,7 +102,51 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1215 — CURRENT ENTRY POINT
+## SESSION 1216 — CURRENT ENTRY POINT
+
+### SESSION 1215 CLOSED — OpenAI caller alignment Phase C+D complete: 3 PRs merged, double round-trip bug fixed, 3 endpoints unbroken, catalog at 16.1KB
+
+Full handoff: [`SESSION_1215_OPENAI_CALLER_ALIGNMENT_PHASE_CD.md`](docs/handoffs/SESSION_1215_OPENAI_CALLER_ALIGNMENT_PHASE_CD.md). **3 PRs merged.** Phase C+D active scope closed in single arc (same day as Session 1214 close — Chris pushed straight into Phase C from 1214 closeout).
+
+| PR | Commit | What |
+|---|---|---|
+| **#2495** | `0ec005ca` | Phase C+D: `content/ai_providers.py` `OpenAIProvider.generate_content` — collapsed broken gpt-5-mini + gpt-5 branches into single check, gpt-5.x path passes only `max_completion_tokens`, removed exception-driven retry-with-different-params. **Eliminates 1 wasted API round-trip per gpt-5.x call** on the primary content path. -54/+23 LoC. |
+| **#2496** | `143cf89d` | Phase C+D: `core/views_ai_learning_api.py` — 3 Django view handlers (baseline_knowledge, learning_insights, personalized_synthesis) fixed. All were silently 500ing on gpt-5-mini (OPENAI_CONFIG default) when SDK rejected `temperature=` + `max_tokens=`. |
+| **#2497** | `526cc025` | Phase D: `agents/executors/base_executor.py` `BaseExecutor.call_openai_api` — conditional temperature strip. Already Phase C compliant (max_completion_tokens correct); now only forwards `temperature=` when model is non-gpt-5.x. Preserves sampling control for non-reasoning callers. |
+
+**Major scoping correction this session:** raw `\bmax_tokens\s*=` grep returns 158 matches across 77 files, **but** `LLMRequest.max_tokens` in `core/services/llm_provider_registry.py:55` is correctly abstracted — `_call_responses_api:237` maps to `max_output_tokens` for gpt-5.x, `_call_chat_api:296` passes through for non-reasoning. Most of those 158 matches are NOT Phase C/D targets. After cross-referencing with direct `chat.completions.create(... max_tokens=...)` and excluding archive/tests/scripts, **6 active files** remained. Per-file audit found only **3 actually broken** — the other 3 were already correct (Sessions 56, 876 prior fixes) or conditional_ok_default (ragtest.py LLM_MODEL env).
+
+**Catalog deliverable `bb775acb-…` ("OpenAI Call Site Catalog — Session 1214"):** Pinned, Platform Capability Audit category. Grew from 10.9KB → 16.1KB this session. Added: Phase C scope refinement note, 3 PR entries (#8/9/10), 1 provenance entry (#11) bundling the 3 already-aligned files + ragtest.py conditional case.
+
+**Spec deliverable `2b9aa447-…` status:** Phase A+B+C+D complete. Phase E remains. Still `accepted` for Session 1216+.
+
+### FIRST THING Session 1216 — Phase E: CI lint + runtime guard
+
+**P1 lead:** Final phase of spec deliverable `2b9aa447-c0c9-4ff3-8483-f92257eb0fcb`. Phase A-D done; Phase E is opt-in CI infrastructure + runtime guard.
+
+**Rigby's drafted AC (verbatim in `SESSION_1215_OPENAI_CALLER_ALIGNMENT_PHASE_CD.md` §"Phase E queued"):**
+
+- **(a) Env var `OPENAI_REASONING_GUARD={warn,strip,error}`** — warn (default, log only), strip (remove forbidden kwargs + log), error (raise before SDK call). Empty/missing → warn.
+- **(b) Forbidden params for reasoning models:** `max_tokens`, `temperature`, `top_p`, `frequency_penalty`, `presence_penalty`. Allowed: `max_completion_tokens`, `reasoning_effort`, `verbosity`, etc.
+- **(c) Model gating:** model string contains substring `"gpt-5"`. o1/o3 explicitly out of Phase E scope.
+- **(d) CI lint:** sibling to `tools/check_direct_llm_calls.py`. Exclusions: LLMRequest abstraction, non-OpenAI providers, tests/scripts/archive.
+- **(e) Shipped when:** runtime guard centralized in `openai_client_factory.py` (or shared helper), warn/strip/error modes all behave correctly on synthetic violations, CI lint passes on main + fails on intentionally-introduced violations, no behavior change for non-gpt-5 models.
+
+**Lean for kickoff:**
+1. Implement runtime guard in `core/services/openai_client_factory.py` (or new sibling helper) — wrap `client.chat.completions.create` invocations with kwarg inspection.
+2. Default `OPENAI_REASONING_GUARD=warn` — burn in 24h, review log volume.
+3. Ship CI lint as separate PR — should pass cleanly on main given Phase A-D close.
+4. Escalate to `strip` once warn-volume is 0.
+5. Optional: `error` mode after a week of `strip` clean.
+
+**Active conversation:** `pa-e37fe30dc7b941a6` continues. Phase E may benefit from a fresh thread to keep system-prompt context lean — call.
+
+**Carryover follow-ups (defer to Session 1217+ unless quick win):**
+- **`OpenAIProvider.generate()` brokenness** (Session 1214 finding, P2) — `agent_llm_integration.py:43-108` references undefined `messages` at L90. Unreachable in prod; delete vs fix.
+- **`content/ai_providers.py:114` bare-with-kwargs `openai.OpenAI(...)`** — has explicit timeout (not 600s footgun) but doesn't use factory. Phase B follow-on.
+- **`agent_llm_integration.py` `AsyncLLMAdapter.chat()` indirect dispatch path** (Session 1214 finding) — actual production LLM call surface; investigate Phase E enforcement coverage.
+- **Stale-thread dispatcher** (`777d9cd8-…`, P2) — ~$3.60/day savings.
+- **System prompt + tool schema size reduction** (P2) — non-smoke conversational turns still 35-68K tokens.
 
 ### SESSION 1214 CLOSED — OpenAI caller alignment Phase A+B complete: 22-of-21 sites cleared, async factory shipped, catalog deliverable live (8 PRs merged)
 
