@@ -10,7 +10,6 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import anthropic
 from abc import ABC, abstractmethod
-from ai_core.llm_adapter_async import AsyncLLMAdapter
 from core.services.openai_client_factory import get_async_openai_client
 
 logger = logging.getLogger(__name__)
@@ -48,66 +47,27 @@ class OpenAIProvider(LLMProvider):
                       max_output_tokens: int = 1000,
                       previous_response_id: Optional[str] = None,
                       **kwargs) -> Dict[str, Any]:
-        """Generate response using OpenAI Responses API
+        """Deprecated stub — kept to satisfy the LLMProvider ABC contract.
 
-        Args:
-            prompt: Input text for the model
-            model: Model to use (gpt-5, gpt-5-mini, gpt-5-nano)
-            reasoning_effort: Reasoning level (minimal, low, medium, high)
-            verbosity: Output verbosity (low, medium, high)
-            max_output_tokens: Maximum output tokens (not including reasoning)
-            previous_response_id: ID from previous response for chain of thought
+        The original body referenced an undefined `messages` variable and was
+        therefore unreachable in any path that actually invoked it (would
+        raise NameError). Live OpenAI dispatch goes through
+        ``core/services/openai_client_factory.py`` + ``AsyncLLMAdapter`` —
+        not through this method. Raises NotImplementedError loudly so any
+        future caller that lands here gets a clear signal instead of a
+        silent NameError.
 
-        Returns:
-            Dict containing content, response_id, and usage stats
+        See Session 1217 Item 1 Bug B (audit deliverable
+        ``bec077ed-d89e-4c7c-935e-f06eefad7bec``).
         """
-        if not self.client:
-            return {
-                'content': "OpenAI API key not configured",
-                'response_id': None,
-                'usage': None,
-                'error': True
-            }
-
-        try:
-            # Use Responses API for GPT-5 models
-            # Note: GPT-5 uses max_completion_tokens, not max_tokens
-            # GPT-5 reasoning models don't support temperature parameter
-            model = getattr(self, 'model_name', None) or getattr(self, 'model', None) or 'qwen2.5:14b-instruct'
-            is_gpt5 = 'gpt-5' in model.lower() if model else False
-
-            kwargs = {
-                'model': model,
-                'tools': getattr(self, 'tools_schema', None),
-            }
-
-            # GPT-5 uses max_completion_tokens and doesn't support temperature
-            # GPT-5 reasoning models need higher token limits for thinking
-            if is_gpt5:
-                kwargs['max_completion_tokens'] = getattr(self, 'max_tokens', 6000)  # Higher for reasoning
-            else:
-                kwargs['max_tokens'] = getattr(self, 'max_tokens', 800)
-                kwargs['temperature'] = getattr(self, 'temperature', 0.2)
-
-            response = await AsyncLLMAdapter().chat(messages, **kwargs)
-            return {
-                'content': response.output_text,
-                'response_id': response.id,
-                'usage': {
-                    'input_tokens': response.usage.input_tokens,
-                    'output_tokens': response.usage.output_tokens,
-                    'reasoning_tokens': getattr(response.usage, 'reasoning_tokens', 0)
-                },
-                'error': False
-            }
-        except Exception as e:
-            logger.error(f"OpenAI generation error: {e}")
-            return {
-                'content': f"Error generating response: {e}",
-                'response_id': None,
-                'usage': None,
-                'error': True
-            }
+        logger.warning(
+            "OpenAIProvider.generate() is deprecated and unreachable; "
+            "use AsyncLLMAdapter / openai_client_factory instead."
+        )
+        raise NotImplementedError(
+            "OpenAIProvider.generate is deprecated/unreachable; "
+            "use core.services.openai_client_factory + AsyncLLMAdapter.chat."
+        )
 
     def get_cost(self, tokens_in: int, tokens_out: int, reasoning_tokens: int = 0, model: str = "gpt-5-mini") -> float:
         """Calculate cost for OpenAI usage including reasoning tokens
