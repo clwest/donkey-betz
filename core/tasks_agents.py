@@ -2425,12 +2425,18 @@ self,
         except _FuturesTimeout:
             _elapsed = time.time() - execution_start
             logger.error(
-                f"[execute_agent_task] WALL-CLOCK TIMEOUT: {agent_name} exceeded "
+                f"[execute_agent_task] AGENT_WALL_CLOCK TIMEOUT: {agent_name} exceeded "
                 f"{_wall_timeout}s limit — killing"
             )
+            # Session 1219 Phase 2: renamed source from 'wall_clock' to
+            # 'agent_wall_clock' so failure_signatures can distinguish this
+            # path (per-agent timeout in this Celery task) from the
+            # router-path 'router_wall_clock' and the watchdog
+            # 'watchdog_cleanup'. The three sources together cover the full
+            # space of timeout-driven failure attribution.
             _record_timeout_signature(
                 agent_name=agent_name,
-                timeout_source='wall_clock',
+                timeout_source='agent_wall_clock',
                 elapsed_seconds=_elapsed,
                 execution_id=execution_record.id if execution_record else None,
                 task_name='core.tasks.execute_agent_task',
@@ -2446,6 +2452,43 @@ self,
                 agent_name=agent_name,
                 execution_time_ms=int(_elapsed * 1000),
             )
+
+            # Session 1219 Phase 2: explicit early save so the failed status
+            # lands BEFORE the downstream enrichment block runs. The
+            # enrichment block (line ~2450 onward) can raise on
+            # URC envelope construction, output_data JSON serialization, or
+            # circuit-breaker release — each historically left the row in
+            # 'in_progress' so the cleanup watchdog had to catch it 30+ min
+            # later. With this early save, even if enrichment crashes, the
+            # row is already in 'failed' state with a clear error_message
+            # naming the wall-clock-timeout as the cause. The downstream
+            # save() at line ~2569 will re-save with full enrichment fields
+            # — a small redundant UPDATE is acceptable insurance.
+            if execution_record:
+                try:
+                    execution_record.status = 'failed'
+                    execution_record.error_message = (
+                        f'{agent_name} exceeded {_wall_timeout}s wall-clock '
+                        f'timeout (agent_wall_clock)'
+                    )[:2000]
+                    execution_record.completed_at = timezone.now()
+                    execution_record.save(update_fields=[
+                        'status', 'error_message', 'completed_at',
+                    ])
+                    logger.warning(
+                        "[execute_agent_task] early-saved failed status for "
+                        "agent=%s execution_id=%s after agent_wall_clock timeout",
+                        agent_name, execution_record.id,
+                    )
+                except Exception as _early_save_exc:
+                    logger.exception(
+                        "[execute_agent_task] early-save after agent_wall_clock "
+                        "timeout failed for agent=%s execution_id=%s: %s "
+                        "(downstream enrichment + save will still attempt)",
+                        agent_name,
+                        execution_record.id if execution_record else None,
+                        _early_save_exc,
+                    )
 
         execution_time_ms = int((time.time() - execution_start) * 1000)
 
