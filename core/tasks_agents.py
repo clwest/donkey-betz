@@ -2569,8 +2569,22 @@ self,
             _raw_output['agent_name'] = agent_name
             _raw_output['run_status'] = _urc_status
             _raw_output['latency_ms'] = execution_time_ms
+            # error_signature carries one of: (a) a normalized runner error
+            # string (first line, UUIDs/long-hex masked, ≤80 chars) when
+            # run_status is 'error'/'timeout', or (b) the synthetic
+            # 'RECEIPT_CONTRACT_VIOLATION: <predicate>' marker when
+            # run_status is 'contract_violation'. Exception-class capture
+            # is deferred to Phase B per Q4 lock — do NOT try to infer
+            # exception classes at writeback time; the class is lost by
+            # the time we get here.
             _raw_output['error_signature'] = _urc_normalize_error_signature(_urc_err_sig_input)
             _raw_output['error_message'] = _urc_err_msg
+            # artifacts is intentionally minimal in v0 — we only mirror
+            # explicit deliverable_id values that PR #2469 already lifts to
+            # output_data top-level. Do NOT add heuristic detection for
+            # other artifact-like IDs (image_id, brief_id, etc.) until each
+            # is added by spec — false positives are worse than false
+            # negatives for a contract-shaped field.
             _urc_artifacts = []
             if _result_data.get('deliverable_id'):
                 _urc_artifacts.append({
@@ -2578,6 +2592,10 @@ self,
                     'id': _result_data['deliverable_id'],
                 })
             _raw_output['artifacts'] = _urc_artifacts
+            # started_at is optional per §3 spec — only emitted when the
+            # agent's path called execution_record.start_execution() (which
+            # sets the field to timezone.now()). Many agents never call it;
+            # absence of the key is expected behavior, not a bug.
             if execution_record and getattr(execution_record, 'started_at', None):
                 _raw_output['started_at'] = execution_record.started_at.isoformat()
             _raw_output['completed_at'] = timezone.now().isoformat()
