@@ -1588,6 +1588,41 @@ class AgentRouter:
                         agent_name=agent_name,
                         execution_time_ms=int(_router_elapsed * 1000),
                     )
+                    # Session 1219 Phase 2: explicit early save so the
+                    # failed status lands BEFORE the downstream
+                    # `_complete_execution` enrichment runs. Mirror of the
+                    # tasks_agents.py:2425 pattern — if downstream
+                    # output_data enrichment raises (URC envelope, JSON
+                    # serialization, etc.), the row is still in a usable
+                    # 'failed' state with a clear error_message naming
+                    # the router-side wall-clock-timeout as the cause.
+                    if execution_record:
+                        try:
+                            from django.utils import timezone as _tz
+                            execution_record.status = 'failed'
+                            execution_record.error_message = (
+                                f'{agent_name} exceeded {_router_wall_timeout}s '
+                                f'router wall-clock timeout (router_wall_clock)'
+                            )[:2000]
+                            execution_record.completed_at = _tz.now()
+                            execution_record.save(update_fields=[
+                                'status', 'error_message', 'completed_at',
+                            ])
+                            logger.warning(
+                                "[router] early-saved failed status for "
+                                "agent=%s execution_id=%s after "
+                                "router_wall_clock timeout",
+                                agent_name, execution_record.id,
+                            )
+                        except Exception as _early_save_exc:
+                            logger.exception(
+                                "[router] early-save after router_wall_clock "
+                                "timeout failed for agent=%s execution_id=%s: %s "
+                                "(downstream _complete_execution will still attempt)",
+                                agent_name,
+                                getattr(execution_record, 'id', None),
+                                _early_save_exc,
+                            )
                 finally:
                     # shutdown(wait=False) so we don't block on a hung
                     # worker thread — same rationale as tasks_agents.py
