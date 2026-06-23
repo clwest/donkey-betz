@@ -102,7 +102,89 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1220 — CURRENT ENTRY POINT
+## SESSION 1221 — CURRENT ENTRY POINT
+
+### SESSION 1220 CLOSED — Zombie monitor (P1) + two detector fixes + OpenAI httpx investigation (P2)
+
+Full handoff: [`SESSION_1220_ZOMBIE_MONITOR_PLUS_HTTPX_INVESTIGATION.md`](docs/handoffs/SESSION_1220_ZOMBIE_MONITOR_PLUS_HTTPX_INVESTIGATION.md). 3 code PRs + 1 docs close + 1 investigation deliverable.
+
+| PR | What |
+|---|---|
+| **#2515** | P1 — Zombie-thread monitor. New `core/services/zombie_thread_monitor.py` + `ops_tool.zombie_thread_rate` action. Wired into both `_FuturesTimeout` catch sites. 11 smoke tests. |
+| **#2516** | Redactor fix — phone regex was matching bare 10-digit YYYYMMDDHH timestamps. Surfaced by P1 live test. 4 new regression tests. |
+| **#2517** | Detector guard — Session 1199's silent-fallback regex flagged legit tool-result echoes. New `_should_trigger_silent_fallback(text, tool_runs)` helper. 7 new tests. |
+| **(this PR)** | Session 1220 close handoff + this start-here rewrite. |
+
+**P2 investigation deliverable** (closes the open question from Session 1219 P3):
+
+| ID | Title | Final size |
+|---|---|---|
+| `7ae61cf7-…` | Session 1220 P2 — OpenAI httpx read-timeout bypass investigation | **7,499 chars** |
+
+**P2 headline finding:** `httpx.Timeout(read=90s)` is **per-chunk**, not **total request**. GPT-5.x reasoning models stream slowly enough to never trip it. Runtime evidence in `LLMCallEvent`: 102.7s and 90.9s calls completed SUCCESS (would have raised if `read=90` were a total bound) + 2 stuck STARTED rows held open 16h and 96h. One stuck row's `execution_id` matches a Session 1219 P3 watchdog-killed `AgentExecution` — proof the LLM call kept running for hours after the ThreadPoolExecutor wall-clock raised.
+
+### FIRST THING Session 1221 — Tier 1 + Tier 2 from P2 deliverable
+
+#### Priority 1 — Tier 1 from P2 deliverable: total-request bound on `_call_openai`
+
+Wrap `core/agents/base_agent.py:_call_openai` (~line 2589, the `self.client.chat.completions.create(**create_kwargs)` call) in a thread-pool future with a total cap.
+
+**Suggested cap:** `max(180, self.llm_timeout * 2.5)` seconds. For AudioAgent (`llm_timeout=60s`), that's 180s — well below the agent's 300s wall-clock, so the agent has time to handle the failure cleanly. For ContentWriterAgent (`llm_timeout=180s`), that's 450s — still safely below the 600s wall-clock.
+
+**Approach:**
+
+```python
+import concurrent.futures as _cf
+def _call_openai(self, prompt, ...):
+    ...
+    cap = max(180.0, getattr(self, 'llm_timeout', 60.0) * 2.5)
+    with _cf.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(self.client.chat.completions.create, **create_kwargs)
+        try:
+            response = future.result(timeout=cap)
+        except _cf.TimeoutError:
+            raise TimeoutError(
+                f"OpenAI total-request timeout after {cap}s in {self.name}"
+            )
+    ...
+```
+
+**Important nuance:** the underlying httpx request will keep running (same zombie-thread mechanic as Phase 3 cf80d413). But the *caller* returns cleanly to the dispatcher, which writes the failed status via Session 1219 PR #2513's early-save path. The zombie thread eventually returns when the OpenAI server finishes or the connection drops at OS level. `--max-tasks-per-child` recycling still provides the floor.
+
+**Smoke test scope:** mock `self.client.chat.completions.create` to sleep > cap, verify `TimeoutError` raises and the message names the cap value.
+
+Single call site change covers ~80 agents that route through `BaseAgent`. Independent agents that don't inherit from `BaseAgent` would still need their own wrap — that's a follow-on PR if any are found.
+
+#### Priority 2 — Tier 2 from P2 deliverable: `LLMCallEvent` cleanup watchdog
+
+Mirror of `core/tasks_agents.py:_impl_cleanup_stale_agent_executions`. Scan `LLMCallEvent` rows where `status='STARTED'` and `started_at < now - T` (suggested T=600s = 10 min). Mark them `status='FAILED'` with `error_type='timeout'` and `error_message='watchdog_cleanup'`.
+
+**Implementation point:** add as a new `@shared_task` next to the existing cleanup task. Add to `core/celery.py:app.conf.beat_schedule` to run every 30 min (mirror of the existing watchdog cadence). Use `add_critical_celery_tasks` to materialize the PeriodicTask row.
+
+**Why this helps:** `ops_tool.failure_signatures` already aggregates by `error_type`. Once stuck LLMCallEvent rows are marked timeout, the existing aggregator surfaces them without dashboard work. Lets us verify Tier 1 is reducing the stuck-row population over time.
+
+**Smoke test scope:** insert a stuck LLMCallEvent row with `started_at = now - 700s`, run the cleanup task, verify the row flips to FAILED.
+
+#### Priority 3 — B2 follow-on for OpenAIProvider (deferred since Session 1217 PR #2507)
+
+Full removal of `OpenAIProvider` class + `openai` branch in `generate_for_agent`. Requires first proving the `real_*` agent paths are no longer exercised in production. Check `AgentExecution` rows for `real_content_creator`, `real_job_executor`, `real_work_delivery_engine`, `real_client_acquisition`, `ai_proposal_engine`, `freelance_job_analyzer`, `concrete_executor` agent names + cross-ref with the Session 1214 handoff note.
+
+#### Priority 4 — Trim remaining 9 zero-exec gateway-referenced classes (deferred since Session 1218 P2)
+
+`ContentDiversityOrchestrator`, `ContrarianAgent`, `LineMovementAnalyzer`, `PerformanceAnalystAgent`, `SharpActionDetector`, `VoiceCriticAgent`, `ResolveAgent`, `TalkingCharacterAgent`, `WhaleWatcherAgent`. Per-site decision per gateway dispatch.
+
+#### Priority 5 — Promote `check-reasoning-contract.yml` to enforce mode (P2 carryover from Session 1216)
+
+Currently `--warn-only`. Verify zero violations on main, then flip.
+
+**Active conversation:** `pa-58737666f25741dc` — carried through Sessions 1217-1220.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Doc-vs-runtime drift triage (audit findings #6/#7/#8)
+- Critical-path hub markers (audit finding #4)
+- Atlas fleet positioning + narrative staleness (#9/#10)
+- Beat schedule disabled tasks classification (Rigby's A4)
+- Revenue pipeline aggregation audit (Rigby's C5)
 
 ### SESSION 1219 CLOSED — Watchdog fix 3-phase ship: bridge + early-save + zombie-thread investigation, all 3 phases shipped same-day
 
