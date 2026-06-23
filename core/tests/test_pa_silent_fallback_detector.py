@@ -21,6 +21,7 @@ import unittest
 from core.services.unified_pa_entrypoint import (
     UnifiedPAEntrypoint,
     _detect_silent_tool_call_fallback,
+    _should_trigger_silent_fallback,
     _SILENT_FALLBACK_USER_MESSAGE,
 )
 
@@ -84,6 +85,72 @@ class SilentFallbackDetectorTest(unittest.TestCase):
         """JSON without "action" key is not flagged."""
         text = 'Here is some JSON: {"name": "X", "value": 42}'
         self.assertFalse(_detect_silent_tool_call_fallback(text))
+
+
+class ShouldTriggerSilentFallbackGuardTest(unittest.TestCase):
+    """AC (Session 1220): the bare detector matches any tool-call JSON
+    shape — that's the right primitive but the wrong policy. The genuine
+    silent-fallback failure only happens when the LLM emits tool JSON in
+    text *instead of* invoking the function-call channel. If any tool
+    already ran successfully in this turn, the JSON in the response is a
+    legitimate echo of the result, not a fallback.
+    """
+
+    # ── Real failure: no successful tools + JSON in text → True
+    def test_fires_when_no_tool_runs(self):
+        text = '{"action": "update", "id": "abc"}'
+        self.assertTrue(_should_trigger_silent_fallback(text, []))
+
+    def test_fires_when_only_failed_tool_runs(self):
+        """A failed tool run doesn't count as legitimate prior work."""
+        text = '{"action": "update", "id": "abc"}'
+        tool_runs = [{'ok': False, 'tool': 'deliverable_tool'}]
+        self.assertTrue(_should_trigger_silent_fallback(text, tool_runs))
+
+    # ── Legitimate echo: ≥1 successful tool + JSON in text → False
+    def test_skips_when_successful_tool_ran(self):
+        """The canonical case that surfaced this fix: ops_tool returns
+        a result that starts with ``{"action": "zombie_thread_rate", ...}``
+        and the LLM echoes part of it in its final-text summary."""
+        text = (
+            'I called the monitor. It returned '
+            '{"action": "zombie_thread_rate", "window_hours": 24, '
+            '"by_agent": {}, "top_offenders": []}.'
+        )
+        tool_runs = [{'ok': True, 'tool': 'ops_tool'}]
+        self.assertFalse(_should_trigger_silent_fallback(text, tool_runs))
+
+    def test_skips_when_mixed_runs_with_one_success(self):
+        text = '{"action": "list"}'
+        tool_runs = [
+            {'ok': False, 'tool': 'foo_tool'},
+            {'ok': True, 'tool': 'bar_tool'},
+            {'ok': False, 'tool': 'baz_tool'},
+        ]
+        self.assertFalse(_should_trigger_silent_fallback(text, tool_runs))
+
+    # ── No JSON → never fires regardless of tool history
+    def test_does_not_fire_on_clean_text_with_no_tools(self):
+        text = 'All done — nothing to report.'
+        self.assertFalse(_should_trigger_silent_fallback(text, []))
+
+    def test_does_not_fire_on_clean_text_with_successful_tools(self):
+        text = 'All done — nothing to report.'
+        tool_runs = [{'ok': True, 'tool': 'ops_tool'}]
+        self.assertFalse(_should_trigger_silent_fallback(text, tool_runs))
+
+    # ── Defensive: weird tool_runs shapes don't crash
+    def test_handles_non_dict_tool_runs_entries(self):
+        text = '{"action": "list"}'
+        tool_runs = ['not a dict', None, {'ok': True}]
+        # The True entry should still count, so we skip the alarm.
+        self.assertFalse(_should_trigger_silent_fallback(text, tool_runs))
+
+    def test_handles_dict_without_ok_key(self):
+        text = '{"action": "list"}'
+        tool_runs = [{'tool': 'foo'}]  # no 'ok' key
+        # Missing 'ok' is treated as falsy — should fire.
+        self.assertTrue(_should_trigger_silent_fallback(text, tool_runs))
 
 
 class UserMessageContractTest(unittest.TestCase):
