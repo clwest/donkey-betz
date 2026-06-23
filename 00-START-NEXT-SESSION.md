@@ -104,6 +104,80 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1223 — CURRENT ENTRY POINT
 
+### SESSION 1222 CLOSED — full 3-arc closure (carryover + audit-revisit + drift cleanup), 11 PRs
+
+> **If you only do one thing next session:** decide the audit #8 canonical-baseline question (the only unresolved drift decision in the codebase — see Priority 5 below).
+
+Session 1222 ended up being three arcs of work in one session, driven by Chris's flag mid-session to revisit the original Session 1217 self-directed audit after the carryover queue cleared. Final ledger:
+
+**Arc v1 — Carryover queue clear** ([handoff](docs/handoffs/SESSION_1222_CARRYOVER_QUEUE_CLEAR.md))
+- #2522: Remove `OpenAIProvider` class (B2 follow-on from Session 1217 PR #2507)
+- #2523: Trim 4 zero-exec names from content_studio + 3 from ops timeout config (P2 Cat A+B)
+- #2524: Drop 3 dormant gateway dispatch actions (P2 Cat C)
+- #2525: Promote `check-reasoning-contract.yml` to enforce
+- #2526: Session 1222 v1 close handoff
+
+**Arc v2 — Audit revisit (Rigby's top-3 leverage picks)** ([handoff](docs/handoffs/SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md))
+- #2527 + #2528: Audit C1 — Opportunity pipeline scope clarification (label-only + `scope='mine'|'all'` param)
+- #2529: Audit #3 — `check-llm-sdk.yml` flipped to enforce (~60 → 0 violations)
+- #2530: Audit B2 — Migration 0364 applies per-task picks on 5 disabled beat tasks (Operator Edge alive with `dry_run=True`)
+- #2531: Session 1222 v2 close handoff
+
+**Arc v3 — Final drift cleanup**
+- #2532: Audit #6 + #7 docs drift reconciled (4 of 6 drift items closed; CLAUDE.md / SERVICES.md / BACKEND_INVENTORY.md / personal-assistant.md + verifier baselines bumped)
+
+**Both CI lints in enforce mode:** `check-reasoning-contract.yml` + `check-llm-sdk.yml`.
+
+### Audit closure summary (Session 1217 deliverable `bec077ed-…`)
+
+Of the 15 findings in the original self-directed audit:
+
+**Closed (11)** — items 1A + 1B + 2 + 3 + A1 (the original Chris-picks) + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift (from the same family).
+
+**Still open (4):**
+
+| # | Title | Effort | Notes |
+|---|---|---|---|
+| **#4** | Critical hub markers / gates | M | Reliability work — flag critical-path files for extra review |
+| **#8** | Seed baseline drift (155 expected vs 89/83 runtime) | M | **Only unresolved drift decision** — see Priority 5 |
+| **#9** | Core orientation doc staleness (Session 1141 → now 81 sessions behind) | M | `docs/PLATFORM_WHAT_IT_IS.md` refresh |
+| **#10** | Atlas fleet capabilities positioning | M | `docs/24_7_GLOBAL_AI_APP_ATLAS.md` reconcile |
+
+### FIRST THING Session 1223
+
+#### Priority 1 — Watchdog observation window (carryover from Sessions 1219-1221)
+
+By Session 1223 the Tier 1 + Tier 2 watchdog fixes (PR #2519 + #2520) have 24-48h+ of burn-in. 5 specific checks documented in the v1 close handoff (zombie thread rate, `LLMCallEvent` stuck rows, `cleanup-stuck-llm-calls` beat firing, Tier 1 timeout firing rate, `ops_tool.failure_signatures`). If all green, the watchdog/timeout arc is fully closed.
+
+#### Priority 2 — Operator Edge newsletter Friday-1 burn-in check
+
+The B2 PR (#2530) re-enabled `generate-operator-edge-newsletter` with `dry_run=True`. First scheduled run = next Friday 1pm MDT post-merge. Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays, flip kwargs to `{'dry_run': false}` to promote to live.
+
+#### Priority 3 — Audit #8: seed baseline drift (the only unresolved drift decision)
+
+Two paths, **Chris picks**:
+- **(A) Make runtime match seed:** re-run `python manage.py load_all_agents_advisors` to bring Agent.objects.count() from 89 back to the expected 155.
+- **(B) Make seed match runtime:** update `core/management/commands/load_all_agents_advisors.py` to declare 89 expected, and bump `expected` in `core/services/doc_claim_verification.py:persona_agent_count` from 155 → 89.
+
+Either closes the audit's last drift. (A) restores a full agent baseline; (B) accepts 89 as the canonical state. Pre-flight: read what's in `load_all_agents_advisors.py` to understand what the "missing" 66 agents would be.
+
+#### Priority 4 — Audit #4, #9, #10 (M each, deferred-but-still-open)
+
+- **#4 — Critical hub markers / gates:** extend the PR template + add a CODEOWNERS / path-pattern gate flagging critical files. Reliability win.
+- **#9 — Core orientation doc staleness:** refresh `docs/PLATFORM_WHAT_IT_IS.md` frontmatter (last reviewed Session 1141, now 81 sessions behind). Add an OpenAI hardening section pointing at the Sessions 1214-1216 + 1221 arc.
+- **#10 — Atlas positioning:** narrow the Phase 1 "fleet integration" claims in `docs/24_7_GLOBAL_AI_APP_ATLAS.md` to match runtime reality.
+
+#### Priority 5 — Whatever Chris wants
+
+No fresh urgent items. Audit revisit complete. Watchdog/timeout arc closed.
+
+**Active conversation:** `pa-58737666f25741dc` — carried through Sessions 1217-1222 (a record 6-session continuous thread).
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (per Rigby's keep-for-future recommendation)
+- `scan-spider-opportunities` resume (B2 Mode B chose curate-now)
+- Tier 3 from P2 deliverable `7ae61cf7-…` (factory-level wrap — defer per the deliverable)
+
 ### SESSION 1222 CLOSED (v2 — audit revisit arc) — C1 + #3 + B2 from Rigby's top-3 lean shipped same-session
 
 Full handoff: [`SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md`](docs/handoffs/SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md). Same session as the v1 carryover-queue close — Chris asked us to revisit the original Session 1217 audit deliverable (`bec077ed-…`, 15 findings) after the queue cleared. Rigby's gap analysis + my PR-ledger cross-check produced 8 still-open findings. Chris agree-all'd Rigby's top-3 leverage picks.
