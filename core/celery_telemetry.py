@@ -223,6 +223,55 @@ def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, *
         logger.debug(f"Celery telemetry: close_old_connections failed for {task_id}", exc_info=True)
 
 
+@task_failure.connect
+def on_agent_task_failure_bridge(sender=None, task_id=None, exception=None, **kwargs):
+    """Mark AgentExecution rows associated with the failed Celery task as failed.
+
+    Session 1219 P1 (deliverable 6b00c112-…). Closes the gap where Celery's
+    SoftTimeLimitExceeded / generic task_failure propagates past the
+    `_FuturesTimeout` cleanup in ``tasks_agents._impl_execute_agent_task``,
+    leaving the AgentExecution row stuck in 'in_progress' until the next
+    30-min cleanup-watchdog sweep catches it.
+
+    Matches via ``input_data->>'celery_task_id'`` which is set at row creation
+    time in ``tasks_agents.py:2179``. Hard SIGKILL cases (Celery's
+    ``time_limit=3900``) cannot be handled here — the worker dies and this
+    signal never fires; the cleanup watchdog remains the safety net for that
+    class.
+
+    Idempotent: filter is scoped to ``status IN ('running', 'in_progress')``
+    so a re-fire (or race with the watchdog) is a no-op.
+    """
+    if not task_id:
+        return
+    try:
+        from core.models_unified_system import AgentExecution
+        from django.utils import timezone
+
+        exc_name = type(exception).__name__ if exception else 'TaskFailure'
+        exc_msg = str(exception)[:200] if exception else 'Celery task failed without exception detail'
+
+        updated = AgentExecution.objects.filter(
+            status__in=('running', 'in_progress'),
+            input_data__celery_task_id=str(task_id),
+        ).update(
+            status='failed',
+            error_message=f'Celery task failed: {exc_name}: {exc_msg}'[:2000],
+            completed_at=timezone.now(),
+        )
+
+        if updated:
+            logger.warning(
+                "[celery_telemetry] Bridged Celery task_failure → AgentExecution: "
+                "task_id=%s exc=%s rows=%d",
+                task_id, exc_name, updated,
+            )
+    except Exception:
+        logger.exception(
+            "[celery_telemetry] AgentExecution failover failed for task_id=%s", task_id,
+        )
+
+
 @before_task_publish.connect
 def stamp_sent_at(headers=None, **kwargs):
     """Stamp `headers["sent_at"]` at enqueue so cockpit_tool.queue_lengths can
