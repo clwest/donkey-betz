@@ -165,7 +165,7 @@ def apply_reasoning_guard(
 
 
 def _install_reasoning_guard(client, async_create: bool = False) -> None:
-    """Wrap ``client.chat.completions.create`` with the reasoning guard.
+    """Wrap the SDK's chat-completions creator with the reasoning guard.
 
     Applied once per client at construction time. The wrapped method
     forwards all args/kwargs to the original after guarding. Cached

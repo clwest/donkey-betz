@@ -1,0 +1,61 @@
+name: Check OpenAI reasoning-model contract
+
+# Session 1216 Phase E — fail PRs that pass forbidden kwargs
+# (max_tokens / temperature / top_p / frequency_penalty / presence_penalty)
+# to gpt-5.x reasoning models via direct OpenAI SDK calls.
+# See tools/check_reasoning_contract.py and the Session 1215 handoff
+# §"Phase E queued for Session 1216" for the full AC.
+
+on:
+  pull_request:
+    paths:
+      - '**/*.py'
+      - '.ci/reasoning_guard_whitelist.txt'
+      - 'tools/check_reasoning_contract.py'
+      - '.github/workflows/check-reasoning-contract.yml'
+  push:
+    branches: [main]
+
+jobs:
+  check-reasoning-contract:
+    name: OpenAI reasoning-contract check
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Phase E staged rollout — ships in --warn-only.
+      # Phase C+D close-out left zero violations on main, so this
+      # warn-only mode produces no false alarms. Promote to enforce
+      # mode once we've burned in 24h with no surprises.
+      #
+      # To switch to enforce mode:
+      #   1. Remove `--warn-only` below
+      #   2. Verify scan still returns 0 violations on main
+      #   3. Merge
+      - name: Run reasoning-contract checker (warn-only staged rollout)
+        run: |
+          python tools/check_reasoning_contract.py \
+            --root . \
+            --whitelist .ci/reasoning_guard_whitelist.txt \
+            --warn-only
+
+      - name: Summarize in the job summary
+        if: always()
+        run: |
+          {
+            echo "## OpenAI reasoning-contract check"
+            echo ""
+            echo "Session 1216 Phase E — running in **warn-only** mode during staged rollout."
+            echo ""
+            echo "Flags new \`chat.completions.create(model='gpt-5.x', max_tokens=..., temperature=...)\` patterns."
+            echo "gpt-5.x reasoning models reject \`max_tokens\`/\`temperature\`/\`top_p\`/\`frequency_penalty\`/\`presence_penalty\`."
+            echo ""
+            echo "Companion to the runtime guard in \`core/services/openai_client_factory.py\` (env: \`OPENAI_REASONING_GUARD\`)."
+          } >> "$GITHUB_STEP_SUMMARY"

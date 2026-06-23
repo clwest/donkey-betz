@@ -33,6 +33,7 @@ tests/
 # The checker itself has to contain the regex patterns it searches for.
 
 tools/check_direct_llm_calls.py
+tools/check_reasoning_contract.py
 
 # LLM enforcer is the instrumentation harness that wraps the SDK; it
 # pre-dates the Session 1098 wrapper and is itself a boundary layer.
