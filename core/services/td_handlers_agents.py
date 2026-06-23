@@ -396,9 +396,22 @@ class AgentHandlersMixin:
 
         action = payload.get('action', 'list')
 
-        # Build base queryset - filter by user if available
+        # Session 1222 P4 (audit C1) — scope param. Default behavior is
+        # unchanged: 'mine' filters by user_id when a caller is
+        # authenticated, matching the pre-Session-1222 contract. Passing
+        # scope='all' opts into the platform-wide view, surfacing the
+        # spider-ingested lead pool (~2,600 system-owned rows as of
+        # this writing). Guardrail: explicit opt-in only — chris doesn't
+        # accidentally stare at thousands of leads when he asks
+        # "what's in my pipeline?".
+        scope = (payload.get('scope') or 'mine').lower()
+        if scope not in ('mine', 'all'):
+            scope = 'mine'
+
+        # Build base queryset - filter by user when scope='mine' (the
+        # default, preserving the pre-Session-1222 contract).
         base_qs = Opportunity.objects.all()
-        if user_id:
+        if scope == 'mine' and user_id:
             base_qs = base_qs.filter(user_id=user_id)
 
         if action == 'list':
@@ -445,21 +458,46 @@ class AgentHandlersMixin:
             # vs 47 audit confusion came from there being no clear marker
             # on the returned shape. See pa_tool_schemas.py
             # opportunity_manager_tool description.
-            return {
+            response = {
                 'action': 'stats',
-                'scope': 'caller' if user_id else 'platform_wide',
+                'scope': scope,
                 'scope_note': (
-                    'Filtered to your opportunities (owner=caller). '
-                    'Platform-wide pool visible via '
-                    'autopilot_tool.dry_run_report → revenue_pipeline.'
-                    if user_id
-                    else 'Unscoped — counts all Opportunity rows across users.'
+                    'Filtered to your opportunities (owner=caller, default). '
+                    'Pass scope="all" to see the platform-wide lead pool '
+                    '(includes spider-ingested rows owned by the system user).'
+                    if scope == 'mine'
+                    else (
+                        'Platform-wide pool — counts every Opportunity row '
+                        'regardless of owner. Most rows here are spider-'
+                        'ingested job listings owned by the system user; '
+                        'check owner_breakdown below for attribution.'
+                    )
                 ),
                 'total': sum(by_status.values()),
                 'by_status': by_status,
                 'by_type': by_type,
                 'total_potential_revenue': str(total_potential),
             }
+            if scope == 'all':
+                # Session 1222 P4 — Rigby's review tweak. When the caller
+                # opts into the platform-wide view, surface the owner
+                # breakdown so the 2,600+ row spike is immediately
+                # interpretable as "system pool" vs human-owned rows.
+                owner_qs = base_qs.values('user_id').annotate(c=Count('id')).order_by('-c')[:10]
+                from django.contrib.auth import get_user_model
+                _user_model = get_user_model()
+                owner_breakdown = []
+                for row in owner_qs:
+                    uid = row['user_id']
+                    uname = '(orphan)'
+                    if uid:
+                        try:
+                            uname = _user_model.objects.get(id=uid).username
+                        except _user_model.DoesNotExist:
+                            uname = '(deleted user)'
+                    owner_breakdown.append({'user': uname, 'count': row['c']})
+                response['owner_breakdown'] = owner_breakdown
+            return response
 
         # Session 993: Update opportunity status
         elif action == 'update_status':
