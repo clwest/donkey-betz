@@ -43,12 +43,84 @@ Usage:
 import logging
 import json
 import time
+import concurrent.futures as _cf
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from openai import OpenAI
 from core.services.openai_client_factory import get_openai_client  # Session 1084 round 51
+
+
+_BASE_AGENT_LOGGER = logging.getLogger(__name__)
+
+
+def _run_openai_create_with_total_cap(
+    create_fn,
+    create_kwargs: Dict[str, Any],
+    total_request_cap_s: float,
+    agent_name: str = '',
+):
+    """Wrap a sync OpenAI ``chat.completions.create`` call in a thread-pool
+    future so the total request time is bounded.
+
+    Session 1221 P1 — Tier 1 from deliverable ``7ae61cf7-…``. The
+    ``openai_client_factory`` configures ``httpx.Timeout(read=90s)``, but
+    that knob is **per-chunk** — it resets every time the server emits
+    more bytes. GPT-5.x reasoning models stream slowly enough that they
+    can stay alive for thousands of seconds without ever tripping it.
+    Runtime evidence (LLMCallEvent last 7d): SUCCESS calls at 102.7s and
+    90.9s with ``retry_count=0`` plus stuck STARTED rows held 16-96h.
+
+    This helper provides the total ceiling httpx's config can't, by
+    submitting the sync SDK call to a one-shot ``ThreadPoolExecutor`` and
+    waiting only ``total_request_cap_s`` for the result. On timeout the
+    helper raises ``TimeoutError`` with a clear message; the underlying
+    httpx request remains alive on the worker thread (Phase 3 zombie
+    semantics — bounded by ``--max-tasks-per-child`` recycling, see
+    deliverable ``cf80d413-…``), but the caller returns cleanly so the
+    dispatcher's early-save path (Session 1219 PR #2513) marks the
+    ``AgentExecution`` row failed without waiting for the cleanup
+    watchdog.
+
+    Args:
+        create_fn: Bound ``client.chat.completions.create`` method.
+        create_kwargs: Keyword arguments to pass to ``create_fn``.
+        total_request_cap_s: Total seconds to wait. Caller derives this
+            from per-agent ``llm_timeout`` (suggested formula
+            ``max(180, llm_timeout * 2.5)``).
+        agent_name: Used only for the error message.
+
+    Returns:
+        The SDK response object on success.
+
+    Raises:
+        TimeoutError: When the call did not return within
+            ``total_request_cap_s``.
+    """
+    _pool = _cf.ThreadPoolExecutor(max_workers=1)
+    try:
+        _future = _pool.submit(create_fn, **create_kwargs)
+        try:
+            return _future.result(timeout=total_request_cap_s)
+        except _cf.TimeoutError:
+            _BASE_AGENT_LOGGER.error(
+                "[base_agent._call_openai] OpenAI total-request timeout "
+                "after %.1fs in %s — underlying httpx request continues on "
+                "the worker thread (zombie semantics; bounded by "
+                "--max-tasks-per-child recycling)",
+                total_request_cap_s, agent_name or 'unknown',
+            )
+            raise TimeoutError(
+                f"OpenAI total-request timeout after {total_request_cap_s:.1f}s "
+                f"in {agent_name or 'unknown'}"
+            )
+    finally:
+        # Session 1075 / 1221: never block on the worker thread — the
+        # SDK call may still be reading from a slow connection. The
+        # caller has already given up; let the underlying httpx request
+        # resolve in its own time.
+        _pool.shutdown(wait=False)
 
 
 class OutputCategory(Enum):
@@ -2586,7 +2658,23 @@ Consider these trends when crafting the response to maximize relevance and engag
                 create_kwargs["tools"] = effective_tools
                 create_kwargs["tool_choice"] = "auto"
 
-            response = self.client.chat.completions.create(**create_kwargs)
+            # Session 1221 P1 — Tier 1 from deliverable 7ae61cf7. The
+            # configured httpx read=90s is per-chunk; a slow-streaming
+            # gpt-5.x reasoning response can outrun every ceiling we have
+            # below the agent layer. Wrap the sync SDK call in a
+            # threadpool future with a total-request bound so the caller
+            # returns cleanly even when the underlying connection stays
+            # open in the worker thread. Cap formula: max(180s, per-agent
+            # llm_timeout * 2.5) — keeps the bound above empirically
+            # observed legitimate call durations (top SUCCESS ContentWriter
+            # 102.7s) while staying below the per-agent wall-clock budget.
+            total_request_cap_s = max(180.0, float(self.llm_timeout) * 2.5)
+            response = _run_openai_create_with_total_cap(
+                self.client.chat.completions.create,
+                create_kwargs,
+                total_request_cap_s,
+                agent_name=self.name,
+            )
 
             # Session 536: Track analytics (cost, tokens, performance)
             self._track_llm_analytics(response, start_time)
