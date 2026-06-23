@@ -291,13 +291,24 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             # try/except so deliverable persist failure never blocks
             # the agent's return.
             if result.success:
+                # Session 1207 (Rigby pa-33088358df304016 follow-up nits):
+                # capture the deliverable's id and surface it on
+                # result.data so output_data carries `deliverable_id` for
+                # downstream tooling / audits. On persist failure, append
+                # a structured entry to result.data['warnings'] (list)
+                # with a stable type tag so monitors can detect regressions
+                # without parsing logs. Conventions:
+                #   - result.data['warnings'] is ALWAYS a list (init if missing)
+                #   - each entry: {'type': <stable_key>, 'message': <str>}
+                #   - 'deliverable_persist_failed' = caught exception during save
+                #   - 'deliverable_gated' = factory returned None (gate or dedupe)
                 try:
                     deliverable_body = self._format_brief_for_deliverable(
                         brief=brief,
                         provenance_markdown=provenance.to_markdown_block(),
                     )
                     deliverable_title = f"Market Intel Brief — {brief.get('date', datetime.now().strftime('%Y-%m-%d'))}"
-                    self._save_to_deliverable(
+                    saved_deliverable = self._save_to_deliverable(
                         title=deliverable_title,
                         content=deliverable_body,
                         deliverable_type='analysis',
@@ -317,12 +328,31 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                             'trigger_source': context.get('trigger_source') or 'scheduled',
                         },
                     )
+                    if saved_deliverable is not None and getattr(saved_deliverable, 'id', None):
+                        result.data['deliverable_id'] = str(saved_deliverable.id)
+                    else:
+                        # Factory returned None — gated by quality gate or
+                        # dedupe. Distinct from a thrown exception.
+                        result.data.setdefault('warnings', []).append({
+                            'type': 'deliverable_gated',
+                            'message': (
+                                'create_deliverable returned None — likely a '
+                                'quality-gate rejection or dedupe hit. Check '
+                                '[DeliverableFactory] log lines for reason_code.'
+                            ),
+                        })
                 except Exception as _dlv_exc:
                     logger.warning(
                         "MarketIntelligenceCoordinator: deliverable persist "
                         "failed (non-blocking — agent result still returned): %s",
                         _dlv_exc,
                     )
+                    # Session 1207 (Rigby tweak): include exception class name
+                    # so Sentry/log triage can route from just output_data.
+                    result.data.setdefault('warnings', []).append({
+                        'type': 'deliverable_persist_failed',
+                        'message': f"{type(_dlv_exc).__name__}: {_dlv_exc}",
+                    })
 
             # === Session 462: Priority 5 - Learning Infrastructure ===
             # Session 1207 (Rigby pa-b2a99ff5b0ee47a6): bookkeeping hooks
