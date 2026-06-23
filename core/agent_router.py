@@ -1579,6 +1579,19 @@ class AgentRouter:
                         logger.exception(
                             f"[router] timeout telemetry failed: {_telemetry_exc}"
                         )
+                    # Session 1220 P1: zombie-thread observability counter,
+                    # mirror of the tasks_agents.py path. Same fail-open
+                    # contract. See core/services/zombie_thread_monitor.py.
+                    try:
+                        from core.services.zombie_thread_monitor import (
+                            record_zombie_thread,
+                        )
+                        record_zombie_thread(agent_name)
+                    except Exception:
+                        logger.exception(
+                            "[router] zombie monitor record failed for %s",
+                            agent_name,
+                        )
                     result = AgentResult(
                         success=False,
                         error=(
