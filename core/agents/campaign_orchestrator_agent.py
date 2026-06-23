@@ -656,13 +656,24 @@ Always provide status updates and be transparent about what's being created."""
             messages.append({'role': 'system', 'content': system_prompt})
         messages.append({'role': 'user', 'content': user_prompt})
 
+        # Session 1222 P5 (audit #3) — migrated to llm_call_wrapper so the
+        # call lands an LLMCallEvent telemetry row. Routes through the
+        # canonical wrapper boundary that the check-llm-sdk.yml enforce
+        # flip now polices.
+        from core.services.llm_call_wrapper import llm_call_span
         try:
-            response = self.client.chat.completions.create(
+            with llm_call_span(
+                provider='openai',
                 model=OUTBOUND_PACK_JSON_MODEL,
-                messages=messages,
-                max_completion_tokens=OUTBOUND_PACK_JSON_MAX_TOKENS,
-                response_format={'type': 'json_object'},
-            )
+                agent_name='CampaignOrchestratorAgent',
+            ) as _span:
+                response = self.client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
+                    model=OUTBOUND_PACK_JSON_MODEL,
+                    messages=messages,
+                    max_completion_tokens=OUTBOUND_PACK_JSON_MAX_TOKENS,
+                    response_format={'type': 'json_object'},
+                )
+                _span.attach_response(response)
             raw = (response.choices[0].message.content or '').strip()
         except Exception as exc:
             logger.error(
