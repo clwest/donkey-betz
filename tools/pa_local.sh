@@ -17,29 +17,25 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1214 (Rigby's
-# session_tool create_fresh at Session 1213 close: pa-e37fe30dc7b941a6 —
-# "Session 1214 — OpenAI caller alignment to gpt-5-mini reasoning contract").
-# P1 lead deliverable: 2b9aa447-c0c9-4ff3-8483-f92257eb0fcb (5-phase
-# alignment spec — Phase A non-gpt-5-mini cleanup, B 74 bare→factory, C
-# max_tokens→max_completion_tokens, D temperature audit, E lint+runtime
-# guard). Initiative 29154d73-06a5-4630-abb4-3412cbdca5c5 (Platform
-# Capability Audit). Carries Session 1213's smoke context minimization
-# evidence (PR #2483 / 3670cede — 31× context shrink on the worst case).
-# Prior pins retired: pa-61c7b47d201d4591 (Sessions 1209-1213 — URC v0.1
-# spec + Phase B extension + smoke context minimization + agents reference
-# + PA spend audit; closed Session 1213 with 5+ PRs merged across the arc),
-# pa-2d74e36cc3a04787 (Session 1208 — CampaignOrchestrator
-# delegation hardening outbound pack — design-anchor record),
-# pa-33088358df304016 (Session 1207 close —
-# MIC auto-deliverable + output_data hardening + CampaignOrchestrator
-# spec hand-off), pa-b2a99ff5b0ee47a6 (superseded mid-Session 1207),
-# pa-234a75abfe374695 (Session 1206 — 5 PRs +
-# docs; closed clean), pa-76aa5b61d0764d11 (Session 1205 Evidence-card
-# pipeline; PR #2456 closed the cardifier asymmetry),
-# pa-1871b37227054254 (Session 1204 Phase B.2),
-# pa-d2d0f4c2b6284899 (Session 1203 Phase B.1), pa-123b7d48f01043eb
-# (Session 1202 Phase A.2), pa-1ccc494ea00b4e77 (Sessions 1200-1202 §A.1),
+# the --conversation flag below. Current value: Session 1217 self-directed
+# audit experiment (Rigby's session_tool create_fresh post Session 1216
+# close: pa-58737666f25741dc — "Session 1217 — Self-directed audit
+# experiment"). Bounded experiment: Chris steps out of priority-setting
+# role, Claude + Rigby self-direct one half-session to produce a single
+# audit deliverable in Donkey Betz workspace. No code changes, no PRs —
+# pure analysis. Output template per finding: Finding / Evidence /
+# Why / Recommendation / Effort. Plan: agree on categories, each
+# independently scan 2-3 categories via tools, merge into one deliverable.
+# Prior pins retired: pa-e37fe30dc7b941a6 (Sessions 1214-1216 — OpenAI
+# caller alignment spec 2b9aa447-…, full 5-phase arc shipped across 3
+# single-day sessions, 15 PRs merged, catalog deliverable bb775acb-…
+# maintained at 17,068 chars; closed clean with all 6 Rigby AC signals
+# confirmed), pa-61c7b47d201d4591 (Sessions 1209-1213), pa-2d74e36cc3a04787
+# (Session 1208), pa-33088358df304016 (Session 1207),
+# pa-b2a99ff5b0ee47a6 (superseded mid-Session 1207), pa-234a75abfe374695
+# (Session 1206), pa-76aa5b61d0764d11 (Session 1205), pa-1871b37227054254
+# (Session 1204), pa-d2d0f4c2b6284899 (Session 1203), pa-123b7d48f01043eb
+# (Session 1202 §A.2), pa-1ccc494ea00b4e77 (Sessions 1200-1202 §A.1),
 # pa-ea12236c83eb4826 (Sessions 1196-1199), pa-92bacb0fbcab44fb (Session 1195),
 # pa-e11847db632a4ee8 (Session 1194), pa-a60842917d36 (Session 1184),
 # pa-8f8ef45338ce4a24 (Sessions 1182-83).
@@ -59,4 +55,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-e37fe30dc7b941a6
+python tools/pa_chat.py "$@" --tools --conversation pa-58737666f25741dc
