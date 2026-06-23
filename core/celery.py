@@ -412,10 +412,17 @@ app.conf.beat_schedule = {
     },
 
     # ── Operator Edge Newsletter ───────────────────────────────────────────
-    # Weekly newsletter from signal clusters + spider data
+    # Weekly newsletter from signal clusters + spider data.
+    # Session 1222 P6 (audit B2) — re-enabled with dry_run=True for the
+    # 2-Friday burn-in. Migration 0364 flips the PeriodicTask row to
+    # enabled=True; this static entry matches so a fresh environment
+    # materializes the same safe-by-default state via
+    # `add_critical_celery_tasks --force`. After burn-in passes, update
+    # kwargs to {} or {'dry_run': False} to promote to live publishing.
     'generate-operator-edge-newsletter': {
         'task': 'core.tasks.generate_operator_edge_newsletter',
         'schedule': crontab(hour=13, minute=0, day_of_week='friday'),  # Friday 6 AM MST = 13:00 UTC
+        'kwargs': {'dry_run': True},
         'options': {'queue': 'content', 'expires': 3600},
     },
 
