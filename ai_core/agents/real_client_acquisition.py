@@ -16,7 +16,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-import openai
 from django.core.cache import cache
 from django.utils import timezone
 from ai_core.agents.agent_llm_integration import agent_llm_integration
@@ -258,8 +257,6 @@ class RealClientAcquisitionEngine:
 
         try:
             # Get OpenAI client
-            client = openai.AsyncOpenAI()
-
             prompt = f"""
             Write a winning freelance proposal for this job:
 

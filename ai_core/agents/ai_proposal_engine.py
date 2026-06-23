@@ -7,7 +7,6 @@ This engine writes proposals that beat 95% of human freelancers.
 
 import logging
 import json
-import openai
 from typing import Dict, List, Any
 from dataclasses import dataclass
 from datetime import datetime
@@ -159,8 +158,6 @@ Ready to start today and make your life easier!
         """Analyze client and job to understand what they really want"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             analysis_prompt = f"""
             Analyze this freelance job posting and client to understand their psychology:
 
@@ -311,8 +308,6 @@ Ready to start today and make your life easier!
         """Personalize the template for this specific client"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             personalization_prompt = f"""
             Personalize this proposal template for a specific client:
 
@@ -423,8 +418,6 @@ Ready to start today and make your life easier!
         """Generate smart follow-up message based on client response"""
 
         try:
-            client = openai.AsyncOpenAI()
-
             follow_up_prompt = f"""
             The client responded to our proposal. Generate a smart follow-up:
 
