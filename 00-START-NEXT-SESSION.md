@@ -122,17 +122,25 @@ Full handoff: [`SESSION_1213_SMOKE_CONTEXT_MINIMIZATION.md`](docs/handoffs/SESSI
 
 **Post-merge gotcha (cleared):** worker restart at 11:22-11:23 MDT (post-`3670cede`) — `smoke_dispatch.py` is imported by `tool_dispatcher.py` which is imported by celery task bodies. All 4 workers + beat alive on fresh PIDs (verified via `ps -eo lstart`).
 
-### FIRST THING Session 1214 — pick one of the two carryover follow-ups
+### FIRST THING Session 1214 — OpenAI caller alignment to gpt-5-mini reasoning contract (5-phase plan)
 
-Two natural pickup paths, both Session 1212 fillings. Lean is **(A)** — direct cost impact, well-scoped.
+**P1 lead:** Deliverable `2b9aa447-c0c9-4ff3-8483-f92257eb0fcb` (filed Session 1213 close) — **Spec: OpenAI Caller Alignment to gpt-5-mini Reasoning Contract**. Pivot from original gpt-5.4 migration spec per Chris course-correction: "let's not flip until right now, but since we know that there's places that we are not using gpt-5-mini (Reasoning Model), let's focus on getting that updated." gpt-5.4 flagship migration is deferred to a separate future deliverable (~$95/day projected cost increase at current volume).
 
-**(A) Stale-thread dispatcher audit + fix** (`777d9cd8-…`, P2) — Three options listed in the deliverable; lean A (per-conversation `session_closed` flag on `ChatConversation`). When `tools/pa_local.sh` repins to a new thread, retire prior via PA tool (`session_tool action=retire conversation_id=<prior>`); `dispatch_actions()` short-circuits with WARN if `is_active=False`. ACs: AC-1 dispatcher skips 4 currently-retired threads, AC-2 active thread unaffected, AC-3 24h watch shows zero dispatches on retired set. ~$3.60/day savings.
+**Why this scope:** Session 1213 audit found ~150 hardcoded model literals + 74 bare `OpenAI()` instantiations bypassing the factory (per memory `feedback_openai_client_factory.md`) + ~90 callers using `max_tokens=` (forbidden by gpt-5.x reasoning models) + ~86 callers passing `temperature=` (also forbidden). Either those calls are silently broken today or routing to non-reasoning models. Alignment surfaces the truth + makes the eventual gpt-5.4 flip a one-line env change with zero parameter surprises.
 
-**(B) Continue Phase B adoption to next 3 context-dependent agents** (Session 1211 carryover, P1) — 4 of ~10 candidates now adopted (CodeReview + Video + Image + MeetingCoordinator). Pattern fixed. Ask Rigby for next 3 picks from fleet smoke `1a8cde69-…`.
+**Five phases (Session 1214 + possible spillover):**
+- **Phase A (~1h):** Kill non-gpt-5-mini active callers (`ai_core/MAKE_MONEY_NOW_WITH_APIS.py:35,69` gpt-3.5-turbo + any other stragglers).
+- **Phase B (~3-4h, ~5-6 PRs):** 74 bare `OpenAI()` / `AsyncOpenAI()` → factory. PRIORITY SUBSET: 5 no-arg `OpenAI()` sites (intelligence/real_agents.py:21, intelligence/agent_execution_pipeline.py:19,35,306, intelligence/agent_factory.py:26,75, scripts/backfill_embeddings.py:61) — these inherit SDK 600s timeout = 10-min hangs on half-dead sockets.
+- **Phase C (~2-3h):** `max_tokens=` → `max_completion_tokens=` (~50-80 active files; per-site review, no bulk sed).
+- **Phase D (~2-3h):** `temperature=` audit (~86 sites); strip silently OR document-then-strip OR conditional-for-non-reasoning-fallback.
+- **Phase E (~1-2h):** CI lint (sibling to `tools/check_direct_llm_calls.py`) + runtime guard in `openai_client_factory.py` behind `OPENAI_REASONING_GUARD={warn,strip,error}` env flag.
 
-**(C) NEW Session 1213 finding — system prompt + tool schema size reduction** (P2) — Smoke context minimization shaved per-call cost on smokes, but Rigby's conversational turns are still 35-68K tokens because the system prompt carries 109 tool schemas + full conversation history. Far larger savings potential than the smoke-context fix. Scoped follow-up: spec which schemas can be lazy-loaded based on user intent (e.g., signal_studio tools only when chat mentions signals). No deliverable filed yet — would need a P2 deliverable + spec round before code.
+**Active conversation:** `pa-e37fe30dc7b941a6` — Session 1214 lean: continue on this thread; Rigby already has the spec in context.
 
-**Active conversation:** `pa-61c7b47d201d4591` — Session 1214 lean: continue on this thread for any of (A)/(B)/(C); spin fresh if pivoting away from cost work.
+**Carryover follow-ups (defer to Session 1215+ unless quick win):**
+- **Stale-thread dispatcher** (`777d9cd8-…`, P2) — ~$3.60/day savings, 3 fix options listed; lean A (per-conversation `session_closed` flag).
+- **Continue Phase B URC adoption to next 3 agents** (Session 1211 carryover, P1) — 4 of ~10 candidates done. Pattern stable.
+- **System prompt + tool schema size reduction** (P2, NEW Session 1213 finding) — non-smoke conversational turns still 35-68K tokens; larger savings than smoke fix. No spec filed yet.
 
 ### Also fires this session
 
@@ -176,7 +184,7 @@ Full handoff: [`SESSION_1210_PHASE_B_RECEIPT_ONLY_CODEREVIEWAGENT.md`](docs/hand
 
 **AC-4 addendum:** Rigby filed +2601 chars on URC spec deliverable `6f09233c-…` capturing (a) Phase B definition (first agent-level integration; A+C are runner-level), (b) classification rule (`data['skipped'] is True` is the load-bearing Q1 marker), (c) schema nuance (`status='skipped'` is receipt-schema-valid but not sufficient on its own), (d) reference impl pointer `core/agents/code_review_agent.py:286-316`.
 
-**Drift surfaced + resolved in-session:** Spec text in `00-START` line 127 implied `data={'status': 'skipped'}` alone would trigger `run_status='skipped'` — Q1 predicate at `urc_envelope.py:50` actually requires `data['skipped'] is True`. Option A reconciliation per Rigby (`pa-61c7b47d201d4591`): agent emits both keys; URC core unchanged.
+**Drift surfaced + resolved in-session:** Spec text in `00-START` line 127 implied `data={'status': 'skipped'}` alone would trigger `run_status='skipped'` — Q1 predicate at `urc_envelope.py:50` actually requires `data['skipped'] is True`. Option A reconciliation per Rigby (`pa-e37fe30dc7b941a6`): agent emits both keys; URC core unchanged.
 
 **Post-merge gotcha (cleared):** worker restart required at 09:47 MDT (post-`4d0040af`) — `code_review_agent.py` is imported by `tasks_agents._impl_execute_agent_task` body. All 4 workers + beat alive on fresh PIDs.
 
@@ -356,7 +364,7 @@ Day-1 (Session 1203) baseline established: zero traffic (~23 min coverage only p
 
 ### Active conversation
 
-`pa-61c7b47d201d4591` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke `1a8cde69-…` + Phase B AC-4 addendum spanning 4 adopters (Sessions 1210-1211) + Session 1212 PA spend audit findings. Pinned in `tools/pa_local.sh`. **Lean for Session 1213: continue on this thread if pickup is one of the two filed follow-ups (smoke context minimization OR stale-thread audit); spin fresh if pivoting away from URC/cost work.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2). **The stale-thread audit deliverable `777d9cd8-…` proposes these retired threads stop accepting autonomous dispatches** — implementation in Session 1213 will close that leak.
+`pa-e37fe30dc7b941a6` — Rigby's `session_tool create_fresh` at Session 1209 open. Carries URC v0.1 design Q1-Q5 lock + Session 1209 fleet smoke `1a8cde69-…` + Phase B AC-4 addendum spanning 4 adopters (Sessions 1210-1211) + Session 1212 PA spend audit findings. Pinned in `tools/pa_local.sh`. **Lean for Session 1213: continue on this thread if pickup is one of the two filed follow-ups (smoke context minimization OR stale-thread audit); spin fresh if pivoting away from URC/cost work.** Prior threads retired: `pa-2d74e36cc3a04787` (Session 1208 + URC design — design-anchor record), `pa-33088358df304016` (Session 1207 MIC + spec handoff), `pa-b2a99ff5b0ee47a6` (Rigby's auto-spawned Session 1207 — superseded mid-session), `pa-234a75abfe374695` (Session 1206 Layer 1 Telemetry), `pa-76aa5b61d0764d11` (Session 1205 evidence-card pipeline), `pa-1871b37227054254` (Session 1204 Phase B.2), `pa-d2d0f4c2b6284899` (Session 1203 Phase B.1), `pa-123b7d48f01043eb` (Session 1202 Phase A.2). **The stale-thread audit deliverable `777d9cd8-…` proposes these retired threads stop accepting autonomous dispatches** — implementation in Session 1213 will close that leak.
 
 **Donkey Betz workspace_id (pin):** `b4503364-2573-4401-9e28-61a739e0ce50` — **50 Initiatives total** (Session 1204 was 50; net +1 from Session 1205's `29154d73-…` Platform Capability Audit Initiative). **31 Initiatives still have NULL `target_workspace_id`** — backfill remains scheduled in roadmap §Phase B.3.
 
