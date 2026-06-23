@@ -283,6 +283,24 @@ Be constructive and brief."""
         }
     ]
 
+    @staticmethod
+    def _is_receipt_only_mode(context: Dict[str, Any] | None) -> bool:
+        """URC v0.1 receipt_only mode detector.
+
+        Returns True when the caller signals a capability ping that
+        should skip code inspection and emit a minimal v0 receipt.
+        Two recognized signals (Rigby sign-off Session 1210 Phase B):
+          - context['mode'] == 'receipt_only'  (primary, URC spec)
+          - context.get('receipt_only') is True  (secondary, forward-compat)
+        """
+        if not context:
+            return False
+        if context.get('mode') == 'receipt_only':
+            return True
+        if context.get('receipt_only') is True:
+            return True
+        return False
+
     def execute(
         self,
         task: str,
@@ -294,6 +312,32 @@ Be constructive and brief."""
         import time
 
         start_time = time.time()
+
+        # Session 1210 Phase B: URC v0.1 receipt_only capability ping.
+        # When the caller signals receipt_only mode, skip the file/code
+        # inspection flow entirely and return a minimal v0 receipt before
+        # time_travel_session opens. The URC predicate at the writeback
+        # (urc_envelope._is_skipped) checks ``data['skipped'] is True`` —
+        # that's the load-bearing marker that maps to run_status='skipped'.
+        # The ``status`` field satisfies the v0 receipt schema separately.
+        # See deliverable 6f09233c-… AC-4 addendum.
+        if self._is_receipt_only_mode(context):
+            execution_time = int((time.time() - start_time) * 1000)
+            return AgentResult(
+                success=True,
+                message='receipt_only mode — no code inspection performed',
+                data={
+                    'skipped': True,
+                    'status': 'skipped',
+                    'mode': 'receipt_only',
+                    'message': 'receipt_only mode — no code inspection performed',
+                },
+                agent_name=self.name,
+                execution_time_ms=execution_time,
+                decisions_made=0,
+                tool_calls=[],
+            )
+
         tool_calls_made = []
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
