@@ -2401,15 +2401,42 @@ self,
             # Session 1076: Sanitize output_data — agent results may contain
             # UUID/datetime objects that aren't JSON-serializable. Force through
             # json.dumps(default=str) round-trip to coerce everything to strings.
+            #
+            # Session 1206 (Finding B1): write BOTH legacy and canonical key
+            # shapes. Pre-fix, this dispatcher wrote `{content, metadata}` and
+            # OVERWROTE the canonical `{result_preview, data, message, error,
+            # tool_calls}` shape that `agent_router._complete_execution` had
+            # just persisted (see core/agent_router.py:1616). Result: readers
+            # that expect the canonical shape (execution_history_tool preview,
+            # deliverable_factory, frontend renderers) saw empty even for
+            # successful runs — content was buried under non-canonical keys.
+            # Existing legacy readers (Session 1181 PR5 artifact_pointers reads
+            # `metadata.images`/`.blog_id`; views_platform_command reads
+            # `content`) keep working because we now write BOTH shapes.
             import json as _json
+            _result_data = getattr(result, 'data', {}) or {}
+            _result_message = result.message or ''
             _raw_output = {
+                # Legacy shape — preserve for backwards compatibility
                 'content': result.content[:5000] if result.content else None,
-                'metadata': getattr(result, 'data', {}) or {},
+                'metadata': _result_data,
+                # Canonical shape (matches agent_router._complete_execution)
+                'message': _result_message,
+                'result_preview': str(_result_message)[:500] if _result_message else None,
+                'data': _result_data,
+                'error': result.error if not result.success else None,
+                'tool_calls': result.tool_calls if result.tool_calls else [],
             }
             try:
                 execution_record.output_data = _json.loads(_json.dumps(_raw_output, default=str))
             except (TypeError, ValueError):
-                execution_record.output_data = {'content': str(result.content)[:5000] if result.content else None}
+                # Defensive fallback — keep at least content + message so
+                # readers from both legacy and canonical paths get something.
+                execution_record.output_data = {
+                    'content': str(result.content)[:5000] if result.content else None,
+                    'message': str(_result_message),
+                    'result_preview': str(_result_message)[:500] if _result_message else None,
+                }
             # Session 1084 round 48: build update_fields dynamically so
             # last_heartbeat_at is excluded from save(). Prevents the
             # heartbeat thread's queryset update() from being stomped by
