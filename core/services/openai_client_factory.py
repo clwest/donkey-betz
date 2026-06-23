@@ -15,9 +15,11 @@ sites across ``core/``; only ``llm_provider_registry.py`` (Session 831) had
 explicit timeouts. The rest were drifting on the SDK default.
 
 Use ``get_openai_client()`` everywhere instead of calling ``OpenAI()``
-directly. The factory also supports DeepSeek, Together AI, and any other
-provider that uses an OpenAI-compatible SDK interface, by accepting a
-``base_url`` override and passing through arbitrary additional kwargs
+directly. For async callers, use ``get_async_openai_client()`` instead of
+``AsyncOpenAI()``. Both factories apply the same timeout + retry contract.
+The factory also supports DeepSeek, Together AI, and any other provider
+that uses an OpenAI-compatible SDK interface, by accepting a ``base_url``
+override and passing through arbitrary additional kwargs
 (``default_headers``, ``organization``, ``project``, etc).
 
 Forbidden kwargs
@@ -31,6 +33,7 @@ Drift audit command
 ::
 
     grep -R "OpenAI(" -n core/ --include='*.py' | grep -v openai_client_factory
+    grep -R "AsyncOpenAI(" -n . --include='*.py' | grep -v openai_client_factory
 """
 
 from __future__ import annotations
@@ -41,7 +44,7 @@ import threading
 from typing import Dict, Optional, Tuple
 
 import httpx
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +65,15 @@ _FORBIDDEN_KWARGS = ("timeout", "max_retries", "api_key")
 # and ``**kwargs`` calls bypass the cache (rare path, hard to key safely).
 _CLIENT_CACHE: Dict[Tuple[str, Optional[str]], OpenAI] = {}
 _CLIENT_CACHE_LOCK = threading.Lock()
+
+# Session 1214 Phase B: async cache parallel to the sync one. AsyncOpenAI
+# wraps an internal httpx.AsyncClient with its own connection pool. Kept in
+# a separate dict because OpenAI and AsyncOpenAI are not interchangeable —
+# returning the wrong type would silently break callers. The underlying
+# async httpx pool, like the sync one, is a process-global singleton and is
+# not explicitly aclose()'d (matches sync behavior — pool dies with process).
+_ASYNC_CLIENT_CACHE: Dict[Tuple[str, Optional[str]], AsyncOpenAI] = {}
+_ASYNC_CLIENT_CACHE_LOCK = threading.Lock()
 
 
 def get_openai_client(
@@ -133,4 +145,65 @@ def get_openai_client(
             if existing is not None:
                 return existing
             _CLIENT_CACHE[cache_key] = client
+    return client
+
+
+def get_async_openai_client(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    **kwargs,
+) -> AsyncOpenAI:
+    """Return an ``AsyncOpenAI`` client with the same timeout + retry contract
+    as :func:`get_openai_client`.
+
+    Semantics mirror the sync factory: ``api_key`` falls back to the
+    ``OPENAI_API_KEY`` environment variable, raises ``RuntimeError`` if
+    missing, rejects forbidden kwargs (``timeout``, ``max_retries``,
+    ``api_key``), and caches per ``(api_key, base_url)`` so repeat callers
+    share one ``AsyncOpenAI`` instance and therefore one ``httpx.AsyncClient``
+    connection pool.
+    """
+    resolved_key = api_key or os.getenv("OPENAI_API_KEY")
+    if not resolved_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set and no api_key was provided to "
+            "get_async_openai_client()"
+        )
+
+    for forbidden in _FORBIDDEN_KWARGS:
+        if forbidden in kwargs:
+            raise ValueError(
+                f"Do not pass {forbidden!r} to get_async_openai_client(); it "
+                f"is centrally managed by the factory"
+            )
+
+    cache_key = (resolved_key, base_url)
+    if not kwargs:
+        cached = _ASYNC_CLIENT_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+
+    timeout = httpx.Timeout(
+        connect=OPENAI_CONNECT_TIMEOUT_S,
+        read=OPENAI_READ_TIMEOUT_S,
+        write=OPENAI_WRITE_TIMEOUT_S,
+        pool=OPENAI_POOL_TIMEOUT_S,
+    )
+
+    ctor_kwargs = {
+        "api_key": resolved_key,
+        "timeout": timeout,
+        "max_retries": OPENAI_MAX_RETRIES,
+    }
+    if base_url:
+        ctor_kwargs["base_url"] = base_url
+    ctor_kwargs.update(kwargs)
+
+    client = AsyncOpenAI(**ctor_kwargs)
+    if not kwargs:
+        with _ASYNC_CLIENT_CACHE_LOCK:
+            existing = _ASYNC_CLIENT_CACHE.get(cache_key)
+            if existing is not None:
+                return existing
+            _ASYNC_CLIENT_CACHE[cache_key] = client
     return client
