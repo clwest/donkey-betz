@@ -439,8 +439,22 @@ class AgentHandlersMixin:
             by_status = dict(base_qs.values('status').annotate(c=Count('id')).values_list('status', 'c'))
             by_type = dict(base_qs.values('opportunity_type').annotate(c=Count('id')).values_list('opportunity_type', 'c'))
             total_potential = base_qs.aggregate(total=Sum('potential_revenue'))['total'] or 0
+            # Session 1222 P4 (audit C1): include an explicit scope label so
+            # callers know whether they're seeing the caller-scoped 'your
+            # pipeline' view or the un-filtered platform-wide pool. The 2631
+            # vs 47 audit confusion came from there being no clear marker
+            # on the returned shape. See pa_tool_schemas.py
+            # opportunity_manager_tool description.
             return {
                 'action': 'stats',
+                'scope': 'caller' if user_id else 'platform_wide',
+                'scope_note': (
+                    'Filtered to your opportunities (owner=caller). '
+                    'Platform-wide pool visible via '
+                    'autopilot_tool.dry_run_report → revenue_pipeline.'
+                    if user_id
+                    else 'Unscoped — counts all Opportunity rows across users.'
+                ),
                 'total': sum(by_status.values()),
                 'by_status': by_status,
                 'by_type': by_type,

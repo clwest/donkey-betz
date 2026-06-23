@@ -1717,6 +1717,45 @@ class OpsHandlersMixin:
             else:
                 report_lines.append(f"\n### Deliberation Retry: No retryable failures")
 
+            # Revenue pipeline section — Session 1222 P4 (audit C1).
+            # Pre-fix the dry_run_report's JSON summary carried this data
+            # under summary.revenue_pipeline but the formatted text output
+            # omitted it, which is what made the "2631 vs 47 mismatch"
+            # confusing in the Session 1217 audit. Both numbers shown now,
+            # with a clear scope label distinguishing platform-wide pool
+            # from the calling user's curated pipeline. See PR description
+            # for the lead-discovery-pool pattern.
+            revenue = summary.get('revenue_pipeline', {})
+            if revenue.get('total_active') or revenue.get('actions_suggested'):
+                report_lines.append(f"\n### Revenue Pipeline (platform-wide)")
+                report_lines.append(
+                    f"- Total active (all users, incl. spider-ingested lead pool): "
+                    f"{revenue.get('total_active', 0)}"
+                )
+                if revenue.get('high_value_active'):
+                    report_lines.append(
+                        f"- High-value (≥$500): {revenue.get('high_value_active', 0)}"
+                    )
+                if revenue.get('stale_count'):
+                    report_lines.append(
+                        f"- Stale (>{48}h since created): {revenue.get('stale_count', 0)}"
+                    )
+                if revenue.get('critical_stale'):
+                    report_lines.append(
+                        f"- Critically stale (>7d): {revenue.get('critical_stale', 0)}"
+                    )
+                if revenue.get('actions_suggested'):
+                    report_lines.append(
+                        f"- Actions suggested: {revenue.get('actions_suggested', 0)}"
+                    )
+                report_lines.append(
+                    "- Scope note: this is the **platform-wide lead pool**. "
+                    "Per-user 'your pipeline' counts come from "
+                    "`opportunity_manager_tool action=stats` (caller-scoped)."
+                )
+            else:
+                report_lines.append(f"\n### Revenue Pipeline: No active opportunities")
+
             # Content sweep section
             content = summary.get('content_sweep', {})
             enhance = content.get('kicked_enhance', 0)
