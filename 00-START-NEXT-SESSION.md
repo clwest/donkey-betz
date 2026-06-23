@@ -102,7 +102,79 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1219 — CURRENT ENTRY POINT
+## SESSION 1220 — CURRENT ENTRY POINT
+
+### SESSION 1219 CLOSED — Watchdog fix 3-phase ship: bridge + early-save + zombie-thread investigation, all 3 phases shipped same-day
+
+Full handoff: [`SESSION_1219_WATCHDOG_FIX_3_PHASE_SHIP.md`](docs/handoffs/SESSION_1219_WATCHDOG_FIX_3_PHASE_SHIP.md). Chris specified a 3-phase fix plan; executed exactly to spec.
+
+| PR | Phase | What |
+|---|---|---|
+| **#2512** | 1 | `task_failure` → `AgentExecution` bridge in `core/celery_telemetry.py`. Catches `SoftTimeLimitExceeded` / generic exception paths. 5 smoke tests. |
+| **#2513** | 2 | Wall-clock-timeout early-save in both `_FuturesTimeout` handlers (`tasks_agents.py` + `agent_router.py`). Renamed `timeout_source='agent_wall_clock'` for attribution clarity. 3 lock-in tests. |
+| **(this PR)** | — | Session 1219 close handoff + Session 1220 start-here. |
+
+**Phase 3 investigation deliverable:**
+
+| ID | Title | Final size |
+|---|---|---|
+| `cf80d413-1f35-44a9-9763-6bc5f3a93916` | Session 1219 P3 — Zombie agent thread investigation | **7,289 chars** |
+
+**Three timeout-source attributions now distinguished:** `agent_wall_clock` (Celery-task path), `router_wall_clock` (direct router path), `watchdog_cleanup` (beat task swept stale row).
+
+**Phase 3 finding:** `ThreadPoolExecutor.shutdown(wait=False)` doesn't kill the agent thread — Python has no API for it. Worker recycling via `--max-tasks-per-child` is the only cleanup. Empirical zombie rate ~2/day. Recommended Option D (monitor + status quo) over heavier alternatives (per-task subprocess, signal-based kill, cooperative cancellation). Phases 1 + 2 already close the visible symptom (orphaned DB rows).
+
+**Open question deferred:** Why doesn't the OpenAI httpx 90s read timeout catch the zombie BEFORE the 300s+ wall-clock fires for short-budget agents like AudioAgent?
+
+### FIRST THING Session 1220 — open items from Session 1219 P3 + carryovers
+
+#### Priority 1 — Ship the zombie-thread monitor (Phase 3 Option D)
+
+Small ~10 LoC + ops_tool integration recommended in deliverable `cf80d413-…`. At both `_FuturesTimeout` catch sites (`tasks_agents.py:2425` + `agent_router.py:1551`), increment a per-worker, per-hour counter via Django cache:
+
+```python
+from django.core.cache import cache
+zombie_key = f'zombie_threads:{agent_name}:{datetime.utcnow().strftime("%Y%m%d%H")}'
+cache.incr(zombie_key, 1)
+```
+
+Then expose `ops_tool.zombie_thread_rate` returning a per-hour breakdown for the last N hours. Alert on >5 zombies/hour for any single agent — that's a structural-hang signal (upstream LLM provider degraded, spider source down, etc.).
+
+#### Priority 2 — Investigate OpenAI httpx timeout bypass (open question from Phase 3)
+
+If `core/services/openai_client_factory.py` correctly sets `read=90s, connect=20s, write=60s, pool=60s` and the OpenAI call respects them, AudioAgent's `_wall_timeout=300s` should never fire — the agent body would have already raised `APITimeoutError` cleanly. The fact that AudioAgent ran 4000s+ before being caught suggests the OpenAI call itself was bypassing its httpx timeout.
+
+**Hypotheses:**
+1. **httpx `pool=60s` wait queue** — the pool timeout only catches "no connection available" cases, not "stuck on existing connection."
+2. **Response streaming hung mid-body** — the `read=90s` deadline only applies between chunks, so a stream that delivers a single byte every 89s would never time out.
+3. **Connection-pool exhaustion at the OpenAI httpx client level** — held connections from previous zombies prevent new ones.
+
+Pull the OpenAI client's TCP/HTTP timeline for a few zombie-killed AudioAgent runs (Wireshark / `tcpdump` if production-accessible, else strace the worker process). Or: add per-call elapsed timing inside `base_agent._call_openai` and check for outliers above the configured read timeout.
+
+#### Priority 3 — B2 follow-on for OpenAIProvider (deferred since Session 1217 PR #2507)
+
+Full removal of the `OpenAIProvider` class + `openai` branch in `generate_for_agent`. Requires first proving the `real_*` agent paths are no longer exercised in production. Session 1214 handoff note: "the live path appears to use `AsyncLLMAdapter` directly." Verify by checking `AgentExecution` rows for `real_content_creator`, `real_job_executor`, `real_work_delivery_engine`, `real_client_acquisition`, `ai_proposal_engine`, `freelance_job_analyzer`, `concrete_executor` agent names + cross-ref with the spec.
+
+#### Priority 4 — Trim the remaining 9 zero-exec gateway-referenced classes (deferred since Session 1218 P2)
+
+The 9 zero-exec classes that stayed in Session 1218 PR #2510 because they're still dispatched by gateway code:
+- `ContentDiversityOrchestrator`, `ContrarianAgent`, `LineMovementAnalyzer`, `PerformanceAnalystAgent`, `SharpActionDetector`, `VoiceCriticAgent` (called from `td_handlers_content.py:4160, 4175, 4513`)
+- `ResolveAgent`, `TalkingCharacterAgent`, `WhaleWatcherAgent` (called from `td_handlers_ops.py:3472,3477` + `td_handlers_core.py:1009`)
+
+Refactor the gateway dispatch sites first. Per-site decision: replace with a different agent, drop the gateway feature entirely, or upgrade the agent to actually be used.
+
+#### Priority 5 — Promote `check-reasoning-contract.yml` to enforce mode (P2 carryover from Session 1216)
+
+Currently ships `--warn-only`. Phase C+D close left zero violations on main. Flip to error mode once a clean run is verified post Phase 1 + 2 watchdog merges.
+
+**Active conversation:** `pa-58737666f25741dc` — same thread carried through Sessions 1217 / 1218 / 1219. Continue here unless you want a fresh thread.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Doc-vs-runtime drift triage (audit findings #6/#7/#8)
+- Critical-path hub markers (audit finding #4)
+- Atlas fleet positioning + narrative staleness (#9/#10)
+- Beat schedule disabled tasks classification (Rigby's A4)
+- Revenue pipeline aggregation audit (Rigby's C5)
 
 ### SESSION 1218 CLOSED — Watchdog investigation + dead-weight trim, both shipped in one session
 
