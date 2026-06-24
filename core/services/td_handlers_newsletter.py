@@ -402,11 +402,31 @@ class NewsletterHandlersMixin:
 
         metrics = compute_issue_metrics(deliverable.content, issue_number, deliverable.title)
 
-        # Allow manual metric updates via payload
+        # Allow manual metric updates via payload — Session 1228 PR-A
+        # switched from `payload.get(field) is not None` to a key-presence
+        # check + non-negative validation. GPT-5.2 autofills int params with
+        # 0, which the old `is not None` gate accepted and would silently
+        # overwrite a real opens/clicks count with 0. Key-presence guard
+        # means the LLM has to explicitly include the field; non-negative
+        # check preserves the legitimate "0 opens" case. Memory rule:
+        # feedback_llm_autofills_boolean_params_with_false (covers int 0).
         manual_fields = ['send_date', 'opens', 'clicks', 'unsubscribes', 'new_subscribers']
         for field in manual_fields:
-            if payload.get(field) is not None:
-                metrics[field] = payload[field]
+            if field not in payload:
+                continue
+            val = payload[field]
+            # send_date is a string; numeric fields must be non-negative ints.
+            if field == 'send_date':
+                if val:  # accept non-empty string only
+                    metrics[field] = val
+                continue
+            try:
+                num = int(val) if val is not None else None
+            except (TypeError, ValueError):
+                continue
+            if num is None or num < 0:
+                continue
+            metrics[field] = num
 
         # Save metrics to deliverable metadata
         meta = deliverable.metadata or {}
