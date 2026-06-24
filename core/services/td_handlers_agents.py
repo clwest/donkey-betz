@@ -1609,25 +1609,42 @@ class AgentHandlersMixin:
             else:
                 logger.info(f"[deliverables] Staff/PA user — showing all {base_qs.count()} items")
 
+        # Session 1227 — show_all flag bypasses the optional filters that
+        # GPT-5.2 has been observed autofilling with `False` (has_initiative
+        # in particular). When True, the bypass applies to: has_initiative,
+        # orphans, saved, status. Other filters (agent/category/type/
+        # workspace/initiative_id) still respect explicit caller intent.
+        _show_all = payload.get('show_all') in (True, 'true', 'True', 1, '1')
+
+        # Session 1227 — track which optional filters actually fired so the
+        # response can echo them. Closes the diagnostic gap that let the
+        # has_initiative autofill bug ship unnoticed for ~one session.
+        _applied = {}
+
         def _apply_common_filters(qs):
             """Apply category/agent/type/saved/status/date filters."""
             dtype = payload.get('type')
             if dtype:
                 qs = qs.filter(deliverable_type=dtype)
+                _applied['type'] = dtype
             cat = payload.get('category')
             if cat:
                 qs = qs.filter(category__iexact=cat)
+                _applied['category'] = cat
             agent = payload.get('agent')
             if agent:
                 qs = qs.filter(agent_name__iexact=agent)
-            if payload.get('saved'):
+                _applied['agent'] = agent
+            if not _show_all and payload.get('saved'):
                 qs = qs.filter(is_saved=True)
+                _applied['saved'] = True
             # Session 1101: Status filter (with aliases for LLM confusion)
             _STATUS_ALIASES = {'approved': 'ready', 'pending_review': 'ready', 'rejected': 'archived'}
             status = payload.get('status')
-            if status and status.lower() != 'all':
+            if not _show_all and status and status.lower() != 'all':
                 status = _STATUS_ALIASES.get(status, status)
                 qs = qs.filter(status=status)
+                _applied['status'] = status
             # Session 1101: Date range filters
             created_before = payload.get('created_before')
             created_after = payload.get('created_after')
@@ -1636,30 +1653,42 @@ class AgentHandlersMixin:
                 dt = parse_datetime(created_before)
                 if dt:
                     qs = qs.filter(created_at__lt=dt)
+                    _applied['created_before'] = created_before
             if created_after:
                 from django.utils.dateparse import parse_datetime
                 dt = parse_datetime(created_after)
                 if dt:
                     qs = qs.filter(created_at__gte=dt)
+                    _applied['created_after'] = created_after
             # Session 1077: Initiative filter
             init_id = payload.get('initiative_id')
             if init_id:
                 qs = qs.filter(initiative_id=init_id)
-            # Session 1226 — has_initiative boolean filter. Rigby's missing
-            # "show me which of agent X's deliverables are attached to
-            # initiatives" query (Chris flagged at Session 1225 close). True =
-            # initiative_id IS NOT NULL; False = IS NULL. Accepts the same
-            # truthy/falsy surface as `orphans` (true/True/1/"true").
+                _applied['initiative_id'] = init_id
+            # Session 1227 — has_initiative gate hardened. GPT-5.2 in function
+            # calling mode autofills declared optional booleans with `False`,
+            # which trips a naive `is not None` check and silently filters out
+            # every deliverable WITH an initiative attached (Session 1227 root
+            # cause; misdiagnosed as F3 'blocked + archived hidden' in Session
+            # 1226 audit `e2964e4a-…`). Mirror the `orphans` truthy-only
+            # pattern: only fire on explicit caller intent. Python bool False
+            # is now treated as autofill → no filter. To explicitly request
+            # "deliverables WITHOUT an initiative", pass the STRING 'false'.
+            # `show_all=true` also bypasses this filter entirely.
             has_init = payload.get('has_initiative')
-            if has_init is not None:
+            if not _show_all:
                 if has_init in (True, 'true', 'True', 1, '1'):
                     qs = qs.filter(initiative_id__isnull=False)
-                elif has_init in (False, 'false', 'False', 0, '0'):
+                    _applied['has_initiative'] = True
+                elif has_init in ('false', 'False'):  # explicit string sentinel only
                     qs = qs.filter(initiative_id__isnull=True)
+                    _applied['has_initiative'] = False
+                # else: None, '', 0, False (python bool) → no filter
             # Workspace filter — scopes deliverable results to a workspace
             ws_id = payload.get('workspace_id') or payload.get('workspace')
             if ws_id:
                 qs = qs.filter(workspace_id=ws_id)
+                _applied['workspace_id'] = ws_id
             # Session 1091 — orphan filter so Rigby can audit "show me
             # deliverables with no workspace assignment". Accepts truthy
             # values (true/True/1/"true"). When set, ignores any other
@@ -1667,8 +1696,9 @@ class AgentHandlersMixin:
             # no workspace_id, so a positive ws_id filter would zero out
             # the result set anyway, but be explicit).
             orphans_only = payload.get('orphans')
-            if orphans_only in (True, 'true', 'True', 1, '1'):
+            if not _show_all and orphans_only in (True, 'true', 'True', 1, '1'):
                 qs = qs.filter(workspace_id__isnull=True)
+                _applied['orphans'] = True
             return qs
 
         # Session 1091 — surface workspace_id + workspace name in list responses.
@@ -1788,6 +1818,10 @@ class AgentHandlersMixin:
             return {
                 'action': 'list', 'total': total, 'offset': offset,
                 'limit': limit, 'count': len(items), 'items': items,
+                # Session 1227 — applied_filters echo + show_all flag so
+                # callers can see exactly which optional filters fired.
+                'applied_filters': dict(_applied),
+                'show_all': _show_all,
             }
 
         elif action == 'search':
@@ -1805,6 +1839,9 @@ class AgentHandlersMixin:
             return {
                 'action': 'search', 'query': query, 'total': total,
                 'offset': offset, 'limit': limit, 'count': len(items), 'items': items,
+                # Session 1227 — same applied_filters surface as list action.
+                'applied_filters': dict(_applied),
+                'show_all': _show_all,
             }
 
         elif action == 'detail':
@@ -2305,11 +2342,20 @@ class AgentHandlersMixin:
                 .order_by('-count')
                 .values_list('category', 'count')[:10]
             )
-            by_agent = dict(
+            # Session 1227 — full_by_agent=true returns the entire agent_name
+            # long tail (Session 1226 audit `e2964e4a-…` §4.6 (C) requested
+            # this so future audits can skip the ORM detour). Truthy-only
+            # check so LLM-autofilled False is treated as "no override".
+            _full_by_agent = payload.get('full_by_agent') in (True, 'true', 'True', 1, '1')
+            _by_agent_qs = (
                 base_qs.values('agent_name')
                 .annotate(count=Count('id'))
                 .order_by('-count')
-                .values_list('agent_name', 'count')[:10]
+            )
+            by_agent = dict(
+                _by_agent_qs.values_list('agent_name', 'count')
+                if _full_by_agent
+                else _by_agent_qs.values_list('agent_name', 'count')[:10]
             )
             # Session 1091 Sprint B — workspace breakdown.
             # NOTE: this handler's existing 'orphans' field counts
@@ -2356,6 +2402,11 @@ class AgentHandlersMixin:
                 'by_type': by_type,
                 'by_category': by_category,
                 'by_agent': by_agent,
+                # Session 1227 — surface the truncation status so callers
+                # know whether by_agent is the full long tail or the
+                # default top-10. by_agent_truncated=true means a
+                # follow-up call with full_by_agent=true is needed.
+                'by_agent_truncated': not _full_by_agent and len(by_agent) >= 10,
                 'by_workspace': by_workspace,
                 'workspace_orphans': workspace_orphans,
                 'workspace_unassigned': workspace_unassigned,
