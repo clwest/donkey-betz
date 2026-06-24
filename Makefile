@@ -229,8 +229,10 @@ davinci-bridge-logs: ## Tail DaVinci Bridge logs
 # - broadcast worker: High-frequency status updates (2 threads)
 CELERY_LONG_RUNNING_LOG ?= celery-long-running.log
 CELERY_BROADCAST_LOG ?= celery-broadcast.log
+CELERY_CODE_JOBS_LOG ?= celery-code-jobs.log
 CELERY_LONG_RUNNING_PIDFILE ?= .celery-long-running.pid
 CELERY_BROADCAST_PIDFILE ?= .celery-broadcast.pid
+CELERY_CODE_JOBS_PIDFILE ?= .celery-code-jobs.pid
 
 celery: ## Start Celery workers + beat (background) with multi-queue architecture
 	@echo "==> Starting Celery services (multi-queue architecture)..."
@@ -286,6 +288,23 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
 			--queues=broadcast \
 			--hostname=broadcast@%h > $(CELERY_BROADCAST_LOG) 2>&1 & echo $$! > $(CELERY_BROADCAST_PIDFILE); \
+		sleep 1; \
+	fi
+	@# Start code_jobs queue worker (claude_code_engineer_task — Session 1226 P3).
+	@# Procfile has `code-worker` on Railway, but `make celery` previously
+	@# omitted it locally. Result: Rigby's claude_code_tool dispatches
+	@# succeeded into the code_jobs Redis queue but never executed because
+	@# no local worker watched it. Manifested as "task 0077cd79 never reached
+	@# Claude Code session" — wasn't wiring, it was queue topology drift.
+	@# Mirrors the Procfile prefork single-task profile to match prod isolation.
+	@if pgrep -f "hostname=code_jobs" >/dev/null 2>&1; then \
+		echo "-> Celery code_jobs worker already running"; \
+	else \
+		echo "-> Starting Celery code_jobs worker (prefork, queues=code_jobs)..."; \
+		PG_APPLICATION_NAME=dbz:celery-code-jobs SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 \
+			--queues=code_jobs \
+			--hostname=code_jobs@%h > $(CELERY_CODE_JOBS_LOG) 2>&1 & echo $$! > $(CELERY_CODE_JOBS_PIDFILE); \
 		sleep 1; \
 	fi
 	@# Start Celery beat if not running.
@@ -347,6 +366,15 @@ celery-stop: ## Stop all Celery workers and beat
 			kill $$PID || true; \
 		fi; \
 		rm -f $(CELERY_BROADCAST_PIDFILE); \
+	fi
+	@# Stop code_jobs worker (Session 1226 P3 add)
+	@if [ -f $(CELERY_CODE_JOBS_PIDFILE) ]; then \
+		PID=$$(cat $(CELERY_CODE_JOBS_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Celery code_jobs worker (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(CELERY_CODE_JOBS_PIDFILE); \
 	fi
 	@# Stop beat
 	@if [ -f $(CELERY_BEAT_PIDFILE) ]; then \
