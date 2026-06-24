@@ -302,11 +302,21 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 	@# every time even with OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES — well-
 	@# known issue (see CLAUDE.md macOS Celery SIGSEGV note). Local uses
 	@# --pool=solo to match the same pattern the default/pa workers use.
+	@#
+	@# CLAUDE_CODE_ENGINE_PROVIDER=openai is the Session 1226 PR #2556
+	@# fallback. Anthropic credits exhausted Session 1226 carryover —
+	@# without this env var the engineer defaults to Anthropic and every
+	@# dispatch returns "credit balance too low" error 400 (verified
+	@# Session 1229 — code_jobs worker bounce via `make celery` lost the
+	@# fallback because shell env wasn't passed through). REMOVE THIS LINE
+	@# (and the `\` continuation) once Anthropic credits are refilled +
+	@# `unset CLAUDE_CODE_ENGINE_PROVIDER` is the one-liner revert path.
 	@if pgrep -f "hostname=code_jobs" >/dev/null 2>&1; then \
 		echo "-> Celery code_jobs worker already running"; \
 	else \
 		echo "-> Starting Celery code_jobs worker (solo, queues=code_jobs)..."; \
 		PG_APPLICATION_NAME=dbz:celery-code-jobs SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
+		CLAUDE_CODE_ENGINE_PROVIDER=openai \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
 			--queues=code_jobs \
 			--hostname=code_jobs@%h > $(CELERY_CODE_JOBS_LOG) 2>&1 & echo $$! > $(CELERY_CODE_JOBS_PIDFILE); \
