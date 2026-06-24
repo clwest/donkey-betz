@@ -3185,7 +3185,13 @@ class OpsHandlersMixin:
         elif action == 'security_containment_plan':
             from core.services.ops_autopilot import SecurityEngine
 
-            dry_run = payload.get('dry_run', True)
+            # Session 1228 PR-A — belt-and-suspenders write gate. Live
+            # security ops (rate limits, switch expiry cleanup, etc.) —
+            # autofilled dry_run=False must not flip a plain preview call
+            # into a live containment action. Memory rule:
+            # feedback_llm_autofills_boolean_params_with_false.
+            from core.services.td_autofill_safety import require_write_authorization
+            dry_run, _write_ok = require_write_authorization(payload)
             engine = SecurityEngine()
             plan = engine.get_containment_plan(dry_run=dry_run)
             return {'action': 'security_containment_plan', **plan}
