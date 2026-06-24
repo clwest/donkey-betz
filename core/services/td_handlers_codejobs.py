@@ -351,17 +351,30 @@ class CodeJobHandlersMixin:
         if not conversation_id and hasattr(self, '_conversation_id'):
             conversation_id = self._conversation_id
 
+        # Session 1230 P4 — request_mode plumbing. 'auto' default keeps prior
+        # behavior (heuristic) when caller omits the kwarg; explicit
+        # 'answer' / 'change' from Rigby overrides the verb heuristic. Any
+        # other value is normalized in execute_engineering_task with a warn
+        # log, not a 4xx — keeps Rigby's tool surface forgiving.
+        request_mode = (payload.get('request_mode') or 'auto').strip().lower()
+
         from core.tasks import claude_code_engineer_task
         task = claude_code_engineer_task.delay(
             task_description=task_description,
             conversation_id=conversation_id,
             requested_by='rigby',
+            request_mode=request_mode,
         )
 
         return {
             'status': 'dispatched',
             'task_id': str(task.id),
-            'message': f'Claude Code engineering session started. Task ID: {task.id}. Results will be posted to the conversation when complete.',
+            'request_mode': request_mode,
+            'message': (
+                f'Claude Code engineering session started '
+                f'(request_mode={request_mode}). Task ID: {task.id}. Results '
+                f'will be posted to the conversation when complete.'
+            ),
         }
 
 
