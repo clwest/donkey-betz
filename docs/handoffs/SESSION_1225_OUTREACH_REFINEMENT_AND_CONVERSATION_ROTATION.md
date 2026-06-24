@@ -1,6 +1,6 @@
-# Session 1225 — Outreach Refinement + Anti-Scrape Sanitizer + Conversation Rotation
+# Session 1225 — Outreach Refinement + Anti-Scrape Sanitizer + Conversation Rotation + Daily Beat Task
 
-**Status:** Three-PR session — Rigby-driven refinement arc on the outreach pipeline shipped Session 1224, plus mid-session conversation rotation after health-check signal.
+**Status:** Five-PR session (4 refinement + 1 close + post-close beat task addition) — Rigby-driven refinement arc on the outreach pipeline shipped Session 1224, mid-session conversation rotation after health-check signal, plus post-close shipment of the daily beat task that was carryover from Session 1224.
 **Date:** 2026-06-23 (continued from Session 1224 close, same UTC day).
 **Active conversation:** rotated mid-session — pa-17e0fa71fd25470a → **pa-77bbcd97a625424d**.
 **Prior session:** [`SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md`](./SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md).
@@ -10,7 +10,7 @@
 
 Session 1224 closed with the outreach pipeline live end-to-end and 5 fallback drafts in the inbox (OpenAI credit at the time was thin). Chris added `+$40` of credits, asked us to delete the fallback drafts and regenerate via the LLM path. The first re-generate exposed the `max_completion_tokens=800` bug that drove the 1224 cross-cutting sweep; Session 1225 picked up after that landed.
 
-Three arcs this session:
+Four arcs this session:
 
 1. **Outreach prompt envelope (#2544)** — Rigby's session-mid architectural ask: hard-bind the SYSTEM_PROMPT to a specific per-offer delivery envelope (ai_automation = 1-day thin-slice prototype with explicit exclusions; consulting = roadmap document only; content_engine = signal audit + sample pipeline). Forwarded manually via Chris because Rigby's `claude_code_tool` dispatch (task ID `0077cd79-…`) didn't reach my session.
 
@@ -18,18 +18,22 @@ Three arcs this session:
 
 3. **Conversation rotation (#2546)** — `pa-17e0fa71fd25470a` carried Sessions 1223 → 1224 → first half of 1225 (8 PRs total). Hit `session_tool.health_check` score 45/100 / `suggest_fresh` at 39 turns. Spun fresh via `session_tool.create_fresh` with full 1224 + 1225 carry-forward context; updated `tools/pa_local.sh` pin.
 
-GH Actions billing still failing — all 3 PRs admin-merged per existing Chris session authorization.
+4. **Daily beat task (#2548, post-close)** — closed the Option B beat task that had been deferred from Session 1224 PR #2540. New `@shared_task generate_outreach_drafts_daily` + `crontab(hour=13, minute=30)` beat entry (= 7:30 AM MDT / 6:30 AM MST). PeriodicTask row materialized via `add_critical_celery_tasks`; celery workers restarted and confirmed the task name registers across all 4 workers. First fire: 2026-06-24 at 13:30 UTC.
+
+GH Actions billing still failing — all 5 PRs admin-merged per existing Chris session authorization.
 
 ## Session Manifest
 
-### PRs merged (3 total)
+### PRs merged (5 total + this update)
 
 | # | Title | What |
 |---|---|---|
 | **#2544** | `feat(session-1225): outreach prompt envelope — hard-bind delivery scope per offer` | `OpportunityDraftGenerator.SYSTEM_PROMPT` rewritten with TONE / GLOBAL / PER-OFFER sections. Forbidden phrases enumerated ("guaranteed", "ROI of N%", "production-ready", etc.). Every body must end with per-offer scoping/qualification question before sign-off. `OFFER_BLURBS` updated to name actual scope. `_fallback_email` updated to match (new `_FALLBACK_QUESTIONS` map). 17/17 unit tests still pass. Live verification: all 3 offer_keys produce envelope-compliant content against real RemoteOK opps. |
 | **#2545** | `fix(session-1225): strip recruiter-board anti-scrape tokens from lead text` | New `_sanitize_lead_text` module-level helper. Three conservative patterns: full RemoteOK clause (`Please mention the word ... when applying ...(#<base64>)`), bare hashtag tokens (`#<base64>` ≥16 chars), bare `tag <base64>` remnants. Applied at `build_prompt_payload` (`title`+`description`) and draft persistence (`lead_title`). +6 tests. 23/23 pass. |
 | **#2546** | `chore(session-1225): rotate pa_local.sh pin → pa-77bbcd97a625424d` | New pin via `session_tool.create_fresh` with 1224+1225 carry-forward seed. Retirement-note convention preserved (21+ historical pins now listed back to Session 1184). |
-| **(this PR)** | `docs(session-1225): close — outreach refinement + sanitizer + conversation rotation + 1226 start-here` | Session close handoff + 00-START-NEXT-SESSION.md rewrite for Session 1226. |
+| **#2547** | `docs(session-1225): close — outreach refinement + sanitizer + conversation rotation + 1226 start-here` | Original session close handoff + 00-START-NEXT-SESSION.md rewrite for Session 1226. |
+| **#2548** | `feat(session-1225): outreach drafts daily beat task` | Post-close addition. Closes the Option B beat task deferred from Session 1224 PR #2540. New `@shared_task generate_outreach_drafts_daily` thin wrapper + `crontab(hour=13, minute=30)` beat entry. PeriodicTask materialized + workers restarted + task name confirmed registered across all 4 workers. 2/2 unit tests pass. |
+| **(this PR)** | `docs(session-1225): update close — add daily beat task #2548 + 1226 start-here refresh` | This update — appends #2548 to the session ledger, removes outreach-beat-task from carryover, adds first-fire watch to Session 1226 P2. |
 
 ### Initiatives + deliverables
 
@@ -103,6 +107,30 @@ Applied at two sites:
 
 **Ownership-verification gap:** `conversation_tool.get` schema doesn't include an owner/username field, and there's no dedicated `whoami` tool endpoint. Implicit verification by reachability (chris's token successfully reaches the new conversation) — Rigby filed a wiring investigation item for `whoami` + `conversation.owner` tool surface (same class as the open `claude_code_tool` dispatch gap).
 
+### Arc 4 — Outreach drafts daily beat task (PR #2548, post-close)
+
+**Trigger:** Chris greenlit shipping the beat task right after the original close handoff (#2547) merged. Carryover priority from Session 1224 → 1225 closed same-session.
+
+**Shape:** thin wrapper around `OpportunityDraftGenerator.generate(limit, scope, offers)`. Mirrors the existing `generate_operator_edge_newsletter` task pattern (`bind=True`, soft/hard time limits 300/360s, queue=content).
+
+**Beat entry:**
+- `crontab(hour=13, minute=30)` UTC = 7:30 AM MDT (summer) / 6:30 AM MST (winter) — matches the operator-edge seasonal-drift convention
+- No kwargs → generator defaults (`limit=5`, `scope='all'`, `offers=None`)
+- `DAILY_GENERATE_CAP=5` enforced inside the generator regardless of `limit` kwarg, so the task is safe even if upstream callers override
+
+**Safety bounds (defense-in-depth from prior PRs):**
+- Approval-required: drafts never auto-send (existing `OutreachSequencer.approve_draft` gate)
+- Daily cap of 5 same as on-demand path
+- SYSTEM_PROMPT envelope (#2544) hard-binds delivery scope
+- Anti-scrape sanitizer (#2545) strips recruiter-board markers
+
+**Verification at session close:**
+- PeriodicTask row created via `python manage.py add_critical_celery_tasks` — `enabled=True`, crontab `minute=30 hour=13`, queue=content
+- Workers restarted via canonical sequence (`pkill -9 -f celery; rm -f .celery*.pid; make celery`)
+- `.venv/bin/celery -A core inspect registered | grep generate_outreach_drafts_daily` shows the task name across all 4 worker hostnames
+
+**Next observable fire:** 2026-06-24 at 13:30 UTC (~7:30 AM MDT on Tuesday). Today's 5/5 cap rolls over at UTC midnight (~6:00 PM MDT tonight); the beat fires after that against a freshly-empty cap.
+
 ## Behavioral invariants post-Session-1225
 
 For ops monitoring (Rigby's lane):
@@ -111,6 +139,7 @@ For ops monitoring (Rigby's lane):
 2. **Every outreach draft body ends with a per-offer scoping/qualification question on its own line** before the sign-off. If the LLM drops the question, the envelope contract has drifted.
 3. **No forbidden-phrase leakage** in outreach drafts: "guaranteed", "ROI of N%", "production-ready", "we will save you", "enterprise-grade", "double your". Compliance scan should return zero hits.
 4. **`tools/pa_local.sh` token resolves to chris**; new conversation `pa-77bbcd97a625424d` reachable via the wrapper.
+5. **Daily outreach beat task fires at 13:30 UTC** without manual trigger (post-#2548). Up to 5 fresh drafts appear in the inbox each morning. `PeriodicTask.objects.filter(name='generate-outreach-drafts-daily').enabled` should be `True`.
 
 ## Rollback levers
 
@@ -119,6 +148,7 @@ For ops monitoring (Rigby's lane):
 | #2544 | Revert `SYSTEM_PROMPT` to pre-1225 (single shared rules block). `OFFER_BLURBS` revert is independent. | Only if the per-offer envelopes produce too-narrow content that fails to land any meetings after 7+ days of real reads. |
 | #2545 | Comment out `_SCRAPE_TOKEN_PATTERNS` regex list, or remove `_sanitize_lead_text` calls in `build_prompt_payload` and draft persistence. | Only if false-positives strip legitimate prose. Tests cover this; haven't seen one. |
 | #2546 | Edit the `--conversation` line in `tools/pa_local.sh` back to `pa-17e0fa71fd25470a`. The old conversation is dormant but not deleted. | Only if the new conversation hits an unrecoverable wiring issue (Rigby loses context, tool calls hang, etc.). |
+| #2548 | `PeriodicTask.objects.filter(name='generate-outreach-drafts-daily').update(enabled=False)` — keeps the row but stops it firing. No code revert required. | If unwanted drafts start appearing (cap accounting bug, prompt drift, etc.) — disable while debugging, re-enable when verified. |
 
 ## 24h watch checklist
 
@@ -126,6 +156,7 @@ For ops monitoring (Rigby's lane):
 2. **Compliance scan** — `OutreachDraft.objects.filter(body_text__iregex=r'guaranteed|production-ready|ROI of \d+%|enterprise-grade').count()` should return zero on touch-1 drafts created post-#2544.
 3. **Fresh conversation health** — `session_tool.health_check` on `pa-77bbcd97a625424d` after Session 1226 opens. If it drops below 70 within ~10 turns, the seed prompt may be too long; consider trimming.
 4. **CI billing status** — Chris-side; once green, normal PR flow returns and admin overrides expire.
+5. **First daily beat fire** — 2026-06-24 at 13:30 UTC. Verify post-fire: `CeleryTaskEvent.objects.filter(task_name='core.tasks.generate_outreach_drafts_daily').order_by('-started_at').first()` returns a `SUCCESS` row, and `OutreachDraft.objects.filter(lead_source='opportunity_outreach_seed', created_at__date='2026-06-24').count()` is 1-5 (not 0).
 
 ## Open ops issues filed this session
 
@@ -163,7 +194,7 @@ None this session. Both Session 1224 rules (`feedback_chris_discoverability_visi
 See 00-START-NEXT-SESSION.md FIRST THING. Highlights:
 
 - **Operator Edge newsletter Friday-1 dry-run check** — first Friday post-PR-#2530-merge is 2026-06-26 (today + 3 days). Calendar-driven; cannot defer past Friday-2 (2026-07-03) without losing the burn-in window.
-- **Outreach beat task** (`generate_outreach_drafts_daily` at 7:30am MT) — still deferred from Session 1224. Now that LLM path + envelope + sanitizer are all live, this is the natural next step. Effort: S (~30 min).
+- **Outreach beat task first-fire watch** — task SHIPPED this session (#2548). First scheduled fire: 2026-06-24 at 13:30 UTC. Verify the run produced 1-5 drafts in the inbox post-fire; no manual trigger required.
 - **`claude_code_tool` dispatch wiring fix** — Rigby filed; investigation needed before code.
 - **`whoami` / conversation-owner tool endpoint** — Rigby filed; small ops add.
 - **Watchdog #5 24-48h re-run** — optional carryover from 1223.
