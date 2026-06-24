@@ -17,23 +17,32 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1229 — Rigby
-# tool-surface verification arc. Pin: pa-4086552cdc9840e9. Rotated
-# from pa-08bdd7c9b348415a mid-Session 1229 after health_check returned
-# score=35 / strongly_recommend_fresh at 33 turns / 16.5k tokens /
-# 11.9h. Carry-forward seed for the new conv: today admin-merged the
-# Session 1227 stack (#2562 visibility/has_initiative-autofill-safety,
-# #2574 duplicates, #2575 set_status, #2576 normalize, #2577 handoff)
-# plus Session 1229 P4 fix #2573 (semantic research title — closes
-# upstream side of TEMPLATE_LEAK_TITLE_TOKENS gate). Workers bounced
-# at rotation time (pkill -9 + rm .celery*.pid + make celery) so new
-# handler surface is live in worker process space.
-# Carryover priorities: Operator Edge Friday-1 dry-run check on
-# 2026-06-26 12:00 UTC, outreach beat first-fire watch on
-# 2026-06-25 13:30 UTC, audit deliverable e2964e4a-… F3 amendment
-# (now unblocked — PR #2562 landed), watchdog #5 24-48h re-run
-# optional, CI billing fix Chris-side.
-# Prior pins retired: pa-08bdd7c9b348415a (Sessions 1226-1229 — agent_name
+# the --conversation flag below. Current value: Session 1231 — Fresh
+# thread (carry-forward from pa-4086552cdc9840e9). Pin:
+# pa-21dfa3a3dc4545b7. Rotated at Session 1230 close after
+# health_check returned score=45 / suggest_fresh at 38 turns / 19k
+# tokens / 2.5h. Carry-forward seed for the new conv: Session 1230
+# closed (4 PRs merged: #2580 COOAgent semantic title, #2581 CTO/
+# Trend sibling wiring, #2582 engineer request_mode + clarification-
+# stall contract, #2583 handoff) + agent system audit deliverable
+# 5318da3e-5ac1-43af-9160-d7505ff7c428 live in DBZ workspace (33,786
+# chars). Chris answered R1: SportsOddsAnalyst cascade is upstream
+# odds-API credit-exhaustion, not platform bug — revised R1 action
+# is circuit-break env var pattern. Workers bounced twice during
+# Session 1230 for P1+P4 wiring.
+# Carryover priorities for Session 1231: Outreach beat first-fire
+# verification 2026-06-25 13:30 UTC, Operator Edge Friday-1 dry-run
+# check 2026-06-26 12:00 UTC, COOAgent scheduled 'files_generated'
+# KeyError investigation (HIGH — daily diagnostic silently failing),
+# deliverable_tool.append updated_at gap fix, engineer workspace
+# staleness, audit R2 (CodeReview + Workflow error_message distros),
+# audit R3 (wire 12 silently-failing-invisible agents to
+# _save_to_deliverable). Chris-side: Anthropic credit refill, odds
+# API credit refill, CI billing.
+# Prior pins retired: pa-4086552cdc9840e9 (Sessions 1229-1230 — Rigby
+# tool-surface verification arc + Session 1230 diagnostic-leak close +
+# engineer request_mode + agent system audit; 38 turns / 19k tokens /
+# score 45 / suggest_fresh at rotation), pa-08bdd7c9b348415a (Sessions 1226-1229 — agent_name
 # canonicalization + verifier-loop audit + Session 1227 §4.6 deliverable_tool
 # surface additions stack + Session 1228 LLM-autofill class sweep + Session
 # 1229 P4 close + workers-bounce; 33 turns / 16.5k tokens / score 35 /
@@ -74,4 +83,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-4086552cdc9840e9
+python tools/pa_chat.py "$@" --tools --conversation pa-21dfa3a3dc4545b7

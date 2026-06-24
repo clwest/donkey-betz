@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-4086552cdc9840e9` (rotated mid-Session 1229 from `pa-08bdd7c9b348415a` at 33 turns / 16.5k tokens / 11.9h / `strongly_recommend_fresh` score 35; titled "Session 1229 — tool-surface verification arc"). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-21dfa3a3dc4545b7` (rotated at Session 1230 close from `pa-4086552cdc9840e9` at 38 turns / 19k tokens / 2.5h / `suggest_fresh` score 45; titled "Session 1231 — Fresh thread (carry-forward from pa-4086552cdc9840e9)"). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -130,7 +130,9 @@ Full handoff: [`SESSION_1230_DIAGNOSTIC_LEAK_CLOSE_PLUS_ENGINEER_REQUEST_MODE.md
 3. `claude_code_tool` accepts `request_mode='auto'|'answer'|'change'`. Default `'auto'` resolves via verb heuristic; explicit caller value bypasses; unknown values warn + fall back. Worker log: `[ClaudeEngineer] dispatch: requested_mode=<X> resolved_mode=<Y>`. Response envelope echoes `mode`.
 4. Answer-mode clarification-stall triggers single retry with hardened preamble. If retry also stalls, envelope flips to `status='contract_failure'`. Change-mode tasks never trigger retry.
 
-**Active conversation (unchanged):** `pa-4086552cdc9840e9` (titled "Session 1229 — tool-surface verification arc"). Session 1230 added ~30 turns; no rotation triggered. Continues into Session 1231 unless `session_tool.whoami` health check flips at session open.
+**Active conversation rotated at Session 1230 close:** `pa-4086552cdc9840e9` → **`pa-21dfa3a3dc4545b7`** (titled "Session 1231 — Fresh thread (carry-forward from pa-4086552cdc9840e9)"). Old conv carried Sessions 1229 → 1230 — closed at 38 turns / 19k tokens / 2.5h / `suggest_fresh` score 45. New conv seeded with: Session 1230 close (4 PRs + agent audit deliverable `5318da3e-…`), R1 reclassification (SportsOddsAnalyst cascade = upstream odds-API credit-exhaustion, not platform bug), Session 1231 priority queue, tool-surface gap (30d aggregate not in `execution_history_tool.stats`). Wrapper updated; ownership verified `conversation_owner_match: true`.
+
+**Agent System Audit deliverable (Session 1230 close):** `5318da3e-5ac1-43af-9160-d7505ff7c428` in Donkey Betz workspace, 33,786 chars, status `completed`. Six sections + R1 amendment. Authoring shape: Claude wrote §1, §2.1, §3, §4, §5, §6 from direct ORM; Rigby contributed §2 (24h baseline + tool-surface gap callout) since `execution_history_tool.stats` is 24h-only. Key findings: 16 healthy agents + 6 medium-specific healthy + 3 cascade-broken (SportsOddsAnalyst family — credits issue) + 3 other-broken (CodeReview/Workflow/OpportunityPipeline) + 12 silently-failing-invisible (PredictionMarketAnalyst + LegalDocDrafter etc.) + 2 quality-concern + 32 dormant + 7 alias-duplicates. Audit R2 (CodeReview/Workflow error_message investigation) + R3 (wire silently-failing-invisible class to `_save_to_deliverable`) are platform-side load-bearing recommendations for Session 1231+.
 
 **Still Chris-side carryover into Session 1231:**
 - **Anthropic credit refill** at https://console.anthropic.com/billing. One-liner Makefile revert (`unset CLAUDE_CODE_ENGINE_PROVIDER`) when credits land. Once active, A/B the Session 1229 line-count task on claude-sonnet-4 vs the Session 1230 fix on gpt-5-mini; if Anthropic-path is clean, lift the retry contract up out of the OpenAI-only branch.
