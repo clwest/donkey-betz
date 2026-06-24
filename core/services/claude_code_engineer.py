@@ -36,9 +36,27 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = '/app'  # Railway container path — may be read-only
 WRITABLE_ROOT = '/tmp/engineer-workspace'  # Writable clone for git operations
 
-SYSTEM_PROMPT = """You are Claude Code Engineer, an autonomous coding agent deployed inside the Donkey Betz platform.
+# Session 1230 P4 — Two-mode system prompts.
+#
+# Session 1229 Step 5 surfaced a behavioral delta on the OpenAI fallback path:
+# given the task `"List 3 Python files in core/services/ + line counts (markdown
+# table only)"`, gpt-5-mini ran 12 `read_file` iterations (on real files —
+# correct readonly work) and then concluded `"I'm ready to make the change,
+# but I don't yet know what you want me to do. Could you please clarify the
+# engineering task?"`. The single SYSTEM_PROMPT was anchored to write-mode
+# work ("Always create a branch", "Write clear commit messages", "summarize
+# what you changed and provide the PR link"). Under tool pressure, gpt-5-mini
+# pattern-matched the dominant write-mode framing and asked for clarification
+# rather than producing the markdown-table answer the task asked for.
+#
+# Rigby's design call (Session 1230): two separate prompts, selected at
+# dispatch via `request_mode`. Mode-branching inside one prompt is too easy
+# for the model to mis-route under tool pressure. The dispatcher infers mode
+# from task verbs when caller doesn't override (request_mode='auto').
 
-You have been invoked by Rigby (the PA) to perform an engineering task. You have REAL tools to read files, write code, search the codebase, and create git branches/commits/PRs.
+CHANGE_SYSTEM_PROMPT = """You are Claude Code Engineer, an autonomous coding agent deployed inside the Donkey Betz platform.
+
+You have been invoked by Rigby (the PA) to perform an engineering task that REQUIRES CODE CHANGES. You have REAL tools to read files, write code, search the codebase, and create git branches/commits/PRs.
 
 RULES:
 - Read before writing. Understand existing code before modifying it.
@@ -56,6 +74,103 @@ CODEBASE:
 
 After completing your task, summarize what you changed and provide the PR link if applicable.
 """
+
+ANSWER_SYSTEM_PROMPT = """You are Claude Code Engineer, an autonomous code-reading agent deployed inside the Donkey Betz platform.
+
+You have been invoked by Rigby (the PA) to ANSWER A QUESTION about the codebase. This is a READONLY task — Rigby wants information, not a code change. Do NOT create branches, write files, commit, or open PRs.
+
+You have REAL tools to read files, search code, and inspect git state. Use them to gather the information you need, then RETURN THE ANSWER DIRECTLY.
+
+RULES:
+- DO NOT ask for clarification. The task is the deliverable spec — read it carefully and produce the requested shape.
+- DO NOT propose code changes. If you think a change is warranted, mention it as a single trailing sentence; the body of your response must be the answer.
+- DO NOT say "I'm ready to make the change" — you are not making a change. You are answering a question.
+- If the task asks for a specific output format (markdown table, bullet list, JSON, file path, line count, etc.), produce exactly that format. The format IS the contract.
+- Tool budget: gather what you need, stop when you have enough. Avoid re-reading the same file twice.
+- Report concisely. Rigby and Chris will see your response verbatim.
+
+CODEBASE:
+- Django 5.0 + PostgreSQL + Celery + Redis + React frontend
+- core/ has agents, services, tasks, views, models
+- frontend/src/ has React components, stores, hooks
+- 82 agents, 77 spiders, 134 services
+
+Your final message MUST be the requested answer in the requested shape. Do not hedge, do not request clarification, do not offer alternatives.
+"""
+
+# Mode → prompt mapping. `_infer_request_mode` resolves 'auto' to one of these.
+_SYSTEM_PROMPT_BY_MODE = {
+    'answer': ANSWER_SYSTEM_PROMPT,
+    'change': CHANGE_SYSTEM_PROMPT,
+}
+
+# Verb-based heuristic for `request_mode='auto'`. If any change-verb appears in
+# the task, treat as 'change'; otherwise default to 'answer' since answer mode
+# is the safer default (avoids surprise PRs from ambiguous prompts).
+#
+# Match is case-insensitive, whole-word, matches at the start of a clause
+# (start-of-string or after `.`/`!`/`?`/newline/colon/comma) so verbs embedded
+# in nouns ("the create_pr tool") don't trigger change mode.
+_CHANGE_VERBS = (
+    'add', 'change', 'commit', 'create', 'delete', 'edit', 'fix',
+    'implement', 'introduce', 'modify', 'patch', 'refactor', 'remove',
+    'rename', 'rewrite', 'update', 'wire', 'write',
+)
+
+# Final-message stall markers — substrings that signal the engineer asked for
+# clarification rather than producing the requested deliverable shape. Used by
+# the answer-mode contract check to trigger a single retry with a stronger
+# preamble.
+_CLARIFICATION_STALL_MARKERS = (
+    "could you please clarify",
+    "could you clarify",
+    "i'm not sure what you want",
+    "i don't yet know what you want",
+    "i'm ready to make the change",
+    "please describe the",
+    "what would you like me to",
+    "let me know which",
+)
+
+
+def _infer_request_mode(task_description: str) -> str:
+    """Return 'answer' or 'change' from a verb-based heuristic on `task_description`.
+
+    Used when the caller passes `request_mode='auto'`. Explicit
+    `request_mode='answer'` / `'change'` from the caller bypasses this.
+
+    Conservative: defaults to 'answer' on ambiguity. The cost of misclassifying
+    a change task as answer is one wasted dispatch (engineer reads files and
+    returns text instead of opening a PR); the cost of misclassifying an
+    answer task as change is the original Session 1229 stall bug.
+    """
+    import re
+
+    task = (task_description or '').lower().strip()
+    if not task:
+        return 'answer'
+
+    # Match each change verb at a clause boundary. The boundary chars cover
+    # start-of-string, sentence terminators, and common punctuation.
+    for verb in _CHANGE_VERBS:
+        if re.search(r'(?:^|[.!?\n:,]\s*)' + re.escape(verb) + r'\b', task):
+            return 'change'
+
+    return 'answer'
+
+
+def _looks_like_clarification_stall(final_text: str) -> bool:
+    """True if the engineer's final message looks like a clarification stall.
+
+    Used by the answer-mode contract: a stall on an answer task is a contract
+    failure (the engineer was supposed to produce a deliverable shape, not
+    ask back). One retry with a stronger preamble; if it stalls again, the
+    caller surfaces a `status='contract_failure'` envelope.
+    """
+    if not final_text:
+        return False
+    text = final_text.lower()
+    return any(marker in text for marker in _CLARIFICATION_STALL_MARKERS)
 
 # Tool definitions for the Claude API
 TOOLS = [
@@ -386,14 +501,19 @@ _OPENAI_TOOLS = _translate_tools_to_openai(TOOLS)
 def _execute_engineering_task_openai(
     task_description: str,
     max_iterations: int,
+    system_prompt: str = CHANGE_SYSTEM_PROMPT,
 ) -> Dict[str, Any]:
     """OpenAI fallback path for execute_engineering_task.
 
     Session 1226 P4 workaround: when Anthropic credits are exhausted, route
     the autonomous engineer through gpt-5-mini via the existing
-    openai_client_factory. Same SYSTEM_PROMPT + TOOLS, different message
-    format. Caller is responsible for git workspace setup + conversation
-    post-back; this function only owns the LLM loop.
+    openai_client_factory. Same TOOLS, different message format. Caller is
+    responsible for git workspace setup + conversation post-back; this
+    function only owns the LLM loop.
+
+    Session 1230 P4: `system_prompt` is now caller-selected (ANSWER vs
+    CHANGE) per the `request_mode` contract. Defaults to CHANGE_SYSTEM_PROMPT
+    for backward compatibility on direct callers (tests, ad-hoc).
 
     Returns: {'final_text': str, 'files_changed': list, 'pr_url': str|None}
     """
@@ -401,7 +521,7 @@ def _execute_engineering_task_openai(
 
     client = get_openai_client()
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": task_description},
     ]
     files_changed: List[str] = []
@@ -489,6 +609,7 @@ def execute_engineering_task(
     conversation_id: str = None,
     requested_by: str = 'rigby',
     max_iterations: int = 500,
+    request_mode: str = 'auto',
 ) -> Dict[str, Any]:
     """
     Execute an engineering task using Claude with codebase tools.
@@ -498,16 +619,47 @@ def execute_engineering_task(
         conversation_id: PA conversation to post results to
         requested_by: Who requested this (for attribution)
         max_iterations: Max tool-use iterations
+        request_mode: 'answer' (readonly Q&A), 'change' (code change), or
+            'auto' (verb-heuristic dispatch). Session 1230 P4. See module
+            docstring for the original behavioral-delta incident.
 
     Returns:
-        Dict with status, summary, files_changed, pr_url
+        Dict with status, summary, files_changed, pr_url, provider, mode
 
     Session 1226 P4 — provider routing:
     When CLAUDE_CODE_ENGINE_PROVIDER='openai' the LLM loop runs through
     gpt-5-mini instead of claude-sonnet-4. Used as a temporary workaround
     when Anthropic credits are exhausted. Default 'anthropic' preserves
     prod behavior.
+
+    Session 1230 P4 — request_mode + clarification-stall contract:
+    On answer-mode tasks, after the primary LLM loop completes the dispatcher
+    checks `final_text` against `_CLARIFICATION_STALL_MARKERS`. If matched,
+    the loop is retried ONCE with a hard "do not ask for clarification"
+    preamble prepended to `task_description`. If the retry also stalls, the
+    return envelope flips `status` to `'contract_failure'` so callers can
+    surface the behavioral delta rather than silently posting a stall.
     """
+    # Resolve request_mode + select system prompt.
+    requested_mode = (request_mode or 'auto').strip().lower()
+    if requested_mode == 'auto':
+        resolved_mode = _infer_request_mode(task_description)
+    elif requested_mode in _SYSTEM_PROMPT_BY_MODE:
+        resolved_mode = requested_mode
+    else:
+        logger.warning(
+            "[ClaudeEngineer] unknown request_mode=%r — falling back to "
+            "verb-heuristic auto-detect.", requested_mode,
+        )
+        resolved_mode = _infer_request_mode(task_description)
+    system_prompt = _SYSTEM_PROMPT_BY_MODE[resolved_mode]
+    logger.info(
+        "[ClaudeEngineer] dispatch: requested_mode=%s resolved_mode=%s "
+        "task_chars=%d max_iter=%d",
+        requested_mode, resolved_mode, len(task_description or ''),
+        max_iterations,
+    )
+
     # Session 1226 P4 — OpenAI fallback path
     provider = os.environ.get('CLAUDE_CODE_ENGINE_PROVIDER', 'anthropic').strip().lower()
     if provider == 'openai':
@@ -516,25 +668,76 @@ def execute_engineering_task(
             result = _execute_engineering_task_openai(
                 task_description=task_description,
                 max_iterations=max_iterations,
+                system_prompt=system_prompt,
             )
+            final_text = result['final_text']
+            envelope_status = 'success'
+
+            # Session 1230 P4 — answer-mode clarification-stall contract.
+            # One retry with a stronger preamble. Only fires on answer mode
+            # because change mode legitimately asks for clarification when
+            # the task is ambiguous.
+            if (resolved_mode == 'answer'
+                    and _looks_like_clarification_stall(final_text)):
+                logger.warning(
+                    "[ClaudeEngineer:openai] clarification stall detected on "
+                    "answer-mode task — retrying once with hard preamble. "
+                    "Original first-line: %s",
+                    (final_text or '').splitlines()[0][:120] if final_text else '',
+                )
+                hardened_task = (
+                    'READONLY ANSWER TASK — do not ask for clarification, do '
+                    'not propose code changes, do not say "I am ready to make '
+                    'the change". Read the task carefully and produce exactly '
+                    'the requested output format. The task is:\n\n'
+                    + task_description
+                )
+                retry = _execute_engineering_task_openai(
+                    task_description=hardened_task,
+                    max_iterations=max_iterations,
+                    system_prompt=ANSWER_SYSTEM_PROMPT,
+                )
+                final_text = retry['final_text']
+                if _looks_like_clarification_stall(final_text):
+                    envelope_status = 'contract_failure'
+                    logger.warning(
+                        "[ClaudeEngineer:openai] retry ALSO stalled — surfacing "
+                        "contract_failure to caller.",
+                    )
+                else:
+                    logger.info(
+                        "[ClaudeEngineer:openai] retry resolved the stall.",
+                    )
+                # Re-use the retry's tool-call side effects (files_changed,
+                # pr_url) since the original loop's side effects ran on the
+                # original `task_description` and the retry ran on the same
+                # underlying engineer.
+                result = retry
+
             if conversation_id:
                 _post_to_conversation(
-                    conversation_id, result['final_text'],
+                    conversation_id, final_text,
                     result['files_changed'], result['pr_url'],
                 )
             return {
-                'status': 'success',
-                'summary': result['final_text'][:2000],
+                'status': envelope_status,
+                'summary': final_text[:2000] if final_text else '',
                 'files_changed': result['files_changed'],
                 'pr_url': result['pr_url'],
                 'provider': 'openai',
+                'mode': resolved_mode,
             }
         except Exception as e:
             logger.error(f"[ClaudeEngineer:openai] Task failed: {e}")
             error_msg = f"Engineering task failed (openai path): {str(e)}"
             if conversation_id:
                 _post_to_conversation(conversation_id, error_msg, [], None)
-            return {'status': 'error', 'error': str(e), 'provider': 'openai'}
+            return {
+                'status': 'error',
+                'error': str(e),
+                'provider': 'openai',
+                'mode': resolved_mode,
+            }
 
     # Default Anthropic path (unchanged from prior behavior)
     api_key = os.environ.get('ANTHROPIC_API_KEY')
@@ -562,7 +765,7 @@ def execute_engineering_task(
                     response = client.messages.create(
                         model="claude-sonnet-4-20250514",
                         max_tokens=4096,
-                        system=SYSTEM_PROMPT,
+                        system=system_prompt,
                         tools=TOOLS,
                         messages=messages,
                     )

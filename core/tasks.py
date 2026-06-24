@@ -11596,10 +11596,22 @@ def enforce_db_retention():
 
 
 @shared_task(bind=True, soft_time_limit=5400, time_limit=5460, ignore_result=False)
-def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby'):
-    """Autonomous Claude Code engineering session — reads files, writes code, creates PRs."""
+def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto'):
+    """Autonomous Claude Code engineering session — reads files, writes code, creates PRs.
+
+    Session 1230 P4: ``request_mode`` ('answer' | 'change' | 'auto', default
+    'auto') controls which SYSTEM_PROMPT the engineer runs against. Closes
+    the Session 1229 Step 5 behavioral-delta (gpt-5-mini stalled on a
+    readonly line-count task asking for clarification instead of producing
+    the markdown table).
+    """
     from core.services.claude_code_engineer import execute_engineering_task
-    return execute_engineering_task(task_description, conversation_id, requested_by)
+    return execute_engineering_task(
+        task_description,
+        conversation_id=conversation_id,
+        requested_by=requested_by,
+        request_mode=request_mode,
+    )
 
 
 @shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
