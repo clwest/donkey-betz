@@ -1,12 +1,31 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** May 12, 2026 (Session 1115 — code-health refactors: closed finding #9, finding #12 to 96.3%)
+**Last Updated:** June 24, 2026 (Session 1227 — added "Claude directs, Rigby executes, Claude verifies" collaboration shape to Working with Rigby)
 
 > **Anchors (context-kit pattern):** [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) is the **narrative anchor** (system glossary, subsystem summaries — not a counts source). [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) is the **runtime/inventory anchor** and is the **sole authoritative source for system counts** (agents, spiders, models, tasks, etc.) per `DOC_LIFECYCLE.md` §2c. When any doc disagrees with PLATFORM_INVENTORY on a count, the inventory wins. Run `python manage.py verify_doc_claims --only-drift` to see which claims drift from reality.
 
 ## Working with Rigby (PA)
 
 Claude Code MUST coordinate with Rigby (the Personal Assistant) for all decision-making, questions, and status updates. **Do not ask yes/no or approval questions in the terminal** — route them through Rigby via `python tools/pa_chat.py "message" --tools --conversation <conversation_id>`. The user (Chris) will respond via the Chat UI. Only use the terminal for questions if explicitly told to do so for a specific reason.
+
+### Collaboration shape: Claude directs, Rigby executes, Claude verifies
+
+The default workflow is a three-step loop:
+
+1. **Direct** — Claude writes a concrete instruction for Rigby: action name, exact arguments, files touched, expected output shape. Not "investigate X" — "run `deliverable_tool list show_all=true workspace_id=…` and report the row count + status breakdown."
+2. **Execute** — Rigby runs the work via her PA tool surface.
+3. **Verify** — Claude independently confirms the result by reading the `Tool Runs (verbose)` block in her reply and cross-checking via Django ORM, `git log`, file Read, or build check. Don't trust the summary text; look at raw tool output.
+
+**Splits by work type:**
+- **Investigations, audits, deliverable edits, tool-surface queries, status checks, row counts, deliverable content sweeps** — route to Rigby; Claude verifies.
+- **Code edits, PRs, deploys, git ops, repo file edits** — Claude executes (Rigby has no repo-write surface). For design judgment calls inside that work (which fields to expose, what defaults to pick, which transitions to allow), route options through Rigby BEFORE coding so the diff lands on a decision she's signed off on.
+- **Post-merge behavior verification of new tools** — Rigby exercises the new surface; Claude reads the tool-output block to confirm shape + values match the spec.
+
+**Why:** (1) Rigby is the platform's first-class interface; giving her real work exercises and improves that surface every session. (2) Claude's direct file/git reads bypass the platform — fine for verification, wrong as the default execution path. (3) Independent verification catches Rigby's known failure modes (placeholder-stall, wrong-baseline-default, premature `completed` flips) before they ship.
+
+**Override conditions:** If Rigby is mid-tool-failure, has a confirmed conversation rotation pending, or the loop needs sub-second turnaround (live debug), Claude self-executes for speed and states the reason out loud.
+
+### Tactical contract
 
 - **Active conversation:** Set per session (check with Chris or Rigby)
 - **Tool:** `python tools/pa_chat.py "message" --tools --conversation <id>`
