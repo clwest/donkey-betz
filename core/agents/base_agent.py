@@ -5476,10 +5476,24 @@ Consider this current data when formulating your response."""
                 if write_result.get('total_failed', 0) > 0:
                     result.message += f" ({write_result['total_failed']} failed)"
             elif write_result.get('partial_failure'):
+                # Session 1231 P2 — pre-fix used bare dict-key access on
+                # the 'files_generated' key. That raised KeyError on the
+                # partial_failure path because _write_files_to_workspace's
+                # Shape B return (line 5217-5230) omits that key — only
+                # Shape A early-return paths include it. Compute total
+                # attempted from existing fields instead.
+                # Closes Session 1230 F1: COOAgent scheduled daily diagnostic
+                # had been silently failing with error_message="'files_generated'"
+                # every 13:30 UTC fire (f2ecd6f9-…, 86796586-…) despite the
+                # deliverable being produced 117ms earlier.
+                total_failed = write_result.get('total_failed', 0)
+                total_attempted = (
+                    write_result.get('total_written', 0) + total_failed
+                )
                 result.message = (
                     f"{result.message}\n\n"
-                    f"📁 Workspace write partially failed: {write_result['total_failed']} of "
-                    f"{write_result['files_generated']} files failed"
+                    f"📁 Workspace write partially failed: {total_failed} of "
+                    f"{total_attempted} files failed"
                 )
 
         return result
