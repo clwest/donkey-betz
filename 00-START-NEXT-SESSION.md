@@ -102,7 +102,72 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1224 — CURRENT ENTRY POINT
+## SESSION 1225 — CURRENT ENTRY POINT
+
+### SESSION 1224 CLOSED — outreach pipeline E2E + hygiene initiative + token budget sweep, 5 PRs
+
+Full handoff: [`SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md`](docs/handoffs/SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md). Full vertical slice (backend + REST + UI + tests + browser-smoke + real LLM content) for Option B outreach drafts; hygiene initiative `d8d6c0b2-…` closed same-session via gates 4 + 5 at the deliverable factory; cross-cutting `max_completion_tokens` floor sweep after live LLM probe surfaced the silent empty-content bug across 11 sites.
+
+| PR | What |
+|---|---|
+| **#2539** | Deliverables hygiene — Gate 4 (`gate_4_template_leak`) + Gate 5 (`gate_5_no_relevance`) at `_should_create_deliverable`. 12 unit tests. Closes initiative `d8d6c0b2-…`. |
+| **#2540** | Opportunity → OutreachDraft pipeline + Inbox UI (Option B). New `OpportunityDraftGenerator` service, 5 REST endpoints under `/api/cockpit/outreach/*`, new `tab=work&sub=outreach` Workspace surface. 14 unit tests. Tracking deliverable `329165f4-…`. |
+| **#2541** | Hotfix: spider-ingested opps use `metadata.url`/`metadata.company` (not `metadata.contact_email`/`metadata.company_name`). Field-name fan-out across contactability gate, prompt payload, and draft persistence. 17/17 tests. |
+| **#2542** | `gpt-5-mini max_completion_tokens` floor sweep — 11 sites bumped to 4000 after live probe showed `finish_reason='length'`, `reasoning_tokens=800`, `content=None`. New memory rule `feedback_gpt5_max_completion_tokens_floor.md`. |
+| **#TBD** | Session close handoff + this start-here rewrite. |
+
+**Both pre-Session-1224 initiatives closed:** outreach tracking deliverable `329165f4-…` flipped to `completed`; hygiene initiative `d8d6c0b2-…` flipped to `COMPLETED`. Browser smoke produced 5 real LLM-personalized email drafts in the inbox with non-empty content.
+
+### FIRST THING Session 1225
+
+The queue is light. Pick whichever lane has the most signal:
+
+#### Priority 1 — CI billing fix (Chris-side, still outstanding)
+
+Carryover from 1223. GitHub Actions billing still failing — all 5 Session 1224 PRs admin-merged. **Until billing is restored at https://github.com/settings/billing, future PR merges still need `--admin`.** When green, normal PR flow returns.
+
+#### Priority 2 — Operator Edge newsletter Friday-1 burn-in check (calendar-driven)
+
+PR #2530 (Session 1222) re-enabled `generate-operator-edge-newsletter` with `dry_run=True`. First Friday post-merge is **2026-06-26** (3 days from Session 1224 close). Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays (06-26 + 07-03), flip kwargs to `{'dry_run': false}` to promote to live. Calendar check at session open — if you're past the Friday, run the verification.
+
+#### Priority 3 — Outreach beat task (`generate_outreach_drafts_daily`)
+
+Deferred from Session 1224 PR #2540 to keep the vertical slice tight. Now that the on-demand path is verified end-to-end, the daily beat is a thin wrapper:
+- `@shared_task` in `core/tasks.py` calling `OpportunityDraftGenerator.generate(limit=5, scope='all')`
+- `core/celery.py` `beat_schedule` entry at `crontab(hour=13, minute=30)` (= 7:30am MDT in summer, 6:30am MST in winter — matches existing convention)
+- Materialize via `add_critical_celery_tasks` so the PeriodicTask row exists on fresh deploys
+- Effort: S (~30 min including tests)
+
+Decision Chris should weigh in on at session open: do you want auto-fire enabled from day 1, or `enabled=False` for a week so you can verify manual triggers work for several days first? Memory rule `feedback_agent_noise.md` argues against unsolicited content generation — but this is approve-required (no auto-send), and 5/day matches your explicit ask.
+
+#### Priority 4 — Watchdog #5 re-run (24-48h drift confirmation)
+
+Carryover from Session 1223. `ops_tool action=failure_signatures window=24h` ~24-48h post Tier 1+2 merge should naturally drift away from `TIMEOUT_WATCHDOG_CLEANUP_*` signatures as pre-merge zombies age out. Optional confirmation; not a blocker.
+
+#### Priority 5 — Upstream sanitizer at `research_agent.py:1103` (gated on hygiene audit)
+
+PR #2539 catches the `BINDING DIRECTIVE` leak at the factory layer with structured logging. If Rigby's daily audit (`deliverable_tool search query='BINDING DIRECTIVE' status=ready`) shows zero new hits over 7 days, the upstream sanitizer stays deferred. If hits appear, ship the upstream fix (sanitize `task` before `task[:100]` in the `_save_to_deliverable` call).
+
+#### Priority 6 — Audit #5 (PA tool schemas vs handlers — Δ=43)
+
+Non-blocking long-tail from Session 1217 audit. `pa_tool_schemas.py` declares 109 schemas; `tool_dispatcher.py` has 152 registered handlers. Delta = 43 needs classification (infra-only handlers, dead, or schemas waiting on handlers). Effort: M. Defer unless cleanup mood.
+
+#### Priority 7 — Whatever Chris wants
+
+Genuinely open. Outreach pipeline is live with real LLM content. Hygiene is closed. Token budgets are aligned across the codebase.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008, paused on credit exhaustion. **Credits now restored** per Session 1224. Pickup unblock: booting the apps + per-app `/api/health` verification. See memory `project_fleet_sibling_apps_credit_paused.md`.
+- Delete the 9 dormant agent class files (per Rigby's Session 1222 P2 keep-for-future — explicitly NOT recommended unless re-prioritized).
+- `scan-spider-opportunities` resume (Session 1222 B2 Mode B chose curate-now).
+- Tier 3 from P2 deliverable `7ae61cf7-…` (factory-level wrap — defer per the deliverable).
+
+**Active conversation:** `pa-17e0fa71fd25470a` — carried through Sessions 1223 + 1224. 2 sessions in, healthy. Health-check with `session_tool.health_check` if it crosses ~40+ messages.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files
+- `scan-spider-opportunities` resume
+- Tier 3 from P2 deliverable `7ae61cf7-…`
 
 ### SESSION 1223 CLOSED — audit sweep (15/15) + watchdog burn-in GREEN, 5 PRs
 
@@ -123,46 +188,6 @@ Full handoff: [`SESSION_1223_AUDIT_SWEEP_AND_WATCHDOG_GREEN.md`](docs/handoffs/S
 **Closed: 15/15** ✅ (full sweep — first time the audit is fully closed since deliverable creation).
 
 Original Chris-picks 1A + 1B + 2 + 3 + A1 + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift + **Session 1223 same-session sweep of the final tail: #8 (PR #2534) + #9 (PR #2535) + #4 (PR #2536) + #10 (PR #2537)**.
-
-### FIRST THING Session 1224
-
-The queue is light. Pick whichever lane has the most signal:
-
-#### Priority 1 — CI billing fix (Chris-side, before any normal PR flow returns)
-
-GitHub Actions billing failed ~15:17Z on 2026-06-23 (during Session 1223). Symptom: every workflow run completes in 2-3 seconds with empty step logs. Root cause via `gh api .../check-runs/<id>/annotations`: "The job was not started because recent account payments have failed or your spending limit needs to be increased." All 5 Session 1223 PRs admin-merged per Chris's session authorization. **Until billing is restored at https://github.com/settings/billing, future PR merges still need `--admin`.** When green, normal PR flow returns and admin overrides expire (scope-bound to the billing outage).
-
-#### Priority 2 — Operator Edge newsletter Friday-1 burn-in check
-
-PR #2530 (Session 1222) re-enabled `generate-operator-edge-newsletter` with `dry_run=True`. First scheduled run = first Friday at 1pm MDT post-merge. Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays, flip kwargs to `{'dry_run': false}` to promote to live. Calendar check before opening Session 1224 — if it's already past Friday, run the verification.
-
-#### Priority 3 — Audit #5 (PA tool schemas vs handlers — 109 vs 152 delta = 43)
-
-Carryover from Session 1217 audit deliverable that was NOT in the original 15 findings but Rigby's mid-session sweep noted: `core/services/pa_tool_schemas.py` declares 109 schemas; `core/services/tool_dispatcher.py` has 152 registered handlers. Delta = 43 (infra-only handlers, dead, or schemas waiting on handlers — needs classification). **Not blocking** — verified Session 1223 PR #2535. Effort: M. Defer unless you want to clean up the long tail.
-
-#### Priority 4 — Tier 3 from P2 deliverable `7ae61cf7-…` (defer unless leakage)
-
-Wrap `openai_client_factory` clients at construction time with the same total-request bound that Tier 1 applies per-callsite. Heavier contract change. Defer unless Tier 1+2 leakage to non-`BaseAgent` paths becomes a measurable production issue. Burn-in monitoring (Priority 5 below) is the trigger.
-
-#### Priority 5 — Re-run watchdog #5 check in 24-48h if you want full closure
-
-Session 1223 closed the watchdog arc GREEN with context (24h `failure_signatures` window was dominated by pre-merge zombies). Re-running `ops_tool action=failure_signatures window=24h` 24-48h post-merge (so ~Friday-Saturday) would naturally show the window dominated by post-fix data — should mechanically drift down. Optional confirmation; not a blocker.
-
-#### Priority 6 — Whatever Chris wants
-
-Genuinely open. Audit fully closed. Watchdog arc closed. Carryover queue empty.
-
-**Possible re-ignites (Chris-discretion only):**
-- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008 (compliancesentinel/contract-concierge/dealflowtracker/mentorforge/pitchdeckforge/sellerpilot/signal-studio) were spun up as Rigby+Claude build targets and paused on OpenAI credit exhaustion. Substrate (handlers, `FleetPaidInterest`, HMAC) shipped; only Session 1138 F1 demand-gate works end-to-end. Pickup unblock: credits + booting the apps + per-app `/api/health` verification. See memory `project_fleet_sibling_apps_credit_paused.md`.
-- Delete the 9 dormant agent class files (per Rigby's Session 1222 P2 keep-for-future recommendation — explicitly NOT recommended unless Chris re-prioritizes).
-- `scan-spider-opportunities` resume (Session 1222 B2 Mode B chose curate-now).
-
-**Active conversation:** `pa-17e0fa71fd25470a` — opened fresh in Session 1223. 1 session in, healthy. Should carry through Session 1224 and likely further. Health-check with `session_tool.health_check` if it crosses ~40+ messages.
-
-**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
-- Delete the 9 dormant agent class files (per Rigby's keep-for-future recommendation)
-- `scan-spider-opportunities` resume (B2 Mode B chose curate-now)
-- Tier 3 from P2 deliverable `7ae61cf7-…` (factory-level wrap — defer per the deliverable)
 
 ### SESSION 1222 CLOSED (v2 — audit revisit arc) — C1 + #3 + B2 from Rigby's top-3 lean shipped same-session
 
