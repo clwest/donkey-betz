@@ -2717,6 +2717,22 @@ class OpsHandlersMixin:
             report = sequencer.get_metrics_report(tz.now())
             return {'action': 'outreach_metrics_report', **report}
 
+        elif action == 'outreach_generate':
+            # Session 1224 P1 — generate touch=1 OutreachDrafts from Opportunity rows
+            from core.services.ops_autopilot import OpportunityDraftGenerator
+
+            limit = payload.get('limit')
+            scope = payload.get('scope', 'all')
+            offers = payload.get('offers')
+            if isinstance(offers, str):
+                offers = [o.strip() for o in offers.split(',') if o.strip()]
+            report = OpportunityDraftGenerator.generate(
+                limit=int(limit) if limit is not None else None,
+                scope=scope,
+                offers=offers,
+            )
+            return {'action': 'outreach_generate', **report}
+
         elif action == 'close_pack_generate':
             # Generate a close pack (proposal + contract + invoice)
             from core.services.ops_autopilot import CloseTheDealEngine

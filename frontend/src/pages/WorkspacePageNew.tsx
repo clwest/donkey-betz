@@ -93,6 +93,7 @@ import {
   Stage3EvaluationTab,
   AppTab,
   hasApp,
+  OutreachInboxTab,
 } from './workspace/tabs'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
@@ -111,6 +112,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'queue', label: 'Queue', icon: ClipboardList },
       { id: 'deliverables', label: 'Deliverables', icon: Package },
       { id: 'initiatives', label: 'Initiatives', icon: Target },
+      { id: 'outreach', label: 'Outreach', icon: Inbox },
     ],
   },
   {
@@ -1136,6 +1138,9 @@ export default function WorkspacePage() {
           )}
           {activePrimary === 'work' && activeSub === 'initiatives' && (
             <InitiativesTab />
+          )}
+          {activePrimary === 'work' && activeSub === 'outreach' && (
+            <OutreachInboxTab />
           )}
 
           {/* BUILD */}
