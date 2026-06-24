@@ -3297,6 +3297,18 @@ class UnifiedPAEntrypoint:
             'task': message,
             'action': 'list',  # Default action
         }
+        # Session 1226 P3 — inject the current conversation_id into every tool
+        # payload so handlers that need to post back into the user's chat (e.g.
+        # claude_code_tool → autonomous Anthropic engineer → _post_to_conversation)
+        # don't have to rediscover it. Handler-level overrides take precedence
+        # if the LLM explicitly set conversation_id in tool args. Discovered
+        # while investigating "claude_code_tool dispatches succeed but never
+        # post results back" — root cause was conversation_id=None being
+        # passed to claude_code_engineer_task, which then skipped the post-back
+        # leg entirely. Tool dispatcher passes conversation_id to telemetry but
+        # not to handlers; this closes the gap at the payload-build layer.
+        if getattr(self, 'conversation_id', None):
+            payload.setdefault('conversation_id', self.conversation_id)
 
         # Intent-specific payload adjustments
         # Session 1000B: "Tell me more about" → lookup attention item by title
