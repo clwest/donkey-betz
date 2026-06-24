@@ -17,24 +17,27 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1226 continuation
-# — agent_name canonicalization + Session 1227 setup (Rigby's session_tool
-# create_fresh mid-Session 1226 after pa-77bbcd97a625424d crossed ~28
-# turns during the verifier-loop deliverables audit arc). Pin:
-# pa-08bdd7c9b348415a. Session 1226 work carried forward in seed: 9 PRs
-# merged (#2550 whoami, #2551 has_initiative, #2552 code_jobs local
-# worker, #2553 macOS pool=solo, #2554 conv_id payload injection, #2555
-# close handoff v1, #2556 OpenAI fallback for autonomous engineer, #2557
-# template-leak token extension). Deliverables audit shipped end-to-end
-# (deliverable e2964e4a-…, 26,465 chars, 4 verified parts, status
-# completed). Next work on the new conversation: 2 SQL migrations for
-# agent_name canonicalization (rigby→Rigby 1 row, ClaudeCode→claude-code
-# 17 rows). State: local-only, OpenAI credits good, Anthropic still
-# exhausted, claude_code_tool live via OpenAI workaround.
+# the --conversation flag below. Current value: Session 1229 — Rigby
+# tool-surface verification arc. Pin: pa-4086552cdc9840e9. Rotated
+# from pa-08bdd7c9b348415a mid-Session 1229 after health_check returned
+# score=35 / strongly_recommend_fresh at 33 turns / 16.5k tokens /
+# 11.9h. Carry-forward seed for the new conv: today admin-merged the
+# Session 1227 stack (#2562 visibility/has_initiative-autofill-safety,
+# #2574 duplicates, #2575 set_status, #2576 normalize, #2577 handoff)
+# plus Session 1229 P4 fix #2573 (semantic research title — closes
+# upstream side of TEMPLATE_LEAK_TITLE_TOKENS gate). Workers bounced
+# at rotation time (pkill -9 + rm .celery*.pid + make celery) so new
+# handler surface is live in worker process space.
 # Carryover priorities: Operator Edge Friday-1 dry-run check on
-# 2026-06-26, outreach beat task generate_outreach_drafts_daily still
-# deferred, watchdog #5 24-48h re-run optional, CI billing fix Chris-side.
-# Prior pins retired: pa-17e0fa71fd25470a (Sessions 1223-1225 — 2-session
+# 2026-06-26 12:00 UTC, outreach beat first-fire watch on
+# 2026-06-25 13:30 UTC, audit deliverable e2964e4a-… F3 amendment
+# (now unblocked — PR #2562 landed), watchdog #5 24-48h re-run
+# optional, CI billing fix Chris-side.
+# Prior pins retired: pa-08bdd7c9b348415a (Sessions 1226-1229 — agent_name
+# canonicalization + verifier-loop audit + Session 1227 §4.6 deliverable_tool
+# surface additions stack + Session 1228 LLM-autofill class sweep + Session
+# 1229 P4 close + workers-bounce; 33 turns / 16.5k tokens / score 35 /
+# strongly_recommend_fresh at rotation), pa-17e0fa71fd25470a (Sessions 1223-1225 — 2-session
 # continuous thread covering audit sweep + watchdog burn-in + full outreach
 # arc + hygiene initiative + token budget sweep; ended mid-Session 1225 at
 # 39 turns / 19.5k tokens / score 45 / suggest_fresh), pa-58737666f25741dc
@@ -71,4 +74,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-08bdd7c9b348415a
+python tools/pa_chat.py "$@" --tools --conversation pa-4086552cdc9840e9
