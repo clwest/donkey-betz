@@ -1,6 +1,8 @@
-# Session 1226 — Rigby Platform-Access Unblocking + claude_code_tool Wiring Repair
+# Session 1226 — Rigby Platform-Access Unblocking + claude_code_tool Wiring Repair + Verifier-Loop Audit
 
-**Status:** Five-PR session — full pivot from outreach/Operator-Edge work to a focused Rigby-access unblocking arc, plus a deep investigation that root-caused the multi-session `claude_code_tool` dispatch failure as a three-layer wiring break.
+**Status:** Twelve-PR session — full pivot from outreach/Operator-Edge work to a focused Rigby-access unblocking arc, a deep investigation that root-caused the multi-session `claude_code_tool` dispatch failure as a three-layer wiring break, AND a verifier-loop-pattern deliverables audit that surfaced + shipped fixes for an active prompt-leak and agent_name fragmentation.
+
+**Note on doc shape:** This handoff was originally shipped as v1 (#2555, 5 PRs covered). The v2 update extends the manifest + adds Arc 4 for the verifier-loop audit work that followed close v1.
 **Date:** 2026-06-23 (continued from Session 1225 close, same UTC day; into 2026-06-24 UTC).
 **Active conversation:** `pa-77bbcd97a625424d` — fresh thread spun mid-Session 1225 after the prior pin hit `suggest_fresh`. Carried Session 1226 from open to close with no rotation.
 **Prior session:** [`SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md`](./SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md).
@@ -26,16 +28,22 @@ GH Actions billing still failing — all 5 PRs admin-merged per existing Chris s
 
 ## Session Manifest
 
-### PRs merged (5 total + this close)
+### PRs merged (12 total)
 
 | # | Title | What |
 |---|---|---|
-| **#2550** | `feat(session-1226): session_tool action=whoami — close ownership-verification gap` | Returns user identity (`user_id`, `username`, `email`, `is_staff`, `is_superuser`) + owner facts on the current or supplied conversation (`conversation_owner_user_id`, `conversation_owner_username`, `conversation_owner_match` bool). 6 unit tests (identity, owner match true/false, unknown conv, no conv id, unknown user_id). |
+| **#2550** | `feat(session-1226): session_tool action=whoami — close ownership-verification gap` | Returns user identity (`user_id`, `username`, `email`, `is_staff`, `is_superuser`) + owner facts on the current or supplied conversation (`conversation_owner_user_id`, `conversation_owner_username`, `conversation_owner_match` bool). 6 unit tests. |
 | **#2551** | `feat(session-1226): deliverable_tool.list has_initiative filter + initiative_id schema clarification` | New `has_initiative` boolean filter. `initiative_id` filter had always existed but schema described it as link-only — corrected. Canonical query unlocked: `deliverable_tool action=list agent='ResearchAgent' has_initiative=true`. 6 unit tests. |
-| **#2552** | `fix(session-1226): start a local code_jobs worker in make celery` | New `make celery` block + matching `make celery-stop` block for the `code_jobs` queue. Mirrors the Procfile profile (prefork single-task on Railway). Closed the silent-queue-forever symptom. |
-| **#2553** | `fix(session-1226): code_jobs worker pool=solo on macOS (prefork SIGSEGVs)` | Local worker swapped to `--pool=solo`. Procfile stays prefork for Linux/Railway. Confirmed end-to-end consumption after the swap. |
-| **#2554** | `fix(session-1226): inject conversation_id into PA tool payloads` | `_build_tool_payload` now `setdefault`s `conversation_id` from `self.conversation_id`. Closes the missing-attribute fallback chain in `claude_code_tool` and `session_tool whoami` auto-injects. |
-| **(this PR)** | `docs(session-1226): close — Rigby platform-access unblocking + claude_code_tool wiring repair + 1227 start-here` | Session close handoff + 00-START-NEXT-SESSION.md rewrite for Session 1227. |
+| **#2552** | `fix(session-1226): start a local code_jobs worker in make celery` | New `make celery` block + matching `make celery-stop` block for the `code_jobs` queue. Mirrors the Procfile profile. Closed the silent-queue-forever symptom. |
+| **#2553** | `fix(session-1226): code_jobs worker pool=solo on macOS (prefork SIGSEGVs)` | Local worker swapped to `--pool=solo`. Procfile stays prefork for Linux/Railway. |
+| **#2554** | `fix(session-1226): inject conversation_id into PA tool payloads` | `_build_tool_payload` now `setdefault`s `conversation_id` from `self.conversation_id`. Closes the missing-attribute fallback chain. |
+| **#2555** | `docs(session-1226): close — Rigby platform-access unblocking + claude_code_tool wiring repair + 1227 start-here` (v1) | Original close handoff (covered #2550–#2554). |
+| **#2556** | `feat(session-1226): claude_code_engineer OpenAI fallback path` | Temporary workaround for exhausted Anthropic credits. `CLAUDE_CODE_ENGINE_PROVIDER=openai` routes the autonomous engineer through `gpt-5-mini` via OpenAI factory with translated tool format. Unset env var to revert when Anthropic credits land. 6 unit tests. |
+| **#2557** | `fix(session-1226): close active research-prompt-leak in TEMPLATE_LEAK_TITLE_TOKENS` | Added `'this topic using external sources'` token. Closes audit P0 — 32-row cluster, 28 in last 7d, ResearchAgent. +1 gate test. |
+| **#2558** | `chore(session-1226): rotate pa_local.sh pin → pa-08bdd7c9b348415a` | Mid-session rotation after pa-77bbcd97a625424d crossed ~28 turns. New pin verified via `session_tool.whoami`. |
+| **#2559** | `fix(session-1226): canonicalize agent_name aliases in core_deliverables` | Migration 0365: `rigby`→`Rigby` (1 row) + `ClaudeCode`→`claude-code` (17 rows). Closes audit F2 history side. 5 tests. |
+| **#2560** | `feat(session-1226): agent_name write-time canonicalization in deliverable_factory` | Module-level `_AGENT_NAME_ALIASES` + `_canonicalize_agent_name()` helper applied at the top of `create_deliverable()`. Closes audit §4.4 P1 'Enforcement' bullet — prevents future drift. 10 tests. Lockstep-asserted against migration 0365's `_ALIAS_MAP`. |
+| **(this PR)** | `docs(session-1226): close v2 — verifier-loop audit arc + final 1227 start-here` | This update — extends the manifest with #2556-#2560 + new Arc 4 for the audit work + new memory rule on the verifier-loop pattern + Session 1227 first-thing refresh. |
 
 ### Carryover items NOT touched this session (intentional)
 
@@ -134,6 +142,28 @@ The dispatcher RECEIVES `conversation_id` at `tool_dispatcher.execute(... conver
 PR #2554 fixes this at the cleanest layer: `_build_tool_payload` `setdefault`s `conversation_id` from `self.conversation_id`. Every PA-routed tool call now sees it. Handler-level overrides still win when the LLM explicitly sets it.
 
 This also incidentally fixes `session_tool whoami`'s same-shape gap — the read at `td_handlers_core.py:3719` gracefully fell back to identity-only, but now `whoami` callers don't need to pass `conversation_id` explicitly either.
+
+### Arc 4 — Verifier-loop deliverables audit (PRs #2556, #2557, #2559, #2560 + deliverable `e2964e4a-…`)
+
+**Trigger:** Chris pivoted from "use the autonomous engineer for the agent-name audit (Tier 3 #4)" to "right agent for the job — Rigby has `deliverable_tool`, use her directly." He flagged that the chat UI didn't surface Rigby's progress during long-running work and proposed the verifier-loop pattern: Rigby executes via her tool surface, Claude verifies every claim directly via Django ORM, Claude reports gaps + corrections to Chris in real-time.
+
+**Trust failures the verifier-loop caught:**
+1. Rigby's first attempt — **wrote the 4-part scaffold then marked the deliverable `completed` without any actual findings**. Classic placeholder pattern (memory rule `feedback_rigby_deliverable_content.md`). Claude pulled the deliverable detail directly, surfaced the 513-char outline, and re-prompted with explicit anti-placeholder rules.
+2. On the second attempt — **Rigby's workspace-scoped baseline was wrong**: she reported 152 deliverables; ORM showed 300. Her `deliverable_tool.list` was hiding 148 rows (entire `blocked` status invisible). Caught + flagged as a tool-surface gap before any analysis built on the wrong number.
+
+**What the audit ultimately produced:** deliverable `e2964e4a-08e9-4ff1-bc01-7fe3adb5a99c`, 26,465 chars across 4 verified parts, status `completed`:
+- **Part 1 — Agent Identity Audit** (appended by Claude via ORM after Rigby's placeholder; 5,519 chars): 313 total deliverables, 35 distinct `agent_name` strings, 2 alias groups (`Rigby`/`rigby` + `ClaudeCode`/`claude-code`), 18 rows would change under normalization.
+- **Part 2 — Metric Drift** (Rigby, 4,744 chars; arithmetic + 3 file paths verified): top-10 before/after normalization; `claude-code` ranks **#14 → #4** post-normalization.
+- **Part 3 — Duplicate / Template-Leak Cluster Analysis** (Rigby, with ORM cluster data from Claude; 7,155 chars; classifications + token-catch verified): 6 duplicate clusters, **Cluster #1 surfaced as a NEW prompt-leak pattern Gate 4 missed** (32 rows, 28 in last 7 days, ResearchAgent, status mix 31 blocked + 1 archived).
+- **Part 4 — Findings / Evidence / Risk / Fixes / Quick Wins / Tool-Surface Gaps** (Rigby; correction applied for non-matching token; 8,532 chars): 5 findings ranked by impact, 5 tool-surface additions proposed, P0/P1/P2 prioritization.
+
+**Concrete fixes shipped from the audit:**
+- **#2557 (P0)** — added `'this topic using external sources'` to `TEMPLATE_LEAK_TITLE_TOKENS`. Stops the 28-per-week bleed. Verified via cross-substring check against actual stored 101-char-truncated title; Rigby's belt-and-suspenders second token (`'do not use query_internal_data'`) was caught as a non-match by the verifier-loop and dropped.
+- **#2559 (P1 data fix)** — migration 0365 canonicalizes 18 rows. Applied locally; post-state matches audit prediction exactly (33 distinct `agent_name` values, `claude-code` count = 21, rank #4).
+- **#2560 (P1 enforcement)** — write-time alias map in `deliverable_factory.create_deliverable`. Prevents future drift. Lockstep test asserts the alias map matches migration 0365's `_ALIAS_MAP` exactly.
+
+**Deferred from the audit (Session 1227 lead candidate):**
+- §4.6 tool-surface additions (5 items): `set_status`, `list show_all` flag, `stats full_by_agent`, first-class `duplicates` action, optional `normalize` action. Together these turn this kind of audit from "ORM archaeology" into "one tool call."
 
 ## Behavioral invariants post-Session-1226
 
