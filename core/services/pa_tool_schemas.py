@@ -1316,8 +1316,13 @@ PA_TOOL_SCHEMAS = [
                     "description": "Route path to check (for check_route) or filter (for list_api_dependencies), e.g. '/governance'",
                 },
                 "auth_required": {
-                    "type": "boolean",
-                    "description": "Filter routes by auth requirement (for list_routes)",
+                    "type": ["string", "boolean"],
+                    "description": (
+                        "Filter routes by auth requirement (for list_routes). OMIT unless explicitly filtering. "
+                        "Pass true → auth-required routes only. Pass the STRING 'false' → public routes only. "
+                        "Python boolean false is treated as LLM autofill and ignored (Session 1228 PR-A, mirrors "
+                        "deliverable_tool has_initiative semantics from Session 1227)."
+                    ),
                 },
                 "writes_only": {
                     "type": "boolean",
@@ -2283,7 +2288,25 @@ PA_TOOL_SCHEMAS = [
                 },
                 "dry_run": {
                     "type": "boolean",
-                    "description": "For action_item_cleanup: true to preview, false to execute (default true).",
+                    "description": (
+                        "For action_item_cleanup / bulk_cleanup / bulk_auto_assign: "
+                        "true to preview (DEFAULT for all three), false to execute. "
+                        "Session 1228 PR-A — writes require BOTH dry_run=false AND "
+                        "confirm=true (belt-and-suspenders against LLM autofill: "
+                        "GPT-5.2 autofills declared optional booleans with False, so "
+                        "the second-factor confirm gate prevents silent flips to "
+                        "write mode). OMIT unless explicitly invoking write mode."
+                    ),
+                },
+                "confirm": {
+                    "type": "boolean",
+                    "description": (
+                        "For action_item_cleanup / bulk_cleanup / bulk_auto_assign: "
+                        "explicit second-factor confirmation required (along with "
+                        "dry_run=false) to actually apply writes. Defaults to false. "
+                        "Session 1228 PR-A. Pass true ONLY when the caller has "
+                        "previewed and is committing to the write."
+                    ),
                 },
                 "limit": {"type": "integer", "description": "Max results (default 50)."},
                 "offset": {"type": "integer", "description": "Skip first N results for pagination."},
@@ -2933,7 +2956,21 @@ PA_TOOL_SCHEMAS = [
                 },
                 "dry_run": {
                     "type": "boolean",
-                    "description": "For 'run' action: evaluate policies but don't actually block/unblock (default false).",
+                    "description": (
+                        "For 'run' action: evaluate policies but don't actually block/unblock (default false). "
+                        "For 'security_containment_plan': preview the containment plan without applying it "
+                        "(DEFAULT true; writes require BOTH dry_run=false AND confirm=true per Session 1228 "
+                        "PR-A belt-and-suspenders against LLM autofill)."
+                    ),
+                },
+                "confirm": {
+                    "type": "boolean",
+                    "description": (
+                        "For 'security_containment_plan': explicit second-factor confirmation required "
+                        "(along with dry_run=false) to actually execute the containment plan. Defaults "
+                        "to false. Session 1228 PR-A — defends against GPT-5.2 autofilling dry_run=False "
+                        "and silently flipping a preview into a live containment action."
+                    ),
                 },
                 "limit": {
                     "type": "integer",
@@ -3300,11 +3337,11 @@ PA_TOOL_SCHEMAS = [
                 "title_prefixes": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: archive items whose title starts with any of these prefixes (e.g., ['Stock Analysis:', 'Market Movement:'])"},
                 "protected_categories": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: exclude these categories from archiving (e.g., ['Patent Disclosures', 'Platform Diagnostics'])"},
                 "categories": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive_published: required list of categories to target (e.g. ['initiative_completion', 'PA Created'])."},
-                "confirm": {"type": "boolean", "description": "For bulk_archive_published: must be true when dry_run=false to actually execute."},
+                "confirm": {"type": "boolean", "description": "For bulk_archive / bulk_archive_published: must be true when dry_run=false to actually execute. Session 1228 PR-A extended the existing bulk_archive_published gate to bulk_archive (belt-and-suspenders against LLM autofill of dry_run=False)."},
                 "types": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive_published: optional deliverable_type filter. 'blog' is blocked."},
                 "created_before": {"type": "string", "description": "ISO-8601 datetime. Only items created before this date (e.g. '2026-02-28T00:00:00Z')."},
                 "created_after": {"type": "string", "description": "ISO-8601 datetime. Only items created after this date."},
-                "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (default: true). Set false to actually archive."},
+                "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (DEFAULT: true). Set dry_run=false AND confirm=true to execute (Session 1228 PR-A belt-and-suspenders)."},
                 "cutoff_days": {"type": "integer", "description": "For run_cleanup: archive items older than N days (default: 7)"},
                 "cap": {"type": "integer", "description": "For run_cleanup/bulk_archive: max items per run (default: 500, max: 2000)"},
                 "protected_types": {"type": "array", "items": {"type": "string"}, "description": "For run_cleanup: deliverable_types to skip"},
@@ -3385,15 +3422,14 @@ PA_TOOL_SCHEMAS = [
                 "exclude_archived": {"type": "boolean", "description": "For duplicates: when true, drop archived rows before grouping. Default false (include archived — useful for hygiene audits). Truthy-only check; Python bool false is treated as autofill and ignored."},
                 "reason": {"type": "string", "description": "For set_status: free-text explanation of why the status was flipped. REQUIRED when flipping completed→ready (the unblock direction); optional on ready→completed. Trimmed; max 500 chars. Persisted under DeliverableEvent.metadata.ctx.reason."},
                 "field": {"type": "string", "description": "For normalize: which field to canonicalize. v1 supports 'agent_name' only."},
-                "dry_run": {"type": "boolean", "description": "For normalize/bulk_archive: when true (DEFAULT for normalize), preview only — no rows touched. For normalize, writing requires BOTH dry_run=false AND confirm=true (belt-and-suspenders against LLM autofill)."},
-                "confirm": {"type": "boolean", "description": "For normalize: explicit second-factor confirmation required (along with dry_run=false) to actually apply writes. Defaults to false."},
                 "full": {"type": "boolean", "description": "For detail: return full content without 8K cap"},
                 "content_offset": {"type": "integer", "description": "For detail: start reading from this char position"},
                 "content_limit": {"type": "integer", "description": "For detail: max chars to return"},
                 "data_sensitivity": {"type": "string", "description": "For create/update: public, internal, confidential, restricted"},
                 "is_pinned": {"type": "boolean", "description": "For create: pin to prevent auto-cleanup"},
                 "agent_name": {"type": "string", "description": "For create: agent name"},
-                "dry_run": {"type": "boolean", "description": "For bulk_archive: preview without executing (default true)"},
+                "dry_run": {"type": "boolean", "description": "For bulk_archive / cleanup / normalize: preview without executing (DEFAULT true). Writes require BOTH dry_run='false' AND confirm=true (Session 1227 PR4 normalize precedent, extended to bulk_archive/cleanup by Session 1228 PR-A). Belt-and-suspenders against LLM autofill — GPT-5.2 autofills declared optional booleans with False."},
+                "confirm": {"type": "boolean", "description": "For bulk_archive / cleanup / normalize: explicit second-factor confirmation required (along with dry_run=false) to actually apply writes. Defaults to false. Session 1228 PR-A extended the existing normalize gate to bulk_archive + cleanup."},
                 "cap": {"type": "integer", "description": "For bulk_archive: max items per run"},
                 "title_prefixes": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: title prefix filter"},
                 "agent_names": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: agent name filter"},

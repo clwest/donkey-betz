@@ -233,9 +233,14 @@ class CoreHandlersMixin:
         import httpx
 
         payload = payload or {}
-        days = payload.get("days")
+        # Session 1228 PR-B — falsy-or-default. GPT-5.2 autofills declared
+        # optional ints with 0; the old `is not None else 7` accepted 0
+        # and the clamp below floored it to 1 (still a silent 1-day vs
+        # intended 7-day window). Memory rule:
+        # feedback_llm_autofills_boolean_params_with_false.
+        days_raw = payload.get("days")
         try:
-            days = int(days) if days is not None else 7
+            days = int(days_raw) if days_raw else 7
         except (TypeError, ValueError):
             days = 7
         # Clamp to the endpoint's enforced range so a bad value doesn't
@@ -858,7 +863,15 @@ RESEARCH DATA:
 
         if action == 'list_routes':
             category = payload.get('category')
-            auth_required = payload.get('auth_required')
+            # Session 1228 PR-A — coerce_optional_bool defends against
+            # GPT-5.2 autofilling `auth_required=False` (which the prior
+            # `is not None` gate accepted and silently filtered out every
+            # auth-required route). Truthy → auth-required only; explicit
+            # string 'false'/'False' → public-only; Python False or omitted
+            # → no filter. Mirror of PR1 has_initiative semantics. Memory
+            # rule: feedback_llm_autofills_boolean_params_with_false.
+            from core.services.td_autofill_safety import coerce_optional_bool
+            auth_required = coerce_optional_bool(payload.get('auth_required'))
             filtered = routes
             if category:
                 filtered = [r for r in filtered if r.get('category') == category]
@@ -3266,7 +3279,7 @@ RESEARCH DATA:
 
                 limit = min(int(payload.get('limit', 10)), 30)
                 sport = payload.get('sport', '').strip().lower()
-                hours = int(payload.get('hours', 48))
+                hours = int(payload.get('hours') or 48)  # Session 1228 PR-B autofill safety
                 cutoff = tz.now() - timedelta(hours=hours)
 
                 qs = Deliverable.objects.filter(
