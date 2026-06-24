@@ -357,6 +357,133 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
         return f"Error in {tool_name}: {str(e)}"
 
 
+def _translate_tools_to_openai(anthropic_tools: List[dict]) -> List[dict]:
+    """Convert Anthropic tool definitions to OpenAI function-call format.
+
+    Session 1226 P4 — Workaround for exhausted Anthropic credits. Anthropic's
+    `{"name": ..., "description": ..., "input_schema": {...}}` shape maps
+    cleanly to OpenAI's `{"type": "function", "function": {"name": ...,
+    "description": ..., "parameters": {...}}}`. JSON Schema bodies are
+    compatible between providers, so input_schema → parameters is a
+    rename, not a transformation.
+    """
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": tool["name"],
+                "description": tool["description"],
+                "parameters": tool["input_schema"],
+            },
+        }
+        for tool in anthropic_tools
+    ]
+
+
+_OPENAI_TOOLS = _translate_tools_to_openai(TOOLS)
+
+
+def _execute_engineering_task_openai(
+    task_description: str,
+    max_iterations: int,
+) -> Dict[str, Any]:
+    """OpenAI fallback path for execute_engineering_task.
+
+    Session 1226 P4 workaround: when Anthropic credits are exhausted, route
+    the autonomous engineer through gpt-5-mini via the existing
+    openai_client_factory. Same SYSTEM_PROMPT + TOOLS, different message
+    format. Caller is responsible for git workspace setup + conversation
+    post-back; this function only owns the LLM loop.
+
+    Returns: {'final_text': str, 'files_changed': list, 'pr_url': str|None}
+    """
+    from core.services.openai_client_factory import get_openai_client
+
+    client = get_openai_client()
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": task_description},
+    ]
+    files_changed: List[str] = []
+    pr_url: Optional[str] = None
+    final_text = ''
+
+    for iteration in range(max_iterations):
+        response = client.chat.completions.create(
+            model='gpt-5-mini',
+            messages=messages,
+            tools=_OPENAI_TOOLS,
+            # Session 1224 memory rule: gpt-5* needs ≥2000 reasoning headroom;
+            # 4000 leaves comfortable room for both reasoning + tool-call args.
+            max_completion_tokens=4000,
+        )
+        choice = response.choices[0]
+        msg = choice.message
+        finish_reason = choice.finish_reason
+
+        # Done — no more tool calls expected
+        if finish_reason == 'stop' and not msg.tool_calls:
+            final_text = msg.content or ''
+            break
+
+        # Tool calls path. Append the assistant message FIRST (with tool_calls
+        # field populated) so the model's next turn sees its own tool_call_ids.
+        if msg.tool_calls:
+            assistant_msg = {
+                'role': 'assistant',
+                'content': msg.content or '',
+                'tool_calls': [
+                    {
+                        'id': tc.id,
+                        'type': 'function',
+                        'function': {
+                            'name': tc.function.name,
+                            'arguments': tc.function.arguments,
+                        },
+                    }
+                    for tc in msg.tool_calls
+                ],
+            }
+            messages.append(assistant_msg)
+
+            for tc in msg.tool_calls:
+                tool_name = tc.function.name
+                try:
+                    tool_input = json.loads(tc.function.arguments or '{}')
+                except json.JSONDecodeError:
+                    tool_input = {}
+                logger.info(f"[ClaudeEngineer:openai] Tool: {tool_name} (iteration {iteration+1})")
+                result = _execute_tool(tool_name, tool_input)
+
+                if tool_name == 'write_file':
+                    files_changed.append(tool_input.get('path', '?'))
+                elif tool_name == 'create_pr' and 'github.com' in result:
+                    pr_url = result.strip()
+
+                messages.append({
+                    'role': 'tool',
+                    'tool_call_id': tc.id,
+                    'content': result[:10000],  # cap per-result at 10KB
+                })
+
+            # Trim old messages to keep context size sane (mirror Anthropic path).
+            if len(messages) > 24:
+                # Keep system + the last 20 turns
+                messages = [messages[0]] + messages[-20:]
+        else:
+            # Unexpected finish_reason without tool_calls — bail to avoid infinite loop
+            final_text = (msg.content or '') or f"Engineer stopped with finish_reason={finish_reason} and no tool calls."
+            break
+    else:
+        final_text = f"Reached max iterations ({max_iterations}). Task may be incomplete."
+
+    return {
+        'final_text': final_text,
+        'files_changed': files_changed,
+        'pr_url': pr_url,
+    }
+
+
 def execute_engineering_task(
     task_description: str,
     conversation_id: str = None,
@@ -374,7 +501,42 @@ def execute_engineering_task(
 
     Returns:
         Dict with status, summary, files_changed, pr_url
+
+    Session 1226 P4 — provider routing:
+    When CLAUDE_CODE_ENGINE_PROVIDER='openai' the LLM loop runs through
+    gpt-5-mini instead of claude-sonnet-4. Used as a temporary workaround
+    when Anthropic credits are exhausted. Default 'anthropic' preserves
+    prod behavior.
     """
+    # Session 1226 P4 — OpenAI fallback path
+    provider = os.environ.get('CLAUDE_CODE_ENGINE_PROVIDER', 'anthropic').strip().lower()
+    if provider == 'openai':
+        _ensure_git_repo()
+        try:
+            result = _execute_engineering_task_openai(
+                task_description=task_description,
+                max_iterations=max_iterations,
+            )
+            if conversation_id:
+                _post_to_conversation(
+                    conversation_id, result['final_text'],
+                    result['files_changed'], result['pr_url'],
+                )
+            return {
+                'status': 'success',
+                'summary': result['final_text'][:2000],
+                'files_changed': result['files_changed'],
+                'pr_url': result['pr_url'],
+                'provider': 'openai',
+            }
+        except Exception as e:
+            logger.error(f"[ClaudeEngineer:openai] Task failed: {e}")
+            error_msg = f"Engineering task failed (openai path): {str(e)}"
+            if conversation_id:
+                _post_to_conversation(conversation_id, error_msg, [], None)
+            return {'status': 'error', 'error': str(e), 'provider': 'openai'}
+
+    # Default Anthropic path (unchanged from prior behavior)
     api_key = os.environ.get('ANTHROPIC_API_KEY')
     if not api_key:
         return {'status': 'error', 'error': 'ANTHROPIC_API_KEY not set'}
