@@ -4570,17 +4570,31 @@ PA_TOOL_SCHEMAS = [
     {
         "type": "function",
         "name": "claude_code_tool",
-        "description": "Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and open PRs. Use when you need code changes, bug fixes, new features, or technical investigation that requires reading/modifying the codebase.",
+        "description": "Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and open PRs. Use when you need code changes, bug fixes, new features, or technical investigation that requires reading/modifying the codebase. Use request_mode='answer' for readonly Q&A about the codebase (no PR created); 'change' for code modifications; default 'auto' picks based on task verbs.",
         "parameters": {
             "type": "object",
             "properties": {
                 "task": {
                     "type": "string",
-                    "description": "Detailed description of what Claude Code should do. Be specific about files, functions, or features involved."
+                    "description": "Detailed description of what Claude Code should do. Be specific about files, functions, or features involved.",
                 },
                 "conversation_id": {
                     "type": "string",
-                    "description": "Conversation ID to post results back to (optional — defaults to current conversation)"
+                    "description": "Conversation ID to post results back to (optional — defaults to current conversation).",
+                },
+                "request_mode": {
+                    "type": "string",
+                    "enum": ["auto", "answer", "change"],
+                    "description": (
+                        "Session 1230 P4. 'answer' = readonly codebase Q&A; "
+                        "engineer must produce the requested output shape, "
+                        "no branches/PRs, no clarification. 'change' = code "
+                        "modification; engineer reads, edits, creates a "
+                        "branch + PR. 'auto' (default) = dispatcher infers "
+                        "from task verbs (add/fix/refactor/etc → change; "
+                        "everything else → answer). Set explicitly when the "
+                        "verb heuristic would misclassify."
+                    ),
                 },
             },
             "required": ["task"],
