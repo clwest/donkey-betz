@@ -102,73 +102,62 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1223 — CURRENT ENTRY POINT
+## SESSION 1224 — CURRENT ENTRY POINT
 
-### SESSION 1222 CLOSED — full 3-arc closure (carryover + audit-revisit + drift cleanup), 11 PRs
+### SESSION 1223 CLOSED — audit sweep (15/15) + watchdog burn-in GREEN, 5 PRs
 
-### SESSION 1223 — IN PROGRESS
+Full handoff: [`SESSION_1223_AUDIT_SWEEP_AND_WATCHDOG_GREEN.md`](docs/handoffs/SESSION_1223_AUDIT_SWEEP_AND_WATCHDOG_GREEN.md). Session 1217 self-directed audit deliverable `bec077ed-…` fully closed (15/15) + Session 1221 watchdog/timeout arc declared green after 5-check burn-in. **No fresh urgent items entering Session 1224.**
 
-> **Audit #8 closed early-session.** Path B chosen (accept 89 as canonical, single-PR close). PR #2534 (this branch `fix/session-1223-audit-8-seed-baseline-drift`) reframes the seed loader as decorative stub-persona scaffolding, re-pegs `persona_agent_count` 155→89 and `total_agent_count_claim` 238→172, adds invariance tests, drift-free post-merge. Audit tail now: **3 of 15 still open (#4, #9, #10).**
+| PR | Audit | What |
+|---|---|---|
+| **#2534** | #8 | Seed baseline drift — Path B (accept Agent.objects=89 as canonical). Loader docstring lie fixed (139 tuples ≠ "149 specialized agents"). New `TestSeedPersonaInvariance` class. |
+| **#2535** | #9 | `docs/PLATFORM_WHAT_IT_IS.md` refresh — frontmatter 1141→1223 + count corrections + new "OpenAI hardening — Sessions 1214-1216 + 1221" subsection. |
+| **#2536** | #4 | `CRITICAL_PATH_HUB` markers on 4 hub files + new PR-template "Critical-path hub change checklist" + `docs/CRITICAL_PATH_HUBS.md` registry doc. |
+| **#2537** | #10 | Atlas TL;DR #6 + Tier 5 intro narrowed per `fleet_health`/`paid_interest_status` runtime evidence (7/7 sibling apps `UNREACHABLE`). Rigby drafted language. |
+| **#2538** | — | Session close handoff + this start-here rewrite. |
 
-Session 1222 ended up being three arcs of work in one session, driven by Chris's flag mid-session to revisit the original Session 1217 self-directed audit after the carryover queue cleared. Final ledger:
-
-**Arc v1 — Carryover queue clear** ([handoff](docs/handoffs/SESSION_1222_CARRYOVER_QUEUE_CLEAR.md))
-- #2522: Remove `OpenAIProvider` class (B2 follow-on from Session 1217 PR #2507)
-- #2523: Trim 4 zero-exec names from content_studio + 3 from ops timeout config (P2 Cat A+B)
-- #2524: Drop 3 dormant gateway dispatch actions (P2 Cat C)
-- #2525: Promote `check-reasoning-contract.yml` to enforce
-- #2526: Session 1222 v1 close handoff
-
-**Arc v2 — Audit revisit (Rigby's top-3 leverage picks)** ([handoff](docs/handoffs/SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md))
-- #2527 + #2528: Audit C1 — Opportunity pipeline scope clarification (label-only + `scope='mine'|'all'` param)
-- #2529: Audit #3 — `check-llm-sdk.yml` flipped to enforce (~60 → 0 violations)
-- #2530: Audit B2 — Migration 0364 applies per-task picks on 5 disabled beat tasks (Operator Edge alive with `dry_run=True`)
-- #2531: Session 1222 v2 close handoff
-
-**Arc v3 — Final drift cleanup**
-- #2532: Audit #6 + #7 docs drift reconciled (4 of 6 drift items closed; CLAUDE.md / SERVICES.md / BACKEND_INVENTORY.md / personal-assistant.md + verifier baselines bumped)
-
-**Both CI lints in enforce mode:** `check-reasoning-contract.yml` + `check-llm-sdk.yml`.
+**Watchdog/timeout arc — declared GREEN.** 5-check burn-in (~3h post-merge of #2519+#2520, local-only): zombie thread rate empty; `LLMCallEvent` stuck rows = 0; `cleanup-stuck-llm-calls` beat firing 10/10 SUCCESS; Tier 1 timeout firing count = 0 across all 4 worker logs; `failure_signatures` 24h yellow-on-literal (pre-merge zombie history dominating window) but green with context. Chris called it green.
 
 ### Audit closure summary (Session 1217 deliverable `bec077ed-…`)
 
-Of the 15 findings in the original self-directed audit:
+**Closed: 15/15** ✅ (full sweep — first time the audit is fully closed since deliverable creation).
 
-**Closed (15) — full sweep.** Original Chris-picks 1A + 1B + 2 + 3 + A1 + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift + **Session 1223 same-session sweep: #8 (PR #2534, Path B — accept 89 as canonical) + #9 (PR #2535 — PLATFORM_WHAT_IT_IS.md refresh + OpenAI hardening) + #4 (PR #2536 — CRITICAL_PATH_HUBS.md + 4 file markers + PR template gate) + #10 (PR #2537 — Atlas fleet positioning narrowed per fleet_health runtime evidence)**.
+Original Chris-picks 1A + 1B + 2 + 3 + A1 + C1 + #3 + B2 + #6 + #7 + bonus dispatcher-trim drift + **Session 1223 same-session sweep of the final tail: #8 (PR #2534) + #9 (PR #2535) + #4 (PR #2536) + #10 (PR #2537)**.
 
-**Still open: 0.** Session 1217 audit deliverable `bec077ed-…` fully closed.
+### FIRST THING Session 1224
 
-### FIRST THING Session 1223
+The queue is light. Pick whichever lane has the most signal:
 
-#### Priority 1 — Watchdog observation window (carryover from Sessions 1219-1221)
+#### Priority 1 — CI billing fix (Chris-side, before any normal PR flow returns)
 
-By Session 1223 the Tier 1 + Tier 2 watchdog fixes (PR #2519 + #2520) have 24-48h+ of burn-in. 5 specific checks documented in the v1 close handoff (zombie thread rate, `LLMCallEvent` stuck rows, `cleanup-stuck-llm-calls` beat firing, Tier 1 timeout firing rate, `ops_tool.failure_signatures`). If all green, the watchdog/timeout arc is fully closed.
+GitHub Actions billing failed ~15:17Z on 2026-06-23 (during Session 1223). Symptom: every workflow run completes in 2-3 seconds with empty step logs. Root cause via `gh api .../check-runs/<id>/annotations`: "The job was not started because recent account payments have failed or your spending limit needs to be increased." All 5 Session 1223 PRs admin-merged per Chris's session authorization. **Until billing is restored at https://github.com/settings/billing, future PR merges still need `--admin`.** When green, normal PR flow returns and admin overrides expire (scope-bound to the billing outage).
 
 #### Priority 2 — Operator Edge newsletter Friday-1 burn-in check
 
-The B2 PR (#2530) re-enabled `generate-operator-edge-newsletter` with `dry_run=True`. First scheduled run = next Friday 1pm MDT post-merge. Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays, flip kwargs to `{'dry_run': false}` to promote to live.
+PR #2530 (Session 1222) re-enabled `generate-operator-edge-newsletter` with `dry_run=True`. First scheduled run = first Friday at 1pm MDT post-merge. Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays, flip kwargs to `{'dry_run': false}` to promote to live. Calendar check before opening Session 1224 — if it's already past Friday, run the verification.
 
-#### Priority 3 — Audit #8: seed baseline drift — **CLOSED Session 1223 (Path B)**
+#### Priority 3 — Audit #5 (PA tool schemas vs handlers — 109 vs 152 delta = 43)
 
-PR #2534 (`fix/session-1223-audit-8-seed-baseline-drift`) shipped Path B per Rigby + Claude joint recommendation. Pre-flight surfaced the loader's own docstring lie (claims "149 agents" but has 139 tuples; 16 historical non-seed rows came from elsewhere — re-seeding reaches 139, not 155, so doesn't actually close the drift). Path A would have required a multi-step fix anyway. Path B: 1 PR.
+Carryover from Session 1217 audit deliverable that was NOT in the original 15 findings but Rigby's mid-session sweep noted: `core/services/pa_tool_schemas.py` declares 109 schemas; `core/services/tool_dispatcher.py` has 152 registered handlers. Delta = 43 (infra-only handlers, dead, or schemas waiting on handlers — needs classification). **Not blocking** — verified Session 1223 PR #2535. Effort: M. Defer unless you want to clean up the long tail.
 
-Scope shipped:
-- `core/management/commands/load_all_agents_advisors.py`: reframed as decorative stub-persona scaffolding for `DynamicPersonaAgent` fallback. Docstring + `help` + stdout messages corrected to 139 + scope clarification.
-- `core/services/doc_claim_verification.py`: `persona_agent_count` 155 → 89; `total_agent_count_claim` 238 → 172 (= AGENT_MAP(83) + 89). Re-peg notes added.
-- `tests/unit/core_agents/test_agent_router.py`: new `TestSeedPersonaInvariance` class documents the contract (AGENT_MAP is the load-bearing dispatch surface; persona-table drift does not gate dispatch).
-- Verifier post-merge: drift = 0 across all docs.
+#### Priority 4 — Tier 3 from P2 deliverable `7ae61cf7-…` (defer unless leakage)
 
-#### Priority 4 — Audit #4, #9, #10 (M each, deferred-but-still-open)
+Wrap `openai_client_factory` clients at construction time with the same total-request bound that Tier 1 applies per-callsite. Heavier contract change. Defer unless Tier 1+2 leakage to non-`BaseAgent` paths becomes a measurable production issue. Burn-in monitoring (Priority 5 below) is the trigger.
 
-- **#4 — Critical hub markers / gates:** extend the PR template + add a CODEOWNERS / path-pattern gate flagging critical files. Reliability win.
-- **#9 — Core orientation doc staleness:** refresh `docs/PLATFORM_WHAT_IT_IS.md` frontmatter (last reviewed Session 1141, now 81 sessions behind). Add an OpenAI hardening section pointing at the Sessions 1214-1216 + 1221 arc.
-- **#10 — Atlas positioning:** narrow the Phase 1 "fleet integration" claims in `docs/24_7_GLOBAL_AI_APP_ATLAS.md` to match runtime reality.
+#### Priority 5 — Re-run watchdog #5 check in 24-48h if you want full closure
 
-#### Priority 5 — Whatever Chris wants
+Session 1223 closed the watchdog arc GREEN with context (24h `failure_signatures` window was dominated by pre-merge zombies). Re-running `ops_tool action=failure_signatures window=24h` 24-48h post-merge (so ~Friday-Saturday) would naturally show the window dominated by post-fix data — should mechanically drift down. Optional confirmation; not a blocker.
 
-No fresh urgent items. Audit revisit complete. Watchdog/timeout arc closed.
+#### Priority 6 — Whatever Chris wants
 
-**Active conversation:** `pa-17e0fa71fd25470a` — fresh Session 1223 thread (prior `pa-58737666f25741dc` retired at 44 msgs / `strongly_recommend_fresh`; carried Sessions 1217-1222, record 6-session run). `tools/pa_local.sh` updated.
+Genuinely open. Audit fully closed. Watchdog arc closed. Carryover queue empty.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008 (compliancesentinel/contract-concierge/dealflowtracker/mentorforge/pitchdeckforge/sellerpilot/signal-studio) were spun up as Rigby+Claude build targets and paused on OpenAI credit exhaustion. Substrate (handlers, `FleetPaidInterest`, HMAC) shipped; only Session 1138 F1 demand-gate works end-to-end. Pickup unblock: credits + booting the apps + per-app `/api/health` verification. See memory `project_fleet_sibling_apps_credit_paused.md`.
+- Delete the 9 dormant agent class files (per Rigby's Session 1222 P2 keep-for-future recommendation — explicitly NOT recommended unless Chris re-prioritizes).
+- `scan-spider-opportunities` resume (Session 1222 B2 Mode B chose curate-now).
+
+**Active conversation:** `pa-17e0fa71fd25470a` — opened fresh in Session 1223. 1 session in, healthy. Should carry through Session 1224 and likely further. Health-check with `session_tool.health_check` if it crosses ~40+ messages.
 
 **Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
 - Delete the 9 dormant agent class files (per Rigby's keep-for-future recommendation)
