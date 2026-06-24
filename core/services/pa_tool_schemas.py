@@ -4600,12 +4600,16 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["health_check", "create_fresh", "list_recent"],
+                    "enum": ["health_check", "create_fresh", "list_recent", "whoami"],
                     "description": (
                         "health_check: analyze current conversation freshness "
                         "(score 0-100, recommendation, reasons, auto-summary, starter prompt). "
                         "create_fresh: create a new conversation and return its ID + starter prompt. "
-                        "list_recent: list recent conversations with titles and message counts."
+                        "list_recent: list recent conversations with titles and message counts. "
+                        "whoami: return the authenticated user's identity (username/email/id/is_staff) "
+                        "plus whether the current (or supplied) conversation_id belongs to that user. "
+                        "Use to confirm 'I am operating as <username>' before scope-sensitive work, "
+                        "or to verify conversation ownership when scope=mine workflows depend on it."
                     ),
                 },
                 "conversation_id": {
