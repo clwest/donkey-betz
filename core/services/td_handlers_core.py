@@ -3796,7 +3796,57 @@ RESEARCH DATA:
                 'count': len(conversations),
             }
 
-        valid = ['health_check', 'create_fresh', 'list_recent']
+        elif action == 'whoami':
+            # Session 1226 — return the authenticated user's identity AND whether the
+            # current (or supplied) conversation_id belongs to that user. Closes the
+            # ownership-verification gap Rigby filed at Session 1225 close.
+            from django.contrib.auth import get_user_model
+
+            UserModel = get_user_model()
+            try:
+                user = UserModel.objects.get(id=user_id)
+            except UserModel.DoesNotExist:
+                return {
+                    'action': 'whoami',
+                    'error': f'user_id={user_id} not found in auth_user table',
+                    'authenticated_user_id': user_id,
+                }
+
+            target_conv_id = (
+                payload.get('conversation_id')
+                or getattr(self, '_current_conversation_id', None)
+            )
+            conv_owner_match = None
+            conv_owner_username = None
+            conv_owner_user_id = None
+            if target_conv_id:
+                from core.models import ChatConversation
+                first_msg = ChatConversation.objects.filter(
+                    conversation_id=target_conv_id,
+                ).order_by('created_at').first()
+                if first_msg is not None:
+                    conv_owner_user_id = first_msg.user_id
+                    conv_owner_match = first_msg.user_id == user_id
+                    try:
+                        owner = UserModel.objects.get(id=first_msg.user_id)
+                        conv_owner_username = owner.username
+                    except UserModel.DoesNotExist:
+                        conv_owner_username = None
+
+            return {
+                'action': 'whoami',
+                'user_id': user_id,
+                'username': user.username,
+                'email': user.email or '',
+                'is_staff': bool(user.is_staff),
+                'is_superuser': bool(user.is_superuser),
+                'conversation_id': target_conv_id or '',
+                'conversation_owner_user_id': conv_owner_user_id,
+                'conversation_owner_username': conv_owner_username,
+                'conversation_owner_match': conv_owner_match,
+            }
+
+        valid = ['health_check', 'create_fresh', 'list_recent', 'whoami']
         return {'error': f'Unknown session_tool action: {action}. Valid: {", ".join(valid)}'}
 
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────
