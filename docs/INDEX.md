@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-24 13:38
+**Generated:** 2026-06-24 13:42
 **Current Session:** 1229
 **Total Documentation:** 2721 files | 711,165 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,766 |
+| Total cross-references | 4,764 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 195 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 183 | Platform Master Inventory |
 | `docs/INDEX.md` | 129 | INDEX |
-| `docs/archive/old-structure/capabilities/02_Content_Creation/README.md` | 118 | 🎨 AI CONTENT STUDIO - The Complete Creation Suite |
+| `docs/archive/old-structure/plans/README.md` | 118 | 📋 Strategic Plans & Roadmaps |
 | `docs/AGENTS.md` | 70 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 69 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 44 | CAPABILITIES |
@@ -249,8 +249,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 393 | 2026-06-24 13:38 |
-| SESSION_1228_AUTOFILL_SWEEP_PLUS_BEAT_TZ_FIXES.md | handoffs | 179 | 2026-06-24 13:37 |
+| INDEX.md | docs | 393 | 2026-06-24 13:41 |
+| SESSION_1228_AUTOFILL_SWEEP_PLUS_BEAT_TZ_FIXES.md | handoffs | 179 | 2026-06-24 13:40 |
 | SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md | handoffs | 242 | 2026-06-24 00:19 |
 | SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md | handoffs | 209 | 2026-06-23 21:09 |
 | SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md | handoffs | 163 | 2026-06-23 20:02 |
