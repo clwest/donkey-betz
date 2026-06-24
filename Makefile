@@ -296,13 +296,18 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 	@# succeeded into the code_jobs Redis queue but never executed because
 	@# no local worker watched it. Manifested as "task 0077cd79 never reached
 	@# Claude Code session" — wasn't wiring, it was queue topology drift.
-	@# Mirrors the Procfile prefork single-task profile to match prod isolation.
+	@#
+	@# Pool choice: Procfile uses --pool=prefork on Railway (Linux, fine).
+	@# On macOS prefork SIGSEGV-crashes the autonomous Anthropic agent fork
+	@# every time even with OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES — well-
+	@# known issue (see CLAUDE.md macOS Celery SIGSEGV note). Local uses
+	@# --pool=solo to match the same pattern the default/pa workers use.
 	@if pgrep -f "hostname=code_jobs" >/dev/null 2>&1; then \
 		echo "-> Celery code_jobs worker already running"; \
 	else \
-		echo "-> Starting Celery code_jobs worker (prefork, queues=code_jobs)..."; \
+		echo "-> Starting Celery code_jobs worker (solo, queues=code_jobs)..."; \
 		PG_APPLICATION_NAME=dbz:celery-code-jobs SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
-		nohup .venv/bin/celery -A core worker --loglevel=info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
 			--queues=code_jobs \
 			--hostname=code_jobs@%h > $(CELERY_CODE_JOBS_LOG) 2>&1 & echo $$! > $(CELERY_CODE_JOBS_PIDFILE); \
 		sleep 1; \
