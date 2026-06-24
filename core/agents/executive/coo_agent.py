@@ -30,6 +30,7 @@ from typing import Dict, Any
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
+from core.services.deliverable_factory import build_semantic_research_title
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -300,8 +301,21 @@ You CANNOT execute changes - only analyze and recommend."""
                     )
 
                     # Session 1006: Persist output to Deliverable
+                    # Session 1230 P1: Semantic title via shared helper —
+                    # mirrors ResearchAgent / CustomerResearchAgent P4 fix
+                    # (Session 1229 PR #2573). Replaces `f"COO Analysis:
+                    # {task[:80]}"` which leaked prompt bodies into titles
+                    # when `task` came from a Stage-1 dispatch with the
+                    # `## Research Topic` framing or older `BINDING
+                    # DIRECTIVE` shapes. Rigby's `duplicates` surfaced a
+                    # 6-row cluster with title `"COO Analysis: You are
+                    # running the daily COO operations diagnostic. The
+                    # threshold gate has trip"` on Session 1229 close.
+                    semantic_title = build_semantic_research_title(
+                        task, prefix='COO Analysis',
+                    )
                     self._save_to_deliverable(
-                        title=f"COO Analysis: {task[:80]}",
+                        title=semantic_title,
                         content=analysis_msg,
                         deliverable_type='analysis',
                         category='Executive Operations',

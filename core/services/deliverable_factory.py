@@ -192,6 +192,17 @@ RELEVANCE_GATED_AGENTS = {'ResearchAgent'}
 #
 # Markers that signal `task` is a leaked prompt body (we should NOT use it
 # verbatim as a title). Match is case-insensitive substring.
+#
+# Session 1230 P1 — added the two scheduled-diagnostic markers below after
+# Rigby's Session 1229 `deliverable_tool.duplicates` surfaced a 6-row COO
+# cluster titled `"COO Analysis: You are running the daily COO operations
+# diagnostic. The threshold gate has trip"`. Same prompt shape ships from
+# `coo_daily.py`, `cto_daily.py`, and `trend_analysis_daily.py` — all three
+# open with "You are running the daily <X> diagnostic. The threshold gate
+# has tripped". Catching either substring neutralizes the family. (Wiring
+# fix landed for COOAgent in this PR; CTOAgent + TrendAnalysisAgent +
+# TrendBreakDetectorAgent are documented sibling callsites for a followup
+# PR — they share the `f"<Label>: {task[:N]}"` pattern.)
 _PROMPT_BODY_MARKERS = (
     'BINDING DIRECTIVE',
     '## Research Topic',
@@ -202,6 +213,8 @@ _PROMPT_BODY_MARKERS = (
     'DO NOT use query_internal',
     'Research this topic to advance',
     'Research this topic using EXTERNAL',
+    'You are running the daily',
+    'The threshold gate has tripped',
 )
 
 # Capture the value of the `## Research Topic` section in a prompt body. The
