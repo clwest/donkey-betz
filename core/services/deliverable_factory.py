@@ -179,31 +179,19 @@ RELEVANCE_GATED_AGENTS = {'ResearchAgent'}
 
 
 # Session 1226 P1 — agent_name write-time canonicalization. Audit deliverable
-# e2964e4a-… §4.4 P1 'Enforcement' bullet. The companion migration 0365 cleans
-# up history; this map prevents new variants from being introduced at write
-# time. Keep this map in lockstep with `_ALIAS_MAP` in
-# core/migrations/0365_session_1226_agent_name_canonicalization.py — if you
-# add a row to one, add it to the other.
+# e2964e4a-… §4.4 P1 'Enforcement' bullet. Migration 0365 cleaned up history;
+# the canonicalizer below prevents new variants from being introduced at
+# write time.
 #
-# Canonical reasoning anchored in audit §1c:
-#   - 'Rigby' wins (101/102 existing rows already use it)
-#   - 'claude-code' wins (matches autonomous engineer source field, Procfile
-#     worker name, feedback-memory file naming)
-_AGENT_NAME_ALIASES = {
-    'rigby': 'Rigby',
-    'ClaudeCode': 'claude-code',
-}
-
-
-def _canonicalize_agent_name(agent_name: Optional[str]) -> str:
-    """Return the canonical spelling for `agent_name`, or the input unchanged.
-
-    Empty/None inputs return ''. Unknown values pass through unchanged so the
-    map stays a strict alias surface, not an opinion engine.
-    """
-    if not agent_name:
-        return ''
-    return _AGENT_NAME_ALIASES.get(agent_name, agent_name)
+# Session 1227 PR4 — the alias map + canonicalizer moved to
+# `core/services/deliverable_aliases` as the single source of truth, so the
+# new `deliverable_tool.normalize` action can read the same map without
+# importing factory internals (and without the previous lockstep-via-
+# comments contract between this file and migration 0365 drifting).
+from core.services.deliverable_aliases import (
+    AGENT_NAME_ALIASES as _AGENT_NAME_ALIASES,  # re-export for any callers
+    canonicalize_agent_name as _canonicalize_agent_name,
+)
 
 
 def _should_create_deliverable(

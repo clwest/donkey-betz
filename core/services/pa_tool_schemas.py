@@ -3345,7 +3345,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "set_status", "export_pdf", "bulk_archive", "link_initiative", "unlink_initiative"],
+                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "set_status", "normalize", "export_pdf", "bulk_archive", "link_initiative", "unlink_initiative"],
                     "description": (
                         "list: browse deliverables (supports status/type/category/date/workspace filters). "
                         "detail: get full content of a deliverable (pass full=true for uncapped content). "
@@ -3357,6 +3357,7 @@ PA_TOOL_SCHEMAS = [
                         "stats: aggregate counts by type/category/agent. "
                         "duplicates: surface duplicate groups (audit-style) — returns rows with count/first_created_at/last_created_at/last_7d_count/agent_name_distribution/status_distribution. Use group_by, min_count, window_days, exclude_archived, limit to tune. "
                         "set_status: surgical, audited status flip — ONLY supports completed↔ready (other transitions go through update). Pass id + status + reason. Reason is REQUIRED on completed→ready. Records actor + trace_id + reason in a DeliverableEvent. "
+                        "normalize: dry-run alias-map sweep — preview rows whose `agent_name` (v1) would be canonicalized via the canonical alias map (e.g., 'rigby'→'Rigby', 'ClaudeCode'→'claude-code'). Defaults to dry_run=true; writes require BOTH dry_run=false AND confirm=true. Workspace-scoped by default; show_all=true sweeps globally. "
                         "export_pdf: generate a downloadable PDF. "
                         "bulk_archive: archive multiple deliverables by filter (dry_run=true by default). "
                         "link_initiative: link a deliverable to an initiative (pass deliverable_id + initiative_id). "
@@ -3383,6 +3384,9 @@ PA_TOOL_SCHEMAS = [
                 "window_days": {"type": "integer", "description": "For duplicates: rolling window in days for last_Nd_count (default 7)."},
                 "exclude_archived": {"type": "boolean", "description": "For duplicates: when true, drop archived rows before grouping. Default false (include archived — useful for hygiene audits). Truthy-only check; Python bool false is treated as autofill and ignored."},
                 "reason": {"type": "string", "description": "For set_status: free-text explanation of why the status was flipped. REQUIRED when flipping completed→ready (the unblock direction); optional on ready→completed. Trimmed; max 500 chars. Persisted under DeliverableEvent.metadata.ctx.reason."},
+                "field": {"type": "string", "description": "For normalize: which field to canonicalize. v1 supports 'agent_name' only."},
+                "dry_run": {"type": "boolean", "description": "For normalize/bulk_archive: when true (DEFAULT for normalize), preview only — no rows touched. For normalize, writing requires BOTH dry_run=false AND confirm=true (belt-and-suspenders against LLM autofill)."},
+                "confirm": {"type": "boolean", "description": "For normalize: explicit second-factor confirmation required (along with dry_run=false) to actually apply writes. Defaults to false."},
                 "full": {"type": "boolean", "description": "For detail: return full content without 8K cap"},
                 "content_offset": {"type": "integer", "description": "For detail: start reading from this char position"},
                 "content_limit": {"type": "integer", "description": "For detail: max chars to return"},
