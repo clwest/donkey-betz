@@ -97,6 +97,7 @@ class ContentHandlersMixin:
             'update': 'update', 'append': 'append', 'search': 'search',
             'save': 'save', 'unsave': 'unsave', 'stats': 'stats',
             'export_pdf': 'export_pdf', 'bulk_archive': 'bulk_archive',
+            'duplicates': 'duplicates',  # Session 1227 PR2
         }
         mapped = ACTION_MAP.get(action, action)
         del_payload = dict(payload)

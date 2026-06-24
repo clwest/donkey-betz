@@ -2510,6 +2510,132 @@ class AgentHandlersMixin:
             else:
                 raise ValueError(f"Unknown cleanup strategy: {strategy}. Use 'duplicates', 'orphans', or 'low_quality'.")
 
+        elif action == 'duplicates':
+            # Session 1227 — first-class duplicates action. Returns aggregate
+            # groups so callers can audit duplicate titles in one tool call
+            # instead of an ORM round-trip. Closes Session 1226 audit
+            # `e2964e4a-…` §4.6 item 3. Each row matches the audit spec:
+            # (group_key fields, count, first_created_at, last_created_at,
+            #  last_7d_count, agent_name_distribution, status_distribution).
+            from django.db.models import Min, Max
+            from django.utils import timezone as _tz
+            from datetime import timedelta as _timedelta
+
+            # group_by — accept the list form per the schema; also accept a
+            # single string for ergonomics. Whitelist the three supported
+            # shapes (Rigby Session 1227 design call: predictable index usage,
+            # no arbitrary combos in v1).
+            raw_group_by = payload.get('group_by') or ['title']
+            if isinstance(raw_group_by, str):
+                raw_group_by = [raw_group_by]
+            _ALLOWED_GROUP_BY = (
+                ('title',),
+                ('title', 'agent_name'),
+                ('title', 'category'),
+            )
+            group_tuple = tuple(raw_group_by)
+            if group_tuple not in _ALLOWED_GROUP_BY:
+                raise ValueError(
+                    "group_by must be one of "
+                    f"{[list(g) for g in _ALLOWED_GROUP_BY]}; got {list(group_tuple)}"
+                )
+
+            # Other params (defaults match Session 1227 design pass).
+            # Session 1227 PR2 — falsy-or-default pattern on int params. GPT-5.2
+            # in function-calling mode autofills declared int params with 0
+            # the same way it autofills booleans with False (see PR1 / memory
+            # rule feedback_llm_autofills_boolean_params_with_false). Treat
+            # missing/0/None/'' as "use the documented default" so the call
+            # `deliverable_tool action=duplicates workspace_id=…` returns the
+            # default-50 rows even when the LLM silently passes limit=0.
+            min_count = max(2, int(payload.get('min_count') or 2))
+            dup_limit = min(int(payload.get('limit') or 50), 200)
+            window_days = max(1, int(payload.get('window_days') or 7))
+            exclude_archived_raw = payload.get('exclude_archived')
+            # Truthy-only check (LLM-autofill safety mirror of PR1).
+            exclude_archived = exclude_archived_raw in (True, 'true', 'True', 1, '1')
+
+            # show_all bypasses exclude_archived (and any future status-
+            # related filter); workspace_id remains a primary scope guardrail
+            # NOT bypassable by show_all (Rigby Session 1227 design call).
+            dup_qs = base_qs
+            if not _show_all and exclude_archived:
+                dup_qs = dup_qs.exclude(status='archived')
+
+            window_start = _tz.now() - _timedelta(days=window_days)
+
+            # Aggregate groups in one pass.
+            groups_qs = (
+                dup_qs.values(*group_tuple)
+                .annotate(
+                    count=Count('id'),
+                    first_created_at=Min('created_at'),
+                    last_created_at=Max('created_at'),
+                )
+                .filter(count__gte=min_count)
+                .order_by('-count', '-last_created_at')
+            )
+            total_above_threshold = groups_qs.count()
+            groups = list(groups_qs[:dup_limit])
+
+            # Per-group: last_7d_count + agent_name_distribution + status_distribution.
+            # N+1-ish but bounded by dup_limit (default 50, max 200). Good
+            # enough for the audit-style call pattern this action serves.
+            results = []
+            for g in groups:
+                group_filter = {k: g[k] for k in group_tuple}
+                group_qs = dup_qs.filter(**group_filter)
+                last_7d_count = group_qs.filter(created_at__gte=window_start).count()
+                agent_dist = dict(
+                    group_qs.values('agent_name')
+                    .annotate(n=Count('id'))
+                    .order_by('-n')
+                    .values_list('agent_name', 'n')
+                )
+                status_dist = dict(
+                    group_qs.values('status')
+                    .annotate(n=Count('id'))
+                    .order_by('-n')
+                    .values_list('status', 'n')
+                )
+                row = {k: g[k] for k in group_tuple}
+                row.update({
+                    'count': g['count'],
+                    'first_created_at': (
+                        g['first_created_at'].isoformat()
+                        if g['first_created_at'] else None
+                    ),
+                    'last_created_at': (
+                        g['last_created_at'].isoformat()
+                        if g['last_created_at'] else None
+                    ),
+                    'last_7d_count': last_7d_count,
+                    'agent_name_distribution': agent_dist,
+                    'status_distribution': status_dist,
+                })
+                results.append(row)
+
+            _dup_applied = {
+                'group_by': list(group_tuple),
+                'min_count': min_count,
+                'limit': dup_limit,
+                'window_days': window_days,
+            }
+            if exclude_archived and not _show_all:
+                _dup_applied['exclude_archived'] = True
+            if ws_scope:
+                _dup_applied['workspace_id'] = ws_scope
+
+            return {
+                'action': 'duplicates',
+                'count': len(results),
+                'total_groups_above_threshold': total_above_threshold,
+                'window_days': window_days,
+                'groups': results,
+                'applied_filters': _dup_applied,
+                'show_all': _show_all,
+            }
+
         else:
             raise ValueError(f"Unknown action: {action}")
 

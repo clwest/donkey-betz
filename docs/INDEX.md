@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-24 07:27
+**Generated:** 2026-06-24 07:49
 **Current Session:** 1227
 **Total Documentation:** 2720 files | 710,899 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,744 |
+| Total cross-references | 4,739 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 195 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 183 | Platform Master Inventory |
 | `docs/INDEX.md` | 129 | INDEX |
-| `docs/archive/old-structure/capabilities/05_Spider_Networks/README.md` | 118 | 🕷️ SPIDER NETWORKS - Intelligent Data Gathering Ar |
+| `docs/spokesperson/README.md` | 118 | 24/7 Global AI — Spokesperson Corpus |
 | `docs/AGENTS.md` | 70 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 69 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 44 | CAPABILITIES |
@@ -172,7 +172,7 @@
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 8 | 2026-05-24 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 8 | 2026-05-24 |
 | [HANDOFF_NUMBERING_GAPS.md](HANDOFF_NUMBERING_GAPS.md) | 45 | 2026-05-22 |
-| [INDEX.md](INDEX.md) | 393 | 2026-06-23 |
+| [INDEX.md](INDEX.md) | 393 | 2026-06-24 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 8 | 2026-05-24 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEARNING_BRIDGE_AUDIT.md](LEARNING_BRIDGE_AUDIT.md) | 154 | 2026-05-25 |
@@ -249,11 +249,11 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 393 | 2026-06-24 07:36 |
 | SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md | handoffs | 242 | 2026-06-24 00:19 |
 | SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md | handoffs | 209 | 2026-06-23 21:09 |
 | SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md | handoffs | 163 | 2026-06-23 20:02 |
 | SESSION_1223_AUDIT_SWEEP_AND_WATCHDOG_GREEN.md | handoffs | 133 | 2026-06-23 18:01 |
-| INDEX.md | docs | 393 | 2026-06-23 18:01 |
 | 24_7_GLOBAL_AI_APP_ATLAS.md | docs | 547 | 2026-06-23 17:48 |
 | CRITICAL_PATH_HUBS.md | docs | 60 | 2026-06-23 17:43 |
 | PLATFORM_WHAT_IT_IS.md | docs | 577 | 2026-06-23 17:36 |

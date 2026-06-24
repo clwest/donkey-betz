@@ -3345,7 +3345,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "export_pdf", "bulk_archive", "link_initiative", "unlink_initiative"],
+                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "export_pdf", "bulk_archive", "link_initiative", "unlink_initiative"],
                     "description": (
                         "list: browse deliverables (supports status/type/category/date/workspace filters). "
                         "detail: get full content of a deliverable (pass full=true for uncapped content). "
@@ -3355,6 +3355,7 @@ PA_TOOL_SCHEMAS = [
                         "search: search deliverables by title keyword. "
                         "save/unsave: bookmark or unbookmark a deliverable. "
                         "stats: aggregate counts by type/category/agent. "
+                        "duplicates: surface duplicate groups (audit-style) — returns rows with count/first_created_at/last_created_at/last_7d_count/agent_name_distribution/status_distribution. Use group_by, min_count, window_days, exclude_archived, limit to tune. "
                         "export_pdf: generate a downloadable PDF. "
                         "bulk_archive: archive multiple deliverables by filter (dry_run=true by default). "
                         "link_initiative: link a deliverable to an initiative (pass deliverable_id + initiative_id). "
@@ -3376,6 +3377,10 @@ PA_TOOL_SCHEMAS = [
                 "orphans": {"type": "boolean", "description": "For list: OMIT unless explicitly filtering for orphans. Pass true to return only deliverables with no workspace assignment (workspace_id IS NULL); the response also surfaces is_orphan on every row. Boolean false is treated as no-filter (autofill safety, Session 1227)."},
                 "show_all": {"type": "boolean", "description": "For list/search: when true, bypass the optional filters that LLMs tend to autofill (has_initiative, orphans, saved, status). Useful when the caller wants the broadest possible result set scoped only to workspace/agent/category/type. Response always echoes `applied_filters` so the caller can see exactly which filters fired."},
                 "full_by_agent": {"type": "boolean", "description": "For stats: when true, return the full agent_name long tail instead of the default top-10. Response sets by_agent_truncated=false. Use for cross-agent audits (Session 1226 audit §4.6 (C))."},
+                "group_by": {"type": "array", "items": {"type": "string"}, "description": "For duplicates: which fields to group by. Allowed: ['title'] (default), ['title','agent_name'], or ['title','category']. v1 keeps the set narrow to preserve index usage."},
+                "min_count": {"type": "integer", "description": "For duplicates: minimum group size to surface (default 2). Use 3+ to focus on the heaviest dupes."},
+                "window_days": {"type": "integer", "description": "For duplicates: rolling window in days for last_Nd_count (default 7)."},
+                "exclude_archived": {"type": "boolean", "description": "For duplicates: when true, drop archived rows before grouping. Default false (include archived — useful for hygiene audits). Truthy-only check; Python bool false is treated as autofill and ignored."},
                 "full": {"type": "boolean", "description": "For detail: return full content without 8K cap"},
                 "content_offset": {"type": "integer", "description": "For detail: start reading from this char position"},
                 "content_limit": {"type": "integer", "description": "For detail: max chars to return"},
