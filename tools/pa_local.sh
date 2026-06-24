@@ -17,17 +17,24 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1223 watchdog
-# burn-in + audit tail (Rigby's session_tool create_fresh post Session 1222
-# close: pa-17e0fa71fd25470a — "Session 1223 — Watchdog burn-in + audit
-# tail (P1-P4)"). Session 1223 priorities: (P1) verify the 5 watchdog
-# burn-in checks from #2519/#2520 are green after 24-48h, (P2) Operator
-# Edge newsletter Friday-1 dry-run check from #2530, (P3) audit #8 seed
-# baseline drift decision (Chris-pick: re-seed runtime to 155 or accept
-# 89 as canonical), (P4) audit #4/#9/#10 — critical-path gates, narrative
-# refresh, Atlas reconciliation. All deferred-but-still-open from the
-# 15-finding Session 1217 audit (deliverable bec077ed-…, 11/15 closed).
-# Prior pins retired: pa-58737666f25741dc (Sessions 1217-1222 — 6-session
+# the --conversation flag below. Current value: Session 1225 outreach
+# refinement (Rigby's session_tool create_fresh mid-Session 1225 after
+# pa-17e0fa71fd25470a hit 45/100 / suggest_fresh at 39 turns / ~19.5k
+# tokens; pin: pa-77bbcd97a625424d — "Session 1225 — outreach refinement
+# + ops carryover from 1224"). Session 1224 + 1225 work carried forward
+# in the seed context: 5 PRs merged 1224 (#2539 hygiene gates, #2540
+# outreach pipeline + UI, #2541 metadata fan-out hotfix, #2542 gpt-5-mini
+# max_completion_tokens floor sweep, #2543 close handoff) + 2 PRs merged
+# 1225 so far (#2544 outreach prompt envelope, #2545 anti-scrape
+# sanitizer). 5 clean drafts in outreach inbox; daily cap 5/5 today.
+# Carryover priorities: Operator Edge Friday-1 dry-run check on
+# 2026-06-26, outreach beat task generate_outreach_drafts_daily still
+# deferred, watchdog #5 24-48h re-run optional, CI billing fix Chris-side.
+# Prior pins retired: pa-17e0fa71fd25470a (Sessions 1223-1225 — 2-session
+# continuous thread covering audit sweep + watchdog burn-in + full outreach
+# arc + hygiene initiative + token budget sweep; ended mid-Session 1225 at
+# 39 turns / 19.5k tokens / score 45 / suggest_fresh), pa-58737666f25741dc
+# (Sessions 1217-1222 — 6-session
 # continuous thread, ended at 44 msgs / 22k tokens / strongly_recommend_fresh;
 # Session 1217 self-directed audit experiment seeded the 15-finding
 # deliverable, Sessions 1218-1222 closed 11/15 + both CI lints flipped
@@ -60,4 +67,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-17e0fa71fd25470a
+python tools/pa_chat.py "$@" --tools --conversation pa-77bbcd97a625424d
