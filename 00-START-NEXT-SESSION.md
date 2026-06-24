@@ -104,71 +104,89 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1227 — CURRENT ENTRY POINT
 
-### SESSION 1226 CLOSED — Rigby platform-access unblocking + claude_code_tool wiring repair, 5 PRs
+### SESSION 1226 CLOSED — Rigby platform-access unblocking + claude_code_tool wiring repair + verifier-loop deliverables audit, 12 PRs
 
-Full handoff: [`SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md`](docs/handoffs/SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md). Session opened pointed at Session 1225 carryover but Chris pivoted mid-session: "the more she can access the platform and the agents, the better the platform will perform." Five PRs under that rubric, with the last three coming from a single deep investigation that root-caused the multi-session `claude_code_tool` dispatch failure as a three-layer wiring break (queue topology → macOS pool → conversation_id wiring) plus an independent Chris-side credit ask.
+Full handoff: [`SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md`](docs/handoffs/SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md). Session opened pointed at Session 1225 carryover but Chris pivoted mid-session: "the more she can access the platform and the agents, the better the platform will perform." Five PRs in the Tier A unblocking arc, three more in a deep investigation that root-caused the multi-session `claude_code_tool` dispatch failure as a three-layer wiring break (queue topology → macOS pool → conversation_id wiring), THEN a verifier-loop deliverables audit (Rigby + Claude, deliverable `e2964e4a-…`) that surfaced + shipped fixes for an active prompt-leak + agent-name fragmentation. 12 PRs total. Audit produced 26,465 chars across 4 verified parts. New memory rule `feedback_verifier_loop_pattern.md` codifies the workflow shape.
 
 | PR | What |
 |---|---|
-| **#2550** | `session_tool action=whoami` — closes the Session 1225 ownership-verification gap. Returns identity (user_id/username/email/is_staff/is_superuser) + conversation_owner_match facts. 6 unit tests. Rigby confirmed `conversation_owner_match: true` on the live conversation. |
-| **#2551** | `deliverable_tool.list has_initiative` filter + `initiative_id` schema clarification. Closes the canonical "which of agent X's deliverables are attached to initiatives?" query Chris remembered Rigby couldn't make. `initiative_id` list filter had existed since Session 1077 but the schema description hid it. 6 unit tests. |
-| **#2552** | Local `code_jobs` queue worker added to `make celery`. Procfile had `code-worker` for Railway but the Makefile omitted it — every `claude_code_tool` dispatch since the tool's existence had been silently queued forever. `CeleryTaskEvent` total all-time was 0. |
-| **#2553** | `code_jobs` worker `--pool=solo` on macOS (prefork SIGSEGVed every fork even with the OBJC env var). Procfile stays prefork for Linux/Railway. |
-| **#2554** | `_build_tool_payload` injects `conversation_id` by default — closes the missing-attribute fallback chain (`self._conversation_id` never set; `self._current_conversation_id` never set). Autonomous engineer's `_post_to_conversation` now receives a real `conversation_id` and fires. |
-| **#TBD** | Session close handoff + this start-here rewrite. |
+| **#2550** | `session_tool action=whoami` — closes ownership-verification gap. 6 tests. |
+| **#2551** | `deliverable_tool.list has_initiative` filter + `initiative_id` schema fix. 6 tests. |
+| **#2552** | Local `code_jobs` worker added to `make celery`. Closes claude_code_tool silent-queue-forever symptom. |
+| **#2553** | `code_jobs` worker `--pool=solo` on macOS (prefork SIGSEGVed). |
+| **#2554** | `_build_tool_payload` injects `conversation_id` by default. Closes autonomous-engineer post-back wiring. |
+| **#2555** | Original session close handoff v1 (covered #2550–#2554). |
+| **#2556** | `claude_code_engineer` OpenAI fallback (`CLAUDE_CODE_ENGINE_PROVIDER=openai` routes through gpt-5-mini). Temporary workaround until Anthropic credits land. |
+| **#2557** | Audit P0 — added `'this topic using external sources'` to `TEMPLATE_LEAK_TITLE_TOKENS`. Stops 28-per-week ResearchAgent bleed. |
+| **#2558** | `pa_local.sh` pin rotation `pa-77bbcd97a625424d` → `pa-08bdd7c9b348415a`. |
+| **#2559** | Migration 0365 — canonicalizes 18 rows (1 rigby→Rigby + 17 ClaudeCode→claude-code). Audit F2 history fix. |
+| **#2560** | Write-time canonicalization in `deliverable_factory.create_deliverable`. Audit §4.4 P1 enforcement bullet. Lockstep-asserted against migration 0365. |
+| **#TBD** | Session close handoff v2 + this start-here rewrite. |
 
-**Investigation also surfaced (non-code):**
-- **Anthropic credits exhausted** — all 7 backlog drains got `error 400: "Your credit balance is too low to access the Anthropic API."` Chris-side fix at https://console.anthropic.com/billing.
-- **Agent-name normalization drift** — both `claude-code` and `ClaudeCode` spellings appear in deliverable rows. New Session 1227 carryover.
+**Audit findings shipped from `e2964e4a-…`:**
+- F1 (P0) — New prompt-leak pattern Gate 4 was missing (Cluster #1, 32 rows / 28 in last 7 days, ResearchAgent). Closed by #2557.
+- F2 (P1) — Agent identity fragmentation (`Rigby`/`rigby` + `ClaudeCode`/`claude-code`, claude-code ranks #14 → #4 after normalization). Closed end-to-end by #2559 (history) + #2560 (enforcement).
+- F3 (deferred to §4.6 backlog) — Tool-layer default filter hides 148 of 300 workspace rows (entire `blocked` status). See Session 1227 P1 below.
+- F4 (meta-constraint recorded) — Tokens must be substrings of first ~100 chars of leaked task because of `task[:100]` truncation at research_agent.py:1103.
 
-**Active conversation:** `pa-77bbcd97a625424d` — same pin Session 1225 spun. Carried 1226 from open to close with no rotation. Health-check threshold likely hit during the investigation arc — re-check at Session 1227 open.
+**Active conversation:** `pa-08bdd7c9b348415a` — rotated mid-session via #2558 after `pa-77bbcd97a625424d` crossed ~28 turns during the audit arc. Owner verified via `session_tool.whoami` (PR #2550): `conversation_owner_match: true`.
+
+**Still Chris-side carryover into Session 1227:**
+- **Anthropic credit refill** at https://console.anthropic.com/billing. OpenAI fallback (#2556) keeps autonomous engineer functional until credits land. Once filled: `unset CLAUDE_CODE_ENGINE_PROVIDER` + `pkill -9 -f celery; rm -f .celery*.pid; make celery` reverts to Claude Sonnet 4 path with zero code change.
+- **CI billing** still failing — all 12 Session 1226 PRs admin-merged.
 
 ### FIRST THING Session 1227
 
-Two calendar-driven items and one credit-dependent verification ride along regardless of what Chris picks:
+The audit's §4.6 tool-surface backlog is the natural Session 1227 lead (it's the single largest piece of deferred work and converts future audits from ORM archaeology to one-tool-call workflows). Calendar-driven items ride along.
 
-#### Priority 1 — Outreach daily beat first-fire verification (CALENDAR-PAST — 2026-06-24 13:30 UTC)
+#### Priority 1 — Audit §4.6 tool-surface additions (the lead item, M-L)
+
+Make this kind of audit a tool call, not ORM archaeology. From deliverable `e2964e4a-…` §4.6, in priority order:
+
+1. **`deliverable_tool.list show_all=true` flag** OR remove the default `blocked`/most-`archived` filter — closes F3 (148 of 300 workspace rows hidden today). Smallest ship + biggest accuracy win.
+2. **`deliverable_tool.stats full_by_agent=true`** to return the full long-tail (35 distinct values), not top-10. Lets future Rigby audits skip the ORM detour.
+3. **`deliverable_tool.duplicates` first-class action** returning `(title, count, first_created_at, last_created_at, last_7d_count, agent_name_distribution, status_distribution)`. Turns Part 3 of this audit into one call.
+4. **`deliverable_tool.set_status` action** — un-blocks Rigby's ability to flip away from premature `completed`. No tool currently exists for this.
+5. **(Optional) `deliverable_tool.normalize` action** with `dry_run=true` preview — automates future alias-map sweeps.
+
+Effort estimate: each is S individually, but consider grouping (1)+(2) in one PR, (3) in its own, (4) in its own, (5) deferred unless mood strikes.
+
+#### Priority 2 — Outreach daily beat first-fire verification (CALENDAR-PAST — 2026-06-24 13:30 UTC)
 
 PR #2548 (Session 1225) materialized the beat task. First fire was scheduled for 2026-06-24 13:30 UTC, **already past** by Session 1227 open. Verify:
 - `CeleryTaskEvent.objects.filter(task_name='core.tasks.generate_outreach_drafts_daily').order_by('-started_at').first()` returns a SUCCESS row
 - `OutreachDraft.objects.filter(lead_source='opportunity_outreach_seed', created_at__date='2026-06-24').count()` is 1-5 (not 0)
 - Browser smoke at `/workspace?tab=work&sub=outreach` shows new drafts
 
-If Anthropic credits weren't restored before the fire, the LLM path may have errored — drafts should still exist via the deterministic fallback skeleton (which doesn't use Anthropic anyway; the outreach generator uses OpenAI/gpt-5-mini, separate from the claude_code_engineer Anthropic dependency).
+The outreach generator uses OpenAI/gpt-5-mini (separate from claude_code_engineer's Anthropic dependency), so Anthropic credit state doesn't gate the outreach pipeline. If anything looks off, check the deterministic fallback skeleton fired.
 
-#### Priority 2 — Anthropic credit refill + claude_code_tool end-to-end verification
+#### Priority 3 — Anthropic credit refill + claude_code_tool revert from OpenAI workaround
 
-Session 1226 closed the wiring chain (#2552/#2553/#2554) but left credits as Chris-side. Refill at https://console.anthropic.com/billing.
+Session 1226 closed the wiring chain (#2552/#2553/#2554) AND shipped an OpenAI fallback (#2556) that's currently active. When credits refill at https://console.anthropic.com/billing:
 
-Then have Rigby retry `claude_code_tool` with a trivial task (e.g. "read README.md first 5 lines and post back here, no code changes"). Verify:
-- Worker log: no `error 400` from Anthropic
-- `CeleryTaskEvent.status=SUCCESS` AND `error_message` is empty
-- Message lands in Rigby's PA chat with the autonomous engineer's output
+1. `unset CLAUDE_CODE_ENGINE_PROVIDER`
+2. `pkill -9 -f celery; rm -f .celery*.pid; make celery`
+3. Have Rigby retry `claude_code_tool` with a trivial task; confirm `provider` field is `'anthropic'` (or absent) in the result envelope, no `error 400`, message lands in chat.
 
-If green: the Tier A claude_code_tool blocker arc is closed end-to-end. The bridge between Rigby and an autonomous engineering session is fully live.
+The OpenAI fallback is cost-positive but Sonnet 4 is the higher-quality default; flip back once credits allow.
 
-#### Priority 3 — Operator Edge newsletter Friday-1 dry-run check (CALENDAR-DRIVEN — Friday 2026-06-26)
+#### Priority 4 — Operator Edge newsletter Friday-1 dry-run check (CALENDAR-DRIVEN — Friday 2026-06-26)
 
 Carried from Sessions 1222 → 1225 → 1226. First Friday post-PR-#2530-merge is **2026-06-26**. Verify the run produced ready/preview state output (no auto-publish). After 2 successful Fridays (06-26 + 07-03), flip kwargs to `{'dry_run': false}`.
 
-#### Priority 4 — Agent-name normalization (`claude-code` vs `ClaudeCode`)
+#### Priority 5 — Audit §4.4 P1 upstream research_agent.py:1103 fix
 
-Rigby's flag from her Session 1226 `has_initiative` verification: both spellings exist in `Deliverable.agent_name`. Fragments any agent-based rollup. Effort breakdown:
-- **Decide canonical spelling** — `claude-code` is more common in Procfile + filenames; `ClaudeCode` shows up in some older deliverables.
-- **Backfill historical rows** — `UPDATE core_deliverables SET agent_name='claude-code' WHERE agent_name='ClaudeCode'` (verify count first).
-- **Add a canonicalize step** in `create_deliverable` so future writes can't introduce variants again.
+Audit recorded: token gates are reactive Whack-A-Mole (the token list now has 5 entries; the upstream bug is one). Stop `title=f"Research: {task[:100]}"` from copying prompt headers verbatim. Generate semantic titles + date/run-id suffix instead. This is what Session 1224 deferred and Session 1226 surfaced again. Worth a focused S-M slice once §4.6 above ships (because §4.6 makes future audits cheaper to confirm the fix held).
 
-Effort: S-M. Worth a focused session.
-
-#### Priority 5 — CI billing fix (Chris-side, still outstanding)
+#### Priority 6 — CI billing fix (Chris-side, still outstanding)
 
 Carryover from 1223 → 1224 → 1225 → 1226. All Session 1226 PRs admin-merged. When green, normal PR flow returns.
 
-#### Priority 6 — Watchdog #5 24-48h re-run (optional drift confirmation)
+#### Priority 7 — Watchdog #5 24-48h re-run (optional drift confirmation)
 
 Carryover from Session 1223. By Session 1227 this window is ~4 days past Tier 1+2 merge — should be fully drift-clean. Optional confirmation.
 
-#### Priority 7 — Outreach tone tweak nice-to-haves (Rigby's Session 1225 review)
+#### Priority 8 — Outreach tone tweak nice-to-haves (Rigby's Session 1225 review)
 
 3 minor prompt edges Rigby flagged:
 - `ai_automation` Johnson Controls: "(happy-path)" qualifier
@@ -177,9 +195,9 @@ Carryover from Session 1223. By Session 1227 this window is ~4 days past Tier 1+
 
 Deferred until a wider draft sample reveals which actually matter.
 
-#### Priority 8 — Whatever Chris wants
+#### Priority 9 — Whatever Chris wants
 
-Genuinely open. Outreach mature (8 PRs across 1224 + 1225). Hygiene closed. Token budgets aligned. Inbox + beat task functional. Tier A Rigby unblocking shipped.
+Genuinely open. Outreach mature (8 PRs across 1224 + 1225). Hygiene closed. Token budgets aligned. Inbox + beat task functional. Tier A Rigby unblocking shipped. Audit `e2964e4a-…` available as a reference for the verifier-loop pattern Session 1227 may want to re-use.
 
 **Possible re-ignites (Chris-discretion only):**
 - **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. Credits restored 1224. No app work yet across 1224/1225/1226.
