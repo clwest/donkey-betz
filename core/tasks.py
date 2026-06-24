@@ -5768,6 +5768,23 @@ def generate_operator_edge_newsletter(self, hours=72, cluster_limit=5, dry_run=F
     return _impl_generate_operator_edge_newsletter(self, hours, cluster_limit, dry_run)
 
 
+@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+def generate_outreach_drafts_daily(self, limit=5, scope='all', offers=None):
+    """Generate up to `limit` touch-1 OutreachDraft rows from Opportunity rows.
+
+    Session 1225 P2 — closes the Option B beat task deferred from PR #2540.
+    Drafts are approval-required (no auto-send). The generator enforces
+    DAILY_GENERATE_CAP=5 internally regardless of the limit kwarg, so this
+    task is safe to fire daily even if upstream callers override `limit`.
+    Envelope + sanitizer (PRs #2544, #2545) hard-bind the LLM-rendered
+    output to per-offer delivery scope with explicit exclusions.
+    """
+    from core.services.ops_autopilot import OpportunityDraftGenerator
+    return OpportunityDraftGenerator.generate(
+        limit=limit, scope=scope, offers=offers,
+    )
+
+
 @shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     from core.tasks_content import _impl_run_autonomous_thinking_cycle
