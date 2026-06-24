@@ -102,7 +102,94 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1227 — CURRENT ENTRY POINT
+## SESSION 1229 — CURRENT ENTRY POINT
+
+### SESSION 1228 CLOSED — LLM-autofill class sweep PR-A + PR-B + outreach/newsletter beat TZ fixes, 4 PRs
+
+Full handoff: [`SESSION_1228_AUTOFILL_SWEEP_PLUS_BEAT_TZ_FIXES.md`](docs/handoffs/SESSION_1228_AUTOFILL_SWEEP_PLUS_BEAT_TZ_FIXES.md). Session opened on Session 1227's Priority 1 (LLM-autofill class-of-bug sweep). Initial grep surfaced ~80 candidate sites; Rigby's triage split into PR-A (semantic safety: write-mode gating + filter overwrites) and PR-B (silent-truncation: int=0 autofill over non-zero defaults). New shared helper `core/services/td_autofill_safety.py` captures the canonical defenses. 49+14=63 new tests; full sweep 72/72 OK; Rigby live verification clean. Mid-session pivot to P2 (outreach beat first-fire verification) revealed the beat **never fired today** — root cause: Session 1225 PR #2548's `crontab(hour=13, minute=30)` was written with a UTC comment but Celery resolved it as Denver-local (`30 13 America/Denver` = 19:30 UTC, six hours late). The **same misinterpretation existed in `generate-operator-edge-newsletter`** (Session 1228 P3 calendar item). Both fixed.
+
+| PR | What |
+|---|---|
+| **#2567** | Autofill sweep PR-A — new `td_autofill_safety` module; Tier 1 belt-and-suspenders mutation gates on 6 sites (`deliverable_tool.cleanup`, `content_tool.bulk_archive`, `initiative_tool.cleanup_action_items` / `bulk_cleanup` / `bulk_auto_assign`, `autopilot_tool.security_containment_plan`); Tier 2 update-field safety on 4 sites (`list_routes auth_required`, newsletter `manual_fields`, `initiative.create` extras, `task_manager.update description`). 49 new tests. Also fixed a pre-existing schema-vs-handler `dry_run` default mismatch on the two `initiative_tool` bulk actions. |
+| **#2571** (re-opened from **#2568**) | Autofill sweep PR-B — falsy-or-default pattern on ~33 `int(payload.get('X', N))` sites across 5 handler files. Highest-risk: `max_runtime_seconds` (autofilled 0 = silent zero-second timeout), `max_chars` (autofilled 0 = empty body), `priority_rank` (autofilled 0 = accidental top-rank), 21 `hours`/`days` lookback params in ops. Source-level sweep guard test catches future reverts. 14 new tests. **#2568 was auto-closed when PR-A's admin-merge deleted its base branch; rebased onto main + re-opened as #2571.** |
+| **#2569** | Outreach beat TZ fix — `crontab(hour=13, minute=30)` → `crontab(hour=7, minute=30)`. Now resolves to 7:30 AM Denver = 13:30 UTC during MDT. PeriodicTask row updated via `sync_celery_beat --apply`. |
+| **#2570** | Newsletter beat TZ fix — same class. `crontab(hour=13, minute=0, day_of_week='friday')` → `crontab(hour=6, minute=0, day_of_week='friday')`. Friday 06-26 dry-run check now fires at **12:00 UTC** instead of 19:00 UTC. `dry_run=True` kwarg unchanged. |
+
+**Rigby live verification at session close** (full Tool Runs blocks captured in handoff §"Arcs 1+2+3+4"):
+- `deliverable_tool action=cleanup` (autofill scenario `dry_run=False`): result stays `dry_run=true`, NO writes triggered. ✓
+- `platform_config_tool list_routes auth_required=False`: count matches baseline (no filter), explicit `'false'` string returns 0 public routes. ✓
+- `autopilot_tool value_events_report days=0`: returns 744 events (default 7d window) — matches no-arg baseline. ✓
+
+**Operational invariants (post-merge):**
+1. No PA tool handler silently flips to write-mode on autofilled `dry_run=False` alone. Belt-and-suspenders requires both `dry_run` falsy AND `confirm=true`.
+2. No PA tool handler with `is not None` optional bool filter fires on Python `False` autofill. Use `coerce_optional_bool` from the new shared helper.
+3. No PA tool handler returns silent zero from autofilled int=0 over non-zero default. The 33 known offenders all use `int(payload.get('X') or N)`.
+4. `generate-outreach-drafts-daily` and `generate-operator-edge-newsletter` PeriodicTask rows are correctly scheduled for Denver-morning slots.
+
+**Active conversation:** `pa-08bdd7c9b348415a` — carried from Session 1226 → 1227 → 1228 with no rotation. Continues into 1229.
+
+**Still Chris-side carryover into Session 1229:**
+- **Anthropic credit refill** (https://console.anthropic.com/billing). OpenAI fallback (#2556) continues to function fine; verified during Session 1228 — no observable degradation.
+- **CI billing** still failing — all 4 Session 1228 PRs admin-merged.
+- **Session 1227's 4 deliverable_tool PRs (#2562-#2566) remain open.** They were Chris's prior work and were not part of Session 1228's authorization. PR #2562 in particular gates the audit deliverable `e2964e4a-…` F3 amendment.
+
+### FIRST THING Session 1229
+
+Two calendar-driven items land first; both validate Session 1228's beat-TZ fixes.
+
+#### Priority 1 — Outreach beat first-fire verification (CALENDAR — 2026-06-25 13:30 UTC)
+
+Tomorrow's first clean fire window. PR #2569 corrected the TZ; the `QueuePreservingScheduler` picks up the updated crontab without beat restart. Verify:
+- `CeleryTaskEvent.objects.filter(task_name='core.tasks.generate_outreach_drafts_daily').order_by('-started_at').first()` returns a SUCCESS row dated 2026-06-25.
+- `OutreachDraft.objects.filter(lead_source='opportunity_outreach_seed', created_at__date='2026-06-25').count()` is 1–5 (not 0).
+- Browser smoke at `/workspace?tab=work&sub=outreach` shows new drafts.
+
+If the count is 0 even with a SUCCESS row, the generator skipped all opps (uncontactable, or daily-cap accounting leak — `DAILY_GENERATE_CAP=5` is enforced inside the generator). If no SUCCESS row at all, the beat scheduler may need a forced reload — `pkill -9 -f "celery -A core beat"; rm -f .celery-beat.pid; make celery`.
+
+#### Priority 2 — Operator Edge newsletter Friday-1 dry-run check (CALENDAR — 2026-06-26 12:00 UTC)
+
+PR #2570 changed the fire time from 19:00 UTC → 12:00 UTC. First Friday of the 2-Friday burn-in. Verify:
+- `PeriodicTask.objects.filter(name='generate-operator-edge-newsletter').first().last_run_at` reflects 06-26 12:00 UTC.
+- New deliverable created with `status='ready'` or `'preview'` (no auto-publish — kwargs still `{'dry_run': True}`).
+- `CeleryTaskEvent` SUCCESS row for `core.tasks.generate_operator_edge_newsletter`.
+
+After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}` to promote to live publishing.
+
+#### Priority 3 — Audit deliverable `e2964e4a-…` F3 amendment
+
+Gated on Session 1227 PR1 (#2562) merge. The audit's F3 finding ("default filter hides `blocked`/most-`archived`, 148 of 300 workspace rows invisible") was the correct *symptom* but the wrong *cause* — Session 1227 PR1's diagnostic log showed the actual culprit was GPT-5.2 autofilling `has_initiative=False` over the old `is not None` gate. Append a brief addendum to the F3 section noting the real cause + reference PR #2562. Trivial via `deliverable_tool action=update` once PR1 lands.
+
+#### Priority 4 — Audit §4.4 P1 upstream `research_agent.py:1103` semantic title fix (S-M)
+
+Carryover from Sessions 1226 → 1227 → 1228. The token gates in `TEMPLATE_LEAK_TITLE_TOKENS` are reactive whack-a-mole. The upstream `title=f"Research: {task[:100]}"` truncation is the source. Generate semantic titles + date/run-id suffix instead.
+
+Session 1227 PR2's `duplicates` action surfaced the prompt-leak clusters are still the heaviest duplicates in DBZ (count=20 / last_7d=16 on the top cluster). They will keep accumulating until this upstream fix lands.
+
+#### Priority 5 — CI billing fix (Chris-side, still outstanding)
+
+Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228. All Session 1228 PRs admin-merged.
+
+#### Priority 6 — Watchdog #5 24-48h re-run (optional drift confirmation)
+
+Carryover from Session 1223. By Session 1229, well past the Tier 1+2 merge window — should be fully drift-clean. Optional.
+
+#### Priority 7 — Outreach tone tweak nice-to-haves (Rigby's Session 1225 review)
+
+3 minor prompt edges Rigby flagged in 1225; deferred until a wider draft sample (10+ generates) reveals which actually matter. Same trio carries.
+
+#### Priority 8 — Whatever Chris wants
+
+Genuinely open. The Session 1228 work closed a recurrence class (autofill) plus a calendar-blocking bug (beat TZ). Sessions 1226-1228 totaled 16 PRs of platform hardening; the surface is in a healthy spot.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. Credits restored 1224. No app work yet across 1224/1225/1226/1227/1228.
+- Audit #5 (PA tool schemas vs handlers — Δ=43) — non-blocking long-tail.
+- `scan-spider-opportunities` resume.
+- Session 1227's 4 PRs (#2562-#2566) admin-merge if Chris wants the deliverable_tool surface additions live on main.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files
+- Tier 3 from P2 deliverable `7ae61cf7-…`
 
 ### SESSION 1226 CLOSED — Rigby platform-access unblocking + claude_code_tool wiring repair + verifier-loop deliverables audit, 12 PRs
 
