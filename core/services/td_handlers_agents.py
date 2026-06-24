@@ -2119,14 +2119,17 @@ class AgentHandlersMixin:
                 if len(current) > 500:
                     preview += '...'
                 obj.preview_content = preview
-                update_fields.extend(['content', 'preview_content'])
+                # Session 1231 P3 — include updated_at so Django's auto_now
+                # fires (silenced by update_fields if not listed). Closes
+                # audit-trail gap from tracking deliverable 61f4312b-….
+                update_fields.extend(['content', 'preview_content', 'updated_at'])
             elif has_real_content:
                 obj.content = raw_content
                 preview = raw_content[:500]
                 if len(raw_content) > 500:
                     preview += '...'
                 obj.preview_content = preview
-                update_fields.extend(['content', 'preview_content'])
+                update_fields.extend(['content', 'preview_content', 'updated_at'])
 
             if 'type' in payload and payload['type'] and str(payload['type']).strip():
                 obj.deliverable_type = str(payload['type']).strip()
@@ -2290,7 +2293,10 @@ class AgentHandlersMixin:
             current = obj.content or ''
             obj.content = current + '\n\n' + text.strip() if current else text.strip()
             obj.preview_content = obj.content[:500] + ('...' if len(obj.content) > 500 else '')
-            obj.save(update_fields=['content', 'preview_content'])
+            # Session 1231 P3 — include updated_at so Django's auto_now fires
+            # (auto_now is silenced by update_fields if not listed). Closes
+            # audit-trail gap from tracking deliverable 61f4312b-….
+            obj.save(update_fields=['content', 'preview_content', 'updated_at'])
             return {
                 'action': 'append',
                 'id': str(obj.id),
