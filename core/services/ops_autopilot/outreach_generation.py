@@ -49,35 +49,80 @@ class OpportunityDraftGenerator:
 
     DAILY_GENERATE_CAP = 5
     OFFER_KEYS = ('ai_automation', 'content_engine', 'consulting')
+    # Session 1225 — Rigby envelope: each blurb names the actual scope being
+    # offered, not a vague capability claim. The SYSTEM_PROMPT hard-binds the
+    # delivery shape (timebox, definition of done, what's explicitly excluded)
+    # so the LLM can't drift into guaranteed-outcome territory.
     OFFER_BLURBS = {
-        'ai_automation': 'automating a manual workflow or reducing ops time',
-        'content_engine': 'turning signals into a daily/weekly content pipeline',
-        'consulting': 'a diagnostic → roadmap → build engagement',
+        'ai_automation': 'a diagnostic + one-day thin-slice prototype (demo video + handoff docs)',
+        'content_engine': 'a signal-source audit + one sample pipeline draft',
+        'consulting': 'a diagnostic + roadmap',
     }
     SEED_SPIDER_NAME = 'opportunity_outreach_seed'
     SEED_DATA_TYPE = 'opportunity_seed'
     LLM_MODEL = 'gpt-5-mini'
     MAX_CANDIDATES_WALKED = 200
 
+    # Session 1225 — Rigby's envelope: hard-binds the prompt to the exact
+    # delivery shape per offer so the LLM never drifts into guaranteed-outcome
+    # marketing copy. Every per-offer block names what is offered AND what is
+    # explicitly excluded. Every body must end with a scoping/qualification
+    # question so the email earns the meeting instead of asking for it.
     SYSTEM_PROMPT = (
-        "You are writing a cold email for consulting/freelance services on "
-        "behalf of Chris from Donkey Betz.\n\n"
-        "Tone: concise, credible, non-hype. No fabricated facts — only use "
-        "fields supplied in the user payload. If a field is missing, write "
-        "generically rather than inventing.\n\n"
-        "Rules:\n"
+        "You are drafting a cold email on behalf of Chris from Donkey Betz, an "
+        "operator-builder who runs small, scoped engagements.\n\n"
+        "TONE:\n"
+        "- Concise, credible, non-hype. Plain English. No marketing voice.\n"
+        "- No fabricated facts — use ONLY fields supplied in the user payload. "
+        "If a field is missing, write generically rather than inventing.\n"
+        "- No guaranteed outcomes anywhere. Forbidden phrases: 'we will save you', "
+        "'guaranteed', 'double your', 'X% improvement', 'ROI of N%', "
+        "'production-ready', 'enterprise-grade'. If you catch yourself promising "
+        "a result, rewrite as a scoped exploration instead.\n\n"
+        "GLOBAL RULES:\n"
         "- Subject: 7 words or fewer.\n"
         "- Body: 120-180 words.\n"
-        "- Open with one specific reference (title or domain) drawn from "
-        "the payload.\n"
-        "- Include exactly one concrete 'quick win' aligned to offer_key:\n"
-        "    ai_automation: automating a manual workflow / reducing ops time\n"
-        "    content_engine: turning signals into a content pipeline\n"
-        "    consulting: diagnostic → roadmap → build\n"
-        "- CTA: 15-minute discovery call.\n"
-        "- Sign as 'Chris / Donkey Betz'.\n\n"
-        "Output ONLY a JSON object with keys: subject, body. No prose, no "
-        "markdown."
+        "- Open with one specific reference (title, company, or domain) drawn "
+        "from the payload — never generic.\n"
+        "- Body MUST end with a scoping/qualification question (see per-offer "
+        "rules below) BEFORE the sign-off. The question goes on its own line.\n"
+        "- Sign as 'Chris / Donkey Betz' on the final line.\n"
+        "- CTA: 15-minute call AFTER they answer the question, not as the first ask.\n\n"
+        "PER-OFFER DELIVERY ENVELOPE (branch on offer_key in user payload):\n\n"
+        "offer_key='ai_automation':\n"
+        "  WHAT YOU'RE OFFERING: a one-day thin-slice prototype — diagnostic "
+        "of one specific workflow + one prototype slice built in either a "
+        "no-code/low-code environment OR a code-based repo+PR (recipient picks).\n"
+        "  DEFINITION OF DONE: short demo video + handoff docs explaining how it "
+        "works and what would have to be true to extend it.\n"
+        "  EXPLICITLY NOT INCLUDED: production deployment, access to live data "
+        "or systems, ROI guarantees, ongoing maintenance. Name at least one of "
+        "these exclusions in the body.\n"
+        "  REQUIRED CHECKPOINT QUESTION: ask one scoping question that helps "
+        "Chris decide whether the prototype is even feasible. Examples: "
+        "'Which workflow currently eats the most manual hours?' or 'Do you have "
+        "a sandbox dataset we could prototype against without touching production?'\n\n"
+        "offer_key='consulting':\n"
+        "  WHAT YOU'RE OFFERING: a diagnostic + written roadmap. Output is the "
+        "roadmap document itself, not implementation.\n"
+        "  EXPLICITLY NOT INCLUDED: build work, guaranteed outcomes from "
+        "following the roadmap, retainer commitment.\n"
+        "  REQUIRED QUALIFICATION QUESTIONS: ask 1-2 questions that qualify "
+        "whether a roadmap is the right next step. Examples: 'What's the "
+        "current bottleneck — clarity, capacity, or capability?' or "
+        "'Have you done a similar diagnostic in the last 12 months?'\n\n"
+        "offer_key='content_engine':\n"
+        "  WHAT YOU'RE OFFERING: a signal-source audit (which inputs you "
+        "already have) + one sample pipeline draft showing how a single "
+        "signal becomes one published piece.\n"
+        "  EXPLICITLY NOT INCLUDED: engagement or conversion guarantees, "
+        "ongoing publishing operations, audience-growth promises.\n"
+        "  REQUIRED QUALIFICATION QUESTIONS: ask 1-2 questions about the "
+        "current content workflow. Examples: 'Where do you source signals "
+        "today?' or 'Who edits the final piece before it goes out?'\n\n"
+        "OUTPUT:\n"
+        "Output ONLY a JSON object with keys: subject, body. No prose outside "
+        "the JSON, no markdown fences."
     )
 
     # ───────────────────────────────────────────────────────────────────
@@ -273,18 +318,54 @@ class OpportunityDraftGenerator:
 
         return cls._fallback_email(opportunity, offer_key, payload)
 
+    # Session 1225 — Per-offer scoping/qualification questions used in the
+    # fallback skeleton. Match the spirit of the SYSTEM_PROMPT envelope so the
+    # fallback path doesn't drift into different framing than the LLM path.
+    _FALLBACK_QUESTIONS = {
+        'ai_automation': (
+            "Which workflow currently eats the most manual hours, and is there "
+            "a sandbox dataset we could prototype against without touching "
+            "production?"
+        ),
+        'consulting': (
+            "What's the current bottleneck — clarity, capacity, or capability "
+            "— and have you done a similar diagnostic in the last 12 months?"
+        ),
+        'content_engine': (
+            "Where do you source signals today, and who edits the final piece "
+            "before it goes out?"
+        ),
+    }
+
     @classmethod
     def _fallback_email(cls, opportunity, offer_key: str, payload: dict) -> dict:
-        """Deterministic skeleton when LLM is unreachable or returns unusable output."""
+        """Deterministic skeleton when LLM is unreachable or returns unusable output.
+
+        Session 1225 — Rigby envelope: same delivery shape constraints as
+        SYSTEM_PROMPT. No guaranteed outcomes; explicit per-offer scope; ends
+        with a qualification question before sign-off.
+        """
         opp = payload['opportunity']
         ref = opp['company_name'] or opp['domain'] or opp['title'][:80]
-        blurb = cls.OFFER_BLURBS.get(offer_key, '')
+        blurb = cls.OFFER_BLURBS.get(offer_key, 'a small, scoped engagement')
+        question = cls._FALLBACK_QUESTIONS.get(
+            offer_key,
+            'What would a useful 30-minute conversation cover from your side?',
+        )
+        greeting = f"Hi{(' ' + opp['contact_name']) if opp['contact_name'] else ''},"
         subject = f"Quick idea for {ref}"[:200]
         body = (
-            f"Hi{(' ' + opp['contact_name']) if opp['contact_name'] else ''},\n\n"
-            f"Saw {ref} and wanted to send a short note. I help operators with {blurb}.\n\n"
-            f"Happy to share one concrete idea over a 15-minute call if useful — "
-            f"no pitch, just the idea.\n\n"
+            f"{greeting}\n\n"
+            f"Saw {ref} and wanted to send a short, no-pitch note. I run "
+            f"small, scoped engagements as an operator-builder. For this "
+            f"kind of opportunity I typically offer {blurb}.\n\n"
+            f"To be clear about what's NOT included: no production deployment, "
+            f"no live-system access, no guaranteed outcomes — just a focused "
+            f"first slice you can evaluate honestly.\n\n"
+            f"Before booking anything, a scoping question:\n"
+            f"{question}\n\n"
+            f"If your answer points somewhere useful, happy to set up a "
+            f"15-minute call.\n\n"
             f"Chris / Donkey Betz"
         )
         return {'subject': subject, 'body': body, 'fallback': True}
