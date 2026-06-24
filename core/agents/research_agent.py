@@ -35,6 +35,7 @@ import time
 from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult, ActionableOutputConfig
+from core.services.deliverable_factory import build_semantic_research_title
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -1064,11 +1065,22 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             importance=0.6
                         )
 
+                        # Session 1229 P4 — semantic title used for both the
+                        # knowledge title and the deliverable title. Replaces
+                        # `f"Research: {task[:N]}"` truncation that leaked
+                        # prompt bodies into titles. The TEMPLATE_LEAK_TITLE_
+                        # TOKENS gate at the factory layer remains as a safety
+                        # net.
+                        semantic_title = build_semantic_research_title(
+                            task,
+                            topics_detected=ml_analysis.get('topics_detected') or [],
+                        )
+
                         # Share knowledge about research patterns
                         sources_used = [r['source'] for r in all_results]
                         self._share_knowledge(
                             knowledge_type='trend',
-                            title=f"Research: {task[:60]}",
+                            title=semantic_title,
                             knowledge_value={
                                 'query': task,
                                 'sources_used': sources_used,
@@ -1087,7 +1099,10 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             research_content = synthesis_text
                         else:
                             # Fallback: build content from key_insights (pre-1200 behavior)
-                            research_content = f"# Research: {task}\n\n"
+                            # Session 1229 P4: H1 mirrors the semantic title so
+                            # the content body doesn't carry the leaked prompt
+                            # either.
+                            research_content = f"# {semantic_title}\n\n"
                             research_content += f"**Sources:** {len(all_results)}\n\n"
                             if key_insights:
                                 research_content += "## Key Insights\n"
@@ -1100,7 +1115,7 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                                 research_content += f"**Topics:** {', '.join(ml_analysis['topics_detected'])}\n"
 
                         self._save_to_deliverable(
-                            title=f"Research: {task[:100]}",
+                            title=semantic_title,
                             content=research_content,
                             deliverable_type='research',
                             category='Research',
