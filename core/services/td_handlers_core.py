@@ -858,7 +858,15 @@ RESEARCH DATA:
 
         if action == 'list_routes':
             category = payload.get('category')
-            auth_required = payload.get('auth_required')
+            # Session 1228 PR-A — coerce_optional_bool defends against
+            # GPT-5.2 autofilling `auth_required=False` (which the prior
+            # `is not None` gate accepted and silently filtered out every
+            # auth-required route). Truthy → auth-required only; explicit
+            # string 'false'/'False' → public-only; Python False or omitted
+            # → no filter. Mirror of PR1 has_initiative semantics. Memory
+            # rule: feedback_llm_autofills_boolean_params_with_false.
+            from core.services.td_autofill_safety import coerce_optional_bool
+            auth_required = coerce_optional_bool(payload.get('auth_required'))
             filtered = routes
             if category:
                 filtered = [r for r in filtered if r.get('category') == category]

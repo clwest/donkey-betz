@@ -701,7 +701,12 @@ class AgentHandlersMixin:
             if payload.get('title'):
                 task.title = payload['title']
                 update_fields.append('title')
-            if payload.get('description') is not None:
+            # Session 1228 PR-A — switched from `is not None` to key-in-payload
+            # guard. GPT-5.2 autofills declared optional string params with ''
+            # (mirror of the bool=False / int=0 autofill class). Falsy-string
+            # gate so an LLM autofill of '' doesn't silently clear an existing
+            # task description. Empty description requires explicit `clear` UX.
+            if payload.get('description'):
                 task.description = payload['description']
                 update_fields.append('description')
 
@@ -2362,7 +2367,14 @@ class AgentHandlersMixin:
 
         elif action == 'cleanup':
             strategy = payload.get('strategy', 'duplicates')
-            dry_run = payload.get('dry_run', True)
+            # Session 1228 PR-A — belt-and-suspenders write gate. The cleanup
+            # strategies (duplicates, orphans, low_quality) each issue a bulk
+            # .delete() when write authorized, so a silent LLM autofill of
+            # dry_run=False alone must NOT execute. Require BOTH an explicit
+            # dry_run falsy value AND a separate confirm=true. Memory rule:
+            # feedback_llm_autofills_boolean_params_with_false.
+            from core.services.td_autofill_safety import require_write_authorization
+            dry_run, _write_ok = require_write_authorization(payload)
 
             if strategy == 'duplicates':
                 # Find all titles that appear more than once
@@ -2401,7 +2413,7 @@ class AgentHandlersMixin:
                         'action': 'cleanup', 'strategy': 'duplicates', 'dry_run': True,
                         'would_delete': len(to_delete_ids),
                         'sample': summary,
-                        'message': f'Would delete {len(to_delete_ids)} duplicate deliverables. Set dry_run=false to execute.',
+                        'message': f'Would delete {len(to_delete_ids)} duplicate deliverables. Set dry_run=false AND confirm=true to execute.',
                     }
                 else:
                     deleted_count = Deliverable.objects.filter(id__in=to_delete_ids).delete()[0]
@@ -2424,7 +2436,7 @@ class AgentHandlersMixin:
                         'action': 'cleanup', 'strategy': 'orphans', 'dry_run': True,
                         'would_delete': count,
                         'sample': [{'title': s['title'][:100], 'agent': s['agent_name'], 'category': s['category']} for s in sample],
-                        'message': f'Would delete {count} orphan deliverables (no user, not saved). Set dry_run=false to execute.',
+                        'message': f'Would delete {count} orphan deliverables (no user, not saved). Set dry_run=false AND confirm=true to execute.',
                     }
                 else:
                     deleted_count = orphan_qs.delete()[0]
@@ -2446,7 +2458,7 @@ class AgentHandlersMixin:
                         'action': 'cleanup', 'strategy': 'low_quality', 'dry_run': True,
                         'would_delete': count,
                         'sample': [{'title': s['title'][:100], 'quality': s['quality_score'], 'agent': s['agent_name']} for s in sample],
-                        'message': f'Would delete {count} low-quality deliverables (score < 0.5, not saved). Set dry_run=false to execute.',
+                        'message': f'Would delete {count} low-quality deliverables (score < 0.5, not saved). Set dry_run=false AND confirm=true to execute.',
                     }
                 else:
                     deleted_count = lq_qs.delete()[0]
