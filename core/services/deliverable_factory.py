@@ -26,8 +26,10 @@ Usage:
 
 import hashlib
 import logging
+import re
 import uuid
-from typing import Optional, List, Any
+from datetime import date
+from typing import Any, Iterable, List, Optional
 
 from django.conf import settings
 
@@ -176,6 +178,141 @@ TEMPLATE_LEAK_TITLE_TOKENS = (
 # and shouldn't land in main deliverables. Other agents are gated by their
 # own quality_score / content gates and aren't covered here yet.
 RELEVANCE_GATED_AGENTS = {'ResearchAgent'}
+
+
+# Session 1229 P4 — semantic research title builder.
+#
+# Upstream side of the TEMPLATE_LEAK_TITLE_TOKENS reactive gate. ResearchAgent
+# (and friends) used to build titles via `title=f"Research: {task[:100]}"`,
+# which silently leaked the full prompt body whenever `task` was a templated
+# Stage-1 prompt rather than a clean user query. Audit deliverable
+# e2964e4a-… §3.1 found a 32-row cluster all sharing the same leaked title.
+# The gate above blocks the resulting rows from persisting; this helper stops
+# the leak at the source.
+#
+# Markers that signal `task` is a leaked prompt body (we should NOT use it
+# verbatim as a title). Match is case-insensitive substring.
+_PROMPT_BODY_MARKERS = (
+    'BINDING DIRECTIVE',
+    '## Research Topic',
+    '## Background Context',
+    '## Required Output',
+    '## Instructions',
+    'EXTERNAL sources',
+    'DO NOT use query_internal',
+    'Research this topic to advance',
+    'Research this topic using EXTERNAL',
+)
+
+# Capture the value of the `## Research Topic` section in a prompt body. The
+# value runs until the next H2 (`\n##`) or end of string. Case-insensitive.
+_RESEARCH_TOPIC_SECTION = re.compile(
+    r'##\s*Research\s+Topic\s*\n(.+?)(?=\n##|\Z)',
+    re.IGNORECASE | re.DOTALL,
+)
+
+# Strip the `[User Context: ...]` tail that research_agent.py:780 appends to
+# `task` when user-context augmentation kicks in. We don't want that leaking
+# into titles either.
+_USER_CONTEXT_TAIL = re.compile(
+    r'\s*\[User Context:.*?\]\s*$',
+    re.DOTALL,
+)
+
+
+def _normalize_whitespace(s: str) -> str:
+    """Collapse all whitespace runs (including newlines) into single spaces."""
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+def _truncate_at_word(s: str, max_chars: int) -> str:
+    """Truncate `s` to <= max_chars, breaking at the last word boundary.
+
+    Falls back to a hard cut if there is no whitespace in the last 20 chars.
+    Trailing punctuation is stripped to keep titles clean.
+    """
+    if len(s) <= max_chars:
+        return s.rstrip(' ,;:.')
+    cut = s[:max_chars]
+    last_space = cut.rfind(' ')
+    if last_space > max_chars - 20:
+        cut = cut[:last_space]
+    return cut.rstrip(' ,;:.')
+
+
+def _looks_like_prompt_body(s: str) -> bool:
+    """True if `s` contains any marker that identifies it as a prompt body."""
+    s_lower = s.lower()
+    return any(marker.lower() in s_lower for marker in _PROMPT_BODY_MARKERS)
+
+
+def build_semantic_research_title(
+    task: str,
+    *,
+    prefix: str = 'Research',
+    topics_detected: Optional[Iterable[str]] = None,
+    max_topic_chars: int = 80,
+    today: Optional[date] = None,
+) -> str:
+    """Build a semantic title for a research deliverable.
+
+    Robust to ``task`` being either a clean user query OR a leaked prompt
+    body (from `tasks_initiatives.py` Stage 1 dispatch or similar).
+
+    Resolution order:
+      1. Extract the value of ``## Research Topic`` if `task` is a prompt
+         body that includes it.
+      2. Else if `task` does NOT look like a prompt body, use it directly.
+      3. Else fall back to ``topics_detected[:3]`` joined with ``·``.
+      4. Else default to ``"brief"``.
+
+    Always strips the ``[User Context: ...]`` tail, normalizes whitespace,
+    truncates at a word boundary at ``max_topic_chars``, and appends a
+    ``— YYYY-MM-DD`` suffix for cross-day uniqueness (the audit surfaced
+    32 rows with identical titles; the suffix bounds duplication to one
+    per day per topic).
+
+    The ``prefix`` argument lets `CustomerResearchAgent` reuse this helper
+    with ``prefix='Customer Research'``.
+
+    Examples::
+
+        >>> build_semantic_research_title("What does HFT mean?", today=date(2026, 6, 24))
+        'Research: What does HFT mean? — 2026-06-24'
+
+        >>> build_semantic_research_title(
+        ...     "Research this topic using EXTERNAL sources ...\\n## Research Topic\\nDecentralized HFT\\n\\n## Background Context\\n...",
+        ...     today=date(2026, 6, 24),
+        ... )
+        'Research: Decentralized HFT — 2026-06-24'
+    """
+    task = (task or '').strip()
+    task = _USER_CONTEXT_TAIL.sub('', task).strip()
+    topics_list = [t for t in (topics_detected or []) if t]
+    today = today or date.today()
+    date_suffix = today.strftime('%Y-%m-%d')
+
+    # 1) Try the explicit `## Research Topic` section.
+    topic_text = ''
+    section_match = _RESEARCH_TOPIC_SECTION.search(task)
+    if section_match:
+        topic_text = _normalize_whitespace(section_match.group(1))
+
+    # 2) Use `task` directly if it doesn't look like a prompt body.
+    if not topic_text and task and not _looks_like_prompt_body(task):
+        topic_text = _normalize_whitespace(task)
+
+    # 3) Topics fallback.
+    if not topic_text and topics_list:
+        topic_text = ' · '.join(str(t) for t in topics_list[:3])
+
+    # 4) Final default — keep short so it doesn't read as a leaked template.
+    if not topic_text:
+        topic_text = 'brief'
+
+    topic_text = _truncate_at_word(topic_text, max_topic_chars)
+
+    return f'{prefix}: {topic_text} — {date_suffix}'
 
 
 # Session 1226 P1 — agent_name write-time canonicalization. Audit deliverable

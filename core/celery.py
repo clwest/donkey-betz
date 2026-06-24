@@ -421,9 +421,18 @@ app.conf.beat_schedule = {
     # materializes the same safe-by-default state via
     # `add_critical_celery_tasks --force`. After burn-in passes, update
     # kwargs to {} or {'dry_run': False} to promote to live publishing.
+    #
+    # Schedule semantics (Session 1228 P3 fix): `crontab(...)` resolves
+    # against CELERY_TIMEZONE = Django TIME_ZONE = America/Denver. The
+    # original entry used `hour=13` with a "Friday 6 AM MST = 13:00 UTC"
+    # comment but actually fired at 13:00 Denver = 19:00 UTC (during MDT).
+    # Same misinterpretation class as the outreach beat (P2 PR #2569).
+    # Pin to `hour=6, minute=0` Denver local; resulting UTC time drifts
+    # seasonally (12:00 UTC in MDT, 13:00 UTC in MST) — matches the
+    # Denver-morning intent stated in the comment.
     'generate-operator-edge-newsletter': {
         'task': 'core.tasks.generate_operator_edge_newsletter',
-        'schedule': crontab(hour=13, minute=0, day_of_week='friday'),  # Friday 6 AM MST = 13:00 UTC
+        'schedule': crontab(hour=6, minute=0, day_of_week='friday'),  # 6:00 AM Denver
         'kwargs': {'dry_run': True},
         'options': {'queue': 'content', 'expires': 3600},
     },
@@ -435,11 +444,19 @@ app.conf.beat_schedule = {
     # enforced inside the generator regardless of the limit kwarg.
     # SYSTEM_PROMPT envelope (PR #2544) + anti-scrape sanitizer (PR #2545)
     # bind the LLM output to a specific per-offer delivery scope.
-    # Schedule pinned 13:30 UTC = 7:30 AM MDT / 6:30 AM MST (drifts
-    # seasonally — matches the operator-edge convention above).
+    #
+    # Schedule semantics (Session 1228 P2 fix): `crontab(...)` resolves
+    # against CELERY_TIMEZONE = Django TIME_ZONE = America/Denver. The
+    # original PR #2548 used `hour=13` thinking it meant UTC, but it
+    # actually meant 13:30 Denver = 19:30 UTC (during MDT). That mismatch
+    # left the PeriodicTask row with crontab `30 13` and timezone
+    # America/Denver — the task never fired at the intended 13:30 UTC =
+    # 7:30 AM Denver morning slot. Pin to `hour=7, minute=30` Denver
+    # local; the resulting UTC time drifts seasonally (13:30 UTC in MDT,
+    # 14:30 UTC in MST) — same drift as the operator-edge convention.
     'generate-outreach-drafts-daily': {
         'task': 'core.tasks.generate_outreach_drafts_daily',
-        'schedule': crontab(hour=13, minute=30),
+        'schedule': crontab(hour=7, minute=30),  # 7:30 AM Denver
         'options': {'queue': 'content', 'expires': 3600},
     },
 
