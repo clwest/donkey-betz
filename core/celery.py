@@ -421,9 +421,18 @@ app.conf.beat_schedule = {
     # materializes the same safe-by-default state via
     # `add_critical_celery_tasks --force`. After burn-in passes, update
     # kwargs to {} or {'dry_run': False} to promote to live publishing.
+    #
+    # Schedule semantics (Session 1228 P3 fix): `crontab(...)` resolves
+    # against CELERY_TIMEZONE = Django TIME_ZONE = America/Denver. The
+    # original entry used `hour=13` with a "Friday 6 AM MST = 13:00 UTC"
+    # comment but actually fired at 13:00 Denver = 19:00 UTC (during MDT).
+    # Same misinterpretation class as the outreach beat (P2 PR #2569).
+    # Pin to `hour=6, minute=0` Denver local; resulting UTC time drifts
+    # seasonally (12:00 UTC in MDT, 13:00 UTC in MST) — matches the
+    # Denver-morning intent stated in the comment.
     'generate-operator-edge-newsletter': {
         'task': 'core.tasks.generate_operator_edge_newsletter',
-        'schedule': crontab(hour=13, minute=0, day_of_week='friday'),  # Friday 6 AM MST = 13:00 UTC
+        'schedule': crontab(hour=6, minute=0, day_of_week='friday'),  # 6:00 AM Denver
         'kwargs': {'dry_run': True},
         'options': {'queue': 'content', 'expires': 3600},
     },
