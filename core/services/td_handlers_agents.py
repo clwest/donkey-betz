@@ -2648,6 +2648,132 @@ class AgentHandlersMixin:
                 'show_all': _show_all,
             }
 
+        elif action == 'normalize':
+            # Session 1227 PR4 — alias-map sweep tool surface. Reads the
+            # canonical alias map from core/services/deliverable_aliases
+            # (the same source `deliverable_factory._canonicalize_agent_name`
+            # uses at write time). Defaults to dry_run=true so callers see
+            # what WOULD change before flipping. Writes require BOTH
+            # `dry_run=false` AND `confirm=true` (Rigby D4 nuance —
+            # belt-and-suspenders against LLM autofill).
+            #
+            # Closes Session 1226 audit `e2964e4a-…` §4.6 item 5 (optional)
+            # — "automates future alias-map sweeps."
+            from core.services.deliverable_aliases import AGENT_NAME_ALIASES
+
+            field = (payload.get('field') or 'agent_name').strip()
+            _ALLOWED_FIELDS = ('agent_name',)
+            if field not in _ALLOWED_FIELDS:
+                raise ValueError(
+                    f"normalize only supports field='agent_name' in v1. "
+                    f"Got field={field!r}. Allowed: {list(_ALLOWED_FIELDS)}."
+                )
+
+            # Scope — workspace by default (Rigby D2: don't silently sweep
+            # globally). show_all=true is the explicit global override.
+            normalize_qs = base_qs
+            scope_label = (
+                f'workspace:{ws_scope}' if ws_scope
+                else ('global' if _show_all else 'unscoped')
+            )
+            if not _show_all and not ws_scope:
+                raise ValueError(
+                    "normalize requires either workspace_id (default scope) "
+                    "or show_all=true (explicit global sweep). "
+                    "Workspace scope is the safer default for a "
+                    "mutation-capable surface."
+                )
+
+            # dry_run — defaults to TRUE; writes require BOTH dry_run=false
+            # AND confirm=true (Rigby D4: belt-and-suspenders).
+            dry_run_raw = payload.get('dry_run')
+            # Only an EXPLICIT falsy passes through; anything else (missing,
+            # None, True, Python False from LLM autofill) keeps dry_run=true.
+            explicit_write = dry_run_raw in (False, 'false', 'False', 0, '0')
+            confirm_raw = payload.get('confirm')
+            confirm = confirm_raw in (True, 'true', 'True', 1, '1')
+            dry_run = not (explicit_write and confirm)
+
+            # Build preview rows.
+            alias_map = AGENT_NAME_ALIASES
+            preview = []
+            total_affected = 0
+            for variant, canonical in alias_map.items():
+                if variant == canonical:
+                    continue  # defensive — no row should canonicalize to itself
+                variant_qs = normalize_qs.filter(**{field: variant})
+                n = variant_qs.count()
+                row = {
+                    'from_value': variant,
+                    'to_value': canonical,
+                    'count': n,
+                }
+                if n:
+                    sample_ids = [
+                        str(uid) for uid in
+                        variant_qs.values_list('id', flat=True)[:5]
+                    ]
+                    row['sample_ids'] = sample_ids
+                preview.append(row)
+                total_affected += n
+
+            # Apply (only when explicitly opted in to write).
+            rows_changed = 0
+            if not dry_run and total_affected:
+                for variant, canonical in alias_map.items():
+                    if variant == canonical:
+                        continue
+                    n = normalize_qs.filter(**{field: variant}).update(
+                        **{field: canonical}
+                    )
+                    rows_changed += n
+                logger.info(
+                    "[normalize] sweep applied: field=%s scope=%s "
+                    "alias_map=%s rows_changed=%d actor=%s trace_id=%s",
+                    field, scope_label, alias_map,
+                    rows_changed,
+                    str(user_id) if user_id else '-',
+                    trace_id or '-',
+                )
+
+            _norm_applied = {
+                'field': field,
+                'dry_run': dry_run,
+            }
+            if ws_scope:
+                _norm_applied['workspace_id'] = ws_scope
+            if _show_all:
+                _norm_applied['show_all'] = True
+
+            if dry_run:
+                msg_action = (
+                    'Preview' if not explicit_write
+                    else 'Preview (write requires both dry_run=false AND confirm=true)'
+                )
+                message = (
+                    f'{msg_action}: {total_affected} row(s) in {scope_label} '
+                    f'would be normalized on field={field!r}. '
+                    f'Pass dry_run=false + confirm=true to apply.'
+                )
+            else:
+                message = (
+                    f'Applied: {rows_changed} row(s) normalized in '
+                    f'{scope_label} on field={field!r}.'
+                )
+
+            return {
+                'action': 'normalize',
+                'field': field,
+                'scope': scope_label,
+                'dry_run': dry_run,
+                'alias_map_used': alias_map,
+                'preview': preview,
+                'total_rows_affected': total_affected,
+                'rows_changed': rows_changed,
+                'applied_filters': _norm_applied,
+                'message': message,
+            }
+
         elif action == 'set_status':
             # Session 1227 PR3 — surgical, audited status flips.
             # Tight scope (Chris Session 1227 design call): only the
