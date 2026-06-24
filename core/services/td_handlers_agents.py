@@ -1311,7 +1311,7 @@ class AgentHandlersMixin:
             if content is None:
                 return {'action': 'read', 'success': False, 'error': f'File not found: {path}'}
 
-            max_chars = min(int(payload.get('max_chars', 50000)), 50000)
+            max_chars = min(int(payload.get('max_chars') or 50000), 50000)  # Session 1228 PR-B autofill safety
             return {
                 'action': 'read',
                 'success': True,
@@ -4436,7 +4436,7 @@ class AgentHandlersMixin:
             if not query:
                 raise ValueError("query is required for search action")
 
-            days_back = payload.get('days_back', 30)
+            days_back = payload.get('days_back') or 30  # Session 1228 PR-B autofill safety
             limit = payload.get('limit', 10)
             conv_type = payload.get('type')  # 'discussion', 'panel', or None
 
@@ -4449,7 +4449,7 @@ class AgentHandlersMixin:
             return {'action': 'search', **result}
 
         elif action == 'recent':
-            days = payload.get('days', 7)
+            days = payload.get('days') or 7  # Session 1228 PR-B autofill safety
             limit = payload.get('limit', 20)
 
             result = brainstorm_search_service.get_recent_summaries(
@@ -4476,7 +4476,7 @@ class AgentHandlersMixin:
             if not category:
                 raise ValueError("category is required for by_category action")
 
-            days_back = payload.get('days_back', 30)
+            days_back = payload.get('days_back') or 30  # Session 1228 PR-B autofill safety
             limit = payload.get('limit', 10)
 
             result = brainstorm_search_service.get_ideas_by_category(
@@ -4487,7 +4487,7 @@ class AgentHandlersMixin:
             return {'action': 'by_category', **result}
 
         elif action == 'list':
-            days_back = payload.get('days', 30)
+            days_back = payload.get('days') or 30  # Session 1228 PR-B autofill safety
             offset = payload.get('offset', 0)
             limit = min(payload.get('limit', 50), 200)  # cap at 200
             conv_type = payload.get('type')

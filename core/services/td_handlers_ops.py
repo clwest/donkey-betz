@@ -296,7 +296,7 @@ class OpsHandlersMixin:
             # timeout. Suggested alert threshold: >5/hour for any single
             # agent.
             from core.services.zombie_thread_monitor import get_zombie_rate
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             agent_name = payload.get('agent_name') or None
             result = get_zombie_rate(hours=hours, agent_name=agent_name)
             return {'action': 'zombie_thread_rate', **result}
@@ -1284,7 +1284,7 @@ class OpsHandlersMixin:
                 agent_whitelist=_as_str_list(payload.get('agent_whitelist')),
                 agent_blacklist=_as_str_list(payload.get('agent_blacklist')),
                 enable_keyword_match=bool(payload.get('enable_keyword_match', False)),
-                priority_rank=int(payload.get('priority_rank', 100)),
+                priority_rank=int(payload.get('priority_rank') or 100),  # Session 1228 PR-B autofill safety
                 owner=str(payload.get('owner', 'rigby'))[:60],
                 status=ActivePriority.STATUS_ACTIVE,
                 expires_at=expires_at,
@@ -2444,7 +2444,7 @@ class OpsHandlersMixin:
 
             policy_filter = payload.get('policy_name', '')
             decision_filter = payload.get('decision_type', '')
-            days = int(payload.get('days', 1))
+            days = int(payload.get('days') or 1)  # Session 1228 PR-B autofill safety
             limit = min(int(payload.get('limit', 50)), 200)
 
             cutoff = timezone.now() - timedelta(days=days)
@@ -2877,7 +2877,7 @@ class OpsHandlersMixin:
                 scheduled_at=scheduled_at,
                 title=payload.get('title', ''),
                 channel=payload.get('channel', 'zoom'),
-                duration_minutes=int(payload.get('duration_minutes', 30)),
+                duration_minutes=int(payload.get('duration_minutes') or 30),  # Session 1228 PR-B autofill safety
                 meeting_link=payload.get('meeting_link', ''),
                 prospect_name=payload.get('prospect_name', ''),
                 prospect_company=payload.get('prospect_company', ''),
@@ -3013,7 +3013,7 @@ class OpsHandlersMixin:
         elif action == 'revenue_funnel':
             from core.services.ops_autopilot import RevenueOrchestrator
 
-            days = int(payload.get('days', 30))
+            days = int(payload.get('days') or 30)  # Session 1228 PR-B autofill safety
             engine = RevenueOrchestrator()
             funnel = engine.get_conversion_funnel(days=days)
             return {'action': 'revenue_funnel', **funnel}
@@ -3036,7 +3036,7 @@ class OpsHandlersMixin:
         elif action == 'knowledge_citation_report':
             from core.services.ops_autopilot import KnowledgeEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             engine = KnowledgeEngine()
             report = engine.get_citation_report(days=days)
             return {'action': 'knowledge_citation_report', **report}
@@ -3095,7 +3095,7 @@ class OpsHandlersMixin:
         elif action == 'engagement_conversion_report':
             from core.services.ops_autopilot import EngagementAutonomyEngine
 
-            days = int(payload.get('days', 30))
+            days = int(payload.get('days') or 30)  # Session 1228 PR-B autofill safety
             engine = EngagementAutonomyEngine()
             report = engine.get_conversion_report(days=days)
             return {'action': 'engagement_conversion_report', **report}
@@ -3112,7 +3112,7 @@ class OpsHandlersMixin:
         elif action == 'growth_schedule':
             from core.services.ops_autopilot import GrowthEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             engine = GrowthEngine()
             schedule = engine.get_schedule(days=days)
             return {'action': 'growth_schedule', **schedule}
@@ -3127,7 +3127,7 @@ class OpsHandlersMixin:
         elif action == 'growth_funnel':
             from core.services.ops_autopilot import GrowthEngine
 
-            days = int(payload.get('days', 30))
+            days = int(payload.get('days') or 30)  # Session 1228 PR-B autofill safety
             engine = GrowthEngine()
             funnel = engine.get_funnel(days=days)
             return {'action': 'growth_funnel', **funnel}
@@ -3136,7 +3136,7 @@ class OpsHandlersMixin:
         elif action == 'capacity_forecast':
             from core.services.ops_autopilot import CapacityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = CapacityEngine()
             forecast = engine.get_capacity_forecast(hours=hours)
             return {'action': 'capacity_forecast', **forecast}
@@ -3144,7 +3144,7 @@ class OpsHandlersMixin:
         elif action == 'capacity_bottleneck_report':
             from core.services.ops_autopilot import CapacityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = CapacityEngine()
             report = engine.get_bottleneck_report(hours=hours)
             return {'action': 'capacity_bottleneck_report', **report}
@@ -3159,7 +3159,7 @@ class OpsHandlersMixin:
         elif action == 'capacity_budget_envelope':
             from core.services.ops_autopilot import CapacityEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             engine = CapacityEngine()
             envelope = engine.get_budget_envelope(days=days)
             return {'action': 'capacity_budget_envelope', **envelope}
@@ -3168,7 +3168,7 @@ class OpsHandlersMixin:
         elif action == 'security_permission_drift':
             from core.services.ops_autopilot import SecurityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = SecurityEngine()
             report = engine.get_permission_drift_report(hours=hours)
             return {'action': 'security_permission_drift', **report}
@@ -3176,7 +3176,7 @@ class OpsHandlersMixin:
         elif action == 'security_abuse_queue':
             from core.services.ops_autopilot import SecurityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             limit = int(payload.get('limit', 50))
             engine = SecurityEngine()
             queue = engine.get_abuse_risk_queue(hours=hours, limit=limit)
@@ -3199,7 +3199,7 @@ class OpsHandlersMixin:
         elif action == 'security_secrets_scan':
             from core.services.ops_autopilot import SecurityEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             engine = SecurityEngine()
             scan = engine.get_secrets_scan(days=days)
             return {'action': 'security_secrets_scan', **scan}
@@ -3207,7 +3207,7 @@ class OpsHandlersMixin:
         elif action == 'compliance_pii_scan':
             from core.services.ops_autopilot import ComplianceEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             limit = int(payload.get('limit', 50))
             engine = ComplianceEngine()
             scan = engine.get_pii_scan(days=days, limit=limit)
@@ -3223,7 +3223,7 @@ class OpsHandlersMixin:
         elif action == 'compliance_access_audit':
             from core.services.ops_autopilot import ComplianceEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = ComplianceEngine()
             audit = engine.get_access_audit(hours=hours)
             return {'action': 'compliance_access_audit', **audit}
@@ -3238,7 +3238,7 @@ class OpsHandlersMixin:
         elif action == 'integrity_quality_report':
             from core.services.ops_autopilot import DataIntegrityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = DataIntegrityEngine()
             report = engine.get_quality_report(hours=hours)
             return {'action': 'integrity_quality_report', **report}
@@ -3246,7 +3246,7 @@ class OpsHandlersMixin:
         elif action == 'integrity_null_spike_scan':
             from core.services.ops_autopilot import DataIntegrityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = DataIntegrityEngine()
             scan = engine.get_null_spike_scan(hours=hours)
             return {'action': 'integrity_null_spike_scan', **scan}
@@ -3254,7 +3254,7 @@ class OpsHandlersMixin:
         elif action == 'integrity_duplicate_report':
             from core.services.ops_autopilot import DataIntegrityEngine
 
-            hours = int(payload.get('hours', 24))
+            hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
             engine = DataIntegrityEngine()
             report = engine.get_duplicate_report(hours=hours)
             return {'action': 'integrity_duplicate_report', **report}
@@ -3269,7 +3269,7 @@ class OpsHandlersMixin:
         elif action == 'value_events_report':
             from core.services.ops_autopilot import ValueRealizationEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             engine = ValueRealizationEngine()
             report = engine.get_value_events_report(days=days)
             return {'action': 'value_events_report', **report}
@@ -3277,7 +3277,7 @@ class OpsHandlersMixin:
         elif action == 'value_outcome_rates':
             from core.services.ops_autopilot import ValueRealizationEngine
 
-            days = int(payload.get('days', 30))
+            days = int(payload.get('days') or 30)  # Session 1228 PR-B autofill safety
             engine = ValueRealizationEngine()
             rates = engine.get_outcome_rates(days=days)
             return {'action': 'value_outcome_rates', **rates}
@@ -3285,7 +3285,7 @@ class OpsHandlersMixin:
         elif action == 'value_usage_gaps':
             from core.services.ops_autopilot import ValueRealizationEngine
 
-            days = int(payload.get('days', 7))
+            days = int(payload.get('days') or 7)  # Session 1228 PR-B autofill safety
             engine = ValueRealizationEngine()
             gaps = engine.get_usage_gaps(days=days)
             return {'action': 'value_usage_gaps', **gaps}
@@ -4917,7 +4917,7 @@ class OpsHandlersMixin:
                 from django.utils import timezone
                 from datetime import timedelta
 
-                hours = int(payload.get('hours', 24))
+                hours = int(payload.get('hours') or 24)  # Session 1228 PR-B autofill safety
                 cutoff = timezone.now() - timedelta(hours=hours)
                 qs = HeartBeat.objects.filter(recorded_at__gte=cutoff)
 

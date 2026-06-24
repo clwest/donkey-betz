@@ -4383,9 +4383,9 @@ class ContentHandlersMixin:
         # ── Session 1101: Manual cleanup trigger ──
         if action == 'run_cleanup':
             from core.tasks import cleanup_stale_content
-            cutoff_days = int(payload.get('cutoff_days', 7))
+            cutoff_days = int(payload.get('cutoff_days') or 7)  # Session 1228 PR-B autofill safety
             statuses = payload.get('statuses', ['ready', 'draft'])
-            cap = min(int(payload.get('cap', 500)), 2000)
+            cap = min(int(payload.get('cap') or 500), 2000)  # Session 1228 PR-B autofill safety
             protected_types = payload.get('protected_types', [])
             task = cleanup_stale_content.delay(
                 cutoff_days=cutoff_days,
@@ -4414,8 +4414,8 @@ class ContentHandlersMixin:
         # ── Operator Edge Newsletter ──
         if action == 'generate_newsletter':
             from core.tasks import generate_operator_edge_newsletter
-            hours = int(payload.get('hours', 72))
-            cluster_limit = int(payload.get('cluster_limit', 5))
+            hours = int(payload.get('hours') or 72)  # Session 1228 PR-B autofill safety
+            cluster_limit = int(payload.get('cluster_limit') or 5)  # Session 1228 PR-B autofill safety
             dry_run = bool(payload.get('dry_run', False))
 
             if dry_run:
@@ -4623,7 +4623,7 @@ class ContentHandlersMixin:
         # feedback_llm_autofills_boolean_params_with_false.
         from core.services.td_autofill_safety import require_write_authorization
         dry_run, _write_ok = require_write_authorization(payload)
-        cap = min(int(payload.get('cap', payload.get('limit', 500))), 2000)
+        cap = min(int(payload.get('cap') or payload.get('limit') or 500), 2000)  # Session 1228 PR-B autofill safety
 
         # Build filter queryset
         base_qs = Deliverable.objects.all()
@@ -4804,7 +4804,7 @@ class ContentHandlersMixin:
 
         dry_run = payload.get('dry_run', True)
         confirm = payload.get('confirm', False)
-        cap = min(int(payload.get('cap', 500)), 2000)
+        cap = min(int(payload.get('cap') or 500), 2000)  # Session 1228 PR-B autofill safety
         agent_filter = payload.get('agent')
 
         # ── Build queryset ──
