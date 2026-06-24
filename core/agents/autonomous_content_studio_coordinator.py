@@ -797,7 +797,7 @@ Reply with ONLY the title, nothing else. Do not include the show name prefix."""
             title_response = client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": title_prompt}],
-                max_completion_tokens=50
+                max_completion_tokens=4000  # Session 1224: gpt-5-mini reasoning ALWAYS consumes ~1500+ tokens before any output. 50 returned empty 100% of the time.
             )
             generated_title = title_response.choices[0].message.content.strip().strip('"\'')
             # Ensure it's not too long and add channel name prefix
