@@ -48,7 +48,8 @@ class DeliverableGatedError(Exception):
         reason: Human-readable reason ("smoke test pattern in title").
         reason_code: Machine-parseable code from the gate that fired.
             One of: gate_1_media_stub, gate_2_smoke_pattern,
-            gate_3_min_length, unknown_gate.
+            gate_3_min_length, gate_4_template_leak,
+            gate_5_no_relevance, unknown_gate.
         title: The title that was rejected (truncated to 120 chars).
         agent_name: The agent_name argument that was passed in.
     """
@@ -143,6 +144,29 @@ SMOKE_TEST_PATTERNS = [
 # stubs. The actual media is stored elsewhere (Cloudinary, etc.).
 MEDIA_STUB_AGENTS = {'ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent'}
 
+# Session 1224 P1 — Deliverables Hygiene initiative d8d6c0b2-…
+# Template/prompt leak: when an agent (typically ResearchAgent on a Stage 1
+# initiative call) titles a deliverable with the first N chars of its prompt,
+# the title becomes the literal prompt body — including the binding directive
+# the prompt builder injects. Audit found 9 such deliverables in main library;
+# 2 were still `ready` (un-archived) on other initiatives so the bleed was
+# ongoing. Block at the factory: any title containing one of these tokens is
+# rejected with reason_code=gate_4_template_leak (callers see None / typed
+# exception). Tokens are matched case-insensitive on the title only — content
+# can legitimately reference these in a quoted example.
+TEMPLATE_LEAK_TITLE_TOKENS = (
+    'binding directive',
+    'research this topic to advance the initiative',
+    'your output must directly advance',
+    'stay narrowly focused on this initiative',
+)
+
+# Session 1224 P1 — Relevance gate. ResearchAgent is the canonical case: when
+# its `metadata.sources_count` is 0 the synthesis is built without evidence
+# and shouldn't land in main deliverables. Other agents are gated by their
+# own quality_score / content gates and aren't covered here yet.
+RELEVANCE_GATED_AGENTS = {'ResearchAgent'}
+
 
 def _should_create_deliverable(
     title: str,
@@ -177,6 +201,25 @@ def _should_create_deliverable(
     if trigger not in ('user_request', 'pa_tool', 'user_chat', 'direct'):
         if content_len < MIN_CONTENT_LENGTH:
             return False, f"below minimum content length ({content_len} < {MIN_CONTENT_LENGTH})", "gate_3_min_length"
+
+    # Gate 4: Template/prompt leak in title (Session 1224 P1)
+    if any(token in title_lower for token in TEMPLATE_LEAK_TITLE_TOKENS):
+        matched = next(t for t in TEMPLATE_LEAK_TITLE_TOKENS if t in title_lower)
+        return (
+            False,
+            f"template-leak title (matched token: {matched!r})",
+            "gate_4_template_leak",
+        )
+
+    # Gate 5: Relevance check — sources-count gate for ResearchAgent
+    if agent_name in RELEVANCE_GATED_AGENTS:
+        sources_count = (metadata or {}).get('sources_count')
+        if sources_count is not None and int(sources_count) <= 0:
+            return (
+                False,
+                f"no relevant sources ({agent_name} produced 0-source synthesis)",
+                "gate_5_no_relevance",
+            )
 
     return True, "passed", "passed"
 
