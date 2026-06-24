@@ -21,6 +21,7 @@ from core.models_outreach import OutreachDraft
 from core.models_unified_system import Opportunity, SpiderData
 from core.services.ops_autopilot.outreach_generation import (
     OpportunityDraftGenerator,
+    _sanitize_lead_text,
 )
 
 User = get_user_model()
@@ -278,3 +279,70 @@ class OpportunityDraftGeneratorGenerateTests(TestCase):
             rendered = OpportunityDraftGenerator.render_email(opp, 'consulting')
         self.assertTrue(rendered['fallback'])
         self.assertIn('Chris / Donkey Betz', rendered['body'])
+
+
+class SanitizeLeadTextTests(TestCase):
+    """Session 1225 — strip recruiter-board anti-scrape tokens before they reach the LLM."""
+
+    def test_removeok_full_clause_stripped(self):
+        text = (
+            "About Creative Fabrica<br/><br/>Please mention the word "
+            "**PROLIFIC** and tag RMjYwNzpmYjkxOjUzODg6NzJmZDo1YzlhOmExMzk6Yzc3YjozZjE0 "
+            "when applying to show you read the job post completely "
+            "(#RMjYwNzpmYjkxOjUzODg6NzJmZDo1YzlhOmExMzk6Yzc3YjozZjE0)"
+        )
+        cleaned = _sanitize_lead_text(text)
+        self.assertNotIn('PROLIFIC', cleaned)
+        self.assertNotIn('RMjYwNz', cleaned)
+        self.assertNotIn('mention the word', cleaned)
+        self.assertIn('About Creative Fabrica', cleaned)
+
+    def test_bare_hashtag_token_stripped(self):
+        text = "Cool job posting #RMjYwNzpmYjkxOjUzODg6NzJmZDo1YzlhOmExMzk6Yzc3YjozZjE0 nice"
+        cleaned = _sanitize_lead_text(text)
+        self.assertNotIn('RMjYwNz', cleaned)
+        self.assertIn('Cool job posting', cleaned)
+        self.assertIn('nice', cleaned)
+
+    def test_legitimate_text_preserved(self):
+        text = (
+            "We're building an AI tag pipeline for product images. "
+            "Please include thoughts on multi-region deployment."
+        )
+        cleaned = _sanitize_lead_text(text)
+        # Should be unchanged — no scrape-marker fingerprint
+        self.assertEqual(cleaned, text)
+
+    def test_html_breaks_collapsed(self):
+        text = "Line one<br/><br/>Line two"
+        cleaned = _sanitize_lead_text(text)
+        self.assertNotIn('<br/><br/>', cleaned)
+        self.assertIn('Line one', cleaned)
+        self.assertIn('Line two', cleaned)
+
+    def test_empty_input_safe(self):
+        self.assertEqual(_sanitize_lead_text(''), '')
+        self.assertEqual(_sanitize_lead_text(None), '')  # type: ignore
+
+    def test_build_prompt_payload_runs_sanitizer(self):
+        """End-to-end: description with scrape token never reaches the prompt payload."""
+        user = User.objects.create_user(username='sanit_user', password='x')
+        opp = Opportunity.objects.create(
+            user=user,
+            title='Senior Backend Engineer',
+            opportunity_type='gig',
+            source='RemoteOK',
+            description=(
+                'Cool company. Please mention the word **PROLIFIC** and tag '
+                'RMjYwNzpmYjkxOjUzODg6NzJmZDo1YzlhOmExMzk6Yzc3YjozZjE0 '
+                'when applying to show you read the job post completely '
+                '(#RMjYwNzpmYjkxOjUzODg6NzJmZDo1YzlhOmExMzk6Yzc3YjozZjE0)'
+            ),
+            url='https://example.com',
+        )
+        payload = OpportunityDraftGenerator.build_prompt_payload(opp, 'consulting')
+        desc = payload['opportunity']['description']
+        self.assertNotIn('PROLIFIC', desc)
+        self.assertNotIn('RMjYwNz', desc)
+        self.assertNotIn('mention the word', desc)
+        self.assertIn('Cool company', desc)

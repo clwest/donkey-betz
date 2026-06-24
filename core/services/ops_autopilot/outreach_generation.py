@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Iterable, Optional
 from urllib.parse import urlparse
 
@@ -42,6 +43,50 @@ from django.db import transaction
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+
+# Session 1225 — Recruiter-board anti-scrape tokens (RemoteOK in particular)
+# embed an instruction in job descriptions that says "Please mention the word
+# X and tag <base64>... when applying to show you read the job post
+# completely (#<base64>)". When that text passes into the LLM prompt it gets
+# echoed into the email body, making the draft look like spam. Strip BEFORE
+# the description hits the LLM payload.
+#
+# Patterns are conservative: each only fires on the recruiter-board fingerprint.
+# Legitimate prose mentioning the word "tag" or "include" is preserved.
+_SCRAPE_TOKEN_PATTERNS = (
+    # Full RemoteOK clause + trailing hashtag in parens
+    re.compile(
+        r'(?i)please\s+mention\s+the\s+word\s+\*{0,2}[\w\-]+\*{0,2}'
+        r'(?:\s+and\s+tag\s+\S+)?\s+when\s+applying\s+to\s+show\s+you\s+'
+        r'read\s+the\s+job\s+post\s+completely\s*'
+        r'(?:\(\s*#?[\w:+/=\-]*\s*\))?'
+    ),
+    # Bare hashtag-style RemoteOK tokens like "#RMjYwNz..." (≥16 chars)
+    re.compile(r'#[A-Za-z0-9+/=:\-]{16,}'),
+    # Fallback: bare "and tag <base64-ish>" remnants from broken parses
+    re.compile(r'(?i)\s+(?:and\s+)?tag\s+[A-Za-z0-9+/=:\-]{16,}'),
+)
+
+
+def _sanitize_lead_text(text: str) -> str:
+    """Strip recruiter-board anti-scrape tokens before the LLM sees them.
+
+    Session 1225 — Rigby flagged the Creative Fabrica draft echoing
+    "include PROLIFIC and tag RMjYwNz..." into the email body. RemoteOK
+    embeds this in `Opportunity.description`; without sanitation the LLM
+    treats it as legitimate copy. Applied at every site that hands lead
+    text to the prompt OR persists it as denormalized draft data.
+    """
+    if not text:
+        return text or ''
+    cleaned = text
+    for pat in _SCRAPE_TOKEN_PATTERNS:
+        cleaned = pat.sub('', cleaned)
+    # Collapse whitespace introduced by removals
+    cleaned = re.sub(r'<br\s*/?>\s*<br\s*/?>', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned)
+    return cleaned.strip()
 
 
 class OpportunityDraftGenerator:
@@ -268,12 +313,18 @@ class OpportunityDraftGenerator:
         age_hours = int(
             (timezone.now() - opportunity.created_at).total_seconds() / 3600
         )
+        # Session 1225 — strip recruiter-board anti-scrape tokens from any
+        # text the LLM sees. Rigby flagged the Creative Fabrica draft echoing
+        # "include PROLIFIC and tag <base64>..." into the email body. Without
+        # this the LLM treats the scrape marker as legitimate copy.
+        sanitized_title = _sanitize_lead_text(opportunity.title)
+        sanitized_description = _sanitize_lead_text(opportunity.description)[:1500]
         return {
             'offer_key': offer_key,
             'offer_blurb': cls.OFFER_BLURBS.get(offer_key, ''),
             'opportunity': {
-                'title': opportunity.title,
-                'description': (opportunity.description or '')[:1500],
+                'title': sanitized_title,
+                'description': sanitized_description,
                 'company_name': company,
                 'contact_name': metadata.get('contact_name', ''),
                 'contact_email': contact_email,
@@ -440,7 +491,7 @@ class OpportunityDraftGenerator:
                 draft = OutreachDraft.objects.create(
                     spider_data_id=seed.id,
                     opportunity=opp,
-                    lead_title=opp.title[:200],
+                    lead_title=_sanitize_lead_text(opp.title)[:200],
                     lead_source=cls.SEED_SPIDER_NAME,
                     lead_url=effective_url[:500],
                     lead_score=opp.match_score,
