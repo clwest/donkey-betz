@@ -159,6 +159,16 @@ TEMPLATE_LEAK_TITLE_TOKENS = (
     'research this topic to advance the initiative',
     'your output must directly advance',
     'stay narrowly focused on this initiative',
+    # Session 1226 P3 — surfaced by the Rigby+Claude verifier-loop audit
+    # (deliverable e2964e4a-…). New leak pattern caught in the wild: a
+    # 32-row cluster, 28 created in the last 7 days, titled
+    # 'Research: This topic using EXTERNAL sources (web_search, spider_query).\n
+    # DO NOT use query_internal_dat' — origin is the ResearchAgent prompt
+    # builder's external-sources branch at core/tasks_initiatives.py, which
+    # leaks through the title=f"Research: {task[:100]}" fallback at
+    # core/agents/research_agent.py:1103. The substring match below was
+    # verified against the actual stored 101-char-truncated title.
+    'this topic using external sources',
 )
 
 # Session 1224 P1 — Relevance gate. ResearchAgent is the canonical case: when
