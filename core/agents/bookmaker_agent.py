@@ -256,7 +256,17 @@ class BookmakerAgent(LearningMixin):
     Session 306: Now includes learning infrastructure for cross-agent knowledge sharing.
     """
 
-    def __init__(self):
+    def __init__(self, user=None, **kwargs):
+        # Session 1231 — accept user= and absorb extra kwargs because
+        # the standard router dispatch at core/agent_router.py:1045 calls
+        # agent_class(user=self.user). Pre-fix this raised
+        # `BookmakerAgent.__init__() got an unexpected keyword argument 'user'`
+        # on every fleet-smoke dispatch (Session 1231 full-AGENT_MAP smoke).
+        # Bookmaker doesn't need user context for its own work — the
+        # LearningMixin.learning_loop is intentionally created with
+        # get_learning_loop_service(None) — but it must accept the kwarg
+        # to avoid crashing at construction time.
+        self.user = user
         self.name = "Vegas AI"
         self.description = "AI Bookmaker analyzing odds like a Vegas professional"
         self.confidence_threshold = 0.65
