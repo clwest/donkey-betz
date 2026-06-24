@@ -86,12 +86,32 @@ class OpportunityDraftGenerator:
 
     @classmethod
     def is_contactable(cls, opportunity) -> bool:
+        # Field-name fan-out — Session 1224 smoke surfaced that spider-ingested
+        # opps (RemoteOK + others) populate `metadata.url` / `metadata.company`
+        # rather than `metadata.contact_email` / `metadata.company_name` /
+        # `metadata.domain`. Accept either schema. Top-level `url` column on
+        # those rows is empty by design.
         metadata = opportunity.metadata or {}
-        if metadata.get('contact_email'):
+        # 1. Explicit email anywhere → contactable
+        if metadata.get('contact_email') or metadata.get('email'):
             return True
-        if metadata.get('company_name') and (metadata.get('domain') or opportunity.url):
+        # 2. Real domain anywhere (top-level or metadata) → contactable
+        candidate_urls = (
+            opportunity.url,
+            metadata.get('url'),
+            metadata.get('source_url'),
+            metadata.get('domain'),
+        )
+        has_domain = any(u and cls._extract_domain(u) for u in candidate_urls)
+        if has_domain:
             return True
-        return bool(cls._extract_domain(opportunity.url or ''))
+        # 3. Company name + ANY url-shaped field also counts (matches the
+        #    original gate intent: company alone isn't enough — need a way to
+        #    reference where we saw them).
+        company = metadata.get('company_name') or metadata.get('company')
+        if company and any(candidate_urls):
+            return True
+        return False
 
     @staticmethod
     def _extract_domain(url: str) -> str:
@@ -180,8 +200,26 @@ class OpportunityDraftGenerator:
 
     @classmethod
     def build_prompt_payload(cls, opportunity, offer_key: str) -> dict:
+        # Field-name fan-out matches is_contactable — spider-ingested opps use
+        # metadata.url / metadata.company; user-curated opps may use
+        # metadata.company_name / metadata.domain etc.
         metadata = opportunity.metadata or {}
-        domain = cls._extract_domain(opportunity.url or '') or metadata.get('domain', '')
+        primary_url = (
+            opportunity.url
+            or metadata.get('url', '')
+            or metadata.get('source_url', '')
+        )
+        domain = cls._extract_domain(primary_url) or metadata.get('domain', '')
+        company = (
+            metadata.get('company_name')
+            or metadata.get('company')
+            or ''
+        )
+        contact_email = (
+            metadata.get('contact_email')
+            or metadata.get('email')
+            or ''
+        )
         age_hours = int(
             (timezone.now() - opportunity.created_at).total_seconds() / 3600
         )
@@ -191,11 +229,11 @@ class OpportunityDraftGenerator:
             'opportunity': {
                 'title': opportunity.title,
                 'description': (opportunity.description or '')[:1500],
-                'company_name': metadata.get('company_name', ''),
+                'company_name': company,
                 'contact_name': metadata.get('contact_name', ''),
-                'contact_email': metadata.get('contact_email', ''),
+                'contact_email': contact_email,
                 'source': opportunity.source,
-                'source_url': opportunity.url or '',
+                'source_url': primary_url,
                 'domain': domain,
                 'potential_revenue': float(opportunity.potential_revenue or 0),
                 'age_hours': age_hours,
@@ -310,12 +348,20 @@ class OpportunityDraftGenerator:
             try:
                 seed = cls.ensure_spider_data_seed(opp)
                 rendered = cls.render_email(opp, offer_key)
+                # Same field-name fan-out as is_contactable / build_prompt_payload
+                opp_md = opp.metadata or {}
+                effective_url = (
+                    opp.url
+                    or opp_md.get('url', '')
+                    or opp_md.get('source_url', '')
+                    or ''
+                )
                 draft = OutreachDraft.objects.create(
                     spider_data_id=seed.id,
                     opportunity=opp,
                     lead_title=opp.title[:200],
                     lead_source=cls.SEED_SPIDER_NAME,
-                    lead_url=(opp.url or '')[:500],
+                    lead_url=effective_url[:500],
                     lead_score=opp.match_score,
                     offer_key=offer_key,
                     subject_line=rendered['subject'],

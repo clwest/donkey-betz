@@ -76,6 +76,26 @@ class OpportunityDraftGeneratorContactabilityTests(TestCase):
         opp = self._make_opp()
         self.assertFalse(OpportunityDraftGenerator.is_contactable(opp))
 
+    def test_metadata_url_alone_is_contactable(self):
+        """Spider-ingested opps (RemoteOK etc.) put the URL at metadata.url, not opp.url."""
+        opp = self._make_opp(metadata={'url': 'https://remoteok.com/jobs/123'})
+        self.assertTrue(OpportunityDraftGenerator.is_contactable(opp))
+
+    def test_metadata_company_plus_url_is_contactable(self):
+        """Spider-ingested opps use metadata.company (not company_name) and metadata.url.
+        This is the actual RemoteOK shape the smoke surfaced.
+        """
+        opp = self._make_opp(metadata={
+            'company': 'Acme',
+            'url': 'https://remoteok.com/jobs/123',
+        })
+        self.assertTrue(OpportunityDraftGenerator.is_contactable(opp))
+
+    def test_metadata_email_field_alone_is_contactable(self):
+        """Accept metadata.email as a synonym for contact_email."""
+        opp = self._make_opp(metadata={'email': 'a@b.com'})
+        self.assertTrue(OpportunityDraftGenerator.is_contactable(opp))
+
 
 class OpportunityDraftGeneratorSeedTests(TestCase):
     def setUp(self):
