@@ -468,7 +468,7 @@ Return this exact JSON structure:
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=1000,
+                max_completion_tokens=4000,  # Session 1224: gpt-5-mini reasoning needs ≥2000 headroom; 1000 borderline
             )
 
             response_text = response.choices[0].message.content or ""

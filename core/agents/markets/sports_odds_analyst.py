@@ -654,7 +654,7 @@ Keep it actionable and under 400 words. All times are MST."""
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=800,
+                max_completion_tokens=4000,  # Session 1224: gpt-5-mini reasoning needs ≥2000 headroom
             )
 
             llm_analysis = response.choices[0].message.content or ""

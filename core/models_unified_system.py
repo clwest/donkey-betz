@@ -11807,7 +11807,7 @@ Respond in JSON format:
             response = client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=200,
+                max_completion_tokens=4000,  # Session 1224: gpt-5-mini reasoning eats tokens before output; 200 returned empty even with low effort
                 reasoning_effort="low",
             )
             import json

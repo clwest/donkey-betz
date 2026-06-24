@@ -2812,7 +2812,7 @@ Be specific and accurate. This is for autonomous text correction."""
                     ]
                 }
             ],
-            max_completion_tokens=300,
+            max_completion_tokens=4000,  # Session 1224: gpt-5-mini reasoning eats reasoning_tokens before output; 300 was returning empty
             reasoning_effort="medium",
         )
 
