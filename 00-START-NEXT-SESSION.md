@@ -104,16 +104,18 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1226 — CURRENT ENTRY POINT
 
-### SESSION 1225 CLOSED — outreach prompt envelope + anti-scrape sanitizer + conversation rotation, 3 PRs
+### SESSION 1225 CLOSED — outreach prompt envelope + anti-scrape sanitizer + conversation rotation + daily beat task, 5 PRs
 
-Full handoff: [`SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md`](docs/handoffs/SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md). Rigby-driven refinement arc on the outreach pipeline shipped in Session 1224 — hard-bound the SYSTEM_PROMPT to a specific per-offer delivery envelope, added an anti-scrape sanitizer to strip RemoteOK PROLIFIC/tag markers before they reach the LLM, and rotated the PA conversation after `session_tool.health_check` returned `suggest_fresh` at 39 turns.
+Full handoff: [`SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md`](docs/handoffs/SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md). Rigby-driven refinement arc on the outreach pipeline shipped in Session 1224 — hard-bound the SYSTEM_PROMPT to a specific per-offer delivery envelope, added an anti-scrape sanitizer to strip RemoteOK PROLIFIC/tag markers before they reach the LLM, rotated the PA conversation after `session_tool.health_check` returned `suggest_fresh` at 39 turns, then closed the Option B daily beat task that had been deferred from Session 1224.
 
 | PR | What |
 |---|---|
 | **#2544** | Outreach prompt envelope — `OpportunityDraftGenerator.SYSTEM_PROMPT` hard-bound to per-offer delivery scope (ai_automation = 1-day thin-slice prototype with explicit exclusions; consulting = roadmap doc only; content_engine = signal audit + sample pipeline). TONE / GLOBAL / PER-OFFER sections; forbidden-phrase list named; every body ends with scoping question on its own line. Fallback skeleton updated to match (`_FALLBACK_QUESTIONS`). |
 | **#2545** | Anti-scrape sanitizer — `_sanitize_lead_text` module helper strips 3 conservative recruiter-board patterns (RemoteOK PROLIFIC/tag clause, bare base64 hashtags, bare `tag <base64>` remnants). Applied at `build_prompt_payload` + draft persistence. Legitimate prose preserved. +6 tests, 23/23 pass. |
 | **#2546** | `pa_local.sh` pin rotation: `pa-17e0fa71fd25470a` → `pa-77bbcd97a625424d`. Old pin carried Sessions 1223 → 1224 → first half of 1225 (8 PRs across two sessions). New conversation seeded with full 1224 + 1225 carry-forward; score 100/100 on first health check. |
-| **#TBD** | Session close handoff + this start-here rewrite. |
+| **#2547** | Original session close handoff + 00-START-NEXT-SESSION.md rewrite for Session 1226. |
+| **#2548** | Outreach drafts daily beat task. New `@shared_task generate_outreach_drafts_daily` + `crontab(hour=13, minute=30)` UTC = 7:30 AM MDT. PeriodicTask materialized + workers restarted + task registered. First fire: 2026-06-24 at 13:30 UTC. |
+| **#TBD** | Handoff update appending #2548 to the ledger + 1226 start-here refresh. |
 
 **Final outreach inbox state:** 5 clean drafts, all real LLM, envelope holding, zero scrape-marker leakage. Daily cap 5/5 hit until UTC reset.
 
@@ -129,15 +131,16 @@ PR #2530 (Session 1222) re-enabled `generate-operator-edge-newsletter` with `dry
 
 **Calendar check at session open** — if today is Friday or later, run the verification first. If still pre-Friday, push to whatever lane Chris picks.
 
-#### Priority 2 — Outreach beat task (`generate_outreach_drafts_daily`)
+#### Priority 2 — Outreach daily beat first-fire watch (CALENDAR-DRIVEN — 2026-06-24 13:30 UTC)
 
-Carryover from Session 1224 + 1225. Now that LLM path + envelope + sanitizer are all live, this is the natural next step:
-- `@shared_task` in `core/tasks.py` calling `OpportunityDraftGenerator.generate(limit=5, scope='all')`
-- `core/celery.py` `beat_schedule` entry at `crontab(hour=13, minute=30)` (7:30am MDT in summer / 6:30am MST in winter)
-- Materialize via `add_critical_celery_tasks` so the PeriodicTask row exists on fresh deploys
-- Effort: S (~30 min including tests)
+PR #2548 (Session 1225 close) materialized the daily beat task. First fire: **2026-06-24 at 13:30 UTC** (= 7:30 AM MDT on Tuesday, ~9.5 hours after Session 1225 close).
 
-Chris's choice: enable from day 1 or `enabled=False` for a week so manual triggers verify for several days first?
+Post-fire verification:
+- `CeleryTaskEvent.objects.filter(task_name='core.tasks.generate_outreach_drafts_daily').order_by('-started_at').first()` returns a `SUCCESS` row
+- `OutreachDraft.objects.filter(lead_source='opportunity_outreach_seed', created_at__date='2026-06-24').count()` is 1-5 (not 0). Zero = task ran but generator skipped (all opps uncontactable, or daily cap accounting bug). Investigate before next cycle.
+- Browser smoke at `/workspace?tab=work&sub=outreach` shows new drafts in the inbox with no manual trigger.
+
+If any check is yellow/red, the rollback is simple: `PeriodicTask.objects.filter(name='generate-outreach-drafts-daily').update(enabled=False)`. Keeps the row, stops firing, no code revert.
 
 #### Priority 3 — Wiring investigations Rigby filed in Session 1225 (low urgency, real friction)
 
