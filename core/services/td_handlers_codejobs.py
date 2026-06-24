@@ -116,7 +116,7 @@ class CodeJobHandlersMixin:
         mode = payload.get('mode', 'dry_run')
         base_branch = payload.get('base_branch', repo.default_base_branch or 'main')
         conversation_id = payload.get('conversation_id', '')
-        max_runtime = min(int(payload.get('max_runtime_seconds', repo.max_runtime_seconds)), 1800)
+        max_runtime = min(int(payload.get('max_runtime_seconds') or repo.max_runtime_seconds), 1800)  # Session 1228 PR-B autofill safety
         plan_json = {
             'version': 'code_worker_v1', 'mode': mode,
             'title': task_prompt[:200], 'task_prompt': task_prompt,
@@ -314,7 +314,7 @@ class CodeJobHandlersMixin:
             default_base_branch=payload.get('default_branch', 'main'),
             test_command=payload.get('test_command', ''),
             lint_command=payload.get('lint_command', ''),
-            max_runtime_seconds=int(payload.get('max_runtime_seconds', 600)),
+            max_runtime_seconds=int(payload.get('max_runtime_seconds') or 600),  # Session 1228 PR-B autofill safety
             is_active=True,
         )
         return {

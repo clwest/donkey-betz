@@ -39,6 +39,7 @@ from typing import Dict, Any, List
 from collections import Counter
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.services.deliverable_factory import build_semantic_research_title
 from ml.auto_selection import TaskType
 
 
@@ -1110,9 +1111,17 @@ Return comprehensive customer research with personas, pain points, and real quot
                             contribution_score=1.0
                         )
 
+                    # Session 1229 P4 — same upstream-title fix as
+                    # ResearchAgent. Stops `task` (which may be a leaked
+                    # prompt body) from landing as the deliverable title.
+                    semantic_title = build_semantic_research_title(
+                        task,
+                        prefix='Customer Research',
+                    )
+
                     # Session 1006: Persist output to Deliverable
                     self._save_to_deliverable(
-                        title=f"Customer Research: {task[:80]}",
+                        title=semantic_title,
                         content=synthesis.get('analysis', str(synthesis)) if isinstance(synthesis, dict) else str(synthesis),
                         deliverable_type='research',
                         category='Customer Research',
@@ -1124,7 +1133,7 @@ Return comprehensive customer research with personas, pain points, and real quot
                     if synthesis.get('analysis'):
                         self._share_knowledge(
                             knowledge_type='user_behavior',
-                            title=f"Customer Research: {task[:80]}",
+                            title=semantic_title,
                             knowledge_value={
                                 'query': task,
                                 'discussions_analyzed': synthesis.get('discussions_analyzed', 0),
