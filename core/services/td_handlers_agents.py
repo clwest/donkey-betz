@@ -1640,6 +1640,17 @@ class AgentHandlersMixin:
             init_id = payload.get('initiative_id')
             if init_id:
                 qs = qs.filter(initiative_id=init_id)
+            # Session 1226 — has_initiative boolean filter. Rigby's missing
+            # "show me which of agent X's deliverables are attached to
+            # initiatives" query (Chris flagged at Session 1225 close). True =
+            # initiative_id IS NOT NULL; False = IS NULL. Accepts the same
+            # truthy/falsy surface as `orphans` (true/True/1/"true").
+            has_init = payload.get('has_initiative')
+            if has_init is not None:
+                if has_init in (True, 'true', 'True', 1, '1'):
+                    qs = qs.filter(initiative_id__isnull=False)
+                elif has_init in (False, 'false', 'False', 0, '0'):
+                    qs = qs.filter(initiative_id__isnull=True)
             # Workspace filter — scopes deliverable results to a workspace
             ws_id = payload.get('workspace_id') or payload.get('workspace')
             if ws_id:
