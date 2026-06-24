@@ -428,6 +428,21 @@ app.conf.beat_schedule = {
         'options': {'queue': 'content', 'expires': 3600},
     },
 
+    # ── Outreach drafts daily (Session 1225 P2 — closes Option B beat) ─────
+    # Generates up to 5 touch-1 OutreachDraft rows per UTC day from
+    # contactable Opportunity rows via OpportunityDraftGenerator. Drafts
+    # are approval-required (no auto-send). DAILY_GENERATE_CAP=5 is
+    # enforced inside the generator regardless of the limit kwarg.
+    # SYSTEM_PROMPT envelope (PR #2544) + anti-scrape sanitizer (PR #2545)
+    # bind the LLM output to a specific per-offer delivery scope.
+    # Schedule pinned 13:30 UTC = 7:30 AM MDT / 6:30 AM MST (drifts
+    # seasonally — matches the operator-edge convention above).
+    'generate-outreach-drafts-daily': {
+        'task': 'core.tasks.generate_outreach_drafts_daily',
+        'schedule': crontab(hour=13, minute=30),
+        'options': {'queue': 'content', 'expires': 3600},
+    },
+
     # ────────────────────────────────────────────────────────────────────────
     # Session 1115 batch-3 — DB hygiene + metrics tasks that were defined but
     # never wired. All entries below are safe by inspection:
