@@ -74,3 +74,6 @@ export { default as HomeTab } from './HomeTab'
 
 // App Integration: Embedded standalone apps in workspace
 export { default as AppTab, hasApp } from './AppTab'
+
+// Session 1224: Outreach Inbox — Opportunity → OutreachDraft approval surface
+export { OutreachInboxTab } from './OutreachInboxTab'

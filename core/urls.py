@@ -1512,6 +1512,16 @@ from core.views_diagnostics import (
     cockpit_autopilot_toggle,  # Focus Cockpit: toggle autopilot policy
     cockpit_autopilot_evaluate,  # Focus Cockpit: evaluate autopilot policies
     cockpit_autopilot_history,  # Focus Cockpit: autopilot event history
+)
+# Session 1224 P1 — Outreach inbox REST endpoints (Opportunity → OutreachDraft)
+from core.views_outreach import (
+    outreach_inbox as outreach_inbox_view,
+    outreach_approve as outreach_approve_view,
+    outreach_reject as outreach_reject_view,
+    outreach_generate as outreach_generate_view,
+    outreach_metrics as outreach_metrics_view,
+)
+from core.views_diagnostics import (  # noqa: E402 — re-open the diagnostic block below
     cockpit_run_trace,  # Focus Cockpit: run trace debugger
     cockpit_config_overview,  # Focus Cockpit: config overview
     cockpit_config_toggle_provider,  # Focus Cockpit: toggle provider
@@ -1803,6 +1813,12 @@ urlpatterns = [
     path('api/cockpit/autopilot/policies/<str:policy_id>/toggle/', cockpit_autopilot_toggle, name='cockpit-autopilot-toggle'),
     path('api/cockpit/autopilot/evaluate/', cockpit_autopilot_evaluate, name='cockpit-autopilot-evaluate'),
     path('api/cockpit/autopilot/history/', cockpit_autopilot_history, name='cockpit-autopilot-history'),
+    # Session 1224 P1 — Outreach inbox (Opportunity → OutreachDraft pipeline)
+    path('api/cockpit/outreach/inbox/', outreach_inbox_view, name='cockpit-outreach-inbox'),
+    path('api/cockpit/outreach/generate/', outreach_generate_view, name='cockpit-outreach-generate'),
+    path('api/cockpit/outreach/metrics/', outreach_metrics_view, name='cockpit-outreach-metrics'),
+    path('api/cockpit/outreach/<str:draft_id>/approve/', outreach_approve_view, name='cockpit-outreach-approve'),
+    path('api/cockpit/outreach/<str:draft_id>/reject/', outreach_reject_view, name='cockpit-outreach-reject'),
     # P15: Run Trace
     path('api/cockpit/runs/<str:run_id>/trace/', cockpit_run_trace, name='cockpit-run-trace'),
     # P16: Config Control Plane
