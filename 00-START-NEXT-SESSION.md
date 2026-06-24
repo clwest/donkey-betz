@@ -102,7 +102,116 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1231 — CURRENT ENTRY POINT
+## SESSION 1232 — CURRENT ENTRY POINT
+
+### SESSION 1231 CLOSED — Agent error-pattern investigation arc (P3 + P2 + R2), 2 PRs
+
+Full handoff: [`SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md`](docs/handoffs/SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md). The arc framing from the prior session's Recommended Session 1231 plan ("bundle P2 + R2 + P3 as one agent error-pattern investigation") held end-to-end. **C (P3) shipped first** to make the audit trail honest for the investigation that followed: `deliverable_tool.append` + `update` content-mutation branches were silencing Django's `auto_now=True` on `updated_at` by omitting the field from `update_fields`. **A (P2) shipped next** with the real bug: `core/agents/base_agent.py:5482` did `write_result['files_generated']` via bare dict access in the `elif partial_failure` branch of `execute_with_workspace` — the key only exists in early-return shapes; the all-files-failed shape (Shape B) omits it. The deliverable was getting produced 117ms before the crash, so the daily COO diagnostic looked like a silent failure. **B (R2) closed as no code change** after verifier-loop ORM pull revealed all 18/18 CodeReview + 9/9 Workflow failures over 30d were smoke probes — every one had `task` containing `'fleet smoke'` / `'smoke:'` / `'force failure'` / `'expected error'`. The audit's success_rate metric is noise-contaminated, not the agents.
+
+| PR | What |
+|---|---|
+| **#2585** | `fix(session-1231): deliverable_tool.append + update content-mutations bump updated_at (P3)`. Three content-mutating branches in `core/services/td_handlers_agents.py` now extend `update_fields` with `'updated_at'`: dedicated `append` action (line 2293), `update`'s `append`/`prepend` sub-mode (line 2122), `update`'s `content` replace sub-mode (line 2129). New `test_deliverable_tool_append_updated_at.py` — 5 tests + source-level guard sentinel. 5/5 new + 24/24 adjacent green. Closes tracking deliv `61f4312b-…`. |
+| **#2586** | `fix(session-1231): COOAgent scheduled 'files_generated' KeyError (P2)`. `base_agent.py:5482` bare access raised KeyError on the `elif partial_failure` branch because `_write_files_to_workspace` Shape B (main path) omits `'files_generated'`. Fix computes `total_attempted = total_written + total_failed` from existing Shape B fields. Added `test_all_files_failed_does_not_raise_key_error` + source-level guard `test_partial_failure_path_uses_safe_getters`. 3/3 in `test_base_agent_workspace_write_visibility.py` green. **Behavioral verify window: next scheduled fire 2026-06-25 13:30 UTC.** Closes Session 1230 F1. |
+
+**Deliverables (in-session):**
+- **create + append + content_complete `df33d12d-…`** ("Audit / Agent Error Patterns") — R2 verification deliverable. First create attempt hit `gate_2_smoke_pattern` (title contained "smoke"); retitled `"claude-code: R2 Findings — CodeReviewAgent & WorkflowAgent 30-day failure review"`. 476-char stub by Rigby; 8,653-char body appended by Claude via `ToolDispatcher._handle_deliverables`; status flipped via `content_tool action=content_complete`. Final 9,131 chars.
+
+**Diagnostic ORM pulls (verifier-loop input):**
+- **CodeReviewAgent 30d**: 23 total / 18 failed / 5 completed. All 18 failures share error `'No code inspection or review completed'`. Tasks classified → **18/18 are smoke probes**.
+- **WorkflowAgent 30d**: 11 total / 9 failed / 2 completed. 5 distinct error messages (timeouts + partial-completions). Tasks classified → **9/9 are full-fleet smoke tests** (6 partial-completed include `CodeReviewAgent` as a failing child — same smoke probes counted at the CodeReview row level, dispatched via the fleet harness).
+
+**Bonus finding:** the R2 deliverable's own 8.7kB append was dispatched from the P2-branch checkout (off main, not P3), so it ran on the pre-P3 code path. `updated_at` on `df33d12d-…` is stuck at `2026-06-24T23:00:28.586862+00:00` despite the 9,131-char body — live evidence of the very bug PR #2585 closes. Future appends (post-#2585 merge) bump correctly.
+
+**Operational invariants (post-merge):**
+1. `deliverable_tool.append` + `update` content mutations bump `updated_at`. Source-level guards in `test_deliverable_tool_append_updated_at.py` lock the wiring.
+2. No more bare `write_result['files_generated']` access on the workspace-write partial-failure path. Source-level guard `test_partial_failure_path_uses_safe_getters` asserts the pattern is absent.
+3. CodeReviewAgent + WorkflowAgent are healthy. No production failures in 30d. The audit's 21.7% / 18.2% success rates are smoke-probe noise.
+
+**Active conversation:** `pa-21dfa3a3dc4545b7` — continues from Session 1230 close. Session 1231 added ~10 turns. No rotation triggered. Continues into Session 1232.
+
+**Still Chris-side carryover into Session 1232:**
+- **Anthropic credit refill** at https://console.anthropic.com/billing. One-liner Makefile revert (`unset CLAUDE_CODE_ENGINE_PROVIDER`) when credits land.
+- **CI billing** still failing — both Session 1231 PRs admin-merged.
+
+### FIRST THING Session 1232
+
+#### Priority 1 — Calendar checks (BOTH DUE THIS SESSION OR NEXT)
+
+These are time-bound; clear first on session open.
+
+- **Outreach beat first-fire verification (2026-06-25 13:30 UTC)** — Session 1228 carryover, P3 in Sessions 1230-1231. Verify:
+  ```python
+  CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.generate_outreach_drafts_daily'
+  ).order_by('-started_at').first()
+  # Expected: SUCCESS dated 2026-06-25
+  OutreachDraft.objects.filter(
+      lead_source='opportunity_outreach_seed',
+      created_at__date='2026-06-25',
+  ).count()
+  # Expected: 1-5
+  ```
+- **P2 behavioral verify (2026-06-25 13:30 UTC, same window as outreach)** — first scheduled COOAgent daily diagnostic after PR #2586 merge. Expect zero `'files_generated'` errors going forward. Run:
+  ```python
+  AgentExecution.objects.filter(
+      agent__name='COOAgent',
+      task__icontains='daily COO operations diagnostic',
+      created_at__gte='2026-06-25',
+  ).order_by('-created_at').first()
+  # Expected: status='completed', error_message empty
+  ```
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
+
+#### Priority 2 — Smoke-probe tagging for `AgentExecution` (NEW — Session 1231 F1 / R2 REC-2, MEDIUM)
+
+Without this, future audits will keep flagging healthy smoke-heavy agents as broken — exactly what triggered R2 in the audit `5318da3e-…`. The R2 deliverable `df33d12d-…` spec'd two implementation options:
+- **(a) Add `is_smoke_test: bool` field to `AgentExecution`**, set by the dispatcher when task matches the substring patterns or `context.smoke=True` is explicit. Cleanest; needs migration + dispatcher edit + audit-tool consumer updates.
+- **(b) Compute at query time** — let `execution_history_tool.stats` accept `include_smoke=False` default and filter at metric calc with the same substring matcher. Cheaper; no schema migration.
+
+Pick one + one focused PR. Substring patterns to detect smoke probes: `'urc v0.1 fleet smoke'`, `'smoke:'`, `'smoke_test:'`, `'force failure'`, `'expected error'`, `'deliberately request'`, `'deliberately review'`, `'fleet smoke'`, `'smoke test'`. Also `context.smoke=True` when present.
+
+#### Priority 3 — Audit `5318da3e-…` §R2 amendment (NEW — Session 1231 F3, P3)
+
+Append a brief §R2 footnote (or §6.2 sub-section) pointing to deliverable `df33d12d-…` for the verifier-loop reframe: "Verifier-loop Session 1231 found all 27 R2 rows were smoke probes; no agent code change warranted; recommendation re-framed as metric-quality fix (REC-2)." Trivial via `deliverable_tool action=append` (now correctly bumps `updated_at` post-#2585). Mirrors how Session 1230 P2 appended §4.8 to `e2964e4a-…`.
+
+#### Priority 4 — Engineer workspace staleness (CARRYOVER — Session 1230 F3, MEDIUM)
+
+Carried from Session 1230. Engineer's `/tmp/engineer-workspace/` git clone is stale (P4 verify `38c2424b-…` couldn't find `build_semantic_research_title` shipped the same day). Options:
+- Add `git pull` to `_ensure_git_repo` if behind upstream (small per-dispatch overhead), or
+- Add a manual `claude_code_tool action=refresh_workspace` if Rigby should opt in, or
+- Document the staleness as a known limitation and have Rigby pass file context explicitly.
+
+Not blocking; small focused PR when bandwidth allows.
+
+#### Priority 5 — Meeting-context leak shape (CARRYOVER — Session 1230 F2, LOW)
+
+Spotted on COOAgent + CTOAgent: `"<Label> Analysis: As a participant in a technical meeting about ..."`. Different prompt template from the diagnostic family. One-off so far (not in any duplicates cluster). Don't add markers preemptively — wait to see if it recurs as a cluster, then one entry in `_PROMPT_BODY_MARKERS` closes it.
+
+#### Priority 6 — Fleet-smoke wall-clock timeouts (NEW — Session 1231 F2 / R2 REC-3, LOW)
+
+3 Workflow rows hit `60min no-heartbeat` or `1200s wall-clock` on full-fleet smokes (~88 agents). Either (a) raise wall-clock for known-smoke workflow dispatches, (b) split fleet smokes into chunks, (c) accept the timeout and stop counting it against the agent. Lower priority — observability not behavior. Most-likely subsumed by Priority 2 (smoke filtering would exclude these too).
+
+#### Priority 7 — CI billing fix (Chris-side, still outstanding)
+
+Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228 → 1229 → 1230 → 1231. All Session 1231 PRs admin-merged.
+
+#### Priority 8 — Anthropic A/B (gated on credit refill)
+
+When Anthropic credits return: run the same Session 1229 Step 5 line-count task on the Anthropic path (`unset CLAUDE_CODE_ENGINE_PROVIDER`) and confirm no clarification stall. If Anthropic path is clean with the new `ANSWER_SYSTEM_PROMPT`, lift the retry contract up out of the OpenAI-only branch so both paths get the same safety net.
+
+#### Priority 9 — Whatever Chris wants
+
+Sessions 1226-1231 totaled 29 PRs of platform hardening + tool-surface additions + verification + two recursion-class closes + one verifier-loop investigation that prevented two unnecessary code-fix PRs. The `deliverable_tool` surface is feature-complete + audit-trail honest; the diagnostic-family title leak class is closed; the engineer behavioral-delta class is closed; the COOAgent KeyError class is closed; R2 closed with no code change; F3 amendment is appended.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work across 1224-1231.
+- Audit #5 (PA tool schemas vs handlers — Δ=43) — non-blocking long-tail.
+- `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves (Rigby's Session 1225 review).
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
 
 ### SESSION 1230 CLOSED — Diagnostic-family leak close + audit §4.8 F3 amendment + engineer request-mode contract, 4 PRs
 
