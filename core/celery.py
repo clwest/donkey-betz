@@ -435,11 +435,19 @@ app.conf.beat_schedule = {
     # enforced inside the generator regardless of the limit kwarg.
     # SYSTEM_PROMPT envelope (PR #2544) + anti-scrape sanitizer (PR #2545)
     # bind the LLM output to a specific per-offer delivery scope.
-    # Schedule pinned 13:30 UTC = 7:30 AM MDT / 6:30 AM MST (drifts
-    # seasonally — matches the operator-edge convention above).
+    #
+    # Schedule semantics (Session 1228 P2 fix): `crontab(...)` resolves
+    # against CELERY_TIMEZONE = Django TIME_ZONE = America/Denver. The
+    # original PR #2548 used `hour=13` thinking it meant UTC, but it
+    # actually meant 13:30 Denver = 19:30 UTC (during MDT). That mismatch
+    # left the PeriodicTask row with crontab `30 13` and timezone
+    # America/Denver — the task never fired at the intended 13:30 UTC =
+    # 7:30 AM Denver morning slot. Pin to `hour=7, minute=30` Denver
+    # local; the resulting UTC time drifts seasonally (13:30 UTC in MDT,
+    # 14:30 UTC in MST) — same drift as the operator-edge convention.
     'generate-outreach-drafts-daily': {
         'task': 'core.tasks.generate_outreach_drafts_daily',
-        'schedule': crontab(hour=13, minute=30),
+        'schedule': crontab(hour=7, minute=30),  # 7:30 AM Denver
         'options': {'queue': 'content', 'expires': 3600},
     },
 
