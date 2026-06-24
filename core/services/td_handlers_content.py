@@ -2040,7 +2040,11 @@ class ContentHandlersMixin:
 
         # Session 1076: Cleanup junk action items (section headings, labels)
         elif action == 'cleanup_action_items':
-            dry_run = payload.get('dry_run', True)
+            # Session 1228 PR-A — belt-and-suspenders write gate. Cancels
+            # InitiativeActionItem rows when executed. Memory rule:
+            # feedback_llm_autofills_boolean_params_with_false.
+            from core.services.td_autofill_safety import require_write_authorization
+            dry_run, _write_ok = require_write_authorization(payload)
             from core.services.action_item_parser import ActionItemParser
 
             junk_qs = InitiativeActionItem.objects.filter(status='pending')
@@ -2594,8 +2598,20 @@ class ContentHandlersMixin:
                 'enhancement': 'ResearchAgent',
             }
 
-            dry_run = payload.get('dry_run', False)
-            limit_count = payload.get('limit', 50)
+            # Session 1228 PR-A — belt-and-suspenders write gate. Mutates
+            # Initiative.owner_agent when executed. Memory rule:
+            # feedback_llm_autofills_boolean_params_with_false.
+            #
+            # Note on prior bug: the handler defaulted dry_run=False here
+            # while the schema documented "dry_run default true"
+            # (pa_tool_schemas.py initiative_tool). With the gate flipped
+            # to belt-and-suspenders, both the schema doc and the handler
+            # now agree: dry_run preview unless dry_run='false' + confirm=true.
+            from core.services.td_autofill_safety import require_write_authorization
+            dry_run, _write_ok = require_write_authorization(payload)
+            # Falsy-or-default — autofilled 0 must not silently truncate
+            # the picklist. Same fix class as Session 1227 PR2.
+            limit_count = int(payload.get('limit') or 50)
 
             qs = Initiative.objects.filter(status='ACTIVE').order_by('-impact_score', '-created_at')[:limit_count]
             assignments = []
@@ -2652,7 +2668,14 @@ class ContentHandlersMixin:
                 find_duplicate_clusters,
             )
 
-            dry_run = payload.get('dry_run', False)
+            # Session 1228 PR-A — belt-and-suspenders write gate. Archives
+            # Initiative rows in bulk when executed. Memory rule:
+            # feedback_llm_autofills_boolean_params_with_false.
+            # Same prior bug as bulk_auto_assign: handler defaulted dry_run=False
+            # while schema documented "dry_run default true". Belt-and-suspenders
+            # gate now matches the documented contract.
+            from core.services.td_autofill_safety import require_write_authorization
+            dry_run, _write_ok = require_write_authorization(payload)
             cutoff = timezone.now() - timedelta(days=14)
 
             init_list = list(Initiative.objects.filter(
@@ -2732,7 +2755,16 @@ class ContentHandlersMixin:
             except InitiativeCreationBlocked as e:
                 return {'action': 'create', 'error': str(e), 'blocked': True}
 
-            # Apply extra fields from payload
+            # Apply extra fields from payload — Session 1228 PR-A switched
+            # from `if val is not None:` to a truthy gate. GPT-5.2 autofills
+            # optional strings with '' and optional numerics with 0/0.0, which
+            # the old check accepted as "explicit value" and silently
+            # overwrote the sensible defaults (impact_score=0.5 →
+            # autofilled 0; purpose='learning' → autofilled ''). Truthy
+            # gate means autofilled noise falls through to the create-time
+            # default; if a caller really needs to set impact_score=0 they
+            # can use initiative_tool action=update which respects 0 as a
+            # post-create explicit set.
             update_fields = []
             for field, default in [
                 ('purpose', 'learning'), ('program', 'uncategorized'),
@@ -2740,7 +2772,7 @@ class ContentHandlersMixin:
                 ('revenue_potential', 0.0), ('execution_speed', 'balanced'),
             ]:
                 val = payload.get(field)
-                if val is not None:
+                if val:
                     if field in ('impact_score', 'urgency', 'revenue_potential'):
                         val = max(0.0, min(1.0, float(val)))
                     setattr(initiative, field, val)
@@ -4351,9 +4383,9 @@ class ContentHandlersMixin:
         # ── Session 1101: Manual cleanup trigger ──
         if action == 'run_cleanup':
             from core.tasks import cleanup_stale_content
-            cutoff_days = int(payload.get('cutoff_days', 7))
+            cutoff_days = int(payload.get('cutoff_days') or 7)  # Session 1228 PR-B autofill safety
             statuses = payload.get('statuses', ['ready', 'draft'])
-            cap = min(int(payload.get('cap', 500)), 2000)
+            cap = min(int(payload.get('cap') or 500), 2000)  # Session 1228 PR-B autofill safety
             protected_types = payload.get('protected_types', [])
             task = cleanup_stale_content.delay(
                 cutoff_days=cutoff_days,
@@ -4382,8 +4414,8 @@ class ContentHandlersMixin:
         # ── Operator Edge Newsletter ──
         if action == 'generate_newsletter':
             from core.tasks import generate_operator_edge_newsletter
-            hours = int(payload.get('hours', 72))
-            cluster_limit = int(payload.get('cluster_limit', 5))
+            hours = int(payload.get('hours') or 72)  # Session 1228 PR-B autofill safety
+            cluster_limit = int(payload.get('cluster_limit') or 5)  # Session 1228 PR-B autofill safety
             dry_run = bool(payload.get('dry_run', False))
 
             if dry_run:
@@ -4584,8 +4616,14 @@ class ContentHandlersMixin:
         from django.db.models import Q
         from django.utils import timezone
 
-        dry_run = payload.get('dry_run', True)
-        cap = min(int(payload.get('cap', payload.get('limit', 500))), 2000)
+        # Session 1228 PR-A — belt-and-suspenders write gate. bulk_archive
+        # was the lone deliverable mutator without a confirm second-factor;
+        # bulk_archive_published already had one (line ~4830). Both now
+        # gate on dry_run='false' + confirm=true. Memory rule:
+        # feedback_llm_autofills_boolean_params_with_false.
+        from core.services.td_autofill_safety import require_write_authorization
+        dry_run, _write_ok = require_write_authorization(payload)
+        cap = min(int(payload.get('cap') or payload.get('limit') or 500), 2000)  # Session 1228 PR-B autofill safety
 
         # Build filter queryset
         base_qs = Deliverable.objects.all()
@@ -4692,7 +4730,7 @@ class ContentHandlersMixin:
         }
 
         if dry_run:
-            result['message'] = f'DRY RUN: {min(total_matching, cap)} items would be archived. Set dry_run=false to execute.'
+            result['message'] = f'DRY RUN: {min(total_matching, cap)} items would be archived. Set dry_run=false AND confirm=true to execute.'
             return result
 
         # Execute archive
@@ -4766,7 +4804,7 @@ class ContentHandlersMixin:
 
         dry_run = payload.get('dry_run', True)
         confirm = payload.get('confirm', False)
-        cap = min(int(payload.get('cap', 500)), 2000)
+        cap = min(int(payload.get('cap') or 500), 2000)  # Session 1228 PR-B autofill safety
         agent_filter = payload.get('agent')
 
         # ── Build queryset ──
