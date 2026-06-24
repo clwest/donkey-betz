@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-a60842917d36` (spun mid-Session 1184 after `pa-f4644aa2fd1b` hit a tool-refusal loop caused by a missing `PA_USE_FUNCTION_CALLING=true` env var on a manual PA worker restart — see READ THIS FIFTH below).
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-4086552cdc9840e9` (rotated mid-Session 1229 from `pa-08bdd7c9b348415a` at 33 turns / 16.5k tokens / 11.9h / `strongly_recommend_fresh` score 35; titled "Session 1229 — tool-surface verification arc"). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -102,7 +102,90 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1229 — CURRENT ENTRY POINT
+## SESSION 1230 — CURRENT ENTRY POINT
+
+### SESSION 1229 CLOSED — P4 semantic research title + Session 1227 stack admin-merge sweep + Rigby tool-surface verification arc, 7 PRs
+
+Full handoff: [`SESSION_1229_P4_PLUS_RIGBY_TOOL_SURFACE_VERIFICATION.md`](docs/handoffs/SESSION_1229_P4_PLUS_RIGBY_TOOL_SURFACE_VERIFICATION.md). Three arcs, seven PRs, one PA conv rotation. Arc 1 closed Session 1228 P4 (Audit `e2964e4a-…` §4.4 P1 — the upstream side of the `TEMPLATE_LEAK_TITLE_TOKENS` reactive gate). Arc 2 admin-merged Rigby's Session 1227 stack — `#2562` merged cleanly but its branch deletion auto-closed `#2563`-`#2566`, all of which had to be recreated as `#2574`-`#2577` against `main` with merge conflicts resolved (recurring shape: DOC-AUTOGEN INDEX.md + additive schema/enum/handler entries). Arc 3 ran an end-to-end Rigby tool-surface verification on the fresh conv — visibility / duplicates / normalize / agent dispatch + P4 / claude_code_tool via OpenAI fallback all green. PR #2578 patched `make celery` to persist the OpenAI fallback env var.
+
+| PR | What |
+|---|---|
+| **#2573** | `fix(session-1229): semantic research title — close upstream prompt-leak gate (P4)`. New `build_semantic_research_title()` helper in `deliverable_factory.py` (4-step resolution: `## Research Topic` section → clean task → topics fallback → "brief"; strips `[User Context:]` tail, normalizes whitespace, truncates at word boundary at 80 chars, appends `— YYYY-MM-DD`). Wired into 5 caller sites (3 in `research_agent.py`, 2 in `customer_research_agent.py`). `TEMPLATE_LEAK_TITLE_TOKENS` gate preserved as safety net. 14 new tests. |
+| **#2562** | Rigby PR1 — `deliverable_tool visibility — has_initiative autofill safety + show_all + applied_filters + full_by_agent`. Admin-merged first; only `docs/INDEX.md` conflict (DOC-AUTOGEN). |
+| **#2574** | Rigby PR2 — `deliverable_tool first-class duplicates action (reopens #2563)`. #2563 auto-closed when #2562's branch was deleted; recreated against main. Schema additions + INDEX.md conflicts. |
+| **#2575** | Rigby PR3 — `deliverable_tool set_status — surgical, audited completed↔ready flip (reopens #2564)`. Same auto-close pattern. Adds 129-line handler. |
+| **#2576** | Rigby PR4 — `deliverable_tool normalize — dry-run alias-map sweep (reopens #2565)`. Same auto-close pattern. Adds 129-line handler + new module `core/services/deliverable_aliases.py` as canonical source. |
+| **#2577** | `docs(session-1227): close handoff doc (reopens #2566)`. Slimmed-down reopen — original would have written a Session 1228 start-here (now historical); kept only the Session 1227 handoff + INDEX.md regen. |
+| **#2578** | `fix(session-1229): code_jobs worker fallback env var + pa_local.sh pin rotation`. Two coupled local-dev infra fixes. Makefile: adds `CLAUDE_CODE_ENGINE_PROVIDER=openai` to the code_jobs worker env so PR #2556 fallback persists across `make celery` bounces. `pa_local.sh`: rotates pin to `pa-4086552cdc9840e9`. |
+
+**Rigby live verification at session close** (full Tool Runs blocks in handoff Arc 3):
+- visibility family — ORM cross-check matched exactly (total=316, has_initiative split 131/185, 33 distinct agents, top-5 counts identical). ✓
+- duplicates — 3 clusters surfaced; all counts/timestamps ORM-verified. Discovered NEW COOAgent prompt-leak (followup item). ✓
+- normalize — both safety layers fire (scope safety + write-confirm). 0 rows changed in dry-run global preview (PRs #2559+#2560 history clean). ✓
+- agent dispatch — P4 verified live in workers: new ResearchAgent dispatch produced `Deliverable.title='Research: 3-sentence summary of the top 3 open-source LLM releases in June 2026 — names — 2026-06-24'`. Exact semantic-helper pattern. ✓
+- claude_code_tool — OpenAI fallback verified end-to-end after Makefile patch: `[ClaudeEngineer:openai]` log lines, 12 OpenAI iterations, CeleryTaskEvent SUCCESS dur=34.18s, `provider: 'openai'` in result. ✓
+
+**Operational invariants (post-merge):**
+1. ResearchAgent + CustomerResearchAgent titles are semantic, not leaked. `build_semantic_research_title()` is the primary defense; `TEMPLATE_LEAK_TITLE_TOKENS` gate is the safety net.
+2. `deliverable_tool` visibility surface echoes `applied_filters` on every list call. `has_initiative` Python bool false is autofill-safe no-op; explicit `'false'` string is the filter sentinel.
+3. `deliverable_tool.duplicates` returns audit-ready group shapes; `set_status` only supports `completed↔ready` with reason required on `completed→ready`; `normalize` requires both `dry_run='false'` AND `confirm=true` to apply, with scope-safety pre-gate.
+4. `claude_code_tool` runs via OpenAI gpt-5-mini fallback when `CLAUDE_CODE_ENGINE_PROVIDER=openai` is set in code_jobs worker env. `make celery` now persists this across bounces.
+
+**Active conversation rotated:** `pa-08bdd7c9b348415a` → **`pa-4086552cdc9840e9`** (Session 1229 — tool-surface verification arc). Old conv carried Sessions 1226 → 1227 → 1228 → 1229 with no rotation until session close. Wrapper updated; ownership verified via `session_tool.whoami` (`conversation_owner_match: true`).
+
+**Still Chris-side carryover into Session 1230:**
+- **Anthropic credit refill** at https://console.anthropic.com/billing. One-liner Makefile revert (`unset CLAUDE_CODE_ENGINE_PROVIDER`) when credits land.
+- **CI billing** still failing — all 7 Session 1229 PRs admin-merged.
+
+### FIRST THING Session 1230
+
+#### Priority 1 — COOAgent prompt-body title leak (NEW — Session 1229 Step 2 discovery, S)
+
+Same bug class as P4 (#2573) — but in COOAgent instead of ResearchAgent. Rigby's `duplicates` call surfaced a 6-row cluster (5 in last 7 days) with title `"COO Analysis: You are running the daily COO operations diagnostic. The threshold gate has trip"`. COOAgent has the same `task[:N]` f-string title build at its `_save_to_deliverable` call site.
+
+Reuse `build_semantic_research_title(prefix='COO Analysis')` — the helper is already prefix-parameterized. Small focused PR, mirrors the shape of #2573.
+
+Watch checklist captured in handoff §24h watch — if the cluster keeps growing past the next COOAgent daily fire, fix is needed before more accumulate.
+
+#### Priority 2 — Audit deliverable `e2964e4a-…` F3 amendment (NOW UNBLOCKED — PR #2562 landed, S)
+
+Carryover from Sessions 1226 → 1227 → 1228 → 1229. The audit's F3 finding ("default filter hides `blocked`/most-`archived`, 148 of 300 workspace rows invisible") was the correct *symptom* but the wrong *cause* — Session 1227 PR1's diagnostic log showed the actual culprit was GPT-5.2 autofilling `has_initiative=False` over the old `is not None` gate. Append a brief addendum to the F3 section noting the real cause + reference PR #2562. Trivial via `deliverable_tool action=update` once Rigby is back on this lane.
+
+#### Priority 3 — Calendar-driven items
+
+- **Outreach beat first-fire verification (2026-06-25 13:30 UTC)** — Session 1228 carryover. PR #2569 corrected the TZ; verify `CeleryTaskEvent.objects.filter(task_name='core.tasks.generate_outreach_drafts_daily').order_by('-started_at').first()` returns SUCCESS dated 2026-06-25. `OutreachDraft.objects.filter(lead_source='opportunity_outreach_seed', created_at__date='2026-06-25').count()` should be 1-5.
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. PR #2570 changed fire time. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
+
+#### Priority 4 — Engineer OpenAI behavioral delta (NEW — Session 1229 Step 5 discovery)
+
+Engineer on OpenAI fallback path ran 12 `read_file` iterations on a trivial line-count request, then concluded with `"Could you please clarify the engineering task?"` instead of answering. Rigby's fix proposal: tighten system prompt with `READONLY_REQUEST=true` mode for tasks answerable via repo scans + add a final-message contract test asserting the assistant response contains the requested deliverable shape (e.g., a markdown table when one was asked for).
+
+Separate from infra. Compare against Anthropic-path behavior when credits return.
+
+#### Priority 5 — CI billing fix (Chris-side, still outstanding)
+
+Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228 → 1229. All Session 1229 PRs admin-merged.
+
+#### Priority 6 — Watchdog #5 24-48h re-run (optional drift confirmation)
+
+Carryover from Session 1223. By Session 1230, well past the Tier 1+2 merge window — should be fully drift-clean. Optional.
+
+#### Priority 7 — Outreach tone tweak nice-to-haves (Rigby's Session 1225 review)
+
+3 minor prompt edges Rigby flagged in 1225; deferred until a wider draft sample (10+ generates) reveals which actually matter.
+
+#### Priority 8 — Whatever Chris wants
+
+Genuinely open. Sessions 1226-1229 totaled 23 PRs of platform hardening + tool-surface additions + verification arc. The deliverable_tool surface is now feature-complete for the audit §4.6 items; the recursion class for prompt-body title leaks has the helper + the gate; Rigby's tool surface has been end-to-end exercised on a fresh conv.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. Credits restored 1224. No app work yet across 1224/1225/1226/1227/1228/1229.
+- Audit #5 (PA tool schemas vs handlers — Δ=43) — non-blocking long-tail.
+- `scan-spider-opportunities` resume.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files
+- Tier 3 from P2 deliverable `7ae61cf7-…`
 
 ### SESSION 1228 CLOSED — LLM-autofill class sweep PR-A + PR-B + outreach/newsletter beat TZ fixes, 4 PRs
 
