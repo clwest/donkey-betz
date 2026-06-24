@@ -99,6 +99,16 @@ def record_status_transition(sender, instance, created, **kwargs):
       - newly-created rows (no prior status to compare)
       - same-status saves (most update_fields=[...] paths)
       - pre_save stash failed
+
+    Session 1227 PR3 — reads an optional ephemeral context dict
+    `instance._transition_context` set by callers that want to
+    enrich the event row beyond the default `{from, to, direction}`.
+    Recognized keys: `reason`, `actor_user_id`, `trace_id`, `source`.
+    The context is namespaced under `metadata['ctx']` to avoid
+    collisions with the authoritative transition fields, and the
+    attribute is removed after consumption so it can't leak to a
+    later save on the same instance. `actor_user_id`, when present
+    and resolvable, also populates the `DeliverableEvent.user` FK.
     """
     if created:
         return
@@ -112,17 +122,38 @@ def record_status_transition(sender, instance, created, **kwargs):
     if direction in ('same', 'unknown'):
         return
 
+    # Session 1227 PR3 — consume ephemeral context (delete after read).
+    ctx = getattr(instance, '_transition_context', None) or {}
+    try:
+        delattr(instance, '_transition_context')
+    except AttributeError:
+        pass
+
+    metadata = {
+        'from': prior,
+        'to': new,
+        'direction': direction,
+    }
+    if ctx:
+        # Namespace under 'ctx' so the {from, to, direction} authoritative
+        # fields can't collide with caller-supplied keys.
+        metadata['ctx'] = {
+            k: v for k, v in ctx.items()
+            if k in ('reason', 'actor_user_id', 'trace_id', 'source')
+            and v is not None
+        }
+
+    event_user_id = ctx.get('actor_user_id') if ctx else None
+    event_source = ctx.get('source') if ctx else None
+
     try:
         from core.models_deliverables import DeliverableEvent
         DeliverableEvent.objects.create(
             deliverable=instance,
             event_type='status_transition',
-            source='deliverable_status_signal',
-            metadata={
-                'from': prior,
-                'to': new,
-                'direction': direction,
-            },
+            source=event_source or 'deliverable_status_signal',
+            user_id=event_user_id if event_user_id else None,
+            metadata=metadata,
         )
     except Exception as e:
         # Never break a deliverable save. Log and move on.
