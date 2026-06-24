@@ -74,8 +74,11 @@ class HasInitiativeFilterTests(TestCase):
         self.assertIn(str(self.other_linked.id), ids)
         self.assertNotIn(str(self.unlinked.id), ids)
 
-    def test_has_initiative_false_returns_only_unlinked(self):
-        result = _dispatch_list(self.chris.id, {'has_initiative': False})
+    def test_has_initiative_explicit_false_string_returns_only_unlinked(self):
+        # Session 1227 — Python bool False is now LLM-autofill safe (no-op).
+        # To explicitly filter for deliverables WITHOUT an initiative, callers
+        # must pass the STRING 'false'. See PR1 / test_deliverable_tool_session_1227.
+        result = _dispatch_list(self.chris.id, {'has_initiative': 'false'})
         ids = self._ids(result)
         self.assertIn(str(self.unlinked.id), ids)
         self.assertNotIn(str(self.linked.id), ids)
