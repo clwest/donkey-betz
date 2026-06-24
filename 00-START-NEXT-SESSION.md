@@ -102,86 +102,103 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1230 — CURRENT ENTRY POINT
+## SESSION 1231 — CURRENT ENTRY POINT
 
-### SESSION 1229 CLOSED — P4 semantic research title + Session 1227 stack admin-merge sweep + Rigby tool-surface verification arc, 7 PRs
+### SESSION 1230 CLOSED — Diagnostic-family leak close + audit §4.8 F3 amendment + engineer request-mode contract, 4 PRs
 
-Full handoff: [`SESSION_1229_P4_PLUS_RIGBY_TOOL_SURFACE_VERIFICATION.md`](docs/handoffs/SESSION_1229_P4_PLUS_RIGBY_TOOL_SURFACE_VERIFICATION.md). Three arcs, seven PRs, one PA conv rotation. Arc 1 closed Session 1228 P4 (Audit `e2964e4a-…` §4.4 P1 — the upstream side of the `TEMPLATE_LEAK_TITLE_TOKENS` reactive gate). Arc 2 admin-merged Rigby's Session 1227 stack — `#2562` merged cleanly but its branch deletion auto-closed `#2563`-`#2566`, all of which had to be recreated as `#2574`-`#2577` against `main` with merge conflicts resolved (recurring shape: DOC-AUTOGEN INDEX.md + additive schema/enum/handler entries). Arc 3 ran an end-to-end Rigby tool-surface verification on the fresh conv — visibility / duplicates / normalize / agent dispatch + P4 / claude_code_tool via OpenAI fallback all green. PR #2578 patched `make celery` to persist the OpenAI fallback env var.
+Full handoff: [`SESSION_1230_DIAGNOSTIC_LEAK_CLOSE_PLUS_ENGINEER_REQUEST_MODE.md`](docs/handoffs/SESSION_1230_DIAGNOSTIC_LEAK_CLOSE_PLUS_ENGINEER_REQUEST_MODE.md). Two recursion classes closed in one session. **Class 1 — diagnostic-family title leak:** P1 (#2580) wired COOAgent + extended `_PROMPT_BODY_MARKERS` to catch the shared `"You are running the daily X diagnostic. The threshold gate has tripped"` opener (covers `coo_daily.py` / `cto_daily.py` / `trend_analysis_daily.py`). P1b (#2581) wired the three sibling callsites (CTOAgent + TrendAnalysisAgent ×2 + TrendBreakDetectorAgent) with a source-level guard test (`test_diagnostic_family_semantic_title_wiring.py`) that locks the wiring against future regressions. **Class 2 — Engineer OpenAI behavioral delta:** P4 (#2582) split the single SYSTEM_PROMPT into `ANSWER_SYSTEM_PROMPT` + `CHANGE_SYSTEM_PROMPT`, added `request_mode='auto'|'answer'|'change'` kwarg + verb-heuristic dispatcher, and added a clarification-stall retry contract (single retry with hardened preamble; if retry stalls, envelope flips to `status='contract_failure'`). P2 appended a §4.8 amendment to audit deliverable `e2964e4a-…` reframing F3's "blocked default filter" symptom as the real cause: GPT-5.2 autofilling `has_initiative=False` over the old `is not None` gate (closed by Session 1227 PR #2562). Plus one tracking deliverable filed for a `deliverable_tool.append` audit-trail gap.
 
 | PR | What |
 |---|---|
-| **#2573** | `fix(session-1229): semantic research title — close upstream prompt-leak gate (P4)`. New `build_semantic_research_title()` helper in `deliverable_factory.py` (4-step resolution: `## Research Topic` section → clean task → topics fallback → "brief"; strips `[User Context:]` tail, normalizes whitespace, truncates at word boundary at 80 chars, appends `— YYYY-MM-DD`). Wired into 5 caller sites (3 in `research_agent.py`, 2 in `customer_research_agent.py`). `TEMPLATE_LEAK_TITLE_TOKENS` gate preserved as safety net. 14 new tests. |
-| **#2562** | Rigby PR1 — `deliverable_tool visibility — has_initiative autofill safety + show_all + applied_filters + full_by_agent`. Admin-merged first; only `docs/INDEX.md` conflict (DOC-AUTOGEN). |
-| **#2574** | Rigby PR2 — `deliverable_tool first-class duplicates action (reopens #2563)`. #2563 auto-closed when #2562's branch was deleted; recreated against main. Schema additions + INDEX.md conflicts. |
-| **#2575** | Rigby PR3 — `deliverable_tool set_status — surgical, audited completed↔ready flip (reopens #2564)`. Same auto-close pattern. Adds 129-line handler. |
-| **#2576** | Rigby PR4 — `deliverable_tool normalize — dry-run alias-map sweep (reopens #2565)`. Same auto-close pattern. Adds 129-line handler + new module `core/services/deliverable_aliases.py` as canonical source. |
-| **#2577** | `docs(session-1227): close handoff doc (reopens #2566)`. Slimmed-down reopen — original would have written a Session 1228 start-here (now historical); kept only the Session 1227 handoff + INDEX.md regen. |
-| **#2578** | `fix(session-1229): code_jobs worker fallback env var + pa_local.sh pin rotation`. Two coupled local-dev infra fixes. Makefile: adds `CLAUDE_CODE_ENGINE_PROVIDER=openai` to the code_jobs worker env so PR #2556 fallback persists across `make celery` bounces. `pa_local.sh`: rotates pin to `pa-4086552cdc9840e9`. |
+| **#2580** | `fix(session-1230): COOAgent semantic title — close prompt-body leak (P1)`. COOAgent `_save_to_deliverable` callsite swaps `f"COO Analysis: {task[:80]}"` for `build_semantic_research_title(task, prefix='COO Analysis')`. Helper markers extended with `'You are running the daily'` + `'The threshold gate has tripped'` (covers all 3 diagnostic prompts). 11 new tests (clean COO tasks, exact audit cluster regression, CTO + Trend sibling shapes, edge cases). 50/50 OK. |
+| **#2581** | `fix(session-1230): COO siblings semantic title — close prompt-body leak family (P1b)`. Wires the three remaining sibling callsites: `cto_agent.py:321`, `trend_analysis_agent.py:498` + `:541`, `trend_break_detector_agent.py:799`. New `test_diagnostic_family_semantic_title_wiring.py` source-level guard (3 contract tests: import present, helper called with correct prefix, no `title=f"<Label>: {task[:N]}"` leak pattern; regex scoped to `title=` kwarg so `_thinking()` `reasoning=` log strings aren't flagged). 53/53 OK. |
+| **#2582** | `fix(session-1230): engineer request_mode + clarification-stall contract (P4)`. Two-prompt split + `request_mode` plumbed through `pa_tool_schemas.py` → `td_handlers_codejobs.py` → `tasks.py` → `claude_code_engineer.py`. Heuristic uses 18 `_CHANGE_VERBS` (clause-boundary regex, case-insensitive); 8 `_CLARIFICATION_STALL_MARKERS` for the retry contract. Retry contract is OpenAI-path-only until Anthropic credits return + A/B is done. 24 new tests. 32/32 OK. |
 
-**Rigby live verification at session close** (full Tool Runs blocks in handoff Arc 3):
-- visibility family — ORM cross-check matched exactly (total=316, has_initiative split 131/185, 33 distinct agents, top-5 counts identical). ✓
-- duplicates — 3 clusters surfaced; all counts/timestamps ORM-verified. Discovered NEW COOAgent prompt-leak (followup item). ✓
-- normalize — both safety layers fire (scope safety + write-confirm). 0 rows changed in dry-run global preview (PRs #2559+#2560 history clean). ✓
-- agent dispatch — P4 verified live in workers: new ResearchAgent dispatch produced `Deliverable.title='Research: 3-sentence summary of the top 3 open-source LLM releases in June 2026 — names — 2026-06-24'`. Exact semantic-helper pattern. ✓
-- claude_code_tool — OpenAI fallback verified end-to-end after Makefile patch: `[ClaudeEngineer:openai]` log lines, 12 OpenAI iterations, CeleryTaskEvent SUCCESS dur=34.18s, `provider: 'openai'` in result. ✓
+**Deliverable updates (in-session):**
+- **append `e2964e4a-…`** (Audit) — §4.8 F3 amendment, 2,518 chars, ORM-verified seam at offset 26,472.
+- **create `61f4312b-…`** (Platform Bugs) — tracking deliverable for `deliverable_tool.append` updated_at gap (severity P3).
+
+**Rigby live verification at session close** (4 dispatches via `claude_code_tool`):
+- `fcdbd982-…` (P1 verify, COO) — new deliverable `461eeb7c-…` titled `"COO Analysis: Brief — 2026-06-24"`. Old leaked rows: 5 / last 7d; new shape: 1. ✓
+- `a609214b-…` (P1b verify, CTO) — new deliverable `863d776b-…` titled `"CTO Analysis: Brief — 2026-06-24"`. ✓
+- `ea9a89aa-…` (P4 verify, smoking gun, `request_mode=auto`) — heuristic resolved `auto → answer`, direct structured response, zero clarification stall, retry contract did not fire. ✓
+- `7e6c267e-…` (P4 verify, `request_mode=change`) — planning response with explicit followup offers; NO branch, NO PR, NO `write_file` invoked. Change-mode contract held. ✓
 
 **Operational invariants (post-merge):**
-1. ResearchAgent + CustomerResearchAgent titles are semantic, not leaked. `build_semantic_research_title()` is the primary defense; `TEMPLATE_LEAK_TITLE_TOKENS` gate is the safety net.
-2. `deliverable_tool` visibility surface echoes `applied_filters` on every list call. `has_initiative` Python bool false is autofill-safe no-op; explicit `'false'` string is the filter sentinel.
-3. `deliverable_tool.duplicates` returns audit-ready group shapes; `set_status` only supports `completed↔ready` with reason required on `completed→ready`; `normalize` requires both `dry_run='false'` AND `confirm=true` to apply, with scope-safety pre-gate.
-4. `claude_code_tool` runs via OpenAI gpt-5-mini fallback when `CLAUDE_CODE_ENGINE_PROVIDER=openai` is set in code_jobs worker env. `make celery` now persists this across bounces.
+1. Diagnostic-family title leak class is closed. COO/CTO/Trend/TrendBreak all use `build_semantic_research_title(prefix=…)`. New scheduled fires produce `"<Label>: Brief — YYYY-MM-DD"` (Step-7 capitalization in `_clean_deliverable_title` renders `brief` → `Brief`).
+2. Source-level guard test (`test_diagnostic_family_semantic_title_wiring.py`) sentinels the wiring — any future revert to the `f"<Label>: {task[:N]}"` shape fails the test.
+3. `claude_code_tool` accepts `request_mode='auto'|'answer'|'change'`. Default `'auto'` resolves via verb heuristic; explicit caller value bypasses; unknown values warn + fall back. Worker log: `[ClaudeEngineer] dispatch: requested_mode=<X> resolved_mode=<Y>`. Response envelope echoes `mode`.
+4. Answer-mode clarification-stall triggers single retry with hardened preamble. If retry also stalls, envelope flips to `status='contract_failure'`. Change-mode tasks never trigger retry.
 
-**Active conversation rotated:** `pa-08bdd7c9b348415a` → **`pa-4086552cdc9840e9`** (Session 1229 — tool-surface verification arc). Old conv carried Sessions 1226 → 1227 → 1228 → 1229 with no rotation until session close. Wrapper updated; ownership verified via `session_tool.whoami` (`conversation_owner_match: true`).
+**Active conversation (unchanged):** `pa-4086552cdc9840e9` (titled "Session 1229 — tool-surface verification arc"). Session 1230 added ~30 turns; no rotation triggered. Continues into Session 1231 unless `session_tool.whoami` health check flips at session open.
 
-**Still Chris-side carryover into Session 1230:**
-- **Anthropic credit refill** at https://console.anthropic.com/billing. One-liner Makefile revert (`unset CLAUDE_CODE_ENGINE_PROVIDER`) when credits land.
-- **CI billing** still failing — all 7 Session 1229 PRs admin-merged.
+**Still Chris-side carryover into Session 1231:**
+- **Anthropic credit refill** at https://console.anthropic.com/billing. One-liner Makefile revert (`unset CLAUDE_CODE_ENGINE_PROVIDER`) when credits land. Once active, A/B the Session 1229 line-count task on claude-sonnet-4 vs the Session 1230 fix on gpt-5-mini; if Anthropic-path is clean, lift the retry contract up out of the OpenAI-only branch.
+- **CI billing** still failing — all 4 Session 1230 PRs admin-merged.
 
-### FIRST THING Session 1230
+### FIRST THING Session 1231
 
-#### Priority 1 — COOAgent prompt-body title leak (NEW — Session 1229 Step 2 discovery, S)
+#### Priority 1 — Calendar checks (BOTH DUE THIS SESSION OR NEXT)
 
-Same bug class as P4 (#2573) — but in COOAgent instead of ResearchAgent. Rigby's `duplicates` call surfaced a 6-row cluster (5 in last 7 days) with title `"COO Analysis: You are running the daily COO operations diagnostic. The threshold gate has trip"`. COOAgent has the same `task[:N]` f-string title build at its `_save_to_deliverable` call site.
+These are time-bound and the first thing to clear on session open.
 
-Reuse `build_semantic_research_title(prefix='COO Analysis')` — the helper is already prefix-parameterized. Small focused PR, mirrors the shape of #2573.
+- **Outreach beat first-fire verification (2026-06-25 13:30 UTC)** — Session 1228 carryover, P3 in Session 1230. Verify:
+  ```python
+  CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.generate_outreach_drafts_daily'
+  ).order_by('-started_at').first()
+  # Expected: SUCCESS dated 2026-06-25
+  OutreachDraft.objects.filter(
+      lead_source='opportunity_outreach_seed',
+      created_at__date='2026-06-25',
+  ).count()
+  # Expected: 1-5
+  ```
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover, P3 in Session 1230. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
 
-Watch checklist captured in handoff §24h watch — if the cluster keeps growing past the next COOAgent daily fire, fix is needed before more accumulate.
+#### Priority 2 — COOAgent scheduled `'files_generated'` KeyError (NEW — Session 1230 F1, HIGH)
 
-#### Priority 2 — Audit deliverable `e2964e4a-…` F3 amendment (NOW UNBLOCKED — PR #2562 landed, S)
+Pre-existing bug surfaced during P1 live verification. Today's scheduled 13:30 UTC COO dispatch (`f2ecd6f9-…`) failed with `error_message="'files_generated'"`. Manual dispatch via Rigby (`fcdbd982-…`) succeeded — so the bug is specific to the scheduled path, not the agent body itself. Likely in `scheduled_diagnostic_runner.py` (which dispatches all three daily diagnostics) or the COOAgent's output-data envelope handling on the scheduled-runner code path.
 
-Carryover from Sessions 1226 → 1227 → 1228 → 1229. The audit's F3 finding ("default filter hides `blocked`/most-`archived`, 148 of 300 workspace rows invisible") was the correct *symptom* but the wrong *cause* — Session 1227 PR1's diagnostic log showed the actual culprit was GPT-5.2 autofilling `has_initiative=False` over the old `is not None` gate. Append a brief addendum to the F3 section noting the real cause + reference PR #2562. Trivial via `deliverable_tool action=update` once Rigby is back on this lane.
+Daily diagnostic is currently silently failing on the scheduled path while manual dispatches work. Worth a focused investigation. Diagnostic checklist:
+- Read `scheduled_diagnostic_runner.py` for the dispatch shape that breaks vs. PA tool dispatch that works.
+- Compare `AgentExecution.input_data` between failed scheduled (`f2ecd6f9`) vs successful manual (`fcdbd982`) dispatches.
+- KeyError on `'files_generated'` suggests envelope mismatch — probably an expected key missing from the response dict, or a code path expecting the engineer-style envelope from a non-engineer dispatcher.
 
-#### Priority 3 — Calendar-driven items
+#### Priority 3 — `deliverable_tool.append` audit-trail gap (NEW — Session 1230 F4, P3)
 
-- **Outreach beat first-fire verification (2026-06-25 13:30 UTC)** — Session 1228 carryover. PR #2569 corrected the TZ; verify `CeleryTaskEvent.objects.filter(task_name='core.tasks.generate_outreach_drafts_daily').order_by('-started_at').first()` returns SUCCESS dated 2026-06-25. `OutreachDraft.objects.filter(lead_source='opportunity_outreach_seed', created_at__date='2026-06-25').count()` should be 1-5.
-- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. PR #2570 changed fire time. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
+Tracking deliverable `61f4312b-…` filed. `append` mutates `content` + `content_length` but does NOT bump `updated_at`. One-line fix in the `append` handler in `td_handlers_*`: `save(update_fields=['content', 'content_length', 'updated_at'])`. Same pattern check needed on `prepend` and any other content-mutating actions. Low blast radius — small focused PR.
 
-#### Priority 4 — Engineer OpenAI behavioral delta (NEW — Session 1229 Step 5 discovery)
+#### Priority 4 — Engineer workspace staleness (NEW — Session 1230 F3, MEDIUM)
 
-Engineer on OpenAI fallback path ran 12 `read_file` iterations on a trivial line-count request, then concluded with `"Could you please clarify the engineering task?"` instead of answering. Rigby's fix proposal: tighten system prompt with `READONLY_REQUEST=true` mode for tasks answerable via repo scans + add a final-message contract test asserting the assistant response contains the requested deliverable shape (e.g., a markdown table when one was asked for).
+Engineer's `/tmp/engineer-workspace/` git clone is stale. P4 verification dispatch `38c2424b-…` (build_semantic_research_title docstring lookup) returned "not found" — but the function was shipped today in #2573 and lives at `core/services/deliverable_factory.py:249`. Either:
+- Add `git pull` to `_ensure_git_repo` if behind upstream (small per-dispatch overhead), or
+- Add a manual `claude_code_tool action=refresh_workspace` if Rigby should opt in, or
+- Document the staleness as a known limitation and have Rigby pass file context explicitly.
 
-Separate from infra. Compare against Anthropic-path behavior when credits return.
+Not blocking the contract — P4 fix works regardless of content correctness. But surfaces as a separate bug class worth a small PR.
 
-#### Priority 5 — CI billing fix (Chris-side, still outstanding)
+#### Priority 5 — Meeting-context leak shape (NEW — Session 1230 F2, LOW)
 
-Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228 → 1229. All Session 1229 PRs admin-merged.
+Spotted on both COOAgent + CTOAgent: `"<Label> Analysis: As a participant in a technical meeting about \"AC-3 smoke control: empty context"`. Different prompt template family from the diagnostic one. One-off so far (not in any duplicates cluster). Don't add markers preemptively — wait to see if it recurs as a cluster, then one entry in `_PROMPT_BODY_MARKERS` closes it.
 
-#### Priority 6 — Watchdog #5 24-48h re-run (optional drift confirmation)
+#### Priority 6 — CI billing fix (Chris-side, still outstanding)
 
-Carryover from Session 1223. By Session 1230, well past the Tier 1+2 merge window — should be fully drift-clean. Optional.
+Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228 → 1229 → 1230. All Session 1230 PRs admin-merged.
 
-#### Priority 7 — Outreach tone tweak nice-to-haves (Rigby's Session 1225 review)
+#### Priority 7 — Anthropic A/B (gated on credit refill)
 
-3 minor prompt edges Rigby flagged in 1225; deferred until a wider draft sample (10+ generates) reveals which actually matter.
+When Anthropic credits return: run the same Session 1229 Step 5 line-count task on the Anthropic path (`unset CLAUDE_CODE_ENGINE_PROVIDER`) and confirm no clarification stall. If Anthropic path is clean with the new `ANSWER_SYSTEM_PROMPT`, lift the retry contract up out of the OpenAI-only branch so both paths get the same safety net.
 
 #### Priority 8 — Whatever Chris wants
 
-Genuinely open. Sessions 1226-1229 totaled 23 PRs of platform hardening + tool-surface additions + verification arc. The deliverable_tool surface is now feature-complete for the audit §4.6 items; the recursion class for prompt-body title leaks has the helper + the gate; Rigby's tool surface has been end-to-end exercised on a fresh conv.
+Sessions 1226-1230 totaled 27 PRs of platform hardening + tool-surface additions + verification + two recursion-class closes. The `deliverable_tool` surface is feature-complete for the audit §4.6 items; the diagnostic-family title leak class is closed (helper + markers + 4 agents wired + source-level guard); the engineer behavioral-delta class is closed (mode split + heuristic + retry contract); the F3 amendment is appended; Rigby's tool surface continues to be exercised every session.
 
 **Possible re-ignites (Chris-discretion only):**
-- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. Credits restored 1224. No app work yet across 1224/1225/1226/1227/1228/1229.
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work across 1224-1230.
 - Audit #5 (PA tool schemas vs handlers — Δ=43) — non-blocking long-tail.
 - `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves (Rigby's Session 1225 review).
 
 **Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
 - Delete the 9 dormant agent class files
