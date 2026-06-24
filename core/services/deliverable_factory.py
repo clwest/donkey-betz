@@ -178,6 +178,34 @@ TEMPLATE_LEAK_TITLE_TOKENS = (
 RELEVANCE_GATED_AGENTS = {'ResearchAgent'}
 
 
+# Session 1226 P1 — agent_name write-time canonicalization. Audit deliverable
+# e2964e4a-… §4.4 P1 'Enforcement' bullet. The companion migration 0365 cleans
+# up history; this map prevents new variants from being introduced at write
+# time. Keep this map in lockstep with `_ALIAS_MAP` in
+# core/migrations/0365_session_1226_agent_name_canonicalization.py — if you
+# add a row to one, add it to the other.
+#
+# Canonical reasoning anchored in audit §1c:
+#   - 'Rigby' wins (101/102 existing rows already use it)
+#   - 'claude-code' wins (matches autonomous engineer source field, Procfile
+#     worker name, feedback-memory file naming)
+_AGENT_NAME_ALIASES = {
+    'rigby': 'Rigby',
+    'ClaudeCode': 'claude-code',
+}
+
+
+def _canonicalize_agent_name(agent_name: Optional[str]) -> str:
+    """Return the canonical spelling for `agent_name`, or the input unchanged.
+
+    Empty/None inputs return ''. Unknown values pass through unchanged so the
+    map stays a strict alias surface, not an opinion engine.
+    """
+    if not agent_name:
+        return ''
+    return _AGENT_NAME_ALIASES.get(agent_name, agent_name)
+
+
 def _should_create_deliverable(
     title: str,
     content: str,
@@ -607,6 +635,22 @@ def create_deliverable(
     default and removes the None return path.
     """
     from core.models_deliverables import Deliverable
+
+    # --- Session 1226 P1: agent_name write-time canonicalization ---
+    # Apply alias map BEFORE any other logic so all downstream calls (gate
+    # checks, telemetry, dedupe, persistence) see the canonical name. Without
+    # this, migration 0365's one-time cleanup gradually re-fragments as new
+    # writes come in. If `_canonicalize_agent_name` rewrote the input, log
+    # the swap once at INFO level so ops can see if any callers are still
+    # passing the deprecated spellings.
+    _raw_agent_name = agent_name
+    agent_name = _canonicalize_agent_name(agent_name)
+    if _raw_agent_name and _raw_agent_name != agent_name:
+        logger.info(
+            "[DeliverableFactory] agent_name canonicalized at write: "
+            "%r → %r (caller can update to use canonical spelling)",
+            _raw_agent_name, agent_name,
+        )
 
     # --- Session 1200: factory-entry instrumentation ---
     # Single structured line emitted before any gating so the inference
