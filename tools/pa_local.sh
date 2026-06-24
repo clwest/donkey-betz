@@ -17,16 +17,20 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1225 outreach
-# refinement (Rigby's session_tool create_fresh mid-Session 1225 after
-# pa-17e0fa71fd25470a hit 45/100 / suggest_fresh at 39 turns / ~19.5k
-# tokens; pin: pa-77bbcd97a625424d — "Session 1225 — outreach refinement
-# + ops carryover from 1224"). Session 1224 + 1225 work carried forward
-# in the seed context: 5 PRs merged 1224 (#2539 hygiene gates, #2540
-# outreach pipeline + UI, #2541 metadata fan-out hotfix, #2542 gpt-5-mini
-# max_completion_tokens floor sweep, #2543 close handoff) + 2 PRs merged
-# 1225 so far (#2544 outreach prompt envelope, #2545 anti-scrape
-# sanitizer). 5 clean drafts in outreach inbox; daily cap 5/5 today.
+# the --conversation flag below. Current value: Session 1226 continuation
+# — agent_name canonicalization + Session 1227 setup (Rigby's session_tool
+# create_fresh mid-Session 1226 after pa-77bbcd97a625424d crossed ~28
+# turns during the verifier-loop deliverables audit arc). Pin:
+# pa-08bdd7c9b348415a. Session 1226 work carried forward in seed: 9 PRs
+# merged (#2550 whoami, #2551 has_initiative, #2552 code_jobs local
+# worker, #2553 macOS pool=solo, #2554 conv_id payload injection, #2555
+# close handoff v1, #2556 OpenAI fallback for autonomous engineer, #2557
+# template-leak token extension). Deliverables audit shipped end-to-end
+# (deliverable e2964e4a-…, 26,465 chars, 4 verified parts, status
+# completed). Next work on the new conversation: 2 SQL migrations for
+# agent_name canonicalization (rigby→Rigby 1 row, ClaudeCode→claude-code
+# 17 rows). State: local-only, OpenAI credits good, Anthropic still
+# exhausted, claude_code_tool live via OpenAI workaround.
 # Carryover priorities: Operator Edge Friday-1 dry-run check on
 # 2026-06-26, outreach beat task generate_outreach_drafts_daily still
 # deferred, watchdog #5 24-48h re-run optional, CI billing fix Chris-side.
@@ -67,4 +71,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-77bbcd97a625424d
+python tools/pa_chat.py "$@" --tools --conversation pa-08bdd7c9b348415a
