@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-24 07:49
+**Generated:** 2026-06-24 08:43
 **Current Session:** 1227
 **Total Documentation:** 2720 files | 710,899 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,739 |
+| Total cross-references | 4,765 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 195 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 183 | Platform Master Inventory |
 | `docs/INDEX.md` | 129 | INDEX |
-| `docs/spokesperson/README.md` | 118 | 24/7 Global AI — Spokesperson Corpus |
+| `docs/archive/old-structure/content-studio/README.md` | 117 | 🎨 Content Studio Documentation |
 | `docs/AGENTS.md` | 70 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 69 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 44 | CAPABILITIES |
@@ -249,7 +249,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 393 | 2026-06-24 07:36 |
+| INDEX.md | docs | 393 | 2026-06-24 07:49 |
 | SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md | handoffs | 242 | 2026-06-24 00:19 |
 | SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md | handoffs | 209 | 2026-06-23 21:09 |
 | SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md | handoffs | 163 | 2026-06-23 20:02 |

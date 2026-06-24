@@ -2636,6 +2636,128 @@ class AgentHandlersMixin:
                 'show_all': _show_all,
             }
 
+        elif action == 'set_status':
+            # Session 1227 PR3 — surgical, audited status flips.
+            # Tight scope (Chris Session 1227 design call): only the
+            # `completed ↔ ready` transitions are allowed. Closes the
+            # "Rigby can't flip a premature `completed` back to `ready`"
+            # gap from Session 1226 audit `e2964e4a-…` §4.6 item 4.
+            #
+            # For other transitions, callers continue to use
+            # `deliverable_tool.update` (not audited / not whitelisted).
+            new_status = (payload.get('status') or '').strip().lower()
+            _ALLOWED_TARGETS = ('ready', 'completed')
+            if new_status not in _ALLOWED_TARGETS:
+                raise ValueError(
+                    "set_status only supports status='ready' or status='completed'. "
+                    f"Got status={new_status!r}. For other transitions, use "
+                    "deliverable_tool.update (not audited / not whitelisted)."
+                )
+
+            # Id-first lookup (Rigby D5 nuance — title allowed only when
+            # exactly one row resolves, so a duplicates-heavy workspace
+            # can't accidentally flip the wrong row).
+            did = payload.get('id')
+            if did:
+                obj = _id_lookup_qs().filter(id=did).first()
+                if not obj:
+                    raise ValueError(f"Deliverable {did} not found")
+            else:
+                title_q = (payload.get('title') or '').strip()
+                if not title_q:
+                    raise ValueError(
+                        "set_status requires `id` (preferred) or a `title` "
+                        "that resolves to exactly one deliverable."
+                    )
+                matches = _id_lookup_qs().filter(title__iexact=title_q)
+                count = matches.count()
+                if count == 0:
+                    raise ValueError(f'No deliverable found matching "{title_q}"')
+                if count > 1:
+                    raise ValueError(
+                        f'Multiple deliverables share title "{title_q}" '
+                        f'({count} rows). Provide `id` to disambiguate.'
+                    )
+                obj = matches.first()
+
+            current_status = obj.status
+            _ALLOWED_TRANSITIONS = (
+                ('completed', 'ready'),
+                ('ready', 'completed'),
+            )
+            if (current_status, new_status) not in _ALLOWED_TRANSITIONS:
+                raise ValueError(
+                    f"set_status only supports completed→ready and ready→completed. "
+                    f"Current status={current_status!r}, target={new_status!r}. "
+                    "For other transitions, use deliverable_tool.update "
+                    "(not audited / not whitelisted)."
+                )
+
+            # Reason — required on completed→ready (the explicit-unblock
+            # direction; this is the path that fixes premature `completed`
+            # flips). Optional on ready→completed. Trim + length cap apply
+            # to both. Empty string after strip() ≠ provided.
+            raw_reason = payload.get('reason')
+            reason = (raw_reason or '').strip() if isinstance(raw_reason, str) else ''
+            if current_status == 'completed' and new_status == 'ready' and not reason:
+                raise ValueError(
+                    "reason is required when flipping completed → ready. "
+                    "Provide a short explanation (e.g., 'work not actually done')."
+                )
+            if reason and len(reason) > 500:
+                raise ValueError(
+                    f"reason must be ≤500 chars (got {len(reason)})."
+                )
+            if not reason:
+                reason = None  # store NULL rather than empty string (Rigby D2)
+
+            # Stash ephemeral context on the instance so the
+            # deliverable_status_signals.record_status_transition post_save
+            # receiver picks it up. The signal removes the attribute after
+            # reading, preventing leak to subsequent saves on this instance.
+            obj._transition_context = {
+                'reason': reason,
+                'actor_user_id': str(user_id) if user_id else None,
+                'trace_id': trace_id,
+                'source': 'deliverable_tool.set_status',
+            }
+            obj.status = new_status
+            obj.save(update_fields=['status'])
+
+            # Look up the event the signal just wrote so we can return its
+            # id. The signal is best-effort, so this may be None.
+            transition_event_id = None
+            try:
+                from core.models_deliverables import DeliverableEvent
+                latest_event = (
+                    DeliverableEvent.objects
+                    .filter(deliverable=obj, event_type='status_transition')
+                    .order_by('-created_at')
+                    .first()
+                )
+                if latest_event:
+                    transition_event_id = str(latest_event.id)
+            except Exception as _e:
+                logger.warning(
+                    "[set_status] event_id lookup failed (%s: %s) — "
+                    "transition still persisted, response will omit event id",
+                    type(_e).__name__, _e,
+                )
+
+            return {
+                'action': 'set_status',
+                'id': str(obj.id),
+                'title': obj.title,
+                'from_status': current_status,
+                'to_status': new_status,
+                'reason': reason,
+                'transition_event_id': transition_event_id,
+                'message': (
+                    f'Flipped "{obj.title}" from {current_status} to {new_status}'
+                    + (f' (reason: "{reason}")' if reason else '.')
+                ),
+            }
+
         else:
             raise ValueError(f"Unknown action: {action}")
 
