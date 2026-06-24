@@ -12,6 +12,7 @@ from django.utils import timezone
 from decimal import Decimal
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.services.deliverable_factory import build_semantic_research_title
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -795,8 +796,15 @@ Provide clear, analytical responses about narrative shifts."""
             logger.warning(f"Failed to record learning outcome: {le}")
 
         if result.success and len(result.message) > 100:
+            # Session 1230 P1 sibling: same recursion class as ResearchAgent
+            # (#2573) and COOAgent (#2580). TrendBreakDetector is a narrative
+            # sibling of TrendAnalysisAgent; same diagnostic-shaped prompts
+            # land here when the daily scheduled runner dispatches.
+            semantic_title = build_semantic_research_title(
+                task, prefix='Trend Break Detection',
+            )
             self._save_to_deliverable(
-                title=f"Trend Break Detection: {task[:80]}",
+                title=semantic_title,
                 content=result.message,
                 deliverable_type='analysis',
                 category='Trend Analysis',

@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
+from core.services.deliverable_factory import build_semantic_research_title
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -494,8 +495,20 @@ You analyze and report - you do NOT create content or execute workflows."""
                     )
 
                     # Session 861/1200: Persist synthesis to Deliverable
+                    # Session 1230 P1 sibling: same recursion class as
+                    # ResearchAgent (#2573) and COOAgent (#2580).
+                    # `trend_analysis_daily.py` ships an "You are running
+                    # the daily TrendAnalysis spider-intelligence anomaly
+                    # diagnostic. The threshold gate has tripped — …"
+                    # prompt body in the same shape. Helper markers
+                    # added in #2580 detect this family; the synthesis
+                    # branch and the conversational branch (below) both
+                    # rewire to the semantic helper.
+                    semantic_title = build_semantic_research_title(
+                        task, prefix='Trend Analysis',
+                    )
                     self._save_to_deliverable(
-                        title=f"Trend Analysis: {task[:50]}",
+                        title=semantic_title,
                         content=analysis_msg,
                         deliverable_type='analysis',
                         category='Analysis',
@@ -536,9 +549,13 @@ You analyze and report - you do NOT create content or execute workflows."""
                     )
 
                     # Session 861: Persist conversational analysis to Deliverable
+                    # Session 1230 P1 sibling: see synthesis branch above.
                     if content:
+                        semantic_title = build_semantic_research_title(
+                            task, prefix='Trend Analysis',
+                        )
                         self._save_to_deliverable(
-                            title=f"Trend Analysis: {task[:50]}",
+                            title=semantic_title,
                             content=content,
                             deliverable_type='analysis',
                             category='Analysis',

@@ -30,6 +30,7 @@ from typing import Dict, Any
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.report_schemas import build_provenance, format_disclaimer
+from core.services.deliverable_factory import build_semantic_research_title
 from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
@@ -317,8 +318,21 @@ You CANNOT execute code or make changes - only analyze and plan."""
                     )
 
                     # Session 1006: Persist output to Deliverable
+                    # Session 1230 P1 sibling: same recursion class as
+                    # ResearchAgent (#2573) and COOAgent (#2580).
+                    # `cto_daily.py` ships an "You are running the daily
+                    # CTO platform reliability diagnostic. The threshold
+                    # gate has tripped — …" prompt body identical in shape
+                    # to the COO leak Rigby's `duplicates` surfaced.
+                    # Helper markers added in #2580 already detect this
+                    # family; wiring the call site here closes the leak
+                    # path. Falls through to step-4 default 'brief' for
+                    # diagnostic-shape inputs (no topics_detected passed).
+                    semantic_title = build_semantic_research_title(
+                        task, prefix='CTO Analysis',
+                    )
                     self._save_to_deliverable(
-                        title=f"CTO Analysis: {task[:80]}",
+                        title=semantic_title,
                         content=analysis_msg,
                         deliverable_type='analysis',
                         category='Executive Technical',
