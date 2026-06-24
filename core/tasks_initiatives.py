@@ -895,7 +895,7 @@ Guidelines:
                                 {"role": "system", "content": "Generate a short, catchy title (3-7 words) for this creative thought. No quotes or punctuation."},
                                 {"role": "user", "content": dream_content if dream_content else "Creative thinking session"}
                             ],
-                            max_completion_tokens=500,  # Higher for GPT-5 reasoning (Session 317)
+                            max_completion_tokens=4000,  # Session 1224: gpt-5-mini reasoning eats ~1500-2000 tokens before output; 500 returned empty
                             timeout=60,  # Session 413: 1 min timeout for simple title
                         )
                         _title_span.attach_response(title_response)
@@ -1157,7 +1157,7 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
                     actionability_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
                         model="gpt-5-mini",
                         messages=[{"role": "user", "content": actionability_prompt}],
-                        max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
+                        max_completion_tokens=4000  # Session 1224: gpt-5-mini reasoning eats ~1500-2000 tokens; 500 underestimate, returned empty
                     )
                     _act_span.attach_response(actionability_response)
 
@@ -1200,7 +1200,7 @@ Example: 0.8|AI Content Studio"""
                         relevance_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
                             model="gpt-5-mini",
                             messages=[{"role": "user", "content": relevance_prompt}],
-                            max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
+                            max_completion_tokens=4000  # Session 1224: gpt-5-mini reasoning eats ~1500-2000 tokens; 500 underestimate, returned empty
                         )
                         _rel_span.attach_response(relevance_response)
 
@@ -1452,7 +1452,7 @@ Format: numbered list of steps."""
                             plan_response = client.chat.completions.create(  # noqa: direct-llm-call — wrapped above
                                 model="gpt-5-mini",
                                 messages=[{"role": "user", "content": plan_prompt}],
-                                max_completion_tokens=800  # Higher for reasoning models
+                                max_completion_tokens=4000  # Session 1224: gpt-5-mini reasoning eats ~1500-2000 tokens; 800 borderline
                             )
                             _plan_span.attach_response(plan_response)
 
