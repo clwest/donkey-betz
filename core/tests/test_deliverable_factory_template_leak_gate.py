@@ -56,6 +56,30 @@ class TemplateLeakGateTests(TestCase):
         self.assertFalse(should)
         self.assertEqual(code, 'gate_4_template_leak')
 
+    def test_external_sources_prompt_leak_is_blocked(self):
+        """Session 1226 P3 — Rigby+Claude verifier-loop audit caught this
+        in-the-wild leak pattern from ResearchAgent (32-row cluster, 28
+        created in last 7 days at time of audit). Title is the exact
+        101-char-truncated form as stored in core_deliverables (the
+        truncation happens at core/agents/research_agent.py:1103 via
+        title=f'Research: {task[:100]}').
+        """
+        # Exact title as stored in the duplicate cluster surfaced by
+        # deliverable e2964e4a-… §3.1 row #1.
+        title = (
+            'Research: This topic using EXTERNAL sources (web_search, spider_query).\n'
+            'DO NOT use query_internal_dat'
+        )
+        should, reason, code = _should_create_deliverable(
+            title=title,
+            content='x' * 400,
+            agent_name='ResearchAgent',
+            metadata={'trigger_source': 'pa_tool', 'sources_count': 5},
+        )
+        self.assertFalse(should)
+        self.assertEqual(code, 'gate_4_template_leak')
+        self.assertIn('this topic using external sources', reason.lower())
+
     def test_case_insensitive_match(self):
         title = 'BiNdInG dIrEcTiVe: leaked title casing'
         should, reason, code = _should_create_deliverable(
