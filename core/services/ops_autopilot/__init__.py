@@ -15,6 +15,7 @@ from core.services.ops_autopilot.budget import BudgetController, ROIEnforcer, Bu
 from core.services.ops_autopilot.impact import ImpactCollector, PortfolioAllocator, GoalAwareAllocator, MultiTouchAttributor, AttributionDebtController  # noqa: F401
 from core.services.ops_autopilot.experiment import ExperimentEngine  # noqa: F401
 from core.services.ops_autopilot.revenue import RevenuePipelineAutomator, OutboundLeadEngine, OutreachSequencer, CloseTheDealEngine, RevenueOrchestrator, ClosePackAutonomyEngine  # noqa: F401
+from core.services.ops_autopilot.outreach_generation import OpportunityDraftGenerator  # noqa: F401
 from core.services.ops_autopilot.engagement import EngagementEngine, MeetingEngine, EngagementAutonomyEngine  # noqa: F401
 from core.services.ops_autopilot.intelligence import KnowledgeEngine, GrowthEngine, CapacityEngine, SecurityEngine, ComplianceEngine, DataIntegrityEngine, ValueRealizationEngine  # noqa: F401
 
@@ -46,6 +47,7 @@ __all__ = [
     "CloseTheDealEngine",
     "RevenueOrchestrator",
     "ClosePackAutonomyEngine",
+    "OpportunityDraftGenerator",
     "EngagementEngine",
     "MeetingEngine",
     "EngagementAutonomyEngine",
