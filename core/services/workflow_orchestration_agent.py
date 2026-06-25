@@ -1393,7 +1393,19 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             # 1231 full-AGENT_MAP fleet smoke (smoke_id=9321b9a13397):
             # WorkflowOrchestrationAgent's smoke dispatch hit
             # 'research_agent' and aborted.
-            pascal_name = ''.join(p.capitalize() for p in agent_name.split('_'))
+            #
+            # Session 1233 B.1.fix — acronym agents (COOAgent, CTOAgent,
+            # SEOOptimizerAgent, AISeriesWorkflowAgent) need an explicit
+            # alias because the default ``''.join(p.capitalize() …)``
+            # produces wrong PascalCase (CooAgent ≠ COOAgent). Surfaced
+            # by the morning_brief end-to-end smoke when Step 2
+            # (lane_2_build_focus → coo_agent) hit "CooAgent not in
+            # AGENT_MAP". The alias map below covers all known
+            # acronym-style entries.
+            pascal_name = self._AGENT_MAP_SNAKE_ALIASES.get(
+                agent_name,
+                ''.join(p.capitalize() for p in agent_name.split('_')),
+            )
             try:
                 from core.agent_router import AgentRouter
                 router = AgentRouter(user=getattr(self, 'user', None))
@@ -3382,6 +3394,24 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         'ai_infra_deep_dive': 'ResearchAgent',
     }
     _MORNING_BRIEF_LANE_4_DEFAULT_SLOT: str = 'ai_infra_deep_dive'
+
+    # Session 1233 B.1.fix — snake_case → AGENT_MAP key alias for agents
+    # whose PascalCase form contains acronyms. The default fallback at
+    # the F4 dispatcher (``''.join(p.capitalize() …)``) produces wrong
+    # casing for these (e.g., coo_agent → 'CooAgent', actual key is
+    # 'COOAgent'). Surfaced by the morning_brief end-to-end smoke at
+    # Step 2 lane_2_build_focus → coo_agent.
+    #
+    # Add a new entry here when you ship a workflow that references a
+    # snake_case agent name whose PascalCase form has 2+ consecutive
+    # uppercase letters. Audit script:
+    #     grep -E '"[A-Z]{2,}' core/agent_router.py | grep ':'
+    _AGENT_MAP_SNAKE_ALIASES: dict = {
+        'coo_agent': 'COOAgent',
+        'cto_agent': 'CTOAgent',
+        'seo_optimizer_agent': 'SEOOptimizerAgent',
+        'ai_series_workflow_agent': 'AISeriesWorkflowAgent',
+    }
 
     def _execute_strategic_synthesis_step(self, context: Dict) -> Dict[str, Any]:
         """Synthesize prior workflow step outputs into actionable insights.
