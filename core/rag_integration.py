@@ -30,120 +30,168 @@ def search_embeddings(
     content_types: Optional[List[str]] = None,
     similarity_threshold: float = 0.7,
     namespace: Optional[str] = 'system',
-    exclude_personal: bool = True
+    exclude_personal: bool = True,
+    # Session 1234 D12 — D9/D10 filter pushdown
+    category: Optional[str] = None,
+    document_class: Optional[str] = None,
+    is_pinned: Optional[bool] = None,
+    min_session: Optional[int] = None,
+    include_superseded: bool = False,
 ) -> List[Dict[str, Any]]:
     """
-    Search unified_embeddings table in ai_unified_platform database for relevant context
-    
+    Session 1234 D12 — semantic search over Document corpus via pgvector.
+
+    Pre-D12 this function targeted a `unified_embeddings` table that
+    doesn't exist (the real Django table is `persistence_unifiedembedding`,
+    which was empty even on local DB). Callers silently degraded to
+    "no context" because the SQL failed every time.
+
+    D12 pivots to the populated path: pgvector cosine similarity over
+    `DocumentEmbedding` (the table the D9 sync + D10 backfill populated,
+    ~16k+ rows post-backfill), joined to `Document` for the D9/D10
+    type-aware filter pushdown (category / document_class / is_pinned /
+    min_session) and default-exclude-superseded ranking.
+
+    Backward-compat: the original signature kwargs (limit / content_types
+    / similarity_threshold / namespace / exclude_personal) remain in
+    place. `content_types` is treated as a soft hint mapped to
+    `document_class` if not explicitly provided.
+
     Args:
-        query: The search query
-        limit: Maximum number of results to return
-        content_types: Optional list of content types to filter
-        similarity_threshold: Minimum similarity score (0-1)
-        namespace: Specific namespace to search ('system', 'personal', 'agent_memory', 'public')
-        exclude_personal: Whether to exclude personal memories (default: True for privacy)
-    
+        query: The search query (text → embedding via OpenAI).
+        limit: Max results.
+        content_types: Optional list of content types — back-compat hint.
+            If `document_class` is also unset, the first entry is used
+            as the document_class filter.
+        similarity_threshold: Minimum cosine similarity (0-1).
+        namespace: (legacy) — informational, not currently filtered.
+        exclude_personal: (legacy) — Document table has no personal
+            namespace; ignored. Kept for signature stability.
+        category, document_class, is_pinned, min_session,
+            include_superseded: Session 1234 D9/D10 filter pushdown.
+            Same semantics as kb_tool action=documents (#2620).
+
     Returns:
-        List of relevant documents with similarity scores
+        List of dicts shaped to the legacy contract:
+        ``{id, content, content_type, metadata, importance_score,
+        similarity_score}``. The retrieval_boost from D9/D10 maps to
+        importance_score so downstream ranking still respects it.
     """
-    
     # Create embedding for the query
     query_embedding = create_embedding(query)
     if not query_embedding:
         logger.error("Failed to create query embedding")
         return []
-    
+
     try:
-        # Connect to the default database where unified_embeddings actually exists
-        conn = psycopg2.connect(
-            host='localhost',
-            database='unified_donkey_betz',
-            user='postgres',
-            password=''  # No password for local postgres
+        from content.models import Document, DocumentEmbedding, ContentStatus
+
+        # Back-compat: if content_types is given and document_class isn't,
+        # use the first content_type as a document_class hint. Avoids
+        # breaking callers that passed e.g. ['document_chunk'] from the
+        # legacy unified_embeddings era.
+        effective_class = document_class
+        if effective_class is None and content_types:
+            first = content_types[0] if isinstance(content_types, (list, tuple)) and content_types else None
+            if first and isinstance(first, str):
+                effective_class = first
+
+        # Base queryset: native pgvector cosine similarity via the
+        # existing classmethod (content/models.py:856-887). Inherits
+        # the orphan-chunk exclusion (no parent file_path).
+        qs = DocumentEmbedding.cosine_similarity_search(
+            query_vector=query_embedding,
+            limit=limit * 4,  # overshoot so post-filter still hits limit
+            min_similarity=similarity_threshold,
         )
-        
-        with conn.cursor() as cursor:
-            # Build the SQL query with vector similarity search
-            sql = """
-                SELECT 
-                    id,
-                    content_text,
-                    content_type,
-                    metadata,
-                    importance_score,
-                    1 - (embedding <=> %s::vector) as similarity
-                FROM unified_embeddings
-                WHERE embedding IS NOT NULL
-            """
-            
-            params = [query_embedding]
-            
-            # Add content type filter if specified
-            if content_types:
-                # Use proper parameterized query
-                sql += f" AND content_type = ANY(%s)"
-                params.append(content_types)
-            
-            # Add namespace filtering for memory isolation
-            if exclude_personal:
-                # CRITICAL: Exclude personal memories for privacy
-                sql += " AND (metadata->>'namespace' IS NULL OR metadata->>'namespace' != 'personal')"
-                sql += " AND (metadata->>'searchable_by_agents' IS NULL OR metadata->>'searchable_by_agents' = 'true')"
-            elif namespace:
-                # Search specific namespace if provided
-                sql += " AND metadata->>'namespace' = %s"
-                params.append(namespace)
-            
-            sql += " AND 1 - (embedding <=> %s::vector) >= %s"
-            params.extend([query_embedding, similarity_threshold])
-            
-            # Order by similarity and importance
-            sql += """
-                ORDER BY 
-                    (1 - (embedding <=> %s::vector)) * importance_score DESC
-                LIMIT %s
-            """
-            params.extend([query_embedding, limit])
-            
-            cursor.execute(sql, params)
-            results = cursor.fetchall()
-            
-            # Format results
-            documents = []
-            encryption_service = get_encryption_service()
-            
-            for row in results:
-                doc_id, content_text, content_type, metadata, importance, similarity = row
-                
-                # Decrypt content if encrypted using the migrated service
-                decrypted_content = encryption_service.decrypt(content_text) if content_text else ""
-                
-                # Parse metadata
-                meta = metadata if isinstance(metadata, dict) else {}
-                
-                # Handle NaN values
-                import math
-                similarity_val = float(similarity) if similarity else 0.0
-                if math.isnan(similarity_val) or math.isinf(similarity_val):
-                    similarity_val = 0.0
-                    
-                documents.append({
-                    'id': doc_id,
-                    'content': decrypted_content[:1000],  # Limit content length
-                    'content_type': content_type,
-                    'metadata': meta,
-                    'importance_score': float(importance) if importance else 0.5,
-                    'similarity_score': similarity_val
-                })
-            
-            logger.info(f"Found {len(documents)} relevant documents for query")
-            conn.close()  # Close the connection to ai_unified_platform
-            return documents
-            
+
+        # D9/D10 filter pushdown via Document join
+        if category:
+            qs = qs.filter(document__category=category)
+        if effective_class:
+            qs = qs.filter(document__document_class=effective_class)
+        if is_pinned is True:
+            # Truthy-only — feedback_llm_autofills_boolean_params_with_false.
+            qs = qs.filter(document__is_pinned=True)
+        if not include_superseded:
+            qs = qs.exclude(document__status=ContentStatus.ARCHIVED)
+        if min_session is not None:
+            try:
+                threshold = int(min_session)
+                # Filter docs whose tags include any session-N >= threshold.
+                # JSONField tag filtering goes through a Python-side pass
+                # because semantics need int parsing of 'session-N' tags.
+                ok_doc_ids = set()
+                for d in Document.objects.filter(
+                    id__in=qs.values_list('document_id', flat=True).distinct(),
+                ).only('id', 'tags'):
+                    for t in (d.tags or []):
+                        if isinstance(t, str) and t.startswith('session-'):
+                            try:
+                                if int(t.split('-', 1)[1]) >= threshold:
+                                    ok_doc_ids.add(d.id)
+                                    break
+                            except (ValueError, IndexError):
+                                continue
+                qs = qs.filter(document_id__in=ok_doc_ids)
+            except (ValueError, TypeError):
+                pass
+
+        # Take final K after filtering
+        qs = qs[:limit]
+
+        documents = []
+        encryption_service = get_encryption_service()
+
+        for chunk in qs:
+            doc = chunk.document
+            # Decrypt content if encrypted; chunk_text usually plaintext.
+            try:
+                content = encryption_service.decrypt(chunk.chunk_text) if chunk.chunk_text else ''
+            except Exception:
+                content = chunk.chunk_text or ''
+
+            # Cosine similarity = 1 - distance (annotation set by the
+            # classmethod). Guard against NaN/inf.
+            import math
+            distance = getattr(chunk, 'distance', None)
+            if distance is None:
+                similarity = 0.0
+            else:
+                similarity = float(1 - distance)
+                if math.isnan(similarity) or math.isinf(similarity):
+                    similarity = 0.0
+
+            documents.append({
+                'id': str(chunk.id),
+                'content': content[:1000],
+                'content_type': doc.document_class or 'document',
+                'metadata': {
+                    'file_path': doc.file_path,
+                    'title': doc.title,
+                    'category': doc.category,
+                    'document_class': doc.document_class,
+                    'is_pinned': doc.is_pinned,
+                    'tags': list(doc.tags or []),
+                    'chunk_index': chunk.chunk_index,
+                    # citation in the same shape as search_docs PA tool
+                    'citation': f"[{doc.file_path}#{chunk.chunk_index}]",
+                },
+                # D9/D10 retrieval_boost maps to legacy importance_score.
+                'importance_score': float(doc.retrieval_boost or 1.0),
+                'similarity_score': similarity,
+            })
+
+        logger.info(
+            f"Found {len(documents)} relevant chunks for query "
+            f"(filters: category={category} class={effective_class} "
+            f"is_pinned={is_pinned} min_session={min_session} "
+            f"include_superseded={include_superseded})"
+        )
+        return documents
+
     except Exception as e:
-        logger.error(f"Error searching embeddings: {e}")
-        if 'conn' in locals():
-            conn.close()
+        logger.error(f"Error searching embeddings: {e}", exc_info=True)
         return []
 
 def get_rag_context(query: str, max_tokens: int = 2000, include_personal: bool = False) -> Dict[str, Any]:
