@@ -228,19 +228,40 @@ class GenerateMorningBriefDailyTaskTests(TestCase):
 
     def test_task_with_no_user_id_looks_up_chris(self):
         """Default beat dispatch passes no user_id → task falls back
-        to looking up 'chris'."""
+        to looking up 'chris'.
+
+        Session 1234 D2.telemetry: mock_result uses the ACTUAL workflow
+        result shape (``steps`` key, per-step ``result`` dict carrying
+        the handler's return). Pre-fix this test passed by accident
+        because both the beat task AND the mock used the wrong
+        ``step_results`` + ``context`` keys.
+        """
         from core.tasks import generate_morning_brief_daily
 
         mock_result = {
             'success': True,
             'workflow': 'morning_brief',
-            'context': {
-                'rotation_slot': 'ai_infra_deep_dive',
-                'lane_4_slot_used': 'ai_infra_deep_dive',
-            },
-            'step_results': [
+            'steps': [
+                {'name': 'rotation_slot_resolve',
+                 'result': {
+                     'success': True,
+                     'rotation_slot': 'ai_infra_deep_dive',
+                     'reason': 'weekday_default:0',
+                 }},
+                {'name': 'lane_4_rotating_focus',
+                 'result': {
+                     'success': True,
+                     'output': 'lane 4 text',
+                     'slot_used': 'ai_infra_deep_dive',
+                     'agent_name': 'ResearchAgent',
+                 }},
                 {'name': 'create_deliverable',
-                 'result': {'deliverable_id': 'deliv-uuid-123'}},
+                 'result': {
+                     'success': True,
+                     'deliverable_id': 'deliv-uuid-123',
+                     'workspace_id': 'ws-uuid-456',
+                     'title': 'Morning Brief — 2026-06-25',
+                 }},
             ],
         }
         with patch(
@@ -253,7 +274,9 @@ class GenerateMorningBriefDailyTaskTests(TestCase):
         self.assertTrue(result['success'])
         self.assertEqual(result['workflow'], 'morning_brief')
         self.assertEqual(result['deliverable_id'], 'deliv-uuid-123')
+        self.assertEqual(result['workspace_id'], 'ws-uuid-456')
         self.assertEqual(result['rotation_slot'], 'ai_infra_deep_dive')
+        self.assertEqual(result['lane_4_slot_used'], 'ai_infra_deep_dive')
         self.assertEqual(result['user_id'], str(self.chris.id))
 
         # Verify the workflow was dispatched with workflow='morning_brief'.
@@ -306,16 +329,18 @@ class GenerateMorningBriefDailyTaskTests(TestCase):
         from core.tasks import generate_morning_brief_daily
 
         # Replays the exact failure shape from task 9d00907a-…
+        # Session 1234 D2.telemetry: uses ``steps`` key (the actual
+        # _compile_final_result return shape), not ``step_results``.
         mock_result = {
             'success': False,
             'workflow': 'morning_brief',
-            'context': {
-                'rotation_slot': 'gtm_pipeline_health',
-                'lane_4_slot_used': None,
-            },
-            'step_results': [
+            'steps': [
                 {'name': 'rotation_slot_resolve',
-                 'result': {'success': True}},
+                 'result': {
+                     'success': True,
+                     'rotation_slot': 'gtm_pipeline_health',
+                     'reason': 'weekday_default:3',
+                 }},
                 {'name': 'lane_1_platform_readiness',
                  'result': {'success': True}},
                 {'name': 'lane_2_build_focus',
@@ -357,13 +382,12 @@ class GenerateMorningBriefDailyTaskTests(TestCase):
         mock_result = {
             'success': True,
             'workflow': 'morning_brief',
-            'context': {
-                'rotation_slot': 'ai_infra_deep_dive',
-                'lane_4_slot_used': 'ai_infra_deep_dive',
-            },
-            'step_results': [
+            'steps': [
                 {'name': 'create_deliverable',
-                 'result': {'deliverable_id': 'deliv-uuid-456'}},
+                 'result': {
+                     'success': True,
+                     'deliverable_id': 'deliv-uuid-456',
+                 }},
             ],
         }
         with patch(
@@ -375,6 +399,123 @@ class GenerateMorningBriefDailyTaskTests(TestCase):
 
         self.assertTrue(result['success'])
         self.assertEqual(result['deliverable_id'], 'deliv-uuid-456')
+
+
+class MorningBriefBeatTaskTelemetryTests(TestCase):
+    """Session 1234 D2.telemetry — beat task reads correct workflow keys.
+
+    The 2026-06-25 final D2 verification (task 56be98e7-…) shipped a
+    real brief end-to-end BUT the beat task return reported
+    ``deliverable_id=None`` because the orchestrator's
+    ``_compile_final_result`` sets ``result['steps']`` (not
+    ``'step_results'``) and does not include a top-level ``'context'``
+    key. Pre-fix the beat task read both wrong keys, so every telemetry
+    field defaulted to None even when the underlying step results carried
+    real values. These tests lock in the fix.
+    """
+
+    def setUp(self):
+        self.chris = User.objects.create_user(
+            username='chris', password='test',
+        )
+
+    def test_telemetry_uses_steps_key_not_step_results(self):
+        """Replays the exact 2026-06-25 task 56be98e7-… shape.
+        The actual workflow result uses 'steps', not 'step_results'.
+        Pre-fix the beat task returned deliverable_id=None despite a
+        real deliverable being created."""
+        from core.tasks import generate_morning_brief_daily
+
+        mock_result = {
+            'success': True,
+            'workflow': 'morning_brief',
+            # ACTUAL _compile_final_result shape: 'steps' key.
+            'steps': [
+                {'name': 'rotation_slot_resolve',
+                 'result': {
+                     'success': True,
+                     'rotation_slot': 'gtm_pipeline_health',
+                     'reason': 'weekday_default:3',
+                 }},
+                {'name': 'lane_4_rotating_focus',
+                 'result': {
+                     'success': True,
+                     'output': 'gtm bullets',
+                     'slot_used': 'gtm_pipeline_health',
+                     'agent_name': 'COOAgent',
+                 }},
+                {'name': 'create_deliverable',
+                 'result': {
+                     'success': True,
+                     'deliverable_id': '88e2396b-aec3-4006-a1d0-7d94cba49d04',
+                     'workspace_id': '19807888-862e-4a1a-b15d-f6c95b97e5a1',
+                 }},
+            ],
+        }
+        with patch(
+            'core.services.workflow_orchestration_agent.'
+            'WorkflowOrchestrationAgent.execute',
+            return_value=mock_result,
+        ):
+            result = generate_morning_brief_daily()
+
+        # All four telemetry fields MUST be populated from the steps.
+        self.assertTrue(result['success'])
+        self.assertEqual(result['deliverable_id'],
+                         '88e2396b-aec3-4006-a1d0-7d94cba49d04',
+                         "deliverable_id MUST be extracted from "
+                         "steps[].result.deliverable_id of the "
+                         "create_deliverable step.")
+        self.assertEqual(result['workspace_id'],
+                         '19807888-862e-4a1a-b15d-f6c95b97e5a1')
+        self.assertEqual(result['rotation_slot'], 'gtm_pipeline_health',
+                         "rotation_slot MUST come from the "
+                         "rotation_slot_resolve step's result, not from "
+                         "a non-existent top-level result['context'].")
+        self.assertEqual(result['lane_4_slot_used'], 'gtm_pipeline_health',
+                         "lane_4_slot_used MUST come from the "
+                         "lane_4_rotating_focus step's result.slot_used.")
+
+    def test_failure_telemetry_uses_steps_key(self):
+        """The MORNING_BRIEF_FAILED log line + RuntimeError MUST surface
+        the actual failed step name + error — pre-fix both fields
+        defaulted to None because step_results was always empty."""
+        from core.tasks import generate_morning_brief_daily
+
+        mock_result = {
+            'success': False,
+            'workflow': 'morning_brief',
+            'steps': [
+                {'name': 'rotation_slot_resolve',
+                 'result': {
+                     'success': True,
+                     'rotation_slot': 'sports_edge_scan',
+                 }},
+                {'name': 'lane_4_rotating_focus',
+                 'result': {
+                     'success': False,
+                     'error': "no multi-bookmaker odds data available",
+                     'slot_used': 'sports_edge_scan',
+                     'agent_name': 'SharpActionDetector',
+                 }},
+            ],
+        }
+        with patch(
+            'core.services.workflow_orchestration_agent.'
+            'WorkflowOrchestrationAgent.execute',
+            return_value=mock_result,
+        ):
+            with self.assertRaises(RuntimeError) as cm:
+                generate_morning_brief_daily()
+
+        # RuntimeError MUST name the actual failed step + error
+        msg = str(cm.exception)
+        self.assertIn('lane_4_rotating_focus', msg,
+                      "RuntimeError MUST identify the failed step by name "
+                      "(was 'None' pre-fix).")
+        self.assertIn('no multi-bookmaker odds data', msg,
+                      "RuntimeError MUST carry the failed step's error "
+                      "string (was 'no error string captured' pre-fix).")
 
 
 class MorningBriefBeatScheduleRegistrationTests(TestCase):
