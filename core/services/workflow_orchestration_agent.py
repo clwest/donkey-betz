@@ -1275,10 +1275,60 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             return self._execute_content_writer_step(context)
 
         else:
-            return {
-                'success': False,
-                'error': f"Unknown agent in workflow: {agent_name}"
-            }
+            # Session 1231 F4 — AGENT_MAP fallback for snake_case step names
+            # that lack a workflow-internal handler. The built-in
+            # workflow templates reference 'research_agent',
+            # 'competitor_analysis_agent', 'customer_research_agent',
+            # 'strategic_synthesis' — three of which exist in AGENT_MAP
+            # under their PascalCase names. Pre-fix every step using
+            # those names silently failed with "Unknown agent in
+            # workflow", aborting the workflow. Surfaced by the Session
+            # 1231 full-AGENT_MAP fleet smoke (smoke_id=9321b9a13397):
+            # WorkflowOrchestrationAgent's smoke dispatch hit
+            # 'research_agent' and aborted.
+            pascal_name = ''.join(p.capitalize() for p in agent_name.split('_'))
+            try:
+                from core.agent_router import AgentRouter
+                router = AgentRouter(user=getattr(self, 'user', None))
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': (
+                        f"Unknown agent in workflow: {agent_name} "
+                        f"(AGENT_MAP fallback unavailable: {type(e).__name__})"
+                    ),
+                }
+            if pascal_name not in router.AGENT_MAP:
+                return {
+                    'success': False,
+                    'error': (
+                        f"Unknown agent in workflow: {agent_name} "
+                        f"(no internal handler + '{pascal_name}' not in AGENT_MAP)"
+                    ),
+                }
+            try:
+                step_task = step_def.get('description', '') or step_def.get('name', '')
+                result = router.route(pascal_name, step_task, context or {})
+                # AgentResult → dict shape matching the other handlers
+                return {
+                    'success': bool(getattr(result, 'success', False)),
+                    'output': getattr(result, 'message', '') or '',
+                    'data': getattr(result, 'data', {}) or {},
+                }
+            except Exception as e:
+                logger.error(
+                    "AGENT_MAP fallback dispatch failed for workflow step "
+                    "agent='%s' → '%s': %s",
+                    agent_name, pascal_name, e,
+                )
+                return {
+                    'success': False,
+                    'error': (
+                        f"AGENT_MAP fallback dispatch failed for "
+                        f"'{agent_name}' (→ '{pascal_name}'): "
+                        f"{type(e).__name__}: {e}"
+                    ),
+                }
 
     def _execute_web_search_step(self, context: Dict) -> Dict[str, Any]:
         """
