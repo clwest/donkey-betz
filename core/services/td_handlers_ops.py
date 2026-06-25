@@ -3,6 +3,27 @@ ToolDispatcher OpsHandlersMixin — extracted handler methods.
 """
 from core.services.pa_identity import PA_IDENTITY
 
+
+def _d14_resolve_min_session(raw):
+    """Session 1234 D14 — LLM-autofill guard for the min_session filter.
+
+    The LLM autofills integer params with 0 the same way it autofills
+    boolean params with False (memory:
+    feedback_llm_autofills_boolean_params_with_false). A min_session=0
+    silently filters the corpus to handoffs-only (since only handoffs
+    carry session-N tags); combined with the similarity floor it often
+    returns 0 results when the user didn't intend any filter.
+
+    Contract: return the int only when > 0; otherwise None (no filter).
+    """
+    if raw is None:
+        return None
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
 =====================================================================
@@ -5249,24 +5270,33 @@ class OpsHandlersMixin:
                 # (per memory feedback_llm_autofills_boolean_params_with_false).
                 if not include_superseded:
                     qs = qs.exclude(status=ContentStatus.ARCHIVED)
+                # Session 1234 D14 — only honor positive min_session. The
+                # LLM autofills integer params with 0 the same way it
+                # autofills boolean params with False (memory:
+                # feedback_llm_autofills_boolean_params_with_false). A
+                # min_session=0 silently filters the corpus to handoffs-
+                # only (since only handoffs carry session-N tags), then
+                # competes them against the similarity threshold — often
+                # zero results when the LLM didn't intend any filter.
                 if f_min_session is not None:
                     try:
                         threshold = int(f_min_session)
-                        # Tag format from D9: 'session-1234'. Filter docs
-                        # whose tags include any session-N with N >= threshold.
-                        # Use a Python-side filter since tags is a JSONField
-                        # of variable shape.
-                        ids_keep = []
-                        for d in qs.only('id', 'tags'):
-                            for t in (d.tags or []):
-                                if isinstance(t, str) and t.startswith('session-'):
-                                    try:
-                                        if int(t.split('-', 1)[1]) >= threshold:
-                                            ids_keep.append(d.id)
-                                            break
-                                    except (ValueError, IndexError):
-                                        continue
-                        qs = qs.filter(id__in=ids_keep)
+                        if threshold > 0:
+                            # Tag format from D9: 'session-1234'. Filter docs
+                            # whose tags include any session-N with N >= threshold.
+                            # Use a Python-side filter since tags is a JSONField
+                            # of variable shape.
+                            ids_keep = []
+                            for d in qs.only('id', 'tags'):
+                                for t in (d.tags or []):
+                                    if isinstance(t, str) and t.startswith('session-'):
+                                        try:
+                                            if int(t.split('-', 1)[1]) >= threshold:
+                                                ids_keep.append(d.id)
+                                                break
+                                        except (ValueError, IndexError):
+                                            continue
+                            qs = qs.filter(id__in=ids_keep)
                     except (ValueError, TypeError):
                         pass
 
@@ -5284,7 +5314,7 @@ class OpsHandlersMixin:
                         'category': f_category or None,
                         'document_class': f_document_class or None,
                         'is_pinned': f_is_pinned if f_is_pinned is True else None,
-                        'min_session': int(f_min_session) if f_min_session is not None and str(f_min_session).isdigit() else None,
+                        'min_session': _d14_resolve_min_session(f_min_session),
                         'include_superseded': include_superseded,
                     },
                     'documents': [{
@@ -5383,7 +5413,7 @@ class OpsHandlersMixin:
                     category=f_category,
                     document_class=f_document_class,
                     is_pinned=(f_is_pinned if f_is_pinned is True else None),
-                    min_session=int(f_min_session) if f_min_session is not None and str(f_min_session).isdigit() else None,
+                    min_session=_d14_resolve_min_session(f_min_session),
                     include_superseded=include_superseded,
                 )
 
@@ -5395,7 +5425,7 @@ class OpsHandlersMixin:
                         'category': f_category,
                         'document_class': f_document_class,
                         'is_pinned': f_is_pinned if f_is_pinned is True else None,
-                        'min_session': int(f_min_session) if f_min_session is not None and str(f_min_session).isdigit() else None,
+                        'min_session': _d14_resolve_min_session(f_min_session),
                         'include_superseded': include_superseded,
                         'similarity_threshold': sim_threshold,
                     },
