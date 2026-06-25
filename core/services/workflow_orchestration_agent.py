@@ -1298,10 +1298,25 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
                 if not result.get('success', False):
                     logger.error(f"❌ Step {step_name} failed: {result.get('error', 'Unknown error')}")
-                    # Don't stop workflow on non-critical failures
-                    if step_name in ['create_project']:
-                        # Project creation failing is non-critical
-                        logger.warning(f"⚠️ Continuing workflow despite {step_name} failure")
+                    # Don't stop workflow on non-critical failures.
+                    # Session 1234 D2 P2.C (Rigby-ratified): lane_4_rotating_focus
+                    # is non-critical for morning_brief. The 4 non-gtm slot agents
+                    # (SharpActionDetector / PredictionMarketAnalyst /
+                    # StockAnalystAgent / ResearchAgent) return success=False on
+                    # quiet-data days; halting the whole brief is the wrong call.
+                    # Brief ships with Lane 4 sentinel from _lane_4_sentinel.
+                    if step_name in ('create_project', 'lane_4_rotating_focus'):
+                        if step_name == 'lane_4_rotating_focus':
+                            logger.error(
+                                "[MORNING_BRIEF_LANE_4_NONCRITICAL_FAIL] "
+                                "slot=%s agent=%s error=%r — workflow continues, "
+                                "brief will ship with sentinel",
+                                result.get('slot_used'),
+                                result.get('agent_name'),
+                                result.get('error', 'no error captured'),
+                            )
+                        else:
+                            logger.warning(f"⚠️ Continuing workflow despite {step_name} failure")
                     else:
                         # Critical step failed - abort
                         return self._compile_final_result(
@@ -3431,14 +3446,58 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
     # Spec source: docs/MORNING_BRIEF_SPEC.md § "Source (agents + feeds),
     # by slot" — v0.5 picks one agent per slot; alternatives noted in spec
     # are deferred until B.2.
+    #
+    # Session 1234 D2 (Rigby-ratified P1.A): gtm_pipeline_health
+    # remapped from OpportunityPipelineAgent → COOAgent. The 2026-06-25
+    # first-fire (task 9d00907a-…) showed OpportunityPipelineAgent's
+    # execute() requires context['opportunity'] (per-Opportunity-row
+    # processing) — wrong contract for Lane 4's daily-summary purpose.
+    # COOAgent has no required context keys and was already proven in
+    # the first-fire as Lane 2's agent. Persona duplication with Lane 2
+    # is mitigated via the per-slot focus prompt below.
     _MORNING_BRIEF_LANE_4_SLOT_AGENT: dict = {
         'sports_edge_scan': 'SharpActionDetector',
         'prediction_markets': 'PredictionMarketAnalyst',
         'ticker_catalyst_watch': 'StockAnalystAgent',
-        'gtm_pipeline_health': 'OpportunityPipelineAgent',
+        'gtm_pipeline_health': 'COOAgent',
         'ai_infra_deep_dive': 'ResearchAgent',
     }
     _MORNING_BRIEF_LANE_4_DEFAULT_SLOT: str = 'ai_infra_deep_dive'
+
+    # Session 1234 D2 — slot-specific focus phrase appended to the Lane 4
+    # step_task. Lets one agent (e.g., COOAgent in Lane 2 build_focus AND
+    # Lane 4 gtm_pipeline_health) produce distinct content per lane by
+    # narrowing the prompt's intent. The base step_task ("actionable
+    # signals, 3-7 bullets, why-it-matters-today, action recommendation")
+    # is shared; this dict adds the slot's specific lens.
+    _MORNING_BRIEF_LANE_4_SLOT_FOCUS: dict = {
+        'gtm_pipeline_health': (
+            "Focus on GTM/pipeline health: top KPIs that moved overnight, "
+            "top 3 risks blocking pipeline velocity, and follow-up actions "
+            "with named owner. Do NOT cover product/build priorities "
+            "(that's Lane 2's job)."
+        ),
+        'sports_edge_scan': (
+            "Focus on sharp-action edges: cross-bookmaker line moves, "
+            "limit changes, sharp money signals. Skip if no qualifying "
+            "edges today."
+        ),
+        'prediction_markets': (
+            "Focus on prediction market dislocations: implied probability "
+            "shifts > 5pp overnight, mispriced contracts vs. base rates, "
+            "and which markets to watch into close."
+        ),
+        'ticker_catalyst_watch': (
+            "Focus on ticker-specific catalysts: earnings/guidance/SEC "
+            "filings hitting today, unusual volume/options activity, "
+            "and which tickers to read first."
+        ),
+        'ai_infra_deep_dive': (
+            "Focus on AI infrastructure shifts: new model/inference "
+            "announcements, pricing changes from major providers, and "
+            "what to dig into deeper."
+        ),
+    }
 
     # Session 1233 B.1.fix — snake_case → AGENT_MAP key alias for agents
     # whose PascalCase form contains acronyms. The default fallback at
@@ -3869,6 +3928,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         except Exception as e:
             return {
                 'success': False,
+                'output': self._lane_4_sentinel(slot, f"{type(e).__name__}: {e}"),
                 'error': (
                     f"Lane 4 dispatch unavailable (AGENT_MAP fallback init "
                     f"failed for slot={slot!r}, agent={agent_pascal!r}): "
@@ -3881,6 +3941,8 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         if agent_pascal not in router.AGENT_MAP:
             return {
                 'success': False,
+                'output': self._lane_4_sentinel(
+                    slot, f"agent {agent_pascal!r} not in AGENT_MAP"),
                 'error': (
                     f"Lane 4: slot {slot!r} resolved to {agent_pascal!r} "
                     f"but that agent is not in AGENT_MAP"
@@ -3889,15 +3951,18 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 'agent_name': agent_pascal,
             }
 
-        # Step task — spec § dispatch prompt for Lane 4. We use the slot
-        # name as the topic anchor; the agent's own system_prompt covers
-        # the rest.
+        # Step task — spec § dispatch prompt for Lane 4. Session 1234 D2:
+        # appends per-slot focus phrase from _MORNING_BRIEF_LANE_4_SLOT_FOCUS
+        # so agents shared across lanes (e.g., COOAgent in Lane 2 + Lane 4)
+        # produce distinct content per lane.
         topic = context.get('topic') or ''
+        slot_focus = self._MORNING_BRIEF_LANE_4_SLOT_FOCUS.get(slot, '')
         step_task = (
             f"Morning Brief Lane 4 — slot={slot}. "
             f"Provide actionable signals only (not a news dump). "
             f"Include 3-7 bullets with 'why it matters today' and explicit "
             f"action recommendation if applicable. "
+            f"{slot_focus} "
             f"Topic anchor: {topic or '(none)'}."
         )
 
@@ -3930,14 +3995,19 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"error/message/output (result type={type(result).__name__})"
                 )
             )
+            full_error = (
+                f"Lane 4 agent {agent_pascal!r} reported failure for "
+                f"slot {slot!r}: {error_detail}"
+            )
+            # Session 1234 D2 P2.C: populate output with sentinel so
+            # synthesis still renders a Lane 4 section ("No signal today
+            # …") instead of an empty heading. Orchestrator's non-critical
+            # path uses the populated context['lane_4_text'] downstream.
             return {
                 'success': False,
-                'output': output,
+                'output': output or self._lane_4_sentinel(slot, error_detail),
                 'data': data,
-                'error': (
-                    f"Lane 4 agent {agent_pascal!r} reported failure for "
-                    f"slot {slot!r}: {error_detail}"
-                ),
+                'error': full_error,
                 'slot_used': slot,
                 'agent_name': agent_pascal,
             }
@@ -3950,6 +4020,8 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             )
             return {
                 'success': False,
+                'output': self._lane_4_sentinel(
+                    slot, f"{type(e).__name__}: {e}"),
                 'error': (
                     f"Lane 4 dispatch failed for slot {slot!r} → "
                     f"agent {agent_pascal!r}: {type(e).__name__}: {e}"
@@ -3957,6 +4029,29 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 'slot_used': slot,
                 'agent_name': agent_pascal,
             }
+
+    @staticmethod
+    def _lane_4_sentinel(slot: str, error_excerpt: str) -> str:
+        """Render the Lane 4 'no signal today' sentinel.
+
+        Session 1234 D2 P2.C (Rigby-ratified): when Lane 4 fails for
+        a recoverable reason (no upstream data, agent contract mismatch,
+        ambient dispatch error), the workflow continues and the brief
+        ships with this sentinel as the Lane 4 section text. Synthesis
+        reads it from ``context['lane_4_text']`` via ``_update_context``.
+
+        The sentinel is short (one paragraph), names the slot, and
+        embeds a truncated error excerpt so Chris can tell at a glance
+        whether Lane 4 was quiet vs. broken.
+        """
+        excerpt = (error_excerpt or 'no detail captured').strip()
+        if len(excerpt) > 240:
+            excerpt = excerpt[:237] + '...'
+        slot_label = slot.replace('_', ' ')
+        return (
+            f"_Lane 4 ({slot_label}): No signal today "
+            f"(agent error: {excerpt})._"
+        )
 
     def _execute_decision_card_synthesis_step(self, context: Dict) -> Dict[str, Any]:
         """Produce the Decision Card from the four lane texts.
