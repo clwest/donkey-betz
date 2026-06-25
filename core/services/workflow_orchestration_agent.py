@@ -693,6 +693,14 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         # per-step input plumbing (rotation_slot_resolve pre-step, slot-resolved
         # agent for Lane 4, override-trigger inputs) lands in Sub-step B.
         # =========================================================================
+        # Session 1233 B.1 update: lane_4_rotating_focus, decision_card_synthesis,
+        # and create_deliverable agents flipped from AGENT_MAP-fallback / project
+        # creation placeholders to dedicated workflow-internal handlers. Lane 4
+        # now slot-driven via context['rotation_slot'] (default 'ai_infra_deep_dive'
+        # until Sub-step B.2 ships rotation_slot_resolve pre-step). Strategic
+        # synthesis (Step 6) reads lane_*_text + decision_card_text from context
+        # when context['_synthesis_mode'] == 'morning_brief' (set in the workflow
+        # context init when workflow == 'morning_brief').
         'morning_brief': {
             'description': "Chris's daily Chief-of-Staff brief: platform readiness + build focus + competitive landscape + rotating market lane + decision card synthesis",
             'content_type': 'morning_brief',
@@ -719,25 +727,25 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 {
                     'step': 4,
                     'name': 'lane_4_rotating_focus',
-                    'agent': 'research_agent',  # v0: default for AI-infra Mon slot. Sub-step B wires slot-resolved dispatch.
+                    'agent': 'lane_4_rotating_focus',  # B.1: internal handler; reads context['rotation_slot'] (default ai_infra_deep_dive)
                     'description': 'Rotating market/signal lane resolved by weekday + override triggers (incident → revenue → signal → calendar)'
                 },
                 {
                     'step': 5,
                     'name': 'decision_card_synthesis',
-                    'agent': 'coo_agent',
+                    'agent': 'decision_card_synthesis',  # B.1: internal LLM handler; reads 4 lane texts
                     'description': 'Synthesize 1-3 explicit decisions from the 4 lanes + governance/work/ops snapshots'
                 },
                 {
                     'step': 6,
                     'name': 'strategic_synthesis',
-                    'agent': 'strategic_synthesis',  # workflow-internal handler from Session 1231 PR #2592
+                    'agent': 'strategic_synthesis',  # workflow-internal handler; B.1 extension reads lane_* + decision_card_text in morning_brief mode
                     'description': 'Compile final brief markdown with TL;DR pointer to Decision Card'
                 },
                 {
                     'step': 7,
                     'name': 'create_deliverable',
-                    'agent': 'create_project_from_research',
+                    'agent': 'create_morning_brief_deliverable',  # B.1: internal handler; persists Deliverable row (workspace_id wired in Sub-step C)
                     'description': 'Persist final brief into "Morning Brief" workspace as a deliverable'
                 }
             ]
@@ -1176,6 +1184,12 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             'project_id': self.project_id,
             # Session 199: Content type from workflow definition
             'content_type': workflow_def.get('content_type', 'logos'),
+            # Session 1233 B.1 — synthesis-mode flag flips
+            # _execute_strategic_synthesis_step from generic-insights
+            # output to morning-brief markdown output.
+            '_synthesis_mode': (
+                'morning_brief' if workflow == 'morning_brief' else 'default'
+            ),
             # Results from each step
             'research_results': None,
             'research_summary': '',
@@ -1340,8 +1354,32 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         # competitor_insights, customer_insights, etc.) and produces a
         # synthesis via an LLM call. Gracefully degrades when no input
         # is present (smoke-case behavior).
+        # Session 1233 B.1 extends this handler with a 'morning_brief'
+        # synthesis mode that reads lane keys and produces the final
+        # brief markdown.
         elif agent_name == 'strategic_synthesis':
             return self._execute_strategic_synthesis_step(context)
+
+        # Session 1233 B.1 — morning_brief workflow Lane 4 rotating
+        # focus dispatch. Reads context['rotation_slot'] (defaults to
+        # 'ai_infra_deep_dive' until B.2 ships rotation_slot_resolve)
+        # and dispatches via the slot → agent map.
+        elif agent_name == 'lane_4_rotating_focus':
+            return self._execute_lane_4_rotating_focus_step(context)
+
+        # Session 1233 B.1 — morning_brief workflow Decision Card
+        # synthesis. Reads the four lane texts from context, calls
+        # gpt-5-mini to produce 1-3 explicit decisions, writes
+        # context['decision_card_text'].
+        elif agent_name == 'decision_card_synthesis':
+            return self._execute_decision_card_synthesis_step(context)
+
+        # Session 1233 B.1 — morning_brief workflow deliverable
+        # creation. Persists context['morning_brief_markdown'] as a
+        # Deliverable row. Workspace UUID will be wired in Sub-step C;
+        # for B.1 the deliverable lands in the user's default workspace.
+        elif agent_name == 'create_morning_brief_deliverable':
+            return self._execute_create_morning_brief_deliverable_step(context)
 
         else:
             # Session 1231 F4 — AGENT_MAP fallback for snake_case step names
@@ -2478,6 +2516,44 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             if result.get('success') and result.get('video_id'):
                 context['generated_video_ids'].append(result['video_id'])
 
+        # Session 1233 B.1 — morning_brief lane plumbing. Each Lane N
+        # step writes its output text into context['lane_N_text'] so
+        # decision_card_synthesis + strategic_synthesis can read them.
+        # Result shape varies by source: AGENT_MAP fallback returns
+        # {'output': str, 'data': dict}; the lane_4_rotating_focus
+        # internal handler returns {'summary': str, 'output': str,
+        # 'slot_used': str}. We pull the first non-empty string.
+        elif step_name in (
+            'lane_1_platform_readiness',
+            'lane_2_build_focus',
+            'lane_3_competitive_landscape',
+            'lane_4_rotating_focus',
+        ):
+            lane_num = step_name.split('_')[1]  # '1' / '2' / '3' / '4'
+            text = (
+                result.get('output')
+                or result.get('summary')
+                or result.get('text')
+                or ''
+            )
+            context[f'lane_{lane_num}_text'] = text
+            context[f'lane_{lane_num}_data'] = result.get('data', {}) or {}
+            if step_name == 'lane_4_rotating_focus':
+                # Capture which slot Lane 4 actually used so synthesis can
+                # render the right section heading.
+                context['lane_4_slot_used'] = result.get(
+                    'slot_used',
+                    context.get('rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT),
+                )
+
+        # Session 1233 B.1 — decision_card_synthesis writes its output
+        # directly into context via the handler, but mirror the assignment
+        # here for symmetry + so the runner's step_results record sees the
+        # value path consistently.
+        elif step_name == 'decision_card_synthesis':
+            if result.get('decision_card_text'):
+                context['decision_card_text'] = result['decision_card_text']
+
     def _summarize_step_result(self, step_name: str, result: Dict) -> str:
         """Create a human-readable summary of a step result."""
 
@@ -3280,6 +3356,33 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         'spider_insights',
     )
 
+    # Session 1233 B.1 — morning_brief lane → synthesis input key map.
+    # Strategic synthesis uses these instead of _SYNTHESIS_CONTEXT_KEYS
+    # when context['_synthesis_mode'] == 'morning_brief'.
+    _MORNING_BRIEF_SYNTHESIS_KEYS: tuple = (
+        'lane_1_text',
+        'lane_2_text',
+        'lane_3_text',
+        'lane_4_text',
+        'decision_card_text',
+    )
+
+    # Session 1233 B.1 — Lane 4 rotating-focus slot → agent map.
+    # When B.2 lands rotation_slot_resolve, the pre-step will write
+    # context['rotation_slot']; for B.1 we default to 'ai_infra_deep_dive'
+    # so Lane 4 dispatches even when no rotation logic has run yet.
+    # Spec source: docs/MORNING_BRIEF_SPEC.md § "Source (agents + feeds),
+    # by slot" — v0.5 picks one agent per slot; alternatives noted in spec
+    # are deferred until B.2.
+    _MORNING_BRIEF_LANE_4_SLOT_AGENT: dict = {
+        'sports_edge_scan': 'SharpActionDetector',
+        'prediction_markets': 'PredictionMarketAnalyst',
+        'ticker_catalyst_watch': 'StockAnalystAgent',
+        'gtm_pipeline_health': 'OpportunityPipelineAgent',
+        'ai_infra_deep_dive': 'ResearchAgent',
+    }
+    _MORNING_BRIEF_LANE_4_DEFAULT_SLOT: str = 'ai_infra_deep_dive'
+
     def _execute_strategic_synthesis_step(self, context: Dict) -> Dict[str, Any]:
         """Synthesize prior workflow step outputs into actionable insights.
 
@@ -3288,6 +3391,11 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         agent existed in AGENT_MAP. This handler reads whatever the prior
         steps left in context, builds a synthesis prompt, and calls
         gpt-5-mini via the OpenAI factory.
+
+        Session 1233 B.1 extension: when context['_synthesis_mode'] ==
+        'morning_brief', read the lane keys instead of the generic
+        _SYNTHESIS_CONTEXT_KEYS and produce the final brief markdown
+        rather than 3-5 insight bullets.
 
         Graceful empty-context behavior: if no prior outputs are present
         (smoke / capability-ping case), returns success with an explicit
@@ -3299,10 +3407,20 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         from core.services.openai_client_factory import get_openai_client
 
         topic = context.get('topic') or context.get('query') or ''
+        is_morning_brief = (
+            context.get('_synthesis_mode') == 'morning_brief'
+        )
+
+        # Session 1233 B.1 — pick the key set based on synthesis mode.
+        key_set = (
+            self._MORNING_BRIEF_SYNTHESIS_KEYS
+            if is_morning_brief
+            else self._SYNTHESIS_CONTEXT_KEYS
+        )
 
         # Collect any prior-step outputs present in context.
         synthesis_inputs = {}
-        for key in self._SYNTHESIS_CONTEXT_KEYS:
+        for key in key_set:
             val = context.get(key)
             if val:
                 # Coerce dict/list to str for prompt assembly.
@@ -3332,23 +3450,32 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             }
 
         # Build the synthesis prompt from whatever's available.
-        prompt_parts = [
-            "You are synthesizing the outputs of a multi-step research workflow "
-            "into a brief, actionable strategic insight.",
-            "",
-            f"Topic: {topic or '(not specified)'}",
-            "",
-            "Prior step outputs (truncated to 2000 chars each):",
-        ]
-        for key, val in synthesis_inputs.items():
-            prompt_parts.append(f"\n--- {key} ---\n{val}")
-        prompt_parts.extend([
-            "",
-            "Produce 3-5 actionable insights as bullets. Each bullet should be "
-            "a single sentence naming a concrete next-step decision the reader "
-            "can act on. Do not restate the inputs verbatim. Skip preamble.",
-        ])
-        prompt = "\n".join(prompt_parts)
+        if is_morning_brief:
+            prompt = self._build_morning_brief_prompt(
+                synthesis_inputs=synthesis_inputs,
+                slot_used=context.get(
+                    'lane_4_slot_used',
+                    context.get('rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT),
+                ),
+            )
+        else:
+            prompt_parts = [
+                "You are synthesizing the outputs of a multi-step research workflow "
+                "into a brief, actionable strategic insight.",
+                "",
+                f"Topic: {topic or '(not specified)'}",
+                "",
+                "Prior step outputs (truncated to 2000 chars each):",
+            ]
+            for key, val in synthesis_inputs.items():
+                prompt_parts.append(f"\n--- {key} ---\n{val}")
+            prompt_parts.extend([
+                "",
+                "Produce 3-5 actionable insights as bullets. Each bullet should be "
+                "a single sentence naming a concrete next-step decision the reader "
+                "can act on. Do not restate the inputs verbatim. Skip preamble.",
+            ])
+            prompt = "\n".join(prompt_parts)
 
         try:
             client = get_openai_client(api_key=settings.OPENAI_API_KEY)
@@ -3373,16 +3500,28 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             context['strategic_synthesis'] = synthesis_text
             inputs_used = list(synthesis_inputs.keys())
 
+            # Session 1233 B.1 — for morning_brief mode, also write the
+            # final brief markdown + title to context so the
+            # create_morning_brief_deliverable step can persist it.
+            if is_morning_brief:
+                from datetime import date as _date
+                context['morning_brief_markdown'] = synthesis_text
+                context['morning_brief_title'] = (
+                    f"Morning Brief — {_date.today().isoformat()}"
+                )
+
             logger.info(
-                "🧩 Session 1231 F7: strategic_synthesis produced %d chars "
-                "from %d input keys: %s",
-                len(synthesis_text), len(inputs_used), inputs_used,
+                "🧩 Session 1231 F7 / 1233 B.1: strategic_synthesis produced "
+                "%d chars from %d input keys (mode=%s): %s",
+                len(synthesis_text), len(inputs_used),
+                'morning_brief' if is_morning_brief else 'default',
+                inputs_used,
             )
 
             return {
                 'success': True,
                 'summary': f'Synthesized {len(inputs_used)} input source(s) '
-                           f'into {len(synthesis_text.splitlines())} insight lines',
+                           f'into {len(synthesis_text.splitlines())} lines',
                 'synthesis': synthesis_text,
                 'inputs_used': inputs_used,
             }
@@ -3394,6 +3533,334 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             return {
                 'success': False,
                 'error': f"strategic_synthesis LLM call failed: {type(e).__name__}: {e}",
+            }
+
+    # =========================================================================
+    # SESSION 1233 B.1 — Morning Brief workflow internal handlers
+    # =========================================================================
+
+    def _build_morning_brief_prompt(
+        self,
+        synthesis_inputs: Dict[str, str],
+        slot_used: str,
+    ) -> str:
+        """Build the strategic-synthesis prompt for morning_brief mode.
+
+        Reads the four lane texts + decision_card_text from
+        ``synthesis_inputs`` (already truncated to 2000 chars per key)
+        and asks gpt-5-mini to produce the final brief markdown:
+        TL;DR pointer + 4 lane sections + Decision Card.
+
+        Spec: docs/MORNING_BRIEF_SPEC.md § Intent + Decision Card.
+        """
+        slot_label_map = {
+            'sports_edge_scan': 'Sports Edge Scan',
+            'prediction_markets': 'Prediction Markets',
+            'ticker_catalyst_watch': 'Ticker / Catalyst Watch',
+            'gtm_pipeline_health': 'GTM / Pipeline Health',
+            'ai_infra_deep_dive': 'AI Infrastructure Deep Dive',
+        }
+        lane_4_label = slot_label_map.get(slot_used, slot_used.replace('_', ' ').title())
+
+        prompt_parts = [
+            "You are producing today's morning Chief-of-Staff brief for Chris, ",
+            "the sole operator of the Donkey Betz platform.",
+            "",
+            "Output a clean markdown document that Chris can read in 5-7 minutes.",
+            "",
+            "Required structure (top to bottom):",
+            "1. A single-line pointer: **If you only read one thing: skip to the Decision Card.**",
+            "2. ## TL;DR — 3 bullets maximum, one per line.",
+            "3. ## Lane 1 — Platform Readiness — summarize lane_1_text concisely.",
+            "4. ## Lane 2 — Build Focus — summarize lane_2_text concisely.",
+            "5. ## Lane 3 — Competitive Landscape — summarize lane_3_text concisely.",
+            f"6. ## Lane 4 — {lane_4_label} — summarize lane_4_text concisely.",
+            "7. ## Today's Decisions — embed decision_card_text verbatim (it's already formatted).",
+            "8. A one-line footer: *Brief generated YYYY-MM-DD*.",
+            "",
+            "Lane inputs (truncated to 2000 chars each):",
+        ]
+        for key, val in synthesis_inputs.items():
+            prompt_parts.append(f"\n--- {key} ---\n{val}")
+        prompt_parts.extend([
+            "",
+            "Rules:",
+            "- Be concise. The whole brief should fit on one screen.",
+            "- Do NOT invent facts. If a lane input is empty or thin, write '*(no notable items)*'.",
+            "- Preserve specific numbers, names, and links from the lane inputs.",
+            "- Skip preamble and meta-commentary. Start with the pointer line.",
+        ])
+        return "\n".join(prompt_parts)
+
+    def _execute_lane_4_rotating_focus_step(self, context: Dict) -> Dict[str, Any]:
+        """Dispatch Lane 4 to a slot-resolved agent.
+
+        Reads ``context['rotation_slot']`` (defaults to
+        ``ai_infra_deep_dive`` until Sub-step B.2 ships
+        ``rotation_slot_resolve``). Maps the slot to its agent via
+        ``_MORNING_BRIEF_LANE_4_SLOT_AGENT`` and dispatches through
+        the standard AGENT_MAP path.
+
+        Returns a dict with the same shape as the AGENT_MAP fallback
+        in ``_execute_step``: ``{'success', 'output', 'data'}`` plus
+        ``'slot_used'`` for downstream ``_update_context`` capture.
+        """
+        slot = context.get('rotation_slot') or self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT
+        agent_pascal = self._MORNING_BRIEF_LANE_4_SLOT_AGENT.get(slot)
+
+        if not agent_pascal:
+            logger.warning(
+                "Lane 4: unknown rotation_slot=%r — falling back to default %r",
+                slot, self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
+            )
+            slot = self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT
+            agent_pascal = self._MORNING_BRIEF_LANE_4_SLOT_AGENT[slot]
+
+        try:
+            from core.agent_router import AgentRouter
+            router = AgentRouter(user=getattr(self, 'user', None))
+        except Exception as e:
+            return {
+                'success': False,
+                'error': (
+                    f"Lane 4 dispatch unavailable (AGENT_MAP fallback init "
+                    f"failed for slot={slot!r}, agent={agent_pascal!r}): "
+                    f"{type(e).__name__}: {e}"
+                ),
+                'slot_used': slot,
+            }
+
+        if agent_pascal not in router.AGENT_MAP:
+            return {
+                'success': False,
+                'error': (
+                    f"Lane 4: slot {slot!r} resolved to {agent_pascal!r} "
+                    f"but that agent is not in AGENT_MAP"
+                ),
+                'slot_used': slot,
+            }
+
+        # Step task — spec § dispatch prompt for Lane 4. We use the slot
+        # name as the topic anchor; the agent's own system_prompt covers
+        # the rest.
+        topic = context.get('topic') or ''
+        step_task = (
+            f"Morning Brief Lane 4 — slot={slot}. "
+            f"Provide actionable signals only (not a news dump). "
+            f"Include 3-7 bullets with 'why it matters today' and explicit "
+            f"action recommendation if applicable. "
+            f"Topic anchor: {topic or '(none)'}."
+        )
+
+        try:
+            result = router.route(agent_pascal, step_task, context or {})
+            return {
+                'success': bool(getattr(result, 'success', False)),
+                'output': getattr(result, 'message', '') or '',
+                'data': getattr(result, 'data', {}) or {},
+                'slot_used': slot,
+            }
+        except Exception as e:
+            logger.error(
+                "Lane 4 dispatch failed for slot=%r → agent=%r: %s",
+                slot, agent_pascal, e, exc_info=True,
+            )
+            return {
+                'success': False,
+                'error': (
+                    f"Lane 4 dispatch failed for slot {slot!r} → "
+                    f"agent {agent_pascal!r}: {type(e).__name__}: {e}"
+                ),
+                'slot_used': slot,
+            }
+
+    def _execute_decision_card_synthesis_step(self, context: Dict) -> Dict[str, Any]:
+        """Produce the Decision Card from the four lane texts.
+
+        Reads ``lane_1_text`` through ``lane_4_text`` from context,
+        calls gpt-5-mini to produce 1-3 explicit decisions in markdown,
+        writes the result into ``context['decision_card_text']``.
+
+        Graceful empty-context behavior matches the
+        ``strategic_synthesis`` pattern: if no lanes wrote anything,
+        return success with the "no decisions today" sentinel so the
+        workflow's dispatch contract stays honored.
+        """
+        from django.conf import settings
+        from core.services.openai_client_factory import get_openai_client
+
+        # Collect lane inputs.
+        lane_inputs = {}
+        for lane_key in ('lane_1_text', 'lane_2_text', 'lane_3_text', 'lane_4_text'):
+            val = context.get(lane_key)
+            if val:
+                lane_inputs[lane_key] = str(val)[:2000]
+
+        if not lane_inputs:
+            # Smoke / empty-context case — keep the workflow alive.
+            sentinel = "No urgent decisions today — monitor only."
+            context['decision_card_text'] = sentinel
+            logger.info(
+                "🗂️ Session 1233 B.1: decision_card_synthesis ran with empty "
+                "lane context — wrote sentinel to keep workflow contract alive."
+            )
+            return {
+                'success': True,
+                'summary': 'No lane inputs available; wrote sentinel',
+                'decision_card_text': sentinel,
+                'inputs_used': [],
+            }
+
+        slot_label = context.get('lane_4_slot_used') or context.get(
+            'rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
+        )
+
+        prompt_parts = [
+            "You are producing the 'Today's Decisions' section for Chris's "
+            "daily Chief-of-Staff brief.",
+            "",
+            "Based on the four lane outputs below, identify 1-3 explicit "
+            "decisions Chris should make today. Hard cap: 3 decisions. If "
+            "nothing urgent surfaces, output exactly: ",
+            "    No urgent decisions today — monitor only.",
+            "",
+            "For each decision, output one '### Decision N: <one-sentence title>' ",
+            "heading followed by:",
+            "- **Decision:** 1 sentence stating what to decide.",
+            "- **Recommendation:** 1 sentence with the suggested choice.",
+            "- **Why now:** 1 bullet (evidence-linked to a specific lane output).",
+            "- **Next step:** owner + timebox (e.g., 'Claude Code — by 11:00 AM MST').",
+            "",
+            "Lane inputs (truncated to 2000 chars each):",
+        ]
+        for key, val in lane_inputs.items():
+            prompt_parts.append(f"\n--- {key} ---\n{val}")
+        prompt_parts.extend([
+            "",
+            "Output ONLY the decision-card markdown. No preamble. No headers ",
+            "other than the per-decision ones.",
+            f"(Context: Lane 4 today is the '{slot_label}' rotating slot.)",
+        ])
+        prompt = "\n".join(prompt_parts)
+
+        try:
+            client = get_openai_client(api_key=settings.OPENAI_API_KEY)
+            response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[{"role": "user", "content": prompt}],
+                # Floor 4000 per Session 1224 memory rule
+                # (feedback_gpt5_max_completion_tokens_floor.md).
+                max_completion_tokens=4000,
+            )
+            card_text = (response.choices[0].message.content or '').strip()
+            if not card_text:
+                return {
+                    'success': False,
+                    'error': (
+                        'decision_card_synthesis: LLM returned empty content '
+                        f'(finish_reason={response.choices[0].finish_reason})'
+                    ),
+                }
+
+            context['decision_card_text'] = card_text
+            inputs_used = list(lane_inputs.keys())
+
+            logger.info(
+                "🗂️ Session 1233 B.1: decision_card_synthesis produced %d chars "
+                "from %d lane inputs: %s",
+                len(card_text), len(inputs_used), inputs_used,
+            )
+            return {
+                'success': True,
+                'summary': f'Produced decision card ({len(card_text)} chars) from '
+                           f'{len(inputs_used)} lane input(s)',
+                'decision_card_text': card_text,
+                'inputs_used': inputs_used,
+            }
+        except Exception as e:
+            logger.error(
+                "🗂️ Session 1233 B.1: decision_card_synthesis LLM call failed: %s",
+                e, exc_info=True,
+            )
+            return {
+                'success': False,
+                'error': (
+                    f"decision_card_synthesis LLM call failed: "
+                    f"{type(e).__name__}: {e}"
+                ),
+            }
+
+    def _execute_create_morning_brief_deliverable_step(
+        self, context: Dict,
+    ) -> Dict[str, Any]:
+        """Persist context['morning_brief_markdown'] as a Deliverable.
+
+        Workspace UUID is not yet wired — Sub-step C (Session 1233+)
+        creates the persistent "Morning Brief" workspace and updates
+        this handler to point at it. For B.1 the deliverable lands with
+        ``workspace=None`` and ``category='Morning Brief'``, which the
+        workspace UI surfaces under "uncategorized."
+
+        Graceful no-content case: if ``morning_brief_markdown`` is
+        missing (workflow ran but synthesis didn't produce output),
+        returns success with a note rather than aborting — the workflow
+        contract stays honored for smoke probes.
+        """
+        markdown = context.get('morning_brief_markdown')
+        if not markdown:
+            logger.info(
+                "📋 Session 1233 B.1: create_morning_brief_deliverable ran with "
+                "no markdown — likely smoke probe. Returning graceful no-op."
+            )
+            return {
+                'success': True,
+                'summary': 'No morning_brief_markdown to persist; smoke no-op',
+                'deliverable_id': None,
+            }
+
+        title = context.get('morning_brief_title') or 'Morning Brief'
+        user = context.get('user') or getattr(self, 'user', None)
+
+        try:
+            from core.models_deliverables import Deliverable
+            deliverable = Deliverable.objects.create(
+                title=title,
+                content=markdown,
+                content_format='markdown',
+                category='Morning Brief',
+                agent_name='WorkflowOrchestrationAgent',
+                agent_task='morning_brief workflow',
+                user=user,
+                status='ready',
+                metadata={
+                    'workflow': 'morning_brief',
+                    'rotation_slot': context.get('lane_4_slot_used') or context.get(
+                        'rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
+                    ),
+                    'session': '1233-B.1',
+                },
+            )
+            logger.info(
+                "📋 Session 1233 B.1: created morning_brief Deliverable %s",
+                deliverable.id,
+            )
+            return {
+                'success': True,
+                'summary': f'Persisted morning_brief as Deliverable {deliverable.id}',
+                'deliverable_id': str(deliverable.id),
+                'title': title,
+            }
+        except Exception as e:
+            logger.error(
+                "📋 Session 1233 B.1: create_morning_brief_deliverable failed: %s",
+                e, exc_info=True,
+            )
+            return {
+                'success': False,
+                'error': (
+                    f"create_morning_brief_deliverable failed: "
+                    f"{type(e).__name__}: {e}"
+                ),
             }
 
     # =========================================================================
