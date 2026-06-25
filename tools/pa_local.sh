@@ -20,22 +20,28 @@
 # the --conversation flag below. Current value: Session 1234 mid-
 # session fresh thread (Rigby started new conv at Chris's direction
 # after the morning_brief first-fire investigation kicked off). Pin:
-# pa-0f08fc48ec914917. Session 1234 close health_check returned
-# score=100 / continue / 5 turns / ~2.5k tokens / 1.8h / 4 topics —
-# NO rotation; carries forward into Session 1235. Session 1234 closed
-# 7 PRs (#2606-#2612 D1-D5 fail-loud arc + lane workspace + router
-# intercept + research dup-skip; #2613 D6 devops dup-skip; #2614 D7
-# leak-gate verified-holding note; #2615 D8 structural snapshot
-# framing on 6 load-bearing docs). 36 historical leak-victim
-# Deliverables bulk-archived via ORM in-session. Workers restarted
-# 14:23 local after D3-D6.
+# pa-0f08fc48ec914917. Session 1234 close (FINAL — two arcs same
+# UTC day) health_check returned score=100 / continue — NO rotation;
+# carries forward into Session 1235. Session 1234 closed 17 PRs
+# total across two arcs. Arc 1 (morning_brief fixes) #2606-#2615
+# + #2617 = D1-D8 + cascade checklist. Arc 2 (docs-corpus retrieval)
+# #2618-#2625 = D9-D16: type-aware Document enrichment +
+# kb_tool action=semantic_search (Rigby's first real semantic
+# retrieval action) + min_session=0 LLM-autofill guard + similarity
+# threshold tuning + filter-before-slice fix that finally made it
+# all work end-to-end. 36 leak-victims archived + 2,729 Documents
+# enriched + ~28k DocumentEmbedding chunks (backfill still ramping).
+# Workers restarted 16:14 local at session close.
 # Carryover priorities for Session 1235: morning_brief 2nd-fire
 # verify (06-26 13:00 UTC = 07:00 MDT) — first scheduled fire with
 # D3/D4/D5/D6 live; ALL lane intermediates should land in MB
 # workspace 19807888-…, NOT cf708a2e-… (Session 1231 E2E). Operator
 # Edge Friday-1 dry-run (06-26 12:00 UTC). Chris reads the brief;
 # Rigby provides audience-fit verdict; Sub-step D polish scope
-# derives from that. Chris-side: Anthropic credit refill, CI billing.
+# derives from that. Optional docs-corpus follow-ups: narrow
+# search_embeddings broad except, fix search_personal_memories,
+# build refresh_docs_corpus beat task. Chris-side: Anthropic credit
+# refill, CI billing.
 # Prior pins retired: pa-91cf6bbce1d6406e (Session 1234 morning —
 # replaced mid-session when Rigby fresh-started pa-0f08fc48ec914917
 # at Chris's direction during the deliverable_tool corpus sweep;
