@@ -686,6 +686,64 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         },
 
         # =========================================================================
+        # SESSION 1232: Daily Chief-of-Staff Morning Brief — v0 draft
+        # See docs/MORNING_BRIEF_SPEC.md for the canonical spec (lanes, rotation,
+        # override triggers, output shapes, per-step input/write keys).
+        # v0 is a workflow-shape stub: it parses + dispatches but the full
+        # per-step input plumbing (rotation_slot_resolve pre-step, slot-resolved
+        # agent for Lane 4, override-trigger inputs) lands in Sub-step B.
+        # =========================================================================
+        'morning_brief': {
+            'description': "Chris's daily Chief-of-Staff brief: platform readiness + build focus + competitive landscape + rotating market lane + decision card synthesis",
+            'content_type': 'morning_brief',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'lane_1_platform_readiness',
+                    'agent': 'system_intelligence_agent',
+                    'description': 'Overnight platform health: SLO breaches, failing tasks, queue backlog, fleet degradation'
+                },
+                {
+                    'step': 2,
+                    'name': 'lane_2_build_focus',
+                    'agent': 'coo_agent',
+                    'description': 'Shipping delta + blocked initiatives + approvals needed in last 24h'
+                },
+                {
+                    'step': 3,
+                    'name': 'lane_3_competitive_landscape',
+                    'agent': 'trend_analysis_agent',
+                    'description': 'Change-only snapshot of competitor launches/pricing/features/fundraising in last 72h'
+                },
+                {
+                    'step': 4,
+                    'name': 'lane_4_rotating_focus',
+                    'agent': 'research_agent',  # v0: default for AI-infra Mon slot. Sub-step B wires slot-resolved dispatch.
+                    'description': 'Rotating market/signal lane resolved by weekday + override triggers (incident → revenue → signal → calendar)'
+                },
+                {
+                    'step': 5,
+                    'name': 'decision_card_synthesis',
+                    'agent': 'coo_agent',
+                    'description': 'Synthesize 1-3 explicit decisions from the 4 lanes + governance/work/ops snapshots'
+                },
+                {
+                    'step': 6,
+                    'name': 'strategic_synthesis',
+                    'agent': 'strategic_synthesis',  # workflow-internal handler from Session 1231 PR #2592
+                    'description': 'Compile final brief markdown with TL;DR pointer to Decision Card'
+                },
+                {
+                    'step': 7,
+                    'name': 'create_deliverable',
+                    'agent': 'create_project_from_research',
+                    'description': 'Persist final brief into "Morning Brief" workspace as a deliverable'
+                }
+            ]
+        },
+
+        # =========================================================================
         # SESSION 496: Content Writing Workflows - Transform research into written content
         # =========================================================================
 
