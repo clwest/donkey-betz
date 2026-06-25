@@ -693,57 +693,63 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         # per-step input plumbing (rotation_slot_resolve pre-step, slot-resolved
         # agent for Lane 4, override-trigger inputs) lands in Sub-step B.
         # =========================================================================
-        # Session 1233 B.1 update: lane_4_rotating_focus, decision_card_synthesis,
-        # and create_deliverable agents flipped from AGENT_MAP-fallback / project
-        # creation placeholders to dedicated workflow-internal handlers. Lane 4
-        # now slot-driven via context['rotation_slot'] (default 'ai_infra_deep_dive'
-        # until Sub-step B.2 ships rotation_slot_resolve pre-step). Strategic
-        # synthesis (Step 6) reads lane_*_text + decision_card_text from context
-        # when context['_synthesis_mode'] == 'morning_brief' (set in the workflow
-        # context init when workflow == 'morning_brief').
+        # Session 1233 B.1 + B.2 update: 8 steps total. B.1 flipped
+        # lane_4_rotating_focus / decision_card_synthesis / create_deliverable
+        # agents to dedicated workflow-internal handlers + extended
+        # strategic_synthesis with morning_brief mode (reads lane_* +
+        # decision_card_text). B.2 added Step 1 rotation_slot_resolve
+        # pre-step that resolves context['rotation_slot'] per priority
+        # chain (caller-forced → override flags → weekday default). All
+        # remaining steps shifted from 1-7 to 2-8.
         'morning_brief': {
-            'description': "Chris's daily Chief-of-Staff brief: platform readiness + build focus + competitive landscape + rotating market lane + decision card synthesis",
+            'description': "Chris's daily Chief-of-Staff brief: rotation slot resolution + platform readiness + build focus + competitive landscape + rotating market lane + decision card synthesis",
             'content_type': 'morning_brief',
             'no_image_generation': True,
             'steps': [
                 {
                     'step': 1,
+                    'name': 'rotation_slot_resolve',
+                    'agent': 'rotation_slot_resolve',  # B.2: internal pure-logic handler; weekday + overrides → context['rotation_slot']
+                    'description': 'Resolve Lane 4 rotation slot per priority chain (caller-forced → incident → revenue → signal → calendar → weekday default)'
+                },
+                {
+                    'step': 2,
                     'name': 'lane_1_platform_readiness',
                     'agent': 'system_intelligence_agent',
                     'description': 'Overnight platform health: SLO breaches, failing tasks, queue backlog, fleet degradation'
                 },
                 {
-                    'step': 2,
+                    'step': 3,
                     'name': 'lane_2_build_focus',
                     'agent': 'coo_agent',
                     'description': 'Shipping delta + blocked initiatives + approvals needed in last 24h'
                 },
                 {
-                    'step': 3,
+                    'step': 4,
                     'name': 'lane_3_competitive_landscape',
                     'agent': 'trend_analysis_agent',
                     'description': 'Change-only snapshot of competitor launches/pricing/features/fundraising in last 72h'
                 },
                 {
-                    'step': 4,
+                    'step': 5,
                     'name': 'lane_4_rotating_focus',
-                    'agent': 'lane_4_rotating_focus',  # B.1: internal handler; reads context['rotation_slot'] (default ai_infra_deep_dive)
-                    'description': 'Rotating market/signal lane resolved by weekday + override triggers (incident → revenue → signal → calendar)'
+                    'agent': 'lane_4_rotating_focus',  # B.1: internal handler; reads context['rotation_slot'] set by Step 1
+                    'description': 'Rotating market/signal lane dispatched per the slot resolved by Step 1'
                 },
                 {
-                    'step': 5,
+                    'step': 6,
                     'name': 'decision_card_synthesis',
                     'agent': 'decision_card_synthesis',  # B.1: internal LLM handler; reads 4 lane texts
                     'description': 'Synthesize 1-3 explicit decisions from the 4 lanes + governance/work/ops snapshots'
                 },
                 {
-                    'step': 6,
+                    'step': 7,
                     'name': 'strategic_synthesis',
                     'agent': 'strategic_synthesis',  # workflow-internal handler; B.1 extension reads lane_* + decision_card_text in morning_brief mode
                     'description': 'Compile final brief markdown with TL;DR pointer to Decision Card'
                 },
                 {
-                    'step': 7,
+                    'step': 8,
                     'name': 'create_deliverable',
                     'agent': 'create_morning_brief_deliverable',  # B.1: internal handler; persists Deliverable row (workspace_id wired in Sub-step C)
                     'description': 'Persist final brief into "Morning Brief" workspace as a deliverable'
@@ -1360,10 +1366,20 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         elif agent_name == 'strategic_synthesis':
             return self._execute_strategic_synthesis_step(context)
 
+        # Session 1233 B.2 — morning_brief workflow rotation_slot_resolve
+        # pre-step. Pure logic (no LLM): reads weekday + override flags
+        # from context, writes context['rotation_slot'] per priority
+        # chain (caller-forced → incident → revenue → signal → calendar
+        # → weekday default). Runs before Lane 4 so the slot resolution
+        # is visible as a distinct workflow step in the trace.
+        elif agent_name == 'rotation_slot_resolve':
+            return self._execute_rotation_slot_resolve_step(context)
+
         # Session 1233 B.1 — morning_brief workflow Lane 4 rotating
-        # focus dispatch. Reads context['rotation_slot'] (defaults to
-        # 'ai_infra_deep_dive' until B.2 ships rotation_slot_resolve)
-        # and dispatches via the slot → agent map.
+        # focus dispatch. Reads context['rotation_slot'] (set by the
+        # rotation_slot_resolve pre-step in B.2, or by an explicit
+        # caller override). Default 'ai_infra_deep_dive' for safety
+        # when no slot has been resolved.
         elif agent_name == 'lane_4_rotating_focus':
             return self._execute_lane_4_rotating_focus_step(context)
 
@@ -3413,6 +3429,43 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         'ai_series_workflow_agent': 'AISeriesWorkflowAgent',
     }
 
+    # Session 1233 B.2 — weekday → Lane 4 default rotation slot.
+    # Mon-Thu pick fixed slots per spec § "Default rotation schedule".
+    # Fri (weekday 4) uses iso_week parity to alternate between
+    # sports_edge_scan (even weeks) and prediction_markets (odd weeks),
+    # so it's NOT in this dict — handled by _resolve_rotation_slot
+    # explicitly. Weekend (Sat/Sun) falls back to ai_infra_deep_dive
+    # (Mon default) since scheduled briefs are weekday-only but the
+    # workflow should still resolve cleanly if dispatched on weekend.
+    #
+    # Tuesday's "Competitor Wedge" per spec § Lane 4 rotation table is
+    # a Lane-3-deepen concept rather than a distinct Lane 4 slot. For
+    # B.2 Tue falls back to ai_infra_deep_dive; a future Sub-step could
+    # add a 'competitor_wedge' slot to _MORNING_BRIEF_LANE_4_SLOT_AGENT
+    # mapping to TrendAnalysisAgent / CompetitorAnalysisAgent.
+    _WEEKDAY_DEFAULT_SLOT: dict = {
+        0: 'ai_infra_deep_dive',     # Mon
+        1: 'ai_infra_deep_dive',     # Tue (spec: competitor_wedge — deferred)
+        2: 'ticker_catalyst_watch',  # Wed
+        3: 'gtm_pipeline_health',    # Thu
+        # 4 (Fri): iso_week parity → sports OR prediction_markets
+        5: 'ai_infra_deep_dive',     # Sat (weekend default)
+        6: 'ai_infra_deep_dive',     # Sun (weekend default)
+    }
+
+    # Session 1233 B.2 — override shorthand → Lane 4 slot map.
+    # When the caller writes ``context['rotation_override']`` with
+    # ``signal_slot`` or ``calendar_slot`` keys (per spec § Override
+    # triggers), the value is a shorthand that gets mapped to the
+    # full slot name via this dict.
+    _ROTATION_OVERRIDE_SHORTHAND_TO_SLOT: dict = {
+        'sports': 'sports_edge_scan',
+        'markets': 'prediction_markets',
+        'tickers': 'ticker_catalyst_watch',
+        'gtm': 'gtm_pipeline_health',
+        'ai_infra': 'ai_infra_deep_dive',
+    }
+
     def _execute_strategic_synthesis_step(self, context: Dict) -> Dict[str, Any]:
         """Synthesize prior workflow step outputs into actionable insights.
 
@@ -3622,12 +3675,134 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         ])
         return "\n".join(prompt_parts)
 
+    def _resolve_rotation_slot(self, context: Dict) -> str:
+        """Pure-logic Lane 4 slot resolver. Pulled out as a helper so
+        the rotation_slot_resolve pre-step (B.2) and Lane 4's runtime
+        fallback can share it.
+
+        Priority chain (highest wins):
+
+        1. Caller-forced ``context['rotation_slot']`` (B.1 default
+           override path stays supported).
+        2. Override flags in ``context['rotation_override']``:
+           ``incident`` (bool) → ai_infra_deep_dive (until incident_focus
+           slot lands), ``revenue`` (bool) → gtm_pipeline_health,
+           ``signal_slot`` (shorthand string) → corresponding slot via
+           ``_ROTATION_OVERRIDE_SHORTHAND_TO_SLOT``, ``calendar_slot``
+           (shorthand string) → same map.
+        3. Weekday default from ``_WEEKDAY_DEFAULT_SLOT``. Friday
+           (weekday 4) alternates between ``sports_edge_scan`` (even
+           ISO weeks) and ``prediction_markets`` (odd ISO weeks) per
+           spec § Lane 4 rotation schedule.
+
+        Spec source: ``docs/MORNING_BRIEF_SPEC.md`` § "Default rotation
+        schedule" + § "Override triggers".
+        """
+        # (1) Caller-forced slot.
+        forced = context.get('rotation_slot')
+        if forced:
+            return forced
+
+        # (2) Override chain.
+        override = context.get('rotation_override') or {}
+        if isinstance(override, dict):
+            if override.get('incident'):
+                # No dedicated 'incident_focus' slot in the B.2 slot
+                # map yet; until that lands, treat incident as
+                # "deepen Lane 1 coverage" via the default slot.
+                return self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT
+            if override.get('revenue'):
+                return 'gtm_pipeline_health'
+            signal = override.get('signal_slot')
+            if signal:
+                return self._ROTATION_OVERRIDE_SHORTHAND_TO_SLOT.get(
+                    signal, self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
+                )
+            calendar = override.get('calendar_slot')
+            if calendar:
+                return self._ROTATION_OVERRIDE_SHORTHAND_TO_SLOT.get(
+                    calendar, self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
+                )
+
+        # (3) Weekday default. Friday handled separately for alternation.
+        # Helper indirection (_get_now_utc) is a test seam — patching
+        # ``self._get_now_utc`` lets tests inject a fixed weekday +
+        # iso_week without monkey-patching datetime at the module level.
+        now = self._get_now_utc()
+        weekday = now.weekday()
+        if weekday == 4:  # Friday
+            iso_week = now.isocalendar()[1]
+            return 'sports_edge_scan' if iso_week % 2 == 0 else 'prediction_markets'
+        return self._WEEKDAY_DEFAULT_SLOT.get(
+            weekday, self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
+        )
+
+    @staticmethod
+    def _get_now_utc():
+        """Test seam: returns ``datetime.utcnow()``. Inline import
+        keeps the module-level imports lean; patching this method
+        on instances is the canonical way to inject a fixed time
+        for tests."""
+        from datetime import datetime as _dt
+        return _dt.utcnow()
+
+    def _execute_rotation_slot_resolve_step(
+        self, context: Dict,
+    ) -> Dict[str, Any]:
+        """Resolve the Lane 4 rotation slot and write it to context.
+
+        Pure-logic pre-step. Captures the resolution reason for the
+        runner's step_result summary BEFORE delegating to
+        ``_resolve_rotation_slot`` so caller-forced vs same-value-by-
+        coincidence stays distinguishable. Persists the result into
+        ``context['rotation_slot']`` for Lane 4 to consume.
+
+        Session 1233 B.2.
+        """
+        forced = context.get('rotation_slot')
+        override = context.get('rotation_override') or {}
+
+        if forced:
+            reason = 'caller_forced'
+        elif isinstance(override, dict) and override.get('incident'):
+            reason = 'override_incident'
+        elif isinstance(override, dict) and override.get('revenue'):
+            reason = 'override_revenue'
+        elif isinstance(override, dict) and override.get('signal_slot'):
+            reason = f"override_signal:{override['signal_slot']}"
+        elif isinstance(override, dict) and override.get('calendar_slot'):
+            reason = f"override_calendar:{override['calendar_slot']}"
+        else:
+            weekday = self._get_now_utc().weekday()
+            reason = (
+                f"fri_alt_iso_week_parity:{weekday}"
+                if weekday == 4
+                else f"weekday_default:{weekday}"
+            )
+
+        slot = self._resolve_rotation_slot(context)
+        context['rotation_slot'] = slot
+
+        logger.info(
+            "🗓️ Session 1233 B.2: rotation_slot_resolve resolved slot=%r "
+            "(reason=%s)",
+            slot, reason,
+        )
+        return {
+            'success': True,
+            'summary': f"Resolved Lane 4 slot to {slot} ({reason})",
+            'rotation_slot': slot,
+            'reason': reason,
+        }
+
     def _execute_lane_4_rotating_focus_step(self, context: Dict) -> Dict[str, Any]:
         """Dispatch Lane 4 to a slot-resolved agent.
 
-        Reads ``context['rotation_slot']`` (defaults to
-        ``ai_infra_deep_dive`` until Sub-step B.2 ships
-        ``rotation_slot_resolve``). Maps the slot to its agent via
+        Reads ``context['rotation_slot']`` set by the
+        ``rotation_slot_resolve`` pre-step (B.2). If no slot has been
+        resolved (e.g., template lacks the pre-step or runs Lane 4
+        directly), falls back to ``_resolve_rotation_slot`` so the
+        weekday default applies. Maps the slot to its agent via
         ``_MORNING_BRIEF_LANE_4_SLOT_AGENT`` and dispatches through
         the standard AGENT_MAP path.
 
@@ -3635,7 +3810,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         in ``_execute_step``: ``{'success', 'output', 'data'}`` plus
         ``'slot_used'`` for downstream ``_update_context`` capture.
         """
-        slot = context.get('rotation_slot') or self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT
+        slot = context.get('rotation_slot') or self._resolve_rotation_slot(context)
         agent_pascal = self._MORNING_BRIEF_LANE_4_SLOT_AGENT.get(slot)
 
         if not agent_pascal:
