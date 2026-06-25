@@ -263,10 +263,10 @@ Bare step list (no code — what the workflow runner must dispatch in order). Ea
 
 - **Sub-step A (Session 1232):** spec exists + Chris-ratified. ✅
 - **Sub-step B.1 (Session 1233):** plumbing-first cut. `_update_context` lane writes + `lane_4_rotating_focus` slot-driven internal handler (default `ai_infra_deep_dive`) + `decision_card_synthesis` real LLM handler + `strategic_synthesis` morning_brief mode + `create_morning_brief_deliverable` handler. Workflow produces a real markdown brief end-to-end on a hardcoded Monday slot. ✅
-- **Sub-step B.2 (Session 1233, this PR):** `rotation_slot_resolve` pre-step + override-trigger inputs (incident → revenue → signal → calendar) + slot-resolution tests across all 7 weekdays + Friday alternation. ← *current*
-- **Sub-step C (Session 1234):** persistent "Morning Brief" workspace + PeriodicTask + first fire verified.
-- **Sub-step D (Session 1235):** polish based on Chris's read of first 1–2 briefs.
-- **Sub-step E (Session 1236+):** dogfood Mon–Fri. Decision point: does the format work?
+- **Sub-step B.2 (Session 1233):** `rotation_slot_resolve` pre-step + override-trigger inputs (incident → revenue → signal → calendar) + slot-resolution tests across all 7 weekdays + Friday alternation. ✅
+- **Sub-step C (Session 1233, this PR):** persistent "Morning Brief" workspace materialized via `get_or_create` at deliverable-persist time + `generate_morning_brief_daily` Celery beat task at `crontab(hour=7, minute=0)` Denver. First-fire verify is post-merge (next Railway morning). ← *current*
+- **Sub-step D (Session 1234+):** polish based on Chris's read of first 1–2 briefs.
+- **Sub-step E (Session 1235+):** dogfood Mon–Fri. Decision point: does the format work?
 
 **Whole-arc DoD:** Chris reads the morning brief 4 of 5 weekday mornings of one full week without needing to ask Rigby for any topic-specific dispatches separately. At that point: user 1 + daily active usage + empirically-true product pitch.
 
@@ -321,3 +321,47 @@ Test seam: `_get_now_utc()` is a static method that tests can `patch.object` to 
 - **Auto-populated override flags.** Override flags are caller-provided in B.2. A future PR could auto-populate them: incident from Lane 1's CRITICAL findings (needs Lane 1 → re-resolve loop), revenue from `governance_tool.inbox`, signal from signal aggregation thresholds, calendar from a known-events table.
 
 Test coverage: 21 rotation-specific tests in `MorningBriefRotationSlotResolveTests` covering Mon-Sun defaults, Fri alternation (both parities), caller-forced bypass, full override chain priority (incident > revenue > signal > calendar), shorthand mapping for all 5 slots, unknown-shorthand fallback, handler context write + reason tag capture, and dispatcher registration. 59/59 tests green across the morning_brief + F4 fallback suites.
+
+## C implementation notes (Session 1233 — landed)
+
+Sub-step C closes the daily-CoS arc scheduling. Two surfaces shipped:
+
+**1. Workspace materialization.** `_execute_create_morning_brief_deliverable_step` calls a new `_get_or_create_morning_brief_workspace(user)` helper that does `ProjectWorkspace.objects.get_or_create(user=user, name='Morning Brief', defaults={...})`. First fire bootstraps the workspace per-user with `workspace_type='local'`, `root_path='/morning-brief'` (symbolic — no filesystem access), idempotent on subsequent fires. The Deliverable row is created with `workspace=workspace` so all briefs accumulate in the same workspace and Chris can scroll back through past days.
+
+**2. Daily beat task.** `core.tasks.generate_morning_brief_daily(user_id=None, dry_run=False)` dispatches the `morning_brief` workflow. Defaults to looking up `username='chris'` when `user_id` is omitted (matches CLAUDE.md § Session 1098 fix). Returns structured telemetry (`success`, `workflow`, `deliverable_id`, `rotation_slot`, `lane_4_slot_used`, `date`, `user_id`, `dry_run`) so `CeleryTaskEvent` rows can surface per-fire diagnostics. Beat schedule entry in `core/celery.py`:
+
+```python
+'generate-morning-brief-daily': {
+    'task': 'core.tasks.generate_morning_brief_daily',
+    'schedule': crontab(hour=7, minute=0),  # 7:00 AM Denver
+    'options': {'queue': 'default', 'expires': 3600},
+},
+```
+
+Time drifts seasonally per Celery's `CELERY_TIMEZONE=America/Denver` convention: 13:00 UTC during MDT, 14:00 UTC during MST. Matches the Session 1228 PRs #2569/#2570 TZ trap fix pattern.
+
+**Local guard.** `generate-morning-brief-daily` is in `LOCAL_DENY_TASKS` in `add_critical_celery_tasks.py` so the beat row only materializes on Railway. Local dispatches stay manual via `manage.py` invocation or the PA tool surface. Reason: 5+ LLM calls per fire (3 lane synthesis + decision card + strategic synthesis) is expensive locally + Chris reads it on Railway anyway.
+
+**First-fire verify (carryover).** The next Railway 7:00 AM Denver fire (≈13:00 UTC) produces the first scheduled morning brief. Verify via:
+
+```python
+CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+).order_by('-started_at').first()
+# Expected: SUCCESS, result['success']=True, result['deliverable_id'] non-null
+
+Deliverable.objects.filter(
+    user__username='chris',
+    category='Morning Brief',
+).order_by('-created_at').first()
+# Expected: today's brief, workspace.name='Morning Brief', status='ready'
+```
+
+Test coverage (12 new tests in `MorningBriefWorkspaceMaterializationTests` + `MorningBriefDeliverableWorkspaceLinkTests` + `GenerateMorningBriefDailyTaskTests` + `MorningBriefBeatScheduleRegistrationTests`):
+
+- Workspace materialization: first call creates, second call reuses (idempotent), scoped per-user, None user returns None
+- Deliverable workspace link: workspace_id populated, multiple briefs accumulate in same workspace, no-markdown smoke no-op preserved
+- Daily task: default lookup falls back to 'chris', missing user returns error (no exception), workflow exception returns failure telemetry (no exception propagation)
+- Beat schedule registration: entry present in `app.conf.beat_schedule`, crontab is `hour=7, minute=0`, task is `generate-morning-brief-daily` in `LOCAL_DENY_TASKS`
+
+71/71 tests green across all morning_brief suites + F4 fallback.

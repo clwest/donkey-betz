@@ -3995,16 +3995,67 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 ),
             }
 
+    # Session 1233 Sub-step C — persistent "Morning Brief" workspace name.
+    # Looked up via get_or_create at deliverable-persist time, scoped per
+    # user, so the first scheduled fire bootstraps the workspace.
+    _MORNING_BRIEF_WORKSPACE_NAME: str = 'Morning Brief'
+    _MORNING_BRIEF_WORKSPACE_DESCRIPTION: str = (
+        "Daily Chief-of-Staff brief workspace. Auto-created by "
+        "WorkflowOrchestrationAgent on first morning_brief workflow fire. "
+        "Each deliverable accumulates here as a dated entry."
+    )
+
+    def _get_or_create_morning_brief_workspace(self, user):
+        """Resolve the persistent Morning Brief workspace for ``user``.
+
+        Idempotent ``get_or_create`` on ``(user, name='Morning Brief')``.
+        Returns the workspace or ``None`` if creation failed (e.g., no
+        user). The Deliverable persist step keeps working in either case
+        — workspace=None lands the row in the user's uncategorized view.
+
+        Session 1233 Sub-step C.
+        """
+        if not user:
+            return None
+        try:
+            from core.models_skin_layer import ProjectWorkspace
+            workspace, created = ProjectWorkspace.objects.get_or_create(
+                user=user,
+                name=self._MORNING_BRIEF_WORKSPACE_NAME,
+                defaults={
+                    'description': self._MORNING_BRIEF_WORKSPACE_DESCRIPTION,
+                    'workspace_type': 'local',
+                    # Symbolic root_path — no filesystem access expected.
+                    # Required by ProjectWorkspace model schema.
+                    'root_path': '/morning-brief',
+                    'tech_stack': {},
+                },
+            )
+            if created:
+                logger.info(
+                    "📋 Session 1233 Sub-step C: bootstrapped Morning Brief "
+                    "workspace %s for user=%s",
+                    workspace.id, getattr(user, 'username', user),
+                )
+            return workspace
+        except Exception as e:
+            logger.warning(
+                "Sub-step C workspace get_or_create failed (deliverable will "
+                "land with workspace=None): %s: %s",
+                type(e).__name__, e,
+            )
+            return None
+
     def _execute_create_morning_brief_deliverable_step(
         self, context: Dict,
     ) -> Dict[str, Any]:
         """Persist context['morning_brief_markdown'] as a Deliverable.
 
-        Workspace UUID is not yet wired — Sub-step C (Session 1233+)
-        creates the persistent "Morning Brief" workspace and updates
-        this handler to point at it. For B.1 the deliverable lands with
-        ``workspace=None`` and ``category='Morning Brief'``, which the
-        workspace UI surfaces under "uncategorized."
+        Session 1233 Sub-step C wires the persistent "Morning Brief"
+        workspace: ``_get_or_create_morning_brief_workspace`` materializes
+        the workspace on first fire and reuses it thereafter. Deliverables
+        accumulate as dated entries in this workspace so Chris can scroll
+        back through past briefs.
 
         Graceful no-content case: if ``morning_brief_markdown`` is
         missing (workflow ran but synthesis didn't produce output),
@@ -4025,6 +4076,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         title = context.get('morning_brief_title') or 'Morning Brief'
         user = context.get('user') or getattr(self, 'user', None)
+        workspace = self._get_or_create_morning_brief_workspace(user)
 
         try:
             from core.models_deliverables import Deliverable
@@ -4036,23 +4088,26 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 agent_name='WorkflowOrchestrationAgent',
                 agent_task='morning_brief workflow',
                 user=user,
+                workspace=workspace,  # Session 1233 Sub-step C
                 status='ready',
                 metadata={
                     'workflow': 'morning_brief',
                     'rotation_slot': context.get('lane_4_slot_used') or context.get(
                         'rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
                     ),
-                    'session': '1233-B.1',
+                    'session': '1233-C',
                 },
             )
             logger.info(
-                "📋 Session 1233 B.1: created morning_brief Deliverable %s",
-                deliverable.id,
+                "📋 Session 1233 Sub-step C: created morning_brief Deliverable "
+                "%s in workspace %s",
+                deliverable.id, workspace.id if workspace else None,
             )
             return {
                 'success': True,
                 'summary': f'Persisted morning_brief as Deliverable {deliverable.id}',
                 'deliverable_id': str(deliverable.id),
+                'workspace_id': str(workspace.id) if workspace else None,
                 'title': title,
             }
         except Exception as e:

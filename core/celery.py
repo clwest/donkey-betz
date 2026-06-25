@@ -460,6 +460,22 @@ app.conf.beat_schedule = {
         'options': {'queue': 'content', 'expires': 3600},
     },
 
+    # Session 1233 Sub-step C — daily Chief-of-Staff morning brief.
+    # Dispatches the morning_brief workflow which runs 8 steps
+    # (rotation_slot_resolve → 4 lanes → decision_card_synthesis →
+    # strategic_synthesis → create_morning_brief_deliverable) and
+    # persists the final markdown brief into Chris's "Morning Brief"
+    # ProjectWorkspace. Pin to 7:00 AM Denver local — drifts UTC
+    # seasonally (13:00 UTC during MDT, 14:00 UTC during MST). Per
+    # spec § Scheduling and the Session 1228 TZ trap fix pattern.
+    # Default queue is fine: this task is low-frequency (1×/day) and
+    # the workflow itself routes individual agent dispatches.
+    'generate-morning-brief-daily': {
+        'task': 'core.tasks.generate_morning_brief_daily',
+        'schedule': crontab(hour=7, minute=0),  # 7:00 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+
     # ────────────────────────────────────────────────────────────────────────
     # Session 1115 batch-3 — DB hygiene + metrics tasks that were defined but
     # never wired. All entries below are safe by inspection:
