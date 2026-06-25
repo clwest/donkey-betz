@@ -5213,21 +5213,88 @@ class OpsHandlersMixin:
                 }
 
             elif action == 'documents':
-                from content.models import Document
+                # Session 1234 D11 — filter params over D9/D10 enrichment.
+                # The Document table now carries category / document_class /
+                # is_pinned / tags / retrieval_boost (D9 sync + D10 backfill);
+                # this action exposes them as filters so Rigby can scope
+                # browsing to "only current architecture docs", "exclude
+                # superseded handoffs", "only docs from session 1200+", etc.
+                #
+                # Default behavior: exclude `status='superseded'`. Pre-D11
+                # the documents listing returned the entire corpus ordered
+                # by created_at desc, so a session-649 superseded handoff
+                # surfaced ahead of an active spec from last week.
+                from content.models import Document, ContentStatus
                 from django.db.models import Count
 
                 query = payload.get('query', '').strip()
-                qs = Document.objects.annotate(chunk_count=Count('embeddings')).order_by('-created_at')
+                f_category = (payload.get('category') or '').strip()
+                f_document_class = (payload.get('document_class') or '').strip()
+                f_is_pinned = payload.get('is_pinned')
+                f_min_session = payload.get('min_session')
+                include_superseded = bool(payload.get('include_superseded', False))
+
+                qs = Document.objects.annotate(chunk_count=Count('embeddings'))
+
                 if query:
                     qs = qs.filter(title__icontains=query)
+                if f_category:
+                    qs = qs.filter(category=f_category)
+                if f_document_class:
+                    qs = qs.filter(document_class=f_document_class)
+                if f_is_pinned is True:
+                    qs = qs.filter(is_pinned=True)
+                # Note: f_is_pinned=False intentionally NOT filtered — that
+                # would mostly return historical docs. Truthy-only check
+                # (per memory feedback_llm_autofills_boolean_params_with_false).
+                if not include_superseded:
+                    qs = qs.exclude(status=ContentStatus.ARCHIVED)
+                if f_min_session is not None:
+                    try:
+                        threshold = int(f_min_session)
+                        # Tag format from D9: 'session-1234'. Filter docs
+                        # whose tags include any session-N with N >= threshold.
+                        # Use a Python-side filter since tags is a JSONField
+                        # of variable shape.
+                        ids_keep = []
+                        for d in qs.only('id', 'tags'):
+                            for t in (d.tags or []):
+                                if isinstance(t, str) and t.startswith('session-'):
+                                    try:
+                                        if int(t.split('-', 1)[1]) >= threshold:
+                                            ids_keep.append(d.id)
+                                            break
+                                    except (ValueError, IndexError):
+                                        continue
+                        qs = qs.filter(id__in=ids_keep)
+                    except (ValueError, TypeError):
+                        pass
+
+                # Order: pinned + boost first, then recency. Pre-D11 ordered
+                # by created_at only, which surfaced ANY recent doc above
+                # high-leverage pinned ones.
+                qs = qs.order_by('-is_pinned', '-retrieval_boost', '-created_at')
+
                 docs = qs[:limit]
                 return {
                     'action': 'documents',
                     'count': len(docs),
+                    'applied_filters': {
+                        'query': query or None,
+                        'category': f_category or None,
+                        'document_class': f_document_class or None,
+                        'is_pinned': f_is_pinned if f_is_pinned is True else None,
+                        'min_session': int(f_min_session) if f_min_session is not None and str(f_min_session).isdigit() else None,
+                        'include_superseded': include_superseded,
+                    },
                     'documents': [{
                         'id': str(d.id),
                         'title': d.title,
-                        'doc_type': getattr(d, 'doc_type', ''),
+                        'category': d.category,
+                        'document_class': d.document_class,
+                        'is_pinned': d.is_pinned,
+                        'tags': list(d.tags or []),
+                        'retrieval_boost': float(d.retrieval_boost or 1.0),
                         'chunk_count': d.chunk_count,
                         'created_at': d.created_at.isoformat() if hasattr(d, 'created_at') and d.created_at else None,
                     } for d in docs],
