@@ -5393,10 +5393,20 @@ class OpsHandlersMixin:
                 if not query:
                     return {'error': 'query is required for semantic_search'}
 
+                # Session 1234 D15 — default lowered from 0.6 to 0.4.
+                # Chris's first verification run with the 0.6 default
+                # against "morning_brief workflow" returned 0 chunks
+                # because text-embedding-3-small typically produces
+                # similarities in the 0.4-0.7 band for related-but-
+                # not-identical content. Direct ORM check at 0.3
+                # surfaced the right Daily-CoS arc handoffs at
+                # similarities 0.567-0.630 — the 0.6 default was
+                # cutting almost all real signal. 0.4 keeps obvious
+                # noise out while still surfacing the corpus.
                 try:
-                    sim_threshold = float(payload.get('similarity_threshold', 0.6) or 0.6)
+                    sim_threshold = float(payload.get('similarity_threshold', 0.4) or 0.4)
                 except (TypeError, ValueError):
-                    sim_threshold = 0.6
+                    sim_threshold = 0.4
                 # Clamp into a sensible band.
                 sim_threshold = max(0.0, min(sim_threshold, 1.0))
 
