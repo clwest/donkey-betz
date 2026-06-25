@@ -7,6 +7,8 @@
 **Location:** `core/services/`
 **Total Services:** 112 `*Service` classes across 351 files
 
+> **⚠ Historical snapshot — do not cite as current.** The "112 services / 351 files" header above is a Session 1133 snapshot retained for context. Authoritative live counts live in [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) per `DOC_LIFECYCLE.md` §2c. As of the Session 1234 audit (2026-06-25) the live count is **~119 *Service classes across ~360 files** (verifier-confirmed minor drift; `BACKEND_INVENTORY.md` `backend_inventory_service_files_167` claim drift is the only currently-active drift hit). The per-category breakdown below is a Session 1133 narrative snapshot; verify category-level numbers against `core/services/` before citing.
+
 ---
 
 ## Overview
