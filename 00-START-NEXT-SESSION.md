@@ -102,6 +102,35 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
+## SESSION CLOSE — DOCS-TO-RIGBY CASCADE CHECKLIST (NEW Session 1234)
+
+When a session edits any meaningful `.md` files in `docs/`, the close should run the **full 4-step cascade** below — `build_docs_index` alone does NOT make doc edits searchable by Rigby. Memory: `feedback_docs_pipeline_4_step_cascade.md`.
+
+| Step | Command | What it does |
+|---|---|---|
+| 1 | `python manage.py build_docs_index` | Refresh `docs/INDEX.md` + `docs/_index.json` (file listing only) |
+| 2 | `python manage.py build_rag_corpus` | Regenerate `.rag/corpus.jsonl` for local Ollama Q&A + `search_docs` PA tool local path |
+| 3 | `python manage.py sync_docs_index_to_documents` | Push index entries to `content.models.Document` rows |
+| 4 | `python manage.py sync_docs_index_to_documents --embed` | Generate `DocumentEmbedding` rows in `unified_embeddings` pgvector table — **this is what production `core.rag_integration` searches against** |
+
+**Why this matters:** Session 1234 close discovered prod corpus was 12d stale + 1820 docs had never been pushed to the `Document` table. No auto-trigger exists (no git hook, no beat task, no filesystem watcher). The pre-1234 memory rule was misleading — said docs "get embedded and injected" but only step 1 ran.
+
+**Cost / time:** Trivial cost (~$0.05 for ~1800 docs at `text-embedding-3-small`), but step 4 is **30-45 min serial** for a full backfill from cold start. Incremental updates after a delta-changed session are seconds-to-minutes.
+
+**Verification:**
+```python
+from content.models import Document, DocumentEmbedding
+print('Document.objects.count():', Document.objects.count())
+print('DocumentEmbedding.objects.count():', DocumentEmbedding.objects.count())
+print('Latest update:', Document.objects.order_by('-updated_at').first().updated_at)
+```
+Latest update should reflect today's date. DocumentEmbedding count should have grown by ~5 × docs_changed.
+
+**P1 candidate for a future beat task:** `core.tasks.refresh_docs_corpus` that hashes `docs/_index.json` daily and re-runs steps 2-4 on delta. Would eliminate the manual cascade.
+
+---
+
+
 ## SESSION 1235 — CURRENT ENTRY POINT
 
 ### SESSION 1234 CLOSED — Morning Brief first-fire fixes (D1→D8) + 36-row leak archive + load-bearing doc structural framing, 7 PRs
