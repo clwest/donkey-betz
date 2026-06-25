@@ -115,25 +115,30 @@ def search_embeddings(
             qs = qs.filter(document__is_pinned=True)
         if not include_superseded:
             qs = qs.exclude(document__status=ContentStatus.ARCHIVED)
+        # Session 1234 D14 — positive-only min_session guard.
+        # LLM autofills integer params with 0 the same way it autofills
+        # booleans with False; treat anything <= 0 as "no filter" so
+        # the corpus isn't silently narrowed to handoff-only.
         if min_session is not None:
             try:
                 threshold = int(min_session)
-                # Filter docs whose tags include any session-N >= threshold.
-                # JSONField tag filtering goes through a Python-side pass
-                # because semantics need int parsing of 'session-N' tags.
-                ok_doc_ids = set()
-                for d in Document.objects.filter(
-                    id__in=qs.values_list('document_id', flat=True).distinct(),
-                ).only('id', 'tags'):
-                    for t in (d.tags or []):
-                        if isinstance(t, str) and t.startswith('session-'):
-                            try:
-                                if int(t.split('-', 1)[1]) >= threshold:
-                                    ok_doc_ids.add(d.id)
-                                    break
-                            except (ValueError, IndexError):
-                                continue
-                qs = qs.filter(document_id__in=ok_doc_ids)
+                if threshold > 0:
+                    # Filter docs whose tags include any session-N >= threshold.
+                    # JSONField tag filtering goes through a Python-side pass
+                    # because semantics need int parsing of 'session-N' tags.
+                    ok_doc_ids = set()
+                    for d in Document.objects.filter(
+                        id__in=qs.values_list('document_id', flat=True).distinct(),
+                    ).only('id', 'tags'):
+                        for t in (d.tags or []):
+                            if isinstance(t, str) and t.startswith('session-'):
+                                try:
+                                    if int(t.split('-', 1)[1]) >= threshold:
+                                        ok_doc_ids.add(d.id)
+                                        break
+                                except (ValueError, IndexError):
+                                    continue
+                    qs = qs.filter(document_id__in=ok_doc_ids)
             except (ValueError, TypeError):
                 pass
 
