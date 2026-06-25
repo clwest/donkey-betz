@@ -5855,19 +5855,46 @@ def generate_morning_brief_daily(self, user_id=None, dry_run=False):
         }
 
     # Extract structured telemetry from the workflow result.
-    context = result.get('context', {}) or {}
-    step_results = result.get('step_results', []) or []
-    deliverable_step = next(
-        (s for s in step_results if s.get('name') == 'create_deliverable'),
-        None,
+    #
+    # Session 1234 D2.telemetry: the workflow's _compile_final_result sets
+    # result['steps'] (NOT 'step_results') and does not surface
+    # result['context'] at all. Pre-fix this beat task read both wrong
+    # keys, so every telemetry field (deliverable_id, rotation_slot,
+    # lane_4_slot_used, failed_step, failed_step_error) reported as None
+    # even when the underlying step results carried real values. The
+    # surfaced symptoms (deliverable_id=None despite a created brief,
+    # MORNING_BRIEF_FAILED line with failed_step=None) were both this
+    # single key mismatch. We extract from per-step result dicts
+    # directly — rotation_slot from the rotation_slot_resolve step,
+    # slot_used from the lane_4_rotating_focus step, deliverable_id
+    # from the create_deliverable step.
+    steps = result.get('steps', []) or []
+
+    def _step_by_name(name):
+        return next((s for s in steps if s.get('name') == name), None)
+
+    rotation_slot_step = _step_by_name('rotation_slot_resolve')
+    rotation_slot = (
+        (rotation_slot_step.get('result') or {}).get('rotation_slot')
+        if rotation_slot_step else None
     )
+
+    lane_4_step = _step_by_name('lane_4_rotating_focus')
+    lane_4_slot_used = (
+        (lane_4_step.get('result') or {}).get('slot_used')
+        if lane_4_step else None
+    )
+
+    deliverable_step = _step_by_name('create_deliverable')
     deliverable_id = (
-        deliverable_step.get('result', {}).get('deliverable_id')
+        (deliverable_step.get('result') or {}).get('deliverable_id')
+        if deliverable_step else None
+    )
+    workspace_id = (
+        (deliverable_step.get('result') or {}).get('workspace_id')
         if deliverable_step else None
     )
     workflow_success = bool(result.get('success'))
-    rotation_slot = context.get('rotation_slot')
-    lane_4_slot_used = context.get('lane_4_slot_used')
 
     # Session 1234 D1 fail-loud (Rigby-ratified): on workflow failure,
     # emit a greppable line and raise so Celery records FAILURE. Before
@@ -5877,7 +5904,7 @@ def generate_morning_brief_daily(self, user_id=None, dry_run=False):
     if not workflow_success:
         # Find the first failed step (with its error, if any) for the log line.
         failed_step = next(
-            (s for s in step_results if not s.get('result', {}).get('success', True)),
+            (s for s in steps if not (s.get('result') or {}).get('success', True)),
             None,
         )
         failed_step_name = failed_step.get('name') if failed_step else None
@@ -5902,6 +5929,7 @@ def generate_morning_brief_daily(self, user_id=None, dry_run=False):
         'success': True,
         'workflow': 'morning_brief',
         'deliverable_id': deliverable_id,
+        'workspace_id': workspace_id,
         'rotation_slot': rotation_slot,
         'lane_4_slot_used': lane_4_slot_used,
         'date': today,
