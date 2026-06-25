@@ -5346,7 +5346,76 @@ class OpsHandlersMixin:
                     } for e in qs],
                 }
 
-            return {'error': f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings'}
+            elif action == 'semantic_search':
+                # Session 1234 D13 — native vector similarity over
+                # DocumentEmbedding via pgvector. Rigby's first real
+                # semantic search PA tool action; before D13 the only
+                # semantic-ish path was `search_docs` (token-overlap
+                # over .rag/corpus.jsonl, local-file only) or
+                # `search_embeddings` (text icontains over the empty
+                # UnifiedEmbedding table). This action threads the
+                # full D9/D10 filter pushdown so a query like "morning
+                # brief workflow" returns the active spec first, not a
+                # random 2025 superseded handoff.
+                from core.rag_integration import search_embeddings
+
+                query = (payload.get('query') or '').strip()
+                if not query:
+                    return {'error': 'query is required for semantic_search'}
+
+                try:
+                    sim_threshold = float(payload.get('similarity_threshold', 0.6) or 0.6)
+                except (TypeError, ValueError):
+                    sim_threshold = 0.6
+                # Clamp into a sensible band.
+                sim_threshold = max(0.0, min(sim_threshold, 1.0))
+
+                f_category = (payload.get('category') or '').strip() or None
+                f_document_class = (payload.get('document_class') or '').strip() or None
+                f_is_pinned = payload.get('is_pinned')
+                f_min_session = payload.get('min_session')
+                include_superseded = bool(payload.get('include_superseded', False))
+
+                chunks = search_embeddings(
+                    query=query,
+                    limit=limit,
+                    similarity_threshold=sim_threshold,
+                    category=f_category,
+                    document_class=f_document_class,
+                    is_pinned=(f_is_pinned if f_is_pinned is True else None),
+                    min_session=int(f_min_session) if f_min_session is not None and str(f_min_session).isdigit() else None,
+                    include_superseded=include_superseded,
+                )
+
+                return {
+                    'action': 'semantic_search',
+                    'count': len(chunks),
+                    'applied_filters': {
+                        'query': query,
+                        'category': f_category,
+                        'document_class': f_document_class,
+                        'is_pinned': f_is_pinned if f_is_pinned is True else None,
+                        'min_session': int(f_min_session) if f_min_session is not None and str(f_min_session).isdigit() else None,
+                        'include_superseded': include_superseded,
+                        'similarity_threshold': sim_threshold,
+                    },
+                    'chunks': [{
+                        'id': c['id'],
+                        'similarity': c['similarity_score'],
+                        'importance': c['importance_score'],
+                        'content_preview': (c.get('content') or '')[:500],
+                        'file_path': c['metadata'].get('file_path'),
+                        'title': c['metadata'].get('title'),
+                        'category': c['metadata'].get('category'),
+                        'document_class': c['metadata'].get('document_class'),
+                        'is_pinned': c['metadata'].get('is_pinned'),
+                        'tags': c['metadata'].get('tags', []),
+                        'chunk_index': c['metadata'].get('chunk_index'),
+                        'citation': c['metadata'].get('citation'),
+                    } for c in chunks],
+                }
+
+            return {'error': f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings, semantic_search'}
 
         except Exception as e:
             logger.error(f"[KB_BROWSE] {action} error: {e}", exc_info=True)
