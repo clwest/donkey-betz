@@ -17,26 +17,30 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1234 — Fresh
-# thread (carry-forward from pa-21dfa3a3dc4545b7). Pin:
-# pa-91cf6bbce1d6406e. Rotated at Session 1233 close after
-# health_check returned score=60 / suggest_fresh at 26 turns / 13k
-# tokens / 4.4h / 8 topics. Carry-forward seed for the new conv:
-# Session 1233 closed (6 PRs merged: #2599 B.1 plumbing + handlers,
-# #2600 acronym alias fix, #2601 smoke verification doc, #2602 B.2
-# rotation pre-step + override chain, #2603 Sub-step C workspace +
-# Celery beat task, #2604 handoff). Daily-CoS arc Sub-steps A-C
-# complete; D (polish) + E (Mon-Fri dogfood) unlock once Railway
-# produces first scheduled brief at 06-25 13:00 UTC = 07:00 MDT.
-# Workers restarted at session close — generate_morning_brief_daily
-# registered.
-# Carryover priorities for Session 1234: FOUR calendar checks
-# (morning_brief first-fire 06-25 13:00 UTC NEW from #2603,
-# outreach beat 06-25 13:30 UTC, COOAgent P2 verify 06-25 13:30 UTC,
-# Operator Edge newsletter 06-26 12:00 UTC). Sub-step D scope
-# derives from Chris's first-brief read + Rigby's audience-fit
-# verdict. Chris-side: Anthropic credit refill, CI billing.
-# Prior pins retired: pa-21dfa3a3dc4545b7 (Sessions 1231-1233 — agent
+# the --conversation flag below. Current value: Session 1234 mid-
+# session fresh thread (Rigby started new conv at Chris's direction
+# after the morning_brief first-fire investigation kicked off). Pin:
+# pa-0f08fc48ec914917. Session 1234 close health_check returned
+# score=100 / continue / 5 turns / ~2.5k tokens / 1.8h / 4 topics —
+# NO rotation; carries forward into Session 1235. Session 1234 closed
+# 7 PRs (#2606-#2612 D1-D5 fail-loud arc + lane workspace + router
+# intercept + research dup-skip; #2613 D6 devops dup-skip; #2614 D7
+# leak-gate verified-holding note; #2615 D8 structural snapshot
+# framing on 6 load-bearing docs). 36 historical leak-victim
+# Deliverables bulk-archived via ORM in-session. Workers restarted
+# 14:23 local after D3-D6.
+# Carryover priorities for Session 1235: morning_brief 2nd-fire
+# verify (06-26 13:00 UTC = 07:00 MDT) — first scheduled fire with
+# D3/D4/D5/D6 live; ALL lane intermediates should land in MB
+# workspace 19807888-…, NOT cf708a2e-… (Session 1231 E2E). Operator
+# Edge Friday-1 dry-run (06-26 12:00 UTC). Chris reads the brief;
+# Rigby provides audience-fit verdict; Sub-step D polish scope
+# derives from that. Chris-side: Anthropic credit refill, CI billing.
+# Prior pins retired: pa-91cf6bbce1d6406e (Session 1234 morning —
+# replaced mid-session when Rigby fresh-started pa-0f08fc48ec914917
+# at Chris's direction during the deliverable_tool corpus sweep;
+# ~6 turns ResearchAgent dup investigation + early D1/D2 morning
+# work / score not pulled at retirement), pa-21dfa3a3dc4545b7 (Sessions 1231-1233 — agent
 # error-pattern investigation arc + daily-CoS arc Sub-steps A close +
 # B.1/B.2/C build-out; 26 turns / 13k tokens / score 60 / suggest_fresh
 # at rotation), pa-4086552cdc9840e9 (Sessions 1229-1230 — Rigby

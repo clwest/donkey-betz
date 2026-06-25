@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-91cf6bbce1d6406e` (rotated at Session 1233 close from `pa-21dfa3a3dc4545b7` at 26 turns / 13k tokens / 4.4h / `suggest_fresh` score 60; titled "Session 1234 — Morning Brief first-fire verify + audience-fit review"). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-0f08fc48ec914917` (Rigby started fresh mid-Session 1234 at Chris's direction; replaced `pa-91cf6bbce1d6406e` after the morning_brief first-fire investigation kicked off; titled informally "Session 1234 — fixes validation + Session 1231 E2E sweep"). Health check at Session 1234 close: **score 100/100, recommendation continue, no rotation** — carries forward into Session 1235. Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -102,7 +102,135 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1234 — CURRENT ENTRY POINT
+## SESSION 1235 — CURRENT ENTRY POINT
+
+### SESSION 1234 CLOSED — Morning Brief first-fire fixes (D1→D8) + 36-row leak archive + load-bearing doc structural framing, 7 PRs
+
+Full handoff: [`SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md`](docs/handoffs/SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md). Seven-PR session driven by the 2026-06-25 13:00 UTC morning_brief first-fire — three independent bugs surfaced from the deliverable corpus in workspace `cf708a2e-…` (Session 1231 E2E): lane intermediates leaking to wrong workspace, agent_router missing workflow-name signal, ResearchAgent saving 8 duplicates on iteration storms. D1/D2 fail-loud arc landed before Chris's deliverable sweep request; D3/D4/D5/D6 closed the boundaries; D7 verified-holding note; D8 structural snapshot framing on 6 load-bearing docs (after Chris's "how much of the platform isn't reflected in docs" prompt and the Explore-agent audit).
+
+| PR | What |
+|---|---|
+| **#2606** | `fix(session-1234): morning_brief D1 fail-loud — lane_4 error capture + beat task raises`. D1 of 3-PR fail-loud arc. Lane 4 handler always populates `error` field on falsy `result.success`; beat task `generate_morning_brief_daily` raises `RuntimeError` instead of swallowing. Per memory `feedback_fail_loud_first_then_root_cause_then_telemetry`. |
+| **#2607** | `fix(session-1234): morning_brief D2 — gtm slot → COOAgent + lane_4 non-critical + sentinel`. D2 root-cause #1. Remapped `gtm_pipeline_health` slot from OpportunityPipelineAgent (per-row contract) to COOAgent (daily-summary contract). Sentinel + non_critical allowlist pattern per memory `feedback_workflow_step_sentinel_plus_noncritical_pattern`. |
+| **#2608** | `fix(session-1234): D2.fix — create_morning_brief_deliverable uses self.user, not context dict`. D2 root-cause #2. `context['user']` is a profile DICT (lane prompt injection); `Deliverable.user` is a FK. Switched to `getattr(self, 'user', None)`. Per memory `feedback_context_user_is_profile_dict_not_user_instance`. |
+| **#2609** | `fix(session-1234): D2.telemetry — beat task reads result['steps'] not 'step_results'`. D2 telemetry-only PR. `WorkflowOrchestrationAgent._compile_final_result` uses key `'steps'`; beat task fixed to extract per-step telemetry by name. Per memory `feedback_workflow_result_steps_not_step_results`. |
+| **#2610** | `fix(session-1234): D3 — morning_brief lanes thread workspace_id to delegates`. New `_resolve_workflow_target_workspace_id(workflow)` helper. `execute()` writes `context['workspace_id']` BEFORE the step loop; router downstream injects to delegate `agent._workspace_id`. Pre-fix: 5 lane intermediates landed in cf708a2e-… (debug workspace) instead of MB workspace 19807888-…. 5 new tests. |
+| **#2611** | `fix(session-1234): D4 — agent_router intercepts workflow dispatches`. Router-level intercept before keyword overrides. Triggers on `WORKFLOWS['<name>']` task pattern OR `context['workflow_name']` set. Reroutes to WorkflowOrchestrationAgent + mirrors `workflow_name` → `context['workflow']`. Closes DevOpsAgent's flagged "ran business_research instead of morning_brief" routing bug. 10 new tests across 3 classes. |
+| **#2612** | `fix(session-1234): D5 — ResearchAgent skips duplicate same-day same-workspace saves`. Pre-save dup check via `_find_recent_duplicate_deliverable(title, window_minutes=60)`. `[RESEARCH_DUP_SKIPPED]` structured log on match; save short-circuits. Per-workspace + per-agent_name scoping; fail-open. Catches 8-deliverable storm pattern from 06-25 00:58 → 05:23 UTC. 10 new tests. |
+| **#2613** | `fix(session-1234): D6 — DevOpsAgent skips duplicate same-day same-workspace saves`. Mirror of D5 after Rigby's `deliverable_tool action=duplicates` surfaced DevOpsAgent as 2nd-highest iteration storm (4 smokes 02:48 → 05:25 UTC). Same shape; deliberately NOT extracted to BaseAgent yet (per "three similar lines is better than premature abstraction"). 10 new tests. |
+| **#2614** | `docs(session-1234): D7 — leak-gate verified-holding note in deliverable_factory`. Docs-only. Title-corruption sweep found leak gate (Session 1226 P3) fully closed: 0 net-new leaks on 06-25; last leak 06-24 13:34. Added verified-holding paragraph to `TEMPLATE_LEAK_TITLE_TOKENS` doc block. |
+| **#2615** | `docs(session-1234): D8 — structural snapshot framing on 6 load-bearing docs`. Explore-agent audited 8 load-bearing docs (ARCHITECTURE / AGENTS / SERVICES / SPIDERS / DATABASE_MODEL_REFERENCE / API_PATH_POLICY / DISCORD_INTEGRATION / CAPABILITIES). 7/8 already had DOC-POINTER-V1; DATABASE_MODEL_REFERENCE was the gap. CAPABILITIES.md already had the per-section "Historical snapshot" pattern (was the model). This PR: added missing banner + extended snapshot framing to 5 others. Zero counts changed by design — Chris picked option 3 (structural framing) over option 1 (surgical count refresh). |
+
+**ORM action (not a PR):** 36 historical leak-victim Deliverables bulk-archived via `.update(status='archived')` in one transaction. Scope: title matches any of 7 `TEMPLATE_LEAK_TITLE_TOKENS` patterns AND created before 06-25 00:00 UTC AND status ∉ `{archived, completed}` AND `agent_name != 'Rigby'`. Preserves 1 intentional Rigby gate-smoke + 1 already-completed COO row. Verified pre/post: 36 expected, 36 updated, 0 leak victims remain un-archived.
+
+**Operational invariants (post-D6 + worker restart at 14:23 local):**
+1. Lane intermediates land in MB workspace `19807888-…`, not cf708a2e.
+2. Any `WORKFLOWS['<name>']` task or `context['workflow_name']` reroutes to WorkflowOrchestrationAgent regardless of caller.
+3. ResearchAgent + DevOpsAgent same-title same-workspace duplicate saves within 60min are skipped + `[*_DUP_SKIPPED]` logged.
+4. Title-leak gate verified holding 1d stale at close.
+5. Load-bearing doc body-text counts are framed as historical snapshots; D8 makes the snapshot framing explicit in 6 docs.
+
+**Active conversation:** `pa-0f08fc48ec914917` — Rigby fresh-started mid-session at Chris's direction (replaced `pa-91cf6bbce1d6406e`). Session 1234 added ~5 turns. Health check at close: **score 100/100, continue, no rotation**. Carries forward.
+
+**Worker state:** Celery workers restarted at 14:23 local after D3/D4/D5/D6 merges. D7 + D8 were docs-only and did not need restart.
+
+**Doc-claim drift verifier at close:** 1 drift (medium) — pre-existing `BACKEND_INVENTORY.md` services count. NOT introduced this session; carryover (out of scope for D8 by design).
+
+**Docs index regenerated at close:** 2729 documents indexed.
+
+**Still Chris-side carryover into Session 1235:**
+- **Anthropic credit refill** at https://console.anthropic.com/billing.
+- **CI billing** still failing — all 7 Session 1234 PRs admin-merged via `--admin`.
+
+### FIRST THING Session 1235
+
+#### Priority 1 — Calendar checks (2026-06-26)
+
+These are time-bound; clear FIRST on session open.
+
+- **morning_brief 2nd-fire verification (2026-06-26 13:00 UTC = 07:00 MDT)** — first scheduled fire with D3/D4/D5/D6 live. The Session 1234 close-of-arc proof. Verify ALL lane intermediates land in MB workspace, NOT cf708a2e.
+
+  ```python
+  from core.models_skin_layer import ProjectWorkspace
+  from core.models_deliverables import Deliverable
+  from core.models import CeleryTaskEvent
+  from datetime import date
+
+  # 1. Beat fire SUCCESS
+  ev = CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.generate_morning_brief_daily',
+      started_at__date=date(2026, 6, 26),
+  ).order_by('-started_at').first()
+  print('beat status:', ev.status, 'err:', ev.error_message or '-')
+
+  # 2. MB workspace exists
+  mb = ProjectWorkspace.objects.get(user__username='chris', name='Morning Brief')
+
+  # 3. All today's chris-owned deliverables land in MB workspace
+  qs = Deliverable.objects.filter(user__username='chris', created_at__date=date(2026, 6, 26))
+  ws_breakdown = {}
+  for d in qs:
+      ws_breakdown.setdefault(str(d.workspace_id), 0)
+      ws_breakdown[str(d.workspace_id)] += 1
+  print('today\'s deliverables by workspace:', ws_breakdown)
+  # Expected: all under str(mb.id); none under cf708a2e-8c87-4a13-abfd-fbd34d8e4ee2
+  ```
+
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + deliverable created with `status='ready'` or `'preview'`. After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
+
+- **Glance check from Session 1234** (de-scoped during the bug-fix arc): outreach beat first-fire 06-25 13:30 UTC + COOAgent P2 verify same window. Both likely fired during Session 1234; just check `CeleryTaskEvent` for 06-25 success.
+
+#### Priority 2 — Read the brief
+
+If the 06-26 first-fire produced a real Deliverable: **Chris reads the brief**. Rigby provides audience-fit verdict.
+
+Once Chris has read 1-2 briefs:
+- Rigby pulls an audience-fit verdict.
+- Chris flags specific polish items.
+- Each polish item → focused PR.
+
+#### Priority 3 — Sub-step D execution
+
+After Priority 2 surfaces scope, ship the polish PRs. Single small PRs preferred over big rewrites (per Rigby's primitives + opt-in apply-list pattern).
+
+#### Priority 4 — `BACKEND_INVENTORY.md` services count drift refresh
+
+The only currently-active `verify_doc_claims --only-drift` hit. Doc says 167 services; actual 354. One-line PR: update the inventory file's services line. Or regenerate via the inventory command if one exists for that doc. Cheap, closes the drift.
+
+#### Priority 5+ — Pre-existing carryover tail
+
+Unchanged from Session 1234's "what didn't get touched" list:
+
+- **Smoke-harness mode inconsistency** (Session 1231 F5, LOW-MEDIUM) — one-line fix.
+- **Smoke-probe tagging for AgentExecution** (Session 1231 F1 / R2 REC-2, MEDIUM).
+- **Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents`** (Session 1231 F6, LOW).
+- **Audit `5318da3e-…` §R2 amendment** (Session 1231 F3, P3) — `deliverable_tool action=append`.
+- **Engineer workspace staleness** (Session 1230 F3, MEDIUM).
+- **Meeting-context leak shape watch** (Session 1230 F2, LOW) — still LOW; no recurrence at Session 1234 close.
+- **Fleet-smoke wall-clock timeouts** (Session 1231 F2 / R2 REC-3, LOW) — subsumed by smoke-probe filtering.
+
+#### Priority N — CI billing fix (Chris-side, still outstanding)
+
+Carryover from 1223 → 1234.
+
+#### Priority N+1 — Anthropic A/B (gated on credit refill)
+
+When Anthropic credits return: run the same Session 1229 Step 5 line-count task on the Anthropic path (`unset CLAUDE_CODE_ENGINE_PROVIDER`) and confirm no clarification stall. If clean, lift the retry contract up out of the OpenAI-only branch.
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1234 totaled ~48 PRs across platform hardening + daily-CoS Sub-steps A-C + first-fire fix arc + load-bearing doc framing. Daily-CoS arc Sub-step D awaits Chris's brief read on 06-26 + onward.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work since 1224.
+- Audit #5 (PA tool schemas vs handlers — Δ=43) — non-blocking long-tail.
+- `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves (Rigby's Session 1225 review).
+- **Extend `verify_doc_claims` registration coverage** to the other 472 unwatched docs — the 8 load-bearing got D8 structural framing but most of the doc corpus remains undrift-checked. Slower compound payoff.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
 
 ### SESSION 1233 CLOSED — Daily-CoS arc build-out: B.1 → B.1.fix → B.1 smoke verify → B.2 → C, 5 PRs
 
