@@ -133,9 +133,9 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 
 ## SESSION 1235 — CURRENT ENTRY POINT
 
-### SESSION 1234 CLOSED — TWO ARCS, 17 PRs
+### SESSION 1234 CLOSED — THREE ARCS, 22 PRs
 
-Same UTC day, two distinct arcs. Both handoffs are load-bearing for Session 1235 context.
+Same UTC day, three distinct arcs. All three handoffs are load-bearing for Session 1235 context.
 
 **Arc 1: Morning Brief first-fire fixes (D1→D8), 7 PRs** — full handoff [`SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md`](docs/handoffs/SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md). Driven by the 2026-06-25 13:00 UTC morning_brief first-fire — three independent bugs surfaced from the deliverable corpus in workspace `cf708a2e-…` (Session 1231 E2E): lane intermediates leaking to wrong workspace, agent_router missing workflow-name signal, ResearchAgent saving 8 duplicates on iteration storms. D1/D2 fail-loud arc landed before Chris's deliverable sweep request; D3/D4/D5/D6 closed the boundaries; D7 verified-holding note; D8 structural snapshot framing on 6 load-bearing docs.
 
@@ -186,9 +186,27 @@ Same UTC day, two distinct arcs. Both handoffs are load-bearing for Session 1235
 
 **Docs index regenerated at close:** 2729 documents indexed.
 
+**Arc 3: Broad-except sweep (D17→D21), 5 PRs** — full handoff [`SESSION_1234_BROAD_EXCEPT_SWEEP_D17_THROUGH_D21.md`](docs/handoffs/SESSION_1234_BROAD_EXCEPT_SWEEP_D17_THROUGH_D21.md). Triggered by D16's discovery that broad `except Exception → return []` was hiding `Cannot filter a sliced queryset` TypeError as "no results." Audit revealed the same anti-pattern at 17 additional sites across 4 more files + 1 fully-broken function. D17 narrowed `scoped_retrieval` (8 sites); D18 narrowed `knowledge_first_router` (6 sites) + 2-way cross-file invariant; D19 narrowed `knowledge_similarity` (1 site) + 3-way invariant; D20 selective-narrowed `views_rag_embeddings` (2 helper sites of 20 — the 18 HTTP endpoints correctly stay broad to preserve API contract) + 4-way invariant; D21 fully rewrote `search_personal_memories` (was connecting to a non-existent database) + matched D17-D20 allowlist shape. **17 broad-except sites narrowed + 1 full function rewrite, all under a single `(DatabaseError, ConnectionError, OSError)` allowlist locked by 4-way pairwise + transitive cross-file invariant tests.**
+
+| PR | What |
+|---|---|
+| **#2627** (D17) | scoped_retrieval narrow-except (8 sites) |
+| **#2628** (D18) | knowledge_first_router narrow-except (6 sites) + 2-way invariant |
+| **#2629** (D19) | knowledge_similarity narrow-except (1 site) + 3-way invariant |
+| **#2630** (D20) | views_rag_embeddings selective narrow-except (2 of 20) + 4-way invariant; helper-vs-endpoint discriminator codified |
+| **#2631** (D21) | search_personal_memories full rewrite (pivot from dead `unified_embeddings` table to `UserEmbedding` ORM) + narrow except matching D17-D20 shape |
+
+**Docs cascade backfill completed** during this arc — the `sync_docs_index_to_documents --embed` task that started at second-arc midpoint reached `Embedded 1810/1819 documents... Embedding complete!` shortly before close. **All 2,732 Documents now embedded (36,854 chunks, 100% coverage)**. The 12-day-stale + 1820-missing corpus state from session open is fully resolved.
+
+**Active conversation:** `pa-0f08fc48ec914917` — continues across all three arcs. **No rotation at any close** (Rigby's verdict: score 100/100 continue). Carries forward into Session 1235.
+
+**Workers restarted multiple times** during the arcs: 14:23 (post-D6), 15:13 (post-D11), 15:17 (post-D13), 15:42 (post-D14), 16:08 (post-D15), 16:14 (post-D16). D17-D21 didn't touch PA-imported task modules so no further restart needed.
+
+**Doc-claim drift verifier at close (all three arcs):** 1 drift (medium) — pre-existing `BACKEND_INVENTORY.md` services count. Same drift at every close; out of scope.
+
 **Still Chris-side carryover into Session 1235:**
 - **Anthropic credit refill** at https://console.anthropic.com/billing.
-- **CI billing** still failing — all 7 Session 1234 PRs admin-merged via `--admin`.
+- **CI billing** still failing — all 22 Session 1234 PRs admin-merged via `--admin`.
 
 ### FIRST THING Session 1235
 
