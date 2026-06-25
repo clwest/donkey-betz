@@ -197,3 +197,134 @@ class WorkflowAgentMapFallbackTests(SimpleTestCase):
         # The fallback's router.route MUST NOT have been called for any of
         # the 9 names that have internal handlers.
         fake_router.route.assert_not_called()
+
+
+class AcronymAliasFallbackTests(SimpleTestCase):
+    """Session 1233 B.1.fix — acronym agent snake_case aliases.
+
+    Without the alias map, the F4 fallback's default
+    ``''.join(p.capitalize() …)`` produces wrong PascalCase for agents
+    whose actual class name contains acronyms (COOAgent / CTOAgent /
+    SEOOptimizerAgent / AISeriesWorkflowAgent). Surfaced by the
+    Session 1233 B.1 morning_brief end-to-end smoke when
+    lane_2_build_focus (coo_agent) hit "CooAgent not in AGENT_MAP".
+    """
+
+    def setUp(self):
+        self.agent = WorkflowOrchestrationAgent(user=MagicMock(name='user'))
+
+    def _step(self, agent_name, description="probe step", name="test_step"):
+        return {'step': 1, 'name': name, 'agent': agent_name,
+                'description': description}
+
+    def test_coo_agent_routes_to_COOAgent_not_CooAgent(self):
+        """The bug: default capitalize-split gives 'CooAgent'; alias map
+        forces 'COOAgent'. Without the alias the morning_brief workflow
+        Step 2 (lane_2_build_focus → coo_agent) fails with
+        'CooAgent not in AGENT_MAP'."""
+        fake_router = MagicMock()
+        fake_router.AGENT_MAP = {'COOAgent': object, 'CooAgent': object}
+        fake_router.route.return_value = SimpleNamespace(
+            success=True, message='ops planned', data={},
+        )
+
+        with patch('core.agent_router.AgentRouter', return_value=fake_router):
+            result = self.agent._execute_step(
+                self._step('coo_agent'), context={},
+            )
+
+        self.assertTrue(result['success'])
+        args, _ = fake_router.route.call_args
+        self.assertEqual(
+            args[0], 'COOAgent',
+            "Acronym alias must produce 'COOAgent', not 'CooAgent'.",
+        )
+
+    def test_cto_agent_routes_to_CTOAgent(self):
+        fake_router = MagicMock()
+        fake_router.AGENT_MAP = {'CTOAgent': object}
+        fake_router.route.return_value = SimpleNamespace(
+            success=True, message='tech reviewed', data={},
+        )
+        with patch('core.agent_router.AgentRouter', return_value=fake_router):
+            result = self.agent._execute_step(
+                self._step('cto_agent'), context={},
+            )
+        self.assertTrue(result['success'])
+        args, _ = fake_router.route.call_args
+        self.assertEqual(args[0], 'CTOAgent')
+
+    def test_seo_optimizer_agent_routes_to_SEOOptimizerAgent(self):
+        fake_router = MagicMock()
+        fake_router.AGENT_MAP = {'SEOOptimizerAgent': object}
+        fake_router.route.return_value = SimpleNamespace(
+            success=True, message='optimized', data={},
+        )
+        with patch('core.agent_router.AgentRouter', return_value=fake_router):
+            result = self.agent._execute_step(
+                self._step('seo_optimizer_agent'), context={},
+            )
+        self.assertTrue(result['success'])
+        args, _ = fake_router.route.call_args
+        self.assertEqual(args[0], 'SEOOptimizerAgent')
+
+    def test_ai_series_workflow_agent_routes_to_AISeriesWorkflowAgent(self):
+        fake_router = MagicMock()
+        fake_router.AGENT_MAP = {'AISeriesWorkflowAgent': object}
+        fake_router.route.return_value = SimpleNamespace(
+            success=True, message='generated', data={},
+        )
+        with patch('core.agent_router.AgentRouter', return_value=fake_router):
+            result = self.agent._execute_step(
+                self._step('ai_series_workflow_agent'), context={},
+            )
+        self.assertTrue(result['success'])
+        args, _ = fake_router.route.call_args
+        self.assertEqual(args[0], 'AISeriesWorkflowAgent')
+
+    def test_non_acronym_agent_still_uses_default_capitalize_split(self):
+        """Regression guard: research_agent → ResearchAgent must keep
+        working via the default capitalize-split path; only acronym
+        agents take the alias path."""
+        fake_router = MagicMock()
+        fake_router.AGENT_MAP = {'ResearchAgent': object}
+        fake_router.route.return_value = SimpleNamespace(
+            success=True, message='researched', data={},
+        )
+        with patch('core.agent_router.AgentRouter', return_value=fake_router):
+            result = self.agent._execute_step(
+                self._step('research_agent'), context={},
+            )
+        self.assertTrue(result['success'])
+        args, _ = fake_router.route.call_args
+        self.assertEqual(args[0], 'ResearchAgent')
+
+    def test_alias_map_covers_all_acronym_agents_in_AGENT_MAP(self):
+        """Source-level audit: the alias map must cover every agent
+        in AGENT_MAP whose PascalCase name contains 2+ consecutive
+        uppercase letters. If a new acronym agent is added to
+        AGENT_MAP without an alias entry, this test fails."""
+        from core.agent_router import AgentRouter
+        router = AgentRouter(user=MagicMock(name='user'))
+        acronym_agents = []
+        for pascal_name in router.AGENT_MAP:
+            # Detect 2+ consecutive uppercase letters (acronym pattern).
+            for i in range(len(pascal_name) - 1):
+                if pascal_name[i].isupper() and pascal_name[i+1].isupper():
+                    acronym_agents.append(pascal_name)
+                    break
+
+        # ThreeDAgent is a false positive — three_d_agent capitalizes
+        # cleanly to ThreeDAgent already, no alias needed.
+        acronym_agents = [a for a in acronym_agents if a != 'ThreeDAgent']
+
+        alias_targets = set(
+            WorkflowOrchestrationAgent._AGENT_MAP_SNAKE_ALIASES.values()
+        )
+        missing = set(acronym_agents) - alias_targets
+        self.assertEqual(
+            missing, set(),
+            f"AGENT_MAP has acronym agents not covered by "
+            f"_AGENT_MAP_SNAKE_ALIASES: {missing}. Add snake_case → "
+            f"PascalCase entries for them."
+        )
