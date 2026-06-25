@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, Count, Sum
+from django.db.utils import DatabaseError
 from datetime import datetime
 import json
 import logging
@@ -24,6 +25,23 @@ from content.embeddings import rag_system, EmbeddingManager
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+# Session 1234 D20 — narrow-except allowlist (same shape as D17/D18/D19
+# enforced by the cross-file invariant test in
+# test_d19_knowledge_similarity_narrow_except.py).
+#
+# IMPORTANT: This file has 20 `except Exception` sites total. Only the
+# 2 HELPER sites (ingest_video_status outer try, _video_document_details)
+# are narrowed by D20. The other 18 are HTTP ENDPOINT handlers that
+# return `Response({'success': False, 'error': str(e)}, status=500)` —
+# they NEED to broad-catch to maintain the API contract (narrowing
+# them would leak unhandled stack traces to clients).
+#
+# The discriminator: helper functions return None / degraded data
+# (silent failure mode — same as D17/D18/D19); endpoint handlers
+# return JSON with an explicit error field (loud failure mode at the
+# HTTP boundary).
+_RETRIEVAL_ENV_ERRORS = (DatabaseError, ConnectionError, OSError)
 
 
 class RagIngestThrottle(ScopedRateThrottle):
@@ -1500,7 +1518,7 @@ def ingest_video_status(request, job_id):
                 result_data['error'] = event.error_message or 'Task failed'
 
             return Response(result_data)
-    except Exception as _e:
+    except _RETRIEVAL_ENV_ERRORS as _e:
         logger.warning(
             "views_rag_embeddings.ingest_video_status: swallowed (%s: %s) — degraded",
             type(_e).__name__, _e,
@@ -1563,7 +1581,7 @@ def _video_document_details(event):
                             'duration_seconds': meta.get('duration_seconds'),
                             'word_count': doc.word_count,
                         }
-    except Exception as _e:
+    except _RETRIEVAL_ENV_ERRORS as _e:
         logger.warning(
             "views_rag_embeddings._video_document_details: swallowed (%s: %s) — degraded",
             type(_e).__name__, _e,
