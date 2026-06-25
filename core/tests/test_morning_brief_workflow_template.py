@@ -312,7 +312,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
         self, mock_router_cls,
     ):
         mock_router = mock_router_cls.return_value
-        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.AGENT_MAP = {'COOAgent': object()}
         mock_router.route.return_value = MagicMock(
             success=False, message='', data={},
             error='upstream agent timed out',
@@ -326,15 +326,15 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
         self.assertIn('error', result,
                       "Falsy-success path MUST populate 'error' field.")
         self.assertIn('upstream agent timed out', result['error'])
-        self.assertIn('OpportunityPipelineAgent', result['error'])
+        self.assertIn('COOAgent', result['error'])
         self.assertIn("'gtm_pipeline_health'", result['error'])
-        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['agent_name'], 'COOAgent')
         self.assertEqual(result['slot_used'], 'gtm_pipeline_health')
 
     @patch('core.agent_router.AgentRouter')
     def test_falsy_success_falls_through_to_message(self, mock_router_cls):
         mock_router = mock_router_cls.return_value
-        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.AGENT_MAP = {'COOAgent': object()}
         # No .error attribute on the mock result — must fall through to message
         mock_result = MagicMock(spec=['success', 'message', 'data'])
         mock_result.success = False
@@ -359,7 +359,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
         must produce a diagnostic string identifying the agent + result type.
         """
         mock_router = mock_router_cls.return_value
-        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.AGENT_MAP = {'COOAgent': object()}
         mock_result = MagicMock(spec=['success', 'message', 'data'])
         mock_result.success = False
         mock_result.message = ''
@@ -372,7 +372,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
 
         self.assertFalse(result['success'])
         self.assertIn('error', result)
-        self.assertIn('OpportunityPipelineAgent', result['error'])
+        self.assertIn('COOAgent', result['error'])
         self.assertIn('no error/message/output', result['error'])
         # MUST NOT be the generic orchestrator-level "Unknown error"
         self.assertNotIn('Unknown error', result['error'])
@@ -382,7 +382,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
         self, mock_router_cls,
     ):
         mock_router = mock_router_cls.return_value
-        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.AGENT_MAP = {'COOAgent': object()}
         mock_router.route.side_effect = ValueError('contextual oops')
 
         result = self.agent._execute_lane_4_rotating_focus_step({
@@ -392,7 +392,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
         self.assertFalse(result['success'])
         self.assertIn('ValueError', result['error'])
         self.assertIn('contextual oops', result['error'])
-        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['agent_name'], 'COOAgent')
         self.assertEqual(result['slot_used'], 'gtm_pipeline_health')
 
     @patch('core.agent_router.AgentRouter')
@@ -409,7 +409,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
 
         self.assertFalse(result['success'])
         self.assertIn('not in AGENT_MAP', result['error'])
-        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['agent_name'], 'COOAgent')
 
     @patch('core.agent_router.AgentRouter')
     def test_successful_dispatch_still_includes_agent_name(
@@ -417,7 +417,7 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
     ):
         """Regression guard: agent_name field must be present on success too."""
         mock_router = mock_router_cls.return_value
-        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.AGENT_MAP = {'COOAgent': object()}
         mock_router.route.return_value = MagicMock(
             success=True, message='gtm signal text', data={'k': 'v'},
         )
@@ -427,8 +427,174 @@ class MorningBriefLane4FailLoudTests(SimpleTestCase):
         })
 
         self.assertTrue(result['success'])
-        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['agent_name'], 'COOAgent')
         self.assertEqual(result['slot_used'], 'gtm_pipeline_health')
+
+
+class MorningBriefLane4D2SlotReassignmentTests(SimpleTestCase):
+    """Session 1234 D2 — Lane 4 slot→agent reassignment + per-slot prompts.
+
+    D2 P1.A (Rigby-ratified): ``gtm_pipeline_health`` remapped from
+    ``OpportunityPipelineAgent`` (which required ``context['opportunity']``,
+    incompatible with Lane 4's daily-summary contract) to ``COOAgent``
+    (no required context keys). Persona duplication with Lane 2 mitigated
+    via ``_MORNING_BRIEF_LANE_4_SLOT_FOCUS`` per-slot focus phrases.
+    """
+
+    def setUp(self):
+        self.agent = WorkflowOrchestrationAgent(user=MagicMock(name='user'))
+
+    def test_gtm_pipeline_health_routes_to_coo_agent(self):
+        """Regression guard against re-introducing OpportunityPipelineAgent."""
+        slot_map = WorkflowOrchestrationAgent._MORNING_BRIEF_LANE_4_SLOT_AGENT
+        self.assertEqual(slot_map['gtm_pipeline_health'], 'COOAgent',
+                         "D2 P1.A: gtm_pipeline_health MUST route to COOAgent. "
+                         "Was OpportunityPipelineAgent pre-D2 — that agent "
+                         "requires context['opportunity'] which Lane 4 cannot "
+                         "supply. Reverting will break the workflow.")
+
+    def test_slot_focus_map_covers_all_5_slots(self):
+        focus_map = WorkflowOrchestrationAgent._MORNING_BRIEF_LANE_4_SLOT_FOCUS
+        for required in (
+            'sports_edge_scan', 'prediction_markets',
+            'ticker_catalyst_watch', 'gtm_pipeline_health',
+            'ai_infra_deep_dive',
+        ):
+            self.assertIn(required, focus_map,
+                          f"Per-slot focus map missing entry for {required!r}. "
+                          f"Without it, Lane 4 uses a generic prompt that "
+                          f"may collide with other lanes' content.")
+
+    def test_gtm_focus_phrase_differentiates_from_lane_2(self):
+        """The gtm focus phrase MUST explicitly exclude Lane 2's territory
+        so COOAgent (shared by Lane 2 + Lane 4) produces distinct output."""
+        focus = WorkflowOrchestrationAgent._MORNING_BRIEF_LANE_4_SLOT_FOCUS[
+            'gtm_pipeline_health']
+        self.assertIn('Lane 2', focus,
+                      "GTM focus phrase MUST reference Lane 2 to make the "
+                      "boundary explicit (Rigby's D2 design contract).")
+        self.assertIn('pipeline', focus.lower())
+
+    @patch('core.agent_router.AgentRouter')
+    def test_lane_4_step_task_includes_gtm_focus_for_gtm_slot(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'COOAgent': object()}
+        mock_router.route.return_value = MagicMock(
+            success=True, message='gtm bullets', data={},
+        )
+
+        self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        args, _ = mock_router.route.call_args
+        dispatched_task = args[1]
+        self.assertIn('gtm_pipeline_health', dispatched_task)
+        # Verify the gtm-specific focus phrase made it into the dispatch
+        self.assertIn('KPI', dispatched_task)
+
+
+class MorningBriefLane4SentinelTests(SimpleTestCase):
+    """Session 1234 D2 P2.C — Lane 4 fail-soft sentinel.
+
+    When Lane 4 fails (no upstream data, agent contract mismatch, ambient
+    dispatch error), the workflow continues and the brief ships with a
+    sentinel as the Lane 4 section. ``_update_context`` reads ``result['output']``
+    into ``context['lane_4_text']``; synthesis renders it as the Lane 4
+    paragraph. Loud-but-non-blocking: orchestrator emits
+    ``[MORNING_BRIEF_LANE_4_NONCRITICAL_FAIL]`` log line, doesn't halt.
+    """
+
+    def setUp(self):
+        self.agent = WorkflowOrchestrationAgent(user=MagicMock(name='user'))
+
+    def test_sentinel_helper_renders_short_paragraph(self):
+        sentinel = WorkflowOrchestrationAgent._lane_4_sentinel(
+            'gtm_pipeline_health', 'Kalshi spider returned no data',
+        )
+        self.assertIn('gtm pipeline health', sentinel)
+        self.assertIn('No signal today', sentinel)
+        self.assertIn('Kalshi spider returned no data', sentinel)
+
+    def test_sentinel_truncates_long_error_excerpts(self):
+        long_error = 'x' * 1000
+        sentinel = WorkflowOrchestrationAgent._lane_4_sentinel(
+            'sports_edge_scan', long_error,
+        )
+        # Sentinel total bounded; 240-char excerpt limit guards against
+        # multi-page error dumps polluting the brief.
+        self.assertLess(len(sentinel), 400)
+        self.assertIn('...', sentinel)
+
+    def test_sentinel_handles_empty_error_gracefully(self):
+        sentinel = WorkflowOrchestrationAgent._lane_4_sentinel(
+            'prediction_markets', '',
+        )
+        self.assertIn('no detail captured', sentinel)
+        self.assertIn('prediction markets', sentinel)
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_populates_output_with_sentinel(
+        self, mock_router_cls,
+    ):
+        """On falsy success with no agent output, the handler's return
+        dict MUST have an 'output' field containing the sentinel — so
+        ``_update_context`` writes it to ``context['lane_4_text']``."""
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'COOAgent': object()}
+        mock_result = MagicMock(spec=['success', 'message', 'data'])
+        mock_result.success = False
+        mock_result.message = ''  # No output from agent
+        mock_result.data = {}
+        mock_router.route.return_value = mock_result
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        # output MUST contain sentinel — synthesis will pick it up
+        self.assertIn('output', result)
+        self.assertIn('No signal today', result['output'])
+        self.assertIn('gtm pipeline health', result['output'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_router_route_exception_also_populates_sentinel_output(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'COOAgent': object()}
+        mock_router.route.side_effect = ValueError('upstream pipeline timeout')
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        self.assertIn('No signal today', result['output'])
+        self.assertIn('ValueError', result['output'])
+
+    def test_successful_dispatch_uses_agent_output_not_sentinel(self):
+        """Regression guard: success path MUST use the agent's actual
+        message as output, NOT the sentinel."""
+        with patch('core.agent_router.AgentRouter') as mock_router_cls:
+            mock_router = mock_router_cls.return_value
+            mock_router.AGENT_MAP = {'COOAgent': object()}
+            mock_router.route.return_value = MagicMock(
+                success=True,
+                message='- KPI 1 moved +12%\n- Risk: vendor delays',
+                data={'kpi_count': 1},
+            )
+
+            result = self.agent._execute_lane_4_rotating_focus_step({
+                'rotation_slot': 'gtm_pipeline_health',
+            })
+
+        self.assertTrue(result['success'])
+        self.assertIn('KPI 1', result['output'])
+        self.assertNotIn('No signal today', result['output'])
 
 
 class MorningBriefDecisionCardTests(SimpleTestCase):
