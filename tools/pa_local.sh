@@ -17,29 +17,29 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1231 — Fresh
-# thread (carry-forward from pa-4086552cdc9840e9). Pin:
-# pa-21dfa3a3dc4545b7. Rotated at Session 1230 close after
-# health_check returned score=45 / suggest_fresh at 38 turns / 19k
-# tokens / 2.5h. Carry-forward seed for the new conv: Session 1230
-# closed (4 PRs merged: #2580 COOAgent semantic title, #2581 CTO/
-# Trend sibling wiring, #2582 engineer request_mode + clarification-
-# stall contract, #2583 handoff) + agent system audit deliverable
-# 5318da3e-5ac1-43af-9160-d7505ff7c428 live in DBZ workspace (33,786
-# chars). Chris answered R1: SportsOddsAnalyst cascade is upstream
-# odds-API credit-exhaustion, not platform bug — revised R1 action
-# is circuit-break env var pattern. Workers bounced twice during
-# Session 1230 for P1+P4 wiring.
-# Carryover priorities for Session 1231: Outreach beat first-fire
-# verification 2026-06-25 13:30 UTC, Operator Edge Friday-1 dry-run
-# check 2026-06-26 12:00 UTC, COOAgent scheduled 'files_generated'
-# KeyError investigation (HIGH — daily diagnostic silently failing),
-# deliverable_tool.append updated_at gap fix, engineer workspace
-# staleness, audit R2 (CodeReview + Workflow error_message distros),
-# audit R3 (wire 12 silently-failing-invisible agents to
-# _save_to_deliverable). Chris-side: Anthropic credit refill, odds
-# API credit refill, CI billing.
-# Prior pins retired: pa-4086552cdc9840e9 (Sessions 1229-1230 — Rigby
+# the --conversation flag below. Current value: Session 1234 — Fresh
+# thread (carry-forward from pa-21dfa3a3dc4545b7). Pin:
+# pa-91cf6bbce1d6406e. Rotated at Session 1233 close after
+# health_check returned score=60 / suggest_fresh at 26 turns / 13k
+# tokens / 4.4h / 8 topics. Carry-forward seed for the new conv:
+# Session 1233 closed (6 PRs merged: #2599 B.1 plumbing + handlers,
+# #2600 acronym alias fix, #2601 smoke verification doc, #2602 B.2
+# rotation pre-step + override chain, #2603 Sub-step C workspace +
+# Celery beat task, #2604 handoff). Daily-CoS arc Sub-steps A-C
+# complete; D (polish) + E (Mon-Fri dogfood) unlock once Railway
+# produces first scheduled brief at 06-25 13:00 UTC = 07:00 MDT.
+# Workers restarted at session close — generate_morning_brief_daily
+# registered.
+# Carryover priorities for Session 1234: FOUR calendar checks
+# (morning_brief first-fire 06-25 13:00 UTC NEW from #2603,
+# outreach beat 06-25 13:30 UTC, COOAgent P2 verify 06-25 13:30 UTC,
+# Operator Edge newsletter 06-26 12:00 UTC). Sub-step D scope
+# derives from Chris's first-brief read + Rigby's audience-fit
+# verdict. Chris-side: Anthropic credit refill, CI billing.
+# Prior pins retired: pa-21dfa3a3dc4545b7 (Sessions 1231-1233 — agent
+# error-pattern investigation arc + daily-CoS arc Sub-steps A close +
+# B.1/B.2/C build-out; 26 turns / 13k tokens / score 60 / suggest_fresh
+# at rotation), pa-4086552cdc9840e9 (Sessions 1229-1230 — Rigby
 # tool-surface verification arc + Session 1230 diagnostic-leak close +
 # engineer request_mode + agent system audit; 38 turns / 19k tokens /
 # score 45 / suggest_fresh at rotation), pa-08bdd7c9b348415a (Sessions 1226-1229 — agent_name
@@ -83,4 +83,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-21dfa3a3dc4545b7
+python tools/pa_chat.py "$@" --tools --conversation pa-91cf6bbce1d6406e
