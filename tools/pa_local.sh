@@ -83,4 +83,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-91cf6bbce1d6406e
+python tools/pa_chat.py "$@" --tools --conversation pa-0f08fc48ec914917
