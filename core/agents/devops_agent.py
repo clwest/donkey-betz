@@ -304,6 +304,58 @@ Only use these tools when explicitly asked to generate configs. For questions or
         }
     ]
 
+    def _find_recent_duplicate_deliverable(
+        self,
+        title: str,
+        window_minutes: int = 60,
+    ):
+        """Session 1234 D6 — mirror of ResearchAgent's D5 helper.
+
+        Returns the most recent existing Deliverable matching
+        (agent_name=self.name, title, workspace_id=self._workspace_id)
+        within the last ``window_minutes``, or None.
+
+        Used to detect operator/PA dispatch storms — when the same
+        DevOps task fires multiple times in quick succession (e.g.
+        smoke retries while iterating on a fix), we skip subsequent
+        saves and log the prior id loudly so the storm is visible in
+        telemetry without cluttering the workspace.
+
+        Repro from 2026-06-25 investigation: 4 identical
+        ``DevOpsAgent: DevOps: Run one-shot smoke execution of internal
+        WORKFLOWS['morning_brief'] …`` deliverables in workspace
+        cf708a2e between 02:48 and 05:25 — all manual smoke retries.
+
+        Fail-open: any unexpected exception returns None so the save
+        proceeds. We never want this guard to swallow a legitimate
+        deliverable.
+        """
+        try:
+            workspace_id = getattr(self, '_workspace_id', None)
+            if not workspace_id or not title:
+                return None
+            from datetime import timedelta
+            from django.utils import timezone
+            from core.models_deliverables import Deliverable
+            cutoff = timezone.now() - timedelta(minutes=window_minutes)
+            return (
+                Deliverable.objects
+                .filter(
+                    agent_name=self.name,
+                    title=title,
+                    workspace_id=workspace_id,
+                    created_at__gte=cutoff,
+                )
+                .order_by('-created_at')
+                .first()
+            )
+        except Exception as e:
+            logger.warning(
+                "[DEVOPS_DUP_CHECK_ERROR] %s: %s — falling open, "
+                "save will proceed", type(e).__name__, e,
+            )
+            return None
+
     def execute(
         self,
         task: str,
@@ -477,14 +529,37 @@ Only use these tools when explicitly asked to generate configs. For questions or
                         )
 
                         # Session 1006: Persist output to Deliverable
-                        self._save_to_deliverable(
-                            title=f"DevOps: {task[:80]}",
-                            content=analysis_msg,
-                            deliverable_type='analysis',
-                            category='DevOps',
-                            tags=['devops', tool_used or 'operations'],
-                            metadata={'task': task[:200], 'tool_used': tool_used},
+                        # Session 1234 D6: pre-save dup-skip (mirror of
+                        # ResearchAgent D5). Catches manual smoke-retry
+                        # storms (4 identical deliverables in 2.5h on
+                        # 2026-06-25). Fail-loud log + skip; first save
+                        # still goes through; daily cadence unaffected.
+                        deliverable_title = f"DevOps: {task[:80]}"
+                        prior = self._find_recent_duplicate_deliverable(
+                            title=deliverable_title,
+                            window_minutes=60,
                         )
+                        if prior is not None:
+                            logger.warning(
+                                "[DEVOPS_DUP_SKIPPED] title=%r "
+                                "workspace_id=%s prior_deliverable_id=%s "
+                                "prior_created_at=%s task=%r — skipping "
+                                "save to avoid duplicate storm",
+                                deliverable_title,
+                                getattr(self, '_workspace_id', None),
+                                prior.id,
+                                prior.created_at.isoformat(),
+                                (task or '')[:120],
+                            )
+                        else:
+                            self._save_to_deliverable(
+                                title=deliverable_title,
+                                content=analysis_msg,
+                                deliverable_type='analysis',
+                                category='DevOps',
+                                tags=['devops', tool_used or 'operations'],
+                                metadata={'task': task[:200], 'tool_used': tool_used},
+                            )
 
                         self._record_learning_outcome(
                             result=result,
