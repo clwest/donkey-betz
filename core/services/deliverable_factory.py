@@ -203,6 +203,17 @@ RELEVANCE_GATED_AGENTS = {'ResearchAgent'}
 # fix landed for COOAgent in this PR; CTOAgent + TrendAnalysisAgent +
 # TrendBreakDetectorAgent are documented sibling callsites for a followup
 # PR — they share the `f"<Label>: {task[:N]}"` pattern.)
+#
+# Session 1234 D7 — verified holding: 2026-06-25 morning_brief first-fire
+# investigation re-swept the corpus and confirmed the gate is fully closed.
+# Zero net-new leak titles on 06-25 across 4 ResearchAgent/COOAgent/
+# CTOAgent/TrendAnalysisAgent deliverables (last leak production was
+# 2026-06-24 13:34, the COOAgent daily-diagnostic family — 1-day stale at
+# verification time). The pre-fix backlog (36 leak-victim rows, dates
+# 2026-06-13 → 2026-06-24, excluding 1 intentional Rigby gate-smoke and
+# 1 already-status=completed COO row) was bulk-archived from this
+# session. No additional code changes; markers below are confirmed
+# correct.
 _PROMPT_BODY_MARKERS = (
     'BINDING DIRECTIVE',
     '## Research Topic',
