@@ -1,6 +1,6 @@
-# Session 1231 — Agent Error-Pattern Investigation (P3 + P2 + R2)
+# Session 1231 — Agent Error-Pattern Investigation (P3 + P2 + R2 + P4 + 83-agent smoke)
 
-**Status:** Two-PR session bundling three findings from Session 1230's audit deliverable `5318da3e-…` and tracking deliverable `61f4312b-…` into one "agent error-pattern investigation" arc. P3 (audit-trail gap) shipped, P2 (real KeyError bug) shipped, R2 (CodeReview + Workflow investigation) closed as **no code change** after verifier-loop revealed all 27 "failures" were smoke probes.
+**Status:** Four-PR session. Opened bundling three findings from Session 1230's audit deliverable `5318da3e-…` and tracking deliverable `61f4312b-…` into one "agent error-pattern investigation" arc (P3 + P2 + R2). After Chris's follow-on ask "can Rigby trigger each of the Agents and get an output from them?", added P4 — a full 83-agent AGENT_MAP coverage smoke that surfaced exactly one true production-broken agent (`BookmakerAgent` constructor) and confirmed effective fleet health at **67 of 68 verifiable production-healthy = 98.5%**.
 
 **Date:** 2026-06-24 (UTC).
 **Active conversation:** `pa-21dfa3a3dc4545b7` (pinned at Session 1230 close; ~10 turns added this session; no rotation triggered).
@@ -17,12 +17,14 @@ Both PRs admin-merged the same UTC day on Chris's session authorization. CI bill
 
 ## Session Manifest
 
-### PRs merged (2 total)
+### PRs merged (4 total)
 
 | # | Title | What |
 |---|---|---|
 | **#2585** | `fix(session-1231): deliverable_tool.append + update content-mutations bump updated_at (P3)` | Three content-mutating branches in `core/services/td_handlers_agents.py` previously saved only `['content', 'preview_content']`, which silenced Django's `auto_now=True` per Django docs ("auto_now fields will only be updated if added to update_fields, when one is supplied"). Branches fixed: dedicated `append` action (line 2293), `update`'s `append`/`prepend` sub-mode (line 2122), `update`'s `content` replace sub-mode (line 2129). All three now extend `update_fields` with `'updated_at'`. New `test_deliverable_tool_append_updated_at.py` — 5 tests (one per branch + a source-level guard sentinel). 5/5 new + 24/24 adjacent (orphan_mutations, append_canary, appends service) green. Closes tracking deliv `61f4312b-…`. |
 | **#2586** | `fix(session-1231): COOAgent scheduled 'files_generated' KeyError (P2)` | `core/agents/base_agent.py:5482` used bare `write_result['files_generated']` in an f-string in the `elif partial_failure` branch of `execute_with_workspace`. `_write_files_to_workspace` returns two dict shapes: Shape A (early returns: no workspace, no manager, no permission) includes `'files_generated'` but also `partial_failure=False` so the elif never fires; Shape B (main return at lines 5217-5230) tracks `total_written` + `total_failed` but omits `'files_generated'` entirely. The elif only fires when `written=False AND partial_failure=True` (ALL files failed) — exactly the shape the scheduled COO diagnostic hit. Fix computes `total_attempted = total_written + total_failed` from existing fields. Added `test_all_files_failed_does_not_raise_key_error` + `test_partial_failure_path_uses_safe_getters` source-level sentinel. 3/3 in `test_base_agent_workspace_write_visibility.py` green. Behavioral verify window: next scheduled fire 2026-06-25 13:30 UTC. Closes Session 1230 F1. |
+| **#2587** | `docs(session-1231): close handoff + Session 1232 start-here` | Session 1231 close docs (first revision — before P4 + full 83-agent smoke landed). Adds this handoff file and rewrites `00-START-NEXT-SESSION.md` Session 1232 entry point. Both updated in-place by the second close pass below. |
+| **#2588** | `fix(session-1231): BookmakerAgent constructor accepts user= kwarg + full-AGENT_MAP smoke harness (P4)` | `core/agents/bookmaker_agent.py:259` — `__init__(self)` → `__init__(self, user=None, **kwargs)`. BookmakerAgent doesn't inherit from `BaseAgent` (uses `LearningMixin` only) so its constructor accepted zero kwargs, but the standard router dispatch at `core/agent_router.py:1045` calls `agent_class(user=self.user)` → instant crash on every dispatch. Fix stashes user on self + absorbs extra kwargs for future-proofing. 4 new tests in `test_bookmaker_agent_constructor.py` (legacy no-args back-compat, router-driven `user=` kwarg, extra-kwargs absorption, end-to-end with real ORM user). 4/4 green. Also bundles `scripts/smoke_all_agents.py` — the one-shot full-AGENT_MAP coverage harness that surfaced the bug. 15-min wall-clock cap; tabulates per-agent status/runtime/error/has_deliverable. Run via `.venv/bin/python scripts/smoke_all_agents.py`. |
 
 ### Deliverables (in-session)
 
@@ -35,6 +37,23 @@ Both PRs admin-merged the same UTC day on Chris's session authorization. CI bill
 - `CodeReviewAgent` 30d failures: 23 total / 18 failed / 5 completed. **All 18 failures share error_message** `'No code inspection or review completed'`. Tasks classified by substring matcher → **18/18 are smoke probes** (URC v0.1 fleet smoke expected ERROR #N, `smoke:` force-failure, `smoke_test:` capability ping, `fleet smoke test` minimal-invocation, `smoke test — receipt only`).
 - `WorkflowAgent` 30d failures: 11 total / 9 failed / 2 completed. 5 distinct error_messages: 2× 60min no-heartbeat timeout, 5× "Workflow partially completed: N successful, M failed", 1× 1200s wall-clock, 1× alt partial-completed message. Tasks classified → **9/9 are full-fleet smoke tests** (`'run a full-fleet smoke test across all available agents (target ~88)'` shape). 6 partial-completed include `CodeReviewAgent` as a failing child — same smoke probes counted at the CodeReview row level, dispatched via the fleet harness.
 
+### Full 83-agent AGENT_MAP coverage smoke (`smoke_id=9321b9a13397`)
+
+Triggered by Chris's question "can Rigby trigger each of the Agents and get an output from them?". `scripts/smoke_all_agents.py` dispatched all 83 entries from `AgentRouter().AGENT_MAP` with `context.mode='fleet_smoke'` + receipt-only capability-ping task; polled `AgentExecution` rows; tabulated. After 15-min harness wall-clock + two re-poll passes + one re-dispatch with `mode='receipt_only'`:
+
+| Bucket | Count | Notes |
+|---|---:|---|
+| ✅ **PASS — completed cleanly** | **67** | 52 in initial 15-min window + 4 first repoll (MarketIntelligenceCoordinator 439s, StockAuditCoordinator 96s, ThinkingAgent 48s, TopicMinerAgent 4.9s) + 6 second repoll (TrendAnalysis, TrendBreakDetector, WhaleWatcher, WorkflowAgent, TrainedCreation, TransactionMonitor) + 5 receipt_only re-dispatch (AudioAgent, ImageEditingAgent, ThreeDAgent, VideoAgent, VideoEditingAgent). |
+| ❌ **R1 cascade** (odds API credits, Chris-side) | **5** | SportsOddsAnalyst, ArbitrageDetector, GamePredictor, LineMovementAnalyzer, SharpActionDetector. All `'The Odds API ... no data'` / `'no events with per-bookmaker odds'`. Same root cause Chris classified at Session 1230 close. |
+| ❌ **Real bug — FIXED this session** | **1** | `BookmakerAgent.__init__() got an unexpected keyword argument 'user'`. Closed by PR #2588. |
+| ❌ **Real bug — NEW followup (not yet fixed)** | **1** | `WorkflowOrchestrationAgent`: `"Step 'market_research' failed: Unknown agent in workflow: research_agent"`. Workflow lookup table uses snake_case `'research_agent'`; AGENT_MAP keys are PascalCase `'ResearchAgent'`. Small lookup-table fix. |
+| 🚪 **Legit shape rejection** (would pass with proper input) | **8** | CodeReviewAgent (no code in smoke task), DecisionEnforcerAgent (no debate_messages), DistributionAgent (no content), EditorAgent (no content), OpportunityPipelineAgent (no opportunity dict), TalkingCharacterAgent (no image_url), TechnicalDocumentAgent (LLM no response — could be smoke-budget edge), VoiceCriticAgent (no content to score). These agents correctly refused tasks shaped for them; not bugs. |
+| 🚫 **By-design disabled** | **1** | CodeGeneratorAgent — `_BLOCKED_AGENTS` via `AgentControlEntry` (DB-backed since Session 1080), reason `"disabled on Railway since Session 1031"`. |
+
+**Effective fleet health:** Excluding R1 cascade (Chris-side), by-design disabled, and shape rejections (which are agents working correctly on inappropriate input), **67 of 68 verifiable production-healthy = 98.5%** post-PR-#2588. The single remaining true broken agent is `WorkflowOrchestrationAgent`'s case-sensitivity in its workflow lookup table.
+
+**Harness-mode inconsistency surfaced as bonus finding:** 5 media agents (AudioAgent, ImageEditingAgent, ThreeDAgent, VideoAgent, VideoEditingAgent) were silently dropped on the initial dispatch because `core/tasks_agents.py:2180` only bypasses the media-spend guard when `context.mode == 'receipt_only'` — but `core/services/smoke_dispatch.py:39-42` `SMOKE_MODES` includes both `'receipt_only'` AND `'fleet_smoke'`. Re-dispatching the 5 with `mode='receipt_only'` produced clean PASSes in 1-5s each. Filed as Session 1232 followup F2.
+
 ### Verifier-loop bonus finding
 
 The R2 deliverable `df33d12d-…`'s own 8.7kB append was dispatched from the P2 working tree branch (off main, not the P3 branch), so it ran on the pre-P3 code path. `updated_at` is stuck at `2026-06-24T23:00:28.586862+00:00` despite the 9,131-char body. This is live evidence of the very bug PR #2585 closes. Future appends (post-#2585 merge on main) will bump correctly.
@@ -44,6 +63,8 @@ The R2 deliverable `df33d12d-…`'s own 8.7kB append was dispatched from the P2 
 1. **`deliverable_tool.append` audit trail is honest.** Every content-mutating branch in `td_handlers_agents._handle_deliverables` now lists `'updated_at'` in `save(update_fields=[...])`. Django's `auto_now=True` fires correctly; `updated_at`-based analytics no longer drift from reality on append-driven content growth. Source-level guard in `test_deliverable_tool_append_updated_at.py:test_source_level_guard_append_handler_lists_updated_at` locks the wiring against future revert.
 2. **No more bare `write_result['files_generated']` access on the workspace-write partial-failure path.** Replaced with `total_attempted = total_written + total_failed` computed from Shape B fields that are always present. Source-level guard `test_partial_failure_path_uses_safe_getters` asserts the bare-access pattern is absent.
 3. **CodeReviewAgent + WorkflowAgent are healthy.** No production failures in 30d. The 21.7% / 18.2% "success rates" in audit `5318da3e-…` are noise from smoke-probe rows + fleet-smoke timeouts; the agents themselves correctly serve every real dispatch.
+4. **`BookmakerAgent` dispatch contract honored.** Constructor now accepts `user=` kwarg + absorbs extra kwargs; standard router dispatch at `core/agent_router.py:1045` (`agent_class(user=self.user)`) no longer crashes at construction time. Other non-`BaseAgent`-inheriting agents (any future `LearningMixin`-only agents) should follow the same pattern.
+5. **Full-AGENT_MAP fleet smoke is reproducible.** `scripts/smoke_all_agents.py` dispatches every entry, polls AgentExecution, tabulates results. 15-min wall-clock cap. Re-run any time to validate fleet state.
 
 ## Rollback / Disable Levers
 
@@ -51,6 +72,7 @@ The R2 deliverable `df33d12d-…`'s own 8.7kB append was dispatched from the P2 
 |---|---|
 | #2585 P3 fix | Per-branch revert of `'updated_at'` extension at `core/services/td_handlers_agents.py:2122`, `:2129`, `:2293`. Source-level guard test will fail, alerting on regression. |
 | #2586 P2 fix | Revert the `total_attempted = …` computation at `core/agents/base_agent.py:5481-5497` and restore bare access. Source-level guard test will fail. Only valid if some new caller starts populating `'files_generated'` in Shape B (none today). |
+| #2588 P4 fix | Revert `__init__(self, user=None, **kwargs)` → `__init__(self)` at `core/agents/bookmaker_agent.py:259`. Constructor tests will fail; router dispatch will resume crashing. Only valid if BookmakerAgent is removed from AGENT_MAP at the same time. |
 
 ## 24h Watch Checklist (copy-paste)
 
@@ -112,6 +134,9 @@ print(f'  bumped after subsequent append? Should be True if any post-#2585 appen
 | **F1** | Smoke-probe filtering for `AgentExecution` success_rate metric (REC-2 in R2 deliverable) | Medium | Two implementation options: (a) add `is_smoke_test: bool` field to `AgentExecution`, set by dispatcher when task matches the substring patterns or `context.smoke=True`; (b) compute at query time — let `execution_history_tool.stats` accept `include_smoke=False` default and filter at metric calc. Either closes the metric-quality bug that produced R2's misleading recommendation. Worth one focused PR — without it, future audits will keep flagging healthy smoke-heavy agents as broken. |
 | **F2** | Fleet-smoke wall-clock timeouts (REC-3 in R2 deliverable) | Low | 3 Workflow rows hit `60min no-heartbeat` or `1200s wall-clock` on full-fleet smokes. Either raise the wall-clock for known-smoke workflow dispatches, split fleet smokes into chunks, or stop counting timeout-on-fleet-smoke against the agent. Lower priority — observability not behavior. |
 | **F3** | Audit `5318da3e-…` §R2 amendment | P3 | Append a brief §R2 footnote pointing to deliverable `df33d12d-…` for the verifier-loop reframe ("all 27 R2 rows were smoke probes; no agent code change warranted; recommendation re-framed as metric-quality fix"). Mirrors how Session 1230 P2 appended §4.8 to `e2964e4a-…`. Trivial via `deliverable_tool action=append` once Session 1232 opens. |
+| **F4** | `WorkflowOrchestrationAgent` workflow-table case-sensitivity | Medium | The smoke surfaced `"Step 'market_research' failed: Unknown agent in workflow: research_agent"`. The workflow lookup table uses snake_case keys (e.g., `'research_agent'`) but `AGENT_MAP` is PascalCase (`'ResearchAgent'`). Small lookup-table or normalization fix; pre-fix every workflow step using snake_case agent names silently fails. Discovered by `scripts/smoke_all_agents.py` (`smoke_id=9321b9a13397`). |
+| **F5** | Smoke-harness mode inconsistency: `fleet_smoke` should bypass media-block alongside `receipt_only` | Low-Medium | `core/services/smoke_dispatch.py:39-42` `SMOKE_MODES = {'receipt_only', 'fleet_smoke'}`, but the media-block bypass at `core/tasks_agents.py:2180-2183` only triggers for `mode == 'receipt_only'`. Result: 5 media agents (AudioAgent, ImageEditingAgent, ThreeDAgent, VideoAgent, VideoEditingAgent) silently dropped when dispatched with `mode='fleet_smoke'`. Re-dispatching with `mode='receipt_only'` produces clean PASSes. Fix: add `or context.get('mode') == 'fleet_smoke'` to `_receipt_only_ctx` predicate. One-line change; closes the silent-drop class. |
+| **F6** | Promote `scripts/smoke_all_agents.py` → `python manage.py smoke_all_agents` | Low | Currently a standalone script in `scripts/`. Promote to a Django management command for the standard `python manage.py` invocation pattern; lets the harness be called from Celery beat for periodic fleet health checks. |
 
 ### Chris-discretion (not on next-session priority list — only if Chris re-prioritizes)
 
