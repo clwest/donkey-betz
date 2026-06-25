@@ -13,6 +13,8 @@
 
 This document establishes the API path conventions for the Donkey Betz platform. Due to historical development patterns, the codebase currently uses two path prefixes:
 
+> **⚠ Historical snapshot — do not cite as current.** The endpoint-count table below is a Session 871 (2026-01-29) snapshot retained for context. Authoritative live counts live in [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) (1,857 `path()` patterns across `core/urls*.py` as of 2026-06-22) per `DOC_LIFECYCLE.md` §2c. The `/api/` vs `/api/v1/` split percentages haven't been re-verified since Session 871 — the **policy direction stays canonical**, but cross-check specific counts against `core/urls.py` before citing.
+
 | Pattern | Usage | Endpoint Count |
 |---------|-------|----------------|
 | `/api/` | Core endpoints, new features | 1,420+ (81.5%) |

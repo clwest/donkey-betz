@@ -47,6 +47,8 @@ SpiderIntelligenceService (Query interface)
 
 ## Spider Categories (77 Total)
 
+> **⚠ Historical snapshot — do not cite as current.** The "77 Total" header conflicts with the headline "80 spiders / 41 categories" above and is a Session 567 snapshot retained for context. Authoritative live counts live in [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) per `DOC_LIFECYCLE.md` §2c. As of the Session 1234 audit (2026-06-25) the live count is **80 spiders across 41 categories**. The per-category lists below are session snapshots; verify against `ai_core/spiders/spider_registry.py` before citing per-spider details.
+
 ### News & Media (10 spiders)
 
 | # | Spider | Source | Type | Status |
