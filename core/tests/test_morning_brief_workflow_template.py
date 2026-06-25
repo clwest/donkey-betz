@@ -34,7 +34,10 @@ class MorningBriefWorkflowTemplateTests(SimpleTestCase):
     and create_deliverable agents flipped to dedicated internal handlers.
     """
 
+    # Session 1233 B.2: rotation_slot_resolve added as Step 1 pre-step;
+    # all subsequent steps shifted from 1-7 to 2-8.
     EXPECTED_STEP_NAMES = [
+        'rotation_slot_resolve',
         'lane_1_platform_readiness',
         'lane_2_build_focus',
         'lane_3_competitive_landscape',
@@ -45,6 +48,8 @@ class MorningBriefWorkflowTemplateTests(SimpleTestCase):
     ]
 
     EXPECTED_AGENTS_BY_STEP = {
+        # Session 1233 B.2: internal pure-logic handler.
+        'rotation_slot_resolve': 'rotation_slot_resolve',
         'lane_1_platform_readiness': 'system_intelligence_agent',
         'lane_2_build_focus': 'coo_agent',
         'lane_3_competitive_landscape': 'trend_analysis_agent',
@@ -76,13 +81,15 @@ class MorningBriefWorkflowTemplateTests(SimpleTestCase):
             "no_image_generation=True to skip image steps in the runner."
         )
 
-    def test_morning_brief_has_seven_steps(self):
+    def test_morning_brief_has_eight_steps(self):
         wf = WorkflowOrchestrationAgent.WORKFLOWS['morning_brief']
         steps = wf['steps']
         self.assertEqual(
-            len(steps), 7,
-            f"Spec requires 7 steps in v0 (4 lanes + decision_card_synthesis "
-            f"+ strategic_synthesis + create_deliverable). Got {len(steps)}."
+            len(steps), 8,
+            f"Session 1233 B.2: spec requires 8 steps "
+            f"(rotation_slot_resolve pre-step + 4 lanes + "
+            f"decision_card_synthesis + strategic_synthesis + "
+            f"create_deliverable). Got {len(steps)}."
         )
 
     def test_morning_brief_step_names_match_spec(self):
@@ -110,8 +117,9 @@ class MorningBriefWorkflowTemplateTests(SimpleTestCase):
         wf = WorkflowOrchestrationAgent.WORKFLOWS['morning_brief']
         step_numbers = [step['step'] for step in wf['steps']]
         self.assertEqual(
-            step_numbers, list(range(1, 8)),
-            "Steps must be numbered 1-7 sequentially. Workflow runner "
+            step_numbers, list(range(1, 9)),
+            "Session 1233 B.2: steps must be numbered 1-8 sequentially "
+            "(rotation_slot_resolve added as Step 1). Workflow runner "
             "respects step['step'] order."
         )
 
@@ -222,24 +230,33 @@ class MorningBriefLane4DispatchTests(SimpleTestCase):
         )
 
     @patch('core.agent_router.AgentRouter')
-    def test_lane_4_dispatches_default_slot_when_no_rotation_slot(
+    def test_lane_4_dispatches_monday_default_when_no_rotation_slot(
         self, mock_router_cls,
     ):
+        """Session 1233 B.2: when neither rotation_slot nor override is
+        set, Lane 4 falls back through _resolve_rotation_slot which
+        uses the current weekday. Forcing Monday via _get_now_utc mock
+        verifies Lane 4's fallback chain chains through to the weekday
+        resolver instead of using a static default."""
         mock_router = mock_router_cls.return_value
         mock_router.AGENT_MAP = {'ResearchAgent': object()}
-        mock_result = MagicMock(
+        mock_router.route.return_value = MagicMock(
             success=True, message='AI infra brief text', data={'k': 'v'},
         )
-        mock_router.route.return_value = mock_result
 
-        result = self.agent._execute_lane_4_rotating_focus_step({})
+        # Force Monday via the test seam.
+        mock_now = MagicMock()
+        mock_now.weekday.return_value = 0
+        mock_now.isocalendar.return_value = (2026, 1, 1)
+        with patch.object(self.agent, '_get_now_utc', return_value=mock_now):
+            result = self.agent._execute_lane_4_rotating_focus_step({})
 
         self.assertTrue(result['success'])
         self.assertEqual(result['slot_used'], 'ai_infra_deep_dive')
         mock_router.route.assert_called_once()
         args, _ = mock_router.route.call_args
         self.assertEqual(args[0], 'ResearchAgent',
-                         "Default slot ai_infra_deep_dive → ResearchAgent")
+                         "Monday default ai_infra_deep_dive → ResearchAgent")
 
     @patch('core.agent_router.AgentRouter')
     def test_lane_4_dispatches_sports_slot_when_set(self, mock_router_cls):
@@ -357,3 +374,209 @@ class MorningBriefContextPlumbingTests(SimpleTestCase):
             context,
         )
         self.assertEqual(context['lane_1_text'], 'all systems green')
+
+
+class MorningBriefRotationSlotResolveTests(SimpleTestCase):
+    """Session 1233 B.2 — rotation_slot_resolve pre-step.
+
+    Coverage shape:
+    - Each weekday Mon-Thu + Sat-Sun → expected default slot
+    - Fri alternation by ISO week parity (sports ↔ markets)
+    - Override priority chain: incident → revenue → signal → calendar
+    - Caller-forced ``rotation_slot`` wins over all overrides
+    - Handler writes ``context['rotation_slot']`` for Lane 4 to read
+    - Handler returns ``reason`` diagnostic for runner step_result
+    """
+
+    def setUp(self):
+        self.agent = WorkflowOrchestrationAgent(user=MagicMock(name='user'))
+
+    def _mock_now(self, weekday, iso_week=1):
+        """Build a now-mock returning the given weekday + iso_week.
+
+        Patch ``self.agent._get_now_utc`` to return this so
+        ``_resolve_rotation_slot`` reads our fixed value.
+        """
+        mock_now = MagicMock()
+        mock_now.weekday.return_value = weekday
+        mock_now.isocalendar.return_value = (2026, iso_week, weekday + 1)
+        return mock_now
+
+    def _resolve_at(self, weekday, iso_week=1, context=None):
+        with patch.object(
+            self.agent, '_get_now_utc',
+            return_value=self._mock_now(weekday, iso_week=iso_week),
+        ):
+            return self.agent._resolve_rotation_slot(context or {})
+
+    # ── default weekday assignments ──
+
+    def test_monday_resolves_to_ai_infra_deep_dive(self):
+        self.assertEqual(self._resolve_at(0), 'ai_infra_deep_dive')
+
+    def test_tuesday_resolves_to_ai_infra_deep_dive(self):
+        """Spec calls Tue 'competitor_wedge' but that's a Lane-3-deepen
+        concept, not a Lane 4 slot. B.2 falls back to ai_infra default;
+        a future Sub-step can add a dedicated competitor_wedge slot."""
+        self.assertEqual(self._resolve_at(1), 'ai_infra_deep_dive')
+
+    def test_wednesday_resolves_to_ticker_catalyst_watch(self):
+        self.assertEqual(self._resolve_at(2), 'ticker_catalyst_watch')
+
+    def test_thursday_resolves_to_gtm_pipeline_health(self):
+        self.assertEqual(self._resolve_at(3), 'gtm_pipeline_health')
+
+    def test_saturday_falls_back_to_ai_infra(self):
+        self.assertEqual(self._resolve_at(5), 'ai_infra_deep_dive')
+
+    def test_sunday_falls_back_to_ai_infra(self):
+        self.assertEqual(self._resolve_at(6), 'ai_infra_deep_dive')
+
+    # ── Friday alternation ──
+
+    def test_friday_even_iso_week_picks_sports(self):
+        self.assertEqual(
+            self._resolve_at(4, iso_week=2), 'sports_edge_scan',
+            "Friday on an even ISO week → sports edge scan.",
+        )
+
+    def test_friday_odd_iso_week_picks_prediction_markets(self):
+        self.assertEqual(
+            self._resolve_at(4, iso_week=1), 'prediction_markets',
+            "Friday on an odd ISO week → prediction markets.",
+        )
+
+    # ── caller-forced wins ──
+
+    def test_caller_forced_slot_wins_over_weekday_default(self):
+        slot = self.agent._resolve_rotation_slot(
+            {'rotation_slot': 'sports_edge_scan'},
+        )
+        self.assertEqual(slot, 'sports_edge_scan')
+
+    def test_caller_forced_slot_wins_over_overrides(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_slot': 'sports_edge_scan',
+            'rotation_override': {'incident': True, 'revenue': True},
+        })
+        self.assertEqual(slot, 'sports_edge_scan',
+                         "Caller-forced rotation_slot wins over override flags.")
+
+    # ── override priority chain ──
+
+    def test_incident_override_routes_to_ai_infra(self):
+        """B.2 doesn't have a dedicated incident_focus slot yet; until
+        that lands, incident override deepens Lane 1's coverage by
+        re-running ai_infra_deep_dive."""
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {'incident': True},
+        })
+        self.assertEqual(slot, 'ai_infra_deep_dive')
+
+    def test_revenue_override_routes_to_gtm(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {'revenue': True},
+        })
+        self.assertEqual(slot, 'gtm_pipeline_health')
+
+    def test_signal_shorthand_routes_to_slot(self):
+        for shorthand, expected in [
+            ('sports', 'sports_edge_scan'),
+            ('markets', 'prediction_markets'),
+            ('tickers', 'ticker_catalyst_watch'),
+            ('gtm', 'gtm_pipeline_health'),
+            ('ai_infra', 'ai_infra_deep_dive'),
+        ]:
+            slot = self.agent._resolve_rotation_slot({
+                'rotation_override': {'signal_slot': shorthand},
+            })
+            self.assertEqual(slot, expected,
+                             f"signal_slot={shorthand!r} → {expected!r}")
+
+    def test_calendar_shorthand_routes_to_slot(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {'calendar_slot': 'tickers'},
+        })
+        self.assertEqual(slot, 'ticker_catalyst_watch')
+
+    def test_incident_beats_revenue(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {'incident': True, 'revenue': True},
+        })
+        self.assertEqual(slot, 'ai_infra_deep_dive',
+                         "Incident is higher priority than revenue.")
+
+    def test_revenue_beats_signal(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {
+                'revenue': True,
+                'signal_slot': 'sports',
+            },
+        })
+        self.assertEqual(slot, 'gtm_pipeline_health',
+                         "Revenue is higher priority than signal.")
+
+    def test_signal_beats_calendar(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {
+                'signal_slot': 'tickers',
+                'calendar_slot': 'sports',
+            },
+        })
+        self.assertEqual(slot, 'ticker_catalyst_watch',
+                         "Signal is higher priority than calendar.")
+
+    def test_unknown_signal_shorthand_falls_back_to_default(self):
+        slot = self.agent._resolve_rotation_slot({
+            'rotation_override': {'signal_slot': 'made_up_xyz'},
+        })
+        self.assertEqual(slot, 'ai_infra_deep_dive',
+                         "Unknown shorthand → default slot fallback.")
+
+    # ── handler step behavior ──
+
+    def test_handler_writes_rotation_slot_to_context(self):
+        context = {}
+        with patch.object(
+            self.agent, '_get_now_utc',
+            return_value=self._mock_now(2),
+        ):
+            result = self.agent._execute_rotation_slot_resolve_step(context)
+        self.assertTrue(result['success'])
+        self.assertEqual(context['rotation_slot'], 'ticker_catalyst_watch')
+        self.assertEqual(result['rotation_slot'], 'ticker_catalyst_watch')
+        self.assertIn('weekday_default:2', result['reason'])
+
+    def test_handler_reason_distinguishes_caller_forced(self):
+        context = {'rotation_slot': 'sports_edge_scan'}
+        result = self.agent._execute_rotation_slot_resolve_step(context)
+        self.assertEqual(result['reason'], 'caller_forced')
+        self.assertEqual(result['rotation_slot'], 'sports_edge_scan')
+
+    def test_handler_reason_captures_override_type(self):
+        for override, expected_prefix in [
+            ({'incident': True}, 'override_incident'),
+            ({'revenue': True}, 'override_revenue'),
+            ({'signal_slot': 'sports'}, 'override_signal:sports'),
+            ({'calendar_slot': 'tickers'}, 'override_calendar:tickers'),
+        ]:
+            result = self.agent._execute_rotation_slot_resolve_step({
+                'rotation_override': override,
+            })
+            self.assertEqual(result['reason'], expected_prefix)
+
+    def test_handler_registered_in_dispatcher(self):
+        """Smoke-level check: rotation_slot_resolve as agent name in a
+        step_def routes to the dedicated internal handler, not the
+        AGENT_MAP fallback."""
+        with patch.object(
+            self.agent, '_execute_rotation_slot_resolve_step',
+            return_value={'success': True, 'rotation_slot': 'sentinel'},
+        ) as spy:
+            result = self.agent._execute_step(
+                {'step': 1, 'name': 'rotation_slot_resolve',
+                 'agent': 'rotation_slot_resolve', 'description': 'test'},
+                context={},
+            )
+            spy.assert_called_once()
+            self.assertEqual(result['rotation_slot'], 'sentinel')

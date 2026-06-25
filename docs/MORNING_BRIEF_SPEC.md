@@ -262,9 +262,9 @@ Bare step list (no code — what the workflow runner must dispatch in order). Ea
 ## Definition of done
 
 - **Sub-step A (Session 1232):** spec exists + Chris-ratified. ✅
-- **Sub-step B.1 (Session 1233, this PR):** plumbing-first cut. `_update_context` lane writes + `lane_4_rotating_focus` slot-driven internal handler (default `ai_infra_deep_dive`) + `decision_card_synthesis` real LLM handler + `strategic_synthesis` morning_brief mode + `create_morning_brief_deliverable` handler. Workflow produces a real markdown brief end-to-end on a hardcoded Monday slot. ← *current*
-- **Sub-step B.2 (Session 1234):** `rotation_slot_resolve` pre-step + override-trigger inputs (incident → revenue → signal → calendar) + slot-resolution tests across weekdays.
-- **Sub-step C (Session 1234/1235):** persistent "Morning Brief" workspace + PeriodicTask + first fire verified.
+- **Sub-step B.1 (Session 1233):** plumbing-first cut. `_update_context` lane writes + `lane_4_rotating_focus` slot-driven internal handler (default `ai_infra_deep_dive`) + `decision_card_synthesis` real LLM handler + `strategic_synthesis` morning_brief mode + `create_morning_brief_deliverable` handler. Workflow produces a real markdown brief end-to-end on a hardcoded Monday slot. ✅
+- **Sub-step B.2 (Session 1233, this PR):** `rotation_slot_resolve` pre-step + override-trigger inputs (incident → revenue → signal → calendar) + slot-resolution tests across all 7 weekdays + Friday alternation. ← *current*
+- **Sub-step C (Session 1234):** persistent "Morning Brief" workspace + PeriodicTask + first fire verified.
 - **Sub-step D (Session 1235):** polish based on Chris's read of first 1–2 briefs.
 - **Sub-step E (Session 1236+):** dogfood Mon–Fri. Decision point: does the format work?
 
@@ -288,10 +288,36 @@ v0 template (`WORKFLOWS['morning_brief']`) updated: Step 4 agent → `lane_4_rot
 
 Test coverage: `core/tests/test_morning_brief_workflow_template.py` — 25 tests across 5 test classes (template shape contract, synthesis-mode branching, Lane 4 slot dispatch with 5 slots, decision_card sentinel, lane-plumbing capture). 25/25 green + 6/6 adjacent F4 fallback tests pass post-merge.
 
-## B.2 follow-on (queued for next session)
+## B.2 implementation notes (Session 1233 — landed)
 
-- `rotation_slot_resolve` as a workflow-internal handler (pure logic): reads weekday (UTC) + override flags from context, writes `context['rotation_slot']`.
-- Override priority chain: incident (from Lane 1 result) → revenue (from `governance_tool.inbox` + meeting calendar) → signal (from signal aggregation threshold) → calendar (from known-events table). First flag wins.
-- Default weekday assignment per § "Default rotation schedule" table.
-- Tests asserting Mon/Tue/Wed/Thu/Fri → expected default slots + each override flag wins per priority.
-- Sub-step B follow-on completes Sub-step C's prerequisite — once rotation is wired, schedule + first-fire verification is mechanical.
+`rotation_slot_resolve` ships as a pure-logic workflow-internal handler at **Step 1** of the morning_brief template (the rest shifted from 1–7 to 2–8). It populates `context['rotation_slot']` before Lane 4 reads it, replacing B.1's static default.
+
+Resolution priority chain (first match wins):
+
+1. **Caller-forced** — `context['rotation_slot']` already set. Bypass override + weekday logic; respect the caller's choice. Reason tag: `caller_forced`.
+2. **Override flags** in `context['rotation_override']` dict:
+   - `incident: True` → `ai_infra_deep_dive` (deepens Lane 1 coverage; a dedicated `incident_focus` slot can land in a future Sub-step). Reason: `override_incident`.
+   - `revenue: True` → `gtm_pipeline_health`. Reason: `override_revenue`.
+   - `signal_slot: <shorthand>` → mapped slot. Reason: `override_signal:<shorthand>`.
+   - `calendar_slot: <shorthand>` → mapped slot. Reason: `override_calendar:<shorthand>`.
+3. **Weekday default** from `_WEEKDAY_DEFAULT_SLOT`. Friday alternates via ISO week parity (`iso_week % 2 == 0` → `sports_edge_scan`, odd → `prediction_markets`). Reason: `weekday_default:<n>` or `fri_alt_iso_week_parity:4`.
+
+Override shorthand → full slot map (`_ROTATION_OVERRIDE_SHORTHAND_TO_SLOT`):
+
+| Shorthand | Full slot |
+|---|---|
+| `sports` | `sports_edge_scan` |
+| `markets` | `prediction_markets` |
+| `tickers` | `ticker_catalyst_watch` |
+| `gtm` | `gtm_pipeline_health` |
+| `ai_infra` | `ai_infra_deep_dive` |
+
+Test seam: `_get_now_utc()` is a static method that tests can `patch.object` to inject a fixed weekday + ISO week without monkey-patching `datetime` at the module level.
+
+**Deferred to a future Sub-step:**
+
+- **Tuesday's `competitor_wedge` slot.** Spec § Lane 4 rotation table calls for `competitor_wedge` on Tue, but that's a Lane-3-deepen concept rather than a Lane 4 slot. B.2 falls back to `ai_infra_deep_dive` for Tue; a future PR can add the dedicated slot mapped to `TrendAnalysisAgent`/`CompetitorAnalysisAgent` with a deeper task.
+- **Incident-specific slot.** Currently incident override falls back to `ai_infra_deep_dive`. A future PR could introduce `incident_focus` mapped to `SystemIntelligenceAgent` for a Lane 1 deepen.
+- **Auto-populated override flags.** Override flags are caller-provided in B.2. A future PR could auto-populate them: incident from Lane 1's CRITICAL findings (needs Lane 1 → re-resolve loop), revenue from `governance_tool.inbox`, signal from signal aggregation thresholds, calendar from a known-events table.
+
+Test coverage: 21 rotation-specific tests in `MorningBriefRotationSlotResolveTests` covering Mon-Sun defaults, Fri alternation (both parities), caller-forced bypass, full override chain priority (incident > revenue > signal > calendar), shorthand mapping for all 5 slots, unknown-shorthand fallback, handler context write + reason tag capture, and dispatcher registration. 59/59 tests green across the morning_brief + F4 fallback suites.
