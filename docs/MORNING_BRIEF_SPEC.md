@@ -261,10 +261,37 @@ Bare step list (no code — what the workflow runner must dispatch in order). Ea
 
 ## Definition of done
 
-- **Sub-step A (this session):** spec exists + Chris-ratified. ← *current*
-- **Sub-step B (1232/1233):** `WORKFLOWS['morning_brief']` template + 1 test runs end-to-end and produces a deliverable with the 4 lanes + decision card.
-- **Sub-step C (1233):** persistent workspace created + PeriodicTask added + first fire verified.
-- **Sub-step D (1234):** polish based on Chris's read of first 1–2 briefs.
-- **Sub-step E (1235):** dogfood Mon–Fri. Decision point: does the format work?
+- **Sub-step A (Session 1232):** spec exists + Chris-ratified. ✅
+- **Sub-step B.1 (Session 1233, this PR):** plumbing-first cut. `_update_context` lane writes + `lane_4_rotating_focus` slot-driven internal handler (default `ai_infra_deep_dive`) + `decision_card_synthesis` real LLM handler + `strategic_synthesis` morning_brief mode + `create_morning_brief_deliverable` handler. Workflow produces a real markdown brief end-to-end on a hardcoded Monday slot. ← *current*
+- **Sub-step B.2 (Session 1234):** `rotation_slot_resolve` pre-step + override-trigger inputs (incident → revenue → signal → calendar) + slot-resolution tests across weekdays.
+- **Sub-step C (Session 1234/1235):** persistent "Morning Brief" workspace + PeriodicTask + first fire verified.
+- **Sub-step D (Session 1235):** polish based on Chris's read of first 1–2 briefs.
+- **Sub-step E (Session 1236+):** dogfood Mon–Fri. Decision point: does the format work?
 
 **Whole-arc DoD:** Chris reads the morning brief 4 of 5 weekday mornings of one full week without needing to ask Rigby for any topic-specific dispatches separately. At that point: user 1 + daily active usage + empirically-true product pitch.
+
+## B.1 implementation notes (Session 1233)
+
+The PR scopes per Rigby's Option A+ recommendation: ship plumbing + Lane 4 slot-driven-with-default first; defer rotation pre-step to B.2. Result: a real morning brief can be produced today on the Monday AI-infra slot; rotation lands as an additive PR.
+
+Internal handlers added (all in `core/services/workflow_orchestration_agent.py`):
+
+- `_execute_lane_4_rotating_focus_step` — reads `context['rotation_slot']` (default `ai_infra_deep_dive`), maps to agent via `_MORNING_BRIEF_LANE_4_SLOT_AGENT`, dispatches via AGENT_MAP fallback router. Returns `slot_used` for downstream `_update_context` capture.
+- `_execute_decision_card_synthesis_step` — reads `lane_1_text` … `lane_4_text`, calls gpt-5-mini at `max_completion_tokens=4000` (per gpt-5* floor rule), writes `context['decision_card_text']`. Graceful sentinel ("No urgent decisions today — monitor only") when no lane outputs.
+- `_execute_create_morning_brief_deliverable_step` — persists `context['morning_brief_markdown']` as a `Deliverable` row with `category='Morning Brief'`. Workspace UUID stays `None` for B.1; Sub-step C wires the actual workspace.
+
+`_execute_strategic_synthesis_step` extended with `_synthesis_mode='morning_brief'` branch that reads lane keys + `decision_card_text` and produces the final brief markdown (TL;DR pointer + 4 lane sections + decision card embed). Default synthesis path unchanged.
+
+`_update_context` extended with branches for `lane_1_platform_readiness` / `lane_2_build_focus` / `lane_3_competitive_landscape` / `lane_4_rotating_focus` / `decision_card_synthesis` step names — captures step outputs into `context['lane_N_text']` etc. so downstream synthesis can read them.
+
+v0 template (`WORKFLOWS['morning_brief']`) updated: Step 4 agent → `lane_4_rotating_focus` (internal); Step 5 agent → `decision_card_synthesis` (internal); Step 7 agent → `create_morning_brief_deliverable` (internal).
+
+Test coverage: `core/tests/test_morning_brief_workflow_template.py` — 25 tests across 5 test classes (template shape contract, synthesis-mode branching, Lane 4 slot dispatch with 5 slots, decision_card sentinel, lane-plumbing capture). 25/25 green + 6/6 adjacent F4 fallback tests pass post-merge.
+
+## B.2 follow-on (queued for next session)
+
+- `rotation_slot_resolve` as a workflow-internal handler (pure logic): reads weekday (UTC) + override flags from context, writes `context['rotation_slot']`.
+- Override priority chain: incident (from Lane 1 result) → revenue (from `governance_tool.inbox` + meeting calendar) → signal (from signal aggregation threshold) → calendar (from known-events table). First flag wins.
+- Default weekday assignment per § "Default rotation schedule" table.
+- Tests asserting Mon/Tue/Wed/Thu/Fri → expected default slots + each override flag wins per priority.
+- Sub-step B follow-on completes Sub-step C's prerequisite — once rotation is wired, schedule + first-fire verification is mechanical.
