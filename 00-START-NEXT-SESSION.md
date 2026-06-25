@@ -104,7 +104,7 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1232 — CURRENT ENTRY POINT
 
-### SESSION 1231 CLOSED — Agent error-pattern investigation arc + full 83-agent fleet smoke + F4 close (P3 + P2 + R2 + P4 + F4), 6 PRs
+### SESSION 1231 CLOSED — Agent error-pattern investigation arc + full 83-agent fleet smoke + F4/F7/F8 close (P3 + P2 + R2 + P4 + F4 + F7 + F8), 9 PRs
 
 Full handoff: [`SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md`](docs/handoffs/SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md). The arc framing from the prior session's Recommended Session 1231 plan ("bundle P2 + R2 + P3 as one agent error-pattern investigation") held end-to-end. **C (P3) shipped first** to make the audit trail honest for the investigation that followed: `deliverable_tool.append` + `update` content-mutation branches were silencing Django's `auto_now=True` on `updated_at` by omitting the field from `update_fields`. **A (P2) shipped next** with the real bug: `core/agents/base_agent.py:5482` did `write_result['files_generated']` via bare dict access in the `elif partial_failure` branch of `execute_with_workspace` — the key only exists in early-return shapes; the all-files-failed shape (Shape B) omits it. The deliverable was getting produced 117ms before the crash, so the daily COO diagnostic looked like a silent failure. **B (R2) closed as no code change** after verifier-loop ORM pull revealed all 18/18 CodeReview + 9/9 Workflow failures over 30d were smoke probes — every one had `task` containing `'fleet smoke'` / `'smoke:'` / `'force failure'` / `'expected error'`. The audit's success_rate metric is noise-contaminated, not the agents. **D (P4) shipped last** in response to Chris's follow-on question "can Rigby trigger each of the Agents and get an output from them?" — built a one-shot full-AGENT_MAP coverage harness (`scripts/smoke_all_agents.py`) that dispatched all 83 entries; surfaced exactly one true production-broken agent (`BookmakerAgent.__init__()` accepted no kwargs but the router calls `agent_class(user=self.user)`). Effective fleet health post-fix: **67 of 68 verifiable production-healthy = 98.5%**.
 
@@ -116,15 +116,18 @@ Full handoff: [`SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md`](docs/handoff
 | **#2588** | `fix(session-1231): BookmakerAgent constructor accepts user= kwarg + full-AGENT_MAP smoke harness (P4)`. `bookmaker_agent.py:259` — `__init__(self)` → `__init__(self, user=None, **kwargs)`. BookmakerAgent uses `LearningMixin` only (no `BaseAgent` inheritance), so its constructor accepted zero kwargs and crashed on every router dispatch. 4 new tests in `test_bookmaker_agent_constructor.py` (4/4 green). Also bundles `scripts/smoke_all_agents.py` — the one-shot full-AGENT_MAP coverage harness that surfaced the bug. 15-min wall-clock cap; tabulates per-agent status/runtime/error/has_deliverable. |
 | **#2589** | `docs(session-1231): handoff + start-here update with PR #2588 + full 83-agent smoke results`. Second close-doc pass after #2588 landed. |
 | **#2590** | `fix(session-1231): WorkflowOrchestrationAgent AGENT_MAP fallback for snake_case step names (F4)`. `workflow_orchestration_agent.py:1278+` — replaced catch-all `else` in `_execute_step()` with AGENT_MAP fallback that converts snake_case → PascalCase and dispatches via `AgentRouter.route()`. Unblocks 3 named-AGENT_MAP step names referenced in built-in templates. 6 new tests + source-level guard for internal-handler precedence. 6/6 green. **Post-fix verification (`d9b71e4a`):** ran 148s through steps 1-3 of `business_research` template successfully (vs pre-fix 4s abort at step 1). Aborted at step 4 with the new explicit error format — surfaces F7 (`strategic_synthesis` references non-existent `StrategicSynthesis` agent). Required local celery restart to load new code (per memory rule `feedback_new_shared_task_needs_worker_restart`). |
+| **#2591** | `docs(session-1231): handoff + start-here update with PR #2590 F4 close + F7 new`. Third close-doc pass. |
+| **#2592** | `fix(session-1231): strategic_synthesis workflow step handler (F7)`. Promoted `strategic_synthesis` from missing-agent to dedicated workflow-internal handler. Reads 10 prior-step context keys, builds synthesis prompt, calls gpt-5-mini at 4000 max_completion_tokens. Graceful empty-context no-op for smoke case. 7 new tests + 1 updated F4 test. 13/13 green. Post-merge verification ran all 4 steps successfully then surfaced F8 (pre-existing latent bug). |
+| **#2593** | `fix(session-1231): _compile_final_result None-defense for project_created (F8)`. `(context.get('project_created') or {}).get(...)` at lines 3486 + 3548. Pre-existing latent bug: line 1129 inits `'project_created': None`; `.get(key, default)` returns default only when key is ABSENT, not when present-with-None. Latent since the init; only fired when F7 unblocked the first workflows to reach `_compile_final_result(success=True)` without `create_project_from_research`. 1 new test. 14/14 green. **End-to-end verification (`c5224af7`): WorkflowOrchestrationAgent receipt_only smoke now `status=completed` in 149.6s, zero error.** |
 
 **Full-AGENT_MAP fleet smoke results (`smoke_id=9321b9a13397`):**
 - 67 PASS (52 initial + 4 first repoll + 6 second repoll + 5 `mode=receipt_only` re-dispatch)
 - 5 FAIL — R1 cascade (odds API credits, Chris-side)
 - 1 FAIL — BookmakerAgent (FIXED by #2588)
-- 1 FAIL — WorkflowOrchestrationAgent (FIXED by #2590; case-sensitivity closed; post-fix verification dispatch ran 148s through steps 1-3 successfully before hitting F7 `strategic_synthesis` missing agent at step 4)
+- 1 FAIL → PASS — WorkflowOrchestrationAgent fully closed by #2590 (F4 case-sensitivity) + #2592 (F7 strategic_synthesis handler) + #2593 (F8 _compile_final_result None-defense). End-to-end verification: `status=completed` in 149.6s, zero error. Pre-fix: failed at step 1 in 4s. Post-#2590: failed at step 4 in 148s. Post-#2592: failed at compile in 155s. Post-#2593: **completed in 149.6s.**
 - 8 FAIL — legit shape rejections (CodeReview/DecisionEnforcer/Distribution/Editor/OpportunityPipeline/TalkingCharacter/TechnicalDocument/VoiceCritic — agents correctly refused smoke tasks shaped inappropriately for them)
 - 1 BY-DESIGN — CodeGeneratorAgent (disabled on Railway since Session 1031 via `AgentControlEntry`)
-- **Net production-healthy: 67 of 68 verifiable = 98.5% post-#2588 → 68 of 68 = 100% dispatch-contract post-#2590.** (WorkflowOrchestrationAgent's templates still abort at step 4 due to F7 `strategic_synthesis` missing agent, but that's a workflow-template issue not an agent issue.)
+- **Net production-healthy: 67/68 = 98.5% post-#2588 → 68/68 = 100% dispatch contract post-#2590 → 68/68 = 100% workflow-completion contract post-#2593.** Zero production-broken agents remain in AGENT_MAP.
 
 **Smoke-harness mode inconsistency surfaced as bonus finding:** 5 media agents silently dropped when dispatched with `mode='fleet_smoke'` because `core/tasks_agents.py:2180-2183` only bypasses the media-spend guard for `mode='receipt_only'`. Adding `fleet_smoke` to the bypass condition is followup F5.
 
@@ -177,24 +180,13 @@ These are time-bound; clear first on session open.
   ```
 - **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
 
-#### Priority 2 — `strategic_synthesis` workflow step references a non-existent agent (NEW — Session 1231 F7, MEDIUM)
-
-Surfaced when PR #2590 closed F4. The F4 fix unblocked workflow steps 1-3 in `business_research` / `startup_validation` templates (3 named-AGENT_MAP cases dispatch correctly), but step 4 (`synthesize_findings` → `strategic_synthesis`) fails because no `StrategicSynthesis` class exists in `AGENT_MAP`. The new error format from #2590 names this explicitly: `"strategic_synthesis (no internal handler + 'StrategicSynthesis' not in AGENT_MAP)"`.
-
-Three options:
-- **(a) Add a `StrategicSynthesis` agent** that synthesizes prior workflow step outputs into actionable insights (matches the template's intent — `"Synthesize all research into actionable insights"`).
-- **(b) Rename the step** in the workflow templates to use an existing agent (`COOAgent`? `CTOAgent`? `ResearchAgent` with a synthesis task?).
-- **(c) Drop the step entirely** from templates that include it (`business_research`, `startup_validation`).
-
-Affected templates: `business_research` step 4, `startup_validation` step 5. Reproducer: dispatch `WorkflowOrchestrationAgent` with `mode='receipt_only'`; default workflow is `business_research`; it'll run through steps 1-3 (taking ~2min) then abort at step 4 with the explicit error.
-
-#### Priority 3 — Smoke-harness mode inconsistency (NEW — Session 1231 F5, LOW-MEDIUM)
+#### Priority 2 — Smoke-harness mode inconsistency (NEW — Session 1231 F5, LOW-MEDIUM)
 
 `core/services/smoke_dispatch.py:39-42` `SMOKE_MODES = {'receipt_only', 'fleet_smoke'}`, but the media-block bypass at `core/tasks_agents.py:2180-2183` only triggers for `mode == 'receipt_only'`. Result: 5 media agents (AudioAgent, ImageEditingAgent, ThreeDAgent, VideoAgent, VideoEditingAgent) silently dropped when dispatched with `mode='fleet_smoke'`. Re-dispatching with `mode='receipt_only'` produces clean PASSes.
 
 One-line fix: add `or context.get('mode') == 'fleet_smoke'` to the `_receipt_only_ctx` predicate at line 2180-2183. Closes the silent-drop class for fleet-smoke media dispatches.
 
-#### Priority 4 — Smoke-probe tagging for `AgentExecution` (NEW — Session 1231 F1 / R2 REC-2, MEDIUM)
+#### Priority 3 — Smoke-probe tagging for `AgentExecution` (NEW — Session 1231 F1 / R2 REC-2, MEDIUM)
 
 Without this, future audits will keep flagging healthy smoke-heavy agents as broken — exactly what triggered R2 in the audit `5318da3e-…`. The R2 deliverable `df33d12d-…` spec'd two implementation options:
 - **(a) Add `is_smoke_test: bool` field to `AgentExecution`**, set by the dispatcher when task matches the substring patterns or `context.smoke=True` is explicit. Cleanest; needs migration + dispatcher edit + audit-tool consumer updates.
@@ -202,15 +194,15 @@ Without this, future audits will keep flagging healthy smoke-heavy agents as bro
 
 Pick one + one focused PR. Substring patterns to detect smoke probes: `'urc v0.1 fleet smoke'`, `'smoke:'`, `'smoke_test:'`, `'force failure'`, `'expected error'`, `'deliberately request'`, `'deliberately review'`, `'fleet smoke'`, `'smoke test'`. Also `context.smoke=True` when present.
 
-#### Priority 5 — Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents` (NEW — Session 1231 F6, LOW)
+#### Priority 4 — Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents` (NEW — Session 1231 F6, LOW)
 
 Currently a standalone script in `scripts/`. Promote to a Django management command for the standard invocation pattern; lets the harness be called from Celery beat for periodic fleet health checks. Same logic, just move + register.
 
-#### Priority 6 — Audit `5318da3e-…` §R2 amendment (NEW — Session 1231 F3, P3)
+#### Priority 5 — Audit `5318da3e-…` §R2 amendment (NEW — Session 1231 F3, P3)
 
 Append a brief §R2 footnote (or §6.2 sub-section) pointing to deliverable `df33d12d-…` for the verifier-loop reframe: "Verifier-loop Session 1231 found all 27 R2 rows were smoke probes; no agent code change warranted; recommendation re-framed as metric-quality fix (REC-2)." Trivial via `deliverable_tool action=append` (now correctly bumps `updated_at` post-#2585). Mirrors how Session 1230 P2 appended §4.8 to `e2964e4a-…`.
 
-#### Priority 7 — Engineer workspace staleness (CARRYOVER — Session 1230 F3, MEDIUM)
+#### Priority 6 — Engineer workspace staleness (CARRYOVER — Session 1230 F3, MEDIUM)
 
 Carried from Session 1230. Engineer's `/tmp/engineer-workspace/` git clone is stale (P4 verify `38c2424b-…` couldn't find `build_semantic_research_title` shipped the same day). Options:
 - Add `git pull` to `_ensure_git_repo` if behind upstream (small per-dispatch overhead), or
@@ -219,25 +211,25 @@ Carried from Session 1230. Engineer's `/tmp/engineer-workspace/` git clone is st
 
 Not blocking; small focused PR when bandwidth allows.
 
-#### Priority 8 — Meeting-context leak shape (CARRYOVER — Session 1230 F2, LOW)
+#### Priority 7 — Meeting-context leak shape (CARRYOVER — Session 1230 F2, LOW)
 
 Spotted on COOAgent + CTOAgent: `"<Label> Analysis: As a participant in a technical meeting about ..."`. Different prompt template from the diagnostic family. One-off so far (not in any duplicates cluster). Don't add markers preemptively — wait to see if it recurs as a cluster, then one entry in `_PROMPT_BODY_MARKERS` closes it.
 
-#### Priority 9 — Fleet-smoke wall-clock timeouts (NEW — Session 1231 F2 / R2 REC-3, LOW)
+#### Priority 8 — Fleet-smoke wall-clock timeouts (NEW — Session 1231 F2 / R2 REC-3, LOW)
 
-3 Workflow rows hit `60min no-heartbeat` or `1200s wall-clock` on full-fleet smokes (~88 agents). Either (a) raise wall-clock for known-smoke workflow dispatches, (b) split fleet smokes into chunks, (c) accept the timeout and stop counting it against the agent. Lower priority — observability not behavior. Most-likely subsumed by Priority 4 (smoke filtering would exclude these too).
+3 Workflow rows hit `60min no-heartbeat` or `1200s wall-clock` on full-fleet smokes (~88 agents). Either (a) raise wall-clock for known-smoke workflow dispatches, (b) split fleet smokes into chunks, (c) accept the timeout and stop counting it against the agent. Lower priority — observability not behavior. Most-likely subsumed by Priority 3 (smoke filtering would exclude these too).
 
-#### Priority 10 — CI billing fix (Chris-side, still outstanding)
+#### Priority 9 — CI billing fix (Chris-side, still outstanding)
 
 Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228 → 1229 → 1230 → 1231. All Session 1231 PRs admin-merged.
 
-#### Priority 11 — Anthropic A/B (gated on credit refill)
+#### Priority 10 — Anthropic A/B (gated on credit refill)
 
 When Anthropic credits return: run the same Session 1229 Step 5 line-count task on the Anthropic path (`unset CLAUDE_CODE_ENGINE_PROVIDER`) and confirm no clarification stall. If Anthropic path is clean with the new `ANSWER_SYSTEM_PROMPT`, lift the retry contract up out of the OpenAI-only branch so both paths get the same safety net.
 
-#### Priority 12 — Whatever Chris wants
+#### Priority 11 — Whatever Chris wants
 
-Sessions 1226-1231 totaled 31 PRs of platform hardening + tool-surface additions + verification + two recursion-class closes + one verifier-loop investigation that prevented two unnecessary code-fix PRs + one full-AGENT_MAP fleet-smoke harness. The `deliverable_tool` surface is feature-complete + audit-trail honest; the diagnostic-family title leak class is closed; the engineer behavioral-delta class is closed; the COOAgent KeyError class is closed; R2 closed with no code change; F3 amendment is appended; BookmakerAgent constructor closed; full fleet smoke verified 98.5% production-healthy.
+Sessions 1226-1231 totaled 34 PRs of platform hardening. The `deliverable_tool` surface is feature-complete + audit-trail honest; diagnostic-family title leak class is closed; engineer behavioral-delta class is closed; COOAgent KeyError class is closed; R2 closed with no code change; F3 amendment outstanding; BookmakerAgent constructor closed; WorkflowOrchestrationAgent F4 + F7 + F8 all closed with end-to-end `status=completed` verification; full fleet smoke verified **68/68 = 100% production-healthy** across both the dispatch contract AND the workflow-completion contract.
 
 **Possible re-ignites (Chris-discretion only):**
 - **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work across 1224-1231.
