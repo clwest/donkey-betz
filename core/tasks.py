@@ -5785,6 +5785,99 @@ def generate_outreach_drafts_daily(self, limit=5, scope='all', offers=None):
     )
 
 
+@shared_task(bind=True, soft_time_limit=900, time_limit=1080)
+def generate_morning_brief_daily(self, user_id=None, dry_run=False):
+    """Dispatch the daily Chief-of-Staff morning brief workflow.
+
+    Session 1233 Sub-step C — closes the daily-CoS arc scheduling.
+    Runs the morning_brief workflow (rotation_slot_resolve →
+    4 lanes → decision_card_synthesis → strategic_synthesis →
+    create_morning_brief_deliverable) and persists the result into
+    Chris's "Morning Brief" workspace.
+
+    Args:
+        user_id: Target user UUID. If None, looks up user 'chris'
+                 (sole platform user; see CLAUDE.md § Session 1098 fix).
+        dry_run: Reserved for future use. Currently no-op — the
+                 workflow always persists. A future PR could gate
+                 the create_deliverable step on this flag.
+
+    Beat schedule: ``crontab(hour=7, minute=0)`` Denver time
+    (13:00 UTC MDT / 14:00 UTC MST per Session 1228 PRs #2569/#2570
+    TZ convention).
+
+    Returns:
+        dict with success / workflow / deliverable_id / rotation_slot /
+        date for the beat task's CeleryTaskEvent telemetry.
+    """
+    from datetime import date as _date
+    from django.contrib.auth import get_user_model
+    from core.services.workflow_orchestration_agent import (
+        WorkflowOrchestrationAgent,
+    )
+
+    User = get_user_model()
+    if user_id:
+        user = User.objects.filter(id=user_id).first()
+    else:
+        user = User.objects.filter(username='chris').first()
+
+    if not user:
+        logger.error(
+            "generate_morning_brief_daily: no target user found "
+            "(user_id=%r, fallback 'chris' lookup failed)",
+            user_id,
+        )
+        return {
+            'success': False,
+            'error': 'no target user found',
+            'workflow': 'morning_brief',
+        }
+
+    agent = WorkflowOrchestrationAgent(user=user)
+    today = _date.today().isoformat()
+
+    try:
+        result = agent.execute(
+            workflow='morning_brief',
+            topic=f'Morning Brief — {today}',
+        )
+    except Exception as e:
+        logger.error(
+            "generate_morning_brief_daily: workflow dispatch raised %s: %s",
+            type(e).__name__, e, exc_info=True,
+        )
+        return {
+            'success': False,
+            'error': f'{type(e).__name__}: {e}',
+            'workflow': 'morning_brief',
+            'date': today,
+        }
+
+    # Extract structured telemetry from the workflow result.
+    context = result.get('context', {}) or {}
+    step_results = result.get('step_results', []) or []
+    deliverable_step = next(
+        (s for s in step_results if s.get('name') == 'create_deliverable'),
+        None,
+    )
+    deliverable_id = (
+        deliverable_step.get('result', {}).get('deliverable_id')
+        if deliverable_step else None
+    )
+
+    return {
+        'success': bool(result.get('success')),
+        'workflow': 'morning_brief',
+        'deliverable_id': deliverable_id,
+        'rotation_slot': context.get('rotation_slot'),
+        'lane_4_slot_used': context.get('lane_4_slot_used'),
+        'date': today,
+        'user_id': str(user.id),
+        'dry_run': dry_run,
+    }
+
+
 @shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     from core.tasks_content import _impl_run_autonomous_thinking_cycle
