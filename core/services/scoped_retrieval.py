@@ -30,6 +30,19 @@ import logging
 
 from django.conf import settings
 from django.db.models import Q
+from django.db.utils import DatabaseError
+
+# Session 1234 D17 — narrow-except allowlist for retrieval methods.
+# Pre-D17 every method here caught `Exception` and returned []/{},
+# which silently hid logic errors (sliced-then-filtered TypeError
+# per D16, AttributeError on missing fields, KeyError on changed
+# APIs, etc.) as "no results found". The allowlist below covers
+# legitimate runtime-only errors: DB connection drops, network
+# failures hitting embedding service, OS-level issues. Logic errors
+# now propagate so tests + production logs see them. Memory:
+# feedback_test_real_db_for_queryset_semantics.md (D16) +
+# feedback_fail_loud_first_then_root_cause_then_telemetry.
+_RETRIEVAL_ENV_ERRORS = (DatabaseError, ConnectionError, OSError)
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +194,7 @@ class ScopedRetrievalService:
                 # Fall back to keyword search
                 return self._keyword_search(query, qs, limit, scope)
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Scoped search failed: {e}")
             return []
 
@@ -240,7 +253,7 @@ class ScopedRetrievalService:
             # Session 949 P2: Apply risk-aware re-ranking
             return self._apply_risk_reranking(retrieval_results, limit)
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Semantic search failed: {e}")
             return []
 
@@ -291,7 +304,7 @@ class ScopedRetrievalService:
             # Session 949 P2: Apply risk-aware re-ranking
             return self._apply_risk_reranking(retrieval_results, limit)
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Keyword search failed: {e}")
             return []
 
@@ -446,7 +459,7 @@ class ScopedRetrievalService:
                 for doc in docs
             ]
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Document class search failed: {e}")
             return []
 
@@ -510,7 +523,7 @@ class ScopedRetrievalService:
                 for doc in docs
             ]
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Failed to get critical docs: {e}")
             return []
 
@@ -556,7 +569,7 @@ class ScopedRetrievalService:
                 for doc in docs
             ]
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Failed to get incident docs: {e}")
             return []
 
@@ -590,7 +603,7 @@ class ScopedRetrievalService:
                 for f in findings
             ]
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Failed to get audit findings: {e}")
             return []
 
@@ -683,7 +696,7 @@ class ScopedRetrievalService:
                 'uncurated': total - curated_all
             }
 
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Failed to get scope stats: {e}")
             return {}
 
