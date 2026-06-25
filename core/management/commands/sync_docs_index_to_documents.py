@@ -149,6 +149,90 @@ class Command(BaseCommand):
             self.stdout.write("\nGenerating embeddings...")
             self.generate_embeddings()
 
+    # =========================================================================
+    # Session 1234 D9 — type-aware retrieval enrichment helpers
+    # =========================================================================
+    #
+    # The doc-drift investigation at Session 1234 close showed that the
+    # Document table flattens everything to (document_type='markdown',
+    # category='', tags=[], document_class='reference', is_pinned=False).
+    # Retrieval surfaces (kb_tool, core.rag_integration) had no per-row
+    # differentiator beyond title text, so a superseded 2025 handoff
+    # competed equally with a current 2026 spec in semantic search.
+    #
+    # The fields below are all live on the existing Document model and
+    # cost nothing to populate at sync time. They give downstream
+    # retrieval real filter axes:
+    #   category       → folder-grained filter ('handoffs', 'specs', …)
+    #   tags           → subsystems list for secondary filter / facets
+    #   document_class → semantic type ('handoff', 'spec', 'narrative', …)
+    #   is_pinned      → "always prefer in retrieval" for active narratives/
+    #                    specs/indexes — the docs Chris/Rigby cite by name
+    #   retrieval_boost → ranking weight; pinned active ≫ default ≫ stale
+
+    _PINNED_TYPES = frozenset({
+        'narrative', 'spec', 'index', 'guide', 'architecture',
+    })
+
+    _STATUS_BOOST = {
+        'active': 1.5,
+        'draft': 0.8,
+        'processed': 1.0,
+        'superseded': 0.4,
+        'archived': 0.3,
+    }
+
+    def _enrichment_fields(self, doc_data: dict) -> dict:
+        """Return the type-aware fields to write on create + update.
+
+        Centralized so the existing-update path (which silently dropped
+        these pre-D9) and the create path emit the same enrichment.
+        """
+        folder = (doc_data.get('folder') or '').strip()
+        idx_type = (doc_data.get('type') or '').strip().lower() or 'reference'
+        idx_status = (doc_data.get('status') or '').strip().lower() or 'active'
+
+        # category: folder basename without leading 'docs/' — e.g. 'handoffs',
+        # 'specs', 'narratives', 'topics', 'audits'. Root-level docs (CLAUDE.md,
+        # README.md) get the file's own basename for a stable category.
+        if folder.startswith('docs/'):
+            category = folder[len('docs/'):].split('/', 1)[0] or 'root'
+        elif folder == 'docs':
+            category = 'root'
+        elif folder:
+            category = folder.split('/', 1)[0]
+        else:
+            category = 'root'
+
+        # tags: subsystems list + a 'session-N' tag if the path is a handoff
+        tags = list(doc_data.get('subsystems') or [])
+        path = doc_data.get('path', '')
+        if 'handoffs/SESSION_' in path:
+            import re as _re
+            m = _re.search(r'SESSION_(\d+)', path)
+            if m:
+                tags.append(f'session-{m.group(1)}')
+
+        # is_pinned: active narrative/spec/index/guide/architecture docs.
+        # These are the docs Rigby should ALWAYS prefer when relevant —
+        # not handoffs (those are session-specific history) and not audits
+        # (those age out).
+        is_pinned = (idx_status == 'active' and idx_type in self._PINNED_TYPES)
+
+        # retrieval_boost: status × pinned. Pinned gets a flat multiplier
+        # over the status floor.
+        boost = self._STATUS_BOOST.get(idx_status, 1.0)
+        if is_pinned:
+            boost = max(boost, 1.5)
+
+        return {
+            'category': category,
+            'tags': tags,
+            'document_class': idx_type,
+            'is_pinned': is_pinned,
+            'retrieval_boost': boost,
+        }
+
     def sync_document(self, doc_data: dict, base_path: Path, dry_run: bool, owner) -> str:
         """Sync a single document from index to Document model."""
         path = doc_data.get('path', '')
@@ -170,6 +254,9 @@ class Command(BaseCommand):
         # Generate content hash for deduplication
         content_hash = hashlib.sha256(content.encode()).hexdigest()
 
+        # Session 1234 D9: shared enrichment fields for both create + update.
+        enrich = self._enrichment_fields(doc_data)
+
         # Check if document already exists (use path as-is from index)
         existing = Document.objects.filter(
             file_path=path
@@ -187,6 +274,14 @@ class Command(BaseCommand):
                     existing.content_hash = content_hash
                     existing.word_count = len(content.split())
                     existing.file_size = doc_data.get('size_bytes', 0)
+                    # Session 1234 D9: also refresh enrichment fields on
+                    # content change. Pre-D9 these silently stayed at the
+                    # row's first-sync values forever.
+                    existing.category = enrich['category']
+                    existing.tags = enrich['tags']
+                    existing.document_class = enrich['document_class']
+                    existing.is_pinned = enrich['is_pinned']
+                    existing.retrieval_boost = enrich['retrieval_boost']
                     existing.updated_at = timezone.now()
                     existing.save()
                 return 'updated'
@@ -227,6 +322,12 @@ class Command(BaseCommand):
             word_count=len(content.split()),
             extracted_metadata=metadata,
             owner=owner,
+            # Session 1234 D9 — type-aware retrieval enrichment
+            category=enrich['category'],
+            tags=enrich['tags'],
+            document_class=enrich['document_class'],
+            is_pinned=enrich['is_pinned'],
+            retrieval_boost=enrich['retrieval_boost'],
         )
 
         return 'created'
