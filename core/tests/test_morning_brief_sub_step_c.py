@@ -544,3 +544,128 @@ class MorningBriefBeatScheduleRegistrationTests(TestCase):
             LOCAL_DENY_TASKS,
         )
         self.assertIn('generate-morning-brief-daily', LOCAL_DENY_TASKS)
+
+
+class MorningBriefLaneWorkspaceThreadTests(TestCase):
+    """Session 1234 D3 — ``_resolve_workflow_target_workspace_id`` returns
+    the MB workspace_id for the ``morning_brief`` workflow so the agent
+    router downstream uses it as the deliverable home for every step.
+
+    Pre-fix: ``execute()`` did not seed ``context['workspace_id']``, so
+    each step's delegate agent fell through agent_router's
+    active-workspace fallback (core/agent_router.py:1083-1121). Symptom:
+    2026-06-25 first fire — SystemIntelligenceAgent/COOAgent/
+    TrendAnalysisAgent deliverables landed in the user's
+    most-recent-active workspace (Session 1231 E2E) instead of the
+    Morning Brief workspace, even after the MB workspace was
+    materialized by step 8.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username=f"test_d3_{uuid.uuid4().hex[:8]}",
+            password='test',
+        )
+        self.agent = WorkflowOrchestrationAgent(user=self.user)
+
+    def test_morning_brief_materializes_and_returns_workspace_id(self):
+        """morning_brief workflow returns str(mb_ws.id) on first call."""
+        self.assertEqual(
+            ProjectWorkspace.objects.filter(
+                user=self.user, name='Morning Brief',
+            ).count(),
+            0,
+            "Pre-condition: no MB workspace yet.",
+        )
+
+        ws_id = self.agent._resolve_workflow_target_workspace_id('morning_brief')
+
+        # MB workspace materialized
+        mb_ws = ProjectWorkspace.objects.get(
+            user=self.user, name='Morning Brief',
+        )
+        self.assertEqual(ws_id, str(mb_ws.id))
+
+    def test_morning_brief_second_call_is_idempotent(self):
+        """Second call returns same id; no second workspace created."""
+        first = self.agent._resolve_workflow_target_workspace_id('morning_brief')
+        second = self.agent._resolve_workflow_target_workspace_id('morning_brief')
+        self.assertEqual(first, second)
+        self.assertEqual(
+            ProjectWorkspace.objects.filter(
+                user=self.user, name='Morning Brief',
+            ).count(),
+            1,
+            "Idempotent: only one MB workspace per user.",
+        )
+
+    def test_non_morning_brief_workflow_returns_none(self):
+        """Other workflows return None (no MB workspace materialized)."""
+        result = self.agent._resolve_workflow_target_workspace_id('business_research')
+        self.assertIsNone(result)
+        self.assertEqual(
+            ProjectWorkspace.objects.filter(
+                user=self.user, name='Morning Brief',
+            ).count(),
+            0,
+            "Non-MB workflow MUST NOT create a Morning Brief workspace.",
+        )
+
+    def test_no_user_returns_none_gracefully(self):
+        """user=None → returns None; no crash, no workspace.
+
+        Mutates the existing agent's ``self.user`` to None instead of
+        constructing with ``user=None`` because BaseContentAgent.__init__
+        unconditionally reads ``user.username`` in a log line (pre-existing
+        behavior, out of D3 scope). The runtime path that matters here is
+        ``_resolve_workflow_target_workspace_id`` reading ``self.user``,
+        which is what we're guarding.
+        """
+        self.agent.user = None
+        result = self.agent._resolve_workflow_target_workspace_id('morning_brief')
+        self.assertIsNone(result)
+        self.assertEqual(
+            ProjectWorkspace.objects.filter(name='Morning Brief').count(),
+            0,
+        )
+
+    def test_execute_seeds_context_workspace_id_before_step_loop(self):
+        """``execute()`` writes context['workspace_id'] before any step runs.
+
+        Source-level guard: scans the ``execute()`` method body for the
+        contract — calls ``_resolve_workflow_target_workspace_id`` and
+        assigns its truthy return value into ``context['workspace_id']``
+        BEFORE the ``for step_def in steps:`` loop. Avoids end-to-end
+        run (full execute() touches DB-backed telemetry that serializes
+        ``self.user`` and trips JSON encoder).
+        """
+        import inspect
+        from core.services.workflow_orchestration_agent import (
+            WorkflowOrchestrationAgent as WOA,
+        )
+        src = inspect.getsource(WOA.execute)
+        helper_pos = src.find('_resolve_workflow_target_workspace_id')
+        seed_pos = src.find("context['workspace_id'] = target_ws_id")
+        loop_pos = src.find('for step_def in steps:')
+
+        self.assertGreater(
+            helper_pos, -1,
+            "execute() must call _resolve_workflow_target_workspace_id.",
+        )
+        self.assertGreater(
+            seed_pos, -1,
+            "execute() must assign target_ws_id into context['workspace_id'].",
+        )
+        self.assertGreater(
+            loop_pos, -1,
+            "execute() must contain the step-loop sentinel.",
+        )
+        self.assertLess(
+            helper_pos, loop_pos,
+            "_resolve_workflow_target_workspace_id must be called BEFORE "
+            "the step loop, otherwise lane delegates miss the seeding.",
+        )
+        self.assertLess(
+            seed_pos, loop_pos,
+            "context['workspace_id'] assignment must be BEFORE the step loop.",
+        )
