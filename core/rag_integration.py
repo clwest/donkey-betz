@@ -28,7 +28,14 @@ def search_embeddings(
     query: str,
     limit: int = 5,
     content_types: Optional[List[str]] = None,
-    similarity_threshold: float = 0.7,
+    # Session 1234 D15 — lowered default 0.7 → 0.4. Pre-D15 the
+    # value was 0.7 in the signature but get_rag_context called with
+    # similarity_threshold=0.6 anyway (line 167). With the corpus
+    # now backed by text-embedding-3-small (D12 pivot), similarities
+    # cluster in the 0.4-0.7 band for related content; 0.7 cut off
+    # essentially all real signal. 0.4 keeps obvious noise out while
+    # still surfacing the corpus.
+    similarity_threshold: float = 0.4,
     namespace: Optional[str] = 'system',
     exclude_personal: bool = True,
     # Session 1234 D12 — D9/D10 filter pushdown
@@ -213,10 +220,13 @@ def get_rag_context(query: str, max_tokens: int = 2000, include_personal: bool =
     """
     
     # Search for relevant documents
+    # Session 1234 D15 — was 0.6; lowered to 0.4 to match the new
+    # search_embeddings default. text-embedding-3-small puts related
+    # content in the 0.4-0.7 band; 0.6 was cutting most signal.
     documents = search_embeddings(
         query=query,
         limit=10,  # Get more initially, then filter
-        similarity_threshold=0.6,  # Lower threshold to get more results
+        similarity_threshold=0.4,
         exclude_personal=not include_personal  # Respect privacy by default
     )
     
