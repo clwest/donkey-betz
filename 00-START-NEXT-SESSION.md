@@ -102,7 +102,147 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 ---
 
 
-## SESSION 1232 — CURRENT ENTRY POINT
+## SESSION 1233 — CURRENT ENTRY POINT
+
+### SESSION 1232 CLOSED — Daily-CoS arc Sub-step A close + Sub-step B start (v0 workflow template), 2 PRs
+
+Full handoff: [`SESSION_1232_DAILY_COS_ARC_SUB_STEP_A_CLOSE.md`](docs/handoffs/SESSION_1232_DAILY_COS_ARC_SUB_STEP_A_CLOSE.md). Two-PR session executing Session 1231's "FIRST THING Session 1232" Priority 0 (start the daily-CoS product arc). **Sub-step A closed end-to-end** — Rigby consulted on topic mix (pushed back on the daily sports/Kalshi/tickers candidates → counter-proposed 4-lane structure with rotation + override triggers), drafted v1 spec (4 lanes: Platform Readiness + Build Focus + Competitive change-only + Rotating Market + Decision Card synthesis), Chris ratified via "agree all" on a 7-question decision card, doc committed in PR #2596. **Sub-step B started** — v0 `WORKFLOWS['morning_brief']` template added in PR #2597 (7 steps matching spec § "Workflow template skeleton") + 10 contract tests locking v0 shape against the spec. 10/10 new + 6/6 adjacent F4 tests green. v0 is a shape stub — full per-step input plumbing (`rotation_slot_resolve` pre-step + slot-resolved Lane 4 dispatch + override-trigger inputs) lands in Session 1233 Sub-step B follow-on. Both PRs awaiting CI/admin merge (Chris-side CI billing carryover).
+
+| PR | What |
+|---|---|
+| **#2596** | `docs(session-1232): MORNING_BRIEF_SPEC v1 active — daily-CoS Sub-step A close`. `docs/MORNING_BRIEF_SPEC.md` (270 lines, status `active`, ratified `2026-06-24` by Chris via "agree all"). Captures: 4 lanes + Decision Card + rotation schedule (Mon=AI-infra / Tue=Competitor-deepen / Wed=Tickers / Thu=GTM / Fri=Sports↔Kalshi alternating) + override priority (Incident → Revenue → Signal → Calendar) + per-lane output shape + source agents/feeds + 7-step workflow skeleton + scheduling (13:00 UTC / 07:00 MDT) + Definition of Done. `docs/INDEX.md` regenerated in same PR. |
+| **#2597** | `feat(session-1232): WORKFLOWS['morning_brief'] v0 template (Sub-step B start)`. v0 workflow template in `core/services/workflow_orchestration_agent.py:WORKFLOWS['morning_brief']` (7 steps: lane_1_platform_readiness → system_intelligence_agent / lane_2_build_focus → coo_agent / lane_3_competitive_landscape → trend_analysis_agent / lane_4_rotating_focus → research_agent (v0 default for Mon AI-infra slot) / decision_card_synthesis → coo_agent / strategic_synthesis → strategic_synthesis (uses PR #2592 internal handler) / create_deliverable → create_project_from_research). `'morning_brief'` added to `AVAILABLE_WORKFLOWS`. New `core/tests/test_morning_brief_workflow_template.py` — 10 contract tests. 10/10 new + 6/6 adjacent F4 tests (`test_workflow_orchestration_agent_map_fallback`) green. |
+
+**Acceptance criteria from Session 1231 "FIRST THING Session 1232" Priority 0 — all met:**
+- [x] `docs/MORNING_BRIEF_SPEC.md` exists, lists 4 lanes + per-topic prompts + output shape, Chris-ratified
+- [x] Rigby consulted on topic selection (verifier-loop pattern — her topic-mix rework drove the rotation+overrides structure)
+- [x] At least one `morning_brief` workflow template draft exists (v0 in PR #2597)
+- [x] Followup F-tags for Sub-steps B-completion / C / D / E rolled into Session 1233 priorities (see Priority 2 below)
+
+**Operational invariants (post-merge — once #2596 + #2597 land):**
+1. **Canonical spec exists.** `docs/MORNING_BRIEF_SPEC.md` is the single source of truth for the daily-CoS brief shape.
+2. **`morning_brief` is a registered workflow.** Present in `AVAILABLE_WORKFLOWS` + `WORKFLOWS` dict; runner can dispatch its 7 steps via existing AGENT_MAP fallback + internal handlers.
+3. **v0 contract tests sentinel the shape.** Any drift (step rename, agent swap, count change) requires updating BOTH spec doc AND test expectations in the same PR.
+
+No behavioral invariants ship this session — v0 workflow template is parsed-and-dispatchable but isn't scheduled yet (Sub-step C) and Lane 4 slot resolution + override-trigger plumbing aren't wired yet (Sub-step B follow-on).
+
+**Active conversation:** `pa-21dfa3a3dc4545b7` — continues from Session 1231 close. Session 1232 added 18 turns. `session_tool health_check` at close: score 75/100 / recommendation=continue / 18 turns / ~9k tokens / 3.7h. No rotation triggered. Continues into Session 1233 on this thread.
+
+**Still Chris-side carryover into Session 1233:**
+- **Anthropic credit refill** at https://console.anthropic.com/billing. One-liner Makefile revert (`unset CLAUDE_CODE_ENGINE_PROVIDER`) when credits land.
+- **CI billing** still failing — both Session 1232 PRs (#2596 + #2597) will need admin-merge if CI is still failing.
+
+### FIRST THING Session 1233
+
+#### Priority 1 — Calendar checks (THREE DUE THIS SESSION, ALL TODAY/TOMORROW)
+
+These are time-bound and the first thing to clear on session open.
+
+- **Outreach beat first-fire verification (2026-06-25 13:30 UTC)** — Session 1228 carryover, P3 in Sessions 1230 → 1232. Verify:
+  ```python
+  CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.generate_outreach_drafts_daily'
+  ).order_by('-started_at').first()
+  # Expected: SUCCESS dated 2026-06-25
+  OutreachDraft.objects.filter(
+      lead_source='opportunity_outreach_seed',
+      created_at__date='2026-06-25',
+  ).count()
+  # Expected: 1-5
+  ```
+- **P2 behavioral verify (2026-06-25 13:30 UTC, same window as outreach)** — first scheduled COOAgent daily diagnostic after PR #2586 merge. Expect zero `'files_generated'` errors going forward. Run:
+  ```python
+  AgentExecution.objects.filter(
+      agent__name='COOAgent',
+      task__icontains='daily COO operations diagnostic',
+      created_at__gte='2026-06-25',
+  ).order_by('-created_at').first()
+  # Expected: status='completed', error_message empty
+  ```
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
+
+#### Priority 2 — Daily-CoS arc Sub-step B follow-on (NEW — Session 1232 Sub-step B completion, HIGH)
+
+PR #2597 shipped a v0 template stub. Sub-step B follow-on wires it into a runnable workflow against the full spec:
+
+1. **`rotation_slot_resolve` pre-step** — pure-logic step that computes `rotation_slot` from weekday + override triggers. Either add as Step 0 in the workflow runner OR as an internal handler the runner invokes before Step 4. Reads: current weekday (UTC), incident flag (from Lane 1 result), revenue flag (from `governance_tool.inbox` + meeting calendar), signal flag (from signal aggregation threshold check), calendar flag (from known-events table). Writes: `rotation_slot` enum string.
+2. **Slot-resolved Lane 4 dispatch** — change Step 4's agent from the static `research_agent` (v0 default) to a slot-resolved dispatch per spec § "Source (agents + feeds), by slot." Five paths: sports_edge_scan → `sharp_action_detector`; prediction_markets → `prediction_market_analyst`; ticker_catalyst_watch → `stock_analyst_agent`/`market_intelligence_coordinator`; gtm_pipeline → `opportunity_pipeline_agent`; ai_infra_deep_dive → `research_agent`/`trend_analysis_agent`. Override triggers can replace the scheduled slot per the priority order.
+3. **Per-step input/write key plumbing** — spec annotates each step's input keys (`window_hours`, `timeframe_hours`, `competitor_shortlist`, `rotation_slot`, `override_triggers`, etc.) and write keys (`lane_N_text`, `lane_N_findings`, `decision_card`, `morning_brief_markdown`, etc.). Wire those into the workflow runner's context-passing so downstream steps can read upstream outputs.
+4. **End-to-end smoke** — dispatch one full `morning_brief` run on a chosen weekday slot (e.g., Mon AI-infra) and verify the final deliverable contains all 4 lanes + Decision Card + correct `content_type='morning_brief'` tag + lands in a workspace.
+5. **Test additions** — extend `test_morning_brief_workflow_template.py` with input/write key contract tests + a slot-resolution smoke test that mocks the override flags and asserts the right agent is dispatched.
+
+After Sub-step B follow-on lands, the workflow is fully runnable; Sub-step C just adds the scheduler + workspace.
+
+#### Priority 3 — Daily-CoS arc Sub-step C (NEW — schedule + workspace, MEDIUM)
+
+Once Sub-step B follow-on is green:
+
+1. **Create persistent "Morning Brief" workspace** — one workspace, deliverables accumulate over time so Chris can scroll back. Capture the UUID in a tracking deliverable or in the spec doc.
+2. **Add `PeriodicTask` row** — `generate-morning-brief-daily` at `crontab(hour=13, minute=0)` UTC during DST (07:00 Denver MDT during summer; flip to `hour=14` during MST). Use the standard explicit-UTC pattern. Session 1228 PRs #2569/#2570 are the TZ trap reference — don't get tripped by the Celery DST behavior.
+3. **First-fire verify** — morning after merge, confirm `CeleryTaskEvent` shows SUCCESS + new deliverable in the workspace with the expected 4-lane + decision-card structure.
+
+If Sub-step C lands in Session 1233 (same session as Sub-step B follow-on), Chris's first scheduled morning brief lands the morning after, 2026-06-27 13:00 UTC.
+
+#### Priority 4 — Smoke-harness mode inconsistency (CARRYOVER — Session 1231 F5, LOW-MEDIUM)
+
+`core/services/smoke_dispatch.py:39-42` `SMOKE_MODES = {'receipt_only', 'fleet_smoke'}`, but the media-block bypass at `core/tasks_agents.py:2180-2183` only triggers for `mode == 'receipt_only'`. Result: 5 media agents (AudioAgent, ImageEditingAgent, ThreeDAgent, VideoAgent, VideoEditingAgent) silently dropped when dispatched with `mode='fleet_smoke'`. Re-dispatching with `mode='receipt_only'` produces clean PASSes.
+
+One-line fix: add `or context.get('mode') == 'fleet_smoke'` to the `_receipt_only_ctx` predicate at line 2180-2183. Closes the silent-drop class for fleet-smoke media dispatches.
+
+#### Priority 5 — Smoke-probe tagging for `AgentExecution` (CARRYOVER — Session 1231 F1 / R2 REC-2, MEDIUM)
+
+Without this, future audits will keep flagging healthy smoke-heavy agents as broken — exactly what triggered R2 in audit `5318da3e-…`. The R2 deliverable `df33d12d-…` spec'd two implementation options:
+- **(a) Add `is_smoke_test: bool` field to `AgentExecution`**, set by the dispatcher when task matches the substring patterns or `context.smoke=True` is explicit. Cleanest; needs migration + dispatcher edit + audit-tool consumer updates.
+- **(b) Compute at query time** — let `execution_history_tool.stats` accept `include_smoke=False` default and filter at metric calc with the same substring matcher. Cheaper; no schema migration.
+
+Pick one + one focused PR. Substring patterns to detect smoke probes: `'urc v0.1 fleet smoke'`, `'smoke:'`, `'smoke_test:'`, `'force failure'`, `'expected error'`, `'deliberately request'`, `'deliberately review'`, `'fleet smoke'`, `'smoke test'`. Also `context.smoke=True` when present.
+
+#### Priority 6 — Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents` (CARRYOVER — Session 1231 F6, LOW)
+
+Currently a standalone script in `scripts/`. Promote to a Django management command for the standard invocation pattern; lets the harness be called from Celery beat for periodic fleet health checks. Same logic, just move + register.
+
+#### Priority 7 — Audit `5318da3e-…` §R2 amendment (CARRYOVER — Session 1231 F3, P3)
+
+Append a brief §R2 footnote (or §6.2 sub-section) pointing to deliverable `df33d12d-…` for the verifier-loop reframe: "Verifier-loop Session 1231 found all 27 R2 rows were smoke probes; no agent code change warranted; recommendation re-framed as metric-quality fix (REC-2)." Trivial via `deliverable_tool action=append` (now correctly bumps `updated_at` post-PR #2585). Mirrors how Session 1230 P2 appended §4.8 to `e2964e4a-…`.
+
+#### Priority 8 — Engineer workspace staleness (CARRYOVER — Session 1230 F3, MEDIUM)
+
+Engineer's `/tmp/engineer-workspace/` git clone is stale (Session 1231 P4 verify `38c2424b-…` couldn't find `build_semantic_research_title` shipped the same day). Options:
+- Add `git pull` to `_ensure_git_repo` if behind upstream (small per-dispatch overhead), or
+- Add a manual `claude_code_tool action=refresh_workspace` if Rigby should opt in, or
+- Document the staleness as a known limitation and have Rigby pass file context explicitly.
+
+Not blocking; small focused PR when bandwidth allows.
+
+#### Priority 9 — Meeting-context leak shape watch (CARRYOVER — Session 1230 F2, LOW)
+
+Spotted on COOAgent + CTOAgent: `"<Label> Analysis: As a participant in a technical meeting about ..."`. Different prompt template from the diagnostic family. One-off so far (not in any duplicates cluster). Don't add markers preemptively — wait to see if it recurs as a cluster, then one entry in `_PROMPT_BODY_MARKERS` closes it.
+
+#### Priority 10 — Fleet-smoke wall-clock timeouts (CARRYOVER — Session 1231 F2 / R2 REC-3, LOW)
+
+3 Workflow rows hit `60min no-heartbeat` or `1200s wall-clock` on full-fleet smokes (~88 agents). Either (a) raise wall-clock for known-smoke workflow dispatches, (b) split fleet smokes into chunks, (c) accept the timeout and stop counting it against the agent. Lower priority — observability not behavior. Most-likely subsumed by Priority 5 (smoke filtering would exclude these too).
+
+#### Priority 11 — CI billing fix (Chris-side, still outstanding)
+
+Carryover from 1223 → 1224 → 1225 → 1226 → 1227 → 1228 → 1229 → 1230 → 1231 → 1232. Both Session 1232 PRs (#2596 + #2597) awaiting admin-merge.
+
+#### Priority 12 — Anthropic A/B (gated on credit refill)
+
+When Anthropic credits return: run the same Session 1229 Step 5 line-count task on the Anthropic path (`unset CLAUDE_CODE_ENGINE_PROVIDER`) and confirm no clarification stall. If Anthropic path is clean with the new `ANSWER_SYSTEM_PROMPT`, lift the retry contract up out of the OpenAI-only branch so both paths get the same safety net.
+
+#### Priority 13 — Whatever Chris wants
+
+Sessions 1226-1232 totaled 36 PRs across platform hardening + the first concrete product wedge (daily-CoS arc). The platform is at **68/68 = 100% production-healthy** across dispatch + workflow-completion contracts. The first product wedge has a ratified spec + v0 workflow template. Next 1-2 sessions should ship Sub-steps B-completion + C so Chris gets his first scheduled morning brief landing the morning after.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work across 1224-1232.
+- Audit #5 (PA tool schemas vs handlers — Δ=43) — non-blocking long-tail.
+- `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves (Rigby's Session 1225 review).
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
 
 ### SESSION 1231 CLOSED — Agent error-pattern investigation arc + full 83-agent fleet smoke + F4/F7/F8 close (P3 + P2 + R2 + P4 + F4 + F7 + F8), 9 PRs
 
