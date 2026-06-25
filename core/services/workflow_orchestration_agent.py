@@ -1274,6 +1274,17 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         elif agent_name == 'content_writer_agent':
             return self._execute_content_writer_step(context)
 
+        # Session 1231 F7 — synthesize prior step outputs into actionable
+        # insights. Built-in workflow templates `business_research` and
+        # `startup_validation` end with a synthesis step that previously
+        # failed because no `StrategicSynthesis` class exists in AGENT_MAP.
+        # This handler reads whatever's in context (research_summary,
+        # competitor_insights, customer_insights, etc.) and produces a
+        # synthesis via an LLM call. Gracefully degrades when no input
+        # is present (smoke-case behavior).
+        elif agent_name == 'strategic_synthesis':
+            return self._execute_strategic_synthesis_step(context)
+
         else:
             # Session 1231 F4 — AGENT_MAP fallback for snake_case step names
             # that lack a workflow-internal handler. The built-in
@@ -3189,6 +3200,143 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         except Exception as e:
             logger.error(f"Content writer step failed: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # SESSION 1231 F7: STRATEGIC SYNTHESIS STEP
+    # =========================================================================
+
+    # Context keys that prior workflow steps may populate. Pulled in
+    # priority order for the synthesis prompt. Defined at class level
+    # so future steps that add context keys can extend this list in
+    # one place rather than hunting through the handler.
+    _SYNTHESIS_CONTEXT_KEYS: tuple = (
+        'research_summary',
+        'research_results',
+        'competitor_insights',
+        'customer_insights',
+        'customer_personas',
+        'customer_pain_points',
+        'brand_recommendations',
+        'creative_recommendations',
+        'enhanced_summary',
+        'spider_insights',
+    )
+
+    def _execute_strategic_synthesis_step(self, context: Dict) -> Dict[str, Any]:
+        """Synthesize prior workflow step outputs into actionable insights.
+
+        Built-in templates `business_research` and `startup_validation`
+        end with this step. Pre-F7 it failed because no `StrategicSynthesis`
+        agent existed in AGENT_MAP. This handler reads whatever the prior
+        steps left in context, builds a synthesis prompt, and calls
+        gpt-5-mini via the OpenAI factory.
+
+        Graceful empty-context behavior: if no prior outputs are present
+        (smoke / capability-ping case), returns success with an explicit
+        "no synthesis input available" note rather than aborting. That
+        keeps the workflow's dispatch contract honored and the smoke
+        harness reporting PASS for the synthesis step.
+        """
+        from django.conf import settings
+        from core.services.openai_client_factory import get_openai_client
+
+        topic = context.get('topic') or context.get('query') or ''
+
+        # Collect any prior-step outputs present in context.
+        synthesis_inputs = {}
+        for key in self._SYNTHESIS_CONTEXT_KEYS:
+            val = context.get(key)
+            if val:
+                # Coerce dict/list to str for prompt assembly.
+                if isinstance(val, (dict, list)):
+                    import json as _json
+                    synthesis_inputs[key] = _json.dumps(val, default=str)[:2000]
+                else:
+                    synthesis_inputs[key] = str(val)[:2000]
+
+        if not synthesis_inputs and not topic:
+            # Smoke / empty-context case — keep the workflow alive without
+            # inventing data.
+            logger.info(
+                "🧩 Session 1231 F7: strategic_synthesis step ran with empty "
+                "context (no prior step outputs found). Returning graceful "
+                "no-op so the workflow's dispatch contract is honored."
+            )
+            return {
+                'success': True,
+                'summary': 'No synthesis input available',
+                'synthesis': (
+                    'No prior step outputs present in workflow context — '
+                    'nothing to synthesize. (Workflow was likely dispatched '
+                    'as a capability-ping smoke or with empty inputs.)'
+                ),
+                'inputs_used': [],
+            }
+
+        # Build the synthesis prompt from whatever's available.
+        prompt_parts = [
+            "You are synthesizing the outputs of a multi-step research workflow "
+            "into a brief, actionable strategic insight.",
+            "",
+            f"Topic: {topic or '(not specified)'}",
+            "",
+            "Prior step outputs (truncated to 2000 chars each):",
+        ]
+        for key, val in synthesis_inputs.items():
+            prompt_parts.append(f"\n--- {key} ---\n{val}")
+        prompt_parts.extend([
+            "",
+            "Produce 3-5 actionable insights as bullets. Each bullet should be "
+            "a single sentence naming a concrete next-step decision the reader "
+            "can act on. Do not restate the inputs verbatim. Skip preamble.",
+        ])
+        prompt = "\n".join(prompt_parts)
+
+        try:
+            client = get_openai_client(api_key=settings.OPENAI_API_KEY)
+            response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[{"role": "user", "content": prompt}],
+                # Floor 4000 per Session 1224 memory rule
+                # (feedback_gpt5_max_completion_tokens_floor.md).
+                max_completion_tokens=4000,
+            )
+            synthesis_text = (response.choices[0].message.content or '').strip()
+            if not synthesis_text:
+                return {
+                    'success': False,
+                    'error': (
+                        'strategic_synthesis: LLM returned empty content '
+                        f'(finish_reason={response.choices[0].finish_reason})'
+                    ),
+                }
+
+            # Persist into context for downstream steps and final compile.
+            context['strategic_synthesis'] = synthesis_text
+            inputs_used = list(synthesis_inputs.keys())
+
+            logger.info(
+                "🧩 Session 1231 F7: strategic_synthesis produced %d chars "
+                "from %d input keys: %s",
+                len(synthesis_text), len(inputs_used), inputs_used,
+            )
+
+            return {
+                'success': True,
+                'summary': f'Synthesized {len(inputs_used)} input source(s) '
+                           f'into {len(synthesis_text.splitlines())} insight lines',
+                'synthesis': synthesis_text,
+                'inputs_used': inputs_used,
+            }
+        except Exception as e:
+            logger.error(
+                "🧩 Session 1231 F7: strategic_synthesis LLM call failed: %s",
+                e, exc_info=True,
+            )
+            return {
+                'success': False,
+                'error': f"strategic_synthesis LLM call failed: {type(e).__name__}: {e}",
+            }
 
     # =========================================================================
     # SESSION 212: CUSTOM WORKFLOW EXECUTION
