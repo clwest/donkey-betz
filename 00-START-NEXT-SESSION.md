@@ -133,9 +133,28 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 
 ## SESSION 1235 — CURRENT ENTRY POINT
 
-### SESSION 1234 CLOSED — Morning Brief first-fire fixes (D1→D8) + 36-row leak archive + load-bearing doc structural framing, 7 PRs
+### SESSION 1234 CLOSED — TWO ARCS, 17 PRs
 
-Full handoff: [`SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md`](docs/handoffs/SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md). Seven-PR session driven by the 2026-06-25 13:00 UTC morning_brief first-fire — three independent bugs surfaced from the deliverable corpus in workspace `cf708a2e-…` (Session 1231 E2E): lane intermediates leaking to wrong workspace, agent_router missing workflow-name signal, ResearchAgent saving 8 duplicates on iteration storms. D1/D2 fail-loud arc landed before Chris's deliverable sweep request; D3/D4/D5/D6 closed the boundaries; D7 verified-holding note; D8 structural snapshot framing on 6 load-bearing docs (after Chris's "how much of the platform isn't reflected in docs" prompt and the Explore-agent audit).
+Same UTC day, two distinct arcs. Both handoffs are load-bearing for Session 1235 context.
+
+**Arc 1: Morning Brief first-fire fixes (D1→D8), 7 PRs** — full handoff [`SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md`](docs/handoffs/SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md). Driven by the 2026-06-25 13:00 UTC morning_brief first-fire — three independent bugs surfaced from the deliverable corpus in workspace `cf708a2e-…` (Session 1231 E2E): lane intermediates leaking to wrong workspace, agent_router missing workflow-name signal, ResearchAgent saving 8 duplicates on iteration storms. D1/D2 fail-loud arc landed before Chris's deliverable sweep request; D3/D4/D5/D6 closed the boundaries; D7 verified-holding note; D8 structural snapshot framing on 6 load-bearing docs.
+
+**Arc 2: Docs-corpus retrieval (D9→D16), 9 PRs** — full handoff [`SESSION_1234_DOCS_CORPUS_ARC_D9_THROUGH_D16.md`](docs/handoffs/SESSION_1234_DOCS_CORPUS_ARC_D9_THROUGH_D16.md). Triggered by Chris's question *"how is Rigby updated when we do things like update the docs?"*. Found prod doc corpus was 12 days stale + 1820 docs had never been synced. D9 wrote type-aware enrichment on the sync path; D10 backfilled 2,729 existing rows; D11 exposed filter axes on `kb_tool action=documents`; D12 pivoted dead `core.rag_integration.search_embeddings` to populated `DocumentEmbedding`; D13 added `kb_tool action=semantic_search` (Rigby's first real semantic-search PA tool action); D14 guarded the `min_session=0` LLM-autofill bug; D15 lowered `similarity_threshold` default 0.6 → 0.4 to match text-embedding-3-small's actual band; **D16 caught the actual 0-results bug**: broad try/except was swallowing `Cannot filter a sliced queryset` TypeError from a classmethod that ended `[:limit]`. Smoking-gun verification: Rigby's call returns 10 chunks matching the direct-ORM check exactly. 39 docs pinned, 15+ document_class values, ~28k DocumentEmbedding chunks (backfill still ramping the long-tail at session close).
+
+| PR | What |
+|---|---|
+| #2606-#2615 (D1-D8) | Morning Brief arc (see Arc 1 handoff) |
+| **#2617** | `docs(session-1234): session-close docs cascade checklist + corrected memory rule` — 4-step cascade lock |
+| **#2618** (D9) | sync writes type-aware retrieval enrichment to Document |
+| **#2619** (D10) | backfill mgmt command + applied to 2,729 existing rows |
+| **#2620** (D11) | kb_tool documents action filter axes |
+| **#2621** (D12) | rag_integration.search_embeddings pivot to populated table |
+| **#2622** (D13) | kb_tool action=semantic_search (pgvector + filters) |
+| **#2623** (D14) | min_session=0 LLM-autofill guard |
+| **#2624** (D15) | similarity_threshold default 0.6 → 0.4 |
+| **#2625** (D16) | **filter-before-slice — the real fix for 0-result bug** |
+
+**Two new auto-memory feedback rules added at close:** `feedback_docs_pipeline_4_step_cascade.md` + `feedback_test_real_db_for_queryset_semantics.md` (the D16 lesson — MagicMock'd querysets don't enforce Django's slicing/filtering rules; integration tests are mandatory for retrieval/search code).
 
 | PR | What |
 |---|---|
@@ -226,7 +245,18 @@ After Priority 2 surfaces scope, ship the polish PRs. Single small PRs preferred
 
 The only currently-active `verify_doc_claims --only-drift` hit. Doc says 167 services; actual 354. One-line PR: update the inventory file's services line. Or regenerate via the inventory command if one exists for that doc. Cheap, closes the drift.
 
-#### Priority 5+ — Pre-existing carryover tail
+#### Priority 5 — Docs-corpus arc follow-ups (NEW from Session 1234 D9-D16)
+
+Optional follow-ups surfaced during the D9-D16 arc:
+
+- **Narrow `search_embeddings` broad `except Exception`** — D16 found that the broad except hid the actual TypeError as "no results" for hours. Per `feedback_fail_loud_first_then_root_cause_then_telemetry` 3-PR arc pattern: replace with specific `DjangoDBError` / `EmbeddingServiceError` so future logic bugs raise instead of silently returning `[]`.
+- **Fix or retire `search_personal_memories`** — same dead `unified_embeddings` table reference as D12. Either point at a real personal-memories model or remove the dead path.
+- **Fix the `TextProcessor extracted_metadata` clobber root cause** — D9 sidesteps by using dedicated Document fields, but TextProcessor overwriting `extracted_metadata` with generic file metadata is still happening. Affects only `extracted_metadata` reads.
+- **Build `core.tasks.refresh_docs_corpus` beat task** — daily hash-delta check on `docs/_index.json` → re-run steps 2-4 of the cascade automatically. Eliminates the 12-day-stale failure mode that started this whole arc.
+
+Each item is small + independent. Ship as separate PRs if time permits.
+
+#### Priority 6+ — Pre-existing carryover tail
 
 Unchanged from Session 1234's "what didn't get touched" list:
 
