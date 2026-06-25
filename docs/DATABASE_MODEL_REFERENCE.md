@@ -1,3 +1,6 @@
+<!-- DOC-POINTER-V1 -->
+> **⚠ Stats in this doc may drift from code.** For current verified numbers see [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) (sole authoritative counts per `DOC_LIFECYCLE.md` §2c). Run `python manage.py verify_doc_claims --only-drift` to see which specific claims currently diverge from runtime reality (Session 1099 verifier).
+
 # Database Model Reference
 
 **Created:** Session 737 (January 9, 2026)
@@ -7,6 +10,8 @@
 ---
 
 ## Summary
+
+> **⚠ Historical snapshot — do not cite as current.** The table below is a Session 1012 snapshot retained for context. Authoritative counts live in [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) per `DOC_LIFECYCLE.md` §2c. As of the Session 1234 audit (2026-06-25), the live model count is **588 concrete models across 23 apps** (vs the 386+ shown below).
 
 | Metric | Value |
 |--------|-------|

@@ -249,6 +249,8 @@ See: `docs/handoffs/SESSION_781_AGENT_VOICE_FIXES.md` for implementation details
 
 ## Complete Agent Reference (72 Agents)
 
+> **⚠ Historical snapshot — do not cite as current.** The "72 Agents" header is a session snapshot retained for narrative context. Authoritative live counts live in the auto-refreshed inventory block at the top of this doc and in [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) per `DOC_LIFECYCLE.md` §2c. As of the Session 1234 audit (2026-06-25), AGENT_MAP holds **83 agents** (74 enabled, 8 rerouted, 1 blocked) — the per-agent sections below are the highest-leverage subset, not a full enumeration.
+
 ### PersonalAssistantAgent
 
 **Purpose:** Traffic cop - routes requests to specialized agents

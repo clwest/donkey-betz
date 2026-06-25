@@ -128,6 +128,8 @@ Uses embeddings for intelligent agent selection (0.45 similarity threshold).
 
 ## Agent Layer
 
+> **⚠ Historical snapshot — do not cite as current.** The agent counts and AGENT_MAP excerpts in this section are a Session 969b snapshot retained for context. Authoritative live counts live in [`PLATFORM_INVENTORY.md`](/docs/PLATFORM_INVENTORY.md) per `DOC_LIFECYCLE.md` §2c. As of the Session 1234 audit (2026-06-25), AGENT_MAP holds **83 agents** (74 enabled, 8 rerouted, 1 blocked) and `core/agents/` holds substantially more files than the "27 clean agents" header below.
+
 **Location:** `core/agents/`
 **Base Class:** `core/agents/base_agent.py`
 
