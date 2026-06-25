@@ -5865,13 +5865,45 @@ def generate_morning_brief_daily(self, user_id=None, dry_run=False):
         deliverable_step.get('result', {}).get('deliverable_id')
         if deliverable_step else None
     )
+    workflow_success = bool(result.get('success'))
+    rotation_slot = context.get('rotation_slot')
+    lane_4_slot_used = context.get('lane_4_slot_used')
+
+    # Session 1234 D1 fail-loud (Rigby-ratified): on workflow failure,
+    # emit a greppable line and raise so Celery records FAILURE. Before
+    # D1 this returned success=False as a normal dict and Celery saw
+    # SUCCESS — the 2026-06-25 first-fire's lane_4 collapse was invisible
+    # to ops_tool.celery_task_history. See feedback_factory_silent_none_footgun.md.
+    if not workflow_success:
+        # Find the first failed step (with its error, if any) for the log line.
+        failed_step = next(
+            (s for s in step_results if not s.get('result', {}).get('success', True)),
+            None,
+        )
+        failed_step_name = failed_step.get('name') if failed_step else None
+        failed_step_error = (
+            (failed_step.get('result') or {}).get('error')
+            if failed_step else None
+        ) or result.get('error') or 'no error string captured'
+
+        logger.error(
+            "MORNING_BRIEF_FAILED task_id=%s user_id=%s date=%s "
+            "rotation_slot=%r lane_4_slot_used=%r failed_step=%r error=%r",
+            self.request.id, user.id, today,
+            rotation_slot, lane_4_slot_used,
+            failed_step_name, failed_step_error,
+        )
+        raise RuntimeError(
+            f"morning_brief workflow failed at step {failed_step_name!r}: "
+            f"{failed_step_error}"
+        )
 
     return {
-        'success': bool(result.get('success')),
+        'success': True,
         'workflow': 'morning_brief',
         'deliverable_id': deliverable_id,
-        'rotation_slot': context.get('rotation_slot'),
-        'lane_4_slot_used': context.get('lane_4_slot_used'),
+        'rotation_slot': rotation_slot,
+        'lane_4_slot_used': lane_4_slot_used,
         'date': today,
         'user_id': str(user.id),
         'dry_run': dry_run,

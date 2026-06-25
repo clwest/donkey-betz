@@ -292,6 +292,145 @@ class MorningBriefLane4DispatchTests(SimpleTestCase):
         self.assertEqual(result['slot_used'], 'ai_infra_deep_dive')
 
 
+class MorningBriefLane4FailLoudTests(SimpleTestCase):
+    """Session 1234 D1 — lane_4 fail-loud regression guard.
+
+    The 2026-06-25 first-fire postmortem (task 9d00907a-…) showed
+    ``_execute_lane_4_rotating_focus_step`` returning ``{'success': False}``
+    with no ``error`` field when ``OpportunityPipelineAgent`` reported
+    falsy success. The orchestrator at workflow_orchestration_agent.py:1271
+    then logged a generic "Unknown error". These tests lock in the fix:
+    on falsy success, the return dict ALWAYS includes a populated ``error``
+    field and an ``agent_name`` field for downstream log context.
+    """
+
+    def setUp(self):
+        self.agent = WorkflowOrchestrationAgent(user=MagicMock(name='user'))
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_with_result_error_captures_error_string(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.route.return_value = MagicMock(
+            success=False, message='', data={},
+            error='upstream agent timed out',
+        )
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        self.assertIn('error', result,
+                      "Falsy-success path MUST populate 'error' field.")
+        self.assertIn('upstream agent timed out', result['error'])
+        self.assertIn('OpportunityPipelineAgent', result['error'])
+        self.assertIn("'gtm_pipeline_health'", result['error'])
+        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['slot_used'], 'gtm_pipeline_health')
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_falls_through_to_message(self, mock_router_cls):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        # No .error attribute on the mock result — must fall through to message
+        mock_result = MagicMock(spec=['success', 'message', 'data'])
+        mock_result.success = False
+        mock_result.message = 'partial output before failure'
+        mock_result.data = {}
+        mock_router.route.return_value = mock_result
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        self.assertIn('partial output before failure', result['error'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_with_no_diagnostics_uses_structured_fallback(
+        self, mock_router_cls,
+    ):
+        """The exact 2026-06-25 first-fire shape: agent returned an object
+        with success=False and no error/message/output. Before D1 this
+        produced 'Unknown error' at the orchestrator. After D1 the handler
+        must produce a diagnostic string identifying the agent + result type.
+        """
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_result = MagicMock(spec=['success', 'message', 'data'])
+        mock_result.success = False
+        mock_result.message = ''
+        mock_result.data = {}
+        mock_router.route.return_value = mock_result
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        self.assertIn('error', result)
+        self.assertIn('OpportunityPipelineAgent', result['error'])
+        self.assertIn('no error/message/output', result['error'])
+        # MUST NOT be the generic orchestrator-level "Unknown error"
+        self.assertNotIn('Unknown error', result['error'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_router_route_exception_captures_exception_type(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.route.side_effect = ValueError('contextual oops')
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        self.assertIn('ValueError', result['error'])
+        self.assertIn('contextual oops', result['error'])
+        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['slot_used'], 'gtm_pipeline_health')
+
+    @patch('core.agent_router.AgentRouter')
+    def test_agent_not_in_agent_map_includes_agent_name_in_return(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        # Empty AGENT_MAP — slot resolves to an agent that doesn't exist.
+        mock_router.AGENT_MAP = {}
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertFalse(result['success'])
+        self.assertIn('not in AGENT_MAP', result['error'])
+        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+
+    @patch('core.agent_router.AgentRouter')
+    def test_successful_dispatch_still_includes_agent_name(
+        self, mock_router_cls,
+    ):
+        """Regression guard: agent_name field must be present on success too."""
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'OpportunityPipelineAgent': object()}
+        mock_router.route.return_value = MagicMock(
+            success=True, message='gtm signal text', data={'k': 'v'},
+        )
+
+        result = self.agent._execute_lane_4_rotating_focus_step({
+            'rotation_slot': 'gtm_pipeline_health',
+        })
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['agent_name'], 'OpportunityPipelineAgent')
+        self.assertEqual(result['slot_used'], 'gtm_pipeline_health')
+
+
 class MorningBriefDecisionCardTests(SimpleTestCase):
     """Session 1233 B.1 — decision_card_synthesis empty-context behavior."""
 

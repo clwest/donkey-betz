@@ -239,6 +239,93 @@ class GenerateMorningBriefDailyTaskTests(TestCase):
         self.assertIn('simulated workflow crash', result['error'])
         self.assertEqual(result['workflow'], 'morning_brief')
 
+    def test_task_raises_when_workflow_returns_failure(self):
+        """Session 1234 D1 fail-loud (Rigby-ratified).
+
+        The 2026-06-25 first-fire postmortem: ``execute()`` returned
+        ``{'success': False, 'step_results': [...lane_4 failed...]}``
+        normally (no exception). The beat task then returned a
+        success-False dict to Celery, which recorded SUCCESS.
+        Monitoring saw a clean green run. Workflow had collapsed at
+        Step 5 with deliverable_id=None.
+
+        After D1: workflow.success=False MUST raise so Celery records
+        FAILURE. Test guards that contract. See
+        feedback_factory_silent_none_footgun.md.
+        """
+        from core.tasks import generate_morning_brief_daily
+
+        # Replays the exact failure shape from task 9d00907a-…
+        mock_result = {
+            'success': False,
+            'workflow': 'morning_brief',
+            'context': {
+                'rotation_slot': 'gtm_pipeline_health',
+                'lane_4_slot_used': None,
+            },
+            'step_results': [
+                {'name': 'rotation_slot_resolve',
+                 'result': {'success': True}},
+                {'name': 'lane_1_platform_readiness',
+                 'result': {'success': True}},
+                {'name': 'lane_2_build_focus',
+                 'result': {'success': True}},
+                {'name': 'lane_3_competitive_landscape',
+                 'result': {'success': True}},
+                {'name': 'lane_4_rotating_focus',
+                 'result': {
+                     'success': False,
+                     'error': "Lane 4 agent 'OpportunityPipelineAgent' "
+                              "reported failure for slot 'gtm_pipeline_health': "
+                              "no error/message/output",
+                     'slot_used': 'gtm_pipeline_health',
+                     'agent_name': 'OpportunityPipelineAgent',
+                 }},
+            ],
+        }
+        with patch(
+            'core.services.workflow_orchestration_agent.'
+            'WorkflowOrchestrationAgent.execute',
+            return_value=mock_result,
+        ):
+            with self.assertRaises(RuntimeError) as cm:
+                generate_morning_brief_daily()
+
+        # Verify the raised exception carries the diagnostic info that the
+        # 2026-06-25 first-fire was missing.
+        msg = str(cm.exception)
+        self.assertIn('lane_4_rotating_focus', msg)
+        self.assertIn('OpportunityPipelineAgent', msg)
+
+    def test_task_returns_success_when_workflow_succeeds(self):
+        """Regression guard: the success path must still return a dict
+        (do NOT raise) when the workflow completes successfully. Pairs
+        with the D1 fail-loud raise to ensure the success branch wasn't
+        accidentally caught by the failure branch."""
+        from core.tasks import generate_morning_brief_daily
+
+        mock_result = {
+            'success': True,
+            'workflow': 'morning_brief',
+            'context': {
+                'rotation_slot': 'ai_infra_deep_dive',
+                'lane_4_slot_used': 'ai_infra_deep_dive',
+            },
+            'step_results': [
+                {'name': 'create_deliverable',
+                 'result': {'deliverable_id': 'deliv-uuid-456'}},
+            ],
+        }
+        with patch(
+            'core.services.workflow_orchestration_agent.'
+            'WorkflowOrchestrationAgent.execute',
+            return_value=mock_result,
+        ):
+            result = generate_morning_brief_daily()
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['deliverable_id'], 'deliv-uuid-456')
+
 
 class MorningBriefBeatScheduleRegistrationTests(TestCase):
     """Source-level guard: the beat schedule has the morning_brief entry."""

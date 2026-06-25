@@ -28,12 +28,41 @@ Usage:
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from agents.base_agent import BaseContentAgent
 
 logger = logging.getLogger(__name__)
+
+
+def _sample_rss_mb() -> Optional[float]:
+    """Return process RSS in MB, or None if psutil is unavailable.
+
+    Session 1234 D1 (Rigby-ratified): light-touch instrumentation for the
+    morning_brief Lane 4 dispatch. The first-fire postmortem showed a
+    +783MB RSS spike on a workflow that didn't even complete; lane-scoped
+    sampling lets us tag the spike to slot+agent without a deep dive.
+    """
+    try:
+        import psutil
+        return psutil.Process().memory_info().rss / (1024 * 1024)
+    except Exception:
+        return None
+
+
+def _log_lane_4_rss(slot: str, agent_name: str,
+                    rss_before_mb: Optional[float],
+                    rss_after_mb: Optional[float]) -> None:
+    """Emit a single greppable line tagging RSS delta to slot+agent."""
+    if rss_before_mb is None or rss_after_mb is None:
+        return
+    delta_mb = rss_after_mb - rss_before_mb
+    logger.info(
+        "[MORNING_BRIEF_LANE_4_RSS] slot=%s agent=%s "
+        "rss_before_mb=%.1f rss_after_mb=%.1f delta_mb=%+.1f",
+        slot, agent_name, rss_before_mb, rss_after_mb, delta_mb,
+    )
 
 
 class WorkflowOrchestrationAgent(BaseContentAgent):
@@ -3808,7 +3837,20 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         Returns a dict with the same shape as the AGENT_MAP fallback
         in ``_execute_step``: ``{'success', 'output', 'data'}`` plus
-        ``'slot_used'`` for downstream ``_update_context`` capture.
+        ``'slot_used'`` and ``'agent_name'`` for downstream
+        ``_update_context`` capture.
+
+        Session 1234 D1 fail-loud (Rigby-ratified): on falsy
+        ``result.success``, the returned dict always populates an
+        ``error`` field with the best available detail (priority:
+        ``result.error`` → ``result.message`` → ``result.output`` →
+        structured fallback). The 2026-06-25 first-fire postmortem
+        showed this branch returning an empty error so the orchestrator
+        logged a generic "Unknown error" with no diagnostic value. See
+        ``feedback_editor_fail_loud.md``. TODO(session-1234+): the same
+        soft-fail-without-error pattern likely exists in other lane
+        handlers; consider extracting a ``normalize_step_result()``
+        helper once D1 proves out.
         """
         slot = context.get('rotation_slot') or self._resolve_rotation_slot(context)
         agent_pascal = self._MORNING_BRIEF_LANE_4_SLOT_AGENT.get(slot)
@@ -3833,6 +3875,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"{type(e).__name__}: {e}"
                 ),
                 'slot_used': slot,
+                'agent_name': agent_pascal,
             }
 
         if agent_pascal not in router.AGENT_MAP:
@@ -3843,6 +3886,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"but that agent is not in AGENT_MAP"
                 ),
                 'slot_used': slot,
+                'agent_name': agent_pascal,
             }
 
         # Step task — spec § dispatch prompt for Lane 4. We use the slot
@@ -3857,15 +3901,49 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             f"Topic anchor: {topic or '(none)'}."
         )
 
+        rss_before_mb = _sample_rss_mb()
         try:
             result = router.route(agent_pascal, step_task, context or {})
+            rss_after_mb = _sample_rss_mb()
+            _log_lane_4_rss(slot, agent_pascal, rss_before_mb, rss_after_mb)
+
+            success = bool(getattr(result, 'success', False))
+            output = getattr(result, 'message', '') or ''
+            data = getattr(result, 'data', {}) or {}
+
+            if success:
+                return {
+                    'success': True,
+                    'output': output,
+                    'data': data,
+                    'slot_used': slot,
+                    'agent_name': agent_pascal,
+                }
+
+            # Session 1234 D1 fail-loud: capture WHY the agent reported
+            # failure. Priority: explicit error → message → output → fallback.
+            error_detail = (
+                getattr(result, 'error', None)
+                or (output if output else None)
+                or (
+                    f"agent {agent_pascal!r} returned success=False with no "
+                    f"error/message/output (result type={type(result).__name__})"
+                )
+            )
             return {
-                'success': bool(getattr(result, 'success', False)),
-                'output': getattr(result, 'message', '') or '',
-                'data': getattr(result, 'data', {}) or {},
+                'success': False,
+                'output': output,
+                'data': data,
+                'error': (
+                    f"Lane 4 agent {agent_pascal!r} reported failure for "
+                    f"slot {slot!r}: {error_detail}"
+                ),
                 'slot_used': slot,
+                'agent_name': agent_pascal,
             }
         except Exception as e:
+            rss_after_mb = _sample_rss_mb()
+            _log_lane_4_rss(slot, agent_pascal, rss_before_mb, rss_after_mb)
             logger.error(
                 "Lane 4 dispatch failed for slot=%r → agent=%r: %s",
                 slot, agent_pascal, e, exc_info=True,
@@ -3877,6 +3955,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"agent {agent_pascal!r}: {type(e).__name__}: {e}"
                 ),
                 'slot_used': slot,
+                'agent_name': agent_pascal,
             }
 
     def _execute_decision_card_synthesis_step(self, context: Dict) -> Dict[str, Any]:
