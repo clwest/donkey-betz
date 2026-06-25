@@ -32,16 +32,25 @@
 # all work end-to-end. 36 leak-victims archived + 2,729 Documents
 # enriched + ~28k DocumentEmbedding chunks (backfill still ramping).
 # Workers restarted 16:14 local at session close.
+# Session 1234 close (3rd handoff): 22 PRs total across 3 arcs
+# (D1-D8 morning_brief fixes, D9-D16 docs-corpus retrieval,
+# D17-D21 broad-except sweep). Backfill completed at close: all
+# 2,732 Documents embedded (36,854 chunks, 100% coverage). 4-way
+# cross-file invariant locks the (DatabaseError, ConnectionError,
+# OSError) allowlist across scoped_retrieval, knowledge_first_router,
+# knowledge_similarity, views_rag_embeddings; D21 search_personal_
+# memories matches that shape via shape-parity test.
 # Carryover priorities for Session 1235: morning_brief 2nd-fire
 # verify (06-26 13:00 UTC = 07:00 MDT) — first scheduled fire with
 # D3/D4/D5/D6 live; ALL lane intermediates should land in MB
 # workspace 19807888-…, NOT cf708a2e-… (Session 1231 E2E). Operator
 # Edge Friday-1 dry-run (06-26 12:00 UTC). Chris reads the brief;
 # Rigby provides audience-fit verdict; Sub-step D polish scope
-# derives from that. Optional docs-corpus follow-ups: narrow
-# search_embeddings broad except, fix search_personal_memories,
-# build refresh_docs_corpus beat task. Chris-side: Anthropic credit
-# refill, CI billing.
+# derives from that. Optional follow-ups: BACKEND_INVENTORY services
+# count drift (only active verifier hit), TextProcessor extracted_
+# metadata clobber root-cause, refresh_docs_corpus beat task,
+# additional broad-except audits (D22+) if a specific file emerges.
+# Chris-side: Anthropic credit refill, CI billing.
 # Prior pins retired: pa-91cf6bbce1d6406e (Session 1234 morning —
 # replaced mid-session when Rigby fresh-started pa-0f08fc48ec914917
 # at Chris's direction during the deliverable_tool corpus sweep;
