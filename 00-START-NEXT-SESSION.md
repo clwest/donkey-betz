@@ -153,6 +153,57 @@ Full handoff: [`SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md`](docs/handoff
 
 ### FIRST THING Session 1232
 
+#### Priority 0 — START the daily-CoS product arc (NEW — first concrete product wedge for Donkey Betz)
+
+**Strategic shift surfaced at Session 1231 close:** Chris asked "what IS Donkey Betz?" — and the honest answer was "as technology: a real multi-agent platform; as product: undefined." The platform is at 68/68 production-healthy after today's 10 PRs, but the question "which Donkey Betz am I building?" had no answer in the corpus. Chris picked the closest-to-shipping framing: **Daily decision-support / chief-of-staff for solo operators (user 1 = Chris)**.
+
+**One-sentence product pitch:** *"Ask Rigby any strategic question or operational ask. She dispatches the right multi-agent workflow and lands a cited deliverable in your workspace within ~3 minutes. Every morning, a standing brief on your active topics is waiting before you sit down."*
+
+**Why this is the closest-to-product framing:** every piece exists + just got verified end-to-end today (Session 1231 PR #2592/#2593 closed the business_research workflow; `cf708a2e-…` workspace + 5 cited deliverables proves the on-demand path works). Only thing missing is a *standing* brief — a daily flow Chris reads with coffee.
+
+**Arc plan (spans Sessions 1232 → 1235):**
+
+##### Sub-step A (Session 1232 — DO FIRST) — Define standing brief topics with Rigby (~20 min conversation)
+
+Chris and Rigby pick 3-5 topics Chris actually wants briefed every morning. Candidates (Rigby helps refine):
+
+- Donkey Betz competitive landscape (who shipped what overnight in AI agent / autonomous ops platform space)
+- AI agent infrastructure space (new frameworks, funding, big releases)
+- One-or-two of: sports betting market, prediction markets (Kalshi), specific tickers (NVDA / AMD / etc.), specific founders/companies Chris is tracking
+- Internal: any platform broken-state to fix before the day starts (daily diagnostics + body systems + smoke results)
+
+**Output:** a `docs/MORNING_BRIEF_SPEC.md` (or equivalent) naming the 3-5 topics + the prompt per topic + the desired output shape per topic (TL;DR + 3-5 bullets + 1 "act on this" recommendation). Rigby drafts; Chris ratifies.
+
+##### Sub-step B (Session 1232 or 1233) — Build `morning_brief` workflow template
+
+New entry in `WorkflowOrchestrationAgent.WORKFLOWS` named `morning_brief`. One step per Chris-approved topic from Sub-step A. Each step dispatches the appropriate agent (Research + TrendAnalysis + CompetitorAnalysis for external topics; ops_tool / execution_history_tool / system audits for internal). Final step uses the new F7 `strategic_synthesis` handler to produce the consolidated brief.
+
+**Output:** new workflow template + 1 test asserting it runs end-to-end and produces a deliverable with the 3-5 sections.
+
+##### Sub-step C (Session 1233) — Schedule + workspace
+
+- Create persistent "Morning Brief" workspace (one workspace, deliverables accumulate over time — Chris scrolls back through past days)
+- Add `PeriodicTask` row: `generate-morning-brief-daily` at **13:00 UTC** (07:00 Denver MDT during summer; switch to 14:00 UTC during MST). Use the standard `crontab(hour=<UTC hour>, minute=0)` pattern. Watch out for the same TZ trap Session 1228 PRs #2569/#2570 fixed.
+- Verify first fire (next morning after merge).
+
+##### Sub-step D (Session 1234) — Polish the deliverable shape
+
+After Chris reads the first 1-2 briefs: tweak the output template. Likely needs: tighter TL;DR (≤3 sentences total at the top), clearer "what to do today" action items, links to underlying spider data sources, archive of past briefs sidebar.
+
+##### Sub-step E (Session 1235) — First-week dogfood + iterate
+
+Chris reads Mon-Fri. After 5 days of real read, decide: does the format work? do the topics fit? right cadence? Iterate.
+
+**Definition of done for "Donkey Betz is a product":** Chris reads the morning brief 4 of 5 weekday mornings of one full week without needing to ask Rigby for any topic-specific dispatches separately. At that point we have user 1, daily active usage, and a product pitch that's empirically true.
+
+**Acceptance criteria for Session 1232 Priority 0 specifically:**
+- [ ] `docs/MORNING_BRIEF_SPEC.md` exists, lists 3-5 topics + per-topic prompts + output shape, Chris-ratified
+- [ ] Rigby has been consulted on topic selection (verifier-loop pattern — her input on what's most useful for Chris's actual day)
+- [ ] At least one `morning_brief` workflow template draft exists (even if not yet wired end-to-end)
+- [ ] Followup F-tags assigned for Sub-steps B-E so they land on subsequent sessions' priority queues
+
+If Sub-step A reveals the topics are obvious + Sub-step B fits in the same session, ship a v1 `morning_brief` template that runs end-to-end on a chosen topic set. Otherwise scope to Sub-step A only and let B-E carry into 1233-1235.
+
 #### Priority 1 — Calendar checks (BOTH DUE THIS SESSION OR NEXT)
 
 These are time-bound; clear first on session open.
