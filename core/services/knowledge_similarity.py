@@ -46,8 +46,22 @@ from dataclasses import dataclass
 import numpy as np
 from django.conf import settings
 from django.core.cache import cache
+from django.db.utils import DatabaseError
 
 logger = logging.getLogger(__name__)
+
+# Session 1234 D19 — narrow-except allowlist (mirror of D17/D18).
+# Pre-D19 the single embedding-service site here caught `Exception`
+# and returned None — same anti-pattern as D16/D17/D18. Allowlist
+# preserves graceful degradation for legitimate runtime errors (DB
+# connection drops, embedding-service network failures, OS-level
+# issues) while letting logic errors (TypeError, AttributeError,
+# KeyError) propagate to tests + prod logs. Cross-file invariant
+# test in test_d18_knowledge_router_narrow_except.py enforces the
+# same tuple shape across all narrow-except retrieval files.
+# Memory: feedback_test_real_db_for_queryset_semantics.md (D16) +
+# feedback_fail_loud_first_then_root_cause_then_telemetry.
+_RETRIEVAL_ENV_ERRORS = (DatabaseError, ConnectionError, OSError)
 
 # Session 744: Use centralized EmbeddingService for all embedding calls
 from core.services.embedding_service import get_embedding_service
@@ -103,7 +117,7 @@ class KnowledgeSimilarityService:
                 agent_name='KnowledgeSimilarityService'
             )
             return result.embedding
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Embedding generation failed: {e}")
             return None
 
