@@ -4523,14 +4523,22 @@ PA_TOOL_SCHEMAS = [
                     "enum": ["stats", "documents", "chunks", "search_embeddings"],
                     "description": (
                         "stats: overall KB metrics (doc count, embedding counts by type). "
-                        "documents: list documents with chunk counts. "
+                        "documents: list documents with chunk counts + Session 1234 D9/D10 enrichment "
+                        "(category, document_class, is_pinned, tags, retrieval_boost); supports "
+                        "filters category / document_class / is_pinned / min_session / include_superseded. "
                         "chunks: view chunks for a specific document. "
                         "search_embeddings: text search across unified embeddings."
                     ),
                 },
                 "document_id": {"type": "string", "description": "Document UUID (for chunks action)"},
-                "query": {"type": "string", "description": "Search term for documents or embeddings"},
-                "content_type": {"type": "string", "description": "Filter unified embeddings by content_type (e.g. agent_knowledge, spider_data, document_chunk)"},
+                "query": {"type": "string", "description": "Search term for documents or embeddings (title icontains)"},
+                "content_type": {"type": "string", "description": "Filter unified embeddings by content_type (e.g. agent_knowledge, spider_data, document_chunk) — search_embeddings action only"},
+                # Session 1234 D11 — Document filter params (documents action)
+                "category": {"type": "string", "description": "Filter documents by category (e.g. 'handoffs', 'specs', 'narratives', 'audits', 'topics', 'architecture'). documents action only."},
+                "document_class": {"type": "string", "description": "Filter documents by document_class (e.g. 'handoff', 'spec', 'narrative', 'audit', 'guide', 'architecture', 'plan'). documents action only."},
+                "is_pinned": {"type": "boolean", "description": "When true, return only pinned docs (active narratives/specs/indexes/guides/architecture). documents action only."},
+                "min_session": {"type": "integer", "description": "Filter handoffs to session-N tag >= this threshold (e.g. 1200 → only Session 1200+ handoffs). documents action only."},
+                "include_superseded": {"type": "boolean", "description": "When true, include archived/superseded docs in results. Default false. documents action only."},
                 "limit": {"type": "integer", "description": "Max results (default 20, max 50)"},
             },
             "required": ["action"],
