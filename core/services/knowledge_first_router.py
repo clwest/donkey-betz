@@ -45,9 +45,23 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
+from django.db.utils import DatabaseError
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+# Session 1234 D18 — narrow-except allowlist (mirror of D17 for
+# core/services/scoped_retrieval.py). Pre-D18 the 6 sub-query
+# methods in this router caught `Exception` and returned the
+# accumulated matches list / None — same anti-pattern as D16 / D17.
+# Allowlist preserves graceful degradation for legitimate runtime
+# errors (DB connection drops, embedding-service network failures,
+# OS-level issues) while letting logic errors (TypeError from
+# sliced-then-filtered QS, AttributeError on missing fields,
+# KeyError on schema drift) propagate to tests + prod logs.
+# Memory: feedback_test_real_db_for_queryset_semantics.md (D16) +
+# feedback_fail_loud_first_then_root_cause_then_telemetry.
+_RETRIEVAL_ENV_ERRORS = (DatabaseError, ConnectionError, OSError)
 
 
 class RoutingDecision(Enum):
@@ -248,7 +262,7 @@ class KnowledgeFirstRouter:
                         'category': result.category
                     }
                 ))
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.warning(f"Spider data query failed: {e}")
 
         return matches
@@ -292,7 +306,7 @@ class KnowledgeFirstRouter:
                         timestamp=timezone.now() - timedelta(days=3),
                         metadata={'type': 'collaboration_insight'}
                     ))
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.warning(f"Learning patterns query failed: {e}")
 
         return matches
@@ -337,7 +351,7 @@ class KnowledgeFirstRouter:
                                 'agent': knowledge.source_agent
                             }
                         ))
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.warning(f"Shared knowledge query failed: {e}")
 
         return matches
@@ -380,7 +394,7 @@ class KnowledgeFirstRouter:
                                 'agent': str(source.agent) if source.agent else None
                             }
                         ))
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.warning(f"Agent knowledge source query failed: {e}")
 
         return matches
@@ -420,7 +434,7 @@ class KnowledgeFirstRouter:
                         'source_url': doc.source_url or '',
                     }
                 ))
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.warning(f"User document query failed: {e}")
 
         return matches
@@ -444,7 +458,7 @@ class KnowledgeFirstRouter:
             embedding = result.embedding
             self._embeddings_cache[cache_key] = embedding
             return embedding
-        except Exception as e:
+        except _RETRIEVAL_ENV_ERRORS as e:
             logger.error(f"Embedding generation failed: {e}")
             return None
 
