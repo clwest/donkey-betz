@@ -103,16 +103,31 @@ def search_embeddings(
             if first and isinstance(first, str):
                 effective_class = first
 
-        # Base queryset: native pgvector cosine similarity via the
-        # existing classmethod (content/models.py:856-887). Inherits
-        # the orphan-chunk exclusion (no parent file_path).
-        qs = DocumentEmbedding.cosine_similarity_search(
-            query_vector=query_embedding,
-            limit=limit * 4,  # overshoot so post-filter still hits limit
-            min_similarity=similarity_threshold,
+        # Session 1234 D16 — build the cosine-similarity queryset
+        # INLINE (not via the classmethod) so D9/D10 filter pushdown
+        # can run BEFORE the slice. The DocumentEmbedding.
+        # cosine_similarity_search classmethod returns `qs[:limit]`,
+        # which is a sliced queryset — Django raises
+        # `Cannot filter a query once a slice has been taken` on any
+        # subsequent `.filter()` or `.exclude()`. Pre-D16 the surrounding
+        # try/except swallowed that exception and returned [] for every
+        # call, which is why D11/D12/D13/D14/D15 all looked correct in
+        # tests (mocked QS) but returned 0 chunks in production.
+        #
+        # Mirror the classmethod's orphan-chunk exclusion + cosine
+        # threshold so retrieval still excludes parentless chunks
+        # ("Agent Activity Knowledge Base" entries that pollute results).
+        from pgvector.django import CosineDistance
+        qs = (
+            DocumentEmbedding.objects
+            .filter(document__file_path__isnull=False)
+            .exclude(document__file_path='')
+            .annotate(distance=CosineDistance('embedding_vector', query_embedding))
+            .filter(distance__lt=(1 - similarity_threshold))
         )
 
-        # D9/D10 filter pushdown via Document join
+        # D9/D10 filter pushdown via Document join — now all run BEFORE
+        # the slice so no `Cannot filter a sliced queryset` blowup.
         if category:
             qs = qs.filter(document__category=category)
         if effective_class:
@@ -149,8 +164,10 @@ def search_embeddings(
             except (ValueError, TypeError):
                 pass
 
-        # Take final K after filtering
-        qs = qs[:limit]
+        # Take final K after filtering — sort by distance (ascending =
+        # closest match first), then slice. The classmethod did the
+        # same order; we just defer the slice until after our filters.
+        qs = qs.order_by('distance')[:limit]
 
         documents = []
         encryption_service = get_encryption_service()
