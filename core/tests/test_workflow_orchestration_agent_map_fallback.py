@@ -100,23 +100,26 @@ class WorkflowAgentMapFallbackTests(SimpleTestCase):
 
     # ── name not in AGENT_MAP — explicit error ──
 
-    def test_strategic_synthesis_returns_explicit_no_handler_error(self):
-        """strategic_synthesis → StrategicSynthesis is not in AGENT_MAP.
-        Pre-fix the error was 'Unknown agent in workflow: strategic_synthesis'.
-        Post-fix the error names both the snake_case and pascal_case forms
-        so the operator can either rename the workflow step or add the
-        agent."""
+    def test_unknown_snake_name_returns_explicit_no_handler_error(self):
+        """An arbitrary snake_case name with no internal handler AND
+        no PascalCase entry in AGENT_MAP returns an explicit error
+        naming both forms. Pre-F4 the error was the generic 'Unknown
+        agent in workflow: <name>' which made the gap invisible.
+
+        (Session 1231 F7 added a dedicated internal handler for
+        ``strategic_synthesis``, so this test now uses a freshly-
+        invented name that no future-friendly elif could match.)"""
         fake_router = MagicMock()
-        fake_router.AGENT_MAP = {'ResearchAgent': object}  # no StrategicSynthesis
+        fake_router.AGENT_MAP = {'ResearchAgent': object}
 
         with patch('core.agent_router.AgentRouter', return_value=fake_router):
             result = self.agent._execute_step(
-                self._step('strategic_synthesis'), context={}
+                self._step('totally_made_up_agent_xyz123'), context={}
             )
 
         self.assertFalse(result['success'])
-        self.assertIn("strategic_synthesis", result['error'])
-        self.assertIn("StrategicSynthesis", result['error'])
+        self.assertIn("totally_made_up_agent_xyz123", result['error'])
+        self.assertIn("TotallyMadeUpAgentXyz123", result['error'])
         self.assertIn("not in AGENT_MAP", result['error'])
         fake_router.route.assert_not_called()
 
