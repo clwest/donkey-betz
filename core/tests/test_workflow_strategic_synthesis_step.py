@@ -200,6 +200,44 @@ class StrategicSynthesisStepTests(SimpleTestCase):
         self.assertIn('strategic_synthesis', ctx)
         self.assertIn('Synthesized insight', ctx['strategic_synthesis'])
 
+    # ── F8 regression: _compile_final_result must not crash on
+    # workflows where 'project_created' stays at its None init ──────
+
+    def test_compile_final_result_handles_project_created_None_init(self):
+        """Pre-F8: line 3486 + 3548 did `context.get('project_created', {}).get(...)`.
+        Since `context['project_created']` is initialized to `None` at
+        line 1129 (not absent), `.get('project_created', {})` returned
+        None — and `None.get(...)` raised AttributeError. Surfaced
+        post-F7 because the F7 fix unblocked the first workflows to
+        ever reach _compile_final_result with success=True AND no
+        create_project step (business_research / startup_validation /
+        competitor_analysis / customer_personas templates)."""
+        result = self.agent._compile_final_result(
+            workflow='business_research',
+            step_results=[{'success': True, 'step': 1, 'name': 'x',
+                           'agent': 'y', 'summary': 'ok', 'result': {}}],
+            context={
+                # Match the exact init shape from execute() line 1111-1133
+                'topic': 'AI agent platforms',
+                'count': 3,
+                'project_created': None,           # ← the trap key
+                'research_results': None,
+                'research_summary': '',
+                'executive_direction': None,
+                'creative_recommendations': '',
+                'generated_image_ids': [],
+                'generated_video_ids': [],
+                'selected_image_id': None,
+            },
+            success=True,
+        )
+        self.assertTrue(result['success'])
+        self.assertEqual(result['workflow'], 'business_research')
+        self.assertIn('completed successfully', result['summary'])
+        # No project_id since project_created is None — and we didn't
+        # crash on the .get('project_id') / .get('project_name') accesses
+        self.assertNotIn('project_id', result)
+
     # ── source-level guard: regression sentinel ─────────────────────
 
     def test_source_level_guard_handler_is_wired(self):
