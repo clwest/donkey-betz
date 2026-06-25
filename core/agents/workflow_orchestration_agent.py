@@ -98,6 +98,7 @@ AVAILABLE_WORKFLOWS = [
     'business_research',
     'competitor_analysis',
     'customer_research',
+    'morning_brief',  # Session 1232 — daily Chief-of-Staff brief; see docs/MORNING_BRIEF_SPEC.md
 ]
 
 
