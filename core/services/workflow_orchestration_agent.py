@@ -1255,6 +1255,21 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 context['topic'] = f"{topic} for '{project_name}'"
                 logger.info(f"📊 Session 334: Enhanced topic with project name: {context['topic']}")
 
+        # Session 1234 D3 — pre-materialize per-workflow target workspace
+        # and thread its id into context BEFORE any step runs. Without
+        # this, each step's delegate agent falls through agent_router's
+        # active-workspace fallback (core/agent_router.py:1083-1121),
+        # which picks the user's most-recently-active workspace —
+        # typically a debugging/test workspace, NOT the workflow's
+        # intended home. Symptom in the 2026-06-25 morning_brief first
+        # fire: lane outputs (SystemIntelligenceAgent, COOAgent,
+        # TrendAnalysisAgent) landed in workspace cf708a2e-…
+        # (Session 1231 E2E) while only the final synthesized brief from
+        # step 8 landed in the actual Morning Brief workspace.
+        target_ws_id = self._resolve_workflow_target_workspace_id(workflow)
+        if target_ws_id:
+            context['workspace_id'] = target_ws_id
+
         # Execute each step in order
         step_results = []
         for step_def in steps:
@@ -4178,6 +4193,34 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         "WorkflowOrchestrationAgent on first morning_brief workflow fire. "
         "Each deliverable accumulates here as a dated entry."
     )
+
+    def _resolve_workflow_target_workspace_id(self, workflow: str) -> str | None:
+        """Resolve the workflow's target workspace_id, materializing if needed.
+
+        Returns a ``str(workspace.id)`` or ``None`` (no scoping; the
+        agent_router fallback chain takes over downstream).
+
+        Session 1234 D3 — currently only ``morning_brief`` opts in.
+        get_or_create on (user, 'Morning Brief') is idempotent so
+        ``_execute_create_morning_brief_deliverable_step`` re-resolving
+        at step 8 is a no-op on second hit. Future workflows that need
+        their own persistent workspace can extend this method instead
+        of repeating the pattern at the top of ``execute()``.
+        """
+        if workflow != 'morning_brief':
+            return None
+        user = getattr(self, 'user', None)
+        if user is None:
+            return None
+        mb_ws = self._get_or_create_morning_brief_workspace(user)
+        if mb_ws is None:
+            return None
+        logger.info(
+            "📋 Session 1234 D3: morning_brief workspace_id=%s wired "
+            "into context — lane delegates will save here.",
+            mb_ws.id,
+        )
+        return str(mb_ws.id)
 
     def _get_or_create_morning_brief_workspace(self, user):
         """Resolve the persistent Morning Brief workspace for ``user``.
