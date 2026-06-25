@@ -285,113 +285,156 @@ def get_rag_context(query: str, max_tokens: int = 2000, include_personal: bool =
         'used_documents': len(used_documents)
     }
 
+def _cosine_similarity_python(a, b):
+    """Pure-Python cosine similarity for JSON-stored embedding vectors.
+
+    Session 1234 D21 — UserEmbedding.embedding_vector is a JSONField,
+    not a pgvector VectorField, so we can't use the native `<=>`
+    operator. Python-side cosine is fine for the expected corpus size
+    (0 → a few thousand rows per user). When UserEmbedding grows past
+    ~10k rows total, migrate the field to pgvector VectorField and
+    repoint this function at the native operator.
+    """
+    if not a or not b or len(a) != len(b):
+        return 0.0
+    import math
+    dot = 0.0
+    na = 0.0
+    nb = 0.0
+    for x, y in zip(a, b):
+        dot += x * y
+        na += x * x
+        nb += y * y
+    if na <= 0 or nb <= 0:
+        return 0.0
+    return dot / (math.sqrt(na) * math.sqrt(nb))
+
+
+# Session 1234 D21 — Personal-memory search narrow-except allowlist.
+# Same shape as D17/D18/D19/D20 (DatabaseError, ConnectionError,
+# OSError). The cross-file invariant in
+# test_d20_views_rag_embeddings_narrow_except.py is NOT extended to
+# include this constant because `rag_integration.py` is the
+# rag-integration module proper, not a retrieval helper file. The
+# functional contract (narrow same set of env errors) is the same,
+# but the module's name doesn't fit the test's existing import paths.
+_PERSONAL_MEMORY_ENV_ERRORS = (
+    __import__('django.db.utils', fromlist=['DatabaseError']).DatabaseError,
+    ConnectionError,
+    OSError,
+)
+
+
 def search_personal_memories(
     query: str,
     user_id: Optional[int] = None,
     limit: int = 5,
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.4,
 ) -> List[Dict[str, Any]]:
     """
-    Search personal memories with strict access control
-    
+    Search a user's personal memories via UserEmbedding semantic search.
+
+    Session 1234 D21 — full rewrite. Pre-D21 this function:
+      - Connected to a non-existent `ai_unified_platform` database
+        (with a non-existent `ai_unified_user` PG user)
+      - Queried a non-existent `unified_embeddings` table
+      - Wrapped both errors in a broad try/except → return [], so
+        every call silently returned "no memories" indistinguishable
+        from "user has no personal memories yet"
+
+    Post-D21 this function:
+      - Uses Django ORM against `UserEmbedding` (the populated user-
+        scoped embedding store: 0 rows locally, populated on Railway
+        when chat injects user memories into the embedding pipeline)
+      - Filters by `user_id` + `is_active=True` for strict access
+        control (no cross-user leakage; matches the original intent)
+      - Computes cosine similarity in Python because UserEmbedding's
+        `embedding_vector` is a JSONField (not pgvector VectorField).
+        Fine performance-wise for the expected corpus size; migrate
+        the field to VectorField when usage grows.
+      - Narrows the broad except to env errors only per D17-D20
+        discipline. Logic errors propagate so future refactors that
+        break this function are visible.
+      - Default similarity_threshold lowered 0.7 → 0.4 to match D15
+        (text-embedding-3-small puts related content in 0.4-0.7 band).
+
     Args:
-        query: The search query
-        user_id: ID of the user whose memories to search
-        limit: Maximum number of results to return
-        similarity_threshold: Minimum similarity score (0-1)
-    
+        query: The search query (text → embedding).
+        user_id: ID of the user whose memories to search. Required.
+        limit: Maximum number of results.
+        similarity_threshold: Minimum cosine similarity (0-1).
+
     Returns:
-        List of relevant personal documents with similarity scores
+        List of personal memory dicts with shape:
+            {id, content, content_type, metadata, importance_score,
+             similarity_score, is_personal}
     """
-    
     if not user_id:
-        logger.warning("Attempted to search personal memories without user_id")
-        return []  # No user, no personal memories
-    
-    # Create embedding for the query
+        logger.warning("search_personal_memories: no user_id supplied; refusing")
+        return []
+
     query_embedding = create_embedding(query)
     if not query_embedding:
-        logger.error("Failed to create query embedding for personal search")
+        logger.error("search_personal_memories: failed to create query embedding")
         return []
-    
+
     try:
-        # Connect to ai_unified_platform database
-        conn = psycopg2.connect(
-            host='localhost',
-            database='ai_unified_platform',
-            user='ai_unified_user',
-            password=os.environ.get('AI_UNIFIED_DB_PASS', '')
+        # Lazy import — UserEmbedding lives in core.models_unified_system
+        # which has a heavy import graph; deferring keeps rag_integration
+        # importable from views.py without dragging it in.
+        from django.apps import apps
+        UserEmbedding = apps.get_model('core', 'UserEmbedding')
+
+        qs = UserEmbedding.objects.filter(
+            user_id=user_id,
+            is_active=True,
+        ).only(
+            'id', 'content', 'content_type', 'metadata', 'confidence_score',
+            'embedding_vector',
         )
-        
-        with conn.cursor() as cursor:
-            # Search ONLY personal namespace with user verification
-            sql = """
-                SELECT 
-                    id,
-                    content_text,
-                    content_type,
-                    metadata,
-                    importance_score,
-                    1 - (embedding <=> %s::vector) as similarity
-                FROM unified_embeddings
-                WHERE embedding IS NOT NULL
-                AND metadata->>'namespace' = 'personal'
-                AND (metadata->>'owner_id' = %s OR metadata->>'owner_id' IS NULL)
-                AND 1 - (embedding <=> %s::vector) >= %s
-                ORDER BY 
-                    (1 - (embedding <=> %s::vector)) * importance_score DESC
-                LIMIT %s
-            """
-            
-            params = [
-                query_embedding,
-                str(user_id),
-                query_embedding,
-                similarity_threshold,
-                query_embedding,
-                limit
-            ]
-            
-            cursor.execute(sql, params)
-            results = cursor.fetchall()
-            
-            # Format results
-            documents = []
-            encryption_service = get_encryption_service()
-            
-            for row in results:
-                doc_id, content_text, content_type, metadata, importance, similarity = row
-                
-                # Decrypt content if encrypted
-                decrypted_content = encryption_service.decrypt(content_text) if content_text else ""
-                
-                # Parse metadata
-                meta = metadata if isinstance(metadata, dict) else {}
-                
-                # Handle NaN values
-                import math
-                similarity_val = float(similarity) if similarity else 0.0
-                if math.isnan(similarity_val) or math.isinf(similarity_val):
-                    similarity_val = 0.0
-                    
-                documents.append({
-                    'id': doc_id,
-                    'content': decrypted_content[:1000],
-                    'content_type': content_type,
-                    'metadata': meta,
-                    'importance_score': float(importance) if importance else 0.5,
-                    'similarity_score': similarity_val,
-                    'is_personal': True  # Mark as personal for UI
-                })
-            
-            logger.info(f"Found {len(documents)} personal documents for user {user_id}")
-            conn.close()
-            return documents
-            
-    except Exception as e:
-        logger.error(f"Error searching personal memories: {e}")
-        if 'conn' in locals():
-            conn.close()
+
+        scored = []
+        for row in qs:
+            vec = row.embedding_vector
+            if not vec:
+                continue
+            sim = _cosine_similarity_python(query_embedding, vec)
+            if sim < similarity_threshold:
+                continue
+            scored.append((sim, row))
+
+        # Sort by similarity * importance descending (matches the pre-D21
+        # ranking semantics; `confidence_score` is the closest analog to
+        # the pre-D21 `importance_score` field).
+        scored.sort(
+            key=lambda t: t[0] * float(getattr(t[1], 'confidence_score', 1.0) or 1.0),
+            reverse=True,
+        )
+
+        documents = []
+        for sim, row in scored[:limit]:
+            documents.append({
+                'id': str(row.id),
+                'content': (row.content or '')[:1000],
+                'content_type': row.content_type or 'memory',
+                'metadata': row.metadata if isinstance(row.metadata, dict) else {},
+                'importance_score': float(row.confidence_score or 0.5),
+                'similarity_score': sim,
+                'is_personal': True,
+            })
+
+        logger.info(
+            f"search_personal_memories: returned {len(documents)} memories "
+            f"for user {user_id} (threshold={similarity_threshold}, "
+            f"scored {len(scored)} above threshold of {qs.count()} total)"
+        )
+        return documents
+
+    except _PERSONAL_MEMORY_ENV_ERRORS as e:
+        logger.error(
+            f"search_personal_memories: environmental error: "
+            f"{type(e).__name__}: {e}"
+        )
         return []
 
 
