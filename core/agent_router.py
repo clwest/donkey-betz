@@ -940,11 +940,74 @@ class AgentRouter:
                     f"Unknown agent: '{agent_name}'. Available agents: {available}"
                 )
 
+        import re as _re  # noqa: E402 — local import to keep the override block self-contained
+
+        # Session 1234 D4 — workflow-dispatch intercept. The
+        # delegate_to_specialist tool description (BaseAgent line 794)
+        # lists category-keyed specialists (Research/Content/Media/…)
+        # but does NOT name WorkflowOrchestrationAgent. So when an
+        # orchestrator agent (e.g. DevOpsAgent) receives a task like
+        # "Run WORKFLOWS['morning_brief'] end-to-end smoke" and asks
+        # its LLM to pick a specialist, the LLM picks ResearchAgent
+        # because the task text mentions research-flavored work. The
+        # specialist then runs its OWN default workflow and reports
+        # back the wrong workflow name.
+        #
+        # Repro from 2026-06-25 investigation:
+        #   AgentExecution at 02:50 — task="Run WORKFLOWS['morning_brief']
+        #   end-to-end", agent=ResearchAgent, context={'workflow_name':
+        #   'morning_brief'}. ResearchAgent ignored the workflow_name and
+        #   ran its market-trends default. DevOpsAgent's downstream
+        #   deliverable correctly flagged the mismatch.
+        #
+        # This intercept catches the case at the router level so it
+        # works regardless of caller (LLM tool-call, direct dispatch,
+        # workflow step). Triggers on two independent signals:
+        #   1. task text contains the literal "WORKFLOWS[" subscript
+        #      pattern (LLM-typed dispatches)
+        #   2. context['workflow_name'] is set to a non-empty string
+        #      (programmatic dispatches)
+        # If either fires and the target is not already the
+        # orchestrator, reroute. No-op when WorkflowOrchestrationAgent
+        # is not in AGENT_MAP (fail-open).
+        _WORKFLOW_DISPATCH_TASK_PATTERN = _re.compile(
+            r"WORKFLOWS\s*\[\s*['\"]\w+['\"]\s*\]", _re.I,
+        )
+        _workflow_signal = bool(
+            _WORKFLOW_DISPATCH_TASK_PATTERN.search(task or '')
+            or (context.get('workflow_name') if isinstance(context, dict) else None)
+        )
+        if (
+            _workflow_signal
+            and agent_name != 'WorkflowOrchestrationAgent'
+            and 'WorkflowOrchestrationAgent' in self.AGENT_MAP
+        ):
+            workflow_name_hint = (
+                context.get('workflow_name') if isinstance(context, dict) else None
+            )
+            logger.info(
+                f"[routing-override:workflow-dispatch] Rerouting "
+                f"'{(task or '')[:80]}' from {agent_name} -> "
+                f"WorkflowOrchestrationAgent (workflow_name="
+                f"{workflow_name_hint!r}, task_signal="
+                f"{bool(_WORKFLOW_DISPATCH_TASK_PATTERN.search(task or ''))})"
+            )
+            agent_name = 'WorkflowOrchestrationAgent'
+            agent_class = self.AGENT_MAP['WorkflowOrchestrationAgent']
+            # Mirror workflow_name → context['workflow'] so
+            # WorkflowOrchestrationAgent.execute() picks it up at line
+            # 233 (it reads 'workflow', not 'workflow_name').
+            if (
+                isinstance(context, dict)
+                and workflow_name_hint
+                and not context.get('workflow')
+            ):
+                context['workflow'] = workflow_name_hint
+
         # Session 1031: Reroute specialist tasks away from non-specialist agents.
         # E.g. "competitor audit" should go to CompetitorAnalysisAgent, not WorkflowAgent.
         # Session 1032: Broadened competitor patterns — "Step 3 competitor audit" variants
         # were slipping through because LLM generates many phrasings.
-        import re as _re
         _ROUTING_OVERRIDES = [
             (_re.compile(r'competitor\s*(audit|analysis|landscape|benchmark|coverage)', _re.I), 'CompetitorAnalysisAgent'),
             (_re.compile(r'Step\s+\d+\s+competitor', _re.I), 'CompetitorAnalysisAgent'),
