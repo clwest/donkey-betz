@@ -165,6 +165,56 @@ class MorningBriefDeliverableWorkspaceLinkTests(TestCase):
         self.assertTrue(result['success'])
         self.assertIsNone(result['deliverable_id'])
 
+    def test_deliverable_persists_when_context_user_is_a_dict(self):
+        """Session 1234 D2.fix regression guard.
+
+        The 2026-06-25 D2 verification surfaced this: lane handlers
+        (Lane 1 platform_readiness onward) write a serialized profile
+        DICT into ``context['user']`` for prompt-injection purposes:
+
+            {'name': '', 'username': 'chris',
+             'communication_style': 'professional', ...}
+
+        Pre-D2.fix the handler did
+        ``user = context.get('user') or getattr(self, 'user', None)``
+        — the dict short-circuited the ``or`` and got passed to
+        ``Deliverable.user`` (a FK to UnifiedUser), raising:
+
+            ValueError: Cannot assign "{...}": "Deliverable.user"
+            must be a "UnifiedUser" instance.
+
+        After D2.fix: handler uses ``self.user`` directly (which IS
+        a UnifiedUser instance because the beat task constructs
+        ``WorkflowOrchestrationAgent(user=user)``).
+        """
+        context_with_dict_user = {
+            'morning_brief_markdown': '## TL;DR\n- D2.fix regression test\n',
+            'morning_brief_title': 'Morning Brief — D2.fix test',
+            # Real lane handlers inject this exact shape:
+            'user': {
+                'name': '',
+                'username': 'chris',
+                'communication_style': 'professional',
+                'memory_summary': 'Profile: prefers balanced responses',
+                'goals': [],
+                'has_user_context': True,
+            },
+            'rotation_slot': 'gtm_pipeline_health',
+        }
+        result = self.agent._execute_create_morning_brief_deliverable_step(
+            context_with_dict_user,
+        )
+
+        self.assertTrue(result['success'],
+                        f"Deliverable creation must succeed even when "
+                        f"context['user'] is a profile dict. Got: {result!r}")
+        self.assertIsNotNone(result['deliverable_id'])
+
+        deliverable = Deliverable.objects.get(id=result['deliverable_id'])
+        # Deliverable.user MUST resolve to the agent's self.user instance,
+        # NOT the profile dict from context.
+        self.assertEqual(deliverable.user, self.user)
+
 
 class GenerateMorningBriefDailyTaskTests(TestCase):
     """Session 1233 Sub-step C — daily beat task dispatch + telemetry."""
