@@ -4520,14 +4520,19 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["stats", "documents", "chunks", "search_embeddings"],
+                    "enum": ["stats", "documents", "chunks", "search_embeddings", "semantic_search"],
                     "description": (
                         "stats: overall KB metrics (doc count, embedding counts by type). "
                         "documents: list documents with chunk counts + Session 1234 D9/D10 enrichment "
                         "(category, document_class, is_pinned, tags, retrieval_boost); supports "
                         "filters category / document_class / is_pinned / min_session / include_superseded. "
                         "chunks: view chunks for a specific document. "
-                        "search_embeddings: text search across unified embeddings."
+                        "search_embeddings: text search across unified embeddings (legacy). "
+                        "semantic_search: Session 1234 D13 — native pgvector cosine similarity over "
+                        "DocumentEmbedding (16k+ chunks). Returns ranked chunks with [docs/path#chunk] "
+                        "citations, supports the same D9/D10 filter set as documents action + a "
+                        "similarity_threshold knob. Use this when the user asks 'find the passage about X' "
+                        "or 'where does the corpus mention Y' — it's the highest-signal retrieval surface."
                     ),
                 },
                 "document_id": {"type": "string", "description": "Document UUID (for chunks action)"},
