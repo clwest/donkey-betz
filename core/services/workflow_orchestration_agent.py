@@ -4249,7 +4249,22 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             }
 
         title = context.get('morning_brief_title') or 'Morning Brief'
-        user = context.get('user') or getattr(self, 'user', None)
+        # Session 1234 D2.fix: context['user'] is a profile DICT (written
+        # by lane handlers for prompt injection); Deliverable.user is a FK
+        # to UnifiedUser. The previous `context.get('user') or getattr...`
+        # always short-circuited on the truthy dict, raising
+        # `Deliverable.user must be a UnifiedUser instance` at .create().
+        # Use self.user directly — that's the source set at agent init.
+        user = getattr(self, 'user', None)
+        if user is None:
+            return {
+                'success': False,
+                'error': (
+                    "create_morning_brief_deliverable: agent has no user "
+                    "instance (self.user is None). Beat task should "
+                    "instantiate WorkflowOrchestrationAgent(user=…)."
+                ),
+            }
         workspace = self._get_or_create_morning_brief_workspace(user)
 
         try:
