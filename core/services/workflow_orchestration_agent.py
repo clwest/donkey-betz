@@ -3483,8 +3483,14 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         if context.get('generated_video_ids'):
             result['video_ids'] = context['generated_video_ids']
 
-        if context.get('project_created', {}).get('project_id'):
-            result['project_id'] = context['project_created']['project_id']
+        # Session 1231 F8 — `'project_created': None` initialization at line
+        # 1129 means `context.get('project_created', {})` returns None when
+        # the key is present-but-None (which happens for any workflow that
+        # doesn't run the create_project_from_research step). Use truthy
+        # fallback so we don't AttributeError on .get('project_id').
+        _proj_created = context.get('project_created') or {}
+        if _proj_created.get('project_id'):
+            result['project_id'] = _proj_created['project_id']
             result['project_name'] = context['project_created'].get('project_name')
 
         if success:
@@ -3539,8 +3545,10 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 f"Researched {context['topic']}, got executive direction, "
                 f"created {len(context.get('generated_image_ids', []))} logos."
             )
-            if context.get('project_created', {}).get('project_name'):
-                result['summary'] += f" Organized into project: {context['project_created']['project_name']}"
+            # Session 1231 F8 — same None-vs-default-dict gotcha as line 3486.
+            _proj_created_summary = context.get('project_created') or {}
+            if _proj_created_summary.get('project_name'):
+                result['summary'] += f" Organized into project: {_proj_created_summary['project_name']}"
         else:
             result['summary'] = f"Workflow '{workflow}' failed: {error}"
 
