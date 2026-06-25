@@ -104,7 +104,7 @@ Tested Session 1159 post-Mac-reboot: full stack restart from cold-boot in ~30 s.
 
 ## SESSION 1232 — CURRENT ENTRY POINT
 
-### SESSION 1231 CLOSED — Agent error-pattern investigation arc + full 83-agent fleet smoke (P3 + P2 + R2 + P4), 4 PRs
+### SESSION 1231 CLOSED — Agent error-pattern investigation arc + full 83-agent fleet smoke + F4 close (P3 + P2 + R2 + P4 + F4), 6 PRs
 
 Full handoff: [`SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md`](docs/handoffs/SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md). The arc framing from the prior session's Recommended Session 1231 plan ("bundle P2 + R2 + P3 as one agent error-pattern investigation") held end-to-end. **C (P3) shipped first** to make the audit trail honest for the investigation that followed: `deliverable_tool.append` + `update` content-mutation branches were silencing Django's `auto_now=True` on `updated_at` by omitting the field from `update_fields`. **A (P2) shipped next** with the real bug: `core/agents/base_agent.py:5482` did `write_result['files_generated']` via bare dict access in the `elif partial_failure` branch of `execute_with_workspace` — the key only exists in early-return shapes; the all-files-failed shape (Shape B) omits it. The deliverable was getting produced 117ms before the crash, so the daily COO diagnostic looked like a silent failure. **B (R2) closed as no code change** after verifier-loop ORM pull revealed all 18/18 CodeReview + 9/9 Workflow failures over 30d were smoke probes — every one had `task` containing `'fleet smoke'` / `'smoke:'` / `'force failure'` / `'expected error'`. The audit's success_rate metric is noise-contaminated, not the agents. **D (P4) shipped last** in response to Chris's follow-on question "can Rigby trigger each of the Agents and get an output from them?" — built a one-shot full-AGENT_MAP coverage harness (`scripts/smoke_all_agents.py`) that dispatched all 83 entries; surfaced exactly one true production-broken agent (`BookmakerAgent.__init__()` accepted no kwargs but the router calls `agent_class(user=self.user)`). Effective fleet health post-fix: **67 of 68 verifiable production-healthy = 98.5%**.
 
@@ -114,15 +114,17 @@ Full handoff: [`SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md`](docs/handoff
 | **#2586** | `fix(session-1231): COOAgent scheduled 'files_generated' KeyError (P2)`. `base_agent.py:5482` bare access raised KeyError on the `elif partial_failure` branch because `_write_files_to_workspace` Shape B (main path) omits `'files_generated'`. Fix computes `total_attempted = total_written + total_failed` from existing Shape B fields. Added `test_all_files_failed_does_not_raise_key_error` + source-level guard `test_partial_failure_path_uses_safe_getters`. 3/3 in `test_base_agent_workspace_write_visibility.py` green. **Behavioral verify window: next scheduled fire 2026-06-25 13:30 UTC.** Closes Session 1230 F1. |
 | **#2587** | `docs(session-1231): close handoff + Session 1232 start-here` (first revision — before P4 + full 83-agent smoke landed). The same handoff and start-here doc were updated in-place by the second close pass after #2588. |
 | **#2588** | `fix(session-1231): BookmakerAgent constructor accepts user= kwarg + full-AGENT_MAP smoke harness (P4)`. `bookmaker_agent.py:259` — `__init__(self)` → `__init__(self, user=None, **kwargs)`. BookmakerAgent uses `LearningMixin` only (no `BaseAgent` inheritance), so its constructor accepted zero kwargs and crashed on every router dispatch. 4 new tests in `test_bookmaker_agent_constructor.py` (4/4 green). Also bundles `scripts/smoke_all_agents.py` — the one-shot full-AGENT_MAP coverage harness that surfaced the bug. 15-min wall-clock cap; tabulates per-agent status/runtime/error/has_deliverable. |
+| **#2589** | `docs(session-1231): handoff + start-here update with PR #2588 + full 83-agent smoke results`. Second close-doc pass after #2588 landed. |
+| **#2590** | `fix(session-1231): WorkflowOrchestrationAgent AGENT_MAP fallback for snake_case step names (F4)`. `workflow_orchestration_agent.py:1278+` — replaced catch-all `else` in `_execute_step()` with AGENT_MAP fallback that converts snake_case → PascalCase and dispatches via `AgentRouter.route()`. Unblocks 3 named-AGENT_MAP step names referenced in built-in templates. 6 new tests + source-level guard for internal-handler precedence. 6/6 green. **Post-fix verification (`d9b71e4a`):** ran 148s through steps 1-3 of `business_research` template successfully (vs pre-fix 4s abort at step 1). Aborted at step 4 with the new explicit error format — surfaces F7 (`strategic_synthesis` references non-existent `StrategicSynthesis` agent). Required local celery restart to load new code (per memory rule `feedback_new_shared_task_needs_worker_restart`). |
 
 **Full-AGENT_MAP fleet smoke results (`smoke_id=9321b9a13397`):**
 - 67 PASS (52 initial + 4 first repoll + 6 second repoll + 5 `mode=receipt_only` re-dispatch)
 - 5 FAIL — R1 cascade (odds API credits, Chris-side)
 - 1 FAIL — BookmakerAgent (FIXED by #2588)
-- 1 FAIL — WorkflowOrchestrationAgent (NEW: `"Unknown agent in workflow: research_agent"` case-sensitivity bug; followup F4)
+- 1 FAIL — WorkflowOrchestrationAgent (FIXED by #2590; case-sensitivity closed; post-fix verification dispatch ran 148s through steps 1-3 successfully before hitting F7 `strategic_synthesis` missing agent at step 4)
 - 8 FAIL — legit shape rejections (CodeReview/DecisionEnforcer/Distribution/Editor/OpportunityPipeline/TalkingCharacter/TechnicalDocument/VoiceCritic — agents correctly refused smoke tasks shaped inappropriately for them)
 - 1 BY-DESIGN — CodeGeneratorAgent (disabled on Railway since Session 1031 via `AgentControlEntry`)
-- **Net production-healthy: 67 of 68 verifiable = 98.5% post-#2588.** Only remaining true broken: WorkflowOrchestrationAgent case-sensitivity.
+- **Net production-healthy: 67 of 68 verifiable = 98.5% post-#2588 → 68 of 68 = 100% dispatch-contract post-#2590.** (WorkflowOrchestrationAgent's templates still abort at step 4 due to F7 `strategic_synthesis` missing agent, but that's a workflow-template issue not an agent issue.)
 
 **Smoke-harness mode inconsistency surfaced as bonus finding:** 5 media agents silently dropped when dispatched with `mode='fleet_smoke'` because `core/tasks_agents.py:2180-2183` only bypasses the media-spend guard for `mode='receipt_only'`. Adding `fleet_smoke` to the bypass condition is followup F5.
 
@@ -175,15 +177,16 @@ These are time-bound; clear first on session open.
   ```
 - **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover. Verify `PeriodicTask.last_run_at` reflects 06-26 12:00 UTC + new deliverable created with `status='ready'` or `'preview'` (no auto-publish). After 06-26 + 07-03 both pass, flip kwargs to `{'dry_run': False}`.
 
-#### Priority 2 — WorkflowOrchestrationAgent case-sensitivity (NEW — Session 1231 F4, MEDIUM)
+#### Priority 2 — `strategic_synthesis` workflow step references a non-existent agent (NEW — Session 1231 F7, MEDIUM)
 
-Surfaced by the full 83-agent fleet smoke (`smoke_id=9321b9a13397`). `WorkflowOrchestrationAgent` dispatches workflow steps and looks up child agents by snake_case names (e.g., `'research_agent'`), but `AGENT_MAP` keys are PascalCase (`'ResearchAgent'`). Every workflow step using snake_case agent names silently fails with `"Step '<name>' failed: Unknown agent in workflow: <snake_name>"`. Currently the only true production-broken agent post-#2588.
+Surfaced when PR #2590 closed F4. The F4 fix unblocked workflow steps 1-3 in `business_research` / `startup_validation` templates (3 named-AGENT_MAP cases dispatch correctly), but step 4 (`synthesize_findings` → `strategic_synthesis`) fails because no `StrategicSynthesis` class exists in `AGENT_MAP`. The new error format from #2590 names this explicitly: `"strategic_synthesis (no internal handler + 'StrategicSynthesis' not in AGENT_MAP)"`.
 
-Two fix options:
-- **(a) Normalize at lookup**: add PascalCase ↔ snake_case translation in `WorkflowOrchestrationAgent`'s child-agent lookup. Backward-compatible.
-- **(b) Update the workflow lookup table** to use PascalCase keys matching `AGENT_MAP`. Cleaner; one-time migration.
+Three options:
+- **(a) Add a `StrategicSynthesis` agent** that synthesizes prior workflow step outputs into actionable insights (matches the template's intent — `"Synthesize all research into actionable insights"`).
+- **(b) Rename the step** in the workflow templates to use an existing agent (`COOAgent`? `CTOAgent`? `ResearchAgent` with a synthesis task?).
+- **(c) Drop the step entirely** from templates that include it (`business_research`, `startup_validation`).
 
-Reproducer: run `.venv/bin/python scripts/smoke_all_agents.py` and look for `WorkflowOrchestrationAgent` in the FAILED bucket.
+Affected templates: `business_research` step 4, `startup_validation` step 5. Reproducer: dispatch `WorkflowOrchestrationAgent` with `mode='receipt_only'`; default workflow is `business_research`; it'll run through steps 1-3 (taking ~2min) then abort at step 4 with the explicit error.
 
 #### Priority 3 — Smoke-harness mode inconsistency (NEW — Session 1231 F5, LOW-MEDIUM)
 
