@@ -729,6 +729,50 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
         except Exception:
             return 'unknown'
 
+    def _find_recent_duplicate_deliverable(
+        self,
+        title: str,
+        window_minutes: int = 60,
+    ):
+        """Session 1234 D5 — return the most recent existing Deliverable
+        matching (agent_name=self.name, title, workspace_id=self._workspace_id)
+        within the last ``window_minutes``, or None.
+
+        Used to detect operator/PA dispatch storms — when the same
+        research query is fired multiple times in quick succession, we
+        skip subsequent saves and log the prior id loudly so the storm
+        is visible in telemetry without cluttering the workspace.
+
+        Fail-open: any unexpected exception returns None so the save
+        proceeds. We never want this guard to swallow a legitimate
+        deliverable.
+        """
+        try:
+            workspace_id = getattr(self, '_workspace_id', None)
+            if not workspace_id or not title:
+                return None
+            from datetime import timedelta
+            from django.utils import timezone
+            from core.models_deliverables import Deliverable
+            cutoff = timezone.now() - timedelta(minutes=window_minutes)
+            return (
+                Deliverable.objects
+                .filter(
+                    agent_name=self.name,
+                    title=title,
+                    workspace_id=workspace_id,
+                    created_at__gte=cutoff,
+                )
+                .order_by('-created_at')
+                .first()
+            )
+        except Exception as e:
+            logger.warning(
+                "[RESEARCH_DUP_CHECK_ERROR] %s: %s — falling open, "
+                "save will proceed", type(e).__name__, e,
+            )
+            return None
+
     def execute(
         self,
         task: str,
@@ -1114,21 +1158,51 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                             if ml_analysis.get('topics_detected'):
                                 research_content += f"**Topics:** {', '.join(ml_analysis['topics_detected'])}\n"
 
-                        self._save_to_deliverable(
+                        # Session 1234 D5 — pre-save duplicate detection.
+                        # Surface from 2026-06-25 morning_brief investigation:
+                        # 8 identical `Research: Market trends and industry
+                        # landscape` deliverables in workspace cf708a2e-… in
+                        # 4.5 hours (00:58 → 05:23). All were independent
+                        # root dispatches (parent_execution_id=None) — not
+                        # workflow-tree retries but operator/PA iteration
+                        # storms. Without dedupe the workspace turns into a
+                        # junk drawer of near-identical titles. Per spec
+                        # discussion at the close of the investigation:
+                        # fail-loud first — skip the duplicate save and log
+                        # the prior id so the operator can see the storm
+                        # AND so the workspace stays clean.
+                        prior = self._find_recent_duplicate_deliverable(
                             title=semantic_title,
-                            content=research_content,
-                            deliverable_type='research',
-                            category='Research',
-                            tags=['research'] + ml_analysis.get('topics_detected', [])[:3],
-                            content_format='markdown',
-                            metadata={
-                                'query': task,
-                                'sources_count': len(all_results),
-                                'sources_used': sources_used,
-                                'sentiment': ml_analysis.get('sentiment', 'unknown'),
-                                'ml_used': ml_analysis.get('ml_used', False),
-                            },
+                            window_minutes=60,
                         )
+                        if prior is not None:
+                            logger.warning(
+                                "[RESEARCH_DUP_SKIPPED] title=%r "
+                                "workspace_id=%s prior_deliverable_id=%s "
+                                "prior_created_at=%s task=%r — skipping "
+                                "save to avoid duplicate storm",
+                                semantic_title,
+                                getattr(self, '_workspace_id', None),
+                                prior.id,
+                                prior.created_at.isoformat(),
+                                (task or '')[:120],
+                            )
+                        else:
+                            self._save_to_deliverable(
+                                title=semantic_title,
+                                content=research_content,
+                                deliverable_type='research',
+                                category='Research',
+                                tags=['research'] + ml_analysis.get('topics_detected', [])[:3],
+                                content_format='markdown',
+                                metadata={
+                                    'query': task,
+                                    'sources_count': len(all_results),
+                                    'sources_used': sources_used,
+                                    'sentiment': ml_analysis.get('sentiment', 'unknown'),
+                                    'ml_used': ml_analysis.get('ml_used', False),
+                                },
+                            )
 
                         return result
                     else:
