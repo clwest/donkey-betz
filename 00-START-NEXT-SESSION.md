@@ -214,6 +214,7 @@ If verification clean → Sub-step E starts. Chris reads daily, captures qualita
 
 PA tools audit closed Session 1239. Still untouched:
 
+- **Rigby's memory store cap** (NEW Session 1239 close discovery — defer to own session, NOT S1240) — Rigby flagged at S1239 close that her memory store is "over capacity" and she's self-pruning low-signal "shipped/deploy" memories to make room. Worth a focused session (S1241+) to surface: cap size, current memory count, eviction policy, whether the pruning rule is intentional or stop-gap. Not blocking morning_brief or Sub-step E — she's working around it.
 - **80 spiders** — last full audit Session 1205 Capability Audit Layer 3. Likely fresh drift since `run-spider-network` re-enabled.
 - **30 advisors** — last audit Session 1208 (`docs/ADVISOR_AUDIT.md`).
 - **9 body systems** — `BodyCoordinator` autonomic reflex layer, last touched Sub-step D.
