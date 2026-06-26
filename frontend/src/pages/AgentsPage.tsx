@@ -2545,7 +2545,7 @@ export default function AgentsPage() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-white">{tool.display_name}</h4>
-                        <span className="text-xs text-gray-500 capitalize">{tool.tool_type.replace('_', ' ')}</span>
+                        <span className="text-xs text-gray-500 capitalize">{tool.tool_type?.replace('_', ' ') ?? 'unknown'}</span>
                       </div>
                     </div>
                     <div className={cn(
@@ -2563,7 +2563,7 @@ export default function AgentsPage() {
 
                   <div className="grid grid-cols-3 gap-2 text-center border-t border-dark-border pt-3">
                     <div>
-                      <p className="text-lg font-semibold text-white">{tool.usage_count.toLocaleString()}</p>
+                      <p className="text-lg font-semibold text-white">{(tool.usage_count ?? 0).toLocaleString()}</p>
                       <p className="text-xs text-gray-500">Uses</p>
                     </div>
                     <div>
@@ -4552,7 +4552,7 @@ export default function AgentsPage() {
                       {selectedTool.is_active ? 'Active' : 'Inactive'}
                     </div>
                   </div>
-                  <p className="text-gray-400 capitalize">{selectedTool.tool_type.replace('_', ' ')} · v{selectedTool.tool_version}</p>
+                  <p className="text-gray-400 capitalize">{selectedTool.tool_type?.replace('_', ' ') ?? 'unknown'} · v{selectedTool.tool_version ?? '—'}</p>
                 </div>
               </div>
               <button
