@@ -63,11 +63,15 @@ LOCAL_DENY_TASKS = frozenset({
     'warm-up-spiders',                     # spider warmup pings externals
     'backfill-spider-embeddings',          # OpenAI embedding spend
     'generate-operator-edge-newsletter',   # LLM newsletter generation
-    # Session 1233 Sub-step C — 5+ LLM calls per fire (lane synthesis +
-    # decision card + strategic synthesis). Production-only on Railway
-    # where chris reads it. Local dispatches stay manual via mgmt
-    # command or PA tool.
-    'generate-morning-brief-daily',
+    # NOTE: Session 1239 — `generate-morning-brief-daily` REMOVED from
+    # LOCAL_DENY_TASKS. Sub-step D (Sessions 1235-1238) shipped the
+    # content-quality polish PRs (Lane 1 self-check, Lane 3 no-signal
+    # fallback, Lane 4 odds-missing fallback, MUSCULAR plain-English,
+    # workspace_resolver, Decision Card validator). Chris now reads
+    # the brief locally each morning to dogfood the Sub-step E loop
+    # (Mon-Fri qualitative verdicts → tightening PRs). LLM cost is
+    # a known + accepted trade for tight iteration on a daily product.
+    # If cost ever becomes a concern, deny here again.
 })
 
 # NOTE: Session 1205 (Capability Audit Layer 3 finding, deliverable `6a200985-…`)

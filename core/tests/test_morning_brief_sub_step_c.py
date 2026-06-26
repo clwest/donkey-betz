@@ -537,13 +537,19 @@ class MorningBriefBeatScheduleRegistrationTests(TestCase):
         self.assertEqual(sched.hour, {7})
         self.assertEqual(sched.minute, {0})
 
-    def test_generate_morning_brief_daily_in_local_deny_tasks(self):
-        """Per Session 1233 Sub-step C: production-only on Railway.
-        Local cost (5+ LLM calls per fire) is not warranted."""
+    def test_generate_morning_brief_daily_not_in_local_deny_tasks(self):
+        """Session 1239 flip: `generate-morning-brief-daily` is INTENTIONALLY
+        kept out of LOCAL_DENY_TASKS so it fires daily on local for Chris's
+        Sub-step E dogfood loop (Mon-Fri qualitative verdicts → tightening
+        PRs). Pre-1239 the task was deny-listed because the brief was
+        produced from a 5+ LLM-call pipeline and chris only read it on prod.
+        After Sub-step D shipped (Sessions 1235-1238), the local fire is the
+        cheapest + tightest iteration loop for content-quality tuning. If
+        cost ever becomes a concern, deny it again."""
         from core.management.commands.add_critical_celery_tasks import (
             LOCAL_DENY_TASKS,
         )
-        self.assertIn('generate-morning-brief-daily', LOCAL_DENY_TASKS)
+        self.assertNotIn('generate-morning-brief-daily', LOCAL_DENY_TASKS)
 
 
 class MorningBriefLaneWorkspaceThreadTests(TestCase):
