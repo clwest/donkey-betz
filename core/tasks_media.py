@@ -646,7 +646,10 @@ def _impl_ingest_video_task(self, document_id, tmp_video_path, original_filename
 
         document.raw_content = full_text[:100000]
         document.processed_content = processed_content[:100000]
+        # Session 1235 P5#1: merge instead of overwrite to preserve
+        # rich keys (e.g. scope='docs_index') written by other writers.
         document.extracted_metadata = {
+            **(document.extracted_metadata or {}),
             'segments': raw_segments,
             'segment_count': len(raw_segments),
             'duration_seconds': round(duration_seconds, 1),
@@ -833,7 +836,10 @@ def _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language
         document.raw_content = full_text[:100000]
         document.processed_content = processed_content[:100000]
         document.source_url = youtube_url
+        # Session 1235 P5#1: merge instead of overwrite to preserve
+        # rich keys (e.g. scope='docs_index') written by other writers.
         document.extracted_metadata = {
+            **(document.extracted_metadata or {}),
             'segments': raw_segments,
             'segment_count': len(raw_segments),
             'duration_seconds': round(duration_seconds, 1),

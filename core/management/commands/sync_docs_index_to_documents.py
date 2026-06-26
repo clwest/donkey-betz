@@ -282,6 +282,26 @@ class Command(BaseCommand):
                     existing.document_class = enrich['document_class']
                     existing.is_pinned = enrich['is_pinned']
                     existing.retrieval_boost = enrich['retrieval_boost']
+                    # Session 1235 P5#1: refresh extracted_metadata too.
+                    # Mirrors the create-path's metadata block (line ~297)
+                    # but merges into existing instead of overwriting so
+                    # processor-added keys (encoding, file_size) survive.
+                    # Self-heals any prior clobber from the upload /process
+                    # endpoint or async process_document_async task.
+                    refreshed_meta = {
+                        'docs_index_type': doc_data.get('type'),
+                        'docs_index_status': doc_data.get('status'),
+                        'subsystems': doc_data.get('subsystems', []),
+                        'folder': doc_data.get('folder', ''),
+                        'inbound_links_count': doc_data.get('inbound_links_count', 0),
+                        'outbound_links': doc_data.get('outbound_links', []),
+                        'has_frontmatter': doc_data.get('has_frontmatter', False),
+                        'scope': 'docs_index',
+                    }
+                    existing.extracted_metadata = {
+                        **(existing.extracted_metadata or {}),
+                        **refreshed_meta,
+                    }
                     existing.updated_at = timezone.now()
                     existing.save()
                 return 'updated'

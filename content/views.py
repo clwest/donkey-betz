@@ -316,7 +316,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 if result.success:
                     document.raw_content = result.raw_content
                     document.processed_content = result.processed_content
-                    document.extracted_metadata = result.metadata
+                    # Session 1235 P5#1: merge instead of overwrite to
+                    # preserve rich keys written by other writers (e.g.
+                    # scope='docs_index' set by sync_docs_index_to_documents).
+                    # Without the merge, scoped_retrieval loses is_curated.
+                    document.extracted_metadata = {
+                        **(document.extracted_metadata or {}),
+                        **(result.metadata or {}),
+                    }
                     document.language = result.language
                     document.word_count = result.word_count
                     document.key_phrases = result.key_phrases
