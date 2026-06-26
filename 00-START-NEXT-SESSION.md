@@ -265,14 +265,30 @@ The only currently-active `verify_doc_claims --only-drift` hit. Doc says 167 ser
 
 #### Priority 5 — Docs-corpus arc follow-ups (NEW from Session 1234 D9-D16)
 
-Optional follow-ups surfaced during the D9-D16 arc:
+All four items closed during Session 1235 (2026-06-25):
 
-- **Narrow `search_embeddings` broad `except Exception`** — D16 found that the broad except hid the actual TypeError as "no results" for hours. Per `feedback_fail_loud_first_then_root_cause_then_telemetry` 3-PR arc pattern: replace with specific `DjangoDBError` / `EmbeddingServiceError` so future logic bugs raise instead of silently returning `[]`.
-- **Fix or retire `search_personal_memories`** — same dead `unified_embeddings` table reference as D12. Either point at a real personal-memories model or remove the dead path.
-- **Fix the `TextProcessor extracted_metadata` clobber root cause** — D9 sidesteps by using dedicated Document fields, but TextProcessor overwriting `extracted_metadata` with generic file metadata is still happening. Affects only `extracted_metadata` reads.
-- **Build `core.tasks.refresh_docs_corpus` beat task** — daily hash-delta check on `docs/_index.json` → re-run steps 2-4 of the cascade automatically. Eliminates the 12-day-stale failure mode that started this whole arc.
+- **~~Narrow `search_embeddings` broad `except Exception`~~** — closed by Session 1234 D17-D21 arc (PRs #2627-#2631), narrow-except sweep across 5 files + 4-way invariant lock.
+- **~~Fix or retire `search_personal_memories`~~** — **closed by D21 PR #2631** (full rewrite, pivot to `UserEmbedding` ORM, 16 tests). Session 1235 verification surfaced a broader finding: **29 files still reference the dead `unified_embeddings`/`ai_unified_platform` legacy surface** (4 are LIVE-WIRED: `core/views_knowledge.py`, `core/conversation_memory.py`, `core/views.py` embedding-stats block, `dashboard/views.py`). Queued as Session 1236 audit arc (see below).
+- **~~Fix the TextProcessor extracted_metadata clobber root cause~~** — closed by Session 1235 PR #2635 (merge-not-overwrite at 4 sites + sync update self-heal path + migration 0047 backfilled 3 LOCAL victims, 2729→2732 scope-keyed).
+- **~~Build `core.tasks.refresh_docs_corpus` beat task~~** — closed by Session 1235 PR #2634 (4:00 AM Denver, hash-delta + unembedded-secondary trigger, NOT in LOCAL_DENY, 9 tests). First scheduled fire: 2026-06-26 10:00 UTC MDT.
 
-Each item is small + independent. Ship as separate PRs if time permits.
+#### Priority 5.5 — Session 1236 audit arc carry-over (NEW from Session 1235 close)
+
+**Audit name:** *P5#3 drift sweep — eradicate `unified_embeddings`/`ai_unified_platform` legacy surfaces (29 files).*
+
+**Definition of done:** No dead DB/table references remain in production code paths. Remaining references must be in archived scripts/tests only, or deleted.
+
+**Tranche 1 (live-wired, must fix, ship as 4 separate PRs):**
+1. `core/views_knowledge.py` — wired in `core/urls.py` at `/api/v1/personal-knowledge/{upload,delete,stats}/`. Silent-empty failure today.
+2. `core/conversation_memory.py` — imported by `core/views.py:1094` + `core/views/main.py:925`. Chat-path risk.
+3. `core/views.py` embedding-stats block (lines ~1229-1340). API correctness.
+4. `dashboard/views.py` + `dashboard/at_a_glance.py` + `dashboard/real_time_monitor.py` embedding counts. UI correctness.
+
+For each PR: require ≥1 "real data" test proving it's not silently returning `[]` anymore.
+
+**Tranche 2 (mgmt cmds, scripts, tests, lower urgency):** `build_rag_corpus.py`, `clean_mythologies.py`, `scripts/{backfill_embeddings,upload_unified_docs}.py`, 3 verification scripts, 8 dead-pattern unit tests.
+
+**Rigby's Session 1236 action:** classify each of the 29 files into {live-wired / live-imported utility / dashboard-only / scripts-mgmt / tests}; produce inventory before Claude opens any PR.
 
 #### Priority 6+ — Pre-existing carryover tail
 

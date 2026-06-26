@@ -7,9 +7,9 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any
-import psycopg2
 from django.core.cache import cache
 from django.db.models import Count, Avg, Q
+from django.utils import timezone
 from content.models import ContentGeneration
 
 logger = logging.getLogger(__name__)
@@ -79,42 +79,35 @@ class RealTimeMonitor:
             
             stats['api_calls_per_hour'] = api_calls
             stats['avg_response_time_ms'] = round(avg_response_time)
-            
-            # 2. Embedding metrics from ai_unified_platform
-            conn = psycopg2.connect(
-                host='localhost',
-                database='ai_unified_platform',
-                user='ai_unified_user',
-                password='ai_unified_pass_2025'
-            )
-            cursor = conn.cursor()
-            
-            # Embeddings created today
-            cursor.execute("""
-                SELECT COUNT(*) FROM unified_embeddings 
-                WHERE created_at >= CURRENT_DATE
-            """)
-            today_embeddings = cursor.fetchone()[0]
-            
-            # Conversations saved today
-            cursor.execute("""
-                SELECT COUNT(*) FROM unified_embeddings 
-                WHERE content_type = 'conversation'
-                AND created_at >= CURRENT_DATE
-                AND metadata->>'learned' = 'true'
-            """)
-            today_conversations = cursor.fetchone()[0]
-            
-            # Total knowledge base size
-            cursor.execute("SELECT COUNT(*) FROM unified_embeddings WHERE embedding IS NOT NULL")
-            total_knowledge = cursor.fetchone()[0]
-            
-            conn.close()
-            
+
+            # Session 1235 P5#3 audit Tranche 1 PR #1: pivot from dead
+            # `ai_unified_platform`/`unified_embeddings` to live
+            # `DocumentEmbedding` ORM. Pre-pivot every fire raised
+            # psycopg2.OperationalError on connect and got swallowed by
+            # the broad except, so the real-time monitor reported zero
+            # embedding activity even when the system was actively
+            # generating chunks.
+            from content.models import DocumentEmbedding
+            # Use localdate() (TIME_ZONE-aware) so created_at__date matches
+            # Django's USE_TZ + TIME_ZONE=America/Denver semantics.
+            today = timezone.localdate()
+
+            today_embeddings = DocumentEmbedding.objects.filter(
+                created_at__date=today,
+            ).count()
+
+            # Conversations: pre-pivot read `content_type='conversation'
+            # AND metadata->>'learned'='true'` from the dead table. No
+            # equivalent on DocumentEmbedding — report 0 honestly until a
+            # real conversation-embedding surface lands (Session 1236+).
+            today_conversations = 0
+
+            total_knowledge = DocumentEmbedding.objects.count()
+
             stats['embeddings_today'] = today_embeddings
             stats['conversations_today'] = today_conversations
             stats['total_knowledge_base'] = total_knowledge
-            stats['learning_rate'] = today_conversations  # New learnings today
+            stats['learning_rate'] = today_conversations
             
             # 3. Calculate percentages for monitoring
             daily_target = 100  # Target conversations per day
