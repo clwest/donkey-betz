@@ -152,11 +152,15 @@ class TestLegacyToGatewayMapping(GatewaySmokeTestBase):
     """Verify REMOVED_TOOL_ALIASES map covers all expected removed tools."""
 
     def test_all_removed_tools_mapped(self):
+        # Session 1239 PR-1: dropped `web_search` from REMOVED_TOOL_ALIASES.
+        # `web_search` is intentionally kept as a standalone primitive (see
+        # `test_legacy_tools_not_registered` and `TestRemovedToolGuard`).
+        # The alias was vestigial and contradicted the test guard.
         expected_legacy = {
             'initiative_tool', 'content_review_tool', 'generate_blog_tool',
             'deliverables_tool', 'boardroom_tool', 'human_decisions_tool',
             'stock_intelligence_tool', 'sports_betting_tool', 'legislation_tool',
-            'rag_query_tool', 'spider_data_tool', 'web_search',
+            'rag_query_tool', 'spider_data_tool',
             'system_health_tool', 'error_summary_tool',
         }
         self.assertEqual(set(self.dispatcher.REMOVED_TOOL_ALIASES.keys()), expected_legacy)
@@ -295,3 +299,52 @@ class TestWebSearchHandlerLimitPassthrough(unittest.TestCase):
     def test_invalid_limit_falls_back_to_5(self):
         captured = self._invoke_handler({'query': 'x', 'limit': 'bogus'})
         self.assertEqual(captured['max_results'], 5)
+
+
+class TestIntelligenceToolSearchWebLimitPassthrough(unittest.TestCase):
+    """Session 1239 PR-1: `intelligence_tool action=search source=web` must
+    forward caller's `limit` to `_handle_web_search`. Previously the gateway
+    dispatcher dropped `limit` and only passed `{'query': query}`, silently
+    capping every web search at the handler default of 5.
+
+    Mocks at the WebSearchTool boundary; no DB needed.
+    """
+
+    def _invoke_intelligence_search(self, payload):
+        from unittest.mock import patch, MagicMock
+        from core.services.tool_dispatcher import ToolDispatcher
+
+        captured = {}
+        mock_tool = MagicMock()
+
+        def fake_execute(*, query, max_results, search_type):
+            captured['query'] = query
+            captured['max_results'] = max_results
+            return {'success': True, 'data': {'results': []}}
+
+        mock_tool.execute = fake_execute
+        with patch('core.tools.web_search.WebSearchTool', return_value=mock_tool):
+            ToolDispatcher()._handle_intelligence(
+                'intelligence_tool', payload, user_id=1, trace_id='test'
+            )
+        return captured
+
+    def test_limit_passthrough_for_source_web(self):
+        captured = self._invoke_intelligence_search(
+            {'action': 'search', 'source': 'web', 'query': 'x', 'limit': 8}
+        )
+        self.assertEqual(captured['max_results'], 8)
+
+    def test_default_limit_when_unspecified(self):
+        captured = self._invoke_intelligence_search(
+            {'action': 'search', 'source': 'web', 'query': 'x'}
+        )
+        # dispatcher default is 10 (intelligence_tool gateway), clamped by
+        # the handler ceiling at 10
+        self.assertEqual(captured['max_results'], 10)
+
+    def test_oversized_limit_clamped_to_10_via_gateway(self):
+        captured = self._invoke_intelligence_search(
+            {'action': 'search', 'source': 'web', 'query': 'x', 'limit': 50}
+        )
+        self.assertEqual(captured['max_results'], 10)
