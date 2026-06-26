@@ -1046,167 +1046,56 @@ def research_documents(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def personal_knowledge_list(request):
-    """Get user's personal knowledge base from unified embeddings"""
-    import psycopg2
-    import json
-    
-    # Get query parameters (support both per_page and page_size)
-    search = request.GET.get('search', '')
-    category = request.GET.get('category', '')
+    """List endpoint for a user's personal knowledge entries.
+
+    Session 1235 P5#3 audit Tranche 1 PR #3: removed dead psycopg2 reads
+    against non-existent `unified_embeddings` table. Returns an honest
+    empty list while the personal-knowledge feature awaits its real
+    backing model.
+
+    This is the LIVE version that core/urls.py imports via
+    `from core.views import personal_knowledge_list` (the `core.views`
+    package shadows the `core/views.py` module). The shadowed
+    `core/views.py:personal_knowledge_list` was identical dead code; both
+    are pivoted in this PR for consistency.
+
+    Coupled with the deferred write endpoints in `core/views_knowledge.py`
+    (`personal_knowledge_upload` / `_delete` / `_stats`) — all four
+    endpoints reference the same dead substrate and require the same
+    upstream decision: either pivot to a real model (likely
+    `UserEmbedding` with a new `personal_knowledge` content_type CHOICES
+    value + migration) OR delete the feature entirely if zero callers.
+
+    Pre-pivot behavior:
+      - psycopg2 connected to `unified_donkey_betz` (live DB)
+      - Queried non-existent `unified_embeddings` table
+      - Broad except returned 200 with empty knowledge + `error` key
+      - User saw empty results silently
+
+    Post-pivot behavior:
+      - No DB hit (no dead-substrate reference)
+      - 200 with empty knowledge, zero stats, no error key
+      - Same user experience, faster response, no error log noise
+
+    Pagination / search / category params accepted but no-op until the
+    feature lands on a real model.
+    """
     page = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('per_page', request.GET.get('page_size', 12)))
-    
-    try:
-        # Connect to ai_unified_platform database
-        conn = psycopg2.connect(
-            host=os.environ.get('DB_HOST', 'localhost'),
-            database=os.environ.get('DB_NAME', 'ai_unified_platform'),
-            user=os.environ.get('DB_USER', 'ai_unified_user'),
-            password=os.environ.get('DB_PASSWORD', '')
-        )
-        cursor = conn.cursor()
-        
-        # Build query with filters
-        where_clauses = ["1=1"]
-        params = []
-        
-        # Filter by user if authenticated (or show all if no user_id in metadata)
-        if request.user.is_authenticated:
-            where_clauses.append("(metadata->>'user_id' = %s OR metadata->>'user_id' IS NULL)")
-            params.append(str(request.user.id))
-        
-        # Search filter
-        if search:
-            where_clauses.append("(content_text ILIKE %s OR metadata->>'title' ILIKE %s)")
-            search_pattern = f'%{search}%'
-            params.extend([search_pattern, search_pattern])
-        
-        # Category filter
-        if category:
-            where_clauses.append("content_type = %s")
-            params.append(category)
-        
-        # Get total count
-        count_query = f"""
-            SELECT COUNT(*) FROM unified_embeddings 
-            WHERE {' AND '.join(where_clauses)}
-        """
-        cursor.execute(count_query, params)
-        total_count = cursor.fetchone()[0]
-        
-        # Get paginated results
-        offset = (page - 1) * page_size
-        query = f"""
-            SELECT 
-                source_id,
-                content_type,
-                content_text,
-                metadata,
-                importance_score,
-                created_at
-            FROM unified_embeddings
-            WHERE {' AND '.join(where_clauses)}
-            ORDER BY created_at DESC
-            LIMIT %s OFFSET %s
-        """
-        params.extend([page_size, offset])
-        cursor.execute(query, params)
-        
-        results = cursor.fetchall()
-        
-        # Format knowledge entries
-        knowledge = []
-        for row in results:
-            source_id, content_type, content_text, metadata, importance, created_at = row
-            
-            # Parse metadata
-            meta = json.loads(metadata) if isinstance(metadata, str) else metadata or {}
-            
-            # Decrypt content if needed
-            if content_text and content_text.startswith('gAAAAA'):
-                try:
-                    from core.encryption_service import get_encryption_service
-                    service = get_encryption_service()
-                    content_text = service.decrypt(content_text) or content_text
-                except Exception as _e:
-                    logger.warning(
-                        "main.personal_knowledge_list: swallowed (%s: %s) — degraded",
-                        type(_e).__name__, _e,
-                    )
-            
-            # Create knowledge entry with full content
-            knowledge.append({
-                'id': source_id,
-                'title': meta.get('title', content_text[:100] if content_text else 'Untitled'),
-                'description': meta.get('description', ''),
-                'content_preview': content_text[:500] if content_text else '',  # Increased preview
-                'full_content': content_text,  # Include full content for detail view
-                'content_type': content_type,
-                'file_type': meta.get('file_type', 'text'),
-                'category': content_type,
-                'tags': meta.get('tags', []),
-                'word_count': len(content_text.split()) if content_text else 0,
-                'use_in_generation': True,
-                'times_used': meta.get('times_used', 0),
-                'last_used': meta.get('last_used'),
-                'created_at': created_at.isoformat() if created_at else None
-            })
-        
-        # Get stats
-        stats_query = """
-            SELECT 
-                COUNT(*) as total_entries,
-                COUNT(DISTINCT content_type) as categories,
-                SUM(LENGTH(content_text)) as total_chars
-            FROM unified_embeddings
-            WHERE metadata->>'user_id' = %s OR %s = ''
-        """
-        cursor.execute(stats_query, [str(request.user.id) if request.user.is_authenticated else '', 
-                                     str(request.user.id) if request.user.is_authenticated else ''])
-        stats_row = cursor.fetchone()
-        
-        # Get categories
-        cat_query = """
-            SELECT DISTINCT content_type 
-            FROM unified_embeddings 
-            WHERE content_type IS NOT NULL
-        """
-        cursor.execute(cat_query)
-        categories = [row[0] for row in cursor.fetchall()]
-        
-        conn.close()
-        
-        # Calculate pagination
-        total_pages = (total_count + page_size - 1) // page_size
-        
-        return Response({
-            'knowledge': knowledge,
-            'stats': {
-                'total_entries': stats_row[0] if stats_row else 0,
-                'total_words': (stats_row[2] // 5) if stats_row and stats_row[2] else 0,  # Rough word estimate
-                'categories': categories,
-                'total_embeddings': total_count
-            },
-            'count': total_count,
-            'page': page,
-            'total_pages': total_pages,
-            'next': f'?page={page + 1}' if page < total_pages else None,
-            'previous': f'?page={page - 1}' if page > 1 else None
-        })
-        
-    except Exception as e:
-        logger.error(f"Error fetching personal knowledge: {e}")
-        return Response({
-            'knowledge': [],
-            'stats': {
-                'total_entries': 0,
-                'total_words': 0,
-                'categories': [],
-                'total_embeddings': 0
-            },
-            'count': 0,
-            'error': str(e)
-        })
+
+    return Response({
+        'knowledge': [],
+        'stats': {
+            'total_entries': 0,
+            'total_words': 0,
+            'categories': [],
+            'total_embeddings': 0,
+        },
+        'count': 0,
+        'page': page,
+        'total_pages': 0,
+        'next': None,
+        'previous': None,
+    })
 
 
 @api_view(['GET'])
