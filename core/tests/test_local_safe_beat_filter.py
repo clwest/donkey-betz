@@ -32,7 +32,7 @@ def _canonical():
     return {
         # Denied (prod-noise)
         'scan-income-spider-orchestrator': {'task': 't1', 'interval': 60},
-        'run-spider-network': {'task': 't2', 'interval': 60},
+        'backfill-spider-embeddings': {'task': 't2', 'interval': 60},
         'warm-up-spiders': {'task': 't3', 'interval': 60},
         # Allowed (housekeeping / monitor / cheap)
         'cleanup-stale-content': {'task': 't4', 'interval': 60},
@@ -84,14 +84,14 @@ class FilterLocalSafeTests(SimpleTestCase):
         self.assertIn('worker-memory-capture', filtered)
         # Denied tasks dropped
         self.assertNotIn('scan-income-spider-orchestrator', filtered)
-        self.assertNotIn('run-spider-network', filtered)
+        self.assertNotIn('backfill-spider-embeddings', filtered)
         self.assertNotIn('warm-up-spiders', filtered)
         # Skipped list is sorted
         self.assertEqual(
             skipped,
             sorted([
                 'scan-income-spider-orchestrator',
-                'run-spider-network',
+                'backfill-spider-embeddings',
                 'warm-up-spiders',
             ]),
         )
@@ -107,22 +107,22 @@ class FilterLocalSafeTests(SimpleTestCase):
         # Override re-enables the named task
         self.assertIn('scan-income-spider-orchestrator', filtered)
         # Other denied tasks still skipped
-        self.assertNotIn('run-spider-network', filtered)
+        self.assertNotIn('backfill-spider-embeddings', filtered)
         self.assertNotIn('warm-up-spiders', filtered)
         # Skipped list reflects only the un-overridden denies
-        self.assertEqual(skipped, ['run-spider-network', 'warm-up-spiders'])
+        self.assertEqual(skipped, ['backfill-spider-embeddings', 'warm-up-spiders'])
 
     def test_local_with_csv_override_multiple_tasks(self):
         with mock.patch.dict(
             os.environ,
-            {'ENABLE_BEAT_TASKS': 'scan-income-spider-orchestrator, run-spider-network ,  '},
+            {'ENABLE_BEAT_TASKS': 'scan-income-spider-orchestrator, backfill-spider-embeddings ,  '},
             clear=False,
         ):
             os.environ.pop('RAILWAY_ENVIRONMENT', None)
             filtered, skipped = _filter_local_safe(_canonical())
         # Whitespace + trailing empty values handled
         self.assertIn('scan-income-spider-orchestrator', filtered)
-        self.assertIn('run-spider-network', filtered)
+        self.assertIn('backfill-spider-embeddings', filtered)
         self.assertNotIn('warm-up-spiders', filtered)
         self.assertEqual(skipped, ['warm-up-spiders'])
 
@@ -141,13 +141,26 @@ class FilterLocalSafeTests(SimpleTestCase):
         self.assertEqual(skipped, [])
 
     def test_deny_list_has_expected_v1_entries(self):
-        """Lock in the v1 denylist so additions/removals require an
-        explicit code change + a touch to this test (and ideally a
-        Rigby sign-off)."""
+        """Lock in the denylist so additions/removals require an explicit
+        code change + a touch to this test (and ideally a Rigby sign-off).
+
+        History:
+        - Session 1205 removed ``run-spider-network`` so the 80-spider
+          producer fires on local + feeds consumers (was starving them
+          with stale Jun 20 data).
+        - Session 1233 added ``generate-morning-brief-daily`` because
+          Sub-step C shipped a 5+ LLM-call brief originally prod-only.
+        - Session 1239 removed ``generate-morning-brief-daily`` after
+          Sub-step D's content-quality polish landed (#2636-#2659);
+          chris now dogfoods the brief locally Mon-Fri to feed
+          Sub-step E qualitative-verdict → tightening-PR loop.
+
+        Pre-Session-1239 this test was stale (still asserting on the
+        Session 1205 state) — sweep brought it back in sync.
+        """
         expected = {
             'scan-income-spider-orchestrator',
             'scan-spider-opportunities',
-            'run-spider-network',
             'warm-up-spiders',
             'backfill-spider-embeddings',
             'generate-operator-edge-newsletter',
