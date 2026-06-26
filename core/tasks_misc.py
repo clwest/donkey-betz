@@ -1675,7 +1675,12 @@ def _impl_process_document_async(self, document_id: int, generate_embeddings: bo
             document.language = result.language
             document.key_phrases = result.key_phrases
             document.entities = result.entities
-            document.extracted_metadata = result.metadata
+            # Session 1235 P5#1: merge instead of overwrite to preserve
+            # rich keys (e.g. scope='docs_index') written by other writers.
+            document.extracted_metadata = {
+                **(document.extracted_metadata or {}),
+                **(result.metadata or {}),
+            }
             document.status = ContentStatus.PROCESSED
             document.add_processing_log('document_processing', 'success', {'word_count': result.word_count})
             document.save()
