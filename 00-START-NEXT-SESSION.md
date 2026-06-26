@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. Current pinned conversation: `pa-0f08fc48ec914917` (Rigby started fresh mid-Session 1234 at Chris's direction; replaced `pa-91cf6bbce1d6406e` after the morning_brief first-fire investigation kicked off; titled informally "Session 1234 — fixes validation + Session 1231 E2E sweep"). Health check at Session 1234 close: **score 100/100, recommendation continue, no rotation** — carries forward into Session 1235. Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. **Current pinned conversation: `pa-634b8fef344d4af2`** (Rigby created fresh at Session 1240 close per her own `suggest_fresh` recommendation; titled "Session 1241 — AgentsPage reality reconnect (UI-only focus)"). Seeded with the 5-surface AgentsPage punch list + S1240 close summary via `carry_forward_summary`. Health at S1240 close: pa-a2443db2e43a42dc was at 60/suggest_fresh after a 21-turn session covering frontend rot audit + 2 crash fixes + AgentsPage reality map. Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -131,7 +131,107 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1240 — CURRENT ENTRY POINT
+## SESSION 1241 — CURRENT ENTRY POINT
+
+### SESSION 1240 CLOSED — Frontend rot audit (3 PRs) + AgentsPage crash fixes (2 PRs) + reality map, 5 PRs total
+
+Full handoff: [`SESSION_1240_FRONTEND_ROT_AUDIT_PLUS_AGENTSPAGE_REALITY_MAP.md`](docs/handoffs/SESSION_1240_FRONTEND_ROT_AUDIT_PLUS_AGENTSPAGE_REALITY_MAP.md).
+
+Session 1240 was a frontend rot audit + live crash response + AgentsPage data-wiring map. Three rot-cleanup PRs deleted **6,891 lines of provably-dead React** (Session 1067 + 1035 consolidation leftovers, same shape as Session 1237 P2.b core/views.py shadow-delete). Two crash-defense PRs hardened AgentsPage Tools + Templates tab + 2 detail modals against undefined-field assumptions (`.replace`, `.toLocaleString`). New memory: **daphne caches `index.html` content across `npm run build` cycles even with DEBUG=True** — symptom is server returning hashes that don't match any file on disk. Fix: daphne restart.
+
+**Session 1240 PRs (all admin-merged):**
+
+| PR | Subject | Net |
+|---|---|---|
+| [#2666](https://github.com/clwest/donkey-betz-platform/pull/2666) PR-A | DashboardPage.tsx orphan delete | -1,007 |
+| [#2667](https://github.com/clwest/donkey-betz-platform/pull/2667) PR-B | BoardroomPage + GovernancePage dead imports | -2,441 |
+| [#2668](https://github.com/clwest/donkey-betz-platform/pull/2668) PR-C | PlatformPage + 3 transitive dead tabs + types.ts cleanup | -3,443 |
+| [#2669](https://github.com/clwest/donkey-betz-platform/pull/2669) | AgentsPage Tools tab defensive crash guards | +6/-6 |
+| [#2670](https://github.com/clwest/donkey-betz-platform/pull/2670) | AgentsPage Templates tab + tool modal toLocaleString defenses | +2/-2 |
+
+Cumulative typecheck delta: **242 → 227 errors (-15 retired, 0 new)**.
+
+**Active conversation:** `pa-634b8fef344d4af2` — created fresh at S1240 close per Rigby's `suggest_fresh` recommendation (predecessor `pa-a2443db2e43a42dc` hit 60/21-turns over the 21h session). Titled "Session 1241 — AgentsPage reality reconnect (UI-only focus)". **Seeded with the 5-surface punch list + close summary via `carry_forward_summary` — opens directly on the work.**
+
+**Worker state:** No backend code touched. No `@shared_task`. No PeriodicTask changes. No celery restart needed.
+
+**Chris-side carryover into Session 1241:**
+- Anthropic credit refill at https://console.anthropic.com/billing
+- CI billing still failing — all 5 Session 1240 PRs admin-merged via `--admin`
+
+### FIRST THING Session 1241 (this fresh console)
+
+#### Priority 0 — Conversation health check + service context
+
+`pa-634b8fef344d4af2` is fresh (~0 turns). Quick `platform_config_tool action=overview` to confirm `service_context: local` before any UI work.
+
+#### Priority 1 — 06-27 cumulative morning_brief verification (TIME-BOUND 07:00 MDT)
+
+**Still the highest-priority cumulative window** (Sub-step D PRs cumulatively live for first time). When the brief fires at 07:00 MDT Saturday 06-27, run the verification block from the SESSION 1240 entry of this doc (preserved below at the previous-session-block) — Decision Cards, Lane 1 self-check, Lane 4 fallback, Lane 3 coverage map, MUSCULAR humanization, MB workspace landing. If verification clean → Sub-step E unlocks.
+
+#### Priority 2 — UI-only focus: AgentsPage reality reconnect (S1240 carryover)
+
+5-surface punch list from S1240's reality-map audit. Chris's framing: **"all 4 of these things are features that we had built but I don't know what we are missing to achieve it"** — treat as wiring archaeology, not feature/delete decisions.
+
+Recommended attack order (Chris-discretion):
+
+**A. DECISIONS repoint (QUICK WIN, ~1 PR):**
+- `DecisionRecord` table has 0 rows + **0 writers anywhere** in codebase. UI reads from it → perpetually empty list.
+- `auto_promote_low_risk_decisions` beat task (runs every 2h, success) operates on **governance/Boardroom decision objects**, NOT `DecisionRecord`.
+- Find the model the boardroom flow uses, repoint AgentsPage Decisions sidebar at it.
+
+**B. DIRECTORY sync (MEDIUM, visibility bug):**
+- AgentsPage shows **23 of 89 agents** (60+ invisible).
+- AGENT_MAP is the code registry; AgentsPage reads `UnifiedAgentTemplate` DB rows.
+- Find the upsert command that materializes AGENT_MAP → DB rows (likely a `manage.py` command); either run it locally or fix what's gating it (prod-only flag / filter).
+
+**C. DREAMS trigger (MEDIUM):**
+- 3 beat tasks running (cleanup-stale-dreams, dream-daily-surfacing, maintain-dream-backlog) are **maintenance not generators**. Dream creation gated on **upstream initiative triggers** in `tasks_initiatives.py:907`.
+- Fire one initiative cycle to populate, OR find why initiatives aren't firing locally.
+
+**D. CHANNELS publisher hook (REAL ARC — DESIGN SESSION FIRST):**
+- Chris: "don't delete this — inter-agent collaboration vision still on roadmap."
+- Rigby's design read: should be an **event-stream projection** — AgentExecution started/completed/failed + deliverable created + initiative status change → routed into channels by family/desk/workspace.
+- Missing: publisher hook layer listening to runtime events. All 5 existing writers are user-CRUD entry points.
+- Multi-PR. Defer past S1241 single arc.
+
+**E. LEARNING instrumentation (REAL ARC — DESIGN SESSION FIRST):**
+- `LearningInsight` writers exist in feedback_processing but no rows locally — likely signal not firing or filter blocking.
+- `AgentLearningSession` + `AgentCollaboration` have **0 writers anywhere** — pure scaffolds.
+- Rigby's design read: `AgentLearningSession` = durable "learning episode" (what failed, what changed, outcome); `AgentCollaboration` = cross-agent edges (review/edit/use).
+- Multi-PR. Defer past S1241 single arc.
+
+**Recommended S1241 ship target:** A (Decisions repoint) is the cleanest "validates the playbook in one PR" win. B (Directory sync) is the highest user-visible impact. C if time + initiative-trigger investigation cooperates.
+
+#### Priority 3 — Pre-existing carryover tail (unchanged)
+
+- Rigby's memory store cap (S1239 close) — deferred to its own session (S1242+)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM) — one-line fix
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2, MEDIUM)
+- Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents` (Session 1231 F6, LOW)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Meeting-context leak shape watch (Session 1230 F2, LOW)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+
+#### Priority N — CI billing fix (Chris-side, outstanding since Session 1223)
+
+#### Priority N+1 — Anthropic A/B (gated on credit refill)
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1240 totaled ~78 PRs. S1241 UI-only focus is the natural arc unless Sub-step E dogfood surfaces new polish items.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+
+---
 
 ### SESSION 1239 CLOSED — PA tools audit clean + morning_brief local dogfood, 2 PRs
 
