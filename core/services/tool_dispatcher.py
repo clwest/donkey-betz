@@ -218,7 +218,6 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         'legislation_tool': ('intelligence_tool', 'legislation_search'),
         'rag_query_tool': ('intelligence_tool', 'search'),
         'spider_data_tool': ('intelligence_tool', 'search'),
-        'web_search': ('intelligence_tool', 'search'),
         # ops_tool absorbs system health tools
         'system_health_tool': ('ops_tool', 'slo_status'),
         'error_summary_tool': ('ops_tool', 'failure_signatures'),
