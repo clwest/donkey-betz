@@ -1214,55 +1214,6 @@ def research_documents(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def personal_knowledge_list(request):
-    """List endpoint for a user's personal knowledge entries.
-
-    Session 1235 P5#3 audit Tranche 1 PR #3: removed dead psycopg2 reads
-    against non-existent `unified_embeddings` table. Returns an honest
-    empty list while the personal-knowledge feature awaits its real
-    backing model.
-
-    Coupled with the deferred write endpoints in `core/views_knowledge.py`
-    (`personal_knowledge_upload` / `_delete` / `_stats`) — all four
-    endpoints reference the same dead substrate and require the same
-    upstream decision: either pivot to a real model (likely
-    `UserEmbedding` with a new `personal_knowledge` content_type CHOICES
-    value + migration) OR delete the feature entirely if zero callers.
-
-    Pre-pivot behavior:
-      - psycopg2 connected to `unified_donkey_betz` (live DB)
-      - Queried non-existent `unified_embeddings` table
-      - Broad except returned 200 with empty knowledge + `error` key
-      - User saw empty results silently
-
-    Post-pivot behavior:
-      - No DB hit (no dead-substrate reference)
-      - 200 with empty knowledge, zero stats, no error key
-      - Same user experience, faster response, no error log noise
-
-    Pagination / search / category params accepted but no-op until the
-    feature lands on a real model.
-    """
-    page = int(request.GET.get('page', 1))
-
-    return Response({
-        'knowledge': [],
-        'stats': {
-            'total_entries': 0,
-            'total_words': 0,
-            'categories': [],
-            'total_embeddings': 0,
-        },
-        'count': 0,
-        'page': page,
-        'total_pages': 0,
-        'next': None,
-        'previous': None,
-    })
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def agents_discovery_stats(request):
     """Placeholder agents discovery stats endpoint"""
     return Response({
