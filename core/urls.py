@@ -1003,7 +1003,7 @@ from core.views import (
     agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
     feedback_analytics, feedback_history, feedback_submit, prompting_stats,
     assistant_context, research_books, research_documents, prompting_test,
-    personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history, llm_chat, platform_status
+    agents_discovery_stats, ebooks_list, voice_history, llm_chat, platform_status
 )
 from core.views_unified_intelligence import (
     unified_intelligence_dashboard, get_unified_intelligence_data,
@@ -1022,9 +1022,9 @@ from core.views_home import home_boot, intelligence_desks, trigger_desks, purge_
 from agents.views_instances import (
     list_instances, get_instance_status, delete_instance, delete_multiple_instances
 )
-from core.views_knowledge import (
-    personal_knowledge_upload, personal_knowledge_delete, personal_knowledge_stats
-)
+# Session 1235 P5#3 Tranche 1 PR #7: deleted core/views_knowledge.py (orphan feature,
+# no callers, redundant with 4 existing context-injection surfaces — see audit deliverable
+# feed2d81-ee2f-44c0-8f17-816591d2a3ff).
 # Import Intelligent Assistant with Agent Integration (Session 58: Replaced with GPT-5 version from views_image)
 # from core.views_assistant_intelligent import assistant_chat_intelligent as assistant_chat
 from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats
@@ -2544,12 +2544,10 @@ urlpatterns = [
     path('api/v1/research/books/', research_books, name='research-books'),
     path('api/v1/research/documents/', research_documents, name='research-documents'),
     
-    # Personal knowledge endpoints
-    path('api/v1/personal-knowledge/list/', personal_knowledge_list, name='personal-knowledge-list'),
-    path('api/v1/personal-knowledge/upload/', personal_knowledge_upload, name='personal-knowledge-upload'),
-    path('api/v1/personal-knowledge/<str:knowledge_id>/delete/', personal_knowledge_delete, name='personal-knowledge-delete'),
-    path('api/v1/personal-knowledge/stats/', personal_knowledge_stats, name='personal-knowledge-stats'),
-    
+    # Personal knowledge endpoints REMOVED Session 1235 P5#3 Tranche 1 PR #7
+    # (orphan feature, no callers, redundant — see audit deliverable
+    # feed2d81-ee2f-44c0-8f17-816591d2a3ff).
+
     # Enhanced Agent Execution (No Celery Required!)
     path('api/v1/agents/execute-sync/', views_agent_execution.execute_agent_sync, name='agent-execute-sync'),
     path('api/v1/agents/list-executable/', views_agent_execution.list_executable_agents, name='agent-list-executable'),

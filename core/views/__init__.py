@@ -32,7 +32,7 @@ from core.views.main import (
     assistant_chat,
     research_books,
     research_documents,
-    personal_knowledge_list,
+    # personal_knowledge_list deleted Session 1235 P5#3 Tranche 1 PR #7
     agents_discovery_stats,
     ebooks_list,
     voice_history,
@@ -85,7 +85,7 @@ __all__ = [
     'assistant_chat',
     'research_books',
     'research_documents',
-    'personal_knowledge_list',
+    # 'personal_knowledge_list' deleted Session 1235 P5#3 Tranche 1 PR #7
     'agents_discovery_stats',
     'ebooks_list',
     'voice_history',
