@@ -91,39 +91,46 @@ def search_personal_memories_api(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def personal_memory_stats(request):
-    """
-    Get stats about user's personal memories
+def personal_memory_stats(request, **kwargs):
+    """Get stats about user's personal memories.
+
+    Note: ``**kwargs`` absorbs the ``user_id`` passthrough that the
+    upstream `@require_personal_memory_access` decorator injects on
+    other views in this file. We read ``request.user`` directly so
+    the kwarg is redundant, but the signature must accept it to avoid
+    `TypeError: unexpected keyword argument`.
+
+    Session 1235 P5#3 audit Tranche 1 PR #4: pivoted from dead
+    `unified_embeddings` raw-SQL query to live `UserEmbedding` ORM
+    (same model D21 PR #2631 validated for the read-path
+    `search_personal_memories`). Pre-pivot the cursor.execute would
+    raise `relation "unified_embeddings" does not exist`, caught by
+    broad except → 500 with error string. Endpoint silently degraded.
     """
     user = request.user
-    
+
     try:
-        from django.db import connection
-        
-        # Count personal documents for this user
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT COUNT(*) 
-                FROM unified_embeddings 
-                WHERE metadata->>'namespace' = 'personal'
-                AND (metadata->>'owner_id' = %s OR metadata->>'owner_id' IS NULL)
-            """, [str(user.id)])
-            
-            personal_count = cursor.fetchone()[0]
-        
+        from django.apps import apps
+        UserEmbedding = apps.get_model('core', 'UserEmbedding')
+
+        personal_count = UserEmbedding.objects.filter(
+            user_id=user.id,
+            is_active=True,
+        ).count()
+
         log_memory_access(
             user_id=user.id,
             query="stats",
             results_count=personal_count,
             access_type='stats'
         )
-        
+
         return Response({
             'personal_memories_count': personal_count,
             'user_id': user.id,
             'timestamp': datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         logger.error(f"Personal memory stats error for user {user.id}: {str(e)}")
         return Response({
@@ -134,12 +141,25 @@ def personal_memory_stats(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @require_personal_memory_access
-def delete_personal_memory(request):
-    """
-    Delete a specific personal memory (with user verification)
+def delete_personal_memory(request, **kwargs):
+    """Delete a specific personal memory (with user verification).
+
+    Note: ``**kwargs`` absorbs the ``user_id`` passthrough that
+    `@require_personal_memory_access` injects. We read ``request.user``
+    directly so the kwarg is redundant.
+
+    Session 1235 P5#3 audit Tranche 1 PR #4: pivoted from dead
+    `unified_embeddings` raw-SQL DELETE to live `UserEmbedding` ORM.
+    Pre-pivot every delete raised on the dead-table SELECT, caught by
+    broad except → 500 "Deletion failed: relation does not exist".
+
+    Access control simplified: pre-pivot relied on `metadata->>'namespace' =
+    'personal' AND owner_id == user.id`. UserEmbedding is implicitly
+    user-scoped via its `user` ForeignKey, so filtering by user_id IS
+    the access check — no separate namespace field needed.
     """
     user = request.user
-    
+
     try:
         memory_id = request.data.get('memory_id')
         if not memory_id:
@@ -147,63 +167,44 @@ def delete_personal_memory(request):
                 'error': 'Memory ID is required',
                 'timestamp': datetime.now().isoformat()
             }, status=400)
-        
-        from django.db import connection
-        
-        # Verify ownership before deletion
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT metadata->>'owner_id', metadata->>'namespace'
-                FROM unified_embeddings 
-                WHERE id = %s
-            """, [memory_id])
-            
-            result = cursor.fetchone()
-            if not result:
-                return Response({
-                    'error': 'Memory not found',
-                    'timestamp': datetime.now().isoformat()
-                }, status=404)
-            
-            owner_id, namespace = result
-            
-            # Verify user owns this memory
-            if namespace != 'personal' or (owner_id and str(owner_id) != str(user.id)):
-                return Response({
-                    'error': 'Access denied - not your memory',
-                    'timestamp': datetime.now().isoformat()
-                }, status=403)
-            
-            # Delete the memory
-            cursor.execute("""
-                DELETE FROM unified_embeddings 
-                WHERE id = %s 
-                AND metadata->>'namespace' = 'personal'
-                AND (metadata->>'owner_id' = %s OR metadata->>'owner_id' IS NULL)
-            """, [memory_id, str(user.id)])
-            
-            deleted_count = cursor.rowcount
-        
+
+        from django.apps import apps
+        UserEmbedding = apps.get_model('core', 'UserEmbedding')
+
+        # Verify ownership via user_id-scoped lookup. If the memory exists
+        # but belongs to another user, the queryset returns empty — same
+        # 404 path as truly-missing memory. This is stricter than the
+        # pre-pivot version (which fetched the row first to distinguish
+        # 404 from 403) but the surface only signals "you have no such
+        # memory" either way — no info leak to the requesting user.
+        memory = UserEmbedding.objects.filter(
+            id=memory_id,
+            user_id=user.id,
+        ).first()
+
+        if not memory:
+            return Response({
+                'error': 'Memory not found or access denied',
+                'timestamp': datetime.now().isoformat()
+            }, status=404)
+
+        memory.delete()
+        deleted_count = 1
+
         log_memory_access(
             user_id=user.id,
             query=f"delete_memory_{memory_id}",
             results_count=deleted_count,
             access_type='delete'
         )
-        
-        if deleted_count > 0:
-            return Response({
-                'success': True,
-                'message': 'Memory deleted successfully',
-                'memory_id': memory_id,
-                'timestamp': datetime.now().isoformat()
-            })
-        else:
-            return Response({
-                'error': 'Failed to delete memory',
-                'timestamp': datetime.now().isoformat()
-            }, status=500)
-        
+
+        return Response({
+            'success': True,
+            'message': 'Memory deleted successfully',
+            'memory_id': memory_id,
+            'timestamp': datetime.now().isoformat()
+        })
+
     except Exception as e:
         logger.error(f"Delete personal memory error for user {user.id}: {str(e)}")
         return Response({
