@@ -476,6 +476,21 @@ app.conf.beat_schedule = {
         'options': {'queue': 'default', 'expires': 3600},
     },
 
+    # Session 1235 P5#2 — daily docs-corpus auto-refresh. Hash-delta
+    # gated cascade (build_docs_index → build_rag_corpus →
+    # sync_docs_index_to_documents → fan-out embed). Pre-this-task,
+    # the cascade was manual-only; prod corpus drifted 12 days +
+    # 1820 Documents unembedded during Session 1234 (D9-D16 arc).
+    # Pin to 4:00 AM Denver — 3h pre-morning_brief for headroom on
+    # cold cascades. NOT in LOCAL_DENY_TASKS (delta cost is sub-penny
+    # and local Rigby benefits from fresh corpus). Worst case on
+    # local: one redundant skip log per fire when corpus is current.
+    'refresh-docs-corpus-daily': {
+        'task': 'core.tasks.refresh_docs_corpus',
+        'schedule': crontab(hour=4, minute=0),  # 4:00 AM Denver
+        'options': {'queue': 'default', 'expires': 3600},
+    },
+
     # ────────────────────────────────────────────────────────────────────────
     # Session 1115 batch-3 — DB hygiene + metrics tasks that were defined but
     # never wired. All entries below are safe by inspection:
