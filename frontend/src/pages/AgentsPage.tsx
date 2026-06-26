@@ -2776,7 +2776,7 @@ export default function AgentsPage() {
 
                   <div className="grid grid-cols-3 gap-2 text-center border-t border-dark-border pt-3">
                     <div>
-                      <p className="text-lg font-semibold text-white">{template.usage_count.toLocaleString()}</p>
+                      <p className="text-lg font-semibold text-white">{(template.usage_count ?? 0).toLocaleString()}</p>
                       <p className="text-xs text-gray-500">Uses</p>
                     </div>
                     <div>
@@ -4574,7 +4574,7 @@ export default function AgentsPage() {
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-dark-hover rounded-lg p-4 text-center">
-                  <p className="text-2xl font-bold text-white">{selectedTool.usage_count.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-white">{(selectedTool.usage_count ?? 0).toLocaleString()}</p>
                   <p className="text-xs text-gray-500">Total Uses</p>
                 </div>
                 <div className="bg-dark-hover rounded-lg p-4 text-center">
