@@ -441,7 +441,8 @@ class SystemRealityChecker:
         # Check for revenue tracking files
         revenue_paths = [
             f"{self.base_path}/intelligence/revenue_integration.py",
-            f"{self.base_path}/core/views.py"
+            # Session 1237 P2.b: was core/views.py (shadowed dead, deleted)
+            f"{self.base_path}/core/views/main.py",
         ]
 
         for path in revenue_paths:
