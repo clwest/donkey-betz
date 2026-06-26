@@ -473,7 +473,7 @@ unified-donkey-betz/
 │   │   ├── blockchain/           # 5 blockchain agents
 │   │   ├── podcast/              # 4 podcast agents
 │   │   └── ...
-│   ├── services/                  # 167 service files (122k lines)
+│   ├── services/                  # 354 service files
 │   │   ├── discord_bot.py        # Discord integration
 │   │   ├── orchestration_engine.py
 │   │   ├── heart.py, lungs.py... # Body systems
