@@ -3637,6 +3637,18 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         # Build the synthesis prompt from whatever's available.
         if is_morning_brief:
+            # Session 1238 PR-2: run lane_1 self-referential health-alarm
+            # self-check. If lane_1_text contains a "paralyzed" / "no agent
+            # activity" warning, recompute the underlying metric now (30min
+            # window) and inject the result as SELF_CHECK_EVIDENCE so the
+            # LLM can downgrade the warning when contradicted by current
+            # state. Closes the "system reports itself paralyzed at the
+            # same moment it generates a brief" trust issue Rigby flagged.
+            lane_1_text = synthesis_inputs.get('lane_1_text', '')
+            self_check = self._collect_lane_1_self_check_evidence(lane_1_text)
+            if self_check:
+                synthesis_inputs['_lane_1_self_check'] = self_check
+
             prompt = self._build_morning_brief_prompt(
                 synthesis_inputs=synthesis_inputs,
                 slot_used=context.get(
@@ -3782,6 +3794,12 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             "- Do NOT invent facts. If a lane input is empty or thin, write '*(no notable items)*'.",
             "- Preserve specific numbers, names, and links from the lane inputs.",
             "- Skip preamble and meta-commentary. Start with the pointer line.",
+            "- Session 1238 PR-2: If SELF_CHECK_EVIDENCE block is present and",
+            "  it contradicts a Lane 1 health-alarm warning (e.g., reports",
+            "  'LOW — stale telemetry'), tag the affected warning in Lane 1",
+            "  with '(Evidence confidence: low — auto-downgraded by",
+            "  30min recheck)' and do NOT lead the TL;DR with it. If the",
+            "  self-check CORROBORATES the warning, surface it normally.",
         ])
         return "\n".join(prompt_parts)
 
@@ -4220,6 +4238,117 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"{type(e).__name__}: {e}"
                 ),
             }
+
+    @staticmethod
+    def _collect_lane_1_self_check_evidence(lane_1_text: str) -> str:
+        """Run cheap runtime self-checks for Lane 1 health-alarm claims.
+
+        Session 1238 PR-2: closes the self-referential trust issue
+        Rigby flagged in the 06-26 audience-fit verdict. Pre-fix Lane
+        1's MUSCULAR warning ("Agent execution telemetry shows
+        'paralyzed'") was based on a body_system snapshot that could be
+        minutes-to-an-hour stale by the time the brief renders. The
+        brief surfaced the stale warning as high-confidence with no
+        recheck — even though the workflow itself was actively running
+        agents at that moment.
+
+        Returns a markdown SELF_CHECK_EVIDENCE block to inject into the
+        morning_brief prompt so the LLM can downgrade contradicted
+        warnings. Returns empty string if no health-alarm keywords
+        detected in lane_1_text (no need to run the self-check).
+
+        Self-check metrics (all cheap ORM queries, 30min window):
+        - AgentExecution rows count
+        - CeleryTaskEvent rows count (proxy for worker liveness)
+        - Distinct agent names that produced AgentExecutions
+
+        These are the same metrics the MUSCULAR body_system check uses
+        to compute "paralyzed" status — so a fresh recompute directly
+        falsifies or confirms the stale warning.
+        """
+        if not lane_1_text:
+            return ''
+
+        # Health-alarm triggers — keywords that indicate Lane 1 is
+        # claiming a system stall / paralysis. If none present, no
+        # self-check needed.
+        triggers = (
+            'paralyzed',
+            'No Agent Activity',
+            'no agent activity',
+            'worker/process stall',
+            'workers stalled',
+        )
+        if not any(t in lane_1_text for t in triggers):
+            return ''
+
+        try:
+            from datetime import timedelta
+            from django.utils import timezone as _tz
+            from django.apps import apps
+            AgentExecution = apps.get_model('core', 'AgentExecution')
+            CeleryTaskEvent = apps.get_model('core', 'CeleryTaskEvent')
+
+            window_minutes = 30
+            since = _tz.now() - timedelta(minutes=window_minutes)
+
+            ae_qs = AgentExecution.objects.filter(created_at__gte=since)
+            ae_count = ae_qs.count()
+            distinct_agents = ae_qs.values_list(
+                'agent__name', flat=True,
+            ).distinct().count()
+
+            cte_count = CeleryTaskEvent.objects.filter(
+                started_at__gte=since,
+            ).count()
+
+            # Decide a confidence-downgrade verdict from the metrics.
+            # If recent activity > 5 agent executions or > 20 celery
+            # events, the system is demonstrably NOT paralyzed; the
+            # warning should be marked "Evidence confidence: low".
+            if ae_count > 5 or cte_count > 20:
+                verdict = (
+                    f"LOW — system shows healthy activity in last "
+                    f"{window_minutes}min "
+                    f"({ae_count} AgentExecutions, {cte_count} "
+                    f"CeleryTaskEvents); the 'paralyzed' warning is "
+                    f"stale telemetry."
+                )
+            elif ae_count == 0 and cte_count < 5:
+                verdict = (
+                    f"HIGH — corroborated by current self-check "
+                    f"({ae_count} AgentExecutions, {cte_count} "
+                    f"CeleryTaskEvents in last {window_minutes}min). "
+                    f"The warning is real."
+                )
+            else:
+                verdict = (
+                    f"MEDIUM — current self-check shows partial "
+                    f"activity ({ae_count} AgentExecutions, "
+                    f"{cte_count} CeleryTaskEvents in last "
+                    f"{window_minutes}min). Investigate before "
+                    f"escalating."
+                )
+
+            return (
+                f"\n--- SELF_CHECK_EVIDENCE (run at brief-compile time) ---\n"
+                f"Lane 1 contains a health-alarm warning. Fresh "
+                f"{window_minutes}-minute window recheck:\n"
+                f"- AgentExecution rows: {ae_count} "
+                f"(from {distinct_agents} distinct agents)\n"
+                f"- CeleryTaskEvent rows: {cte_count}\n"
+                f"- Evidence confidence: {verdict}\n"
+                f"- What would falsify Lane 1's warning: "
+                f"AgentExecution count > 5 or CeleryTaskEvent count "
+                f"> 20 in the last {window_minutes} minutes.\n"
+            )
+        except Exception as e:
+            logger.warning(
+                "🩺 Session 1238 PR-2: lane_1 self-check raised "
+                "(%s: %s) — returning empty evidence block",
+                type(e).__name__, e,
+            )
+            return ''
 
     @staticmethod
     def _validate_decision_card(card_text: str) -> list:
