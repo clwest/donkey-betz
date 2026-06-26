@@ -222,7 +222,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE("\nVerifying codebase access..."))
         test_files = [
             'manage.py',
-            'core/views.py',
+            'core/views/main.py',  # Session 1237 P2.b: was core/views.py (shadowed dead, deleted)
             'intelligence/tasks.py',
             'frontend/src/App.tsx',
         ]
