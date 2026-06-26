@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-06-25 21:24
+**Generated:** 2026-06-26 04:00
 **Current Session:** 1238
 **Total Documentation:** 2735 files | 714,879 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 4,813 |
+| Total cross-references | 4,814 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -35,7 +35,7 @@
 | `CLAUDE.md` | 199 | CLAUDE - AI Session Entry Point |
 | `docs/PLATFORM_INVENTORY.md` | 185 | Platform Master Inventory |
 | `docs/INDEX.md` | 133 | INDEX |
-| `docs/docs-pattern/spokesperson-corpus/README.md` | 118 | Spokesperson Corpus Pattern |
+| `docs/archive/old-structure/status/README.md` | 118 | STATUS |
 | `docs/AGENTS.md` | 71 | AGENTS |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 69 | PLATFORM WHAT IT IS |
 | `docs/CAPABILITIES.md` | 46 | CAPABILITIES |
@@ -250,9 +250,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_1237_AUDIT_BONUS_CARRYOVERS_CLOSE.md | handoffs | 132 | 2026-06-25 21:23 |
+| SESSION_1237_AUDIT_BONUS_CARRYOVERS_CLOSE.md | handoffs | 132 | 2026-06-25 21:26 |
+| INDEX.md | docs | 394 | 2026-06-25 21:26 |
 | SESSION_1236_P5_3_AUDIT_COMPLETE_TRANCHE_1_THROUGH_4.md | handoffs | 174 | 2026-06-25 21:03 |
-| INDEX.md | docs | 394 | 2026-06-25 21:03 |
 | SESSION_1235_CARRYOVER_CLOSE_PLUS_P5_3_DRIFT_SWEEP_TRANCHE_1.md | handoffs | 225 | 2026-06-25 20:06 |
 | BACKEND_INVENTORY.md | docs | 652 | 2026-06-25 18:01 |
 | SESSION_1234_BROAD_EXCEPT_SWEEP_D17_THROUGH_D21.md | handoffs | 150 | 2026-06-25 17:45 |

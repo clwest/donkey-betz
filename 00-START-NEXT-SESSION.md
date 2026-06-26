@@ -193,7 +193,7 @@ These are time-bound. Clear FIRST on session open.
   print('status:', ev.status, 'took:', ev.duration_ms, 'result:', ev.result)
   ```
 - **morning_brief 2nd-fire verification (2026-06-26 13:00 UTC = 07:00 MDT)** — first scheduled fire with Session 1234 D3/D4/D5/D6 live. Verify lane intermediates land in MB workspace `19807888-…`, NOT cf708a2e.
-- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover.
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 06:00 UTC = 00:00 MDT)** — Session 1228 carryover. NOTE: Operator Edge is in `LOCAL_DENY_TASKS` (`add_critical_celery_tasks.py:65`) so it's `enabled=False` on local; this verification is prod-only via Railway logs. Crontab is `hour=6, minute=0, day_of_week=friday` (corrected Session 1238 PR-B — prior carryover entries said 12:00 UTC which was inaccurate to source).
 
 #### Priority 2 — Brief read + Sub-step D (if morning_brief 2nd fire produced real content)
 
