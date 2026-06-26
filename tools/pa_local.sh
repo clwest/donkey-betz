@@ -17,41 +17,27 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1234 mid-
-# session fresh thread (Rigby started new conv at Chris's direction
-# after the morning_brief first-fire investigation kicked off). Pin:
-# pa-0f08fc48ec914917. Session 1234 close (FINAL — two arcs same
-# UTC day) health_check returned score=100 / continue — NO rotation;
-# carries forward into Session 1235. Session 1234 closed 17 PRs
-# total across two arcs. Arc 1 (morning_brief fixes) #2606-#2615
-# + #2617 = D1-D8 + cascade checklist. Arc 2 (docs-corpus retrieval)
-# #2618-#2625 = D9-D16: type-aware Document enrichment +
-# kb_tool action=semantic_search (Rigby's first real semantic
-# retrieval action) + min_session=0 LLM-autofill guard + similarity
-# threshold tuning + filter-before-slice fix that finally made it
-# all work end-to-end. 36 leak-victims archived + 2,729 Documents
-# enriched + ~28k DocumentEmbedding chunks (backfill still ramping).
-# Workers restarted 16:14 local at session close.
-# Session 1234 close (3rd handoff): 22 PRs total across 3 arcs
-# (D1-D8 morning_brief fixes, D9-D16 docs-corpus retrieval,
-# D17-D21 broad-except sweep). Backfill completed at close: all
-# 2,732 Documents embedded (36,854 chunks, 100% coverage). 4-way
-# cross-file invariant locks the (DatabaseError, ConnectionError,
-# OSError) allowlist across scoped_retrieval, knowledge_first_router,
-# knowledge_similarity, views_rag_embeddings; D21 search_personal_
-# memories matches that shape via shape-parity test.
-# Carryover priorities for Session 1235: morning_brief 2nd-fire
-# verify (06-26 13:00 UTC = 07:00 MDT) — first scheduled fire with
-# D3/D4/D5/D6 live; ALL lane intermediates should land in MB
-# workspace 19807888-…, NOT cf708a2e-… (Session 1231 E2E). Operator
-# Edge Friday-1 dry-run (06-26 12:00 UTC). Chris reads the brief;
-# Rigby provides audience-fit verdict; Sub-step D polish scope
-# derives from that. Optional follow-ups: BACKEND_INVENTORY services
-# count drift (only active verifier hit), TextProcessor extracted_
-# metadata clobber root-cause, refresh_docs_corpus beat task,
-# additional broad-except audits (D22+) if a specific file emerges.
-# Chris-side: Anthropic credit refill, CI billing.
-# Prior pins retired: pa-91cf6bbce1d6406e (Session 1234 morning —
+# the --conversation flag below. Current value: Session 1236 fresh
+# thread (Rigby create_fresh at Session 1236 open per her own P0
+# health-check recommendation: "Rotate when we start implementing
+# Tranche 2/3/4 so the new thread can be audit execution rather than
+# audit discovery + design"). Pin: pa-a2443db2e43a42dc. Title:
+# "Session 1236 — P5#3 Drift Sweep (Tranche 2/3/4 execution)".
+# Carry-forward seeded with audit deliverable feed2d81-ee2f-44c0-
+# 8f17-816591d2a3ff scope, Tranche 1 close summary (7 PRs #2636-
+# #2641 + #2643 = 7 of 7 named files closed), Tranche 2/3/4 todo
+# list (clean_mythologies.py mgmt cmd / scripts cleanup / dead unit
+# tests), worker state, and refresh_docs_corpus first-fire timing
+# (2026-06-26 04:00 Denver pending verification at S1236 P1).
+# Prior pins retired: pa-0f08fc48ec914917 (Sessions 1234-1235 →
+# Session 1236 open; ~50 turns across the 3 sessions covering
+# Session 1234 3-arc 22-PR close + Session 1235 9-PR + audit
+# Tranche 1 8th PR; health at rotation: 75/continue with rotation
+# trigger "before Tranche 2/3/4 implementation". Carries the full
+# audit-discovery + Tranche 1 design context — superseded for
+# execution work by the fresh thread).
+# Older retired pins (Sessions 1234 morning + earlier):
+# pa-91cf6bbce1d6406e (Session 1234 morning —
 # replaced mid-session when Rigby fresh-started pa-0f08fc48ec914917
 # at Chris's direction during the deliverable_tool corpus sweep;
 # ~6 turns ResearchAgent dup investigation + early D1/D2 morning
@@ -102,4 +88,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-0f08fc48ec914917
+python tools/pa_chat.py "$@" --tools --conversation pa-a2443db2e43a42dc
