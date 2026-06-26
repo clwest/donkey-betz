@@ -508,6 +508,9 @@ def render_clusters(metrics: Dict[str, Any], gate: Dict[str, Any]) -> List[str]:
 
 def build_config():
     from core.services.scheduled_diagnostic_runner import DiagnosticConfig
+    from core.services.diagnostics._workspace_resolver import (
+        resolve_morning_brief_workspace_id as _resolve_diagnostic_workspace_id,
+    )
 
     return DiagnosticConfig(
         name='trend_daily_diagnostic',
@@ -532,5 +535,9 @@ def build_config():
         posting_enabled_env='TREND_DIAGNOSTIC_POSTING_ENABLED',
         cache_key_prefix='trend_diag',
         workspace_id_env='TREND_DIAG_WORKSPACE_ID',
+        # Session 1238 PR-A: same fix as COO + CTO daily diagnostics —
+        # resolver defaults to chris's Morning Brief workspace when env
+        # var unset. See _workspace_resolver module docstring.
+        workspace_resolver=_resolve_diagnostic_workspace_id,
         queue=os.environ.get('TREND_DIAG_QUEUE', 'long_running'),
     )
