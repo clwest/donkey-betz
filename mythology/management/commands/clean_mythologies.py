@@ -1,9 +1,34 @@
 """
 Management command to clean mythology from embeddings and create guards.
+
+Session 1236 P5#3 audit Tranche 2 PR #1: `clean_embeddings()` was
+retired to a no-op. Pre-pivot it queried the non-existent
+`unified_embeddings` table for known hallucination patterns
+(Dart/Flutter, Fitness Dashboard, "350 deployments", capability
+exaggerations) via `connection.cursor()` raw SQL, then bulk-deleted
+the matched rows. Every invocation silently caught the
+"relation does not exist" exception and reported zero items cleaned
+while still logging a "✅ Cleanup completed" success line.
+
+The retirement preserves `setup_guards()`, `setup_patterns()`, and
+`generate_summary()` which DO use real Django models (`MythPattern`,
+`MythologyGuard`, `MythologyCleanup`, `MythologyAlert`). The
+`--setup-guards` flag work continues to function. The cleanup step is
+now a no-op that records zero counts.
+
+Why retire not pivot: hallucination prevention now happens at WRITE
+time via `core/conversation_memory.py:HALLUCINATION_INDICATORS`
+(Session 1235 PR #2637 preserved the filter on the canonical
+ConversationMemory write path). The post-hoc cleanup step is
+redundant with prevention-at-write. If a future writer puts free-form
+user content into `UserEmbedding` without an analogous filter, this
+mgmt cmd can be repivoted with a proper target model at that time.
+
+Zero callers outside this file at retirement time (verified via grep
+across non-archive, non-cache codebase).
 """
 
 from django.core.management.base import BaseCommand
-from django.db import connection
 from django.utils import timezone
 import time
 
@@ -154,90 +179,34 @@ class Command(BaseCommand):
                 self.stdout.write(f'  • Pattern exists: {pattern_type}')
     
     def clean_embeddings(self, cleanup):
-        """Clean mythologies from embeddings."""
-        self.stdout.write(self.style.SUCCESS('\n🔍 Scanning embeddings for mythologies...'))
-        
-        with connection.cursor() as cursor:
-            # Get total count
-            cursor.execute("SELECT COUNT(*) FROM unified_embeddings")
-            total_count = cursor.fetchone()[0]
-            self.stdout.write(f'  Total embeddings: {total_count}')
-            
-            # Specific mythology queries
-            mythologies_to_clean = [
-                {
-                    'name': 'Dart/Flutter',
-                    'query': "SELECT id FROM unified_embeddings WHERE content_text ILIKE '%dart%' OR content_text ILIKE '%flutter%'",
-                    'field': 'dart_flutter_removed'
-                },
-                {
-                    'name': 'Fitness Dashboard',
-                    'query': "SELECT id FROM unified_embeddings WHERE content_text ILIKE '%fitness%dashboard%'",
-                    'field': 'fitness_dashboard_removed'
-                },
-                {
-                    'name': '350 Deployments',
-                    'query': "SELECT id FROM unified_embeddings WHERE content_text LIKE '%350%' AND content_text ILIKE '%deployment%'",
-                    'field': 'deployments_350_removed'
-                },
-                {
-                    'name': 'Capability Exaggerations',
-                    'query': "SELECT id FROM unified_embeddings WHERE content_text ILIKE '%unlimited%' OR content_text ILIKE '%infinite%' OR content_text ILIKE '%perfect%'",
-                    'field': 'capability_exaggerations_removed'
-                }
-            ]
-            
-            cleanup.items_scanned = total_count
-            total_cleaned = 0
-            
-            for myth_config in mythologies_to_clean:
-                self.stdout.write(f'\n  Checking for {myth_config["name"]}...')
-                
-                # Get IDs to delete
-                cursor.execute(myth_config['query'])
-                ids_to_delete = [row[0] for row in cursor.fetchall()]
-                count = len(ids_to_delete)
-                
-                if count > 0:
-                    self.stdout.write(self.style.WARNING(f'    ⚠️ Found {count} embeddings with {myth_config["name"]}'))
-                    
-                    if not self.dry_run:
-                        # Delete in batches
-                        batch_size = 100
-                        for i in range(0, len(ids_to_delete), batch_size):
-                            batch = ids_to_delete[i:i+batch_size]
-                            placeholders = ','.join(['%s'] * len(batch))
-                            cursor.execute(
-                                f"DELETE FROM unified_embeddings WHERE id IN ({placeholders})",
-                                batch
-                            )
-                        
-                        self.stdout.write(self.style.SUCCESS(f'    ✓ Deleted {count} embeddings'))
-                    else:
-                        self.stdout.write(self.style.WARNING(f'    [DRY RUN] Would delete {count} embeddings'))
-                    
-                    # Update cleanup record
-                    setattr(cleanup, myth_config['field'], count)
-                    total_cleaned += count
-                else:
-                    self.stdout.write(f'    ✓ No {myth_config["name"]} found')
-            
-            cleanup.items_cleaned = total_cleaned
-            cleanup.save()
-            
-            # Create alert if significant mythologies found
-            if total_cleaned > 100:
-                MythologyAlert.objects.create(
-                    alert_type='cleanup_needed',
-                    severity='high' if total_cleaned > 500 else 'medium',
-                    title=f'Mythology cleanup performed: {total_cleaned} items',
-                    description=f'Cleaned {total_cleaned} mythology-contaminated embeddings from the system',
-                    data={
-                        'cleanup_id': str(cleanup.id),
-                        'items_cleaned': total_cleaned,
-                        'dry_run': self.dry_run
-                    }
-                )
+        """Retired no-op (Session 1236 P5#3 Tranche 2 PR #1).
+
+        Pre-retirement: queried dead `unified_embeddings` table for
+        known hallucination patterns and bulk-deleted matches. See
+        module docstring for rationale.
+
+        Post-retirement: records zero counts and prints a clear
+        retirement notice. Hallucination prevention happens at WRITE
+        time via the `HALLUCINATION_INDICATORS` filter in
+        `core/conversation_memory.py`.
+        """
+        self.stdout.write(self.style.SUCCESS(
+            '\n🔍 Scanning embeddings for mythologies...'
+        ))
+        self.stdout.write(
+            '  [RETIRED] Post-Session 1236 PR #1 of Tranche 2: '
+            'cleanup step no-op (no real backing model). '
+            'Prevention happens at write-time via '
+            'core/conversation_memory.HALLUCINATION_INDICATORS.'
+        )
+
+        cleanup.items_scanned = 0
+        cleanup.items_cleaned = 0
+        cleanup.dart_flutter_removed = 0
+        cleanup.fitness_dashboard_removed = 0
+        cleanup.deployments_350_removed = 0
+        cleanup.capability_exaggerations_removed = 0
+        cleanup.save()
     
     def generate_summary(self, cleanup):
         """Generate cleanup summary."""
