@@ -131,7 +131,108 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1237 — CURRENT ENTRY POINT
+## SESSION 1238 — CURRENT ENTRY POINT
+
+### SESSION 1237 CLOSED — P5#3 audit bonus carryovers close, 3 PRs (-1,558 net lines)
+
+Full handoff: [`SESSION_1237_AUDIT_BONUS_CARRYOVERS_CLOSE.md`](docs/handoffs/SESSION_1237_AUDIT_BONUS_CARRYOVERS_CLOSE.md).
+
+Session 1237 closed all 3 bonus carryovers surfaced during the Session 1235-1236 P5#3 drift-sweep audit. Pure execution session — no design debate, no new audit scope.
+
+**Session 1237 PRs:**
+
+| PR | Subject | Lines |
+|---|---|---|
+| [#2649](https://github.com/clwest/donkey-betz-platform/pull/2649) | P2.a — `search_personal_memories_api` decorator-kwarg fix | +140 / -3 |
+| [#2650](https://github.com/clwest/donkey-betz-platform/pull/2650) | P2.c — `dashboard/at_a_glance.py` delete (scope-corrected mid-execution) | +75 / -415 |
+| [#2651](https://github.com/clwest/donkey-betz-platform/pull/2651) | P2.b — `core/views.py` shadowed delete | +105 / -1,460 |
+
+**Notable findings:**
+
+- **P2.c scope correction:** original framing was "update the error-pattern map" (assumed live tooling). Triple-grep showed 0 importers anywhere — same orphan pattern as `intelligence/core.py`. Routed pivot through Chris → delete. Bonus value: the deleted map's suggested fix for the `ai_unified_platform does not exist` error was wrong even when written (it pointed at `sed`-renaming a string that doesn't exist in `ai_core/settings.py`).
+- **P2.b shadowing audit:** systematic set-diff of function names between `core/views.py` and `core/views/main.py` returned empty in both directions — 100% duplication. The shadowing dates back to Session 728's package conversion (per `__init__.py` comment). The file was kept as dead artifact for unknown reasons. 1,457 lines removed; 0 production behavior change (URL resolver still loads 1797 patterns).
+
+**Audit grand-total stats (Sessions 1235 → 1237 combined):**
+- 17 PRs total (14 formal audit + 3 bonus carryovers)
+- ~5,000+ lines of dead code removed
+- ~100+ regression-guard tests written
+- 0 real bug patterns in production code
+
+**Operational invariants (added Session 1237):**
+- `search_personal_memories_api` accepts decorator `user_id=` kwarg cleanly
+- `dashboard/at_a_glance.py` deleted; zero refs anywhere
+- `core/views.py` deleted; package re-export chain preserves all import paths
+- Set-diff parity (`comm -23 / -13`) is the canonical evidence pattern for any future "is this duplicate file a shadow?" audit work
+
+**Active conversation at S1237 close:** `pa-a2443db2e43a42dc` — was 100/100 at S1237 open; added ~6 turns. Should still be 95-100. Re-check at S1238 open.
+
+**Worker state:** No new `@shared_task` added Session 1237. No restart needed.
+
+**Still Chris-side carryover into Session 1238:**
+- Anthropic credit refill at https://console.anthropic.com/billing
+- CI billing still failing — all 3 Session 1237 PRs admin-merged via `--admin`
+
+### FIRST THING Session 1238
+
+#### Priority 0 — Conversation health check
+
+`pa-a2443db2e43a42dc` — health re-check via `session_tool action=health_check`. Should be 95-100 (small additive turns through bounded P2 execution work).
+
+#### Priority 1 — Calendar checks (TIME-BOUND, 2026-06-26 — should be DUE by S1238 open if opening morning)
+
+These are time-bound. Clear FIRST on session open.
+
+- **`refresh_docs_corpus` first scheduled fire verify (2026-06-26 10:00 UTC MDT = 04:00 Denver)** — Session 1235 PR #2634's first-ever scheduled run. Expected: skip path (corpus fully embedded). Verify:
+  ```python
+  from core.models import CeleryTaskEvent
+  from datetime import date
+  ev = CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.refresh_docs_corpus',
+      started_at__date=date(2026, 6, 26),
+  ).order_by('-started_at').first()
+  print('status:', ev.status, 'took:', ev.duration_ms, 'result:', ev.result)
+  ```
+- **morning_brief 2nd-fire verification (2026-06-26 13:00 UTC = 07:00 MDT)** — first scheduled fire with Session 1234 D3/D4/D5/D6 live. Verify lane intermediates land in MB workspace `19807888-…`, NOT cf708a2e.
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover.
+
+#### Priority 2 — Brief read + Sub-step D (if morning_brief 2nd fire produced real content)
+
+If 06-26 morning_brief produced a real Deliverable: Chris reads → Rigby pulls audience-fit verdict → polish PRs.
+
+#### Priority 3 — Pre-existing carryover tail
+
+Unchanged from Sessions 1235-1237:
+
+- **Smoke-harness mode inconsistency** (Session 1231 F5, LOW-MEDIUM) — one-line fix.
+- **Smoke-probe tagging for AgentExecution** (Session 1231 F1 / R2 REC-2, MEDIUM).
+- **Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents`** (Session 1231 F6, LOW).
+- **Audit `5318da3e-…` §R2 amendment** (Session 1231 F3, P3) — `deliverable_tool action=append`.
+- **Engineer workspace staleness** (Session 1230 F3, MEDIUM).
+- **Meeting-context leak shape watch** (Session 1230 F2, LOW).
+- **Fleet-smoke wall-clock timeouts** (Session 1231 F2 / R2 REC-3, LOW).
+
+#### Priority N — CI billing fix (Chris-side, still outstanding since Session 1223)
+
+#### Priority N+1 — Anthropic A/B (gated on credit refill)
+
+When Anthropic credits return: run the Session 1229 Step 5 line-count task on the Anthropic path.
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1237 totaled ~65 PRs. Daily-CoS arc Sub-step D awaits Chris's brief read on 06-26 + onward.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work since 1224.
+- Audit #5 (PA tool schemas vs handlers — Δ=43).
+- `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves.
+- **Extend `verify_doc_claims` registration coverage** to the other 472 unwatched docs.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
+
+---
 
 ### SESSION 1236 CLOSED — P5#3 drift-sweep audit COMPLETE, 5 PRs
 
