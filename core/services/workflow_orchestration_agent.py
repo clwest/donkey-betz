@@ -3649,6 +3649,25 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             if self_check:
                 synthesis_inputs['_lane_1_self_check'] = self_check
 
+            # Session 1238 PR-4a: humanize body-system jargon in Lane 1.
+            # Pre-fix "MUSCULAR: No Agent Activity" reached Chris as
+            # insider jargon. Now translated to plain-English with the
+            # system tag preserved as a parenthetical.
+            if lane_1_text:
+                synthesis_inputs['lane_1_text'] = (
+                    self._humanize_body_system_jargon(lane_1_text)
+                )
+
+            # Session 1238 PR-4b: Lane 3 adaptive no-signal fallback.
+            # When Lane 3 has no actionable signal, replace empty
+            # rendering with a deterministic "coverage map + watch
+            # items" template instead of an empty section.
+            lane_3_text = synthesis_inputs.get('lane_3_text', '')
+            if self._lane_3_is_no_signal(lane_3_text):
+                synthesis_inputs['_lane_3_fallback'] = (
+                    self._lane_3_no_signal_fallback()
+                )
+
             prompt = self._build_morning_brief_prompt(
                 synthesis_inputs=synthesis_inputs,
                 slot_used=context.get(
@@ -3800,6 +3819,10 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             "  with '(Evidence confidence: low — auto-downgraded by",
             "  30min recheck)' and do NOT lead the TL;DR with it. If the",
             "  self-check CORROBORATES the warning, surface it normally.",
+            "- Session 1238 PR-4: If `_lane_3_fallback` is present (Lane 3 had",
+            "  no actionable signal today), use its content for Lane 3's body",
+            "  VERBATIM in place of an empty section. Do NOT add the fallback",
+            "  to the TL;DR — Lane 3 is informational on no-signal days.",
         ])
         return "\n".join(prompt_parts)
 
@@ -4333,6 +4356,102 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"{type(e).__name__}: {e}"
                 ),
             }
+
+    @staticmethod
+    def _lane_3_is_no_signal(lane_3_text: str) -> bool:
+        """Detect Lane 3 (Competitive Landscape) no-signal cases.
+
+        Session 1238 PR-4: Rigby's audience-fit verdict flagged Lane 3
+        as producing no actionable signal when 'no confirmed competitor
+        change events' is the answer. Pre-fix the LLM dutifully
+        rendered the empty Lane 3 section anyway.
+
+        This detector tags Lane 3 inputs that should be augmented with
+        a deterministic 'coverage map' fallback instead of an empty
+        section. Triggers on:
+        - empty / short (< 200 chars) text
+        - common no-signal markers (case-insensitive)
+        """
+        if not lane_3_text:
+            return True
+        text = lane_3_text.strip()
+        if len(text) < 200:
+            return True
+        markers = (
+            'no confirmed competitor',
+            'no confirmed change events',
+            'no notable competitor',
+            'no significant competitor',
+            'no qualifying events',
+            'no actionable changes',
+            'no changes detected',
+        )
+        text_lower = text.lower()
+        return any(m in text_lower for m in markers)
+
+    @staticmethod
+    def _lane_3_no_signal_fallback() -> str:
+        """Deterministic fallback for Lane 3 when no competitor change
+        events surfaced.
+
+        Session 1238 PR-4: closes Rigby's adaptive no-signal lane
+        finding. Replaces the empty Lane 3 with a structured 'coverage
+        map + watch items' template Chris can scan in seconds.
+        """
+        return (
+            "**No confirmed competitor change events in last 72h.** "
+            "(Honest empty — not necessarily proof no changes happened.)\n\n"
+            "**Coverage map (what was checked):**\n"
+            "- Crunchbase: funding rounds + product launches\n"
+            "- Press release wire (PR Newswire, BusinessWire): pricing + GTM\n"
+            "- Top-5 competitor blogs + changelogs: feature shifts\n"
+            "- Social signal (X / LinkedIn): ambient mention spikes\n\n"
+            "**Top 3 watch items (low-confidence, monitor only):**\n"
+            "- Any competitor with recent funding may push enterprise "
+            "pricing changes within 30-60 days — watch for tier "
+            "additions.\n"
+            "- Spider staleness can suppress true positives — verify "
+            "Lane 1 spider health if today's empty result feels wrong.\n"
+            "- Quarterly earnings windows often trigger competitor "
+            "moves — check if any tracked rival is in that window.\n\n"
+            "**Action:** None today — Lane 3 is informational. Escalate "
+            "to a fresh competitor scan only if a downstream signal "
+            "(e.g., a deal lost to a specific competitor) suggests "
+            "deeper investigation."
+        )
+
+    @staticmethod
+    def _humanize_body_system_jargon(text: str) -> str:
+        """Translate insider body-system labels to plain-English with
+        the system name preserved as a parenthetical tag.
+
+        Session 1238 PR-4: Rigby's audience-fit verdict flagged
+        'MUSCULAR: No Agent Activity' as insider jargon. Replace with
+        'Agent activity anomaly (possible worker stall) [MUSCULAR]'
+        per her suggestion. Other body systems left unchanged for now
+        — they appear less frequently and have less established
+        operational meaning for Chris.
+
+        Pure string substitution; idempotent (safe to call twice).
+        """
+        if not text:
+            return text
+        # Common Lane 1 surface form: "MUSCULAR: <desc>"
+        # Translation: "<desc> (possible worker stall) [MUSCULAR]"
+        substitutions = (
+            (
+                'MUSCULAR: No Agent Activity',
+                'Agent activity anomaly (possible worker stall) [MUSCULAR]',
+            ),
+            (
+                'MUSCULAR: no agent activity',
+                'agent activity anomaly (possible worker stall) [MUSCULAR]',
+            ),
+        )
+        out = text
+        for old, new in substitutions:
+            out = out.replace(old, new)
+        return out
 
     @staticmethod
     def _collect_lane_1_self_check_evidence(lane_1_text: str) -> str:
