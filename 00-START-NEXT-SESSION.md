@@ -131,7 +131,121 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1239 — CURRENT ENTRY POINT
+## SESSION 1240 — CURRENT ENTRY POINT
+
+### SESSION 1239 CLOSED — PA tools audit clean + morning_brief local dogfood, 2 PRs
+
+Full handoff: [`SESSION_1239_PA_TOOLS_AUDIT_CLEAN_PLUS_MORNING_BRIEF_LOCAL_DOGFOOD.md`](docs/handoffs/SESSION_1239_PA_TOOLS_AUDIT_CLEAN_PLUS_MORNING_BRIEF_LOCAL_DOGFOOD.md).
+
+Session 1239 was audit-then-act. Verified PA tools surface (Audit #5, Δ=43 from inventory) ran clean — 109 schemas / 152 handlers / 108 matched; the 1 schema orphan (`run_agent`) + 44 handler orphans are by-design (umbrella schema + agent-name dispatches). Rigby's `tool_migration_report` confirmed all 14 REMOVED_TOOL_ALIASES entries silent in 24h. One real cleanup (`web_search` was dual-exposed) folded into PR-1; bonus regression bug found + fixed (`intelligence_tool action=search source=web` was dropping `limit`). PR-2 flipped `generate-morning-brief-daily` to fire on local per Chris's directive + unstuck 6 stale tests from Session 1205's `run-spider-network` removal.
+
+**Session 1239 PRs:**
+
+| PR | Subject | Net | Tests |
+|---|---|---|---|
+| [#2660](https://github.com/clwest/donkey-betz-platform/pull/2660) (PR-1) | web_search alias cleanup + intelligence_tool.search limit passthrough | +57 / -3 | 3 new (16 green) |
+| [#2661](https://github.com/clwest/donkey-betz-platform/pull/2661) (PR-2) | generate-morning-brief-daily local dogfood + unstuck Session-1205 stale beat-filter tests | +51 / -28 | 1 flipped + 6 unstuck (20 green) |
+
+**Operational invariants added Session 1239:**
+- `intelligence_tool action=search source=web limit=N` honors N (was silently capping at 5)
+- `REMOVED_TOOL_ALIASES` and `web_search` schema/handler no longer contradict; cleanup audits won't flag this again
+- `generate-morning-brief-daily` enabled on local (`make celery` restart required to pick up) — 07:00 Denver daily fire
+- Beat-filter lock-in tests track current denylist (gate restored — future denylist changes require explicit test touch)
+
+**Active conversation at S1239 close:** `pa-a2443db2e43a42dc` — added ~6 turns this session (audit-only). Should still be 90-100. Per S1237/S1238 close notes, Rigby's recommendation is "rotate before next substantial design+execution arc." **S1240 begins Sub-step E (Mon-Fri dogfood loop) which IS a new arc — rotation should be considered at S1240 open.**
+
+**Worker state:** No new `@shared_task` Session 1239. PR-2 adds an enabled `PeriodicTask` row — Chris should run `pkill -9 -f celery; rm -f .celery*.pid; make celery` before going to bed tonight if he wants the 07:00 Denver fire tomorrow (06-27).
+
+**Chris-side carryover into Session 1240:**
+- Anthropic credit refill at https://console.anthropic.com/billing
+- CI billing still failing — both Session 1239 PRs admin-merged via `--admin`
+
+### FIRST THING Session 1240 (Saturday morning 2026-06-27)
+
+#### Priority 0 — Conversation health check (+ rotation candidate)
+
+`pa-a2443db2e43a42dc` — re-check via `session_tool action=health_check`. Should be 90-100. **Rotation recommended** — Session 1240 starts Sub-step E (new design+execution arc).
+
+#### Priority 1 — 06-27 cumulative verification (TIME-BOUND, FIRST thing Saturday morning)
+
+The cumulative window for both Sub-step D (Session 1238 polish PRs) AND Sub-step E kickoff (Session 1239 local dogfood flip).
+
+- **`refresh_docs_corpus` 2nd scheduled fire verify (2026-06-27 10:00 UTC MDT = 04:00 Denver)** — expected skip path.
+- **morning_brief 1st LOCAL fire verify (2026-06-27 13:00 UTC = 07:00 MDT)** — first ever local fire after Session 1239 PR-2 removed it from LOCAL_DENY_TASKS. Verification block:
+  ```python
+  # 1. Did it fire?
+  from core.models import CeleryTaskEvent
+  from datetime import date
+  ev = CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.generate_morning_brief_daily',
+      started_at__date=date(2026, 6, 27),
+  ).order_by('-started_at').first()
+  assert ev and ev.status == 'SUCCESS', f"Brief did not fire or failed: {ev}"
+
+  # 2. Did the deliverable land in the right workspace?
+  from core.models_deliverables import Deliverable
+  d = Deliverable.objects.filter(
+      user__username='chris',
+      category='Morning Brief',
+      created_at__date=date(2026, 6, 27),
+  ).first()
+  assert d, "No morning brief deliverable for 2026-06-27"
+  # Should NOT land in the cf708a2e leak workspace (PR #2653 holds)
+
+  # 3. Sub-step D invariants in content
+  content = d.content
+  # Decision Cards end with periods, show "MDT" not "MST", all 4 fields (PR #2655)
+  # Lane 1 warnings tagged "Evidence confidence: low" when self-check refutes (PR #2656)
+  # Lane 4 3-block fallback if no odds (PR #2657)
+  # Lane 3 coverage map if no-signal (PR #2658)
+  # Body-system jargon humanized (PR #2658)
+  ```
+- **COO daily diagnostic (2026-06-27 13:30 UTC)** — deliverable should land in MB workspace, NOT cf708a2e.
+
+#### Priority 2 — Re-ask Rigby for audience-fit verdict on the 06-27 LOCAL brief
+
+Sub-step D PRs + first local fire combined should land Rigby's overall 66/100 → 80s. If still flagging Decision-Card incompleteness or Lane self-reference issues, surface diff against today's specific defect shapes.
+
+#### Priority 3 — Sub-step E (Mon-Fri dogfood) kickoff
+
+If verification clean → Sub-step E starts. Chris reads daily, captures qualitative verdict, each newly-surfaced polish item becomes a focused PR. Same rhythm that produced Session 1238's 6 polish PRs but now driven by real cumulative content quality, not Rigby's one-time audit.
+
+#### Priority 4 — Remaining audit candidates (Chris discretion)
+
+PA tools audit closed Session 1239. Still untouched:
+
+- **80 spiders** — last full audit Session 1205 Capability Audit Layer 3. Likely fresh drift since `run-spider-network` re-enabled.
+- **30 advisors** — last audit Session 1208 (`docs/ADVISOR_AUDIT.md`).
+- **9 body systems** — `BodyCoordinator` autonomic reflex layer, last touched Sub-step D.
+- **144 Discord commands** — `docs/DISCORD_AUDIT.md`, 25 Cog classes.
+- **61 frontend routes** — last sanity-check pre-Workspace tab redesign.
+- **7 fleet sibling apps** at localhost:8002-8008 — Session 1233 carryover.
+
+#### Priority N — Pre-existing carryover tail
+
+Unchanged across many sessions:
+
+- **Smoke-harness mode inconsistency** (Session 1231 F5, LOW-MEDIUM) — one-line fix.
+- **Smoke-probe tagging for AgentExecution** (Session 1231 F1 / R2 REC-2, MEDIUM).
+- **Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents`** (Session 1231 F6, LOW).
+- **Audit `5318da3e-…` §R2 amendment** (Session 1231 F3, P3).
+- **Engineer workspace staleness** (Session 1230 F3, MEDIUM).
+- **Meeting-context leak shape watch** (Session 1230 F2, LOW).
+- **Fleet-smoke wall-clock timeouts** (Session 1231 F2 / R2 REC-3, LOW).
+
+#### Priority N+1 — CI billing fix (Chris-side, outstanding since Session 1223)
+
+#### Priority N+2 — Anthropic A/B (gated on credit refill)
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1239 totaled ~73 PRs. Sub-step E starting tomorrow is the headline. Daily morning brief reads + ordered polish PRs = the natural Sub-step E rhythm.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
+
+---
 
 ### SESSION 1238 CLOSED — morning_brief Sub-step D complete + cf708a2e leak fix, 6 PRs
 
