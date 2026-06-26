@@ -131,7 +131,113 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1238 — CURRENT ENTRY POINT
+## SESSION 1239 — CURRENT ENTRY POINT
+
+### SESSION 1238 CLOSED — morning_brief Sub-step D complete + cf708a2e leak fix, 6 PRs
+
+Full handoff: [`SESSION_1238_MORNING_BRIEF_SUB_STEP_D_COMPLETE.md`](docs/handoffs/SESSION_1238_MORNING_BRIEF_SUB_STEP_D_COMPLETE.md).
+
+Session 1238 closed the daily-CoS Sub-step D polish phase end-to-end via 6 PRs (+1,702 / -12 net production lines, 75 new tests). Plus the cf708a2e leak surfaced during P1.b drill (separate from Sub-step D, adjacent fix).
+
+**Session 1238 PRs:**
+
+| PR | Subject | Net | Tests |
+|---|---|---|---|
+| [#2653](https://github.com/clwest/donkey-betz-platform/pull/2653) (A) | `scheduled_diagnostic_runner` workspace_resolver | +368 / -1 | 10 |
+| [#2654](https://github.com/clwest/donkey-betz-platform/pull/2654) (B) | 00-START Operator Edge timestamp correction | +6 / -6 | (doc) |
+| [#2655](https://github.com/clwest/donkey-betz-platform/pull/2655) (1) | Decision Card validator + truncation guard + dynamic TZ | +391 / -5 | 11 |
+| [#2656](https://github.com/clwest/donkey-betz-platform/pull/2656) (2) | Lane 1 self-referential health alarm filter | +317 / -0 | 12 |
+| [#2657](https://github.com/clwest/donkey-betz-platform/pull/2657) (3) | Lane 4 odds-missing fallback | +298 / -0 | 13 |
+| [#2658](https://github.com/clwest/donkey-betz-platform/pull/2658) (4) | Lane 3 adaptive + MUSCULAR plain-English | +322 / -0 | 19 |
+
+**Rigby's 06-26 audience-fit verdict (overall 66/100)** drove the polish PR list. All 6 prioritized items landed in priority order. Tomorrow's 06-27 morning_brief fire is the cumulative verification window.
+
+**Operational invariants added Session 1238:**
+- `scheduled_diagnostic_runner` workspace priority chain: env_var → resolver → None (COO/CTO/Trend auto-target chris's MB workspace)
+- Decision Cards: dynamic Denver TZ, 6000 token budget, post-render validator catches truncation + missing fields
+- Lane 1 health alarms: contradiction-aware via 30min recheck against AgentExecution + CeleryTaskEvent
+- Lane 3: deterministic coverage-map fallback when no-signal
+- Lane 4: 3-block fallback when odds data missing
+- Body-system jargon: humanized in operator-facing text
+
+**Active conversation at S1238 close:** `pa-a2443db2e43a42dc` — health 100/100, ~24 turns added. Still healthy but approaching the rotation point Rigby flagged at S1237 ("rotate before next substantial design+execution arc"). **Re-check at S1239 open + consider rotation if score < 90 or topic count > 7.**
+
+**Worker state:** No new `@shared_task` Session 1238. No restart needed.
+
+**Chris-side carryover into Session 1239:**
+- Anthropic credit refill at https://console.anthropic.com/billing
+- CI billing still failing — all 6 Session 1238 PRs admin-merged via `--admin`
+
+### FIRST THING Session 1239
+
+#### Priority 0 — Conversation health check
+
+`pa-a2443db2e43a42dc` — re-check via `session_tool action=health_check`. Should be 90-100 (Sub-step D execution kept conv tightly scoped). Per Rigby's prior recommendation, **rotate if next session starts a substantially new arc** (e.g., post-Sub-step-D feature work). Continue if just monitoring tomorrow's brief.
+
+#### Priority 1 — 06-27 cumulative verification (TIME-BOUND)
+
+The primary purpose of Session 1239 — verify all 6 Session 1238 PRs land cleanly in tomorrow's morning_brief fire.
+
+- **`refresh_docs_corpus` 2nd scheduled fire (2026-06-27 10:00 UTC MDT = 04:00 Denver)** — expected: skip path (took < 1s, `index_changed=False`, `unembedded_before=0`). If cascade re-runs, debug what changed.
+- **morning_brief 3rd-fire verify (2026-06-27 13:00 UTC = 07:00 MDT)** — the cumulative verification window. Expected checks:
+  ```python
+  from core.models_deliverables import Deliverable
+  from datetime import date
+  qs = Deliverable.objects.filter(user__username='chris', created_at__date=date(2026, 6, 27))
+  # Expected: all in MB workspace 19807888-…; NONE in cf708a2e (PR-A held)
+  d = Deliverable.objects.filter(category='Morning Brief', created_at__date=date(2026, 6, 27)).first()
+  # Read d.content:
+  # - Decision Cards end with periods, show "MDT" not "MST", all 4 fields per decision (PR-1)
+  # - Lane 1 warnings tagged "Evidence confidence: low — auto-downgraded" when self-check refutes (PR-2)
+  # - Lane 4 ships 3-block fallback if no odds (PR-3)
+  # - Lane 3 ships coverage map if no-signal (PR-4a)
+  # - Body-system jargon humanized (PR-4b)
+  ```
+- **COO daily diagnostic (2026-06-27 13:30 UTC)** — deliverable should land in MB workspace, NOT cf708a2e (PR-A).
+- **Operator Edge 06:00 UTC** — prod fire only; ignore on local (LOCAL_DENY_TASKS).
+
+#### Priority 2 — Re-ask Rigby for audience-fit verdict on the 06-27 brief
+
+Sub-step D PRs should land Rigby's overall 66/100 score into the 80s. If she's still flagging Decision-Card incompleteness or Lane self-reference issues, surface the diff against today's specific defect shapes (token usage, validation_issues field, self-check trigger logs).
+
+#### Priority 3 — Brief read by Chris + any newly-surfaced polish items
+
+If Sub-step D is fully validated → Sub-step E (Mon-Fri dogfood). Chris reads daily, flags any remaining issues, each becomes a focused PR.
+
+If new polish items surface → cycle (read → Rigby verdict → ordered fix PRs) — same pattern as Session 1238.
+
+#### Priority 4+ — Pre-existing carryover tail
+
+Unchanged across many sessions:
+
+- **Smoke-harness mode inconsistency** (Session 1231 F5, LOW-MEDIUM) — one-line fix.
+- **Smoke-probe tagging for AgentExecution** (Session 1231 F1 / R2 REC-2, MEDIUM).
+- **Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents`** (Session 1231 F6, LOW).
+- **Audit `5318da3e-…` §R2 amendment** (Session 1231 F3, P3).
+- **Engineer workspace staleness** (Session 1230 F3, MEDIUM).
+- **Meeting-context leak shape watch** (Session 1230 F2, LOW).
+- **Fleet-smoke wall-clock timeouts** (Session 1231 F2 / R2 REC-3, LOW).
+
+#### Priority N — CI billing fix (Chris-side, still outstanding since Session 1223)
+
+#### Priority N+1 — Anthropic A/B (gated on credit refill)
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1238 totaled ~71 PRs. Sub-step E (Mon-Fri dogfood) is unlocked now that Sub-step D landed. Daily morning brief reads + ordered polish PRs = the natural Sub-step E rhythm.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008.
+- Audit #5 (PA tool schemas vs handlers — Δ=43).
+- `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves.
+- **Extend `verify_doc_claims` registration coverage** to the other 472 unwatched docs.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
+
+---
 
 ### SESSION 1237 CLOSED — P5#3 audit bonus carryovers close, 3 PRs (-1,558 net lines)
 
