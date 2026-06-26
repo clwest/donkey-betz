@@ -1,9 +1,9 @@
 // Session 825: Workspace tabs barrel export
 // Session 971b: Added SystemTab, DataIntelTab adapters for 9-tab model
 // Session 1077: Unified Work tab + Ops Console
+// Session 1240: CommandTab/SystemTab/LearningJourneyTab dropped (PlatformPage delete cascade)
 export { WorkTab } from './WorkTab'
 export { OpsConsoleTab } from './OpsConsoleTab'
-export { CommandTab } from './CommandTab'
 export { GovernanceTab } from './GovernanceTab'
 export { KnowledgeTab } from './KnowledgeTab'
 export { OperationsTab } from './OperationsTab'
@@ -42,14 +42,10 @@ export { CareerTab } from './CareerTab'
 // Session 869: Voice Marketplace Tab
 export { VoiceMarketplaceTab } from './VoiceMarketplaceTab'
 
-// Session 870: Learning Journey Dashboard Tab
-export { LearningJourneyTab } from './LearningJourneyTab'
-
 // Session 927: Boardroom Tab - Decision Hub
 export { BoardroomTab } from './BoardroomTab'
 
 // Session 971b: Merged adapter tabs (9-tab model)
-export { SystemTab } from './SystemTab'
 export { DataIntelTab } from './DataIntelTab'
 
 // Session 1008: Campaign Orchestrator + ToolCall Analytics
