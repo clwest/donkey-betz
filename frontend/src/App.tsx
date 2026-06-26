@@ -37,8 +37,6 @@ import DeliverablesPage from '@/pages/DeliverablesPage'  // Deliverables library
 import ProjectsPage from '@/pages/ProjectsPage'  // Project Hub: card grid
 import ProjectHubPage from '@/pages/ProjectHubPage'  // Project Hub: detail view
 import HowItWorksPage from '@/pages/HowItWorksPage'
-import BoardroomPage from '@/pages/BoardroomPage'  // Session 1067: Full-page boardroom
-import GovernancePage from '@/pages/GovernancePage'  // Session 1067: Full-page governance
 import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs UI
 import MediaPage from '@/pages/MediaPage'
 import VipAcceptPage from '@/pages/VipAcceptPage'
