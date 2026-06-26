@@ -171,7 +171,7 @@ Session 1239 was audit-then-act. Verified PA tools surface (Audit #5, Δ=43 from
 The cumulative window for both Sub-step D (Session 1238 polish PRs) AND Sub-step E kickoff (Session 1239 local dogfood flip).
 
 - **`refresh_docs_corpus` 2nd scheduled fire verify (2026-06-27 10:00 UTC MDT = 04:00 Denver)** — expected skip path.
-- **morning_brief 1st LOCAL fire verify (2026-06-27 13:00 UTC = 07:00 MDT)** — first ever local fire after Session 1239 PR-2 removed it from LOCAL_DENY_TASKS. Verification block:
+- **morning_brief 3rd-fire verify (2026-06-27 13:00 UTC = 07:00 MDT)** — first fire with all 6 Session 1238 Sub-step D PRs cumulatively live. **NOT** the "first-ever local fire" — PR-2 sanity-check on 06-26 evening surfaced that the PeriodicTask row was already `enabled=True` with `total_run_count=2` (`last_run_at=2026-06-26 13:00:00 UTC`). `LOCAL_DENY_TASKS` was a paper defense for this task: `_filter_local_safe` blocks new materialization but `_enforce_disabled_local` only runs on `add_critical_celery_tasks` invocation, so the existing-enabled row had been firing all along. PR-2 ratified what was happening. Verification block:
   ```python
   # 1. Did it fire?
   from core.models import CeleryTaskEvent
@@ -204,7 +204,7 @@ The cumulative window for both Sub-step D (Session 1238 polish PRs) AND Sub-step
 
 #### Priority 2 — Re-ask Rigby for audience-fit verdict on the 06-27 LOCAL brief
 
-Sub-step D PRs + first local fire combined should land Rigby's overall 66/100 → 80s. If still flagging Decision-Card incompleteness or Lane self-reference issues, surface diff against today's specific defect shapes.
+Sub-step D PRs (all 6 cumulatively live for the first time tomorrow) should land Rigby's overall 66/100 → 80s. Yesterday's 06-26 read earned 66/100 with NONE of the Sub-step D PRs merged yet — tomorrow is the first apples-to-apples follow-up. If still flagging Decision-Card incompleteness or Lane self-reference issues, surface diff against today's specific defect shapes.
 
 #### Priority 3 — Sub-step E (Mon-Fri dogfood) kickoff
 
