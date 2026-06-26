@@ -3665,12 +3665,19 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         try:
             client = get_openai_client(api_key=settings.OPENAI_API_KEY)
+            # Session 1238 PR-1: morning_brief mode renders 4 lane summaries +
+            # embeds the (already-rendered) decision_card_text verbatim. With
+            # gpt-5-mini's ~1500-2000 reasoning overhead, 4000 max gave
+            # ~2000-2500 output tokens — tight for the full brief markdown.
+            # Bump to 6000 to give consistent headroom. Default 4000 floor
+            # still applies for non-morning_brief synthesis (3-5 bullets).
+            mb_budget = 6000 if is_morning_brief else 4000
             response = client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
                 # Floor 4000 per Session 1224 memory rule
                 # (feedback_gpt5_max_completion_tokens_floor.md).
-                max_completion_tokens=4000,
+                max_completion_tokens=mb_budget,
             )
             synthesis_text = (response.choices[0].message.content or '').strip()
             if not synthesis_text:
@@ -4109,6 +4116,18 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             'rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
         )
 
+        # Session 1238 PR-1: dynamic Denver TZ abbreviation. Pre-fix the
+        # prompt hardcoded "MST" in its example, and the LLM followed the
+        # example — produced "by 11:00 AM MST" timestamps even in summer
+        # (June 26 is MDT). Now we inject the current Denver TZ
+        # abbreviation so it tracks DST correctly year-round.
+        from datetime import datetime as _dt
+        try:
+            from zoneinfo import ZoneInfo
+            _denver_tz = _dt.now(tz=ZoneInfo('America/Denver')).strftime('%Z')
+        except Exception:
+            _denver_tz = 'MDT'  # safe fallback during DST; flip to MST if needed
+
         prompt_parts = [
             "You are producing the 'Today's Decisions' section for Chris's "
             "daily Chief-of-Staff brief.",
@@ -4123,7 +4142,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             "- **Decision:** 1 sentence stating what to decide.",
             "- **Recommendation:** 1 sentence with the suggested choice.",
             "- **Why now:** 1 bullet (evidence-linked to a specific lane output).",
-            "- **Next step:** owner + timebox (e.g., 'Claude Code — by 11:00 AM MST').",
+            f"- **Next step:** owner + timebox (e.g., 'Claude Code — by 11:00 AM {_denver_tz}').",
             "",
             "Lane inputs (truncated to 2000 chars each):",
         ]
@@ -4142,9 +4161,14 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             response = client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[{"role": "user", "content": prompt}],
-                # Floor 4000 per Session 1224 memory rule
-                # (feedback_gpt5_max_completion_tokens_floor.md).
-                max_completion_tokens=4000,
+                # Session 1238 PR-1: bumped 4000 → 6000. gpt-5-mini's
+                # reasoning consumes ~1500-2000 tokens (per memory rule
+                # feedback_gpt5_max_completion_tokens_floor); 4000 gave
+                # ~2000-2500 output tokens which is tight for 3 decision
+                # cards each with 4 required fields. Today's 06-26 brief
+                # truncated Decision #3 mid-sentence ("...confirm whether
+                # missing odds data") — bump gives more headroom.
+                max_completion_tokens=6000,
             )
             card_text = (response.choices[0].message.content or '').strip()
             if not card_text:
@@ -4155,6 +4179,18 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                         f'(finish_reason={response.choices[0].finish_reason})'
                     ),
                 }
+
+            # Session 1238 PR-1: post-render validator catches truncation
+            # + missing required fields. Logs warning when invalid (does
+            # NOT fail the step — the brief still ships, but the issue
+            # is visible in logs for triage).
+            validation_issues = self._validate_decision_card(card_text)
+            if validation_issues:
+                logger.warning(
+                    "🗂️ Session 1238 PR-1: decision_card validation found "
+                    "%d issue(s): %s",
+                    len(validation_issues), validation_issues,
+                )
 
             context['decision_card_text'] = card_text
             inputs_used = list(lane_inputs.keys())
@@ -4170,6 +4206,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                            f'{len(inputs_used)} lane input(s)',
                 'decision_card_text': card_text,
                 'inputs_used': inputs_used,
+                'validation_issues': validation_issues,
             }
         except Exception as e:
             logger.error(
@@ -4183,6 +4220,86 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"{type(e).__name__}: {e}"
                 ),
             }
+
+    @staticmethod
+    def _validate_decision_card(card_text: str) -> list:
+        """Validate a decision_card_synthesis LLM output for completeness.
+
+        Session 1238 PR-1: catches the truncation + missing-field
+        defects Rigby's audience-fit verdict flagged on the 06-26 brief
+        (Decision #3 ended mid-sentence at "...confirm whether missing
+        odds data" — no period, no Next step field).
+
+        Returns a list of human-readable issue strings (empty list =
+        valid). Caller logs warnings + can attach to telemetry. Does NOT
+        fail the step — the brief still ships, but the issue is
+        visible.
+
+        Validation rules (per docs/MORNING_BRIEF_SPEC.md Decision Card
+        contract):
+
+        1. **Sentinel exception:** If the entire text is exactly the
+           "no urgent decisions today" sentinel, it's valid.
+        2. **Termination:** card_text must end with sentence punctuation
+           (., !, ?). Truncation mid-sentence fails this.
+        3. **Per-decision required fields:** every '### Decision N:'
+           block must contain all 4 markers: 'Decision:',
+           'Recommendation:', 'Why now:', 'Next step:'. Missing any =
+           fail.
+        4. **At least one decision:** if text doesn't match the
+           sentinel and contains no '### Decision' headers, fail.
+        """
+        import re
+
+        issues: list = []
+
+        if not card_text or not card_text.strip():
+            return ['decision_card empty']
+
+        text = card_text.strip()
+
+        # Rule 1: sentinel exception — exact match is valid + skip rest
+        SENTINEL = 'No urgent decisions today — monitor only.'
+        if text == SENTINEL or text.startswith(SENTINEL):
+            return []
+
+        # Rule 2: termination — must end with sentence punctuation
+        last_char = text[-1]
+        if last_char not in '.!?"\'`)':
+            issues.append(
+                f"text ends with {last_char!r} (truncation suspected — "
+                "no sentence-terminating punctuation)"
+            )
+
+        # Find all decision headers ('### Decision N:' or '### Decision N.')
+        decision_headers = re.findall(
+            r'^###\s+Decision\s+\d+[:.]', text, flags=re.MULTILINE,
+        )
+
+        # Rule 4: at least one decision
+        if not decision_headers:
+            issues.append(
+                'no \'### Decision N:\' headers found (and not the '
+                '"No urgent decisions today" sentinel)'
+            )
+            return issues  # short-circuit — can't validate fields
+
+        # Rule 3: per-decision required-field check.
+        # Split on the decision headers so each block has its own fields.
+        # Use re.split with a capturing group to keep the headers.
+        parts = re.split(r'(^###\s+Decision\s+\d+[:.][^\n]*$)',
+                         text, flags=re.MULTILINE)
+        # parts is [pre-header-junk, header1, body1, header2, body2, ...].
+        for i in range(1, len(parts), 2):
+            header = parts[i]
+            body = parts[i + 1] if i + 1 < len(parts) else ''
+            for required in ('Decision:', 'Recommendation:', 'Why now:', 'Next step:'):
+                if required not in body:
+                    issues.append(
+                        f"{header.strip()}: missing required field {required!r}"
+                    )
+
+        return issues
 
     # Session 1233 Sub-step C — persistent "Morning Brief" workspace name.
     # Looked up via get_or_create at deliverable-persist time, scoped per
