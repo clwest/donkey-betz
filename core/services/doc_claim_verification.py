@@ -1686,7 +1686,7 @@ def _backend_inv_services_files() -> ClaimResult:
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
     actual = len(py_files)
-    expected = 336  # refreshed Session 1133 close — post 1131-1133 arc count
+    expected = 354  # refreshed Session 1235 close — natural growth since 336 baseline (Session 1133)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 15 else ('medium' if drift <= 80 else 'high')
     return ClaimResult.build(
@@ -1694,7 +1694,8 @@ def _backend_inv_services_files() -> ClaimResult:
         actual=actual,
         severity=severity,
         note=(
-            "docs/SERVICES.md claims 103; BACKEND_INVENTORY.md claims 167; "
+            "docs/SERVICES.md still claims 103 (unregistered claim — separate follow-up); "
+            "BACKEND_INVENTORY.md updated 167 → 354 Session 1235; "
             "actual .py file count (excluding __init__.py)"
         ),
         fix_suggestion=(
