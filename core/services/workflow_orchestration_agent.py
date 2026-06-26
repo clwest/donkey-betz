@@ -4017,6 +4017,24 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             data = getattr(result, 'data', {}) or {}
 
             if success:
+                # Session 1238 PR-3: augment thin sports_edge_scan
+                # outputs with the deterministic no-odds fallback per
+                # Rigby's 06-26 audience-fit verdict. Other slots fall
+                # through unchanged. If agents for other slots exhibit
+                # the same thin-success pattern, extend the slot->
+                # fallback map; for now sports_edge_scan is the only
+                # observed case.
+                if (
+                    slot == 'sports_edge_scan'
+                    and self._lane_4_output_is_thin(output)
+                ):
+                    fallback = self._lane_4_sports_edge_scan_fallback()
+                    output = (
+                        f"{output}\n\n"
+                        f"---\n\n"
+                        f"_Session 1238 PR-3 auto-augmented (no-odds fallback):_\n\n"
+                        f"{fallback}"
+                    )
                 return {
                     'success': True,
                     'output': output,
@@ -4069,6 +4087,83 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 'slot_used': slot,
                 'agent_name': agent_pascal,
             }
+
+    @staticmethod
+    def _lane_4_sports_edge_scan_fallback() -> str:
+        """Deterministic fallback for Lane 4 sports_edge_scan when no
+        multi-bookmaker odds data is available.
+
+        Session 1238 PR-3: closes Rigby's "dead lane" finding from the
+        06-26 audience-fit verdict. Pre-fix, when the SharpActionDetector
+        agent had no qualifying odds data, it returned success with the
+        thin output "No multi-bookmaker odds data available." → the brief
+        inherited a near-empty Lane 4 section.
+
+        This fallback turns the empty lane into a structured 3-block
+        template per Rigby's spec:
+          - Data status (what feed is missing + spider health)
+          - What we can still do today (model/news/watchlist signals)
+          - Action (concrete restart/verify steps)
+
+        Static + deterministic on purpose — operator-facing recovery
+        playbook. If individual checks (spider liveness, watchlist
+        population) need to surface live runtime data, that's a future
+        enhancement (Session 1239+).
+        """
+        return (
+            "**Data status:** Multi-bookmaker odds feed empty for today's "
+            "scan window. Sharp-action signals require ≥2 sportsbook lines "
+            "(line moves + limit changes) to flag edges — no qualifying data "
+            "available from the current provider pull.\n\n"
+            "**What we can still do today (no-odds-fallback):**\n"
+            "- Review yesterday's closing line vs. results in the betting "
+            "dashboard; surface any large CLV misses that suggest model "
+            "drift.\n"
+            "- Scan watchlist tickers for injury news / scheduling changes "
+            "that would have moved lines if odds were live.\n"
+            "- Spot-check ML model health: are inference latencies normal? "
+            "Did any feature pipelines fail overnight?\n\n"
+            "**Action (pick one):**\n"
+            "- Verify odds provider API keys + rate-limit headroom "
+            "(typical cause when feed goes silent without errors).\n"
+            "- Manually trigger the odds-spider beat task if it's been "
+            "skipped: `python manage.py shell -c \"from celery import "
+            "current_app; current_app.send_task('core.tasks.run_odds_scan')\"`.\n"
+            "- File a brief ops note if this is the 2nd day in a row — "
+            "may indicate a provider-side outage worth escalating."
+        )
+
+    @staticmethod
+    def _lane_4_output_is_thin(output: str) -> bool:
+        """Heuristic: detect Lane 4 outputs that are technically
+        successful but content-thin.
+
+        Session 1238 PR-3: used by `_execute_lane_4_rotating_focus_step`
+        to decide whether to augment with the slot-specific fallback.
+
+        Thin signals:
+        - Output < 200 characters total
+        - Contains "no multi-bookmaker odds data" / "no qualifying"
+        - Contains generic "no data available" markers
+
+        Used in combination with the slot match (currently only
+        sports_edge_scan has a fallback template; other slots fall
+        through unchanged).
+        """
+        if not output:
+            return True
+        text = output.strip()
+        if len(text) < 200:
+            return True
+        thin_markers = (
+            'no multi-bookmaker odds',
+            'no multi-book odds',
+            'no qualifying',
+            'no odds data available',
+            'no data available',
+        )
+        text_lower = text.lower()
+        return any(m in text_lower for m in thin_markers)
 
     @staticmethod
     def _lane_4_sentinel(slot: str, error_excerpt: str) -> str:
