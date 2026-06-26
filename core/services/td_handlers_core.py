@@ -3162,7 +3162,9 @@ RESEARCH DATA:
             elif source == 'spider':
                 result = self._handle_spider_data('spider_data_tool', {'action': 'search', 'query': query, 'limit': limit}, user_id, trace_id)
             elif source == 'web':
-                result = self._handle_web_search('web_search', {'query': query}, user_id, trace_id)
+                result = self._handle_web_search(
+                    'web_search', {'query': query, 'limit': limit}, user_id, trace_id,
+                )
             else:
                 result = {'error': f'Unknown source: {source}. Valid: kb, spider, web'}
             return _tag(result)
