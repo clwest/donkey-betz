@@ -23,9 +23,16 @@ User = get_user_model()
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @require_personal_memory_access
-def search_personal_memories_api(request):
-    """
-    Search user's personal memories with strict access control
+def search_personal_memories_api(request, **kwargs):
+    """Search user's personal memories with strict access control.
+
+    Session 1237 P2.a: added ``**kwargs`` to absorb the ``user_id``
+    passthrough that `@require_personal_memory_access` injects. Pre-fix
+    every DRF dispatch raised `TypeError: unexpected keyword argument
+    'user_id'`. The endpoint had been silently broken — same shape as
+    the two sibling functions Session 1235 PR #2639 fixed (this one was
+    left untouched per "don't fix outside scope" at that time).
+    We read ``request.user`` directly so the kwarg is redundant.
     """
     user = request.user
     
