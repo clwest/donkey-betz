@@ -58,7 +58,7 @@ class EnforceDisabledLocalTests(TestCase):
 
     def test_local_disables_existing_enabled_denylisted_rows(self):
         self._make_periodic_task('scan-income-spider-orchestrator', enabled=True)
-        self._make_periodic_task('run-spider-network', enabled=True)
+        self._make_periodic_task('backfill-spider-embeddings', enabled=True)
         self._make_periodic_task('safe-housekeeping-task', enabled=True)  # not in deny
 
         with mock.patch.dict(os.environ, {}, clear=False):
@@ -67,13 +67,13 @@ class EnforceDisabledLocalTests(TestCase):
             count, names = _enforce_disabled_local()
 
         self.assertEqual(count, 2)
-        self.assertEqual(names, sorted(['scan-income-spider-orchestrator', 'run-spider-network']))
+        self.assertEqual(names, sorted(['scan-income-spider-orchestrator', 'backfill-spider-embeddings']))
         # Denied rows toggled
         self.assertFalse(
             PeriodicTask.objects.get(name='scan-income-spider-orchestrator').enabled
         )
         self.assertFalse(
-            PeriodicTask.objects.get(name='run-spider-network').enabled
+            PeriodicTask.objects.get(name='backfill-spider-embeddings').enabled
         )
         # Safe row untouched
         self.assertTrue(
@@ -83,7 +83,7 @@ class EnforceDisabledLocalTests(TestCase):
     def test_local_is_idempotent_on_already_disabled_rows(self):
         """Rows already at enabled=False are not toggled (or counted)."""
         self._make_periodic_task('scan-income-spider-orchestrator', enabled=False)
-        self._make_periodic_task('run-spider-network', enabled=True)
+        self._make_periodic_task('backfill-spider-embeddings', enabled=True)
 
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop('RAILWAY_ENVIRONMENT', None)
@@ -92,7 +92,7 @@ class EnforceDisabledLocalTests(TestCase):
 
         # Only the enabled one shows up
         self.assertEqual(count, 1)
-        self.assertEqual(names, ['run-spider-network'])
+        self.assertEqual(names, ['backfill-spider-embeddings'])
 
     def test_local_with_no_denylisted_rows_in_db(self):
         """If the DB has no denylisted rows at all, returns (0, [])."""
@@ -125,7 +125,7 @@ class EnforceDisabledLocalTests(TestCase):
         """When ENABLE_BEAT_TASKS opts a task back in, the helper
         leaves it enabled — symmetric to _filter_local_safe behavior."""
         self._make_periodic_task('scan-income-spider-orchestrator', enabled=True)
-        self._make_periodic_task('run-spider-network', enabled=True)
+        self._make_periodic_task('backfill-spider-embeddings', enabled=True)
 
         with mock.patch.dict(
             os.environ,
@@ -137,14 +137,14 @@ class EnforceDisabledLocalTests(TestCase):
 
         # Only the non-overridden task gets disabled
         self.assertEqual(count, 1)
-        self.assertEqual(names, ['run-spider-network'])
+        self.assertEqual(names, ['backfill-spider-embeddings'])
         # Override target untouched
         self.assertTrue(
             PeriodicTask.objects.get(name='scan-income-spider-orchestrator').enabled
         )
         # Non-override denylisted task toggled
         self.assertFalse(
-            PeriodicTask.objects.get(name='run-spider-network').enabled
+            PeriodicTask.objects.get(name='backfill-spider-embeddings').enabled
         )
 
     def test_local_with_override_for_all_denylist_is_noop(self):
