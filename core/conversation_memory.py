@@ -1,237 +1,211 @@
-"""
-Real-time conversation memory and learning system
-Saves all conversations to build knowledge over time
+"""Conversation memory facade.
+
+Thin wrapper around the ``core.models.ConversationMemory`` Django model
+that preserves the legacy `conversation_memory.save_conversation(...)` /
+`get_conversation_history(...)` / `update_knowledge_metrics(...)` call
+surface used by the chat-path views.
+
+Session 1235 P5#3 audit Tranche 1 PR #2: pivoted from dead
+`unified_embeddings` raw-SQL writes (against a DB that existed but a
+table that didn't) to the real `core.models.ConversationMemory` model
+that has the canonical user-chat shape (user, message, response,
+agents_used, intent, success, created_at).
+
+Pre-pivot every save_conversation call silently returned False with
+`logger.error("Failed to save conversation: relation "unified_embeddings"
+does not exist")` and the chat path's outer try/except logged
+"Conversation save result: False" — the "learning loop" had been broken
+since this file existed.
+
+The facade pattern is kept for two reasons:
+1. Two call sites (`core/views.py:1094`, `core/views/main.py:925`) import
+   the singleton; changing both imports would expand PR scope without
+   semantic benefit.
+2. The hallucination filter (block known bad-content strings before
+   persisting) is real functional logic worth preserving at this layer.
+
+Embedding generation was dropped from save_conversation: the new model
+has no `embedding` column. If/when semantic search of conversation
+history is needed, that's a separate feature on top of this surface
+(could write to DocumentEmbedding with a conversation-specific
+source_type, or add a new ConversationEmbedding model).
 """
 
-import json
 import logging
-from datetime import datetime
-from typing import Dict, Any
-import psycopg2
+from typing import Dict, Any, List, Optional
+
 from django.contrib.auth import get_user_model
-from core.rag_integration import create_embedding
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+# Hallucination filter — real functional content gate preserved from
+# pre-pivot version. Strings here are known bad-content markers from
+# unrelated Flutter/fitness-tracker hallucinations that surfaced in
+# earlier sessions; if the assistant response contains any, we refuse
+# to persist it.
+HALLUCINATION_INDICATORS = (
+    'dashboard_page.dart',
+    'main_navigation_page.dart',
+    'FITNESS DASHBOARD',
+    'Flutter',
+    'weight tracking',
+    'Walking, Herd, Profile',
+)
+
+
 class ConversationMemory:
-    """Persistent conversation memory that learns from every interaction"""
-    
-    def __init__(self):
-        self.db_config = {
-            'host': 'localhost',
-            'database': 'unified_donkey_betz',
-            'user': 'postgres',
-            'password': ''
-        }
-    
-    def save_conversation(self, user_id, user_message: str, 
-                         assistant_response: str, metadata: Dict[str, Any] = None) -> bool:
+    """Facade around the core.models.ConversationMemory Django model."""
+
+    def save_conversation(
+        self,
+        user_id,
+        user_message: str,
+        assistant_response: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Persist a user/assistant exchange to ConversationMemory.
+
+        Returns True on successful save, False on filter-rejection or
+        any DB error. Mirrors pre-pivot return semantics so callers
+        don't need to change.
         """
-        Save a conversation to persistent memory for learning
-        
-        Args:
-            user_id: User ID
-            user_message: User's message
-            assistant_response: Assistant's response
-            metadata: Additional context (timestamp, session_id, etc)
-        
-        Returns:
-            True if saved successfully
-        """
-        logger.info(f"=== save_conversation called ===")
-        logger.info(f"User ID: {user_id}")
-        logger.info(f"User message: {user_message[:50]}...")
-        logger.info(f"Assistant response: {assistant_response[:50]}...")
-        
-        # CRITICAL: Don't save conversations that contain known hallucinations
-        hallucination_indicators = [
-            'dashboard_page.dart',
-            'main_navigation_page.dart', 
-            'FITNESS DASHBOARD',
-            'Flutter',
-            'weight tracking',
-            'Walking, Herd, Profile'
-        ]
-        
-        for indicator in hallucination_indicators:
+        # Hallucination filter — refuse to persist responses containing
+        # known bad-content markers from prior incidents.
+        for indicator in HALLUCINATION_INDICATORS:
             if indicator in assistant_response:
-                logger.warning(f"Detected potential hallucination ('{indicator}'), not saving conversation")
-                return False
-        
-        try:
-            # Create embedding for the conversation
-            conversation_text = f"User: {user_message}\nAssistant: {assistant_response}"
-            logger.info(f"Creating embedding for text of length: {len(conversation_text)}")
-            embedding = create_embedding(conversation_text)
-            
-            if not embedding:
-                logger.warning("Could not create embedding for conversation")
-                embedding = None
-            else:
-                logger.info(f"Embedding created successfully, length: {len(embedding)}")
-            
-            # Connect to ai_unified_platform database
-            conn = psycopg2.connect(**self.db_config)
-            cursor = conn.cursor()
-            
-            # Insert into unified_embeddings table
-            insert_sql = """
-                INSERT INTO unified_embeddings (
-                    source_database, source_table, source_id, 
-                    content_type, content_text, embedding,
-                    embedding_model, metadata, importance_score,
-                    created_at
-                ) VALUES (
-                    'unified_donkey_betz', 'conversations', %s,
-                    'conversation', %s, %s,
-                    'text-embedding-3-small', %s, %s,
-                    NOW()
+                logger.warning(
+                    "ConversationMemory.save_conversation: rejected by "
+                    "hallucination filter (indicator=%r)",
+                    indicator,
                 )
-            """
-            
-            # Prepare metadata
+                return False
+
+        try:
+            from core.models import ConversationMemory as ConvModel
+
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                logger.error(
+                    "ConversationMemory.save_conversation: user_id=%r not found",
+                    user_id,
+                )
+                return False
+
             meta = metadata or {}
-            meta.update({
-                'user_id': str(user_id),  # Ensure user_id is string for JSON
-                'timestamp': datetime.now().isoformat(),
-                'user_message': user_message,
-                'assistant_response': assistant_response,
-                'learned': True  # Mark as new learning
-            })
-            
-            # Calculate importance based on response length and content
-            importance = min(1.0, len(assistant_response) / 1000)
-            
-            # Generate unique ID
-            import uuid
-            conversation_id = str(uuid.uuid4())
-            
-            logger.info(f"Executing SQL insert for conversation_id: {conversation_id}")
-            cursor.execute(insert_sql, (
-                conversation_id,
-                conversation_text,
-                embedding,
-                json.dumps(meta),
-                importance
-            ))
-            
-            logger.info(f"SQL executed, committing transaction...")
-            conn.commit()
-            cursor.close()
-            conn.close()
-            
-            logger.info(f"✅ Successfully saved conversation to memory: {conversation_id}")
+            # Extract structured fields that map to model columns.
+            # Other metadata keys (conversation_id, provider, model,
+            # rag_used, ...) have no home in the current model — they
+            # only existed in the dead-table JSONB metadata column.
+            # Drop them with a comment; if needed later, add a metadata
+            # JSONField via migration.
+            agents_used = meta.get('agents_used') or []
+            intent = (meta.get('intent') or '')[:100]  # CharField max_length=100
+
+            row = ConvModel.objects.create(
+                user=user,
+                message=user_message,
+                response=assistant_response,
+                agents_used=agents_used,
+                intent=intent,
+                success=True,
+            )
+            logger.info(
+                "ConversationMemory.save_conversation: persisted row id=%s "
+                "for user_id=%s",
+                row.id, user_id,
+            )
             return True
-            
+
         except Exception as e:
-            logger.error(f"Failed to save conversation: {e}")
+            logger.error(
+                "ConversationMemory.save_conversation: failed to persist "
+                "for user_id=%r: %s",
+                user_id, e, exc_info=True,
+            )
             return False
-    
-    def get_conversation_history(self, user_id: int, limit: int = 10) -> list:
-        """
-        Get recent conversation history for a user
-        
-        Args:
-            user_id: User ID
-            limit: Number of conversations to retrieve
-        
-        Returns:
-            List of conversation records
+
+    def get_conversation_history(self, user_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        """Return recent ConversationMemory rows shaped for legacy callers.
+
+        Output shape preserved from pre-pivot version:
+            {content, user_message, assistant_response, timestamp}
         """
         try:
-            conn = psycopg2.connect(**self.db_config)
-            cursor = conn.cursor()
-            
-            query = """
-                SELECT content_text, metadata, created_at
-                FROM unified_embeddings
-                WHERE content_type = 'conversation'
-                AND metadata->>'user_id' = %s
-                AND metadata->>'learned' = 'true'
-                ORDER BY created_at DESC
-                LIMIT %s
-            """
-            
-            cursor.execute(query, (str(user_id), limit))
-            results = cursor.fetchall()
-            
-            conversations = []
-            for content, metadata, created_at in results:
-                meta = json.loads(metadata) if isinstance(metadata, str) else metadata
-                conversations.append({
-                    'content': content,
-                    'user_message': meta.get('user_message', ''),
-                    'assistant_response': meta.get('assistant_response', ''),
-                    'timestamp': created_at.isoformat() if created_at else None
-                })
-            
-            cursor.close()
-            conn.close()
-            
-            return conversations
-            
+            from core.models import ConversationMemory as ConvModel
+
+            qs = ConvModel.objects.filter(user_id=user_id).order_by(
+                '-created_at',
+            )[:limit]
+
+            return [
+                {
+                    'content': f"User: {row.message}\nAssistant: {row.response}",
+                    'user_message': row.message,
+                    'assistant_response': row.response,
+                    'timestamp': row.created_at.isoformat() if row.created_at else None,
+                }
+                for row in qs
+            ]
+
         except Exception as e:
-            logger.error(f"Failed to get conversation history: {e}")
+            logger.error(
+                "ConversationMemory.get_conversation_history: failed for "
+                "user_id=%r: %s",
+                user_id, e, exc_info=True,
+            )
             return []
-    
+
     def update_knowledge_metrics(self, user_id: int) -> Dict[str, int]:
-        """
-        Update and return knowledge metrics for a user
-        
-        Args:
-            user_id: User ID
-        
-        Returns:
-            Dictionary with knowledge metrics
+        """Return knowledge metrics for a user's conversations + global
+        embedding corpus count.
+
+        Output shape preserved from pre-pivot version:
+            {total_conversations, today_conversations,
+             total_knowledge_base, learning_rate}
+
+        ``total_knowledge_base`` now reflects the live DocumentEmbedding
+        chunk count (the real corpus size) instead of the dead
+        unified_embeddings table. ``learning_rate`` is today's
+        conversation count, matching pre-pivot semantics.
         """
         try:
-            conn = psycopg2.connect(**self.db_config)
-            cursor = conn.cursor()
-            
-            # Count total conversations
-            cursor.execute("""
-                SELECT COUNT(*) 
-                FROM unified_embeddings 
-                WHERE content_type = 'conversation'
-                AND metadata->>'user_id' = %s
-            """, (str(user_id),))
-            total_conversations = cursor.fetchone()[0]
-            
-            # Count today's conversations
-            cursor.execute("""
-                SELECT COUNT(*) 
-                FROM unified_embeddings 
-                WHERE content_type = 'conversation'
-                AND metadata->>'user_id' = %s
-                AND created_at >= CURRENT_DATE
-            """, (str(user_id),))
-            today_conversations = cursor.fetchone()[0]
-            
-            # Count total embeddings
-            cursor.execute("SELECT COUNT(*) FROM unified_embeddings")
-            total_embeddings = cursor.fetchone()[0]
-            
-            cursor.close()
-            conn.close()
-            
+            from core.models import ConversationMemory as ConvModel
+            from content.models import DocumentEmbedding
+
+            # Use TIME_ZONE-aware localdate for created_at__date filter
+            # (Session 1235 PR #2636 lesson — same as dashboard pivot).
+            today = timezone.localdate()
+
+            user_total = ConvModel.objects.filter(user_id=user_id).count()
+            user_today = ConvModel.objects.filter(
+                user_id=user_id,
+                created_at__date=today,
+            ).count()
+            total_kb = DocumentEmbedding.objects.count()
+
             return {
-                'total_conversations': total_conversations,
-                'today_conversations': today_conversations,
-                'total_knowledge_base': total_embeddings,
-                'learning_rate': today_conversations  # New learnings today
+                'total_conversations': user_total,
+                'today_conversations': user_today,
+                'total_knowledge_base': total_kb,
+                'learning_rate': user_today,
             }
-            
+
         except Exception as e:
-            logger.error(f"Failed to update knowledge metrics: {e}")
+            logger.error(
+                "ConversationMemory.update_knowledge_metrics: failed for "
+                "user_id=%r: %s",
+                user_id, e, exc_info=True,
+            )
             return {
                 'total_conversations': 0,
                 'today_conversations': 0,
                 'total_knowledge_base': 0,
-                'learning_rate': 0
+                'learning_rate': 0,
             }
 
 
-# Singleton instance
+# Singleton instance — import target used by core/views.py + core/views/main.py
 conversation_memory = ConversationMemory()
