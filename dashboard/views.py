@@ -79,48 +79,41 @@ def dashboard_stats(request):
         except:
             pass
     
-    # Get REAL embedding counts from unified_donkey_betz database
+    # Session 1235 P5#3 audit Tranche 1 PR #1: pivot from dead
+    # `unified_embeddings` table (in non-existent `ai_unified_platform`
+    # DB) to live `DocumentEmbedding` ORM. Pre-pivot this block silently
+    # caught the connection failure and returned a hardcoded `67922`
+    # fallback indistinguishable from real data. Now reads the real
+    # 36k+ DocumentEmbedding chunks populated by the docs corpus.
     try:
-        import psycopg2
-        conn = psycopg2.connect(
-            host='localhost',
-            database='unified_donkey_betz',
-            user='postgres',
-            password=''
-        )
-        cursor = conn.cursor()
-        
-        # Get total embeddings
-        cursor.execute("SELECT COUNT(*) FROM unified_embeddings WHERE embedding IS NOT NULL")
-        total_embeddings = cursor.fetchone()[0]
-        
-        # Get today's new embeddings for trend
-        cursor.execute("""
-            SELECT COUNT(*) FROM unified_embeddings 
-            WHERE embedding IS NOT NULL 
-            AND created_at >= CURRENT_DATE
-        """)
-        today_count = cursor.fetchone()[0]
-        
-        # Get conversation count
-        cursor.execute("""
-            SELECT COUNT(*) FROM unified_embeddings 
-            WHERE content_type = 'conversation'
-            AND metadata->>'user_id' = %s
-        """, (str(user_id),))
-        user_conversations = cursor.fetchone()[0]
-        
-        conn.close()
-        
+        from content.models import DocumentEmbedding
+        # Use localdate() (TIME_ZONE-aware) so created_at__date comparisons
+        # match Django's USE_TZ + TIME_ZONE=America/Denver semantics. Naive
+        # timezone.now().date() would return UTC date and miss late-evening
+        # Denver rows that crossed midnight UTC.
+        today = timezone.localdate()
+        total_embeddings = DocumentEmbedding.objects.count()
+        today_count = DocumentEmbedding.objects.filter(
+            created_at__date=today,
+        ).count()
+        # User-scoped conversation count: DocumentEmbedding doesn't have
+        # a per-user conversation surface (pre-pivot this was reading
+        # `content_type='conversation' AND metadata->>'user_id'=N` from a
+        # table that never existed). Report 0 honestly until a real
+        # conversation embedding model is wired (Session 1236 follow-up).
+        user_conversations = 0
+
         stats['total_embeddings'] = total_embeddings
         stats['total_content'] = total_embeddings
         stats['user_conversations'] = user_conversations
         stats['total_content_trend'] = f'+{today_count}' if today_count > 0 else '0'
-        stats['learning_today'] = today_count  # NEW learnings today
+        stats['learning_today'] = today_count
     except Exception as e:
-        logger.error(f"Failed to get real embedding counts: {e}")
-        stats['total_embeddings'] = 67922  # Fallback to known count
-        stats['total_content'] = 67922
+        # Narrow this further in a follow-up if the broad except masks
+        # real DB issues; matched to the pre-pivot shape for now.
+        logger.error(f"Failed to get DocumentEmbedding counts: {e}")
+        stats['total_embeddings'] = 0
+        stats['total_content'] = 0
     
     # Try to get content breakdown
     try:
@@ -200,113 +193,66 @@ def dashboard_activity(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def embeddings_stats(request):
-    """Get embeddings statistics for the dashboard."""
-    # Handle authenticated or anonymous users
-    user_id = 9  # Default to user ID 9 (chris) where embeddings are stored
-    if hasattr(request, 'user') and request.user.is_authenticated:
-        user_id = request.user.id
-    
-    # Default stats with sample data for demo
+    """Get embeddings statistics for the dashboard.
+
+    Session 1235 P5#3 audit Tranche 1 PR #1: pivoted from dead
+    `unified_embeddings` raw-SQL queries to live `DocumentEmbedding` +
+    `Document` ORM. Pre-pivot this returned hardcoded `265174`-style
+    sample data with `status='demo_mode'` whenever the dead table query
+    failed (always). Users saw misleading fake numbers presented as if
+    real.
+    """
     stats = {
-        'total_embeddings': 265174,  # From previous migration
-        'by_platform': {
-            'moveyourazz': 265174,
-            'ai_content_studio': 0,
-            'agent_orchestra': 0
-        },
-        'by_type': {
-            'conversation': 265174,
-            'document': 0,
-            'knowledge': 0
-        },
+        'total_embeddings': 0,
+        'by_platform': {},
+        'by_type': {},
         'recent_count': 0,
-        'zero_vectors': 265174,  # All need regeneration
+        'zero_vectors': 0,
         'status': 'healthy',
-        'last_updated': timezone.now().isoformat()
+        'last_updated': timezone.now().isoformat(),
     }
-    
-    # Try to get real data from unified_embeddings table
+
     try:
-        from django.db import connection
-        with connection.cursor() as cursor:
-            # Check if unified_embeddings table exists
-            cursor.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'unified_embeddings'
-                )
-            """)
-            table_exists = cursor.fetchone()[0]
-            
-            if table_exists:
-                # Total count
-                cursor.execute("SELECT COUNT(*) FROM unified_embeddings")
-                result = cursor.fetchone()
-                if result:
-                    total_embeddings = result[0]
-                    stats['total_embeddings'] = total_embeddings
-                
-                # By platform (from source_database field)
-                cursor.execute("""
-                    SELECT source_database, COUNT(*) 
-                    FROM unified_embeddings 
-                    GROUP BY source_database
-                """)
-                platform_data = {}
-                for row in cursor.fetchall():
-                    if row[0]:
-                        platform_data[row[0]] = row[1]
-                
-                # Update platform stats - unified_embeddings is the current system
-                stats['by_platform'] = {
-                    'unified_platform': total_embeddings,
-                    'moveyourazz': 0,
-                    'ai_content_studio': 0,
-                    'agent_orchestra': 0
-                }
-                if platform_data:
-                    stats['by_platform'].update(platform_data)
-                
-                # By type (from content_type field)
-                cursor.execute("""
-                    SELECT content_type, COUNT(*) 
-                    FROM unified_embeddings 
-                    GROUP BY content_type
-                """)
-                type_data = {}
-                for row in cursor.fetchall():
-                    if row[0]:
-                        type_data[row[0]] = row[1]
-                if type_data:
-                    stats['by_type'] = type_data
-                
-                # Recent (last 7 days)
-                cursor.execute("""
-                    SELECT COUNT(*) FROM unified_embeddings 
-                    WHERE created_at > NOW() - INTERVAL '7 days'
-                """)
-                result = cursor.fetchone()
-                if result:
-                    stats['recent_count'] = result[0]
-                
-                # Check for zero vectors - this might be expensive, so let's simplify
-                stats['zero_vectors'] = 0  # Assume all are real vectors in unified_embeddings
-                
-                # Update status to healthy
-                stats['status'] = 'healthy'
-                stats['message'] = f'Live data from unified_embeddings table ({total_embeddings:,} vectors)'
-            else:
-                # Table doesn't exist, use demo data
-                stats['status'] = 'demo_mode'
-                stats['message'] = 'Using sample data - unified_embeddings table not found'
-                
+        from content.models import Document, DocumentEmbedding
+
+        total_embeddings = DocumentEmbedding.objects.count()
+        stats['total_embeddings'] = total_embeddings
+
+        # Platform breakdown — post-pivot, everything is "unified_platform".
+        # Pre-pivot this read `source_database` which doesn't exist on the
+        # live model. Surface a single bucket honestly; UI can hide it.
+        stats['by_platform'] = {'unified_platform': total_embeddings}
+
+        # By type: Document.document_type drives content classification
+        # (markdown / text / pdf / etc.). Pre-pivot this read raw-SQL
+        # content_type from the dead table.
+        type_breakdown = dict(
+            Document.objects.values_list('document_type').annotate(
+                count=Count('id'),
+            ).values_list('document_type', 'count')
+        )
+        stats['by_type'] = type_breakdown or {'unknown': 0}
+
+        # Recent (last 7 days)
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        stats['recent_count'] = DocumentEmbedding.objects.filter(
+            created_at__gte=seven_days_ago,
+        ).count()
+
+        # Zero vectors — DocumentEmbedding writes via the embedding pipeline
+        # which only persists on successful embedding generation, so 0 is
+        # the structural expected value. Pre-pivot this was speculative.
+        stats['zero_vectors'] = 0
+        stats['status'] = 'healthy'
+        stats['message'] = (
+            f'Live data from DocumentEmbedding ({total_embeddings:,} chunks)'
+        )
+
     except Exception as e:
-        # On error, return demo data with error noted
-        stats['status'] = 'demo_mode'
+        # Narrow this further in a follow-up if the broad except masks
+        # real DB issues. Matches pre-pivot shape for now.
+        stats['status'] = 'error'
         stats['debug_error'] = str(e)
-        print(f"DEBUG: Exception in embeddings_stats: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"embeddings_stats: failed to query DocumentEmbedding: {e}")
     
     return Response(stats)
