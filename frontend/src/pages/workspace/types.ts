@@ -34,36 +34,8 @@ export type WorkspaceTab =
   | 'git'
   | 'triggers'
 
-// Platform tab IDs (8 tabs — moved from workspace)
-export type PlatformTab =
-  | 'command'
-  | 'initiatives'
-  | 'boardroom'
-  | 'evaluation'
-  | 'content'
-  | 'system'
-  | 'dataintel'
-  | 'knowledge'
-  | 'learning'
-
-// Set of platform tab IDs for redirect detection
-export const PLATFORM_TABS = new Set<string>([
-  'command', 'initiatives', 'boardroom', 'evaluation', 'content',
-  'system', 'dataintel', 'knowledge', 'learning',
-])
-
-// Legacy tab IDs that should redirect to platform
-export const LEGACY_TO_PLATFORM: Record<string, PlatformTab> = {
-  infrastructure: 'system',
-  orchestration: 'system',
-  datasources: 'dataintel',
-  intelligence: 'dataintel',
-  governance: 'boardroom',
-  consciousness: 'knowledge',
-  conceptforge: 'content',
-  career: 'content',
-  voices: 'content',
-}
+// Session 1240: PlatformTab, PLATFORM_TABS, LEGACY_TO_PLATFORM, normalizePlatformTab,
+// legacyTabToSubTab, PlatformTabConfig removed alongside PlatformPage delete cascade.
 
 // Sub-tab types for each main tab
 export type InfrastructureSubTab = 'health' | 'integration' | 'services' | 'llm' | 'analytics' | 'billing'
@@ -76,35 +48,6 @@ export type ContentStudioSubTab = 'gallery' | 'channels' | 'blogs' | 'podcast' |
 // Session 971b: New merged tab sub-tab types
 export type SystemSubTab = 'health' | 'integration' | 'services' | 'llm' | 'monitor' | 'workflows' | 'hivemind' | 'triggers' | 'toolcalls'
 export type DataIntelSubTab = 'spiders' | 'feed' | 'learning' | 'reasoning' | 'collective' | 'safety' | 'predictions' | 'skills'
-
-/**
- * Session 1035: Normalize platform tab params (legacy or current).
- * Used by PlatformPage to handle old bookmarks.
- */
-export function normalizePlatformTab(tab: string): PlatformTab {
-  if (PLATFORM_TABS.has(tab)) return tab as PlatformTab
-  const legacy = LEGACY_TO_PLATFORM[tab]
-  if (legacy) return legacy
-  return 'command'
-}
-
-/**
- * Session 971b: Map legacy tab to a default sub-tab in the new merged tab.
- * So ?tab=orchestration lands on the "monitor" sub-tab within System.
- */
-export function legacyTabToSubTab(tab: string): string | undefined {
-  const mapping: Record<string, string> = {
-    infrastructure: 'health',
-    orchestration: 'monitor',
-    triggers: 'triggers',
-    datasources: 'spiders',
-    intelligence: 'reasoning',
-    conceptforge: 'dossiers',
-    voices: 'voices',
-    files: 'files',
-  }
-  return mapping[tab]
-}
 
 // Workspace context for project understanding
 export interface WorkspaceContext {
@@ -187,14 +130,6 @@ export interface ActionResult {
 // Tab configuration
 export interface TabConfig {
   id: WorkspaceTab
-  label: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
-  description?: string
-}
-
-// Platform tab configuration
-export interface PlatformTabConfig {
-  id: PlatformTab
   label: string
   icon: React.ComponentType<{ size?: number; className?: string }>
   description?: string

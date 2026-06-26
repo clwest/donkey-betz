@@ -17,7 +17,6 @@ import LegalPage from '@/pages/LegalPage'
 import PortfolioPage from '@/pages/PortfolioPage'
 import AdminPage from '@/pages/AdminPage'
 import WorkspacePage from '@/pages/WorkspacePageNew'  // Session 825: New modular workspace
-import PlatformPage from '@/pages/PlatformPage'  // Session 1035: System-wide dashboard
 import AdvisorsPage from '@/pages/AdvisorsPage'
 import NeuralOrchestraPage from '@/pages/NeuralOrchestraPage'
 import ConversationContractPage from '@/pages/ConversationContractPage'
