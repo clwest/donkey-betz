@@ -131,7 +131,115 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1236 — CURRENT ENTRY POINT
+## SESSION 1237 — CURRENT ENTRY POINT
+
+### SESSION 1236 CLOSED — P5#3 drift-sweep audit COMPLETE, 5 PRs
+
+Full handoff: [`SESSION_1236_P5_3_AUDIT_COMPLETE_TRANCHE_1_THROUGH_4.md`](docs/handoffs/SESSION_1236_P5_3_AUDIT_COMPLETE_TRANCHE_1_THROUGH_4.md).
+
+Session 1236 closed the full P5#3 drift-sweep audit across 4 tranches. Combined with Session 1235's Tranche 1 PRs #1-#6, the audit shipped **14 PRs total** spanning ~19 files affected, ~3,000+ lines of dead code removed, ~90+ regression-guard tests written.
+
+**Audit deliverable** `feed2d81-ee2f-44c0-8f17-816591d2a3ff` marked `completed` via `content_tool action=content_complete`.
+
+**Session 1236 PRs:**
+
+| PR | Subject | Tranche |
+|---|---|---|
+| [#2643](https://github.com/clwest/donkey-betz-platform/pull/2643) | delete orphan personal-knowledge feature (-489 lines) | T1 PR #7 final |
+| [#2644](https://github.com/clwest/donkey-betz-platform/pull/2644) | rotate pa_local.sh pin → `pa-a2443db2e43a42dc` | infra |
+| [#2645](https://github.com/clwest/donkey-betz-platform/pull/2645) | `clean_mythologies` retire cleanup step | T2 PR #1 |
+| [#2646](https://github.com/clwest/donkey-betz-platform/pull/2646) | delete 5 dead one-shot scripts (-1,624 lines) | T3 bulk |
+| [#2647](https://github.com/clwest/donkey-betz-platform/pull/2647) | delete 6 dead zombie unit tests (-1,110 lines) | T4 bulk |
+
+**Final audit verification:** sharper grep for real bug patterns (`psycopg2.connect` / `database='ai_unified_platform'` / `FROM unified_embeddings` / `INTO unified_embeddings`) across entire repo returns 8 file hits — all are intentional source-guard `assertNotIn(...)` text in test files OR retirement-rationale docstrings. **0 real bug patterns in production code.**
+
+**Notable decisions:**
+- **PR #2643 (orphan personal-knowledge delete):** Chris's evidence `"I do remember when we started that, but I honestly forgot all about doing it lol"` met the deletion threshold. Pushed back on my over-engineered 410-Gone-with-deprecation-logging framing — _"theres a lot of things we haven't used in 30 days lol"_ — honest deletion was right.
+- **Conv rotation mid-session:** Per Rigby's own P0 health-check recommendation (75/100, "rotate before Tranche 2/3/4 implementation"). `pa-0f08fc48ec914917` → `pa-a2443db2e43a42dc`. Carry-forward seeded with audit scope + Tranche 1 close summary.
+
+**Operational invariants (added Session 1236):**
+- Zero `psycopg2.connect` calls remain in production code (all retired/deleted)
+- Zero `FROM unified_embeddings` / `INTO unified_embeddings` queries remain in production code
+- `clean_mythologies` mgmt cmd runs cleanly with `[RETIRED]` notice + zero counts
+
+**Active conversation at S1236 close:** `pa-a2443db2e43a42dc` — health re-check at S1237 open is mandatory.
+
+**Worker state:** No new `@shared_task` added Session 1236. No restart needed.
+
+**Still Chris-side carryover into Session 1237:**
+- Anthropic credit refill at https://console.anthropic.com/billing
+- CI billing still failing — all 5 Session 1236 PRs admin-merged via `--admin`
+
+### FIRST THING Session 1237
+
+#### Priority 0 — Conversation health check
+
+`pa-a2443db2e43a42dc` was fresh at Session 1236 mid-session start; added ~10 turns through Tranche 2/3/4 execution + close. Likely 90-95/100 (fresh + bounded execution work, no design debate). Run `session_tool action=health_check` to confirm before any other PA work.
+
+#### Priority 1 — Calendar checks (TIME-BOUND, 2026-06-26)
+
+These are time-bound. Clear FIRST on session open.
+
+- **`refresh_docs_corpus` first scheduled fire verify (2026-06-26 10:00 UTC MDT = 04:00 Denver)** — Session 1235 PR #2634's first-ever scheduled run. Expected: skip path (corpus fully embedded). Verify:
+  ```python
+  from core.models import CeleryTaskEvent
+  from datetime import date
+  ev = CeleryTaskEvent.objects.filter(
+      task_name='core.tasks.refresh_docs_corpus',
+      started_at__date=date(2026, 6, 26),
+  ).order_by('-started_at').first()
+  print('status:', ev.status, 'took:', ev.duration_ms, 'result:', ev.result)
+  # Expected: SUCCESS, took < 1s, result includes index_changed=False, unembedded_before=0
+  ```
+- **morning_brief 2nd-fire verification (2026-06-26 13:00 UTC = 07:00 MDT)** — first scheduled fire with Session 1234 D3/D4/D5/D6 live. Verify lane intermediates land in MB workspace `19807888-…`, NOT cf708a2e.
+- **Operator Edge newsletter Friday-1 dry-run check (2026-06-26 12:00 UTC)** — Session 1228 carryover.
+
+#### Priority 2 — Bonus carryovers surfaced during the P5#3 audit (Session 1235-1236)
+
+These are out-of-DoD-scope discoveries from the audit work; each is a focused single-PR opportunity.
+
+1. **`search_personal_memories_api` latent decorator-kwarg bug** — `@require_personal_memory_access` passes `user_id=` kwarg; function signature is `def view(request):`. One-line `**kwargs` fix (same pattern Session 1235 PR #2639 applied to two sibling functions). Lowest-risk pickup.
+2. **`core/views.py` shadowed dead code audit** — Python package resolution makes `core/views/` (package) win over `core/views.py` (module). Likely substantial deletion candidate (potentially thousands of lines) after verifying every function is also in `core/views/main.py`. Medium-risk; needs systematic function-by-function audit.
+3. **`dashboard/at_a_glance.py` error log analyzer** — references the dead-DB error pattern with an outdated suggested fix ("rename `ai_unified_platform` → `unified_donkey_betz`"). Real fix is the ORM pivot pattern. Update the analyzer's error-pattern map. Low-risk meta-tooling cleanup.
+
+#### Priority 3 — Brief read + Sub-step D (if morning_brief 2nd fire produced real content)
+
+If 06-26 morning_brief produced a real Deliverable: Chris reads → Rigby pulls audience-fit verdict → polish PRs.
+
+#### Priority 4+ — Pre-existing carryover tail
+
+Unchanged from Session 1235-1236:
+
+- **Smoke-harness mode inconsistency** (Session 1231 F5, LOW-MEDIUM) — one-line fix.
+- **Smoke-probe tagging for AgentExecution** (Session 1231 F1 / R2 REC-2, MEDIUM).
+- **Promote `scripts/smoke_all_agents.py` → `manage.py smoke_all_agents`** (Session 1231 F6, LOW).
+- **Audit `5318da3e-…` §R2 amendment** (Session 1231 F3, P3) — `deliverable_tool action=append`.
+- **Engineer workspace staleness** (Session 1230 F3, MEDIUM).
+- **Meeting-context leak shape watch** (Session 1230 F2, LOW).
+- **Fleet-smoke wall-clock timeouts** (Session 1231 F2 / R2 REC-3, LOW).
+
+#### Priority N — CI billing fix (Chris-side, still outstanding since Session 1223)
+
+#### Priority N+1 — Anthropic A/B (gated on credit refill)
+
+When Anthropic credits return: run the Session 1229 Step 5 line-count task on the Anthropic path (`unset CLAUDE_CODE_ENGINE_PROVIDER`) and confirm no clarification stall.
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1236 totaled ~62 PRs. Daily-CoS arc Sub-step D awaits Chris's brief read on 06-26 + onward.
+
+**Possible re-ignites (Chris-discretion only):**
+- **Fleet sibling apps build-out** — 7 apps at localhost:8002-8008. No work since 1224.
+- Audit #5 (PA tool schemas vs handlers — Δ=43).
+- `scan-spider-opportunities` resume.
+- Outreach tone tweak nice-to-haves.
+- **Extend `verify_doc_claims` registration coverage** to the other 472 unwatched docs.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222).
+- Tier 3 from P2 deliverable `7ae61cf7-…`.
+
+---
 
 ### SESSION 1235 CLOSED — 9 PRs across two arcs (carryover-close + P5#3 audit Tranche 1)
 
