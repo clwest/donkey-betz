@@ -450,6 +450,9 @@ def build_config():
     then assigns the post wrapper to `CTO_CONFIG.post_task_callable`.
     """
     from core.services.scheduled_diagnostic_runner import DiagnosticConfig
+    from core.services.diagnostics._workspace_resolver import (
+        resolve_morning_brief_workspace_id as _resolve_diagnostic_workspace_id,
+    )
 
     return DiagnosticConfig(
         name='cto_daily_diagnostic',
@@ -474,6 +477,10 @@ def build_config():
         posting_enabled_env='CTO_DIAGNOSTIC_POSTING_ENABLED',
         cache_key_prefix='cto_diag',
         workspace_id_env='CTO_DIAG_WORKSPACE_ID',
+        # Session 1238 PR-A: same fix as COO + Trend daily diagnostics —
+        # resolver defaults to chris's Morning Brief workspace when env
+        # var unset. See _workspace_resolver module docstring.
+        workspace_resolver=_resolve_diagnostic_workspace_id,
         # CTO-specific override — queue env var from Session 1093
         queue=os.environ.get('CTO_DIAG_QUEUE', 'long_running'),
     )

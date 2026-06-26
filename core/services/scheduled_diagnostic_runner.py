@@ -215,6 +215,18 @@ class DiagnosticConfig:
     # Optional workspace id for the attention item (None = unassigned).
     workspace_id_env: str = ''
 
+    # Session 1238 PR-A: optional lazy resolver for the dispatched agent's
+    # target workspace. Resolution priority chain at dispatch time is:
+    #     workspace_id_env (env var lookup)
+    #     → workspace_resolver() return value
+    #     → None (router fallback — KNOWN BAD per Session 1238 cf708a2e leak)
+    # Callers that want deterministic targeting (avoid the router fallback)
+    # should set this. The shared helper
+    # `core.services.diagnostics._workspace_resolver
+    # .resolve_morning_brief_workspace_id` is the canonical default for
+    # chris's daily operational diagnostics (COO/CTO/TrendAnalysis).
+    workspace_resolver: Optional[Callable[[], Optional[str]]] = None
+
     # ── Session 1096: anti-spam safety rails (Rigby's queued priority) ─────
     # Hard daily post cap regardless of severity. Default 3 (morning + one
     # escalation + one late-day change per Rigby's sizing). Escalation
@@ -818,7 +830,24 @@ def run_diagnostic(config: DiagnosticConfig) -> Dict[str, Any]:
         }
 
     # ── 4. Dispatch agent async (no .get())
-    workspace_id = _env_value(config.workspace_id_env) if config.workspace_id_env else None
+    # Session 1238 PR-A: priority chain for workspace targeting —
+    # env var → workspace_resolver() → None. Pre-fix, unset env var
+    # silently fell through to None and the agent_router downstream
+    # picked the user's most-recent-active workspace (caused today's
+    # 06-26 COO diagnostic deliverable to leak into cf708a2e debug ws).
+    workspace_id: Optional[str] = None
+    if config.workspace_id_env:
+        env_val = _env_value(config.workspace_id_env)
+        if env_val:
+            workspace_id = env_val
+    if workspace_id is None and config.workspace_resolver is not None:
+        try:
+            workspace_id = config.workspace_resolver()
+        except Exception as e:
+            logger.warning(
+                '[%s] workspace_resolver raised %s: %s — falling through to None',
+                prefix, type(e).__name__, e,
+            )
     agent_prompt = config.prompt_builder(metrics, gate)
     agent_async_id = None
     dispatch_error = None
