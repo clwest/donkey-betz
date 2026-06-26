@@ -1132,6 +1132,9 @@ def render_stuck_initiatives(metrics: Dict[str, Any], gate: Dict[str, Any]) -> L
 def build_config():
     """Build the COO DiagnosticConfig. Lazy import of runner."""
     from core.services.scheduled_diagnostic_runner import DiagnosticConfig
+    from core.services.diagnostics._workspace_resolver import (
+        resolve_morning_brief_workspace_id as _resolve_diagnostic_workspace_id,
+    )
 
     return DiagnosticConfig(
         name='coo_daily_diagnostic',
@@ -1159,6 +1162,13 @@ def build_config():
         posting_enabled_env='COO_DIAGNOSTIC_POSTING_ENABLED',
         cache_key_prefix='coo_diag',
         workspace_id_env='COO_DIAG_WORKSPACE_ID',
+        # Session 1238 PR-A: closes today's 06-26 cf708a2e leak. When
+        # the env var is unset, this resolver targets chris's Morning
+        # Brief workspace (same morning-cadence as morning_brief itself).
+        # Pre-fix the unset env var fell through to None and the
+        # agent_router fallback picked the user's most-recent-active
+        # workspace (cf708a2e debug ws from Session 1231 E2E).
+        workspace_resolver=_resolve_diagnostic_workspace_id,
         queue=os.environ.get('COO_DIAG_QUEUE', 'long_running'),
         # Session 1096 — Rigby's conservative-start recommendation:
         # override the primitive's default cap of 3 to start COO at 2.
