@@ -5938,6 +5938,162 @@ def generate_morning_brief_daily(self, user_id=None, dry_run=False):
     }
 
 
+@shared_task(bind=True, soft_time_limit=600, time_limit=720, ignore_result=True)
+def refresh_docs_corpus(self, force=False):
+    """Daily auto-cascade for the docs corpus.
+
+    Session 1235 P5#2 — closes the 12-day-stale failure mode discovered
+    during Session 1234's D9→D16 docs-corpus retrieval arc. Pre-this-task,
+    the cascade ``build_docs_index → build_rag_corpus →
+    sync_docs_index_to_documents → embed`` was manual-only with no
+    auto-trigger, so prod corpus drifted 12 days and 1820 Documents were
+    never pushed.
+
+    Behavior (hash-delta gated, with secondary unembedded-count trigger):
+
+    1. Hash current ``docs/_index.json`` content. Compare against cached
+       prior hash at ``docs_corpus:last_index_hash``.
+    2. Check unembedded count: ``Document`` rows with non-empty content
+       and no ``DocumentEmbedding`` rows.
+    3. If hash unchanged AND unembedded == 0 AND not force: skip (no-op).
+    4. If hash changed OR force: run cascade steps 1-3
+       (``build_docs_index``, ``build_rag_corpus``,
+       ``sync_docs_index_to_documents``).
+    5. If unembedded > 0 (recomputed after sync): fan out
+       ``generate_document_embeddings.delay()`` per doc. Per Rigby's
+       design review: skip serial inline embedding to avoid 25min beat
+       tasks; let the worker pool parallelize.
+    6. Update cached hash on success.
+
+    The two-trigger gate (hash OR unembedded-count) is self-healing for
+    partial step-4 failures (OpenAI rate-limit, network hiccup): next
+    fire detects remaining unembedded docs and retries them even if the
+    index hash didn't change.
+
+    Beat schedule: ``crontab(hour=4, minute=0)`` Denver time
+    (10:00 UTC MDT, 11:00 UTC MST per Session 1228 TZ convention).
+    Cadence picks 04:00 (3h pre-morning_brief) for headroom on cold
+    cascades. NOT in LOCAL_DENY_TASKS — delta cost is sub-penny and
+    local Rigby benefits from a fresh corpus during dev/test.
+
+    Args:
+        force: If True, run cascade regardless of hash. Default False.
+               Useful for manual triggers (PA tool, post-deploy refresh).
+
+    Returns:
+        dict telemetry: ``success / index_changed / unembedded_before /
+        sync_summary / embedding_tasks_dispatched / took_seconds /
+        hash_short`` for ``CeleryTaskEvent`` introspection.
+    """
+    import hashlib
+    import io
+    from pathlib import Path
+    from django.conf import settings
+    from django.core.cache import cache
+    from django.core.management import call_command
+    from content.models import Document, DocumentEmbedding
+
+    started = time.monotonic()
+    cache_key = 'docs_corpus:last_index_hash'
+    index_path = Path(settings.BASE_DIR) / 'docs' / '_index.json'
+
+    current_hash = None
+    if index_path.exists():
+        with open(index_path, 'rb') as f:
+            current_hash = hashlib.sha256(f.read()).hexdigest()
+
+    prior_hash = cache.get(cache_key)
+    index_unchanged_pre = (current_hash == prior_hash) and current_hash is not None
+
+    embedded_doc_ids = set(
+        DocumentEmbedding.objects.values_list('document_id', flat=True).distinct()
+    )
+    unembedded_qs = Document.objects.exclude(id__in=embedded_doc_ids).filter(
+        raw_content__gt=''
+    )
+    unembedded_before = unembedded_qs.count()
+
+    if index_unchanged_pre and unembedded_before == 0 and not force:
+        elapsed = time.monotonic() - started
+        logger.info(
+            "[DOCS_CORPUS_REFRESH_SKIP] index_unchanged=True unembedded=0 "
+            "took=%.2fs hash=%s",
+            elapsed, (current_hash or 'none')[:12],
+        )
+        return {
+            'success': True,
+            'index_changed': False,
+            'unembedded_before': 0,
+            'sync_summary': None,
+            'embedding_tasks_dispatched': 0,
+            'took_seconds': round(elapsed, 2),
+            'hash_short': (current_hash or 'none')[:12],
+        }
+
+    sync_summary = None
+    new_hash = current_hash
+
+    if (not index_unchanged_pre) or force:
+        out = io.StringIO()
+        try:
+            call_command('build_docs_index', stdout=out, stderr=out)
+            call_command('build_rag_corpus', stdout=out, stderr=out)
+            call_command('sync_docs_index_to_documents', stdout=out, stderr=out)
+        except Exception as e:
+            elapsed = time.monotonic() - started
+            logger.error(
+                "[DOCS_CORPUS_REFRESH_CASCADE_FAIL] step1-3 raised %s: %s "
+                "took=%.2fs",
+                type(e).__name__, e, elapsed, exc_info=True,
+            )
+            return {
+                'success': False,
+                'error': f'{type(e).__name__}: {e}',
+                'stage': 'cascade_1_3',
+                'took_seconds': round(elapsed, 2),
+            }
+
+        if index_path.exists():
+            with open(index_path, 'rb') as f:
+                new_hash = hashlib.sha256(f.read()).hexdigest()
+
+        sync_summary = 'cascade_1_3_complete'
+
+        embedded_doc_ids = set(
+            DocumentEmbedding.objects.values_list('document_id', flat=True).distinct()
+        )
+        unembedded_qs = Document.objects.exclude(id__in=embedded_doc_ids).filter(
+            raw_content__gt=''
+        )
+
+    embedding_tasks_dispatched = 0
+    for doc_id in unembedded_qs.values_list('id', flat=True):
+        generate_document_embeddings.delay(str(doc_id), 'openai_small')
+        embedding_tasks_dispatched += 1
+
+    if new_hash:
+        cache.set(cache_key, new_hash, timeout=None)
+
+    elapsed = time.monotonic() - started
+    logger.info(
+        "[DOCS_CORPUS_REFRESH] index_changed=%s unembedded_before=%d "
+        "embedding_tasks_dispatched=%d took=%.2fs hash=%s",
+        not index_unchanged_pre, unembedded_before,
+        embedding_tasks_dispatched, elapsed,
+        (new_hash or 'none')[:12],
+    )
+
+    return {
+        'success': True,
+        'index_changed': not index_unchanged_pre,
+        'unembedded_before': unembedded_before,
+        'sync_summary': sync_summary,
+        'embedding_tasks_dispatched': embedding_tasks_dispatched,
+        'took_seconds': round(elapsed, 2),
+        'hash_short': (new_hash or 'none')[:12],
+    }
+
+
 @shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     from core.tasks_content import _impl_run_autonomous_thinking_cycle
