@@ -122,6 +122,94 @@ class MuscularPlainEnglishHumanizerTests(TestCase):
         self.assertEqual(WorkflowOrchestrationAgent._humanize_body_system_jargon(''), '')
 
 
+class MuscularBroadenedSweepTests(TestCase):
+    """Session 1242: PR #2658's 2 literal substitutions missed 3 of 4
+    MUSCULAR mentions in the 06-27 brief. The broadened humanizer
+    catches the remaining shapes too.
+
+    Each test uses the exact escape pattern from the 06-27 brief
+    (Deliverable 7ba30cc0-5fa9-44fb-a316-cf728c3ce1d7), so the test
+    suite acts as a regression guard against the specific shapes that
+    leaked through PR #2658.
+    """
+
+    def test_tl_dr_prose_bare_muscular_demoted_to_tag(self):
+        """Site 1 from 06-27 brief — TL;DR prose."""
+        text = (
+            'DevOps should validate Celery worker health and restart if '
+            'needed — MUSCULAR warning exists but a 30-min recheck shows '
+            'low confidence; follow Decision 1 if DevOps sees an '
+            'execution stall.'
+        )
+        out = WorkflowOrchestrationAgent._humanize_body_system_jargon(text)
+        # Bare 'MUSCULAR warning' replaced with humanized phrase + tag
+        self.assertNotIn('— MUSCULAR warning', out)
+        self.assertIn('agent-activity [MUSCULAR] warning', out)
+
+    def test_lane_1_subsystem_warning_collapses_to_single_subsystem(self):
+        """Site 2 from 06-27 brief — Lane 1 body. The phrase 'MUSCULAR
+        subsystem WARNING' should NOT produce 'agent-activity [MUSCULAR]
+        subsystem WARNING' (awkward double 'subsystem'). The dedicated
+        'MUSCULAR subsystem' pattern collapses to a single subsystem."""
+        text = (
+            'Agent activity anomaly: MUSCULAR subsystem WARNING — '
+            '"No recent agent activity; agents not running."'
+        )
+        out = WorkflowOrchestrationAgent._humanize_body_system_jargon(text)
+        # No double 'subsystem subsystem'
+        self.assertNotIn('subsystem subsystem', out)
+        # Tag preserved
+        self.assertIn('[MUSCULAR]', out)
+        # Reads as plain English
+        self.assertIn('agent-activity subsystem [MUSCULAR] WARNING', out)
+
+    def test_dashboard_path_bare_muscular(self):
+        """Site 3 from 06-27 brief — 'Where to verify' line referring to
+        the Body Health Dashboard nav crumb."""
+        text = 'Where to verify: Body Health Dashboard > MUSCULAR; /ai-studio/.'
+        out = WorkflowOrchestrationAgent._humanize_body_system_jargon(text)
+        self.assertNotIn('> MUSCULAR;', out)
+        self.assertIn('> agent-activity [MUSCULAR];', out)
+
+    def test_the_muscular_subsystem_pattern(self):
+        """Site 4 from 06-27 brief — Decision 1 'Why now' phrasing."""
+        text = (
+            'The MUSCULAR subsystem reports "No Agent Activity — WARNING" '
+            'and is BLOCKING content generation pipelines.'
+        )
+        out = WorkflowOrchestrationAgent._humanize_body_system_jargon(text)
+        self.assertNotIn('The MUSCULAR subsystem', out)
+        self.assertIn('The agent-activity subsystem [MUSCULAR]', out)
+
+    def test_broadened_pass_is_idempotent(self):
+        """All 4 06-27 leak shapes survive a second humanizer pass
+        unchanged. Critical: the synthesis step + decision_card step
+        both run the humanizer on overlapping text, so non-idempotent
+        replacement would compound."""
+        text = (
+            'MUSCULAR warning exists. MUSCULAR subsystem WARNING. '
+            'Dashboard > MUSCULAR. The MUSCULAR subsystem reports.'
+        )
+        once = WorkflowOrchestrationAgent._humanize_body_system_jargon(text)
+        twice = WorkflowOrchestrationAgent._humanize_body_system_jargon(once)
+        self.assertEqual(once, twice)
+        # And the legacy literal still rewrites correctly after broaden:
+        legacy = WorkflowOrchestrationAgent._humanize_body_system_jargon(
+            'MUSCULAR: No Agent Activity'
+        )
+        self.assertIn('Agent activity anomaly', legacy)
+        self.assertNotIn('agent-activity [MUSCULAR]: No', legacy)
+
+    def test_already_tagged_muscular_left_alone(self):
+        """The negative lookbehind/lookahead must skip MUSCULAR already
+        wrapped in brackets so PR #2658's [MUSCULAR] tag survives
+        intact when the humanizer runs over its own output (or over
+        text already humanized at an upstream layer)."""
+        text = 'Agent activity anomaly (possible worker stall) [MUSCULAR] — re-checked.'
+        out = WorkflowOrchestrationAgent._humanize_body_system_jargon(text)
+        self.assertEqual(out, text)
+
+
 class MorningBriefSynthesisInputsIntegrationTests(TestCase):
     """`_execute_strategic_synthesis_step` morning_brief mode wires
     both helpers into synthesis_inputs."""
