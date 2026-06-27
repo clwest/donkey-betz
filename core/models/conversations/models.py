@@ -327,3 +327,47 @@ class UserMemoryContext(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.memory_type}: {self.content[:50]}..."
+
+
+class PaMessageFeedback(models.Model):
+    """Thumbs up/down feedback on PA responses (Session 1085, rebuilt S1243).
+
+    The original class lived in the shadowed core/models.py monolith and was
+    never Django-registered, so the supporting table was never created — the
+    /api/pa/feedback/ endpoint 500'd on every POST. This rebuild registers the
+    model under the conversations subpackage and adds the missing migration.
+    """
+
+    import uuid as _uuid
+
+    id = models.UUIDField(primary_key=True, default=_uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='pa_message_feedback',
+    )
+    conversation_id_str = models.CharField(
+        max_length=255,
+        db_index=True,
+        help_text="Conversation ID string (e.g., 'pa-xxx') — string, not FK.",
+    )
+    message_index = models.IntegerField(
+        default=0,
+        help_text="Index of the assistant message within the conversation.",
+    )
+    rating = models.SmallIntegerField(help_text="+1 (thumbs up) or -1 (thumbs down)")
+    note = models.TextField(blank=True, help_text="Optional feedback text.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_pamessagefeedback'
+        unique_together = [('user', 'conversation_id_str', 'message_index')]
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['rating']),
+        ]
+
+    def __str__(self):
+        icon = "👍" if self.rating > 0 else "👎"
+        return f"{icon} {self.user.username} on {self.conversation_id_str}:{self.message_index}"
