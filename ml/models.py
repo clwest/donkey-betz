@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 
 
-class MLModelVersion(models.Model):
+class SportsMLModelVersion(models.Model):
     """
     Track ML model versions and performance over time
 
@@ -116,7 +116,7 @@ class MLModelVersion(models.Model):
         Make this model active (deactivate all other versions for this sport)
         """
         # Deactivate all other versions for this sport
-        MLModelVersion.objects.filter(
+        SportsMLModelVersion.objects.filter(
             sport_type=self.sport_type,
             is_active=True
         ).update(is_active=False, retired_date=timezone.now())
@@ -143,7 +143,7 @@ class MLModelVersion(models.Model):
             sport_type: 'nfl', 'nba', 'mlb', or 'nhl'
 
         Returns:
-            MLModelVersion instance or None
+            SportsMLModelVersion instance or None
         """
         return cls.objects.filter(
             sport_type=sport_type,
@@ -159,7 +159,7 @@ class MLModelVersion(models.Model):
             sport_type: 'nfl', 'nba', 'mlb', or 'nhl'
 
         Returns:
-            QuerySet of MLModelVersion instances
+            QuerySet of SportsMLModelVersion instances
         """
         return cls.objects.filter(sport_type=sport_type).order_by('-version')
 
@@ -179,7 +179,7 @@ class MLModelVersion(models.Model):
         if self.version == 1:
             return None
 
-        previous = MLModelVersion.objects.filter(
+        previous = SportsMLModelVersion.objects.filter(
             sport_type=self.sport_type,
             version=self.version - 1
         ).first()

@@ -151,7 +151,7 @@ def cleanup_old_model_files(keep_versions: int = 5):
         dict: Cleanup statistics
     """
     import os
-    from ml.models import MLModelVersion
+    from ml.models import SportsMLModelVersion
 
     logger.info(f"🧹 Cleaning up old model files (keeping {keep_versions} versions per sport)")
 
@@ -162,7 +162,7 @@ def cleanup_old_model_files(keep_versions: int = 5):
     for sport in sports:
         try:
             # Get all versions for this sport
-            versions = MLModelVersion.objects.filter(
+            versions = SportsMLModelVersion.objects.filter(
                 sport_type=sport
             ).order_by('-version')
 
@@ -209,7 +209,7 @@ def get_model_stats() -> Dict[str, Any]:
     Returns:
         dict: Model statistics
     """
-    from ml.models import MLModelVersion
+    from ml.models import SportsMLModelVersion
 
     logger.info("📊 Gathering model statistics...")
 
@@ -218,7 +218,7 @@ def get_model_stats() -> Dict[str, Any]:
 
     for sport in sports:
         try:
-            active_model = MLModelVersion.get_active_model(sport)
+            active_model = SportsMLModelVersion.get_active_model(sport)
 
             if active_model:
                 stats[sport] = {

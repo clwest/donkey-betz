@@ -25,7 +25,7 @@ from django.db.models import Avg
 
 from .models import (
     CoLeadershipDecision,
-    AgentRecommendation,
+    AdvisorDecisionRecommendation,
     HumanDecision,
     DecisionOutcome
 )
@@ -78,7 +78,7 @@ def log_agent_recommendation(
     decision: CoLeadershipDecision,
     agent_template,
     payload_dict: Dict[str, Any]
-) -> AgentRecommendation:
+) -> AdvisorDecisionRecommendation:
     """
     Log an agent's recommendation for a decision.
 
@@ -95,10 +95,10 @@ def log_agent_recommendation(
             - time_horizon: "short_term" | "long_term" etc. (optional)
 
     Returns:
-        AgentRecommendation instance
+        AdvisorDecisionRecommendation instance
     """
     try:
-        recommendation = AgentRecommendation.objects.create(
+        recommendation = AdvisorDecisionRecommendation.objects.create(
             decision=decision,
             agent_template=agent_template,
             stance=payload_dict.get('stance', 'neutral'),
@@ -429,7 +429,7 @@ def get_user_decision_stats(user) -> Dict[str, Any]:
         success_rate = (success_count / total) * 100 if total > 0 else 0.0
 
         # Average AI confidence
-        avg_confidence = AgentRecommendation.objects.filter(
+        avg_confidence = AdvisorDecisionRecommendation.objects.filter(
             decision__initiated_by=user,
             confidence__isnull=False
         ).aggregate(avg=Avg('confidence'))['avg'] or 0.0

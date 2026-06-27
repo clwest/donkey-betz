@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
-    ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
+    ContentGeneration, ContentWorkflow, ContentWorkflowExecution, ContentAnalytics,
     ImageHistory, VideoHistory, MiniFigAsset, CreativeProject, ProjectWorkflow
 )
 
@@ -231,7 +231,7 @@ class ContentWorkflowAdmin(admin.ModelAdmin):
     creator_name.short_description = 'Creator'
 
 
-@admin.register(WorkflowExecution)
+@admin.register(ContentWorkflowExecution)
 class WorkflowExecutionAdmin(admin.ModelAdmin):
     """Admin interface for workflow executions"""
     
