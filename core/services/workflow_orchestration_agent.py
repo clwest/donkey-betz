@@ -2637,9 +2637,15 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         # directly into context via the handler, but mirror the assignment
         # here for symmetry + so the runner's step_results record sees the
         # value path consistently.
+        # Session 1242 Path C — also mirror the structured decision_cards
+        # list. Handler always sets both keys (markdown + structured) per
+        # the locked spec, but mirroring here keeps the dispatch contract
+        # symmetric across both representations.
         elif step_name == 'decision_card_synthesis':
             if result.get('decision_card_text'):
                 context['decision_card_text'] = result['decision_card_text']
+            if 'decision_cards' in result:
+                context['decision_cards'] = result['decision_cards']
 
     def _summarize_step_result(self, step_name: str, result: Dict) -> str:
         """Create a human-readable summary of a step result."""
@@ -4215,13 +4221,35 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         """Produce the Decision Card from the four lane texts.
 
         Reads ``lane_1_text`` through ``lane_4_text`` from context,
-        calls gpt-5-mini to produce 1-3 explicit decisions in markdown,
-        writes the result into ``context['decision_card_text']``.
+        calls gpt-5-mini to produce 1-3 explicit decisions, writes
+        BOTH the markdown form into ``context['decision_card_text']``
+        AND the structured form into ``context['decision_cards']``.
 
-        Graceful empty-context behavior matches the
-        ``strategic_synthesis`` pattern: if no lanes wrote anything,
-        return success with the "no decisions today" sentinel so the
-        workflow's dispatch contract stays honored.
+        Session 1242 (Path C — deliverable 19b45ea0-…): structured form
+        added per MORNING_BRIEF_SPEC.md:228 (which always called for
+        ``decision_card[{...}]`` alongside the markdown but was deferred
+        in S1233 B.1). Markdown body uses RELATIVE deadlines per Rigby's
+        S1242 audience-fit verdict (Chris's reading variance makes
+        "within 24 hours" strictly more actionable than "by 11:00 AM MDT").
+        Structured form carries an absolute ISO-8601 ``next_step_timebox``
+        when the LLM can confidently derive one — "present but optional"
+        per Rigby's locked design constraint.
+
+        Per-card schema (``decision_cards[i]``):
+          - ``decision``: str (non-empty after strip)
+          - ``recommendation``: str (non-empty after strip)
+          - ``why_now``: str (non-empty after strip)
+          - ``next_step_owner``: str (non-empty after strip)
+          - ``next_step_deadline_style``: one of {"relative", "absolute", "hybrid"}
+          - ``next_step_timebox``: ISO-8601 datetime w/ offset OR null
+
+        On structured-form parse / validation failure: keep the markdown,
+        set ``decision_cards=[]``, emit warning log + observability metric.
+        Brief still ships per ``feedback_workflow_step_sentinel_plus_
+        noncritical_pattern``.
+
+        Graceful empty-context behavior unchanged from B.1: if no lanes
+        wrote anything, return sentinel markdown + empty structured list.
         """
         from django.conf import settings
         from core.services.openai_client_factory import get_openai_client
@@ -4244,16 +4272,22 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         if not lane_inputs:
             # Smoke / empty-context case — keep the workflow alive.
+            # Path C: also write empty decision_cards list so any
+            # downstream consumer reading the structured form sees a
+            # well-formed empty list, not a missing key.
             sentinel = "No urgent decisions today — monitor only."
             context['decision_card_text'] = sentinel
+            context['decision_cards'] = []
             logger.info(
                 "🗂️ Session 1233 B.1: decision_card_synthesis ran with empty "
-                "lane context — wrote sentinel to keep workflow contract alive."
+                "lane context — wrote sentinel + empty decision_cards to keep "
+                "workflow contract alive."
             )
             return {
                 'success': True,
                 'summary': 'No lane inputs available; wrote sentinel',
                 'decision_card_text': sentinel,
+                'decision_cards': [],
                 'inputs_used': [],
             }
 
@@ -4261,33 +4295,76 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             'rotation_slot', self._MORNING_BRIEF_LANE_4_DEFAULT_SLOT,
         )
 
-        # Session 1238 PR-1: dynamic Denver TZ abbreviation. Pre-fix the
-        # prompt hardcoded "MST" in its example, and the LLM followed the
-        # example — produced "by 11:00 AM MST" timestamps even in summer
-        # (June 26 is MDT). Now we inject the current Denver TZ
-        # abbreviation so it tracks DST correctly year-round.
+        # Session 1242 Path C: compute Denver TZ ISO offset for the
+        # structured form's ``next_step_timebox`` when LLM emits an
+        # absolute deadline. Output shape: "-06:00" (MDT) or "-07:00"
+        # (MST), tracking DST automatically. Per Rigby's S1242 verdict
+        # this is NOT exposed in the markdown prompt anymore (markdown
+        # uses relative deadlines); only the structured form sees it.
         from datetime import datetime as _dt
         try:
             from zoneinfo import ZoneInfo
-            _denver_tz = _dt.now(tz=ZoneInfo('America/Denver')).strftime('%Z')
+            _denver_now = _dt.now(tz=ZoneInfo('America/Denver'))
+            _denver_iso_offset = _denver_now.strftime('%z')
+            # Normalize "-0600" → "-06:00" for ISO-8601 colon-separated form
+            if len(_denver_iso_offset) == 5:
+                _denver_iso_offset = (
+                    _denver_iso_offset[:3] + ':' + _denver_iso_offset[3:]
+                )
         except Exception:
-            _denver_tz = 'MDT'  # safe fallback during DST; flip to MST if needed
+            _denver_iso_offset = '-06:00'  # MDT safe fallback
 
         prompt_parts = [
             "You are producing the 'Today's Decisions' section for Chris's "
-            "daily Chief-of-Staff brief.",
+            "daily Chief-of-Staff brief. Output TWO parts in order: a "
+            "markdown body, then a JSON block.",
+            "",
+            "## PART 1 — Markdown body",
             "",
             "Based on the four lane outputs below, identify 1-3 explicit "
             "decisions Chris should make today. Hard cap: 3 decisions. If "
-            "nothing urgent surfaces, output exactly: ",
+            "nothing urgent surfaces, output exactly:",
             "    No urgent decisions today — monitor only.",
             "",
-            "For each decision, output one '### Decision N: <one-sentence title>' ",
+            "For each decision, output one '### Decision N: <one-sentence title>' "
             "heading followed by:",
             "- **Decision:** 1 sentence stating what to decide.",
             "- **Recommendation:** 1 sentence with the suggested choice.",
             "- **Why now:** 1 bullet (evidence-linked to a specific lane output).",
-            f"- **Next step:** owner + timebox (e.g., 'Claude Code — by 11:00 AM {_denver_tz}').",
+            "- **Next step:** owner + RELATIVE timebox (e.g., 'Claude Code — within 24 hours' or 'DevOps — within 2 hours').",
+            "",
+            "USE RELATIVE DEADLINES IN THE MARKDOWN. Do NOT use absolute clock "
+            "times in the markdown (no 'by 11:00 AM MDT' etc.) — Chris reads at "
+            "variable times and relative deadlines stay actionable. Absolute "
+            "times go in the JSON block instead.",
+            "",
+            "## PART 2 — JSON block (after the markdown)",
+            "",
+            "After the markdown body, output a fenced ```json ... ``` block "
+            "with this exact shape:",
+            "```json",
+            '{"decision_cards": [',
+            '  {',
+            '    "decision": "<from Decision: line above>",',
+            '    "recommendation": "<from Recommendation: line above>",',
+            '    "why_now": "<from Why now: line above>",',
+            '    "next_step_owner": "<owner name from Next step: line above>",',
+            '    "next_step_deadline_style": "relative" | "absolute" | "hybrid",',
+            '    "next_step_timebox": "<ISO-8601 datetime with offset>" OR null',
+            '  }',
+            ']}',
+            "```",
+            "",
+            "Rules for the JSON block:",
+            "- ``next_step_deadline_style`` MUST be one of: \"relative\", \"absolute\", \"hybrid\".",
+            "  - \"relative\" when the markdown deadline is a duration (\"within X hours/days\") and no specific clock time applies — this is the typical case.",
+            "  - \"absolute\" when a specific clock deadline is genuinely derivable (e.g., a meeting at 14:00, market close 16:00).",
+            "  - \"hybrid\" when both apply (rare).",
+            "- ``next_step_timebox`` MUST be ISO-8601 with offset when style=\"absolute\" or \"hybrid\"; MUST be null when style=\"relative\".",
+            f"- ISO offset for Denver TZ today: {_denver_iso_offset}",
+            "- ``decision_cards`` array length MUST equal the number of '### Decision N:' headers in the markdown body.",
+            "- If markdown is the no-urgent sentinel, JSON block is exactly: ```json\\n{\"decision_cards\": []}\\n```.",
+            "- All string fields must be non-empty after stripping whitespace.",
             "",
             "Lane inputs (truncated to 2000 chars each):",
         ]
@@ -4295,9 +4372,10 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             prompt_parts.append(f"\n--- {key} ---\n{val}")
         prompt_parts.extend([
             "",
-            "Output ONLY the decision-card markdown. No preamble. No headers ",
-            "other than the per-decision ones.",
             f"(Context: Lane 4 today is the '{slot_label}' rotating slot.)",
+            "",
+            "Output the markdown body FIRST, then the ```json ...``` block. "
+            "Nothing else.",
         ])
         prompt = "\n".join(prompt_parts)
 
@@ -4313,10 +4391,13 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 # cards each with 4 required fields. Today's 06-26 brief
                 # truncated Decision #3 mid-sentence ("...confirm whether
                 # missing odds data") — bump gives more headroom.
+                # Session 1242 Path C: 6000 still adequate since structured
+                # form adds ~300-500 tokens of JSON to a 1500-token markdown
+                # body (estimated 2000-2500 output tokens including JSON).
                 max_completion_tokens=6000,
             )
-            card_text = (response.choices[0].message.content or '').strip()
-            if not card_text:
+            full_response = (response.choices[0].message.content or '').strip()
+            if not full_response:
                 return {
                     'success': False,
                     'error': (
@@ -4325,10 +4406,22 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     ),
                 }
 
-            # Session 1238 PR-1: post-render validator catches truncation
-            # + missing required fields. Logs warning when invalid (does
-            # NOT fail the step — the brief still ships, but the issue
-            # is visible in logs for triage).
+            # Session 1242 Path C: split markdown body + JSON block.
+            # Failure mode: keep markdown, set decision_cards=[] per
+            # Rigby's "do not fail workflow on JSON parse failure" rule.
+            card_text, decision_cards, parse_issue = (
+                self._parse_decision_card_response(full_response)
+            )
+            if parse_issue:
+                logger.warning(
+                    "🗂️ Session 1242 Path C: decision_card JSON parse issue "
+                    "(%s) — keeping markdown, setting decision_cards=[].",
+                    parse_issue,
+                )
+
+            # Session 1238 PR-1: post-render markdown validator catches
+            # truncation + missing required fields. Logs warning when
+            # invalid (does NOT fail the step — brief still ships).
             validation_issues = self._validate_decision_card(card_text)
             if validation_issues:
                 logger.warning(
@@ -4337,7 +4430,37 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     len(validation_issues), validation_issues,
                 )
 
+            # Session 1242 Path C: structured-form validator. Empties
+            # decision_cards on any validation failure (Rigby's "present
+            # but optional" + "don't fail workflow" rules combined).
+            structured_issues = self._validate_decision_cards_structured(
+                decision_cards
+            )
+            if structured_issues:
+                logger.warning(
+                    "🗂️ Session 1242 Path C: decision_cards (structured) "
+                    "validation found %d issue(s) (%s) — keeping markdown, "
+                    "setting decision_cards=[].",
+                    len(structured_issues), structured_issues,
+                )
+                decision_cards = []
+
+            # Path C observability log: surfaces count + how many cards
+            # carried a non-null absolute timebox (per Rigby's recommendation
+            # — "log a compact summary, attach to existing run metadata").
+            non_null_timebox_count = sum(
+                1 for c in decision_cards if c.get('next_step_timebox')
+            )
+            logger.info(
+                "🗂️ Session 1242 Path C: decision_cards structured form — "
+                "count=%d, non_null_timebox=%d, parse_issue=%s, "
+                "structured_issues=%d",
+                len(decision_cards), non_null_timebox_count,
+                bool(parse_issue), len(structured_issues),
+            )
+
             context['decision_card_text'] = card_text
+            context['decision_cards'] = decision_cards
             inputs_used = list(lane_inputs.keys())
 
             logger.info(
@@ -4347,11 +4470,17 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             )
             return {
                 'success': True,
-                'summary': f'Produced decision card ({len(card_text)} chars) from '
-                           f'{len(inputs_used)} lane input(s)',
+                'summary': (
+                    f'Produced decision card ({len(card_text)} chars markdown '
+                    f'+ {len(decision_cards)} structured) from '
+                    f'{len(inputs_used)} lane input(s)'
+                ),
                 'decision_card_text': card_text,
+                'decision_cards': decision_cards,
                 'inputs_used': inputs_used,
                 'validation_issues': validation_issues,
+                'structured_issues': structured_issues,
+                'parse_issue': parse_issue,
             }
         except Exception as e:
             logger.error(
@@ -4365,6 +4494,162 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     f"{type(e).__name__}: {e}"
                 ),
             }
+
+    @staticmethod
+    def _parse_decision_card_response(full_response: str) -> tuple:
+        """Split decision_card_synthesis LLM output into markdown body + structured cards.
+
+        Session 1242 Path C: the LLM is asked to output TWO sections in
+        order — a markdown body followed by a fenced ``` ```json ``` ```
+        block containing ``{"decision_cards": [...]}``. This helper
+        extracts both. On any parse failure, returns the full response
+        as the markdown body, an empty list for the structured form, and
+        a diagnostic string in the third tuple slot.
+
+        Returns: (markdown_body: str, decision_cards: list[dict], parse_issue: str)
+        ``parse_issue`` is '' on success, otherwise a short reason string
+        the caller can log.
+
+        Parsing strategy: locate the LAST ``` ```json ``` ``` fence in the
+        response (more robust than greedy first-fence match if the
+        markdown body itself contains a code block). Everything before
+        that fence is the markdown body. Inside the fence, JSON-parse and
+        extract the ``decision_cards`` array.
+        """
+        import json
+        import re as _re
+
+        if not full_response or not full_response.strip():
+            return ('', [], 'empty response')
+
+        # Two-pass fence matching:
+        # 1. Prefer the LAST ```json fence (most specific; survives if
+        #    the markdown body has its own ```python / ```bash blocks
+        #    that share opening-and-closing-fence shape).
+        # 2. Fall back to the LAST bare ``` fence only if no ```json
+        #    fence found (handles the LLM-forgot-the-lang-tag case).
+        #
+        # Why this matters: with the LLM emitting fenced code samples
+        # inside a Decision body, a single combined regex would pair
+        # the code-sample's closing fence with the next code-sample's
+        # opening fence and capture the text in between as "JSON" —
+        # then json.loads fails on prose text. Splitting the strategy
+        # avoids the false pair.
+        json_fence_re = _re.compile(
+            r'```json\s*\n(.*?)\n\s*```',
+            _re.DOTALL,
+        )
+        matches = list(json_fence_re.finditer(full_response))
+        if not matches:
+            bare_fence_re = _re.compile(
+                r'```\s*\n(.*?)\n\s*```',
+                _re.DOTALL,
+            )
+            matches = list(bare_fence_re.finditer(full_response))
+        if not matches:
+            return (full_response.strip(), [], 'no JSON fence found')
+
+        last_match = matches[-1]
+        json_text = last_match.group(1).strip()
+        markdown_body = full_response[:last_match.start()].strip()
+
+        try:
+            payload = json.loads(json_text)
+        except json.JSONDecodeError as e:
+            return (markdown_body, [], f'json decode error: {e}')
+
+        if not isinstance(payload, dict):
+            return (markdown_body, [], f'JSON root is {type(payload).__name__}, not dict')
+
+        cards = payload.get('decision_cards')
+        if cards is None:
+            return (markdown_body, [], 'missing "decision_cards" key')
+        if not isinstance(cards, list):
+            return (
+                markdown_body, [],
+                f'"decision_cards" is {type(cards).__name__}, not list',
+            )
+
+        return (markdown_body, cards, '')
+
+    @staticmethod
+    def _validate_decision_cards_structured(cards: list) -> list:
+        """Validate the structured decision_cards form per Rigby's S1242 contract.
+
+        Locked contract (deliverable 19b45ea0-…):
+        - ``decision_cards`` is a list[dict] (may be empty).
+        - Required keys per card: ``decision``, ``recommendation``,
+          ``why_now``, ``next_step_owner``, ``next_step_deadline_style``,
+          ``next_step_timebox``.
+        - ``next_step_deadline_style`` ∈ {"relative", "absolute", "hybrid"}.
+        - ``next_step_timebox`` MUST be ISO-8601 datetime w/ offset when
+          style ∈ {"absolute", "hybrid"}; MUST be null when style == "relative".
+        - All string fields must be non-empty after strip().
+
+        Returns: list[str] of human-readable issues (empty list = valid).
+        Caller per S1242 design: if any issues, empty the decision_cards
+        list entirely (don't ship partial structured form — keep markdown).
+        """
+        import re as _re
+
+        issues: list = []
+        REQUIRED_KEYS = (
+            'decision', 'recommendation', 'why_now',
+            'next_step_owner', 'next_step_deadline_style', 'next_step_timebox',
+        )
+        VALID_STYLES = {'relative', 'absolute', 'hybrid'}
+        ISO_OFFSET_PATTERN = _re.compile(
+            r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:\d{2}|Z)$'
+        )
+
+        if not isinstance(cards, list):
+            return [f'decision_cards is {type(cards).__name__}, not list']
+
+        for i, card in enumerate(cards):
+            if not isinstance(card, dict):
+                issues.append(f'card[{i}] is {type(card).__name__}, not dict')
+                continue
+
+            missing = [k for k in REQUIRED_KEYS if k not in card]
+            if missing:
+                issues.append(f'card[{i}] missing keys: {missing}')
+                continue
+
+            # String non-empty checks for first 4 fields
+            for key in ('decision', 'recommendation', 'why_now', 'next_step_owner'):
+                val = card.get(key)
+                if not isinstance(val, str) or not val.strip():
+                    issues.append(
+                        f'card[{i}].{key} is empty or non-string'
+                    )
+
+            style = card.get('next_step_deadline_style')
+            if style not in VALID_STYLES:
+                issues.append(
+                    f'card[{i}].next_step_deadline_style={style!r} '
+                    f'not in {sorted(VALID_STYLES)}'
+                )
+
+            timebox = card.get('next_step_timebox')
+            if style == 'relative':
+                if timebox is not None:
+                    issues.append(
+                        f'card[{i}].next_step_timebox must be null when '
+                        f'style=relative (got {timebox!r})'
+                    )
+            elif style in ('absolute', 'hybrid'):
+                if not isinstance(timebox, str) or not timebox.strip():
+                    issues.append(
+                        f'card[{i}].next_step_timebox must be ISO-8601 '
+                        f'string when style={style} (got {timebox!r})'
+                    )
+                elif not ISO_OFFSET_PATTERN.match(timebox):
+                    issues.append(
+                        f'card[{i}].next_step_timebox={timebox!r} does not '
+                        f'match ISO-8601 with offset pattern'
+                    )
+
+        return issues
 
     @staticmethod
     def _lane_3_is_no_signal(lane_3_text: str) -> bool:
