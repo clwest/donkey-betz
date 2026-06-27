@@ -2,7 +2,7 @@
 Session 906: Fix orphan initiatives that lack proper tracking records.
 
 Problem: Initiatives auto-created from blocked research before Session 906
-don't have HiveMindSession or AgentExecution records, causing the UI to show:
+don't have HiveMindSession or AgentTaskExecution records, causing the UI to show:
 - Agents: 0
 - Messages: 0
 - Origin & Trigger: empty
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Fix orphan initiatives by creating HiveMindSession and AgentExecution tracking records'
+    help = 'Fix orphan initiatives by creating HiveMindSession and AgentTaskExecution tracking records'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -52,7 +52,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from core.models_document_registry import Initiative, InitiativeStage
         from core.models_unified_system import HiveMindSession, HiveMindContribution, Agent
-        from core.models.agents_registry.models import AgentExecution, UnifiedAgentTemplate
+        from core.models.agents_registry.models import AgentTaskExecution, UnifiedAgentTemplate
 
         fix = options['fix']
         limit = options['limit']
@@ -65,7 +65,7 @@ class Command(BaseCommand):
         # Get ResearchAgent from both models
         # Agent model for HiveMindContribution
         agent_model = Agent.objects.filter(name__icontains='Research').first()
-        # UnifiedAgentTemplate for AgentExecution
+        # UnifiedAgentTemplate for AgentTaskExecution
         agent_template = UnifiedAgentTemplate.objects.filter(name__icontains='Research').first()
 
         if not agent_template:
@@ -109,8 +109,8 @@ class Command(BaseCommand):
                 Q(conversation_topic__icontains=init.name[:50])
             ).exists()
 
-            # Also check AgentExecution
-            has_execution = AgentExecution.objects.filter(
+            # Also check AgentTaskExecution
+            has_execution = AgentTaskExecution.objects.filter(
                 metadata__initiative_id=str(init.id)
             ).exists()
 
@@ -169,9 +169,9 @@ class Command(BaseCommand):
                         if existing_session:
                             session_id = str(existing_session.id)
 
-                    # Create AgentExecution if needed
+                    # Create AgentTaskExecution if needed
                     if needs_execution:
-                        AgentExecution.objects.create(
+                        AgentTaskExecution.objects.create(
                             template=agent_template,
                             execution_id=f"backfill-{uuid.uuid4().hex[:8]}",
                             task_description=f"Research: {init.name[:200]}",

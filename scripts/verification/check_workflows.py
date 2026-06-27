@@ -12,7 +12,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
-from core.models.agents_registry import AgentOrchestration, AgentExecution, AgentStatus
+from core.models.agents_registry import AgentOrchestration, AgentTaskExecution, AgentStatus
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -39,7 +39,7 @@ def check_workflows():
             print(f"  Agents: {len(orch.agent_sequence) if orch.agent_sequence else 0}")
             
             # Check for executions
-            executions = AgentExecution.objects.filter(parent_orchestration=orch)
+            executions = AgentTaskExecution.objects.filter(parent_orchestration=orch)
             if executions:
                 print(f"  Executions: {executions.count()}")
                 for exec in executions[:3]:
@@ -53,7 +53,7 @@ def check_workflows():
     print("RECENT AGENT EXECUTIONS")
     print("="*60)
     
-    recent_execs = AgentExecution.objects.all().order_by('-created_at')[:10]
+    recent_execs = AgentTaskExecution.objects.all().order_by('-created_at')[:10]
     if recent_execs:
         print(f"\nLast {len(recent_execs)} executions:\n")
         for exec in recent_execs:

@@ -34,9 +34,9 @@ except ImportError:
     get_agent_registry = None
 
 try:
-    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration
 except ImportError:
-    UnifiedAgentTemplate = AgentExecution = AgentOrchestration = None
+    UnifiedAgentTemplate = AgentTaskExecution = AgentOrchestration = None
 
 try:
     from intelligence.revenue_integration import RevenueIncomeIntegration

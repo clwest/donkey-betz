@@ -12,11 +12,11 @@ from datetime import timedelta
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from core.models.agents_registry import AgentExecution
+from core.models.agents_registry import AgentTaskExecution
 from django.utils import timezone
 
 # Check recent executions
-recent = AgentExecution.objects.filter(
+recent = AgentTaskExecution.objects.filter(
     created_at__gte=timezone.now() - timedelta(hours=1)
 ).order_by('-created_at')
 

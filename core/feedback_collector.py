@@ -115,10 +115,10 @@ class FeedbackCollector:
         Process feedback to update agent learning metrics
         """
         try:
-            from core.models.agents_registry import AgentExecution
+            from core.models.agents_registry import AgentTaskExecution
             
             # Get the execution
-            execution = AgentExecution.objects.filter(
+            execution = AgentTaskExecution.objects.filter(
                 execution_id=feedback['execution_id']
             ).first()
             

@@ -27,7 +27,7 @@ from django.utils import timezone
 from django.db import connection
 
 # Import models
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentRegistry
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration, AgentRegistry
 from sports.models import League, Team, Game, Sportsbook, BettingMarket, OddsLine, BankrollManagement
 from content.models import Document
 
@@ -222,7 +222,7 @@ def test_agent_system_integration(test_user):
     print(f"   ✅ Test agent {'created' if created else 'exists'}: {test_agent.name}")
     
     # Create agent execution
-    execution = AgentExecution.objects.create(
+    execution = AgentTaskExecution.objects.create(
         template=test_agent,
         user=test_user,
         task_description="Integration test execution",
@@ -402,7 +402,7 @@ def generate_final_report():
     test_leagues = League.objects.filter(abbreviation="TST").count()
     test_games = Game.objects.filter(external_id="test_integration_game").count()
     test_agents = UnifiedAgentTemplate.objects.filter(name__contains="test").count()
-    test_executions = AgentExecution.objects.filter(task_description__contains="integration").count()
+    test_executions = AgentTaskExecution.objects.filter(task_description__contains="integration").count()
     test_content = Document.objects.filter(category__contains="test").count()
     
     print(f"\n📈 INTEGRATION OBJECTS CREATED:")

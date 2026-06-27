@@ -13,7 +13,7 @@ sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from core.models_unified_system import Advisor
 from core.models import Revenue
 from django.utils import timezone
@@ -42,15 +42,15 @@ total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
 print(f"\n✅ Total Agents: {total_agents}")
 
 one_hour_ago = timezone.now() - timedelta(hours=1)
-active_agent_ids = AgentExecution.objects.filter(
+active_agent_ids = AgentTaskExecution.objects.filter(
     created_at__gte=one_hour_ago
 ).values_list('template_id', flat=True).distinct()
 active_agents = len(set(active_agent_ids))
 print(f"✅ Active Agents (last hour): {active_agents}")
 
 # Get REAL task stats
-total_executions = AgentExecution.objects.count()
-successful_executions = AgentExecution.objects.filter(status='completed').count()
+total_executions = AgentTaskExecution.objects.count()
+successful_executions = AgentTaskExecution.objects.filter(status='completed').count()
 success_rate = (successful_executions / total_executions * 100) if total_executions > 0 else 0
 print(f"✅ Total Executions: {total_executions}")
 print(f"✅ Successful: {successful_executions}")

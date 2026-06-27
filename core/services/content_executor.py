@@ -15,7 +15,7 @@ from typing import Dict, Any, List
 from django.utils import timezone
 
 from core.llm_enforcer import LLMEnforcer
-from core.models.agents_registry import AgentExecution, AgentStatus
+from core.models.agents_registry import AgentTaskExecution, AgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ class DonkeyBetzContentExecutor(ContentExecutorLearningMixin):
         """
         try:
             # Get execution record
-            execution = AgentExecution.objects.get(id=execution_id)
+            execution = AgentTaskExecution.objects.get(id=execution_id)
             execution.status = AgentStatus.RUNNING
             execution.started_at = timezone.now()
             execution.save()
@@ -332,7 +332,7 @@ class DonkeyBetzContentExecutor(ContentExecutorLearningMixin):
 
                 return error_result
 
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             self.logger.error(f"Execution {execution_id} not found")
             return {'success': False, 'error': 'Execution not found'}
         except Exception as e:

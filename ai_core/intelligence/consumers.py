@@ -45,7 +45,7 @@ except ImportError:
 # Import real system components
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentStatus
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration, AgentStatus
 from intelligence.models import OpportunityActionPlan, RevenueMetrics
 
 logger = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ class AgentWorkPlatformConsumer(AsyncWebsocketConsumer):
         try:
             from ai_core.agents.agent_work_platform import get_agent_work_platform_status
             from django.core.cache import cache
-            from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
+            from core.models.agents_registry import AgentTaskExecution, UnifiedAgentTemplate
             from intelligence.models import RevenueMetrics
 
             # Get platform status
@@ -140,7 +140,7 @@ class AgentWorkPlatformConsumer(AsyncWebsocketConsumer):
             executable_jobs = cache.get('executable_jobs', [])
 
             # Get real agent executions from database
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 created_at__gte=timezone.now() - timedelta(hours=1),
                 status__in=[AgentStatus.RUNNING, AgentStatus.COMPLETED]
             ).select_related('agent_template').order_by('-created_at')[:20]
@@ -1253,7 +1253,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
             )['avg'] or 0
 
             # Get agent execution metrics
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 created_at__gte=timezone.now() - timedelta(days=7)
             )
 

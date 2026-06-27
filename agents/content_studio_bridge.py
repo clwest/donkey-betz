@@ -20,7 +20,7 @@ from core.views_content import (
 )
 
 # Import agent models
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -73,7 +73,7 @@ class ContentStudioBridge:
         """Log the agent execution for tracking"""
         if self.agent:
             try:
-                self.execution_record = AgentExecution.objects.create(
+                self.execution_record = AgentTaskExecution.objects.create(
                     template=self.agent,
                     input_data={
                         'action': action,

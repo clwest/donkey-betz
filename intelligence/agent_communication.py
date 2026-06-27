@@ -23,7 +23,7 @@ from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentOrchestration,
     AgentChannel,
-    AgentExecution
+    AgentTaskExecution
 )
 
 logger = logging.getLogger(__name__)
@@ -142,7 +142,7 @@ class AgentCommunication:
         logger.info(f"Broadcasting from {agent.name} to orchestration {orchestration.id}")
 
         # Get all agents in orchestration
-        executions = AgentExecution.objects.filter(orchestration=orchestration)
+        executions = AgentTaskExecution.objects.filter(orchestration=orchestration)
         agents = [e.agent for e in executions if e.agent != agent]
 
         # Send message to each agent
@@ -310,7 +310,7 @@ class AgentCommunication:
 
     def send_execution_update(
         self,
-        execution: AgentExecution,
+        execution: AgentTaskExecution,
         status: str,
         message: str,
         metadata: Optional[Dict] = None
@@ -319,7 +319,7 @@ class AgentCommunication:
         Send execution status update
 
         Args:
-            execution: AgentExecution instance
+            execution: AgentTaskExecution instance
             status: Execution status
             message: Status message
             metadata: Additional metadata
@@ -379,7 +379,7 @@ class AgentCommunication:
             Status summary
         """
         # Get all executions
-        executions = AgentExecution.objects.filter(orchestration=orchestration)
+        executions = AgentTaskExecution.objects.filter(orchestration=orchestration)
 
         # Count by status
         status_counts = {}

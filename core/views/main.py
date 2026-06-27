@@ -484,7 +484,7 @@ def prompting_settings(request):
 @permission_classes([IsAuthenticated])
 def execute_agent(request):
     """Execute an agent with provided parameters"""
-    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
     from agents.tasks import execute_agent as execute_agent_task
     import uuid
     
@@ -509,7 +509,7 @@ def execute_agent(request):
     execution_id = f"exec_{agent_template.name}_{uuid.uuid4().hex[:8]}"
     
     # Create execution instance
-    execution = AgentExecution.objects.create(
+    execution = AgentTaskExecution.objects.create(
         template=agent_template,
         user=request.user,
         execution_id=execution_id,
@@ -573,12 +573,12 @@ def agent_instances(request):
 @permission_classes([AllowAny])
 def agent_executions_list(request):
     """Get list of agent executions (actual task runs with results)"""
-    from core.models.agents_registry import AgentExecution
+    from core.models.agents_registry import AgentTaskExecution
     from agents.serializers import AgentExecutionSerializer
     from django.core.paginator import Paginator
     
     # Fetch agent executions, ordered by most recent first
-    executions = AgentExecution.objects.select_related('template', 'user').order_by('-created_at')
+    executions = AgentTaskExecution.objects.select_related('template', 'user').order_by('-created_at')
     
     # Filter by status if provided
     status = request.GET.get('status')

@@ -8,7 +8,7 @@ from django.db.models import Q
 import logging
 
 # Session 392: Updated to use canonical import path
-from core.models.agents_registry import AgentExecution
+from core.models.agents_registry import AgentTaskExecution
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def list_instances(request):
     """
     try:
         # Get all executions for the current user
-        executions = AgentExecution.objects.filter(
+        executions = AgentTaskExecution.objects.filter(
             user=request.user
         ).select_related('template', 'parent_orchestration').order_by('-created_at')[:50]
         
@@ -80,7 +80,7 @@ def get_instance_status(request, instance_id):
     Get the status of a specific instance.
     """
     try:
-        execution = AgentExecution.objects.get(
+        execution = AgentTaskExecution.objects.get(
             Q(id=instance_id) | Q(execution_id=instance_id),
             user=request.user
         )
@@ -94,7 +94,7 @@ def get_instance_status(request, instance_id):
             'success': True
         })
         
-    except AgentExecution.DoesNotExist:
+    except AgentTaskExecution.DoesNotExist:
         return Response({
             'error': 'Instance not found',
             'success': False
@@ -113,7 +113,7 @@ def delete_instance(request, instance_id):
     Delete a specific instance.
     """
     try:
-        execution = AgentExecution.objects.get(
+        execution = AgentTaskExecution.objects.get(
             Q(id=instance_id) | Q(execution_id=instance_id),
             user=request.user
         )
@@ -124,7 +124,7 @@ def delete_instance(request, instance_id):
             'success': True
         })
         
-    except AgentExecution.DoesNotExist:
+    except AgentTaskExecution.DoesNotExist:
         return Response({
             'error': 'Instance not found',
             'success': False
@@ -151,7 +151,7 @@ def delete_multiple_instances(request):
             }, status=400)
         
         # Delete instances belonging to the user
-        deleted_count = AgentExecution.objects.filter(
+        deleted_count = AgentTaskExecution.objects.filter(
             Q(id__in=instance_ids) | Q(execution_id__in=instance_ids),
             user=request.user
         ).delete()[0]

@@ -12,7 +12,7 @@ import logging
 
 # Import real agent models and tasks
 from core.models.agents_registry import (
-    UnifiedAgentTemplate, AgentExecution, AgentOrchestration, 
+    UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration, 
     AgentStatus, AgentSpecialization
 )
 from agents.tasks import execute_agent, execute_orchestration
@@ -322,7 +322,7 @@ def execute_workflow(request):
             
             # Create mock execution records for tracking
             for i, agent_info in enumerate(agent_sequence):
-                AgentExecution.objects.create(
+                AgentTaskExecution.objects.create(
                     user=request.user,
                     parent_orchestration=orchestration,
                     agent_name=agent_info['name'],
@@ -368,7 +368,7 @@ def workflow_status(request, execution_id):
             )
             
             # Get associated executions
-            executions = AgentExecution.objects.filter(
+            executions = AgentTaskExecution.objects.filter(
                 parent_orchestration=orchestration
             ).order_by('created_at')
             
@@ -427,7 +427,7 @@ def workflow_status(request, execution_id):
         except AgentOrchestration.DoesNotExist:
             # Try to find as single execution
             try:
-                execution = AgentExecution.objects.get(
+                execution = AgentTaskExecution.objects.get(
                     id=execution_id,
                     user=request.user
                 )
@@ -450,7 +450,7 @@ def workflow_status(request, execution_id):
                     }
                 })
                 
-            except AgentExecution.DoesNotExist:
+            except AgentTaskExecution.DoesNotExist:
                 return Response({
                     'error': 'Execution not found'
                 }, status=404)
@@ -475,7 +475,7 @@ def workflow_history(request):
         ).order_by('-created_at')[:10]
         
         # Get single agent executions
-        single_executions = AgentExecution.objects.filter(
+        single_executions = AgentTaskExecution.objects.filter(
             user=request.user,
             parent_orchestration__isnull=True  # Not part of an orchestration
         ).order_by('-created_at')[:10]
@@ -484,7 +484,7 @@ def workflow_history(request):
         
         # Add orchestrations to history
         for orch in orchestrations:
-            executions = AgentExecution.objects.filter(parent_orchestration=orch)
+            executions = AgentTaskExecution.objects.filter(parent_orchestration=orch)
             completed_count = executions.filter(status=AgentStatus.COMPLETED).count()
             total_count = len(orch.agent_sequence)
             

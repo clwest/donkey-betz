@@ -24,7 +24,7 @@ from agents.executor_registry import (
     system_health_check,
     execute_agent_by_name
 )
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
 
 class Command(BaseCommand):
@@ -149,7 +149,7 @@ class Command(BaseCommand):
 
             # Database statistics
             total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 created_at__gte=timezone.now() - timezone.timedelta(hours=24)
             ).count()
 
@@ -197,7 +197,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"    Total Cost: ${data.get('total_cost', 0):.2f}")
 
             # Recent executions from database
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 created_at__gte=timezone.now() - timezone.timedelta(hours=24)
             ).order_by('-created_at')[:5]
 
@@ -348,7 +348,7 @@ class Command(BaseCommand):
 
         cutoff_date = timezone.now() - timezone.timedelta(days=days)
 
-        old_executions = AgentExecution.objects.filter(
+        old_executions = AgentTaskExecution.objects.filter(
             created_at__lt=cutoff_date,
             status__in=['completed', 'failed']
         )
@@ -375,8 +375,8 @@ class Command(BaseCommand):
             db_stats = {
                 'total_templates': UnifiedAgentTemplate.objects.count(),
                 'active_templates': UnifiedAgentTemplate.objects.filter(is_active=True).count(),
-                'total_executions': AgentExecution.objects.count(),
-                'recent_executions': AgentExecution.objects.filter(
+                'total_executions': AgentTaskExecution.objects.count(),
+                'recent_executions': AgentTaskExecution.objects.filter(
                     created_at__gte=timezone.now() - timezone.timedelta(hours=24)
                 ).count(),
                 'export_timestamp': timezone.now().isoformat()

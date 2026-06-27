@@ -148,7 +148,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_real_nexus_status(self):
         """Get REAL system status from database including REAL spider data"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
         from core.models_unified_system import Advisor
         from core.models import Revenue
         try:
@@ -173,14 +173,14 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
         total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
 
         one_hour_ago = timezone.now() - timedelta(hours=1)
-        active_agent_ids = AgentExecution.objects.filter(
+        active_agent_ids = AgentTaskExecution.objects.filter(
             created_at__gte=one_hour_ago
         ).values_list('template_id', flat=True).distinct()
         active_agents = len(set(active_agent_ids))
 
         # Get REAL task stats
-        total_executions = AgentExecution.objects.count()
-        successful_executions = AgentExecution.objects.filter(status='completed').count()
+        total_executions = AgentTaskExecution.objects.count()
+        successful_executions = AgentTaskExecution.objects.filter(status='completed').count()
         success_rate = (successful_executions / total_executions * 100) if total_executions > 0 else 0
 
         # Get REAL spider data from SpiderRegistry and SpiderQualityMetrics
@@ -236,8 +236,8 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
         else:
             memory_usage = 'N/A'
 
-        # Calculate real uptime (from earliest AgentExecution)
-        first_execution = AgentExecution.objects.order_by('created_at').first()
+        # Calculate real uptime (from earliest AgentTaskExecution)
+        first_execution = AgentTaskExecution.objects.order_by('created_at').first()
         if first_execution:
             uptime_days = (timezone.now() - first_execution.created_at).days
             if uptime_days > 0:
@@ -249,7 +249,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
             uptime = "N/A"
 
         # Get average response time from recent executions
-        recent_executions = AgentExecution.objects.filter(
+        recent_executions = AgentTaskExecution.objects.filter(
             created_at__gte=one_hour_ago,
             execution_time_seconds__isnull=False
         )
@@ -360,7 +360,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_recent_activities(self, limit=5):
         """PHASE 1 FIX: Get REAL recent system activities"""
-        from core.models.agents_registry import AgentExecution
+        from core.models.agents_registry import AgentTaskExecution
         from core.models import Revenue
         try:
             from intelligence.models import OpportunityInteraction
@@ -371,7 +371,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
 
         # Get recent agent executions (last 15 minutes)
         recent_time = timezone.now() - timedelta(minutes=15)
-        recent_executions = AgentExecution.objects.filter(
+        recent_executions = AgentTaskExecution.objects.filter(
             status='completed',
             created_at__gte=recent_time
         ).select_related('template').order_by('-created_at')[:limit]
@@ -537,13 +537,13 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
 
     async def send_agent_status(self):
         """Send detailed agent status information"""
-        from core.models.agents_registry import AgentExecution
+        from core.models.agents_registry import AgentTaskExecution
 
         try:
             # Get recent agent activity (last 24 hours to ensure we show some data)
             one_day_ago = timezone.now() - timedelta(hours=24)
             recent_executions = await database_sync_to_async(
-                lambda: list(AgentExecution.objects.filter(
+                lambda: list(AgentTaskExecution.objects.filter(
                     created_at__gte=one_day_ago
                 ).select_related('template').order_by('-created_at')[:10])
             )()

@@ -556,7 +556,7 @@ Base recommendations on the concrete data collected, not generic advice."""
 
                     try:
                         from agents.tasks import execute_agent
-                        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentStatus
+                        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentStatus
 
                         # Find the best agent for this specialization
                         # First try to get the preferred agent by name
@@ -605,7 +605,7 @@ Base recommendations on the concrete data collected, not generic advice."""
                                 context_tracking = {}
 
                             # Create agent execution
-                            execution = AgentExecution.objects.create(
+                            execution = AgentTaskExecution.objects.create(
                                 template=agent_template,
                                 task_description=f"Income Builder Step {i}: {step}",
                                 task_type='income_generation',

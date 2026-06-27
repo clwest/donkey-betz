@@ -16,7 +16,7 @@ import uuid
 import logging
 
 from core.models.agents_registry import (
-    AgentOrchestration, AgentExecution, UnifiedAgentTemplate, AgentStatus
+    AgentOrchestration, AgentTaskExecution, UnifiedAgentTemplate, AgentStatus
 )
 from core.tasks_agents import execute_orchestration
 
@@ -506,7 +506,7 @@ def get_workflow_output(request, execution_id):
         }, status=404)
 
     # Get all agent executions for this orchestration
-    executions = AgentExecution.objects.filter(
+    executions = AgentTaskExecution.objects.filter(
         parent_orchestration=orchestration
     ).order_by('created_at')
 

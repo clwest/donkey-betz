@@ -14,7 +14,7 @@ from datetime import datetime
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from agents.tasks import execute_agent
 from sports.models import Game
 
@@ -75,7 +75,7 @@ proper_input_data = {
 # Create execution with proper data
 execution_id = f"test_{agent.name}_{uuid.uuid4().hex[:8]}"
 
-execution = AgentExecution.objects.create(
+execution = AgentTaskExecution.objects.create(
     execution_id=execution_id,
     template=agent,
     task_description=f"Analyze NCAAF game: {game.away_team.name} @ {game.home_team.name} - Calculate optimal bet sizing using Kelly Criterion",

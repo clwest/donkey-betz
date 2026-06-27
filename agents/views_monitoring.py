@@ -96,9 +96,9 @@ def agent_performance_detail(request, agent_name):
             )
         
         # Get recent executions
-        from core.models.agents_registry import AgentExecution
+        from core.models.agents_registry import AgentTaskExecution
         
-        recent_executions = AgentExecution.objects.filter(
+        recent_executions = AgentTaskExecution.objects.filter(
             template__name=agent_name,
             created_at__gte=timezone.now() - time_period
         ).order_by('-created_at')[:10]

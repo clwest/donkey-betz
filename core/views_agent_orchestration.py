@@ -224,7 +224,7 @@ def execute_agent(request):
     """
     Execute AI agent task with intelligent routing - migrated from DBAO
     """
-    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
     from agents.tasks import execute_agent as execute_agent_task
     
     import logging
@@ -310,7 +310,7 @@ def execute_agent(request):
         logger.info(f"Creating agent execution for template: {agent_template.name}")
         
         # Create execution instance
-        execution = AgentExecution.objects.create(
+        execution = AgentTaskExecution.objects.create(
             template=agent_template,
             user=user,
             execution_id=f"exec_{agent_template.name}_{uuid.uuid4().hex[:8]}",
