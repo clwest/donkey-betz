@@ -23,7 +23,7 @@ except (ImportError, RuntimeError):
     OPENAI_AVAILABLE = False
 
 from .agent_instruction_parser import AgentInstruction, AgentInstructionParser
-from intelligence.models import ActionPlan, AgentExecution
+from intelligence.models import ActionPlan, ActionPlanExecution
 from core.agents.registry import get_agent_registry  # Use the real registry
 from .real_agents import AgentFactory  # Import the real agent factory
 
@@ -434,7 +434,7 @@ Use your expertise in {self.agent_info.get('specialization')} to provide a compr
         self,
         instruction: AgentInstruction,
         plan_id: str
-    ) -> 'AgentExecution':
+    ) -> 'ActionPlanExecution':
         """Create a record of agent execution"""
         # This would create a database record
         # For now, return a mock record
