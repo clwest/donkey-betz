@@ -1173,7 +1173,11 @@ CELERY_TASK_ROUTES = {
     'core.tasks.execute_dream_implementations': {'queue': 'long_running'},  # Session 1040: Heavy LLM processing
     # Session 1009: Removed 4 phantom routes (tasks don't exist):
     #   autonomous_studio.run_main_loop, generate_podcast_task, generate_image_task, generate_video_task
-    'content.tasks.poll_pending_trainings': {'queue': 'content'},
+    # Session 1246: removed content.tasks.poll_pending_trainings route — entire
+    # content/tasks.py file deleted (3 dormant char-training tasks with 0
+    # callers / 0 PeriodicTask rows / 0 telemetry events ever per S1245 audit).
+    # Surgical retirement of the Celery surface only; CharacterModel + 16-file
+    # dependency chain stays — separate S1247 retirement plan.
     # Session 1009: Moved workspace/rotation tasks from content → long_running
     # These run ALL agents in a category (~20-74 agents) and caused OOM on content worker (512MB).
     # .delay() calls in views_platform_command.py and views_workspace_triggers.py route via
