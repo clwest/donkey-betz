@@ -2,7 +2,7 @@
 Unified Intelligence Search Service
 ====================================
 
-Session 303: Unified search across SpiderData AND BusinessResearchResult.
+Session 303: Unified search across LegacySpiderData AND BusinessResearchResult.
 
 This service provides a single interface to search:
 1. Spider data (real-time web crawls)
@@ -388,15 +388,15 @@ class UnifiedIntelligenceSearch:
 
     def get_intelligence_stats(self) -> Dict[str, Any]:
         """Get statistics about available intelligence data."""
-        from core.models_unified_system import SpiderData, BusinessResearchResult
+        from core.models_unified_system import LegacySpiderData, BusinessResearchResult
 
         since_24h = timezone.now() - timedelta(hours=24)
         since_7d = timezone.now() - timedelta(days=7)
 
         spider_stats = {
-            'total': SpiderData.objects.count(),
-            'last_24h': SpiderData.objects.filter(created_at__gte=since_24h).count(),
-            'last_7d': SpiderData.objects.filter(created_at__gte=since_7d).count(),
+            'total': LegacySpiderData.objects.count(),
+            'last_24h': LegacySpiderData.objects.filter(created_at__gte=since_24h).count(),
+            'last_7d': LegacySpiderData.objects.filter(created_at__gte=since_7d).count(),
         }
 
         research_stats = {
@@ -409,7 +409,7 @@ class UnifiedIntelligenceSearch:
         }
 
         # Latest entries
-        latest_spider = SpiderData.objects.order_by('-created_at').first()
+        latest_spider = LegacySpiderData.objects.order_by('-created_at').first()
         latest_research = BusinessResearchResult.objects.order_by('-created_at').first()
 
         return {

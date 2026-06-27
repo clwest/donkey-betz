@@ -4,7 +4,7 @@ Bulk Spider Embedding Command
 
 Session 394: Fast bulk embedding for spider data.
 
-This command processes all SpiderData entries that need embeddings in an
+This command processes all LegacySpiderData entries that need embeddings in an
 efficient manner:
 1. Skips entries with no embeddable content (marks them as processed)
 2. Uses batch processing for OpenAI API efficiency
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.openai_client_factory import get_openai_client
 
         batch_size = options['batch']
@@ -81,7 +81,7 @@ class Command(BaseCommand):
 
         # Get entries needing embeddings
         since = timezone.now() - timedelta(hours=hours)
-        entries = SpiderData.objects.filter(
+        entries = LegacySpiderData.objects.filter(
             created_at__gte=since,
             embedding__isnull=True
         ).order_by('-created_at')

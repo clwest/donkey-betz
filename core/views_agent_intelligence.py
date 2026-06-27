@@ -441,11 +441,11 @@ def get_bridge_status(request):
     """
     try:
         from core.services.spider_intelligence import get_spider_intelligence_service
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         service = get_spider_intelligence_service()
         spider_count = len(service.get_available_categories())
-        data_count = SpiderData.objects.count()
+        data_count = LegacySpiderData.objects.count()
 
         return JsonResponse({
             'success': True,
@@ -490,12 +490,12 @@ def inject_test_data(request):
         "message": "Injected test data"
     }
 
-    NOTE: Session 497 - Updated to use SpiderData model directly.
+    NOTE: Session 497 - Updated to use LegacySpiderData model directly.
     """
     try:
         import json
         from django.utils import timezone
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         body = json.loads(request.body)
 
@@ -506,8 +506,8 @@ def inject_test_data(request):
             'description': 'Injected via API for testing'
         })
 
-        # Create SpiderData record directly
-        spider_data = SpiderData.objects.create(
+        # Create LegacySpiderData record directly
+        spider_data = LegacySpiderData.objects.create(
             spider_name=spider_name,
             category=category,
             title=data.get('title', 'Test Data'),

@@ -136,7 +136,7 @@ class ROITracker:
         """
         try:
             from core.models_unified_system import (
-                ConversionEvent, Opportunity, SpiderData
+                ConversionEvent, Opportunity, LegacySpiderData
             )
             from django.contrib.auth import get_user_model
             User = get_user_model()
@@ -167,9 +167,9 @@ class ROITracker:
 
             if spider_data_id:
                 try:
-                    spider_data = SpiderData.objects.get(id=spider_data_id)
-                except SpiderData.DoesNotExist:
-                    logger.warning(f"SpiderData not found: {spider_data_id}")
+                    spider_data = LegacySpiderData.objects.get(id=spider_data_id)
+                except LegacySpiderData.DoesNotExist:
+                    logger.warning(f"LegacySpiderData not found: {spider_data_id}")
 
             if user_id:
                 try:

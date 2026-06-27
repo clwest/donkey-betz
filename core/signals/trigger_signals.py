@@ -238,7 +238,7 @@ def _evaluate_workspace_match(value, operator: str, match_value: str) -> tuple[b
     return False, None
 
 
-@receiver(post_save, sender='core.SpiderData')
+@receiver(post_save, sender='core.LegacySpiderData')
 def on_spider_data_created(sender, instance, created, **kwargs):
     """
     Signal handler for SpiderData creation.

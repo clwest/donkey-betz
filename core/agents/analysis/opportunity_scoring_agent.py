@@ -513,12 +513,12 @@ You score and analyze - you do NOT create content or execute workflows."""
 
         try:
             from django.utils import timezone
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             cutoff = timezone.now() - timedelta(hours=hours)
 
             # Get spider data
-            spider_data = SpiderData.objects.filter(
+            spider_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 is_actionable=True
             ).order_by('-relevance_score')[:limit]
@@ -831,13 +831,13 @@ You score and analyze - you do NOT create content or execute workflows."""
 
         try:
             from django.utils import timezone
-            from core.models_unified_system import SpiderData, Opportunity, OpportunityTask
+            from core.models_unified_system import LegacySpiderData, Opportunity, OpportunityTask
 
             cutoff = timezone.now() - timedelta(hours=hours)
 
             # Get unprocessed spider data (not yet linked to an opportunity)
             # Note: Opportunity.spider_data has related_name='scored_opportunities'
-            spider_data_qs = SpiderData.objects.filter(
+            spider_data_qs = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 is_actionable=True,
                 scored_opportunities__isnull=True  # Not yet processed into an opportunity
@@ -907,7 +907,7 @@ You score and analyze - you do NOT create content or execute workflows."""
         Create an Opportunity record from scored spider data.
 
         Args:
-            spider_data: The SpiderData instance
+            spider_data: The LegacySpiderData instance
             score_data: Score results from _calculate_score
 
         Returns:

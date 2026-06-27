@@ -31,7 +31,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--save-to-db',
             action='store_true',
-            help='Save fetched data to SpiderData table',
+            help='Save fetched data to LegacySpiderData table',
         )
         parser.add_argument(
             '--create-knowledge',
@@ -140,10 +140,10 @@ class Command(BaseCommand):
         return None
 
     def _save_to_spider_data(self, result, content):
-        """Save fetched data to SpiderData table"""
-        from core.models_unified_system import SpiderData
+        """Save fetched data to LegacySpiderData table"""
+        from core.models_unified_system import LegacySpiderData
 
-        self.stdout.write("\nSaving to SpiderData...")
+        self.stdout.write("\nSaving to LegacySpiderData...")
 
         high_quality = content.get('high_quality_conversations', [])
         saved = 0
@@ -158,8 +158,8 @@ class Command(BaseCommand):
                 first_msg = messages[0]
                 summary = first_msg.get('content', str(first_msg)) if isinstance(first_msg, dict) else str(first_msg)
 
-                # SpiderData model fields: spider_name, source_url, data_type, raw_data, processed_data, relevance_score, insights
-                SpiderData.objects.create(
+                # LegacySpiderData model fields: spider_name, source_url, data_type, raw_data, processed_data, relevance_score, insights
+                LegacySpiderData.objects.create(
                     spider_name='discord_training',
                     source_url=f"https://huggingface.co/datasets/{conv.get('source_dataset', '')}",
                     data_type='training_data',
@@ -177,7 +177,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"  Error saving: {e}"))
 
-        self.stdout.write(self.style.SUCCESS(f"  Saved {saved} records to SpiderData"))
+        self.stdout.write(self.style.SUCCESS(f"  Saved {saved} records to LegacySpiderData"))
 
     def _create_knowledge_sources(self, content):
         """Create AgentKnowledgeSource entries from high-quality data"""

@@ -85,11 +85,11 @@ def check_database():
             cursor.execute("SELECT 1")
 
         # Check key tables exist
-        from core.models_unified_system import Agent, SpiderData
+        from core.models_unified_system import Agent, LegacySpiderData
         from content.models import ImageHistory
 
         agent_count = Agent.objects.filter(is_active=True).count()
-        spider_data_count = SpiderData.objects.count()
+        spider_data_count = LegacySpiderData.objects.count()
         image_count = ImageHistory.objects.count()
 
         print(f"  ✓ Database: Connected")

@@ -292,7 +292,7 @@ def stats_api(request):
     """
     from core.models_unified_system import (
         Agent, AgentLearningConnection, KnowledgeTransfer,
-        SpiderData, AgentKnowledgeSource, MythologyQuarantine
+        LegacySpiderData, AgentKnowledgeSource, MythologyQuarantine
     )
     from django.db.models import Count, Avg, Sum
     from ai_core.spiders.spider_registry import spider_registry
@@ -304,7 +304,7 @@ def stats_api(request):
 
         # Spider stats
         spider_count = len(spider_registry.list_spiders()) if hasattr(spider_registry, 'list_spiders') else 77
-        spider_data_24h = SpiderData.objects.filter(created_at__gte=today).count()
+        spider_data_24h = LegacySpiderData.objects.filter(created_at__gte=today).count()
 
         # Agent stats (show all agents, not just active)
         total_agents = Agent.objects.count()

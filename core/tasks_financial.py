@@ -724,7 +724,7 @@ def _impl_run_blockchain_security_monitor():
         from core.models_autonomous_alerts import (
             BlockchainSecurityAlert, BlockchainMonitoringSession
         )
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.discord_notifications import DiscordNotificationService
 
         # Create monitoring session (Property #1: Persistent Context)
@@ -735,7 +735,7 @@ def _impl_run_blockchain_security_monitor():
         cutoff = timezone.now() - timedelta(hours=6)
         blockchain_spiders = ['etherscan', 'etherscan_api', 'coingecko']
 
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=blockchain_spiders,
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')
@@ -936,7 +936,7 @@ def _impl_run_stock_market_intelligence():
         from core.models_autonomous_alerts import (
             StockMarketAlert, MarketMonitoringSession
         )
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.discord_notifications import DiscordNotificationService
 
         # Create monitoring session (Property #1: Persistent Context)
@@ -947,7 +947,7 @@ def _impl_run_stock_market_intelligence():
         cutoff = timezone.now() - timedelta(hours=6)
         financial_spiders = ['yahoo_finance', 'finnhub', 'sec_edgar', 'business_news', 'bloomberg']
 
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=financial_spiders,
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')
@@ -1193,7 +1193,7 @@ def _impl_run_sec_filing_analyzer(self):
     logger.info("📊 [SEC] Starting filing analysis...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import (
             SECFilingAnalysis, AutonomousSituationSession
         )
@@ -1208,7 +1208,7 @@ def _impl_run_sec_filing_analyzer(self):
         cutoff = timezone.now() - timedelta(hours=48)
 
         # Get SEC data from spider
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['sec_edgar', 'yahoo_finance', 'business_news'],
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')[:150]
@@ -1304,7 +1304,7 @@ def _impl_run_earnings_predictor(self):
     logger.info("📈 [EARNINGS] Starting prediction analysis...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import (
             EarningsPrediction, AutonomousSituationSession
         )
@@ -1320,7 +1320,7 @@ def _impl_run_earnings_predictor(self):
         cutoff = timezone.now() - timedelta(hours=72)
 
         # Get financial news and data
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['yahoo_finance', 'business_news', 'finnhub', 'hackernews'],
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')[:200]

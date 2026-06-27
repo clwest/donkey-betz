@@ -1976,7 +1976,7 @@ def _impl_trigger_spider_conversations(self, min_relevance: int = 70, max_conver
     """
     from django.utils import timezone
     from datetime import timedelta
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
     from core.models import Agent, AgentConversation, ConversationMessage
     import random
     import openai
@@ -1993,7 +1993,7 @@ def _impl_trigger_spider_conversations(self, min_relevance: int = 70, max_conver
 
         # Find recent high-relevance spider data (last 2 hours)
         cutoff = timezone.now() - timedelta(hours=2)
-        interesting_data = SpiderData.objects.filter(
+        interesting_data = LegacySpiderData.objects.filter(
             created_at__gte=cutoff,
             relevance_score__gte=min_relevance,
             is_processed=True

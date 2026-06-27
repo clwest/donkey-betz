@@ -1,15 +1,15 @@
 """
-Session 1189 Item 3: SpiderData aggregation PA tool (v1).
+Session 1189 Item 3: LegacySpiderData aggregation PA tool (v1).
 
 Background: Session 1187 Utilization Recon (deliverable 88952c54-...)
 established that AGENT_SPIDER_MAPPINGS was routing dispatches against
-SpiderData via category names, but until Session 1188's supply recon
+LegacySpiderData via category names, but until Session 1188's supply recon
 (deliverable 13032820-...) there was no PA tool to verify what categories
 actually had supply. Rigby's supply recon ran via one-off Django shell
 scripts twice across two sessions — recurring tooling gap.
 
 This module exposes a single `aggregate` action that group-bys
-SpiderData rows by `data_type` (with optional spider_name and
+LegacySpiderData rows by `data_type` (with optional spider_name and
 data_types filters) over a windowed time range, returning counts +
 top contributors. v1 deliberately omits per-row samples, source
 domain breakdowns, text search, and date-bucket histograms — that's
@@ -87,7 +87,7 @@ def aggregate_spider_data(
     tool dispatch. Keeping it pure makes it cheap to unit-test against
     real DB fixtures.
     """
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     days_back = _clamp(int(days_back), DAYS_BACK_MIN, DAYS_BACK_MAX)
     top_spiders_limit = _clamp(
@@ -108,7 +108,7 @@ def aggregate_spider_data(
     # total_count because callers (Rigby, AC verifiers) need both —
     # cheap join in a single query saves a round trip.
     by_data_type_qs = (
-        SpiderData.objects.filter(base_filter)
+        LegacySpiderData.objects.filter(base_filter)
         .values('data_type')
         .annotate(
             total_count=Count('id'),
@@ -132,7 +132,7 @@ def aggregate_spider_data(
         }
         if include_top_spiders:
             top_qs = (
-                SpiderData.objects.filter(
+                LegacySpiderData.objects.filter(
                     base_filter & Q(data_type=row['data_type'])
                 )
                 .values('spider_name')
@@ -171,14 +171,14 @@ def aggregate_spider_data(
     }
 
     if include_totals:
-        total_count = SpiderData.objects.filter(base_filter).count()
-        actionable_count = SpiderData.objects.filter(actionable_filter).count()
+        total_count = LegacySpiderData.objects.filter(base_filter).count()
+        actionable_count = LegacySpiderData.objects.filter(actionable_filter).count()
         distinct_data_types = (
-            SpiderData.objects.filter(base_filter)
+            LegacySpiderData.objects.filter(base_filter)
             .values('data_type').distinct().count()
         )
         distinct_spiders = (
-            SpiderData.objects.filter(base_filter)
+            LegacySpiderData.objects.filter(base_filter)
             .values('spider_name').distinct().count()
         )
         payload['totals'] = {

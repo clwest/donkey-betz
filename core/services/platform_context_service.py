@@ -332,16 +332,16 @@ class PlatformContextService:
             return _envelope({'error': str(e)}, [], hours_back, [str(e)])
 
     def spider_health(self, hours_back: int = 24, limit: int = 50) -> Dict:
-        """Real spider network health from SpiderData."""
+        """Real spider network health from LegacySpiderData."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.db.models import Count, Max
 
             cutoff = timezone.now() - timedelta(hours=hours_back)
 
             # Spider activity
             spider_stats = list(
-                SpiderData.objects.filter(created_at__gte=cutoff)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff)
                 .values('spider_name')
                 .annotate(
                     items=Count('id'),
@@ -353,7 +353,7 @@ class PlatformContextService:
             active = [s for s in spider_stats if s['items'] > 0]
 
             # Total spiders ever seen
-            all_spiders = SpiderData.objects.values('spider_name').distinct().count()
+            all_spiders = LegacySpiderData.objects.values('spider_name').distinct().count()
             stale = all_spiders - len(active)
 
             facts = {
@@ -364,7 +364,7 @@ class PlatformContextService:
             }
 
             evidence = [_evidence(
-                'postgres', 'SpiderData',
+                'postgres', 'LegacySpiderData',
                 f'{len(active)} active spiders in {hours_back}h, {stale} stale',
             )]
 

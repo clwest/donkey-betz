@@ -1381,13 +1381,13 @@ Use delegation when you need expertise outside your specialty. For example:
             List of spider intelligence dicts with title, content, source
         """
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
             from datetime import timedelta
 
             cutoff = timezone.now() - timedelta(hours=hours)
 
-            query = SpiderData.objects.filter(
+            query = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff
             ).exclude(
                 embedding__isnull=True
@@ -3818,7 +3818,7 @@ Consider this current data when formulating your response."""
         Annotations help humans discover valuable information from the spider network.
 
         Args:
-            spider_data_id: UUID of the SpiderData item to annotate
+            spider_data_id: UUID of the LegacySpiderData item to annotate
             annotation_type: One of: useful, profitable, podcast_worthy, breaking_news,
                            investment_opportunity, action_required, warning, trending
             confidence: 0.0-1.0 confidence score (default: 0.7)
@@ -3839,7 +3839,7 @@ Consider this current data when formulating your response."""
                 )
         """
         try:
-            from core.models_unified_system import SpiderData, SpiderDataAnnotation
+            from core.models_unified_system import LegacySpiderData, SpiderDataAnnotation
 
             # Validate annotation type
             valid_types = [t[0] for t in SpiderDataAnnotation.ANNOTATION_TYPES]
@@ -3852,9 +3852,9 @@ Consider this current data when formulating your response."""
 
             # Get the spider data item
             try:
-                spider_data = SpiderData.objects.get(id=spider_data_id)
-            except SpiderData.DoesNotExist:
-                logger.warning(f"[{self.name}] SpiderData {spider_data_id} not found")
+                spider_data = LegacySpiderData.objects.get(id=spider_data_id)
+            except LegacySpiderData.DoesNotExist:
+                logger.warning(f"[{self.name}] LegacySpiderData {spider_data_id} not found")
                 return False
 
             # Create or update the annotation

@@ -354,7 +354,7 @@ __all__ = [
     'Application',
     'AgentSolution',
     'AgentLearning',
-    'SpiderData',
+    'LegacySpiderData',
     'SpiderItemHash',  # Session 616: Spider deduplication
     'AdvisorInsight',
     'UserAgentLearning',

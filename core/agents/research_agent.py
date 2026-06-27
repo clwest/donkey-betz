@@ -2708,17 +2708,17 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
                     results.append(record)
 
             elif data_type == 'spider_data_stats':
-                from core.models import SpiderData
+                from core.models import LegacySpiderData
 
                 # Get aggregated stats rather than individual records
-                recent_data = SpiderData.objects.filter(created_at__gte=recent_cutoff)
+                recent_data = LegacySpiderData.objects.filter(created_at__gte=recent_cutoff)
 
                 spider_counts = dict(recent_data.values('spider_name').annotate(
                     count=Count('id')
                 ).order_by('-count')[:20].values_list('spider_name', 'count'))
 
                 summary = {
-                    'total_records': SpiderData.objects.count(),
+                    'total_records': LegacySpiderData.objects.count(),
                     'records_last_n_days': recent_data.count(),
                     'days_queried': days_back,
                     'spider_activity': spider_counts,

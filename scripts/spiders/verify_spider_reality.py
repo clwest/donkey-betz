@@ -128,19 +128,19 @@ def check_database_records():
     print("-" * 50)
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
-        total = SpiderData.objects.count()
-        print(f"SpiderData records: {total}")
+        total = LegacySpiderData.objects.count()
+        print(f"LegacySpiderData records: {total}")
 
         if total > 0:
             # Check recent activity
             recent = datetime.now() - timedelta(days=1)
-            recent_count = SpiderData.objects.filter(created_at__gte=recent).count()
+            recent_count = LegacySpiderData.objects.filter(created_at__gte=recent).count()
             print(f"Records from last 24h: {recent_count}")
 
             # Show sample
-            samples = SpiderData.objects.order_by('-created_at')[:3]
+            samples = LegacySpiderData.objects.order_by('-created_at')[:3]
             print("\nRecent samples:")
             for s in samples:
                 print(f"   • {s.spider_name}: {s.data_type} ({s.created_at})")

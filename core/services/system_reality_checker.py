@@ -578,13 +578,13 @@ class SystemRealityChecker:
     def check_spider_network(self):
         """Check if spiders are collecting data"""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
-            recent_data = SpiderData.objects.filter(
+            recent_data = LegacySpiderData.objects.filter(
                 created_at__gte=self.cutoff
             ).count()
 
-            unique_spiders = SpiderData.objects.filter(
+            unique_spiders = LegacySpiderData.objects.filter(
                 created_at__gte=self.cutoff
             ).values('spider_name').distinct().count()
 

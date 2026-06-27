@@ -2,7 +2,7 @@
 Boost spider data collection and activate idle spiders
 """
 from django.core.management.base import BaseCommand
-from core.models_unified_system import SpiderData
+from core.models_unified_system import LegacySpiderData
 from ai_core.spiders.spider_registry import SpiderRegistry
 import random
 from datetime import timedelta
@@ -82,7 +82,7 @@ class Command(BaseCommand):
             spider_type = self._get_spider_type(spider_name)
 
             # Get current count
-            current_count = SpiderData.objects.filter(spider_name=spider_name).count()
+            current_count = LegacySpiderData.objects.filter(spider_name=spider_name).count()
 
             # Calculate how many items to add
             if current_count == 0:
@@ -109,7 +109,7 @@ class Command(BaseCommand):
                 data['confidence_score'] = random.uniform(0.7, 0.95)
 
                 # Create spider data entry
-                SpiderData.objects.create(
+                LegacySpiderData.objects.create(
                     spider_name=spider_name,
                     data_type=spider_type if spider_type != 'freelance' else 'opportunity',
                     raw_data=data,
