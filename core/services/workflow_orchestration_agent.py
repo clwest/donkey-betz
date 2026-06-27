@@ -4227,11 +4227,20 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         from core.services.openai_client_factory import get_openai_client
 
         # Collect lane inputs.
+        # Session 1242: humanize lane_1_text BEFORE the LLM sees it.
+        # Pre-fix the decision_card_synthesis step read lane_1_text raw
+        # from context, so MUSCULAR jargon flowed into the LLM prompt and
+        # echoed into TL;DR prose, Decision "Why now" lines, and
+        # Where-to-verify pointers. Symmetrical with the humanizer call
+        # in _execute_strategic_synthesis_step.
         lane_inputs = {}
         for lane_key in ('lane_1_text', 'lane_2_text', 'lane_3_text', 'lane_4_text'):
             val = context.get(lane_key)
             if val:
-                lane_inputs[lane_key] = str(val)[:2000]
+                val_str = str(val)[:2000]
+                if lane_key == 'lane_1_text':
+                    val_str = self._humanize_body_system_jargon(val_str)
+                lane_inputs[lane_key] = val_str
 
         if not lane_inputs:
             # Smoke / empty-context case — keep the workflow alive.
@@ -4428,17 +4437,34 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         Session 1238 PR-4: Rigby's audience-fit verdict flagged
         'MUSCULAR: No Agent Activity' as insider jargon. Replace with
         'Agent activity anomaly (possible worker stall) [MUSCULAR]'
-        per her suggestion. Other body systems left unchanged for now
-        — they appear less frequently and have less established
-        operational meaning for Chris.
+        per her suggestion.
 
-        Pure string substitution; idempotent (safe to call twice).
+        Session 1242: broadened beyond the original 2 literal patterns
+        after 06-27 brief verification surfaced 4 MUSCULAR escapes —
+        only 1 of which matched PR #2658's literal. The escapes (TL;DR
+        prose, Where-to-verify lines, Decision Card "Why now" body)
+        showed the LLM echoing MUSCULAR from its INPUT into its OUTPUT
+        in shapes the literal substitution didn't cover. New approach:
+        (1) legacy literals preserved for backwards compat with the
+        original Rigby-prescribed rewrite, (2) a tolerant pass catches
+        any remaining bare MUSCULAR mention not already wrapped in
+        brackets, demoting it to a parenthetical [MUSCULAR] tag after
+        a plain-English phrase. Other body systems (HEART, LUNGS,
+        CIRCULATORY, etc.) still left unchanged — they don't appear
+        in lane outputs yet.
+
+        Idempotent: re-running the humanizer on its own output is a
+        no-op because the regex skips tokens already preceded by `[`
+        or followed by `]`.
         """
         if not text:
             return text
-        # Common Lane 1 surface form: "MUSCULAR: <desc>"
-        # Translation: "<desc> (possible worker stall) [MUSCULAR]"
-        substitutions = (
+
+        # Pass 1: legacy literal patterns from PR #2658. Preserved so
+        # the original "MUSCULAR: No Agent Activity" → "Agent activity
+        # anomaly (possible worker stall) [MUSCULAR]" rewrite that
+        # Rigby specifically prescribed continues to land verbatim.
+        legacy = (
             (
                 'MUSCULAR: No Agent Activity',
                 'Agent activity anomaly (possible worker stall) [MUSCULAR]',
@@ -4449,8 +4475,29 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             ),
         )
         out = text
-        for old, new in substitutions:
+        for old, new in legacy:
             out = out.replace(old, new)
+
+        # Pass 2: tolerant sweep for remaining bare MUSCULAR mentions.
+        # Order matters — most specific shape first so the generic fallback
+        # only fires on mentions the specific shapes didn't claim.
+        import re as _re
+        # Shape: "MUSCULAR subsystem"  → "agent-activity subsystem [MUSCULAR]"
+        # (case-insensitive; collapses the redundant "subsystem subsystem"
+        # that a naive replace would produce.)
+        out = _re.sub(
+            r'(?<!\[)\bMUSCULAR\b\s+subsystem\b',
+            'agent-activity subsystem [MUSCULAR]',
+            out,
+            flags=_re.IGNORECASE,
+        )
+        # Generic fallback: any other bare MUSCULAR not already wrapped
+        # in `[...]`. Demote to a plain-English noun with the tag preserved.
+        out = _re.sub(
+            r'(?<!\[)\bMUSCULAR\b(?!\])',
+            'agent-activity [MUSCULAR]',
+            out,
+        )
         return out
 
     @staticmethod
