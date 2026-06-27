@@ -1,5 +1,5 @@
-from .action_plan import ActionPlan, ActionPlanStep, AgentExecution
-__all__ = ["ActionPlan", "ActionPlanStep"]
+from .action_plan import ActionPlan, ActionPlanStep, ActionPlanExecution
+__all__ = ["ActionPlan", "ActionPlanStep", "ActionPlanExecution"]
 
 from .spider_intelligence import SpiderIntelligenceNode
 

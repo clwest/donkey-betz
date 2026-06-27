@@ -148,8 +148,15 @@ class ActionPlanStep(models.Model):
         return f"Step {self.step_number}: {self.description[:50]}..."
 
 
-class AgentExecution(models.Model):
-    """Minimal execution record to satisfy pipeline imports and basic logging."""
+class ActionPlanExecution(models.Model):
+    """Action-plan execution record (renamed from AgentExecution in S1243).
+
+    Was previously named `AgentExecution`, which collided in the Django model
+    registry with `core.AgentExecution` (canonical orchestration model, 984 live
+    rows) and `agents.AgentExecution` (dormant rich-execution surface). Renamed
+    here to remove the class-name collision and clarify intent: this model
+    tracks per-step execution of `ActionPlan` flows, not generic agent runs.
+    """
     action_plan = models.ForeignKey(ActionPlan, on_delete=models.CASCADE, related_name='agent_executions')
     agent_name = models.CharField(max_length=100)
     status = models.CharField(max_length=32, default='started')  # e.g. started, running, success, failed
