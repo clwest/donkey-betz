@@ -71,9 +71,9 @@ class WorkflowAnalyticsService:
         self.user = user if user and not isinstance(user, AnonymousUser) else None
 
     def _get_workflow_execution_model(self):
-        """Get WorkflowExecution model lazily to avoid import issues"""
-        from content.models import WorkflowExecution
-        return WorkflowExecution
+        """Get ContentWorkflowExecution model lazily to avoid import issues"""
+        from content.models import ContentWorkflowExecution
+        return ContentWorkflowExecution
 
     def _get_content_workflow_model(self):
         """Get ContentWorkflow model lazily to avoid import issues"""
@@ -82,10 +82,10 @@ class WorkflowAnalyticsService:
 
     def _get_base_queryset(self):
         """Get base queryset filtered by user if applicable"""
-        WorkflowExecution = self._get_workflow_execution_model()
+        ContentWorkflowExecution = self._get_workflow_execution_model()
         if self.user:
-            return WorkflowExecution.objects.filter(user=self.user)
-        return WorkflowExecution.objects.all()
+            return ContentWorkflowExecution.objects.filter(user=self.user)
+        return ContentWorkflowExecution.objects.all()
 
     # =========================================================================
     # EXECUTION HISTORY

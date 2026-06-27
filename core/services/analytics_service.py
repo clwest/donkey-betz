@@ -259,13 +259,13 @@ class AnalyticsService:
         """
         Get workflow execution trends over time.
         """
-        from content.models import WorkflowExecution
+        from content.models import ContentWorkflowExecution
 
         end_date = timezone.now()
         start_date = end_date - timedelta(days=days)
 
         try:
-            executions = WorkflowExecution.objects.filter(
+            executions = ContentWorkflowExecution.objects.filter(
                 started_at__gte=start_date
             ).annotate(
                 date=TruncDate('started_at')
@@ -383,7 +383,7 @@ class AnalyticsService:
         """
 
         try:
-            # This requires duration tracking in WorkflowExecution
+            # This requires duration tracking in ContentWorkflowExecution
             # For now, return placeholder data
             return ChartData(
                 labels=['Logo Creation', 'Brand Identity', 'Video Thumbnail', 'Product Photo'],

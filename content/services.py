@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from .models import (
     ContentTemplate, Document, KnowledgeBase, ContentGeneration,
-    ContentWorkflow, WorkflowExecution, EmbeddingModel, ContentStatus
+    ContentWorkflow, ContentWorkflowExecution, EmbeddingModel, ContentStatus
 )
 from .embeddings import rag_system
 from .ai_providers import AIProviderManager
@@ -184,18 +184,18 @@ Original system prompt:
             generation.save()
 
 
-class WorkflowExecutionService:
+class ContentWorkflowExecutionService:
     """Service for executing content workflows"""
     
     def __init__(self, user: User):
         self.user = user
         self.generation_service = ContentGenerationService(user)
     
-    def execute_workflow(self, workflow: ContentWorkflow, execution_request: Dict[str, Any]) -> WorkflowExecution:
+    def execute_workflow(self, workflow: ContentWorkflow, execution_request: Dict[str, Any]) -> ContentWorkflowExecution:
         """Execute a content workflow"""
         try:
-            # Create WorkflowExecution record
-            execution = WorkflowExecution.objects.create(
+            # Create ContentWorkflowExecution record
+            execution = ContentWorkflowExecution.objects.create(
                 workflow=workflow,
                 user=self.user,
                 input_data=execution_request['input_data'],
@@ -223,7 +223,7 @@ class WorkflowExecutionService:
                 execution.save()
             raise
     
-    def _execute_workflow_sync(self, execution: WorkflowExecution):
+    def _execute_workflow_sync(self, execution: ContentWorkflowExecution):
         """Execute workflow synchronously"""
         try:
             execution.status = ContentStatus.PROCESSING
@@ -290,14 +290,14 @@ class WorkflowExecutionService:
             execution.completed_at = timezone.now()
             execution.save()
     
-    def _execute_workflow_async(self, execution: WorkflowExecution):
+    def _execute_workflow_async(self, execution: ContentWorkflowExecution):
         """Execute workflow asynchronously (placeholder for Celery task)"""
         # In production, this would trigger a Celery task
         # For now, we'll just mark it as processing
         execution.status = ContentStatus.PROCESSING
         execution.save()
     
-    def _execute_workflow_step(self, execution: WorkflowExecution, step: Dict[str, Any], 
+    def _execute_workflow_step(self, execution: ContentWorkflowExecution, step: Dict[str, Any], 
                               previous_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute a single workflow step"""
         step_type = step.get('type', 'unknown')
@@ -329,7 +329,7 @@ class WorkflowExecutionService:
                 'step_type': step_type
             }
     
-    def _execute_generation_step(self, execution: WorkflowExecution, step: Dict[str, Any], 
+    def _execute_generation_step(self, execution: ContentWorkflowExecution, step: Dict[str, Any], 
                                previous_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute content generation step"""
         try:
@@ -372,7 +372,7 @@ class WorkflowExecutionService:
                 'step_type': 'content_generation'
             }
     
-    def _execute_document_processing_step(self, execution: WorkflowExecution, step: Dict[str, Any], 
+    def _execute_document_processing_step(self, execution: ContentWorkflowExecution, step: Dict[str, Any], 
                                         previous_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute document processing step"""
         # Placeholder for document processing logic
@@ -383,7 +383,7 @@ class WorkflowExecutionService:
             'message': 'Document processing completed'
         }
     
-    def _execute_rag_search_step(self, execution: WorkflowExecution, step: Dict[str, Any], 
+    def _execute_rag_search_step(self, execution: ContentWorkflowExecution, step: Dict[str, Any], 
                                previous_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute RAG search step"""
         try:
@@ -433,7 +433,7 @@ class WorkflowExecutionService:
                 'step_type': 'rag_search'
             }
     
-    def _execute_template_step(self, execution: WorkflowExecution, step: Dict[str, Any], 
+    def _execute_template_step(self, execution: ContentWorkflowExecution, step: Dict[str, Any], 
                              previous_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute template application step"""
         try:
@@ -460,7 +460,7 @@ class WorkflowExecutionService:
                 'step_type': 'template_application'
             }
     
-    def _execute_data_transformation_step(self, execution: WorkflowExecution, step: Dict[str, Any], 
+    def _execute_data_transformation_step(self, execution: ContentWorkflowExecution, step: Dict[str, Any], 
                                         previous_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute data transformation step"""
         # Placeholder for data transformation logic

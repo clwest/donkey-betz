@@ -15,6 +15,10 @@ from .embedding_generator import embedding_generator
 from .knowledge_base_manager import knowledge_base_manager
 
 # Import models
+# Note (S1244): LearningInsight was imported here but never used in any
+# .objects.X call. Removed when ai_intelligence.LearningInsight was deleted
+# in the Cat 2 dormant cleanup batch. Canonical model lives in core (see
+# core.models.ai_learning.models.LearningInsight) but isn't needed here.
 try:
     from .models import (
         AgentLearningEvent,
@@ -22,7 +26,6 @@ try:
         AgentKnowledgeBase,
         LearningEmbedding,
         AgentLearningSession,
-        LearningInsight
     )
     from django.db import transaction
 except ImportError:
@@ -31,7 +34,6 @@ except ImportError:
     AgentKnowledgeBase = None
     LearningEmbedding = None
     AgentLearningSession = None
-    LearningInsight = None
     transaction = None
 
 logger = logging.getLogger(__name__)

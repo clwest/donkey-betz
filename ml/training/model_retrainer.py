@@ -89,8 +89,8 @@ class ModelRetrainer:
 
             # Check if we have enough new predictions since last retrain
             try:
-                from ml.models import MLModelVersion
-                latest_version = MLModelVersion.objects.filter(
+                from ml.models import SportsMLModelVersion
+                latest_version = SportsMLModelVersion.objects.filter(
                     sport_type=sport_type,
                     is_active=True
                 ).first()
@@ -317,9 +317,9 @@ class ModelRetrainer:
             (should_deploy: bool, reason: str)
         """
         try:
-            from ml.models import MLModelVersion
+            from ml.models import SportsMLModelVersion
 
-            current_version = MLModelVersion.objects.filter(
+            current_version = SportsMLModelVersion.objects.filter(
                 sport_type=sport_type,
                 is_active=True
             ).first()
@@ -366,11 +366,11 @@ class ModelRetrainer:
             Version number or None if failed
         """
         try:
-            from ml.models import MLModelVersion
+            from ml.models import SportsMLModelVersion
             from django.utils import timezone
 
             # Get next version number
-            latest_version = MLModelVersion.objects.filter(
+            latest_version = SportsMLModelVersion.objects.filter(
                 sport_type=sport_type
             ).order_by('-version').first()
 
@@ -389,7 +389,7 @@ class ModelRetrainer:
             logger.info(f"Saved {sport_type.upper()} model v{next_version} to {model_path}")
 
             # Create database record
-            model_version = MLModelVersion.objects.create(
+            model_version = SportsMLModelVersion.objects.create(
                 sport_type=sport_type,
                 model_name=f"{sport_type}_predictor",
                 version=next_version,

@@ -26,19 +26,19 @@ from rest_framework.response import Response
 
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
-    ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
+    ContentGeneration, ContentWorkflow, ContentWorkflowExecution, ContentAnalytics,
     EmbeddingModel, ContentStatus
 )
 from .serializers import (
     ContentTemplateSerializer, DocumentSerializer, DocumentEmbeddingSerializer,
     KnowledgeBaseSerializer, ContentGenerationSerializer, ContentWorkflowSerializer,
-    WorkflowExecutionSerializer, ContentAnalyticsSerializer,
+    ContentWorkflowExecutionSerializer, ContentAnalyticsSerializer,
     DocumentUploadSerializer, SemanticSearchSerializer,
-    ContentGenerationRequestSerializer, WorkflowExecutionRequestSerializer
+    ContentGenerationRequestSerializer, ContentWorkflowExecutionRequestSerializer
 )
 from .processors import pipeline
 from .embeddings import rag_system
-from .services import ContentGenerationService, WorkflowExecutionService
+from .services import ContentGenerationService, ContentWorkflowExecutionService
 
 logger = logging.getLogger(__name__)
 
@@ -566,16 +566,16 @@ class ContentWorkflowViewSet(viewsets.ModelViewSet):
     def execute(self, request, pk=None):
         """Execute workflow"""
         workflow = self.get_object()
-        serializer = WorkflowExecutionRequestSerializer(data=request.data)
+        serializer = ContentWorkflowExecutionRequestSerializer(data=request.data)
         
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            service = WorkflowExecutionService(request.user)
+            service = ContentWorkflowExecutionService(request.user)
             execution = service.execute_workflow(workflow, serializer.validated_data)
             
-            exec_serializer = WorkflowExecutionSerializer(
+            exec_serializer = ContentWorkflowExecutionSerializer(
                 execution, context={'request': request}
             )
             return Response(exec_serializer.data, status=status.HTTP_201_CREATED)
@@ -591,12 +591,12 @@ class ContentWorkflowViewSet(viewsets.ModelViewSet):
 class WorkflowExecutionViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for workflow executions"""
     
-    serializer_class = WorkflowExecutionSerializer
+    serializer_class = ContentWorkflowExecutionSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         """Get executions for current user"""
-        return WorkflowExecution.objects.filter(user=self.request.user)
+        return ContentWorkflowExecution.objects.filter(user=self.request.user)
     
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -640,7 +640,7 @@ class ContentAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
         # Get user's content statistics
         documents_count = Document.objects.filter(owner=user).count()
         generations_count = ContentGeneration.objects.filter(user=user).count()
-        workflows_count = WorkflowExecution.objects.filter(user=user).count()
+        workflows_count = ContentWorkflowExecution.objects.filter(user=user).count()
         
         # Recent activity
         recent_documents = Document.objects.filter(

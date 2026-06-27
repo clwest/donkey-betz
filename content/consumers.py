@@ -12,7 +12,7 @@ from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 
 from .models import (
-    Document, ContentGeneration, WorkflowExecution, 
+    Document, ContentGeneration, ContentWorkflowExecution, 
     ContentTemplate, KnowledgeBase
 )
 
@@ -307,11 +307,11 @@ class ContentProcessingConsumer(AsyncWebsocketConsumer):
     def get_user_execution(self, execution_id):
         """Get execution if user owns it"""
         try:
-            return WorkflowExecution.objects.get(
+            return ContentWorkflowExecution.objects.get(
                 id=execution_id,
                 user=self.user
             )
-        except WorkflowExecution.DoesNotExist:
+        except ContentWorkflowExecution.DoesNotExist:
             return None
     
     @database_sync_to_async
@@ -353,7 +353,7 @@ class ContentProcessingConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_user_active_workflows(self):
         """Get user's active workflow executions"""
-        executions = WorkflowExecution.objects.filter(
+        executions = ContentWorkflowExecution.objects.filter(
             user=self.user,
             status__in=['pending', 'processing']
         ).order_by('-created_at')
@@ -507,7 +507,7 @@ class ContentAnalyticsConsumer(AsyncWebsocketConsumer):
         return {
             'total_documents': Document.objects.filter(owner=self.user).count(),
             'total_generations': ContentGeneration.objects.filter(user=self.user).count(),
-            'total_workflows': WorkflowExecution.objects.filter(user=self.user).count(),
+            'total_workflows': ContentWorkflowExecution.objects.filter(user=self.user).count(),
             'processing_stats': {
                 'pending': 0,
                 'processing': 1,
