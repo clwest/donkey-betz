@@ -133,7 +133,7 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 
 ## SESSION 1243 — CURRENT ENTRY POINT
 
-### SESSION 1242 CLOSED — Path C structured decision_card + Cat 5 deletion-regret audit (3 PRs, 5 audit deliverables advanced)
+### SESSION 1242 CLOSED — Path C + Cat 5 audit + audit-method correction via core/models.py shadowing discovery (6 PRs, 6 audit deliverables advanced)
 
 Full handoff: [`SESSION_1242_PATH_C_STRUCTURED_DECISION_CARD_PLUS_DELETION_REGRET_AUDIT.md`](docs/handoffs/SESSION_1242_PATH_C_STRUCTURED_DECISION_CARD_PLUS_DELETION_REGRET_AUDIT.md).
 
@@ -150,6 +150,13 @@ Session 1242 opened on the S1241 P1 06-27 cumulative morning_brief verification 
 | [#2672](https://github.com/clwest/donkey-betz-platform/pull/2672) | fix(session-1242): broaden MUSCULAR humanizer + apply at decision_card_synthesis | `74845aee` | +145 / -10 | 6 new (25 total green) |
 | [#2673](https://github.com/clwest/donkey-betz-platform/pull/2673) | docs(session-1241): close handoff + S1242 entry-point | `41fa0d15` | +290 / -69 | (docs) |
 | [#2674](https://github.com/clwest/donkey-betz-platform/pull/2674) | feat(session-1242): Path C — structured decision_card with next_step_timebox | `b7252f3c` | +908 / -30 | 33 new (69 total green) |
+| [#2675](https://github.com/clwest/donkey-betz-platform/pull/2675) | docs(session-1242): close handoff + S1243 entry-point (morning close) | `390ff776` | +419 / -69 | (docs) |
+| [#2676](https://github.com/clwest/donkey-betz-platform/pull/2676) | docs(session-1242): mark generate_agent_dreams as user-triggered, not scheduled | `801da251` | +1 / -1 | (docs) |
+| [#2677](https://github.com/clwest/donkey-betz-platform/pull/2677) | refactor(session-1242): remove shadowed AgentLearningSession from core/models.py | `5affd2cc` | +18 / -30 | 69 green (no regression) |
+
+**THE BIG DISCOVERY (afternoon):** `core/models.py` is shadowed by the `core/models/` package. Python loads the package, not the file. All 25 class definitions in `core/models.py` are dead Python text — Django registers zero of them. `apps.get_model()` always returns the package class. PR #2677 surgically removed 1 class (no migration needed); 24 remain. Filed as Cat 2 Finding 2.1 candidate. This invalidates my earlier "duplicate model" classification protocol — every such finding now requires `apps.get_model()` resolution check before classification past CANDIDATE.
+
+**Chris's product-question that reframed the audit method:** *"Are we deleting features that were never added or are we deleting features that are working in other ways and these are just duplicates that need to be removed?"* — surfaced 3 distinct deletion categories (1: Never-completed / 2: Duplicate-old-not-removed / 3: Works-but-not-exercised). Applied to all 4 pending findings; Finding 1.3 Dreams flipped from "stillborn" → Cat 3 (works, just user-triggered) — closed via PR #2676 doc cleanup + smoke test (0 → 3 AgentDream rows). Finding 1.5 legacy AgentLearningSession confirmed Cat 2 via shadowing → closed via PR #2677. Classification protocol now part of the audit method.
 
 **Audit deliverables advanced this session (Donkey Betz workspace `b4503364-…`):**
 
@@ -157,6 +164,8 @@ Session 1242 opened on the S1241 P1 06-27 cumulative morning_brief verification 
 |---|---|---|
 | MASTER INDEX | `dfd2a073-da10-433e-90fe-1fc69a3c716a` | S1242 log entry + summary table (5,741 → 8,306 chars) |
 | Cat 1 — Stillborn Surfaces | `2d7ea39f-3bf0-447c-8c89-33210fc0d18b` | Finding 1.1 promoted **DUAL-SOURCED → RUNTIME-CHECKED**; Findings 1.2-1.5 finalized; cross-finding pattern named (10,898 → 29,887 chars) |
+| Cat 1 — Stillborn Surfaces (afternoon) | `2d7ea39f-…` | + Finding 1.3 smoke-test result + revised classification (DISPROVEN as stillborn, Cat 3 works-but-not-exercised); 29,778 → 34,599 chars |
+| **Cat 2 — Phantom Dependencies (NEW finding)** | `86870fdd-e8d8-48d3-9760-4bea75ec10e3` | **NEW Finding 2.1 candidate** — `core/models.py` shadowed by `core/models/` package; 24 remaining dead-text classes; per-class verify-before-delete + `apps.get_model()` resolution check protocol established (883 → 8,348 chars) |
 | Cat 4 — Doc↔Code Drift | `0836042d-3a97-4d60-b9c8-11ea8d7f9884` | NEW **Finding 4.3 candidate** — search_docs provenance filter excludes ~85% of pre-filter matches (5,269 → 8,167 chars) |
 | Cat 5 — Deletion Regret | `7ad80aaf-2025-419d-8590-8897ab2e6ee2` | **3 new findings** (5.1 ml_intelligence.ml_service + 5.2 ml_revenue_pipeline + 5.3 batch_tag_documents) + Rigby Lens B (1,081 → 21,005 chars) |
 | Path C deliverable (NEW) | `19b45ea0-0831-43e8-aa43-038cf9c2e705` | Created mid-session, full design spec + Rigby Q1-Q4 + SHIPPED addendum (0 → 17,830 chars) |
@@ -239,22 +248,38 @@ Expected: `count=X, non_null_timebox=Y, parse_issue=False, structured_issues=0`.
 - Absolute clock in markdown → Path C prompt needs stronger negative instruction OR gpt-5-mini is ignoring the rule.
 - Brief did not fire OR worker still on old code → run `pkill -9 -f celery; rm -f .celery*.pid; make celery` (this is the bedtime-restart Chris may have skipped).
 
-#### Priority 2 — Pick one after P1 lands clean
+#### Priority 2 — Audit method correction (shadowing) + verification discipline upgrade
 
-After P0 + P1 land, options ordered roughly by leverage:
+**Framing per Rigby's S1242 close ratification:** the `core/models.py` shadowing discovery means our "duplicate model" classification protocol was wrong. Before any more cleanup PRs, recalibrate the audit instrument. Rigby's ratified ordering (a) → (c) → (b):
 
-**(a) Action one of the Cat 1 / Cat 5 findings** — real fix work, not catalogue. Highest user-facing impact: **Finding 1.3 Dreams short-circuit** (`AgentDream.objects.count() == 0` despite beat tasks firing 16+ times SUCCESS — read `_impl_maintain_dream_backlog` to find the gate). Other candidates:
-- 1.5 PersistentLearningEngine orphan (easiest "remove" — 0 callers anywhere)
-- 1.4 Channels duplicate model (`core.AgentChannel` vs `agents.AgentChannel`)
-- 1.2 Directory rendering check (hit `/api/v1/agents/comprehensive` curl — verify 23 rows surface)
-- 5.1 ml_intelligence.ml_service restore (highest CAT 5 impact — silent ML degradation in agent-advisor bridge)
-- 5.2 ml_revenue_pipeline restore-or-document (Income Builder enhanced ML path)
+##### (a) Re-verify Finding 1.4 Channels with `apps.get_model()` resolution check — FIRST EXECUTABLE STEP
 
-**(b) Deeper Cat 5 audit scan** — Cat 5 v1 heuristic was module-name-only. Broaden to: class/function-level imports, Celery task-name strings, settings.py grep, dynamic imports. Plus Cat 2 / Cat 3 / Cat 6 have empty schemas — seed one.
+S1242 Finding 1.4 classified `core.AgentChannel` vs `agents.AgentChannel` as Cat 2 duplicates without doing the `apps.get_model()` check that revealed Finding 1.5's actual mechanism (shadowing, not duplication). Run the same check + reclassify:
 
-**(c) Rigby docs-side passes for Findings 1.2-1.5** still pending Lens B.
+```python
+from django.apps import apps
+for m in apps.get_models():
+    if m.__name__ == 'AgentChannel':
+        print(f'  {m._meta.app_label}.{m.__name__} | module={m.__module__} | table={m._meta.db_table}')
+from core.models import AgentChannel as A
+print(f'core.models.AgentChannel → module={A.__module__} table={A._meta.db_table}')
+```
 
-**(d) Investigate Finding 4.3** (search_docs provenance filter) — if real, weakens "no docs evidence found" verdicts on multiple findings. Disconfirm test in Finding 4.3 card.
+If only one is Django-registered → likely shadowing (same as 1.5). If both are registered → real duplicate (Cat 2 with split consumers + 8 importers to migrate). Update Finding 1.4 classification before any cleanup PR. ~20 min.
+
+##### (c) Per-class shadowing scan on `core/models.py`
+
+Per Cat 2 Finding 2.1's pseudocode in deliverable `86870fdd-…`: for each of 24 remaining classes in `core/models.py`, classify into SAFE_DUPLICATE / LOST_CANDIDATE / AMBIGUOUS. Produces an enumerated verified list ready for batch-cleanup PRs (or surfaces classes that need product Qs before delete). ~1-2 hr scan + ~15 min triage with results.
+
+##### (b) Cat 5 micro-fix (only after (a)+(c) land)
+
+Cat 5 findings 5.1 / 5.2 / 5.3 are all small Cat 1 fixes — but DEFER until method correction lands. Rigby's rationale: *"Cat 5 fixes are tempting and small, but the shadowing discovery just proved we can't trust surface-level 'duplicate model' intuition without the model registry check."*
+
+##### (d) Other options (lower priority unless circumstances change)
+
+- Rigby docs-side passes for Cat 1 Findings 1.2 / 1.4 (1.3 closed; 1.5 mostly closed) — pending Lens B
+- Investigate Finding 4.3 (search_docs provenance filter) — if real, weakens "no docs evidence found" verdicts on multiple findings
+- Deeper Cat 5 audit scan — broaden v1 module-name heuristic to class/function imports + Celery task strings + settings keys
 
 #### Priority 3 — Pre-existing carryover tail (unchanged)
 

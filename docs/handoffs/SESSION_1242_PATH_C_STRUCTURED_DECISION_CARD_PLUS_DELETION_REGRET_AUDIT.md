@@ -302,3 +302,113 @@ Sessions 1226-1242 totaled ~85 PRs + 2 no-code audit sessions. S1242 alone shipp
 > "Code that looks dead may be staged for an unbuilt connection."
 
 Chris's mid-session directive is now `feedback_verify_before_deleting_dead_code.md`. The rule's first real application in the same session demonstrated its value: it converted what I framed as "delete dead code" into Path C — a spec-faithful implementation that closes drift instead of erasing it. Same shape will repeat across many future "X looks unused" calls. The audit's Cat 5 work also showed the inverse: 5.1 / 5.2 / 5.3 were archived under similar "looks dead" reasoning, and we now suspect at least 2 of them (5.1 + 5.2) had silent-fallback consumers that were broken in the process. The rule is bidirectional.
+
+
+---
+
+## Session 1242 — AFTERNOON CLOSE (after morning's 4 PRs)
+
+Morning closed at PR #2675 with the original handoff above. Afternoon continued and shipped 2 more PRs + surfaced an audit-method correction that's bigger than the PRs themselves.
+
+### Afternoon arc (post-PR-#2675)
+
+**Chris's clarifying question reframed the audit:** *"Are we deleting features that were never added or are we deleting features that are working in other ways and these are just duplicates that need to be removed?"*
+
+Surfaced a real gap in how I'd been framing finding classifications. Named **3 distinct deletion categories** and audited each pending finding against them:
+
+| Cat | What it is | Safe to delete? |
+|---|---|---|
+| **1. Never-completed** | Scaffolded with intent, abandoned mid-build. Carcass of an unbuilt thing. | Yes IF no consumer downstream waiting (verify-before-delete) |
+| **2. Duplicate (old not removed)** | Was built; later re-built or migrated elsewhere; old path never cleaned up. | Yes IF replacement actually covers the same functionality |
+| **3. Works-but-not-exercised** | Code functional. Would work if triggered. We just never trigger it. | **NO — dormant ≠ dead** |
+
+This classification protocol is now part of the audit method. Applied to all 4 pending Cat 1/Cat 5 findings:
+
+| Finding | Initial guess | Actual classification | Outcome |
+|---|---|---|---|
+| 1.3 Dreams | "stillborn writer chain" | **Cat 3 works-but-not-exercised** (smoke-test proved writer works, just no scheduled fire + no user clicks) | Closed via PR #2676 (1-line doc cleanup of stale "Every 30 min" claim) |
+| 1.4 Channels | "Cat 2 duplicate models" | **Re-verification pending** with `apps.get_model()` (S1243 P2.a) — my initial classification may have been the same trap as 1.5 below | Deferred to S1243 |
+| 1.5 (legacy `AgentLearningSession`) | "Cat 2 dead-duplicate" | **CONFIRMED Cat 2 but via shadowing** — `core/models.py:2324` was shadowed Python text, never Django-registered. `apps.get_model()` returned the package class both pre- and post-edit. | Closed via PR #2677 (surgical class delete, no migration) |
+| 5.1 MLService + PatternPrediction | "Cat 1 deletion regret" | **MIXED** — MLService = Cat 1 (no replacement); PatternPrediction = NOT a problem (already imported from `ml/core/ml_engine.py:55` at line 21; audit card overstated the surface) | Deferred to S1243 |
+| 5.2 EnhancedMLRevenuePipeline | "Cat 1 deletion regret" | **Cat 1** (enhanced layer never replaced; basic `MLEngine` at `ml/core/ml_engine.py:74` still works) | Deferred to S1243 |
+
+### Afternoon PRs (both admin-merged)
+
+| PR | Subject | Merge | Net |
+|---|---|---|---|
+| [#2676](https://github.com/clwest/donkey-betz-platform/pull/2676) | docs(session-1242): mark generate_agent_dreams as user-triggered, not scheduled | `801da251` | +1 / -1 (single-line surgical fix) |
+| [#2677](https://github.com/clwest/donkey-betz-platform/pull/2677) | refactor(session-1242): remove shadowed AgentLearningSession from core/models.py | `5affd2cc` | +18 / -30 (net -12, surgical class removal + inline comment) |
+
+### THE BIG DISCOVERY — `core/models.py` is shadowed by `core/models/` package
+
+While verifying-before-deleting the legacy AgentLearningSession class (Finding 1.5 cleanup), I checked `apps.get_model()` resolution and found **the entire `core/models.py` file is shadowed at the module-resolution layer**. Python loads the PACKAGE (`core/models/__init__.py`), not the FILE. All 25 class definitions in `core/models.py` are dead Python text — Django registers zero of them.
+
+PR #2677 removed 1 class. **24 remaining classes** in the shadowed file. Per-class verification needed because some classes might have NO live counterpart and would be lost-on-delete rather than safely-removable.
+
+**Filed as Cat 2 Finding 2.1 candidate** in deliverable `86870fdd-…` (Cat 2 deliverable, 883 → 8,348 chars). Includes:
+- Full per-finding card with evidence + impact + reconnect hypothesis
+- Pseudocode for the per-class shadowing scan (3 buckets: SAFE_DUPLICATE / LOST_CANDIDATE / AMBIGUOUS)
+- Disconfirm test: grep for non-package import paths
+- **Audit method addendum: `apps.get_model()` resolution check is now MANDATORY for all "duplicate model" findings**
+
+### Cross-finding lesson reinforced (3rd time S1242)
+
+Every audit claim needs verifier-loop discipline — **including my own audit cards.** Sources of mis-classification today:
+1. S1241 start-here was wrong on `DecisionRecord` wiring → caught when verifying Finding 1.1
+2. My initial Finding 1.5 card named `_impl_maintain_dream_backlog` as the writer (it's CLEANUP, not generation) → caught when I went to fix Dreams (Finding 1.3) and instead found Dreams works
+3. My initial Finding 1.5 "Cat 2 dead-duplicate" assumption → caught when I checked `apps.get_model()` before delete
+
+**Generalized rule:** trust no claim about who-writes-what-to-which-model until grep-verified AND `apps.get_model()`-resolution-checked, regardless of source (start-here doc, my own audit cards, recent handoffs, even fresh memory).
+
+### Rigby ratified S1243 P2 order
+
+Routed S1243 P2 options to Rigby. She picked: **(a) Channels re-verify first → (c) per-class shadowing scan → (b) Cat 5 micro-fix.** Reasoning:
+- (a) is the fastest way to "recalibrate the audit instrument" after the shadowing discovery — directly prevents another high-confidence-but-wrong cleanup move
+- (c) is the highest-leverage method-level follow-on — turns "24 dead-looking classes" into an enumerated verified list
+- (b) Cat 5 fixes are tempting + small, but should wait until (a)+(c) underway — shadowing discovery proved we can't trust surface-level "duplicate model" intuition
+
+Her suggested S1243 framing: lead with *"audit method correction (shadowing) + verification discipline upgrade,"* then list (a) as the first executable step.
+
+### Audit deliverables advanced (cumulative S1242 total)
+
+| Doc | UUID | Δ chars (cumulative S1242) |
+|---|---|---|
+| MASTER INDEX | `dfd2a073-…` | 5,741 → 8,306 (no afternoon change; S1242 log entry already had the morning summary) |
+| Cat 1 — Stillborn Surfaces | `2d7ea39f-…` | 10,898 → **34,599** (afternoon added Finding 1.3 smoke-test result, +4,821) |
+| **Cat 2 — Phantom Dependencies** | `86870fdd-…` | 883 → **8,348** (NEW Finding 2.1 candidate, +7,465) |
+| Cat 4 — Doc↔Code Drift | `0836042d-…` | 5,269 → 8,167 |
+| Cat 5 — Deletion Regret | `7ad80aaf-…` | 1,081 → 21,005 |
+| Path C deliverable | `19b45ea0-…` | 0 → 17,830 (SHIPPED close) |
+
+### Full S1242 PR tally (6 PRs)
+
+| PR | Subject | Merge |
+|---|---|---|
+| #2672 | MUSCULAR broaden | `74845aee` |
+| #2673 | S1241 close handoff | `41fa0d15` |
+| #2674 | Path C structured decision_card | `b7252f3c` |
+| #2675 | S1242 close handoff (morning) | `390ff776` |
+| #2676 | doc cleanup (generate_agent_dreams schedule) | `801da251` |
+| #2677 | remove shadowed AgentLearningSession | `5affd2cc` |
+| #2678 (this commit) | S1242 close addendum (afternoon work + Cat 2 Finding 2.1 + classification protocol) | TBD |
+
+### Net stats (cumulative S1242)
+
+- 6 PRs shipped, 1 close addendum PR (this) = 7 total
+- +1,343 net production LOC + 1 surgical class removal (-12 net LOC)
+- 69 tests green in morning_brief-related suites; 0 regressions across all PRs
+- 6 audit deliverables advanced (Master + Cat 1 + Cat 2 + Cat 4 + Cat 5 + Path C)
+- 1 new memory rule logged (`feedback_verify_before_deleting_dead_code.md`)
+- Classification protocol established (3 categories + apps.get_model() mandatory check)
+- 8 findings advanced across 3 categories (Cat 1: 1.1 RUNTIME-CHECKED + 1.2-1.5 finalized + 1.3 closed; Cat 2: 2.1 NEW candidate; Cat 4: 4.3 NEW candidate; Cat 5: 5.1+5.2+5.3 seeded)
+
+### State at FINAL close
+
+- **Active PA conversation:** `pa-634b8fef344d4af2` — ~28-32 turns total this session. Health likely 30-50 range. **Rotation at S1243 open is the right call.**
+- **Worker state — CRITICAL bedtime restart still required by Chris:** PR #2672 + #2674 + #2677 all modify `core/services/workflow_orchestration_agent.py` (or `core/models.py` for #2677). The `core/models.py` change is functionally no-op (shadowed file) so PR #2677 alone doesn't require restart, but PR #2672 + #2674 do. **Without restart, 06-28 brief fires on pre-merge code and neither MUSCULAR nor Path C behavior shows in verification.**
+- **CI billing:** still failing on all 6 PRs. Admin-merge pattern unchanged from S1239-S1241.
+- **Docs cascade:** ran this morning (step 1 + 3 + 4 for ~4 docs delta). Afternoon edits (this addendum + start-here update + INDEX regen + Cat 2 deliverable) will be re-run as part of this commit.
+
+### Why the day was longer than expected
+
+Original plan was the morning's α (clean S1242 close + tomorrow verify). Chris's "still plan on working today" extended the afternoon. Chris's "Are we deleting features that were never added or are we deleting features that are working in other ways" question reframed the audit method itself — which became the highest-value discovery of the day. Without that question, I would have shipped a "delete the legacy AgentLearningSession" PR without realizing the shadowing pattern. The fact that Chris's product-question caught my audit blind-spot is reusable: **whenever framing a "delete X" recommendation, restate the category (1/2/3) + the verify-before-delete evidence + the apps.get_model() resolution if model-related.** Make it harder for me to ship a high-confidence-wrong cleanup.
