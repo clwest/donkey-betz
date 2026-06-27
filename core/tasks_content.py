@@ -1873,7 +1873,7 @@ def _impl_generate_self_blog_task(self, tone='enthusiastic', word_count=1500, to
     try:
         from core.models_unified_system import (
             Agent, AgentKnowledgeSource, AgentLearningConnection,
-            KnowledgeTransfer, SpiderData, SelfBlog, AgentConversation,
+            KnowledgeTransfer, LegacySpiderData, SelfBlog, AgentConversation,
             AgentDream, AgentDecisionSummary, AgentEvolution
         )
         from core.agents.content_writer_agent import ContentWriterAgent
@@ -1927,7 +1927,7 @@ def _impl_generate_self_blog_task(self, tone='enthusiastic', word_count=1500, to
             spider_registry = get_spider_registry()
             spider_count_info = spider_registry.get_spider_count()
             total_spiders = spider_count_info.get('total', 77)
-            spider_data_total = SpiderData.objects.count()
+            spider_data_total = LegacySpiderData.objects.count()
         except Exception:
             total_spiders = 77  # Updated fallback
             spider_data_total = 0
@@ -1977,7 +1977,7 @@ def _impl_generate_self_blog_task(self, tone='enthusiastic', word_count=1500, to
             # Session 937: Fixed to use correct model fields
             # title/source/url/content are inside raw_data JSON, not model fields
             spider_entries = list(
-                SpiderData.objects.filter(created_at__gte=last_24h)
+                LegacySpiderData.objects.filter(created_at__gte=last_24h)
                 .defer('embedding', 'item_embeddings')
                 .order_by('-created_at')[:50]
             )
@@ -2459,9 +2459,9 @@ def _impl_generate_self_blog_deliberation_task(self, tone='enthusiastic', word_c
 
         if topic_category == 'trending':
             try:
-                from core.models_unified_system import SpiderData
+                from core.models_unified_system import LegacySpiderData
                 now = timezone.now()
-                recent = SpiderData.objects.filter(
+                recent = LegacySpiderData.objects.filter(
                     created_at__gte=now - timedelta(hours=48)
                 ).order_by('-created_at')[:20]
                 for entry in recent:
@@ -3126,10 +3126,10 @@ def _impl_generate_daily_betting_brief(self):
             f"{len(top_plays)} top plays, {gen_time}s"
         )
 
-        # Store brief as SpiderData for historical analysis
+        # Store brief as LegacySpiderData for historical analysis
         try:
-            from core.models_unified_system import SpiderData
-            SpiderData.objects.create(
+            from core.models_unified_system import LegacySpiderData
+            LegacySpiderData.objects.create(
                 spider_name='betting_coordinator',
                 source_url='internal://sports-betting-brief',
                 data_type='sports_odds',
@@ -3821,7 +3821,7 @@ def _impl_run_source_pack_workflow(self, run_id):
     Multi-step workflow: collect sources → ingest → embed → compare → export.
 
     Stages:
-        collecting (5-15%)  — WebSearch + SpiderData keyword search
+        collecting (5-15%)  — WebSearch + LegacySpiderData keyword search
         ingesting  (20-40%) — process_url per new URL
         embedding  (45-60%) — RAG embed per document
         generating (65-85%) — _run_comparison_generation()
@@ -3891,8 +3891,8 @@ def _impl_run_source_pack_workflow(self, run_id):
         run.save(update_fields=['stage_detail', 'percent', 'events_json', 'updated_at'])
 
         try:
-            from core.models_unified_system import SpiderData
-            spider_hits = SpiderData.objects.filter(
+            from core.models_unified_system import LegacySpiderData
+            spider_hits = LegacySpiderData.objects.filter(
                 embedding_text__icontains=competitor_name
             ).order_by('-created_at')[:20]
             for sd in spider_hits:
@@ -4140,13 +4140,13 @@ Write an 900–1200 word briefing using the signal clusters and source data belo
 
 
 def _gather_newsletter_evidence(hours: int = 72, cluster_limit: int = 5):
-    """Gather top signal clusters and supporting SpiderData for the newsletter.
+    """Gather top signal clusters and supporting LegacySpiderData for the newsletter.
 
     Returns:
         dict with 'clusters' (list of dicts) and 'evidence_block' (formatted str)
     """
     from core.models import SignalCluster
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     cutoff = timezone.now() - timedelta(hours=hours)
 
@@ -4165,7 +4165,7 @@ def _gather_newsletter_evidence(hours: int = 72, cluster_limit: int = 5):
     cluster_data = []
 
     for cluster in clusters:
-        # Extract keywords from the cluster to search SpiderData
+        # Extract keywords from the cluster to search LegacySpiderData
         keywords = []
         if cluster.name:
             # Remove pattern_type suffix from name for better search
@@ -4176,11 +4176,11 @@ def _gather_newsletter_evidence(hours: int = 72, cluster_limit: int = 5):
             if clean_name:
                 keywords.append(clean_name)
 
-        # Gather supporting SpiderData
+        # Gather supporting LegacySpiderData
         spider_items = []
         if keywords:
             query = keywords[0]
-            spider_qs = SpiderData.objects.filter(
+            spider_qs = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
             ).filter(
                 Q(embedding_text__icontains=query) |
@@ -4240,7 +4240,7 @@ def _impl_generate_operator_edge_newsletter(
     """Generate an Operator Edge newsletter issue from recent signal clusters.
 
     Pipeline:
-    1. Gather top signal clusters + supporting SpiderData
+    1. Gather top signal clusters + supporting LegacySpiderData
     2. Build prompt with evidence citations
     3. Run ContentWriterAgent with Operator Edge template
     4. Save as Deliverable in Operator Edge workspace

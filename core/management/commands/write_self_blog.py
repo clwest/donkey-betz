@@ -67,7 +67,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearningConnection, KnowledgeTransfer, SpiderData, SelfBlog
+        from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearningConnection, KnowledgeTransfer, LegacySpiderData, SelfBlog
         from core.agents.content_writer_agent import ContentWriterAgent
 
         self.stdout.write(self.style.SUCCESS('\n🤖 SELF-AWARE BLOG GENERATION'))
@@ -101,8 +101,8 @@ class Command(BaseCommand):
             total_spiders = spider_count_info.get('total', 77)
 
             # Get spider data stats from database
-            spider_data_24h = SpiderData.objects.filter(created_at__gte=last_24h).count()
-            spider_data_total = SpiderData.objects.count()
+            spider_data_24h = LegacySpiderData.objects.filter(created_at__gte=last_24h).count()
+            spider_data_total = LegacySpiderData.objects.count()
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'   Spider registry error: {e}'))
             total_spiders = 77  # fallback to current known count

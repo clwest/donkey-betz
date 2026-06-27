@@ -404,7 +404,7 @@ class TriggerEvent(models.Model):
 
     # What data caused it
     spider_data = models.ForeignKey(
-        'core.SpiderData',
+        'core.LegacySpiderData',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

@@ -348,7 +348,7 @@ Be critical but fair - acknowledge valid points from the other side."""
         concern_areas: List[str]
     ) -> Dict[str, Any]:
         """Research concerns and risks about a topic."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         # Query spider data for critical content
         keywords = [topic] + concern_areas + ["risks", "concerns", "problems", "criticism", "failure"]
@@ -356,7 +356,7 @@ Be critical but fair - acknowledge valid points from the other side."""
         recent_date = timezone.now() - timedelta(days=30)
 
         try:
-            spider_results = SpiderData.objects.filter(
+            spider_results = LegacySpiderData.objects.filter(
                 created_at__gte=recent_date,
                 embedding_text__icontains=topic,
             )[:10]

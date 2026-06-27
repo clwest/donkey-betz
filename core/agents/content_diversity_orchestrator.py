@@ -237,14 +237,14 @@ Categories you manage:
             ...
         }
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         since = timezone.now() - timedelta(hours=hours)
 
         category_data = {}
 
         for category, spiders in self.CATEGORY_SPIDERS.items():
-            spider_runs = SpiderData.objects.filter(
+            spider_runs = LegacySpiderData.objects.filter(
                 spider_name__in=spiders,
                 created_at__gte=since
             )

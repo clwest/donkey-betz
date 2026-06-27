@@ -45,7 +45,7 @@ def test_spiders():
     print("="*60)
 
     from ai_core.spiders.spider_registry import SpiderRegistry
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     registry = SpiderRegistry()
     stats = registry.get_spider_count()
@@ -67,13 +67,13 @@ def test_spiders():
             test_result('spiders', f"Spider '{spider_name}' instantiation", False, str(e))
 
     # Check existing spider data
-    spider_data_count = SpiderData.objects.count()
+    spider_data_count = LegacySpiderData.objects.count()
     print(f"\nExisting spider data records: {spider_data_count}")
 
     if spider_data_count > 0:
         test_result('spiders', "Spider data exists in database", True)
         # Show some recent data
-        recent = SpiderData.objects.order_by('-created_at')[:3]
+        recent = LegacySpiderData.objects.order_by('-created_at')[:3]
         for item in recent:
             data_preview = str(item.raw_data)[:50] if item.raw_data else "No data"
             print(f"    - {item.spider_name}: {data_preview}... ({item.created_at})")
@@ -201,9 +201,9 @@ def test_data_flow():
     # Test 1: Spider -> Agent Knowledge Source
     print("\n📊 Test 1: Spider Data -> Agent Knowledge")
     try:
-        from core.models_unified_system import SpiderData, AgentKnowledgeSource
+        from core.models_unified_system import LegacySpiderData, AgentKnowledgeSource
 
-        spider_count = SpiderData.objects.count()
+        spider_count = LegacySpiderData.objects.count()
         knowledge_count = AgentKnowledgeSource.objects.count()
 
         print(f"   Spider Data records: {spider_count}")

@@ -438,7 +438,7 @@ class SmartTrendingService:
         Category-specific spiders + news sources = comprehensive coverage.
         Session 523 FIX: Also filters by topic keywords so "AI trends" gets AI articles.
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from ai_core.spiders.spider_registry import SpiderRegistry
 
         # Get spiders for each category
@@ -491,7 +491,7 @@ class SmartTrendingService:
 
         # Fetch more records to filter from (especially important when topic filtering)
         fetch_multiplier = 10 if topic_keywords else 5
-        queryset = SpiderData.objects.filter(
+        queryset = LegacySpiderData.objects.filter(
             spider_name__in=spider_names,
             created_at__gte=cutoff
         ).order_by('-created_at')[:limit * fetch_multiplier]

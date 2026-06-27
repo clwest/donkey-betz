@@ -16,7 +16,7 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-from core.models_unified_system import SpiderData
+from core.models_unified_system import LegacySpiderData
 
 
 @require_http_methods(["GET"])
@@ -47,7 +47,7 @@ def spider_network_data(request):
     # Get spider data from database
     try:
         # Session 810: Defer embedding fields to reduce egress costs
-        spider_data_entries = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').all()
+        spider_data_entries = LegacySpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').all()
         opportunities = spider_data_entries.filter(data_type='opportunity').count()
         total_data = spider_data_entries.count()
 
@@ -60,7 +60,7 @@ def spider_network_data(request):
         # Get data count per spider
         from django.db.models import Count
         spider_data_counts = dict(
-            SpiderData.objects.values('spider_name').annotate(count=Count('id')).values_list('spider_name', 'count')
+            LegacySpiderData.objects.values('spider_name').annotate(count=Count('id')).values_list('spider_name', 'count')
         )
 
     except Exception as e:
@@ -139,7 +139,7 @@ def spider_activity_feed(request):
     # Get recent spider data from database
     try:
         # Session 807: Defer embedding fields to reduce egress costs
-        recent_entries = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
+        recent_entries = LegacySpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
 
         for entry in recent_entries:
             # Handle raw_data being either dict or list
@@ -241,23 +241,23 @@ def spider_data_stats(request):
 
     try:
         # Get data statistics from database
-        total_entries = SpiderData.objects.count()
+        total_entries = LegacySpiderData.objects.count()
 
         # Group by data type
         data_by_type = {}
         for data_type in ['opportunity', 'content', 'market', 'lead', 'other']:
-            count = SpiderData.objects.filter(data_type=data_type).count()
+            count = LegacySpiderData.objects.filter(data_type=data_type).count()
             data_by_type[data_type] = count
 
         # Get success rate based on processed data
-        successful = SpiderData.objects.filter(is_processed=True).count()
+        successful = LegacySpiderData.objects.filter(is_processed=True).count()
         success_rate = (successful / total_entries * 100) if total_entries > 0 else 0
 
         # Get recent trends (last 7 days)
         trends = []
         for i in range(7):
             date = timezone.now().date() - timedelta(days=i)
-            count = SpiderData.objects.filter(
+            count = LegacySpiderData.objects.filter(
                 created_at__date=date
             ).count()
             trends.append({
@@ -301,8 +301,8 @@ def spider_health_check(request):
 
         # Add database connectivity check
         try:
-            from core.models_unified_system import SpiderData
-            recent_data = SpiderData.objects.filter(
+            from core.models_unified_system import LegacySpiderData
+            recent_data = LegacySpiderData.objects.filter(
                 created_at__gte=timezone.now() - timedelta(hours=24)
             ).count()
             health['database_status'] = 'connected'
@@ -488,11 +488,11 @@ def spider_embedding_coverage(request):
     Session 484: Get embedding coverage statistics per spider.
     Shows which spiders have embedded data and where gaps exist.
     """
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
     from django.db.models import Count, Q
 
     # Get counts per spider
-    spider_stats = SpiderData.objects.values('spider_name').annotate(
+    spider_stats = LegacySpiderData.objects.values('spider_name').annotate(
         total_count=Count('id'),
         embedded_count=Count('id', filter=Q(embedding__isnull=False)),
         recent_count=Count('id', filter=Q(
@@ -501,8 +501,8 @@ def spider_embedding_coverage(request):
     ).order_by('-total_count')
 
     # Calculate overall stats
-    total_records = SpiderData.objects.count()
-    embedded_records = SpiderData.objects.filter(embedding__isnull=False).count()
+    total_records = LegacySpiderData.objects.count()
+    embedded_records = LegacySpiderData.objects.filter(embedding__isnull=False).count()
     coverage_percent = (embedded_records / total_records * 100) if total_records > 0 else 0
 
     spiders = []
@@ -564,7 +564,7 @@ def spider_health_summary(request):
     """
     Session 484: Get overall spider health summary for dashboard.
     """
-    from core.models_unified_system import SpiderExecutionLog, SpiderData
+    from core.models_unified_system import SpiderExecutionLog, LegacySpiderData
     from django.db.models import Count
 
     # Time windows
@@ -582,12 +582,12 @@ def spider_health_summary(request):
     recent_errors = executions_24h.filter(status='error').order_by('-started_at')[:5]
 
     # Data collection stats
-    data_24h = SpiderData.objects.filter(created_at__gte=last_24h).count()
-    data_7d = SpiderData.objects.filter(created_at__gte=last_7d).count()
+    data_24h = LegacySpiderData.objects.filter(created_at__gte=last_24h).count()
+    data_7d = LegacySpiderData.objects.filter(created_at__gte=last_7d).count()
 
     # Embedding coverage
-    total_records = SpiderData.objects.count()
-    embedded_records = SpiderData.objects.filter(embedding__isnull=False).count()
+    total_records = LegacySpiderData.objects.count()
+    embedded_records = LegacySpiderData.objects.filter(embedding__isnull=False).count()
     embedding_coverage = (embedded_records / total_records * 100) if total_records > 0 else 0
 
     # Top error spiders

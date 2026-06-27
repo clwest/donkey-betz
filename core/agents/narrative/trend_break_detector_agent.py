@@ -416,7 +416,7 @@ When analyzing potential shifts, consider:
     def _identify_trigger_events(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Identify events that may have triggered a shift."""
         from core.models_narrative_drift import Narrative, NarrativeEvidence
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         narrative_id = tool_input.get('narrative_id')
         shift_date_str = tool_input.get('shift_date')
@@ -457,11 +457,11 @@ When analyzing potential shifts, consider:
             })
 
         # Also look at spider data with relevant keywords
-        # Session 737: Fixed to use proper SpiderData fields
+        # Session 737: Fixed to use proper LegacySpiderData fields
         if narrative.keywords:
             for keyword in narrative.keywords[:3]:
                 # Search in spider_name and embedding_text instead of title
-                spider_data = SpiderData.objects.filter(
+                spider_data = LegacySpiderData.objects.filter(
                     created_at__gte=window_start,
                     created_at__lte=window_end,
                 ).filter(
@@ -622,7 +622,7 @@ When analyzing potential shifts, consider:
 
     def _get_recent_spider_data(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Get recent spider data for narrative analysis."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         domain = tool_input.get('domain')
         hours_back = tool_input.get('hours_back', 24)
@@ -630,7 +630,7 @@ When analyzing potential shifts, consider:
 
         cutoff = timezone.now() - timedelta(hours=hours_back)
 
-        queryset = SpiderData.objects.filter(created_at__gte=cutoff)
+        queryset = LegacySpiderData.objects.filter(created_at__gte=cutoff)
 
         # Filter by spider_name if domain provided (map domains to spider names)
         domain_spider_mapping = {

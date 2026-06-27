@@ -96,16 +96,16 @@ def _herfindahl(shares: List[float]) -> float:
 
 
 def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) -> Dict[str, Any]:
-    """Collect TrendAnalysis-flavored distributional metrics from SpiderData +
+    """Collect TrendAnalysis-flavored distributional metrics from LegacySpiderData +
     SignalCluster.
     """
     from django.db.models import Count
     from core.models import SignalCluster
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     # ── Spider volume (records ingested)
-    records_24h = SpiderData.objects.filter(created_at__gte=cutoff_24h).count()
-    records_7d = SpiderData.objects.filter(created_at__gte=cutoff_7d).count()
+    records_24h = LegacySpiderData.objects.filter(created_at__gte=cutoff_24h).count()
+    records_7d = LegacySpiderData.objects.filter(created_at__gte=cutoff_7d).count()
     records_7d_avg_daily = records_7d / 7.0
 
     volume_delta_pct = (
@@ -114,12 +114,12 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
     )
 
     by_data_type_24h = dict(
-        SpiderData.objects.filter(created_at__gte=cutoff_24h)
+        LegacySpiderData.objects.filter(created_at__gte=cutoff_24h)
         .values('data_type').annotate(c=Count('id'))
         .values_list('data_type', 'c')
     )
     by_spider_24h_rows = list(
-        SpiderData.objects.filter(created_at__gte=cutoff_24h)
+        LegacySpiderData.objects.filter(created_at__gte=cutoff_24h)
         .values('spider_name').annotate(c=Count('id'))
         .order_by('-c')
     )
@@ -136,7 +136,7 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
 
     # ── Spider coverage (silence detection)
     active_7d_set = set(
-        SpiderData.objects.filter(created_at__gte=cutoff_7d)
+        LegacySpiderData.objects.filter(created_at__gte=cutoff_7d)
         .values_list('spider_name', flat=True).distinct()
     )
     active_24h_set = set(by_spider_24h.keys())
@@ -381,7 +381,7 @@ def build_agent_prompt(metrics: Dict[str, Any], gate: Dict[str, Any]) -> str:
         'You are running the daily TrendAnalysis spider-intelligence anomaly '
         'diagnostic. The threshold gate has tripped — produce a structured '
         'anomaly report in your characteristic analyst voice.\n\n'
-        'METRICS BUNDLE (live data from SpiderData + SignalCluster tables — '
+        'METRICS BUNDLE (live data from LegacySpiderData + SignalCluster tables — '
         'do not invent numbers):\n'
         '```json\n'
         f'{json.dumps(bundle, indent=2, default=str)}\n'

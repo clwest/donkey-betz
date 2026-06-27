@@ -90,8 +90,8 @@ class SpiderIntelligenceService:
 
     def __init__(self):
         # Lazy import to avoid circular imports
-        from core.models_unified_system import SpiderData
-        self.SpiderData = SpiderData
+        from core.models_unified_system import LegacySpiderData
+        self.LegacySpiderData = LegacySpiderData
 
     # Session 237: Common stopwords to filter out from trending topics
     STOPWORDS = {
@@ -180,7 +180,7 @@ class SpiderIntelligenceService:
         since = timezone.now() - timedelta(hours=hours)
 
         # Build query
-        queryset = self.SpiderData.objects.filter(created_at__gte=since)
+        queryset = self.LegacySpiderData.objects.filter(created_at__gte=since)
 
         # Session 385: Exclude job spiders unless explicitly requested or filtering by jobs category
         if not include_jobs and category != 'jobs':
@@ -359,13 +359,13 @@ class SpiderIntelligenceService:
         since = timezone.now() - timedelta(hours=24)
 
         # Get crypto data
-        crypto_data = self.SpiderData.objects.filter(
+        crypto_data = self.LegacySpiderData.objects.filter(
             spider_name__in=['coingecko', 'etherscan', 'financial'],
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
 
         # Get stock data
-        stock_data = self.SpiderData.objects.filter(
+        stock_data = self.LegacySpiderData.objects.filter(
             spider_name__in=['yahoo_finance', 'seekingalpha'],
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
@@ -454,7 +454,7 @@ class SpiderIntelligenceService:
         elif topic_filter == '3d':
             spider_sources.extend(['dribbble', 'behance', 'sketchfab', 'blender', 'cgtrader'])
 
-        tech_data = self.SpiderData.objects.filter(
+        tech_data = self.LegacySpiderData.objects.filter(
             spider_name__in=spider_sources,
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
@@ -631,7 +631,7 @@ class SpiderIntelligenceService:
         """
         since = timezone.now() - timedelta(hours=hours)
 
-        job_data = self.SpiderData.objects.filter(
+        job_data = self.LegacySpiderData.objects.filter(
             spider_name__in=self.CATEGORY_MAPPINGS['jobs'],
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')
@@ -739,7 +739,7 @@ class SpiderIntelligenceService:
 
         return summary
 
-    # Session 814: Performance limit - max SpiderData entries to scan per search
+    # Session 814: Performance limit - max LegacySpiderData entries to scan per search
     # Prevents timeouts when searching through thousands of entries
     MAX_ENTRIES_TO_SCAN = 300
 
@@ -798,7 +798,7 @@ class SpiderIntelligenceService:
 
         since = timezone.now() - timedelta(hours=hours)
 
-        qs = self.SpiderData.objects.filter(
+        qs = self.LegacySpiderData.objects.filter(
             created_at__gte=since,
             embedding__isnull=False,
         ).exclude(
@@ -907,7 +907,7 @@ class SpiderIntelligenceService:
             return []
 
         # Build queryset
-        queryset = self.SpiderData.objects.filter(created_at__gte=since)
+        queryset = self.LegacySpiderData.objects.filter(created_at__gte=since)
 
         if category:
             spider_names = self.CATEGORY_MAPPINGS.get(category, [])
@@ -992,7 +992,7 @@ class SpiderIntelligenceService:
         """
         since = timezone.now() - timedelta(hours=hours)
 
-        queryset = self.SpiderData.objects.filter(created_at__gte=since)
+        queryset = self.LegacySpiderData.objects.filter(created_at__gte=since)
         if spider_name:
             queryset = queryset.filter(spider_name=spider_name)
 
@@ -1186,7 +1186,7 @@ class SpiderIntelligenceService:
             'envato', 'unsplash', 'pinterest', 'figma', 'canva'
         ]
 
-        creative_data = self.SpiderData.objects.filter(
+        creative_data = self.LegacySpiderData.objects.filter(
             spider_name__in=creative_spiders,
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text', 'processed_data', 'insights').order_by('-created_at')

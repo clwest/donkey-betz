@@ -247,7 +247,7 @@ class SpiderActionPipeline:
         thresholds: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Get job listings that meet action thresholds."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         since = timezone.now() - timedelta(hours=max_age_hours)
         keywords = thresholds.get('keywords', [])
@@ -255,7 +255,7 @@ class SpiderActionPipeline:
 
         # Query job spider data
         job_spiders = ['remoteok', 'weworkremotely', 'adzuna', 'github_jobs']
-        job_data = SpiderData.objects.filter(
+        job_data = LegacySpiderData.objects.filter(
             spider_name__in=job_spiders,
             created_at__gte=since
         ).order_by('-created_at')[:100]  # Get recent data
@@ -318,13 +318,13 @@ class SpiderActionPipeline:
         thresholds: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Get financial data that meets action thresholds."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         since = timezone.now() - timedelta(hours=max_age_hours)
         price_change_threshold = thresholds.get('price_change_percent', 5.0)
 
         financial_spiders = ['coingecko', 'yahoo_finance', 'polygon_finance', 'finnhub']
-        financial_data = SpiderData.objects.filter(
+        financial_data = LegacySpiderData.objects.filter(
             spider_name__in=financial_spiders,
             created_at__gte=since
         ).order_by('-created_at')[:50]
@@ -385,13 +385,13 @@ class SpiderActionPipeline:
         thresholds: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Get trending tech topics that meet action thresholds."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         since = timezone.now() - timedelta(hours=max_age_hours)
         upvote_threshold = thresholds.get('upvote_threshold', 100)
 
         tech_spiders = ['hackernews', 'devto', 'producthunt', 'reddit']
-        tech_data = SpiderData.objects.filter(
+        tech_data = LegacySpiderData.objects.filter(
             spider_name__in=tech_spiders,
             created_at__gte=since
         ).order_by('-created_at')[:50]
@@ -448,13 +448,13 @@ class SpiderActionPipeline:
         thresholds: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Get news items that meet action thresholds."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         since = timezone.now() - timedelta(hours=max_age_hours)
         relevance_keywords = thresholds.get('relevance_keywords', [])
 
         news_spiders = ['techcrunch', 'theverge', 'axios', 'bbc', 'reuters_rss']
-        news_data = SpiderData.objects.filter(
+        news_data = LegacySpiderData.objects.filter(
             spider_name__in=news_spiders,
             created_at__gte=since
         ).order_by('-created_at')[:50]
@@ -868,14 +868,14 @@ Context from Spider Data:
 
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """Get statistics about the spider action pipeline."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_human_interface import HumanAttentionItem
         from core.models_orchestration import OrchestrationExecution
         from django.db.models import Count
 
         # Recent spider data
         since_24h = timezone.now() - timedelta(hours=24)
-        spider_data_count = SpiderData.objects.filter(created_at__gte=since_24h).count()
+        spider_data_count = LegacySpiderData.objects.filter(created_at__gte=since_24h).count()
 
         # Spider-triggered attention items
         spider_attention = HumanAttentionItem.objects.filter(

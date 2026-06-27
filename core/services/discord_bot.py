@@ -562,7 +562,7 @@ class StatusCommands(commands.Cog):
 
         try:
             # Import Django models (must be done after Django setup)
-            from core.models_unified_system import Agent, SpiderData, AgentDream, HiveMindSession
+            from core.models_unified_system import Agent, LegacySpiderData, AgentDream, HiveMindSession
             from content.models import ImageHistory
 
             # Gather stats using sync_to_async for ORM calls
@@ -570,7 +570,7 @@ class StatusCommands(commands.Cog):
             def get_stats():
                 return {
                     'agent_count': Agent.objects.filter(is_active=True).count(),
-                    'spider_data_count': SpiderData.objects.count(),
+                    'spider_data_count': LegacySpiderData.objects.count(),
                     'dream_count': AgentDream.objects.count(),
                     'hivemind_count': HiveMindSession.objects.count(),
                     'image_count': ImageHistory.objects.count(),
@@ -810,7 +810,7 @@ class SpiderCommands(commands.Cog):
         await interaction.response.defer()
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
 
             # Cap limit
@@ -819,7 +819,7 @@ class SpiderCommands(commands.Cog):
             @sync_to_async
             def get_trending_data(cat, lim):
                 week_ago = timezone.now() - timedelta(days=7)
-                queryset = SpiderData.objects.filter(created_at__gte=week_ago)
+                queryset = LegacySpiderData.objects.filter(created_at__gte=week_ago)
 
                 if cat:
                     queryset = queryset.filter(data_type__icontains=cat)
@@ -918,7 +918,7 @@ class SpiderCommands(commands.Cog):
         await interaction.response.defer()
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.db.models import Count
             from django.utils import timezone
 
@@ -927,14 +927,14 @@ class SpiderCommands(commands.Cog):
                 today = timezone.now().date()
                 week_ago = timezone.now() - timedelta(days=7)
 
-                categories = list(SpiderData.objects.values('data_type').annotate(
+                categories = list(LegacySpiderData.objects.values('data_type').annotate(
                     count=Count('id')
                 ).order_by('-count')[:10])
 
                 return {
-                    'total': SpiderData.objects.count(),
-                    'today': SpiderData.objects.filter(created_at__date=today).count(),
-                    'week': SpiderData.objects.filter(created_at__gte=week_ago).count(),
+                    'total': LegacySpiderData.objects.count(),
+                    'today': LegacySpiderData.objects.filter(created_at__date=today).count(),
+                    'week': LegacySpiderData.objects.filter(created_at__gte=week_ago).count(),
                     'categories': categories,
                 }
 
@@ -1791,12 +1791,12 @@ class SpiderCommands(commands.Cog):
             futures_data = await get_futures_data(league)
 
             if not futures_data:
-                # Fallback to SpiderData if live API doesn't have futures
-                from core.models_unified_system import SpiderData
+                # Fallback to LegacySpiderData if live API doesn't have futures
+                from core.models_unified_system import LegacySpiderData
 
                 @sync_to_async
                 def get_cached_futures():
-                    return list(SpiderData.objects.filter(
+                    return list(LegacySpiderData.objects.filter(
                         spider_name='theodds',
                         data_type='futures'
                     ).order_by('-created_at')[:10])

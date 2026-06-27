@@ -1,7 +1,7 @@
 """
 Session 1189 Item 3: tests for spider_data_aggregation_tool v1.
 
-Builds real SpiderData fixtures (not mocks — Rigby's spec called for
+Builds real LegacySpiderData fixtures (not mocks — Rigby's spec called for
 real DB fixtures because correctness hinges on ORM aggregation /
 group-by behavior, and mocking the ORM would just re-validate our
 own mock).
@@ -16,7 +16,7 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from core.models_unified_system import SpiderData
+from core.models_unified_system import LegacySpiderData
 from core.services.spider_data_aggregation_tool import (
     DAYS_BACK_MAX,
     TOP_SPIDERS_LIMIT_MAX,
@@ -30,10 +30,10 @@ def _make_spider_row(
     spider_name: str,
     is_actionable: bool = True,
     days_ago: int = 1,
-) -> SpiderData:
+) -> LegacySpiderData:
     """Tight fixture builder — only sets fields the aggregation reads."""
     created_at = timezone.now() - timedelta(days=days_ago)
-    row = SpiderData.objects.create(
+    row = LegacySpiderData.objects.create(
         spider_name=spider_name,
         source_url=f'https://example.com/{uuid.uuid4().hex[:8]}',
         data_type=data_type,
@@ -42,7 +42,7 @@ def _make_spider_row(
         processed_data={},
     )
     # created_at is auto_now_add — overwrite for windowed tests
-    SpiderData.objects.filter(pk=row.pk).update(created_at=created_at)
+    LegacySpiderData.objects.filter(pk=row.pk).update(created_at=created_at)
     row.refresh_from_db()
     return row
 

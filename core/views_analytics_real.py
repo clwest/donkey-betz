@@ -22,7 +22,7 @@ def analytics_overview(request):
     Session 780: Replaces stub with actual data
     """
     from core.models_unified_system import Agent, AgentExecution, AgentMemory
-    from core.models import SpiderData, ContentChannel
+    from core.models import LegacySpiderData, ContentChannel
 
     # Calculate date ranges
     now = timezone.now()
@@ -75,9 +75,9 @@ def analytics_overview(request):
         )
 
     # Spider data stats
-    spider_data_30d = SpiderData.objects.filter(created_at__gte=last_30d).count()
-    spider_data_7d = SpiderData.objects.filter(created_at__gte=last_7d).count()
-    spider_data_24h = SpiderData.objects.filter(created_at__gte=last_24h).count()
+    spider_data_30d = LegacySpiderData.objects.filter(created_at__gte=last_30d).count()
+    spider_data_7d = LegacySpiderData.objects.filter(created_at__gte=last_7d).count()
+    spider_data_24h = LegacySpiderData.objects.filter(created_at__gte=last_24h).count()
 
     # Memory/learning stats
     total_memories = AgentMemory.objects.count()

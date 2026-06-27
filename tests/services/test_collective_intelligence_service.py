@@ -663,7 +663,7 @@ class TestResolveKnowledgeGap:
     def test_creates_knowledge_items(self, ci_service):
         """Test that knowledge items are created."""
         with patch('core.models_unified_system.SharedKnowledge') as mock_knowledge:
-            with patch('core.models_unified_system.SpiderData') as mock_spider:
+            with patch('core.models_unified_system.LegacySpiderData') as mock_spider:
                 mock_spider.objects.filter.return_value.order_by.return_value.__getitem__.return_value = []
                 mock_item = MagicMock()
                 mock_item.id = uuid4()
@@ -684,7 +684,7 @@ class TestResolveKnowledgeGap:
         with patch('core.models_unified_system.SharedKnowledge') as mock_knowledge:
             mock_knowledge.objects.create.side_effect = Exception("DB Error")
 
-            with patch('core.models_unified_system.SpiderData') as mock_spider:
+            with patch('core.models_unified_system.LegacySpiderData') as mock_spider:
                 mock_spider.objects.filter.return_value.order_by.return_value.__getitem__.return_value = []
 
                 result = ci_service.resolve_knowledge_gap('video')

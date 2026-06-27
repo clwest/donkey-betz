@@ -192,7 +192,7 @@ Include counts, categorizations, and actionable findings."""
                         "models": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of model names to count. Options: Agent, AgentExecution, AgentMemory, SpiderData, Conversation, User, ImageHistory, VideoHistory"
+                            "description": "List of model names to count. Options: Agent, AgentExecution, AgentMemory, LegacySpiderData, Conversation, User, ImageHistory, VideoHistory"
                         }
                     }
                 }
@@ -628,7 +628,7 @@ Include counts, categorizations, and actionable findings."""
             'Agent': ('agents', 'Agent'),
             'AgentExecution': ('core', 'AgentExecution'),
             'AgentMemory': ('core', 'AgentMemory'),
-            'SpiderData': ('core', 'SpiderData'),
+            'LegacySpiderData': ('core', 'LegacySpiderData'),
             'Conversation': ('core', 'Conversation'),
             'User': ('core', 'User'),
             'ImageHistory': ('core', 'ImageHistory'),

@@ -3,7 +3,7 @@ Session 1224 P1 — OpportunityDraftGenerator unit tests.
 
 Covers:
   - contactability gate (url-with-domain vs metadata-only vs nothing)
-  - synthetic SpiderData seed idempotency
+  - synthetic LegacySpiderData seed idempotency
   - candidate selection excludes opportunities with existing touch-1 drafts
   - daily cap halts further generation
   - round-robin offer distribution across multiple candidates
@@ -18,7 +18,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.models_outreach import OutreachDraft
-from core.models_unified_system import Opportunity, SpiderData
+from core.models_unified_system import Opportunity, LegacySpiderData
 from core.services.ops_autopilot.outreach_generation import (
     OpportunityDraftGenerator,
     _sanitize_lead_text,
@@ -123,7 +123,7 @@ class OpportunityDraftGeneratorSeedTests(TestCase):
         first = OpportunityDraftGenerator.ensure_spider_data_seed(self.opp)
         second = OpportunityDraftGenerator.ensure_spider_data_seed(self.opp)
         self.assertEqual(first.id, second.id)
-        self.assertEqual(SpiderData.objects.filter(
+        self.assertEqual(LegacySpiderData.objects.filter(
             spider_name=OpportunityDraftGenerator.SEED_SPIDER_NAME,
             raw_data__opportunity_id=str(self.opp.id),
         ).count(), 1)

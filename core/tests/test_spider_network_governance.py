@@ -61,7 +61,7 @@ class SpiderNetworkGovernanceTest(SimpleTestCase):
              patch('core.tasks_spiders._collect_spider_data_sync') as mock_collect, \
              patch('core.services.spider_deduplication.deduplicate_spider_items') as mock_dedup, \
              patch('core.models_unified_system.SpiderExecutionLog') as mock_exec_log, \
-             patch('core.models_unified_system.SpiderData') as mock_spider_data, \
+             patch('core.models_unified_system.LegacySpiderData') as mock_spider_data, \
              patch('redis.Redis.from_url') as mock_redis_from_url, \
              patch('core.tasks_spiders.datetime') as mock_datetime:
             mock_collect.return_value = {'item_count': 1}
@@ -114,7 +114,7 @@ class SpiderNetworkGovernanceTest(SimpleTestCase):
              patch('core.tasks_spiders._collect_spider_data_sync') as mock_collect, \
              patch('core.services.spider_deduplication.deduplicate_spider_items') as mock_dedup, \
              patch('core.models_unified_system.SpiderExecutionLog') as mock_exec_log, \
-             patch('core.models_unified_system.SpiderData') as mock_spider_data, \
+             patch('core.models_unified_system.LegacySpiderData') as mock_spider_data, \
              patch('redis.Redis.from_url') as mock_redis_from_url, \
              patch('core.tasks_spiders.datetime') as mock_datetime:
             mock_collect.return_value = {'item_count': 1}

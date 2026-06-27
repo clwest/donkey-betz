@@ -19,7 +19,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from core.models import Agent, SpiderData, UserProfile
+from core.models import Agent, LegacySpiderData, UserProfile
 from core.models_document_registry import Initiative
 from core.models_unified_system import AgentDream, AgentDecisionSummary
 
@@ -89,7 +89,7 @@ def home_boot(request):
 
     # --- While Away Stats ---
     # Spider findings since last visit
-    spider_findings = SpiderData.objects.filter(
+    spider_findings = LegacySpiderData.objects.filter(
         created_at__gte=last_visit
     ).count()
 
@@ -161,7 +161,7 @@ def home_boot(request):
 
     # System health based on recent agent executions
     # Simple heuristic: healthy if we have active agents and recent spider data
-    recent_spider_data = SpiderData.objects.filter(
+    recent_spider_data = LegacySpiderData.objects.filter(
         created_at__gte=now - timedelta(hours=6)
     ).exists()
 

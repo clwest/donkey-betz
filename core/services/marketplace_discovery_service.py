@@ -565,8 +565,8 @@ class MarketplaceDiscoveryService:
             if self.spider_service:
                 # Try to get recent spider data
                 # Session 493: Fixed to extract topics from raw_data items
-                from core.models_unified_system import SpiderData
-                recent = SpiderData.objects.order_by('-created_at')[:50]
+                from core.models_unified_system import LegacySpiderData
+                recent = LegacySpiderData.objects.order_by('-created_at')[:50]
 
                 topics = set()
                 for data in recent:

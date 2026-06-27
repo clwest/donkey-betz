@@ -1,7 +1,7 @@
 """
 One-time triage of the spider embedding backlog.
 
-Problem: 86,500+ SpiderData records have no embedding. Most are duplicate
+Problem: 86,500+ LegacySpiderData records have no embedding. Most are duplicate
 spider runs (same content fetched every 15-30 min) or noise spiders
 (weather, GIFs, stock photos) with zero intelligence value.
 
@@ -51,14 +51,14 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         apply = options['apply']
         mode = 'APPLY' if apply else 'DRY RUN'
         self.stdout.write(f'\n=== Spider Embedding Triage ({mode}) ===\n')
 
         # Scope: unembedded records older than 7 days, not already marked
-        backlog = SpiderData.objects.filter(
+        backlog = LegacySpiderData.objects.filter(
             embedding__isnull=True,
             created_at__lt=timezone.now() - timedelta(hours=168),
         ).exclude(embedding_text='[NO_ITEMS]')
@@ -149,7 +149,7 @@ class Command(BaseCommand):
 
         Returns (keep_count, mark_count).
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         scoped = backlog.filter(spider_name__in=spider_names)
 
@@ -187,7 +187,7 @@ class Command(BaseCommand):
                 batch_ids = list(to_mark.values_list('id', flat=True)[:batch_size])
                 if not batch_ids:
                     break
-                marked = SpiderData.objects.filter(id__in=batch_ids).update(
+                marked = LegacySpiderData.objects.filter(id__in=batch_ids).update(
                     embedding_text='[NO_ITEMS]'
                 )
                 total_marked += marked

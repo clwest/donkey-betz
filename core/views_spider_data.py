@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 
-from core.models_unified_system import SpiderData
+from core.models_unified_system import LegacySpiderData
 from ai_core.spiders.spider_registry import SpiderRegistry
 
 
@@ -23,7 +23,7 @@ def get_spider_items(request, spider_name):
         processed_only = request.GET.get('processed', '').lower() == 'true'
 
         # Build query
-        query = SpiderData.objects.filter(spider_name__icontains=spider_name)
+        query = LegacySpiderData.objects.filter(spider_name__icontains=spider_name)
 
         if actionable_only:
             query = query.filter(is_actionable=True)
@@ -77,16 +77,16 @@ def get_spider_items(request, spider_name):
             'page_size': page_size,
             'items': items,
             'stats': {
-                'total': SpiderData.objects.filter(spider_name__icontains=spider_name).count(),
-                'actionable': SpiderData.objects.filter(
+                'total': LegacySpiderData.objects.filter(spider_name__icontains=spider_name).count(),
+                'actionable': LegacySpiderData.objects.filter(
                     spider_name__icontains=spider_name,
                     is_actionable=True
                 ).count(),
-                'processed': SpiderData.objects.filter(
+                'processed': LegacySpiderData.objects.filter(
                     spider_name__icontains=spider_name,
                     is_processed=True
                 ).count(),
-                'unprocessed': SpiderData.objects.filter(
+                'unprocessed': LegacySpiderData.objects.filter(
                     spider_name__icontains=spider_name,
                     is_processed=False
                 ).count()
@@ -109,7 +109,7 @@ def get_spider_summary(request):
 
         summaries = []
         for spider_name in spiders:
-            spider_data = SpiderData.objects.filter(spider_name=spider_name)
+            spider_data = LegacySpiderData.objects.filter(spider_name=spider_name)
 
             # Get sample items
             sample_items = []
@@ -133,7 +133,7 @@ def get_spider_summary(request):
         return JsonResponse({
             'success': True,
             'total_spiders': len(spiders),
-            'total_items': SpiderData.objects.count(),
+            'total_items': LegacySpiderData.objects.count(),
             'summaries': summaries
         })
 
@@ -148,7 +148,7 @@ def get_spider_summary(request):
 def mark_spider_item_processed(request, item_id):
     """Mark a spider data item as processed"""
     try:
-        spider_data = SpiderData.objects.get(id=item_id)
+        spider_data = LegacySpiderData.objects.get(id=item_id)
         spider_data.is_processed = True
         spider_data.save()
 
@@ -158,7 +158,7 @@ def mark_spider_item_processed(request, item_id):
             'item_id': str(item_id)
         })
 
-    except SpiderData.DoesNotExist:
+    except LegacySpiderData.DoesNotExist:
         return JsonResponse({
             'success': False,
             'error': 'Item not found'

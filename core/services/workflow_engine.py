@@ -557,7 +557,7 @@ class WorkflowEngine:
     def _get_spider_trends(self, intent: UserIntent) -> Dict[str, Any]:
         """Get trending data from spider network for enhancements."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from collections import Counter
 
             # Determine relevant data types based on purpose/content
@@ -573,7 +573,7 @@ class WorkflowEngine:
                 relevant_types = ['financial', 'tech', 'innovation']
 
             # Get recent spider data from relevant categories
-            trends = SpiderData.objects.filter(
+            trends = LegacySpiderData.objects.filter(
                 data_type__in=relevant_types
             ).order_by('-created_at')[:50]
 
