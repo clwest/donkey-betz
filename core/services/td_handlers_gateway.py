@@ -941,13 +941,19 @@ class GatewayHandlersMixin:
                 if not task_name:
                     return {'error': 'Provide task_name to trigger'}
 
-                # Whitelist of safe tasks the PA can trigger on demand
+                # Whitelist of safe tasks the PA can trigger on demand.
+                # Session 1246: removed 'core.tasks.check_system_health' —
+                # ghost entry; never had a @shared_task definition (verified
+                # via `git log -S "def check_system_health" -- core/tasks.py`,
+                # zero hits). Stuck S1245 telemetry rows at status='QUEUED'
+                # were eager writes from the trigger_task path below; the
+                # only `_check_system_health` symbol in the repo is the
+                # private method in core/services/metadata_tracking.py.
                 ALLOWED_TASKS = {
                     'core.tasks.sync_congress_data',
                     'core.tasks.run_all_spiders',
                     'core.tasks.run_spider_network',
                     'core.tasks.spider_data_retention',
-                    'core.tasks.check_system_health',
                     'core.tasks.run_signal_aggregation',
                     'core.tasks.generate_self_blog_deliberation_task',
                     'core.tasks.backfill_spider_embeddings',
