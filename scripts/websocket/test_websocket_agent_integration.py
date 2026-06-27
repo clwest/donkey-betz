@@ -24,7 +24,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import sync_to_async
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from sports.models import Game, OddsLine, BettingMarket, LineMovement
 from content.models import Document
 
@@ -97,7 +97,7 @@ class WebSocketAgentIntegrationTester:
                 raise Exception("No active agents found for testing")
             
             # Create execution with WebSocket channel
-            execution = await sync_to_async(AgentExecution.objects.create)(
+            execution = await sync_to_async(AgentTaskExecution.objects.create)(
                 template=agent_template,
                 user=self.test_user,
                 task_description="WebSocket integration test",
@@ -301,7 +301,7 @@ class WebSocketAgentIntegrationTester:
             
             if line_analyzer_agent:
                 # Create agent execution triggered by line movement
-                triggered_execution = await sync_to_async(AgentExecution.objects.create)(
+                triggered_execution = await sync_to_async(AgentTaskExecution.objects.create)(
                     template=line_analyzer_agent,
                     user=self.test_user,
                     task_description="Analyze significant line movement",

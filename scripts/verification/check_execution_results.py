@@ -13,7 +13,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
-from core.models.agents_registry import AgentOrchestration, AgentExecution
+from core.models.agents_registry import AgentOrchestration, AgentTaskExecution
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -38,7 +38,7 @@ def check_results():
         print(f"   Created: {orch.created_at}")
         
         # Get executions for this orchestration
-        executions = AgentExecution.objects.filter(
+        executions = AgentTaskExecution.objects.filter(
             parent_orchestration=orch
         ).order_by('id')
         

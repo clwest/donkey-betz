@@ -14,7 +14,7 @@ django.setup()
 
 pytestmark = pytest.mark.django_db
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution  # noqa: E402
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution  # noqa: E402
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def test_agent_fields_and_execution(agent):
             print(f"   {field.name}: {value}")
 
     print("\n🧪 Testing execution creation...")
-    execution = AgentExecution.objects.create(
+    execution = AgentTaskExecution.objects.create(
         execution_id=f"test_{uuid.uuid4().hex[:8]}",
         template=agent,
         task_description="Test: Verify agent execution with correct field names",

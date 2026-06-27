@@ -116,7 +116,7 @@ class HybridAgentExecutor:
         user=None
     ) -> Dict[str, Any]:
         """Execute agent asynchronously via Celery"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
         from agents.tasks import execute_agent as execute_agent_task
         import uuid
 
@@ -132,7 +132,7 @@ class HybridAgentExecutor:
             # Create execution record
             execution_id = f"exec_{agent_name}_{uuid.uuid4().hex[:8]}"
 
-            execution = AgentExecution.objects.create(
+            execution = AgentTaskExecution.objects.create(
                 template=agent_template,
                 user=user,
                 execution_id=execution_id,

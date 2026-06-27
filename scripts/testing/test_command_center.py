@@ -15,7 +15,7 @@ django.setup()
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
 User = get_user_model()
 
@@ -130,7 +130,7 @@ def show_active_agents_for_ui():
     # Get top performing agents
     from django.db.models import Count
     
-    top_agents = AgentExecution.objects.values('template__name', 'template__specialization').annotate(
+    top_agents = AgentTaskExecution.objects.values('template__name', 'template__specialization').annotate(
         exec_count=Count('id')
     ).order_by('-exec_count')[:10]
     

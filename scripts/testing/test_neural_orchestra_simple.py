@@ -24,7 +24,7 @@ from django.utils import timezone
 # Import registries and models only
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration
 from intelligence.models import OpportunityActionPlan, RevenueMetrics
 
 def test_registries():
@@ -99,13 +99,13 @@ def test_database_models():
     try:
         # Test models
         agent_count = UnifiedAgentTemplate.objects.count()
-        execution_count = AgentExecution.objects.count()
+        execution_count = AgentTaskExecution.objects.count()
         orchestration_count = AgentOrchestration.objects.count()
         opportunity_count = OpportunityActionPlan.objects.count()
         metrics_count = RevenueMetrics.objects.count()
 
         print(f"✓ UnifiedAgentTemplate: {agent_count} records")
-        print(f"✓ AgentExecution: {execution_count} records")
+        print(f"✓ AgentTaskExecution: {execution_count} records")
         print(f"✓ AgentOrchestration: {orchestration_count} records")
         print(f"✓ OpportunityActionPlan: {opportunity_count} records")
         print(f"✓ RevenueMetrics: {metrics_count} records")

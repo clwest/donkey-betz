@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentOrchestration,
     AgentRegistry,
     AgentChannel,
@@ -313,7 +313,7 @@ class ProjectAgentDeploymentManager:
         agent_name: str,
         task_description: str,
         context: Dict[str, Any] = None
-    ) -> AgentExecution:
+    ) -> AgentTaskExecution:
         """
         Execute a specific agent for a project task
 
@@ -324,7 +324,7 @@ class ProjectAgentDeploymentManager:
             context: Additional context for execution
 
         Returns:
-            AgentExecution instance
+            AgentTaskExecution instance
         """
         # Get the agent template
         try:
@@ -350,7 +350,7 @@ class ProjectAgentDeploymentManager:
             execution_context.update(context)
 
         # Create execution
-        execution = AgentExecution.objects.create(
+        execution = AgentTaskExecution.objects.create(
             template=agent,
             user=project.user,
             task_description=task_description,

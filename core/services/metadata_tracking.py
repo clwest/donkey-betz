@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution
+    AgentTaskExecution
 )
 from core.models import GeneratedProject
 
@@ -79,14 +79,14 @@ class EnhancedMetadataTracker:
 
     def track_agent_execution(
         self,
-        execution: AgentExecution,
+        execution: AgentTaskExecution,
         additional_metrics: Dict[str, Any] = None
     ) -> None:
         """
         Track detailed metadata for agent execution
 
         Args:
-            execution: AgentExecution instance
+            execution: AgentTaskExecution instance
             additional_metrics: Additional metrics to track
         """
         metadata = {
@@ -357,7 +357,7 @@ class EnhancedMetadataTracker:
             return {'error': f'Agent {agent_name} not found'}
 
         # Get executions in time period
-        executions = AgentExecution.objects.filter(
+        executions = AgentTaskExecution.objects.filter(
             template=agent,
             created_at__gte=start_date
         )
@@ -452,7 +452,7 @@ class EnhancedMetadataTracker:
 
         # Today's executions
         today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_executions = AgentExecution.objects.filter(created_at__gte=today_start)
+        today_executions = AgentTaskExecution.objects.filter(created_at__gte=today_start)
         dashboard['total_executions_today'] = today_executions.count()
 
         # System health check

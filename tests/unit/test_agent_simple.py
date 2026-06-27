@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
-Smoke test: create an AgentExecution with explicit NCAAF data and run the task.
+Smoke test: create an AgentTaskExecution with explicit NCAAF data and run the task.
 
 By default this test monkeypatches `execute_agent` to avoid external calls.
 Set RUN_AGENT_INTEGRATION=1 to run the real execute_agent for an integration check.
@@ -16,7 +16,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_core.settings")
 
 pytestmark = pytest.mark.django_db
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution  # noqa: E402
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution  # noqa: E402
 from agents import tasks as agent_tasks  # noqa: E402
 
 
@@ -64,7 +64,7 @@ Be specific about this being NCAAF/college football, not basketball or any other
 def _fake_execute_agent(execution_id: str):
     """Deterministic, fast stand-in for agents.tasks.execute_agent."""
     # Pretend work happened: update the DB row as the real task would.
-    exec_obj = AgentExecution.objects.get(execution_id=execution_id)
+    exec_obj = AgentTaskExecution.objects.get(execution_id=execution_id)
     exec_obj.status = "completed"
     exec_obj.llm_response = (
         "✅ NCAAF analysis complete for Oklahoma Sooners @ Temple Owls. "
@@ -86,7 +86,7 @@ def test_execute_agent_with_explicit_ncaaf(agent_or_skip, ncaaf_payload, monkeyp
 
     # Create the execution row
     execution_id = f"test_simple_{uuid.uuid4().hex[:8]}"
-    exec_obj = AgentExecution.objects.create(
+    exec_obj = AgentTaskExecution.objects.create(
         execution_id=execution_id,
         template=agent,
         task_description=task_description,

@@ -11,7 +11,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from datetime import datetime
 import logging
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 from core.models import Agent, SpiderCategory, AgentSpiderConnection, AgentKnowledgeSource
 
@@ -84,7 +84,7 @@ class AgentStatsAPI(View):
                 agent_list.append(agent_info)
 
             # Get recent executions for activity tracking
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 status='completed'
             ).order_by('-completed_at')[:10]
 

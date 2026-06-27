@@ -284,7 +284,7 @@ def profile_stats(request):
     """
     Get user profile statistics matching frontend expectations.
     """
-    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
     
     # Get or create statistics and profile
     stats_obj, _ = UserStatistics.objects.get_or_create(user=request.user)
@@ -302,7 +302,7 @@ def profile_stats(request):
     # Calculate real agent counts
     try:
         agents_created = UnifiedAgentTemplate.objects.filter(created_by=request.user).count()
-        agent_executions = AgentExecution.objects.filter(user=request.user).count()
+        agent_executions = AgentTaskExecution.objects.filter(user=request.user).count()
     except Exception:
         agents_created = 0
         agent_executions = 0

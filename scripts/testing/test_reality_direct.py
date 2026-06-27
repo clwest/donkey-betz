@@ -11,7 +11,7 @@ django.setup()
 
 from django.db import connection
 from intelligence.models import OpportunityActionPlan, ActionPlan, EarningRecord
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from persistence.models import (
     UnifiedUser, UserProfile, DocumentEmbedding, PersistentMemory,
     AgentKnowledge, SpiderDiscovery, SystemMetrics
@@ -54,7 +54,7 @@ def check_database_reality():
 
     # Check agents
     agent_count = UnifiedAgentTemplate.objects.count()
-    execution_count = AgentExecution.objects.count()
+    execution_count = AgentTaskExecution.objects.count()
 
     print(f"\nAgent Data:")
     print(f"  Registered Agents: {agent_count}")

@@ -85,23 +85,23 @@ def analytics_dashboard(request):
 
     # REAL DATA: Agent executions with response time tracking (Session 735)
     try:
-        from core.models.agents_registry import AgentExecution, AgentStatus
-        agent_executions = AgentExecution.objects.filter(
+        from core.models.agents_registry import AgentTaskExecution, AgentStatus
+        agent_executions = AgentTaskExecution.objects.filter(
             created_at__gte=start_date
         ).count()
 
-        completed_executions = AgentExecution.objects.filter(
+        completed_executions = AgentTaskExecution.objects.filter(
             created_at__gte=start_date,
             status=AgentStatus.COMPLETED
         ).count()
 
-        failed_executions = AgentExecution.objects.filter(
+        failed_executions = AgentTaskExecution.objects.filter(
             created_at__gte=start_date,
             status=AgentStatus.FAILED
         ).count()
 
         # REAL DATA: Average response time from completed executions
-        avg_response_data = AgentExecution.objects.filter(
+        avg_response_data = AgentTaskExecution.objects.filter(
             created_at__gte=start_date,
             status=AgentStatus.COMPLETED,
             execution_time_seconds__isnull=False
@@ -301,8 +301,8 @@ def cost_breakdown(request):
 
     # REAL DATA: Agent execution costs (if available)
     try:
-        from core.models.agents_registry import AgentExecution, AgentStatus
-        agent_cost = AgentExecution.objects.filter(
+        from core.models.agents_registry import AgentTaskExecution, AgentStatus
+        agent_cost = AgentTaskExecution.objects.filter(
             created_at__gte=start_date,
             status=AgentStatus.COMPLETED
         ).aggregate(

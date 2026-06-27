@@ -28,7 +28,7 @@ from core.models.agents_registry import (
 
     # Models
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentContribution,
     AgentOrchestration,
     AgentTool,
@@ -51,7 +51,7 @@ __all__ = [
 
     # Models
     'UnifiedAgentTemplate',
-    'AgentExecution',
+    'AgentTaskExecution',
     'AgentContribution',
     'AgentOrchestration',
     'AgentTool',

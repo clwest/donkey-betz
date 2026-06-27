@@ -362,10 +362,10 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_channel_info(self) -> Dict:
         """Get current channel information."""
-        from core.models import AgentChannel
+        from core.models import ProjectChannel
 
         try:
-            channel = AgentChannel.objects.get(name=self.channel_id)
+            channel = ProjectChannel.objects.get(name=self.channel_id)
             return {
                 'id': str(channel.id),
                 'name': channel.name,
@@ -377,9 +377,9 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
                 'is_archived': channel.is_archived,
                 'created_at': channel.created_at.isoformat()
             }
-        except AgentChannel.DoesNotExist:
+        except ProjectChannel.DoesNotExist:
             # Create the channel if it doesn't exist (e.g., 'general')
-            channel = AgentChannel.objects.create(
+            channel = ProjectChannel.objects.create(
                 name=self.channel_id,
                 description=f"#{self.channel_id} channel",
                 channel_type='topic'
@@ -399,9 +399,9 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_all_channels(self) -> List[Dict]:
         """Get list of all channels."""
-        from core.models import AgentChannel
+        from core.models import ProjectChannel
 
-        channels = AgentChannel.objects.filter(is_archived=False).order_by('-last_activity', '-created_at')[:50]
+        channels = ProjectChannel.objects.filter(is_archived=False).order_by('-last_activity', '-created_at')[:50]
 
         return [{
             'id': str(ch.id),
@@ -416,10 +416,10 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_channel_members(self) -> List[Dict]:
         """Get channel members."""
-        from core.models import AgentChannel, ChannelMembership
+        from core.models import ProjectChannel, ChannelMembership
 
         try:
-            channel = AgentChannel.objects.get(name=self.channel_id)
+            channel = ProjectChannel.objects.get(name=self.channel_id)
             memberships = ChannelMembership.objects.filter(
                 channel=channel,
                 is_active=True
@@ -433,16 +433,16 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
                 'presence': m.presence_status,
                 'last_posted': m.last_posted_at.isoformat() if m.last_posted_at else None
             } for m in memberships]
-        except AgentChannel.DoesNotExist:
+        except ProjectChannel.DoesNotExist:
             return []
 
     @database_sync_to_async
     def get_recent_messages(self, limit: int) -> List[Dict]:
         """Get recent messages for the channel."""
-        from core.models import AgentChannel, ChannelMessage
+        from core.models import ProjectChannel, ChannelMessage
 
         try:
-            channel = AgentChannel.objects.get(name=self.channel_id)
+            channel = ProjectChannel.objects.get(name=self.channel_id)
             messages = ChannelMessage.objects.filter(
                 channel=channel,
                 thread_parent__isnull=True  # Only top-level messages
@@ -463,7 +463,7 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
                     'created_at': msg.created_at.isoformat()
                 })
             return result
-        except AgentChannel.DoesNotExist:
+        except ProjectChannel.DoesNotExist:
             return []
 
     @database_sync_to_async
@@ -477,10 +477,10 @@ class AgentSlackConsumer(AsyncWebsocketConsumer):
         message_type: str
     ) -> Dict:
         """Save a message to the database."""
-        from core.models import Agent, AgentChannel, ChannelMessage, ChannelMembership
+        from core.models import Agent, ProjectChannel, ChannelMessage, ChannelMembership
 
         # Get or create channel
-        channel, _ = AgentChannel.objects.get_or_create(
+        channel, _ = ProjectChannel.objects.get_or_create(
             name=self.channel_id,
             defaults={
                 'description': f"#{self.channel_id} channel",
@@ -676,13 +676,13 @@ Respond helpfully and concisely, drawing on your specialized knowledge."""
         creator_agent_name: Optional[str]
     ) -> Dict:
         """Create a new channel."""
-        from core.models import Agent, AgentChannel
+        from core.models import Agent, ProjectChannel
 
         creator = None
         if creator_agent_name:
             creator = Agent.objects.filter(name=creator_agent_name).first()
 
-        channel = AgentChannel.objects.create(
+        channel = ProjectChannel.objects.create(
             name=name,
             description=description,
             channel_type=channel_type,

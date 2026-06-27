@@ -25,7 +25,7 @@ from asgiref.sync import async_to_sync
 from core.api_helpers import smart_truncate  # noqa: F401
 
 from core.models.agents_registry import (
-    AgentExecution,
+    AgentTaskExecution,
     AgentStatus,
     AgentOrchestration,
     UnifiedAgentTemplate
@@ -107,7 +107,7 @@ class AgentExecutionTask(Task):
         execution_id = kwargs.get('execution_id')
         if execution_id:
             try:
-                execution = AgentExecution.objects.get(execution_id=execution_id)
+                execution = AgentTaskExecution.objects.get(execution_id=execution_id)
                 execution.status = AgentStatus.FAILED
                 execution.error_message = str(exc)
                 execution.error_traceback = str(einfo)
@@ -119,7 +119,7 @@ class AgentExecutionTask(Task):
                     'status': 'failed',
                     'error': str(exc)
                 })
-            except AgentExecution.DoesNotExist:
+            except AgentTaskExecution.DoesNotExist:
                 logger.error(f"Execution {execution_id} not found during failure handling")
 
 
@@ -501,7 +501,7 @@ def execute_agent(self, execution_id: str, **kwargs):
     """
     try:
         # Get the execution instance
-        execution = AgentExecution.objects.get(execution_id=execution_id)
+        execution = AgentTaskExecution.objects.get(execution_id=execution_id)
 
         # Update status to running
         execution.status = AgentStatus.RUNNING
@@ -744,7 +744,7 @@ def execute_agent(self, execution_id: str, **kwargs):
 
             raise ai_error
 
-    except AgentExecution.DoesNotExist:
+    except AgentTaskExecution.DoesNotExist:
         logger.error(f"AgentExecution with ID {execution_id} not found")
         raise
 
@@ -753,7 +753,7 @@ def execute_agent(self, execution_id: str, **kwargs):
 
         # Update execution status
         try:
-            execution = AgentExecution.objects.get(execution_id=execution_id)
+            execution = AgentTaskExecution.objects.get(execution_id=execution_id)
             execution.status = AgentStatus.FAILED
             execution.error_message = str(e)
             execution.error_traceback = traceback.format_exc()
@@ -768,7 +768,7 @@ def execute_agent(self, execution_id: str, **kwargs):
                 'progress': 0
             })
 
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             pass
 
         # Retry the task if retries are available
@@ -793,12 +793,12 @@ def execute_agent_async(self, execution_id: str):
 
         # Mark execution as failed
         try:
-            execution = AgentExecution.objects.get(execution_id=execution_id)
+            execution = AgentTaskExecution.objects.get(execution_id=execution_id)
             execution.status = AgentStatus.FAILED
             execution.error_message = str(e)
             execution.completed_at = timezone.now()
             execution.save()
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             pass
 
         # Retry if possible
@@ -819,7 +819,7 @@ def cleanup_old_executions(days_to_keep: int = 30):
     cutoff_date = timezone.now() - timedelta(days=days_to_keep)
 
     # Delete old completed/failed executions
-    deleted_count = AgentExecution.objects.filter(
+    deleted_count = AgentTaskExecution.objects.filter(
         created_at__lt=cutoff_date,
         status__in=[AgentStatus.COMPLETED, AgentStatus.FAILED, AgentStatus.CANCELLED]
     ).delete()[0]
@@ -836,7 +836,7 @@ def check_stuck_executions():
     # Find executions that have been running for more than 1 hour
     one_hour_ago = timezone.now() - timedelta(hours=1)
 
-    stuck_executions = AgentExecution.objects.filter(
+    stuck_executions = AgentTaskExecution.objects.filter(
         status=AgentStatus.RUNNING,
         started_at__lt=one_hour_ago
     )
@@ -963,7 +963,7 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                 context_tracking = build_context_tracking(agent_name, task)
 
                 # Create execution record
-                execution = AgentExecution.objects.create(
+                execution = AgentTaskExecution.objects.create(
                     template=template,
                     user=orchestration.user,
                     parent_orchestration=orchestration,
@@ -1099,7 +1099,7 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                 from core.services.context_tracking import build_context_tracking
                 context_tracking = build_context_tracking(agent_name, base_prompt)
 
-                execution = AgentExecution.objects.create(
+                execution = AgentTaskExecution.objects.create(
                     template=template,
                     user=orchestration.user,
                     parent_orchestration=orchestration,
@@ -2462,7 +2462,7 @@ self,
                     if execution_record:
                         try:
                             _hb_close_old_connections()
-                            rowcount = AgentExecution.objects.filter(
+                            rowcount = AgentTaskExecution.objects.filter(
                                 id=_hb_execution_id
                             ).update(last_heartbeat_at=timezone.now())
                             tick_count += 1
