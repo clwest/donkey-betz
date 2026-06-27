@@ -1337,12 +1337,12 @@ CELERY_TASK_ROUTES = {
     'core.tasks.reevaluate_enhanced_blogs': {'queue': 'content'},  # PublishGate = heuristic only
     'core.tasks.auto_publish_approved_blogs': {'queue': 'content'},  # Simple status update
     # Session 1004: Narrative/pipeline module tasks — LLM calls, moved to default
+    # Session 1244: removed 3 dead narrative_drift routes (process_spider_data,
+    # send_daily_digest, process_shifts_for_content) and unified_pipeline.run_complete_cycle —
+    # tasks never registered. Confirmed via current_app.tasks scan with 23 task modules
+    # imported. The remaining narrative_drift + unified_pipeline routes below ARE live.
     'narrative_drift.run_detector_cycle': {'queue': 'default'},
-    'narrative_drift.process_spider_data': {'queue': 'default'},
     'narrative_drift.update_narrative_statuses': {'queue': 'default'},
-    'narrative_drift.send_daily_digest': {'queue': 'default'},
-    'narrative_drift.process_shifts_for_content': {'queue': 'content'},
-    'unified_pipeline.run_complete_cycle': {'queue': 'default'},
     'unified_pipeline.health_check': {'queue': 'default'},
     # Session 1009: Removed phantom autonomous_studio.track_performance (task doesn't exist)
     # Session 1028: Route unrouted tasks off celery-worker to prevent OOM
@@ -1408,10 +1408,11 @@ CELERY_TASK_ROUTES = {
     'core.tasks.run_metrics_action_check': {'queue': 'long_running'},
     'core.tasks.market_movement_alerts': {'queue': 'long_running'},
     'core.tasks.check_sec_filings_alert': {'queue': 'long_running'},
-    'core.tasks.workspace_autopilot_tick': {'queue': 'long_running'},
+    # Session 1244: removed 3 dead core.tasks routes (workspace_autopilot_tick,
+    # aggregate_spider_signals, process_pending_auto_topics) — full dotted path
+    # not registered; short-name 'aggregate_spider_signals' / 'process_pending_auto_topics'
+    # routes below still match the actual registered tasks (which live under different paths).
     'core.tasks.dispatch_pending_action_items': {'queue': 'default'},  # 192ms avg, 174/day — lightweight
-    'core.tasks.aggregate_spider_signals': {'queue': 'long_running'},
-    'core.tasks.process_pending_auto_topics': {'queue': 'long_running'},
 
     # Session 1063: Route embedding tasks to ml queue
     'core.tasks.embed_agent_activity': {'queue': 'ml'},
