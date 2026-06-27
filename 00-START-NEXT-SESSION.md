@@ -162,7 +162,7 @@ Session 1245 ran P2 from the S1244 close menu — telemetry-based dead-task anal
 ### FIRST THING Session 1246
 
 #### Priority 0 — Conversation health check
-`pa-1cb4915546654c78` — was 100/continue, 7 turns + multiple S1245 exchanges. Re-check at S1246 open.
+**Active conversation pinned in `tools/pa_local.sh`: `pa-2bb73c969fd24802`** ("S1246 — Morning Brief CUMULATIVE Verification (P1) + Follow-ups"). Rigby created it fresh at S1245 close (her own decision after self-noting topic spread widened from 2 → 4 across S1245). It's seeded with carry-forward summary: PR #2690 (`85598c28`), deliverable `24ade5c4-…` (ready, 6,900 chars, DBZ workspace), S1115 cross-ref policy, beat 90/90, S1246 menu. Previous conv `pa-1cb4915546654c78` was 95/continue/13 turns at wrap — safe but rotated proactively for crisp P1 thread.
 
 #### Priority 1 — 06-28 morning_brief CUMULATIVE verification (TIME-BOUND, ~13:00 UTC Sunday = 07:00 MDT)
 
