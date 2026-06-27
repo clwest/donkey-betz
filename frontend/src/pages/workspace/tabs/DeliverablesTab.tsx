@@ -826,136 +826,12 @@ export function DeliverablesTab() {
         </button>
       </div>
 
-      {/* Stats Row */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-white">{stats.total}</div>
-            <div className="text-xs text-gray-400">Total</div>
-          </div>
-          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-primary-400">{stats.saved}</div>
-            <div className="text-xs text-gray-400">Saved</div>
-          </div>
-          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-yellow-400">{stats.templates}</div>
-            <div className="text-xs text-gray-400">Templates</div>
-          </div>
-          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-green-400">{stats.recent_7d}</div>
-            <div className="text-xs text-gray-400">Last 7 days</div>
-          </div>
-        </div>
-      )}
-
-      {/* Session 1091 Sprint B — Workspace breakdown card.
-          Surfaces per-workspace volume + dedicated orphan/unassigned counts so
-          Chris can see hygiene at a glance. orphan_count should always read 0
-          post-PR #1965; if it ever rises, the factory's Unassigned-bucket
-          fallback has regressed. unassigned_count is informational — it's
-          legitimate volume that landed in the triage bucket and may want
-          reassignment. */}
-      {stats?.by_workspace && stats.by_workspace.length > 0 && (
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-200">Workspace Breakdown</h4>
-            <div className="flex items-center gap-2 text-xs">
-              {typeof stats.orphan_count === 'number' && (
-                <span
-                  className={cn(
-                    'px-1.5 py-0.5 rounded',
-                    stats.orphan_count > 0
-                      ? 'bg-red-500/20 text-red-300'
-                      : 'bg-gray-700 text-gray-400'
-                  )}
-                  title="Deliverables with no workspace assignment (workspace_id IS NULL). Should always be 0 post-PR #1965; if it rises, the factory fallback regressed."
-                >
-                  Orphans: {stats.orphan_count}
-                </span>
-              )}
-              {typeof stats.unassigned_count === 'number' && stats.unassigned_count > 0 && (
-                <span
-                  className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300"
-                  title="Deliverables in the per-user 'Unassigned' triage bucket (created without explicit workspace assignment). Reassign as needed."
-                >
-                  Unassigned: {stats.unassigned_count}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            {stats.by_workspace.slice(0, 10).map((row) => (
-              <div
-                key={row.workspace_id ?? 'orphan'}
-                className="flex items-center justify-between text-xs"
-              >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span
-                    className={cn(
-                      'px-1.5 py-0.5 rounded truncate max-w-[200px]',
-                      row.is_orphan
-                        ? 'bg-red-500/20 text-red-300'
-                        : row.is_unassigned
-                          ? 'bg-amber-500/20 text-amber-300'
-                          : 'bg-blue-500/15 text-blue-300'
-                    )}
-                  >
-                    {row.workspace_name}
-                  </span>
-                </div>
-                <span className="text-gray-400 tabular-nums">{row.count}</span>
-              </div>
-            ))}
-            {stats.by_workspace.length > 10 && (
-              <div className="text-xs text-gray-500 pt-1">
-                +{stats.by_workspace.length - 10} more workspaces
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Today Queue */}
-      {recentDeliverables.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 border border-emerald-500/20 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Inbox size={16} className="text-emerald-400" />
-            <h4 className="text-sm font-semibold text-emerald-400">Today's Queue</h4>
-            <span className="text-xs text-gray-500">{recentDeliverables.length} items need attention</span>
-          </div>
-          <div className="space-y-2">
-            {recentDeliverables.slice(0, 5).map(d => (
-              <div key={d.id} className="flex items-center justify-between gap-3 bg-dark-card/50 rounded-lg px-3 py-2">
-                <button
-                  onClick={() => setSelectedId(d.id)}
-                  className="flex-1 text-left min-w-0"
-                >
-                  <span className="text-sm text-white truncate block">{d.title}</span>
-                  <span className="text-xs text-gray-500">{d.agent_name} &middot; {formatDate(d.created_at)}</span>
-                </button>
-                <div className="flex gap-1 flex-shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleQuickAction(d.id, 'action_taken') }}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
-                    title="Mark as acted on"
-                  >
-                    <CheckCircle2 size={12} />
-                    Done
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleQuickAction(d.id, 'task_created') }}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors"
-                    title="Create follow-up task"
-                  >
-                    <ListChecks size={12} />
-                    Task
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Session 1246 — Layout reorder (Chris ask). The interactive work
+          surface (source tabs + search/filters + grouped cards) lives at the
+          top of the page so what's been done is the first thing visible.
+          Informational panels (Stats / Workspace Breakdown / Today's Queue)
+          moved below the cards section — they're still load-bearing for
+          hygiene but they're context, not the main read. */}
 
       {/* Source Tabs */}
       <div className="flex gap-1 border-b border-dark-border pb-2">
@@ -1351,6 +1227,142 @@ export function DeliverablesTab() {
             </div>
           )}
         </>
+      )}
+
+      {/* Session 1246 — Informational panels (Stats / Workspace Breakdown /
+          Today's Queue) moved below the work surface per Chris ask. Still
+          load-bearing for hygiene + today's-attention items, but they're
+          context, not the headline. */}
+
+      {/* Stats Row */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-white">{stats.total}</div>
+            <div className="text-xs text-gray-400">Total</div>
+          </div>
+          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-primary-400">{stats.saved}</div>
+            <div className="text-xs text-gray-400">Saved</div>
+          </div>
+          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-yellow-400">{stats.templates}</div>
+            <div className="text-xs text-gray-400">Templates</div>
+          </div>
+          <div className="bg-dark-card border border-dark-border rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-green-400">{stats.recent_7d}</div>
+            <div className="text-xs text-gray-400">Last 7 days</div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 1091 Sprint B — Workspace breakdown card.
+          Surfaces per-workspace volume + dedicated orphan/unassigned counts so
+          Chris can see hygiene at a glance. orphan_count should always read 0
+          post-PR #1965; if it ever rises, the factory's Unassigned-bucket
+          fallback has regressed. unassigned_count is informational — it's
+          legitimate volume that landed in the triage bucket and may want
+          reassignment. */}
+      {stats?.by_workspace && stats.by_workspace.length > 0 && (
+        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-200">Workspace Breakdown</h4>
+            <div className="flex items-center gap-2 text-xs">
+              {typeof stats.orphan_count === 'number' && (
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded',
+                    stats.orphan_count > 0
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'bg-gray-700 text-gray-400'
+                  )}
+                  title="Deliverables with no workspace assignment (workspace_id IS NULL). Should always be 0 post-PR #1965; if it rises, the factory fallback regressed."
+                >
+                  Orphans: {stats.orphan_count}
+                </span>
+              )}
+              {typeof stats.unassigned_count === 'number' && stats.unassigned_count > 0 && (
+                <span
+                  className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300"
+                  title="Deliverables in the per-user 'Unassigned' triage bucket (created without explicit workspace assignment). Reassign as needed."
+                >
+                  Unassigned: {stats.unassigned_count}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {stats.by_workspace.slice(0, 10).map((row) => (
+              <div
+                key={row.workspace_id ?? 'orphan'}
+                className="flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span
+                    className={cn(
+                      'px-1.5 py-0.5 rounded truncate max-w-[200px]',
+                      row.is_orphan
+                        ? 'bg-red-500/20 text-red-300'
+                        : row.is_unassigned
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-blue-500/15 text-blue-300'
+                    )}
+                  >
+                    {row.workspace_name}
+                  </span>
+                </div>
+                <span className="text-gray-400 tabular-nums">{row.count}</span>
+              </div>
+            ))}
+            {stats.by_workspace.length > 10 && (
+              <div className="text-xs text-gray-500 pt-1">
+                +{stats.by_workspace.length - 10} more workspaces
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Today Queue */}
+      {recentDeliverables.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 border border-emerald-500/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Inbox size={16} className="text-emerald-400" />
+            <h4 className="text-sm font-semibold text-emerald-400">Today's Queue</h4>
+            <span className="text-xs text-gray-500">{recentDeliverables.length} items need attention</span>
+          </div>
+          <div className="space-y-2">
+            {recentDeliverables.slice(0, 5).map(d => (
+              <div key={d.id} className="flex items-center justify-between gap-3 bg-dark-card/50 rounded-lg px-3 py-2">
+                <button
+                  onClick={() => setSelectedId(d.id)}
+                  className="flex-1 text-left min-w-0"
+                >
+                  <span className="text-sm text-white truncate block">{d.title}</span>
+                  <span className="text-xs text-gray-500">{d.agent_name} &middot; {formatDate(d.created_at)}</span>
+                </button>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleQuickAction(d.id, 'action_taken') }}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 transition-colors"
+                    title="Mark as acted on"
+                  >
+                    <CheckCircle2 size={12} />
+                    Done
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleQuickAction(d.id, 'task_created') }}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors"
+                    title="Create follow-up task"
+                  >
+                    <ListChecks size={12} />
+                    Task
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
