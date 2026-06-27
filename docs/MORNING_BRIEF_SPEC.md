@@ -225,7 +225,22 @@ Bare step list (no code — what the workflow runner must dispatch in order). Ea
 ### Step 5: `decision_card_synthesis`
 - **Agent:** `coo_agent` (or dedicated CoS/brief agent)
 - **Inputs:** `lane_1_text`, `lane_2_text`, `lane_3_text`, `lane_4_text`, `governance_snapshot` (optional), `initiative_snapshot` (optional), `ops_snapshot` (optional), `max_decisions` (3)
-- **Writes:** `decision_card[{decision, recommendation, why_now, next_step_owner, next_step_timebox}]`, `decision_card_text`
+- **Writes:** `decision_cards[{decision, recommendation, why_now, next_step_owner, next_step_deadline_style, next_step_timebox}]`, `decision_card_text`
+
+**Implementation note (Session 1242 Path C — deliverable `19b45ea0-…`):** the structured `decision_cards` list ships alongside the markdown `decision_card_text` per "present but optional" contract — always emitted (even as an empty list on parse failure), with per-card `next_step_timebox` allowed to be null when the LLM can't confidently derive an absolute clock time. Markdown body uses RELATIVE deadlines ("within X hours") per Rigby's S1242 audience-fit verdict; absolute clock deadlines (ISO-8601 with Denver TZ offset, DST-tracked) live ONLY in the structured form's `next_step_timebox` field. Per-card schema:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `decision` | str | ✓ (non-empty) | What to decide. |
+| `recommendation` | str | ✓ (non-empty) | Suggested choice. |
+| `why_now` | str | ✓ (non-empty) | Evidence link. |
+| `next_step_owner` | str | ✓ (non-empty) | Owner name. |
+| `next_step_deadline_style` | enum | ✓ | One of `relative` \| `absolute` \| `hybrid`. |
+| `next_step_timebox` | str OR null | ✓ | ISO-8601 with offset when style ∈ {`absolute`, `hybrid`}; null when style = `relative`. |
+
+On any structured-form parse / validation failure: keep the markdown, set `decision_cards=[]`, emit warning log + observability metric (count + non-null-timebox count). Brief still ships per `feedback_workflow_step_sentinel_plus_noncritical_pattern`. **In-memory context only for v0** — no DB schema change; graduate to deliverable `structured_data` column or new model only when a named consumer surfaces (ICS exporter, deadline tracker).
+
+Pre-Path-C (S1233 B.1): only `decision_card_text` was written; the structured form was deferred. Spec drift surfaced in S1242 verify-before-delete audit on PR #2655's `_denver_tz` inject and closed via Path C implementation.
 
 ### Step 6: `strategic_synthesis` (uses F7 handler from PR #2592)
 - **Agent:** `strategic_review` (or `thinking_agent`)
