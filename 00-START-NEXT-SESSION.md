@@ -131,7 +131,153 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1244 — CURRENT ENTRY POINT
+## SESSION 1245 — CURRENT ENTRY POINT
+
+### SESSION 1244 CLOSED — Cat 2 cross-app duplicates 9 → 0 + Cat 6 Finding 6.X CLOSED + Celery wiring audit (3 findings) + 2 regression canaries
+
+Full handoff: [`SESSION_1244_CAT_2_FULLY_CLOSED_PLUS_CELERY_AUDIT_PLUS_2_REGRESSION_CANARIES.md`](docs/handoffs/SESSION_1244_CAT_2_FULLY_CLOSED_PLUS_CELERY_AUDIT_PLUS_2_REGRESSION_CANARIES.md).
+
+Session 1244 was a continuous arc from S1243 close. Locked in the audit wins + pushed two adjacent domains to closure.
+
+**PRs shipped this session (all admin-merged via `--admin --merge`):**
+
+| PR | SHA | Subject | Net |
+|---|---|---|---|
+| [#2684](https://github.com/clwest/donkey-betz-platform/pull/2684) | `c3f80f69` | Cat 2 dormant cleanup batch (3 deletes + 3 renames) | +294/-326 |
+| [#2685](https://github.com/clwest/donkey-betz-platform/pull/2685) | `7893e654` | rename core.AgentChannel + agents.AgentExecution — Cat 2 9 → 0 | +411/-316 |
+| [#2686](https://github.com/clwest/donkey-betz-platform/pull/2686) | `00b10160` | Cat 2 regression canary + Cat 6 Finding 6.X resolution | +75/-629 |
+| [#2687](https://github.com/clwest/donkey-betz-platform/pull/2687) | `a7a5e6d1` | Celery queue parity audit + regression canary (sports fix) | +128/-1 |
+| [#2688](https://github.com/clwest/donkey-betz-platform/pull/2688) | `f84c2bf1` | remove 7 orphan task_routes patterns + extend canary | +75/-11 |
+
+**Cat 2 audit FINAL state: 9 → 0 cross-app duplicates.** All 10 inventory items resolved via combination of renames + deletes across S1243 + S1244.
+
+**Cat 6 Finding 6.X CLOSED-FINAL.** Live `/api/intelligence/agents/status/<id>/` endpoint repaired (was 500-ing on every call); dead `ai_core/spiders/integration.py` file deleted (625 lines, zero live importers).
+
+**Celery wiring audit (3 findings shipped + 1 deferred):**
+- Queue parity gap fixed (sports queue local consumer)
+- 7 orphan task_routes patterns removed
+- Dead-task analysis deferred to telemetry approach (static analysis hit >50% false positives due to delegation wrappers)
+
+**2 regression canaries locked in via Django tests:**
+- `core/tests/test_no_cross_app_model_duplicates.py` — Cat 2 zero-state
+- `core/tests/test_celery_queue_parity.py` — Procfile↔Makefile↔task_routes parity (4 assertions)
+
+**Audit-method protocol validated 9× this session.** Canonical pattern documented in handoff.
+
+**Audit deliverables current state:**
+- Cat 1 Stillborn `2d7ea39f-…` → 43,761 chars (active findings)
+- Cat 2 Phantom `86870fdd-…` → **33,516 chars** (CLOSED-FINAL + Celery audit close block)
+- Cat 6 Wrong-scope `7c05145d-…` → 5,393 chars (CLOSED-FINAL, Finding 6.X both subitems)
+- Decision: PaMessageFeedback `2fda8b3e-…` → status=completed
+
+**Active PA conversation:** `pa-1cb4915546654c78` — score 100/continue, 6 turns, 1 topic at S1244 close. No rotation needed. `tools/pa_local.sh` unchanged.
+
+**Worker state at S1244 close:**
+- Daphne restarted 4 times mid-session — running latest code
+- Celery NOT currently running locally (no `make celery` this session). Run before exercising celery-routed tasks locally.
+
+**Chris-side carryover into Session 1245:**
+- Anthropic credit refill at https://console.anthropic.com/billing — still failing CI billing
+- All 6 S1244 PRs admin-merged via `--admin --merge`
+- 06-28 morning_brief verification time-bound to ~13:00 UTC Sunday
+
+### FIRST THING Session 1245
+
+#### Priority 0 — Conversation health check
+`pa-1cb4915546654c78` was at 100/continue, 6 turns at S1244 close. Re-check at S1245 open.
+
+#### Priority 1 — 06-28 morning_brief CUMULATIVE verification (TIME-BOUND, ~13:00 UTC Sunday = 07:00 MDT)
+
+Validates 6 PRs cumulatively from S1242 + S1243 production paths (S1244's PRs are model renames + Celery tweaks — no direct morning_brief involvement but will exercise indirectly via spider data writes and agent execution tracking).
+
+```python
+from core.models import CeleryTaskEvent
+from core.models_deliverables import Deliverable
+from datetime import date
+import re
+
+today = date(2026, 6, 28)
+
+ev = CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+    started_at__date=today,
+).order_by('-started_at').first()
+assert ev and ev.status == 'SUCCESS'
+
+d = Deliverable.objects.filter(
+    user__username='chris', category='Morning Brief',
+    created_at__date=today,
+).order_by('-created_at').first()
+assert d
+assert not str(d.workspace.id).startswith('cf708a2e'), "cf708a2e leak regression"
+
+c = d.content
+bare = len(re.findall(r'(?<!\[)\bMUSCULAR\b(?!\])', c))
+assert bare == 0
+absolute_hits = re.findall(r'by\s+\d{1,2}:\d{2}\s+(AM|PM)\s+(MDT|MST)', c, re.IGNORECASE)
+assert not absolute_hits
+
+# S1244 sanity — LegacySpiderData rows preserved
+from core.models import LegacySpiderData
+assert LegacySpiderData.objects.count() >= 8170
+```
+
+#### Priority 2 — Dead-task analysis (telemetry-based redo)
+
+Per S1244 Celery audit deferred-followup. Static analysis hit >50% false positives. Switch to telemetry:
+
+```python
+from core.models import CeleryTaskEvent
+from datetime import timedelta
+from django.utils import timezone
+
+cutoff = timezone.now() - timedelta(days=30)
+all_seen = set(
+    CeleryTaskEvent.objects.filter(started_at__gte=cutoff)
+    .values_list('task_name', flat=True).distinct()
+)
+
+# After importing all 23 task modules (see test_celery_queue_parity.py setUp)
+from celery import current_app
+registered = {t for t in current_app.tasks.keys() if not t.startswith('celery.')}
+zero_fire = registered - all_seen
+print(f'Zero-fire-in-30-days tasks: {len(zero_fire)}')
+```
+
+Per-task: check if it's a delegation wrapper (`def X(): return _impl_X()`) — if yes, `_impl` may have callers. If not, candidate for cleanup.
+
+#### Priority 3 — Pick next audit domain
+
+Rigby's recommended S1245 menu:
+1. **PA tools audit** (recommended first) — 109 schemas + 152 handlers + 8 enrichment services. Same canonical protocol. Likely surfaces schema↔handler orphans + wrong-import patterns. 1-2 hr investment.
+2. **Spider pipeline health** — 80 spiders / 41 categories / 1.14M SpiderItemHash rows.
+3. **RAG / citation integrity** — search_docs corpus, retrieval gates, citation source verification.
+4. **24/7 advisor system** — 30 functional advisors. Last full audit Session 1208.
+
+#### Priority N — Pre-existing carryover tail (unchanged)
+
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM)
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2)
+- Promote `scripts/smoke_all_agents.py` → mgmt cmd (Session 1231 F6)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Meeting-context leak shape watch (Session 1230 F2, LOW)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1244 totaled ~85 PRs across 19 sessions. S1244 closed major audit loops. S1245 menu is wide open — telemetry-based dead-task analysis OR new audit domain OR whatever feels right.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+
+---
 
 ### SESSION 1243 CLOSED — audit-method validated 4×, 4 PRs shipped, full Cat 2 cross-app duplicate inventory enumerated
 
