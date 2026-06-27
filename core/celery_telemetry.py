@@ -57,6 +57,20 @@ def _extract_agent_name(task_kwargs):
     return ''
 
 
+# Session 1246 fix (was S1245 bonus finding): Celery signals carry the Task
+# instance under `sender` (and sometimes `task`). `str(sender)` returns the
+# Task repr ("<@task: core.tasks.X of <app> at 0xADDR>") — useless for joins
+# and aggregations downstream. Pull `.name` off whichever object Celery gave
+# us, in priority order, and only fall back to `str(sender)` as a last resort
+# when the signal payload is unexpectedly shaped (still better than a row
+# with task_name='').
+def _extract_task_name(task, sender):
+    name = getattr(task, 'name', None) or getattr(sender, 'name', None)
+    if isinstance(name, str) and name:
+        return name
+    return str(sender) if sender is not None else ''
+
+
 @task_prerun.connect
 def on_task_prerun(sender=None, task_id=None, task=None, **kwargs):
     """Create a STARTED row when a task begins execution."""
@@ -84,7 +98,7 @@ def on_task_prerun(sender=None, task_id=None, task=None, **kwargs):
         CeleryTaskEvent.objects.update_or_create(
             task_id=task_id,
             defaults={
-                'task_name': task.name if task else str(sender),
+                'task_name': _extract_task_name(task, sender),
                 'agent_name': agent_name,
                 'queue': queue,
                 'status': 'STARTED',
@@ -130,7 +144,7 @@ def on_task_postrun(sender=None, task_id=None, task=None, state=None, retval=Non
             # Prerun was missed (e.g. eager mode), create a complete row
             CeleryTaskEvent.objects.create(
                 task_id=task_id,
-                task_name=task.name if task else str(sender),
+                task_name=_extract_task_name(task, sender),
                 status=state or 'SUCCESS',
                 started_at=now,
                 finished_at=now,
@@ -194,7 +208,7 @@ def on_task_failure(sender=None, task_id=None, exception=None, traceback=None, *
         else:
             CeleryTaskEvent.objects.create(
                 task_id=task_id,
-                task_name=str(sender),
+                task_name=_extract_task_name(None, sender),
                 status='FAILURE',
                 started_at=now,
                 finished_at=now,
