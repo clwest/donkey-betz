@@ -131,7 +131,123 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1245 — CURRENT ENTRY POINT
+## SESSION 1246 — CURRENT ENTRY POINT
+
+### SESSION 1245 CLOSED — P2 Celery connectivity audit + AUDIT_FINDINGS.md #12 framework re-validated + new `audit_celery_zero_fire` mgmt cmd
+
+Full handoff: [`SESSION_1245_P2_CELERY_CONNECTIVITY_AUDIT_PLUS_AUDIT_FINDINGS_12_VALIDATION.md`](docs/handoffs/SESSION_1245_P2_CELERY_CONNECTIVITY_AUDIT_PLUS_AUDIT_FINDINGS_12_VALIDATION.md).
+
+Session 1245 ran P2 from the S1244 close menu — telemetry-based dead-task analysis (S1244 Celery audit deferred-followup). Initial probe surfaced 14 "disconnected" Celery tasks; verify-before-delete sweep showed 11 of 14 were already documented as deferred-by-policy in `AUDIT_FINDINGS.md` §12 (S1115 audit). The audit's actual value was preventing a wrong deletion PR + re-validating the S1115 framework.
+
+**PR shipped:**
+
+| PR | Subject | Net |
+|---|---|---|
+| (new this session) | `core/management/commands/audit_celery_zero_fire.py` — runtime telemetry probe + KNOWN_DEFERRED filter | +210 |
+
+**Audit deliverable:** `24ade5c4-7562-4905-80a1-bb901d0549d7` (Donkey Betz workspace, status=ready, 6,900 chars)
+
+**Headline findings:**
+- **Beat schedule health: PERFECT (90/90 enabled PeriodicTask rows fired in 14d window).** S1244 queue-parity canary is working.
+- **Of 14 "disconnected" candidates:** 11 already in `AUDIT_FINDINGS.md` §12 deferred list, 1 probe false positive (direct-Python-caller blind spot), 2 net-new (`content/` character-training dormancy).
+- **2 bonus telemetry findings:** repr bug (`task_name=str(task_obj)` instead of `task.name`), ghost task `core.tasks.check_system_health`.
+- **0 tasks deleted** — verify-before-delete intervened.
+
+**Memory rule added:** `feedback_audit_findings_12_canonical_celery_deferred_list.md` — cross-ref #12 before any Celery deletion + zero-fire telemetry horizon caveats.
+
+**Chris-side carryover into Session 1246:**
+- Anthropic credit refill at https://console.anthropic.com/billing — still failing CI billing
+- S1245 PR pending admin-merge
+
+### FIRST THING Session 1246
+
+#### Priority 0 — Conversation health check
+`pa-1cb4915546654c78` — was 100/continue, 7 turns + multiple S1245 exchanges. Re-check at S1246 open.
+
+#### Priority 1 — 06-28 morning_brief CUMULATIVE verification (TIME-BOUND, ~13:00 UTC Sunday = 07:00 MDT)
+
+Validates 7+ PRs cumulatively from S1242-S1245 production paths.
+
+```python
+from core.models import CeleryTaskEvent
+from core.models_deliverables import Deliverable
+from datetime import date
+import re
+
+today = date(2026, 6, 28)
+
+ev = CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+    started_at__date=today,
+).order_by('-started_at').first()
+assert ev and ev.status == 'SUCCESS'
+
+d = Deliverable.objects.filter(
+    user__username='chris', category='Morning Brief',
+    created_at__date=today,
+).order_by('-created_at').first()
+assert d
+assert not str(d.workspace.id).startswith('cf708a2e'), "cf708a2e leak regression"
+
+c = d.content
+bare = len(re.findall(r'(?<!\[)\bMUSCULAR\b(?!\])', c))
+assert bare == 0
+absolute_hits = re.findall(r'by\s+\d{1,2}:\d{2}\s+(AM|PM)\s+(MDT|MST)', c, re.IGNORECASE)
+assert not absolute_hits
+
+from core.models import LegacySpiderData
+assert LegacySpiderData.objects.count() >= 8170
+```
+
+#### Priority 2 — Content/ subsystem retirement product-Q
+
+S1245 found the entire content/ character-training subsystem dormant:
+- `CharacterModel.objects.count()` = 0
+- All 3 training tasks (poll_pending_trainings, check_single_training, cleanup_stale_trainings): 0 telemetry events ever
+- Subsystem originated Session 175 (Replicate character training poller)
+
+**Ask Chris:** is this subsystem retired? If yes, ship a deletion PR removing the 3 tasks + `content/models.py CharacterModel` + `content/character_training.py` + the 0014 migration. If unsure, leave dormant per memory rule.
+
+#### Priority 3 — Bonus telemetry findings trace
+
+Two findings filed in S1245 for S1246 trace:
+1. **Telemetry repr bug** — find where `CeleryTaskEvent` writer is doing `task_name=str(task_obj)` instead of `task_name=task.name`. Sample row: `<@task: core.tasks.cleanup_stale_agent_executions of unified_donkey_betz_core at 0x10b8d91d0>`. Grep for `CeleryTaskEvent.objects.create` + check `task_name=` kwarg shape.
+2. **Ghost task `core.tasks.check_system_health`** — fires recorded but task not in `current_app.tasks`. Likely renamed/deleted with leftover writer. `git log -S "check_system_health"` + check for renames.
+
+#### Priority 4 — Add 5th axis to `audit_celery_zero_fire`
+
+Direct Python call detection — the S1245 probe blind spot. Add an option that for each "uncategorized zero-fire" task runs `rg "\b<short>\s*\("` excluding def-sites + wrapper sites, and reports hit count. Either as a new `--include-direct-calls` flag or always-on column.
+
+#### Priority 5 — Pick next audit domain
+
+S1244's recommended menu still applies (1 down: PA tools / spiders / RAG / 24/7 advisors). Plus:
+- Re-run `audit_celery_zero_fire` once 30d telemetry accumulates (~2026-07-13) for the first telemetry-valid zero-fire census.
+
+#### Priority N — Pre-existing carryover tail (unchanged)
+
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM)
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2)
+- Promote `scripts/smoke_all_agents.py` → mgmt cmd (Session 1231 F6)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Meeting-context leak shape watch (Session 1230 F2, LOW — `cf708a2e` workspace still active; Rigby briefly mis-assigned the S1245 deliverable to it)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+
+#### Priority Last — Whatever Chris wants
+
+S1245 was a methodology-validation session. The S1115 audit framework holds. The probe is hardened. Next session is wide open — content/ retirement Q is the most actionable single item.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+- The 11 AUDIT_FINDINGS.md #12 deferred-by-policy tasks (each needs Chris green-light per #12 protocol)
+
+---
 
 ### SESSION 1244 CLOSED — Cat 2 cross-app duplicates 9 → 0 + Cat 6 Finding 6.X CLOSED + Celery wiring audit (3 findings) + 2 regression canaries
 
