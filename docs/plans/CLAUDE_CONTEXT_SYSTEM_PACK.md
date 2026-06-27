@@ -912,7 +912,7 @@ Location: `core/celery.py`
 | `run_autonomous_loop` | Every 15 min | Full autonomous cycle |
 | `run_stock_audit_cycle` | Every 30 min (market hours) | Stock monitoring |
 | `run_blockchain_audit_cycle` | Every 15 min | Blockchain monitoring |
-| `generate_agent_dreams` | Every 30 min | Agent idle thoughts |
+| `generate_agent_dreams` | User-triggered (DreamsPanel button — no beat schedule per Session 1242 verification) | Agent idle thoughts |
 | `run_daily_digest` | Daily at 8am | User opportunity digest |
 | `send_daily_digest` | Daily at 9am | Email digests |
 | `cleanup_old_records` | Daily at 3am | Database maintenance |
