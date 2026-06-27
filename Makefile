@@ -249,7 +249,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		echo "-> Starting Celery default worker (solo, ML-free queues)..."; \
 		PG_APPLICATION_NAME=dbz:celery-worker SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
-			--queues=default,agents,content \
+			--queues=default,agents,content,sports \
 			--hostname=default@%h > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
 		sleep 1; \
 	fi
