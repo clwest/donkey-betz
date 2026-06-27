@@ -131,81 +131,88 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1241 — CURRENT ENTRY POINT
+## SESSION 1242 — CURRENT ENTRY POINT
 
-### SESSION 1240 CLOSED — Frontend rot audit (3 PRs) + AgentsPage crash fixes (2 PRs) + reality map, 5 PRs total
+### SESSION 1241 CLOSED — Platform Reality Audit stand-up (no-code, 7 deliverables, worked specimen)
 
-Full handoff: [`SESSION_1240_FRONTEND_ROT_AUDIT_PLUS_AGENTSPAGE_REALITY_MAP.md`](docs/handoffs/SESSION_1240_FRONTEND_ROT_AUDIT_PLUS_AGENTSPAGE_REALITY_MAP.md).
+Full handoff: [`SESSION_1241_PLATFORM_REALITY_AUDIT_STAND_UP.md`](docs/handoffs/SESSION_1241_PLATFORM_REALITY_AUDIT_STAND_UP.md).
 
-Session 1240 was a frontend rot audit + live crash response + AgentsPage data-wiring map. Three rot-cleanup PRs deleted **6,891 lines of provably-dead React** (Session 1067 + 1035 consolidation leftovers, same shape as Session 1237 P2.b core/views.py shadow-delete). Two crash-defense PRs hardened AgentsPage Tools + Templates tab + 2 detail modals against undefined-field assumptions (`.replace`, `.toLocaleString`). New memory: **daphne caches `index.html` content across `npm run build` cycles even with DEBUG=True** — symptom is server returning hashes that don't match any file on disk. Fix: daphne restart.
+Session 1241 opened executing the S1241 start-here punch list — Surface A (AgentsPage Decisions sidebar repoint), estimated 1 PR. Verifier-loop on Rigby's code-pointer map collapsed the diagnosis in ~15 min — the start-here was materially wrong on TWO load-bearing facts:
+- `DecisionRecord` has 1 production writer at `core/agents/base_agent.py:3417`, NOT zero
+- AgentsPage reads `AgentDecisionSummary` via `/api/boardroom/decisions/` (`AgentsPage.tsx:748`), NOT `DecisionRecord` — wiring has existed since Session 696
 
-**Session 1240 PRs (all admin-merged):**
+Chris reframed mid-session: stop coding, audit what we've actually built across the whole codebase + `/docs/`. No PRs even on obvious fixes. **No-code Platform Reality Audit foundation shipped instead.**
 
-| PR | Subject | Net |
-|---|---|---|
-| [#2666](https://github.com/clwest/donkey-betz-platform/pull/2666) PR-A | DashboardPage.tsx orphan delete | -1,007 |
-| [#2667](https://github.com/clwest/donkey-betz-platform/pull/2667) PR-B | BoardroomPage + GovernancePage dead imports | -2,441 |
-| [#2668](https://github.com/clwest/donkey-betz-platform/pull/2668) PR-C | PlatformPage + 3 transitive dead tabs + types.ts cleanup | -3,443 |
-| [#2669](https://github.com/clwest/donkey-betz-platform/pull/2669) | AgentsPage Tools tab defensive crash guards | +6/-6 |
-| [#2670](https://github.com/clwest/donkey-betz-platform/pull/2670) | AgentsPage Templates tab + tool modal toLocaleString defenses | +2/-2 |
+**Audit deliverables stood up in Donkey Betz workspace (`b4503364-2573-4401-9e28-61a739e0ce50`), all `status=ready`, all `category=platform-audit`:**
 
-Cumulative typecheck delta: **242 → 227 errors (-15 retired, 0 new)**.
+| Doc | UUID |
+|---|---|
+| MASTER INDEX | `dfd2a073-da10-433e-90fe-1fc69a3c716a` |
+| Category 1 — Stillborn Surfaces | `2d7ea39f-3bf0-447c-8c89-33210fc0d18b` |
+| Category 2 — Phantom Dependencies | `86870fdd-e8d8-48d3-9760-4bea75ec10e3` |
+| Category 3 — Orphan Models & Migrations | `74485d22-3bb8-47bd-80b6-7ae7e4657d22` |
+| Category 4 — Doc↔Code Drift | `0836042d-3a97-4d60-b9c8-11ea8d7f9884` |
+| Category 5 — Deletion Regret / Git Archeology | `7ad80aaf-2025-419d-8590-8897ab2e6ee2` |
+| Category 6 — Works, but wrong-scope/permissions/flags | `7c05145d-a618-4bc2-bf49-fb46a16fe8e6` |
 
-**Active conversation:** `pa-634b8fef344d4af2` — created fresh at S1240 close per Rigby's `suggest_fresh` recommendation (predecessor `pa-a2443db2e43a42dc` hit 60/21-turns over the 21h session). Titled "Session 1241 — AgentsPage reality reconnect (UI-only focus)". **Seeded with the 5-surface punch list + close summary via `carry_forward_summary` — opens directly on the work.**
+**Findings seeded (7 total):**
+- **Category 1:** 5 findings from AgentsPage map. Finding 1.1 (Decisions Sidebar) elevated to **DUAL-SOURCED** as the worked specimen — code-side fully verified, awaits Rigby's docs-side `search_docs` pass. Findings 1.2-1.5 (Directory / Dreams / Channels / Learning) are **CANDIDATE** pending recon. 10,898 chars in Cat 1 doc.
+- **Category 4:** 2 meta-findings on the audit tooling itself — 4.1 (`deliverable_tool.create` defaults to `status=completed` regardless of param) + 4.2 (`Deliverable.status` model declares 4 choices but DB accepts `completed` as 5th value, choices not enforced at DB layer). Both CANDIDATE.
+
+**Audit method locked:**
+- **Per-finding schema:** Surface / Reader / Writer / Gates / Observed / Expected / Claim / Evidence (code) / Evidence (docs) / Status / Impact / Reconnect hypothesis (no fix) / Disconfirm test / Verified by Claude / Verified by Rigby
+- **State machine:** CANDIDATE → DUAL-SOURCED → RUNTIME-CHECKED → CONFIRMED (with DISPROVEN / DEFERRED branches). Hard evidence minimums per state — see Rigby's design in the master index doc.
+- **Split contract:** Claude = code/git/ORM (file Read, Grep, manage.py shell, git log/blame). Rigby = docs/deliverables/conversations corpus (search_docs, deliverable history, narrative cross-ref, handoff archaeology). Each verifies the other before promotion past CANDIDATE.
+- **Category 5 two-lens timeline:** Lens A (Claude git chronology) + Lens B (Rigby intent/promise trail via `search_docs(originating_session=1067/1035/1237/1240)`). Mismatches labeled "deleted in git, still referenced in docs/UI" → phantom + drift; "documented as deleted, but code still there" → drift / cleanup incomplete; "deleted without documentation" → deletion regret risk.
+
+**Lesson from worked specimen (Finding 1.1):** any doc/handoff claim of "0 writers" or "wrong wiring" MUST be verified via grep/Read before acceptance. Start-here doc claims are internally consistent (writer believed them at write time) but can be materially wrong if code shifted. Applied to Finding 1.5 already (explicit grep-first flag on the `AgentLearningSession` + `AgentCollaboration` "0 writers anywhere" claim).
+
+**New memory rule queued:** `feedback_deliverable_create_defaults_to_completed.md` — companion to existing `feedback_deliverable_status_via_content_complete.md` (which covered update-to-completed silent ignore; this covers create-defaults-to-completed silent override).
+
+**Active conversation:** `pa-634b8fef344d4af2` — ~10 turns this session. **Title is now STALE** ("Session 1241 — AgentsPage reality reconnect (UI-only focus)") because the session reframed mid-flight from UI repoint → platform-wide audit. **Consider rotation at S1242 open** with proper title ("Session 1242 — Platform Reality Audit continued" or similar).
 
 **Worker state:** No backend code touched. No `@shared_task`. No PeriodicTask changes. No celery restart needed.
 
-**Chris-side carryover into Session 1241:**
+**Chris-side carryover into Session 1242:**
 - Anthropic credit refill at https://console.anthropic.com/billing
-- CI billing still failing — all 5 Session 1240 PRs admin-merged via `--admin`
+- CI billing still failing (no PRs this session)
 
-### FIRST THING Session 1241 (this fresh console)
+### FIRST THING Session 1242
 
-#### Priority 0 — Conversation health check + service context
+#### Priority 0 — Conversation health + rotation decision
 
-`pa-634b8fef344d4af2` is fresh (~0 turns). Quick `platform_config_tool action=overview` to confirm `service_context: local` before any UI work.
+`pa-634b8fef344d4af2` should still be healthy (~10 turns at S1241 close). But the title is stale. Run `session_tool action=health_check`; if score still >70, decide: rotate to fresh thread with proper title OR continue with rename note (`session_tool action=rename` if it exists).
+
+If rotating: seed fresh thread with `carry_forward_summary` including the 7 deliverable UUIDs + audit method state machine + Finding 1.1 worked specimen (DUAL-SOURCED, awaiting Rigby docs-side pass).
+
+Also quick `platform_config_tool action=overview` to confirm `service_context: local` before any work.
 
 #### Priority 1 — 06-27 cumulative morning_brief verification (TIME-BOUND 07:00 MDT)
 
-**Still the highest-priority cumulative window** (Sub-step D PRs cumulatively live for first time). When the brief fires at 07:00 MDT Saturday 06-27, run the verification block from the SESSION 1240 entry of this doc (preserved below at the previous-session-block) — Decision Cards, Lane 1 self-check, Lane 4 fallback, Lane 3 coverage map, MUSCULAR humanization, MB workspace landing. If verification clean → Sub-step E unlocks.
+**Pre-existing P1 from prior plan, still standing.** When the brief fires at 07:00 MDT Saturday 06-27, run the verification block preserved in the older Session 1240 priorities block below this entry-point (around lines 270-302 — `CeleryTaskEvent` check + Deliverable check + Sub-step D invariants in content). If verification clean → Sub-step E unlocks AND audit work can resume.
 
-#### Priority 2 — UI-only focus: AgentsPage reality reconnect (S1240 carryover)
+#### Priority 2 — Continue Platform Reality Audit (post-verify)
 
-5-surface punch list from S1240's reality-map audit. Chris's framing: **"all 4 of these things are features that we had built but I don't know what we are missing to achieve it"** — treat as wiring archaeology, not feature/delete decisions.
+**Rigby docs-side pass on Finding 1.1** (elevate from DUAL-SOURCED → RUNTIME-CHECKED):
+- `search_docs('AgentDecisionSummary writer')`
+- `search_docs('DecisionRecord boardroom')`
+- `search_docs('agent decision summary')`
+- Specific question: does any doc identify what writes to `AgentDecisionSummary`?
+- Then runtime check: `AgentDecisionSummary.objects.count()` locally. If 0 → upstream writer is the actual gap.
 
-Recommended attack order (Chris-discretion):
+**Code-side recon for Findings 1.2-1.5** (elevate CANDIDATE → DUAL-SOURCED):
+- **1.2 Directory:** locate AgentsPage agent-list reader component + endpoint + filter logic. `UnifiedAgentTemplate.objects.count()` check.
+- **1.3 Dreams:** verify `core/tasks_initiatives.py:907` is actual Dream creation point; diagnose why local initiatives aren't firing (gate, flag, or schedule).
+- **1.4 Channels:** confirm 5 CRUD writers; confirm NO signal handlers/event listeners for channel projection in `core/services/channels*` or similar.
+- **1.5 Learning:** **grep first** for `AgentLearningSession.objects.(create|update_or_create)` and `AgentCollaboration.objects.(create|update_or_create)` in `core/` BEFORE accepting the "0 writers" claim (Finding 1.1 lesson).
 
-**A. DECISIONS repoint (QUICK WIN, ~1 PR):**
-- `DecisionRecord` table has 0 rows + **0 writers anywhere** in codebase. UI reads from it → perpetually empty list.
-- `auto_promote_low_risk_decisions` beat task (runs every 2h, success) operates on **governance/Boardroom decision objects**, NOT `DecisionRecord`.
-- Find the model the boardroom flow uses, repoint AgentsPage Decisions sidebar at it.
+**Category 5 kickoff** — git-archeology Lens A over Sessions 1067 / 1035 / 1237 P2.b / 1240 cleanup arcs. Look for "deleted in git but referenced in docs/UI" mismatches. Rigby in parallel runs Lens B via `search_docs(originating_session=1067)` etc.
 
-**B. DIRECTORY sync (MEDIUM, visibility bug):**
-- AgentsPage shows **23 of 89 agents** (60+ invisible).
-- AGENT_MAP is the code registry; AgentsPage reads `UnifiedAgentTemplate` DB rows.
-- Find the upsert command that materializes AGENT_MAP → DB rows (likely a `manage.py` command); either run it locally or fix what's gating it (prod-only flag / filter).
-
-**C. DREAMS trigger (MEDIUM):**
-- 3 beat tasks running (cleanup-stale-dreams, dream-daily-surfacing, maintain-dream-backlog) are **maintenance not generators**. Dream creation gated on **upstream initiative triggers** in `tasks_initiatives.py:907`.
-- Fire one initiative cycle to populate, OR find why initiatives aren't firing locally.
-
-**D. CHANNELS publisher hook (REAL ARC — DESIGN SESSION FIRST):**
-- Chris: "don't delete this — inter-agent collaboration vision still on roadmap."
-- Rigby's design read: should be an **event-stream projection** — AgentExecution started/completed/failed + deliverable created + initiative status change → routed into channels by family/desk/workspace.
-- Missing: publisher hook layer listening to runtime events. All 5 existing writers are user-CRUD entry points.
-- Multi-PR. Defer past S1241 single arc.
-
-**E. LEARNING instrumentation (REAL ARC — DESIGN SESSION FIRST):**
-- `LearningInsight` writers exist in feedback_processing but no rows locally — likely signal not firing or filter blocking.
-- `AgentLearningSession` + `AgentCollaboration` have **0 writers anywhere** — pure scaffolds.
-- Rigby's design read: `AgentLearningSession` = durable "learning episode" (what failed, what changed, outcome); `AgentCollaboration` = cross-agent edges (review/edit/use).
-- Multi-PR. Defer past S1241 single arc.
-
-**Recommended S1241 ship target:** A (Decisions repoint) is the cleanest "validates the playbook in one PR" win. B (Directory sync) is the highest user-visible impact. C if time + initiative-trigger investigation cooperates.
+**Expand Category 1** to top-10 user-visible surfaces per Rigby's S1241 plan: Dashboard / Boardroom / Channels / Learning / Spiders / Initiatives / Content pipeline (in addition to the 5 AgentsPage surfaces already in there).
 
 #### Priority 3 — Pre-existing carryover tail (unchanged)
 
-- Rigby's memory store cap (S1239 close) — deferred to its own session (S1242+)
+- Rigby's memory store cap (S1239 close) — deferred to its own session
 - 80 spiders audit (last Session 1205)
 - 30 advisors audit (last Session 1208)
 - 9 body systems audit
@@ -225,7 +232,7 @@ Recommended attack order (Chris-discretion):
 
 #### Priority Last — Whatever Chris wants
 
-Sessions 1226-1240 totaled ~78 PRs. S1241 UI-only focus is the natural arc unless Sub-step E dogfood surfaces new polish items.
+Sessions 1226-1241 totaled ~78 PRs + 1 no-code audit foundation session. S1242 natural arc is Cat 1 expansion + Cat 5 kickoff. Method validated by Finding 1.1 worked specimen — apply same verifier-loop discipline to every future finding.
 
 **Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
 - Delete the 9 dormant agent class files (deferred since Session 1222)
