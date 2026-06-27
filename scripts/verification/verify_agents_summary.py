@@ -11,7 +11,7 @@ from datetime import timedelta
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from core.models.agents_registry import AgentExecution
+from core.models.agents_registry import AgentTaskExecution
 from django.utils import timezone
 
 print(f"\n{'='*80}")
@@ -19,7 +19,7 @@ print(f"🎯 AGENT EXECUTION SUMMARY - Real-Time Data Verification")
 print(f"{'='*80}\n")
 
 # Get recent executions for Alabama game
-recent = AgentExecution.objects.filter(
+recent = AgentTaskExecution.objects.filter(
     created_at__gte=timezone.now() - timedelta(hours=2),
     input_data__home_team='Alabama Crimson Tide'
 ).order_by('-completed_at')

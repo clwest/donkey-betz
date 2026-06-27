@@ -21,7 +21,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 import django
 django.setup()
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from core.agents.registry import AgentRegistry
 from core.tools import ToolRegistry
 from intelligence.shared_memory import SharedMemorySystem
@@ -209,7 +209,7 @@ except Exception as e:
 print("\n📊 TEST 8: Recent Executions Check")
 print("-" * 40)
 try:
-    recent_executions = AgentExecution.objects.all().order_by('-created_at')[:5]
+    recent_executions = AgentTaskExecution.objects.all().order_by('-created_at')[:5]
 
     if recent_executions:
         print(f"✅ Found {len(recent_executions)} recent executions:")

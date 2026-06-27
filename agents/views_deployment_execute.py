@@ -20,7 +20,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 
-from core.models.agents_registry import AgentExecution
+from core.models.agents_registry import AgentTaskExecution
 from core.models import GeneratedProject, GeneratedCode
 
 
@@ -208,7 +208,7 @@ def list_agent_executions(request):
     try:
         limit = int(request.GET.get('limit', 10))
 
-        executions = AgentExecution.objects.all().order_by('-started_at')[:limit]
+        executions = AgentTaskExecution.objects.all().order_by('-started_at')[:limit]
 
         results = []
         for execution in executions:

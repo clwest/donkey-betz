@@ -204,10 +204,10 @@ def test_agent_execution_logging():
     print("Testing Agent Execution Logging")
     print("-"*40)
 
-    from core.models.agents_registry import AgentExecution
+    from core.models.agents_registry import AgentTaskExecution
 
     # Count executions before
-    before_count = AgentExecution.objects.count()
+    before_count = AgentTaskExecution.objects.count()
 
     # Create some content
     result = agent_create_blog(
@@ -216,7 +216,7 @@ def test_agent_execution_logging():
     )
 
     # Count executions after
-    after_count = AgentExecution.objects.count()
+    after_count = AgentTaskExecution.objects.count()
 
     if after_count > before_count:
         print(f"✅ Execution logged successfully!")
@@ -224,7 +224,7 @@ def test_agent_execution_logging():
         print(f"   Executions after: {after_count}")
 
         # Get the latest execution
-        latest = AgentExecution.objects.order_by('-created_at').first()
+        latest = AgentTaskExecution.objects.order_by('-created_at').first()
         if latest:
             print(f"   Latest execution:")
             print(f"     Agent: {latest.template.name if latest.template else 'Unknown'}")

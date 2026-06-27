@@ -394,7 +394,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
     def get_real_orchestra_data_from_db(self):
         """Get real Neural Orchestra data with dynamic connections and workflows"""
         try:
-            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration
             from .orchestration_reality_connector import orchestration_connector
             from .models_unified_system import Advisor
             from django.db.models import Count
@@ -410,7 +410,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
             formatted_agents = []
             for agent in agents_queryset:
                 # Determine realistic agent status based on recent activity
-                recent_executions = AgentExecution.objects.filter(
+                recent_executions = AgentTaskExecution.objects.filter(
                     template_id=agent['id'],
                     created_at__gte=timezone.now() - timedelta(hours=24)
                 ).count()
@@ -494,7 +494,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
                 created_at__gte=one_hour_ago
             ).count()
 
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 created_at__gte=one_day_ago
             )
             total_recent = recent_executions.count()
@@ -707,12 +707,12 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_agent_details(self, agent_id):
         """Get detailed information about a specific agent"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
         try:
             agent = UnifiedAgentTemplate.objects.get(id=agent_id, is_active=True)
 
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 agent_id=agent_id
             ).order_by('-started_at')[:10]
 
@@ -908,7 +908,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             }
 
             # PHASE 2 FIX: Calculate real metrics from database
-            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
             from core.models import Revenue
             from core.models_unified_system import Advisor
             from datetime import timedelta
@@ -918,7 +918,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
 
             # Get active agents (executed in last hour)
             one_hour_ago = timezone.now() - timedelta(hours=1)
-            active_agent_ids = AgentExecution.objects.filter(
+            active_agent_ids = AgentTaskExecution.objects.filter(
                 created_at__gte=one_hour_ago
             ).values_list('template_id', flat=True).distinct()
             active_agents_count = len(set(active_agent_ids))
@@ -936,7 +936,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             ).count()
 
             # Calculate success rate from recent executions
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 created_at__gte=timezone.now() - timedelta(days=1)
             )
             total_recent = recent_executions.count()
@@ -1089,7 +1089,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def run_system_diagnostics(self):
         """Run comprehensive system diagnostics"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
         from core.models import Revenue
         from django.db import connection
 
@@ -1108,7 +1108,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
         diagnostics['agents_registered'] = total_agents
 
         # Execution history
-        total_executions = AgentExecution.objects.count()
+        total_executions = AgentTaskExecution.objects.count()
         diagnostics['total_executions'] = total_executions
 
         # Revenue tracking

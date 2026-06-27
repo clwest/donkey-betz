@@ -200,10 +200,10 @@ class SystemRealityChecker:
             # Check agents
             checks_performed.append("agent_data_check")
             try:
-                from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
                 agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-                execution_count = AgentExecution.objects.count()
+                execution_count = AgentTaskExecution.objects.count()
 
                 details.update({
                     'active_agents': agent_count,
@@ -581,10 +581,10 @@ class SystemRealityChecker:
             # Check agent models
             checks_performed.append("agent_models_check")
             try:
-                from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+                from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
                 total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-                total_executions = AgentExecution.objects.count()
+                total_executions = AgentTaskExecution.objects.count()
 
                 details.update({
                     'total_agents': total_agents,
@@ -599,7 +599,7 @@ class SystemRealityChecker:
                     details['has_full_agent_count'] = True
 
                 # Check for recent executions
-                recent_executions = AgentExecution.objects.filter(
+                recent_executions = AgentTaskExecution.objects.filter(
                     started_at__gte=timezone.now() - timedelta(hours=24)
                 ).count()
 
@@ -945,14 +945,14 @@ class SystemRealityChecker:
             # Check agent execution history
             checks_performed.append("execution_history_check")
             try:
-                from core.models.agents_registry import AgentExecution
+                from core.models.agents_registry import AgentTaskExecution
 
-                total_executions = AgentExecution.objects.count()
-                recent_executions = AgentExecution.objects.filter(
+                total_executions = AgentTaskExecution.objects.count()
+                recent_executions = AgentTaskExecution.objects.filter(
                     started_at__gte=timezone.now() - timedelta(hours=24)
                 ).count()
 
-                successful_executions = AgentExecution.objects.filter(
+                successful_executions = AgentTaskExecution.objects.filter(
                     status='completed'
                 ).count()
 

@@ -24,7 +24,7 @@ from django.utils import timezone
 
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentOrchestration,
     LLMProvider,
     AgentStatus
@@ -404,7 +404,7 @@ class AgentExecutor:
         context: Optional[Dict[str, Any]] = None,
         orchestration: Optional[AgentOrchestration] = None,
         user: Optional[Any] = None
-    ) -> AgentExecution:
+    ) -> AgentTaskExecution:
         """
         Execute an agent with a given task
 
@@ -416,7 +416,7 @@ class AgentExecutor:
             user: Optional user who initiated this execution
 
         Returns:
-            AgentExecution: Execution record with results
+            AgentTaskExecution: Execution record with results
         """
         start_time = time.time()
         context = context or {}
@@ -434,7 +434,7 @@ class AgentExecutor:
             context_tracking = {}
 
         # Create execution record
-        execution = AgentExecution.objects.create(
+        execution = AgentTaskExecution.objects.create(
             template=agent,
             execution_id=f"exec_{agent.name}_{int(time.time())}",
             task_description=task,

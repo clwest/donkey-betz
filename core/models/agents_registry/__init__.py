@@ -17,7 +17,7 @@ Features:
 - Self-aware registry system
 
 Usage:
-    from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+    from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
     # or
     from core.models import UnifiedAgentTemplate  # after adding to __all__
 """
@@ -31,7 +31,7 @@ from .models import (
 
     # Models
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentContribution,
     AgentOrchestration,
     AgentTool,
@@ -51,7 +51,7 @@ __all__ = [
 
     # Models
     'UnifiedAgentTemplate',
-    'AgentExecution',
+    'AgentTaskExecution',
     'AgentContribution',
     'AgentOrchestration',
     'AgentTool',

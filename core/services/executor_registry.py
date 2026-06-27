@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.utils import timezone
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentStatus
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentStatus
 from agents.executors.base_executor import (
     BaseAgentExecutor,
     ExecutionContext,
@@ -337,7 +337,7 @@ class ExecutorRegistrationSystem:
     async def _create_db_execution_record(self,
                                         agent_name: str,
                                         task_data: Dict[str, Any],
-                                        context: ExecutionContext) -> Optional[AgentExecution]:
+                                        context: ExecutionContext) -> Optional[AgentTaskExecution]:
         """Create database record for execution tracking"""
 
         try:
@@ -352,7 +352,7 @@ class ExecutorRegistrationSystem:
                 return None
 
             # Create execution record
-            execution = AgentExecution.objects.create(
+            execution = AgentTaskExecution.objects.create(
                 template=agent_template,
                 execution_id=context.task_id,
                 task_description=task_data.get('description', f'Execute {agent_name}'),
@@ -372,7 +372,7 @@ class ExecutorRegistrationSystem:
             return None
 
     async def _update_db_execution_record(self,
-                                        execution: Optional[AgentExecution],
+                                        execution: Optional[AgentTaskExecution],
                                         result: ExecutionResult):
         """Update database execution record with results"""
 
@@ -418,7 +418,7 @@ class ExecutorRegistrationSystem:
             self.logger.error(f"Failed to update DB execution record: {e}")
 
     async def _mark_execution_failed(self,
-                                   execution: AgentExecution,
+                                   execution: AgentTaskExecution,
                                    error_message: str):
         """Mark execution as failed in database"""
 

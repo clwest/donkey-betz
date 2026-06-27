@@ -16,7 +16,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 
 # Session 392: Updated to use canonical import path
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentStatus
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentStatus
 from content.ai_providers import AIProviderManager
 from core.tools import ToolRegistry
 
@@ -164,7 +164,7 @@ def execute_agent_with_tools(self, execution_id: str):
     """
     try:
         # Get the execution instance
-        execution = AgentExecution.objects.get(execution_id=execution_id)
+        execution = AgentTaskExecution.objects.get(execution_id=execution_id)
         agent_template = execution.template
         
         logger.info(f"Starting enhanced execution for {execution_id} with agent {agent_template.name}")
@@ -294,7 +294,7 @@ Provide specific, actionable insights based on the real data available.
         logger.error(f"Enhanced execution failed for {execution_id}: {e}\n{traceback.format_exc()}")
         
         try:
-            execution = AgentExecution.objects.get(execution_id=execution_id)
+            execution = AgentTaskExecution.objects.get(execution_id=execution_id)
             execution.status = AgentStatus.FAILED
             execution.error_message = str(e)
             execution.completed_at = timezone.now()
@@ -338,7 +338,7 @@ def execute_sports_agent_orchestration(game_id: str, agent_ids: List[str], conte
                 agent = UnifiedAgentTemplate.objects.get(name=agent_id)
                 
                 # Create execution
-                execution = AgentExecution.objects.create(
+                execution = AgentTaskExecution.objects.create(
                     template=agent,
                     execution_id=f"{agent_id}_{game_id}_{datetime.now().timestamp()}",
                     task_description=f"Analyze game {game_id} from {agent.specialization} perspective",

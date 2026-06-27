@@ -23,7 +23,7 @@ from django.conf import settings
 
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import (
-    UnifiedAgentTemplate, AgentExecution, AgentStatus
+    UnifiedAgentTemplate, AgentTaskExecution, AgentStatus
 )
 
 User = get_user_model()
@@ -130,7 +130,7 @@ class AgentExecutionConsumer(AgentBaseConsumer):
     def get_user_executions(self):
         """Get user's recent agent executions"""
         try:
-            executions = AgentExecution.objects.filter(
+            executions = AgentTaskExecution.objects.filter(
                 user=self.user
             ).select_related('template').order_by('-created_at')[:10]
             
@@ -156,7 +156,7 @@ class AgentExecutionConsumer(AgentBaseConsumer):
     def get_active_executions(self):
         """Get currently active agent executions"""
         try:
-            active_executions = AgentExecution.objects.filter(
+            active_executions = AgentTaskExecution.objects.filter(
                 status__in=[AgentStatus.PENDING, AgentStatus.RUNNING]
             ).select_related('template', 'user').order_by('-created_at')[:20]
             
@@ -236,7 +236,7 @@ class AgentExecutionConsumer(AgentBaseConsumer):
     def get_execution(self, execution_id):
         """Get execution details"""
         try:
-            execution = AgentExecution.objects.select_related('template', 'user').get(id=execution_id)
+            execution = AgentTaskExecution.objects.select_related('template', 'user').get(id=execution_id)
             return {
                 'id': str(execution.id),
                 'agent_id': str(execution.template.id),
@@ -250,7 +250,7 @@ class AgentExecutionConsumer(AgentBaseConsumer):
                 'started_at': execution.started_at.isoformat() if execution.started_at else None,
                 'completed_at': execution.completed_at.isoformat() if execution.completed_at else None
             }
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             return None
     
     async def send_execution_logs(self, execution_id):
@@ -270,9 +270,9 @@ class AgentExecutionConsumer(AgentBaseConsumer):
     def get_execution_logs(self, execution_id):
         """Get execution logs from database"""
         try:
-            execution = AgentExecution.objects.get(id=execution_id)
+            execution = AgentTaskExecution.objects.get(id=execution_id)
             return execution.execution_log
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             return []
     
     async def cancel_execution(self, execution_id):
@@ -295,14 +295,14 @@ class AgentExecutionConsumer(AgentBaseConsumer):
     def cancel_execution_db(self, execution_id):
         """Cancel execution in database"""
         try:
-            execution = AgentExecution.objects.get(id=execution_id, user=self.user)
+            execution = AgentTaskExecution.objects.get(id=execution_id, user=self.user)
             if execution.status in [AgentStatus.PENDING, AgentStatus.RUNNING]:
                 execution.status = AgentStatus.CANCELLED
                 execution.completed_at = timezone.now()
                 execution.save()
                 return True
             return False
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             return False
     
     # Message handlers for group messages
@@ -423,14 +423,14 @@ class AgentOrchestrationConsumer(AgentBaseConsumer):
             from django.db.models import Count, Avg
             
             # Get execution statistics
-            execution_stats = AgentExecution.objects.values('status').annotate(count=Count('id'))
+            execution_stats = AgentTaskExecution.objects.values('status').annotate(count=Count('id'))
             stats_dict = {stat['status']: stat['count'] for stat in execution_stats}
             
             # Get active agents count
             active_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
             
             # Get average execution time (for completed executions)
-            avg_execution_time = AgentExecution.objects.filter(
+            avg_execution_time = AgentTaskExecution.objects.filter(
                 status=AgentStatus.COMPLETED
             ).aggregate(
                 avg_duration=Avg('execution_time_seconds')
@@ -491,7 +491,7 @@ class AgentOrchestrationConsumer(AgentBaseConsumer):
             agent = UnifiedAgentTemplate.objects.get(id=agent_id)
             
             # Get recent executions for this agent
-            recent_executions = AgentExecution.objects.filter(
+            recent_executions = AgentTaskExecution.objects.filter(
                 template=agent
             ).order_by('-created_at')[:5]
             

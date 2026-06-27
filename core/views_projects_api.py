@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 
 from core.models_partnership import PartnershipProject
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -649,7 +649,7 @@ def assign_agent_to_project(request, project_id):
         agent = UnifiedAgentTemplate.objects.get(id=agent_id, is_active=True)
 
         # Create agent execution record
-        execution = AgentExecution.objects.create(
+        execution = AgentTaskExecution.objects.create(
             template=agent,
             user=user,
             execution_id=f"{agent.name}_{project_id}_{int(datetime.now().timestamp())}",
@@ -681,7 +681,7 @@ def assign_agent_to_project(request, project_id):
         project.save()
 
         # Calculate estimated time based on agent's average
-        avg_time = AgentExecution.objects.filter(
+        avg_time = AgentTaskExecution.objects.filter(
             template=agent,
             status='completed'
         ).aggregate(Avg('execution_time_seconds'))

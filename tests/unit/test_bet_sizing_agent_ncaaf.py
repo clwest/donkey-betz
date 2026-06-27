@@ -3,13 +3,13 @@ import os, uuid, pytest
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_core.settings")
 pytestmark = pytest.mark.django_db
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from sports.models import Game
 from agents import tasks as agent_tasks
 
 
 def _fake_execute_agent(execution_id: str):
-    exec_obj = AgentExecution.objects.get(execution_id=execution_id)
+    exec_obj = AgentTaskExecution.objects.get(execution_id=execution_id)
     exec_obj.status = "completed"
     exec_obj.llm_response = (
         "Kelly bet sizing computed for NCAAF: Oklahoma @ Temple, spread -21.5."
@@ -49,7 +49,7 @@ def test_kelly_bet_sizing_for_ncaaf(monkeypatch):
     }
 
     execution_id = f"test_{agent.name}_{uuid.uuid4().hex[:8]}"
-    exec_obj = AgentExecution.objects.create(
+    exec_obj = AgentTaskExecution.objects.create(
         execution_id=execution_id,
         template=agent,
         task_description=f"Analyze NCAAF: {game.away_team.name} @ {game.home_team.name} (Kelly sizing)",

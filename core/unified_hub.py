@@ -393,7 +393,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_real_orchestra_data(self) -> Dict[str, Any]:
         """Get REAL Neural Orchestra data - all 149 agents with live activity!"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
         # Get ALL registered agents (should be 149!)
         agents = list(UnifiedAgentTemplate.objects.filter(
@@ -401,7 +401,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         ).values('id', 'name', 'display_name', 'specialization'))
 
         # Get recent executions to determine status
-        recent_executions = AgentExecution.objects.filter(
+        recent_executions = AgentTaskExecution.objects.filter(
             started_at__gte=timezone.now() - timedelta(hours=1)
         ).values('template_id', 'status')
 
@@ -457,7 +457,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         workflows = []
 
         # Add workflows from database
-        active_db_executions = AgentExecution.objects.filter(
+        active_db_executions = AgentTaskExecution.objects.filter(
             status__in=['running', 'pending']
         ).select_related('parent_orchestration')[:3]
 
@@ -670,14 +670,14 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_control_center_data(self) -> Dict[str, Any]:
         """Get Control Center overview data"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
         from intelligence.models import OpportunityActionPlan, RevenueMetrics
 
         return {
             'type': 'control_update',
             'system_overview': {
                 'agents_active': UnifiedAgentTemplate.objects.filter(is_active=True).count(),
-                'executions_today': AgentExecution.objects.filter(
+                'executions_today': AgentTaskExecution.objects.filter(
                     started_at__gte=timezone.now() - timedelta(hours=24)
                 ).count(),
                 'opportunities_active': OpportunityActionPlan.objects.exclude(

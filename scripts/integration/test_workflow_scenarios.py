@@ -21,7 +21,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration
 from sports.models import Game, Team, League, BettingMarket, OddsLine, Sportsbook, BankrollManagement
 from content.models import Document, ContentGeneration
 

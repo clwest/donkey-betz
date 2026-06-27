@@ -722,7 +722,7 @@ def get_project_slack_channel(request, project_id):
     """
     try:
         from core.models_partnership import PartnershipProject
-        from core.models import Agent, AgentChannel, ChannelMessage, ChannelMembership
+        from core.models import Agent, ProjectChannel, ChannelMessage, ChannelMembership
 
         project = PartnershipProject.objects.get(id=project_id)
         project_name = getattr(project, 'project_name', '') or getattr(project, 'name', '') or ''
@@ -735,7 +735,7 @@ def get_project_slack_channel(request, project_id):
             channel_name = f"project-{str(project_id)[:8]}"
 
         # Get or create the channel
-        channel, created = AgentChannel.objects.get_or_create(
+        channel, created = ProjectChannel.objects.get_or_create(
             name=channel_name,
             defaults={
                 'description': f"Discussion channel for: {project_name}",
@@ -844,7 +844,7 @@ def post_project_slack_message(request, project_id):
 
     try:
         from core.models_partnership import PartnershipProject
-        from core.models import Agent, AgentChannel, ChannelMessage
+        from core.models import Agent, ProjectChannel, ChannelMessage
         import re
 
         project = PartnershipProject.objects.get(id=project_id)
@@ -868,7 +868,7 @@ def post_project_slack_message(request, project_id):
             channel_name = f"project-{str(project_id)[:8]}"
 
         # Get or create channel
-        channel, _ = AgentChannel.objects.get_or_create(
+        channel, _ = ProjectChannel.objects.get_or_create(
             name=channel_name,
             defaults={
                 'description': f"Discussion channel for: {project_name}",

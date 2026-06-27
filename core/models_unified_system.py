@@ -16069,9 +16069,18 @@ class OriginalityScore(models.Model):
 # Session 319: Agent Slack - Multi-Agent Channel Communication
 # =============================================================================
 
-class AgentChannel(models.Model):
-    """
-    A Slack-like channel where multiple agents can collaborate.
+class ProjectChannel(models.Model):
+    """Project-scoped Slack-style channel (renamed from `core.AgentChannel` in S1244).
+
+    Removes the cross-app name collision with `agents.AgentChannel` (in
+    `core.models.agents_registry.models`, the orchestration-oriented variant).
+    Different concepts — this one is project-scoped Slack channels with
+    `project_id` FK, pinned messages, and member counts. The agents variant
+    has orchestration_id, active_agents tracking, and a richer metadata model.
+
+    Both tables empty (0 rows). Renamed for clarity; not removed because
+    the slack-channel project surface may still be built out. Audit:
+    deliverable 86870fdd-… Finding 1.4.
 
     Channels are topic-based rooms where agents can join, share knowledge,
     and work together on projects. Each channel has a purpose and can be
@@ -16213,7 +16222,7 @@ class ChannelMembership(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     channel = models.ForeignKey(
-        AgentChannel,
+        ProjectChannel,
         on_delete=models.CASCADE,
         related_name='memberships'
     )
@@ -16280,7 +16289,7 @@ class ChannelMessage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     channel = models.ForeignKey(
-        AgentChannel,
+        ProjectChannel,
         on_delete=models.CASCADE,
         related_name='channel_messages'
     )

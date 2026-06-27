@@ -29,7 +29,7 @@ from asgiref.sync import sync_to_async
 
 # Import models
 from core.models.agents_registry import (
-    UnifiedAgentTemplate, AgentExecution, AgentOrchestration, 
+    UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration, 
     AgentRegistry, AgentSpecialization
 )
 from sports.models import (
@@ -335,7 +335,7 @@ class CrossSystemWorkflowTester:
                     )(name=agent_name, is_active=True)
                     
                     execution = await sync_to_async(
-                        lambda: AgentExecution.objects.create(
+                        lambda: AgentTaskExecution.objects.create(
                             template=agent_template,
                             user=self.test_user,
                             task_description=f"Analyze {str(self.test_game)}",
@@ -810,7 +810,7 @@ All recommendations are based on mathematical models and historical analysis. Pa
                     )(name=agent_name, is_active=True)
                     
                     execution = await sync_to_async(
-                        lambda: AgentExecution.objects.create(
+                        lambda: AgentTaskExecution.objects.create(
                             template=agent_template,
                             user=self.test_user,
                             task_description="Performance benchmark test",
@@ -848,7 +848,7 @@ All recommendations are based on mathematical models and historical analysis. Pa
             )()
             
             recent_executions = await sync_to_async(
-                lambda: AgentExecution.objects.filter(
+                lambda: AgentTaskExecution.objects.filter(
                     created_at__gte=timezone.now() - timedelta(hours=24)
                 ).count()
             )()

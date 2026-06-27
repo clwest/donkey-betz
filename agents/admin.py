@@ -7,7 +7,7 @@ from django.contrib import admin
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentOrchestration,
     AgentTool,
     AgentRegistry
@@ -86,7 +86,7 @@ class UnifiedAgentTemplateAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('creator', 'parent_template')
 
 
-@admin.register(AgentExecution)
+@admin.register(AgentTaskExecution)
 class AgentExecutionAdmin(admin.ModelAdmin):
     list_display = [
         'execution_id', 'template_name', 'status', 'priority', 
