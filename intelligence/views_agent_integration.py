@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from .agent_execution_pipeline import AgentExecutionPipeline
 from .agent_instruction_parser import AgentInstructionParser
-from .models import ActionPlan, AgentExecution
+from .models import ActionPlan, ActionPlanExecution
 from core.agents.registry import get_agent_registry
 
 logger = logging.getLogger(__name__)
@@ -312,7 +312,7 @@ def get_execution_status(request, execution_id):
     try:
         # Try to get execution from database
         try:
-            execution = AgentExecution.objects.get(id=execution_id)
+            execution = ActionPlanExecution.objects.get(id=execution_id)
             return Response({
                 'success': True,
                 'status': execution.status,
@@ -321,7 +321,7 @@ def get_execution_status(request, execution_id):
                 'completed_at': execution.completed_at,
                 'error_message': execution.error_message
             })
-        except AgentExecution.DoesNotExist:
+        except ActionPlanExecution.DoesNotExist:
             return Response({
                 'success': False,
                 'error': 'Execution not found'

@@ -23,7 +23,7 @@ from django.core.cache import cache
 from django.db import transaction
 
 # Import existing models
-from intelligence.models import AgentExecution
+from intelligence.models import ActionPlanExecution
 from core.models_unified_system import Agent as UnifiedAgentTemplate  # W002 fix: Agent model used as alias
 from advisors.registry import get_advisor_registry, AdvisorProfile
 
@@ -139,7 +139,7 @@ class SpiderPlatformIntegration:
 
             # Create agent execution with intelligence data
             with transaction.atomic():
-                execution = AgentExecution.objects.create(
+                execution = ActionPlanExecution.objects.create(
                     template=agent_template,
                     input_data={
                         'intelligence': intelligence_data,
