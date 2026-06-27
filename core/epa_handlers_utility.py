@@ -541,7 +541,7 @@ class EPAUtilityMixin:
             production_section = []
             try:
                 from core.models_autonomous_studio import ContentChannel, ChannelEpisode
-                from core.models_unified_system import SpiderData
+                from core.models_unified_system import LegacySpiderData
 
                 # Content channel status
                 active_channels = ContentChannel.objects.filter(status='active').count()
@@ -553,7 +553,7 @@ class EPAUtilityMixin:
                     production_section.append(f"\n📺 **Content:** {active_channels} active channels, {recent_episodes} episodes created (24h)")
 
                 # Spider data freshness
-                recent_spider_data = SpiderData.objects.filter(
+                recent_spider_data = LegacySpiderData.objects.filter(
                     created_at__gte=last_hour
                 ).count()
 

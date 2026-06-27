@@ -1009,10 +1009,10 @@ class LearningPatternEngine:
             # Which spider data types are most valuable (volume, relevance, actionability)?
             g_total = patterns_created + patterns_updated
             try:
-                from core.models_unified_system import SpiderData
+                from core.models_unified_system import LegacySpiderData
 
                 spider_stats = (
-                    SpiderData.objects.filter(created_at__gte=since)
+                    LegacySpiderData.objects.filter(created_at__gte=since)
                     .values('data_type')
                     .annotate(
                         total=Count('id'),

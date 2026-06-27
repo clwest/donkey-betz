@@ -17,7 +17,7 @@ from django.db import IntegrityError
 from core.models_unified_system import (
     MarketIntelligenceBrief,
     PredictionOutcome,
-    SpiderData,
+    LegacySpiderData,
     UserWatchlistItem,
 )
 from core.models_autonomous_alerts import StockMarketAlert
@@ -75,7 +75,7 @@ def stock_hub(request):
         correct_30d = predictions_with_30d.filter(was_correct_30_days=True).count()
         accuracy_30d = round((correct_30d / total_30d) * 100, 1) if total_30d > 0 else None
 
-        sec_filings_count = SpiderData.objects.filter(spider_name='sec_edgar').count()
+        sec_filings_count = LegacySpiderData.objects.filter(spider_name='sec_edgar').count()
 
         # Top alerts (6 most recent)
         top_alerts = []
@@ -113,7 +113,7 @@ def stock_hub(request):
 
         # Market news — expand raw_data.items from financial spiders
         market_news = []
-        for row in SpiderData.objects.filter(
+        for row in LegacySpiderData.objects.filter(
             spider_name__in=FINANCIAL_NEWS_SPIDERS
         ).order_by('-created_at')[:20]:
             raw = row.raw_data or {}
@@ -137,7 +137,7 @@ def stock_hub(request):
 
         # SEC recent — expand raw_data.items
         sec_recent = []
-        for row in SpiderData.objects.filter(
+        for row in LegacySpiderData.objects.filter(
             spider_name='sec_edgar'
         ).order_by('-created_at')[:10]:
             raw = row.raw_data or {}
@@ -219,7 +219,7 @@ def stock_dashboard(request):
         accuracy_30d = round((correct_30d / total_30d) * 100, 1) if total_30d > 0 else None
 
         # SEC filings count
-        sec_filings_count = SpiderData.objects.filter(spider_name='sec_edgar').count()
+        sec_filings_count = LegacySpiderData.objects.filter(spider_name='sec_edgar').count()
 
         # Total briefs
         total_briefs = MarketIntelligenceBrief.objects.count()
@@ -466,7 +466,7 @@ def stock_sec_filings(request):
         limit = int(request.GET.get('limit', 20))
         offset = int(request.GET.get('offset', 0))
 
-        qs = SpiderData.objects.filter(spider_name='sec_edgar').order_by('-created_at')
+        qs = LegacySpiderData.objects.filter(spider_name='sec_edgar').order_by('-created_at')
         total = qs.count()
         filings = qs[offset:offset + limit]
 
@@ -506,7 +506,7 @@ def stock_market_news(request):
         # Collect all news items from financial spiders
         all_news = []
         sources_seen = set()
-        for row in SpiderData.objects.filter(
+        for row in LegacySpiderData.objects.filter(
             spider_name__in=FINANCIAL_NEWS_SPIDERS
         ).order_by('-created_at')[:200]:
             raw = row.raw_data or {}
@@ -690,7 +690,7 @@ def ticker_lookup(request, symbol):
         if company_name:
             # Use the first word of the company name to avoid suffix mismatches
             search_term = company_name.split()[0] if company_name else symbol
-            sec_qs = SpiderData.objects.filter(
+            sec_qs = LegacySpiderData.objects.filter(
                 spider_name='sec_edgar',
                 raw_data__icontains=search_term,
             ).order_by('-created_at')
@@ -710,7 +710,7 @@ def ticker_lookup(request, symbol):
 
     # 6. Spider data — recent mentions across financial spiders
     try:
-        spider_qs = SpiderData.objects.filter(
+        spider_qs = LegacySpiderData.objects.filter(
             spider_name__in=FINANCIAL_SPIDERS,
             raw_data__icontains=symbol,
         ).exclude(

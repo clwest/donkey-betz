@@ -1044,7 +1044,7 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             List of relevant legal intelligence dicts
         """
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
             from datetime import timedelta
 
@@ -1056,20 +1056,20 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                 'colorado_family_law', 'justia_family_law'
             ]
 
-            # Query SpiderData for legal content
-            query = SpiderData.objects.filter(
+            # Query LegacySpiderData for legal content
+            query = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=legal_sources
             )
 
             # Order by recency and get results
-            # Note: SpiderData uses JSON fields so we filter by spider_name (legal spiders)
+            # Note: LegacySpiderData uses JSON fields so we filter by spider_name (legal spiders)
             # then do keyword relevance scoring in Python
             results = query.order_by('-created_at')[:limit]
 
             intelligence = []
             for item in results:
-                # SpiderData stores data in raw_data or processed_data JSON fields
+                # LegacySpiderData stores data in raw_data or processed_data JSON fields
                 raw_data = item.raw_data or {}
                 processed_data = item.processed_data or {}
 

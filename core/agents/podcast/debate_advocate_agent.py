@@ -347,7 +347,7 @@ CRITICAL: Use research tools to find real evidence. Never fabricate statistics o
         focus_areas: List[str]
     ) -> Dict[str, Any]:
         """Research positive aspects of a topic using spider data."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         # Query spider data for positive content
         keywords = [topic] + focus_areas + ["benefits", "success", "innovation", "growth"]
@@ -356,7 +356,7 @@ CRITICAL: Use research tools to find real evidence. Never fabricate statistics o
         recent_date = timezone.now() - timedelta(days=30)
 
         try:
-            spider_results = SpiderData.objects.filter(
+            spider_results = LegacySpiderData.objects.filter(
                 created_at__gte=recent_date,
                 embedding_text__icontains=topic,
             )[:10]

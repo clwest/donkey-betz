@@ -434,7 +434,7 @@ class ConversationOrchestrator:
                 ),
             },
             'TrendAnalysisAgent': {
-                'model_path': 'core.models_unified_system.SpiderData',
+                'model_path': 'core.models_unified_system.LegacySpiderData',
                 'filters': {'data_type__in': ['tech', 'news', 'ai_ml', 'social', 'financial']},
                 'order': '-created_at',
                 'fields': ['spider_name', 'data_type', 'created_at'],
@@ -846,13 +846,13 @@ class ConversationOrchestrator:
 
         try:
             # Spider data stats
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
             from datetime import timedelta
 
-            stats['spider_data_total'] = SpiderData.objects.count()
+            stats['spider_data_total'] = LegacySpiderData.objects.count()
             recent = timezone.now() - timedelta(hours=24)
-            stats['spider_data_24h'] = SpiderData.objects.filter(created_at__gte=recent).count()
+            stats['spider_data_24h'] = LegacySpiderData.objects.filter(created_at__gte=recent).count()
         except Exception as e:
             logger.warning(f"Could not get spider data stats: {e}")
             stats['spider_data_total'] = 'unknown'

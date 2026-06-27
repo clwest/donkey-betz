@@ -300,10 +300,10 @@ class ProactiveIntelligenceService:
         trending = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             # Get trending content topics - use correct field names
             # Session 807: Defer embedding fields to reduce egress costs
-            content_data = SpiderData.objects.filter(
+            content_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['techcrunch', 'hackernews', 'theverge', 'wired', 'reddit']
             ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
@@ -332,9 +332,9 @@ class ProactiveIntelligenceService:
         trending = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             # Session 807: Defer embedding fields to reduce egress costs
-            design_data = SpiderData.objects.filter(
+            design_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['behance', 'dribbble', 'awwwards', 'unsplash']
             ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]
@@ -362,9 +362,9 @@ class ProactiveIntelligenceService:
         trending = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             # Session 807: Defer embedding fields to reduce egress costs
-            tech_data = SpiderData.objects.filter(
+            tech_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['techcrunch', 'hackernews', 'theverge', 'wired', 'mit_tech_review', 'arstechnica']
             ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
@@ -398,9 +398,9 @@ class ProactiveIntelligenceService:
         alerts = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             # Session 807: Defer embedding fields to reduce egress costs
-            legal_data = SpiderData.objects.filter(
+            legal_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['courtlistener', 'legal_news', 'findlaw', 'colorado_family_law']
             ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]

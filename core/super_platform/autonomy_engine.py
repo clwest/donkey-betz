@@ -354,7 +354,7 @@ class AutonomyEngine:
         actions = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from ai_core.spiders.spider_registry import SpiderRegistry
 
             registry = SpiderRegistry()
@@ -363,7 +363,7 @@ class AutonomyEngine:
             cutoff = timezone.now() - timedelta(hours=6)
             stale_categories = set()
 
-            recent_data = SpiderData.objects.filter(
+            recent_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff
             ).values('spider_name').annotate(count=Count('id'))
 

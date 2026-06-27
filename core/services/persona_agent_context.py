@@ -162,16 +162,16 @@ class PersonaAgentContextBuilder:
     """
 
     def __init__(self):
-        self.SpiderData = None
+        self.LegacySpiderData = None
         self._load_models()
 
     def _load_models(self):
         """Lazy load Django models to avoid import issues."""
         try:
-            from core.models_unified_system import SpiderData
-            self.SpiderData = SpiderData
+            from core.models_unified_system import LegacySpiderData
+            self.LegacySpiderData = LegacySpiderData
         except ImportError:
-            logger.warning("Could not import SpiderData model")
+            logger.warning("Could not import LegacySpiderData model")
 
     def is_persona_agent(self, agent) -> bool:
         """
@@ -219,7 +219,7 @@ class PersonaAgentContextBuilder:
         Returns:
             List of spider data items with title, summary, source
         """
-        if not self.SpiderData:
+        if not self.LegacySpiderData:
             return []
 
         mapping = self.get_mapping_for_agent(agent)
@@ -230,7 +230,7 @@ class PersonaAgentContextBuilder:
         spiders = mapping.get('spiders', [])
 
         # Query spider data
-        data = self.SpiderData.objects.filter(
+        data = self.LegacySpiderData.objects.filter(
             spider_name__in=spiders,
             created_at__gte=since
         ).order_by('-created_at')[:limit * 3]  # Get more, we'll filter
@@ -246,7 +246,7 @@ class PersonaAgentContextBuilder:
         return results
 
     def _extract_item_content(self, spider_data) -> Optional[Dict[str, Any]]:
-        """Extract readable content from a SpiderData record."""
+        """Extract readable content from a LegacySpiderData record."""
         content = {
             'source': spider_data.spider_name,
             'title': None,
@@ -351,7 +351,7 @@ class PersonaAgentContextBuilder:
         Returns:
             Dict with summary, key_insights, data_count
         """
-        if not self.SpiderData:
+        if not self.LegacySpiderData:
             return {}
 
         mapping = self.get_mapping_for_agent(agent)
@@ -362,7 +362,7 @@ class PersonaAgentContextBuilder:
         spiders = mapping.get('spiders', [])
 
         # Get data count
-        data_count = self.SpiderData.objects.filter(
+        data_count = self.LegacySpiderData.objects.filter(
             spider_name__in=spiders,
             created_at__gte=since
         ).count()

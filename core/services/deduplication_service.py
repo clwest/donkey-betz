@@ -77,8 +77,8 @@ class DeduplicationService:
     NO_DATA_WINDOW_HOURS = 168  # 7 days
 
     def __init__(self):
-        from core.models_unified_system import SpiderData, AgentConversation, AgentDream
-        self.SpiderData = SpiderData
+        from core.models_unified_system import LegacySpiderData, AgentConversation, AgentDream
+        self.LegacySpiderData = LegacySpiderData
         self.AgentConversation = AgentConversation
         self.AgentDream = AgentDream
 
@@ -134,12 +134,12 @@ class DeduplicationService:
         Check if a spider URL already exists in the database.
 
         Returns:
-            Tuple of (exists: bool, existing_record: SpiderData or None)
+            Tuple of (exists: bool, existing_record: LegacySpiderData or None)
         """
         if not url or url in ['internal', 'on-demand-execution']:
             # These are internal markers, not real URLs - allow them but don't duplicate
             cutoff = timezone.now() - timedelta(hours=1)
-            existing = self.SpiderData.objects.filter(
+            existing = self.LegacySpiderData.objects.filter(
                 source_url=url,
                 created_at__gte=cutoff
             ).first()
@@ -152,13 +152,13 @@ class DeduplicationService:
         if spider_name:
             query &= Q(spider_name=spider_name)
 
-        existing = self.SpiderData.objects.filter(query).first()
+        existing = self.LegacySpiderData.objects.filter(query).first()
         return (existing is not None, existing)
 
     def get_duplicate_spider_urls(self, limit: int = 100) -> List[Dict]:
         """Get list of duplicate spider URLs for cleanup."""
         duplicates = (
-            self.SpiderData.objects
+            self.LegacySpiderData.objects
             .values('source_url')
             .annotate(count=Count('id'))
             .filter(count__gt=1)
@@ -193,7 +193,7 @@ class DeduplicationService:
             count = dup['count']
 
             # Get all records for this URL, ordered by created_at (newest first)
-            records = self.SpiderData.objects.filter(source_url=url).order_by('-created_at')
+            records = self.LegacySpiderData.objects.filter(source_url=url).order_by('-created_at')
 
             # Keep the first (newest), delete the rest
             ids_to_delete = list(records.values_list('id', flat=True)[1:])
@@ -202,7 +202,7 @@ class DeduplicationService:
                 # Delete one by one, skipping records with FK references
                 for record_id in ids_to_delete:
                     try:
-                        deleted, _ = self.SpiderData.objects.filter(id=record_id).delete()
+                        deleted, _ = self.LegacySpiderData.objects.filter(id=record_id).delete()
                         result['records_deleted'] += deleted
                         result['records_to_delete'] += 1
                     except Exception:

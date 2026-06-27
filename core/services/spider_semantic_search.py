@@ -9,7 +9,7 @@ semantic search, allowing more accurate matching of user queries to
 relevant spider data.
 
 Strategy:
-- Generate and store embeddings in the SpiderData model
+- Generate and store embeddings in the LegacySpiderData model
 - Use semantic similarity to rank results
 - Hybrid approach: combine semantic + keyword matching
 - Celery task for background embedding generation
@@ -180,7 +180,7 @@ class SpiderSemanticSearch:
         Returns:
             List of SemanticSearchResult sorted by similarity
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.spider_intelligence import SpiderIntelligenceService
 
         # Generate query embedding
@@ -195,7 +195,7 @@ class SpiderSemanticSearch:
 
         # Get spider data
         since = timezone.now() - timedelta(hours=hours)
-        queryset = SpiderData.objects.filter(created_at__gte=since)
+        queryset = LegacySpiderData.objects.filter(created_at__gte=since)
 
         if category:
             category_mappings = SpiderIntelligenceService.CATEGORY_MAPPINGS
@@ -392,12 +392,12 @@ class SpiderSemanticSearch:
 
     def generate_entry_embedding(self, spider_data, mark_empty: bool = True) -> str:
         """
-        Generate and store embedding for a SpiderData entry.
+        Generate and store embedding for a LegacySpiderData entry.
 
         Uses the model's get_searchable_text() method.
 
         Args:
-            spider_data: SpiderData model instance
+            spider_data: LegacySpiderData model instance
             mark_empty: If True, mark entries with no text as [NO_ITEMS]
 
         Returns:
@@ -424,7 +424,7 @@ class SpiderSemanticSearch:
 
     def backfill_embeddings(self, batch_size: int = 50, hours: int = None) -> Dict[str, int]:
         """
-        Generate embeddings for SpiderData entries that don't have them.
+        Generate embeddings for LegacySpiderData entries that don't have them.
 
         Session 394: Improved to skip already-marked empty entries and use larger batches.
         Session triage (Apr 2026): Removed default hours=168 window that excluded
@@ -433,7 +433,7 @@ class SpiderSemanticSearch:
         Session 1083 (Rigby audit): Reduced default batch_size 100→50 after
         observing 1.37GB memory spike per run in celery telemetry
         (start=669MB, end=2042MB). Only load id + raw_data + embedding_text
-        columns via .only() so Django doesn't prefetch every SpiderData
+        columns via .only() so Django doesn't prefetch every LegacySpiderData
         field into memory. Beat runs this every 15 min so lower batches
         still drain the backlog — just with flatter memory profile.
 
@@ -444,14 +444,14 @@ class SpiderSemanticSearch:
         Returns:
             Dict with processing stats
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         # Find entries without embeddings
         # Session 394: Also exclude entries marked as empty
         # Session 782: Exclude by embedding_text instead of embedding=[] (pgvector error)
         # Session 1083: .only() to avoid loading every column (was pulling
         # large `processed_data` JSONB fields into memory unnecessarily)
-        qs = SpiderData.objects.filter(
+        qs = LegacySpiderData.objects.filter(
             embedding__isnull=True  # Only NULL, not empty list
         ).exclude(
             embedding_text='[NO_ITEMS]'  # Skip already-marked empty entries
@@ -542,7 +542,7 @@ class SpiderSemanticSearch:
 
         Falls back to regular semantic_search if no DB embeddings found.
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.spider_intelligence import SpiderIntelligenceService
 
         # Generate query embedding
@@ -554,7 +554,7 @@ class SpiderSemanticSearch:
         # Get spider data with embeddings
         # Session 736: Exclude entries marked as empty (embedding_text='[NO_ITEMS]')
         since = timezone.now() - timedelta(hours=hours)
-        queryset = SpiderData.objects.filter(
+        queryset = LegacySpiderData.objects.filter(
             created_at__gte=since,
             embedding__isnull=False
         ).exclude(
@@ -661,9 +661,9 @@ class SpiderSemanticSearch:
         - marked_empty: Has empty list [] (no content to embed)
         - pending: Has NULL (needs processing)
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
-        total = SpiderData.objects.count()
+        total = LegacySpiderData.objects.count()
 
         # Count entries with actual embeddings (not empty list)
         # PostgreSQL: embedding is not null AND embedding != '{}'
@@ -674,7 +674,7 @@ class SpiderSemanticSearch:
         # Sample to count - for large datasets this is more efficient
         # Session 736: pgvector returns numpy arrays, check size properly
         sample_size = min(total, 5000)
-        for entry in SpiderData.objects.order_by('-created_at')[:sample_size]:
+        for entry in LegacySpiderData.objects.order_by('-created_at')[:sample_size]:
             if entry.embedding is None:
                 pending += 1
             elif len(entry.embedding) == 0:
@@ -691,9 +691,9 @@ class SpiderSemanticSearch:
 
         # Recent stats (last 24 hours)
         since = timezone.now() - timedelta(hours=24)
-        recent_total = SpiderData.objects.filter(created_at__gte=since).count()
+        recent_total = LegacySpiderData.objects.filter(created_at__gte=since).count()
         recent_with = 0
-        for entry in SpiderData.objects.filter(created_at__gte=since):
+        for entry in LegacySpiderData.objects.filter(created_at__gte=since):
             # Session 736: pgvector returns numpy arrays, not lists
             # Must use 'is not None' instead of truth check on numpy arrays
             if entry.embedding is not None and len(entry.embedding) > 0:

@@ -261,12 +261,12 @@ class PAKnowledgeInjector:
     def _get_spider_freshness(self) -> Dict[str, Any]:
         """Get spider network freshness info."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
             from django.db.models import Max
 
             # Get most recent spider data
-            latest = SpiderData.objects.aggregate(
+            latest = LegacySpiderData.objects.aggregate(
                 latest_data=Max('created_at')
             )
 

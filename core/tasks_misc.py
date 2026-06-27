@@ -1876,9 +1876,9 @@ def _impl_unified_pipeline_health_check():
 
     # Check Market Intelligence (Spider + Scoring)
     try:
-        from core.models_unified_system import SpiderData, Opportunity
+        from core.models_unified_system import LegacySpiderData, Opportunity
 
-        spider_count = SpiderData.objects.filter(created_at__gte=cutoff).defer('embedding').count()
+        spider_count = LegacySpiderData.objects.filter(created_at__gte=cutoff).defer('embedding').count()
         opp_count = Opportunity.objects.filter(created_at__gte=cutoff).count()
 
         health['systems']['market_intelligence'] = {
@@ -2092,14 +2092,14 @@ def _impl_run_viral_content_predictor(self):
     logger.info("🔥 [VIRAL] Starting viral content prediction...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import ViralContentPrediction, AutonomousSituationSession
         from django.utils import timezone
         from datetime import timedelta
 
         session = AutonomousSituationSession.objects.create(situation_type='viral_prediction', status='running')
         cutoff = timezone.now() - timedelta(hours=12)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['reddit', 'hackernews', 'bluesky', 'producthunt'],
             created_at__gte=cutoff
         ).defer('embedding')[:50]
@@ -2166,12 +2166,12 @@ def _impl_run_crypto_sentiment_monitor(self):
     session = AutonomousSituationSession.objects.create(situation_type='crypto_sentiment', status='running')
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from datetime import timedelta
         from collections import defaultdict
 
         cutoff = timezone.now() - timedelta(hours=6)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['coingecko', 'reddit', 'bluesky'],
             created_at__gte=cutoff
         ).defer('embedding')[:200]
@@ -2218,7 +2218,7 @@ def _impl_run_tech_stack_tracker(self):
     logger.info("🔧 [TECH STACK] Starting tracking...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import TechStackTrend, AutonomousSituationSession
         from django.utils import timezone
         from datetime import timedelta
@@ -2226,7 +2226,7 @@ def _impl_run_tech_stack_tracker(self):
 
         session = AutonomousSituationSession.objects.create(situation_type='tech_stack', status='running')
         cutoff = timezone.now() - timedelta(hours=24)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['github', 'hackernews', 'devto'],
             created_at__gte=cutoff
         ).defer('embedding')[:300]
@@ -2292,11 +2292,11 @@ def _impl_run_ai_model_monitor(self):
     session = AutonomousSituationSession.objects.create(situation_type='ai_model', status='running')
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from datetime import timedelta
 
         cutoff = timezone.now() - timedelta(hours=24)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['huggingface', 'github', 'hackernews'],
             created_at__gte=cutoff
         ).defer('embedding')[:100]
@@ -2349,11 +2349,11 @@ def _impl_run_case_law_monitor(self):
     session = AutonomousSituationSession.objects.create(situation_type='case_law', status='running')
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from datetime import timedelta
 
         cutoff = timezone.now() - timedelta(hours=24)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['courtlistener', 'findlaw', 'justia_family_law'],
             created_at__gte=cutoff
         ).defer('embedding')[:50]
@@ -3361,7 +3361,7 @@ def _impl_run_business_strategy_agents():
     - MarketingStrategyAgent
     """
     from core.agent_router import AgentRouter
-    from core.models_unified_system import SpiderData, Opportunity
+    from core.models_unified_system import LegacySpiderData, Opportunity
     from django.utils import timezone
     from datetime import timedelta
 

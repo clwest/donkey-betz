@@ -1475,7 +1475,7 @@ class Opportunity(models.Model):
 
     # Source linkage to spider data
     spider_data = models.ForeignKey(
-        'SpiderData',
+        'LegacySpiderData',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2144,7 +2144,7 @@ class ScoringQueueItem(models.Model):
 
     # What to score
     spider_data = models.ForeignKey(
-        'SpiderData',
+        'LegacySpiderData',
         on_delete=models.CASCADE,
         related_name='scoring_queue_items'
     )
@@ -3688,11 +3688,21 @@ class AgentLearning(models.Model):
         ordering = ['-created_at']
 
 
-class SpiderData(models.Model):
-    """
-    Data collected by spider network for intelligence gathering.
+class LegacySpiderData(models.Model):
+    """Legacy 15-column spider data model — DO NOT USE FOR NEW CODE.
 
-    Session 293: Added embedding support for semantic search.
+    Renamed from `LegacySpiderData` in S1243 to remove the cross-app name collision
+    with `persistence.LegacySpiderData`. Both classes were registered with Django
+    under the same name; 31,777 rows were split between them. The persistence
+    variant (36 fields, with revenue/opportunity/quality scoring) is canonical
+    and is what `ai_core.spiders.base_spider.BaseSpider` writes to.
+
+    This class is retained because ~100 production files (management commands,
+    legacy tasks, older view-level writers) still reference its 8,177 rows.
+    Migrating them to `persistence.LegacySpiderData` is a separate larger effort
+    tracked in Cat 2 deliverable `86870fdd-…` Finding 2.3.
+
+    Schema (this legacy variant): 15 fields total. Session 293 added embedding.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -3802,7 +3812,7 @@ class SpiderDataAnnotation(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    spider_data = models.ForeignKey('SpiderData', on_delete=models.CASCADE, related_name='annotations')
+    spider_data = models.ForeignKey('LegacySpiderData', on_delete=models.CASCADE, related_name='annotations')
     annotation_type = models.CharField(max_length=50, choices=ANNOTATION_TYPES, db_index=True)
     confidence_score = models.FloatField(default=0.5)  # 0.0-1.0
     note = models.TextField(blank=True)
@@ -19786,7 +19796,7 @@ class ConversionEvent(models.Model):
 
     # Link to spider data source
     spider_data = models.ForeignKey(
-        'SpiderData',
+        'LegacySpiderData',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

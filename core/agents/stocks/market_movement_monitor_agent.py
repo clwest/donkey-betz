@@ -370,11 +370,11 @@ Focus on stocks without corresponding news explanations for moves."""
     def _get_market_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch market data from spider network."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
 
             cutoff = timezone.now() - timedelta(hours=24)
-            query = SpiderData.objects.filter(
+            query = LegacySpiderData.objects.filter(
                 spider_name__in=['yahoo_finance', 'coingecko', 'finnhub'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:50]

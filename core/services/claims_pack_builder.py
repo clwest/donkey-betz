@@ -1,11 +1,11 @@
 """
 Phase 4: Claims Pack Builder
 
-Queries SpiderData (last 72h) and SignalCluster (active, keyword-matched)
+Queries LegacySpiderData (last 72h) and SignalCluster (active, keyword-matched)
 to assemble a ClaimsPack for the content deliberation pipeline.
 
 Sources in priority order:
-1. SpiderData raw_data['items'] — factual/speculative based on description presence
+1. LegacySpiderData raw_data['items'] — factual/speculative based on description presence
 2. SignalCluster sample_signals — speculative claims from pattern detection
 
 Singleton: get_claims_pack_builder()
@@ -49,7 +49,7 @@ def _matches_topic(text: str, tokens: Set[str]) -> bool:
 
 
 class ClaimsPackBuilder:
-    """Builds a ClaimsPack from SpiderData and SignalCluster sources."""
+    """Builds a ClaimsPack from LegacySpiderData and SignalCluster sources."""
 
     def build(self, topic: str, max_claims: int = 20) -> ClaimsPack:
         """
@@ -66,11 +66,11 @@ class ClaimsPackBuilder:
         seen_urls: Set[str] = set()
         tokens = _tokenize_topic(topic)
 
-        # Source 1: SpiderData (last 72h)
+        # Source 1: LegacySpiderData (last 72h)
         try:
             claims.extend(self._from_spider_data(tokens, seen_urls))
         except Exception as e:
-            logger.warning(f"[Phase 4] SpiderData claim extraction failed: {e}")
+            logger.warning(f"[Phase 4] LegacySpiderData claim extraction failed: {e}")
 
         # Source 2: SignalCluster (active, keyword match)
         try:
@@ -110,11 +110,11 @@ class ClaimsPackBuilder:
     def _from_spider_data(
         self, tokens: Set[str], seen_urls: Set[str]
     ) -> List[SpiderClaim]:
-        """Extract claims from SpiderData items (last 72h)."""
-        from core.models_unified_system import SpiderData
+        """Extract claims from LegacySpiderData items (last 72h)."""
+        from core.models_unified_system import LegacySpiderData
 
         cutoff = timezone.now() - timedelta(hours=72)
-        entries = SpiderData.objects.filter(created_at__gte=cutoff).order_by('-created_at')[:200]
+        entries = LegacySpiderData.objects.filter(created_at__gte=cutoff).order_by('-created_at')[:200]
 
         claims: List[SpiderClaim] = []
         for entry in entries:

@@ -99,7 +99,7 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      high-value opportunities. Generates follow-up suggestions with
      cadence tracking. Guardrails: never auto-send, max 3 follow-ups
      per opp. PA tool: revenue_pipeline_report.
- 25. Outbound lead engine: Discovers prospecting leads from SpiderData
+ 25. Outbound lead engine: Discovers prospecting leads from LegacySpiderData
      (job postings, startup news, business signals). Scores leads on
      recency, revenue potential, and channel fit. Generates outreach
      drafts (approval required — never auto-sends). Deduplication by
@@ -388,7 +388,7 @@ class RevenuePipelineAutomator:
 
 class OutboundLeadEngine:
     """
-    Discovers prospecting leads from SpiderData, scores them, and
+    Discovers prospecting leads from LegacySpiderData, scores them, and
     surfaces a prioritised queue for human outreach.
 
     Lead sources (spider data_types):
@@ -430,7 +430,7 @@ class OutboundLeadEngine:
 
     def evaluate(self, now) -> dict:
         """Discover and score leads from recent spider data."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         result = {
             'leads_discovered': 0,
@@ -443,7 +443,7 @@ class OutboundLeadEngine:
         lookback = now - timedelta(days=self.LOOKBACK_DAYS)
 
         # Get recent spider data from lead-relevant types
-        spider_qs = SpiderData.objects.filter(
+        spider_qs = LegacySpiderData.objects.filter(
             created_at__gte=lookback,
             data_type__in=self.LEAD_DATA_TYPES,
         ).order_by('-created_at')
@@ -559,14 +559,14 @@ class OutboundLeadEngine:
 
     def get_lead_source_report(self, now) -> dict:
         """PA-facing: which spider sources produce leads."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.db.models import Count
 
         lookback = now - timedelta(days=30)
 
         # 30-day source breakdown
         source_stats = list(
-            SpiderData.objects.filter(
+            LegacySpiderData.objects.filter(
                 created_at__gte=lookback,
                 data_type__in=self.LEAD_DATA_TYPES,
             ).values('spider_name', 'data_type').annotate(
@@ -576,11 +576,11 @@ class OutboundLeadEngine:
 
         # 7-day vs 30-day trend
         week_lookback = now - timedelta(days=7)
-        week_count = SpiderData.objects.filter(
+        week_count = LegacySpiderData.objects.filter(
             created_at__gte=week_lookback,
             data_type__in=self.LEAD_DATA_TYPES,
         ).count()
-        month_count = SpiderData.objects.filter(
+        month_count = LegacySpiderData.objects.filter(
             created_at__gte=lookback,
             data_type__in=self.LEAD_DATA_TYPES,
         ).count()

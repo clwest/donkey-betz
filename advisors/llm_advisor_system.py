@@ -95,7 +95,7 @@ class LLMAdvisor(AIEnforcedAgent):
             List of spider intelligence items relevant to advisor's domain
         """
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
             from datetime import timedelta
 
@@ -114,9 +114,9 @@ class LLMAdvisor(AIEnforcedAgent):
             logger.info(f"🕷️ Fetching spider data for {self.advisor_profile['name']} (domain: {domain})")
             logger.info(f"   Sources: {spider_sources[:5]}...")
 
-            # Query SpiderData for domain-relevant content
+            # Query LegacySpiderData for domain-relevant content
             # Session 807: Defer embedding fields to reduce egress costs
-            query = SpiderData.objects.filter(
+            query = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=spider_sources
             ).defer('embedding', 'item_embeddings', 'embedding_text')
@@ -133,7 +133,7 @@ class LLMAdvisor(AIEnforcedAgent):
             topic_lower = topic.lower() if topic else ""
 
             for item in results:
-                # SpiderData stores data in raw_data or processed_data JSON fields
+                # LegacySpiderData stores data in raw_data or processed_data JSON fields
                 raw_data = item.raw_data or {}
                 processed_data = item.processed_data or {}
 
@@ -168,7 +168,7 @@ class LLMAdvisor(AIEnforcedAgent):
             return final_intelligence
 
         except ImportError as e:
-            logger.warning(f"Could not import SpiderData model: {e}")
+            logger.warning(f"Could not import LegacySpiderData model: {e}")
             return []
         except Exception as e:
             logger.error(f"Error fetching spider intelligence for advisor: {e}")

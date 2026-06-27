@@ -4685,8 +4685,8 @@ def _impl_generate_human_attention_items():
         # boardroom noise (6+ items per cycle from Reuters/BBC/TechCrunch/etc).
         # News data is still collected by spiders and available via spider_data_tool.
         try:
-            from core.models_unified_system import SpiderData
-            recent_spider_data = SpiderData.objects.filter(
+            from core.models_unified_system import LegacySpiderData
+            recent_spider_data = LegacySpiderData.objects.filter(
                 created_at__gte=timezone.now() - timedelta(hours=4),
                 data_type__in=['opportunity', 'market_data', 'trend_data', 'competitor_info']
             ).order_by('-created_at')[:10]

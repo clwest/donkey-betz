@@ -2831,7 +2831,7 @@ class ContentHandlersMixin:
         - search: Search spider data by keyword
         - stats: Get spider collection statistics
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.db.models import Count
         from django.utils import timezone
         from datetime import timedelta
@@ -2847,8 +2847,8 @@ class ContentHandlersMixin:
 
         if action == 'recent':
             # Get recent spider data across all spiders
-            # Session 989: Use actual SpiderData fields (no title/url/category/content)
-            qs = SpiderData.objects.filter(created_at__gte=cutoff)
+            # Session 989: Use actual LegacySpiderData fields (no title/url/category/content)
+            qs = LegacySpiderData.objects.filter(created_at__gte=cutoff)
 
             if spider_name:
                 qs = qs.filter(spider_name__icontains=spider_name)
@@ -2873,7 +2873,7 @@ class ContentHandlersMixin:
             if not spider_name:
                 # List available spiders with counts
                 spider_counts = dict(
-                    SpiderData.objects.filter(created_at__gte=cutoff)
+                    LegacySpiderData.objects.filter(created_at__gte=cutoff)
                     .values('spider_name')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:30]
@@ -2885,9 +2885,9 @@ class ContentHandlersMixin:
                     'message': 'Specify spider_name to get data from a specific spider'
                 }
 
-            # Session 989: Use actual SpiderData fields
+            # Session 989: Use actual LegacySpiderData fields
             # Session 1030: Include processed_data for first 3 items (crypto prices live there)
-            qs = SpiderData.objects.filter(
+            qs = LegacySpiderData.objects.filter(
                 spider_name__icontains=spider_name,
                 created_at__gte=cutoff
             ).order_by('-created_at')[:limit]
@@ -2914,9 +2914,9 @@ class ContentHandlersMixin:
 
         elif action == 'by_category':
             if not category:
-                # Session 989: Use data_type (not category) — actual SpiderData field
+                # Session 989: Use data_type (not category) — actual LegacySpiderData field
                 category_counts = dict(
-                    SpiderData.objects.filter(created_at__gte=cutoff)
+                    LegacySpiderData.objects.filter(created_at__gte=cutoff)
                     .values('data_type')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:20]
@@ -2930,7 +2930,7 @@ class ContentHandlersMixin:
 
             # Session 989: Use data_type (not category)
             items = list(
-                SpiderData.objects.filter(
+                LegacySpiderData.objects.filter(
                     data_type__icontains=category,
                     created_at__gte=cutoff
                 ).order_by('-created_at')[:limit].values(
@@ -2954,12 +2954,12 @@ class ContentHandlersMixin:
                 }
 
             # Session 1089: Search embedding_text, source_url, AND raw_data.
-            # ~72% of recent SpiderData has empty embedding_text, so searching
+            # ~72% of recent LegacySpiderData has empty embedding_text, so searching
             # only that field returned 0 results for most queries. raw_data
             # contains the actual content (titles, descriptions, articles).
             from django.db.models import Q, TextField
             from django.db.models.functions import Cast
-            qs = SpiderData.objects.filter(
+            qs = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff
             ).annotate(
                 raw_text=Cast('raw_data', TextField())
@@ -3015,9 +3015,9 @@ class ContentHandlersMixin:
             }
 
         elif action == 'stats':
-            total = SpiderData.objects.filter(created_at__gte=cutoff).count()
+            total = LegacySpiderData.objects.filter(created_at__gte=cutoff).count()
             by_spider = dict(
-                SpiderData.objects.filter(created_at__gte=cutoff)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff)
                 .values('spider_name')
                 .annotate(count=Count('id'))
                 .order_by('-count')[:10]
@@ -3025,7 +3025,7 @@ class ContentHandlersMixin:
             )
             # Session 989: Use data_type (not category)
             by_data_type = dict(
-                SpiderData.objects.filter(created_at__gte=cutoff)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff)
                 .values('data_type')
                 .annotate(count=Count('id'))
                 .order_by('-count')[:10]
@@ -3602,8 +3602,8 @@ class ContentHandlersMixin:
 
         # 2. Spider data
         try:
-            from core.models_unified_system import SpiderData
-            spider_qs = SpiderData.objects.filter(created_at__gte=cutoff)
+            from core.models_unified_system import LegacySpiderData
+            spider_qs = LegacySpiderData.objects.filter(created_at__gte=cutoff)
             total_spider = spider_qs.count()
             distinct_spiders = spider_qs.values('spider_name').distinct().count()
             top_spiders = list(
@@ -3843,7 +3843,7 @@ class ContentHandlersMixin:
         - predictions: Prediction outcomes with accuracy
         - sec_filings: SEC Edgar spider data
         """
-        from core.models_unified_system import MarketIntelligenceBrief, PredictionOutcome, SpiderData
+        from core.models_unified_system import MarketIntelligenceBrief, PredictionOutcome, LegacySpiderData
         from core.models_autonomous_alerts import StockMarketAlert
         from django.db.models import Count, Avg
         from django.utils import timezone
@@ -3883,7 +3883,7 @@ class ContentHandlersMixin:
             correct_30d = predictions_30d.filter(was_correct_30_days=True).count()
             accuracy_30d = round((correct_30d / total_30d) * 100, 1) if total_30d > 0 else None
 
-            sec_count = SpiderData.objects.filter(spider_name='sec_edgar').count()
+            sec_count = LegacySpiderData.objects.filter(spider_name='sec_edgar').count()
             total_briefs = MarketIntelligenceBrief.objects.count()
 
             return {
@@ -3973,7 +3973,7 @@ class ContentHandlersMixin:
             return {'action': 'predictions', 'items': items, 'total': total, 'stats': stats}
 
         elif action == 'sec_filings':
-            qs = SpiderData.objects.filter(spider_name='sec_edgar').order_by('-created_at')
+            qs = LegacySpiderData.objects.filter(spider_name='sec_edgar').order_by('-created_at')
             total = qs.count()
             filings = qs[:limit]
             items = []
@@ -4033,17 +4033,17 @@ class ContentHandlersMixin:
                 status='watching',
             ).count()
 
-            # Recent sharp signals from SpiderData
-            from core.models_unified_system import SpiderData
+            # Recent sharp signals from LegacySpiderData
+            from core.models_unified_system import LegacySpiderData
             cutoff = timezone.now() - timedelta(hours=12)
-            recent_odds = SpiderData.objects.filter(
+            recent_odds = LegacySpiderData.objects.filter(
                 spider_name='theodds',
                 created_at__gte=cutoff,
             ).count()
 
             # Active sports from recent odds data
             active_sports = list(
-                SpiderData.objects.filter(
+                LegacySpiderData.objects.filter(
                     spider_name='theodds',
                     created_at__gte=cutoff,
                 ).values_list('data_type', flat=True).distinct()[:10]

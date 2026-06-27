@@ -483,7 +483,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
                             "spider_data_ids": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "List of SpiderData UUIDs to process"
+                                "description": "List of LegacySpiderData UUIDs to process"
                             }
                         }
                     }
@@ -886,20 +886,20 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
     def _process_new_spider_data(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Process new spider data for narrative signals."""
         from core.models_narrative_drift import Narrative, NarrativeEvidence
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         spider_data_ids = tool_input.get('spider_data_ids', [])
 
         if not spider_data_ids:
             # Get recent unprocessed spider data
             recent = timezone.now() - timedelta(hours=6)
-            spider_data_qs = SpiderData.objects.filter(
+            spider_data_qs = LegacySpiderData.objects.filter(
                 created_at__gte=recent
             ).exclude(
                 narrative_evidence__isnull=False
             )[:50]
         else:
-            spider_data_qs = SpiderData.objects.filter(id__in=spider_data_ids)
+            spider_data_qs = LegacySpiderData.objects.filter(id__in=spider_data_ids)
 
         results = {
             'processed': 0,
@@ -910,7 +910,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
         for sd in spider_data_qs:
             results['processed'] += 1
 
-            # Extract content from raw_data (SpiderData stores items in raw_data.items)
+            # Extract content from raw_data (LegacySpiderData stores items in raw_data.items)
             raw_data = sd.raw_data or {}
             items = raw_data.get('items', [])
 
@@ -1137,7 +1137,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
     def _seed_domain_narratives(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Seed initial narratives for a domain from spider data patterns."""
         from core.models_narrative_drift import Narrative, NarrativeDomain
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         domain = tool_input.get('domain')
         count = tool_input.get('count', 5)
@@ -1163,7 +1163,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
 
         # Get recent spider data
         recent = timezone.now() - timedelta(days=7)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             data_type__in=categories,
             created_at__gte=recent
         ).values('embedding_text').annotate(

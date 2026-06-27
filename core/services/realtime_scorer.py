@@ -102,7 +102,7 @@ class RealtimeScorer:
         Add a scoring request to the priority queue.
 
         Args:
-            spider_data_id: ID of SpiderData to score
+            spider_data_id: ID of LegacySpiderData to score
             priority: Queue priority level
             source: Request source identifier
             user_id: Optional user who requested
@@ -307,10 +307,10 @@ class RealtimeScorer:
 
         try:
             # Get spider data and score
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from core.services.ml_scoring_engine import get_ml_scoring_engine
 
-            spider_data = SpiderData.objects.get(id=request.spider_data_id)
+            spider_data = LegacySpiderData.objects.get(id=request.spider_data_id)
             engine = get_ml_scoring_engine()
             result = engine.score_opportunity(spider_data)
 

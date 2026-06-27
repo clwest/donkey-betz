@@ -1246,7 +1246,7 @@ class CollectiveIntelligenceService:
             Dict with resolution status and created knowledge items
         """
         try:
-            from core.models_unified_system import SharedKnowledge, SpiderData
+            from core.models_unified_system import SharedKnowledge, LegacySpiderData
             import random
 
             created_items = []
@@ -1265,14 +1265,14 @@ class CollectiveIntelligenceService:
             keywords = domain_keywords.get(domain, [domain])
 
             # Search spider data for relevant content
-            # SpiderData uses raw_data (JSON) and processed_data (JSON) fields
+            # LegacySpiderData uses raw_data (JSON) and processed_data (JSON) fields
             from django.db.models import Q
             query = Q()
             for keyword in keywords:
                 # Search in spider_name and source_url, and raw_data (JSON contains)
                 query |= Q(spider_name__icontains=keyword) | Q(source_url__icontains=keyword)
 
-            spider_items = SpiderData.objects.filter(query).order_by('-created_at')[:10]
+            spider_items = LegacySpiderData.objects.filter(query).order_by('-created_at')[:10]
 
             # Get agents that work in this domain
             domain_agents = self._get_domain_agents(domain)

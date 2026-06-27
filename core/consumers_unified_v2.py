@@ -389,8 +389,8 @@ INSTRUCTIONS:
     @database_sync_to_async
     def get_spider_data_count(self):
         """Get count of spider data items"""
-        from core.models_unified_system import SpiderData
-        return SpiderData.objects.count()
+        from core.models_unified_system import LegacySpiderData
+        return LegacySpiderData.objects.count()
 
     @database_sync_to_async
     def get_opportunity_count(self):

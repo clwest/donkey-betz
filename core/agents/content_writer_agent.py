@@ -526,7 +526,7 @@ For this {content_type}, ensure:
         """
         try:
             from core.models import Agent
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from core.models_heart import HeartBeat
             from django.utils import timezone
             from datetime import timedelta
@@ -536,7 +536,7 @@ For this {content_type}, ensure:
 
             active_agents = Agent.objects.filter(is_active=True).count()
 
-            spider_qs = SpiderData.objects.filter(created_at__gte=cutoff)
+            spider_qs = LegacySpiderData.objects.filter(created_at__gte=cutoff)
             active_spiders = spider_qs.values('spider_name').distinct().count()
             data_points = spider_qs.count()
 

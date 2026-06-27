@@ -348,16 +348,16 @@ class CongressSyncService:
         logger.info(f"Bill enrichment: {stats}")
         return stats
 
-    # ─── Bills (from existing SpiderData → Bill model) ───────
+    # ─── Bills (from existing LegacySpiderData → Bill model) ───────
 
     def migrate_spider_bills(self) -> Dict:
-        """Migrate bills from SpiderData into the Bill model."""
-        from core.models_unified_system import SpiderData
+        """Migrate bills from LegacySpiderData into the Bill model."""
+        from core.models_unified_system import LegacySpiderData
         from core.models_government import Bill
 
         stats = {'created': 0, 'updated': 0, 'skipped': 0, 'errors': 0}
 
-        rows = SpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
+        rows = LegacySpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
 
         for row in rows:
             rd = row.raw_data or {}
@@ -743,9 +743,9 @@ class CongressSyncService:
         results['bills_congressgov'] = self.sync_bills()
         logger.info(f"Bills (Congress.gov): {results['bills_congressgov']}")
 
-        # 3. Migrate any additional bills from SpiderData
+        # 3. Migrate any additional bills from LegacySpiderData
         results['bills_spider'] = self.migrate_spider_bills()
-        logger.info(f"Bills (SpiderData): {results['bills_spider']}")
+        logger.info(f"Bills (LegacySpiderData): {results['bills_spider']}")
 
         # 4. Enrich bills with summaries and sponsors
         results['enrichment'] = self.enrich_bill_details(batch_size=100)

@@ -382,11 +382,11 @@ Focus on transactions that diverge from normal patterns."""
     def _get_insider_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch insider trading data from SEC filings."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
 
             cutoff = timezone.now() - timedelta(days=30)
-            query = SpiderData.objects.filter(
+            query = LegacySpiderData.objects.filter(
                 spider_name__in=['sec', 'sec_edgar'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:100]

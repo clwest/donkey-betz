@@ -2,8 +2,8 @@
 Spider Data Learning Bridge
 Learns from spider-collected data to improve agent intelligence and opportunity matching
 
-Session 400: Fixed to use core.models_unified_system.SpiderData (active model with 6500+ records)
-instead of persistence.models.SpiderData (empty model - never populated)
+Session 400: Fixed to use core.models_unified_system.LegacySpiderData (active model with 6500+ records)
+instead of persistence.models.LegacySpiderData (empty model - never populated)
 
 Session 1115 batch-11: refactored to inherit from `LearningBridge` ABC.
 Public `process_spider_data` kept as a back-compat shim so the existing
@@ -16,10 +16,10 @@ from typing import Any, Dict, List
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-# Session 400: Use the CORRECT SpiderData model (the one that actually has data!)
+# Session 400: Use the CORRECT LegacySpiderData model (the one that actually has data!)
 # Also use Agent from core.models_unified_system (has 31 agents) not UnifiedAgentTemplate (28 agents)
 from core.learning_bridges.base import LearningBridge
-from core.models_unified_system import SpiderData, UserAgentLearning, Agent
+from core.models_unified_system import LegacySpiderData, UserAgentLearning, Agent
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,8 @@ class SpiderDataLearningLoop(LearningBridge):
     # ABC contract
     # ------------------------------------------------------------------
     def process_event(self, event_data: Any) -> Dict:
-        """Process a newly-saved SpiderData row end-to-end."""
-        spider_data: SpiderData = event_data
+        """Process a newly-saved LegacySpiderData row end-to-end."""
+        spider_data: LegacySpiderData = event_data
         target_agents = self._get_target_agents_for_data(spider_data)
         if not target_agents:
             logger.debug(
@@ -87,7 +87,7 @@ class SpiderDataLearningLoop(LearningBridge):
 
     def _extract_patterns(self, event_data: Any) -> Dict:
         """Extract target agents + summary metrics."""
-        spider_data: SpiderData = event_data
+        spider_data: LegacySpiderData = event_data
         target_agents = self._get_target_agents_for_data(spider_data)
         raw_data = spider_data.raw_data or {}
         items = raw_data.get('items', [])
@@ -100,13 +100,13 @@ class SpiderDataLearningLoop(LearningBridge):
             'completeness': self._calculate_completeness(spider_data),
             'freshness': self._calculate_freshness(spider_data),
             'opportunity_potential': self._estimate_opportunity_potential(spider_data),
-            # Thread the SpiderData instance through for `_update_learning`.
+            # Thread the LegacySpiderData instance through for `_update_learning`.
             '_spider_data': spider_data,
         }
 
     def _update_learning(self, patterns: Dict) -> None:
         """Create one UserAgentLearning entry per target agent."""
-        spider_data: SpiderData = patterns['_spider_data']
+        spider_data: LegacySpiderData = patterns['_spider_data']
         for agent_name in patterns['target_agents']:
             self._create_agent_learning_entry(spider_data, agent_name)
 
@@ -129,11 +129,11 @@ class SpiderDataLearningLoop(LearningBridge):
     # ------------------------------------------------------------------
     # Back-compat alias used by `on_spider_data_collected` signal handler
     # ------------------------------------------------------------------
-    def process_spider_data(self, spider_data: SpiderData) -> Dict:
+    def process_spider_data(self, spider_data: LegacySpiderData) -> Dict:
         """Back-compat shim — delegates to `process_event`."""
         return self.process_event(spider_data)
 
-    def _get_target_agents_for_data(self, spider_data: SpiderData) -> List[str]:
+    def _get_target_agents_for_data(self, spider_data: LegacySpiderData) -> List[str]:
         """Determine which agents should learn from this spider data based on category
 
         Session 400: Maps data_type/category to relevant agents
@@ -164,10 +164,10 @@ class SpiderDataLearningLoop(LearningBridge):
 
         return agents
 
-    def _create_agent_learning_entry(self, spider_data: SpiderData, agent_name: str):
+    def _create_agent_learning_entry(self, spider_data: LegacySpiderData, agent_name: str):
         """Create a learning entry for a specific agent
 
-        Session 400: Updated to use fields available in core.models_unified_system.SpiderData
+        Session 400: Updated to use fields available in core.models_unified_system.LegacySpiderData
         """
         try:
             # Try to find the agent - Session 400: Use Agent model instead of UnifiedAgentTemplate
@@ -177,8 +177,8 @@ class SpiderDataLearningLoop(LearningBridge):
                 logger.warning(f"Agent '{agent_name}' not found in database, skipping learning entry")
                 return
 
-            # Session 400: Extract learning content using available fields in core SpiderData
-            # Core SpiderData has: spider_name, source_url, data_type, raw_data, processed_data,
+            # Session 400: Extract learning content using available fields in core LegacySpiderData
+            # Core LegacySpiderData has: spider_name, source_url, data_type, raw_data, processed_data,
             # relevance_score, insights, embedding, is_processed, is_actionable, created_at
             raw_data = spider_data.raw_data or {}
             items = raw_data.get('items', [])
@@ -211,7 +211,7 @@ class SpiderDataLearningLoop(LearningBridge):
             # Determine learning domain
             learning_domain = self._map_data_type_to_domain(spider_data.data_type)
 
-            # Session 400: Calculate confidence score - core SpiderData doesn't have quality_score
+            # Session 400: Calculate confidence score - core LegacySpiderData doesn't have quality_score
             # Use relevance_score, completeness, and item count as proxies
             item_score = min(1.0, item_count / 10) if item_count > 0 else 0.3  # More items = higher confidence
             confidence_score = (
@@ -265,10 +265,10 @@ class SpiderDataLearningLoop(LearningBridge):
         except Exception as e:
             logger.error(f"Error creating learning entry for {agent_name}: {e}", exc_info=True)
 
-    def _calculate_completeness(self, spider_data: SpiderData) -> float:
+    def _calculate_completeness(self, spider_data: LegacySpiderData) -> float:
         """Calculate data completeness score (0-1)
 
-        Session 400: Updated to use fields available in core SpiderData
+        Session 400: Updated to use fields available in core LegacySpiderData
         """
         score = 0.0
 
@@ -288,10 +288,10 @@ class SpiderDataLearningLoop(LearningBridge):
 
         return min(1.0, score)
 
-    def _calculate_freshness(self, spider_data: SpiderData) -> float:
+    def _calculate_freshness(self, spider_data: LegacySpiderData) -> float:
         """Calculate data freshness score (0-1)
 
-        Session 400: Use created_at instead of discovered_at (core SpiderData field)
+        Session 400: Use created_at instead of discovered_at (core LegacySpiderData field)
         """
         from django.utils import timezone
         from datetime import timedelta
@@ -331,10 +331,10 @@ class SpiderDataLearningLoop(LearningBridge):
 
             if total_runs < 5:
                 # Not enough history — fall back to relevance heuristic
-                total = SpiderData.objects.filter(spider_name=spider_name).count()
+                total = LegacySpiderData.objects.filter(spider_name=spider_name).count()
                 if total == 0:
                     return 0.5
-                high_relevance = SpiderData.objects.filter(
+                high_relevance = LegacySpiderData.objects.filter(
                     spider_name=spider_name, relevance_score__gte=70
                 ).count()
                 return high_relevance / total if total > 0 else 0.5
@@ -346,12 +346,12 @@ class SpiderDataLearningLoop(LearningBridge):
         except Exception:
             return 0.5
 
-    def _estimate_opportunity_potential(self, spider_data: SpiderData) -> str:
+    def _estimate_opportunity_potential(self, spider_data: LegacySpiderData) -> str:
         """Estimate the potential value of this opportunity
 
         Session 400: Updated to use relevance_score and item count
         """
-        # relevance_score is 0-100 in core SpiderData
+        # relevance_score is 0-100 in core LegacySpiderData
         relevance = float(spider_data.relevance_score or 50) / 100
 
         # Also factor in item count
@@ -369,7 +369,7 @@ class SpiderDataLearningLoop(LearningBridge):
             return 'low'
 
     @staticmethod
-    def evaluate_actionability(spider_data: SpiderData) -> bool:
+    def evaluate_actionability(spider_data: LegacySpiderData) -> bool:
         """Evaluate whether spider data is actionable (can drive user decisions)."""
         if (spider_data.relevance_score or 0) < 50:
             return False
@@ -405,14 +405,14 @@ class SpiderDataLearningLoop(LearningBridge):
 spider_data_learning = SpiderDataLearningLoop()
 
 
-@receiver(post_save, sender=SpiderData)
+@receiver(post_save, sender=LegacySpiderData)
 def on_spider_data_collected(sender, instance, created, **kwargs):
     """Learn from newly collected spider data"""
     if created:  # Only process new data
         # Evaluate actionability (field checks only, no DB queries)
         actionable = SpiderDataLearningLoop.evaluate_actionability(instance)
         if actionable:
-            SpiderData.objects.filter(pk=instance.pk).update(is_actionable=True)
+            LegacySpiderData.objects.filter(pk=instance.pk).update(is_actionable=True)
 
         try:
             spider_data_learning.process_spider_data(instance)

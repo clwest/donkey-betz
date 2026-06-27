@@ -1864,9 +1864,9 @@ class SpiderIntelligenceConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_recent_spider_data(self):
         """Get recent spider data from database"""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
-        recent = SpiderData.objects.order_by('-created_at')[:10]
+        recent = LegacySpiderData.objects.order_by('-created_at')[:10]
         return [{
             'spider_name': d.spider_name,
             'category': d.data_type,
