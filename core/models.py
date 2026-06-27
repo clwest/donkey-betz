@@ -2321,36 +2321,24 @@ class ErrorInstance(models.Model):
         return f"{self.project_name}: {self.error_type} ({'✅' if self.was_successful else '❌'})"
 
 
-class AgentLearningSession(models.Model):
-    """Track agent learning sessions and improvements over time"""
-
-    session_id = models.CharField(max_length=100, unique=True)
-    agent_type = models.CharField(max_length=50)  # 'AgentErrorHandler', 'GPT4oMini', etc.
-
-    # Session statistics
-    total_errors_encountered = models.IntegerField(default=0)
-    total_errors_fixed = models.IntegerField(default=0)
-    success_rate = models.FloatField(default=0.0)
-    average_resolution_time = models.FloatField(default=0.0)
-
-    # Learning metrics
-    new_patterns_learned = models.IntegerField(default=0)
-    patterns_improved = models.IntegerField(default=0)
-    knowledge_base_size_before = models.IntegerField(default=0)
-    knowledge_base_size_after = models.IntegerField(default=0)
-
-    # Session metadata
-    started_at = models.DateTimeField(auto_now_add=True)
-    ended_at = models.DateTimeField(null=True, blank=True)
-    session_duration_minutes = models.FloatField(default=0.0)
-
-    class Meta:
-        ordering = ['-started_at']
-        verbose_name = "Agent Learning Session"
-        verbose_name_plural = "Agent Learning Sessions"
-
-    def __str__(self):
-        return f"{self.agent_type} - {self.session_id} ({self.success_rate:.1%})"
+# Session 1242: AgentLearningSession class removed from this file.
+# It was shadowed by the live class at core/models/ai_learning/models.py:9
+# (which Django actually registers as `core.AgentLearningSession`). This
+# file (`core/models.py`) is not imported by Django at all — the
+# `core/models/` package shadows it at the module-resolution layer, so
+# nothing in this file ever reaches Django's app registry. The class here
+# was dead Python text. Removed as part of Session 1242 Cat 1 Finding 1.5
+# cleanup. See `2d7ea39f-…` Cat 1 deliverable for the full classification
+# (Cat 2 dead-duplicate confirmed by `apps.get_model` returning the package
+# class + zero importers anywhere outside this file).
+#
+# A separate audit finding (S1243 candidate) tracks the BIGGER pattern:
+# this entire `core/models.py` file (2698 lines, 25 class definitions) is
+# shadowed by `core/models/` package. None of the classes here are
+# Django-registered. Some are pure dead duplicates (this one was);
+# others may have NO live counterpart and would be lost-on-archive
+# rather than safely-removable. Per-class verify-before-delete required
+# before any wider cleanup.
 
 
 class AgentCollaboration(models.Model):
