@@ -50,15 +50,27 @@ class CeleryQueueParityTests(SimpleTestCase):
 
     def setUp(self):
         # Trigger task discovery so task_routes is populated as it would be
-        # in a running celery worker / beat process.
+        # in a running celery worker / beat process. The complete list below
+        # must stay in sync with every `tasks.py` and `tasks_*.py` under apps
+        # in INSTALLED_APPS — if a new task module is added, register it here
+        # OR rely on Django autodiscover (only fires at app-ready, not in
+        # SimpleTestCase setUp).
         for module in (
+            # core/ — the monolith plus tasks_*.py siblings
             'core.tasks', 'core.tasks_agents', 'core.tasks_content',
             'core.tasks_spiders', 'core.tasks_financial', 'core.tasks_ops',
             'core.tasks_initiatives', 'core.tasks_misc',
             'core.tasks_conversations', 'core.tasks_body_systems',
-            'core.tasks_media', 'core.celery',
-            'ai_core.tasks', 'intelligence.tasks',
-            'agents.tasks_enhanced', 'ml.tasks',
+            'core.tasks_media', 'core.tasks_executor',
+            'core.tasks_push_notifications', 'core.celery',
+            # other apps' tasks.py files
+            'ai_core.tasks', 'ai_core.spiders.tasks',
+            'intelligence.tasks',
+            'agents.tasks', 'agents.tasks_enhanced',
+            'content.tasks',
+            'pipelines.tasks',
+            'sports.tasks',
+            'ml.tasks',
         ):
             try:
                 __import__(module)
@@ -125,3 +137,54 @@ class CeleryQueueParityTests(SimpleTestCase):
             f"or remove the consumer to free capacity.\n"
             f"  Consumed: {sorted(consumed)}\n  Declared: {sorted(declared)}"
         )
+
+    def test_every_route_pattern_matches_a_registered_task(self):
+        """Every task_routes pattern must match at least 1 registered task.
+
+        Catches orphan routes — declarations pointing at tasks that no
+        @shared_task claims. Orphan routes are no-ops at runtime (they
+        route nothing because the target task doesn't exist), but they
+        pollute the routing config and signal stale references that
+        survived a task rename/delete.
+
+        Patterns can be exact dotted-paths or wildcards (`app.*`).
+        Short-name patterns (no dot) match by task name lookup.
+
+        S1244 caught 7 orphan routes:
+        - 3x narrative_drift.* (process_spider_data, send_daily_digest,
+          process_shifts_for_content) — siblings of run_detector_cycle
+          which IS registered
+        - unified_pipeline.run_complete_cycle — sibling of health_check
+        - 3x core.tasks.* (workspace_autopilot_tick, aggregate_spider_signals,
+          process_pending_auto_topics) — short-name routes for these still
+          work; the full-path routes were dead duplicates
+        """
+        from celery import current_app
+        registered = {t for t in current_app.tasks.keys()
+                      if not t.startswith('celery.')}
+        routes = current_app.conf.task_routes or {}
+
+        orphan_patterns = []
+        for pattern in routes.keys():
+            if pattern.endswith('.*'):
+                prefix = pattern[:-2]
+                if not any(t.startswith(prefix + '.') or t == prefix
+                           for t in registered):
+                    orphan_patterns.append(pattern)
+            else:
+                if pattern not in registered:
+                    orphan_patterns.append(pattern)
+
+        if orphan_patterns:
+            lines = ["task_routes patterns with no matching registered task:"]
+            for p in sorted(orphan_patterns):
+                queue = routes[p].get('queue', '?') if isinstance(routes[p], dict) else '?'
+                lines.append(f"  [{queue}] {p}")
+            lines.append("")
+            lines.append(
+                "Remove the orphan pattern(s) from CELERY_TASK_ROUTES in "
+                "core/settings.py, OR add the @shared_task back if it was "
+                "removed by mistake. Orphan routes are runtime no-ops but "
+                "pollute the routing config."
+            )
+            self.fail("\n".join(lines))
