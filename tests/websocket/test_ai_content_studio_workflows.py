@@ -24,7 +24,7 @@ from django.utils import timezone
 # Core AI Platform Models
 from core.models.agents_registry import (
     UnifiedAgentTemplate, 
-    AgentExecution, 
+    AgentTaskExecution, 
     AgentOrchestration,
     AgentRegistry,
     AgentSpecialization

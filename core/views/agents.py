@@ -18,7 +18,7 @@ import django_filters
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentOrchestration,
     AgentTool,
     AgentRegistry,
@@ -53,7 +53,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 
 class AgentExecutionFilter(django_filters.FilterSet):
-    """Custom filter for AgentExecution to support JSON field filtering"""
+    """Custom filter for AgentTaskExecution to support JSON field filtering"""
     input_data__game_id = django_filters.CharFilter(
         field_name='input_data',
         lookup_expr='game_id__iexact',
@@ -67,7 +67,7 @@ class AgentExecutionFilter(django_filters.FilterSet):
         return queryset
     
     class Meta:
-        model = AgentExecution
+        model = AgentTaskExecution
         fields = ['status', 'priority', 'template__specialization', 'input_data__game_id']
 
 
@@ -132,7 +132,7 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
         input_data['context_injected'] = context_tracking
 
         # Create execution instance
-        execution = AgentExecution.objects.create(
+        execution = AgentTaskExecution.objects.create(
             template=agent_template,
             user=request.user if request.user.is_authenticated else None,
             execution_id=execution_id,
@@ -164,7 +164,7 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
 class AgentExecutionViewSet(viewsets.ModelViewSet):
     """ViewSet for managing agent executions"""
     
-    queryset = AgentExecution.objects.all()
+    queryset = AgentTaskExecution.objects.all()
     serializer_class = AgentExecutionSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend]
@@ -337,7 +337,7 @@ class AgentOrchestrationViewSet(viewsets.ModelViewSet):
         orchestration = self.get_object()
 
         # Get all agent executions for this orchestration
-        executions = AgentExecution.objects.filter(
+        executions = AgentTaskExecution.objects.filter(
             parent_orchestration=orchestration
         ).order_by('created_at')
 
@@ -399,7 +399,7 @@ class AgentRegistryViewSet(viewsets.ReadOnlyModelViewSet):
         """Get comprehensive registry statistics"""
         # Get basic statistics
         agents = UnifiedAgentTemplate.objects.filter(is_active=True)
-        executions = AgentExecution.objects.all()
+        executions = AgentTaskExecution.objects.all()
         
         stats = {
             'total_agents': agents.count(),
@@ -425,7 +425,7 @@ def game_executions(request, game_id):
     Get agent executions for a specific game.
     """
     try:
-        executions = AgentExecution.objects.filter(
+        executions = AgentTaskExecution.objects.filter(
             input_data__game_id=game_id
         ).select_related('template').order_by('-created_at')
         
@@ -470,7 +470,7 @@ def health_check(request):
     try:
         # Check database connectivity
         agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-        active_executions = AgentExecution.objects.filter(
+        active_executions = AgentTaskExecution.objects.filter(
             status__in=['pending', 'running', 'initializing']
         ).count()
         
@@ -611,7 +611,7 @@ def execute_agent(request):
     input_data['context_injected'] = context_tracking
 
     # Create execution instance
-    execution = AgentExecution.objects.create(
+    execution = AgentTaskExecution.objects.create(
         template=agent_template,
         user=request.user if request.user.is_authenticated else None,
         execution_id=execution_id,

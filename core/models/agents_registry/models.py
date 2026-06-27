@@ -431,8 +431,21 @@ class UnifiedAgentTemplate(UnifiedBaseModel):
         return True, f"Confidence: {self.confidence_score}, Keywords: {keyword_matches}"
 
 
-class AgentExecution(UnifiedBaseModel):
-    """
+class AgentTaskExecution(UnifiedBaseModel):
+    """Rich per-task agent execution record (renamed from `agents.AgentExecution` in S1244).
+
+    Removes the cross-app name collision with `core.AgentExecution` (in
+    `core.models_unified_system`, the canonical orchestration-tracker
+    that has 987 live rows). This one is the 39-column rich task-
+    execution surface — task_description, progress_percentage,
+    websocket_channel, token_usage, cost_breakdown, user_rating,
+    quality_score, etc. Designed for granular per-task tracking but
+    never had a writer wired up; table remained 0 rows.
+
+    72+ read-side importers across the codebase query against this
+    (always returning empty), so renamed-rather-than-deleted preserves
+    the consumer code paths. Audit: deliverable 86870fdd-… Finding 2.2.
+
     Individual agent execution instance with comprehensive tracking
     """
     
@@ -819,7 +832,7 @@ class AgentContribution(UnifiedBaseModel):
 
     # Execution tracking
     execution = models.ForeignKey(
-        AgentExecution,
+        AgentTaskExecution,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -1450,7 +1463,7 @@ class AgentChannelMessage(UnifiedBaseModel):
     
     # Message sender (either agent or user)
     agent_instance = models.ForeignKey(
-        'AgentExecution',
+        'AgentTaskExecution',
         null=True,
         blank=True,
         on_delete=models.CASCADE,

@@ -856,7 +856,7 @@ class AutonomousActionExecutor:
             # External DB references -> Internal
             'bigquery': 'Use: SpiderData, BusinessResearchResult (direct Django ORM)',
             'snowflake': 'Use: SpiderData, ContentMetrics (direct Django ORM)',
-            'redshift': 'Use: SpiderData, AgentExecution (direct Django ORM)',
+            'redshift': 'Use: SpiderData, AgentTaskExecution (direct Django ORM)',
             'data warehouse': 'Use: SpiderData + ResearchResult + ContentMetrics',
             'csv export': 'Use: Django ORM queryset, export via management command',
             'parquet': 'Use: Django ORM queryset with pandas DataFrame export',
@@ -867,7 +867,7 @@ class AutonomousActionExecutor:
             'experiment data': 'Experiment model (status: running/success/failure/partial/inconclusive)',
             'experiment': 'Experiment model (core.models.Experiment)',
             'halt': 'Experiment.objects.filter(is_halted=True)',
-            'failed': 'Experiment.objects.filter(status="failure") or AgentExecution.objects.filter(status="failed")',
+            'failed': 'Experiment.objects.filter(status="failure") or AgentTaskExecution.objects.filter(status="failed")',
 
             # Content
             'content': 'SelfBlog / Deliverable models',
@@ -882,8 +882,8 @@ class AutonomousActionExecutor:
             'external data': 'SpiderData model',
 
             # Agent system
-            'agent': 'AgentExecution model + core.agents/',
-            'execution': 'AgentExecution model',
+            'agent': 'AgentTaskExecution model + core.agents/',
+            'execution': 'AgentTaskExecution model',
             'workflow': 'Initiative model (5-stage pipeline)',
             'pipeline': 'Initiative + ConceptForgeRun models',
 
@@ -1056,14 +1056,14 @@ class AutonomousActionExecutor:
     ) -> Any:
         """
         Session 905: Create a ResearchResult record when research is blocked.
-        Session 906: Enhanced to create proper tracking records (HiveMindSession, AgentExecution).
+        Session 906: Enhanced to create proper tracking records (HiveMindSession, AgentTaskExecution).
 
         This enables the self-unblock loop by:
         1. Creating a persistent record of blocked research
         2. Linking to the Initiative and Stage
         3. Scheduling a retry task
         4. Session 906: Creating HiveMindSession for Origin & Trigger tracking
-        5. Session 906: Creating AgentExecution for agent participation tracking
+        5. Session 906: Creating AgentTaskExecution for agent participation tracking
 
         Args:
             topic: Research topic
@@ -1080,7 +1080,7 @@ class AutonomousActionExecutor:
             from core.models_research import ResearchResult
             from core.models_document_registry import Initiative, InitiativeStage
             from core.models_unified_system import HiveMindSession, HiveMindContribution
-            from core.models.agents_registry.models import AgentExecution, UnifiedAgentTemplate
+            from core.models.agents_registry.models import AgentTaskExecution, UnifiedAgentTemplate
             from core.tasks import retry_blocked_research
             from datetime import timedelta
             import uuid
@@ -1186,9 +1186,9 @@ class AutonomousActionExecutor:
                                     thinking_time=1.0,
                                 )
 
-                            # Session 906: Create AgentExecution record
+                            # Session 906: Create AgentTaskExecution record
                             if research_agent:
-                                AgentExecution.objects.create(
+                                AgentTaskExecution.objects.create(
                                     template=research_agent,
                                     execution_id=f"blocked-research-{uuid.uuid4().hex[:8]}",
                                     task_description=f"Research: {topic[:200]}",
@@ -1220,7 +1220,7 @@ class AutonomousActionExecutor:
                                         'session': 906,
                                     },
                                 )
-                                logger.info(f"[Session 906] Created AgentExecution for {research_agent.name}")
+                                logger.info(f"[Session 906] Created AgentTaskExecution for {research_agent.name}")
 
                         except Exception as session_error:
                             logger.warning(f"[Session 906] Could not create tracking records: {session_error}")

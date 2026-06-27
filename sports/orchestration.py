@@ -493,7 +493,7 @@ class AgentOrchestrator:
         """Execute real Django agent and return structured result"""
         try:
             # Import Django models and execution function
-            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
             from agents.tasks_enhanced import execute_agent_with_tools
             from asgiref.sync import sync_to_async
             import uuid
@@ -577,7 +577,7 @@ CURRENT BETTING LINES:"""
 
 Provide specific {agent_id.replace('-', ' ').title()} analysis using these exact odds."""
             
-            execution = await sync_to_async(AgentExecution.objects.create)(
+            execution = await sync_to_async(AgentTaskExecution.objects.create)(
                 execution_id=execution_id,
                 template=agent_template,
                 task_description=task_description,

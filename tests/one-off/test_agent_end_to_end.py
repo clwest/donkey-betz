@@ -22,7 +22,7 @@ import asyncio
 from datetime import datetime
 from decimal import Decimal
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentStatus
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentOrchestration, AgentStatus
 from intelligence.agent_executor import AgentExecutor
 from intelligence.agent_orchestrator import AgentOrchestrator
 from intelligence.agent_communication import AgentCommunication
@@ -325,7 +325,7 @@ def test_execution_history():
 
     try:
         # Get recent executions
-        recent_executions = AgentExecution.objects.all().order_by('-created_at')[:5]
+        recent_executions = AgentTaskExecution.objects.all().order_by('-created_at')[:5]
 
         print_info(f"Recent executions: {recent_executions.count()}")
 

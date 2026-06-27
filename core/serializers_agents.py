@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentOrchestration,
     AgentTool,
     AgentRegistry,
@@ -104,7 +104,7 @@ class AgentExecutionSerializer(serializers.ModelSerializer):
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     
     class Meta:
-        model = AgentExecution
+        model = AgentTaskExecution
         fields = [
             'id', 'execution_id', 'template', 'template_name', 'user', 'user_username',
             'task_description', 'task_type', 'context', 'input_data',
@@ -143,7 +143,7 @@ class AgentExecutionListSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)
     
     class Meta:
-        model = AgentExecution
+        model = AgentTaskExecution
         fields = [
             'id', 'execution_id', 'template_name', 'user_username',
             'task_description', 'status', 'priority', 'progress_percentage',

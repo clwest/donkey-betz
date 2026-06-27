@@ -2297,7 +2297,7 @@ class EPAToolHandlersMixin:
                 return {'success': False, 'error': 'Task description is required'}
 
             from core.services.content_executor import DonkeyBetzContentExecutor
-            from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
+            from core.models.agents_registry import AgentTaskExecution, UnifiedAgentTemplate
 
             # Create execution record
             try:
@@ -2309,7 +2309,7 @@ class EPAToolHandlersMixin:
                     description='Executes AI content creation tasks'
                 )
 
-            execution = AgentExecution.objects.create(
+            execution = AgentTaskExecution.objects.create(
                 agent=template,
                 user=self.user,
                 input_data={

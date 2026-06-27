@@ -1802,9 +1802,9 @@ def initiative_origin_trace_api(request, initiative_id):
         # Session 904: Get active agent work on this initiative
         trace['active_work'] = []
         try:
-            from core.models.agents_registry.models import AgentExecution
+            from core.models.agents_registry.models import AgentTaskExecution
             # Find any running or recent executions for this initiative
-            active_executions = AgentExecution.objects.filter(
+            active_executions = AgentTaskExecution.objects.filter(
                 status__in=['running', 'initializing', 'pending'],
             ).order_by('-started_at')[:20]
 
@@ -1826,7 +1826,7 @@ def initiative_origin_trace_api(request, initiative_id):
             # Also check for recent completed work (last hour) to show what just finished
             from django.utils import timezone
             from datetime import timedelta
-            recent_completed = AgentExecution.objects.filter(
+            recent_completed = AgentTaskExecution.objects.filter(
                 status='completed',
                 completed_at__gte=timezone.now() - timedelta(hours=1),
             ).order_by('-completed_at')[:10]

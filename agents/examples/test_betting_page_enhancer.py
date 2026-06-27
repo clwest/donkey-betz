@@ -16,7 +16,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 import django
 django.setup()
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentRegistry
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution, AgentRegistry
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -138,7 +138,7 @@ def test_agent_execution():
             print(f"\n🔬 Test Scenario {i}: {scenario['task'][:50]}...")
             
             # Create execution
-            execution = AgentExecution.objects.create(
+            execution = AgentTaskExecution.objects.create(
                 template=agent,
                 user=user,
                 task_description=scenario['task'],

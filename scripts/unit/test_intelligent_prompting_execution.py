@@ -7,7 +7,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from django.contrib.auth import get_user_model
 import uuid
 
@@ -26,7 +26,7 @@ print(f"Found agent: {intelligent_agent.name}")
 print(f"Agent capabilities: {intelligent_agent.capabilities}")
 
 # Create a test execution to optimize a prompt
-execution = AgentExecution.objects.create(
+execution = AgentTaskExecution.objects.create(
     template=intelligent_agent,
     user=user,
     execution_id=f"test_prompt_opt_{uuid.uuid4().hex[:8]}",

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.core.cache import cache
 import logging
 
-from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import AgentContribution, UnifiedAgentTemplate, AgentTaskExecution
 from content.models import CreativeProject, ImageHistory, VideoHistory
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class AgentContributionService:
         contribution_type: str = 'generation',
         contribution_role: str = 'Primary Creator',
         contribution_percentage: int = 100,
-        execution: Optional[AgentExecution] = None,
+        execution: Optional[AgentTaskExecution] = None,
         task_description: str = '',
         execution_time_seconds: Optional[float] = None,
         tokens_used: Optional[int] = None
@@ -88,7 +88,7 @@ class AgentContributionService:
         contribution_type: str = 'generation',
         contribution_role: str = 'Primary Creator',
         contribution_percentage: int = 100,
-        execution: Optional[AgentExecution] = None,
+        execution: Optional[AgentTaskExecution] = None,
         task_description: str = '',
         execution_time_seconds: Optional[float] = None,
         tokens_used: Optional[int] = None
@@ -140,7 +140,7 @@ class AgentContributionService:
         contribution_type: str = 'orchestration',
         contribution_role: str = 'Project Coordinator',
         contribution_percentage: int = 100,
-        execution: Optional[AgentExecution] = None,
+        execution: Optional[AgentTaskExecution] = None,
         task_description: str = '',
         execution_time_seconds: Optional[float] = None,
         tokens_used: Optional[int] = None

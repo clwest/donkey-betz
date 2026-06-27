@@ -352,8 +352,8 @@ class AgentRouter:
         
         try:
             # Create execution record for tracking
-            from core.models.agents_registry import AgentExecution, AgentStatus
-            execution = AgentExecution.objects.create(
+            from core.models.agents_registry import AgentTaskExecution, AgentStatus
+            execution = AgentTaskExecution.objects.create(
                 template=agent,
                 user=self.user,
                 execution_id=execution_id,

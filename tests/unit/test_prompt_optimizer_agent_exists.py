@@ -4,7 +4,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_core.settings")
 pytestmark = pytest.mark.django_db
 
 from django.contrib.auth import get_user_model
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
 User = get_user_model()
 
@@ -19,7 +19,7 @@ def test_intelligent_prompt_agent_presence_and_execution_stub():
     if not agent:
         pytest.skip("Intelligent Prompting Agent not found or inactive.")
 
-    exec_obj = AgentExecution.objects.create(
+    exec_obj = AgentTaskExecution.objects.create(
         template=agent,
         user=user,
         execution_id=f"test_prompt_opt_{uuid.uuid4().hex[:8]}",

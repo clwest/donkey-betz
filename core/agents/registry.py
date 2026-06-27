@@ -26,7 +26,7 @@ from django.utils import timezone
 # Updated import path - use canonical location
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
+    AgentTaskExecution,
     AgentSpecialization,
     AgentStatus,
     AgentPriority
@@ -363,7 +363,7 @@ class AgentRegistry:
                 self.logger.debug(f"Context tracking unavailable: {e}")
 
             # Create execution record
-            execution = AgentExecution.objects.create(
+            execution = AgentTaskExecution.objects.create(
                 template=agent_template,
                 input_data=task_data,
                 priority=priority,
@@ -424,7 +424,7 @@ class AgentRegistry:
     def get_execution_status(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """Get status of an agent execution"""
         try:
-            execution = AgentExecution.objects.get(id=execution_id)
+            execution = AgentTaskExecution.objects.get(id=execution_id)
 
             return {
                 'id': execution.id,
@@ -439,7 +439,7 @@ class AgentRegistry:
                 'execution_time_ms': (getattr(execution, 'execution_time_seconds', 0) or 0) * 1000 if hasattr(execution, 'execution_time_seconds') and getattr(execution, 'execution_time_seconds', None) is not None else 0
             }
 
-        except AgentExecution.DoesNotExist:
+        except AgentTaskExecution.DoesNotExist:
             return None
         except Exception as e:
             self.logger.error(f"Error getting execution status: {e}")
@@ -472,10 +472,10 @@ class AgentRegistry:
             # Get basic counts
             total_agents = UnifiedAgentTemplate.objects.count()
             active_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-            total_executions = AgentExecution.objects.count()
+            total_executions = AgentTaskExecution.objects.count()
 
             # Calculate average success rate
-            completed_executions = AgentExecution.objects.filter(
+            completed_executions = AgentTaskExecution.objects.filter(
                 status=AgentStatus.COMPLETED
             ).count()
             avg_success_rate = completed_executions / total_executions if total_executions > 0 else 0.0

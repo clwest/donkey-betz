@@ -23,7 +23,7 @@ from django.utils import timezone
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentOrchestration,
-    AgentExecution,
+    AgentTaskExecution,
     AgentPerformanceMetrics,
     AgentStatus
 )
@@ -226,7 +226,7 @@ class AgentOrchestrator:
         context: Dict,
         orchestration: AgentOrchestration,
         user: Optional[Any]
-    ) -> List[AgentExecution]:
+    ) -> List[AgentTaskExecution]:
         """Execute agents in parallel"""
         logger.info("Executing agents in parallel")
 
@@ -256,7 +256,7 @@ class AgentOrchestrator:
         context: Dict,
         orchestration: AgentOrchestration,
         user: Optional[Any]
-    ) -> List[AgentExecution]:
+    ) -> List[AgentTaskExecution]:
         """Execute agents sequentially"""
         logger.info("Executing agents sequentially")
 
@@ -293,7 +293,7 @@ class AgentOrchestrator:
         context: Dict,
         orchestration: AgentOrchestration,
         user: Optional[Any]
-    ) -> List[AgentExecution]:
+    ) -> List[AgentTaskExecution]:
         """
         Execute agents hierarchically (lead agent coordinates others)
 
@@ -354,7 +354,7 @@ class AgentOrchestrator:
 
         return executions
 
-    def _aggregate_results(self, executions: List[AgentExecution]) -> Dict[str, Any]:
+    def _aggregate_results(self, executions: List[AgentTaskExecution]) -> Dict[str, Any]:
         """
         Aggregate results from multiple agent executions
 

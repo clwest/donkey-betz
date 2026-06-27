@@ -229,20 +229,20 @@ class AgentMonitor:
         
         # Store summary in database (if model exists)
         try:
-            from core.models.agents_registry import AgentExecution
+            from core.models.agents_registry import AgentTaskExecution
 
-            AgentExecution.objects.filter(id=self.execution_id).update(
+            AgentTaskExecution.objects.filter(id=self.execution_id).update(
                 performance_metrics=self.metrics,
                 execution_time=self.metrics['execution_time'],
                 status='completed' if not self.metrics['errors'] else 'failed'
             )
         except ImportError as e:
-            # Previously swallowed silently; AgentExecution lives in
+            # Previously swallowed silently; AgentTaskExecution lives in
             # core/models/agents_registry and always exists, so an
             # ImportError here means a transitive dependency failed to
             # load and that's worth knowing about.
             logger.warning(
-                "agent_monitoring: AgentExecution import failed (%s: %s) — "
+                "agent_monitoring: AgentTaskExecution import failed (%s: %s) — "
                 "per-execution metrics will not be persisted this run",
                 type(e).__name__, e,
             )
@@ -311,10 +311,10 @@ class PerformanceAnalyzer:
     def get_agent_stats(agent_name, time_period=None):
         """Get performance statistics for an agent"""
         try:
-            from core.models.agents_registry import AgentExecution
+            from core.models.agents_registry import AgentTaskExecution
             from django.db.models import Avg, Count, Max, Min, Q
             
-            query = AgentExecution.objects.filter(
+            query = AgentTaskExecution.objects.filter(
                 template__name=agent_name
             )
             
@@ -444,11 +444,11 @@ class PerformanceAnalyzer:
         
         # Get metrics for all agents
         try:
-            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 
             # Overall statistics
-            total_executions = AgentExecution.objects.count()
-            successful_executions = AgentExecution.objects.filter(
+            total_executions = AgentTaskExecution.objects.count()
+            successful_executions = AgentTaskExecution.objects.filter(
                 status='completed'
             ).count()
 
@@ -523,19 +523,19 @@ def get_agent_metrics_summary():
     }
     
     try:
-        from core.models.agents_registry import AgentExecution
+        from core.models.agents_registry import AgentTaskExecution
         from django.db.models import Avg, Count
         
         # Get 24-hour statistics
         since = timezone.now() - timedelta(hours=24)
-        recent_executions = AgentExecution.objects.filter(
+        recent_executions = AgentTaskExecution.objects.filter(
             created_at__gte=since
         )
 
         summary['total_executions_24h'] = recent_executions.count()
 
         # Count active/running agents
-        active_count = AgentExecution.objects.filter(
+        active_count = AgentTaskExecution.objects.filter(
             status__in=['running', 'in_progress', 'pending']
         ).count()
         summary['active_agents'] = active_count

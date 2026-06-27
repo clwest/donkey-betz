@@ -26,7 +26,7 @@ from asgiref.sync import sync_to_async
 from core.agents.registry import agent_registry
 from intelligence.spiders.spider_army.orchestrator import SpiderArmyOrchestrator
 from intelligence.models import RevenueMetrics, EarningRecord
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate, AgentTaskExecution
 from persistence.models import UnifiedEmbedding
 from django.db import models
 
@@ -594,7 +594,7 @@ class PlatformUnificationOrchestrator:
 
             # Get active executions
             active_executions = await sync_to_async(list)(
-                AgentExecution.objects.filter(
+                AgentTaskExecution.objects.filter(
                     status__in=['running', 'pending']
                 ).select_related('template').values(
                     'id', 'template__name', 'status', 'started_at'
