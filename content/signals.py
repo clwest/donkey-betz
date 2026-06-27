@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from .models import (
     Document, DocumentEmbedding, KnowledgeBase, ContentGeneration,
-    ContentTemplate, WorkflowExecution, ContentAnalytics, ImageHistory
+    ContentTemplate, ContentWorkflowExecution, ContentAnalytics, ImageHistory
 )
 import logging
 
@@ -150,7 +150,7 @@ def record_embedding_analytics(sender, instance, created, **kwargs):
             )
 
 
-@receiver(post_save, sender=WorkflowExecution)
+@receiver(post_save, sender=ContentWorkflowExecution)
 def record_workflow_analytics(sender, instance, created, **kwargs):
     """Record analytics for workflow executions"""
     if created:

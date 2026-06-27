@@ -334,7 +334,6 @@ __all__ = [
     'UserMemoryContext',
 
     # AI Learning models
-    'AgentLearningSession',
     'AgentCollaboration',
     'LearningInsight',
 

@@ -256,56 +256,8 @@ class AgentLearningSession(models.Model):
         return f"Session({self.session_name}: {self.status})"
 
 
-class LearningInsight(models.Model):
-    """High-level insights generated from multiple learning events"""
-
-    INSIGHT_TYPES = [
-        ('pattern', 'Pattern Recognition'),
-        ('trend', 'Trend Analysis'),
-        ('correlation', 'Correlation Discovery'),
-        ('anomaly', 'Anomaly Detection'),
-        ('prediction', 'Predictive Insight'),
-        ('recommendation', 'Strategic Recommendation'),
-    ]
-
-    # Insight Identity
-    insight_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
-    title = models.CharField(max_length=300)
-    insight_type = models.CharField(max_length=50, choices=INSIGHT_TYPES)
-
-    # Insight Content
-    description = models.TextField()
-    key_findings = models.JSONField(default=list)
-    implications = models.JSONField(default=list)
-    recommended_actions = models.JSONField(default=list)
-
-    # Source Data
-    contributing_agents = models.JSONField(default=list)  # List of agent IDs
-    source_events = models.ManyToManyField(AgentLearningEvent, related_name='insights')
-    data_sources = models.JSONField(default=list)
-
-    # Confidence and Impact
-    confidence_score = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
-    impact_score = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
-    urgency_level = models.CharField(max_length=20, choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')])
-
-    # Timing and Relevance
-    created_at = models.DateTimeField(default=timezone.now, db_index=True)
-    relevant_until = models.DateTimeField(blank=True, null=True)
-
-    # Validation
-    is_validated = models.BooleanField(default=False)
-    validation_score = models.FloatField(default=0.0, validators=[MinValueValidator(0), MaxValueValidator(1)])
-
-    class Meta:
-        app_label = 'ai_intelligence'
-        ordering = ['-impact_score', '-created_at']
-        indexes = [
-            models.Index(fields=['insight_type', '-created_at']),
-            models.Index(fields=['confidence_score']),
-            models.Index(fields=['impact_score']),
-            models.Index(fields=['urgency_level']),
-        ]
-
-    def __str__(self):
-        return f"Insight({self.title}: {self.insight_type})"
+# ai_intelligence.LearningInsight removed in S1244 (Cat 2 dormant cleanup).
+# Was imported by persistent_learning_engine.py in a try block but never
+# used in any .objects.X call. Canonical `core.LearningInsight` (in
+# core/models/ai_learning/models.py) remains and is actively used by
+# models_feedback_processing.py + implementation_executor.py.

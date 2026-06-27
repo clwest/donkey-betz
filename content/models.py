@@ -1438,7 +1438,7 @@ class ContentWorkflow(UnifiedBaseModel):
         return f"{self.name} ({self.domain})"
 
 
-class WorkflowExecution(UnifiedBaseModel):
+class ContentWorkflowExecution(UnifiedBaseModel):
     """
     Individual workflow execution instances
     """
