@@ -131,7 +131,141 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1243 — CURRENT ENTRY POINT
+## SESSION 1244 — CURRENT ENTRY POINT
+
+### SESSION 1243 CLOSED — audit-method validated 4×, 4 PRs shipped, full Cat 2 cross-app duplicate inventory enumerated
+
+Full handoff: [`SESSION_1243_AUDIT_METHOD_4X_VALIDATED_FOUR_PRS_PLUS_CROSS_APP_INVENTORY.md`](docs/handoffs/SESSION_1243_AUDIT_METHOD_4X_VALIDATED_FOUR_PRS_PLUS_CROSS_APP_INVENTORY.md).
+
+Session 1243 opened on P0 health check + P2 audit-method correction from S1242 close. The audit method itself became the headline. Four PRs shipped — each validated the protocol on a different shape of cross-app collision (shadowing, stillborn-endpoint, true cross-app duplicate, mixed-live-data dual-table). Session closed with the complete Cat 2 cross-app duplicate inventory enumerated (9 names total, finite and regenerable) and 3 of 9 resolved.
+
+**PRs shipped this session (all admin-merged via `--admin --merge`):**
+
+| PR | Subject | Merge | Net |
+|---|---|---|---|
+| [#2679](https://github.com/clwest/donkey-betz-platform/pull/2679) | refactor(session-1243): tombstone shadowed core/models.py (24 dead classes) | `f3dbcebe` | +52 / -2,684 |
+| [#2680](https://github.com/clwest/donkey-betz-platform/pull/2680) | feat(session-1243): rebuild PaMessageFeedback (stillborn since S1085) | `a686d602` | +293 / -26 |
+| [#2681](https://github.com/clwest/donkey-betz-platform/pull/2681) | refactor(session-1243): rename intelligence.AgentExecution → ActionPlanExecution | `92c20677` | +49 / -11 |
+| [#2682](https://github.com/clwest/donkey-betz-platform/pull/2682) | refactor(session-1243): rename core.SpiderData → core.LegacySpiderData (D1 clean-cut, 115 files) | `f2de87f5` | +789 / -746 |
+
+**Cat 2 cross-app duplicate progress: 3 of 9 resolved.** Six dormant duplicates remain (all 0 rows, low risk batch cleanup candidates): AgentLearningSession, AgentRecommendation, GeneratedProject, LearningInsight, MLModelVersion, WorkflowExecution. Plus 1 deferred-product-Q (core ↔ agents AgentExecution rich-surface).
+
+**Audit-method canonicalized (validated 4×):** `apps.get_models()` filtered by `__name__` + AST file classification (core_only / persistence_only / both / no_import) + row-count + writer-trace. Documented in handoff.
+
+**Audit deliverables current state:**
+- Cat 1 — Stillborn Surfaces `2d7ea39f-…` → **43,761 chars** (Finding 1.6 added + 1.4 reclassified)
+- Cat 2 — Phantom Dependencies `86870fdd-…` → **25,132 chars** (Finding 2.3 complete inventory + 3 closures)
+- Cat 6 — Wrong-scope/persona `7c05145d-…` → **3,585 chars** (Finding 6.X 2 wrong-import bugs)
+- Decision: PaMessageFeedback `2fda8b3e-…` → status=completed (REBUILD shipped via #2680)
+
+**Active PA conversation:** `pa-1cb4915546654c78` — created at S1243 close per Rigby's `suggest_fresh` (pa-634b8fef344d4af2 ended at 45/34 turns). Carry-forward seeded explicitly via pa_chat follow-up. Baseline 100/continue at S1244 open. `tools/pa_local.sh` updated to pin the new conversation.
+
+**Worker state at S1243 close:**
+- Daphne restarted mid-session after PR #2680 (PaMessageFeedback rebuild). NOT restarted after PR #2682 (LegacySpiderData rename). Local daphne is on pre-#2682 cache.
+- Celery not currently running locally.
+- **Chris should run** `pkill -9 -f celery; rm -f .celery*.pid; make stop; make start; make celery` before exercising any local code paths overnight.
+
+**Chris-side carryover into Session 1244:**
+- Anthropic credit refill at https://console.anthropic.com/billing — still failing CI billing
+- All 4 S1243 PRs admin-merged via `--admin --merge`
+- Daphne + celery restart before bed (see Worker state)
+
+### FIRST THING Session 1244
+
+#### Priority 0 — Conversation health check
+`pa-1cb4915546654c78` was at 100/continue + 1 turn at S1243 close. Re-check at S1244 open.
+
+#### Priority 1 — 06-28 morning_brief CUMULATIVE verification (TIME-BOUND, ~13:00 UTC Sunday = 07:00 MDT)
+
+Validates **6 PRs cumulatively**: #2672 + #2674 (S1242) AND #2679 + #2680 + #2681 + #2682 (S1243). Verification block:
+
+```python
+from core.models import CeleryTaskEvent
+from core.models_deliverables import Deliverable
+from datetime import date
+import re
+
+today = date(2026, 6, 28)
+
+ev = CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+    started_at__date=today,
+).order_by('-started_at').first()
+assert ev and ev.status == 'SUCCESS'
+
+d = Deliverable.objects.filter(
+    user__username='chris', category='Morning Brief',
+    created_at__date=today,
+).order_by('-created_at').first()
+assert d
+assert not str(d.workspace.id).startswith('cf708a2e'), "cf708a2e leak regression"
+
+c = d.content
+
+# PR #2672 MUSCULAR broaden
+bare = len(re.findall(r'(?<!\[)\bMUSCULAR\b(?!\])', c))
+assert bare == 0, f"MUSCULAR regression: {bare}"
+
+# PR #2674 Path C markdown (no absolute clocks in markdown)
+absolute_hits = re.findall(r'by\s+\d{1,2}:\d{2}\s+(AM|PM)\s+(MDT|MST)', c, re.IGNORECASE)
+assert not absolute_hits, f"Absolute clock in markdown: {absolute_hits}"
+
+# S1243 sanity — LegacySpiderData rows preserved
+from core.models import LegacySpiderData
+assert LegacySpiderData.objects.count() >= 8170, "Row loss in #2682 RenameModel"
+```
+
+#### Priority 2 — Cat 2 dormant cleanup batch
+
+6 remaining cross-app duplicates from Finding 2.3 inventory, all 0 rows so low data risk:
+
+| Class | Variant A | Variant B |
+|---|---|---|
+| AgentLearningSession | `core.models.ai_learning.models` | `ai_core.intelligence.models` |
+| AgentRecommendation | `core.models_agent_memory` | `coleadership.models` |
+| GeneratedProject | `core.models.projects.models` | `ai_opportunities.models` |
+| LearningInsight | `core.models.ai_learning.models` | `ai_core.intelligence.models` |
+| MLModelVersion | `core.models_unified_system` | `ml.models` |
+| WorkflowExecution | `core.models_unified_system` | `content.models` |
+
+Apply the canonical investigation protocol per-class. Batch dormant-only renames into a single PR. Same shape as #2681 — RenameModel is data-safe at 0 rows.
+
+#### Priority 3 — Cat 6 Finding 6.X reachability check
+
+Two wrong-import endpoint bugs surfaced by PR #2681:
+- `ai_core/spiders/integration.py:142` — `.create(template=..., input_data=..., priority=...)` with kwargs that don't exist on `ActionPlanExecution`
+- `intelligence/views_agent_integration.py:315-322` — accesses `.result`, `.started_at`, `.completed_at`, `.error_message` fields that don't exist
+
+Determine reachability. If unreachable → cleanup PR. If reachable → fix import to `from core.models.agents_registry import AgentExecution`.
+
+#### Priority 4 — Open product Q
+
+`core.AgentExecution` (canonical, 984 live rows) ↔ `agents.AgentExecution` (39-col rich-execution surface, 0 rows). Was the agents-app rich-execution surface abandoned, staged, or accidentally unwired? Determines migrate-vs-leave.
+
+#### Priority N — Pre-existing carryover tail (unchanged)
+
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM)
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2)
+- Promote `scripts/smoke_all_agents.py` → mgmt cmd (Session 1231 F6)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Meeting-context leak shape watch (Session 1230 F2, LOW)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+
+#### Priority Last — Whatever Chris wants
+
+Sessions 1226-1243 totaled ~82 PRs across 18 sessions. S1243's headline was audit-method canonicalization (validated 4×); the natural S1244 arc is "drain the 6-item Cat 2 dormant queue using the canonical protocol."
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+
+---
 
 ### SESSION 1242 CLOSED — Path C + Cat 5 audit + audit-method correction via core/models.py shadowing discovery (6 PRs, 6 audit deliverables advanced)
 

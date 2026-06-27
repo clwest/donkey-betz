@@ -17,18 +17,20 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1236 fresh
-# thread (Rigby create_fresh at Session 1236 open per her own P0
-# health-check recommendation: "Rotate when we start implementing
-# Tranche 2/3/4 so the new thread can be audit execution rather than
-# audit discovery + design"). Pin: pa-a2443db2e43a42dc. Title:
-# "Session 1236 — P5#3 Drift Sweep (Tranche 2/3/4 execution)".
-# Carry-forward seeded with audit deliverable feed2d81-ee2f-44c0-
-# 8f17-816591d2a3ff scope, Tranche 1 close summary (7 PRs #2636-
-# #2641 + #2643 = 7 of 7 named files closed), Tranche 2/3/4 todo
-# list (clean_mythologies.py mgmt cmd / scripts cleanup / dead unit
-# tests), worker state, and refresh_docs_corpus first-fire timing
-# (2026-06-26 04:00 Denver pending verification at S1236 P1).
+# the --conversation flag below. Current value: Session 1244 fresh
+# thread (Rigby create_fresh at S1243 close per her own suggest_fresh
+# recommendation: pa-634b8fef344d4af2 ended S1243 at 45/suggest_fresh
+# after 34 turns / 17k tokens / 19.6h / 6 topics). Pin:
+# pa-1cb4915546654c78. Title: "Session 1244 — Cat 2 cleanup batch +
+# 06-28 verification". Carry-forward seeded with: 4 S1243 PR roll
+# (#2679 tombstone / #2680 PaMessageFeedback rebuild / #2681
+# ActionPlanExecution rename / #2682 LegacySpiderData rename — D1
+# clean-cut 115 files), Cat 2 cross-app duplicate inventory (3 of 9
+# resolved; 6 dormant remain), audit-method canonicalization (apps.
+# get_models + AST file classification validated 4x), S1244 priority
+# queue (P0 health check; P1 06-28 morning_brief cumulative
+# verification 13:00 UTC; P2 dormant batch cleanup; P3 Cat 6
+# reachability; P4 core↔agents AgentExecution product Q).
 # Prior pins retired: pa-0f08fc48ec914917 (Sessions 1234-1235 →
 # Session 1236 open; ~50 turns across the 3 sessions covering
 # Session 1234 3-arc 22-PR close + Session 1235 9-PR + audit
@@ -36,6 +38,12 @@
 # trigger "before Tranche 2/3/4 implementation". Carries the full
 # audit-discovery + Tranche 1 design context — superseded for
 # execution work by the fresh thread).
+# Retired at S1243 close: pa-634b8fef344d4af2 (Sessions 1241-1243 —
+# 3-session continuous thread covering S1241 frontend rot audit +
+# S1242 Path C / Cat 5 audit / 6 PRs + S1243 audit-method
+# canonicalization / 4 PRs / full Cat 2 cross-app duplicate
+# inventory; ended at 34 turns / 17k tokens / score 45 /
+# suggest_fresh).
 # Older retired pins (Sessions 1234 morning + earlier):
 # pa-91cf6bbce1d6406e (Session 1234 morning —
 # replaced mid-session when Rigby fresh-started pa-0f08fc48ec914917
@@ -88,4 +96,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-634b8fef344d4af2
+python tools/pa_chat.py "$@" --tools --conversation pa-1cb4915546654c78
