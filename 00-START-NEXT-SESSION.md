@@ -131,84 +131,130 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1242 — CURRENT ENTRY POINT
+## SESSION 1243 — CURRENT ENTRY POINT
 
-### SESSION 1241 CLOSED — Platform Reality Audit stand-up (no-code, 7 deliverables, worked specimen)
+### SESSION 1242 CLOSED — Path C structured decision_card + Cat 5 deletion-regret audit (3 PRs, 5 audit deliverables advanced)
 
-Full handoff: [`SESSION_1241_PLATFORM_REALITY_AUDIT_STAND_UP.md`](docs/handoffs/SESSION_1241_PLATFORM_REALITY_AUDIT_STAND_UP.md).
+Full handoff: [`SESSION_1242_PATH_C_STRUCTURED_DECISION_CARD_PLUS_DELETION_REGRET_AUDIT.md`](docs/handoffs/SESSION_1242_PATH_C_STRUCTURED_DECISION_CARD_PLUS_DELETION_REGRET_AUDIT.md).
 
-Session 1241 opened executing the S1241 start-here punch list — Surface A (AgentsPage Decisions sidebar repoint), estimated 1 PR. Verifier-loop on Rigby's code-pointer map collapsed the diagnosis in ~15 min — the start-here was materially wrong on TWO load-bearing facts:
-- `DecisionRecord` has 1 production writer at `core/agents/base_agent.py:3417`, NOT zero
-- AgentsPage reads `AgentDecisionSummary` via `/api/boardroom/decisions/` (`AgentsPage.tsx:748`), NOT `DecisionRecord` — wiring has existed since Session 696
+Session 1242 opened on the S1241 P1 06-27 cumulative morning_brief verification (time-bound). Brief fired SUCCESS at 13:00:02 UTC, deliverable landed correctly (`7ba30cc0-…`, NOT cf708a2e leak — PR #2653 holds). Content surfaced **2 Sub-step D regression candidates** that became this session's work:
 
-Chris reframed mid-session: stop coding, audit what we've actually built across the whole codebase + `/docs/`. No PRs even on obvious fixes. **No-code Platform Reality Audit foundation shipped instead.**
+1. **MUSCULAR jargon leak (PR #2658 scope gap)** — 4 bare mentions slipped past the 2-literal humanizer in TL;DR / Lane 1 / Where-to-verify / Decision 1 body. Shipped **PR #2672** (broaden humanizer to tolerant regex + apply at `_execute_decision_card_synthesis_step` which read `lane_1_text` raw). 25 tests green; production verification on the 06-27 content showed 4 bare → 0 bare + 4 tagged `[MUSCULAR]`, count preserved.
 
-**Audit deliverables stood up in Donkey Betz workspace (`b4503364-2573-4401-9e28-61a739e0ce50`), all `status=ready`, all `category=platform-audit`:**
+2. **MDT absent (PR #2655 dead-letter)** — 0 MDT/MST anywhere because LLM emits relative deadlines ("within 48h") instead of absolute. Started to mark `_denver_tz` as dead code. **Chris invoked NEW memory rule:** `feedback_verify_before_deleting_dead_code.md` — *"code that looks dead may be staged for an unbuilt connection."* 6-step verify-before-delete surfaced `MORNING_BRIEF_SPEC.md:228` as planned consumer (structured `decision_card[{..., next_step_timebox}]` deferred since S1233 B.1). Routed Path A/B/C triage to Rigby; she picked **(C) Hybrid** — markdown stays RELATIVE per audience-fit; structured form ships absolute TZ-aware. Chris ratified. Shipped **PR #2674 (Path C)** — single LLM call emits markdown + ```json fence, 2 new helpers (parser + structured validator), 33 new tests, MORNING_BRIEF_SPEC.md updated. `_denver_tz` rescued from dead code, now feeds structured form's ISO offset.
 
-| Doc | UUID |
-|---|---|
-| MASTER INDEX | `dfd2a073-da10-433e-90fe-1fc69a3c716a` |
-| Category 1 — Stillborn Surfaces | `2d7ea39f-3bf0-447c-8c89-33210fc0d18b` |
-| Category 2 — Phantom Dependencies | `86870fdd-e8d8-48d3-9760-4bea75ec10e3` |
-| Category 3 — Orphan Models & Migrations | `74485d22-3bb8-47bd-80b6-7ae7e4657d22` |
-| Category 4 — Doc↔Code Drift | `0836042d-3a97-4d60-b9c8-11ea8d7f9884` |
-| Category 5 — Deletion Regret / Git Archeology | `7ad80aaf-2025-419d-8590-8897ab2e6ee2` |
-| Category 6 — Works, but wrong-scope/permissions/flags | `7c05145d-a618-4bc2-bf49-fb46a16fe8e6` |
+**PRs shipped this session (all admin-merged via `--admin --merge`):**
 
-**Findings seeded (7 total):**
-- **Category 1:** 5 findings from AgentsPage map. Finding 1.1 (Decisions Sidebar) elevated to **DUAL-SOURCED** as the worked specimen — code-side fully verified, awaits Rigby's docs-side `search_docs` pass. Findings 1.2-1.5 (Directory / Dreams / Channels / Learning) are **CANDIDATE** pending recon. 10,898 chars in Cat 1 doc.
-- **Category 4:** 2 meta-findings on the audit tooling itself — 4.1 (`deliverable_tool.create` defaults to `status=completed` regardless of param) + 4.2 (`Deliverable.status` model declares 4 choices but DB accepts `completed` as 5th value, choices not enforced at DB layer). Both CANDIDATE.
+| PR | Subject | Merge | Net | Tests |
+|---|---|---|---|---|
+| [#2672](https://github.com/clwest/donkey-betz-platform/pull/2672) | fix(session-1242): broaden MUSCULAR humanizer + apply at decision_card_synthesis | `74845aee` | +145 / -10 | 6 new (25 total green) |
+| [#2673](https://github.com/clwest/donkey-betz-platform/pull/2673) | docs(session-1241): close handoff + S1242 entry-point | `41fa0d15` | +290 / -69 | (docs) |
+| [#2674](https://github.com/clwest/donkey-betz-platform/pull/2674) | feat(session-1242): Path C — structured decision_card with next_step_timebox | `b7252f3c` | +908 / -30 | 33 new (69 total green) |
 
-**Audit method locked:**
-- **Per-finding schema:** Surface / Reader / Writer / Gates / Observed / Expected / Claim / Evidence (code) / Evidence (docs) / Status / Impact / Reconnect hypothesis (no fix) / Disconfirm test / Verified by Claude / Verified by Rigby
-- **State machine:** CANDIDATE → DUAL-SOURCED → RUNTIME-CHECKED → CONFIRMED (with DISPROVEN / DEFERRED branches). Hard evidence minimums per state — see Rigby's design in the master index doc.
-- **Split contract:** Claude = code/git/ORM (file Read, Grep, manage.py shell, git log/blame). Rigby = docs/deliverables/conversations corpus (search_docs, deliverable history, narrative cross-ref, handoff archaeology). Each verifies the other before promotion past CANDIDATE.
-- **Category 5 two-lens timeline:** Lens A (Claude git chronology) + Lens B (Rigby intent/promise trail via `search_docs(originating_session=1067/1035/1237/1240)`). Mismatches labeled "deleted in git, still referenced in docs/UI" → phantom + drift; "documented as deleted, but code still there" → drift / cleanup incomplete; "deleted without documentation" → deletion regret risk.
+**Audit deliverables advanced this session (Donkey Betz workspace `b4503364-…`):**
 
-**Lesson from worked specimen (Finding 1.1):** any doc/handoff claim of "0 writers" or "wrong wiring" MUST be verified via grep/Read before acceptance. Start-here doc claims are internally consistent (writer believed them at write time) but can be materially wrong if code shifted. Applied to Finding 1.5 already (explicit grep-first flag on the `AgentLearningSession` + `AgentCollaboration` "0 writers anywhere" claim).
+| Doc | UUID | Δ |
+|---|---|---|
+| MASTER INDEX | `dfd2a073-da10-433e-90fe-1fc69a3c716a` | S1242 log entry + summary table (5,741 → 8,306 chars) |
+| Cat 1 — Stillborn Surfaces | `2d7ea39f-3bf0-447c-8c89-33210fc0d18b` | Finding 1.1 promoted **DUAL-SOURCED → RUNTIME-CHECKED**; Findings 1.2-1.5 finalized; cross-finding pattern named (10,898 → 29,887 chars) |
+| Cat 4 — Doc↔Code Drift | `0836042d-3a97-4d60-b9c8-11ea8d7f9884` | NEW **Finding 4.3 candidate** — search_docs provenance filter excludes ~85% of pre-filter matches (5,269 → 8,167 chars) |
+| Cat 5 — Deletion Regret | `7ad80aaf-2025-419d-8590-8897ab2e6ee2` | **3 new findings** (5.1 ml_intelligence.ml_service + 5.2 ml_revenue_pipeline + 5.3 batch_tag_documents) + Rigby Lens B (1,081 → 21,005 chars) |
+| Path C deliverable (NEW) | `19b45ea0-0831-43e8-aa43-038cf9c2e705` | Created mid-session, full design spec + Rigby Q1-Q4 + SHIPPED addendum (0 → 17,830 chars) |
 
-**New memory rule queued:** `feedback_deliverable_create_defaults_to_completed.md` — companion to existing `feedback_deliverable_status_via_content_complete.md` (which covered update-to-completed silent ignore; this covers create-defaults-to-completed silent override).
+**Cross-finding pattern named (S1242):** writers exist but produce 0 rows in production via 3 flavors — (1) writer chain has no callers, (2) writer fires but short-circuits before persist, (3) writer is feature-flagged for paths not exercised locally. Mirrors Cat 5's silent-fallback pattern across archived modules. Pattern is bidirectional with the deletion-regret rule.
 
-**Active conversation:** `pa-634b8fef344d4af2` — ~10 turns this session. **Title is now STALE** ("Session 1241 — AgentsPage reality reconnect (UI-only focus)") because the session reframed mid-flight from UI repoint → platform-wide audit. **Consider rotation at S1242 open** with proper title ("Session 1242 — Platform Reality Audit continued" or similar).
+**New memory rule logged:** [`feedback_verify_before_deleting_dead_code.md`](~/.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_verify_before_deleting_dead_code.md). 6-step verify checklist (grep callers + stringified refs + `docs/` + recent handoffs + audit deliverables via Rigby + originating PR intent). First real use shipped Path C instead of destructive cleanup.
 
-**Worker state:** No backend code touched. No `@shared_task`. No PeriodicTask changes. No celery restart needed.
+**Active conversation:** `pa-634b8fef344d4af2` — started S1242 at 75/continue with 10 turns; added ~16-20 turns covering all 3 PRs + audit work + Lens B + Path C design + shipment summary. Likely 50-65 range now. **Rotation at S1243 open is a real consideration.**
 
-**Chris-side carryover into Session 1242:**
+**Worker state:** Both PR #2672 and PR #2674 modify `core/services/workflow_orchestration_agent.py` (no new `@shared_task`, no PeriodicTask changes). **A worker restart isn't strictly required by the @shared_task registry, BUT** per `feedback_router_heartbeat_not_dead.md` companion + sys.modules cache rule, modifying agent module code requires worker restart for the new code to actually fire. **CHRIS MUST run `pkill -9 -f celery; rm -f .celery*.pid; make celery` before going to bed tonight, otherwise tomorrow's 06-28 fire uses the OLD code paths** and neither PR's behavior shows up in verification.
+
+**Chris-side carryover into Session 1243:**
 - Anthropic credit refill at https://console.anthropic.com/billing
-- CI billing still failing (no PRs this session)
+- CI billing still failing — all 3 S1242 PRs admin-merged via `--admin --merge`
+- **CRITICAL: celery restart needed tonight** (see Worker state above) — without it, 06-28 brief fires with pre-PR-#2672 + pre-PR-#2674 code
 
-### FIRST THING Session 1242
+### FIRST THING Session 1243
 
 #### Priority 0 — Conversation health + rotation decision
 
-`pa-634b8fef344d4af2` should still be healthy (~10 turns at S1241 close). But the title is stale. Run `session_tool action=health_check`; if score still >70, decide: rotate to fresh thread with proper title OR continue with rename note (`session_tool action=rename` if it exists).
+`pa-634b8fef344d4af2` quick `session_tool action=health_check`. Started S1242 at 75/continue with 10 turns; added ~16-20 turns this session covering all 3 PR arcs + Cat 5 audit + Lens B + Path C design + shipment summary. Likely 50-65 range now.
 
-If rotating: seed fresh thread with `carry_forward_summary` including the 7 deliverable UUIDs + audit method state machine + Finding 1.1 worked specimen (DUAL-SOURCED, awaiting Rigby docs-side pass).
+**Decision tree:**
+- If score ≥ 70 AND topic_count ≤ 7 → **continue** (no rotation needed)
+- If score < 70 OR topic_count > 7 → **rotate with carry-forward summary** including:
+  - 3 S1242 PR merge commits (`74845aee` / `41fa0d15` / `b7252f3c`)
+  - 5 audit deliverable UUIDs + char counts
+  - Cross-finding pattern: "writers exist but 0 rows / 3 flavors"
+  - `feedback_verify_before_deleting_dead_code.md` rule + first real use producing Path C
+  - 06-28 brief verification window pending
+  - Cat 5 v1 heuristic gaps (class/function-level imports, Celery task strings, settings.py keys — deferred to deeper-audit follow-up)
 
-Also quick `platform_config_tool action=overview` to confirm `service_context: local` before any work.
+#### Priority 1 — 06-28 morning_brief 4th-fire cumulative verification (TIME-BOUND 07:00 MDT Sun = 13:00 UTC)
 
-#### Priority 1 — 06-27 cumulative morning_brief verification (TIME-BOUND 07:00 MDT)
+**Cumulative verification window for BOTH PR #2672 (MUSCULAR broaden) AND PR #2674 (Path C structured form).** Run this block:
 
-**Pre-existing P1 from prior plan, still standing.** When the brief fires at 07:00 MDT Saturday 06-27, run the verification block preserved in the older Session 1240 priorities block below this entry-point (around lines 270-302 — `CeleryTaskEvent` check + Deliverable check + Sub-step D invariants in content). If verification clean → Sub-step E unlocks AND audit work can resume.
+```python
+from core.models import CeleryTaskEvent
+from core.models_deliverables import Deliverable
+from datetime import date
+import re
 
-#### Priority 2 — Continue Platform Reality Audit (post-verify)
+today = date(2026, 6, 28)
 
-**Rigby docs-side pass on Finding 1.1** (elevate from DUAL-SOURCED → RUNTIME-CHECKED):
-- `search_docs('AgentDecisionSummary writer')`
-- `search_docs('DecisionRecord boardroom')`
-- `search_docs('agent decision summary')`
-- Specific question: does any doc identify what writes to `AgentDecisionSummary`?
-- Then runtime check: `AgentDecisionSummary.objects.count()` locally. If 0 → upstream writer is the actual gap.
+# 1. Brief fired?
+ev = CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+    started_at__date=today,
+).order_by('-started_at').first()
+assert ev and ev.status == 'SUCCESS', f"Brief did not fire or failed: {ev}"
 
-**Code-side recon for Findings 1.2-1.5** (elevate CANDIDATE → DUAL-SOURCED):
-- **1.2 Directory:** locate AgentsPage agent-list reader component + endpoint + filter logic. `UnifiedAgentTemplate.objects.count()` check.
-- **1.3 Dreams:** verify `core/tasks_initiatives.py:907` is actual Dream creation point; diagnose why local initiatives aren't firing (gate, flag, or schedule).
-- **1.4 Channels:** confirm 5 CRUD writers; confirm NO signal handlers/event listeners for channel projection in `core/services/channels*` or similar.
-- **1.5 Learning:** **grep first** for `AgentLearningSession.objects.(create|update_or_create)` and `AgentCollaboration.objects.(create|update_or_create)` in `core/` BEFORE accepting the "0 writers" claim (Finding 1.1 lesson).
+# 2. Deliverable landed?
+d = Deliverable.objects.filter(
+    user__username='chris', category='Morning Brief',
+    created_at__date=today,
+).order_by('-created_at').first()
+assert d, "No Morning Brief deliverable for 2026-06-28"
+assert not str(d.workspace.id).startswith('cf708a2e'), "cf708a2e leak regression"
 
-**Category 5 kickoff** — git-archeology Lens A over Sessions 1067 / 1035 / 1237 P2.b / 1240 cleanup arcs. Look for "deleted in git but referenced in docs/UI" mismatches. Rigby in parallel runs Lens B via `search_docs(originating_session=1067)` etc.
+c = d.content
 
-**Expand Category 1** to top-10 user-visible surfaces per Rigby's S1241 plan: Dashboard / Boardroom / Channels / Learning / Spiders / Initiatives / Content pipeline (in addition to the 5 AgentsPage surfaces already in there).
+# 3. PR #2672 MUSCULAR broaden verification
+bare = len(re.findall(r'(?<!\[)\bMUSCULAR\b(?!\])', c))
+assert bare == 0, f"MUSCULAR regression: {bare} bare mentions (expected 0)"
+
+# 4. PR #2674 Path C markdown verification (no absolute clocks in markdown)
+absolute_hits = re.findall(r'by\s+\d{1,2}:\d{2}\s+(AM|PM)\s+(MDT|MST)', c, re.IGNORECASE)
+assert not absolute_hits, f"Absolute clock format in markdown: {absolute_hits}"
+```
+
+Also pull the Path C log line from the Celery task logs:
+```bash
+grep "Session 1242 Path C: decision_cards" /tmp/celery.log | tail -3
+```
+Expected: `count=X, non_null_timebox=Y, parse_issue=False, structured_issues=0`. If `parse_issue=True` or `structured_issues>0`, gpt-5-mini's JSON adherence is the issue — consider the 2-pass repair fallback (Rigby's bonus suggestion deferred for v0).
+
+**If verification fails:**
+- MUSCULAR regression → file Cat 1 finding (different escape pattern). Do NOT broaden the regex further without identifying the new pipeline path.
+- Absolute clock in markdown → Path C prompt needs stronger negative instruction OR gpt-5-mini is ignoring the rule.
+- Brief did not fire OR worker still on old code → run `pkill -9 -f celery; rm -f .celery*.pid; make celery` (this is the bedtime-restart Chris may have skipped).
+
+#### Priority 2 — Pick one after P1 lands clean
+
+After P0 + P1 land, options ordered roughly by leverage:
+
+**(a) Action one of the Cat 1 / Cat 5 findings** — real fix work, not catalogue. Highest user-facing impact: **Finding 1.3 Dreams short-circuit** (`AgentDream.objects.count() == 0` despite beat tasks firing 16+ times SUCCESS — read `_impl_maintain_dream_backlog` to find the gate). Other candidates:
+- 1.5 PersistentLearningEngine orphan (easiest "remove" — 0 callers anywhere)
+- 1.4 Channels duplicate model (`core.AgentChannel` vs `agents.AgentChannel`)
+- 1.2 Directory rendering check (hit `/api/v1/agents/comprehensive` curl — verify 23 rows surface)
+- 5.1 ml_intelligence.ml_service restore (highest CAT 5 impact — silent ML degradation in agent-advisor bridge)
+- 5.2 ml_revenue_pipeline restore-or-document (Income Builder enhanced ML path)
+
+**(b) Deeper Cat 5 audit scan** — Cat 5 v1 heuristic was module-name-only. Broaden to: class/function-level imports, Celery task-name strings, settings.py grep, dynamic imports. Plus Cat 2 / Cat 3 / Cat 6 have empty schemas — seed one.
+
+**(c) Rigby docs-side passes for Findings 1.2-1.5** still pending Lens B.
+
+**(d) Investigate Finding 4.3** (search_docs provenance filter) — if real, weakens "no docs evidence found" verdicts on multiple findings. Disconfirm test in Finding 4.3 card.
 
 #### Priority 3 — Pre-existing carryover tail (unchanged)
 
