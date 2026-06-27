@@ -144,6 +144,120 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatTimeShort(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
+}
+
+// Session 1246 — Grouped view helpers. Recency-first (Today / This Week /
+// This Month / Older) → category accordions inside. Rigby's design call:
+// Chris's framing ("read through what's been done") is fundamentally time-
+// oriented, and category is the best semantic chunking inside time.
+
+const RECENCY_BUCKETS = ['today', 'this_week', 'this_month', 'older'] as const
+type RecencyBucket = (typeof RECENCY_BUCKETS)[number]
+
+const RECENCY_LABELS: Record<RecencyBucket, string> = {
+  today: 'Today',
+  this_week: 'This Week',
+  this_month: 'This Month',
+  older: 'Older',
+}
+
+function bucketRecency(iso: string): RecencyBucket {
+  const now = new Date()
+  const created = new Date(iso)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  if (created >= startOfToday) return 'today'
+  const sevenDaysAgo = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000)
+  if (created >= sevenDaysAgo) return 'this_week'
+  const thirtyDaysAgo = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000)
+  if (created >= thirtyDaysAgo) return 'this_month'
+  return 'older'
+}
+
+// Empty/missing category surfaces as a dedicated bucket so we don't
+// silently hide items that lack metadata. Rigby's 5th-consideration ask:
+// becomes the feedback loop for category discipline.
+const UNCATEGORIZED_KEY = '__uncategorized__'
+const UNCATEGORIZED_LABEL = 'Uncategorized / Needs metadata'
+
+function categoryKey(d: Deliverable): string {
+  const c = (d.category || '').trim()
+  return c || UNCATEGORIZED_KEY
+}
+
+interface GroupSummary {
+  count: number
+  latestIso: string
+  statusCounts: Record<string, number>
+  topTags: { tag: string; count: number }[]
+}
+
+function summarizeGroup(items: Deliverable[]): GroupSummary {
+  const statusCounts: Record<string, number> = {}
+  const tagCounts: Record<string, number> = {}
+  let latestIso = items[0]?.created_at ?? ''
+  for (const it of items) {
+    if (it.status) statusCounts[it.status] = (statusCounts[it.status] ?? 0) + 1
+    for (const tag of it.tags ?? []) {
+      tagCounts[tag] = (tagCounts[tag] ?? 0) + 1
+    }
+    if (new Date(it.created_at) > new Date(latestIso)) latestIso = it.created_at
+  }
+  const topTags = Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([tag, count]) => ({ tag, count }))
+  return { count: items.length, latestIso, statusCounts, topTags }
+}
+
+interface GroupedView {
+  recency: RecencyBucket
+  categories: { key: string; label: string; items: Deliverable[]; summary: GroupSummary }[]
+}
+
+function groupDeliverables(items: Deliverable[]): GroupedView[] {
+  const byRecency = new Map<RecencyBucket, Map<string, Deliverable[]>>()
+  for (const it of items) {
+    const r = bucketRecency(it.created_at)
+    const c = categoryKey(it)
+    let inner = byRecency.get(r)
+    if (!inner) {
+      inner = new Map()
+      byRecency.set(r, inner)
+    }
+    let bucket = inner.get(c)
+    if (!bucket) {
+      bucket = []
+      inner.set(c, bucket)
+    }
+    bucket.push(it)
+  }
+  const out: GroupedView[] = []
+  for (const recency of RECENCY_BUCKETS) {
+    const inner = byRecency.get(recency)
+    if (!inner) continue
+    const categories = Array.from(inner.entries()).map(([key, items]) => ({
+      key,
+      label: key === UNCATEGORIZED_KEY ? UNCATEGORIZED_LABEL : key,
+      items: items.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      summary: summarizeGroup(items),
+    }))
+    // Surface Uncategorized first inside each recency bucket (Rigby's call —
+    // feedback loop for tagging discipline), then alphabetical.
+    categories.sort((a, b) => {
+      if (a.key === UNCATEGORIZED_KEY) return -1
+      if (b.key === UNCATEGORIZED_KEY) return 1
+      return a.label.localeCompare(b.label)
+    })
+    out.push({ recency, categories })
+  }
+  return out
+}
+
 function QualityBar({ score }: { score: number }) {
   const pct = Math.round(score * 100)
   const color = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500'
@@ -175,6 +289,23 @@ export function DeliverablesTab() {
   const [searchInput, setSearchInput] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
+  // Session 1246 — Grouped view (Rigby design: recency → category accordions
+  // with cheap aggregation summaries). Default to grouped; persist to
+  // localStorage so the toggle survives reloads. Per_page bumps when grouped
+  // so all items render in one accordion view (pagination is a flat-mode
+  // construct; grouping wants the whole picture).
+  const [viewMode, setViewMode] = useState<'grouped' | 'flat'>(() => {
+    if (typeof window === 'undefined') return 'grouped'
+    const stored = window.localStorage.getItem('deliverables_view_mode')
+    return stored === 'flat' ? 'flat' : 'grouped'
+  })
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('deliverables_view_mode', viewMode)
+    }
+  }, [viewMode])
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
   // ---- Queries ----
   // Workspace-aware: when viewed inside a workspace context, filter by
   // workspace. When on the global /deliverables page, show everything.
@@ -190,12 +321,19 @@ export function DeliverablesTab() {
     queryFn: () => deliverablesApi.types().then(r => r.data),
   })
 
+  // Session 1246 — Grouped mode wants the whole picture rather than a 20-row
+  // page slice, so request a larger window. 200 is a tradeoff: large enough
+  // to capture the workspace's session-history sweep without paying a full
+  // workspace round-trip. If a workspace exceeds 200 items the grouped view
+  // still shows the most-recent 200 + the flat-mode toggle remains
+  // available for full paginated browse.
+  const perPage = viewMode === 'grouped' ? 200 : 20
   const listQuery = useQuery({
-    queryKey: ['deliverables-list', page, filters, activeWsId],
+    queryKey: ['deliverables-list', page, perPage, filters, activeWsId],
     queryFn: () => deliverablesApi.list({
       ...filters,
-      page,
-      per_page: 20,
+      page: viewMode === 'grouped' ? 1 : page,
+      per_page: perPage,
       ...(activeWsId ? { workspace: activeWsId } : {}),
     }).then(r => r.data),
   })
@@ -313,6 +451,134 @@ export function DeliverablesTab() {
     const age = Date.now() - new Date(d.created_at).getTime()
     return age < 24 * 60 * 60 * 1000 && !actedIds.has(d.id)
   })
+
+  // Session 1246 — shared card render used by both flat + grouped views.
+  // Pulled into a closure so the existing card markup stays the single
+  // source of truth instead of being duplicated across two render paths.
+  const renderCard = (d: Deliverable) => (
+    <button
+      key={d.id}
+      onClick={() => setSelectedId(d.id)}
+      className="text-left bg-dark-card border border-dark-border rounded-lg p-4 hover:border-primary-500/30 transition-colors group"
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h4 className="text-sm font-medium text-white group-hover:text-primary-400 transition-colors line-clamp-2">
+          {d.title}
+        </h4>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            d.is_saved ? unsaveMutation.mutate(d.id) : saveMutation.mutate(d.id)
+          }}
+          className="flex-shrink-0 text-gray-500 hover:text-primary-400 transition-colors"
+        >
+          {d.is_saved ? <BookmarkCheck size={14} className="text-primary-400" /> : <Bookmark size={14} />}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <span className={cn(
+          'px-1.5 py-0.5 rounded text-xs inline-flex items-center gap-1',
+          d.source === 'user'
+            ? 'bg-emerald-500/20 text-emerald-400'
+            : 'bg-gray-600/30 text-gray-400'
+        )}>
+          {d.source === 'user' ? <User size={10} /> : <Bot size={10} />}
+          {d.source === 'user' ? 'You' : 'System'}
+        </span>
+        <span className={cn('px-1.5 py-0.5 rounded text-xs', TYPE_COLORS[d.deliverable_type] || 'bg-gray-700 text-gray-300')}>
+          {d.deliverable_type}
+        </span>
+        {d.agent_name && (
+          <span className="px-1.5 py-0.5 rounded text-xs bg-gray-700 text-gray-300 truncate max-w-[120px]">
+            {d.agent_name}
+          </span>
+        )}
+        {/* Session 1091 — workspace assignment surfacing.
+            Orphans (workspace_id null) shouldn't happen post-fix
+            but the badge shouts loudly when one slips through. */}
+        {d.is_orphan ? (
+          <span
+            className="px-1.5 py-0.5 rounded text-xs bg-red-500/20 text-red-300 inline-flex items-center gap-1"
+            title="No workspace assigned — needs triage"
+          >
+            Orphan
+          </span>
+        ) : d.workspace_name ? (
+          <span
+            className={cn(
+              'px-1.5 py-0.5 rounded text-xs truncate max-w-[140px]',
+              d.workspace_name === 'Unassigned'
+                ? 'bg-amber-500/20 text-amber-300'
+                : 'bg-blue-500/15 text-blue-300'
+            )}
+            title={
+              d.workspace_name === 'Unassigned'
+                ? 'Triage bucket — created without workspace; reassign as needed'
+                : `Workspace: ${d.workspace_name}`
+            }
+          >
+            {d.workspace_name}
+          </span>
+        ) : null}
+        {d.is_template && (
+          <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
+            template
+          </span>
+        )}
+      </div>
+
+      {d.preview_content && (
+        <p className="text-xs text-gray-400 line-clamp-3 mb-2">
+          {d.preview_content}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center gap-1">
+          <Clock size={10} />
+          {formatDate(d.created_at)}
+        </div>
+        {d.quality_score > 0 && <QualityBar score={d.quality_score} />}
+      </div>
+
+      {d.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {d.tags.slice(0, 3).map((tag, i) => (
+            <span key={i} className="px-1 py-0.5 bg-gray-800 text-gray-500 rounded text-[10px]">{tag}</span>
+          ))}
+          {d.tags.length > 3 && (
+            <span className="text-[10px] text-gray-600">+{d.tags.length - 3}</span>
+          )}
+        </div>
+      )}
+    </button>
+  )
+
+  // Session 1246 — Grouped view computed eagerly. Computation is O(N log N)
+  // for the sort; N ≤ 200 by design (perPage cap above). Memo not needed.
+  const groupedView: GroupedView[] = viewMode === 'grouped' ? groupDeliverables(deliverables) : []
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+  // "View all in this group" — switch to flat view + apply the category
+  // filter so the existing pagination + card grid takes it from there. The
+  // Uncategorized bucket has no real category to filter on; in that case
+  // we just flip to flat view and let the user browse.
+  const viewAllInGroup = (categoryName: string) => {
+    if (categoryName === UNCATEGORIZED_LABEL || categoryName === UNCATEGORIZED_KEY) {
+      setViewMode('flat')
+      setPage(1)
+      return
+    }
+    setFilters(f => ({ ...f, category: categoryName }))
+    setPage(1)
+    setViewMode('flat')
+  }
 
   // ============ Detail View ============
   if (selectedId) {
@@ -751,6 +1017,26 @@ export function DeliverablesTab() {
             Filters
             {hasActiveFilters && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary-400" />}
           </button>
+          {/* Session 1246 — Grouped/Flat view toggle. Grouped is the
+              default (Rigby design call: scan-ability for session-spanning
+              history). Flat list is the safety valve for raw chronological
+              browse + pagination. Persisted to localStorage. */}
+          <button
+            onClick={() => setViewMode(m => (m === 'grouped' ? 'flat' : 'grouped'))}
+            className={cn(
+              'flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors',
+              viewMode === 'grouped'
+                ? 'bg-primary-500/20 text-primary-400'
+                : 'bg-gray-800/50 text-gray-400 hover:text-white'
+            )}
+            title={
+              viewMode === 'grouped'
+                ? 'Currently grouped by recency → category. Click for flat list.'
+                : 'Currently flat list. Click for grouped view.'
+            }
+          >
+            {viewMode === 'grouped' ? 'Grouped' : 'Flat list'}
+          </button>
           {hasActiveFilters && (
             <button
               onClick={handleClearFilters}
@@ -821,7 +1107,7 @@ export function DeliverablesTab() {
       )}
       {listQuery.error && <ErrorState error={listQuery.error} />}
 
-      {/* Cards Grid */}
+      {/* Cards: flat grid or grouped accordions per viewMode (S1246). */}
       {!listQuery.isLoading && !listQuery.error && (
         <>
           {deliverables.length === 0 ? (
@@ -829,112 +1115,166 @@ export function DeliverablesTab() {
               <FileText size={32} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">{hasActiveFilters ? 'No deliverables match your filters.' : 'No deliverables yet. Agent outputs will appear here.'}</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {deliverables.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => setSelectedId(d.id)}
-                  className="text-left bg-dark-card border border-dark-border rounded-lg p-4 hover:border-primary-500/30 transition-colors group"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="text-sm font-medium text-white group-hover:text-primary-400 transition-colors line-clamp-2">
-                      {d.title}
-                    </h4>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        d.is_saved ? unsaveMutation.mutate(d.id) : saveMutation.mutate(d.id)
-                      }}
-                      className="flex-shrink-0 text-gray-500 hover:text-primary-400 transition-colors"
-                    >
-                      {d.is_saved ? <BookmarkCheck size={14} className="text-primary-400" /> : <Bookmark size={14} />}
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    <span className={cn(
-                      'px-1.5 py-0.5 rounded text-xs inline-flex items-center gap-1',
-                      d.source === 'user'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-gray-600/30 text-gray-400'
-                    )}>
-                      {d.source === 'user' ? <User size={10} /> : <Bot size={10} />}
-                      {d.source === 'user' ? 'You' : 'System'}
+          ) : viewMode === 'grouped' ? (
+            /* Session 1246 — Grouped view (Rigby design lock): recency
+               sections (Today / This Week / This Month / Older) → category
+               accordions with cheap aggregation summary headers. */
+            <div className="space-y-6">
+              {groupedView.map(section => (
+                <div key={section.recency} className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 pl-1">
+                    {RECENCY_LABELS[section.recency]}{' '}
+                    <span className="text-gray-600 normal-case font-normal">
+                      · {section.categories.reduce((s, c) => s + c.summary.count, 0)} items
                     </span>
-                    <span className={cn('px-1.5 py-0.5 rounded text-xs', TYPE_COLORS[d.deliverable_type] || 'bg-gray-700 text-gray-300')}>
-                      {d.deliverable_type}
-                    </span>
-                    {d.agent_name && (
-                      <span className="px-1.5 py-0.5 rounded text-xs bg-gray-700 text-gray-300 truncate max-w-[120px]">
-                        {d.agent_name}
-                      </span>
-                    )}
-                    {/* Session 1091 — workspace assignment surfacing.
-                        Orphans (workspace_id null) shouldn't happen post-fix
-                        but the badge shouts loudly when one slips through. */}
-                    {d.is_orphan ? (
-                      <span
-                        className="px-1.5 py-0.5 rounded text-xs bg-red-500/20 text-red-300 inline-flex items-center gap-1"
-                        title="No workspace assigned — needs triage"
-                      >
-                        Orphan
-                      </span>
-                    ) : d.workspace_name ? (
-                      <span
-                        className={cn(
-                          'px-1.5 py-0.5 rounded text-xs truncate max-w-[140px]',
-                          d.workspace_name === 'Unassigned'
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'bg-blue-500/15 text-blue-300'
-                        )}
-                        title={
-                          d.workspace_name === 'Unassigned'
-                            ? 'Triage bucket — created without workspace; reassign as needed'
-                            : `Workspace: ${d.workspace_name}`
-                        }
-                      >
-                        {d.workspace_name}
-                      </span>
-                    ) : null}
-                    {d.is_template && (
-                      <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-400">
-                        template
-                      </span>
-                    )}
+                  </h3>
+                  <div className="space-y-2">
+                    {section.categories.map(group => {
+                      const groupKey = `${section.recency}:${group.key}`
+                      const isOpen = expandedGroups.has(groupKey)
+                      const isUncat = group.key === UNCATEGORIZED_KEY
+                      return (
+                        <div
+                          key={groupKey}
+                          className={cn(
+                            'bg-dark-card border rounded-lg overflow-hidden',
+                            isUncat
+                              ? 'border-amber-500/30'
+                              : 'border-dark-border'
+                          )}
+                        >
+                          {/* Header (click to expand/collapse) */}
+                          <button
+                            onClick={() => toggleGroup(groupKey)}
+                            className="w-full text-left px-4 py-3 hover:bg-dark-border/30 transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <ChevronRight
+                                  size={14}
+                                  className={cn(
+                                    'flex-shrink-0 text-gray-500 transition-transform',
+                                    isOpen && 'rotate-90'
+                                  )}
+                                />
+                                <span
+                                  className={cn(
+                                    'text-sm font-medium truncate',
+                                    isUncat ? 'text-amber-300' : 'text-white'
+                                  )}
+                                >
+                                  {group.label}
+                                </span>
+                                <span className="text-xs text-gray-500 flex-shrink-0">
+                                  · {group.summary.count}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {/* Status mini-badges */}
+                                {Object.entries(group.summary.statusCounts)
+                                  .sort((a, b) => b[1] - a[1])
+                                  .slice(0, 3)
+                                  .map(([status, count]) => (
+                                    <span
+                                      key={status}
+                                      className={cn(
+                                        'px-1.5 py-0.5 rounded text-[10px]',
+                                        STATUS_COLORS[status] || 'bg-gray-700 text-gray-300'
+                                      )}
+                                      title={`${count} ${status}`}
+                                    >
+                                      {status} {count}
+                                    </span>
+                                  ))}
+                                <span className="text-xs text-gray-500 hidden sm:inline">
+                                  latest {formatTimeShort(group.summary.latestIso)}
+                                </span>
+                              </div>
+                            </div>
+                            {/* Top tags + view-all link (only when collapsed
+                                for a clean expanded state). */}
+                            {!isOpen && (
+                              <div className="flex items-center justify-between gap-2 mt-1.5 pl-6">
+                                <div className="flex flex-wrap gap-1 min-w-0">
+                                  {group.summary.topTags.map(({ tag, count }) => (
+                                    <span
+                                      key={tag}
+                                      className="px-1 py-0.5 bg-gray-800 text-gray-500 rounded text-[10px]"
+                                    >
+                                      {tag} · {count}
+                                    </span>
+                                  ))}
+                                </div>
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => { e.stopPropagation(); viewAllInGroup(group.label) }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.stopPropagation()
+                                      viewAllInGroup(group.label)
+                                    }
+                                  }}
+                                  className="text-[11px] text-primary-400 hover:text-primary-300 transition-colors flex-shrink-0 cursor-pointer"
+                                  title={
+                                    isUncat
+                                      ? 'Flip to flat list (no category filter — these have no category to filter on).'
+                                      : `Switch to flat list filtered by category="${group.label}".`
+                                  }
+                                >
+                                  View all →
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                          {/* Expanded cards. The card grid mirrors the flat
+                              view's layout so users don't relearn anything
+                              when toggling. */}
+                          {isOpen && (
+                            <div className="p-3 border-t border-dark-border bg-dark-bg/40">
+                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                {group.items.map(renderCard)}
+                              </div>
+                              {!isUncat && (
+                                <div className="flex justify-end mt-3">
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => viewAllInGroup(group.label)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') viewAllInGroup(group.label)
+                                    }}
+                                    className="text-xs text-primary-400 hover:text-primary-300 transition-colors cursor-pointer"
+                                  >
+                                    View all {group.label} in flat list →
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-
-                  {d.preview_content && (
-                    <p className="text-xs text-gray-400 line-clamp-3 mb-2">
-                      {d.preview_content}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Clock size={10} />
-                      {formatDate(d.created_at)}
-                    </div>
-                    {d.quality_score > 0 && <QualityBar score={d.quality_score} />}
-                  </div>
-
-                  {d.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {d.tags.slice(0, 3).map((tag, i) => (
-                        <span key={i} className="px-1 py-0.5 bg-gray-800 text-gray-500 rounded text-[10px]">{tag}</span>
-                      ))}
-                      {d.tags.length > 3 && (
-                        <span className="text-[10px] text-gray-600">+{d.tags.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                </button>
+                </div>
               ))}
+              {/* Footer note: the perPage cap is honest about what's loaded. */}
+              {deliverables.length >= perPage && (
+                <p className="text-[11px] text-gray-600 text-center pt-2">
+                  Showing the most-recent {perPage} items in grouped view.
+                  Switch to Flat list to browse the full history.
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Flat list — original card grid. */
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {deliverables.map(renderCard)}
             </div>
           )}
 
-          {/* Pagination */}
-          {pagination && pagination.total_pages > 1 && (
+          {/* Pagination — flat mode only; grouped view shows all loaded items in one window. */}
+          {viewMode === 'flat' && pagination && pagination.total_pages > 1 && (
             <div className="flex items-center justify-between pt-4 border-t border-dark-border mt-4">
               <span className="text-xs text-gray-500">
                 Page {pagination.page} of {pagination.total_pages} ({pagination.total_items?.toLocaleString()} items)
