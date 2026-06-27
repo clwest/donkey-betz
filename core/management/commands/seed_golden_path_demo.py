@@ -18,7 +18,7 @@ from datetime import timedelta
 from content.models import CreativeProject, AISession
 from coleadership.models import (
     CoLeadershipDecision,
-    AgentRecommendation,
+    AdvisorDecisionRecommendation,
     HumanDecision,
     DecisionOutcome,
 )
@@ -123,7 +123,7 @@ class Command(BaseCommand):
 
         # Create Agent Recommendations
         if cto:
-            AgentRecommendation.objects.create(
+            AdvisorDecisionRecommendation.objects.create(
                 decision=decision,
                 agent_template=cto,
                 stance='support',
@@ -146,7 +146,7 @@ Risks are manageable with our DevOps team.""",
             self.stdout.write('   ✅ CTO recommendation added')
 
         if coo:
-            AgentRecommendation.objects.create(
+            AdvisorDecisionRecommendation.objects.create(
                 decision=decision,
                 agent_template=coo,
                 stance='concern',
@@ -169,7 +169,7 @@ Recommendation: Start with manual oversight, automate incrementally.""",
             self.stdout.write('   ✅ COO recommendation added')
 
         if pm:
-            AgentRecommendation.objects.create(
+            AdvisorDecisionRecommendation.objects.create(
                 decision=decision,
                 agent_template=pm,
                 stance='alternative',

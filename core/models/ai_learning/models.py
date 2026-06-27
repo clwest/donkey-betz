@@ -6,38 +6,6 @@ from django.db import models
 from ..system.models import ErrorPattern
 
 
-class AgentLearningSession(models.Model):
-    """Track agent learning sessions and improvements over time"""
-
-    session_id = models.CharField(max_length=100, unique=True)
-    agent_type = models.CharField(max_length=50)  # 'AgentErrorHandler', 'GPT4oMini', etc.
-
-    # Session statistics
-    total_errors_encountered = models.IntegerField(default=0)
-    total_errors_fixed = models.IntegerField(default=0)
-    success_rate = models.FloatField(default=0.0)
-    average_resolution_time = models.FloatField(default=0.0)
-
-    # Learning metrics
-    new_patterns_learned = models.IntegerField(default=0)
-    patterns_improved = models.IntegerField(default=0)
-    knowledge_base_size_before = models.IntegerField(default=0)
-    knowledge_base_size_after = models.IntegerField(default=0)
-
-    # Session metadata
-    started_at = models.DateTimeField(auto_now_add=True)
-    ended_at = models.DateTimeField(null=True, blank=True)
-    session_duration_minutes = models.FloatField(default=0.0)
-
-    class Meta:
-        ordering = ['-started_at']
-        verbose_name = "Agent Learning Session"
-        verbose_name_plural = "Agent Learning Sessions"
-
-    def __str__(self):
-        return f"{self.agent_type} - {self.session_id} ({self.success_rate:.1%})"
-
-
 class AgentCollaboration(models.Model):
     """Track how different agents collaborate and learn from each other"""
 

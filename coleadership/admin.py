@@ -8,15 +8,15 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     CoLeadershipDecision,
-    AgentRecommendation,
+    AdvisorDecisionRecommendation,
     HumanDecision,
     DecisionOutcome,
     CoLeadershipPreferences
 )
 
 
-class AgentRecommendationInline(admin.TabularInline):
-    model = AgentRecommendation
+class AdvisorDecisionRecommendationInline(admin.TabularInline):
+    model = AdvisorDecisionRecommendation
     extra = 0
     readonly_fields = ['created_at', 'confidence']
     fields = ['agent_template', 'stance', 'summary', 'confidence', 'created_at']
@@ -48,7 +48,7 @@ class CoLeadershipDecisionAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'frozen_at']
     search_fields = ['title', 'description']
     readonly_fields = ['id', 'created_at', 'frozen_at']
-    inlines = [AgentRecommendationInline, HumanDecisionInline, DecisionOutcomeInline]
+    inlines = [AdvisorDecisionRecommendationInline, HumanDecisionInline, DecisionOutcomeInline]
 
     fieldsets = (
         ('Decision Details', {
@@ -87,8 +87,8 @@ class CoLeadershipDecisionAdmin(admin.ModelAdmin):
     outcome_status.short_description = 'Outcome'
 
 
-@admin.register(AgentRecommendation)
-class AgentRecommendationAdmin(admin.ModelAdmin):
+@admin.register(AdvisorDecisionRecommendation)
+class AdvisorDecisionRecommendationAdmin(admin.ModelAdmin):
     list_display = [
         'decision',
         'agent_template',

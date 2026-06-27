@@ -95,7 +95,7 @@ class CoLeadershipDecision(models.Model):
         return hasattr(self, 'outcome')
 
 
-class AgentRecommendation(models.Model):
+class AdvisorDecisionRecommendation(models.Model):
     """
     Each board agent's stance for a decision (CTO, COO, etc.).
 

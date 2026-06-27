@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
-    ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
+    ContentGeneration, ContentWorkflow, ContentWorkflowExecution, ContentAnalytics,
     EmbeddingModel
 )
 from .processors import pipeline
@@ -238,7 +238,7 @@ class ContentWorkflowSerializer(serializers.ModelSerializer):
         return value
 
 
-class WorkflowExecutionSerializer(serializers.ModelSerializer):
+class ContentWorkflowExecutionSerializer(serializers.ModelSerializer):
     """Serializer for workflow executions"""
     
     user_name = serializers.CharField(source='user.username', read_only=True)
@@ -246,7 +246,7 @@ class WorkflowExecutionSerializer(serializers.ModelSerializer):
     execution_status = serializers.SerializerMethodField()
     
     class Meta:
-        model = WorkflowExecution
+        model = ContentWorkflowExecution
         fields = [
             'id', 'workflow', 'workflow_name', 'user', 'user_name', 'input_data',
             'execution_config', 'status', 'current_step', 'progress_percentage',
@@ -344,7 +344,7 @@ class ContentGenerationRequestSerializer(serializers.Serializer):
     save_as_document = serializers.BooleanField(default=True)
 
 
-class WorkflowExecutionRequestSerializer(serializers.Serializer):
+class ContentWorkflowExecutionRequestSerializer(serializers.Serializer):
     """Serializer for workflow execution requests"""
     
     workflow_id = serializers.UUIDField()
