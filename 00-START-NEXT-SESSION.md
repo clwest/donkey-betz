@@ -131,7 +131,165 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1246 — CURRENT ENTRY POINT
+## SESSION 1247 — CURRENT ENTRY POINT
+
+### SESSION 1246 CLOSED — S1245 bonus findings closed + audit_celery_zero_fire 5th axis + content/ char-training Celery surface retired + fleet caller verification
+
+Full handoff: [`SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md`](docs/handoffs/SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md).
+
+Session 1246 executed the S1245 P3/P4 carryover punch list + the S1246 P2 content/ retirement product-Q. Mid-session pivot to fleet-caller verification surfaced by Chris's "we might be deleting things we need because we didn't document the fleet apps properly" prompt — caught a documentation-gap risk before merging the deletion PRs. All 3 PRs cleared safe via Rigby runtime + Claude cross-repo ORM evidence and admin-merged at 22:53 UTC.
+
+**PRs shipped (all admin-merged):**
+
+| PR | SHA | Subject | Net | Merge SHA |
+|---|---|---|---|---|
+| [#2692](https://github.com/clwest/donkey-betz-platform/pull/2692) | `fbc77b81` | celery telemetry task_name + remove ghost task whitelist | +20/-5 | `57071592` |
+| [#2693](https://github.com/clwest/donkey-betz-platform/pull/2693) | `cc9ab2c1` | delete dormant content/ char-training Celery tasks | +5/-211 | `1f1edabe` |
+| [#2694](https://github.com/clwest/donkey-betz-platform/pull/2694) | `48e135e9` | audit_celery_zero_fire --include-direct-calls axis | +163/-1 | `660c6b5e` |
+
+**Deliverables produced (both Donkey Betz workspace, b4503364-…, status=ready):**
+
+| Deliverable | Purpose |
+|---|---|
+| `421eeaca-fab8-4753-bd11-33a9b831ee96` | S1246 P1 — 06-28 morning_brief verification runbook (3,479 chars) |
+| `c5ea2f61-be21-4211-abd5-30d7c99983f7` | S1247 plan — content/ char-training full retirement reachability map (7,067 chars after fleet addendum) |
+
+**Headline outcomes:**
+- **S1245 P3.1 telemetry repr bug FIXED.** Shared `_extract_task_name(task, sender)` helper applied to all 3 Celery signal handlers (prerun, postrun, failure). 6/6 smoke cases incl. S1245 bug repro.
+- **S1245 P3.2 ghost task RESOLVED.** `core.tasks.check_system_health` was never defined (`git log -S "def check_system_health" -- core/tasks.py` → zero hits); removed from PA's ALLOWED_TASKS whitelist. Stale QUEUED rows age out per `CELERY_TASK_EVENT_RETENTION_DAYS` (30d).
+- **S1246 P2 surgical retirement SHIPPED.** Whole-file delete of `content/tasks.py` (3 dormant tasks) + `task_routes` entry removed. CharacterModel + 16-file chain queued for S1247 retirement plan.
+- **S1246 P4 5th axis SHIPPED.** `audit_celery_zero_fire --include-direct-calls` automates the S1245 probe blind-spot manual step. Caught the exact blind-spot case in smoke (1 hit for `intelligence.tasks.process_pending_action_plans` in `core/celery.py:629`).
+- **Fleet caller verification CLEAN.** 0 callers across 7 fleet repos + character-os + infra; 0 local FleetServiceKey rows ever; 0 authenticated FleetPAChatAuditRow matches ever; 0 FleetArtifact mentions of any of the 4 task names.
+
+**Memory rule added:** `feedback_fleet_caller_verification_before_celery_deletes.md` — 3-axis sweep (cross-repo grep + Rigby runtime + ORM probe) before any Celery deletion PR merge; local-DB-only verdict has known prod blind spot.
+
+**Subfinding queued for S1247 (workspace leak watch):**
+`cf708a2e-…` (Session 1231 E2E sandbox) is still the active workspace despite S1230 F2 / S1245 flagging — rotation rule isn't auto-firing. Filed as S1246 F-bonus in the runbook deliverable.
+
+**Chris-side carryover into Session 1247:**
+- Anthropic credit refill at https://console.anthropic.com/billing — still failing CI billing
+- All 3 S1246 PRs admin-merged
+- 06-28 morning_brief CUMULATIVE verification time-bound to ~13:00 UTC Sunday = 07:00 MDT
+- **Local fleet integration appears dormant** (0 active FleetServiceKey rows). Clarifying Q: are fleet keys prod-only? Worth answering before the S1247 model-layer retirement PR.
+
+### FIRST THING Session 1247
+
+#### Priority 0 — Conversation health check
+
+`pa-2bb73c969fd24802` was at 100/continue/1 turn at S1246 mid-session pull, then accumulated turns through the multi-ask + content sweep + fleet verification round. Re-check health at S1247 open via `session_tool.health_check`. Likely still green (single coherent topic); fresh-start only if score drops below 60.
+
+#### Priority 1 — 06-28 morning_brief CUMULATIVE verification (TIME-BOUND, ~13:00 UTC Sunday = 07:00 MDT)
+
+**Use Rigby's runbook deliverable `421eeaca-fab8-4753-bd11-33a9b831ee96`** — pre-staged with the full Python verification block, pre-flight checklist (celery worker / beat alive / long_running queue depth = 0), post-fire scrub regexes, and the cf708a2e workspace leak watch.
+
+Quick-recall summary of the verification block (canonical version is in the deliverable):
+
+```python
+from core.models import CeleryTaskEvent
+from core.models_deliverables import Deliverable
+from datetime import date
+import re
+
+today = date(2026, 6, 28)
+
+ev = CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+    started_at__date=today,
+).order_by('-started_at').first()
+assert ev and ev.status == 'SUCCESS'
+
+d = Deliverable.objects.filter(
+    user__username='chris', category='Morning Brief',
+    created_at__date=today,
+).order_by('-created_at').first()
+assert d
+assert not str(d.workspace.id).startswith('cf708a2e'), "cf708a2e leak regression"
+
+c = d.content
+bare = len(re.findall(r'(?<!\[)\bMUSCULAR\b(?!\])', c))
+assert bare == 0
+absolute_hits = re.findall(r'by\s+\d{1,2}:\d{2}\s+(AM|PM)\s+(MDT|MST)', c, re.IGNORECASE)
+assert not absolute_hits
+
+from core.models import LegacySpiderData
+assert LegacySpiderData.objects.count() >= 8170
+```
+
+#### Priority 2 — content/ char-training full retirement (the big one)
+
+**Source of truth:** deliverable `c5ea2f61-…` — Rigby's S1247 reachability map (7,067 chars). It enumerates the 16 CharacterModel-importing files + URL wiring (live at `/api/characters/…`) + agent registration + fleet caller verification addendum.
+
+**Before deleting anything:**
+1. Ask Chris the open clarifying Q — is local FleetServiceKey count=0 because (a) keys are prod-only, (b) fleet went dormant locally, or (c) keys were never provisioned here? If (a), the runtime evidence in S1246's 3-axis sweep doesn't fully cover prod — need a Rigby prod-side check before any model-layer deletion.
+2. Re-confirm with Rigby that the 2 training agents (`CharacterTrainingAgent`, `TrainedCreationAgent`) have ONLY fleet-smoke no-op executions (no real training runs). S1246 finding: their entire AgentExecution history was "Fleet smoke: return one-sentence receipt of capability."
+3. Run `python manage.py audit_celery_zero_fire --include-direct-calls` (S1246 P4 axis, now merged) — confirm no surprise direct callers for the 2 agents' workflow tasks.
+
+**Retirement scope (sequenced shortest-tail-first per the map):**
+- Remove `core/views_character_training.py` URL patterns from `core/urls.py` (around line 2920+) — verify with a 404 smoke test
+- Remove `core/views_character_training.py` import block from `core/urls.py` (around line 1312)
+- Delete `core/views_character_training.py` itself
+- Delete `core/views_image_helpers.py` import block + any view that requires CharacterModel
+- Audit `core/epa_handlers_tools.py` for the CharacterModel import + remove dependent handlers
+- Remove `CharacterTrainingAgent` + `TrainedCreationAgent` registrations + delete the agent class files
+- Audit `ai_core/agents/brand_style_agent.py` for the CharacterModel reference (verify it's a soft reference, not a hard import)
+- Delete `content/character_training.py`
+- Delete `content/models.py CharacterModel` + run a forward-migration that drops the table (BackwardsCompatibility: leave 0014 forward-migration intact for audit history; new 03XX migration handles the drop)
+- Delete 5 `tests/one-off/test_*character*.py` + `test_trained_*.py` files
+- Decision deliverable update: set deliverable `c5ea2f61-…` status to `completed` when shipped
+
+**Risk classification (per Rigby's map):**
+- LOW — `tests/one-off/*`, `content/character_training.py` (only callers are the 3 deleted tasks)
+- MED — `core/views_character_training.py` + URL patterns (live route surface; need to verify with curl/browser before pulling)
+- HIGH — `CharacterModel` itself (Django migration, table drop)
+
+#### Priority 3 — Workspace leak watch (S1246 F-bonus)
+
+`cf708a2e-…` was active for the entire S1246 session despite S1230 F2 / S1245 having flagged it. Rotation rule isn't auto-firing. Two paths:
+
+(a) **Quick fix** — Rigby explicit set: `workspace_tool action=set_active id=b4503364-2573-4401-9e28-61a739e0ce50`. Confirm it sticks. Single PA call, 2 min.
+
+(b) **Real fix** — investigate why `cf708a2e-…` keeps re-activating. Check the rotation rule in `core/services/workspace_*.py` (whatever controls active-workspace state). Maybe write a beat task that re-pins to Donkey Betz if active workspace name contains "E2E" or "sandbox" or is older than N days.
+
+Worth checking handoffs `SESSION_1230_*` + `SESSION_1231_*` for the original F2/F3 framing.
+
+#### Priority 4 — S1115 #12 deferred list re-audit
+
+Re-run `audit_celery_zero_fire --days 30` once 30d telemetry accumulates (~2026-07-13) for the first telemetry-valid zero-fire census. The S1246 P4 axis means the per-task `direct=N` column is now available — should radically reduce false positives.
+
+#### Priority 5 — Pick next audit domain
+
+S1245 menu (1 down: PA tools audit deferred again; rest unchanged):
+1. **PA tools audit** — 109 schemas + 152 handlers + 8 enrichment services. Canonical protocol. Likely surfaces schema↔handler orphans + wrong-import patterns. 1-2 hr.
+2. **Spider pipeline health** — 80 spiders / 41 categories / 1.14M SpiderItemHash rows.
+3. **RAG / citation integrity** — search_docs corpus, retrieval gates, citation source verification.
+4. **24/7 advisor system** — 30 functional advisors. Last full audit Session 1208.
+
+#### Priority N — Pre-existing carryover tail
+
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM)
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2)
+- Promote `scripts/smoke_all_agents.py` → mgmt cmd (Session 1231 F6)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Meeting-context leak shape watch (Session 1230 F2 → now also S1246 F-bonus, see P3 above)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+- Local FleetServiceKey count=0 (S1246 carryover — answer prod-side first)
+
+#### Priority Last — Whatever Chris wants
+
+S1246 was a 3-PR execution + mid-session fleet pivot session. P1 morning_brief verification is the only time-bound item for S1247. Content/ retirement is the most actionable non-time-bound item. After P1 + P2, S1247 is wide open.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+- The 11 AUDIT_FINDINGS.md #12 deferred-by-policy tasks (each needs Chris green-light per #12 protocol)
+
+---
 
 ### SESSION 1245 CLOSED — P2 Celery connectivity audit + AUDIT_FINDINGS.md #12 framework re-validated + new `audit_celery_zero_fire` mgmt cmd
 
