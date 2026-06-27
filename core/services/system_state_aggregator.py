@@ -457,14 +457,14 @@ class SystemStateAggregator:
         now = timezone.now()
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             # 1. Check for stale spider categories
             # Get categories that had data recently vs those that are stale
             recent_threshold = now - timedelta(hours=24)
 
             # Count recent data by spider_name
-            recent_sources = SpiderData.objects.filter(
+            recent_sources = LegacySpiderData.objects.filter(
                 created_at__gte=recent_threshold
             ).values('spider_name').annotate(count=Count('id'))
 

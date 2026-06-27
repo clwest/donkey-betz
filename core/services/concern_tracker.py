@@ -262,7 +262,7 @@ class ConcernTrackerService:
 
         Returns verification result with status update recommendation.
         """
-        from core.models_unified_system import SpiderData, KnowledgeTransfer, AgentDecisionSummary
+        from core.models_unified_system import LegacySpiderData, KnowledgeTransfer, AgentDecisionSummary
         from datetime import timedelta
 
         now = timezone.now()
@@ -280,7 +280,7 @@ class ConcernTrackerService:
         try:
             if concern.category == 'spider_activity':
                 # Check if spiders have collected data
-                spider_data_count = SpiderData.objects.filter(
+                spider_data_count = LegacySpiderData.objects.filter(
                     created_at__gte=last_24h
                 ).count()
                 result['metrics']['spider_data_24h'] = spider_data_count

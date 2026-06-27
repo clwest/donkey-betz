@@ -737,7 +737,7 @@ def _impl_execute_pending_opportunity_tasks(limit: int = 20):
     agents assigned to high-scoring opportunities.
 
     Pipeline flow:
-    Spiders → SpiderData → ML Score → Opportunity → Task → [THIS] → Agent → Outcome
+    Spiders → LegacySpiderData → ML Score → Opportunity → Task → [THIS] → Agent → Outcome
 
     Args:
         limit: Maximum tasks to execute per run (default: 20)
@@ -1291,7 +1291,7 @@ def _impl_collect_training_data():
     - SlimOrca (reasoning conversations)
     - And more...
 
-    Data is saved to SpiderData and triggers the Spider Data Bridge
+    Data is saved to LegacySpiderData and triggers the Spider Data Bridge
     to create learning entries for agents.
     """
     import asyncio
@@ -1329,8 +1329,8 @@ def _impl_collect_training_data():
             logger.warning("📚 [SESSION 420] No training data fetched")
             return {'status': 'no_data', 'records_saved': 0}
 
-        # Save to SpiderData (triggers Spider Data Bridge automatically)
-        from core.models_unified_system import SpiderData
+        # Save to LegacySpiderData (triggers Spider Data Bridge automatically)
+        from core.models_unified_system import LegacySpiderData
         # Session 616: Item-level deduplication for training data
         from core.services.spider_deduplication import deduplicate_spider_items
 
@@ -1352,7 +1352,7 @@ def _impl_collect_training_data():
                 first_msg = messages[0]
                 summary = first_msg.get('content', str(first_msg)) if isinstance(first_msg, dict) else str(first_msg)
 
-                SpiderData.objects.create(
+                LegacySpiderData.objects.create(
                     spider_name='discord_training',
                     source_url=f"https://huggingface.co/datasets/{conv.get('source_dataset', '')}",
                     data_type='training_data',
@@ -1446,7 +1446,7 @@ def _impl_collect_training_data_full():
             logger.warning("📚 [SESSION 420] No training data fetched in full collection")
             return {'status': 'no_data', 'records_saved': 0}
 
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         # Session 616: Item-level deduplication
         from core.services.spider_deduplication import deduplicate_spider_items
 
@@ -1471,7 +1471,7 @@ def _impl_collect_training_data_full():
                 first_msg = messages[0]
                 summary = first_msg.get('content', str(first_msg)) if isinstance(first_msg, dict) else str(first_msg)
 
-                SpiderData.objects.create(
+                LegacySpiderData.objects.create(
                     spider_name='discord_training',
                     source_url=f"https://huggingface.co/datasets/{conv.get('source_dataset', '')}",
                     data_type='training_data',
@@ -1876,7 +1876,7 @@ def _impl_process_trigger_events(event_ids: list):
     """
     Process trigger events and generate immediate alerts.
 
-    This task is called when SpiderData arrives and matches a trigger.
+    This task is called when LegacySpiderData arrives and matches a trigger.
     It runs immediately (with 2s delay) instead of waiting for scheduled runs.
 
     Args:
@@ -2065,7 +2065,7 @@ def _impl_run_design_trends_monitor(self):
     logger.info("🎨 [DESIGN TRENDS] Starting design trends analysis...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import (
             DesignTrend, AutonomousSituationSession
         )
@@ -2083,7 +2083,7 @@ def _impl_run_design_trends_monitor(self):
         cutoff = timezone.now() - timedelta(hours=24)
         design_spiders = ['dribbble', 'behance', 'awwwards', 'unsplash']
 
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=design_spiders,
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')
@@ -2189,7 +2189,7 @@ def _impl_run_freelance_opportunity_scout(self):
     logger.info("💼 [FREELANCE] Starting opportunity scout...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import (
             FreelanceOpportunity, AutonomousSituationSession
         )
@@ -2204,7 +2204,7 @@ def _impl_run_freelance_opportunity_scout(self):
         cutoff = timezone.now() - timedelta(hours=24)
 
         # Get job data from spiders
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['remoteok', 'weworkremotely', 'adzuna', 'hackernews'],
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')[:200]
@@ -2282,7 +2282,7 @@ def _impl_run_skill_gap_analyzer(self):
     logger.info("📚 [SKILLS] Starting skill gap analysis...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import (
             SkillGapAnalysis, TechStackTrend, AutonomousSituationSession
         )
@@ -2317,7 +2317,7 @@ def _impl_run_skill_gap_analyzer(self):
         cutoff = timezone.now() - timedelta(hours=48)
 
         # Get education/course data from spiders
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['coursera', 'education_rss', 'hackernews', 'devto'],
             created_at__gte=cutoff
         ).defer('embedding').order_by('-created_at')[:200]
@@ -3058,13 +3058,13 @@ def _impl_monitor_celery_health():
 
     try:
         # === Check 1: Spider Data Freshness ===
-        from core.models_unified_system import SpiderData, SpiderExecutionLog
+        from core.models_unified_system import LegacySpiderData, SpiderExecutionLog
 
         two_hours_ago = timezone.now() - timedelta(hours=2)
         one_hour_ago = timezone.now() - timedelta(hours=1)
 
         # Check latest spider data
-        latest_spider = SpiderData.objects.order_by('-created_at').first()
+        latest_spider = LegacySpiderData.objects.order_by('-created_at').first()
         if latest_spider:
             stats['latest_spider_data'] = latest_spider.created_at.isoformat()
             if latest_spider.created_at < two_hours_ago:
@@ -3076,7 +3076,7 @@ def _impl_monitor_celery_health():
             issues.append("🕷️ **No Spider Data**: No spider data records found in database")
 
         # Count recent spider data
-        recent_spider_count = SpiderData.objects.filter(created_at__gte=one_hour_ago).count()
+        recent_spider_count = LegacySpiderData.objects.filter(created_at__gte=one_hour_ago).count()
         stats['spider_data_last_hour'] = recent_spider_count
         if recent_spider_count == 0 and latest_spider and latest_spider.created_at >= two_hours_ago:
             warnings.append(f"⚠️ No spider data in last hour (last was {(timezone.now() - latest_spider.created_at).total_seconds() / 60:.0f} min ago)")
@@ -3593,8 +3593,8 @@ def _impl_retry_blocked_research(self, research_result_id: str):
     research.save(update_fields=['retry_count', 'updated_at'])
 
     # Check for new spider data
-    from core.models_unified_system import SpiderData
-    recent_spider_data = SpiderData.objects.filter(
+    from core.models_unified_system import LegacySpiderData
+    recent_spider_data = LegacySpiderData.objects.filter(
         created_at__gte=research.created_at,
         data_type__in=['tech', 'news', 'content', 'research']
     ).count()

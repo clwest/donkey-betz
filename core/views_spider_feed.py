@@ -21,13 +21,13 @@ from django.db.models import Count, Q, Sum, F
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator
 
-from core.models_unified_system import SpiderData, SpiderDataAnnotation
+from core.models_unified_system import LegacySpiderData, SpiderDataAnnotation
 
 logger = logging.getLogger(__name__)
 
 
 def _serialize_spider_item(spider_data, include_full_data=False):
-    """Serialize a SpiderData item with its annotations for the feed."""
+    """Serialize a LegacySpiderData item with its annotations for the feed."""
     # Get annotations for this item
     annotations = list(
         spider_data.annotations.all()
@@ -114,7 +114,7 @@ def spider_feed(request):
 
         # Base query - only items with annotations
         # Session 807: Defer embedding fields to reduce egress costs
-        queryset = SpiderData.objects.filter(
+        queryset = LegacySpiderData.objects.filter(
             annotations__isnull=False
         ).defer('embedding', 'item_embeddings', 'embedding_text').distinct().prefetch_related('annotations')
 
@@ -211,7 +211,7 @@ def spider_feed_trending(request):
 
         # Get items with recent annotations, ranked by annotation count
         # Session 810: Defer embedding fields to reduce egress costs
-        trending = SpiderData.objects.filter(
+        trending = LegacySpiderData.objects.filter(
             annotations__created_at__gte=cutoff
         ).defer('embedding', 'item_embeddings', 'embedding_text').annotate(
             recent_annotation_count=Count('annotations', filter=Q(annotations__created_at__gte=cutoff)),
@@ -251,7 +251,7 @@ def spider_feed_item_detail(request, item_id):
     """
     try:
         # Session 810: Defer embedding fields to reduce egress costs
-        spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').prefetch_related('annotations').get(id=item_id)
+        spider_data = LegacySpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').prefetch_related('annotations').get(id=item_id)
 
         # Increment view count on all annotations
         SpiderDataAnnotation.objects.filter(spider_data=spider_data).update(
@@ -265,7 +265,7 @@ def spider_feed_item_detail(request, item_id):
             'item': item
         })
 
-    except SpiderData.DoesNotExist:
+    except LegacySpiderData.DoesNotExist:
         return JsonResponse({
             'status': 'error',
             'message': 'Item not found'
@@ -293,7 +293,7 @@ def spider_feed_annotate(request, item_id):
     import json
     try:
         # Session 810: Defer embedding fields to reduce egress costs
-        spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').get(id=item_id)
+        spider_data = LegacySpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').get(id=item_id)
 
         try:
             data = json.loads(request.body)
@@ -351,7 +351,7 @@ def spider_feed_annotate(request, item_id):
             }
         })
 
-    except SpiderData.DoesNotExist:
+    except LegacySpiderData.DoesNotExist:
         return JsonResponse({
             'status': 'error',
             'message': 'Item not found'
@@ -447,7 +447,7 @@ def sports_hub_feed(request):
         category = request.GET.get('category', '')
         limit = min(int(request.GET.get('limit', 20)), 50)
 
-        qs = SpiderData.objects.defer(
+        qs = LegacySpiderData.objects.defer(
             'embedding', 'item_embeddings', 'embedding_text'
         ).order_by('-created_at')
 
@@ -460,7 +460,7 @@ def sports_hub_feed(request):
 
         # Expand raw_data items into individual entries
         expanded = []
-        for row in qs[:20]:  # Check up to 20 SpiderData rows
+        for row in qs[:20]:  # Check up to 20 LegacySpiderData rows
             raw = row.raw_data or {}
             entries = raw.get('items', [])
             spider_ts = row.created_at.isoformat() if row.created_at else None
@@ -500,7 +500,7 @@ def spider_feed_stats(request):
         last_7d = now - timedelta(days=7)
 
         # Total stats
-        total_annotated_items = SpiderData.objects.filter(annotations__isnull=False).distinct().count()
+        total_annotated_items = LegacySpiderData.objects.filter(annotations__isnull=False).distinct().count()
         total_annotations = SpiderDataAnnotation.objects.count()
 
         # Activity stats
@@ -509,7 +509,7 @@ def spider_feed_stats(request):
 
         # Top sources (by annotation count)
         top_sources = list(
-            SpiderData.objects.filter(annotations__isnull=False)
+            LegacySpiderData.objects.filter(annotations__isnull=False)
             .values('spider_name')
             .annotate(count=Count('annotations'))
             .order_by('-count')[:5]

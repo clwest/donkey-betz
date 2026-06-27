@@ -58,11 +58,11 @@ class SpiderValidationAgent(BaseValidationAgent):
             )
 
     def check_spider_data_model(self):
-        """Verify SpiderData model has records."""
+        """Verify LegacySpiderData model has records."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             self.check_model_count(
-                model_class=SpiderData,
+                model_class=LegacySpiderData,
                 min_count=100,  # Should have substantial data
                 name='spider_data_records'
             )
@@ -70,7 +70,7 @@ class SpiderValidationAgent(BaseValidationAgent):
             self.add_check(
                 name='spider_data_records',
                 passed=False,
-                message=f'Cannot import SpiderData: {e}'
+                message=f'Cannot import LegacySpiderData: {e}'
             )
 
     def check_spider_endpoints(self):

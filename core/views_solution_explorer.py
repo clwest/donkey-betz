@@ -14,7 +14,7 @@ import logging
 
 from core.models_unified_system import (
     Agent, AgentSolution, AgentLearning,
-    SpiderData
+    LegacySpiderData
 )
 
 logger = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ def get_solution_detail(request, solution_id):
 
         # Get spider data that contributed to this solution
         # Session 807: Defer embedding fields to reduce egress costs
-        spider_sources = SpiderData.objects.filter(
+        spider_sources = LegacySpiderData.objects.filter(
             processed=True,
             created_at__lte=solution.created_at,
             created_at__gte=solution.created_at - timedelta(hours=1)
@@ -225,7 +225,7 @@ def get_data_flow(request):
         flows = []
 
         # Session 807: Defer embedding fields to reduce egress costs
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             processed=True
         ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
 
@@ -267,7 +267,7 @@ def get_data_flow(request):
         return JsonResponse({
             'success': True,
             'flows': flows,
-            'total_spiders': SpiderData.objects.count(),
+            'total_spiders': LegacySpiderData.objects.count(),
             'total_solutions': AgentSolution.objects.count(),
             'total_agents': Agent.objects.filter(is_active=True).count()
         })

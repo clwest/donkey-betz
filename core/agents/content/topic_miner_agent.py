@@ -345,7 +345,7 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
 
     def _query_spider_trends(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Query spider network for trending topics"""
-        from core.models import SpiderData
+        from core.models import LegacySpiderData
 
         domain_keywords = tool_input.get('domain_keywords', [])
         days_back = tool_input.get('days_back', 7)
@@ -355,7 +355,7 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         since_date = timezone.now() - timedelta(days=days_back)
 
         # Build query - search for any domain keyword in embedding_text
-        query = SpiderData.objects.filter(
+        query = LegacySpiderData.objects.filter(
             created_at__gte=since_date
         )
 
@@ -390,14 +390,14 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
 
     def _score_topic_potential(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Score a topic's potential based on various factors"""
-        from core.models import SpiderData
+        from core.models import LegacySpiderData
 
         topic = tool_input.get('topic')
         domain_keywords = tool_input.get('domain_keywords', [])
 
         # Count mentions in spider data (last 7 days)
         since_date = timezone.now() - timedelta(days=7)
-        mention_count = SpiderData.objects.filter(
+        mention_count = LegacySpiderData.objects.filter(
             embedding_text__icontains=topic,
             created_at__gte=since_date
         ).count()
@@ -407,7 +407,7 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         mention_score = min(mention_count * 10, 100)
 
         # Recency score (0-100) - higher if mentioned in last 24 hours
-        recent_count = SpiderData.objects.filter(
+        recent_count = LegacySpiderData.objects.filter(
             embedding_text__icontains=topic,
             created_at__gte=timezone.now() - timedelta(days=1)
         ).count()
@@ -440,7 +440,7 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
 
     def _detect_trending_gaps(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Find trending topics not yet covered"""
-        from core.models import SpiderData
+        from core.models import LegacySpiderData
 
         domain_keywords = tool_input.get('domain_keywords', [])
         covered_topics = tool_input.get('covered_topics', [])
@@ -454,7 +454,7 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
         for keyword in domain_keywords:
             keyword_query |= Q(embedding_text__icontains=keyword)
 
-        recent_items = SpiderData.objects.filter(
+        recent_items = LegacySpiderData.objects.filter(
             keyword_query,
             created_at__gte=since_date
         ).order_by('-created_at')[:50]

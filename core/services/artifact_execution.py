@@ -262,7 +262,7 @@ class ArtifactExecutionService:
         min_records spider records match the topic keywords.
         """
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone as tz
             from datetime import timedelta
             from django.db.models import Q
@@ -294,7 +294,7 @@ class ArtifactExecutionService:
             for kw in keywords:
                 query |= Q(raw_data__icontains=kw) | Q(embedding_text__icontains=kw)
 
-            count = SpiderData.objects.filter(
+            count = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
             ).filter(query).count()
 

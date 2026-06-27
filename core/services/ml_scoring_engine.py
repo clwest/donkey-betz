@@ -9,7 +9,7 @@ Session 670: Phase 3 - LightGBM with Optuna hyperparameter optimization
 Policy: Hybrid rule + ML scoring with SHAP explainability
 
 This engine provides:
-1. Feature extraction from SpiderData (24 features)
+1. Feature extraction from LegacySpiderData (24 features)
 2. LightGBM or XGBoost-based opportunity scoring
 3. Optuna hyperparameter optimization
 4. SHAP explanations for each prediction
@@ -462,7 +462,7 @@ class MLScoringEngine:
 
     def extract_features(self, spider_data) -> np.ndarray:
         """
-        Extract features from a SpiderData instance.
+        Extract features from a LegacySpiderData instance.
 
         Returns a numpy array of shape (1, n_features)
         """
@@ -579,7 +579,7 @@ class MLScoringEngine:
             cached_embeddings = cache.get(cache_key)
 
             if cached_embeddings is None:
-                from core.models_unified_system import SpiderData, OpportunityOutcome
+                from core.models_unified_system import LegacySpiderData, OpportunityOutcome
 
                 # Get embeddings from successful opportunities (won outcomes)
                 successful_spider_ids = OpportunityOutcome.objects.filter(
@@ -588,7 +588,7 @@ class MLScoringEngine:
                 ).values_list('task__opportunity__spider_data_id', flat=True)[:100]
 
                 successful_embeddings = list(
-                    SpiderData.objects.filter(
+                    LegacySpiderData.objects.filter(
                         id__in=successful_spider_ids
                     ).exclude(
                         embedding__isnull=True
@@ -787,7 +787,7 @@ class MLScoringEngine:
         Score an opportunity using hybrid ML + rule-based approach.
 
         Args:
-            spider_data: SpiderData instance to score
+            spider_data: LegacySpiderData instance to score
 
         Returns:
             MLScoringResult with scores and explanations
@@ -1233,7 +1233,7 @@ class MLScoringEngine:
         from django.utils import timezone
 
         try:
-            from core.models_unified_system import OpportunityOutcome, SpiderData
+            from core.models_unified_system import OpportunityOutcome, LegacySpiderData
 
             cutoff = timezone.now() - timedelta(days=days)
 
@@ -1248,7 +1248,7 @@ class MLScoringEngine:
                     continue
 
                 try:
-                    spider_data = SpiderData.objects.get(id=opp.spider_data_id)
+                    spider_data = LegacySpiderData.objects.get(id=opp.spider_data_id)
                     features = self.extract_features(spider_data)[0].tolist()
 
                     # Normalize outcome to 0-1 scale
@@ -1267,7 +1267,7 @@ class MLScoringEngine:
                         'outcome': outcome_score,
                         'opportunity_id': str(opp.id)
                     })
-                except SpiderData.DoesNotExist:
+                except LegacySpiderData.DoesNotExist:
                     continue
 
             logger.info(f"Extracted {len(training_data)} training samples from {days} days")

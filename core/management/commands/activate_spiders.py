@@ -6,7 +6,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models_unified_system import SpiderData
+from core.models_unified_system import LegacySpiderData
 from intelligence.spider_agent_connector import SpiderAgentConnector
 
 
@@ -153,7 +153,7 @@ class Command(BaseCommand):
             opp = random.choice(opportunities)
 
             # Add some variation to the data
-            spider_data = SpiderData.objects.create(
+            spider_data = LegacySpiderData.objects.create(
                 spider_name=opp['spider'],
                 data_type='opportunity' if 'Job' in opp['spider'] or 'Freelance' in opp['spider'] else 'intelligence',
                 raw_data=opp['data'],
@@ -183,7 +183,7 @@ class Command(BaseCommand):
                 job_data = job_spider.scrape()  # This might need parameters
 
                 for item in job_data:
-                    SpiderData.objects.create(
+                    LegacySpiderData.objects.create(
                         spider_name='Job Spider',
                         data_type='opportunity',
                         raw_data=item,
@@ -206,7 +206,7 @@ class Command(BaseCommand):
                 freelance_data = freelance_spider.find_opportunities()
 
                 for item in freelance_data:
-                    SpiderData.objects.create(
+                    LegacySpiderData.objects.create(
                         spider_name='Freelance Spider',
                         data_type='freelance',
                         raw_data=item,
@@ -236,7 +236,7 @@ class Command(BaseCommand):
         self.stdout.write('Processing spider data and routing to agents...')
 
         # Get unprocessed spider data
-        unprocessed = SpiderData.objects.filter(
+        unprocessed = LegacySpiderData.objects.filter(
             is_processed=False
         ).order_by('-created_at')[:limit]
 

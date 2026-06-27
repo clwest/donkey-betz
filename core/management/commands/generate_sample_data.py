@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from core.models_unified_system import (
     Agent, Advisor, Revenue, Opportunity,
-    AgentExecution, Collaboration, SpiderData,
+    AgentExecution, Collaboration, LegacySpiderData,
     AdvisorInsight
 )
 from decimal import Decimal
@@ -146,7 +146,7 @@ class Command(BaseCommand):
         # Create spider data
         self.stdout.write("🕷️ Creating spider data...")
         for _ in range(10):
-            SpiderData.objects.create(
+            LegacySpiderData.objects.create(
                 spider_name=f"JobSpider_{random.randint(1, 5)}",
                 source_url=f"https://example.com/job/{random.randint(1000, 9999)}",
                 data_type='job_posting',
@@ -163,5 +163,5 @@ class Command(BaseCommand):
         self.stdout.write(f"💼 Active Opportunities: {Opportunity.objects.filter(user=user, status='active').count()}")
         self.stdout.write(f"🤖 Agent Executions: {AgentExecution.objects.filter(user=user).count()}")
         self.stdout.write(f"💡 Advisor Insights: {AdvisorInsight.objects.filter(user=user).count()}")
-        self.stdout.write(f"🕷️ Spider Data Points: {SpiderData.objects.count()}")
+        self.stdout.write(f"🕷️ Spider Data Points: {LegacySpiderData.objects.count()}")
         self.stdout.write("\n🔑 Login with: username='demo_user', password='demo123'")

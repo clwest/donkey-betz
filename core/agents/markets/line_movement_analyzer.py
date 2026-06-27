@@ -169,8 +169,8 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
         return odds_events, source_info
 
     def _load_odds_snapshots(self) -> Dict[str, Dict]:
-        """Load previous odds snapshots from SpiderData for line comparison."""
-        from core.models_unified_system import SpiderData
+        """Load previous odds snapshots from LegacySpiderData for line comparison."""
+        from core.models_unified_system import LegacySpiderData
         from django.utils import timezone
         from datetime import timedelta
 
@@ -178,7 +178,7 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
         cutoff = timezone.now() - timedelta(hours=24)
 
         try:
-            recent_odds = SpiderData.objects.filter(
+            recent_odds = LegacySpiderData.objects.filter(
                 spider_name='theodds',
                 data_type='sports_odds',
                 created_at__gte=cutoff,

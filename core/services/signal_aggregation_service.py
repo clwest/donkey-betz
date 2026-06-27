@@ -1,11 +1,11 @@
 """
 Signal Aggregation Service - Session 900
 
-Clusters recent SpiderData into SignalClusters, detecting patterns
+Clusters recent LegacySpiderData into SignalClusters, detecting patterns
 that can trigger auto-generated conversation topics.
 
 Flow:
-1. Fetch recent SpiderData (configurable window)
+1. Fetch recent LegacySpiderData (configurable window)
 2. Extract keywords and themes from each signal
 3. Cluster signals by semantic similarity
 4. Calculate pattern metrics (strength, confidence, novelty)
@@ -23,7 +23,7 @@ from uuid import UUID
 from django.db.models import Count
 from django.utils import timezone
 
-from core.models import SpiderData, Agent
+from core.models import LegacySpiderData, Agent
 from core.models_signal_intelligence import SignalCluster, AutoTopic
 from core.services.content_scoring_service import ContentScoringService
 
@@ -34,7 +34,7 @@ class SignalAggregationService:
     """
     Session 900: Aggregates spider signals into meaningful patterns.
 
-    This service transforms raw SpiderData into SignalClusters that
+    This service transforms raw LegacySpiderData into SignalClusters that
     can trigger intelligent conversation topics.
     """
 
@@ -250,7 +250,7 @@ class SignalAggregationService:
 
         return created_clusters
 
-    def _fetch_recent_spider_data(self) -> List[SpiderData]:
+    def _fetch_recent_spider_data(self) -> List[LegacySpiderData]:
         """Fetch spider data from the lookback window.
 
         Session 1003: Include records that are either processed OR have embedding_text
@@ -259,13 +259,13 @@ class SignalAggregationService:
         """
         from django.db.models import Q
         return list(
-            SpiderData.objects.filter(
+            LegacySpiderData.objects.filter(
                 Q(is_processed=True) | ~Q(embedding_text=''),
                 created_at__gte=self.cutoff_time,
             ).order_by('-created_at')[:500]  # Limit for performance
         )
 
-    def _extract_signals(self, spider_data: List[SpiderData]) -> List[Dict]:
+    def _extract_signals(self, spider_data: List[LegacySpiderData]) -> List[Dict]:
         """
         Extract structured signals from spider data.
 
@@ -343,8 +343,8 @@ class SignalAggregationService:
                 break
         return out
 
-    def _extract_url_from_spider_data(self, sd: 'SpiderData') -> str:
-        """Best-effort URL extraction from a SpiderData row.
+    def _extract_url_from_spider_data(self, sd: 'LegacySpiderData') -> str:
+        """Best-effort URL extraction from a LegacySpiderData row.
 
         Session 1139 follow-up — closes the empty `evidence[].url` bug
         that surfaces in signal-studio as broken `<a href="">` links
@@ -390,7 +390,7 @@ class SignalAggregationService:
 
         return ""
 
-    def _extract_text_from_spider_data(self, sd: SpiderData) -> str:
+    def _extract_text_from_spider_data(self, sd: LegacySpiderData) -> str:
         """Extract readable text from spider data."""
         text_parts = []
 

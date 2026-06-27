@@ -1414,7 +1414,7 @@ BACKFILL_SPIDER_EMBEDDINGS_QUEUE = "ml"
 @singleton_task("backfill-spider-embeddings", ttl=600)
 def backfill_spider_embeddings(self, batch_size: int = 50):
     """
-    Session 293: Generate embeddings for SpiderData entries that don't have them.
+    Session 293: Generate embeddings for LegacySpiderData entries that don't have them.
     Session 394: Increased default batch size from 50 to 200 for faster processing.
     Session 1083 (Rigby audit): Reduced 200→50 after observing 1.37GB memory
     spike per run in celery telemetry (start=669MB → end=2042MB). Combined
@@ -2853,12 +2853,12 @@ def _conversation_spawn_allowed(topic: str, hours: int = 6, log_prefix: str = '[
 
         # Gate 2: "Research needed" preflight — only spawn if there's backing data
         if 'research needed' in topic.lower():
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             # Extract project/topic keywords (strip prefix)
             search_terms = topic.lower().replace('research needed for', '').replace('research needed', '').strip()
             search_terms = search_terms.split(':')[0].strip()[:50]
             if search_terms:
-                recent_data = SpiderData.objects.filter(
+                recent_data = LegacySpiderData.objects.filter(
                     created_at__gte=timezone.now() - timedelta(hours=24),
                 ).filter(
                     Q(spider_name__icontains=search_terms[:20]) |
@@ -4248,7 +4248,7 @@ def cleanup_spider_item_hashes(days_to_keep: int = 90):
     Session 616: Clean up old spider item hashes to prevent table bloat.
     Apr 2026: Extended from 7→90 days to match dedup lookback window.
     The 7-day window caused re-ingestion — hashes expired, old RSS items
-    looked "new" again, creating ~85k duplicate SpiderData rows.
+    looked "new" again, creating ~85k duplicate LegacySpiderData rows.
 
     Args:
         days_to_keep: Days of hashes to retain (default: 90)
@@ -4285,7 +4285,7 @@ def cleanup_spider_item_hashes(days_to_keep: int = 90):
 @singleton_task("spider-data-retention", ttl=1800)
 def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
     """
-    Apr 2026: Prevent SpiderData table from filling the database.
+    Apr 2026: Prevent LegacySpiderData table from filling the database.
 
     Two-phase retention:
     1. TRIM: Rows older than trim_days — null out raw_data (keeps embedding_text,
@@ -4295,7 +4295,7 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
 
     Safety: Processes in batches, logs everything, respects soft_time_limit.
     """
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
     from django.utils import timezone
     from django.db import connection
     from datetime import timedelta  # Session 1083: was `timezone.timedelta` — doesn't exist
@@ -4322,14 +4322,14 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
         deleted_total = 0
         while True:
             batch_ids = list(
-                SpiderData.objects.filter(created_at__lt=delete_cutoff)
+                LegacySpiderData.objects.filter(created_at__lt=delete_cutoff)
                 .values_list('id', flat=True)[:batch_size]
             )
             if not batch_ids:
                 break
-            count, _ = SpiderData.objects.filter(id__in=batch_ids).delete()
+            count, _ = LegacySpiderData.objects.filter(id__in=batch_ids).delete()
             deleted_total += count
-            logger.info(f"[RETENTION] Deleted {count} SpiderData rows older than {delete_days}d (total: {deleted_total})")
+            logger.info(f"[RETENTION] Deleted {count} LegacySpiderData rows older than {delete_days}d (total: {deleted_total})")
         stats['deleted'] = deleted_total
     except Exception as e:
         logger.error(f"[RETENTION] Delete phase failed: {e}")
@@ -4339,7 +4339,7 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
         trimmed_total = 0
         while True:
             batch_ids = list(
-                SpiderData.objects.filter(
+                LegacySpiderData.objects.filter(
                     created_at__lt=trim_cutoff,
                     created_at__gte=delete_cutoff,
                 )
@@ -4348,7 +4348,7 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
             )
             if not batch_ids:
                 break
-            count = SpiderData.objects.filter(id__in=batch_ids).update(
+            count = LegacySpiderData.objects.filter(id__in=batch_ids).update(
                 raw_data={},
                 item_embeddings={},
             )
@@ -5383,14 +5383,14 @@ def run_job_match_intelligence(self):
     logger.info("💼 [JOB MATCH] Starting job matching...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import JobMatch, JobMatchProfile, AutonomousSituationSession
         from django.utils import timezone
         from datetime import timedelta
 
         session = AutonomousSituationSession.objects.create(situation_type='job_matching', status='running')
         cutoff = timezone.now() - timedelta(hours=6)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['remoteok', 'weworkremotely', 'adzuna'],
             created_at__gte=cutoff
         ).defer('embedding')[:100]
@@ -5434,14 +5434,14 @@ def run_side_hustle_detector(self):
     logger.info("💰 [SIDE HUSTLE] Starting detection...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import SideHustle, AutonomousSituationSession
         from django.utils import timezone
         from datetime import timedelta
 
         session = AutonomousSituationSession.objects.create(situation_type='side_hustle', status='running')
         cutoff = timezone.now() - timedelta(hours=24)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['reddit', 'producthunt', 'kickstarter'],
             created_at__gte=cutoff
         ).defer('embedding')[:100]
@@ -5493,14 +5493,14 @@ def run_regulatory_change_detector(self):
     logger.info("📜 [REGULATORY] Starting detection...")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_autonomous_situations import RegulatoryChange, AutonomousSituationSession
         from django.utils import timezone
         from datetime import timedelta
 
         session = AutonomousSituationSession.objects.create(situation_type='regulatory', status='running')
         cutoff = timezone.now() - timedelta(hours=48)
-        spider_data = SpiderData.objects.filter(
+        spider_data = LegacySpiderData.objects.filter(
             spider_name__in=['government', 'legal_news', 'business_news'],
             created_at__gte=cutoff
         ).defer('embedding')[:100]
@@ -9611,7 +9611,7 @@ AGENT_DATA_REQUIREMENTS = {
     },
     'TrendAnalysisAgent': {
         'models': [
-            ('core.models_unified_system.SpiderData', {'data_type': 'trend_data'}, 5, 'trend data points'),
+            ('core.models_unified_system.LegacySpiderData', {'data_type': 'trend_data'}, 5, 'trend data points'),
         ],
         'description': 'trend analysis',
     },
@@ -10564,9 +10564,9 @@ def _gather_live_system_metrics():
         metrics['activity']['agent_executions_error'] = str(e)
 
     try:
-        from core.models_unified_system import SpiderData
-        metrics['activity']['spider_entries_24h'] = SpiderData.objects.filter(created_at__gte=last_24h).count()
-        metrics['activity']['spider_entries_7d'] = SpiderData.objects.filter(created_at__gte=last_7d).count()
+        from core.models_unified_system import LegacySpiderData
+        metrics['activity']['spider_entries_24h'] = LegacySpiderData.objects.filter(created_at__gte=last_24h).count()
+        metrics['activity']['spider_entries_7d'] = LegacySpiderData.objects.filter(created_at__gte=last_7d).count()
     except Exception as e:
         metrics['activity']['spider_entries_error'] = str(e)
 
@@ -11421,12 +11421,12 @@ def _gather_initiative_research(initiative, stage_num: int) -> str:
     """
     Session 1021: Gather REAL system data relevant to an initiative topic.
 
-    Queries SpiderData, SignalClusters, AgentConversations, and Deliverables
+    Queries LegacySpiderData, SignalClusters, AgentConversations, and Deliverables
     to build actual research context — not hallucinated content.
 
     Returns a formatted string with real data for the TechnicalDocumentAgent.
     """
-    from core.models_unified_system import SpiderData, AgentConversation
+    from core.models_unified_system import LegacySpiderData, AgentConversation
     from core.models import SignalCluster
     from django.utils import timezone
     from datetime import timedelta
@@ -11451,7 +11451,7 @@ def _gather_initiative_research(initiative, stage_num: int) -> str:
     try:
         spider_hits = []
         for kw in keywords[:3]:
-            hits = SpiderData.objects.filter(
+            hits = LegacySpiderData.objects.filter(
                 embedding_text__icontains=kw,
                 created_at__gte=since
             ).order_by('-created_at')[:3]

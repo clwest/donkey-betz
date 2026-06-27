@@ -432,11 +432,11 @@ Focus on patterns that suggest informed trading or manipulation."""
     def _get_market_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch market data for analysis."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
 
             cutoff = timezone.now() - timedelta(days=7)
-            query = SpiderData.objects.filter(
+            query = LegacySpiderData.objects.filter(
                 spider_name__in=['yahoo_finance', 'finnhub', 'coingecko'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:100]
@@ -467,11 +467,11 @@ Focus on patterns that suggest informed trading or manipulation."""
     def _get_social_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch social media data for correlation."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
 
             cutoff = timezone.now() - timedelta(days=3)
-            query = SpiderData.objects.filter(
+            query = LegacySpiderData.objects.filter(
                 spider_name__in=['reddit', 'bluesky', 'hackernews'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:50]

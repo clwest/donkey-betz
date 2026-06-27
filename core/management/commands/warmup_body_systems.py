@@ -198,11 +198,11 @@ class Command(BaseCommand):
         DIGESTIVE tracks data ingestion - we need to process some data.
         """
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             # Check for unprocessed data
-            unprocessed = SpiderData.objects.filter(is_processed=False).count()
-            recent = SpiderData.objects.filter(
+            unprocessed = LegacySpiderData.objects.filter(is_processed=False).count()
+            recent = LegacySpiderData.objects.filter(
                 created_at__gte=timezone.now() - timedelta(hours=24)
             ).count()
 
@@ -237,11 +237,11 @@ class Command(BaseCommand):
             if unprocessed > 0:
                 # Get IDs first (can't update a sliced queryset directly)
                 ids_to_process = list(
-                    SpiderData.objects.filter(is_processed=False)
+                    LegacySpiderData.objects.filter(is_processed=False)
                     .values_list('id', flat=True)[:50]
                 )
                 if ids_to_process:
-                    updated = SpiderData.objects.filter(id__in=ids_to_process).update(
+                    updated = LegacySpiderData.objects.filter(id__in=ids_to_process).update(
                         is_processed=True,
                         processed_at=timezone.now()
                     )

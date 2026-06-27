@@ -187,7 +187,7 @@ class AutonomousIntelligenceLoop:
         Returns:
             Dict with results
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.discord_notifications import discord_notify
 
         results = {
@@ -207,7 +207,7 @@ class AutonomousIntelligenceLoop:
         try:
             # Get recent spider data (last 24 hours)
             cutoff = dj_timezone.now() - timedelta(hours=24)
-            recent_data = SpiderData.objects.filter(
+            recent_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff
             ).order_by('-created_at')[:100]
 
@@ -272,7 +272,7 @@ class AutonomousIntelligenceLoop:
         Returns:
             Dict with results
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.discord_notifications import discord_notify
 
         results = {
@@ -284,7 +284,7 @@ class AutonomousIntelligenceLoop:
         try:
             # Get recent job data (last 24 hours)
             cutoff = dj_timezone.now() - timedelta(hours=24)
-            recent_jobs = SpiderData.objects.filter(
+            recent_jobs = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['remoteok', 'weworkremotely', 'adzuna', 'adzuna_jobs']
             ).order_by('-created_at')[:50]
@@ -345,7 +345,7 @@ class AutonomousIntelligenceLoop:
             True if sent successfully
         """
         from django.utils import timezone as dj_timezone
-        from core.models_unified_system import SpiderData, AgentDream, AgentConversation, AgentKnowledge
+        from core.models_unified_system import LegacySpiderData, AgentDream, AgentConversation, AgentKnowledge
         from core.services.discord_notifications import discord_notify
 
         try:
@@ -353,7 +353,7 @@ class AutonomousIntelligenceLoop:
             yesterday = dj_timezone.now() - timedelta(hours=24)
 
             # SEC Summary
-            sec_data = SpiderData.objects.filter(
+            sec_data = LegacySpiderData.objects.filter(
                 collected_at__gte=yesterday,
                 spider_id='sec_edgar'
             )
@@ -364,7 +364,7 @@ class AutonomousIntelligenceLoop:
             }
 
             # Tech News
-            tech_data = SpiderData.objects.filter(
+            tech_data = LegacySpiderData.objects.filter(
                 collected_at__gte=yesterday,
                 spider_id__in=['techcrunch', 'the_verge', 'hackernews', 'wired']
             ).values_list('title', flat=True)[:5]

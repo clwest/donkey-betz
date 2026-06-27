@@ -82,7 +82,7 @@ class ResearchResult(models.Model):
     )
 
     spider_sources = models.ManyToManyField(
-        'core.SpiderData',
+        'core.LegacySpiderData',
         blank=True,
         related_name='research_results',
         help_text='Spider data used in this research'

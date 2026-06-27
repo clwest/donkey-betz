@@ -2648,12 +2648,12 @@ class UnifiedPAEntrypoint:
         }
 
         try:
-            from core.models_unified_system import Agent, SpiderData, Opportunity
+            from core.models_unified_system import Agent, LegacySpiderData, Opportunity
             from django.db.models import Count
 
             # Real counts
             stats['agent_count'] = await asyncio.to_thread(Agent.objects.count)
-            stats['spider_data_count'] = await asyncio.to_thread(SpiderData.objects.count)
+            stats['spider_data_count'] = await asyncio.to_thread(LegacySpiderData.objects.count)
             stats['opportunity_count'] = await asyncio.to_thread(
                 lambda: Opportunity.objects.filter(status='active').count()
             )
@@ -5542,7 +5542,7 @@ Address the user by name occasionally."""
                     return str(tool_result)
 
             # Session 948/989: Spider data results formatting
-            # Session 989: Fixed field names to match actual SpiderData model
+            # Session 989: Fixed field names to match actual LegacySpiderData model
             elif intent == 'spider_data':
                 action = tool_result.get('action', '')
 
@@ -5661,7 +5661,7 @@ Address the user by name occasionally."""
 
                 response = f"**{keyword.title()} Data** from spider network ({count} items):\n\n"
                 for item in items[:6]:
-                    # Session 989: Use actual SpiderData fields
+                    # Session 989: Use actual LegacySpiderData fields
                     spider = item.get('spider_name', 'Unknown')
                     source_url = item.get('source_url', '')
                     embed_text = item.get('embedding_text', '')

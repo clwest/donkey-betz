@@ -531,13 +531,13 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
 
         # --- Signal-driven picks: tickers from recent spider data ---
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone as tz
             import re
 
             cutoff = tz.now() - td(hours=12)
             financial_spiders = ['yahoo_finance', 'finnhub', 'bloomberg', 'business_news']
-            recent_spider = SpiderData.objects.filter(
+            recent_spider = LegacySpiderData.objects.filter(
                 spider_name__in=financial_spiders,
                 created_at__gte=cutoff,
             ).defer('embedding', 'item_embeddings').order_by('-created_at')[:20]

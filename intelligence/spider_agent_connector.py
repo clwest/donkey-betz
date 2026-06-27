@@ -11,7 +11,7 @@ from core.models_unified_system import (
     Agent,
     AgentSolution,
     AgentLearning,
-    SpiderData
+    LegacySpiderData
 )
 
 logger = logging.getLogger(__name__)
@@ -99,12 +99,12 @@ class SpiderAgentConnector:
             ]
         }
 
-    def route_spider_data(self, spider_data: SpiderData) -> Dict[str, Any]:
+    def route_spider_data(self, spider_data: LegacySpiderData) -> Dict[str, Any]:
         """
         Route spider data to appropriate agents for processing
 
         Args:
-            spider_data: SpiderData model instance
+            spider_data: LegacySpiderData model instance
 
         Returns:
             Dictionary with routing results
@@ -192,12 +192,12 @@ class SpiderAgentConnector:
         logger.info(f"No category match for spider '{spider_name}', using 'research' as fallback")
         return 'research'
 
-    def _create_agent_solution(self, agent: Agent, spider_data: SpiderData) -> Optional[AgentSolution]:
+    def _create_agent_solution(self, agent: Agent, spider_data: LegacySpiderData) -> Optional[AgentSolution]:
         """Create a solution based on spider data"""
         try:
-            # Session 911: Handle both SpiderData models
-            # - core.models_unified_system.SpiderData has processed_data/raw_data
-            # - persistence.models.SpiderData has structured_data/content
+            # Session 911: Handle both LegacySpiderData models
+            # - core.models_unified_system.LegacySpiderData has processed_data/raw_data
+            # - persistence.models.LegacySpiderData has structured_data/content
             data = {}
 
             # Try processed_data (unified model)
@@ -253,7 +253,7 @@ class SpiderAgentConnector:
             logger.error(f"Error creating agent solution: {e}")
             return None
 
-    def _create_learning_record(self, agent: Agent, spider_data: SpiderData, solution: AgentSolution):
+    def _create_learning_record(self, agent: Agent, spider_data: LegacySpiderData, solution: AgentSolution):
         """Record spider data ingestion for the agent.
 
         Note: Synthetic AgentLearning records with hardcoded effectiveness
@@ -268,7 +268,7 @@ class SpiderAgentConnector:
         self,
         teacher_agent: Agent,
         solution: AgentSolution,
-        spider_data: SpiderData
+        spider_data: LegacySpiderData
     ):
         """
         Session 767: Propagate learning to connected agents.
@@ -347,7 +347,7 @@ const opportunityRef = {{
     title: "{title}",
     type: "{data_type}",
     source: "{source}",
-    // Query SpiderData model using spider_data_id from metrics for full details
+    // Query LegacySpiderData model using spider_data_id from metrics for full details
 }};
 
 // To get full data:
@@ -392,7 +392,7 @@ const opportunityRef = {{
         try:
             # Get unprocessed spider data
             # Session 807: Defer embedding fields to reduce egress costs
-            unprocessed = SpiderData.objects.filter(
+            unprocessed = LegacySpiderData.objects.filter(
                 is_processed=False
             ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:limit]
 
@@ -429,12 +429,12 @@ const opportunityRef = {{
 
     def get_routing_statistics(self) -> Dict[str, Any]:
         """Get statistics about spider-agent routing"""
-        # Session 911: SpiderData model doesn't have is_processed field
+        # Session 911: LegacySpiderData model doesn't have is_processed field
         # Just count total spider data
         stats = {
             'routing_map': {cat: len(agents) for cat, agents in self.routing_map.items()},
             'processing_stats': self.processing_stats,
-            'total_spider_data': SpiderData.objects.count(),
+            'total_spider_data': LegacySpiderData.objects.count(),
             'success_rate': 0
         }
 

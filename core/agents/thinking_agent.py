@@ -835,7 +835,7 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
         from core.models_unified_system import (
             Agent, AgentKnowledgeSource, AgentLearningConnection,
             KnowledgeTransfer, ThoughtRecord,
-            AgentConversation, AgentDream, SpiderData
+            AgentConversation, AgentDream, LegacySpiderData
         )
 
         cutoff = timezone.now() - timedelta(hours=lookback_hours)
@@ -1020,12 +1020,12 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
         # Gather spider stats - Session 548: Use created_at (not discovered_at)
         try:
             # Count unique spiders with recent activity
-            active_spiders = SpiderData.objects.filter(
+            active_spiders = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff
             ).values('spider_name').distinct().count()
 
-            data_24h = SpiderData.objects.filter(created_at__gte=cutoff).count()
-            total_data = SpiderData.objects.count()
+            data_24h = LegacySpiderData.objects.filter(created_at__gte=cutoff).count()
+            total_data = LegacySpiderData.objects.count()
 
             context['spider_stats'] = {
                 'active_count': active_spiders,

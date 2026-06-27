@@ -4,7 +4,7 @@ Session 706: DIGESTIVE SYSTEM - Data Ingestion & Processing Service
 The DIGESTIVE SYSTEM monitors how raw spider data is transformed into
 actionable intelligence through the 4-stage pipeline:
 
-1. INTAKE: Spider data collection (SpiderData, SpiderExecutionLog)
+1. INTAKE: Spider data collection (LegacySpiderData, SpiderExecutionLog)
 2. PROCESSING: Normalization, deduplication
 3. ENRICHMENT: Embedding generation, relevance scoring
 4. ROUTING: Data delivery to agents and services
@@ -358,12 +358,12 @@ class DigestiveSystemService:
 
     def check_intake(self) -> dict:
         """Check spider data intake health."""
-        from core.models_unified_system import SpiderData, SpiderExecutionLog, SpiderItemHash
+        from core.models_unified_system import LegacySpiderData, SpiderExecutionLog, SpiderItemHash
 
         cutoff_24h = timezone.now() - timedelta(hours=24)
 
-        # Count SpiderData created in last 24h
-        items_24h = SpiderData.objects.filter(created_at__gte=cutoff_24h).count()
+        # Count LegacySpiderData created in last 24h
+        items_24h = LegacySpiderData.objects.filter(created_at__gte=cutoff_24h).count()
 
         # Spider execution stats
         executions = SpiderExecutionLog.objects.filter(started_at__gte=cutoff_24h)
@@ -404,7 +404,7 @@ class DigestiveSystemService:
         status = self._determine_status(score)
 
         # Check for starvation (no intake in last hour)
-        recent_intake = SpiderData.objects.filter(
+        recent_intake = LegacySpiderData.objects.filter(
             created_at__gte=timezone.now() - timedelta(hours=1)
         ).count()
         if recent_intake == 0 and items_24h > 0:
@@ -426,14 +426,14 @@ class DigestiveSystemService:
 
         Session 1083 (Rigby audit): `is_processed=False` alone is a
         LIAR metric. 82,210 of the 83,679 "unprocessed" rows in the
-        DB right now are actually SpiderData entries that the embedder
+        DB right now are actually LegacySpiderData entries that the embedder
         already inspected and marked `embedding_text='[NO_ITEMS]'`
         (spiders that fetched but produced zero items). Those rows
         never need processing — they're already done. Excluding them
         drops the reported backlog from 83,679 to 1,469 (98.2% was
         false-alarm) and makes DIGESTIVE health scores accurate.
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         cutoff_24h = timezone.now() - timedelta(hours=24)
         cutoff_1h = timezone.now() - timedelta(hours=1)
@@ -441,26 +441,26 @@ class DigestiveSystemService:
         # Count unprocessed items (queue depth) — excluding rows that
         # the embedder already marked as deliberately empty.
         try:
-            queue_depth = SpiderData.objects.filter(
+            queue_depth = LegacySpiderData.objects.filter(
                 is_processed=False,
             ).exclude(
                 embedding_text='[NO_ITEMS]',
             ).count()
         except Exception:
             # If is_processed field doesn't exist, estimate from recent untagged items
-            queue_depth = SpiderData.objects.filter(
+            queue_depth = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_24h,
                 relevance_score__isnull=True
             ).count()
 
         # Processed items (24h)
         try:
-            items_24h = SpiderData.objects.filter(
+            items_24h = LegacySpiderData.objects.filter(
                 is_processed=True,
                 created_at__gte=cutoff_24h
             ).count()
         except Exception:
-            items_24h = SpiderData.objects.filter(
+            items_24h = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_24h,
                 relevance_score__isnull=False
             ).count()
@@ -468,13 +468,13 @@ class DigestiveSystemService:
         # Calculate throughput (items per minute over last hour)
         # Use processed_at timestamp to count items actually processed recently
         try:
-            recent_processed = SpiderData.objects.filter(
+            recent_processed = LegacySpiderData.objects.filter(
                 is_processed=True,
                 processed_at__gte=cutoff_1h
             ).count()
         except Exception:
             # Fallback: count items created recently that are processed
-            recent_processed = SpiderData.objects.filter(
+            recent_processed = LegacySpiderData.objects.filter(
                 is_processed=True,
                 created_at__gte=cutoff_1h
             ).count()
@@ -530,16 +530,16 @@ class DigestiveSystemService:
 
     def check_enrichment(self) -> dict:
         """Check embedding/scoring pipeline health."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         cutoff_24h = timezone.now() - timedelta(hours=24)
 
         # Count items with embeddings
-        total_items = SpiderData.objects.filter(created_at__gte=cutoff_24h).count()
+        total_items = LegacySpiderData.objects.filter(created_at__gte=cutoff_24h).count()
 
         # Check for embedding field
         try:
-            items_with_embeddings = SpiderData.objects.filter(
+            items_with_embeddings = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_24h,
                 embedding__isnull=False
             ).count()
@@ -550,7 +550,7 @@ class DigestiveSystemService:
         coverage = (items_with_embeddings / total_items * 100) if total_items > 0 else 0
 
         # Count items with relevance scores
-        items_with_scores = SpiderData.objects.filter(
+        items_with_scores = LegacySpiderData.objects.filter(
             created_at__gte=cutoff_24h,
             relevance_score__isnull=False
         ).count()
@@ -588,33 +588,33 @@ class DigestiveSystemService:
 
     def check_routing(self) -> dict:
         """Check data routing to consumers."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         cutoff_24h = timezone.now() - timedelta(hours=24)
 
-        total_items = SpiderData.objects.filter(created_at__gte=cutoff_24h).count()
+        total_items = LegacySpiderData.objects.filter(created_at__gte=cutoff_24h).count()
 
         # Items marked as actionable (routed to agents)
         try:
-            items_actionable = SpiderData.objects.filter(
+            items_actionable = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_24h,
                 is_actionable=True
             ).count()
         except Exception:
             # If is_actionable doesn't exist, estimate from relevance scores
-            items_actionable = SpiderData.objects.filter(
+            items_actionable = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_24h,
                 relevance_score__gte=70  # High relevance = likely actionable
             ).count()
 
         # Items filtered out (low relevance)
-        items_filtered = SpiderData.objects.filter(
+        items_filtered = LegacySpiderData.objects.filter(
             created_at__gte=cutoff_24h,
             relevance_score__lt=50
         ).count() if total_items > 0 else 0
 
         # Items routed (actionable or high relevance)
-        items_routed = SpiderData.objects.filter(
+        items_routed = LegacySpiderData.objects.filter(
             created_at__gte=cutoff_24h,
             relevance_score__gte=50
         ).count() if total_items > 0 else 0
@@ -713,23 +713,23 @@ class DigestiveSystemService:
 
     def get_metabolism_rate(self) -> dict:
         """Calculate current throughput metrics (items per minute)."""
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         cutoff_1h = timezone.now() - timedelta(hours=1)
 
         # Intake rate (items created per minute in last hour)
-        items_ingested_1h = SpiderData.objects.filter(created_at__gte=cutoff_1h).count()
+        items_ingested_1h = LegacySpiderData.objects.filter(created_at__gte=cutoff_1h).count()
         intake_rate = items_ingested_1h / 60.0
 
         # Processing rate (items processed per minute) - use processed_at timestamp
         try:
-            items_processed_1h = SpiderData.objects.filter(
+            items_processed_1h = LegacySpiderData.objects.filter(
                 processed_at__gte=cutoff_1h,
                 is_processed=True
             ).count()
         except Exception:
             # Fallback to created_at
-            items_processed_1h = SpiderData.objects.filter(
+            items_processed_1h = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_1h,
                 is_processed=True
             ).count()
@@ -737,12 +737,12 @@ class DigestiveSystemService:
 
         # Output rate (actionable items per minute)
         try:
-            items_output_1h = SpiderData.objects.filter(
+            items_output_1h = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_1h,
                 is_actionable=True
             ).count()
         except Exception:
-            items_output_1h = SpiderData.objects.filter(
+            items_output_1h = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff_1h,
                 relevance_score__gte=70
             ).count()

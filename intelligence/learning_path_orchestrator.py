@@ -14,7 +14,7 @@ from core.models_unified_system import (
     Agent,
     AgentSolution,
     AgentLearning,
-    SpiderData
+    LegacySpiderData
 )
 
 logger = logging.getLogger(__name__)
@@ -267,7 +267,7 @@ class LearningPathOrchestrator:
         """Activate spider network to search for information"""
         try:
             # Create spider task for this query
-            spider_data = SpiderData.objects.create(
+            spider_data = LegacySpiderData.objects.create(
                 spider_name='Dynamic Learning Spider',
                 data_type='learning_query',
                 raw_data={

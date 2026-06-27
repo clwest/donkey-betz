@@ -12,7 +12,7 @@ Pipeline:
      existing active touch-1 draft).
   2. Round-robin across offers (ai_automation / content_engine /
      consulting).
-  3. ensure_spider_data_seed — create a purposeful SpiderData row
+  3. ensure_spider_data_seed — create a purposeful LegacySpiderData row
      (spider_name='opportunity_outreach_seed') so the OutreachDraft
      NOT NULL constraint on spider_data_id is satisfied without a
      migration. Idempotent per opportunity.
@@ -250,15 +250,15 @@ class OpportunityDraftGenerator:
         ).count()
 
     # ───────────────────────────────────────────────────────────────────
-    # Synthetic SpiderData seed (Option A — no migration)
+    # Synthetic LegacySpiderData seed (Option A — no migration)
     # ───────────────────────────────────────────────────────────────────
 
     @classmethod
     @transaction.atomic
     def ensure_spider_data_seed(cls, opportunity):
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
-        existing = SpiderData.objects.filter(
+        existing = LegacySpiderData.objects.filter(
             spider_name=cls.SEED_SPIDER_NAME,
             data_type=cls.SEED_DATA_TYPE,
             raw_data__opportunity_id=str(opportunity.id),
@@ -266,7 +266,7 @@ class OpportunityDraftGenerator:
         if existing:
             return existing
 
-        return SpiderData.objects.create(
+        return LegacySpiderData.objects.create(
             spider_name=cls.SEED_SPIDER_NAME,
             source_url=(opportunity.url or '')[:500],
             data_type=cls.SEED_DATA_TYPE,

@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
 
-from core.models_unified_system import SpiderData, Opportunity, AgentExecution
+from core.models_unified_system import LegacySpiderData, Opportunity, AgentExecution
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def intelligence_activity_feed(request):
 
         # Get recent spider data (last 10 items)
         # Session 807: Defer embedding fields to reduce egress costs
-        recent_spider_data = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
+        recent_spider_data = LegacySpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:10]
 
         for item in recent_spider_data:
             # Make spider name more readable
@@ -193,13 +193,13 @@ def spider_network_status(request):
         spider_list = spider_registry.list_spiders()
 
         # Get data statistics
-        total_data = SpiderData.objects.count()
-        last_24h = SpiderData.objects.filter(
+        total_data = LegacySpiderData.objects.count()
+        last_24h = LegacySpiderData.objects.filter(
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
 
         # Get spider stats from database (items collected, last run)
-        spider_stats = SpiderData.objects.values('spider_name').annotate(
+        spider_stats = LegacySpiderData.objects.values('spider_name').annotate(
             items_collected=Count('id'),
             last_run=Max('created_at')
         )
@@ -207,7 +207,7 @@ def spider_network_status(request):
 
         # Get active spiders (those that have recent data)
         active_spider_names = set(
-            SpiderData.objects.filter(
+            LegacySpiderData.objects.filter(
                 created_at__gte=timezone.now() - timedelta(hours=24)
             ).values_list('spider_name', flat=True).distinct()
         )
@@ -264,10 +264,10 @@ def intelligence_data_quality(request):
     }
     """
     try:
-        total_items = SpiderData.objects.count()
+        total_items = LegacySpiderData.objects.count()
 
         # Get items from last 24 hours
-        recent_items = SpiderData.objects.filter(
+        recent_items = LegacySpiderData.objects.filter(
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
 

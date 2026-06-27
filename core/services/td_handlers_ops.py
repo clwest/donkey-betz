@@ -3857,9 +3857,9 @@ class OpsHandlersMixin:
 
         # 4. Spiders (24h)
         try:
-            from core.models_unified_system import SpiderData
-            items = SpiderData.objects.filter(created_at__gte=last_24h).count()
-            distinct_spiders = SpiderData.objects.filter(created_at__gte=last_24h).values('spider_name').distinct().count()
+            from core.models_unified_system import LegacySpiderData
+            items = LegacySpiderData.objects.filter(created_at__gte=last_24h).count()
+            distinct_spiders = LegacySpiderData.objects.filter(created_at__gte=last_24h).values('spider_name').distinct().count()
             snapshot['spiders_24h'] = {'items': items, 'active_spiders': distinct_spiders}
         except Exception as e:
             snapshot['spiders_24h'] = {'error': str(e)}
@@ -4289,7 +4289,7 @@ class OpsHandlersMixin:
         trace_id: str
     ) -> Dict[str, Any]:
         """
-        Session 1014: Legislation tool — congressional bill tracking via SpiderData.
+        Session 1014: Legislation tool — congressional bill tracking via LegacySpiderData.
 
         Actions:
         - search: Find bills by keyword
@@ -4298,7 +4298,7 @@ class OpsHandlersMixin:
         - trending: Most recently active bills
         - overview: Dashboard stats
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.db.models import Q
         import json
 
@@ -4311,7 +4311,7 @@ class OpsHandlersMixin:
         limit = min(payload.get('limit', 10), 20)
 
         def _bills_from_row(item):
-            """Session 1075: Extract bill dicts from a SpiderData row.
+            """Session 1075: Extract bill dicts from a LegacySpiderData row.
 
             Spider stores data as {'items': [...], 'source': ..., 'dedup_stats': ...}.
             Each element in 'items' is a bill dict with bill_number, topics, state, etc.
@@ -4330,7 +4330,7 @@ class OpsHandlersMixin:
                 return [inner]
             return []
 
-        qs = SpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
+        qs = LegacySpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
         total_tracked = qs.count()
 
         if action == 'overview':
@@ -4645,7 +4645,7 @@ class OpsHandlersMixin:
         limit = min(int(payload.get('limit', 30)), 100)
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             if action == 'list':
                 now = timezone.now()
@@ -4653,7 +4653,7 @@ class OpsHandlersMixin:
                 cutoff_7d = now - timedelta(days=7)
 
                 spider_stats = (
-                    SpiderData.objects
+                    LegacySpiderData.objects
                     .values('spider_name')
                     .annotate(
                         total_items=Count('id'),
@@ -4671,7 +4671,7 @@ class OpsHandlersMixin:
                     age_hours = (now - last_run).total_seconds() / 3600 if last_run else None
                     items.append({
                         'spider_name': s['spider_name'],
-                        'total_runs': s['total_items'],  # renamed: each SpiderData row = one run
+                        'total_runs': s['total_items'],  # renamed: each LegacySpiderData row = one run
                         'runs_24h': s['items_24h'],
                         'runs_7d': s['items_7d'],
                         # Keep legacy keys for backward compat
@@ -4682,7 +4682,7 @@ class OpsHandlersMixin:
                         'first_seen': s['first_seen'].isoformat() if s['first_seen'] else None,
                         'age_hours': round(age_hours, 1) if age_hours is not None else None,
                         'status': 'active' if age_hours and age_hours < 48 else 'stale' if age_hours else 'unknown',
-                        'count_note': 'total_runs = SpiderData rows (each contains multiple items)',
+                        'count_note': 'total_runs = LegacySpiderData rows (each contains multiple items)',
                     })
 
                 return {
@@ -4699,7 +4699,7 @@ class OpsHandlersMixin:
                     return {'error': 'spider_name required for history action'}
 
                 runs = (
-                    SpiderData.objects
+                    LegacySpiderData.objects
                     .filter(spider_name__iexact=spider_name)
                     .values('created_at', 'data_type', 'source_url')
                     .order_by('-created_at')[:limit]
@@ -4722,9 +4722,9 @@ class OpsHandlersMixin:
                 if not item_id:
                     return {'error': 'item_id required for detail action'}
                 try:
-                    item = SpiderData.objects.get(id=item_id)
-                except SpiderData.DoesNotExist:
-                    return {'error': f'SpiderData {item_id} not found'}
+                    item = LegacySpiderData.objects.get(id=item_id)
+                except LegacySpiderData.DoesNotExist:
+                    return {'error': f'LegacySpiderData {item_id} not found'}
                 return {
                     'action': 'detail',
                     'id': str(item.id),
@@ -4744,7 +4744,7 @@ class OpsHandlersMixin:
                 if not query and not data_type and not spider_name:
                     return {'error': 'At least one of query, data_type, or spider_name required'}
 
-                qs = SpiderData.objects.all()
+                qs = LegacySpiderData.objects.all()
                 if spider_name:
                     qs = qs.filter(spider_name__icontains=spider_name)
                 if data_type:
@@ -5117,10 +5117,10 @@ class OpsHandlersMixin:
 
                 # 6. Spiders (recent data check)
                 try:
-                    from core.models_unified_system import SpiderData
+                    from core.models_unified_system import LegacySpiderData
                     from django.utils import timezone
                     from datetime import timedelta
-                    recent = SpiderData.objects.filter(created_at__gte=timezone.now() - timedelta(hours=2)).count()
+                    recent = LegacySpiderData.objects.filter(created_at__gte=timezone.now() - timedelta(hours=2)).count()
                     components['spiders'] = {'status': 'ok' if recent > 0 else 'warning', 'items_last_2h': recent}
                 except Exception as e:
                     components['spiders'] = {'status': 'error', 'detail': str(e)[:100]}
@@ -5208,14 +5208,14 @@ class OpsHandlersMixin:
             if action == 'stats':
                 from content.models import Document, DocumentEmbedding
                 from persistence.models import UnifiedEmbedding
-                from core.models_unified_system import SpiderData
+                from core.models_unified_system import LegacySpiderData
                 from django.db.models import Count
 
                 doc_count = Document.objects.count()
                 doc_with_embeddings = Document.objects.filter(embeddings__isnull=False).distinct().count()
                 doc_embedding_count = DocumentEmbedding.objects.count()
                 unified_count = UnifiedEmbedding.objects.count()
-                spider_with_embedding = SpiderData.objects.filter(embedding__isnull=False).count()
+                spider_with_embedding = LegacySpiderData.objects.filter(embedding__isnull=False).count()
 
                 # Breakdown by content_type
                 unified_by_type = list(

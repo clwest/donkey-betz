@@ -548,7 +548,7 @@ def get_project_spiders(request, project_id):
     try:
         from core.models_partnership import PartnershipProject
         from core.models_unified_system import (
-            SpiderData,
+            LegacySpiderData,
             ProjectSpiderPriority,
         )
         from core.services.spider_priority_engine import get_spider_priority_engine
@@ -577,7 +577,7 @@ def get_project_spiders(request, project_id):
                 query |= Q(raw_data__icontains=topic)
 
             # Session 807: Defer embedding fields to reduce egress costs
-            recent_data = SpiderData.objects.filter(query).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
+            recent_data = LegacySpiderData.objects.filter(query).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:20]
             for sd in recent_data:
                 spider_data.append({
                     'id': str(sd.id),

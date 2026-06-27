@@ -328,16 +328,16 @@ class PlatformIntelligenceBriefingService:
     def _gather_spider_highlights(self, briefing: PlatformBriefing, since: timezone.datetime):
         """Gather notable external intelligence from spiders."""
         try:
-            from core.models import SpiderData
+            from core.models import LegacySpiderData
 
             # Get recent spider data count
-            briefing.total_spider_records_24h = SpiderData.objects.filter(
+            briefing.total_spider_records_24h = LegacySpiderData.objects.filter(
                 created_at__gte=since
             ).count()
 
             # Get one highlight from each spider source
             seen_sources = set()
-            highlights = SpiderData.objects.filter(
+            highlights = LegacySpiderData.objects.filter(
                 created_at__gte=since
             ).order_by('-created_at')[:50]
 

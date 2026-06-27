@@ -3,7 +3,7 @@ Session 243: Sync Agent Learning System
 Session 532: Added LLM-synthesized knowledge summaries
 
 This command:
-1. Populates AgentKnowledgeSource from SpiderData
+1. Populates AgentKnowledgeSource from LegacySpiderData
 2. Creates AgentLearningConnection between complementary agents
 3. Enables the agent-to-agent knowledge sharing network
 4. Uses LLM to synthesize meaningful summaries from spider data
@@ -21,7 +21,7 @@ from core.models import (
     Agent, SpiderCategory, AgentKnowledgeSource,
     AgentLearningConnection
 )
-from core.models_unified_system import SpiderData
+from core.models_unified_system import LegacySpiderData
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def synthesize_knowledge_with_llm(spider_name: str, data_type: str, data_list: l
         client = get_openai_client(api_key=os.environ.get('OPENAI_API_KEY'))
 
         # Extract content from spider data for the LLM
-        # SpiderData has raw_data (JSONField) with items containing title, summary, insights
+        # LegacySpiderData has raw_data (JSONField) with items containing title, summary, insights
         data_samples = []
         for d in data_list[:10]:  # Limit to 10 samples to avoid token limits
             sample = {}
@@ -288,10 +288,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("✅ AGENT LEARNING SYNC COMPLETE!"))
         self.stdout.write(f"📚 Knowledge Sources: {AgentKnowledgeSource.objects.count()}")
         self.stdout.write(f"🔗 Agent Learning Connections: {AgentLearningConnection.objects.count()}")
-        self.stdout.write(f"🕷️ Spider Data Processed: {SpiderData.objects.filter(is_processed=True).count()}")
+        self.stdout.write(f"🕷️ Spider Data Processed: {LegacySpiderData.objects.filter(is_processed=True).count()}")
 
     def populate_knowledge_from_spiders(self, dry_run=False, use_llm=False, refresh=False):
-        """Create AgentKnowledgeSource entries from SpiderData
+        """Create AgentKnowledgeSource entries from LegacySpiderData
 
         Session 532: Added use_llm parameter for LLM-synthesized summaries
         """
@@ -375,7 +375,7 @@ class Command(BaseCommand):
         }
 
         # Get all spider data grouped by spider_name
-        spider_data_groups = SpiderData.objects.values('spider_name').annotate(
+        spider_data_groups = LegacySpiderData.objects.values('spider_name').annotate(
             count=Count('id')
         ).order_by('-count')
 
@@ -406,7 +406,7 @@ class Command(BaseCommand):
                 continue
 
             # Get sample data for this spider
-            sample_data = SpiderData.objects.filter(spider_name=spider_name).order_by('-created_at')[:50]
+            sample_data = LegacySpiderData.objects.filter(spider_name=spider_name).order_by('-created_at')[:50]
 
             # Determine knowledge type from data_type
             for agent in connected_agents:
@@ -489,7 +489,7 @@ class Command(BaseCommand):
 
         # Mark spider data as processed
         if not dry_run:
-            SpiderData.objects.filter(is_processed=False).update(
+            LegacySpiderData.objects.filter(is_processed=False).update(
                 is_processed=True,
                 processed_at=timezone.now()
             )

@@ -906,7 +906,7 @@ Given your experience with cryptocurrency markets and blockchain technology:
     def _check_recent_exploits(self) -> Dict[str, Any]:
         """Check spider data for recent exploit news."""
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone
             from datetime import timedelta
 
@@ -915,7 +915,7 @@ Given your experience with cryptocurrency markets and blockchain technology:
 
             exploit_keywords = ['exploit', 'hack', 'attack', 'drain', 'stolen', 'vulnerability']
 
-            recent_data = SpiderData.objects.filter(
+            recent_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff,
                 spider_name__in=['etherscan', 'coingecko', 'securityweek']
             )[:10]

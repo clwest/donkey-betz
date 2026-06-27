@@ -525,11 +525,11 @@ Alert on:
         }
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone as dj_timezone
 
             cutoff = dj_timezone.now() - timedelta(days=7)
-            filings = SpiderData.objects.filter(
+            filings = LegacySpiderData.objects.filter(
                 spider_name__in=['sec', 'sec_edgar'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:10]
@@ -575,11 +575,11 @@ Alert on:
         }
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone as dj_timezone
 
             cutoff = dj_timezone.now() - timedelta(days=1)
-            data = SpiderData.objects.filter(
+            data = LegacySpiderData.objects.filter(
                 spider_name='yahoo_finance',
                 created_at__gte=cutoff
             ).order_by('-created_at').first()
@@ -611,13 +611,13 @@ Alert on:
         }
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             from django.utils import timezone as dj_timezone
 
             cutoff = dj_timezone.now() - timedelta(hours=6)
 
             # Query for market spider data
-            market_data = SpiderData.objects.filter(
+            market_data = LegacySpiderData.objects.filter(
                 spider_name__in=['yahoo_finance', 'finnhub', 'polygon_finance'],
                 created_at__gte=cutoff
             ).order_by('-created_at')[:max_items]
@@ -941,11 +941,11 @@ Provide:
         # If no data found, try to get from spider network
         if not prices:
             try:
-                from core.models_unified_system import SpiderData
+                from core.models_unified_system import LegacySpiderData
                 from django.utils import timezone
 
                 cutoff = timezone.now() - timedelta(days=30)
-                data = SpiderData.objects.filter(
+                data = LegacySpiderData.objects.filter(
                     spider_name__in=['yahoo_finance', 'polygon_spider'],
                     created_at__gte=cutoff
                 ).order_by('-created_at')[:30]

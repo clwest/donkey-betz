@@ -894,7 +894,7 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
         Pulls from:
         - WorkspaceOperation (recent operations with timestamps)
         - AgentExecution (agent runs, especially failures)
-        - SpiderData (spider network activity)
+        - LegacySpiderData (spider network activity)
         - DecisionRecord (AI decisions made)
 
         Returns timestamped stories that can be used as concrete examples in podcasts.
@@ -997,9 +997,9 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
 
         # 3. Fetch spider activity
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
-            spider_data = SpiderData.objects.filter(
+            spider_data = LegacySpiderData.objects.filter(
                 created_at__gte=cutoff
             ).order_by('-created_at')[:20]
 

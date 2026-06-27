@@ -392,7 +392,7 @@ def market_research_dashboard(request):
     """
     from datetime import timedelta
     from django.utils import timezone
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     try:
         hours = int(request.GET.get('hours', 24))
@@ -410,7 +410,7 @@ def market_research_dashboard(request):
 
         # ========== CRYPTO SECTION ==========
         # Session 807: Defer embedding fields to reduce egress costs
-        crypto_data = SpiderData.objects.filter(
+        crypto_data = LegacySpiderData.objects.filter(
             spider_name__in=['coingecko', 'etherscan'],
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')
@@ -484,7 +484,7 @@ def market_research_dashboard(request):
         # Get news from financial news sources
         # Session 807: Defer embedding fields to reduce egress costs
         news_spiders = ['business_news', 'reuters_rss', 'seekingalpha', 'newsapi', 'bbc', 'cnn']
-        news_data = SpiderData.objects.filter(
+        news_data = LegacySpiderData.objects.filter(
             spider_name__in=news_spiders,
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')
@@ -605,19 +605,19 @@ def opportunities_dashboard(request):
     limit = int(request.GET.get('limit', 10))
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.utils import timezone
         from datetime import timedelta
 
         cutoff = timezone.now() - timedelta(hours=hours)
 
         # Helper function to get spider data
-        # SpiderData stores items in raw_data['items'] as a list
+        # LegacySpiderData stores items in raw_data['items'] as a list
         def get_spider_items(source_names, item_limit=10):
             items = []
             for source in source_names:
                 # Session 807: Defer embedding fields to reduce egress costs
-                spider_data = SpiderData.objects.filter(
+                spider_data = LegacySpiderData.objects.filter(
                     spider_name__icontains=source,
                     created_at__gte=cutoff
                 ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]  # Get fewer records, each has multiple items
@@ -712,9 +712,9 @@ def opportunities_dashboard(request):
 
         # Business & Tech Discussions from Reddit
         # Session 385: Broadened to include AI, ML, design, and tech discussions
-        # SpiderData stores items in raw_data['items'] as a list
+        # LegacySpiderData stores items in raw_data['items'] as a list
         # Session 807: Defer embedding fields to reduce egress costs
-        reddit_data = SpiderData.objects.filter(
+        reddit_data = LegacySpiderData.objects.filter(
             spider_name__icontains='reddit',
             created_at__gte=cutoff
         ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:15]  # Get more records for variety
@@ -1016,15 +1016,15 @@ def dashboard_stats(request):
         clean_agents = db_agent_count
 
         # === DATA STATS ===
-        from core.models_unified_system import SpiderData, AgentMemory, AgentKnowledgeSource
+        from core.models_unified_system import LegacySpiderData, AgentMemory, AgentKnowledgeSource
         from core.models_unified_system import AgentConversation, HiveMindSession, KnowledgeTransfer
 
         # Total data points
-        total_data_points = SpiderData.objects.count()
+        total_data_points = LegacySpiderData.objects.count()
 
         # Data from last 24 hours
         last_24h = timezone.now() - timedelta(hours=24)
-        recent_data_points = SpiderData.objects.filter(created_at__gte=last_24h).count()
+        recent_data_points = LegacySpiderData.objects.filter(created_at__gte=last_24h).count()
 
         # Success rate (approximate based on recent runs)
         success_rate = 98
@@ -1139,7 +1139,7 @@ def spider_data_feed(request):
         offset: Pagination offset
         sort: 'recent' or 'score'
     """
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     try:
         category = request.GET.get('category', 'all') or 'all'  # Handle empty string
@@ -1150,7 +1150,7 @@ def spider_data_feed(request):
 
         # Build queryset
         # Session 807: Defer embedding fields to reduce egress costs
-        queryset = SpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').exclude(raw_data__isnull=True)
+        queryset = LegacySpiderData.objects.defer('embedding', 'item_embeddings', 'embedding_text').exclude(raw_data__isnull=True)
 
         if category != 'all':
             queryset = queryset.filter(data_type=category)
@@ -1282,14 +1282,14 @@ def spider_data_feed(request):
             items.sort(key=lambda x: x.get('score') or 0, reverse=True)
 
         # Get available sources for filter dropdown
-        sources = list(SpiderData.objects.values_list('spider_name', flat=True).distinct().order_by('spider_name'))
+        sources = list(LegacySpiderData.objects.values_list('spider_name', flat=True).distinct().order_by('spider_name'))
 
         # Get available categories
-        categories = list(SpiderData.objects.values_list('data_type', flat=True).distinct().order_by('data_type'))
+        categories = list(LegacySpiderData.objects.values_list('data_type', flat=True).distinct().order_by('data_type'))
 
         # Get stats
-        total_records = SpiderData.objects.count()
-        with_embeddings = SpiderData.objects.exclude(embedding__isnull=True).count()
+        total_records = LegacySpiderData.objects.count()
+        with_embeddings = LegacySpiderData.objects.exclude(embedding__isnull=True).count()
 
         return JsonResponse({
             'status': 'success',
@@ -1569,7 +1569,7 @@ def spider_timeline(request):
     from django.db.models import Count, Max
     from django.db.models.functions import TruncHour, TruncDay
     from datetime import timedelta
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
 
     try:
         range_param = request.GET.get('range', '24h')
@@ -1587,7 +1587,7 @@ def spider_timeline(request):
 
         # Get collection timeline
         timeline = list(
-            SpiderData.objects.filter(created_at__gte=since)
+            LegacySpiderData.objects.filter(created_at__gte=since)
             .annotate(period=trunc_fn('created_at'))
             .values('period')
             .annotate(count=Count('id'))
@@ -1600,7 +1600,7 @@ def spider_timeline(request):
 
         # Get source freshness
         freshness = list(
-            SpiderData.objects.values('spider_name')
+            LegacySpiderData.objects.values('spider_name')
             .annotate(
                 last_update=Max('created_at'),
                 total_records=Count('id')
@@ -1615,7 +1615,7 @@ def spider_timeline(request):
         for spider_name in set(f['spider_name'] for f in freshness):
             # Sample recent records to count actual items
             # Session 807: Defer embedding fields to reduce egress costs
-            recent = SpiderData.objects.filter(spider_name=spider_name).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:3]
+            recent = LegacySpiderData.objects.filter(spider_name=spider_name).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:3]
             item_count = 0
             for r in recent:
                 if r.raw_data and isinstance(r.raw_data.get('items'), list):
@@ -1813,7 +1813,7 @@ def spider_detail(request, spider_name):
     Used by ICC detail panel to show actual news/data.
     """
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.utils import timezone
         from datetime import timedelta
 
@@ -1824,7 +1824,7 @@ def spider_detail(request, spider_name):
 
         # Get recent data from this spider
         # Session 807: Defer embedding fields to reduce egress costs
-        queryset = SpiderData.objects.filter(
+        queryset = LegacySpiderData.objects.filter(
             spider_name__iexact=spider_name,
             created_at__gte=since
         ).defer('embedding', 'item_embeddings', 'embedding_text').exclude(raw_data__isnull=True).order_by('-created_at')[:20]
@@ -1911,8 +1911,8 @@ def spider_detail(request, spider_name):
                 break
 
         # Get spider metadata
-        total_records = SpiderData.objects.filter(spider_name__iexact=spider_name).count()
-        recent_records = SpiderData.objects.filter(
+        total_records = LegacySpiderData.objects.filter(spider_name__iexact=spider_name).count()
+        recent_records = LegacySpiderData.objects.filter(
             spider_name__iexact=spider_name,
             created_at__gte=since
         ).count()

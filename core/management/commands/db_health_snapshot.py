@@ -145,9 +145,9 @@ class Command(BaseCommand):
 
         # Spiders
         stats['spiders'] = {
-            'SpiderData': self._safe_count('core.SpiderData'),
-            'SpiderData_last_24h': self._safe_count_recent('core.SpiderData', 'created_at', 24),
-            'SpiderData_last_7d': self._safe_count_recent('core.SpiderData', 'created_at', 24*7),
+            'SpiderData': self._safe_count('core.LegacySpiderData'),
+            'SpiderData_last_24h': self._safe_count_recent('core.LegacySpiderData', 'created_at', 24),
+            'SpiderData_last_7d': self._safe_count_recent('core.LegacySpiderData', 'created_at', 24*7),
             'SpiderDataAnnotation': self._safe_count('core.SpiderDataAnnotation'),
         }
 

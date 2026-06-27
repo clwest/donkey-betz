@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from core.models import (
     Agent, AgentExecution, UserProfile,
     Revenue, Opportunity, Application,
-    SpiderData, Advisor, Collaboration
+    LegacySpiderData, Advisor, Collaboration
 )
 
 @api_view(['GET'])
@@ -71,7 +71,7 @@ def dashboard_stats(request):
     ).count()
 
     # Get spider network data points
-    spider_data_points = SpiderData.objects.filter(
+    spider_data_points = LegacySpiderData.objects.filter(
         created_at__gte=timezone.now() - timedelta(hours=24)
     ).count()
 
@@ -353,7 +353,7 @@ def dashboard_summary(request):
 
     try:
         # Spider data since last visit
-        while_away['new_spider_data'] = SpiderData.objects.filter(
+        while_away['new_spider_data'] = LegacySpiderData.objects.filter(
             created_at__gte=last_visit
         ).count()
     except Exception as _e:

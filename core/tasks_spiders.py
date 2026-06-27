@@ -113,7 +113,7 @@ def _impl_execute_single_spider(self, spider_name: str, execution_log_id: str = 
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
     from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
-    from core.models_unified_system import SpiderData, SpiderExecutionLog
+    from core.models_unified_system import LegacySpiderData, SpiderExecutionLog
     import traceback
 
     spider_start_time = time.time()
@@ -183,7 +183,7 @@ def _impl_execute_single_spider(self, spider_name: str, execution_log_id: str = 
                 data['items'] = unique_items
                 data['dedup_stats'] = dedup_stats
 
-            spider_data = SpiderData.objects.create(
+            spider_data = LegacySpiderData.objects.create(
                 spider_name=spider_name,
                 data_type=category,
                 raw_data=data if isinstance(data, dict) else {'data': str(data)},
@@ -193,7 +193,7 @@ def _impl_execute_single_spider(self, spider_name: str, execution_log_id: str = 
             item_count = len(unique_items)
             logger.info(f"✅ Spider {spider_name} completed: {item_count} unique items (dedup: {dedup_stats['duplicates']} removed)")
         else:
-            # No unique items - skip creating SpiderData record
+            # No unique items - skip creating LegacySpiderData record
             spider_data = None
             item_count = 0
             logger.info(f"⏭️ Spider {spider_name}: all {dedup_stats['total']} items already seen, skipping save")
@@ -238,16 +238,16 @@ def _impl_execute_single_spider(self, spider_name: str, execution_log_id: str = 
 
 def _impl_process_core_spider_data():
     """
-    Session 707: Process unprocessed spider data from core.models_unified_system.SpiderData
+    Session 707: Process unprocessed spider data from core.models_unified_system.LegacySpiderData
 
-    This task processes the CORE SpiderData table which is used by the unified system,
-    as opposed to the legacy persistence.models.SpiderData table.
+    This task processes the CORE LegacySpiderData table which is used by the unified system,
+    as opposed to the legacy persistence.models.LegacySpiderData table.
 
     The DIGESTIVE system monitors this table for queue depth.
 
     Runs every 2 minutes with 500 items per batch to catch up with backlog.
     """
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
     from intelligence.spider_agent_connector import SpiderAgentConnector
     from django.utils import timezone
 
@@ -256,8 +256,8 @@ def _impl_process_core_spider_data():
     connector = SpiderAgentConnector()
 
     # Get unprocessed spider data (50 per run — still 1,500/hour at 2-min interval)
-    unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').order_by('created_at')[:50]
-    total_unprocessed = SpiderData.objects.filter(is_processed=False).defer('embedding').count()
+    unprocessed = LegacySpiderData.objects.filter(is_processed=False).defer('embedding').order_by('created_at')[:50]
+    total_unprocessed = LegacySpiderData.objects.filter(is_processed=False).defer('embedding').count()
 
     results = {
         'processed': 0,
@@ -323,7 +323,7 @@ def _impl_run_spider_network(self):
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
     from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
-    from core.models_unified_system import SpiderData, SpiderExecutionLog
+    from core.models_unified_system import LegacySpiderData, SpiderExecutionLog
     from django.utils import timezone
     import traceback
 
@@ -435,7 +435,7 @@ def _impl_run_spider_network(self):
                     data['items'] = unique_items
                     data['dedup_stats'] = dedup_stats
 
-                spider_data = SpiderData.objects.create(
+                spider_data = LegacySpiderData.objects.create(
                     spider_name=spider_name,
                     data_type=category,
                     raw_data=data if isinstance(data, dict) else {'data': str(data)},
@@ -468,7 +468,7 @@ def _impl_run_spider_network(self):
             results['all_topics'].append(category)
 
             # Session 399: Publish spider completion event for real-time UI updates.
-            # Session 1083 (Rigby audit): only publish when a SpiderData row
+            # Session 1083 (Rigby audit): only publish when a LegacySpiderData row
             # was actually created — previously unconditionally did
             # `str(spider_data.id)` which AttributeError'd on every spider
             # whose dedup dropped all items (spider_data = None at line 434).
@@ -574,7 +574,7 @@ def _impl_execute_single_spider_lightweight(spider_name: str):
     Session 505: Renamed from execute_single_spider to avoid conflict with the
     proper spider execution task at line 239 that uses actual spider classes.
     """
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import LegacySpiderData
     from django.utils import timezone
 
     logger.info(f"🕷️ On-demand execution: {spider_name}")
@@ -650,7 +650,7 @@ def _impl_execute_single_spider_lightweight(spider_name: str):
                 data['items'] = unique_items
                 data['dedup_stats'] = dedup_stats
 
-            spider_data = SpiderData.objects.create(
+            spider_data = LegacySpiderData.objects.create(
                 spider_name=spider_name,
                 data_type=category,
                 raw_data=data if isinstance(data, dict) else {'data': str(data)},
@@ -724,7 +724,7 @@ def _impl_score_spider_data_async(spider_data_id: str, priority: str = 'normal',
     Routes through the dispatcher which decides realtime vs batch.
 
     Args:
-        spider_data_id: UUID of SpiderData to score
+        spider_data_id: UUID of LegacySpiderData to score
         priority: 'high', 'normal', or 'low'
         source: Where the request came from
         user_id: Optional user ID
@@ -735,7 +735,7 @@ def _impl_score_spider_data_async(spider_data_id: str, priority: str = 'normal',
     logger.info(f"⚡ [ASYNC SCORE] Scoring {spider_data_id} (priority={priority})")
 
     try:
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.services.scoring_dispatcher import (
             get_scoring_dispatcher,
             ScoringPriority
@@ -745,7 +745,7 @@ def _impl_score_spider_data_async(spider_data_id: str, priority: str = 'normal',
         User = get_user_model()
 
         # Get spider data
-        spider_data = SpiderData.objects.get(id=spider_data_id).defer('embedding')
+        spider_data = LegacySpiderData.objects.get(id=spider_data_id).defer('embedding')
 
         # Get user if provided
         user = None
@@ -862,7 +862,7 @@ def _impl_aggregate_spider_signals(self, lookback_hours: int = 6):
     Session 900: Aggregate recent spider data into SignalClusters.
 
     This task runs periodically to:
-    1. Fetch recent SpiderData
+    1. Fetch recent LegacySpiderData
     2. Cluster signals by topic/keyword similarity
     3. Create/update SignalCluster records
     4. Generate AutoTopic suggestions from actionable clusters

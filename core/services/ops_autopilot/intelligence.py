@@ -99,7 +99,7 @@ Policies (v7 — attribution debt + experiment engine + decision ledger + remedi
      high-value opportunities. Generates follow-up suggestions with
      cadence tracking. Guardrails: never auto-send, max 3 follow-ups
      per opp. PA tool: revenue_pipeline_report.
- 25. Outbound lead engine: Discovers prospecting leads from SpiderData
+ 25. Outbound lead engine: Discovers prospecting leads from LegacySpiderData
      (job postings, startup news, business signals). Scores leads on
      recency, revenue potential, and channel fit. Generates outreach
      drafts (approval required — never auto-sends). Deduplication by
@@ -239,7 +239,7 @@ class KnowledgeEngine:
 
     Monitors citation health across the system by querying:
     - CitationViolation: tracks outputs that failed citation requirements
-    - SpiderData: knowledge freshness and source coverage
+    - LegacySpiderData: knowledge freshness and source coverage
     - ResearchResult: research completion and quality
     - Deliverable: output provenance and source linking
 
@@ -269,7 +269,7 @@ class KnowledgeEngine:
         Overall knowledge health dashboard.
         """
         from core.models_orchestration import CitationViolation
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from core.models_research import ResearchResult
         from django.db.models import Count
 
@@ -295,23 +295,23 @@ class KnowledgeEngine:
         ).count()
 
         # Spider data freshness (last 24h ingestion)
-        spider_24h = SpiderData.objects.filter(
+        spider_24h = LegacySpiderData.objects.filter(
             created_at__gte=day_ago,
         ).count()
-        spider_7d = SpiderData.objects.filter(
+        spider_7d = LegacySpiderData.objects.filter(
             created_at__gte=week_ago,
         ).count()
 
         # Spider data by type (top 10)
         spider_by_type = list(
-            SpiderData.objects.filter(created_at__gte=week_ago)
+            LegacySpiderData.objects.filter(created_at__gte=week_ago)
             .values('data_type')
             .annotate(count=Count('id'))
             .order_by('-count')[:10]
         )
 
         # Active spiders (distinct spider names in last 7d)
-        active_spiders = SpiderData.objects.filter(
+        active_spiders = LegacySpiderData.objects.filter(
             created_at__gte=week_ago,
         ).values('spider_name').distinct().count()
 
@@ -425,7 +425,7 @@ class KnowledgeEngine:
         """
         Spider data coverage and source quality metrics.
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.db.models import Count, Avg, Max
 
         now = timezone.now()
@@ -433,7 +433,7 @@ class KnowledgeEngine:
 
         # Top sources by volume
         top_spiders = list(
-            SpiderData.objects.filter(created_at__gte=week_ago)
+            LegacySpiderData.objects.filter(created_at__gte=week_ago)
             .values('spider_name')
             .annotate(
                 count=Count('id'),
@@ -448,7 +448,7 @@ class KnowledgeEngine:
 
         # Data type distribution
         type_dist = list(
-            SpiderData.objects.filter(created_at__gte=week_ago)
+            LegacySpiderData.objects.filter(created_at__gte=week_ago)
             .values('data_type')
             .annotate(count=Count('id'))
             .order_by('-count')
@@ -457,7 +457,7 @@ class KnowledgeEngine:
         # Source URL diversity (unique domains)
         from django.db.models import Value
         all_urls = list(
-            SpiderData.objects.filter(created_at__gte=week_ago)
+            LegacySpiderData.objects.filter(created_at__gte=week_ago)
             .values_list('source_url', flat=True)[:1000]
         )
         domains = set()
@@ -497,14 +497,14 @@ class KnowledgeEngine:
         """
         Detect stale knowledge sources and recommend refreshes.
         """
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
         from django.db.models import Max
 
         now = timezone.now()
 
         # Latest record per data_type
         latest_by_type = list(
-            SpiderData.objects.values('data_type')
+            LegacySpiderData.objects.values('data_type')
             .annotate(latest=Max('created_at'), )
             .order_by('data_type')
         )
@@ -536,7 +536,7 @@ class KnowledgeEngine:
 
         # Latest record per spider
         latest_by_spider = list(
-            SpiderData.objects.values('spider_name')
+            LegacySpiderData.objects.values('spider_name')
             .annotate(latest=Max('created_at'))
             .order_by('spider_name')
         )
@@ -587,7 +587,7 @@ class KnowledgeEngine:
         Returns key metrics and flags issues.
         """
         from core.models_orchestration import CitationViolation
-        from core.models_unified_system import SpiderData
+        from core.models_unified_system import LegacySpiderData
 
         day_ago = now - timedelta(hours=24)
 
@@ -599,7 +599,7 @@ class KnowledgeEngine:
             was_blocked=True,
         ).count()
 
-        spider_24h = SpiderData.objects.filter(
+        spider_24h = LegacySpiderData.objects.filter(
             created_at__gte=day_ago,
         ).count()
 
@@ -2017,15 +2017,15 @@ class ComplianceEngine:
                 type(_e).__name__, _e,
             )
 
-        # Check SpiderData retention
+        # Check LegacySpiderData retention
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
             threshold = now - timedelta(days=self.RETENTION_THRESHOLDS['spider_data'])
-            old_count = SpiderData.objects.filter(created_at__lt=threshold).count()
-            total = SpiderData.objects.count()
+            old_count = LegacySpiderData.objects.filter(created_at__lt=threshold).count()
+            total = LegacySpiderData.objects.count()
             if old_count > 0:
                 violations.append({
-                    'table': 'SpiderData',
+                    'table': 'LegacySpiderData',
                     'threshold_days': self.RETENTION_THRESHOLDS['spider_data'],
                     'records_past_retention': old_count,
                     'total_records': total,
@@ -2214,7 +2214,7 @@ class DataIntegrityEngine:
     per-source data reliability scores.
 
     Data sources:
-    - SpiderData: primary data feed quality
+    - LegacySpiderData: primary data feed quality
     - AgentExecution: execution output quality
     - Deliverable: content quality metrics
 
@@ -2238,11 +2238,11 @@ class DataIntegrityEngine:
         by_source = {}
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             # Per-spider quality stats
             spider_stats = list(
-                SpiderData.objects.filter(created_at__gte=cutoff)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff)
                 .values('spider_name')
                 .annotate(
                     total=Count('id'),
@@ -2276,9 +2276,9 @@ class DataIntegrityEngine:
                     })
 
             # Check for overall volume drop
-            total_recent = SpiderData.objects.filter(created_at__gte=cutoff).count()
+            total_recent = LegacySpiderData.objects.filter(created_at__gte=cutoff).count()
             prev_cutoff = cutoff - timedelta(hours=hours)
-            total_prev = SpiderData.objects.filter(
+            total_prev = LegacySpiderData.objects.filter(
                 created_at__gte=prev_cutoff, created_at__lt=cutoff
             ).count()
 
@@ -2319,10 +2319,10 @@ class DataIntegrityEngine:
         spikes = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             spider_stats = list(
-                SpiderData.objects.filter(created_at__gte=cutoff)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff)
                 .values('spider_name', 'data_type')
                 .annotate(
                     total=Count('id'),
@@ -2379,11 +2379,11 @@ class DataIntegrityEngine:
         duplicates = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             # Check for duplicate source_urls per spider
             dup_urls = list(
-                SpiderData.objects.filter(created_at__gte=cutoff)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff)
                 .exclude(source_url__isnull=True)
                 .exclude(source_url='')
                 .values('spider_name', 'source_url')
@@ -2428,11 +2428,11 @@ class DataIntegrityEngine:
         scores = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             # 7-day stats per spider
             spider_stats = list(
-                SpiderData.objects.filter(created_at__gte=cutoff_7d)
+                LegacySpiderData.objects.filter(created_at__gte=cutoff_7d)
                 .values('spider_name')
                 .annotate(
                     total_7d=Count('id'),

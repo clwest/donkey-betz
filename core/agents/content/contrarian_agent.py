@@ -353,7 +353,7 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
 
     def _check_topic_saturation(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Check how saturated a topic is in recent content"""
-        from core.models import SpiderData
+        from core.models import LegacySpiderData
 
         topic = tool_input.get('topic')
         days_back = tool_input.get('days_back', 14)
@@ -362,20 +362,20 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
         now = timezone.now()
 
         # Last 3 days
-        recent_count = SpiderData.objects.filter(
+        recent_count = LegacySpiderData.objects.filter(
             embedding_text__icontains=topic,
             created_at__gte=now - timedelta(days=3)
         ).count()
 
         # Previous 3 days (for comparison)
-        previous_count = SpiderData.objects.filter(
+        previous_count = LegacySpiderData.objects.filter(
             embedding_text__icontains=topic,
             created_at__gte=now - timedelta(days=6),
             created_at__lt=now - timedelta(days=3)
         ).count()
 
         # Total in period
-        total_count = SpiderData.objects.filter(
+        total_count = LegacySpiderData.objects.filter(
             embedding_text__icontains=topic,
             created_at__gte=now - timedelta(days=days_back)
         ).count()
@@ -476,7 +476,7 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
 
     def _find_rising_topics(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Find topics that are rising but not yet saturated"""
-        from core.models import SpiderData
+        from core.models import LegacySpiderData
         from django.db.models import Q
 
         domain_keywords = tool_input.get('domain_keywords', [])
@@ -497,12 +497,12 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
             keyword_query |= Q(embedding_text__icontains=keyword)
 
         # Get items from both periods
-        recent_items = SpiderData.objects.filter(
+        recent_items = LegacySpiderData.objects.filter(
             keyword_query,
             created_at__gte=recent_start
         )
 
-        previous_items = SpiderData.objects.filter(
+        previous_items = LegacySpiderData.objects.filter(
             keyword_query,
             created_at__gte=previous_start,
             created_at__lt=previous_end

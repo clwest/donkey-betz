@@ -569,10 +569,10 @@ class NarrativeInjectionService:
         incidents = []
 
         try:
-            from core.models_unified_system import SpiderData
+            from core.models_unified_system import LegacySpiderData
 
             # Get recent high-value spider results
-            results = SpiderData.objects.filter(
+            results = LegacySpiderData.objects.filter(
                 created_at__gte=timezone.now() - timedelta(days=3)
             ).order_by('-created_at')[:100]
 
