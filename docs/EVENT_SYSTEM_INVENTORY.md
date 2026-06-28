@@ -1263,6 +1263,202 @@ Out of scope for PR 5. Documented here so a future PR (or a
 
 ---
 
+## 13. PR 6 — Rigby internal work queue (`RigbyWorkItem`)
+
+> Status: shipped in PR 6 of the Rigby Event Intake arc. **No human
+> notification. No agent dispatch.** Actionable intake decisions
+> create a `RigbyWorkItem` row in Rigby's own queue. Default OFF.
+
+### 13.1 Why Notify-Chris was deferred
+
+The original PR 5 → PR 6 path proposed "Notify Chris" as the first
+live action. **Chris's S1250 directive overrode that.** The principle:
+**events should first create operational awareness for Rigby. Humans
+should only be notified when Rigby determines human judgment is
+needed.**
+
+Making Chris the default target of every actionable intake decision
+would have:
+
+- Made Chris the exception handler for every status_transition.
+- Skipped the prior step where Rigby evaluates whether the decision
+  even needs a human at all.
+- Coupled Rigby's operational maturity to Chris's attention budget.
+
+PR 6 instead gives Rigby a **queue she can review on her own
+cadence**. Chris becomes the exception handler — escalated only when
+Rigby decides she needs him. The Notify-Chris path is still on the
+roadmap (later PR), but it now sits **after** Rigby's queue, not
+parallel to it.
+
+### 13.2 `RigbyWorkItem` purpose
+
+One row per actionable intake decision. The queue is Rigby's own
+operational surface — what she has open, what she's acknowledged,
+what she's resolved, what she's ignored.
+
+**Schema** (`core/models_rigby_work_items.py`):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `id` | UUID | Primary key. |
+| `source_mission_run` | FK → `OpsRun` | The MissionRun (domain='mission') that produced this work item. |
+| `source_event_ref` | CharField (indexed) | Canonical `<source>:<source_id>` handle of the originating event. |
+| `decision` | CharField (indexed) | Mirror of intake decision (`monitor` / `notify` in v0). |
+| `severity` | CharField | PR 2 closed vocab. |
+| `mission_impact` | CharField | PR 4 closed vocab. |
+| `priority` | PositiveSmallIntegerField (indexed) | Derived from mission_impact (unknown=1 / low=3 / medium=5 / high=8). Higher = sooner. |
+| `title` | CharField(200) | Short human-readable title for Rigby's queue UI. |
+| `summary` | TextField | Reason / context — quoted from the rule. |
+| `recommended_next_action` | TextField | What Rigby (or her future tooling) should consider doing. |
+| `evidence` | JSONField | `{event_ref, rules_fired, decision_reason, source, kind, severity}`. |
+| `status` | CharField (choices, indexed) | `open` / `acknowledged` / `resolved` / `ignored`. Default `open`. |
+| `created_at` | DateTimeField (indexed) | auto_now_add. |
+| `updated_at` | DateTimeField | auto_now. |
+| `resolved_at` | DateTimeField (nullable) | Populated by future PR when Rigby resolves an item. |
+
+**Constraints:**
+
+- `unique_together = ('source_event_ref', 'decision')` — idempotent
+  on re-run. Re-running the intake on the same event_ref returns the
+  same work item; never produces a duplicate row. Different decisions
+  on the same event_ref (would only happen if rules change between
+  runs — not in v0) get distinct rows.
+- `indexes` on `(status, -priority, -created_at)` and
+  `(decision, -created_at)` so Rigby's queue can be sorted cheaply.
+
+### 13.3 How the internal work queue fits the COO model
+
+```
+Platform Event arrives
+   │
+   ▼
+rigby_event_intake (PR 4 / 5)
+   │
+   ├── MissionRun (OpsRun, domain='mission', run_kind='intake')
+   ├── OpsRunEvent: intake_started → impact_assessed → decision_made
+   │
+   ├── If decision is actionable AND RIGBY_INTERNAL_WORK_QUEUE_ENABLED:
+   │     RigbyWorkItem (status='open')           ← PR 6 lands HERE
+   │
+   ├── MissionRun.status = 'passed' (or 'failed' on drop)
+   │
+   ▼
+[Rigby reviews her queue async — PR 7+]
+   │
+   ├── work_item.acknowledged → Rigby has seen it
+   ├── work_item.resolved → Rigby took action
+   ├── work_item.ignored → Rigby decided no action needed
+   │
+   ▼
+[Escalate to human — PR 8+ if needed]
+   │
+   ├── Notify Chris (only when Rigby decides human judgment is needed)
+   ├── Create Initiative (formal multi-step workflow)
+   ├── Delegate to specific agent
+```
+
+This sequence respects the new principle: **Rigby first, Chris on
+escalation.** It also extends the MissionRun timeline naturally —
+future PRs adding `escalated_to_chris` / `delegated_to_agent_X` /
+`resolved` events on the same OpsRun parent row keep the full
+event-to-outcome lineage in one place.
+
+### 13.4 v0 actionable decision set
+
+```python
+ACTIONABLE_DECISIONS = {"monitor", "notify"}
+```
+
+- `ignore` — never produces a work item (intentional; the rule
+  decided there is nothing to do).
+- `log` — reserved closed-vocab value, no v0 rule produces it; no
+  work item path.
+- `create_initiative` / `delegate` — deferred to later PRs which need
+  to make additional plumbing decisions about what those mean.
+
+### 13.5 Feature flag behavior
+
+`settings.RIGBY_INTERNAL_WORK_QUEUE_ENABLED` (default `False`).
+Environment-controlled via `RIGBY_INTERNAL_WORK_QUEUE_ENABLED=true`.
+
+| Setting | Behavior |
+|---|---|
+| `False` (default) | Intake still runs end-to-end; MissionRun + 3 OpsRunEvents still written; **no RigbyWorkItem rows created** regardless of decision. |
+| `True` | Actionable decisions (`monitor` / `notify`) create a RigbyWorkItem row via `get_or_create(source_event_ref=..., decision=...)`. `ignore` decisions never produce a row. |
+
+This is the **second** feature flag in the intake pipeline. Both must
+be on for the full chain to execute:
+
+| Flag | Gates |
+|---|---|
+| `RIGBY_EVENT_INTAKE_ENABLED` (PR 5) | DeliverableEvent → `apply_async(rigby_event_intake)` |
+| `RIGBY_INTERNAL_WORK_QUEUE_ENABLED` (PR 6) | Actionable decision → RigbyWorkItem row |
+
+Belt-and-braces gating means flipping just one flag is well-defined:
+
+- Only PR 5 flag ON: intake runs but no work items created.
+- Only PR 6 flag ON: signal does not enqueue, so intake never runs;
+  the PR 6 flag has nothing to act on.
+- Both ON: full chain executes.
+
+### 13.6 Priority ladder (v0)
+
+| `mission_impact` | `priority` |
+|---|---|
+| `unknown` | 1 |
+| `low` | 3 |
+| `medium` | 5 |
+| `high` | 8 |
+
+Higher priority = Rigby should look at it sooner. The ladder is
+intentionally sparse (1/3/5/8) so future tiers can land between
+existing values without renumbering.
+
+### 13.7 What is still out of scope
+
+- **No human notification.** PR 6 does NOT send anything to Chris,
+  Discord, email, push, or any other human-facing channel. The work
+  item is a Rigby-internal row only.
+- **No agent dispatch.** No `agent_router.route()` call, no Celery
+  task targeting an agent, no tool dispatch.
+- **No initiative creation.** `create_initiative` is a decision value
+  but not v0 actionable.
+- **No queue consumer.** PR 6 only **writes** to the queue. Rigby's
+  side (review / acknowledge / resolve / ignore) is PR 7+. There is
+  no consumer code yet; the queue accumulates.
+- **No queue surface in the Workspace UI.** Frontend exposure is a
+  separate PR.
+- **No LLM in assessment.** Decision rules remain deterministic (PR
+  4).
+- **No new emitters.** Only DeliverableEvent + OpsRunEvent (via PR
+  5's wired subscriber and direct calls in tests).
+
+### 13.8 What lands in this PR
+
+- `core/models_rigby_work_items.py` — new model file (~110 lines).
+- `core/migrations/0371_session_1250_rigby_work_item.py` — additive
+  migration.
+- `core/models/__init__.py` — re-export `RigbyWorkItem`.
+- `core/services/rigby_event_intake.py` — adds `ACTIONABLE_DECISIONS`
+  constant, `_PRIORITY_BY_IMPACT` map, `_compose_work_item_fields`
+  helper, `_maybe_create_work_item` function; calls it after
+  `decision_made` event. Return dict gains `work_item_id` (str or
+  `None`).
+- `core/settings.py` — adds `RIGBY_INTERNAL_WORK_QUEUE_ENABLED`
+  (default `False`).
+- `core/tests/test_rigby_work_item.py` — new test file (~340 lines,
+  18 tests).
+- This §13 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+**Test summary (real PostgreSQL test DB):**
+- 18/18 PR 6 tests green in 0.73s.
+- 119/119 across PR 2 + PR 3 + PR 4 + PR 5 + PR 6 green in 7.30s.
+- All earlier static guardrails still pass.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a

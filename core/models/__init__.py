@@ -218,6 +218,9 @@ from ..models_workflow_run import WorkflowRun
 # Import ops runs (Context Packet #9 - Ops Observability)
 from ..models_ops_runs import OpsRun, OpsRunEvent
 
+# Session 1250 PR 6 - RigbyWorkItem (internal operational queue)
+from ..models_rigby_work_items import RigbyWorkItem
+
 # Import AutopilotAction + RemediationPlaybook (Session 1086/1087)
 # Other diagnostic pipeline models already tracked via earlier migrations
 from ..models_diagnostic_pipeline import AutopilotAction, RemediationPlaybook
