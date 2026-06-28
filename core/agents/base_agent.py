@@ -3218,6 +3218,35 @@ Consider these trends when crafting the response to maximize relevance and engag
                     _tc_result = {'success': False, 'error': f"Web search failed: {str(e)}"}
                     return _tc_result
 
+            # Session 1246 audit fix (S1247 lane L): handle intelligence_tool
+            # web-search action. ResearchAgent's prompt + tool spec (lines 14,
+            # 67, 109, 526 of research_agent.py) declare intelligence_tool
+            # as its canonical search gateway after the Session 1183 migration
+            # from web_search, but the base-agent dispatcher was never updated
+            # to wire it through. All 6 of today's pa_tool_success_rate SLO
+            # breaches were ResearchAgent/intelligence_tool calls failing with
+            # 'not implemented in ResearchAgent'.
+            #
+            # Map to the same WebSearchTool the legacy `web_search` branch
+            # uses — intelligence_tool's `action=search, source=web` shape
+            # carries `query` + `limit`. Other action/source combos still fall
+            # through to the not-implemented error below; we only handle the
+            # narrow case that's actually live in production traffic.
+            if tool_name == 'intelligence_tool' and arguments.get('action') == 'search' and arguments.get('source') == 'web':
+                try:
+                    from core.tools.web_search import WebSearchTool
+                    search_tool = WebSearchTool()
+                    _tc_result = search_tool.execute(
+                        query=arguments.get('query', ''),
+                        max_results=arguments.get('limit') or arguments.get('num_results', 10),
+                        search_type=arguments.get('search_type', 'text'),
+                    )
+                    return _tc_result
+                except Exception as e:
+                    _tc_success = False
+                    _tc_result = {'success': False, 'error': f"intelligence_tool web search failed: {str(e)}"}
+                    return _tc_result
+
             # Session 1002B: Handle spider_query tool for any agent that includes it
             if tool_name == 'spider_query':
                 try:
@@ -3248,12 +3277,36 @@ Consider these trends when crafting the response to maximize relevance and engag
             # Record all built-in tool calls
             try:
                 _latency = int((_tc_time.time() - _tc_start) * 1000)
+                # Session 1246 audit fix (S1247 lane L): extract error
+                # message + type from the result dict on failure paths.
+                # The previous record-call left error_message='' and
+                # error_type='' on every failure, even though both fail
+                # branches above set _tc_result['error']. That made
+                # pa_tool_success_rate breaches forensic (the audit caught
+                # 6 ResearchAgent/intelligence_tool failures with no
+                # debuggable error in the row). Now: extract on failure,
+                # default to empty on success.
+                _err_msg = ''
+                _err_type = ''
+                if not _tc_success and isinstance(_tc_result, dict):
+                    _err_msg = str(_tc_result.get('error') or '')[:1000]
+                    # Classify: 'NotImplemented' for the dispatcher-miss
+                    # branch (most common, surfaces uncovered tool wiring);
+                    # 'ToolExecutionError' for genuine exception branches
+                    # (spider_query etc.). Future branches that bubble a
+                    # specific exception class can pass it through here.
+                    if 'not implemented in' in _err_msg.lower():
+                        _err_type = 'NotImplemented'
+                    elif _err_msg:
+                        _err_type = 'ToolExecutionError'
                 self._record_tool_call(
                     tool_name=tool_name,
                     arguments=arguments,
                     result=_tc_result,
                     latency_ms=_latency,
                     success=_tc_success,
+                    error_message=_err_msg,
+                    error_type=_err_type,
                 )
             except Exception as _e:
                 logger.warning(
