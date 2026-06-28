@@ -78,6 +78,22 @@ LABEL_INTAKE_STARTED = "intake_started"
 LABEL_IMPACT_ASSESSED = "impact_assessed"
 LABEL_DECISION_MADE = "decision_made"
 
+# Session 1250 PR 6: decisions that produce a RigbyWorkItem row.
+# 'ignore' never produces a work item; 'log' is a v0-reserved bucket
+# with no rules attached today (no work item either, since no rule
+# produces 'log' in v0). 'create_initiative' / 'delegate' are deferred
+# to later PRs which need to make additional plumbing decisions about
+# what those side effects mean.
+ACTIONABLE_DECISIONS: frozenset[str] = frozenset({"monitor", "notify"})
+
+# Priority ladder: mission_impact → priority integer. Higher = sooner.
+_PRIORITY_BY_IMPACT: dict[str, int] = {
+    "unknown": 1,
+    "low": 3,
+    "medium": 5,
+    "high": 8,
+}
+
 
 # ---------------------------------------------------------------------------
 # Result shape
@@ -216,6 +232,105 @@ def apply_rules_v0(event: PlatformEvent) -> DecisionResult:
 
 def _now_iso() -> str:
     return timezone.now().isoformat()
+
+
+def _compose_work_item_fields(
+    event: PlatformEvent, result: DecisionResult, event_ref: str
+) -> dict[str, Any]:
+    """Build the human-readable + structured fields for a RigbyWorkItem.
+
+    Each rule produces a tailored title + recommended_next_action so
+    Rigby's queue surface (future PR) can render meaningful entries
+    without joining back to the original event payload. The summary
+    quotes the rule's ``reason`` directly.
+    """
+    rule = result.rules_fired[0] if result.rules_fired else None
+    title: str
+    next_action: str
+    if rule == "deliverable_status_backward":
+        title = f"Monitor: Deliverable rework signal"
+        next_action = (
+            "Review the rework reason. Verify it wasn't a regression "
+            "or a quality leak; if it was, surface to the COO gate."
+        )
+    elif rule == "deliverable_status_terminal":
+        title = f"Notify: Deliverable reached terminal state"
+        next_action = (
+            "Confirm the terminal outcome (published / rejected / "
+            "archived) was the expected one. If unexpected, escalate."
+        )
+    elif rule == "ops_step_fail":
+        title = f"Notify: Ops step failed"
+        next_action = (
+            "Investigate the failed ops step. Verify recovery; if the "
+            "failure is ongoing or recurrent, surface to oncall."
+        )
+    else:  # pragma: no cover - defensive default
+        title = f"{result.decision.capitalize()}: {event.kind}"
+        next_action = "Review the event and decide a next step."
+
+    summary = result.reason or f"{event.source}:{event.source_id} → {result.decision}"
+
+    return {
+        "title": title,
+        "summary": summary,
+        "recommended_next_action": next_action,
+        "evidence": {
+            "event_ref": event_ref,
+            "rules_fired": list(result.rules_fired),
+            "decision_reason": result.reason,
+            "source": event.source,
+            "kind": event.kind,
+            "severity": event.severity,
+        },
+        "priority": _PRIORITY_BY_IMPACT.get(result.mission_impact, 1),
+    }
+
+
+def _maybe_create_work_item(
+    *,
+    event_ref: str,
+    mission_run: Any,
+    event: PlatformEvent,
+    result: DecisionResult,
+) -> Optional[str]:
+    """Create a RigbyWorkItem when the decision is actionable and the
+    feature flag is on. Returns the work item's UUID string or None.
+
+    Idempotent: ``unique_together = (source_event_ref, decision)`` on
+    the model + ``get_or_create`` here means re-running the intake
+    task never produces duplicates.
+
+    NB: creates a Rigby-internal row only. Does NOT notify any human,
+    dispatch any agent, or call any external surface. PR 7+ will
+    decide what consumes the queue.
+    """
+    if result.decision not in ACTIONABLE_DECISIONS:
+        return None
+    from django.conf import settings as _settings
+
+    if not getattr(_settings, "RIGBY_INTERNAL_WORK_QUEUE_ENABLED", False):
+        return None
+
+    from core.models_rigby_work_items import RigbyWorkItem
+
+    fields = _compose_work_item_fields(event, result, event_ref)
+    item, _created = RigbyWorkItem.objects.get_or_create(
+        source_event_ref=event_ref,
+        decision=result.decision,
+        defaults={
+            "source_mission_run": mission_run,
+            "severity": event.severity,
+            "mission_impact": result.mission_impact,
+            "priority": fields["priority"],
+            "title": fields["title"],
+            "summary": fields["summary"],
+            "recommended_next_action": fields["recommended_next_action"],
+            "evidence": fields["evidence"],
+            # status defaults to 'open' per model definition.
+        },
+    )
+    return str(item.id)
 
 
 def _emit_telemetry(
@@ -385,6 +500,7 @@ def _run_intake(event_ref: str, *, dry_run: bool = True) -> dict[str, Any]:
             "drop_reason": drop_reason,
             "dry_run": dry_run,
             "created": created,
+            "work_item_id": None,
         }
 
     # 6. Apply rules and write the impact_assessed + decision_made events.
@@ -416,6 +532,17 @@ def _run_intake(event_ref: str, *, dry_run: bool = True) -> dict[str, Any]:
                 "dry_run": dry_run,
             },
         },
+    )
+
+    # 6b. Session 1250 PR 6: create RigbyWorkItem when the decision is
+    # actionable (monitor / notify) AND the work-queue flag is on.
+    # This is Rigby's internal queue — no human notification, no agent
+    # dispatch. See docs/EVENT_SYSTEM_INVENTORY.md §13.
+    work_item_id = _maybe_create_work_item(
+        event_ref=event_ref,
+        mission_run=mission_run,
+        event=event,
+        result=result,
     )
 
     # 7. Finalize MissionRun if not already finalized (idempotent re-run safety).
@@ -454,6 +581,7 @@ def _run_intake(event_ref: str, *, dry_run: bool = True) -> dict[str, Any]:
         "dropped": False,
         "dry_run": dry_run,
         "created": created,
+        "work_item_id": work_item_id,
     }
 
 

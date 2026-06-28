@@ -112,6 +112,15 @@ RIGBY_EVENT_INTAKE_ENABLED = os.environ.get(
     'RIGBY_EVENT_INTAKE_ENABLED', 'false'
 ).lower() == 'true'
 
+# Session 1250 PR 6: gate for the Rigby internal work queue.
+# Default OFF. When True, actionable intake decisions (monitor / notify)
+# create a RigbyWorkItem row for Rigby's queue. No human notification,
+# no agent dispatch — only Rigby's internal queue. See
+# docs/EVENT_SYSTEM_INVENTORY.md §13.
+RIGBY_INTERNAL_WORK_QUEUE_ENABLED = os.environ.get(
+    'RIGBY_INTERNAL_WORK_QUEUE_ENABLED', 'false'
+).lower() == 'true'
+
 # Session 1116: Public-read intelligence endpoint token (247globalai.com integration).
 # When unset / empty, the endpoint at /api/public/intelligence/now/ rejects every
 # request — default-off safety. See core/views_public_intelligence.py.
