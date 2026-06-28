@@ -4925,6 +4925,90 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+
+    # ── AI Employee framework v0 (Session 1252 PR 1) ──────────────────────
+    {
+        "type": "function",
+        "name": "employee_tool",
+        "description": (
+            "Read-only inspection of the AI Employee + JobContract registry. "
+            "v0 surface: action=describe employee=rigby [job=docs_manager] "
+            "returns Rigby's profile and her assigned Documentation Manager "
+            "contract (mission, responsibilities, daily routine, authority, "
+            "evidence requirements, escalation rules). Use when the user "
+            "asks about who Rigby is, what jobs she owns, or what a specific "
+            "job contract requires of her. No state mutation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["describe"],
+                    "description": "v0 supports describe only.",
+                },
+                "employee": {
+                    "type": "string",
+                    "description": "Employee handle (lowercase). v0: 'rigby'.",
+                },
+                "job": {
+                    "type": "string",
+                    "description": (
+                        "Optional job key to scope the response to a single "
+                        "contract. v0 known keys: 'docs_manager'."
+                    ),
+                },
+            },
+            "required": ["action", "employee"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "mission_verdict",
+        "description": (
+            "Rigby-only: certify, reject, or defer a MissionRun. Writes one "
+            "OpsRunEvent (label='verdict_issued:<verdict>') and flips "
+            "OpsRun.status to passed/failed/partial. Idempotent — calling "
+            "twice with the same (mission_id, verdict) is a no-op. Use after "
+            "you have inspected the mission's evidence (OpsRunEvents, "
+            "LLMCallEvents, ToolCallRecords) and reached a verdict. "
+            "Rejected callers receive TOOL_PERMISSION_DENIED."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["certify", "reject", "defer"],
+                    "description": (
+                        "certify → status=passed; reject → status=failed; "
+                        "defer → status=partial."
+                    ),
+                },
+                "mission_id": {
+                    "type": "string",
+                    "description": "UUID of the OpsRun (domain='mission') row.",
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "Optional 0.0-1.0 confidence; clamped to range.",
+                },
+                "evidence_refs": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional pointer strings, e.g. "
+                        "['llm_call:<uuid>', 'deliverable:<uuid>']."
+                    ),
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Optional free-form note.",
+                },
+            },
+            "required": ["action", "mission_id"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
