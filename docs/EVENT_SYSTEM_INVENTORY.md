@@ -714,6 +714,160 @@ No behavior change for existing emitters or consumers.
 
 ---
 
+## 10. PR 3 — OpsRun MissionRun-compatibility fields
+
+> Status: shipped in PR 3 of the Rigby Event Intake arc. Additive
+> migration to OpsRun + Option B domain filtering in
+> `platform_event_view`. No new model. No behavior change for existing
+> OpsRun callers.
+
+### 10.1 Why OpsRun, not a new MissionRun model
+
+PR 1 §4.3 approved reusing `OpsRun` / `OpsRunEvent` as the MissionRun
+v0 primitive **only if ops vs mission separation is preserved**. PR 3
+honors that constraint:
+
+- OpsRun already has the right shape: a run + per-step timeline +
+  heartbeat (`step_start` / `step_pass` / `step_fail` / `info` /
+  `heartbeat` events).
+- A parallel MissionRun model would duplicate that infrastructure and
+  force per-source plumbing in `platform_event_view`, signal handlers,
+  ops UIs, and the body coordinator. None of that delivers user value
+  in v0.
+- The honest cost of reuse is one CharField (`domain`) that callers
+  must read; the honest cost of a parallel model is duplicated
+  migrations, duplicated indexes, duplicated docs, and an integration
+  surface that has to bridge the two later. PR 3 buys the cheap option.
+
+The decision is **reversible**. If mission semantics diverge from ops
+semantics enough that a separate model is justified, a future PR can
+introduce `MissionRun` and migrate mission-domain rows over without
+breaking ops callers. The fields added in PR 3 (`domain`, `run_kind`,
+`mission_id`) are the same fields a `MissionRun` model would have, so
+the data is portable.
+
+### 10.2 Fields added to OpsRun
+
+Migration: `core/migrations/0370_session_1250_opsrun_mission_fields.py`.
+
+| Field | Type | Default | Index | Purpose |
+|---|---|---|---|---|
+| `domain` | `CharField(max_length=20, choices=ops/mission)` | `'ops'` | yes | Top-level scope. Do **not** overload `run_type`. |
+| `run_kind` | `CharField(max_length=40, blank=True)` | `''` | no | Sub-classification within domain (e.g., `intake` / `decision` / `delegation` / `verification` for mission). Free-form per-domain. |
+| `mission_id` | `UUIDField(null=True, blank=True)` | `None` | yes | Mission identity. Null for ops-domain rows. |
+
+Migration is **additive only**. No backfill. No behavior change for
+existing OpsRun callers: every legacy creation path
+(`ops_loop` / `smoke_test` / `deploy_verify` / `manual` /
+`llm_routing`) gets `domain='ops'` implicitly via the column default.
+
+`OpsRunEvent` schema is **unchanged**. The event-row's domain is
+derivable via the parent join (`OpsRunEvent.run__domain`), not stored
+on the event row itself.
+
+### 10.3 The ops/mission separation invariant
+
+The contract enforced by tests in
+`core/tests/test_opsrun_mission_fields.py`:
+
+- `OpsRun.objects.filter(domain='ops')` returns **only** ops-domain
+  rows; mission rows are excluded.
+- `OpsRun.objects.filter(domain='mission')` returns **only**
+  mission-domain rows; ops rows are excluded.
+- `run_type` is orthogonal to `domain`. A mission-domain row can still
+  carry `run_type='manual'` for compatibility with existing ops
+  tooling that filters on `run_type`. Mission taxonomy lives in
+  `run_kind`, not in `run_type`.
+- `OpsRunEvent` is unaware of domain at the schema level. Consumers
+  that need domain-aware filtering go through the
+  `platform_event_view` adapter (§10.4).
+
+**What this invariant prevents.** Ops dashboards, ops alerts, ops
+metrics rollups, and the body coordinator all filter on `run_type`
+(legacy) and/or `domain='ops'` (new). None of them surface
+mission-domain rows by accident. Mission-side code does the inverse.
+
+### 10.4 Domain filtering in `platform_event_view`
+
+PR 3 implements Option B from the PR 2 report: the read API exposes
+domain filtering at the public entrypoint, so consumers cannot
+accidentally pull cross-domain rows.
+
+```python
+# All ops-run events (ops + mission) — PR 2 behavior preserved
+list(iter_events("ops_run_event"))
+
+# Ops-domain events only
+list(iter_events("ops_run_event", domain="ops"))
+
+# Mission-domain events only
+list(iter_events("ops_run_event", domain="mission"))
+```
+
+**Semantics:**
+
+- `domain=None` (default): yields all rows for the source —
+  byte-identical to PR 2 behavior.
+- `domain='ops'`: filters via `OpsRunEvent.objects.filter(run__domain='ops')`.
+- `domain='mission'`: filters via `OpsRunEvent.objects.filter(run__domain='mission')`.
+- `domain` outside `{'ops', 'mission'}`: raises `ValueError`.
+- `domain` provided on any source other than `'ops_run_event'` (e.g.,
+  `iter_events('deliverable_event', domain='ops')`): raises
+  `ValueError`. DeliverableEvent has no domain concept; this is a
+  hard error, not a silent ignore.
+
+The capability is declared at module level via
+`SUPPORTED_DOMAINS = {'ops', 'mission'}` and
+`DOMAIN_FILTER_SOURCES = {'ops_run_event'}`.
+
+### 10.5 What is still out of scope
+
+- **No new MissionRun model.** Per §10.1.
+- **No OpsRunEvent schema changes.** Event-row schema is frozen for
+  v0. Per §10.2.
+- **No `run_type` overloading.** Mission taxonomy goes into
+  `run_kind`. Per §10.3.
+- **No intake task.** That is PR 4.
+- **No signal handlers** to react to OpsRun creation / mission_id
+  changes. PR 4 / PR 5 may add these.
+- **No agent dispatch** triggered by mission rows.
+- **No frontend changes.** Ops UIs continue to filter on
+  `domain='ops'` (or via the existing `run_type` filters); mission UIs
+  do not exist yet.
+- **No backfill** of historical OpsRun rows to a mission domain. All
+  legacy rows are ops-domain. If a future PR identifies rows that
+  should be reclassified, it can do so with an explicit data
+  migration.
+- **No reverse-migration safety beyond Django's `AddField` default.**
+  If a future operator runs `migrate core 0369`, the three new
+  columns will drop; any data in them will be lost. This is standard
+  Django behavior; not a v0 concern.
+
+### 10.6 What lands in this PR
+
+- `core/migrations/0370_session_1250_opsrun_mission_fields.py` — new
+  migration (additive, 3 fields).
+- `core/models_ops_runs.py` — adds the 3 fields + `DOMAIN_CHOICES`
+  constant. Existing model behavior unchanged.
+- `core/services/platform_event_view.py` — adds `domain` kwarg
+  validation at the public entrypoint + `domain` join on the
+  OpsRunEventAdapter. DeliverableEventAdapter ignores the kwarg (the
+  public entrypoint rejects it before the adapter runs).
+- `core/tests/test_opsrun_mission_fields.py` — new test file (~180
+  lines, 13 tests: defaults, mission isolation, index presence,
+  OpsRunEvent schema unchanged).
+- `core/tests/test_platform_event_view.py` — extended with
+  `OpsRunEventDomainFilterTests` (7 new tests, covers all 6 spec
+  cases + composition with watermark).
+- This §10 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+All 50 tests across `test_platform_event_view` +
+`test_opsrun_mission_fields` pass in ~0.5s on the real PostgreSQL
+test DB.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
