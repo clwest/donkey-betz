@@ -133,9 +133,15 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 
 ## SESSION 1247 — CURRENT ENTRY POINT
 
-### SESSION 1246 CLOSED — S1245 bonus findings closed + audit_celery_zero_fire 5th axis + content/ char-training Celery surface retired + fleet caller verification
+### SESSION 1246 CLOSED IN TWO PARTS
 
-Full handoff: [`SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md`](docs/handoffs/SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md).
+**Part 1 (morning/early evening) — S1245 carryover + content/ retirement Celery surface + fleet verification.** 7 PRs (#2692-#2695). Full handoff: [`SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md`](docs/handoffs/SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md).
+
+**Part 2 (evening/late night) — 31-tab workspace audit + 6 lane fixes + 3 BROKEN tabs.** 8 more PRs (#2696-#2705). Full handoff: [`SESSION_1246_PART_2_WORKSPACE_TAB_AUDIT_AND_SLO_REMEDIATION.md`](docs/handoffs/SESSION_1246_PART_2_WORKSPACE_TAB_AUDIT_AND_SLO_REMEDIATION.md).
+
+**Day total: 15 PRs merged + 4 ORM data fixes + 5 deliverables produced + 31 tabs audited + 3 BROKEN tabs fixed + 2 SLOs cleared/recovering.**
+
+### Part 1 summary (unchanged from earlier close)
 
 Session 1246 executed the S1245 P3/P4 carryover punch list + the S1246 P2 content/ retirement product-Q. Mid-session pivot to fleet-caller verification surfaced by Chris's "we might be deleting things we need because we didn't document the fleet apps properly" prompt — caught a documentation-gap risk before merging the deletion PRs. All 3 PRs cleared safe via Rigby runtime + Claude cross-repo ORM evidence and admin-merged at 22:53 UTC.
 
@@ -166,10 +172,47 @@ Session 1246 executed the S1245 P3/P4 carryover punch list + the S1246 P2 conten
 **Subfinding queued for S1247 (workspace leak watch):**
 `cf708a2e-…` (Session 1231 E2E sandbox) is still the active workspace despite S1230 F2 / S1245 flagging — rotation rule isn't auto-firing. Filed as S1246 F-bonus in the runbook deliverable.
 
+### Part 2 summary
+
+After Part 1 closed, Chris asked: *"Before we call it a night, do you and Rigby feel up to going through each tab in the workspace, verify it's real data and if it's actually working as intended?"* He noted *"if we have a high quality audit it might reshape the way we are running things like the test running in the morning."*
+
+That framing was right. 8 PRs followed.
+
+**PRs shipped in Part 2:**
+
+| PR | Subject | Lane |
+|---|---|---|
+| [#2696](https://github.com/clwest/donkey-betz-platform/pull/2696) | Deliverables tab grouped view (recency + category accordions) | UI request |
+| [#2697](https://github.com/clwest/donkey-betz-platform/pull/2697) | Move Deliverables work surface to top of tab | UI request (#2696 follow-up) |
+| [#2698](https://github.com/clwest/donkey-betz-platform/pull/2698) | http_smoke_test auto-detect environment | PA tool gap |
+| [#2699](https://github.com/clwest/donkey-betz-platform/pull/2699) | OperationsTab WorkspaceOperation import | BROKEN tab fix |
+| [#2700](https://github.com/clwest/donkey-betz-platform/pull/2700) | FilesTab WorkspaceContext FK | BROKEN tab fix |
+| [#2701](https://github.com/clwest/donkey-betz-platform/pull/2701) | PublishGate operational title patterns | F1 (publish_ready SLO) |
+| [#2702](https://github.com/clwest/donkey-betz-platform/pull/2702) | http_smoke_test local auth | H (smoke_test auth) |
+| [#2703](https://github.com/clwest/donkey-betz-platform/pull/2703) | base_agent intelligence_tool handler + telemetry hygiene | L (pa_tool SLO) |
+| [#2704](https://github.com/clwest/donkey-betz-platform/pull/2704) | Sports agents no_data success pattern | K (45.7% agent success) |
+| [#2705](https://github.com/clwest/donkey-betz-platform/pull/2705) | env-aware effective_root_path | G (broader root_path) |
+
+**ORM data fixes (Part 2):**
+- Donkey Betz `root_path` translated to local codebase
+- 3 stuck SelfBlog test fixtures archived (F2)
+- Catalyst blog archived (Chris decision)
+- CodeGeneratorAgent unblocked (15-day Railway-specific block cleared)
+
+**3 SLO breaches at Part 2 close:**
+- `publish_ready_age_p95` — ✅ CLEARED (backlog=0 after Catalyst archive)
+- `pa_tool_success_rate` — 🔄 Self-recovering (post-#2703 + 24h window roll)
+- `celery_task_success_rate` — 🔄 Self-recovering (spider stale-worker failures rolling out)
+
+**S1247 audit deliverable:** `1c3e63ec-0f30-425a-ad31-328e3de71e5f` — `S1247 workspace tab audit — RUNTIME VERIFICATION` (~14,000+ chars). 31 tabs catalogued + classified. All 3 BROKEN tabs fixed. 6 P1 untested-runtime tabs closed.
+
+**Memory rules added in Part 2:**
+- `feedback_stop_putting_chris_to_bed.md` — session-end summaries are status reports, not bedtime suggestions
+
 **Chris-side carryover into Session 1247:**
 - Anthropic credit refill at https://console.anthropic.com/billing — still failing CI billing
-- All 3 S1246 PRs admin-merged
-- 06-28 morning_brief CUMULATIVE verification time-bound to ~13:00 UTC Sunday = 07:00 MDT
+- All 15 day-PRs admin-merged
+- 06-28 morning_brief CUMULATIVE verification time-bound to ~13:00 UTC Sunday = 07:00 MDT (now de-risked further by today's audit fixes)
 - **Local fleet integration appears dormant** (0 active FleetServiceKey rows). Clarifying Q: are fleet keys prod-only? Worth answering before the S1247 model-layer retirement PR.
 
 ### FIRST THING Session 1247
