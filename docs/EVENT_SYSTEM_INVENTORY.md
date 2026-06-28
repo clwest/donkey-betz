@@ -555,6 +555,165 @@ them at integration time.
 
 ---
 
+## 9. PR 2 — `platform_event_view` service (read-only)
+
+> Status: shipped in PR 2 of the Rigby Event Intake arc. Documentation
+> only; no behavior change for existing emitters. The service is a
+> read API over rows that already exist — it writes nothing.
+
+### 9.1 Adapters implemented
+
+| Adapter | Source name | Source model | Volume class |
+|---|---|---|---|
+| `DeliverableEventAdapter` | `deliverable_event` | `core.models_deliverables.DeliverableEvent` | `low` |
+| `OpsRunEventAdapter` | `ops_run_event` | `core.models_ops_runs.OpsRunEvent` | `medium` |
+
+Both are registered in `core/services/platform_event_view.py` via
+`_ADAPTERS`. Callers list adapters with `supported_sources()` and
+declare per-adapter volume with `volume_class(source)`.
+
+### 9.2 Normalized record (`PlatformEvent`)
+
+Frozen `@dataclass` defined in `core/services/platform_event_view.py`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `source` | `str` | Adapter name (`deliverable_event` / `ops_run_event`). |
+| `source_id` | `str` | String form of the source row's primary key. |
+| `kind` | `str` | Source event_type, verbatim — not remapped. |
+| `severity` | `str` | One of `SUPPORTED_SEVERITIES`. `unknown` when source row doesn't evidence a mapped severity. |
+| `ts` | `datetime` | Source row's `created_at` (timezone-aware). |
+| `payload` | `Mapping[str, Any]` | Per-source dict. Keys are stable per adapter; shape differs across sources. |
+| `correlation_id` | `Optional[str]` | Best-effort cross-source key. |
+| `raw_ref` | `str` | `<source>:<source_id>` — stable handle for the row. |
+
+### 9.3 Severity vocabularies (closed)
+
+`SUPPORTED_SEVERITIES = {debug, info, notice, warn, error, critical, unknown}`.
+
+**DeliverableEvent.**
+
+| Event type | Severity rule |
+|---|---|
+| `status_transition` | derived from `metadata['direction']`: `forward` / `same` → `info`; `backward` → `warn`; `terminal` → `notice`; missing / unrecognized → `unknown` |
+| `synthesis_viewed`, `deliverable_saved`, `deliverable_exported`, `shared` | `info` |
+| `task_created`, `followup_created`, `action_taken` | `notice` |
+| Any other / unmapped value | `unknown` |
+
+**OpsRunEvent.**
+
+| Event type | Severity rule |
+|---|---|
+| `step_fail` | `error` |
+| `step_pass` | `info` |
+| `step_start`, `heartbeat` | `debug` |
+| `info` | `info` |
+| Any other / unmapped value | `unknown` |
+
+### 9.4 Fields mapped per adapter
+
+**DeliverableEvent → PlatformEvent.**
+
+| Source field | Normalized location |
+|---|---|
+| `id` (UUID) | `source_id` (str), `raw_ref` suffix |
+| `event_type` | `kind` |
+| `created_at` | `ts` |
+| `metadata['direction']` (for `status_transition`) | drives `severity` |
+| `metadata['trace_id']` → `['execution_id']` → `['ctx']['trace_id']` → `['ctx']['execution_id']` | `correlation_id` (first non-empty) |
+| `deliverable_id` | `payload['deliverable_id']` |
+| `user_id` | `payload['user_id']` |
+| `source` (provenance field on the row) | `payload['event_source']` (renamed to avoid collision with the normalized `source` field) |
+| `metadata` (full dict) | `payload['metadata']` |
+
+**OpsRunEvent → PlatformEvent.**
+
+| Source field | Normalized location |
+|---|---|
+| `id` (UUID) | `source_id` (str), `raw_ref` suffix |
+| `event_type` | `kind` |
+| `created_at` | `ts` |
+| `event_type` | drives `severity` |
+| `detail['trace_id']` → `['execution_id']` → `['ctx']['trace_id']` → `['ctx']['execution_id']` | `correlation_id` (first non-empty) |
+| `run_id` | `payload['run_id']` |
+| `label` | `payload['label']` |
+| `detail` (full dict) | `payload['detail']` |
+
+### 9.5 Watermark + ordering
+
+- Ordering: `ts ASC, source_id ASC`. Deterministic and stable across runs.
+- Watermark API: `iter_events(source, since_ts=..., since_id=..., limit=...)`.
+  - Both `since_ts` and `since_id` set: strict resume after the
+    `(ts, source_id)` pair. Boundary tie (`ts == since_ts`) is
+    decided by `source_id > since_id`.
+  - `since_ts` alone: strict `ts > since_ts`.
+  - Both `None`: from the beginning.
+- Memory: unbounded reads use `qs.iterator(chunk_size=200)`. Bounded
+  reads (`limit=N`) materialize at most `N` rows into a list (sliced
+  QuerySets cannot use `.iterator()`).
+- Idempotent: identical arguments yield identical records in identical
+  order assuming the underlying rows do not change.
+
+### 9.6 Deferred sources (explicitly NOT in PR 2)
+
+These adapters are deliberately **not implemented** per the v0
+direction in §4. Adding any of them is a separate PR with explicit
+verification (writer liveness, volume estimation, severity vocab):
+
+- `celery_task_event` (high volume; needs watermark stress testing)
+- `llm_call_event` (high volume; per-call telemetry)
+- `impact_event` (mission-relevant but needs schema review)
+- `fleet_event` (semantics owned by fleet team; do not repurpose)
+- `trigger_event` (writer paths unverified in PR 1 §7)
+- `cockpit_incident_event`, `cockpit_autopilot_event`,
+  `cockpit_audit_log` (defer per §4)
+- Anything sourced from the Redis EventBus
+
+### 9.7 Known limitations
+
+1. **`payload` shape varies across adapters.** Callers must do per-source
+   interpretation. This is intentional — the goal is normalization of
+   identity / time / classification, not a unified payload schema. A
+   future PR can add per-source TypedDicts if intake-side code starts
+   to suffer.
+2. **Watermark is `(ts, source_id)`, not a single monotonic cursor.**
+   Storing a resume token means storing both. This is the cost of
+   honest tie-break under `auto_now_add` clocks. A `BIGSERIAL`-style
+   cursor would be simpler but requires a schema change to the source
+   tables; out of scope for PR 2.
+3. **No multi-source merging.** `iter_events` reads one source at a
+   time. Cross-source ordering / fan-in is intake-side responsibility
+   (deferred to PR 4+).
+4. **`limit=N` materializes a list, not a cursor.** Memory bound is
+   `N rows × normalized record size`. Safe for any reasonable batch
+   size; do not pass `limit=10_000_000`.
+5. **Severity mappings are conservative.** "Unknown" is the explicit
+   fallback whenever the source row does not evidence a mapped
+   classification. This is per §5 guardrail "Keep mission impact as
+   Unknown when not evidenced." Tightening any mapping is a future PR
+   that should also update tests.
+6. **`correlation_id` fallback is best-effort.** If no event in the
+   chain populates the metadata, `correlation_id` is `None`. PR 4+
+   intake-side code should handle `None` explicitly rather than skip
+   uncorrelated events.
+7. **No DB-level enforcement of read-only.** Module is read-only by
+   convention + AST tests. A future PR could route through a
+   read-only DB user / replica if production hardening becomes
+   warranted.
+
+### 9.8 What lands in this PR
+
+- `core/services/platform_event_view.py` — new module (~310 lines).
+- `core/tests/test_platform_event_view.py` — new test file (~470
+  lines, 30 tests, real-DB integration over 120 mixed fixture rows).
+- This §9 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+No code changes outside the new service file + tests. No migrations.
+No behavior change for existing emitters or consumers.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
