@@ -103,6 +103,15 @@ CELERY_TASK_EVENT_RETENTION_DAYS = int(os.environ.get('CELERY_TASK_EVENT_RETENTI
 LLM_CALL_LOG_RETENTION_DAYS = int(os.environ.get('LLM_CALL_LOG_RETENTION_DAYS', '30'))
 BODY_THROTTLE_MAX_DELAY_SECONDS = int(os.environ.get('BODY_THROTTLE_MAX_DELAY_SECONDS', '30'))
 
+# Session 1250 PR 5: gate for the Rigby Event Intake subscriber on
+# DeliverableEvent('status_transition'). Default OFF. When False, the
+# post_save signal does NOT enqueue rigby_event_intake. Flip to True
+# via env (`RIGBY_EVENT_INTAKE_ENABLED=true`) for deploy-controlled
+# rollout. See docs/EVENT_SYSTEM_INVENTORY.md §12.
+RIGBY_EVENT_INTAKE_ENABLED = os.environ.get(
+    'RIGBY_EVENT_INTAKE_ENABLED', 'false'
+).lower() == 'true'
+
 # Session 1116: Public-read intelligence endpoint token (247globalai.com integration).
 # When unset / empty, the endpoint at /api/public/intelligence/now/ rejects every
 # request — default-off safety. See core/views_public_intelligence.py.
