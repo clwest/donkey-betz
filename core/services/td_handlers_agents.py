@@ -1284,9 +1284,15 @@ class AgentHandlersMixin:
                     'scan_duration_ms': context.scan_duration_ms,
                 },
                 'context': {
-                    'workspace_name': context.workspace_name,
-                    'root_path': context.root_path,
-                    'tech_stack': context.tech_stack,
+                    # Session 1246 audit fix: workspace_name / root_path /
+                    # tech_stack live on the related ProjectWorkspace, not on
+                    # WorkspaceContext itself. The old direct attribute access
+                    # crashed scan with `'WorkspaceContext' object has no
+                    # attribute 'workspace_name'`, breaking FilesTab (S1247
+                    # audit deliverable 1c3e63ec-…). Route through the FK.
+                    'workspace_name': context.workspace.name,
+                    'root_path': context.workspace.root_path,
+                    'tech_stack': context.workspace.tech_stack,
                     'key_files': context.key_files,
                     'total_files': context.total_files,
                     'total_directories': context.total_directories,
