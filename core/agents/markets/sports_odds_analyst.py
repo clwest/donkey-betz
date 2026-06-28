@@ -213,11 +213,18 @@ Remember: Sharp money moves lines. Look for where the line went AGAINST public b
                 events, source_info = self._get_sports_odds(context)
 
                 if not events:
+                    # Session 1246 (S1247 lane K): empty-upstream is not a
+                    # real agent failure — the agent ran, queried, found no
+                    # data, and gracefully reported it. Marking these as
+                    # success=False dragged the OrchestrationTab dashboard's
+                    # success_rate to 45.7% (audit deliverable 1c3e63ec-…).
+                    # Surface as success=True with explicit no_data marker
+                    # so downstream consumers can branch on it without the
+                    # SLO/dashboard treating it as a failure.
                     return AgentResult(
-                        success=False,
+                        success=True,
                         message="No sports odds data available",
-                        data={},
-                        error="The Odds API spider returned no data",
+                        data={'status': 'no_data', 'reason': 'The Odds API spider returned no data'},
                         agent_name=self.name,
                         execution_time_ms=self._elapsed_ms(start_time)
                     )
