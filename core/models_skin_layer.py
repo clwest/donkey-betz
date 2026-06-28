@@ -223,6 +223,51 @@ class ProjectWorkspace(models.Model):
         """Get the backend framework from tech stack."""
         return self.tech_stack.get('backend', 'unknown')
 
+    @property
+    def effective_root_path(self) -> str:
+        """Return root_path translated to the current execution environment.
+
+        Session 1246 (S1247 lane G). Workspaces created on Railway store
+        absolute paths like ``/app/workspaces/<slug>`` in ``root_path``.
+        Locally that prefix doesn't exist, so FilesTab + GitTab + scan
+        operations all 'path not found' for 8 of 10 workspaces. The
+        S1247 audit caught this on Donkey Betz; a single ORM update
+        unblocked that one workspace, but the pattern affects every
+        non-natively-created workspace.
+
+        Resolution order:
+        1. If ``root_path`` exists on disk, use it as-is (already valid in
+           current environment — common when the workspace was natively
+           created here).
+        2. If ``root_path`` starts with ``/app/workspaces/`` and the local
+           ``WORKSPACE_BASE_DIR`` env var is set (or defaults to
+           ``/app/workspaces``), translate the suffix to the local base.
+           Lets developers point ``WORKSPACE_BASE_DIR`` at a Mac-friendly
+           dir (``~/development/workspaces``) and have stored prod paths
+           resolve.
+        3. Otherwise return ``root_path`` unchanged so existing
+           "path not found" error semantics still kick in upstream.
+        """
+        import os as _os
+        from pathlib import Path as _Path
+
+        stored = self.root_path or ''
+        if not stored:
+            return stored
+
+        if _Path(stored).exists():
+            return stored
+
+        if stored.startswith('/app/workspaces/'):
+            base = _os.environ.get('WORKSPACE_BASE_DIR') or '/app/workspaces'
+            if base != '/app/workspaces':
+                suffix = stored[len('/app/workspaces/'):]
+                candidate = str(_Path(base) / suffix)
+                if _Path(candidate).exists():
+                    return candidate
+
+        return stored
+
 
 class WorkspaceOperation(models.Model):
     """
