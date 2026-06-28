@@ -868,6 +868,224 @@ test DB.
 
 ---
 
+## 11. PR 4 — `rigby_event_intake` Celery task (dry-run)
+
+> Status: shipped in PR 4 of the Rigby Event Intake arc. **No new
+> model. No new migration. No subscribers wired.** The task is
+> invocable by hand or from future PR 5 subscribers and is
+> `dry_run=True` by default.
+
+### 11.1 Architecture: MissionRun-as-intake-record
+
+PR 4 honors the Session 1250 architecture decision documented in
+§10.1: **no `IntakeDecision` model is created.** The intake-decision
+record lives inside an `OpsRun` row with `domain='mission'` and
+`run_kind='intake'`. The lifecycle is captured as `OpsRunEvent` rows
+on the same parent, forming a single authoritative record from
+event → assessment → decision.
+
+```
+Platform Event arrives
+   │
+   ▼
+rigby_event_intake(event_ref, dry_run=True)  ── core/services/rigby_event_intake.py
+   │
+   ├── derive_mission_id(event_ref)
+   │     = uuid5(MISSION_INTAKE_NAMESPACE, event_ref)
+   │
+   ├── platform_event_view.get_event(event_ref)   ── PR 2 read API
+   │
+   ├── OpsRun.objects.get_or_create(
+   │       mission_id=<derived>,
+   │       domain='mission', run_kind='intake',
+   │       defaults={title, run_type='manual', triggered_by='pa_tool',
+   │                 status='running', summary={event_ref, dry_run, ...}},
+   │   )
+   │
+   ├── OpsRunEvent.get_or_create(run=<>, label='intake_started',
+   │       defaults={event_type='info', detail={event_ref, dry_run,
+   │                                            source, source_id}})
+   │
+   ├── apply_rules_v0(event)
+   │     │
+   │     ▼ DecisionResult(decision, mission_impact, rules_fired, reason)
+   │
+   ├── OpsRunEvent.get_or_create(run=<>, label='impact_assessed',
+   │       defaults={event_type='info',
+   │                 detail={mission_impact, severity, rules_fired, reason}})
+   │
+   ├── OpsRunEvent.get_or_create(run=<>, label='decision_made',
+   │       defaults={event_type=('info'|'step_pass'),
+   │                 detail={decision, mission_impact, rules_fired,
+   │                         reason, dry_run}})
+   │
+   ├── If still 'running': MissionRun.summary updated, status='passed',
+   │   finished_at=now.
+   │
+   └── Telemetry: structured log line `[RIGBY_INTAKE] ...`
+```
+
+### 11.2 Why no IntakeDecision model
+
+Reasoning is in §10.1 (the MissionRun-as-primitive argument) plus the
+Session 1250 reevaluation. The short form:
+
+- **One authoritative record.** Decision + lifecycle in one place,
+  walkable via `OpsRunEvent.objects.filter(run__mission_id=...)`.
+- **Future stages (delegation / verification / learning) are additive.**
+  Each is one new OpsRunEvent label. No new model ever.
+- **Existing infrastructure already reads MissionRun.** PR 3's
+  `platform_event_view` adapter sees mission events; ops UIs / mission
+  UIs share code paths.
+- **DB-level enforcement (closed-vocab `decision`) is not a v0
+  requirement** — Python validation + tests + the `DecisionResult`
+  dataclass enforce the contract at write time. (CharField `choices=`
+  validate form/admin input only — see memory
+  `feedback_deliverable_create_defaults_to_completed.md`.)
+
+### 11.3 Idempotency via `mission_id = uuid5(NAMESPACE, event_ref)`
+
+- `MISSION_INTAKE_NAMESPACE = uuid5(NAMESPACE_DNS,
+  'rigby-event-intake.donkeybetz.com')` — derived once at module load,
+  stable across processes.
+- Same `event_ref` → same `mission_id` → same `OpsRun` via
+  `get_or_create`.
+- Each lifecycle event uses `get_or_create(run=<>, label=<>)` keyed on
+  the `(run, label)` pair, so re-running writes zero duplicates.
+- MissionRun is only finalized if status is still `running` —
+  prevents an over-write on re-run.
+
+**Known limitation:** without a unique constraint on
+`(domain, run_kind, mission_id)`, two concurrent processes could
+race on first creation. V0 acceptable; addressable later via a
+unique-together migration or a Postgres advisory lock.
+
+### 11.4 Decision rules v0
+
+Hard-coded in `apply_rules_v0`. **No rule registry, no pluggability —
+Option A per the Session 1250 reevaluation.** First match wins;
+otherwise `ignore`:
+
+| Condition | Decision | Mission impact | Rule id |
+|---|---|---|---|
+| `deliverable_event` + `status_transition` + `metadata.direction == 'backward'` | `monitor` | `low` | `deliverable_status_backward` |
+| `deliverable_event` + `status_transition` + `metadata.direction == 'terminal'` | `notify` | `medium` | `deliverable_status_terminal` |
+| `ops_run_event` + `kind == 'step_fail'` | `notify` | `medium` | `ops_step_fail` |
+| Otherwise | `ignore` | `unknown` | (none) |
+
+**Invariants enforced by `DecisionResult.__post_init__`:**
+
+- `decision ∈ {ignore, log, monitor, notify, create_initiative, delegate}`.
+- `mission_impact ∈ {unknown, low, medium, high}`.
+- Non-`unknown` mission_impact **requires** at least one entry in
+  `rules_fired`. A silent "this is medium impact" without evidence is
+  a `ValueError` at construction time.
+
+### 11.5 dry_run behavior (v0 default)
+
+- **Default:** `dry_run=True`.
+- **Allowed v0 side effects** (under any caller context):
+  - One MissionRun (OpsRun with `domain='mission'`).
+  - Up to three OpsRunEvent timeline rows.
+  - One structured log line.
+- **Forbidden v0 side effects** (no flag flips them on):
+  - No notifications.
+  - No initiative creation.
+  - No agent dispatch.
+  - No tool dispatch.
+  - No external HTTP calls.
+  - No LLM invocations.
+
+Tests assert these absences by counting rows on adjacent models
+(Deliverable / DeliverableEvent) before vs. after the task runs, and
+by inspecting which model rows the task touched.
+
+### 11.6 Telemetry contract
+
+The single `[RIGBY_INTAKE]` log line carries:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `events_seen` | int | Always `1` for single-event invocation. |
+| `processed` | int | `1` if a decision was reached, `0` if dropped. |
+| `ignored` | int | `1` if `decision == 'ignore'`, else `0`. |
+| `dropped` | int | `1` if the event row could not be loaded, else `0`. |
+| `lag_ms` | int | Wall time in the task body. |
+| `event_ref` | str | Echo of the caller-provided event_ref. |
+| `decision` | str | Closed-vocab decision value. |
+| `dry_run` | bool | The dry_run flag (always `True` in v0 actual usage). |
+| `mission_id` | UUID | Derived mission_id. |
+
+### 11.7 Timeline event labels (stable)
+
+These are the public surface of the intake — future stages (PR 5+)
+extend the timeline by adding new labels, never modifying existing
+ones.
+
+| Label | Event type | When written | Detail keys |
+|---|---|---|---|
+| `intake_started` | `info` | First call. | `event_ref`, `dry_run`, `source`, `source_id` |
+| `impact_assessed` | `info` | After rules evaluated (event loaded successfully). | `mission_impact`, `severity`, `rules_fired`, `reason` |
+| `decision_made` | `info` (ignore) / `step_pass` (any other) / `step_fail` (drop) | After decision reached or drop confirmed. | `decision`, `mission_impact`, `rules_fired`, `reason`, `dry_run`, `dropped?` |
+
+### 11.8 Drop vs. error: who raises, who records
+
+| Input shape | Behavior |
+|---|---|
+| Malformed `event_ref` (empty / no colon / missing source / missing id) | `ValueError`; **no MissionRun created** |
+| Unknown source (e.g., `celery_task_event:...`) | `ValueError`; **no MissionRun created** |
+| Valid source, source_id missing in DB | MissionRun created with `status='failed'`; `decision_made` event_type=`step_fail`; telemetry `dropped=1`; **does not raise** |
+
+The split is intentional: caller-side bugs (malformed input) crash
+loud; legitimate drops (stale event_ref) leave a paper trail.
+
+### 11.9 What is still out of scope (deferred)
+
+- **No subscribers wired.** The task is not invoked by any signal,
+  Beat schedule, or consumer in PR 4. PR 5 wires the first
+  subscriber.
+- **No agent dispatch.** Even if `decision == 'delegate'`, the task
+  writes the decision and stops. The actual delegation to
+  `agent_router.route()` is PR 7+.
+- **No notifications.** `decision == 'notify'` writes the decision;
+  PR 6 enables the actual notify pathway.
+- **No LLM in assessment.** Rules are deterministic.
+- **No rule registry.** Adding rules in PR 5+ means editing
+  `apply_rules_v0` directly. Refactor to a registry only if rule count
+  outgrows the if/elif chain.
+- **No `worker` import edit.** The task is registered via
+  `@shared_task` decoration; Celery picks it up when the module is
+  imported. PR 5's subscriber will import this module → registration
+  becomes ambient. The PR 4 tests bypass `.apply()` (which closes
+  test-transaction DB connections via Celery's
+  `close_old_connections` signal) and call the inner `_run_intake`
+  function directly.
+- **No `core/celery.py` change** to add the module to
+  `app.conf.imports`. Defer to PR 5 when there's an actual caller.
+
+### 11.10 What lands in this PR
+
+- `core/services/rigby_event_intake.py` — new module (~330 lines).
+  Includes constants, `DecisionResult` dataclass, `derive_mission_id`,
+  `apply_rules_v0`, `_run_intake` (the implementation), and the
+  Celery task entrypoint.
+- `core/services/platform_event_view.py` — adds `get_event(event_ref)`
+  and a `BaseAdapter.get(source_id)` abstract method. Both adapters
+  implement `get` via `Model.objects.get`. Read-only still holds.
+- `core/tests/test_rigby_event_intake.py` — new test file (~480
+  lines, 38 tests).
+- This §11 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+**Test summary (real PostgreSQL test DB):**
+- 38/38 PR 4 tests green in 0.56s.
+- 88/88 across PR 2 + PR 3 + PR 4 green in 0.96s.
+- All earlier static guardrails (no EventBus / LLM / Cockpit imports
+  / writes / `.objects.all()` scans) still pass against the modified
+  `platform_event_view.py`.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
