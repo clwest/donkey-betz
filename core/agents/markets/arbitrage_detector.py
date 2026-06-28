@@ -141,11 +141,12 @@ Output Format:
                 events = self._get_multi_book_odds(context)
 
                 if not events:
+                    # Session 1246 S1247 lane K — see sports_odds_analyst.py.
+                    # Empty upstream is no_data, not a real agent failure.
                     return AgentResult(
-                        success=False,
+                        success=True,
                         message="No multi-bookmaker odds data available",
-                        data={},
-                        error="Need odds from multiple bookmakers for arbitrage detection",
+                        data={'status': 'no_data', 'reason': 'Need odds from multiple bookmakers for arbitrage detection'},
                         agent_name=self.name,
                         execution_time_ms=self._elapsed_ms(start_time)
                     )
