@@ -79,7 +79,47 @@ def _resolve_base_url(environment: str | None) -> str:
     return 'http://localhost:8000'
 
 
-def _resolve_auth_token() -> str | None:
+def _resolve_auth_token(environment: str | None = None) -> str | None:
+    """Resolve the auth token to send with smoke-test requests.
+
+    Session 1246 fix (lane H): separate local/prod token sources. The
+    .env's PA_API_TOKEN is the *production* token; when smoke_test was
+    extended to auto-detect local in PR #2698, that prod token started
+    getting sent to local Django on every request and bouncing 401 on
+    any auth-gated endpoint. S1247 audit Wave 5 hit this on
+    /api/v1/tool-call-records/, /api/v1/decision-records/,
+    /api/v1/agents/unified-executions/, /api/v1/reasoning/*,
+    /api/triggers/, etc.
+
+    Resolution order for environment='local':
+      1. `LOCAL_PA_API_TOKEN` env var (explicit override)
+      2. DRF Token for `chris` user (auto-fallback; smoke_test runs
+         inside Django context, so this is a cheap DB lookup)
+      3. `PA_API_TOKEN` env var (last resort — may be wrong env)
+
+    For environment='railway_prod' (or anything else), unchanged behavior:
+    return `PA_API_TOKEN`.
+    """
+    if environment == 'local':
+        explicit = os.getenv('LOCAL_PA_API_TOKEN')
+        if explicit:
+            return explicit
+        try:
+            from django.contrib.auth import get_user_model
+            from rest_framework.authtoken.models import Token
+            User = get_user_model()
+            chris = User.objects.filter(username='chris').first()
+            if chris:
+                token = Token.objects.filter(user=chris).first()
+                if token:
+                    return token.key
+        except Exception as _e:
+            logger.warning(
+                "http_smoke_test._resolve_auth_token: chris-token lookup "
+                "failed (%s: %s) — falling back to PA_API_TOKEN",
+                type(_e).__name__, _e,
+            )
+        return os.getenv('PA_API_TOKEN')
     return os.getenv('PA_API_TOKEN')
 
 
@@ -883,7 +923,10 @@ def run_smoke_test(payload: dict) -> dict:
     base_url = _resolve_base_url(environment)
     if environment is None:
         environment = 'railway_prod' if os.environ.get('RAILWAY_ENVIRONMENT') else 'local'
-    token = _resolve_auth_token()
+    # Pass the resolved environment so the token resolver picks the right
+    # source (local DRF user token vs PA_API_TOKEN). See _resolve_auth_token
+    # for the priority order.
+    token = _resolve_auth_token(environment)
     auth_headers: dict[str, str] = {}
     if token:
         auth_headers['Authorization'] = f'Token {token}'
