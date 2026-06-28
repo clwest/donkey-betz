@@ -2093,6 +2093,93 @@ flipping any of the PR 6/7/8 flags.
 
 ---
 
+## 17. PR 10 — Local intake exercise & observation write-up
+
+> Status: docs-only PR. Operator validation against the live local
+> DB. Full handoff at
+> [`docs/handoffs/SESSION_1250_PR10_LOCAL_INTAKE_EXERCISE.md`](handoffs/SESSION_1250_PR10_LOCAL_INTAKE_EXERCISE.md).
+
+### 17.1 What we did
+
+Locally flipped `RIGBY_EVENT_INTAKE_ENABLED=true`, kept the other
+three flags OFF, restarted the `pa` Celery worker with the env var
+set, then triggered three Deliverable status transitions:
+
+1. **forward** (`draft → ready`) — expected `decision='ignore'`.
+2. **backward** (`ready → draft`) — expected `decision='monitor'`.
+3. **terminal** (`draft → archived`) — expected `decision='notify'`.
+
+### 17.2 What happened
+
+All three transitions produced exactly the expected behavior:
+
+| Transition | Decision | Mission impact | Timeline events | Work item created |
+|---|---|---|---|---|
+| forward | `ignore` | `unknown` | 3 (`intake_started`/`impact_assessed`/`decision_made`) | no (queue flag off) |
+| backward | `monitor` | `low` | 3 | no (queue flag off) |
+| terminal | `notify` | `medium` | 3 | no (queue flag off) |
+
+All three MissionRuns reached `status='passed'` in ~6ms each. The lag
+check reported `OK / No stuck intake MissionRuns`. Zero RigbyWorkItem
+rows and zero `AgentExecution` rows linked to delegation were created
+— every Stage 2/3/4 gate held closed.
+
+### 17.3 Operator gotcha (documented for future operators)
+
+`settings.RIGBY_EVENT_INTAKE_ENABLED` is checked **in the
+signal-emitting process** (the Django shell / runserver / whichever
+worker saves the Deliverable), not in the `pa` worker that runs the
+intake task. Setting the env var only on the worker is insufficient
+— the gate short-circuits in the calling process and `apply_async`
+never fires.
+
+Correct pattern: ensure the env var is visible to **both** the
+process saving the Deliverable AND the `pa` worker. For ad-hoc shell
+work:
+
+```bash
+RIGBY_EVENT_INTAKE_ENABLED=true .venv/bin/python manage.py shell
+```
+
+For long-running services, set it in the same env block as the
+worker (`make celery` should pick it up if exported in the shell
+that invokes make).
+
+### 17.4 Stage 1 verdict + next stage
+
+**Stage 1 (intake) is safe to proceed.** All three rule branches
+fire correctly. All side-effect gates held closed. The lag check
+correctly reports clean.
+
+**Next stage (PR 11):** flip `RIGBY_INTERNAL_WORK_QUEUE_ENABLED=true`
+locally, keep the other two flags OFF, re-exercise with the same
+three transitions. Expected: backward → 1 RigbyWorkItem with
+`decision='monitor'`, `priority=3`; terminal → 1 RigbyWorkItem with
+`decision='notify'`, `priority=5`; forward → no work item.
+
+If PR 11 looks clean, PR 12 flips `RIGBY_WORK_QUEUE_REVIEW_ENABLED`
+and exercises the PA tool review surface. PR 13+ flips
+`RIGBY_DELEGATION_ENABLED` and exercises delegation. Production
+flips remain deferred until local observation is complete for each
+stage.
+
+### 17.5 What lands in this PR
+
+Documentation only — no code, no settings, no flag flips persisted.
+
+- `docs/handoffs/SESSION_1250_PR10_LOCAL_INTAKE_EXERCISE.md` —
+  full handoff with command outputs, expected-vs-actual table,
+  three anomalies surfaced (operator gotcha; pre-existing cascade
+  drift; status-snapshot semantics), cleanup state, and the PR 11
+  recommendation.
+- This §17 — short summary + link.
+- `docs/INDEX.md` — regenerated.
+
+Production defaults for all four Rigby flags remain `False`. The
+exercise was local-only and operator-driven.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
