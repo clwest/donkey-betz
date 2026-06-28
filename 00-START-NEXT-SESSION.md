@@ -131,7 +131,111 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1250 — CURRENT ENTRY POINT
+## SESSION 1251 — CURRENT ENTRY POINT
+
+### SESSION 1250 CLOSED — 11 PRs shipped + Session 1251 opens with capability audit
+
+**Session window:** 2026-06-28 Sunday (~all day, multiple PA arcs).
+**Full audit handoff:** [`SESSION_1251_CAPABILITY_AUDIT.md`](docs/handoffs/SESSION_1251_CAPABILITY_AUDIT.md).
+**Pipeline handoffs:** [`SESSION_1250_PR10_LOCAL_INTAKE_EXERCISE.md`](docs/handoffs/SESSION_1250_PR10_LOCAL_INTAKE_EXERCISE.md) + [`SESSION_1250_PR11_LOCAL_WORK_QUEUE_EXERCISE.md`](docs/handoffs/SESSION_1250_PR11_LOCAL_WORK_QUEUE_EXERCISE.md).
+
+**TL;DR — Session 1250:** Built the full Rigby Event Intake → Mission Delegation pipeline across 11 PRs (#2716 → #2726). All four runtime flags default OFF. Net production behavior change: zero. Locally exercised through Stage 2 (intake → MissionRun → RigbyWorkItem). All 199 tests green. **Pipeline is code-complete, production-dormant.**
+
+**Session 1250 PRs (all admin-merged given Anthropic billing CI gap):**
+
+| PR | Type | Scope | Tests |
+|---|---|---|---|
+| [#2716](https://github.com/clwest/donkey-betz-platform/pull/2716) | docs | Event inventory | — |
+| [#2717](https://github.com/clwest/donkey-betz-platform/pull/2717) | feat | platform_event_view (read API) | 30 |
+| [#2718](https://github.com/clwest/donkey-betz-platform/pull/2718) | feat | OpsRun MissionRun fields | 20 |
+| [#2719](https://github.com/clwest/donkey-betz-platform/pull/2719) | feat | rigby_event_intake dry-run task | 38 |
+| [#2720](https://github.com/clwest/donkey-betz-platform/pull/2720) | feat | DeliverableEvent subscriber | 13 |
+| [#2721](https://github.com/clwest/donkey-betz-platform/pull/2721) | feat | RigbyWorkItem internal queue | 18 |
+| [#2722](https://github.com/clwest/donkey-betz-platform/pull/2722) | feat | Work-queue review tools | 30 |
+| [#2723](https://github.com/clwest/donkey-betz-platform/pull/2723) | feat | Mission Delegation | 25 |
+| [#2724](https://github.com/clwest/donkey-betz-platform/pull/2724) | feat | Local observation harness | 25 |
+| [#2725](https://github.com/clwest/donkey-betz-platform/pull/2725) | docs | PR 10 intake exercise handoff | — |
+| [#2726](https://github.com/clwest/donkey-betz-platform/pull/2726) | docs | PR 11 work queue exercise handoff | — |
+
+**Headline outcomes:**
+
+- **199 tests across the PR 2-9 pipeline**, all green in 7.73s on real PostgreSQL.
+- **Four feature flags, all default OFF:** `RIGBY_EVENT_INTAKE_ENABLED`, `RIGBY_INTERNAL_WORK_QUEUE_ENABLED`, `RIGBY_WORK_QUEUE_REVIEW_ENABLED`, `RIGBY_DELEGATION_ENABLED`. Composes to net-zero production change.
+- **Local Stage 1 + Stage 2 exercises** verified the pipeline end-to-end. 3 transitions → 3 MissionRuns + 2 RigbyWorkItems exactly as specified.
+- **Capability audit** (Session 1251) concluded: the platform is over-served for current operator habits. Recommendation: stop building toward a richer pipeline. Start handing Rigby existing daily jobs.
+
+### FIRST THING Session 1251
+
+**Do not** open the next pipeline-stage PR. The recommendation from the Session 1251 capability audit is:
+
+> Transition from infrastructure construction to operational capability.
+
+**PR 12 — Rigby's Morning Brief** is the first operating-capability job Rigby owns.
+
+#### Objective (PR 12)
+
+Give Rigby her first recurring operational job — a daily concise operating brief for Chris.
+
+The brief should answer:
+- What changed since yesterday?
+- Is the platform healthy?
+- Are workers / queues / costs / alerts okay?
+- Is the active session healthy?
+- Do we need a fresh session?
+- Are there new audit findings?
+- Are any queues stuck?
+- What should Chris focus on first today?
+
+#### Architectural rules (hard)
+
+- **No new infrastructure** unless discovery proves a small wrapper is required.
+- **Use existing tools only.** Bundle: `context-kit orient` (or equivalent), `session_tool.health_check`, `ops_digest_tool.generate`, `cockpit_tool.worker_health`, `platform_config_tool` (feature flags), `audit_tool.findings`, `cockpit_tool.queue_lengths`, `cost_telemetry_tool` summary if cheap, `recent_activity_tool` if useful.
+- **No new models. No new event system. No new agent orchestration. No LLM-heavy output. No human notification system beyond posting/saving the brief where Rigby already operates. No automatic PR creation. No automatic delegation.**
+
+#### Implementation sequence
+
+- **PR 12A** — `rigby_morning_brief` tool or management command, **manually runnable**. Discovery-led — confirm which existing tools should be bundled before writing code. Output format must be short (executive-summary first, readable in under 60 seconds), structured as:
+  1. Today's top priority
+  2. Platform health
+  3. Active risks
+  4. What changed
+  5. What not to work on
+  6. Suggested next action
+
+- **PR 12B** — schedule daily beat **only after manual validation in PR 12A.**
+
+#### First-move discovery (before any code)
+
+Before writing PR 12A code, the session should answer:
+
+1. Which existing tools cover each of the 7 questions the brief should answer?
+2. Where should the brief be saved/posted? (PA conversation? deliverable? both?)
+3. Should it start as a PA tool (Rigby invokes from chat) or a management command (operator invokes from shell)?
+4. What's the exact bundled payload shape?
+5. What does the "under 60 seconds to read" output look like?
+
+The audit handoff §4 (top-20 opportunities) and §5 (recommendation) frame the answer.
+
+#### Acceptance criteria (PR 12A)
+
+To be confirmed during discovery, but starting hypothesis:
+
+1. Single command/tool invocation produces the brief in < 5 seconds.
+2. Brief output is < 1200 characters in the human-readable view.
+3. Reuses ≥ 5 existing PA tools; introduces ≤ 50 lines of new code.
+4. No new model, no migration, no new feature flag.
+5. Side-effect-free (read-only) — does not mutate state.
+6. Has at least one real-DB integration test that calls it end-to-end and asserts the 6-section output structure.
+7. Handles the "all four S1250 flags OFF" case gracefully (most fields populated; queue-related fields show "queue disabled").
+
+#### Reading order for Session 1251 open
+
+1. This `00-START-NEXT-SESSION.md`.
+2. `docs/handoffs/SESSION_1251_CAPABILITY_AUDIT.md` — full audit.
+3. `docs/EVENT_SYSTEM_INVENTORY.md` §16 + §17 + §18 — what the harness + Stage 1 + Stage 2 exercises proved.
+4. PR 12 discovery (run before any code).
+
+---
 
 ### SESSION 1249 CLOSED — P1 morning_brief verified green; parity menu (a) + (b) shipped end-to-end
 
