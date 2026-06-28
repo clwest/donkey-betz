@@ -43,13 +43,40 @@ ALLOWED_HOSTS_RE = re.compile(
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 
-def _resolve_base_url(environment: str) -> str:
+def _resolve_base_url(environment: str | None) -> str:
+    """Resolve the smoke-test base URL.
+
+    Session 1246 fix: when the PA caller doesn't specify `environment`,
+    auto-detect from the running process's RAILWAY_ENVIRONMENT env var
+    instead of defaulting to prod. Previously the schema default
+    'railway_prod' caused every local PA call to hit Railway, which 404s
+    when the smoke test runs against an old or undeployed app. The S1247
+    workspace tab audit (deliverable 1c3e63ec-…) surfaced this as a P1
+    gap — Rigby couldn't runtime-verify any /api/* endpoint without
+    explicitly passing `environment='local'`.
+
+    Behavior:
+      - `environment='local'`         → http://localhost:8000
+      - `environment='railway_prod'`  → RAILWAY_PUBLIC_URL or default prod URL
+      - `environment` is None/missing → auto-detect from RAILWAY_ENVIRONMENT:
+                                        set ⇒ prod URL; absent ⇒ localhost
+    """
     if environment == 'local':
         return 'http://localhost:8000'
-    return os.getenv(
-        'RAILWAY_PUBLIC_URL',
-        'https://donkey-betz-platform-production.up.railway.app',
-    )
+    if environment == 'railway_prod':
+        return os.getenv(
+            'RAILWAY_PUBLIC_URL',
+            'https://donkey-betz-platform-production.up.railway.app',
+        )
+    # Auto-detect: RAILWAY_ENVIRONMENT is set on Railway, absent locally.
+    # Mirrors the convention used by td_handlers_ops + td_handlers_core +
+    # core/services/skin.py for service-context detection.
+    if os.environ.get('RAILWAY_ENVIRONMENT'):
+        return os.getenv(
+            'RAILWAY_PUBLIC_URL',
+            'https://donkey-betz-platform-production.up.railway.app',
+        )
+    return 'http://localhost:8000'
 
 
 def _resolve_auth_token() -> str | None:
@@ -824,7 +851,12 @@ def run_smoke_test(payload: dict) -> dict:
         {ok, passed, failed, total, environment, results: [...]}
     """
     suite_name = payload.get('suite')
-    environment = payload.get('environment', 'railway_prod')
+    # Session 1246: pass through None when the caller didn't specify so
+    # `_resolve_base_url` can auto-detect from RAILWAY_ENVIRONMENT. The
+    # old default 'railway_prod' meant every local PA call hit Railway's
+    # edge proxy and got 404 'Application not found' (S1247 audit P1
+    # finding).
+    environment = payload.get('environment')
     fail_fast = payload.get('fail_fast', True)
     return_body = payload.get('return_body', False)
     max_body_bytes = min(payload.get('max_body_bytes', 50_000), 250_000)
@@ -845,8 +877,12 @@ def run_smoke_test(payload: dict) -> dict:
     if len(steps) > MAX_STEPS:
         return {'ok': False, 'error': f'Too many steps: {len(steps)} (max {MAX_STEPS})'}
 
-    # Resolve environment
+    # Resolve environment — when the caller didn't specify, the resolver
+    # auto-detects from RAILWAY_ENVIRONMENT. Echo the resolved value back
+    # in the response so the caller sees which env was actually hit.
     base_url = _resolve_base_url(environment)
+    if environment is None:
+        environment = 'railway_prod' if os.environ.get('RAILWAY_ENVIRONMENT') else 'local'
     token = _resolve_auth_token()
     auth_headers: dict[str, str] = {}
     if token:
