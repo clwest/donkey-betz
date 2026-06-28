@@ -23,7 +23,10 @@ Usage:
 
 Environment:
     PA_API_TOKEN: Auth token (falls back to .env TEST_AUTH_TOKEN, then Railway lookup)
-    PA_API_URL: Base URL (default: https://donkey-betz-platform-production.up.railway.app)
+    PA_API_URL: Base URL (overrides --env flag; default when unset: http://localhost:8000)
+
+Production targeting is opt-in: pass `--env prod` to flip the URL to the Railway
+production URL (PA_API_URL still wins if set). Bare invocation hits local.
 """
 
 import json
@@ -35,7 +38,8 @@ import urllib.error
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-DEFAULT_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"
+DEFAULT_BASE_URL = "http://localhost:8000"
+PROD_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"
 POLL_INTERVAL = 3  # seconds
 POLL_TIMEOUT = 300  # 5 minutes — matches Celery PA task hard limit
 MAX_CONTENT_LENGTH = 5000  # truncate long responses
@@ -348,6 +352,10 @@ def main():
         "--trigger-pa", action="store_true",
         help="Force trigger Rigby even without @mention (with --say)"
     )
+    parser.add_argument(
+        "--env", choices=["local", "prod"], default="local",
+        help="Target environment (default: local). 'prod' flips PA_API_URL to the Railway production URL; explicit PA_API_URL env var still wins."
+    )
     # Legacy
     parser.add_argument(
         "--listen", "-l", metavar="CONV_ID",
@@ -356,6 +364,15 @@ def main():
     parser.add_argument("--listen-timeout", type=int, default=600)
 
     args = parser.parse_args()
+
+    # ── Environment selection ──
+    # Honor explicit PA_API_URL env var (precedence: env var > flag > default).
+    # Bare invocation hits local; `--env prod` opts into production.
+    if args.env == "prod" and not os.environ.get("PA_API_URL"):
+        os.environ["PA_API_URL"] = PROD_BASE_URL
+        sys.stderr.write(
+            f"WARNING: PA_CHAT targeting PRODUCTION ({PROD_BASE_URL})\n"
+        )
 
     # ── Watch mode (3-way) ──
     if args.watch:
