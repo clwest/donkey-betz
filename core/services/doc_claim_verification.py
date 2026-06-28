@@ -686,9 +686,9 @@ def _agents_md_workspace_aware() -> ClaimResult:
     description="docs/AGENTS.md Session 969b: 'PA now has 89 tools'",
 )
 def _agents_md_pa_tool_count() -> ClaimResult:
-    """Compare 'PA now has 89 tools' against the live PA_TOOL_SCHEMAS list."""
+    """Compare 'PA now has N tools' against the live PA_TOOL_SCHEMAS list."""
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 106  # Session 1142 + search_docs PA tool added in same session
+    expected = 110  # Session 1250 PR 7: rigby_work_item tool added
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')
@@ -963,7 +963,7 @@ def _capabilities_total_agents() -> ClaimResult:
 )
 def _capabilities_pa_tools() -> ClaimResult:
     from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
-    expected = 106  # Session 1142 + search_docs PA tool
+    expected = 110  # Session 1250 PR 7: rigby_work_item tool added
     actual = len(PA_TOOL_SCHEMAS)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 3 else ('medium' if drift <= 20 else 'high')

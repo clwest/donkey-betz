@@ -121,6 +121,15 @@ RIGBY_INTERNAL_WORK_QUEUE_ENABLED = os.environ.get(
     'RIGBY_INTERNAL_WORK_QUEUE_ENABLED', 'false'
 ).lower() == 'true'
 
+# Session 1250 PR 7: gate for the Rigby work-queue REVIEW tools
+# (rigby_work_item: list / acknowledge / resolve / ignore). Default
+# OFF. When False, the rigby_work_item PA tool returns a structured
+# "tools disabled by flag" response — schema stays advertised, handler
+# refuses execution. See docs/EVENT_SYSTEM_INVENTORY.md §14.
+RIGBY_WORK_QUEUE_REVIEW_ENABLED = os.environ.get(
+    'RIGBY_WORK_QUEUE_REVIEW_ENABLED', 'false'
+).lower() == 'true'
+
 # Session 1116: Public-read intelligence endpoint token (247globalai.com integration).
 # When unset / empty, the endpoint at /api/public/intelligence/now/ rejects every
 # request — default-off safety. See core/views_public_intelligence.py.
