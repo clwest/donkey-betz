@@ -185,10 +185,13 @@ from core.services.td_handlers_railway import RailwayToolMixin
 from core.services.td_handlers_newsletter import NewsletterHandlersMixin
 from core.services.td_handlers_rigby_work_queue import RigbyWorkQueueReviewMixin
 from core.services.td_handlers_rigby_shift_brief import RigbyShiftBriefMixin
+# Session 1252 PR 1 — AI Employee framework v0 (employee_tool +
+# mission_verdict). Adds two PA tools without new models or migrations.
+from core.services.td_handlers_employee import EmployeeHandlersMixin
 from core.services.pa_identity import PA_IDENTITY
 
 
-class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin, RigbyShiftBriefMixin):
+class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin, RigbyShiftBriefMixin, EmployeeHandlersMixin):
     """
     Centralized dispatcher for all PA tool executions.
 
@@ -558,6 +561,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Session management (health check, create fresh, list recent)
         self.register("session_tool", self._handle_session)
+
+        # Session 1252 PR 1 — AI Employee framework v0.
+        # employee_tool: read-only describe of the registered AI Employee
+        # registry (RIGBY) and its assigned JobContract (Documentation
+        # Manager). mission_verdict: Rigby-only certify/reject/defer on
+        # a MissionRun. See ``td_handlers_employee.py``.
+        self.register("employee_tool", self._handle_employee_tool)
+        self.register("mission_verdict", self._handle_mission_verdict)
 
         logger.info(f"ToolDispatcher: Registered {len(self._tool_handlers)} tool handlers")
 
