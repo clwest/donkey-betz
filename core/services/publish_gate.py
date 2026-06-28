@@ -49,7 +49,12 @@ class PublishGate:
     MYTHOLOGY_THRESHOLD = 0.15
 
     # Session 864: Operational title prefixes that bypass quality checks -> internal_only
-    # These are clearly internal documents and shouldn't be evaluated as public content
+    # These are clearly internal documents and shouldn't be evaluated as public content.
+    # Session 1246 (lane F1): expanded with test/QA/verification artifact patterns.
+    # S1247 audit (deliverable 1c3e63ec-…) caught 3 test artifacts stuck publish_ready
+    # for 175-358h because the bracketed-prefix patterns below didn't match
+    # naming styles like "BLOGTOOL_E2E_v1: …" / "Verify Your Blog Tool Lifecycle: …" /
+    # "Platform QA Pass 1: …". Those should always classify as internal_only.
     OPERATIONAL_TITLE_PATTERNS = [
         r'^\[research\]',           # [Research] ...
         r'^\[stage \d+',            # [Stage 1 - Research Brief] ...
@@ -62,6 +67,21 @@ class PublishGate:
         r'^researchagent:',         # ResearchAgent: ...
         r'^systeminsights:',        # SystemInsights: ...
         r'^root.?cause',            # Root-cause analysis...
+        # ── Session 1246 F1 additions ──
+        # Tightened from initial pass after smoke-test:
+        # - "verify your X" only (not "verify <generic>") — avoids
+        #   "Verify these claims yourself — a guide" false positive
+        # - trailing-fixture patterns use `.*` prefix because the helper
+        #   uses re.match() which anchors at start
+        r'^blogtool[_:]',                       # BLOGTOOL_E2E_v1: ...
+        r'^verify\s+your\s+',                   # Verify Your Blog Tool Lifecycle: ...
+        r'^platform\s+qa\s+pass\s+\d+',         # Platform QA Pass 1: ... (more specific than ^platform qa)
+        r'.*\b(?:verification|smoke[-_ ]test)\s*(?:run|pass)?\s*$',  # … verification / … smoke test / … smoke-test pass
+        r'^e2e[_:\s]',                          # E2E_test, E2E: ..., E2E Pass 1
+        r'^smoke[_:\s]',                        # smoke_test, smoke: capability check
+        r'^qa\s+pass\s+\d+',                    # QA Pass 1: ...
+        r'^test\s+(?:run|pass|fixture)',        # Test Run, Test Pass, Test Fixture
+        r'^(?:integration|regression)\s+(?:test|check)',
     ]
 
     # Signals indicating internal content
