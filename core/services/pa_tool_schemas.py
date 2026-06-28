@@ -1941,7 +1941,13 @@ PA_TOOL_SCHEMAS = [
                 "environment": {
                     "type": "string",
                     "enum": ["railway_prod", "local"],
-                    "description": "Target environment (default: railway_prod)",
+                    "description": (
+                        "Target environment. If omitted, auto-detects from the "
+                        "running process's RAILWAY_ENVIRONMENT env var: set ⇒ "
+                        "railway_prod, absent ⇒ local. Only pass this explicitly "
+                        "when you need to override the running context (e.g., "
+                        "smoke-test prod from local PA)."
+                    ),
                 },
                 "steps": {
                     "type": "array",
