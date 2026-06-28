@@ -4815,7 +4815,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "acknowledge", "resolve", "ignore"],
+                    "enum": ["list", "acknowledge", "resolve", "ignore", "delegate"],
                     "description": (
                         "list: paginated read (filters: status, decision, "
                         "priority_min, since, limit, offset). "
@@ -4825,7 +4825,13 @@ PA_TOOL_SCHEMAS = [
                         "outcome ∈ {acted, delegated_externally, "
                         "no_action_needed}. Optional note. Sets resolved_at. "
                         "ignore: transition to ignored. Requires non-empty "
-                        "reason."
+                        "reason. "
+                        "delegate: dispatch the work item to an agent via "
+                        "Rigby Mission Delegation. v0 routes 'monitor' "
+                        "decisions to TrendAnalysisAgent; 'notify' is not "
+                        "delegatable. Re-delegation is rejected while a "
+                        "non-terminal AgentExecution exists for the item. "
+                        "Gated by RIGBY_DELEGATION_ENABLED."
                     ),
                 },
                 "work_item_id": {

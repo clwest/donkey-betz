@@ -73,6 +73,17 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Deliverable status signals not available
 
+        # Session 1250 PR 8: Connect Rigby Mission Delegation lifecycle
+        # signals — observes AgentExecution.post_save for delegated
+        # executions and appends agent_assigned / agent_completed /
+        # verification_* / mission_closed events to the parent MissionRun.
+        # Gated by settings.RIGBY_DELEGATION_ENABLED (default False).
+        try:
+            from core.signals import connect_rigby_delegation_signals
+            connect_rigby_delegation_signals()
+        except ImportError:
+            pass  # Rigby delegation signals not available
+
         # Session 1095 Tier 1b: Connect MythologyAlert → HAI bridge so
         # critical/high mythology alerts surface in the governance inbox.
         try:

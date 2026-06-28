@@ -154,12 +154,17 @@ class RigbyWorkQueueReviewMixin:
             return self._rigby_work_item_resolve(payload, user_id, trace_id)
         if action == "ignore":
             return self._rigby_work_item_ignore(payload, user_id, trace_id)
+        if action == "delegate":
+            return self._rigby_work_item_delegate(payload, user_id, trace_id)
 
         return {
             "ok": False,
             "action": action,
             "gateway": "rigby_work_item",
-            "error": f"Unknown action {action!r}. Supported: list / acknowledge / resolve / ignore.",
+            "error": (
+                f"Unknown action {action!r}. Supported: list / acknowledge / "
+                f"resolve / ignore / delegate."
+            ),
         }
 
     # ----------------------------------------------------------------
@@ -468,3 +473,30 @@ class RigbyWorkQueueReviewMixin:
                 "reason": reason,
             },
         }
+
+    # ----------------------------------------------------------------
+    # Action: delegate (Session 1250 PR 8)
+    # ----------------------------------------------------------------
+
+    def _rigby_work_item_delegate(self, payload, user_id, trace_id) -> dict[str, Any]:
+        """Delegate a work item to an agent via Rigby Mission Delegation.
+
+        Thin wrapper that calls
+        ``core.services.rigby_mission_delegation.delegate_work_item``
+        and echoes its structured response. The actual routing,
+        re-delegation guard, MissionRun timeline writes, and async
+        dispatch all live in the service module; this handler is just
+        the PA tool gateway.
+        """
+        from core.services.rigby_mission_delegation import delegate_work_item
+
+        p = payload or {}
+        work_item_id = p.get("work_item_id") or p.get("id")
+        if not work_item_id:
+            return {
+                "ok": False,
+                "action": "delegate",
+                "gateway": "rigby_work_item",
+                "error": "work_item_id is required",
+            }
+        return delegate_work_item(str(work_item_id))
