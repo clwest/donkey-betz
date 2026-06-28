@@ -25,10 +25,49 @@ What's NOT rework:
 """
 import logging
 
+from django.conf import settings
+from django.db import transaction
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
+
+
+def _enqueue_rigby_intake(event_ref: str, deliverable_id) -> None:
+    """Enqueue the Rigby Event Intake task for a status_transition event.
+
+    Session 1250 PR 5: gated by ``settings.RIGBY_EVENT_INTAKE_ENABLED``
+    (default False). When False, this function is a no-op. When True,
+    the intake task is enqueued with ``dry_run=True``; PR 6 will be
+    the first PR allowed to flip dry_run.
+
+    Called via ``transaction.on_commit`` so we never enqueue a task
+    that references a row that was rolled back.
+    """
+    if not getattr(settings, 'RIGBY_EVENT_INTAKE_ENABLED', False):
+        return
+    # Lazy import keeps signal-module import cheap and avoids any
+    # circular-import risk between core.services.* and core.signals.*.
+    from core.services.rigby_event_intake import rigby_event_intake
+
+    try:
+        async_result = rigby_event_intake.apply_async(
+            args=[event_ref],
+            kwargs={'dry_run': True},
+        )
+        task_id = getattr(async_result, 'id', None)
+        logger.info(
+            '[RIGBY_INTAKE_SUBSCRIBE] enqueued event_ref=%s task_id=%s '
+            'deliverable_id=%s dry_run=True flag=ON',
+            event_ref, task_id, deliverable_id,
+        )
+    except Exception as e:
+        # Never break the deliverable save path. Log + swallow.
+        logger.warning(
+            '[RIGBY_INTAKE_SUBSCRIBE] enqueue failed for event_ref=%s '
+            'deliverable_id=%s (%s: %s)',
+            event_ref, deliverable_id, type(e).__name__, e,
+        )
 
 
 # Progress ordering. Higher rank = further along. Terminal statuses
@@ -148,7 +187,7 @@ def record_status_transition(sender, instance, created, **kwargs):
 
     try:
         from core.models_deliverables import DeliverableEvent
-        DeliverableEvent.objects.create(
+        de = DeliverableEvent.objects.create(
             deliverable=instance,
             event_type='status_transition',
             source=event_source or 'deliverable_status_signal',
@@ -162,6 +201,20 @@ def record_status_transition(sender, instance, created, **kwargs):
             '— deliverable %s %s→%s transition not tracked',
             type(e).__name__, e, instance.pk, prior, new,
         )
+        return
+
+    # Session 1250 PR 5: enqueue Rigby Event Intake on commit. Gated by
+    # settings.RIGBY_EVENT_INTAKE_ENABLED (default False). The
+    # transaction.on_commit() guard ensures we never enqueue a task
+    # whose target DeliverableEvent was rolled back. Inside a
+    # ``transaction.atomic`` block that rolls back, the callback is
+    # discarded; outside any transaction, the callback fires
+    # immediately.
+    event_ref = f'deliverable_event:{de.id}'
+    deliverable_id = instance.pk
+    transaction.on_commit(
+        lambda: _enqueue_rigby_intake(event_ref, deliverable_id)
+    )
 
 
 def connect_deliverable_status_signals():

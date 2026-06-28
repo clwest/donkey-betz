@@ -832,6 +832,12 @@ app.conf.imports = (
     'ml.tasks',
     'sports.tasks',
     'intelligence.tasks',
+    # Session 1250 PR 5: ensure rigby_event_intake is registered at
+    # worker boot so apply_async / .delay calls from signal handlers
+    # resolve. Subscriber is gated by settings.RIGBY_EVENT_INTAKE_ENABLED
+    # (default False); this import only registers the task name, it
+    # does not enqueue anything.
+    'core.services.rigby_event_intake',
 )
 
 
