@@ -183,10 +183,11 @@ from core.services.td_handlers_gateway import GatewayHandlersMixin
 from core.services.td_handlers_codejobs import CodeJobHandlersMixin
 from core.services.td_handlers_railway import RailwayToolMixin
 from core.services.td_handlers_newsletter import NewsletterHandlersMixin
+from core.services.td_handlers_rigby_work_queue import RigbyWorkQueueReviewMixin
 from core.services.pa_identity import PA_IDENTITY
 
 
-class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin):
+class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin):
     """
     Centralized dispatcher for all PA tool executions.
 
@@ -472,6 +473,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Session 1077: Focused tool split — reduce GPT function-calling confusion
         self.register("deliverable_tool", self._handle_deliverable_direct)
+        # Session 1250 PR 7: Rigby work-queue review tools. Schema is
+        # always advertised; the handler itself gates on
+        # settings.RIGBY_WORK_QUEUE_REVIEW_ENABLED and returns a
+        # standard "tools disabled" response when the flag is OFF.
+        self.register("rigby_work_item", self._handle_rigby_work_item)
         self.register("blog_tool", self._handle_blog_direct)
 
         # Session 1079: Governance tool — gateway for boardroom + human decisions
