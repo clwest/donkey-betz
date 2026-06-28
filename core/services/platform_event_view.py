@@ -133,6 +133,16 @@ class BaseAdapter(ABC):
     ) -> Iterator[PlatformEvent]:
         ...
 
+    @abstractmethod
+    def get(self, source_id: str) -> PlatformEvent:
+        """Return a single normalized event by source_id.
+
+        Raises ``LookupError`` if no row matches.
+        Raises ``ValueError`` if ``source_id`` is malformed for this
+        adapter (e.g., not a valid UUID).
+        """
+        ...
+
 
 class DeliverableEventAdapter(BaseAdapter):
     """Adapter over ``core.models_deliverables.DeliverableEvent``.
@@ -200,6 +210,21 @@ class DeliverableEventAdapter(BaseAdapter):
 
         for row in qs.iterator(chunk_size=_DEFAULT_CHUNK_SIZE):
             yield self._normalize(row)
+
+    def get(self, source_id: str) -> PlatformEvent:
+        from core.models_deliverables import DeliverableEvent
+
+        try:
+            row = DeliverableEvent.objects.get(id=source_id)
+        except (DeliverableEvent.DoesNotExist, ValueError) as exc:
+            # ValueError: malformed UUID. Surface as LookupError uniformly
+            # so callers don't have to distinguish "bad shape" from "not
+            # found" — the public ``get_event`` wrapper raises ValueError
+            # at the event_ref parsing level for malformed inputs.
+            raise LookupError(
+                f"deliverable_event:{source_id} not found ({exc})"
+            ) from exc
+        return self._normalize(row)
 
     def _normalize(self, row: Any) -> PlatformEvent:
         metadata: Mapping[str, Any] = row.metadata or {}
@@ -295,6 +320,17 @@ class OpsRunEventAdapter(BaseAdapter):
 
         for row in qs.iterator(chunk_size=_DEFAULT_CHUNK_SIZE):
             yield self._normalize(row)
+
+    def get(self, source_id: str) -> PlatformEvent:
+        from core.models_ops_runs import OpsRunEvent
+
+        try:
+            row = OpsRunEvent.objects.get(id=source_id)
+        except (OpsRunEvent.DoesNotExist, ValueError) as exc:
+            raise LookupError(
+                f"ops_run_event:{source_id} not found ({exc})"
+            ) from exc
+        return self._normalize(row)
 
     def _normalize(self, row: Any) -> PlatformEvent:
         detail: Mapping[str, Any] = row.detail or {}
@@ -409,3 +445,28 @@ def iter_events(
     return _ADAPTERS[source].iter_events(
         since_ts=since_ts, since_id=since_id, limit=limit, domain=domain
     )
+
+
+def get_event(event_ref: str) -> PlatformEvent:
+    """Return a single ``PlatformEvent`` by ``event_ref``.
+
+    ``event_ref`` is the stable handle yielded by ``iter_events`` — the
+    string ``"<source>:<source_id>"``.
+
+    Raises ``ValueError`` for malformed ``event_ref`` or unknown source.
+    Raises ``LookupError`` for valid format / valid source but no
+    matching row.
+    """
+    if not isinstance(event_ref, str) or not event_ref.strip():
+        raise ValueError("event_ref must be a non-empty string")
+    source, sep, source_id = event_ref.partition(":")
+    if not sep or not source or not source_id:
+        raise ValueError(
+            f"Invalid event_ref format: {event_ref!r}; "
+            f"expected '<source>:<source_id>'"
+        )
+    if source not in _ADAPTERS:
+        raise ValueError(
+            f"Unknown source: {source!r}. Supported: {sorted(_ADAPTERS)}"
+        )
+    return _ADAPTERS[source].get(source_id)
