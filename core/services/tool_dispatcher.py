@@ -184,10 +184,11 @@ from core.services.td_handlers_codejobs import CodeJobHandlersMixin
 from core.services.td_handlers_railway import RailwayToolMixin
 from core.services.td_handlers_newsletter import NewsletterHandlersMixin
 from core.services.td_handlers_rigby_work_queue import RigbyWorkQueueReviewMixin
+from core.services.td_handlers_rigby_shift_brief import RigbyShiftBriefMixin
 from core.services.pa_identity import PA_IDENTITY
 
 
-class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin):
+class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin, RigbyShiftBriefMixin):
     """
     Centralized dispatcher for all PA tool executions.
 
@@ -478,6 +479,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # settings.RIGBY_WORK_QUEUE_REVIEW_ENABLED and returns a
         # standard "tools disabled" response when the flag is OFF.
         self.register("rigby_work_item", self._handle_rigby_work_item)
+
+        # Session 1251 PR 12A: Rigby Shift Brief — daily operator handoff
+        # bundling ops_digest + cockpit + session health + audit findings +
+        # recent activity into one structured response. Read-only; no flag.
+        self.register("rigby_shift_brief_tool", self._handle_rigby_shift_brief)
         self.register("blog_tool", self._handle_blog_direct)
 
         # Session 1079: Governance tool — gateway for boardroom + human decisions
