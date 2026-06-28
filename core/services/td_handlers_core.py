@@ -3758,19 +3758,29 @@ RESEARCH DATA:
                 assistant_response=f"Fresh session started. {('Context carried forward: ' + carry_forward[:500]) if carry_forward else 'Ready to go.'}",
             )
 
-            # Generate a starter prompt from the old conversation if we have one
-            old_conversation_id = getattr(self, '_current_conversation_id', None)
-            starter_prompt = ''
-            if old_conversation_id:
-                try:
-                    from core.services.session_health_service import get_session_health
-                    old_health = get_session_health(old_conversation_id, user_id)
-                    starter_prompt = old_health.get('starter_prompt', '')
-                except Exception as _e:
-                    logger.warning(
-                        "td_core._handle_session: swallowed (%s: %s) — degraded",
-                        type(_e).__name__, _e,
-                    )
+            # Session 1247: starter_prompt was always empty because the prior
+            # implementation read self._current_conversation_id which is never
+            # assigned anywhere in the codebase, and carry_forward_summary was
+            # only used in the first message body. Prefer the explicit
+            # carry_forward_summary the caller passed; fall back to the active
+            # conversation's auto-generated summary (via payload.conversation_id,
+            # which the PA entrypoint reliably injects via setdefault).
+            starter_prompt = carry_forward
+            if not starter_prompt:
+                old_conversation_id = (
+                    payload.get('conversation_id')
+                    or getattr(self, '_current_conversation_id', None)
+                )
+                if old_conversation_id and old_conversation_id != new_id:
+                    try:
+                        from core.services.session_health_service import get_session_health
+                        old_health = get_session_health(old_conversation_id, user_id)
+                        starter_prompt = old_health.get('starter_prompt', '')
+                    except Exception as _e:
+                        logger.warning(
+                            "td_core._handle_session: swallowed (%s: %s) — degraded",
+                            type(_e).__name__, _e,
+                        )
 
             return {
                 'action': 'create_fresh',

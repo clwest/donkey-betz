@@ -17,20 +17,29 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1244 fresh
-# thread (Rigby create_fresh at S1243 close per her own suggest_fresh
-# recommendation: pa-634b8fef344d4af2 ended S1243 at 45/suggest_fresh
-# after 34 turns / 17k tokens / 19.6h / 6 topics). Pin:
-# pa-1cb4915546654c78. Title: "Session 1244 — Cat 2 cleanup batch +
-# 06-28 verification". Carry-forward seeded with: 4 S1243 PR roll
-# (#2679 tombstone / #2680 PaMessageFeedback rebuild / #2681
-# ActionPlanExecution rename / #2682 LegacySpiderData rename — D1
-# clean-cut 115 files), Cat 2 cross-app duplicate inventory (3 of 9
-# resolved; 6 dormant remain), audit-method canonicalization (apps.
-# get_models + AST file classification validated 4x), S1244 priority
-# queue (P0 health check; P1 06-28 morning_brief cumulative
-# verification 13:00 UTC; P2 dormant batch cleanup; P3 Cat 6
-# reachability; P4 core↔agents AgentExecution product Q).
+# the --conversation flag below. Current value: Session 1247 fresh
+# thread (Rigby create_fresh at S1247 open per S1246 P2 close pin
+# pa-2bb73c969fd24802 sitting at 60/suggest_fresh after 26 turns / 7
+# topics / 34 unique agents / 2.8h duration). Pin:
+# pa-3901b70e61934df7. Title: "Session 1247 — morning_brief P1
+# verification + content/char-training retirement". Carry-forward
+# seeded MANUALLY post-create_fresh (create_fresh action returned
+# empty starter_prompt — filed as PA tool surface finding): S1246
+# 2-part close (15 PRs day total, 31-tab workspace audit, 3 BROKEN
+# tabs fixed, 1 SLO cleared), S1247 priority queue (P0 health check
+# done; P1 TIME-BOUND 13:00 UTC Sunday 06-28 morning_brief CUMULATIVE
+# verification via runbook deliverable 421eeaca-…; P2 content/
+# char-training full retirement via reachability map deliverable
+# c5ea2f61-…; P3 workspace leak watch cf708a2e-…; P4 S1115 #12
+# re-audit ~2026-07-13; P5 audit-domain menu), outstanding finding
+# list (start-here stale local-trap reference, session_tool
+# health_check conversation_id param ignored, session_tool
+# create_fresh carry_forward_summary not honored).
+# Retired at S1247 open: pa-2bb73c969fd24802 (Session 1246 — both
+# parts of the 15-PR day, ended at 26 turns / 13k tokens / score 60 /
+# suggest_fresh; multi-topic but coherent — rotated to give S1247 a
+# clean focused thread for the time-bound P1 morning_brief
+# verification).
 # Prior pins retired: pa-0f08fc48ec914917 (Sessions 1234-1235 →
 # Session 1236 open; ~50 turns across the 3 sessions covering
 # Session 1234 3-arc 22-PR close + Session 1235 9-PR + audit
@@ -96,4 +105,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-2bb73c969fd24802
+python tools/pa_chat.py "$@" --tools --conversation pa-3901b70e61934df7

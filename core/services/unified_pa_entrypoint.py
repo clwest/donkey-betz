@@ -1761,8 +1761,11 @@ class UnifiedPAEntrypoint:
                 # Inject conversation_id so tools that dispatch async
                 # work (e.g. cockpit_tool.trigger_task) can post results
                 # back to this conversation when the work completes.
+                # Session 1247: use setdefault so an explicit conversation_id
+                # passed by the LLM (e.g. session_tool.health_check on a
+                # different conversation) is not silently overwritten.
                 if self.conversation_id and isinstance(arguments, dict):
-                    arguments['conversation_id'] = self.conversation_id
+                    arguments.setdefault('conversation_id', self.conversation_id)
 
                 # Per-user workspace scoping — auto-inject workspace_id
                 # so tools like deliverable_tool only return workspace data
