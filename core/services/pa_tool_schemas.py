@@ -1911,6 +1911,17 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "description": "Table name prefix to search (for search_tables, default 'core_')",
                 },
+                "env": {
+                    "type": "string",
+                    "enum": ["local", "prod"],
+                    "description": (
+                        "Target environment. 'local' (default) queries the local DB. "
+                        "'prod' delegates to /api/db-health-rpc/ on the configured prod URL — "
+                        "requires PA_DB_HEALTH_RPC_URL and PA_DB_HEALTH_RPC_CLIENT_TOKEN env "
+                        "vars. Returned dict always carries an 'env' tag so cross-env "
+                        "comparisons are unambiguous."
+                    ),
+                },
             },
         },
     },
