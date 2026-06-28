@@ -9,7 +9,15 @@ from django.db import models
 
 
 class OpsRun(models.Model):
-    """A single execution of an ops operation (smoke test, control loop, etc.)."""
+    """A single execution of an ops operation (smoke test, control loop, etc.).
+
+    Session 1250 PR 3: ``domain``, ``run_kind``, and ``mission_id`` were
+    added as MissionRun-compatibility fields per
+    ``docs/EVENT_SYSTEM_INVENTORY.md`` §10. Ops vs mission separation is
+    enforced by ``domain``; ``run_type`` is **not** overloaded into
+    mission taxonomy. All three fields are additive and default to the
+    ops-domain behavior; existing callers are unaffected.
+    """
     RUN_TYPE_CHOICES = [
         ('ops_loop', 'Ops Loop'),
         ('smoke_test', 'Smoke Test'),
@@ -29,6 +37,10 @@ class OpsRun(models.Model):
         ('management_cmd', 'Management Cmd'),
         ('manual', 'Manual'),
     ]
+    DOMAIN_CHOICES = [
+        ('ops', 'Ops'),
+        ('mission', 'Mission'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
@@ -40,6 +52,33 @@ class OpsRun(models.Model):
     summary = models.JSONField(default=dict)
     event_count = models.PositiveIntegerField(default=0)
     fail_count = models.PositiveIntegerField(default=0)
+
+    # Session 1250 PR 3: MissionRun-compatibility fields. See module docstring.
+    # ``domain`` is the top-level separator; do NOT use ``run_type`` for this.
+    domain = models.CharField(
+        max_length=20,
+        choices=DOMAIN_CHOICES,
+        default='ops',
+        db_index=True,
+        help_text="Session 1250 PR 3: ops vs mission scope. Do not overload run_type.",
+    )
+    # ``run_kind`` is a free-form sub-classification within ``domain``.
+    # Examples (mission): 'intake' / 'decision' / 'delegation' / 'verification'.
+    # Blank for ops-domain rows.
+    run_kind = models.CharField(
+        max_length=40,
+        blank=True,
+        default='',
+        help_text="Session 1250 PR 3: sub-classification within domain.",
+    )
+    # ``mission_id`` is populated when ``domain='mission'``; null otherwise.
+    # Indexed for mission-side queries.
+    mission_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Session 1250 PR 3: mission identity; null for ops-domain rows.",
+    )
 
     class Meta:
         app_label = 'core'

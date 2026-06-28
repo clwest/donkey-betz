@@ -556,6 +556,109 @@ class OpsRunEventAdapterTests(TestCase):
 
 
 # ---------------------------------------------------------------------------
+# PR 3 — OpsRunEventAdapter domain filtering (Option B)
+# ---------------------------------------------------------------------------
+
+
+class OpsRunEventDomainFilterTests(TestCase):
+    """PR 3: ``iter_events(source='ops_run_event', domain=...)``.
+
+    Validates the join-based filter against parent OpsRun.domain.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        # Two parent runs: one ops, one mission.
+        cls.ops_run = OpsRun.objects.create(
+            title="domain-filter-ops",
+            run_type="manual",
+            domain="ops",
+        )
+        cls.mission_run = OpsRun.objects.create(
+            title="domain-filter-mission",
+            run_type="manual",
+            domain="mission",
+            run_kind="intake",
+            mission_id=uuid.uuid4(),
+        )
+        # 3 events under ops_run, 2 under mission_run.
+        cls.ops_events = [
+            OpsRunEvent.objects.create(
+                run=cls.ops_run, event_type="step_pass", label=f"ops-{i}",
+            )
+            for i in range(3)
+        ]
+        cls.mission_events = [
+            OpsRunEvent.objects.create(
+                run=cls.mission_run, event_type="info", label=f"mission-{i}",
+            )
+            for i in range(2)
+        ]
+
+    def test_domain_omitted_returns_all_rows(self):
+        """No domain kwarg → PR 2 behavior preserved."""
+        out = list(pev.iter_events("ops_run_event"))
+        all_ids = {str(e.id) for e in (self.ops_events + self.mission_events)}
+        self.assertEqual({pe.source_id for pe in out}, all_ids)
+        self.assertEqual(len(out), 5)
+
+    def test_domain_ops_excludes_mission_rows(self):
+        out = list(pev.iter_events("ops_run_event", domain="ops"))
+        out_ids = {pe.source_id for pe in out}
+        self.assertEqual(out_ids, {str(e.id) for e in self.ops_events})
+        # Confirm none of the mission events leak through.
+        for me in self.mission_events:
+            self.assertNotIn(str(me.id), out_ids)
+
+    def test_domain_mission_excludes_ops_rows(self):
+        out = list(pev.iter_events("ops_run_event", domain="mission"))
+        out_ids = {pe.source_id for pe in out}
+        self.assertEqual(out_ids, {str(e.id) for e in self.mission_events})
+        for oe in self.ops_events:
+            self.assertNotIn(str(oe.id), out_ids)
+
+    def test_domain_filter_composes_with_watermark(self):
+        # Filter mission-only + a watermark in the past → still get all mission rows.
+        out = list(
+            pev.iter_events(
+                "ops_run_event",
+                domain="mission",
+                since_ts=timezone.now() - timedelta(days=1),
+            )
+        )
+        self.assertEqual(len(out), 2)
+
+    def test_invalid_domain_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            list(pev.iter_events("ops_run_event", domain="wat"))
+        self.assertIn("Unknown domain", str(cm.exception))
+
+    def test_domain_on_deliverable_event_raises(self):
+        """DeliverableEvent has no domain concept — passing one is a hard error."""
+        with self.assertRaises(ValueError) as cm:
+            list(pev.iter_events("deliverable_event", domain="ops"))
+        self.assertIn("domain= filter is not supported", str(cm.exception))
+
+    def test_deliverable_adapter_default_path_unchanged(self):
+        """PR 2 DeliverableEvent behavior must be byte-identical when no domain
+        kwarg is passed."""
+        user = _make_user("dlv-domain-isolation")
+        workspace = _make_workspace(user)
+        deliverable = _make_deliverable(user, workspace)
+        ev = DeliverableEvent.objects.create(
+            deliverable=deliverable, event_type="synthesis_viewed",
+        )
+        out = [
+            pe for pe in pev.iter_events("deliverable_event")
+            if pe.source_id == str(ev.id)
+        ]
+        self.assertEqual(len(out), 1)
+        # Same shape PR 2 promised.
+        self.assertEqual(out[0].source, "deliverable_event")
+        self.assertEqual(out[0].kind, "synthesis_viewed")
+
+
+# ---------------------------------------------------------------------------
 # Real-DB integration: 100+ mixed rows (per PR 1 AC11)
 # ---------------------------------------------------------------------------
 

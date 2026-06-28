@@ -19,6 +19,12 @@ PR 2 ships exactly two adapters:
 - ``deliverable_event`` over ``core.models_deliverables.DeliverableEvent``
 - ``ops_run_event`` over ``core.models_ops_runs.OpsRunEvent``
 
+Session 1250 PR 3 adds optional ``domain`` filtering on
+``source='ops_run_event'`` — caller can request ops-domain or
+mission-domain rows only. The DeliverableEvent adapter is unchanged
+(no domain concept); passing ``domain`` on any other source raises
+``ValueError``.
+
 Per the v0 direction in EVENT_SYSTEM_INVENTORY §4, these are deferred:
 ``celery_task_event``, ``llm_call_event``, ``impact_event``,
 ``fleet_event``, ``trigger_event``, the Cockpit family, and anything
@@ -47,6 +53,13 @@ SUPPORTED_SEVERITIES: frozenset[str] = frozenset(
     {"debug", "info", "notice", "warn", "error", "critical", "unknown"}
 )
 SUPPORTED_VOLUME_CLASSES: frozenset[str] = frozenset({"low", "medium", "high"})
+
+# Session 1250 PR 3: ops vs mission scope filter for OpsRunEvent only.
+# DeliverableEvent does not support this filter — passing ``domain`` on
+# any other source raises ValueError at the public ``iter_events``
+# entrypoint.
+SUPPORTED_DOMAINS: frozenset[str] = frozenset({"ops", "mission"})
+DOMAIN_FILTER_SOURCES: frozenset[str] = frozenset({"ops_run_event"})
 
 _DEFAULT_CHUNK_SIZE = 200
 
@@ -116,6 +129,7 @@ class BaseAdapter(ABC):
         since_ts: Optional[datetime] = None,
         since_id: Optional[str] = None,
         limit: Optional[int] = None,
+        domain: Optional[str] = None,
     ) -> Iterator[PlatformEvent]:
         ...
 
@@ -156,7 +170,12 @@ class DeliverableEventAdapter(BaseAdapter):
         since_ts: Optional[datetime] = None,
         since_id: Optional[str] = None,
         limit: Optional[int] = None,
+        domain: Optional[str] = None,
     ) -> Iterator[PlatformEvent]:
+        # PR 3 note: the public ``iter_events`` rejects ``domain`` for
+        # this source before we ever get here. The kwarg is accepted to
+        # satisfy the BaseAdapter contract; we ignore it.
+        del domain
         # Lazy import keeps module import cheap and isolates Django setup.
         from core.models_deliverables import DeliverableEvent
         from django.db.models import Q
@@ -248,11 +267,16 @@ class OpsRunEventAdapter(BaseAdapter):
         since_ts: Optional[datetime] = None,
         since_id: Optional[str] = None,
         limit: Optional[int] = None,
+        domain: Optional[str] = None,
     ) -> Iterator[PlatformEvent]:
         from core.models_ops_runs import OpsRunEvent
         from django.db.models import Q
 
         qs = OpsRunEvent.objects.order_by("created_at", "id")
+        # Session 1250 PR 3: domain filter joins to parent OpsRun.domain.
+        # ``None`` preserves PR 2 behavior (all rows).
+        if domain is not None:
+            qs = qs.filter(run__domain=domain)
         if since_ts is not None and since_id is not None:
             qs = qs.filter(
                 Q(created_at__gt=since_ts)
@@ -333,6 +357,7 @@ def iter_events(
     since_ts: Optional[datetime] = None,
     since_id: Optional[str] = None,
     limit: Optional[int] = None,
+    domain: Optional[str] = None,
 ) -> Iterator[PlatformEvent]:
     """Yield ``PlatformEvent`` records from ``source`` in deterministic order.
 
@@ -345,6 +370,17 @@ def iter_events(
         - ``since_ts`` alone: strict ``ts > since_ts``.
         - Both ``None``: from the beginning.
 
+    Session 1250 PR 3: optional ``domain`` filter.
+        - ``None`` (default): preserves PR 2 behavior — yields all rows
+          for the source.
+        - ``'ops'`` / ``'mission'``: limits OpsRunEvent rows to those
+          whose parent ``OpsRun.domain`` matches. Only supported on
+          ``source='ops_run_event'``.
+        - Any other value: raises ``ValueError``.
+        - Passing a non-None ``domain`` on a source other than
+          ``ops_run_event`` raises ``ValueError`` (DeliverableEvent has
+          no domain concept).
+
     Idempotent — the same arguments yield the same records in the same
     order assuming the underlying rows do not change.
 
@@ -353,12 +389,23 @@ def iter_events(
     a list (since sliced QuerySets cannot use ``.iterator()`` in
     older Django versions and the bound makes it safe).
 
-    Raises ``ValueError`` if ``source`` is not registered.
+    Raises ``ValueError`` if ``source`` is not registered, or if
+    ``domain`` is invalid for the source.
     """
     if source not in _ADAPTERS:
         raise ValueError(
             f"Unknown source: {source!r}. Supported: {sorted(_ADAPTERS)}"
         )
+    if domain is not None:
+        if domain not in SUPPORTED_DOMAINS:
+            raise ValueError(
+                f"Unknown domain: {domain!r}. Supported: {sorted(SUPPORTED_DOMAINS)}"
+            )
+        if source not in DOMAIN_FILTER_SOURCES:
+            raise ValueError(
+                f"domain= filter is not supported for source={source!r}. "
+                f"Supported sources: {sorted(DOMAIN_FILTER_SOURCES)}"
+            )
     return _ADAPTERS[source].iter_events(
-        since_ts=since_ts, since_id=since_id, limit=limit
+        since_ts=since_ts, since_id=since_id, limit=limit, domain=domain
     )
