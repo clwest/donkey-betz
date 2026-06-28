@@ -1407,6 +1407,12 @@ class AgentHandlersMixin:
             }
 
         elif action == 'operations':
+            # Session 1246 audit fix: WorkspaceOperation was never imported in
+            # this file (every other model in this handler uses inline scoped
+            # imports — ProjectWorkspace appears 7 times the same way). The
+            # `operations` action branch raised NameError on every call.
+            # S1247 workspace tab audit deliverable 1c3e63ec-… caught it.
+            from core.models_skin_layer import WorkspaceOperation
             workspace, error = self._resolve_workspace_for_payload(manager, user_id, payload)
             if error:
                 return {'action': 'operations', 'success': False, 'error': error}
@@ -1463,6 +1469,8 @@ class AgentHandlersMixin:
             if not operation_id:
                 return {'action': 'rollback', 'success': False, 'error': 'operation_id is required for rollback'}
 
+            # Session 1246: same missing import as the `operations` branch above.
+            from core.models_skin_layer import WorkspaceOperation
             operation = WorkspaceOperation.objects.filter(id=operation_id, user_id=user_id).first()
             if not operation:
                 return {'action': 'rollback', 'success': False, 'error': f'Operation not found: {operation_id}'}
