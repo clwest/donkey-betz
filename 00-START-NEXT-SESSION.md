@@ -131,7 +131,91 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1249 — CURRENT ENTRY POINT
+## SESSION 1250 — CURRENT ENTRY POINT
+
+### SESSION 1249 CLOSED — P1 morning_brief verified green; parity menu (a) + (b) shipped end-to-end
+
+**Session window:** 2026-06-28 Sunday morning CDT (~3h).
+**Full handoff:** [`SESSION_1249_P1_GREEN_PLUS_PARITY_MENU_AB_SHIPPED.md`](docs/handoffs/SESSION_1249_P1_GREEN_PLUS_PARITY_MENU_AB_SHIPPED.md).
+
+**TL;DR:** Executed the S1248-named local↔prod parity menu top-2. P2(b) wrapper-trap fix + P2(a) server `/api/db-health-rpc/` + P2(a) client `env='prod'` selector all shipped + admin-merged + live-verified end-to-end. Loopback round-trip (client → local server, acting as 'prod') returned real DB result tagged `env='prod'` in 289ms with every expected field present. P3 char-training retirement is now technically unblockable — needs only `PA_DB_HEALTH_RPC_TOKEN` set in Railway prod env to flip the capability live.
+
+**PRs shipped (3, all admin-merged given Anthropic billing CI gap):**
+
+| PR | SHA | Subject | Net | Merge SHA |
+|---|---|---|---|---|
+| [#2712](https://github.com/clwest/donkey-betz-platform/pull/2712) | `f74b76c5` | `pa_chat.py` default flipped to local + `--env prod` opt-in | +124/-2 + commit metadata | `77bbdec8` |
+| [#2713](https://github.com/clwest/donkey-betz-platform/pull/2713) | `b5af4202` | server `/api/db-health-rpc/` endpoint + middleware exemption | +355/-0 | `1a8c2c6c` |
+| [#2714](https://github.com/clwest/donkey-betz-platform/pull/2714) | `ee44d848` | client `db_health_tool env='prod'` selector + schema | +430/-0 | `3fce425b` |
+
+**Headline outcomes:**
+
+- **Wrapper-trap closed.** Bare `python tools/pa_chat.py "msg"` now hits LOCAL. `--env prod` opts in with stderr warning. Memory rule `feedback_pa_chat_local_override.md` updated to reflect post-fix state.
+- **Cross-env prod-query capability shipped.** Local Rigby can now (when Railway prod env var is set) call `db_health_tool action=verify_table table_name=<x> env=prod` and get a real answer programmatically.
+- **34 new tests added** across 3 PRs, all green. No regression on existing tests post-`_handle_db_health` refactor.
+- **P1 morning_brief 2026-06-28 verified green** at S1249 open via runbook deliverable `421eeaca-…`. All 6 assertions pass.
+
+### FIRST THING Session 1250
+
+#### Priority 0 — Pin health check
+
+`pa-e8999a1793f04e23` (S1249 pin). Estimated ~14-16 turns at S1249 close — light. Run `session_tool action=health_check conversation_id=pa-e8999a1793f04e23` at S1250 open. PR #2707 + #2709 fixes mean rotation is one tool call away if `suggest_fresh` returns; carry-forward auto-seeds via `create_fresh starter_prompt`.
+
+#### Priority 1 — Decide P2 menu (c)/(d) vs P3 char-training
+
+**Branch point depends on whether Chris has flipped the prod env var:**
+
+**Path A — Chris has set `PA_DB_HEALTH_RPC_TOKEN` on Railway prod:**
+- **P3 char-training retirement** becomes the high-value pick. First action:
+  - Export `PA_DB_HEALTH_RPC_URL=https://donkey-betz-platform-production.up.railway.app/api/db-health-rpc/` + `PA_DB_HEALTH_RPC_CLIENT_TOKEN=<same value Chris set on prod>` in local shell.
+  - `make restart` (PA worker reloads with vars).
+  - Ask Rigby: `db_health_tool action=verify_table table_name=core_fleetservicekey env=prod` — answers the gating P3 question programmatically.
+  - Then sequence the reachability map in deliverable `c5ea2f61-…` (16 CharacterModel-importing files, risk-graded LOW/MED/HIGH).
+
+**Path B — No prod env var change yet:**
+- **P2(d) `make env-diff` mgmt cmd** — substantive work that doesn't depend on prod-side prereqs. Reads local config + Railway API + diffs. ~2h estimated.
+- OR **P2(c) env-parity probe beat task** — daily canned health checks across both envs. Land it dormant, activate when (a) is live in prod.
+- OR audit-domain pick (P6).
+
+#### Priority 2 — Token follow-up PR (deferred from #2712)
+
+Tiny PR to split `PA_API_TOKEN` ambiguity (`.env` value is prod). Options:
+- Add `PA_LOCAL_TOKEN` env var convention + `_get_token()` env-aware resolution.
+- OR strict: require `PA_API_TOKEN` to match `--env` choice (warn if mismatch).
+
+Estimated ~30 lines + tests. Closes the remaining half of the wrapper-trap.
+
+#### Priority 3 — Pre-existing carryover tail
+
+- Finding 3 (workspace_tool counter decoupling) — investigate `core/models_workspace*.py` + `core/services/workspace_*.py` for `total_files_written` increment paths
+- Section 5B verification — grep `autopilot_tool.drift_scan` and `diagnostics_tool.schema_handler_diff` to verify they exist + work
+- `pa-2bb73c969fd24802` 26→29 turn growth despite rotation — find what's still writing to the retired thread
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM)
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2)
+- Promote `scripts/smoke_all_agents.py` → mgmt cmd (Session 1231 F6)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+- Workspace leak watch (`cf708a2e-…`) "real fix" investigation
+- P5 S1115 #12 deferred list re-audit (~2026-07-13 telemetry-valid window)
+- Anthropic credit refill at https://console.anthropic.com/billing — all 3 S1249 PRs admin-merged because lint CI didn't run
+
+#### Priority Last — Whatever Chris wants
+
+S1249 was a productive 3-PR Sunday morning. The local↔prod parity theme moved from "named" to "half-shipped end-to-end." Choice point at S1250 is the prod-env-var question above: if Chris flipped it, P3 char-training unblock is the obvious next pick.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+- The 11 AUDIT_FINDINGS.md #12 deferred-by-policy tasks (each needs Chris green-light per #12 protocol)
+
+---
 
 ### SESSION 1248 CLOSED — P2a + P2b shipped, P2c deferred, local↔prod parity named as a theme
 
