@@ -2087,16 +2087,65 @@ class AgentHandlersMixin:
                     "deliverable_factory.create_deliverable returned None "
                     "despite raise_on_gated=True — internal contract violation"
                 )
-            return {
+
+            # Session 1248 P2b — close the verify-then-set_status round-trip
+            # documented in `feedback_deliverable_create_defaults_to_completed.md`.
+            # The factory defaults new rows to status='completed' regardless
+            # of explicit status='draft'/'ready' params, so every caller had
+            # to follow create with a separate detail/ORM check + set_status
+            # to_status=ready. Two complementary fixes:
+            #
+            #   1. ALWAYS echo the actual stored `status` (Rigby's Q1c delta
+            #      #1 + #2): top-level field, canonical name, source of truth.
+            #      BC-safe (extra key, callers ignore extras).
+            #   2. OPT-IN `return_detail=True` triggers a follow-up detail
+            #      fetch and embeds the sanitized dict under a `detail` key
+            #      (Rigby's delta #3: detail.status echoed but top-level
+            #      status remains canonical). `detail_included: bool` flag
+            #      tells callers whether the embedded fetch succeeded
+            #      without making them parse for key existence (delta #4).
+            #
+            # Detail-fetch failure is soft: log warning + set
+            # `detail_included=False`; the create itself still reports ok=True.
+            response = {
                 'action': 'create',
                 'ok': True,
                 'id': str(obj.id),
                 'title': obj.title,
                 'deliverable_type': obj.deliverable_type,
                 'category': obj.category,
+                'status': obj.status,
                 'saved': True,
                 'message': f'Created and saved "{obj.title}" to your Deliverables library.',
             }
+
+            if payload.get('return_detail') in (True, 'true', 'True', 1, '1'):
+                response['detail_included'] = False
+                try:
+                    detail_result = self._handle_deliverables(
+                        tool_name,
+                        {'action': 'detail', 'id': str(obj.id)},
+                        user_id,
+                        trace_id,
+                    )
+                    if isinstance(detail_result, dict) and 'error' not in detail_result:
+                        response['detail'] = detail_result
+                        response['detail_included'] = True
+                    else:
+                        logger.warning(
+                            "[deliverables.create] return_detail follow-up "
+                            "returned no usable detail dict for id=%s: %r",
+                            obj.id, detail_result,
+                        )
+                except Exception as _detail_err:
+                    logger.warning(
+                        "[deliverables.create] return_detail follow-up "
+                        "raised for id=%s (%s: %s) — create succeeded; "
+                        "embedding detail_included=False",
+                        obj.id, type(_detail_err).__name__, _detail_err,
+                    )
+
+            return response
 
         elif action == 'update':
             # Session 1168 bug #2 + Session 1169 item 3: use the
