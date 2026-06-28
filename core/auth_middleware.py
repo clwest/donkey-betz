@@ -109,6 +109,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Webhooks with their own verification (use secrets/signatures)
         '/api/discord/verify-link-code/',  # Discord bot verification (uses bot_secret)
         '/api/stripe/webhook/',  # Stripe webhook (uses signature verification)
+        # Session 1249 P2(a): db_health_tool prod RPC. View enforces
+        # service-token auth via PA_DB_HEALTH_RPC_TOKEN env var; unset
+        # token returns 404 (endpoint disabled). NOT user-bound.
+        '/api/db-health-rpc/',
 
         # Django admin (has its own auth)
         '/admin/',
