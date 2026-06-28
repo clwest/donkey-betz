@@ -53,6 +53,11 @@ from .initiative_diagnostic_signals import (
     connect_initiative_diagnostic_signals,
 )
 
+from .rigby_delegation_signals import (
+    on_delegation_lifecycle,
+    connect_rigby_delegation_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -87,4 +92,7 @@ __all__ = [
     'stash_prior_target_workspace_id',
     'clear_initiative_diagnostic_on_workspace_set',
     'connect_initiative_diagnostic_signals',
+    # Session 1250 PR 8 — Rigby Mission Delegation lifecycle signals
+    'on_delegation_lifecycle',
+    'connect_rigby_delegation_signals',
 ]

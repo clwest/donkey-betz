@@ -130,6 +130,15 @@ RIGBY_WORK_QUEUE_REVIEW_ENABLED = os.environ.get(
     'RIGBY_WORK_QUEUE_REVIEW_ENABLED', 'false'
 ).lower() == 'true'
 
+# Session 1250 PR 8: gate for Rigby Mission Delegation (the 5th
+# rigby_work_item action: 'delegate'). Default OFF. When False, the
+# delegate action returns a structured 'delegation disabled' response
+# and the AgentExecution post_save lifecycle signal short-circuits.
+# See docs/EVENT_SYSTEM_INVENTORY.md §15.
+RIGBY_DELEGATION_ENABLED = os.environ.get(
+    'RIGBY_DELEGATION_ENABLED', 'false'
+).lower() == 'true'
+
 # Session 1116: Public-read intelligence endpoint token (247globalai.com integration).
 # When unset / empty, the endpoint at /api/public/intelligence/now/ rejects every
 # request — default-off safety. See core/views_public_intelligence.py.

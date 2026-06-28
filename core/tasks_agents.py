@@ -2294,9 +2294,18 @@ self,
             # as NULL for non-PA dispatches (autonomous beat tasks, direct
             # router calls); the Phase 1 invariant is that only persisted
             # conversation_id rows + explicit subscription may post follow-up.
+            # Session 1250 PR 8: honor parent_object_type / parent_object_id
+            # from context so async Rigby Mission Delegation can carry the
+            # RigbyWorkItem linkage to the resulting AgentExecution row. The
+            # sync route() path (_create_execution_record at
+            # core/agent_router.py:2787) already honors these; this is parity
+            # for the async wrapper. Backward-compatible — empty/None when
+            # callers don't set them.
             _optional_kwargs = {
                 'last_heartbeat_at': timezone.now(),
                 'conversation_id': context.get('conversation_id') or None,
+                'parent_object_type': context.get('parent_object_type') or '',
+                'parent_object_id': context.get('parent_object_id') or None,
             }
             try:
                 execution_record = AgentExecution.objects.create(

@@ -1623,6 +1623,279 @@ in production**.
 
 ---
 
+## 15. PR 8 — Rigby Mission Delegation
+
+> Status: shipped in PR 8 of the Rigby Event Intake arc. Rigby
+> becomes the operations layer: she delegates actionable work items
+> to agents and observes completion via the existing
+> `AgentExecution.post_save` signal. **No human notification. No
+> direct agent dispatch outside existing infrastructure. No LLM.**
+> Default OFF.
+
+### 15.1 Delegation lifecycle (new in PR 8)
+
+```
+RigbyWorkItem(decision='monitor', status='open' or 'acknowledged')
+   │
+   ▼ Rigby invokes PA tool: rigby_work_item action='delegate'
+   │
+   ▼ delegate_work_item(work_item_id) — core/services/rigby_mission_delegation.py
+   │
+   ├── 1. Resolve work item + check flag (RIGBY_DELEGATION_ENABLED)
+   ├── 2. Routing check: decision → agent (deterministic table)
+   ├── 3. Re-delegation guard: reject if non-terminal AgentExecution exists
+   ├── 4. Append OpsRunEvent:  label='delegation_started'
+   │      detail={work_item_id, decision, routed_agent, task_preview}
+   │
+   └── 5. execute_agent_task.apply_async(args=[agent_name, task, context],
+                                          queue='long_running')
+          context['parent_object_type'] = 'RigbyWorkItem'
+          context['parent_object_id']   = str(work_item.id)
+          context['auto_followup']      = False
+
+[Celery worker picks up execute_agent_task → _impl_execute_agent_task creates
+ AgentExecution row with parent_object_type/parent_object_id from context]
+   │
+   ▼ AgentExecution.save(created=True)
+   │
+   ▼ post_save signal — core/signals/rigby_delegation_signals.py
+   │   ├── Filter: parent_object_type == 'RigbyWorkItem' + flag ON
+   │   └── Append OpsRunEvent: label='agent_assigned'
+   │       detail={execution_id, agent_name, work_item_id, decision}
+   │
+   ▼ AgentRouter.route() runs the agent synchronously inside the task
+   │
+   ▼ AgentExecution.save(status='completed'|'failed'|'cancelled')
+   │
+   ▼ post_save signal fires again (idempotent — checks for prior
+   │  agent_completed event before writing)
+   │
+   ├── Append OpsRunEvent: label='agent_completed'
+   │      detail={execution_id, status, time_ms, tokens, cost, error?}
+   │
+   ├── Append OpsRunEvent: label='verification_started'
+   │
+   ├── Deterministic verification (no LLM):
+   │     verdict = (
+   │         'verified'              if status='completed' and ≥1 LLMCallEvent(SUCCESS)
+   │         'failed_no_llm_calls'   if status='completed' but 0 LLMCallEvent
+   │         'failed_agent_error'    if status in {failed, cancelled}
+   │     )
+   │     evidence = {llm_success_count, tool_call_success_count, ...}
+   │
+   ├── Append OpsRunEvent: label='verification_completed'
+   │      detail={verdict, evidence}
+   │
+   └── Append OpsRunEvent: label='mission_closed'
+          detail={verified, verdict, decided_via='delegation'}
+```
+
+The MissionRun timeline is the single authoritative record. After
+PR 8, a fully-delegated mission reads:
+
+```
+intake_started → impact_assessed → decision_made
+  → work_item_acknowledged (optional, from PR 7)
+  → delegation_started → agent_assigned → agent_completed
+  → verification_started → verification_completed → mission_closed
+```
+
+### 15.2 v0 routing table
+
+Hardcoded in `core/services/rigby_mission_delegation.py`:
+
+```python
+DELEGATION_ROUTING = {
+    "monitor": "TrendAnalysisAgent",
+}
+```
+
+- `notify` decisions are **not delegatable** in v0. The PA tool
+  returns `{ok: False, not_delegatable: True}` and the work item
+  stays in Rigby's queue. Rationale: `notify` is about surfacing
+  human-readable summaries; delegating doesn't help. Future PR can
+  add `notify → ContentWriterAgent` if useful.
+- Adding more decisions = edit the dict + tests. No LLM, no rule
+  engine, no plugin registry.
+
+### 15.3 Feature flag (the 4th in the pipeline)
+
+`settings.RIGBY_DELEGATION_ENABLED` (default `False`). When OFF:
+
+- `delegate` PA tool action returns
+  `{ok: False, error: 'rigby delegation is disabled (flag off)', flag: 'RIGBY_DELEGATION_ENABLED'}`.
+- The `post_save` lifecycle signal short-circuits — even if a
+  delegated AgentExecution somehow exists, no lifecycle events get
+  written.
+
+Four-flag chain after PR 8:
+
+| Flag | Default | Gates |
+|---|---|---|
+| `RIGBY_EVENT_INTAKE_ENABLED` (PR 5) | `False` | signal → enqueue intake task |
+| `RIGBY_INTERNAL_WORK_QUEUE_ENABLED` (PR 6) | `False` | actionable decision → RigbyWorkItem |
+| `RIGBY_WORK_QUEUE_REVIEW_ENABLED` (PR 7) | `False` | PA tool actions on the queue |
+| `RIGBY_DELEGATION_ENABLED` (PR 8) | `False` | `delegate` action + post_save lifecycle |
+
+Net behavior with all four OFF (production default): zero functional
+change vs. PR 4 close.
+
+### 15.4 Re-delegation policy
+
+```python
+NON_TERMINAL_STATUSES = {"pending", "in_progress"}
+
+active = AgentExecution.objects.filter(
+    parent_object_type="RigbyWorkItem",
+    parent_object_id=work_item.id,
+    status__in=NON_TERMINAL_STATUSES,
+).first()
+if active is not None:
+    return {ok: False, error: "non-terminal execution exists"}
+```
+
+- **Active delegation blocks re-delegation.** Rigby must wait for the
+  prior execution to reach a terminal state.
+- **`failed` / `cancelled` permit explicit re-delegation.** A fresh
+  call to `delegate` after a failure spawns a new AgentExecution row;
+  the old one stays in the timeline as the failed attempt.
+- **`completed` is NOT in the guard set.** A second `delegate` after
+  success technically creates another execution. v0 documents this
+  but doesn't block it — the assumption is that Rigby's queue UI
+  closes the work item after a successful verification, so duplicate
+  delegations are an operator choice. v1 may tighten this if
+  operationally needed.
+- **No automatic retries.** PR 8 spec rule. Each delegation is an
+  explicit Rigby action.
+
+### 15.5 MissionRun timeline events (PR 8 additions)
+
+PR 8 adds six new stable labels on the parent MissionRun's
+`OpsRunEvent` stream. Future PRs must keep these stable.
+
+| Label | Event type | When written | Idempotency key |
+|---|---|---|---|
+| `delegation_started` | `info` | At `delegate_work_item` dispatch time (in service) | none — multiple delegations create multiple events |
+| `agent_assigned` | `info` | On `AgentExecution.created=True` with `parent_object_type='RigbyWorkItem'` | `detail.execution_id` |
+| `agent_completed` | `step_pass` / `step_fail` | On terminal save (`completed` / `failed` / `cancelled`) | `detail.execution_id` |
+| `verification_started` | `info` | Immediately after `agent_completed` | written together with `agent_completed` (gated by same idempotency check) |
+| `verification_completed` | `step_pass` / `step_fail` | After deterministic verification | same |
+| `mission_closed` | `step_pass` / `info` | Final lifecycle event | same |
+
+Idempotency: the signal handler queries
+`OpsRunEvent.objects.filter(run=mission_run, label='agent_completed', detail__execution_id=str(execution.id)).exists()`
+before writing the terminal-lifecycle block. The signal can fire
+multiple times for the same AgentExecution (e.g., `update_fields`
+saves); only the first terminal save writes the lifecycle.
+
+### 15.6 Deterministic verification
+
+The verification step uses **only** structured telemetry rows already
+populated by the existing platform:
+
+```python
+def _verify_execution(execution) -> (verdict, evidence):
+    if execution.status != "completed":
+        return "failed_agent_error", {execution_status, error_message?}
+    llm_ok = LLMCallEvent.objects.filter(
+        execution_id=execution.id, status="SUCCESS"
+    ).count()
+    if llm_ok == 0:
+        return "failed_no_llm_calls", {execution_status, llm_success_count: 0}
+    tool_ok = ToolCallRecord.objects.filter(
+        trace_id=execution.trace_id, success=True
+    ).count() if execution.trace_id else 0
+    return "verified", {execution_status, llm_success_count, tool_call_success_count}
+```
+
+**No LLM-as-judge.** No external API. No human-in-the-loop. Verdict
+is fully deterministic from existing rows. `failed_no_llm_calls`
+catches the "agent returned `completed` but did no real work" case
+(would-be silent success).
+
+`MissionRun.status` is **not touched** by verification. It stays at
+whatever the intake task set (typically `passed`). The verdict lives
+in the `mission_closed` event's `detail.verdict`. This honors §10.1:
+the timeline is the audit trail, not the parent row's status field.
+
+### 15.7 Tool surface
+
+The existing `rigby_work_item` PA tool gains a 5th action:
+
+| Action | Required | Optional |
+|---|---|---|
+| `delegate` | `work_item_id` | — |
+
+The handler is a thin wrapper around
+`delegate_work_item(work_item_id)`. No additional knobs — Rigby
+doesn't pick the agent; the routing table decides.
+
+### 15.8 What changes outside the new modules
+
+| Touch | Change | Reason |
+|---|---|---|
+| `core/tasks_agents.py` `_impl_execute_agent_task` | +2 lines: read `parent_object_type` / `parent_object_id` from context, plumb into `_create_kwargs` | The sync `route()` path already honors these (via `_create_execution_record`); this brings the async wrapper to parity. Backward-compatible — empty/None when callers don't set them. |
+| `core/apps.py:ready()` | +1 try/except block calling `connect_rigby_delegation_signals()` | Standard pattern (matches PR 5's deliverable_status_signals registration). |
+| `core/signals/__init__.py` | re-export `on_delegation_lifecycle` + `connect_rigby_delegation_signals` | Standard pattern. |
+
+### 15.9 What is still out of scope
+
+- **No human notification.** Rigby's PA chat remains the only consumer.
+- **No new model.** Linkage via existing
+  `AgentExecution.parent_object_type` + `parent_object_id` (Session
+  843 fields).
+- **No new migration.**
+- **No UI.** Frontend exposure is a separate PR.
+- **No `agent_router.route()` bypass.** All execution goes through the
+  existing async wrapper (`execute_agent_task` Celery task), which
+  itself calls `route()` inside the worker.
+- **No automatic retries.** Each delegation is an explicit Rigby
+  action.
+- **No automatic planning / multi-agent orchestration.** One work item,
+  one delegated agent, one completion.
+- **No LLM in routing or verification.** Both are deterministic.
+- **No new EventBus / signal framework.** Reuse Django `post_save` on
+  the existing `AgentExecution` model.
+- **No config_tool runtime toggle.** Deploy-controlled.
+- **No `MissionRun.status` mutation.** The mission's final verdict
+  lives in the `mission_closed` event's `detail`, not the parent
+  row's status.
+
+### 15.10 What lands in this PR
+
+- `core/services/rigby_mission_delegation.py` — new module (~250
+  lines): routing table, `delegate_work_item()` service, helpers,
+  closed-vocab constants.
+- `core/signals/rigby_delegation_signals.py` — new module (~210
+  lines): single `post_save` receiver, `_verify_execution`,
+  six lifecycle-label constants.
+- `core/signals/__init__.py` — re-export the new signal hooks.
+- `core/apps.py` — register the new signal via `ready()`.
+- `core/services/td_handlers_rigby_work_queue.py` — new
+  `_rigby_work_item_delegate` method (~25 lines), wired into the
+  action dispatcher.
+- `core/services/pa_tool_schemas.py` — extend `rigby_work_item`
+  action enum + description.
+- `core/services/rigby_mission_delegation.py` import side: pulls
+  `execute_agent_task` from `core.tasks` (not `core.tasks_agents`)
+  per the Celery registration site.
+- `core/tasks_agents.py` `_impl_execute_agent_task` — additive
+  context plumbing for `parent_object_type` / `parent_object_id`.
+- `core/settings.py` — `RIGBY_DELEGATION_ENABLED` flag (default
+  `False`).
+- `core/tests/test_rigby_mission_delegation.py` — new test file
+  (~500 lines, 25 tests).
+- This §15 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+**Test summary (real PostgreSQL test DB):**
+- 25/25 PR 8 tests green in 0.58s.
+- 174/174 across PR 2 + PR 3 + PR 4 + PR 5 + PR 6 + PR 7 + PR 8
+  green in 7.76s.
+- All earlier static guardrails still pass.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
