@@ -1441,6 +1441,28 @@ RESEARCH DATA:
         """
         Session 1069: Database health — connection status, migration state,
         table row counts, and pgvector extension status.
+
+        Session 1249 P2(a) client: payload ``env`` arg selects target DB.
+        ``env='local'`` (default) preserves existing behavior. ``env='prod'``
+        delegates to ``/api/db-health-rpc/`` on the configured prod URL via
+        :meth:`_delegate_remote_db_health`. Every return value carries an
+        ``env`` tag at the top level so cross-env comparisons in chat are
+        unambiguous.
+        """
+        env = payload.get('env', 'local')
+        if env != 'local':
+            return self._delegate_remote_db_health(env, payload, trace_id)
+
+        result = self._handle_db_health_local(payload)
+        if isinstance(result, dict):
+            result.setdefault('env', 'local')
+        return result
+
+    def _handle_db_health_local(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Inner handler for the local code path. Same surface as the
+        original Session 1069 implementation; extracted so the public
+        :meth:`_handle_db_health` can layer the env selector + env-tag
+        without rewriting every action return.
         """
         from django.db import connection
 
@@ -1754,6 +1776,102 @@ RESEARCH DATA:
             return result
 
         return {'error': f'Unknown db_health action: {action}'}
+
+    def _delegate_remote_db_health(
+        self,
+        env: str,
+        payload: Dict[str, Any],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Delegate a db_health_tool call to a remote env via the RPC endpoint.
+
+        Session 1249 P2(a) client. Currently supports ``env='prod'`` only.
+        Reads endpoint URL + service token from process env:
+
+        - ``PA_DB_HEALTH_RPC_URL``: full endpoint, e.g.
+          ``https://donkey-betz-platform-production.up.railway.app/api/db-health-rpc/``
+        - ``PA_DB_HEALTH_RPC_CLIENT_TOKEN``: must match the prod server's
+          ``PA_DB_HEALTH_RPC_TOKEN`` setting.
+
+        Fail-loud-but-don't-crash: every error path returns a dict with
+        ``env``, ``action``, and ``error`` keys so the LLM caller can
+        explain what went wrong. ``env`` is stripped from the outgoing
+        payload (server endpoint does not accept it; defense against
+        accidental loops).
+        """
+        import json as _json
+        import os as _os
+        import urllib.error
+        import urllib.request
+
+        action = payload.get('action', 'unknown')
+        if env != 'prod':
+            return {
+                'env': env,
+                'action': action,
+                'error': f"unsupported env '{env}' (supported: 'local', 'prod')",
+            }
+
+        url = _os.environ.get('PA_DB_HEALTH_RPC_URL', '').strip()
+        token = _os.environ.get('PA_DB_HEALTH_RPC_CLIENT_TOKEN', '').strip()
+        missing = []
+        if not url:
+            missing.append('PA_DB_HEALTH_RPC_URL')
+        if not token:
+            missing.append('PA_DB_HEALTH_RPC_CLIENT_TOKEN')
+        if missing:
+            return {
+                'env': env,
+                'action': action,
+                'error': f"env=prod not configured: missing env var(s): {', '.join(missing)}",
+            }
+
+        outgoing = {k: v for k, v in payload.items() if k != 'env'}
+        body = _json.dumps(outgoing).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Token {token}',
+            },
+            method='POST',
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                resp_body = resp.read().decode('utf-8', errors='replace')
+                envelope = _json.loads(resp_body)
+        except urllib.error.HTTPError as exc:
+            err_body = exc.read().decode('utf-8', errors='replace')[:500]
+            return {
+                'env': env,
+                'action': action,
+                'error': f'HTTP {exc.code}: {err_body}',
+                'trace_id': trace_id,
+            }
+        except urllib.error.URLError as exc:
+            return {
+                'env': env,
+                'action': action,
+                'error': f'URL error: {exc.reason}',
+                'trace_id': trace_id,
+            }
+        except (TimeoutError, _json.JSONDecodeError) as exc:
+            return {
+                'env': env,
+                'action': action,
+                'error': f'{type(exc).__name__}: {exc}',
+                'trace_id': trace_id,
+            }
+
+        result = envelope.get('result') or {}
+        if not isinstance(result, dict):
+            result = {'raw_result': result}
+        result['env'] = env
+        if envelope.get('trace_id'):
+            result['remote_trace_id'] = envelope['trace_id']
+        return result
 
     def _handle_http_smoke_test(
         self,
