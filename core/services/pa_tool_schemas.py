@@ -3544,6 +3544,46 @@ PA_TOOL_SCHEMAS = [
             "required": ["action"],
         },
     },
+    # ── rigby_shift_brief_tool (Session 1251 PR 12A) ─────────────────────
+    {
+        "type": "function",
+        "name": "rigby_shift_brief_tool",
+        "description": (
+            "Rigby's operator shift brief — a one-minute pulse for Chris at "
+            "the start of a session. Bundles ops_digest, cockpit "
+            "worker_health + queue_lengths, session health, audit findings, "
+            "and recent activity into one structured 6-section response: "
+            "top priority, platform health, active risks, what changed, "
+            "what NOT to work on, suggested next action. Read-only; no "
+            "state mutation. Distinct from the heavier morning_brief content "
+            "workflow — this is operational status, not narrative."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["generate"],
+                    "description": "Always 'generate' for v0. Reserved for future actions.",
+                },
+                "conversation_id": {
+                    "type": "string",
+                    "description": (
+                        "Optional pinned conversation_id for the session "
+                        "health-check sub-section. Falls back to the current "
+                        "PA conversation if omitted."
+                    ),
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["10m", "1h", "6h", "24h"],
+                    "description": "Lookback window for activity counts (default: 24h).",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── ops_digest_tool ──────────────────────────────────────────────────
     {
         "type": "function",
