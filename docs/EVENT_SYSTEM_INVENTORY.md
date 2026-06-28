@@ -1459,6 +1459,170 @@ existing values without renumbering.
 
 ---
 
+## 14. PR 7 — Rigby work-queue review tools
+
+> Status: shipped in PR 7 of the Rigby Event Intake arc. PA tool
+> surface for Rigby to read and transition her own queue. **Still no
+> human notification. Still no agent dispatch.** Default OFF.
+
+### 14.1 Tools added
+
+One new PA tool, `rigby_work_item`, with four actions:
+
+| Action | Purpose | Required | Optional |
+|---|---|---|---|
+| `list` | Paginated read | — | `status`, `decision`, `priority_min`, `since` (ISO datetime), `limit` (default 25, max 100), `offset` |
+| `acknowledge` | open → acknowledged | `work_item_id` | `note` |
+| `resolve` | → resolved (sets `resolved_at`) | `work_item_id`, `outcome` (closed vocab) | `note` |
+| `ignore` | → ignored | `work_item_id`, `reason` (non-empty) | — |
+
+`outcome` closed vocab: `acted` / `delegated_externally` / `no_action_needed`.
+
+Tool surface lives in `core/services/td_handlers_rigby_work_queue.py`
+(new mixin) and is registered on `ToolDispatcher` via
+`RigbyWorkQueueReviewMixin`. Schema added to `PA_TOOL_SCHEMAS` in
+`core/services/pa_tool_schemas.py`.
+
+### 14.2 Lifecycle transitions
+
+```
+       ┌──────────┐                 ┌──────────────┐
+       │   open   │   acknowledge   │ acknowledged │
+       │ (default)│ ──────────────► │              │
+       └────┬─────┘                 └──────┬───────┘
+            │                              │
+            │   resolve (outcome)          │   resolve (outcome)
+            │   ────────────────►          │   ────────────────►
+            │                              │
+            │   ┌───────────┐              │
+            └──►│ resolved  │◄─────────────┘
+                │ (terminal)│
+                └───────────┘
+            │                              │
+            │   ignore (reason)            │   ignore (reason)
+            │   ───────────────►           │   ───────────────►
+            │                              │
+            │   ┌──────────┐               │
+            └──►│  ignored │◄──────────────┘
+                │(terminal)│
+                └──────────┘
+```
+
+**Terminal states** (`resolved`, `ignored`) cannot transition further.
+Attempting to acknowledge/resolve/ignore a terminal item returns a
+clean error (`ok=False`) with no DB side effect.
+
+**Idempotency** at each transition:
+- `acknowledge` of already-`acknowledged` → no-op response (no new
+  audit row).
+- `resolve` of already-`resolved` → no-op response.
+- `ignore` of already-`ignored` → no-op response.
+
+### 14.3 MissionRun timeline audit (Option A)
+
+**Every** state transition appends an `OpsRunEvent` row to the parent
+`MissionRun` (i.e., `source_mission_run`). This is Option A from the
+PR 7 design decision — the audit trail lives in the existing
+MissionRun timeline; **no separate transition table**.
+
+| Transition | OpsRunEvent label | `event_type` | `detail` keys |
+|---|---|---|---|
+| `* → acknowledged` | `work_item_acknowledged` | `info` | `work_item_id, from_status, to_status, note` |
+| `* → resolved` | `work_item_resolved` | `step_pass` | `work_item_id, from_status, to_status, outcome, note` |
+| `* → ignored` | `work_item_ignored` | `info` | `work_item_id, from_status, to_status, reason` |
+
+This extends the MissionRun timeline established in §11.7 with three
+new labels. Future PRs that add more transitions must keep these
+labels stable.
+
+To replay a full mission lineage:
+
+```python
+OpsRunEvent.objects.filter(run__mission_id=<mid>).order_by('created_at')
+# → intake_started → impact_assessed → decision_made
+#   → work_item_acknowledged → work_item_resolved
+#   (or → work_item_ignored)
+```
+
+One MissionRun. One ordered timeline. From event arrival to outcome.
+
+### 14.4 Feature flag behavior
+
+`settings.RIGBY_WORK_QUEUE_REVIEW_ENABLED` (default `False`).
+Environment-controlled via `RIGBY_WORK_QUEUE_REVIEW_ENABLED=true`.
+
+| Setting | Behavior |
+|---|---|
+| `False` (default) | `rigby_work_item` schema **is still advertised** to the LLM. Handler returns a structured `{ok: False, error: 'tools disabled', flag: 'RIGBY_WORK_QUEUE_REVIEW_ENABLED'}` response. No DB writes. No transitions. No audit rows. |
+| `True` | All four actions work end-to-end. Transitions write OpsRunEvent audit rows on the parent MissionRun. |
+
+**Why advertise the schema even when off:** keeps `SCHEMA_VERSION`
+stable across deploys (no cache invalidation on flip), and gives the
+LLM a clear "disabled" signal instead of "unknown tool." Operators
+get an explicit error message naming the flag.
+
+This is the **third** feature flag in the intake pipeline:
+
+| Flag | Default | Gates |
+|---|---|---|
+| `RIGBY_EVENT_INTAKE_ENABLED` (PR 5) | `False` | signal → enqueue intake |
+| `RIGBY_INTERNAL_WORK_QUEUE_ENABLED` (PR 6) | `False` | actionable decision → RigbyWorkItem |
+| `RIGBY_WORK_QUEUE_REVIEW_ENABLED` (PR 7) | `False` | PA tool actions on the queue |
+
+All three must be on for the full chain (event → intake → work item →
+Rigby review) to fire. Defaults compose to **net zero behavior change
+in production**.
+
+### 14.5 What is still out of scope
+
+- **No human notification.** Rigby's PA chat surface remains the only
+  consumer. No Discord / email / push / Workspace UI surfacing of
+  work items.
+- **No agent dispatch.** No `agent_router.route()` call from any work
+  item transition.
+- **No initiative creation.** No `Initiative.objects.create(...)`.
+- **No automatic state transitions.** Rigby explicitly transitions
+  items via the PA tools; nothing auto-acknowledges on a timer or
+  auto-resolves on event recurrence.
+- **No SLA / escalation tracking.** A work item can sit `open`
+  forever; nothing nags Rigby or escalates to Chris.
+- **No LLM-assisted decisioning.** Acknowledge / resolve / ignore are
+  manual operator actions; no model picks the transition.
+- **No frontend UI work.** Rigby uses her existing PA chat to call
+  the tools; no Workspace tab / Cockpit panel added.
+- **No new emitters.** Same set as PR 5 (DeliverableEvent →
+  status_transition).
+- **No `config_tool` runtime toggle.** Deploy-controlled flag only.
+
+### 14.6 What lands in this PR
+
+- `core/services/td_handlers_rigby_work_queue.py` — new mixin
+  (~370 lines): `RigbyWorkQueueReviewMixin`, action dispatcher,
+  per-action handlers, `_write_transition_event` helper, closed-vocab
+  constants.
+- `core/services/tool_dispatcher.py` — mixin added to
+  `ToolDispatcher`'s base class tuple; handler registered as
+  `rigby_work_item` (registry now 153 tools, up from 152).
+- `core/services/pa_tool_schemas.py` — new schema entry for the
+  `rigby_work_item` tool with action enum + parameters.
+- `core/settings.py` — new `RIGBY_WORK_QUEUE_REVIEW_ENABLED`
+  (default `False`).
+- `core/tests/test_rigby_work_queue_review.py` — new test file
+  (~430 lines, 30 tests covering flag-off, list pagination /
+  filters / ordering, each transition action, idempotency,
+  invalid-transition error paths, audit event shape, side-effect
+  containment, schema registration sanity).
+- This §14 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+**Test summary (real PostgreSQL test DB):**
+- 30/30 PR 7 tests green in 0.14s.
+- 149/149 across PR 2 + PR 3 + PR 4 + PR 5 + PR 6 + PR 7 green in 7.34s.
+- Tool dispatcher registers 153 handlers (was 152).
+- All earlier static guardrails still pass.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a

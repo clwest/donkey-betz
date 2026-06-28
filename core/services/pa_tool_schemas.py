@@ -4799,6 +4799,86 @@ PA_TOOL_SCHEMAS = [
             "required": [],
         },
     },
+    # ── Session 1250 PR 7: Rigby internal work-queue review tools ───────
+    {
+        "type": "function",
+        "name": "rigby_work_item",
+        "description": (
+            "Rigby's internal operational work queue. Read and transition "
+            "RigbyWorkItem rows produced by Rigby Event Intake. NO human "
+            "notification, NO agent dispatch — internal queue only. Gated "
+            "by RIGBY_WORK_QUEUE_REVIEW_ENABLED; when disabled, returns "
+            "a 'tools disabled' response instead of acting."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "acknowledge", "resolve", "ignore"],
+                    "description": (
+                        "list: paginated read (filters: status, decision, "
+                        "priority_min, since, limit, offset). "
+                        "acknowledge: transition open → acknowledged. "
+                        "Idempotent on already-acknowledged. Optional note. "
+                        "resolve: transition to resolved. Requires "
+                        "outcome ∈ {acted, delegated_externally, "
+                        "no_action_needed}. Optional note. Sets resolved_at. "
+                        "ignore: transition to ignored. Requires non-empty "
+                        "reason."
+                    ),
+                },
+                "work_item_id": {
+                    "type": "string",
+                    "description": "UUID of the RigbyWorkItem (for acknowledge / resolve / ignore).",
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Alias for work_item_id.",
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["open", "acknowledged", "resolved", "ignored"],
+                    "description": "For list: filter by status.",
+                },
+                "decision": {
+                    "type": "string",
+                    "enum": ["monitor", "notify"],
+                    "description": "For list: filter by intake decision class.",
+                },
+                "priority_min": {
+                    "type": "integer",
+                    "description": "For list: minimum priority (inclusive). Higher = sooner.",
+                },
+                "since": {
+                    "type": "string",
+                    "description": "For list: ISO-8601 datetime; only items created at or after this time.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "For list: max rows (default 25, max 100).",
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "For list: pagination offset (default 0).",
+                },
+                "outcome": {
+                    "type": "string",
+                    "enum": ["acted", "delegated_externally", "no_action_needed"],
+                    "description": "For resolve: closed-vocab outcome.",
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Optional note for acknowledge / resolve.",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Required non-empty reason for ignore.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──
