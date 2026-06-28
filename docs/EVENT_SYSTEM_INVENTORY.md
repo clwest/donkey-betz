@@ -1896,6 +1896,203 @@ doesn't pick the agent; the routing table decides.
 
 ---
 
+## 16. PR 9 — Local intake observation harness
+
+> Status: shipped in PR 9 of the Rigby Event Intake arc. **Two new
+> management commands. No new model. No new code paths that fire the
+> pipeline.** This PR adds observability so we can safely enable the
+> first stage locally before any downstream side-effect flag flips.
+
+### 16.1 Local-only rollout shape
+
+Per the PR 9 directive, only one flag is flipped, and only locally:
+
+| Flag | Status after PR 9 | How to enable |
+|---|---|---|
+| `RIGBY_EVENT_INTAKE_ENABLED` | local: **ON** (operator choice); production: **OFF** | `export RIGBY_EVENT_INTAKE_ENABLED=true` in your shell or `.env.local` |
+| `RIGBY_INTERNAL_WORK_QUEUE_ENABLED` | **OFF** everywhere | (deferred to later PR) |
+| `RIGBY_WORK_QUEUE_REVIEW_ENABLED` | **OFF** everywhere | (deferred to later PR) |
+| `RIGBY_DELEGATION_ENABLED` | **OFF** everywhere | (deferred to later PR) |
+
+Net behavior with `RIGBY_EVENT_INTAKE_ENABLED=true` locally + others
+OFF:
+- Every Deliverable status_transition triggers the intake task on
+  the `pa` queue.
+- The intake task writes a MissionRun (OpsRun, domain='mission',
+  run_kind='intake') with the three lifecycle OpsRunEvents
+  (`intake_started`, `impact_assessed`, `decision_made`).
+- **No RigbyWorkItem rows are created** (PR 6 flag off).
+- **No PA tool review surface for queues** (PR 7 flag off).
+- **No agent delegation** (PR 8 flag off).
+- **No notifications. No agent dispatch. No external HTTP calls.**
+
+The intake task is millisecond-scale and side-effect-bounded —
+exactly what we want to observe in isolation.
+
+**Production defaults are untouched.** PR 9 changes no settings;
+`os.environ.get('RIGBY_EVENT_INTAKE_ENABLED', 'false')` still
+evaluates to `False` in production.
+
+### 16.2 `rigby_intake_status` — recent runs + aggregates
+
+Read-only. Reports on recent intake MissionRuns and gives a
+flag-state snapshot at the top of the output.
+
+```
+python manage.py rigby_intake_status
+python manage.py rigby_intake_status --limit 20
+python manage.py rigby_intake_status --json
+```
+
+Sample human output (against an empty local DB):
+
+```
+Rigby Intake Status
+  generated: 2026-06-28T19:36:52.877804+00:00
+
+Flags:
+  [off]  RIGBY_EVENT_INTAKE_ENABLED
+  [off]  RIGBY_INTERNAL_WORK_QUEUE_ENABLED
+  [off]  RIGBY_WORK_QUEUE_REVIEW_ENABLED
+  [off]  RIGBY_DELEGATION_ENABLED
+
+Totals:
+  all-time intake runs : 0
+  last 24h             : 0
+  last 7d              : 0
+  currently running    : 0
+
+Decision breakdown (7d):
+  (no decisions in window)
+
+Recent intake runs (latest 0):
+  (no rows)
+```
+
+JSON output shape:
+
+```json
+{
+  "generated_at": "...",
+  "flags": {
+    "RIGBY_EVENT_INTAKE_ENABLED": false,
+    "RIGBY_INTERNAL_WORK_QUEUE_ENABLED": false,
+    "RIGBY_WORK_QUEUE_REVIEW_ENABLED": false,
+    "RIGBY_DELEGATION_ENABLED": false
+  },
+  "totals": {
+    "all_time": 0, "last_24h": 0, "last_7d": 0, "running_count": 0
+  },
+  "decision_breakdown_7d": {"ignore": 12, "monitor": 3, "notify": 1},
+  "recent": [
+    {
+      "mission_run_id": "...", "started_at": "...", "finished_at": "...",
+      "status": "passed", "source_event_ref": "deliverable_event:...",
+      "decision": "ignore", "mission_impact": "unknown",
+      "timeline_event_count": 3, "has_work_item": false,
+      "mission_id": "..."
+    }
+  ]
+}
+```
+
+### 16.3 `rigby_intake_lag_check` — stuck-running detector
+
+Read-only. Flags any intake MissionRun in `status='running'` past
+the threshold. **Report only — no notifications, no
+WorkspaceOperation, no remediation.**
+
+```
+python manage.py rigby_intake_lag_check
+python manage.py rigby_intake_lag_check --threshold 10
+python manage.py rigby_intake_lag_check --json
+```
+
+Sample human output (clean state):
+
+```
+Rigby Intake Lag Check — OK (threshold 5m)
+  generated: 2026-06-28T19:36:58.296008+00:00
+  No stuck intake MissionRuns.
+```
+
+Sample human output (one stuck run):
+
+```
+Rigby Intake Lag Check — 1 stuck (threshold 5m)
+  generated: 2026-06-28T19:40:00+00:00
+
+  c25e3a7d3ec5.. age=11.4m started_at=2026-06-28T19:28:36+00:00 event_ref=deliverable_event:abc...
+```
+
+The 5-minute default is a heuristic: the intake task is
+millisecond-scale; anything in `running` past that is almost
+certainly a crashed worker, a stuck dispatch, or a manual
+intervention. The threshold is operator-tunable.
+
+### 16.4 What healthy looks like
+
+After flipping `RIGBY_EVENT_INTAKE_ENABLED=true` locally and
+exercising a Deliverable status_transition (e.g., changing a
+deliverable's status via the admin or PA tool), running
+`rigby_intake_status` should show:
+
+- `Flags: [ON]  RIGBY_EVENT_INTAKE_ENABLED` (and `[off]` for the
+  other three).
+- `Totals.last_24h` increases by 1 per status transition observed.
+- `Totals.running_count == 0` (the intake task finishes
+  millisecond-scale).
+- `Decision breakdown` populated with one of `ignore` / `monitor` /
+  `notify` based on the direction of the transition.
+- Each recent row has `timeline_event_count == 3`
+  (intake_started + impact_assessed + decision_made).
+- `has_work_item: false` (PR 6 flag is off).
+
+`rigby_intake_lag_check` should consistently report
+`OK (threshold 5m) / No stuck intake MissionRuns`.
+
+If either command reports anomalies (running_count > 0 for >5min, or
+the lag check finds a stuck run, or decision_breakdown shows
+unexpected values), that's the signal to investigate **before**
+flipping any of the PR 6/7/8 flags.
+
+### 16.5 What is still out of scope
+
+- No production flag flip — only local enablement.
+- No PR 6/7/8 flag flips — those stay default OFF.
+- No human notifications surfaced by either command (Discord /
+  email / push / WorkspaceOperation / chat).
+- No remediation of stuck runs (no kill / restart / requeue).
+- No new emitters.
+- No UI / Workspace surface for the status report.
+- No automatic alerting / Beat-scheduled lag check (commands are
+  on-demand only).
+
+### 16.6 What lands in this PR
+
+- `core/management/commands/rigby_intake_status.py` — new command
+  (~170 lines).
+- `core/management/commands/rigby_intake_lag_check.py` — new
+  command (~105 lines).
+- `core/tests/test_rigby_intake_observation.py` — new test file
+  (~360 lines, 25 tests covering source-default invariants,
+  status-shape, aggregates, decision breakdown, work-item presence,
+  lag detection / threshold semantics, read-only behavior, no
+  downstream side effects).
+- This §16 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+**No model changes. No migrations. No settings changes
+(production defaults preserved). No new emitters. No new flags.**
+
+**Test summary (real PostgreSQL test DB):**
+- 25/25 PR 9 tests green in 0.15s.
+- 199/199 across PR 2 + PR 3 + PR 4 + PR 5 + PR 6 + PR 7 + PR 8 +
+  PR 9 green in 7.73s.
+- All earlier static guardrails still pass.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
