@@ -2180,6 +2180,83 @@ exercise was local-only and operator-driven.
 
 ---
 
+## 18. PR 11 — Local work queue exercise & observation write-up
+
+> Status: docs-only PR. Operator validation against the live local
+> DB. Full handoff at
+> [`docs/handoffs/SESSION_1250_PR11_LOCAL_WORK_QUEUE_EXERCISE.md`](handoffs/SESSION_1250_PR11_LOCAL_WORK_QUEUE_EXERCISE.md).
+
+### 18.1 What we did
+
+Locally flipped **two** flags (`RIGBY_EVENT_INTAKE_ENABLED` +
+`RIGBY_INTERNAL_WORK_QUEUE_ENABLED`), kept the other two OFF,
+restarted the `pa` Celery worker, then triggered the same three
+Deliverable status transitions used in PR 10:
+
+1. **forward** (`draft → ready`) — expected: `decision='ignore'`, **no
+   work item**.
+2. **backward** (`ready → draft`) — expected: `decision='monitor'`,
+   **1 work item** (`priority=3`, `status='open'`).
+3. **terminal** (`draft → archived`) — expected: `decision='notify'`,
+   **1 work item** (`priority=5`, `status='open'`).
+
+### 18.2 What happened
+
+| Transition | Decision | MissionRun? | RigbyWorkItem? | priority | status |
+|---|---|---|---|---|---|
+| forward | `ignore` | ✓ | none (correct — `ignore` not actionable) | — | — |
+| backward | `monitor` | ✓ | 1 created | 3 | open |
+| terminal | `notify` | ✓ | 1 created | 5 | open |
+
+**Net: 3 MissionRuns, 2 RigbyWorkItems.** Both items linked back to
+their source MissionRun via FK + carry the matching
+`source_event_ref`. Both `status='open'`, `resolved_at=NULL`. Titles
+populated from the v0 `_compose_work_item_fields` templates ("Monitor:
+Deliverable rework signal" / "Notify: Deliverable reached terminal
+state").
+
+`rigby_intake_status` correctly surfaced `work_item=✓` for the two
+actionable rows and `work_item=·` for the `ignore` row. Lag check OK.
+
+### 18.3 Side-effect gates verified independently
+
+- `AgentExecution.objects.filter(parent_object_type='RigbyWorkItem').count() == 0` ✓
+- `OpsRunEvent` rows with delegation lifecycle labels
+  (`delegation_started` / `agent_assigned` / `agent_completed` /
+  `verification_*` / `mission_closed`) total count = 0 ✓
+
+Stage 3 (PR 7 review tools) and Stage 4 (PR 8 delegation) held closed
+exactly as designed.
+
+### 18.4 Stage 2 verdict + next stage
+
+**Stage 2 (event → intake → MissionRun → RigbyWorkItem) is safe to
+proceed.** Every assertion in the PR 11 spec matched expected
+behavior. No anomalies (PR 10's findings were already known and
+applied preventively).
+
+**Next stage (PR 12):** flip `RIGBY_WORK_QUEUE_REVIEW_ENABLED=true`
+locally, keep `RIGBY_DELEGATION_ENABLED=false`, exercise the
+`rigby_work_item` PA tool surface (list / acknowledge / resolve /
+ignore). Detailed exercise plan in §"Recommendation — next stage
+(PR 12)" of the PR 11 handoff.
+
+### 18.5 What lands in this PR
+
+Documentation only — no code, no settings, no flag flips persisted.
+
+- `docs/handoffs/SESSION_1250_PR11_LOCAL_WORK_QUEUE_EXERCISE.md` —
+  full handoff with command outputs, expected-vs-actual table, ORM
+  dumps of both RigbyWorkItem rows, side-effect gate verification,
+  cleanup state, PR 12 exercise plan.
+- This §18 — short summary + link.
+- `docs/INDEX.md` — regenerated.
+
+Production defaults remain `False` for all four Rigby flags. Local
+DB cleaned back to baseline after the exercise.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
