@@ -15,7 +15,7 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. **Current pinned conversation: `pa-634b8fef344d4af2`** (Rigby created fresh at Session 1240 close per her own `suggest_fresh` recommendation; titled "Session 1241 — AgentsPage reality reconnect (UI-only focus)"). Seeded with the 5-surface AgentsPage punch list + S1240 close summary via `carry_forward_summary`. Health at S1240 close: pa-a2443db2e43a42dc was at 60/suggest_fresh after a 21-turn session covering frontend rot audit + 2 crash fixes + AgentsPage reality map. Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. **Current pinned conversation: `pa-3901b70e61934df7`** (Rigby created fresh at Session 1247 open via `session_tool.create_fresh` per her own `suggest_fresh` recommendation on the prior pin; titled "Session 1247 — morning_brief P1 verification + content/char-training retirement"). Seeded manually post-create_fresh because `session_tool.create_fresh` returned empty `starter_prompt` despite the `carry_forward_summary` arg — filed as Finding 2 in deliverable `6103e35c-9914-4028-82cb-2866169d580e`, then FIXED via PR #2707 (merge SHA `b5d44430`). Light usage through S1247 close — likely still green for S1248 open but health-check at session start. Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
@@ -131,7 +131,149 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1247 — CURRENT ENTRY POINT
+## SESSION 1248 — CURRENT ENTRY POINT
+
+### SESSION 1247 CLOSED — PA tool gap audit + 2 findings fixed + P2 deferred
+
+**Session window:** 2026-06-27 Saturday evening CDT.
+**Full handoff:** [`SESSION_1247_PA_TOOL_GAP_AUDIT_PLUS_2_FINDINGS_FIXED_AND_P2_DEFERRED.md`](docs/handoffs/SESSION_1247_PA_TOOL_GAP_AUDIT_PLUS_2_FINDINGS_FIXED_AND_P2_DEFERRED.md).
+
+**TL;DR:** S1247 opened on the S1246 carryover priority queue. P2 (content/char-training retirement) blocked early on a clarifying question Chris didn't have — `FleetServiceKey.count == 0` locally could be prod-only / dormant / never provisioned. Mid-session pivot: Chris asked us to audit all PA tools for gaps Rigby has hit. Self-report + Claude cross-check surfaced two fixable bugs on the session_tool surface. Those landed as PR #2707, were verified live via Rigby after a PA worker bounce.
+
+**PR shipped (1, admin-merged):**
+
+| PR | SHA | Subject | Net | Merge SHA |
+|---|---|---|---|---|
+| [#2707](https://github.com/clwest/donkey-betz-platform/pull/2707) | `e298a817` | session_tool conversation_id + create_fresh starter_prompt | +217/-29 | `b5d44430` |
+
+**Deliverables produced (3, all Donkey Betz `b4503364-…`, all `status=ready`):**
+
+| Deliverable | Purpose |
+|---|---|
+| `6103e35c-9914-4028-82cb-2866169d580e` | S1247 PA tool surface findings (3 bugs filed; 2 of 3 FIXED via #2707) |
+| `6b5570c2-42e7-4580-b4ef-c768b67967c6` | S1247 PA tool gap audit (Rigby self-report + Claude cross-check, 15,174 chars) |
+| `c5ea2f61-be21-4211-abd5-30d7c99983f7` | P2 retirement reachability map (appended deferral note, 8,921 chars) |
+
+**Headline outcomes:**
+- **2 of 3 PA tool findings actually FIXED + verified live (post-merge + worker bounce):**
+  - Finding 1: `session_tool.health_check` honors explicit `conversation_id` (was unconditional override at `unified_pa_entrypoint.py:1765`)
+  - Finding 2: `session_tool.create_fresh` uses `carry_forward_summary` as `starter_prompt` (handler was reading never-assigned `self._current_conversation_id`)
+- **P2 deferred** — FleetServiceKey blocker documented in deliverable `c5ea2f61-…`. 16-file CharacterModel reachability map grep-verified against current tree.
+- **Wrapper pin rotated** — `pa-2bb73c969fd24802` (S1246, 60/suggest_fresh) → `pa-3901b70e61934df7` (S1247 fresh).
+- **PA worker bounced** — PID 21175 → 23545, new code picked up, both fixes verified via Rigby's tool surface.
+
+**Open finding queue at S1247 close:**
+- Finding 3 (workspace_tool `total_files_written: 0` despite `total_operations: 1429`) — deferred
+- PA tool gap audit top-3 implementation sprint (deliverable `6b5570c2-…`)
+- `00-START-NEXT-SESSION.md` lines 17-18 stale local-trap doc reference — superseded by today's update but a final audit pass may surface other stale refs
+- `pa-2bb73c969fd24802` retired-thread turn growth (26→29 despite rotation) — minor follow-up
+- Section 5B verification of `autopilot_tool.drift_scan` + `diagnostics_tool.schema_handler_diff` (deliverable `6b5570c2-…`)
+- CI billing — 3 lint checks on PR #2707 didn't actually run because of GitHub Actions billing failure (Anthropic credit refill still pending). PR admin-merged anyway per the S1246 pattern.
+
+### FIRST THING Session 1248
+
+#### Priority 0 — Conversation health check
+
+`pa-3901b70e61934df7` (S1247 pin) had light usage tonight — probably still green. Run `session_tool.health_check conversation_id=pa-3901b70e61934df7` at S1248 open. Now that the Finding 1 fix is live, the explicit `conversation_id` arg will be honored — no need to swap the wrapper pin to verify health on a specific thread.
+
+#### Priority 1 — 06-28 morning_brief CUMULATIVE verification (TIME-BOUND, ~13:00 UTC Sunday = 07:00 MDT)
+
+**Use Rigby's runbook deliverable `421eeaca-fab8-4753-bd11-33a9b831ee96`** — pre-staged with the full Python verification block, pre-flight checklist (celery worker / beat alive / long_running queue depth = 0), post-fire scrub regexes, and the cf708a2e workspace leak watch.
+
+Quick-recall summary of the verification block (canonical version is in the deliverable):
+
+```python
+from core.models import CeleryTaskEvent
+from core.models_deliverables import Deliverable
+from datetime import date
+import re
+
+today = date(2026, 6, 28)
+
+ev = CeleryTaskEvent.objects.filter(
+    task_name='core.tasks.generate_morning_brief_daily',
+    started_at__date=today,
+).order_by('-started_at').first()
+assert ev and ev.status == 'SUCCESS'
+
+d = Deliverable.objects.filter(
+    user__username='chris', category='Morning Brief',
+    created_at__date=today,
+).order_by('-created_at').first()
+assert d
+assert not str(d.workspace.id).startswith('cf708a2e'), "cf708a2e leak regression"
+
+c = d.content
+bare = len(re.findall(r'(?<!\[)\bMUSCULAR\b(?!\])', c))
+assert bare == 0
+absolute_hits = re.findall(r'by\s+\d{1,2}:\d{2}\s+(AM|PM)\s+(MDT|MST)', c, re.IGNORECASE)
+assert not absolute_hits
+
+from core.models import LegacySpiderData
+assert LegacySpiderData.objects.count() >= 8170
+```
+
+#### Priority 2 — PA tool gap audit implementation sprint (NEW — chosen from S1247 deliverable `6b5570c2-…`)
+
+The S1247 gap audit produced a top-3 prioritized list. Cleanest order:
+
+(a) **`session_tool` retire/set_active/seed actions** — smallest blast radius, biggest immediate ergonomic win. Closes Session 1212 `~$3.60/day waste` carryover on retired-thread dispatches. Single tool surface, three coherent additions. `session_tool.retire(conversation_id=…)` + `session_tool.set_active(conversation_id=…)` + a hardened `seed` action that can't return empty. Implementation file: `core/services/td_handlers_core.py` (around lines 3727-3866 for the existing actions). Schema: `core/services/pa_tool_schemas.py:4673-4717`.
+
+(b) **`deliverable_tool.create return_detail` option** — lowest implementation cost of the three. Add an optional `return_detail=True` arg to the create handler that triggers a follow-up `detail` lookup before returning. Eliminates the verify-then-`set_status` round-trip pattern documented in `feedback_deliverable_create_defaults_to_completed.md`.
+
+(c) **`db_health_tool` env selector OR new `prod_db_query_tool`** — biggest design Q (auth + allowlist + read-only enforcement). Recommend route options through Rigby BEFORE coding so the diff lands on a decision she's signed off on. Unblocks P3 (below) and every future "dormant locally vs live in prod?" check.
+
+#### Priority 3 — content/char-training full retirement (DEFERRED, unblock cycle depends on P2c)
+
+**Source of truth:** deliverable `c5ea2f61-…` reachability map (8,921 chars after S1247 deferral note). 16 CharacterModel-importing files grep-verified against current tree.
+
+Unblock condition: prod-side FleetServiceKey verification. Either Rigby prod-side chat, Chris-mediated confirmation, OR (more general) shipping P2c above and using the new prod_db_query_tool to resolve the question programmatically.
+
+Once unblocked, sequence shortest-tail-first per the map. Risk-graded LOW (5 one-off tests + `content/character_training.py` dead code) / MED (`core/views_character_training.py` + URL routes at `core/urls.py:2920+`) / HIGH (`CharacterModel` table drop).
+
+#### Priority 4 — Workspace leak watch (cf708a2e-…) "real fix"
+
+S1230 F2 / S1245 / S1246 F-bonus. At S1247 close the active workspace is Donkey Betz (`b4503364-…`), NOT cf708a2e-… — so this is not currently misbehaving. The "real fix" is a behavioral policy question (what should auto-re-pin look like?) plus a code change in `core/services/workspace_*.py`. Defer until the pattern returns OR until Chris wants to debate the auto-re-pin policy.
+
+#### Priority 5 — S1115 #12 deferred list re-audit (~2026-07-13)
+
+Re-run `audit_celery_zero_fire --days 30` once 30d telemetry accumulates for the first telemetry-valid zero-fire census. The S1246 P4 `--include-direct-calls` axis (PR #2694) means per-task `direct=N` columns are now available — should radically reduce false positives.
+
+#### Priority 6 — Pick next audit domain
+
+S1245 menu (PA tools audit completed via S1247 gap audit deliverable `6b5570c2-…` — strike from list):
+1. **Spider pipeline health** — 80 spiders / 41 categories / 1.14M SpiderItemHash rows.
+2. **RAG / citation integrity** — search_docs corpus, retrieval gates, citation source verification.
+3. **24/7 advisor system** — 30 functional advisors. Last full audit Session 1208.
+
+#### Priority N — Pre-existing carryover tail
+
+- Finding 3 (workspace_tool counter decoupling) — investigate `core/models_workspace*.py` + `core/services/workspace_*.py` for `total_files_written` increment paths
+- Section 5B verification — grep `autopilot_tool.drift_scan` and `diagnostics_tool.schema_handler_diff` to verify they exist + work before requesting a new schema/handler diff tool
+- `pa-2bb73c969fd24802` 26→29 turn growth despite rotation — find what's still writing to the retired thread
+- Smoke-harness mode inconsistency (Session 1231 F5, LOW-MEDIUM)
+- Smoke-probe tagging for AgentExecution (Session 1231 F1 / R2 REC-2)
+- Promote `scripts/smoke_all_agents.py` → mgmt cmd (Session 1231 F6)
+- Audit `5318da3e-…` §R2 amendment (Session 1231 F3, P3)
+- Engineer workspace staleness (Session 1230 F3, MEDIUM)
+- Fleet-smoke wall-clock timeouts (Session 1231 F2 / R2 REC-3, LOW)
+- 80 spiders audit (last Session 1205)
+- 30 advisors audit (last Session 1208)
+- 9 body systems audit
+- 144 Discord commands audit
+- 7 fleet sibling apps at localhost:8002-8008
+- Local FleetServiceKey count=0 (S1246 carryover — still unanswered)
+
+#### Priority Last — Whatever Chris wants
+
+S1247 was a paperwork-heavy session that produced 1 small PR + 3 deliverables. P1 morning_brief verification is the only time-bound item for S1248. P2a (session_tool retire/set_active/seed) is the cleanest non-time-bound starting move. After P1 + P2, S1248 is wide open.
+
+**Not on Chris's pick — DO NOT touch unless explicitly re-prioritized:**
+- Delete the 9 dormant agent class files (deferred since Session 1222)
+- Tier 3 from P2 deliverable `7ae61cf7-…`
+- The 11 AUDIT_FINDINGS.md #12 deferred-by-policy tasks (each needs Chris green-light per #12 protocol)
+
+---
 
 ### SESSION 1246 CLOSED IN TWO PARTS
 
