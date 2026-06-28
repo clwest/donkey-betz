@@ -1086,6 +1086,183 @@ loud; legitimate drops (stale event_ref) leave a paper trail.
 
 ---
 
+## 12. PR 5 — Subscribe DeliverableEvent → Rigby Intake
+
+> Status: shipped in PR 5 of the Rigby Event Intake arc. First real
+> emitter wired. **Default OFF.** The subscriber is deploy-controlled
+> via ``settings.RIGBY_EVENT_INTAKE_ENABLED`` until PR 6 flips it on
+> after observation.
+
+### 12.1 First subscribed emitter
+
+The post_save receiver in
+`core/signals/deliverable_status_signals.py` already wrote a
+`DeliverableEvent('status_transition')` row on every Deliverable status
+flip (since Session 1095). PR 5 adds **one additional step** to that
+receiver:
+
+```
+Deliverable.status changes (forward / backward / terminal)
+   │
+   ▼ deliverable_status_signals.py
+   │
+   ├── DeliverableEvent('status_transition') row written
+   │
+   └── transaction.on_commit(lambda: _enqueue_rigby_intake(event_ref, deliverable_id))
+       │
+       ▼ if settings.RIGBY_EVENT_INTAKE_ENABLED:
+       │     rigby_event_intake.apply_async(
+       │         args=['deliverable_event:<de.id>'],
+       │         kwargs={'dry_run': True},
+       │     )
+       │     log [RIGBY_INTAKE_SUBSCRIBE] event_ref task_id deliverable_id dry_run flag
+       │
+       └── else: no-op (silent)
+```
+
+Other DeliverableEvent event_types (`synthesis_viewed`, `shared`,
+`task_created`, etc.) are **not** subscribed. Only the
+``status_transition`` path enqueues. Asserted by
+`test_synthesis_viewed_event_does_not_enqueue` and
+`test_shared_event_does_not_enqueue`.
+
+### 12.2 Feature flag behavior
+
+| Setting | Default | When False | When True |
+|---|---|---|---|
+| `RIGBY_EVENT_INTAKE_ENABLED` | `False` | `_enqueue_rigby_intake()` returns immediately; no `apply_async`. The `DeliverableEvent` row is still written (the legacy COO rework path is unaffected). | `apply_async` is called with `args=['deliverable_event:<de.id>']`, `kwargs={'dry_run': True}`, on the `pa` queue. Logged via `[RIGBY_INTAKE_SUBSCRIBE]`. |
+
+The flag is read from the environment variable
+`RIGBY_EVENT_INTAKE_ENABLED` (string `'true'`/`'false'`, case-insensitive)
+and bound at Django startup in `core/settings.py`. Operators flip it
+via deploy env, not via runtime `config_tool` — this is the **first
+real event subscription**, so deploy-controlled gating is the
+appropriate caution level for v0.
+
+### 12.3 dry_run behavior
+
+PR 5 always passes `dry_run=True`. There is no callsite in PR 5 that
+sets `dry_run=False`. That flag flip lives in PR 6 and will be gated
+behind a separate setting / decision-class allowlist.
+
+### 12.4 `transaction.on_commit` protection
+
+The enqueue is wrapped in `transaction.on_commit(lambda: ...)`. This
+guarantees:
+
+- If the surrounding transaction **commits**, the callback runs and
+  `apply_async` is invoked.
+- If the surrounding transaction **rolls back**, the callback is
+  **discarded** — no enqueue happens, so we never reference a
+  `DeliverableEvent` row that was never persisted.
+- Outside any explicit transaction (autocommit mode), the callback
+  fires immediately after the save returns.
+
+Tests verify both halves of this contract:
+`TransactionRollbackTests.test_rollback_suppresses_enqueue` and
+`test_commit_fires_enqueue`. Real `TransactionTestCase` is used here
+(not `TestCase`) because `TestCase`'s outer transaction always rolls
+back, which would prevent any `on_commit` callbacks from firing.
+
+For tests that DO use `TestCase` (the FlagOn / FlagOff classes),
+Django's `self.captureOnCommitCallbacks(execute=True)` context
+manager is used to flush callbacks at the end of the test block.
+
+### 12.5 Worker registration
+
+`core/celery.py` `app.conf.imports` tuple now includes
+`'core.services.rigby_event_intake'`. Workers import this module at
+boot, which registers the task name
+`'core.services.rigby_event_intake.rigby_event_intake'` in the Celery
+task registry. Without this, `apply_async()` from the signal handler
+would fail with `KeyError: <task name>` at runtime.
+
+Verified by `TaskRegistrationTests.test_task_is_registered_on_celery_app`
+and `test_task_in_app_conf_imports`.
+
+### 12.6 Telemetry contract
+
+On every successful enqueue, the subscriber emits a `[RIGBY_INTAKE_SUBSCRIBE]`
+log line carrying:
+
+| Field | Source | Purpose |
+|---|---|---|
+| `event_ref` | `f'deliverable_event:{de.id}'` | What was queued. |
+| `task_id` | `apply_async()` return | Trace into Celery's CeleryTaskEvent rows / `[RIGBY_INTAKE]` task log. |
+| `deliverable_id` | `instance.pk` | Trace back to the source Deliverable. |
+| `dry_run` | always `True` in PR 5 | Explicit, not implicit. |
+| `flag` | always `ON` when the line emits | Confirms the gate was checked and open. |
+
+This line is the join key between (a) the signal-side
+`[RIGBY_INTAKE_SUBSCRIBE]` log, (b) the task-side `[RIGBY_INTAKE]`
+log (PR 4 §11.6), and (c) the `MissionRun.summary` written by the
+task.
+
+### 12.7 Current operational state
+
+| Surface | State |
+|---|---|
+| `DeliverableEvent('status_transition')` post_save receiver | wired to intake task via `transaction.on_commit` |
+| `RIGBY_EVENT_INTAKE_ENABLED` setting | `False` by default (deploy-controlled) |
+| Worker task registration | live (via `app.conf.imports`) |
+| `dry_run=True` | hard-coded by subscriber; PR 5 has no way to flip it |
+| Other emitters (CeleryTaskEvent, LLMCallEvent, ImpactEvent, OpsRunEvent direct, FleetEvent, TriggerEvent, Cockpit*) | not subscribed (deferred — PR 7+) |
+| Notifications / agent dispatch / initiative creation | not enabled (deferred — PR 6 for notify, PR 7+ for others) |
+
+**Net behavior when `RIGBY_EVENT_INTAKE_ENABLED=False`** (the
+production default): zero functional change vs. PR 4. The path
+exists; no enqueues fire.
+
+### 12.8 What is still out of scope
+
+- **No flag flip to ON in production.** PR 5 ships the wiring with
+  the flag OFF. Operators may flip it in staging / locally to
+  observe; PR 6 is the first PR that recommends a production flip.
+- **No `dry_run=False`.** PR 6 introduces decision-class gating
+  (e.g., "Notify-Chris decisions actually emit notifications now").
+- **No agent dispatch.** PR 7+.
+- **No new emitters beyond DeliverableEvent.** OpsRunEvent staying
+  unsubscribed is intentional — it's the source the intake task
+  itself writes to (it would self-loop if subscribed naively).
+- **No config_tool runtime toggle.** Deploy-controlled v0 only.
+- **No LLM in assessment.** PR 4's rule-based path is the contract.
+
+### 12.9 Known limitation — pre-existing CeleryTaskEvent NOT NULL drift
+
+During eager-mode end-to-end tests in PR 5 we observed
+`IntegrityError: null value in column "queue" of relation
+"core_celerytaskevent"` from the existing Celery telemetry signal
+handlers (`core/celery_telemetry.py`). The error is **caught and
+swallowed** by the existing telemetry code, so it does not affect
+intake behavior or test results — but it indicates a pre-existing
+drift in `CeleryTaskEvent.queue` column NOT NULL constraint that
+the telemetry writer does not honor for eager-mode invocations.
+
+Out of scope for PR 5. Documented here so a future PR (or a
+`build_celery_audit` follow-up) can address it.
+
+### 12.10 What lands in this PR
+
+- `core/settings.py` — adds `RIGBY_EVENT_INTAKE_ENABLED` (default
+  `False`).
+- `core/celery.py` — adds `'core.services.rigby_event_intake'` to
+  `app.conf.imports` for worker registration.
+- `core/signals/deliverable_status_signals.py` — adds
+  `_enqueue_rigby_intake()` helper + `transaction.on_commit()` hook
+  in `record_status_transition`. Other behavior unchanged.
+- `core/tests/test_deliverable_intake_subscriber.py` — new test file
+  (~330 lines, 13 tests).
+- This §12 added to `docs/EVENT_SYSTEM_INVENTORY.md`.
+- `docs/INDEX.md` regenerated via `python manage.py build_docs_index`.
+
+**Test summary (real PostgreSQL test DB):**
+- 13/13 PR 5 tests green in 5.85s (slower than prior PRs because
+  TransactionTestCase + eager Celery require real commits).
+- 101/101 across PR 2 + PR 3 + PR 4 + PR 5 green in 6.77s.
+- All earlier static guardrails still pass.
+
+---
+
 *This is a discovery snapshot. The runtime inventory in
 `PLATFORM_INVENTORY.md` remains the authoritative source for any
 quantitative count; if this doc and the inventory disagree on a
