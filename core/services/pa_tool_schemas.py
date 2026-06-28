@@ -4683,7 +4683,10 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["health_check", "create_fresh", "list_recent", "whoami"],
+                    "enum": [
+                        "health_check", "create_fresh", "list_recent", "whoami",
+                        "retire", "set_active", "seed",
+                    ],
                     "description": (
                         "health_check: analyze current conversation freshness "
                         "(score 0-100, recommendation, reasons, auto-summary, starter prompt). "
@@ -4692,12 +4695,27 @@ PA_TOOL_SCHEMAS = [
                         "whoami: return the authenticated user's identity (username/email/id/is_staff) "
                         "plus whether the current (or supplied) conversation_id belongs to that user. "
                         "Use to confirm 'I am operating as <username>' before scope-sensitive work, "
-                        "or to verify conversation ownership when scope=mine workflows depend on it."
+                        "or to verify conversation ownership when scope=mine workflows depend on it. "
+                        "retire: mark a conversation as retired (session_active=False on all rows), "
+                        "blocking the conversation_action_dispatcher from firing stale agent "
+                        "dispatches into it (Session 1212 ~$3.60/day waste fix). Requires "
+                        "conversation_id. If retiring the currently-bound thread, requires "
+                        "force=true. "
+                        "set_active: un-retire a conversation (session_active=True on all rows). "
+                        "Inverse of retire; idempotent. Requires conversation_id. "
+                        "seed: append a [SYSTEM SEED] message into an existing conversation "
+                        "to backfill starter context. Requires conversation_id + non-empty "
+                        "content (empty seeds are rejected at the handler edge)."
                     ),
                 },
                 "conversation_id": {
                     "type": "string",
-                    "description": "Conversation ID to check health for (health_check). Defaults to current conversation.",
+                    "description": (
+                        "Conversation ID to target. Used by health_check, retire, set_active, "
+                        "seed, and the fallback summary lookup in create_fresh. Defaults to "
+                        "the current conversation for read-only actions; required for retire / "
+                        "set_active / seed."
+                    ),
                 },
                 "title": {
                     "type": "string",
@@ -4710,6 +4728,23 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "Number of recent conversations to return (list_recent, default 10).",
+                },
+                "force": {
+                    "type": "boolean",
+                    "description": (
+                        "retire only: required (true) when retiring the currently-bound "
+                        "thread. Default false — refuses to silently retire the chat the "
+                        "request arrived through. Cross-thread retires don't need this."
+                    ),
+                },
+                "content": {
+                    "type": "string",
+                    "description": (
+                        "seed only: REQUIRED non-empty seed text. Will be prefixed with "
+                        "`[SYSTEM SEED]` and stored as a real ChatConversation row with "
+                        "source='pa' so it's visible in conversation history. Whitespace "
+                        "and empty strings are rejected."
+                    ),
                 },
             },
             "required": ["action"],

@@ -3871,7 +3871,161 @@ RESEARCH DATA:
                 'conversation_owner_match': conv_owner_match,
             }
 
-        valid = ['health_check', 'create_fresh', 'list_recent', 'whoami']
+        elif action == 'retire':
+            # Session 1248 — bulk-flip session_active=False on all rows for
+            # conversation_id. Closes the ~$3.60/day stale-thread dispatch
+            # waste documented in deliverable `777d9cd8-…` (S1212 audit).
+            #
+            # Design Qs signed off by Rigby on pa-3901b70e61934df7 (S1248):
+            #   Q1(c) — require force=True if retiring the currently-bound
+            #           thread; return is_current_bound + pin-rotation notice.
+            #
+            # Currently-bound detection: PA entrypoint injects sentinel
+            # `_bound_conversation_id` into every payload (always — not
+            # setdefault) so the handler can compare against the LLM-supplied
+            # target without trusting LLM-overridable fields.
+            from core.models import ChatConversation
+            from django.db.models import Q
+
+            target = (payload.get('conversation_id') or '').strip()
+            if not target:
+                return {'error': 'session_tool.retire requires conversation_id.'}
+
+            bound = (payload.get('_bound_conversation_id') or '').strip()
+            is_current_bound = bool(bound) and target == bound
+            force = bool(payload.get('force'))
+
+            if is_current_bound and not force:
+                return {
+                    'action': 'retire',
+                    'conversation_id': target,
+                    'is_current_bound': True,
+                    'retired': False,
+                    'error': (
+                        f"Refusing to retire the currently-bound thread "
+                        f"`{target}` without force=true. This is the chat "
+                        f"you're talking to me through right now — retiring "
+                        f"it would silence dispatches mid-conversation. "
+                        f"Pass force=true to override, then rotate the "
+                        f"wrapper pin (`tools/pa_local.sh` line 70) before "
+                        f"continuing."
+                    ),
+                }
+
+            qs = ChatConversation.objects.filter(conversation_id=target, user_id=user_id)
+            previously_active = qs.filter(session_active=True).exists()
+            updated = qs.filter(session_active=True).update(session_active=False)
+
+            response = {
+                'action': 'retire',
+                'conversation_id': target,
+                'is_current_bound': is_current_bound,
+                'previously_active': previously_active,
+                'retired': True,
+                'updated_count': updated,
+            }
+            if is_current_bound:
+                response['pin_rotation_notice'] = (
+                    f"You just retired the currently-bound thread `{target}`. "
+                    f"Edit `tools/pa_local.sh` line 70 to a new conversation_id "
+                    f"(create one via session_tool.create_fresh) before any "
+                    f"further work — otherwise this PA wrapper will keep "
+                    f"dispatching into a retired thread."
+                )
+            return response
+
+        elif action == 'set_active':
+            # Session 1248 — inverse of retire. Bulk-flip session_active=True
+            # on all rows for conversation_id. Use to un-retire a thread
+            # (oops-rollback). Symmetric + idempotent.
+            #
+            # Design Qs signed off by Rigby:
+            #   Q2(c) — scope this PR to un-retire only. Do NOT introduce
+            #           UnifiedUser.pinned_pa_conversation_id (parallel
+            #           pin-of-truth) until we're ready to retrofit the
+            #           wrapper to read it.
+            from core.models import ChatConversation
+
+            target = (payload.get('conversation_id') or '').strip()
+            if not target:
+                return {'error': 'session_tool.set_active requires conversation_id.'}
+
+            qs = ChatConversation.objects.filter(conversation_id=target, user_id=user_id)
+            if not qs.exists():
+                return {
+                    'action': 'set_active',
+                    'conversation_id': target,
+                    'error': f"No conversation found with id `{target}` for this user.",
+                }
+
+            previously_retired = qs.filter(session_active=False).exists()
+            updated = qs.filter(session_active=False).update(session_active=True)
+
+            return {
+                'action': 'set_active',
+                'conversation_id': target,
+                'previously_retired': previously_retired,
+                'reactivated': True,
+                'updated_count': updated,
+            }
+
+        elif action == 'seed':
+            # Session 1248 — backfill an existing conversation with starter
+            # context. Closes the Finding-2 root-cause class (handler returned
+            # empty starter without raising).
+            #
+            # Design Qs signed off by Rigby:
+            #   Q3(a) — append as a real message row, source='pa' (not
+            #           'claude-code' — semantically misleading), prefix with
+            #           hard `[SYSTEM SEED]` marker. content REQUIRED;
+            #           reject empty/whitespace.
+            from core.models import ChatConversation
+
+            target = (payload.get('conversation_id') or '').strip()
+            content = (payload.get('content') or '').strip()
+            if not target:
+                return {'error': 'session_tool.seed requires conversation_id.'}
+            if not content:
+                return {
+                    'error': (
+                        'session_tool.seed requires non-empty content. Empty '
+                        'seeds are the Session 1247 Finding-2 root cause '
+                        'class; rejecting at the handler edge.'
+                    ),
+                }
+
+            # Verify the conversation exists + belongs to this user before
+            # writing — avoids silently seeding a typo'd id into the DB.
+            existing = ChatConversation.objects.filter(
+                conversation_id=target, user_id=user_id,
+            ).order_by('created_at').first()
+            if existing is None:
+                return {
+                    'action': 'seed',
+                    'conversation_id': target,
+                    'error': f"No conversation found with id `{target}` for this user.",
+                }
+
+            seed_message = f"[SYSTEM SEED] {content}"
+            row = ChatConversation.objects.create(
+                conversation_id=target,
+                user_id=user_id,
+                session_title=existing.session_title,
+                user_message=seed_message,
+                assistant_response="Seed acknowledged.",
+                source='pa',
+            )
+
+            return {
+                'action': 'seed',
+                'conversation_id': target,
+                'seeded': True,
+                'seed_message_id': row.id,
+                'content_length': len(content),
+                'marker': '[SYSTEM SEED]',
+            }
+
+        valid = ['health_check', 'create_fresh', 'list_recent', 'whoami', 'retire', 'set_active', 'seed']
         return {'error': f'Unknown session_tool action: {action}. Valid: {", ".join(valid)}'}
 
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────

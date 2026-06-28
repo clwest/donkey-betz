@@ -278,6 +278,50 @@ class ConversationActionDispatcher:
             result.errors.append("Action dispatch is disabled")
             return result
 
+        # Session 1248 — retired-thread gate. Closes the ~$3.60/day stale-
+        # thread dispatch waste documented in deliverable `777d9cd8-…`
+        # (S1212 audit). If every ChatConversation row for this conversation_id
+        # has session_active=False, the thread has been explicitly retired via
+        # session_tool.retire — block the dispatch with a clear error payload.
+        # Escape hatch: context.get('allow_retired') == True bypasses (staff/
+        # debug only; emit a WARN log when used).
+        try:
+            from core.models import ChatConversation
+
+            ctx = context or {}
+            allow_retired = bool(ctx.get('allow_retired'))
+            convo_qs = ChatConversation.objects.filter(conversation_id=conversation_id)
+            has_active = convo_qs.filter(session_active=True).exists()
+            has_any = convo_qs.exists()
+            if has_any and not has_active:
+                if allow_retired:
+                    logger.warning(
+                        "[dispatch_actions] allow_retired=True bypass — firing "
+                        "into retired thread conversation_id=%s (caller-supplied "
+                        "escape hatch; expected to be staff/debug only)",
+                        conversation_id,
+                    )
+                else:
+                    result.skipped_count = len(decision_summary.get('next_steps', []) or []) or 1
+                    msg = (
+                        f"Refusing to dispatch into retired thread "
+                        f"`{conversation_id}`. Un-retire with "
+                        f"session_tool.set_active(conversation_id='{conversation_id}') "
+                        f"or pass context.allow_retired=True to override "
+                        f"(staff/debug only). See deliverable 777d9cd8 for "
+                        f"the stale-thread dispatch audit context."
+                    )
+                    result.errors.append(msg)
+                    logger.warning("[dispatch_actions] %s", msg)
+                    return result
+        except Exception as _gate_err:
+            # Fail-open: don't block the live path on DB hiccups.
+            logger.warning(
+                "[dispatch_actions] retired-thread gate swallowed (%s: %s) — "
+                "continuing dispatch fail-open",
+                type(_gate_err).__name__, _gate_err,
+            )
+
         if not decision_summary:
             result.errors.append("No decision summary provided")
             return result

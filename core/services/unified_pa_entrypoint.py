@@ -1764,8 +1764,13 @@ class UnifiedPAEntrypoint:
                 # Session 1247: use setdefault so an explicit conversation_id
                 # passed by the LLM (e.g. session_tool.health_check on a
                 # different conversation) is not silently overwritten.
+                # Session 1248: also inject `_bound_conversation_id` sentinel
+                # so handlers can detect "is this action targeting the chat
+                # we're actually in?" — used by session_tool.retire to gate
+                # accidental self-retire of the live thread.
                 if self.conversation_id and isinstance(arguments, dict):
                     arguments.setdefault('conversation_id', self.conversation_id)
+                    arguments['_bound_conversation_id'] = self.conversation_id
 
                 # Per-user workspace scoping — auto-inject workspace_id
                 # so tools like deliverable_tool only return workspace data
@@ -3312,6 +3317,10 @@ class UnifiedPAEntrypoint:
         # not to handlers; this closes the gap at the payload-build layer.
         if getattr(self, 'conversation_id', None):
             payload.setdefault('conversation_id', self.conversation_id)
+            # Session 1248 — sentinel for "is this the live chat?" detection.
+            # Always set (not setdefault) so LLM can't spoof it; underscore
+            # prefix flags it as system-injected.
+            payload['_bound_conversation_id'] = self.conversation_id
 
         # Intent-specific payload adjustments
         # Session 1000B: "Tell me more about" → lookup attention item by title
