@@ -152,11 +152,12 @@ Remember: Markets are forward-looking. Look for what others are missing."""
                 markets = self._get_kalshi_markets(context)
 
                 if not markets:
+                    # Session 1246 S1247 lane K — see sports_odds_analyst.py.
+                    # Empty upstream is no_data, not a real agent failure.
                     return AgentResult(
-                        success=False,
+                        success=True,
                         message="No prediction market data available",
-                        data={},
-                        error="Kalshi spider returned no data",
+                        data={'status': 'no_data', 'reason': 'Kalshi spider returned no data'},
                         agent_name=self.name,
                         execution_time_ms=self._elapsed_ms(start_time)
                     )
