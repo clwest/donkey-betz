@@ -4843,6 +4843,16 @@ urlpatterns += [
 ]
 
 # =============================================================================
+# Session 1249 P2(a): db_health_tool prod RPC endpoint (local↔prod parity)
+# Token-gated read-only forwarder; see core/views_db_health_rpc.py
+# =============================================================================
+from core.views_db_health_rpc import db_health_rpc
+
+urlpatterns += [
+    path('api/db-health-rpc/', db_health_rpc, name='db-health-rpc'),
+]
+
+# =============================================================================
 # BPaaS: Build Packet as a Service
 # =============================================================================
 from core.views_bpaas_api import (
