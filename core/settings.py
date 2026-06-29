@@ -139,6 +139,19 @@ RIGBY_DELEGATION_ENABLED = os.environ.get(
     'RIGBY_DELEGATION_ENABLED', 'false'
 ).lower() == 'true'
 
+# Session 1252 PR 2: pinned PA conversation that Rigby posts escalation
+# summaries into when a Documentation Manager mission fails. Resolves
+# at runtime so the active pin can be updated without amending the
+# JobContract code constant (`core.employees.jobs.RIGBY.primary_chat_id`)
+# every time the pin rotates (~every 10-15 sessions). Fallback chain:
+#   (1) env value RIGBY_PRIMARY_PA_PIN, if set + non-empty
+#   (2) RIGBY.primary_chat_id from core.employees.jobs (the contract
+#       constant — may be stale; PR 1 hardcoded the S1247 pin)
+# Active local pin as of Session 1252: pa-c7263e7061a0.
+RIGBY_PRIMARY_PA_PIN = os.environ.get(
+    'RIGBY_PRIMARY_PA_PIN', ''
+).strip() or None
+
 # Session 1116: Public-read intelligence endpoint token (247globalai.com integration).
 # When unset / empty, the endpoint at /api/public/intelligence/now/ rejects every
 # request — default-off safety. See core/views_public_intelligence.py.
