@@ -830,3 +830,357 @@ class EmployeeToolStatusZeroWritesTests(TestCase):
             "mission_id": str(run.id),
         })
         self.assertEqual(OpsRun.objects.count(), before_count)
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Session 1257 PR 2.2.1 — Platform Auditor status
+# ═════════════════════════════════════════════════════════════════════
+#
+# After PR 2.2 wired the Platform Auditor task runner, the
+# ``employee_tool action=status`` handler was still hardcoded to
+# Rigby/docs_manager. PR 2.2.1 generalized the handler to use the
+# registry; these tests prove the new (employee, job, mission_run_kind)
+# triple flows through ``derive_status`` correctly without touching
+# the existing Rigby path.
+
+
+def _seed_platform_audit_mission(
+    *,
+    started_at,
+    verdict: Optional[str] = "certified",
+    status: str = "passed",
+    triggered_by: str = "beat",
+    wall_time_ms: Optional[int] = 68,
+    findings_count: int = 13,
+    issues_found_count: int = 1,
+    failed_step: Optional[str] = None,
+    error_signature: Optional[str] = None,
+    error_tail: Optional[str] = None,
+    escalation_deliverable_id: Optional[str] = None,
+    verdict_confidence: Optional[float] = 0.95,
+    finished_offset_seconds: int = 1,
+    audit_type: str = "comprehensive",
+):
+    """Create one OpsRun(domain='mission', run_kind='platform_audit')."""
+    from core.models_ops_runs import OpsRun
+
+    finished_at = started_at + timedelta(seconds=finished_offset_seconds)
+    summary: Dict[str, Any] = {
+        "verdict": verdict,
+        "verdict_confidence": verdict_confidence,
+        "verdict_issued_by": "platform_auditor",
+        "verdict_issued_at": finished_at.isoformat(),
+        "wall_time_ms": wall_time_ms,
+        "failed_step": failed_step,
+        "error_tail": error_tail,
+        "error_signature": error_signature,
+        "degraded_evidence": False,
+        # Audit-shape keys from PR 2.1 contract
+        "audit_type": audit_type,
+        "findings_count": findings_count,
+        "issues_found_count": issues_found_count,
+        "docs_audited": [
+            "CLAUDE.md", "00-START-NEXT-SESSION.md", "SPIDERS.md",
+            "AGENTS.md", "SERVICES.md", "ARCHITECTURE.md",
+        ],
+        "integrations_audited_count": 19,
+        "env_vars_checked_count": 20,
+        "models_counted": {"Agent": 89, "AgentExecution": 1234},
+        "report_deliverable_id": "fake-deliverable-uuid",
+        "report_chars": 2084,
+    }
+    if escalation_deliverable_id:
+        summary["escalation_deliverable_id"] = escalation_deliverable_id
+
+    run = OpsRun.objects.create(
+        title="platform_audit",
+        run_type="manual",
+        domain="mission",
+        run_kind="platform_audit",
+        status=status,
+        triggered_by=triggered_by,
+        summary=summary,
+        finished_at=finished_at,
+    )
+    OpsRun.objects.filter(id=run.id).update(started_at=started_at)
+    run.refresh_from_db()
+    return run
+
+
+class PlatformAuditorStatusHappyPathTests(TestCase):
+    """PR 2.2.1 — status surface works for the second registered employee."""
+
+    def test_no_missions_returns_no_data(self):
+        result = _call({
+            "action": "status",
+            "employee": "platform_auditor",
+            "job": "platform_audit",
+            "window": "7d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["employee"], "platform_auditor")
+        self.assertEqual(
+            result["employee_display_name"], "Platform Auditor"
+        )
+        self.assertEqual(result["job"], "platform_audit")
+        self.assertEqual(result["job_display_name"], "Platform Audit")
+        self.assertEqual(result["missions"]["total"], 0)
+        self.assertEqual(result["trust"]["status"], "no_data")
+        self.assertIsNone(result["trust"]["ratio"])
+        self.assertEqual(result["trust"]["current_streak"], 0)
+        self.assertEqual(result["trust"]["current_streak_kind"], "none")
+        self.assertIsNone(result["latest_mission"])
+
+    def test_single_certified_mission_yields_healthy_status(self):
+        now = timezone.now()
+        run = _seed_platform_audit_mission(
+            started_at=now - timedelta(minutes=5),
+            verdict="certified",
+            status="passed",
+        )
+        result = _call({
+            "action": "status",
+            "employee": "platform_auditor",
+            "job": "platform_audit",
+            "window": "7d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["missions"]["total"], 1)
+        self.assertEqual(result["missions"]["certified"], 1)
+        self.assertEqual(result["missions"]["rejected"], 0)
+        self.assertEqual(result["trust"]["status"], "healthy")
+        self.assertEqual(result["trust"]["ratio"], 1.0)
+        self.assertEqual(result["trust"]["current_streak"], 1)
+        self.assertEqual(
+            result["trust"]["current_streak_kind"], "certified"
+        )
+        self.assertEqual(
+            result["latest_mission"]["mission_id"], str(run.id)
+        )
+        self.assertEqual(result["latest_mission"]["verdict"], "certified")
+        self.assertFalse(result["latest_mission"]["has_escalation"])
+
+    def test_three_rejects_in_7d_trip_wires_under_review(self):
+        """Trust math + tripwire identical to docs_cascade: 3 rejected
+        in last 7 days regardless of caller window."""
+        now = timezone.now()
+        for hours_ago in (24, 48, 72):
+            _seed_platform_audit_mission(
+                started_at=now - timedelta(hours=hours_ago),
+                verdict="rejected",
+                status="failed",
+                verdict_confidence=0.0,
+                failed_step="step_2_inventory_integrations",
+                error_signature="abc123",
+            )
+        # Plus one certified.
+        _seed_platform_audit_mission(
+            started_at=now - timedelta(hours=12),
+            verdict="certified",
+        )
+
+        result = _call({
+            "action": "status",
+            "employee": "platform_auditor",
+            "job": "platform_audit",
+            "window": "30d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["missions"]["certified"], 1)
+        self.assertEqual(result["missions"]["rejected"], 3)
+        # 1 / (1 + 3) = 0.25
+        self.assertEqual(result["trust"]["ratio"], 0.25)
+        self.assertEqual(result["trust"]["status"], "under_review")
+
+    def test_status_uses_platform_audit_run_kind_not_docs_cascade(self):
+        """Critical regression check: status must scope the OpsRun
+        query by the job's mission_run_kind, NOT a hardcoded
+        'docs_cascade'.
+
+        If the handler accidentally always queries docs_cascade, this
+        test would report 0 missions for platform_auditor even when a
+        platform_audit OpsRun exists."""
+        now = timezone.now()
+        # Seed a docs_cascade mission — it must NOT leak into the
+        # platform_auditor status response.
+        _seed_mission(
+            started_at=now - timedelta(hours=2),
+            verdict="certified",
+        )
+        # Seed a real platform_audit mission.
+        _seed_platform_audit_mission(
+            started_at=now - timedelta(hours=1),
+            verdict="certified",
+        )
+
+        result = _call({
+            "action": "status",
+            "employee": "platform_auditor",
+            "job": "platform_audit",
+            "window": "7d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["missions"]["total"], 1)
+        self.assertEqual(result["missions"]["certified"], 1)
+
+        # And inverse: Rigby still sees the docs_cascade mission only.
+        rigby_result = _call({
+            "action": "status",
+            "employee": "rigby",
+            "job": "docs_manager",
+            "window": "7d",
+        })
+        self.assertTrue(rigby_result["ok"])
+        self.assertEqual(rigby_result["missions"]["total"], 1)
+        self.assertEqual(rigby_result["missions"]["certified"], 1)
+
+    def test_mission_id_hint_returns_pointer_to_evidence_action(self):
+        now = timezone.now()
+        run = _seed_platform_audit_mission(
+            started_at=now - timedelta(minutes=5),
+            verdict="certified",
+        )
+        result = _call({
+            "action": "status",
+            "employee": "platform_auditor",
+            "job": "platform_audit",
+            "mission_id": str(run.id),
+            "window": "7d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertIn("requested_mission_pointer", result)
+        pointer = result["requested_mission_pointer"]
+        self.assertEqual(pointer["mission_id"], str(run.id))
+        self.assertEqual(
+            pointer["evidence_action"], "evidence_for_mission"
+        )
+
+
+class PlatformAuditorStatusErrorPathTests(TestCase):
+
+    def test_unknown_employee_lists_both_employees(self):
+        """Generalized error response surfaces the actual registry."""
+        result = _call({
+            "action": "status",
+            "employee": "not-a-registered-employee",
+            "job": "platform_audit",
+            "window": "7d",
+        })
+        self.assertFalse(result["ok"])
+        # Both employees appear in the known list (registry is honest).
+        self.assertIn("rigby", result["known_employees"])
+        self.assertIn("platform_auditor", result["known_employees"])
+
+    def test_unknown_job_for_platform_auditor_lists_platform_audit(self):
+        """Unknown-job error for platform_auditor surfaces its actual
+        registered jobs (just platform_audit in v0)."""
+        result = _call({
+            "action": "status",
+            "employee": "platform_auditor",
+            "job": "not_a_real_job",
+            "window": "7d",
+        })
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["known_jobs"], ["platform_audit"])
+
+    def test_unknown_job_for_rigby_still_lists_docs_manager(self):
+        """Rigby's unknown-job error response unchanged after PR 2.2.1."""
+        result = _call({
+            "action": "status",
+            "employee": "rigby",
+            "job": "not_a_real_job",
+            "window": "7d",
+        })
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["known_jobs"], ["docs_manager"])
+
+
+class RigbyStatusUnchangedAfterGeneralizationTests(TestCase):
+    """PR 2.2.1 regression coverage — Rigby's path must not shift."""
+
+    def test_rigby_status_no_data_unchanged(self):
+        result = _call({
+            "action": "status",
+            "employee": "rigby",
+            "job": "docs_manager",
+            "window": "7d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["employee"], "rigby")
+        self.assertEqual(result["job"], "docs_manager")
+        self.assertEqual(result["missions"]["total"], 0)
+        self.assertEqual(result["trust"]["status"], "no_data")
+
+    def test_rigby_status_after_seeded_certified_run(self):
+        now = timezone.now()
+        run = _seed_mission(
+            started_at=now - timedelta(minutes=5),
+            verdict="certified",
+        )
+        result = _call({
+            "action": "status",
+            "employee": "rigby",
+            "job": "docs_manager",
+            "window": "7d",
+        })
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["missions"]["certified"], 1)
+        self.assertEqual(result["trust"]["ratio"], 1.0)
+        self.assertEqual(result["trust"]["status"], "healthy")
+        self.assertEqual(
+            result["latest_mission"]["mission_id"], str(run.id)
+        )
+
+
+class NoMissionRunnerCallerChangeTests(TestCase):
+    """PR 2.2.1 must NOT change the count or identity of MissionRunner
+    production callers. Status generalization is handler-only."""
+
+    def test_exactly_two_production_callers(self):
+        import ast
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parents[2]
+        core_dir = repo_root / "core"
+
+        callers = set()
+        for py in core_dir.rglob("*.py"):
+            if "/tests/" in str(py):
+                continue
+            if py.name == "mission_runner.py":
+                continue
+            try:
+                tree = ast.parse(py.read_text(), filename=str(py))
+            except Exception:
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    func_repr = ast.dump(node.func)
+                    if (
+                        "MissionRunner" in func_repr
+                        or "build_docs_manager_runner" in func_repr
+                        or "build_platform_audit_runner" in func_repr
+                    ):
+                        callers.add(str(py.relative_to(repo_root)))
+
+        job_to_factory = {
+            "docs_manager": {
+                "core/tasks_documentation_manager.py",
+                "core/jobs/docs_cascade.py",
+            },
+            "platform_audit": {
+                "core/tasks_platform_audit.py",
+                "core/jobs/platform_audit.py",
+            },
+        }
+        observed_jobs = set()
+        for path in callers:
+            for job, files in job_to_factory.items():
+                if path in files:
+                    observed_jobs.add(job)
+        self.assertEqual(
+            observed_jobs,
+            {"docs_manager", "platform_audit"},
+            "PR 2.2.1 must not add or remove MissionRunner production "
+            f"callers; observed: {sorted(callers)}",
+        )
