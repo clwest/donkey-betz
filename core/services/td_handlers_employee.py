@@ -333,6 +333,14 @@ class EmployeeHandlersMixin:
         Read-only. No writes. No new model. Trust ratio derived
         per-call. ``window`` is one of ``7d`` / ``30d`` / ``90d``.
 
+        Session 1257 PR 2.2.1: generalized from Rigby/docs_manager-only
+        to any registered (employee, job) pair. ``derive_status``
+        already accepted ``mission_run_kind`` per-call; this handler's
+        gate is the only thing that was hardcoded. Trust math is
+        unchanged (certified / (certified + rejected); deferred neutral;
+        under_review at 3 rejected in last 7 days regardless of caller
+        window).
+
         If ``mission_id`` is supplied, the response carries a pointer
         to ``evidence_for_mission`` rather than inlining evidence
         (per Rigby SIGN-WITH-EDITS amendment 1).
@@ -340,12 +348,13 @@ class EmployeeHandlersMixin:
         employee_handle = (
             payload.get("employee") or ""
         ).strip().lower()
-        if employee_handle != RIGBY.handle:
+        employee = get_employee(employee_handle)
+        if employee is None:
             return {
                 "ok": False,
                 "error": (
-                    f"v0 status supports only employee='rigby'. "
-                    f"Got {employee_handle!r}."
+                    f"Unknown employee {employee_handle!r}; "
+                    "status surface requires a registered employee."
                 ),
                 "known_employees": [
                     e.handle for e in list_employees()
@@ -353,14 +362,17 @@ class EmployeeHandlersMixin:
             }
 
         job_key = (payload.get("job") or "").strip().lower()
-        if job_key != "docs_manager":
+        job = get_job(employee_handle, job_key)
+        if job is None:
             return {
                 "ok": False,
                 "error": (
-                    f"v0 status supports only job='docs_manager'. "
-                    f"Got {job_key!r}."
+                    f"Employee {employee_handle!r} has no job "
+                    f"keyed {job_key!r}."
                 ),
-                "known_jobs": ["docs_manager"],
+                "known_jobs": list_job_keys_for_employee(
+                    employee_handle
+                ),
             }
 
         window_days = _parse_window(payload.get("window"))
@@ -379,11 +391,11 @@ class EmployeeHandlersMixin:
         from core.employees.status import derive_status
 
         return derive_status(
-            employee_handle=RIGBY.handle,
-            employee_display_name=RIGBY.display_name,
-            job_key="docs_manager",
-            job_display_name=DOCUMENTATION_MANAGER.title,
-            mission_run_kind=DOCUMENTATION_MANAGER.mission_run_kind,
+            employee_handle=employee.handle,
+            employee_display_name=employee.display_name,
+            job_key=job_key,
+            job_display_name=job.title,
+            mission_run_kind=job.mission_run_kind,
             window_days=window_days,
             mission_id_hint=mission_id_hint,
         )
