@@ -1,10 +1,13 @@
 """
-ToolDispatcher EmployeeHandlersMixin — Session 1252 PR 1.
+ToolDispatcher EmployeeHandlersMixin — Session 1252 PR 1 + 1253 PR 3.
 
-Adds two PA tools to the dispatcher:
+Adds these PA tools to the dispatcher:
 
-  * ``employee_tool`` (action=describe) — read-only inspection of the
-    AI Employee registry and the assigned JobContract(s).
+  * ``employee_tool`` (actions: describe / run_now / status /
+    evidence_for_mission) — read-only inspection of the AI Employee
+    registry and assigned JobContract(s), on-demand dispatch
+    (Rigby-only), daily-read status surface, and per-mission evidence
+    join.
   * ``mission_verdict`` (action=certify|reject|defer) — Rigby-gated
     verdict emission on a MissionRun. Wraps the canonical helper at
     ``core.employees.mission_verdict.emit_mission_verdict``.
@@ -116,14 +119,28 @@ class EmployeeHandlersMixin:
                 payload, user_id, trace_id
             )
 
+        if action == "status":
+            return self._handle_employee_status(payload, trace_id)
+
+        if action == "evidence_for_mission":
+            return self._handle_employee_evidence_for_mission(
+                payload, trace_id
+            )
+
         if action != "describe":
             return {
                 "ok": False,
                 "error": (
                     f"Unknown employee_tool action {action!r}; "
-                    f"v0 supports 'describe' and 'run_now'."
+                    f"v0 supports 'describe', 'run_now', 'status', "
+                    f"'evidence_for_mission'."
                 ),
-                "valid_actions": ["describe", "run_now"],
+                "valid_actions": [
+                    "describe",
+                    "run_now",
+                    "status",
+                    "evidence_for_mission",
+                ],
             }
 
         employee_handle = (payload.get("employee") or "").strip().lower()
@@ -298,6 +315,102 @@ class EmployeeHandlersMixin:
             "summary": terminal.summary or {},
         }
 
+    # ── employee_tool action=status (Session 1253 PR 3) ──────────────
+
+    def _handle_employee_status(
+        self,
+        payload: Dict[str, Any],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Read-only daily-read status surface for one employee + job.
+
+        Read-only. No writes. No new model. Trust ratio derived
+        per-call. ``window`` is one of ``7d`` / ``30d`` / ``90d``.
+
+        If ``mission_id`` is supplied, the response carries a pointer
+        to ``evidence_for_mission`` rather than inlining evidence
+        (per Rigby SIGN-WITH-EDITS amendment 1).
+        """
+        employee_handle = (
+            payload.get("employee") or ""
+        ).strip().lower()
+        if employee_handle != RIGBY.handle:
+            return {
+                "ok": False,
+                "error": (
+                    f"v0 status supports only employee='rigby'. "
+                    f"Got {employee_handle!r}."
+                ),
+                "known_employees": [
+                    e.handle for e in list_employees()
+                ],
+            }
+
+        job_key = (payload.get("job") or "").strip().lower()
+        if job_key != "docs_manager":
+            return {
+                "ok": False,
+                "error": (
+                    f"v0 status supports only job='docs_manager'. "
+                    f"Got {job_key!r}."
+                ),
+                "known_jobs": ["docs_manager"],
+            }
+
+        window_days = _parse_window(payload.get("window"))
+        if window_days is None:
+            return {
+                "ok": False,
+                "error": (
+                    "Unrecognized window. v0 supports '7d', '30d', "
+                    "or '90d'."
+                ),
+                "valid_windows": ["7d", "30d", "90d"],
+            }
+
+        mission_id_hint = (payload.get("mission_id") or "").strip() or None
+
+        from core.employees.status import derive_status
+
+        return derive_status(
+            employee_handle=RIGBY.handle,
+            employee_display_name=RIGBY.display_name,
+            job_key="docs_manager",
+            job_display_name=DOCUMENTATION_MANAGER.title,
+            mission_run_kind=DOCUMENTATION_MANAGER.mission_run_kind,
+            window_days=window_days,
+            mission_id_hint=mission_id_hint,
+        )
+
+    # ── employee_tool action=evidence_for_mission (PR 3) ─────────────
+
+    def _handle_employee_evidence_for_mission(
+        self,
+        payload: Dict[str, Any],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Per-mission evidence join across the 5+ evidence tables.
+
+        ``verbose=False`` (default) returns ``error_tail_preview``
+        (last 30 lines) + ``has_full_error_tail`` rather than the full
+        tail (per Rigby SIGN-WITH-EDITS amendment 2). ``verbose=True``
+        returns the full ``error_tail``.
+        """
+        mission_id = (payload.get("mission_id") or "").strip()
+        if not mission_id:
+            return {
+                "ok": False,
+                "error": "Missing required arg 'mission_id'.",
+            }
+
+        verbose = bool(payload.get("verbose"))
+
+        from core.employees.status import evidence_for_mission
+
+        return evidence_for_mission(
+            mission_id=mission_id, verbose=verbose
+        )
+
     # ── mission_verdict ──────────────────────────────────────────────
 
     def _handle_mission_verdict(
@@ -406,6 +519,28 @@ def _wait_for_terminal_mission(
             return run
         time.sleep(poll_interval_seconds)
     return None
+
+
+# ── Window parser (PR 3, module-private) ─────────────────────────────
+
+
+_WINDOW_MAP = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+}
+
+
+def _parse_window(raw: Optional[Any]) -> Optional[int]:
+    """Translate the caller's ``window`` arg into a day count.
+
+    Default is ``7d`` when unset. Returns ``None`` for unrecognized
+    inputs so the handler can refuse with a clear error.
+    """
+    if raw is None or raw == "":
+        return _WINDOW_MAP["7d"]
+    key = str(raw).strip().lower()
+    return _WINDOW_MAP.get(key)
 
 
 # ── Auth helper (module-private) ─────────────────────────────────────

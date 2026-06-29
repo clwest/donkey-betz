@@ -187,10 +187,11 @@ class EmployeeToolDescribeErrorPathTests(SimpleTestCase):
         result = _call_describe({"action": "fire", "employee": "rigby"})
         self.assertFalse(result["ok"])
         self.assertIn("Unknown employee_tool action", result["error"])
-        # Session 1252 PR 2 added 'run_now' to the action vocabulary.
+        # Session 1252 PR 2 added 'run_now'; Session 1253 PR 3 added
+        # 'status' + 'evidence_for_mission' to the action vocabulary.
         self.assertEqual(
             sorted(result["valid_actions"]),
-            ["describe", "run_now"],
+            ["describe", "evidence_for_mission", "run_now", "status"],
         )
 
     def test_missing_employee_returns_error_with_known_list(self):
