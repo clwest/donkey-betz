@@ -697,7 +697,9 @@ MORNING_BRIEF_JOB = JobContract(
 
     responsibilities=(
         "Run the morning brief once per weekday morning "
-        "(cadence finalized in PR 3.3 when the beat schedule lands).",
+        "(daily 07:00 America/Denver; beat row "
+        "``generate-morning-brief-daily`` routes to "
+        "``chief_of_staff_morning_brief_run`` per S1258 PR 3.3).",
         "Resolve the Lane 4 rotation slot per the priority chain "
         "(caller-forced → incident → revenue → signal → calendar → "
         "weekday default).",
@@ -723,13 +725,16 @@ MORNING_BRIEF_JOB = JobContract(
     ),
 
     triggers=(
-        "Cron only (v0). Beat schedule lands in PR 3.3 — daily 07:00 "
-        "local (America/Denver) per the existing "
-        "generate_morning_brief_daily comment at "
-        "core/tasks.py:5805-5807.",
+        "Cron — daily 07:00 local (America/Denver). Beat row "
+        "``generate-morning-brief-daily`` at "
+        "``core/celery.py:463-481``; task target "
+        "``chief_of_staff_morning_brief_run`` at "
+        "``core/tasks_chief_of_staff.py``. Beat field flipped to the "
+        "MissionRunner-backed runner in S1258 PR 3.3.",
         "Manual override via ``employee_tool action=run_now "
-        "employee=chief_of_staff job=morning_brief`` — lands in PR 3.2 "
-        "(task runner) along with the run_now registry entry.",
+        "employee=chief_of_staff job=morning_brief`` (PR 3.2 task "
+        "runner + ``_RUN_NOW_TASKS`` registry entry in "
+        "``core/services/td_handlers_employee.py``).",
     ),
 
     daily_routine=(

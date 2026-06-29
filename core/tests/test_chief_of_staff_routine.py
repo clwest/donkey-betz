@@ -668,43 +668,67 @@ class NoWorkflowInternalsModifiedTests(TestCase):
 
 
 # ═════════════════════════════════════════════════════════════════════
-# 7. No PeriodicTask / beat schedule added
+# 7. Post-migration beat schedule — PR 3.3 ground truth
 # ═════════════════════════════════════════════════════════════════════
 
 
-class NoBeatScheduleTests(TestCase):
+class PostMigrationBeatScheduleTests(TestCase):
+    """S1258 PR 3.3 — beat row task field flipped to MissionRunner-backed
+    runner. PR 3.2 shipped the runner without a beat schedule and kept
+    the legacy ``core.tasks.generate_morning_brief_daily`` as the daily
+    target; PR 3.3 flips the row's ``task`` field to
+    ``chief_of_staff_morning_brief_run`` and deletes the legacy body.
 
-    def test_no_periodic_task_for_chief_of_staff(self):
+    Pre-migration (PR 3.2) these assertions were inverted as the
+    ``NoBeatScheduleTests`` guardrail (no PeriodicTask for new task name
+    yet, legacy beat row still pointing at the legacy task). Flipped
+    here on the same surface so the test class name + assertions match
+    the post-migration production truth.
+    """
+
+    def test_periodic_task_row_targets_chief_of_staff_runner(self):
+        """After PR 3.3 the live PeriodicTask row should point at the
+        new MissionRunner-backed task. The check is conditional on the
+        row existing in this DB — CI fresh DBs that haven't run
+        ``sync_celery_beat --apply`` won't have it seeded."""
         from django_celery_beat.models import PeriodicTask
 
-        # The beat schedule task-name flip lands in PR 3.3; PR 3.2
-        # must NOT register any PeriodicTask for the new task name.
-        count = PeriodicTask.objects.filter(
-            task="chief_of_staff_morning_brief_run"
-        ).count()
+        row = PeriodicTask.objects.filter(
+            name="generate-morning-brief-daily",
+        ).first()
+        if row is None:
+            self.skipTest(
+                "PeriodicTask 'generate-morning-brief-daily' not present "
+                "in this DB; run `python manage.py sync_celery_beat "
+                "--apply` to seed."
+            )
         self.assertEqual(
-            count, 0,
-            "PR 3.2 must not register a PeriodicTask for "
-            "chief_of_staff_morning_brief_run — the beat row flip "
-            "lands in PR 3.3.",
+            row.task,
+            "chief_of_staff_morning_brief_run",
+            "PR 3.3 contract: live beat row task field MUST point at "
+            "the MissionRunner-backed runner.",
         )
 
-    def test_legacy_beat_row_task_unchanged(self):
-        """The existing generate-morning-brief-daily beat row (if it
-        exists in this DB) should still point at the legacy task. PR
-        3.2 must NOT flip it (that's PR 3.3)."""
-        from django_celery_beat.models import PeriodicTask
+    def test_beat_row_task_field_in_source_of_truth(self):
+        """Source-level guard: ``core/celery.py`` beat_schedule entry
+        ``generate-morning-brief-daily`` MUST target the
+        MissionRunner-backed runner. This is the dictionary the Railway
+        release ``sync_celery_beat`` reads to reconcile DB state."""
+        from core.celery import app
 
-        legacy_row = PeriodicTask.objects.filter(
-            name="generate-morning-brief-daily"
-        ).first()
-        if legacy_row is not None:
-            self.assertEqual(
-                legacy_row.task,
-                "core.tasks.generate_morning_brief_daily",
-                "PR 3.2 must not flip the legacy beat row task name — "
-                "that's PR 3.3's scope.",
-            )
+        entry = app.conf.beat_schedule.get("generate-morning-brief-daily")
+        self.assertIsNotNone(
+            entry,
+            "'generate-morning-brief-daily' missing from "
+            "core/celery.py beat_schedule.",
+        )
+        self.assertEqual(
+            entry["task"],
+            "chief_of_staff_morning_brief_run",
+            "PR 3.3 contract: source-of-truth beat schedule entry "
+            "MUST target chief_of_staff_morning_brief_run (not the "
+            "deleted legacy core.tasks.generate_morning_brief_daily).",
+        )
 
 
 # ═════════════════════════════════════════════════════════════════════
