@@ -64,22 +64,38 @@ def _check(name, passed, evidence=''):
 
 
 def check_beat_fire():
+    """Check the morning brief beat fired on TARGET_DATE.
+
+    Accepts both pre- and post-S1258-PR-3.3 task names so the script
+    works for historical 06-27 verification (legacy task) and for
+    post-migration fires (MissionRunner-backed task). The migration
+    preserves the beat row name + cadence; only the task target
+    changed. CeleryTaskEvent.task_name reflects the dispatched task
+    name, so historical rows still carry the legacy name and
+    post-migration rows carry the new one.
+    """
+    from django.db.models import Q
     from core.models import CeleryTaskEvent
     ev = CeleryTaskEvent.objects.filter(
-        task_name='core.tasks.generate_morning_brief_daily',
+        Q(task_name='core.tasks.generate_morning_brief_daily')
+        | Q(task_name='chief_of_staff_morning_brief_run'),
         started_at__date=TARGET_DATE,
     ).order_by('-started_at').first()
     if not ev:
         return _check(
             f'1. Beat task fired on {TARGET_DATE}',
             False,
-            'No CeleryTaskEvent row found. Check beat process is running '
-            'and that `pkill -9 -f celery; rm -f .celery*.pid; make celery` '
+            'No CeleryTaskEvent row found for either '
+            'core.tasks.generate_morning_brief_daily (pre-S1258) or '
+            'chief_of_staff_morning_brief_run (post-S1258 PR 3.3). '
+            'Check beat process is running and that '
+            '`pkill -9 -f celery; rm -f .celery*.pid; make celery` '
             'ran before bed last night.',
         )
     return _check(
         f'1. Beat task fired on {TARGET_DATE}',
         True,
+        f'task_name={ev.task_name} '
         f'started_at={ev.started_at.isoformat()} '
         f'duration_seconds={ev.duration_seconds} status={ev.status}',
     ), ev

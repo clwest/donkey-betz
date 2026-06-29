@@ -1,6 +1,6 @@
 """Session 1233 Sub-step C — workspace materialization + daily beat task.
 
-Three test classes:
+Test classes:
 
 1. ``MorningBriefWorkspaceMaterializationTests`` —
    ``_get_or_create_morning_brief_workspace`` is idempotent, scoped per
@@ -8,10 +8,18 @@ Three test classes:
 2. ``MorningBriefDeliverableWorkspaceLinkTests`` —
    ``_execute_create_morning_brief_deliverable_step`` writes the
    deliverable's ``workspace_id`` to the materialized workspace.
-3. ``GenerateMorningBriefDailyTaskTests`` — the
-   ``generate_morning_brief_daily`` shared task dispatches the
-   workflow, returns structured telemetry, and gracefully handles
-   missing user.
+3. ``MorningBriefBeatScheduleRegistrationTests`` — the beat schedule
+   entry ``generate-morning-brief-daily`` is registered with the
+   MissionRunner-backed task target + correct cadence.
+4. ``MorningBriefBeatTaskTelemetryTests`` — DELETED in S1258 PR 3.3
+   (legacy ``generate_morning_brief_daily`` task body removed; the
+   new task's telemetry is covered by
+   ``test_chief_of_staff_routine.SuccessPathTests`` and
+   ``test_employees_chief_of_staff``).
+5. ``GenerateMorningBriefDailyTaskTests`` — DELETED in S1258 PR 3.3
+   for the same reason.
+6. ``MorningBriefLaneWorkspaceThreadTests`` — workflow-internal
+   resolution of the target workspace (unchanged by PR 3.3).
 
 Run::
 
@@ -19,7 +27,7 @@ Run::
 """
 
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -216,340 +224,107 @@ class MorningBriefDeliverableWorkspaceLinkTests(TestCase):
         self.assertEqual(deliverable.user, self.user)
 
 
-class GenerateMorningBriefDailyTaskTests(TestCase):
-    """Session 1233 Sub-step C — daily beat task dispatch + telemetry."""
-
-    def setUp(self):
-        # Sole platform user per CLAUDE.md § Session 1098 fix.
-        self.chris = User.objects.create_user(
-            username='chris',
-            password='test',
-        )
-
-    def test_task_with_no_user_id_looks_up_chris(self):
-        """Default beat dispatch passes no user_id → task falls back
-        to looking up 'chris'.
-
-        Session 1234 D2.telemetry: mock_result uses the ACTUAL workflow
-        result shape (``steps`` key, per-step ``result`` dict carrying
-        the handler's return). Pre-fix this test passed by accident
-        because both the beat task AND the mock used the wrong
-        ``step_results`` + ``context`` keys.
-        """
-        from core.tasks import generate_morning_brief_daily
-
-        mock_result = {
-            'success': True,
-            'workflow': 'morning_brief',
-            'steps': [
-                {'name': 'rotation_slot_resolve',
-                 'result': {
-                     'success': True,
-                     'rotation_slot': 'ai_infra_deep_dive',
-                     'reason': 'weekday_default:0',
-                 }},
-                {'name': 'lane_4_rotating_focus',
-                 'result': {
-                     'success': True,
-                     'output': 'lane 4 text',
-                     'slot_used': 'ai_infra_deep_dive',
-                     'agent_name': 'ResearchAgent',
-                 }},
-                {'name': 'create_deliverable',
-                 'result': {
-                     'success': True,
-                     'deliverable_id': 'deliv-uuid-123',
-                     'workspace_id': 'ws-uuid-456',
-                     'title': 'Morning Brief — 2026-06-25',
-                 }},
-            ],
-        }
-        with patch(
-            'core.services.workflow_orchestration_agent.'
-            'WorkflowOrchestrationAgent.execute',
-            return_value=mock_result,
-        ) as mock_execute:
-            result = generate_morning_brief_daily()
-
-        self.assertTrue(result['success'])
-        self.assertEqual(result['workflow'], 'morning_brief')
-        self.assertEqual(result['deliverable_id'], 'deliv-uuid-123')
-        self.assertEqual(result['workspace_id'], 'ws-uuid-456')
-        self.assertEqual(result['rotation_slot'], 'ai_infra_deep_dive')
-        self.assertEqual(result['lane_4_slot_used'], 'ai_infra_deep_dive')
-        self.assertEqual(result['user_id'], str(self.chris.id))
-
-        # Verify the workflow was dispatched with workflow='morning_brief'.
-        mock_execute.assert_called_once()
-        call_kwargs = mock_execute.call_args.kwargs
-        self.assertEqual(call_kwargs.get('workflow'), 'morning_brief')
-        self.assertIn('Morning Brief —', call_kwargs.get('topic', ''))
-
-    def test_task_returns_error_when_no_user_found(self):
-        """Missing user → task returns failure (does not raise)."""
-        from core.tasks import generate_morning_brief_daily
-        # User chris from setUp is the only test user; pass a non-existent UUID.
-        result = generate_morning_brief_daily(
-            user_id='00000000-0000-0000-0000-000000000000',
-        )
-        self.assertFalse(result['success'])
-        self.assertIn('no target user found', result['error'])
-
-    def test_task_returns_failure_telemetry_when_workflow_raises(self):
-        """Workflow exception → task returns failure dict, does not
-        propagate (beat task should not crash the worker)."""
-        from core.tasks import generate_morning_brief_daily
-
-        with patch(
-            'core.services.workflow_orchestration_agent.'
-            'WorkflowOrchestrationAgent.execute',
-            side_effect=RuntimeError("simulated workflow crash"),
-        ):
-            result = generate_morning_brief_daily()
-
-        self.assertFalse(result['success'])
-        self.assertIn('RuntimeError', result['error'])
-        self.assertIn('simulated workflow crash', result['error'])
-        self.assertEqual(result['workflow'], 'morning_brief')
-
-    def test_task_raises_when_workflow_returns_failure(self):
-        """Session 1234 D1 fail-loud (Rigby-ratified).
-
-        The 2026-06-25 first-fire postmortem: ``execute()`` returned
-        ``{'success': False, 'step_results': [...lane_4 failed...]}``
-        normally (no exception). The beat task then returned a
-        success-False dict to Celery, which recorded SUCCESS.
-        Monitoring saw a clean green run. Workflow had collapsed at
-        Step 5 with deliverable_id=None.
-
-        After D1: workflow.success=False MUST raise so Celery records
-        FAILURE. Test guards that contract. See
-        feedback_factory_silent_none_footgun.md.
-        """
-        from core.tasks import generate_morning_brief_daily
-
-        # Replays the exact failure shape from task 9d00907a-…
-        # Session 1234 D2.telemetry: uses ``steps`` key (the actual
-        # _compile_final_result return shape), not ``step_results``.
-        mock_result = {
-            'success': False,
-            'workflow': 'morning_brief',
-            'steps': [
-                {'name': 'rotation_slot_resolve',
-                 'result': {
-                     'success': True,
-                     'rotation_slot': 'gtm_pipeline_health',
-                     'reason': 'weekday_default:3',
-                 }},
-                {'name': 'lane_1_platform_readiness',
-                 'result': {'success': True}},
-                {'name': 'lane_2_build_focus',
-                 'result': {'success': True}},
-                {'name': 'lane_3_competitive_landscape',
-                 'result': {'success': True}},
-                {'name': 'lane_4_rotating_focus',
-                 'result': {
-                     'success': False,
-                     'error': "Lane 4 agent 'OpportunityPipelineAgent' "
-                              "reported failure for slot 'gtm_pipeline_health': "
-                              "no error/message/output",
-                     'slot_used': 'gtm_pipeline_health',
-                     'agent_name': 'OpportunityPipelineAgent',
-                 }},
-            ],
-        }
-        with patch(
-            'core.services.workflow_orchestration_agent.'
-            'WorkflowOrchestrationAgent.execute',
-            return_value=mock_result,
-        ):
-            with self.assertRaises(RuntimeError) as cm:
-                generate_morning_brief_daily()
-
-        # Verify the raised exception carries the diagnostic info that the
-        # 2026-06-25 first-fire was missing.
-        msg = str(cm.exception)
-        self.assertIn('lane_4_rotating_focus', msg)
-        self.assertIn('OpportunityPipelineAgent', msg)
-
-    def test_task_returns_success_when_workflow_succeeds(self):
-        """Regression guard: the success path must still return a dict
-        (do NOT raise) when the workflow completes successfully. Pairs
-        with the D1 fail-loud raise to ensure the success branch wasn't
-        accidentally caught by the failure branch."""
-        from core.tasks import generate_morning_brief_daily
-
-        mock_result = {
-            'success': True,
-            'workflow': 'morning_brief',
-            'steps': [
-                {'name': 'create_deliverable',
-                 'result': {
-                     'success': True,
-                     'deliverable_id': 'deliv-uuid-456',
-                 }},
-            ],
-        }
-        with patch(
-            'core.services.workflow_orchestration_agent.'
-            'WorkflowOrchestrationAgent.execute',
-            return_value=mock_result,
-        ):
-            result = generate_morning_brief_daily()
-
-        self.assertTrue(result['success'])
-        self.assertEqual(result['deliverable_id'], 'deliv-uuid-456')
-
-
-class MorningBriefBeatTaskTelemetryTests(TestCase):
-    """Session 1234 D2.telemetry — beat task reads correct workflow keys.
-
-    The 2026-06-25 final D2 verification (task 56be98e7-…) shipped a
-    real brief end-to-end BUT the beat task return reported
-    ``deliverable_id=None`` because the orchestrator's
-    ``_compile_final_result`` sets ``result['steps']`` (not
-    ``'step_results'``) and does not include a top-level ``'context'``
-    key. Pre-fix the beat task read both wrong keys, so every telemetry
-    field defaulted to None even when the underlying step results carried
-    real values. These tests lock in the fix.
-    """
-
-    def setUp(self):
-        self.chris = User.objects.create_user(
-            username='chris', password='test',
-        )
-
-    def test_telemetry_uses_steps_key_not_step_results(self):
-        """Replays the exact 2026-06-25 task 56be98e7-… shape.
-        The actual workflow result uses 'steps', not 'step_results'.
-        Pre-fix the beat task returned deliverable_id=None despite a
-        real deliverable being created."""
-        from core.tasks import generate_morning_brief_daily
-
-        mock_result = {
-            'success': True,
-            'workflow': 'morning_brief',
-            # ACTUAL _compile_final_result shape: 'steps' key.
-            'steps': [
-                {'name': 'rotation_slot_resolve',
-                 'result': {
-                     'success': True,
-                     'rotation_slot': 'gtm_pipeline_health',
-                     'reason': 'weekday_default:3',
-                 }},
-                {'name': 'lane_4_rotating_focus',
-                 'result': {
-                     'success': True,
-                     'output': 'gtm bullets',
-                     'slot_used': 'gtm_pipeline_health',
-                     'agent_name': 'COOAgent',
-                 }},
-                {'name': 'create_deliverable',
-                 'result': {
-                     'success': True,
-                     'deliverable_id': '88e2396b-aec3-4006-a1d0-7d94cba49d04',
-                     'workspace_id': '19807888-862e-4a1a-b15d-f6c95b97e5a1',
-                 }},
-            ],
-        }
-        with patch(
-            'core.services.workflow_orchestration_agent.'
-            'WorkflowOrchestrationAgent.execute',
-            return_value=mock_result,
-        ):
-            result = generate_morning_brief_daily()
-
-        # All four telemetry fields MUST be populated from the steps.
-        self.assertTrue(result['success'])
-        self.assertEqual(result['deliverable_id'],
-                         '88e2396b-aec3-4006-a1d0-7d94cba49d04',
-                         "deliverable_id MUST be extracted from "
-                         "steps[].result.deliverable_id of the "
-                         "create_deliverable step.")
-        self.assertEqual(result['workspace_id'],
-                         '19807888-862e-4a1a-b15d-f6c95b97e5a1')
-        self.assertEqual(result['rotation_slot'], 'gtm_pipeline_health',
-                         "rotation_slot MUST come from the "
-                         "rotation_slot_resolve step's result, not from "
-                         "a non-existent top-level result['context'].")
-        self.assertEqual(result['lane_4_slot_used'], 'gtm_pipeline_health',
-                         "lane_4_slot_used MUST come from the "
-                         "lane_4_rotating_focus step's result.slot_used.")
-
-    def test_failure_telemetry_uses_steps_key(self):
-        """The MORNING_BRIEF_FAILED log line + RuntimeError MUST surface
-        the actual failed step name + error — pre-fix both fields
-        defaulted to None because step_results was always empty."""
-        from core.tasks import generate_morning_brief_daily
-
-        mock_result = {
-            'success': False,
-            'workflow': 'morning_brief',
-            'steps': [
-                {'name': 'rotation_slot_resolve',
-                 'result': {
-                     'success': True,
-                     'rotation_slot': 'sports_edge_scan',
-                 }},
-                {'name': 'lane_4_rotating_focus',
-                 'result': {
-                     'success': False,
-                     'error': "no multi-bookmaker odds data available",
-                     'slot_used': 'sports_edge_scan',
-                     'agent_name': 'SharpActionDetector',
-                 }},
-            ],
-        }
-        with patch(
-            'core.services.workflow_orchestration_agent.'
-            'WorkflowOrchestrationAgent.execute',
-            return_value=mock_result,
-        ):
-            with self.assertRaises(RuntimeError) as cm:
-                generate_morning_brief_daily()
-
-        # RuntimeError MUST name the actual failed step + error
-        msg = str(cm.exception)
-        self.assertIn('lane_4_rotating_focus', msg,
-                      "RuntimeError MUST identify the failed step by name "
-                      "(was 'None' pre-fix).")
-        self.assertIn('no multi-bookmaker odds data', msg,
-                      "RuntimeError MUST carry the failed step's error "
-                      "string (was 'no error string captured' pre-fix).")
+# NOTE (S1258 PR 3.3): GenerateMorningBriefDailyTaskTests +
+# MorningBriefBeatTaskTelemetryTests were deleted here. They exercised
+# the legacy ``core.tasks.generate_morning_brief_daily`` task body,
+# which was removed in this PR. Equivalent coverage of the
+# MissionRunner-backed Chief of Staff task now lives in:
+#   * ``core/tests/test_chief_of_staff_routine.py`` (SuccessPathTests,
+#     fail-loud raise contract, mission timeline + verdict semantics)
+#   * ``core/tests/test_employees_chief_of_staff.py`` (task
+#     registration, runner factory, production caller count = 3)
 
 
 class MorningBriefBeatScheduleRegistrationTests(TestCase):
     """Source-level guard: the beat schedule has the morning_brief entry."""
 
-    def test_generate_morning_brief_daily_registered_in_beat_schedule(self):
+    def test_beat_row_targets_chief_of_staff_runner(self):
+        """S1258 PR 3.3 post-migration ground truth: the beat row
+        ``generate-morning-brief-daily`` MUST route to the
+        MissionRunner-backed ``chief_of_staff_morning_brief_run``.
+        Cadence + queue + row name preserved from pre-migration."""
         from core.celery import app
         schedule = app.conf.beat_schedule
         self.assertIn('generate-morning-brief-daily', schedule)
         entry = schedule['generate-morning-brief-daily']
         self.assertEqual(
-            entry['task'], 'core.tasks.generate_morning_brief_daily',
+            entry['task'], 'chief_of_staff_morning_brief_run',
+            "S1258 PR 3.3 flipped the beat row's task field; "
+            "if this fails, the migration was reverted or the "
+            "task name drifted from the @shared_task name= kwarg "
+            "in core/tasks_chief_of_staff.py.",
         )
         # Crontab must fire at 7:00 AM Denver per spec § Scheduling.
+        # PR 3.3 preserves cadence — only the task target changed.
         from celery.schedules import crontab
         sched = entry['schedule']
         self.assertIsInstance(sched, crontab)
         # crontab.hour and crontab.minute are frozensets of ints
         self.assertEqual(sched.hour, {7})
         self.assertEqual(sched.minute, {0})
+        # Queue + expires preserved.
+        self.assertEqual(entry['options']['queue'], 'default')
+        self.assertEqual(entry['options']['expires'], 3600)
 
-    def test_generate_morning_brief_daily_not_in_local_deny_tasks(self):
+    def test_morning_brief_beat_row_not_in_local_deny_tasks(self):
         """Session 1239 flip: `generate-morning-brief-daily` is INTENTIONALLY
         kept out of LOCAL_DENY_TASKS so it fires daily on local for Chris's
         Sub-step E dogfood loop (Mon-Fri qualitative verdicts → tightening
         PRs). Pre-1239 the task was deny-listed because the brief was
         produced from a 5+ LLM-call pipeline and chris only read it on prod.
         After Sub-step D shipped (Sessions 1235-1238), the local fire is the
-        cheapest + tightest iteration loop for content-quality tuning. If
-        cost ever becomes a concern, deny it again."""
+        cheapest + tightest iteration loop for content-quality tuning. The
+        S1258 PR 3.3 task-target flip does not change this — the beat row
+        NAME is the LOCAL_DENY_TASKS key, not the task target. If cost ever
+        becomes a concern, deny here again."""
         from core.management.commands.add_critical_celery_tasks import (
             LOCAL_DENY_TASKS,
         )
         self.assertNotIn('generate-morning-brief-daily', LOCAL_DENY_TASKS)
+
+    def test_legacy_generate_morning_brief_daily_symbol_removed(self):
+        """S1258 PR 3.3 regression guard: the legacy
+        ``generate_morning_brief_daily`` task body was deleted from
+        ``core.tasks``. Any future re-introduction (accidental revert,
+        cherry-pick from a stale branch) would break the beat-row contract
+        because the worker registry would have a duplicate name conflict.
+        """
+        import core.tasks
+        self.assertFalse(
+            hasattr(core.tasks, 'generate_morning_brief_daily'),
+            "core.tasks.generate_morning_brief_daily was deleted in "
+            "S1258 PR 3.3. If this assertion fails, either the legacy "
+            "task body was reintroduced or the beat row was reverted "
+            "WITHOUT restoring the body — both are migration drift.",
+        )
+
+    def test_periodic_task_row_targets_chief_of_staff_runner(self):
+        """S1258 PR 3.3 DB-state guard: the live PeriodicTask row named
+        ``generate-morning-brief-daily``, when it exists in this DB, MUST
+        point its ``task`` field at ``chief_of_staff_morning_brief_run``.
+
+        The row is created by ``sync_celery_beat --apply`` reading
+        ``core/celery.py``; this test verifies the DB side of the
+        migration is in sync with the source-of-truth beat schedule.
+        Some test environments don't seed the row (CI fresh DB) — the
+        check is conditional on the row existing.
+        """
+        from django_celery_beat.models import PeriodicTask
+        row = PeriodicTask.objects.filter(
+            name='generate-morning-brief-daily',
+        ).first()
+        if row is None:
+            self.skipTest(
+                "PeriodicTask 'generate-morning-brief-daily' not present "
+                "in this DB; run `python manage.py sync_celery_beat "
+                "--apply` to seed."
+            )
+        self.assertEqual(
+            row.task, 'chief_of_staff_morning_brief_run',
+            "PeriodicTask DB row task field drifted from PR 3.3 target. "
+            "Either sync_celery_beat hasn't run since the flip, or the "
+            "row was hand-edited.",
+        )
 
 
 class MorningBriefLaneWorkspaceThreadTests(TestCase):
