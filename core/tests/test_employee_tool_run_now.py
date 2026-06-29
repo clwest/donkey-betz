@@ -245,9 +245,9 @@ class RunNowDispatchTests(TestCase):
             "core.tasks_documentation_manager."
             "rigby_documentation_manager_daily.delay"
         ) as delay_mock, patch(
-            "core.tasks_documentation_manager.call_command"
+            "core.jobs.docs_cascade.call_command"
         ) as cc_mock, patch(
-            "core.tasks_documentation_manager.subprocess.run"
+            "core.jobs.docs_cascade.subprocess.run"
         ) as sp_mock:
             delay_mock.return_value = MagicMock(id="abc")
             _call_run_now(
