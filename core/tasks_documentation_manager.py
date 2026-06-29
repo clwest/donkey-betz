@@ -712,18 +712,47 @@ def _create_or_append_escalation_deliverable(
         content=body,
         preview_content=body[:500] + ("..." if len(body) > 500 else ""),
         workspace_id=workspace_id,
+        # Session 1252 PR 2 (Rigby SIGN-WITH-EDITS): we explicitly
+        # create at status='completed' even though direct ORM would
+        # otherwise land at the model default 'ready'. This matches
+        # what the PA dispatcher's `deliverable_tool.create` path
+        # produces (per feedback_deliverable_create_defaults_to_completed.md),
+        # AND it guarantees the next step's completed→ready flip is a
+        # genuine transition that fires pre_save/post_save signals and
+        # writes the DeliverableEvent('status_transition') audit row
+        # Rigby requires. Without this, the deliverable would land
+        # 'ready' directly and no audit row would exist for the
+        # escalation event.
+        status="completed",
     )
     deliverable.save()
 
     # Per contract escalation_visibility step 2: force the new
     # publish_candidate deliverable from the create-default `completed`
     # to a visible `ready` state via the canonical set_status path.
-    _force_deliverable_ready(deliverable.id)
+    # Threads ops_run_id + error_signature into the audit row that the
+    # status_transition signal will write — Rigby PR 2 SIGN-WITH-EDITS
+    # requirement: the audit must include both pointers so the
+    # transition is queryable + traceable without relying on
+    # deliverable.status alone.
+    _force_deliverable_ready(
+        deliverable.id,
+        ops_run_id=mission.id,
+        error_signature=error_signature,
+    )
 
     return str(deliverable.id), False, None
 
 
-def _force_deliverable_ready(deliverable_id: Any) -> None:
+_DOCS_MANAGER_SOURCE = "DocsManager"
+
+
+def _force_deliverable_ready(
+    deliverable_id: Any,
+    *,
+    ops_run_id: Any,
+    error_signature: str,
+) -> None:
     """Flip a newly-created Deliverable from completed→ready.
 
     Mirrors the contract of ``deliverable_tool action=set_status`` —
@@ -738,7 +767,40 @@ def _force_deliverable_ready(deliverable_id: Any) -> None:
     Per memory rule feedback_deliverable_create_defaults_to_completed.md,
     new Deliverable rows land as ``completed`` regardless of the
     explicit param — this is the standard workaround.
+
+    Session 1252 PR 2 (Rigby SIGN-WITH-EDITS): the transition emits a
+    DeliverableEvent('status_transition') row with the following
+    queryable context (via the signal's whitelist, see
+    ``core/signals/deliverable_status_signals.py``):
+
+      metadata.from              = 'completed'
+      metadata.to                = 'ready'
+      metadata.direction         = 'backward' (per classify_transition)
+      metadata.ctx.source        = 'DocsManager'
+      metadata.ctx.ops_run_id    = <UUID of the failing OpsRun>
+      metadata.ctx.error_signature = <16-char hash from dedupe>
+      metadata.ctx.reason        = <explanatory string>
+
+    The DeliverableEvent.source top-level column also reads
+    'DocsManager' for cheap indexed queries; the actor user FK
+    resolves to whoever Rigby runs as.
+
+    The audit row is *additional* to the deliverable.status field —
+    queries that need to prove "Docs Manager escalated and audited"
+    should join DeliverableEvent on event_type='status_transition' +
+    source='DocsManager', NOT rely on Deliverable.status alone.
     """
+    if not error_signature:
+        raise ValueError(
+            "_force_deliverable_ready requires a non-empty "
+            "error_signature so the audit row is queryable."
+        )
+    if not ops_run_id:
+        raise ValueError(
+            "_force_deliverable_ready requires a non-null "
+            "ops_run_id so the audit row links back to the MissionRun."
+        )
+
     from core.models_deliverables import Deliverable
 
     user_id = _resolve_runs_as_user_id()
@@ -773,7 +835,9 @@ def _force_deliverable_ready(deliverable_id: Any) -> None:
         ),
         "actor_user_id": str(user_id) if user_id else None,
         "trace_id": None,
-        "source": "docs_manager_daily.force_deliverable_ready",
+        "source": _DOCS_MANAGER_SOURCE,
+        "ops_run_id": str(ops_run_id),
+        "error_signature": error_signature,
     }
     obj.status = "ready"
     obj.save(update_fields=["status"])

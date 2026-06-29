@@ -450,6 +450,184 @@ class DedupeBehaviorTests(TestCase):
             )
 
 
+# ── Audit trail (Rigby PR 2 SIGN-WITH-EDITS) ─────────────────────────
+
+
+class EscalationAuditTrailTests(TestCase):
+    """Rigby's PR 2 sign-off requirement: every escalation that flips a
+    Deliverable from completed→ready must emit an auditable transition
+    record with previous_status, new_status, source='DocsManager',
+    ops_run_id, and error_signature. The audit MUST NOT rely on the
+    Deliverable's current status alone — independent join against
+    DeliverableEvent(event_type='status_transition') is the contract.
+    """
+
+    def setUp(self):
+        _setup_user_and_workspace()
+
+    def _run_failure_and_get_artifacts(self):
+        with ExitStack() as stack:
+            _mock_step_1_failure(stack, error_line="audit test fail")
+            _run_task()
+        run = OpsRun.objects.filter(
+            run_kind="docs_cascade", status="failed"
+        ).order_by("-started_at").first()
+        deliverable = Deliverable.objects.filter(
+            title__startswith="Docs Manager Escalation"
+        ).order_by("-created_at").first()
+        return run, deliverable
+
+    def test_escalation_deliverable_status_is_ready(self):
+        """Hard guarantee #1: deterministically ``ready``, never
+        silently left at the create-default ``completed``."""
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        self.assertIsNotNone(deliverable)
+        self.assertEqual(deliverable.status, "ready")
+        self.assertNotEqual(deliverable.status, "completed")
+
+    def test_exactly_one_status_transition_audit_event_exists(self):
+        """Hard guarantee #2: the transition emits one and only one
+        DeliverableEvent('status_transition') row per escalation."""
+        from core.models_deliverables import DeliverableEvent
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        transitions = DeliverableEvent.objects.filter(
+            deliverable=deliverable,
+            event_type="status_transition",
+        )
+        self.assertEqual(transitions.count(), 1)
+
+    def test_audit_event_has_previous_and_new_status_in_metadata(self):
+        """Hard guarantee #3a: previous_status + new_status are
+        captured in the audit record, not just on the live Deliverable."""
+        from core.models_deliverables import DeliverableEvent
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        evt = DeliverableEvent.objects.get(
+            deliverable=deliverable, event_type="status_transition"
+        )
+        self.assertEqual(evt.metadata["from"], "completed")
+        self.assertEqual(evt.metadata["to"], "ready")
+
+    def test_audit_event_source_is_docs_manager(self):
+        """Hard guarantee #3b: actor/source = 'DocsManager' on both
+        the DeliverableEvent.source top-level column (for indexed
+        queries) and metadata.ctx.source (for context preservation)."""
+        from core.models_deliverables import DeliverableEvent
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        evt = DeliverableEvent.objects.get(
+            deliverable=deliverable, event_type="status_transition"
+        )
+        self.assertEqual(evt.source, "DocsManager")
+        self.assertEqual(evt.metadata["ctx"]["source"], "DocsManager")
+
+    def test_audit_event_includes_ops_run_id(self):
+        """Hard guarantee #3c: OpsRun ID present in the audit metadata."""
+        from core.models_deliverables import DeliverableEvent
+
+        run, deliverable = self._run_failure_and_get_artifacts()
+        evt = DeliverableEvent.objects.get(
+            deliverable=deliverable, event_type="status_transition"
+        )
+        self.assertEqual(evt.metadata["ctx"]["ops_run_id"], str(run.id))
+
+    def test_audit_event_includes_error_signature(self):
+        """Hard guarantee #3d: error_signature present in the audit
+        metadata — links audit row to dedupe hash."""
+        from core.models_deliverables import DeliverableEvent
+
+        run, deliverable = self._run_failure_and_get_artifacts()
+        evt = DeliverableEvent.objects.get(
+            deliverable=deliverable, event_type="status_transition"
+        )
+        self.assertEqual(
+            evt.metadata["ctx"]["error_signature"],
+            run.summary["error_signature"],
+        )
+        # Signature is the 16-char SHA prefix shape — not a placeholder.
+        self.assertEqual(len(evt.metadata["ctx"]["error_signature"]), 16)
+
+    def test_audit_does_not_rely_on_deliverable_status_field(self):
+        """Hard guarantee #4: an auditor that NEVER queries
+        Deliverable.status can still derive the full transition story
+        from DeliverableEvent + OpsRun joins.
+
+        Demonstration: mutate Deliverable.status AFTER the escalation
+        (simulate a later edit) and assert the audit row STILL reports
+        the original completed→ready transition unchanged."""
+        from core.models_deliverables import DeliverableEvent
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        # Tamper with the live status.
+        deliverable.status = "draft"
+        deliverable.save(update_fields=["status"])
+
+        evt = DeliverableEvent.objects.filter(
+            deliverable=deliverable,
+            event_type="status_transition",
+            source="DocsManager",
+        ).first()
+        self.assertIsNotNone(evt)
+        self.assertEqual(evt.metadata["from"], "completed")
+        self.assertEqual(evt.metadata["to"], "ready")
+        # The audit row is unaffected by the later status mutation —
+        # proving the audit trail is independent of Deliverable.status.
+
+    def test_transition_cannot_silently_land_as_completed(self):
+        """Hard guarantee #5 (Rigby's wording): with the workaround
+        in place, the deliverable lands `ready` AND an auditable row
+        exists. The combination proves the silent-completed failure
+        mode cannot occur on any escalation path.
+
+        Phrased as a regression guard: any future refactor that drops
+        the _force_deliverable_ready call OR drops the audit row would
+        be caught by this single assertion pair."""
+        from core.models_deliverables import DeliverableEvent
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        # Live status MUST be ready (workaround ran).
+        self.assertEqual(deliverable.status, "ready")
+        # And an audit row MUST exist proving the transition happened.
+        self.assertEqual(
+            DeliverableEvent.objects.filter(
+                deliverable=deliverable,
+                event_type="status_transition",
+                source="DocsManager",
+                metadata__from="completed",
+                metadata__to="ready",
+            ).count(),
+            1,
+            "escalation must produce exactly one auditable "
+            "completed→ready DeliverableEvent",
+        )
+
+    def test_force_deliverable_ready_rejects_empty_error_signature(self):
+        """Internal contract: callers must thread the signature through
+        — passing empty string raises rather than silently writing an
+        unqueryable audit row."""
+        from core.tasks_documentation_manager import _force_deliverable_ready
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        with self.assertRaises(ValueError):
+            _force_deliverable_ready(
+                deliverable.id,
+                ops_run_id="00000000-0000-0000-0000-000000000000",
+                error_signature="",
+            )
+
+    def test_force_deliverable_ready_rejects_null_ops_run_id(self):
+        from core.tasks_documentation_manager import _force_deliverable_ready
+
+        _run, deliverable = self._run_failure_and_get_artifacts()
+        with self.assertRaises(ValueError):
+            _force_deliverable_ready(
+                deliverable.id,
+                ops_run_id=None,
+                error_signature="abc123",
+            )
+
+
 # ── Tail-trim helper (Rigby Q5/Q7) ───────────────────────────────────
 
 
