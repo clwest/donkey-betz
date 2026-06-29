@@ -4932,23 +4932,32 @@ PA_TOOL_SCHEMAS = [
         "name": "employee_tool",
         "description": (
             "Inspect or dispatch jobs on the AI Employee registry. "
-            "Two actions in v0: (1) describe — read-only profile + job "
+            "Actions in v0: (1) describe — read-only profile + job "
             "contract for an employee. (2) run_now (Session 1252 PR 2) — "
             "Rigby-only dispatch of an assigned job's task immediately. "
-            "Use describe when the user asks about who Rigby is, what "
-            "jobs she owns, or what a contract requires. Use run_now to "
-            "kick off the Documentation Manager daily routine on "
-            "demand (e.g., 'Rigby, run docs_manager now')."
+            "(3) status (Session 1253 PR 3) — read-only daily-read "
+            "trust/timing/drift summary over a 7d/30d/90d window. "
+            "(4) evidence_for_mission (PR 3) — per-mission join across "
+            "OpsRun + OpsRunEvent + Deliverable + DeliverableEvent + "
+            "LLMCallEvent + ToolCallRecord. Use describe for contract "
+            "questions; run_now to kick off the docs cascade on demand; "
+            "status for the morning health check; evidence_for_mission "
+            "for postmortem on a specific mission_id."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["describe", "run_now"],
+                    "enum": [
+                        "describe",
+                        "run_now",
+                        "status",
+                        "evidence_for_mission",
+                    ],
                     "description": (
-                        "describe (read-only profile + contract) or "
-                        "run_now (Rigby-only, dispatches the job's task)."
+                        "describe / run_now (Rigby-only) / status "
+                        "(read-only) / evidence_for_mission (read-only)."
                     ),
                 },
                 "employee": {
@@ -4959,8 +4968,8 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "description": (
                         "Job key. For describe it scopes the response; for "
-                        "run_now it selects which job to dispatch. v0 "
-                        "known keys: 'docs_manager'."
+                        "run_now / status it selects which job. v0 known "
+                        "keys: 'docs_manager'."
                     ),
                 },
                 "wait_for_result": {
@@ -4969,6 +4978,36 @@ PA_TOOL_SCHEMAS = [
                         "run_now only: when true, polls up to 90s for the "
                         "mission to reach a terminal status before "
                         "returning. Default false (immediate return)."
+                    ),
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["7d", "30d", "90d"],
+                    "description": (
+                        "status only: rollup window. Default '7d'. "
+                        "Note: trust_status='under_review' threshold "
+                        "always uses the last 7 days regardless of "
+                        "window — it's a trip-wire, not a lens."
+                    ),
+                },
+                "mission_id": {
+                    "type": "string",
+                    "description": (
+                        "evidence_for_mission: UUID of the OpsRun to "
+                        "dump. status: optional pointer hint — when "
+                        "supplied, the status response carries a "
+                        "requested_mission_pointer redirecting to "
+                        "evidence_for_mission (status does NOT inline "
+                        "evidence)."
+                    ),
+                },
+                "verbose": {
+                    "type": "boolean",
+                    "description": (
+                        "evidence_for_mission only. Default false: "
+                        "error_tail is summarized as error_tail_preview "
+                        "(last 30 lines) + has_full_error_tail flag. "
+                        "true: full error_tail returned."
                     ),
                 },
             },
