@@ -23,27 +23,27 @@ append, completed→ready audit transition, verdict emission, shift-
 report dispatch) is delegated entirely to MissionRunner.
 
 ──────────────────────────────────────────────────────────────────────
-Closure-capture pattern for mission-aware postflight
+Postflight context (PR 1.3+)
 ──────────────────────────────────────────────────────────────────────
 
-MissionRunner's ``postflight_fn`` signature is
-``(passed: bool, summary_acc: dict) -> None`` — it does **not** pass
-the ``OpsRun`` row. The docs cascade needs the mission row in
-postflight for two specific event emissions:
+MissionRunner's ``postflight_fn`` accepts a ``PostflightContext``
+(``mission``, ``passed``, ``summary_acc``). The docs cascade's
+postflight reads ``ctx.mission`` directly to emit two timeline events
+the runner can't emit on its own:
 
   * On success: write the ``step_5_drift_observed`` info event onto
     the mission timeline.
   * On failure: write the ``step_5_skipped`` info event onto the
     mission timeline.
 
-To preserve behavior without modifying MissionRunner, the build
-helper creates a small ``_MissionHolder`` dict, wraps each step
-function so it stashes the mission row into the holder on first
-invocation, and the postflight closure reads the mission out of the
-holder. Steps always receive the mission, so the holder is populated
-before postflight runs (even if step 1 fails). This is a contained,
-local workaround — surfacing into MissionRunner would need a runner
-signature change which PR 1.2 intentionally avoids.
+PR 1.2 used a closure-capture workaround (a ``mission_holder`` dict
+populated by step wrappers, read by the postflight) because
+MissionRunner's pre-1.3 postflight_fn signature was
+``(passed, summary_acc)`` and did not carry the mission. PR 1.3 added
+``PostflightContext`` to MissionRunner; this module then dropped the
+closure-capture wrappers entirely. See PR #2739 (closure-capture
+introduction) and PR #2740 (PostflightContext replacement) for
+history.
 """
 
 from __future__ import annotations
@@ -69,6 +69,7 @@ from core.employees.mission_runner import (
     MissionRunner,
     MissionRunnerConfig,
     PAPostContext,
+    PostflightContext,
     Step,
     StepResult,
 )
@@ -577,40 +578,7 @@ def post_pa_escalation(post_ctx: PAPostContext) -> Optional[str]:
         return None
 
 
-# ── Closure-capture helpers (mission row → postflight) ────────────────
-
-
-def _make_mission_capturing_step(
-    base_step_fn: Callable[[Any], StepResult], mission_holder: Dict[str, Any]
-) -> Callable[[Any], StepResult]:
-    """Wrap a step so it stashes the mission row into ``mission_holder``.
-
-    The capture happens on every call (idempotent assignment). Steps
-    receive the mission row from MissionRunner; we re-publish it into
-    the holder so the postflight closure can read it.
-
-    **Safety guard (Rigby PR 1.2 SIGN-WITH-EDITS).** The wrapper
-    explicitly refuses a ``None`` mission. MissionRunner is contractually
-    required to pass the OpsRun row to every step_fn; if a future runner
-    change ever broke that, the docs cascade would silently start with
-    a missing mission and the postflight guard would also raise — but
-    failing loud at the step boundary surfaces the regression at its
-    source rather than at the postflight downstream consumer.
-    """
-
-    def _wrapped(mission) -> StepResult:
-        if mission is None:
-            raise RuntimeError(
-                "docs_cascade step wrapper received mission=None — "
-                "MissionRunner's step contract is broken. Cannot "
-                "populate mission_holder; the closure-capture "
-                "workaround for step_5_drift_observed / step_5_skipped "
-                "depends on a non-null mission row at step entry."
-            )
-        mission_holder["mission"] = mission
-        return base_step_fn(mission)
-
-    return _wrapped
+# ── Preflight + postflight hook builders (PR 1.3+) ────────────────────
 
 
 def _make_preflight() -> Callable[[Dict[str, Any]], None]:
@@ -639,92 +607,78 @@ def _make_preflight() -> Callable[[Dict[str, Any]], None]:
     return _preflight
 
 
-def _make_postflight(
-    mission_holder: Dict[str, Any],
-) -> Callable[[bool, Dict[str, Any]], None]:
-    """Return a postflight closure with mission-row access.
+def _postflight(ctx: "PostflightContext") -> None:
+    """Postflight hook with mission-row access via PostflightContext.
 
-    On success: probes after-counts + runs drift observation (emits
-    ``step_5_drift_observed`` info event onto the timeline).
-    On failure: probes after-counts (state may be partially mutated) +
-    emits ``step_5_skipped`` info event.
+    Reads ``ctx.mission`` directly (no closure-capture). On success
+    probes after-counts + runs drift observation (emits
+    ``step_5_drift_observed`` info event). On failure probes
+    after-counts (state may be partially mutated) + emits
+    ``step_5_skipped`` info event.
 
-    **Safety guard (Rigby PR 1.2 SIGN-WITH-EDITS).** The postflight
-    explicitly raises if the mission row was never captured. This
-    surfaces a broken closure-capture path immediately rather than
-    silently producing a mission timeline missing the load-bearing
-    ``step_5_drift_observed`` / ``step_5_skipped`` events. The
-    capture happens inside ``_make_mission_capturing_step``; an empty
-    holder at postflight time means the step loop never ran, which is
-    impossible in normal MissionRunner operation (the runner enforces
-    at least one Step via ``__init__`` validation, and step_fns are
-    always invoked before postflight).
+    **Defensive guard.** ``ctx.mission`` is contractually guaranteed
+    non-None by MissionRunner (the runner constructs the context
+    inside ``_run_mission`` after the OpsRun row is created). The
+    guard here raises if that contract is ever broken, surfacing the
+    regression at its source rather than silently dropping the
+    step_5 timeline events.
     """
+    if ctx.mission is None:
+        raise RuntimeError(
+            "docs_cascade postflight invoked with ctx.mission=None — "
+            "MissionRunner contract violation. Cannot emit "
+            "step_5_drift_observed / step_5_skipped without a mission "
+            "row. Investigate the MissionRunner _run_mission flow."
+        )
 
-    def _postflight(passed: bool, summary_acc: Dict[str, Any]) -> None:
-        mission = mission_holder.get("mission")
-        if mission is None:
-            raise RuntimeError(
-                "docs_cascade postflight invoked without a captured "
-                "mission row. The closure-capture workaround for "
-                "step_5_drift_observed / step_5_skipped requires that "
-                "at least one step_fn fired and stashed the mission "
-                "via _make_mission_capturing_step before postflight "
-                "runs. An empty holder means either the step loop was "
-                "skipped (broken MissionRunner contract) or the "
-                "wrapper was bypassed (broken docs_cascade wiring). "
-                "Investigate before silently dropping step_5 events."
-            )
+    mission = ctx.mission
+    summary_acc = ctx.summary_acc
 
-        if passed:
-            summary_acc["docs_indexed_count"] = _probe_docs_indexed_count()
-            summary_acc["documents_count_after"] = _probe_documents_count()
-            summary_acc["embeddings_count_after"] = (
-                _probe_embeddings_count()
-            )
-            summary_acc["embedding_delta"] = _safe_delta(
-                summary_acc.get("embeddings_count_before"),
-                summary_acc["embeddings_count_after"],
-            )
-            if any(
-                summary_acc[k] is None
-                for k in (
-                    "docs_indexed_count",
-                    "documents_count_after",
-                    "embeddings_count_after",
-                )
-            ):
-                summary_acc["degraded_evidence"] = True
-
-            drift_count, drift_items, drift_degraded = (
-                _run_drift_observation(mission)
-            )
-            summary_acc["drift_count"] = drift_count
-            summary_acc["drift_items_count"] = drift_items
-            if drift_degraded:
-                summary_acc["degraded_evidence"] = True
-            return
-
-        # Failure path
+    if ctx.passed:
+        summary_acc["docs_indexed_count"] = _probe_docs_indexed_count()
         summary_acc["documents_count_after"] = _probe_documents_count()
         summary_acc["embeddings_count_after"] = _probe_embeddings_count()
         summary_acc["embedding_delta"] = _safe_delta(
             summary_acc.get("embeddings_count_before"),
             summary_acc["embeddings_count_after"],
         )
-        # Step 5 is the drift-observation slot. On cascade failure it
-        # never runs — emit the skipped event so the timeline matches
-        # the pre-1.2 behavior (single ``step_5_skipped`` event, not
-        # the runner's ``<name>_skipped`` for runner-managed steps).
-        _emit_event(
-            mission,
-            STEP_5_SKIPPED_LABEL,
-            "info",
-            reason="prior_failure",
-            cmd="verify_doc_claims --only-drift",
-        )
+        if any(
+            summary_acc[k] is None
+            for k in (
+                "docs_indexed_count",
+                "documents_count_after",
+                "embeddings_count_after",
+            )
+        ):
+            summary_acc["degraded_evidence"] = True
 
-    return _postflight
+        drift_count, drift_items, drift_degraded = _run_drift_observation(
+            mission
+        )
+        summary_acc["drift_count"] = drift_count
+        summary_acc["drift_items_count"] = drift_items
+        if drift_degraded:
+            summary_acc["degraded_evidence"] = True
+        return
+
+    # Failure path
+    summary_acc["documents_count_after"] = _probe_documents_count()
+    summary_acc["embeddings_count_after"] = _probe_embeddings_count()
+    summary_acc["embedding_delta"] = _safe_delta(
+        summary_acc.get("embeddings_count_before"),
+        summary_acc["embeddings_count_after"],
+    )
+    # Step 5 is the drift-observation slot. On cascade failure it never
+    # runs — emit the skipped event so the timeline matches the pre-1.2
+    # behavior (single ``step_5_skipped`` event, not the runner's
+    # ``<name>_skipped`` for runner-managed steps).
+    _emit_event(
+        mission,
+        STEP_5_SKIPPED_LABEL,
+        "info",
+        reason="prior_failure",
+        cmd="verify_doc_claims --only-drift",
+    )
 
 
 def _docs_escalation_spec_factory(
@@ -749,11 +703,10 @@ def build_docs_manager_runner() -> MissionRunner:
     """Wire all docs-cascade-specific config + hooks into a MissionRunner.
 
     Called by the Celery task; also usable from tests + management
-    commands. Each call returns a fresh runner instance with its own
-    mission_holder closure, so concurrent runs do not share state.
+    commands. PR 1.3+: no per-call mutable state — the postflight reads
+    ``ctx.mission`` directly from the PostflightContext MissionRunner
+    constructs at run-time, so the factory is pure.
     """
-    mission_holder: Dict[str, Any] = {}
-
     config = MissionRunnerConfig(
         # Identity
         employee_handle=RIGBY.handle,
@@ -778,28 +731,10 @@ def build_docs_manager_runner() -> MissionRunner:
     )
 
     steps = [
-        Step(
-            name="step_1_index",
-            fn=_make_mission_capturing_step(
-                step_1_build_docs_index, mission_holder
-            ),
-        ),
-        Step(
-            name="step_2_corpus",
-            fn=_make_mission_capturing_step(
-                step_2_build_rag_corpus, mission_holder
-            ),
-        ),
-        Step(
-            name="step_3_sync",
-            fn=_make_mission_capturing_step(
-                step_3_sync_docs_index_to_documents, mission_holder
-            ),
-        ),
-        Step(
-            name="step_4_embed",
-            fn=_make_mission_capturing_step(step_4_embed, mission_holder),
-        ),
+        Step(name="step_1_index", fn=step_1_build_docs_index),
+        Step(name="step_2_corpus", fn=step_2_build_rag_corpus),
+        Step(name="step_3_sync", fn=step_3_sync_docs_index_to_documents),
+        Step(name="step_4_embed", fn=step_4_embed),
     ]
 
     return MissionRunner(
@@ -811,7 +746,7 @@ def build_docs_manager_runner() -> MissionRunner:
         shift_report_fn=_shift_report_fn,
         pa_post_fn=post_pa_escalation,
         preflight_fn=_make_preflight(),
-        postflight_fn=_make_postflight(mission_holder),
+        postflight_fn=_postflight,
     )
 
 

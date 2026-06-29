@@ -1389,6 +1389,127 @@ class MissionRunnerHookContainmentTests(TestCase):
         self.assertEqual(m.status, "passed")
         self.assertTrue(m.summary.get("degraded_evidence"))
 
+    # ── PR 1.3 PostflightContext + dual-signature dispatch ──────────
+
+    def test_postflight_with_context_signature_receives_postflightcontext(self):
+        """1-arg postflight_fn → MissionRunner constructs a PostflightContext."""
+        from core.employees.mission_runner import PostflightContext
+
+        recorded: Dict[str, Any] = {}
+
+        def _post(ctx):
+            recorded["ctx_type"] = type(ctx).__name__
+            recorded["passed"] = ctx.passed
+            recorded["mission_id"] = str(ctx.mission.id)
+            recorded["summary_acc_is_dict"] = isinstance(ctx.summary_acc, dict)
+
+        runner = _build_runner(
+            [_passing_step("step_a")], postflight_fn=_post
+        )
+        result = runner.run()
+        self.assertEqual(recorded["ctx_type"], "PostflightContext")
+        self.assertTrue(recorded["passed"])
+        self.assertEqual(recorded["mission_id"], result.mission_id)
+        self.assertTrue(recorded["summary_acc_is_dict"])
+
+    def test_postflight_context_mission_matches_runner_mission(self):
+        """ctx.mission IS the OpsRun row the runner created."""
+        captured: Dict[str, Any] = {}
+
+        def _post(ctx):
+            captured["mission"] = ctx.mission
+
+        runner = _build_runner(
+            [_passing_step("step_a")], postflight_fn=_post
+        )
+        result = runner.run()
+        self.assertEqual(str(captured["mission"].id), result.mission_id)
+
+    def test_postflight_summary_acc_mutations_persist_to_mission_summary(self):
+        """When context-shape postflight mutates ctx.summary_acc, those
+        mutations land in OpsRun.summary after the run."""
+
+        def _post(ctx):
+            ctx.summary_acc["postflight_marker"] = "ctx_path"
+
+        runner = _build_runner(
+            [_passing_step("step_a")], postflight_fn=_post
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        self.assertEqual(m.summary.get("postflight_marker"), "ctx_path")
+
+    def test_runner_detects_legacy_2arg_postflight_signature(self):
+        """Backward-compat: 2-arg ``def post(passed, summary_acc)`` →
+        runner records ``_postflight_uses_context = False``."""
+
+        def _legacy(passed, summary_acc):
+            pass
+
+        runner = MissionRunner(
+            config=_make_config(),
+            steps=[_passing_step("step_a")],
+            postflight_fn=_legacy,
+        )
+        self.assertFalse(runner._postflight_uses_context)
+
+    def test_runner_detects_context_postflight_signature(self):
+        """1-arg ``def post(ctx)`` → ``_postflight_uses_context = True``."""
+
+        def _ctx_post(ctx):
+            pass
+
+        runner = MissionRunner(
+            config=_make_config(),
+            steps=[_passing_step("step_a")],
+            postflight_fn=_ctx_post,
+        )
+        self.assertTrue(runner._postflight_uses_context)
+
+    def test_runner_detects_none_postflight(self):
+        """No postflight → detection records False; no exception."""
+        runner = MissionRunner(
+            config=_make_config(),
+            steps=[_passing_step("step_a")],
+            postflight_fn=None,
+        )
+        self.assertFalse(runner._postflight_uses_context)
+
+    def test_postflight_context_dataclass_shape(self):
+        """PostflightContext carries mission, passed, summary_acc."""
+        from core.employees.mission_runner import PostflightContext
+
+        acc: Dict[str, Any] = {"k": "v"}
+        ctx = PostflightContext(
+            mission="mission-stub", passed=True, summary_acc=acc
+        )
+        self.assertEqual(ctx.mission, "mission-stub")
+        self.assertTrue(ctx.passed)
+        self.assertEqual(ctx.summary_acc, acc)
+
+    def test_postflight_context_is_frozen(self):
+        from core.employees.mission_runner import PostflightContext
+
+        ctx = PostflightContext(mission=None, passed=False, summary_acc={})
+        with self.assertRaises(Exception):
+            ctx.passed = True  # type: ignore
+
+    def test_legacy_2arg_postflight_still_works_end_to_end(self):
+        """Existing 2-arg postflight callers continue to receive
+        (passed, summary_acc) and their mutations persist."""
+
+        def _legacy(passed, summary_acc):
+            summary_acc["legacy_marker"] = True
+
+        runner = MissionRunner(
+            config=_make_config(),
+            steps=[_passing_step("step_a")],
+            postflight_fn=_legacy,
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        self.assertTrue(m.summary.get("legacy_marker"))
+
 
 # ═════════════════════════════════════════════════════════════════════
 # Verdict — idempotency + confidence selection

@@ -74,9 +74,16 @@ Construct a runner from:
   * ``preflight_fn`` (optional) — ``dict -> None``. Mutates the
     summary_acc dict in place before step execution. None → no
     preflight.
-  * ``postflight_fn`` (optional) — ``(passed: bool, summary_acc:
-    dict) -> None``. Mutates after step execution. None → no
-    postflight.
+  * ``postflight_fn`` (optional) — accepts either of two signatures:
+      * ``(ctx: PostflightContext) -> None`` (preferred, PR 1.3+) —
+        receives a frozen ``PostflightContext`` carrying ``mission``,
+        ``passed``, and the mutable ``summary_acc`` dict.
+      * ``(passed: bool, summary_acc: dict) -> None`` (legacy) —
+        same surface without the mission row. Kept for
+        backwards-compat; new callers should prefer the context.
+    MissionRunner detects the signature once at ``__init__`` via
+    ``inspect.signature`` (counts required positional parameters).
+    None → no postflight.
 
 Then call ``.run()`` to execute end-to-end. Returns a
 ``MissionRunResult`` envelope. **Never raises** (top-level catch logs +
@@ -353,6 +360,35 @@ class PAPostContext:
 
 
 @dataclass(frozen=True)
+class PostflightContext:
+    """Context passed to the ``postflight_fn`` hook (PR 1.3+).
+
+    Carries the mission row + outcome + summary accumulator so jobs
+    can emit job-specific events onto the mission timeline from
+    postflight without resorting to closure-capture tricks.
+
+    Backwards compatibility: MissionRunner detects the postflight_fn
+    signature at __init__ time. Callers that declare a 1-positional
+    arg postflight (``def fn(ctx): ...``) receive a PostflightContext.
+    Callers that declare 2 positional args
+    (``def fn(passed, summary_acc): ...``) receive the legacy shape.
+    Detection is via ``inspect.signature`` on the required positional
+    parameters only — defaults + ``*args`` / ``**kwargs`` don't change
+    the dispatch. New callers should prefer the context shape; legacy
+    callers continue to work without change.
+
+    ``summary_acc`` is the same mutable dict the runner accumulates
+    into across preflight + steps + postflight. Mutations from inside
+    postflight are persisted to ``OpsRun.summary`` after the hook
+    returns.
+    """
+
+    mission: Any
+    passed: bool
+    summary_acc: Dict[str, Any]
+
+
+@dataclass(frozen=True)
 class EscalationDeliverableSpec:
     """Policy for how an escalation Deliverable is created.
 
@@ -504,9 +540,14 @@ class MissionRunner:
             Callable[[PAPostContext], Optional[str]]
         ] = None,
         preflight_fn: Optional[Callable[[Dict[str, Any]], None]] = None,
-        postflight_fn: Optional[
-            Callable[[bool, Dict[str, Any]], None]
-        ] = None,
+        # postflight_fn accepts EITHER ``(PostflightContext) -> None``
+        # (preferred, PR 1.3+) or ``(passed, summary_acc) -> None``
+        # (legacy). The runner dispatches based on the signature
+        # detected at __init__ via ``_detect_context_signature``.
+        # ``Callable[..., None]`` is used here so static checkers
+        # don't reject either shape; the runtime dispatch enforces
+        # the right call.
+        postflight_fn: Optional[Callable[..., None]] = None,
     ):
         if not config.mission_run_kind:
             raise ValueError(
@@ -535,6 +576,41 @@ class MissionRunner:
         self.pa_post_fn = pa_post_fn
         self.preflight_fn = preflight_fn
         self.postflight_fn = postflight_fn
+        # PR 1.3: detect 1-arg (PostflightContext) vs 2-arg (legacy
+        # ``passed, summary_acc``) postflight signature once at
+        # construction, store the verdict for dispatch in _run_mission.
+        # Detection inspects only required positional parameters so
+        # defaults / *args / **kwargs don't change the dispatch.
+        self._postflight_uses_context = self._detect_context_signature(
+            postflight_fn
+        )
+
+    @staticmethod
+    def _detect_context_signature(fn) -> bool:
+        """Return True iff ``fn`` declares exactly one required positional arg.
+
+        Used to choose between the new ``postflight_fn(ctx)`` and the
+        legacy ``postflight_fn(passed, summary_acc)`` shape. None / 2-arg
+        callers fall through to legacy behavior; 1-arg callers get a
+        PostflightContext. Callables that can't be introspected are
+        conservatively treated as legacy.
+        """
+        if fn is None:
+            return False
+        try:
+            import inspect
+            sig = inspect.signature(fn)
+        except (TypeError, ValueError):
+            return False
+        required_positional = [
+            p for p in sig.parameters.values()
+            if p.kind in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            )
+            and p.default is inspect.Parameter.empty
+        ]
+        return len(required_positional) == 1
 
     # ── Public entry points ──────────────────────────────────────────
 
@@ -788,9 +864,20 @@ class MissionRunner:
                 break
 
         # Postflight (Rigby #7 optional hook — contained).
+        # PR 1.3: dispatch based on the signature detected at __init__.
+        # 1-arg callers receive a PostflightContext; 2-arg callers
+        # receive the legacy (passed, summary_acc) shape.
         if self.postflight_fn is not None:
             try:
-                self.postflight_fn(not failed, summary_acc)
+                if self._postflight_uses_context:
+                    ctx = PostflightContext(
+                        mission=mission,
+                        passed=not failed,
+                        summary_acc=summary_acc,
+                    )
+                    self.postflight_fn(ctx)
+                else:
+                    self.postflight_fn(not failed, summary_acc)
             except Exception as exc:
                 logger.warning(
                     "[MissionRunner] postflight_fn raised; continuing. "
