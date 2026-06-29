@@ -41,6 +41,8 @@ from core.employees import (
     get_job,
     list_employees,
     list_jobs_for_employee,
+    list_jobs_with_keys,
+    list_job_keys_for_employee,
 )
 from core.employees.mission_verdict import (
     VALID_VERDICTS,
@@ -177,27 +179,25 @@ class EmployeeHandlersMixin:
                         f"Employee {employee_handle!r} has no job "
                         f"keyed {job_key!r}."
                     ),
-                    "known_jobs": [
-                        # Re-derive by stable lookup ordering.
-                        "docs_manager"
-                    ] if employee_handle == RIGBY.handle else [],
+                    # Session 1257 PR 2.1: generalized — list whatever
+                    # jobs the registry actually holds for this
+                    # employee instead of hardcoding 'docs_manager'.
+                    "known_jobs": list_job_keys_for_employee(
+                        employee_handle
+                    ),
                 }
             jobs_payload = [
                 {"key": job_key, "contract": _dataclass_to_jsonable(job)}
             ]
         else:
-            # All jobs for this employee. v0: just one (docs_manager).
-            jobs_payload = []
-            for job in list_jobs_for_employee(employee_handle):
-                # Reverse-lookup the key — only one job in v0 so this
-                # is a stable enumeration, not a fragile mapping.
-                if job is DOCUMENTATION_MANAGER:
-                    jobs_payload.append(
-                        {
-                            "key": "docs_manager",
-                            "contract": _dataclass_to_jsonable(job),
-                        }
-                    )
+            # All jobs for this employee. Session 1257 PR 2.1:
+            # generalized via list_jobs_with_keys so any registered
+            # employee (Rigby's docs_manager, Platform Auditor's
+            # platform_audit, future Employee #3+) appears.
+            jobs_payload = [
+                {"key": key, "contract": _dataclass_to_jsonable(job)}
+                for key, job in list_jobs_with_keys(employee_handle)
+            ]
 
         return {
             "ok": True,
