@@ -56,6 +56,17 @@ Construct a runner from:
   * ``escalation_summary_formatter`` (optional) — ``FailureContext ->
     str``. One-line summary for the PA escalation post. Defaults to a
     generic one-liner.
+  * ``escalation_deliverable_spec_factory`` (optional) —
+    ``FailureContext -> EscalationDeliverableSpec``. Returns the
+    policy for *how* the escalation Deliverable is created
+    (``deliverable_type`` / ``category`` / ``publish_intent`` /
+    ``initial_status`` / ``force_ready`` / ``audit_completed_to_ready`` /
+    workspace targeting). Defaults to a factory that returns
+    ``EscalationDeliverableSpec()`` (the baseline PR 1.1 policy:
+    type='report', category='ops',
+    publish_intent='publish_candidate', initial_status='completed',
+    force_ready=True, audit_completed_to_ready=True). Static-policy
+    callers wrap a constant spec in ``lambda ctx: SPEC``.
   * ``shift_report_fn`` (optional) — ``OpsRun -> dict``. Called once
     on terminal mission. None → no shift report.
   * ``pa_post_fn`` (optional) — ``PAPostContext -> Optional[str]``.
@@ -154,6 +165,61 @@ For a 3-step mission where step 2 fails:
 
 Terminal mission status: ``OpsRun.status`` flips to ``passed`` /
 ``failed`` / ``partial`` per ``emit_mission_verdict``.
+
+═══════════════════════════════════════════════════════════════════════
+ERROR SIGNATURE CANONICALIZATION
+═══════════════════════════════════════════════════════════════════════
+
+**MissionRunner owns the canonical error-signature normalization for
+the Employee OS.** ``MissionRunner.make_error_signature(failed_step,
+error_tail)`` is the single classifier; the implementation lives in
+``_normalize_for_signature`` (module-level) and the public static
+``make_error_signature`` (class-level). Callers — including tests,
+escalation-lookup queries, and downstream tooling — re-derive
+signatures by calling this method, never by reimplementing the
+normalization.
+
+**Pattern application order is load-bearing.** The volatile-substring
+regex list runs in this order:
+
+  1. **UUID** (8-4-4-4-12 hex). UUIDs are normalized as a *unit*
+     before any pattern that could match a sub-string of them. This
+     prevents the all-numeric trailing segment of UUIDs like
+     ``550e8400-e29b-41d4-a716-446655440000`` from being replaced as
+     a Unix epoch while the rest of the UUID stays untouched.
+  2. **ISO-8601 timestamp** (with optional fractional + offset).
+  3. **Bare HH:MM:SS clock.**
+  4. **Long numeric** (≥10 digits — Unix-epoch-shaped).
+
+The docs-manager helper that originally motivated this extraction
+shipped with the patterns in the reverse order. Two PR 1.1 tests
+(``test_signature_stable_across_uuids`` and
+``test_uuid_normalization_runs_before_numeric_normalization``)
+surfaced the latent ordering bug — the runner fixes it as part of the
+canonical extraction.
+
+**This may shift dedupe signatures when Documentation Manager
+migrates in PR 1.2.** Failures that produced a stable signature under
+the pre-extraction order may produce a different (but still stable)
+signature under MissionRunner. This is intentional:
+
+  * The runner's normalization order is **correct** (UUIDs are atomic
+    units; matching their suffixes as epochs breaks signature
+    stability).
+  * The pre-extraction docs-manager signatures were silently wrong for
+    failure tails containing UUIDs.
+  * Existing escalation rows referencing old signatures are not
+    migrated. The 24h dedupe window means any drift is bounded: an
+    in-flight recurring failure may produce a new escalation
+    Deliverable rather than appending to a prior one for one cycle
+    after PR 1.2 lands; subsequent failures dedupe correctly.
+
+**The new canonical ordering is the platform standard from PR 1.1
+forward.** Future jobs adopting MissionRunner use this normalization
+by construction. Any caller that needs to re-derive a historical
+docs-manager signature for archival purposes can use the legacy
+regex order — but new signatures are generated only by the runner's
+classifier.
 """
 
 from __future__ import annotations
@@ -287,6 +353,65 @@ class PAPostContext:
 
 
 @dataclass(frozen=True)
+class EscalationDeliverableSpec:
+    """Policy for how an escalation Deliverable is created.
+
+    Honored by the runner on the create-new branch of
+    ``_create_or_append_escalation_deliverable`` (the append branch
+    appends to a prior Deliverable's content and does not re-evaluate
+    type / publish_intent / status — those are frozen at first creation
+    by design).
+
+    Defaults preserve PR 1.1 baseline behavior exactly:
+        deliverable_type='report', category='ops',
+        publish_intent='publish_candidate' (matches
+        ``PublishIntent.PUBLISH_CANDIDATE``),
+        initial_status='completed', force_ready=True,
+        audit_completed_to_ready=True,
+        workspace_id=None, workspace_name=None.
+
+    When all workspace fields are None, the runner falls back to the
+    legacy ``MissionRunnerConfig.workspace_name`` lookup so existing
+    config-level workspace pointers remain authoritative for callers
+    that haven't migrated to spec-based workspace policy.
+
+    ``audit_completed_to_ready=False`` flips the deliverable to
+    ``ready`` without setting ``_transition_context`` — no
+    ``DeliverableEvent('status_transition')`` audit row is emitted.
+    Use this when a caller wants the visible state without paying for
+    the audit-row write.
+
+    ``force_ready=False`` skips the flip entirely; the deliverable
+    stays at ``initial_status``. Use this when the caller is fine
+    leaving the row at ``initial_status`` (e.g., a future job that
+    wants escalations as ``draft`` until a separate review step
+    promotes them).
+    """
+
+    deliverable_type: str = "report"
+    category: str = "ops"
+    # PublishIntent is a TextChoices enum whose values are bare strings;
+    # using the string literal here keeps this dataclass free of Django
+    # model imports at module load. The value equals
+    # ``PublishIntent.PUBLISH_CANDIDATE``.
+    publish_intent: str = "publish_candidate"
+    initial_status: str = "completed"
+    force_ready: bool = True
+    audit_completed_to_ready: bool = True
+    workspace_id: Optional[Any] = None
+    workspace_name: Optional[str] = None
+
+
+# Factory type — receives the FailureContext so callers can branch on
+# attributes of the failure (e.g. severity from the signature, recurrence
+# from prior summaries) when deciding spec values. Static callers wrap
+# their constant spec in ``lambda ctx: SPEC``.
+EscalationDeliverableSpecFactory = Callable[
+    [FailureContext], EscalationDeliverableSpec
+]
+
+
+@dataclass(frozen=True)
 class MissionRunResult:
     """Envelope returned by ``MissionRunner.run()``."""
 
@@ -371,6 +496,9 @@ class MissionRunner:
         escalation_summary_formatter: Optional[
             Callable[[FailureContext], str]
         ] = None,
+        escalation_deliverable_spec_factory: Optional[
+            EscalationDeliverableSpecFactory
+        ] = None,
         shift_report_fn: Optional[Callable[[Any], Dict[str, Any]]] = None,
         pa_post_fn: Optional[
             Callable[[PAPostContext], Optional[str]]
@@ -398,6 +526,10 @@ class MissionRunner:
         self.escalation_summary_formatter = (
             escalation_summary_formatter
             or _default_escalation_summary_formatter
+        )
+        self.escalation_deliverable_spec_factory = (
+            escalation_deliverable_spec_factory
+            or _default_escalation_deliverable_spec_factory
         )
         self.shift_report_fn = shift_report_fn
         self.pa_post_fn = pa_post_fn
@@ -921,37 +1053,44 @@ class MissionRunner:
             counts_so_far=counts_so_far,
         )
         body = self.escalation_body_formatter(ctx)
+        spec = self.escalation_deliverable_spec_factory(ctx)
+        workspace_id = self._resolve_workspace_for_spec(spec)
 
-        workspace_id = self._resolve_workspace_id()
         deliverable = Deliverable(
             title=f"{self.config.escalation_title_prefix} — {today_str}",
             slug=(
                 f"{_slugify(self.config.escalation_title_prefix)}-"
                 f"{today_str}-{uuid.uuid4().hex[:8]}"
             ),
-            deliverable_type="report",
-            publish_intent=PublishIntent.PUBLISH_CANDIDATE,
-            category="ops",
+            deliverable_type=spec.deliverable_type,
+            # PublishIntent enum values are bare strings; the spec
+            # carries the string directly so the dataclass stays
+            # import-free. Equivalent to PublishIntent.PUBLISH_CANDIDATE
+            # for the default spec.
+            publish_intent=spec.publish_intent,
+            category=spec.category,
             content=body,
             preview_content=body[:500] + ("..." if len(body) > 500 else ""),
             workspace_id=workspace_id,
-            # Honor the documented platform behavior:
-            # Deliverable.create defaults new rows to status='completed'
-            # via PA dispatcher even when 'draft' is explicit. Setting
-            # 'completed' here intentionally so the next force-ready
-            # step is a real transition that fires the post_save
-            # signal and writes the DeliverableEvent audit row.
+            # Default spec lands rows at 'completed' so the subsequent
+            # force-ready step is a real transition that fires the
+            # post_save signal and writes the DeliverableEvent audit
+            # row. A custom spec may set initial_status='ready' to
+            # skip the flip + audit row entirely.
             # Memory: feedback_deliverable_create_defaults_to_completed.md.
-            status="completed",
+            status=spec.initial_status,
         )
         deliverable.save()
 
-        # Force completed→ready transition with audited context.
-        self._force_deliverable_ready(
-            deliverable.id,
-            ops_run_id=mission.id,
-            error_signature=error_signature,
-        )
+        # Optional completed→ready flip + audit transition, honoring
+        # the spec's force_ready + audit_completed_to_ready knobs.
+        if spec.force_ready and spec.initial_status != "ready":
+            self._force_deliverable_ready(
+                deliverable.id,
+                ops_run_id=mission.id,
+                error_signature=error_signature,
+                emit_audit_event=spec.audit_completed_to_ready,
+            )
 
         return str(deliverable.id), False, None
 
@@ -961,29 +1100,43 @@ class MissionRunner:
         *,
         ops_run_id: Any,
         error_signature: str,
+        emit_audit_event: bool = True,
     ) -> None:
         """Flip a newly-created Deliverable from completed→ready.
 
-        Mirrors the canonical ``deliverable_tool action=set_status``
-        contract: stashes ``_transition_context`` on the instance so the
+        Default (``emit_audit_event=True``): stashes
+        ``_transition_context`` on the instance so the
         ``deliverable_status_signals.record_status_transition``
         post_save receiver fires a
         ``DeliverableEvent('status_transition')`` row, then saves with
         ``update_fields=['status']``. Source is the configured
         ``escalation_source`` value so audit queries can filter on it.
-        """
-        if not error_signature:
-            raise ValueError(
-                "_force_deliverable_ready requires a non-empty "
-                "error_signature so the audit row is queryable."
-            )
-        if not ops_run_id:
-            raise ValueError(
-                "_force_deliverable_ready requires a non-null ops_run_id "
-                "so the audit row links back to the MissionRun."
-            )
 
+        ``emit_audit_event=False``: flip status without setting
+        ``_transition_context``. No ``DeliverableEvent`` row is
+        written. Used by specs that want the visible state without
+        paying for the audit-row write (e.g. test specs or
+        low-severity escalations).
+
+        When ``emit_audit_event=True``, ``ops_run_id`` + ``error_signature``
+        are required so the audit row remains queryable. When False,
+        both are still accepted for symmetry but neither is consulted.
+        """
         from core.models_deliverables import Deliverable
+
+        if emit_audit_event:
+            if not error_signature:
+                raise ValueError(
+                    "_force_deliverable_ready(emit_audit_event=True) "
+                    "requires a non-empty error_signature so the "
+                    "audit row is queryable."
+                )
+            if not ops_run_id:
+                raise ValueError(
+                    "_force_deliverable_ready(emit_audit_event=True) "
+                    "requires a non-null ops_run_id so the audit row "
+                    "links back to the MissionRun."
+                )
 
         user_id = self._resolve_runs_as_user_id()
         try:
@@ -1006,18 +1159,19 @@ class MissionRunner:
         if from_status == "ready":
             return
 
-        obj._transition_context = {
-            "reason": (
-                f"{self.config.escalation_source} escalation: force "
-                "visible state for human review (workaround for "
-                "create-default-completed bug)."
-            ),
-            "actor_user_id": str(user_id) if user_id else None,
-            "trace_id": None,
-            "source": self.config.escalation_source,
-            "ops_run_id": str(ops_run_id),
-            "error_signature": error_signature,
-        }
+        if emit_audit_event:
+            obj._transition_context = {
+                "reason": (
+                    f"{self.config.escalation_source} escalation: force "
+                    "visible state for human review (workaround for "
+                    "create-default-completed bug)."
+                ),
+                "actor_user_id": str(user_id) if user_id else None,
+                "trace_id": None,
+                "source": self.config.escalation_source,
+                "ops_run_id": str(ops_run_id),
+                "error_signature": error_signature,
+            }
         obj.status = "ready"
         obj.save(update_fields=["status"])
 
@@ -1117,25 +1271,56 @@ class MissionRunner:
         return getattr(user, "id", None) if user else None
 
     def _resolve_workspace_id(self) -> Optional[Any]:
-        """Look up the configured workspace by name; None if unset/missing."""
-        if not self.config.workspace_name:
+        """Look up the configured workspace by name; None if unset/missing.
+
+        Legacy entry point — delegates to ``_resolve_workspace_by_name``
+        for the actual ORM lookup. Preserved so callers that don't
+        pass a spec still get config-level workspace resolution.
+        """
+        return self._resolve_workspace_by_name(self.config.workspace_name)
+
+    def _resolve_workspace_by_name(self, name: Optional[str]) -> Optional[Any]:
+        """ORM lookup for ``ProjectWorkspace`` by name (case-insensitive).
+
+        Returns the workspace ``id`` or None if missing / unset / lookup
+        error. Used by both the legacy ``_resolve_workspace_id`` path and
+        the spec-aware ``_resolve_workspace_for_spec`` path.
+        """
+        if not name:
             return None
         try:
             from core.models_skin_layer import ProjectWorkspace
 
             ws = ProjectWorkspace.objects.filter(
-                name__iexact=self.config.workspace_name
+                name__iexact=name
             ).first()
             return ws.id if ws else None
         except Exception as exc:
             logger.warning(
                 "[MissionRunner] workspace lookup failed name=%s "
                 "err=%s: %s",
-                self.config.workspace_name,
-                type(exc).__name__,
-                exc,
+                name, type(exc).__name__, exc,
             )
             return None
+
+    def _resolve_workspace_for_spec(
+        self, spec: "EscalationDeliverableSpec"
+    ) -> Optional[Any]:
+        """Spec-aware workspace resolution.
+
+        Precedence:
+          1. ``spec.workspace_id`` (explicit UUID) — used as-is.
+          2. ``spec.workspace_name`` — looked up by name.
+          3. ``config.workspace_name`` (legacy fallback) — looked up by
+             name. Preserves existing config-level workspace pointers
+             for callers that haven't migrated to per-mission spec.
+          4. None.
+        """
+        if spec.workspace_id is not None:
+            return spec.workspace_id
+        if spec.workspace_name:
+            return self._resolve_workspace_by_name(spec.workspace_name)
+        return self._resolve_workspace_id()
 
     def _resolve_active_pin(self) -> Optional[str]:
         """Resolve the active PA chat pin per config fallback chain.
@@ -1231,3 +1416,23 @@ def _default_escalation_summary_formatter(ctx: FailureContext) -> str:
         f"Mission FAILED at {ctx.failed_step} "
         f"(signature {ctx.error_signature}, mission {ctx.mission_id})."
     )
+
+
+def _default_escalation_deliverable_spec_factory(
+    ctx: FailureContext,
+) -> EscalationDeliverableSpec:
+    """Default factory — returns a baseline spec for every failure.
+
+    Returns ``EscalationDeliverableSpec()`` (all fields at their
+    declared defaults). Preserves the PR 1.1 baseline behavior:
+    type='report', category='ops',
+    publish_intent='publish_candidate', initial_status='completed',
+    force_ready=True, audit_completed_to_ready=True, no workspace
+    override (falls through to ``MissionRunnerConfig.workspace_name``).
+
+    Callers that need per-failure policy (e.g. a high-severity
+    signature flips publish_intent='publish_required') pass their own
+    factory at MissionRunner construction time. Static-policy callers
+    use ``lambda ctx: EscalationDeliverableSpec(<custom fields>)``.
+    """
+    return EscalationDeliverableSpec()
