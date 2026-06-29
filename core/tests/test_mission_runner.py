@@ -35,11 +35,9 @@ Run::
 from __future__ import annotations
 
 import ast
-import os
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-from unittest import mock
+from typing import Any, Dict, List, Optional
 
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -50,7 +48,11 @@ from core.employees.mission_runner import (
     DEFAULT_CONFIDENCE_SUCCESS_DEGRADED,
     DEFAULT_CONFIDENCE_SUCCESS_FULL,
     DEFAULT_DEDUPE_WINDOW_HOURS,
+    DEFAULT_ESCALATION_SOURCE,
+    DEFAULT_ESCALATION_TITLE_PREFIX,
     ESCALATION_LABEL,
+    EscalationDeliverableSpec,
+    FailureContext,
     PAPostContext,
     RUN_STARTED_LABEL,
     Step,
@@ -578,6 +580,55 @@ class MissionRunnerErrorSignatureTests(SimpleTestCase):
         self.assertEqual(len(sig), 16)
         self.assertTrue(all(c in "0123456789abcdef" for c in sig))
 
+    def test_uuid_normalization_runs_before_numeric_normalization(self):
+        """Regex order check — the canonical platform behavior.
+
+        UUIDs MUST normalize as a unit before the long-numeric pattern
+        runs. Otherwise a UUID with an all-numeric trailing segment
+        (e.g. ``550e8400-e29b-41d4-a716-446655440000``) gets its
+        suffix matched as a Unix epoch first, leaving the UUID prefix
+        un-normalized.
+
+        Documented in the module docstring's "ERROR SIGNATURE
+        CANONICALIZATION" section. This is the platform canonical
+        from PR 1.1 forward; the docs-manager helper's original
+        reverse order is a latent bug, fixed here as part of the
+        extraction.
+        """
+        tail_with_numeric_uuid = (
+            "Failed with run_id=550e8400-e29b-41d4-a716-446655440000"
+        )
+        tail_with_hex_uuid = (
+            "Failed with run_id=fedcba98-7654-3210-fedc-ba9876543210"
+        )
+        sig_numeric = MissionRunner.make_error_signature(
+            "step", tail_with_numeric_uuid
+        )
+        sig_hex = MissionRunner.make_error_signature(
+            "step", tail_with_hex_uuid
+        )
+        self.assertEqual(
+            sig_numeric, sig_hex,
+            "UUIDs must normalize as a unit; if signatures differ, "
+            "the regex order is broken (numeric pattern is eating "
+            "the UUID's trailing segment)",
+        )
+
+    def test_signature_stable_with_mixed_volatile_substrings(self):
+        """Combined timestamp + UUID + numeric — all normalize together."""
+        a = (
+            "2026-06-29T13:42:11Z [run=550e8400-e29b-41d4-a716-"
+            "446655440000] processed 1234567890 items"
+        )
+        b = (
+            "2026-06-30T08:15:33Z [run=fedcba98-7654-3210-fedc-"
+            "ba9876543210] processed 9876543210 items"
+        )
+        self.assertEqual(
+            MissionRunner.make_error_signature("step", a),
+            MissionRunner.make_error_signature("step", b),
+        )
+
 
 # ═════════════════════════════════════════════════════════════════════
 # Escalation — Rigby constraint #6
@@ -735,6 +786,410 @@ class MissionRunnerEscalationTests(TestCase):
         self.assertEqual(
             ev.detail.get("error_signature"),
             m.summary.get("error_signature"),
+        )
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Escalation Deliverable Spec — Rigby SIGN-WITH-EDITS amendment #1
+# ═════════════════════════════════════════════════════════════════════
+#
+# Verifies the EscalationDeliverableSpec policy seam. The seam exposes
+# deliverable_type / category / publish_intent / initial_status /
+# force_ready / audit_completed_to_ready / workspace_id /
+# workspace_name as caller-configurable policy. Default factory must
+# preserve the PR 1.1 baseline exactly.
+
+
+class MissionRunnerEscalationSpecTests(TestCase):
+    def setUp(self):
+        _setup_user()
+
+    # ── Default spec preserves baseline behavior ────────────────────
+
+    def test_default_spec_carries_generic_defaults(self):
+        """The default spec has no docs-manager-specific policy baked in."""
+        spec = EscalationDeliverableSpec()
+        self.assertEqual(spec.deliverable_type, "report")
+        self.assertEqual(spec.category, "ops")
+        # PublishIntent.PUBLISH_CANDIDATE == 'publish_candidate' string.
+        self.assertEqual(spec.publish_intent, "publish_candidate")
+        self.assertEqual(spec.initial_status, "completed")
+        self.assertTrue(spec.force_ready)
+        self.assertTrue(spec.audit_completed_to_ready)
+        self.assertIsNone(spec.workspace_id)
+        self.assertIsNone(spec.workspace_name)
+
+    def test_default_factory_returns_default_spec_for_any_context(self):
+        """Default factory ignores FailureContext and returns baseline."""
+        from core.employees.mission_runner import (
+            _default_escalation_deliverable_spec_factory,
+        )
+        ctx = FailureContext(
+            mission_id="m-1",
+            failed_step="step_x",
+            error_tail="oops",
+            error_signature="aaaaaaaaaaaaaaaa",
+            started_at=timezone.now(),
+            finished_at=timezone.now(),
+            counts_so_far={},
+        )
+        spec = _default_escalation_deliverable_spec_factory(ctx)
+        self.assertEqual(spec, EscalationDeliverableSpec())
+
+    def test_default_escalation_source_is_generic(self):
+        """Module-level DEFAULT_ESCALATION_SOURCE is not docs-specific."""
+        self.assertNotEqual(DEFAULT_ESCALATION_SOURCE, "DocsManager")
+        self.assertNotEqual(DEFAULT_ESCALATION_SOURCE, "docs_manager")
+        # Generic + cosmetic — auditable but not employee-coupled.
+        self.assertEqual(DEFAULT_ESCALATION_SOURCE, "MissionRunner")
+
+    def test_default_escalation_title_prefix_is_generic(self):
+        self.assertNotEqual(
+            DEFAULT_ESCALATION_TITLE_PREFIX, "Docs Manager Escalation"
+        )
+        self.assertEqual(
+            DEFAULT_ESCALATION_TITLE_PREFIX, "Mission Escalation"
+        )
+
+    def test_default_spec_matches_pr_1_1_baseline_end_to_end(self):
+        """When no factory is supplied, the saved Deliverable carries
+        the baseline policy (type=report, intent=publish_candidate,
+        status=ready after force-flip, audit row emitted)."""
+        from core.models_deliverables import (
+            Deliverable, DeliverableEvent, PublishIntent,
+        )
+
+        runner = _build_runner(
+            [_failing_step("step_x", "default spec test")],
+            config=_make_config(escalation_source="DefaultSpecSrc"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.deliverable_type, "report")
+        self.assertEqual(deliv.category, "ops")
+        self.assertEqual(deliv.publish_intent, PublishIntent.PUBLISH_CANDIDATE)
+        self.assertEqual(deliv.status, "ready")
+        # Audit row emitted by default spec.
+        self.assertEqual(
+            DeliverableEvent.objects.filter(
+                event_type="status_transition",
+                source="DefaultSpecSrc",
+                deliverable_id=deliv.id,
+            ).count(),
+            1,
+        )
+
+    # ── Custom spec changes deliverable fields ──────────────────────
+
+    def test_custom_spec_changes_deliverable_type(self):
+        from core.models_deliverables import Deliverable
+
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    deliverable_type="audit_report",
+                )
+            ),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.deliverable_type, "audit_report")
+
+    def test_custom_spec_changes_category(self):
+        from core.models_deliverables import Deliverable
+
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    category="monitoring",
+                )
+            ),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.category, "monitoring")
+
+    def test_custom_spec_changes_publish_intent(self):
+        from core.models_deliverables import Deliverable, PublishIntent
+
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    publish_intent=PublishIntent.PUBLISH_REQUIRED,
+                )
+            ),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.publish_intent, PublishIntent.PUBLISH_REQUIRED)
+
+    # ── Force-ready / audit-transition knobs ────────────────────────
+
+    def test_spec_initial_status_ready_skips_force_flip_and_audit(self):
+        """initial_status='ready' → no flip, no audit row."""
+        from core.models_deliverables import Deliverable, DeliverableEvent
+
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    initial_status="ready",
+                )
+            ),
+            config=_make_config(escalation_source="ReadySpecSrc"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.status, "ready")
+        # No audit row — there was nothing to flip.
+        self.assertEqual(
+            DeliverableEvent.objects.filter(
+                event_type="status_transition",
+                source="ReadySpecSrc",
+                deliverable_id=deliv.id,
+            ).count(),
+            0,
+        )
+
+    def test_force_ready_false_keeps_completed_and_skips_audit(self):
+        """force_ready=False → deliverable stays at initial_status."""
+        from core.models_deliverables import Deliverable, DeliverableEvent
+
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    initial_status="completed",
+                    force_ready=False,
+                )
+            ),
+            config=_make_config(escalation_source="NoForceSrc"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.status, "completed")
+        self.assertEqual(
+            DeliverableEvent.objects.filter(
+                event_type="status_transition",
+                source="NoForceSrc",
+                deliverable_id=deliv.id,
+            ).count(),
+            0,
+        )
+
+    def test_audit_transition_false_flips_without_audit_row(self):
+        """audit_completed_to_ready=False → flip happens, no audit row."""
+        from core.models_deliverables import Deliverable, DeliverableEvent
+
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    initial_status="completed",
+                    force_ready=True,
+                    audit_completed_to_ready=False,
+                )
+            ),
+            config=_make_config(escalation_source="SilentFlipSrc"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        # Status flipped to ready.
+        self.assertEqual(deliv.status, "ready")
+        # No audit row.
+        self.assertEqual(
+            DeliverableEvent.objects.filter(
+                event_type="status_transition",
+                source="SilentFlipSrc",
+                deliverable_id=deliv.id,
+            ).count(),
+            0,
+        )
+
+    # ── Workspace resolution precedence ─────────────────────────────
+
+    def test_spec_workspace_id_overrides_config_workspace_name(self):
+        """Spec workspace_id wins over config-level workspace_name."""
+        from core.models_deliverables import Deliverable
+        from core.models_skin_layer import ProjectWorkspace
+
+        chris = _setup_user()
+        wins = ProjectWorkspace.objects.create(
+            user=chris,
+            name="WinsWorkspace",
+            description="spec id wins",
+            root_path="/tmp/wins",
+        )
+        loses = ProjectWorkspace.objects.create(
+            user=chris,
+            name="LosesWorkspace",
+            description="config name loses",
+            root_path="/tmp/loses",
+        )
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    workspace_id=wins.id,
+                )
+            ),
+            config=_make_config(workspace_name="LosesWorkspace"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.workspace_id, wins.id)
+        self.assertNotEqual(deliv.workspace_id, loses.id)
+
+    def test_spec_workspace_name_overrides_config_workspace_name(self):
+        """Spec workspace_name (lookup) wins over config workspace_name."""
+        from core.models_deliverables import Deliverable
+        from core.models_skin_layer import ProjectWorkspace
+
+        chris = _setup_user()
+        wins = ProjectWorkspace.objects.create(
+            user=chris,
+            name="SpecNameWins",
+            description="spec name wins",
+            root_path="/tmp/spec-name-wins",
+        )
+        loses = ProjectWorkspace.objects.create(
+            user=chris,
+            name="ConfigNameLoses",
+            description="config name loses",
+            root_path="/tmp/config-name-loses",
+        )
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            escalation_deliverable_spec_factory=(
+                lambda ctx: EscalationDeliverableSpec(
+                    workspace_name="SpecNameWins",
+                )
+            ),
+            config=_make_config(workspace_name="ConfigNameLoses"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.workspace_id, wins.id)
+        self.assertNotEqual(deliv.workspace_id, loses.id)
+
+    def test_no_spec_workspace_falls_back_to_config_workspace_name(self):
+        """Spec workspace fields both None → config workspace_name used."""
+        from core.models_deliverables import Deliverable
+        from core.models_skin_layer import ProjectWorkspace
+
+        chris = _setup_user()
+        legacy = ProjectWorkspace.objects.create(
+            user=chris,
+            name="LegacyConfigWorkspace",
+            description="legacy fallback",
+            root_path="/tmp/legacy-config",
+        )
+        # Default spec (both workspace fields None).
+        runner = _build_runner(
+            [_failing_step("step_x")],
+            config=_make_config(workspace_name="LegacyConfigWorkspace"),
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        self.assertEqual(deliv.workspace_id, legacy.id)
+
+    # ── Factory receives FailureContext ─────────────────────────────
+
+    def test_factory_receives_failure_context(self):
+        """Factory can branch on FailureContext attributes."""
+        captured: List[FailureContext] = []
+
+        def _factory(ctx: FailureContext) -> EscalationDeliverableSpec:
+            captured.append(ctx)
+            return EscalationDeliverableSpec()
+
+        runner = _build_runner(
+            [_failing_step("step_x", "boom payload")],
+            escalation_deliverable_spec_factory=_factory,
+        )
+        result = runner.run()
+        self.assertEqual(len(captured), 1)
+        ctx = captured[0]
+        self.assertEqual(ctx.failed_step, "step_x")
+        self.assertEqual(ctx.mission_id.__class__.__name__, "UUID")
+        self.assertIn("boom payload", ctx.error_tail)
+        self.assertEqual(len(ctx.error_signature), 16)
+
+    def test_factory_can_branch_on_signature(self):
+        """Factory inspects ctx.error_signature for severity routing."""
+        from core.models_deliverables import Deliverable, PublishIntent
+
+        def _factory(ctx: FailureContext) -> EscalationDeliverableSpec:
+            # Toy branch: signatures starting with 'f' get publish_required.
+            if ctx.error_signature.startswith("f"):
+                return EscalationDeliverableSpec(
+                    publish_intent=PublishIntent.PUBLISH_REQUIRED,
+                )
+            return EscalationDeliverableSpec()
+
+        runner = _build_runner(
+            [_failing_step("step_x", "deterministic payload")],
+            escalation_deliverable_spec_factory=_factory,
+        )
+        result = runner.run()
+        m = OpsRun.objects.get(id=result.mission_id)
+        deliv = Deliverable.objects.get(
+            id=m.summary.get("escalation_deliverable_id")
+        )
+        sig = m.summary.get("error_signature", "")
+        if sig.startswith("f"):
+            self.assertEqual(deliv.publish_intent, PublishIntent.PUBLISH_REQUIRED)
+        else:
+            self.assertEqual(deliv.publish_intent, PublishIntent.PUBLISH_CANDIDATE)
+
+    # ── Spec dataclass invariants ───────────────────────────────────
+
+    def test_spec_is_frozen(self):
+        spec = EscalationDeliverableSpec()
+        with self.assertRaises(Exception):
+            spec.deliverable_type = "different"  # type: ignore
+
+    def test_spec_equality(self):
+        self.assertEqual(
+            EscalationDeliverableSpec(),
+            EscalationDeliverableSpec(),
+        )
+        self.assertNotEqual(
+            EscalationDeliverableSpec(),
+            EscalationDeliverableSpec(deliverable_type="audit_report"),
         )
 
 
