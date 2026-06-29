@@ -131,7 +131,84 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1251 — CURRENT ENTRY POINT
+## SESSION 1253 — CURRENT ENTRY POINT
+
+### SESSION 1252 CLOSED — AI Employee v0 + Documentation Manager live (3 PRs)
+
+**Session window:** 2026-06-28 Sunday late afternoon → evening (~6.5h).
+**Full handoff:** [`SESSION_1252_AI_EMPLOYEE_V0_PR1_PR2_LANDED.md`](docs/handoffs/SESSION_1252_AI_EMPLOYEE_V0_PR1_PR2_LANDED.md).
+
+**TL;DR:** Built the smallest practical AI Employee abstraction (frozen-dataclass `AIEmployee` + `JobContract`, no new DB models), gave Rigby her first real recurring job (Documentation Manager), and put it in production. PR 1 contract signed by Rigby with 6 required edits; PR 2 daily routine signed with 1 audit-trail amendment; PR 3 cutover wired the active PA pin into the worker env. **PeriodicTask is now `enabled=True`. First beat fire: Monday 2026-06-29 06:30 America/Denver.**
+
+**Session 1252 PRs (all admin-merged given Anthropic billing CI gap):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2729](https://github.com/clwest/donkey-betz-platform/pull/2729) | feat | AI Employee v0 contract + verdict surface | `1fe0bb0f` |
+| [#2730](https://github.com/clwest/donkey-betz-platform/pull/2730) | feat | Documentation Manager daily routine + run_now + audit trail | `1b5b65c0` |
+| [#2731](https://github.com/clwest/donkey-betz-platform/pull/2731) | chore | Makefile env var for active PA pin | `67ab1e73` |
+
+**Headline outcomes:**
+
+- **3 PRs shipped, all Rigby-signed before merge.** Architecture review → discovery report → operational sign-off → plan-as-signed build → amendment loop when needed. Pattern worked clean across both substantive PRs.
+- **131 new tests across 6 files**, 181/181 green in 2.9s on real PostgreSQL.
+- **Documentation Manager owns**: 4-step docs cascade (build_docs_index → build_rag_corpus → sync → embed), Step 4 hard timeout enforcement (1800s subprocess), drift observation, verdict emission, escalation flow (publish_candidate Deliverable with auditable completed→ready transition via DeliverableEvent('status_transition', source='DocsManager') with ops_run_id + error_signature metadata), 24h dedupe by failure signature, pinned PA chat post.
+- **Production cutover verified end-to-end** before flipping `enabled=True`: real success run (44.4s, 12/12 summary keys, certified verdict) + controlled failure injection (escalation Deliverable in `ready`, audit row with correct metadata, PA post) + safe restore.
+
+### FIRST THING Session 1253
+
+**Do not** open PR 3 reflexively. Wait until Monday's first beat-driven MissionRun has produced real data — actual response shapes inform the PR 3 read API better than theoretical specs.
+
+#### Priority 0 — Monday 06:30 first-fire watch
+
+When the first beat fires at 06:30 local Monday (2026-06-29):
+
+```python
+from core.models_ops_runs import OpsRun, OpsRunEvent
+run = OpsRun.objects.filter(
+    domain='mission', run_kind='docs_cascade'
+).order_by('-started_at').first()
+print(run.id, run.status, run.triggered_by)
+print('summary keys:', sorted(run.summary.keys()))
+print('event labels:', list(
+    OpsRunEvent.objects.filter(run=run)
+    .order_by('created_at').values_list('label', flat=True)
+))
+```
+
+Expectations:
+1. `triggered_by='beat'` (NOT 'manual')
+2. `status='passed'` (or `'failed'` with an escalation Deliverable — both are correct outcomes; failed means something actually broke and Rigby caught it)
+3. All 12 required summary keys present (`docs_indexed_count`, `documents_count_before/after`, `embeddings_count_before/after`, `embedding_delta`, `drift_count`, `drift_items_count`, `degraded_evidence`, `wall_time_ms`, `failed_step`, `error_tail`)
+4. If escalation fired: PA post in `pa-c7263e7061a0` (the active pin via env), NOT `pa-3901b70e61934df7` (the stale contract constant)
+
+#### Priority 1 — PR 3 specification refinement
+
+After Priority 0 data exists, draft the PR 3 plan with REAL summary shapes (not theoretical). Scope per PR 1 plan §6:
+
+- `employee_tool action=status employee=rigby [job=docs_manager] [window=7d|30d|90d]`
+- Trust ratio **derived on read, never persisted** (no new model)
+- `trust_status='under_review'` at 3 failures in 7d
+- Single integration test against 100 seeded MissionRuns; response < 500ms
+- After PR 3 ships: update `feedback_docs_pipeline_4_step_cascade.md` memory rule
+
+Route the PR 3 plan through Rigby for operational sign-off before any code.
+
+#### Priority 2 — Optional housekeeping
+
+- Update `RIGBY.primary_chat_id` in `core/employees/jobs.py` to match the active pin `pa-c7263e7061a0`. Non-blocking thanks to env override. ~3-line change + test update + memory note.
+- `docs/INDEX.md` is uncommitted from PR 2 verification — will get refreshed by Monday's beat run; no need to commit manually now.
+
+#### What NOT to do
+
+- **Don't flip the Session 1250 flags** (`RIGBY_EVENT_INTAKE_ENABLED` etc.) yet. Audit's "stop building toward a richer pipeline" rule still applies. Let Documentation Manager burn a week before exercising the intake/queue/delegation stack.
+- **Don't touch `dispatcher.execute_sync`** in the task module. The asyncio-loop footgun is well-documented in `_force_deliverable_ready`'s docstring; future in-task PA-tool operations should mirror handler contracts via direct ORM.
+- **Don't restart all celery workers.** Only the default worker needs the new env var.
+- **Don't `rm` `docs/INDEX.md`** if it shows up uncommitted — it's auto-regenerated cascade output.
+
+---
+
+## SESSION 1251 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1250 CLOSED — 11 PRs shipped + Session 1251 opens with capability audit
 
