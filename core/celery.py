@@ -855,6 +855,16 @@ app.conf.imports = (
     # the first beat fire (PR 2.3) + on manual `run_now` dispatches
     # via the PA tool.
     'core.tasks_platform_audit',
+    # Session 1257 PR 3.2: Chief of Staff Morning Brief task. Same
+    # lesson — `@shared_task chief_of_staff_morning_brief_run` in a
+    # non-standard `tasks_chief_of_staff.py` module needs explicit
+    # listing here so worker dispatch resolves the task name on
+    # manual `run_now` dispatches via the PA tool. The future beat
+    # row task-name flip (legacy `generate-morning-brief-daily` →
+    # `chief_of_staff_morning_brief_run`) lands in PR 3.3; until
+    # then the legacy task keeps firing from beat and this task is
+    # callable only via run_now / Celery shell.
+    'core.tasks_chief_of_staff',
 )
 
 
@@ -893,6 +903,11 @@ def _eager_import_session1115_modules(sender, **kwargs):
         # time so app.tasks reads (build_celery_audit / verify_doc_claims
         # / queue parity tests) see it without waiting for worker boot.
         'core.tasks_platform_audit',
+        # Session 1257 PR 3.2: Chief of Staff Morning Brief task — same
+        # lesson. Forces the @shared_task to register at finalize time
+        # so `chief_of_staff_morning_brief_run` shows up in app.tasks
+        # without waiting for worker boot.
+        'core.tasks_chief_of_staff',
     )
     for mod in eager_modules:
         try:
