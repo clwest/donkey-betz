@@ -438,21 +438,22 @@ class TasksFileThinnessTests(SimpleTestCase):
 
 
 # ═════════════════════════════════════════════════════════════════════
-# Closure-capture workaround safety (Rigby PR 1.2 SIGN-WITH-EDITS)
+# PostflightContext seam (PR 1.3+)
 # ═════════════════════════════════════════════════════════════════════
 #
-# The docs cascade uses a closure-capture pattern to give postflight
-# access to the mission row that MissionRunner's postflight_fn
-# signature does not pass. These tests prove the workaround is safe:
+# PR 1.3 replaced the closure-capture workaround with MissionRunner's
+# PostflightContext. The docs cascade postflight now reads ctx.mission
+# directly. These tests verify:
 #
-#   * Mission is captured before postflight runs
-#   * Missing capture fails loud (no silent fallback)
-#   * Each runner has its own holder (no cross-run bleed)
-#   * Event labels + order match pre-PR-1.2 behavior
+#   * docs_cascade declares the new context-shaped postflight
+#   * the postflight raises if ctx.mission is None (defensive guard)
+#   * the postflight emits step_5_skipped on failure with ctx.mission
+#   * the closure-capture surface is fully gone from docs_cascade
+#   * build_docs_manager_runner is pure (no per-call mutable state)
 
 
-class ClosureCaptureSafetyTests(TestCase):
-    """Rigby PR 1.2 SIGN-WITH-EDITS — workaround must fail loud."""
+class PostflightContextTests(TestCase):
+    """PR 1.3 — postflight uses PostflightContext instead of closure-capture."""
 
     def setUp(self):
         User.objects.get_or_create(
@@ -460,107 +461,62 @@ class ClosureCaptureSafetyTests(TestCase):
             defaults={"email": "chris@test.donkey"},
         )
 
-    def test_postflight_raises_when_mission_holder_empty(self):
-        """Empty holder → RuntimeError (no silent fallback)."""
-        from core.jobs.docs_cascade import _make_postflight
+    def test_docs_cascade_postflight_uses_single_context_signature(self):
+        """The hook installed by the builder takes a single PostflightContext
+        argument (not the legacy passed/summary_acc pair)."""
+        import inspect
 
-        postflight = _make_postflight(mission_holder={})
-        with self.assertRaises(RuntimeError) as ctx:
-            postflight(True, {})
-        self.assertIn(
-            "without a captured mission row",
-            str(ctx.exception),
-        )
-
-    def test_step_wrapper_raises_on_none_mission(self):
-        """A null mission at step entry → RuntimeError."""
-        from core.employees.mission_runner import StepResult
-        from core.jobs.docs_cascade import _make_mission_capturing_step
-
-        def _inner(mission):
-            return StepResult(passed=True)
-
-        wrapped = _make_mission_capturing_step(_inner, mission_holder={})
-        with self.assertRaises(RuntimeError) as ctx:
-            wrapped(None)
-        self.assertIn("mission=None", str(ctx.exception))
-
-    def test_step_wrapper_captures_mission_into_holder(self):
-        """The wrapper writes the mission into the holder before calling
-        the inner step fn."""
-        from core.employees.mission_runner import StepResult
-        from core.jobs.docs_cascade import _make_mission_capturing_step
-        from core.models_ops_runs import OpsRun
-
-        # Synthetic mission row.
-        run = OpsRun.objects.create(
-            title="capture-test",
-            run_type="manual",
-            domain="mission",
-            run_kind="docs_cascade",
-            triggered_by="manual",
-            status="running",
-            summary={},
-        )
-
-        holder: dict = {}
-
-        def _inner(mission):
-            # By the time inner runs, the holder must already have the
-            # mission (capture happens BEFORE inner is invoked).
-            self.assertEqual(mission_holder_get(holder), str(run.id))
-            return StepResult(passed=True)
-
-        def mission_holder_get(h):
-            m = h.get("mission")
-            return str(m.id) if m is not None else None
-
-        wrapped = _make_mission_capturing_step(_inner, holder)
-        wrapped(run)
-        self.assertEqual(holder["mission"], run)
-
-    def test_two_runners_have_independent_mission_holders(self):
-        """Each build_docs_manager_runner() call must produce a runner
-        with its own mission_holder closure (no cross-run bleed)."""
         from core.jobs.docs_cascade import build_docs_manager_runner
 
-        r1 = build_docs_manager_runner()
-        r2 = build_docs_manager_runner()
-
-        # Steps captured into the runner instances are wrapped by the
-        # builder. The wrappers close over the *holder*, not the runner.
-        # Inspecting the closure cells reveals whether they share state.
-        def _extract_holder(step_fn):
-            # _wrapped closes over (base_step_fn, mission_holder); the
-            # holder is the dict cell.
-            for cell in step_fn.__closure__ or ():
-                if isinstance(cell.cell_contents, dict):
-                    return cell.cell_contents
-            return None
-
-        holders_r1 = {id(_extract_holder(s.fn)) for s in r1.steps}
-        holders_r2 = {id(_extract_holder(s.fn)) for s in r2.steps}
-
-        # Within one runner, all step wrappers share the SAME holder.
-        self.assertEqual(len(holders_r1), 1)
-        self.assertEqual(len(holders_r2), 1)
-
-        # Across runners, holders are DIFFERENT objects.
-        self.assertNotEqual(
-            holders_r1.pop(), holders_r2.pop(),
-            "build_docs_manager_runner() must produce a fresh "
-            "mission_holder per call — cross-run bleed would corrupt "
-            "step_5 event emission",
+        runner = build_docs_manager_runner()
+        sig = inspect.signature(runner.postflight_fn)
+        positional = [
+            p for p in sig.parameters.values()
+            if p.kind in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            )
+            and p.default is inspect.Parameter.empty
+        ]
+        self.assertEqual(
+            len(positional), 1,
+            "docs_cascade postflight should accept a single "
+            "PostflightContext argument (PR 1.3+)",
         )
 
-    def test_postflight_with_captured_mission_succeeds_silently(self):
-        """Sanity check: when the holder IS populated, postflight runs
-        normally (validates the guard doesn't false-positive)."""
-        from core.jobs.docs_cascade import _make_postflight
-        from core.models_ops_runs import OpsRun
+    def test_mission_runner_routes_to_context_signature(self):
+        """MissionRunner detects the 1-arg signature + records True."""
+        from core.jobs.docs_cascade import build_docs_manager_runner
+
+        runner = build_docs_manager_runner()
+        self.assertTrue(
+            runner._postflight_uses_context,
+            "Runner should detect the docs cascade postflight as a "
+            "context-shape hook (1 required positional arg)",
+        )
+
+    def test_postflight_raises_when_ctx_mission_is_none(self):
+        """Defensive guard — empty ctx.mission → RuntimeError."""
+        from core.employees.mission_runner import PostflightContext
+        from core.jobs.docs_cascade import _postflight
+
+        ctx = PostflightContext(
+            mission=None, passed=True, summary_acc={}
+        )
+        with self.assertRaises(RuntimeError) as exc_info:
+            _postflight(ctx)
+        self.assertIn("ctx.mission=None", str(exc_info.exception))
+
+    def test_postflight_emits_step_5_skipped_on_failure_path(self):
+        """When ctx.passed=False, emit step_5_skipped on ctx.mission."""
+        from unittest.mock import patch
+
+        from core.employees.mission_runner import PostflightContext
+        from core.jobs.docs_cascade import _postflight
+        from core.models_ops_runs import OpsRun, OpsRunEvent
 
         run = OpsRun.objects.create(
-            title="postflight-positive",
+            title="postflight-fail-test",
             run_type="manual",
             domain="mission",
             run_kind="docs_cascade",
@@ -568,14 +524,9 @@ class ClosureCaptureSafetyTests(TestCase):
             status="running",
             summary={},
         )
-
-        # Failure path postflight does no probes that hit real
-        # docs/_index.json; just emits step_5_skipped. The default
-        # probes return None safely.
-        from unittest.mock import patch
-
-        postflight = _make_postflight({"mission": run})
-        summary_acc: dict = {}
+        ctx = PostflightContext(
+            mission=run, passed=False, summary_acc={}
+        )
         with patch(
             "core.jobs.docs_cascade._probe_documents_count",
             return_value=None,
@@ -583,15 +534,96 @@ class ClosureCaptureSafetyTests(TestCase):
             "core.jobs.docs_cascade._probe_embeddings_count",
             return_value=None,
         ):
-            postflight(False, summary_acc)
+            _postflight(ctx)
 
-        # step_5_skipped event was emitted on the captured mission.
-        from core.models_ops_runs import OpsRunEvent
         self.assertTrue(
             OpsRunEvent.objects.filter(
                 run=run, label="step_5_skipped"
             ).exists()
         )
+
+    def test_postflight_emits_step_5_drift_observed_on_success_path(self):
+        """When ctx.passed=True, run drift observation + emit drift event."""
+        from unittest.mock import patch
+
+        from core.employees.mission_runner import PostflightContext
+        from core.jobs.docs_cascade import _postflight
+        from core.models_ops_runs import OpsRun, OpsRunEvent
+
+        run = OpsRun.objects.create(
+            title="postflight-pass-test",
+            run_type="manual",
+            domain="mission",
+            run_kind="docs_cascade",
+            triggered_by="manual",
+            status="running",
+            summary={},
+        )
+        ctx = PostflightContext(
+            mission=run, passed=True, summary_acc={}
+        )
+        with patch(
+            "core.jobs.docs_cascade._probe_docs_indexed_count",
+            return_value=10,
+        ), patch(
+            "core.jobs.docs_cascade._probe_documents_count",
+            return_value=10,
+        ), patch(
+            "core.jobs.docs_cascade._probe_embeddings_count",
+            return_value=100,
+        ), patch(
+            "core.jobs.docs_cascade._run_drift_observation",
+            return_value=(3, 3, False),
+        ):
+            _postflight(ctx)
+
+        self.assertEqual(ctx.summary_acc["drift_count"], 3)
+        self.assertEqual(ctx.summary_acc["drift_items_count"], 3)
+
+    def test_docs_cascade_no_closure_capture_surface(self):
+        """The closure-capture helpers must be deleted from docs_cascade."""
+        from core.jobs import docs_cascade
+
+        # The PR 1.2 helpers must be gone.
+        self.assertFalse(
+            hasattr(docs_cascade, "_make_mission_capturing_step"),
+            "_make_mission_capturing_step should be deleted in PR 1.3",
+        )
+        # _make_postflight was the closure-capture factory; replaced by
+        # a top-level _postflight function. _make_postflight may exist
+        # as a function name if reused; verify it's NOT the closure
+        # factory it used to be by checking its signature shape.
+        if hasattr(docs_cascade, "_make_postflight"):
+            import inspect
+            sig = inspect.signature(docs_cascade._make_postflight)
+            params = list(sig.parameters.values())
+            self.assertEqual(
+                len(params), 0,
+                "_make_postflight should be parameter-less if it "
+                "still exists; PR 1.3 closure-capture factory takes "
+                "a mission_holder dict",
+            )
+
+    def test_build_docs_manager_runner_is_pure(self):
+        """No per-call mutable state — two builds produce step_fns that
+        do NOT close over a shared dict."""
+        from core.jobs.docs_cascade import build_docs_manager_runner
+
+        r1 = build_docs_manager_runner()
+        r2 = build_docs_manager_runner()
+
+        def _has_dict_closure_cell(fn):
+            for cell in fn.__closure__ or ():
+                if isinstance(cell.cell_contents, dict):
+                    return True
+            return False
+
+        for s in r1.steps + r2.steps:
+            self.assertFalse(
+                _has_dict_closure_cell(s.fn),
+                f"Step {s.name!r} closes over a dict — PR 1.3 should "
+                "have removed the closure-capture wrappers",
+            )
 
 
 class EventLabelOrderPreservationTests(TestCase):
