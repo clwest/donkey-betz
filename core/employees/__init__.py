@@ -15,9 +15,13 @@ from core.employees.jobs import (
     AuthorityLevel,
     RIGBY,
     DOCUMENTATION_MANAGER,
+    PLATFORM_AUDITOR,
+    PLATFORM_AUDIT_JOB,
     list_employees,
     get_employee,
     list_jobs_for_employee,
+    list_jobs_with_keys,
+    list_job_keys_for_employee,
     get_job,
 )
 
@@ -27,8 +31,12 @@ __all__ = [
     "AuthorityLevel",
     "RIGBY",
     "DOCUMENTATION_MANAGER",
+    "PLATFORM_AUDITOR",
+    "PLATFORM_AUDIT_JOB",
     "list_employees",
     "get_employee",
     "list_jobs_for_employee",
+    "list_jobs_with_keys",
+    "list_job_keys_for_employee",
     "get_job",
 ]
