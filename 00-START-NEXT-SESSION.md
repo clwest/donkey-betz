@@ -246,6 +246,7 @@ If Employee #2 needs any new model, PA tool, queue, or admin UI — **stop and r
 
 | Item | Source | Severity |
 |---|---|---|
+| **PR 1.3 candidate: replace docs-cascade closure-capture with `PostflightContext`** — see Tracked Seam Debt block below | PR #2739 (Rigby SIGN-WITH-EDITS) | medium |
 | Authority enforcement (JobContract.authority is policy, not enforced) | S1254 §3 | medium |
 | Notification channel abstraction (push + WebSocket "DM arrived" event) | PR #2735 §"What's NOT" | low |
 | Mobile messaging screen | PR-4 discovery report | low |
@@ -254,6 +255,68 @@ If Employee #2 needs any new model, PA tool, queue, or admin UI — **stop and r
 | Pre-existing failing test `test_every_route_pattern_matches_a_registered_task` (orphan `content.*` route) | S1253 #2733 PR description | low |
 | `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low |
 | `feedback_docs_pipeline_4_step_cascade.md` memory rule update — point at the new daily-read surface (`employee_tool action=status` + shift-report DM) | S1254 deferred | low |
+
+#### Tracked seam debt — PR 1.3 candidate
+
+**Replace Documentation Manager closure-capture workaround with
+MissionRunner postflight context carrying the mission row.**
+
+**Why this exists.** PR #2739 (Session 1256 PR 1.2) migrated the
+Documentation Manager onto MissionRunner. MissionRunner's
+`postflight_fn(passed, summary_acc)` signature does **not** receive
+the mission row. The docs cascade needs the mission row in postflight
+to emit two custom timeline events the runner can't emit on its own:
+
+- `step_5_drift_observed` (singular info event on success)
+- `step_5_skipped` (singular info event on failure)
+
+PR 1.2 worked around this **without modifying MissionRunner's public
+contract** by stashing the mission inside a `_make_mission_capturing_step`
+wrapper into a per-runner `mission_holder` dict that the postflight
+closure reads. The workaround has fail-loud guards (postflight raises
+`RuntimeError` if the holder is empty; step wrapper raises if mission
+is `None`) and per-runner isolation tests, but it's still a workaround.
+
+**Intended API shape (PR 1.3).** Replace the closure dance with an
+explicit context object:
+
+```python
+@dataclass(frozen=True)
+class PostflightContext:
+    mission: OpsRun          # the mission row, populated by the runner
+    passed: bool             # final cascade-step outcome
+    summary_acc: dict        # mutable accumulator (caller may mutate)
+
+# MissionRunner constructor signature evolves:
+postflight_fn: Optional[Callable[[PostflightContext], None]] = None
+
+# Backwards compatibility: detect 2-arg vs 1-arg via inspect.signature
+# at constructor time. 2-arg callers (today's shape) get a shim that
+# unpacks (passed, summary_acc) from the context. New callers receive
+# the context directly. This lets PR 1.3 land without forcing every
+# job to migrate in lockstep.
+```
+
+**Acceptance for the follow-up PR:**
+- New `PostflightContext` dataclass in `core/employees/mission_runner.py`
+- `postflight_fn` accepts either the new 1-arg shape or the legacy
+  2-arg shape (detected via `inspect.signature`)
+- `core/jobs/docs_cascade.py` migrates: postflight reads
+  `ctx.mission` instead of `mission_holder.get("mission")`
+- `_make_mission_capturing_step` deleted; `mission_holder` deleted
+- Same tests in `test_docs_manager_migration.py::EventLabelOrderPreservationTests`
+  still pass verbatim
+- `test_docs_manager_migration.py::ClosureCaptureSafetyTests` is
+  renamed and updated to test the new context shape
+- MissionRunner gains a 1-2 line contract test that PostflightContext
+  is passed and that the legacy 2-arg signature still works
+
+**Where the workaround lives today (so PR 1.3 knows the surface):**
+- `core/jobs/docs_cascade.py:583-606` — `_make_mission_capturing_step` wrapper
+- `core/jobs/docs_cascade.py:626-668` — `_make_postflight` factory + fail-loud guard
+- `core/jobs/docs_cascade.py:735` — `mission_holder` allocation in `build_docs_manager_runner()`
+- `core/tests/test_docs_manager_migration.py::ClosureCaptureSafetyTests` — 5 safety tests covering the workaround
+- `core/employees/mission_runner.py` — **unchanged in PR 1.2**; PR 1.3 modifies the runner
 
 #### What NOT to do
 

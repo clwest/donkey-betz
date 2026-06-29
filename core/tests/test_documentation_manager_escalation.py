@@ -64,25 +64,25 @@ def _mock_step_1_failure(stack: ExitStack, error_line: str = "boom"):
 
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager.call_command",
+            "core.jobs.docs_cascade.call_command",
             side_effect=_cc_side,
         )
     )
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager.subprocess.run",
+            "core.jobs.docs_cascade.subprocess.run",
             return_value=MagicMock(returncode=0, stdout="", stderr=""),
         )
     )
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager._probe_documents_count",
+            "core.jobs.docs_cascade._probe_documents_count",
             return_value=0,
         )
     )
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager._probe_embeddings_count",
+            "core.jobs.docs_cascade._probe_embeddings_count",
             return_value=0,
         )
     )
@@ -364,7 +364,7 @@ class DedupeBehaviorTests(TestCase):
         with ExitStack() as stack:
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager.call_command",
+                    "core.jobs.docs_cascade.call_command",
                     side_effect=lambda cmd, *a, **kw: (
                         (kw.get("stdout") and kw["stdout"].write(big_error))
                         or (_ for _ in ()).throw(SystemExit(1))
@@ -373,7 +373,7 @@ class DedupeBehaviorTests(TestCase):
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager.subprocess.run",
+                    "core.jobs.docs_cascade.subprocess.run",
                     return_value=MagicMock(
                         returncode=0, stdout="", stderr=""
                     ),
@@ -381,13 +381,13 @@ class DedupeBehaviorTests(TestCase):
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_documents_count",
+                    "core.jobs.docs_cascade._probe_documents_count",
                     return_value=0,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_embeddings_count",
+                    "core.jobs.docs_cascade._probe_embeddings_count",
                     return_value=0,
                 )
             )

@@ -65,11 +65,11 @@ def _setup_user_and_workspace():
 def _mock_cascade_all_pass(stack: ExitStack):
     """Patch call_command + subprocess.run so every step passes silently."""
     cc_mock = stack.enter_context(
-        patch("core.tasks_documentation_manager.call_command")
+        patch("core.jobs.docs_cascade.call_command")
     )
     cc_mock.return_value = None
     sp_mock = stack.enter_context(
-        patch("core.tasks_documentation_manager.subprocess.run")
+        patch("core.jobs.docs_cascade.subprocess.run")
     )
     sp_mock.return_value = MagicMock(
         returncode=0, stdout="all good\n", stderr=""
@@ -94,11 +94,11 @@ def _mock_cascade_step_failure(stack: ExitStack, fail_at: str):
         return None
 
     cc_mock = stack.enter_context(
-        patch("core.tasks_documentation_manager.call_command",
+        patch("core.jobs.docs_cascade.call_command",
               side_effect=_cc_side)
     )
     sp_mock = stack.enter_context(
-        patch("core.tasks_documentation_manager.subprocess.run")
+        patch("core.jobs.docs_cascade.subprocess.run")
     )
     sp_mock.return_value = MagicMock(
         returncode=0, stdout="", stderr=""
@@ -109,12 +109,12 @@ def _mock_cascade_step_failure(stack: ExitStack, fail_at: str):
 def _mock_cascade_step_4_timeout(stack: ExitStack):
     """Patch so step 4 (subprocess.run) raises TimeoutExpired."""
     cc_mock = stack.enter_context(
-        patch("core.tasks_documentation_manager.call_command")
+        patch("core.jobs.docs_cascade.call_command")
     )
     cc_mock.return_value = None
     sp_mock = stack.enter_context(
         patch(
-            "core.tasks_documentation_manager.subprocess.run",
+            "core.jobs.docs_cascade.subprocess.run",
             side_effect=subprocess.TimeoutExpired(
                 cmd="manage.py sync_docs_index_to_documents --embed",
                 timeout=1800,
@@ -130,19 +130,19 @@ def _mock_probes_all_zero(stack: ExitStack):
     """Make Document + DocumentEmbedding probes return 0/0 deterministically."""
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager._probe_documents_count",
+            "core.jobs.docs_cascade._probe_documents_count",
             return_value=0,
         )
     )
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager._probe_embeddings_count",
+            "core.jobs.docs_cascade._probe_embeddings_count",
             return_value=0,
         )
     )
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager._probe_docs_indexed_count",
+            "core.jobs.docs_cascade._probe_docs_indexed_count",
             return_value=42,
         )
     )
@@ -170,7 +170,7 @@ def _mock_drift_observation(stack: ExitStack, drift_count: int = 3):
 
     stack.enter_context(
         patch(
-            "core.tasks_documentation_manager._run_drift_observation",
+            "core.jobs.docs_cascade._run_drift_observation",
             side_effect=_side_effect,
         )
     )
@@ -406,19 +406,19 @@ class ProbeBehaviorTests(TestCase):
             _mock_cascade_all_pass(stack)
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_docs_indexed_count",
+                    "core.jobs.docs_cascade._probe_docs_indexed_count",
                     return_value=137,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_documents_count",
+                    "core.jobs.docs_cascade._probe_documents_count",
                     return_value=0,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_embeddings_count",
+                    "core.jobs.docs_cascade._probe_embeddings_count",
                     return_value=0,
                 )
             )
@@ -432,19 +432,19 @@ class ProbeBehaviorTests(TestCase):
             _mock_cascade_all_pass(stack)
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_documents_count",
+                    "core.jobs.docs_cascade._probe_documents_count",
                     return_value=None,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_embeddings_count",
+                    "core.jobs.docs_cascade._probe_embeddings_count",
                     return_value=None,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_docs_indexed_count",
+                    "core.jobs.docs_cascade._probe_docs_indexed_count",
                     return_value=None,
                 )
             )
@@ -460,19 +460,19 @@ class ProbeBehaviorTests(TestCase):
             _mock_cascade_all_pass(stack)
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_documents_count",
+                    "core.jobs.docs_cascade._probe_documents_count",
                     return_value=None,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_embeddings_count",
+                    "core.jobs.docs_cascade._probe_embeddings_count",
                     return_value=None,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_docs_indexed_count",
+                    "core.jobs.docs_cascade._probe_docs_indexed_count",
                     return_value=None,
                 )
             )
@@ -490,7 +490,7 @@ class ProbeBehaviorTests(TestCase):
             _mock_probes_all_zero(stack)
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._run_drift_observation",
+                    "core.jobs.docs_cascade._run_drift_observation",
                     return_value=(None, None, True),
                 )
             )
@@ -511,19 +511,19 @@ class ProbeBehaviorTests(TestCase):
 
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_documents_count",
+                    "core.jobs.docs_cascade._probe_documents_count",
                     return_value=10,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_embeddings_count",
+                    "core.jobs.docs_cascade._probe_embeddings_count",
                     side_effect=_probe_emb,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_docs_indexed_count",
+                    "core.jobs.docs_cascade._probe_docs_indexed_count",
                     return_value=10,
                 )
             )
@@ -539,13 +539,13 @@ class ProbeBehaviorTests(TestCase):
             _mock_cascade_step_failure(stack, fail_at="build_docs_index")
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_documents_count",
+                    "core.jobs.docs_cascade._probe_documents_count",
                     return_value=50,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager._probe_embeddings_count",
+                    "core.jobs.docs_cascade._probe_embeddings_count",
                     return_value=75,
                 )
             )
@@ -650,13 +650,13 @@ class ErrorTailAndSignatureTests(TestCase):
         with ExitStack() as stack:
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager.call_command",
+                    "core.jobs.docs_cascade.call_command",
                     side_effect=_cc_side,
                 )
             )
             stack.enter_context(
                 patch(
-                    "core.tasks_documentation_manager.subprocess.run",
+                    "core.jobs.docs_cascade.subprocess.run",
                     return_value=MagicMock(
                         returncode=0, stdout="", stderr=""
                     ),
