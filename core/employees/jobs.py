@@ -366,15 +366,293 @@ DOCUMENTATION_MANAGER = JobContract(
 )
 
 
+# ── Employee constant: Platform Auditor (Session 1257 PR 2.1) ────────
+
+
+PLATFORM_AUDITOR = AIEmployee(
+    handle="platform_auditor",
+    display_name="Platform Auditor",
+    # Honest v0: like Rigby, the Platform Auditor has no dedicated User
+    # row. Acts as the ``chris`` UnifiedUser server-side when running
+    # autonomously. Tracked as a known v0 limitation.
+    runs_as_username="chris",
+    # No pinned PA chat — the auditor reports via the audit Deliverable
+    # itself + the standard shift-report DM, not via a dedicated chat
+    # thread. Empty primary_chat_id is intentional.
+    primary_chat_id=None,
+    notes=(
+        "Second AI employee (Session 1257). Owns the weekly platform "
+        "audit — read-only inspection of docs, integrations, env "
+        "config status, and database model counts. Wraps the existing "
+        "PlatformAuditAgent (core/agents/platform_audit_agent.py). "
+        "v0 acts as the ``chris`` UnifiedUser server-side; no "
+        "dedicated service account yet. Beat schedule + task runner "
+        "land in subsequent PRs (2.2/2.3); PR 2.1 registers the "
+        "contract only."
+    ),
+)
+
+
+# ── Job constant: Platform Audit (Session 1257 PR 2.1) ───────────────
+
+
+PLATFORM_AUDIT_JOB = JobContract(
+    title="Platform Audit",
+    employee_handle="platform_auditor",
+    manager="chris",
+
+    # ── Mission ─────────────────────────────────────────────────────
+    mission=(
+        "Platform Auditor owns running the weekly internal platform "
+        "audit, recording evidence, certifying healthy audits, and "
+        "escalating drift or anomalies. The audit is strictly "
+        "read-only: it inspects platform docs, integration "
+        "configuration status, environment-variable presence (values "
+        "masked), and key database-model row counts. The auditor "
+        "does NOT modify any platform state, write to env config, "
+        "delete database rows, execute arbitrary code, or access "
+        "actual secret values. Findings are persisted as a structured "
+        "audit Deliverable; failures escalate per the standard "
+        "Employee OS visibility guarantee."
+    ),
+
+    responsibilities=(
+        "Run the platform audit once per week (cadence finalized in "
+        "PR 2.3 when the beat schedule lands).",
+        "Inspect the canonical platform docs (CLAUDE.md, "
+        "SPIDERS.md, AGENTS.md, SERVICES.md, ARCHITECTURE.md, "
+        "CAPABILITIES.md) for surface-level drift.",
+        "Inventory integrations (LLM providers, media APIs, spider "
+        "credentials, payment, infrastructure) and report which have "
+        "credentials configured vs missing.",
+        "Audit environment-variable configuration coverage by "
+        "category (api_keys, database, redis, feature_flags) — "
+        "values masked; only existence reported.",
+        "Count key database models (Agent, AgentExecution, "
+        "AgentMemory, LegacySpiderData, Conversation, User, "
+        "ImageHistory, VideoHistory) and report current totals.",
+        "Synthesize the findings into a structured audit Deliverable "
+        "(Executive Summary / Integration Health / Configuration "
+        "Status / Database Health / Top Risks / Green Checks).",
+        "On clean audit → certify mission via mission_verdict + stay "
+        "silent. Silent success is the contract.",
+        "On any audit failure → escalate per the visibility "
+        "guarantee below.",
+    ),
+
+    triggers=(
+        "Cron only (v0). Beat schedule lands in PR 2.3 — weekly "
+        "cadence to be finalized then (proposed: Monday 06:30 local).",
+        "Manual override via ``employee_tool action=run_now "
+        "employee=platform_auditor job=platform_audit`` — lands in "
+        "PR 2.2 (run_now path) along with the task runner.",
+    ),
+
+    # No daily routine — the audit is weekly v0. Listed empty so the
+    # contract dataclass is explicit about cadence rather than implicit.
+    daily_routine=(),
+
+    weekly_routine=(
+        "Step 1 — read_documentation: sweep the 6 canonical docs.",
+        "Step 2 — inventory_integrations: capture credential-status "
+        "snapshot across all integration categories.",
+        "Step 3 — check_env_config: presence-only audit across "
+        "all env categories (values masked).",
+        "Step 4 — count_database_models: capture row counts for the "
+        "8 canonical models.",
+        "Step 5 — generate_audit_report: synthesize the findings "
+        "into a structured Deliverable (Executive Summary / "
+        "Integration Health / Configuration Status / Database "
+        "Health / Top Risks / Green Checks).",
+        "Step 6 — emit verdict via mission_verdict.",
+    ),
+
+    mission_run_kind="platform_audit",
+
+    # ── Authority — read-only by design ─────────────────────────────
+    authority={
+        "read_platform_docs": AuthorityLevel.EXECUTE.value,
+        "inventory_integrations": AuthorityLevel.EXECUTE.value,
+        "check_env_config_status": AuthorityLevel.OBSERVE.value,
+        "count_database_models": AuthorityLevel.OBSERVE.value,
+        "generate_audit_report": AuthorityLevel.EXECUTE.value,
+        "save_audit_to_deliverable": AuthorityLevel.EXECUTE.value,
+        "certify_mission_run": AuthorityLevel.EXECUTE.value,
+        "recommend_remediations": AuthorityLevel.RECOMMEND.value,
+        "modify_any_file": AuthorityLevel.PROHIBITED.value,
+        "modify_env_config": AuthorityLevel.PROHIBITED.value,
+        "delete_database_rows": AuthorityLevel.PROHIBITED.value,
+        "execute_arbitrary_code": AuthorityLevel.PROHIBITED.value,
+        "access_secret_values": AuthorityLevel.PROHIBITED.value,
+        "open_pull_request": AuthorityLevel.PROHIBITED.value,
+        "modify_settings": AuthorityLevel.PROHIBITED.value,
+    },
+
+    prohibited_actions=(
+        "Modify any file (config, code, docs).",
+        "Modify environment-variable configuration.",
+        "Execute arbitrary code outside the named audit tools.",
+        "Access actual secret values from env vars "
+        "(presence-only, masked).",
+        "Delete or update rows in any database model.",
+        "Open or merge pull requests.",
+        "Decide what is in scope for the audit "
+        "(Chris owns scope).",
+    ),
+
+    # ── Success / failure metrics ───────────────────────────────────
+    success_metrics=(
+        "All 5 audit steps return without raising.",
+        "Synthesized audit Deliverable includes the 6 required "
+        "sections (Executive Summary, Integration Health, "
+        "Configuration Status, Database Health, Top Risks, "
+        "Green Checks).",
+        "Audit Deliverable persisted with deliverable_type='analysis' "
+        "(matches the agent's existing actionable_config item shape).",
+        "Total mission wall time < 5 minutes.",
+        "findings_count + issues_found_count recorded in the "
+        "mission summary.",
+    ),
+
+    failure_metrics=(
+        "Any of the 5 audit steps raises or returns a malformed "
+        "shape (e.g., LLM synthesis empty without fallback).",
+        "Audit Deliverable missing one or more required sections.",
+        "Audit wall time exceeds 10 minutes (LLM synthesis stall).",
+        "3 failures within a 7-day rolling window → mark the job "
+        "'trust_status: under_review' in the status tool's derived "
+        "response (no state change to the contract itself).",
+    ),
+
+    # ── Evidence contract ───────────────────────────────────────────
+    required_summary_keys=(
+        # Audit shape
+        "audit_type",                   # 'integrations' / 'configuration' / 'database' / 'comprehensive'
+        "findings_count",               # int — total findings flagged
+        "issues_found_count",           # int — subset that are actionable issues
+        # Step-level evidence
+        "docs_audited",                 # list[str] — doc names actually read in step 1
+        "integrations_audited_count",   # int — integrations enumerated in step 2
+        "env_vars_checked_count",       # int — env vars probed in step 3
+        "models_counted",               # dict[str, int] — model_name → row count
+        # Synthesis output
+        "report_deliverable_id",        # UUID — the audit Deliverable from step 5
+        "report_chars",                 # int — synthesis length
+        # Timing + failure capture
+        "wall_time_ms",
+        "failed_step",                  # null on success
+        "error_tail",                   # null on success
+        "degraded_evidence",            # bool — true when any evidence field is null
+    ),
+
+    evidence_tables=(
+        "OpsRun (domain=mission, run_kind=platform_audit)",
+        "OpsRunEvent (one per audit step + verdict_issued event)",
+        "LLMCallEvent (from gpt-5.2 synthesis + tool calls)",
+        "ToolCallRecord (from each platform audit tool invocation)",
+        "Deliverable (audit report — created on every run, not "
+        "just on escalation)",
+    ),
+
+    # ── Drift definition ───────────────────────────────────────────
+    drift_count_definition=(
+        "Not applicable to the Platform Auditor. The audit is "
+        "observational — its findings count is reported via "
+        "``findings_count`` and ``issues_found_count`` rather than "
+        "a docs-cascade-style drift metric. The runner does not "
+        "consult a verify_doc_claims-equivalent for this job."
+    ),
+
+    # ── Step timeout (mirrors docs-cascade contract shape) ──────────
+    # Platform audit doesn't have a separate long-running step like the
+    # docs cascade's embed step. The LLM synthesis is bounded by the
+    # standard MissionRunner soft/hard time limits inherited from the
+    # Celery task wrapper (configured in PR 2.2 when the task lands).
+    # Empty dict here is explicit about no per-step override.
+    embed_step_timeout={},
+
+    # ── Escalation (mirrors docs cascade conventions) ──────────────
+    escalation_rules=(
+        "First failure of any step → escalate immediately.",
+        "Subsequent failures with the SAME failure signature within "
+        "24h → append/reference the prior escalation rather than "
+        "create a duplicate Deliverable (24h dedupe window).",
+        "3 failures of any kind within a 7-day rolling window → mark "
+        "the job 'trust_status: under_review' in the status tool's "
+        "derived response.",
+    ),
+
+    escalation_visibility=(
+        "Create a Deliverable with "
+        "publish_intent=publish_candidate titled 'Platform Audit "
+        "Escalation [YYYY-MM-DD]'.",
+        "Force the Deliverable to a visible state (ready or "
+        "attention-required) via the canonical status path with "
+        "audit transition source='PlatformAuditor'. Required "
+        "because Deliverable.create currently defaults new rows "
+        "to status=completed regardless of explicit param.",
+        "No PA chat post for v0 — the auditor has no pinned PA "
+        "conversation. Findings + escalations are visible in the "
+        "/inbox web UI via the shift-report DM (post_shift_report).",
+    ),
+
+    dedupe_rule=(
+        "Duplicate escalation suppression MUST key off the failure "
+        "signature derived from OpsRun.summary.failed_step + a "
+        "normalized hash of OpsRun.summary.error_tail (canonical "
+        "MissionRunner.make_error_signature). Same signature within "
+        "24h → append to or reference the prior escalation. "
+        "Different signature → new Deliverable, even if the prior "
+        "one is still open."
+    ),
+
+    # ── Boundary statements ────────────────────────────────────────
+    what_chris_approves=(
+        "The contract itself (PR 2.1 review).",
+        "Quarterly: reads ``employee_tool action=status "
+        "employee=platform_auditor`` and decides whether to expand "
+        "the auditor's authority (e.g., adding new audit categories).",
+        "Acts on findings flagged in the weekly audit Deliverable.",
+    ),
+
+    what_claude_handles=(
+        "Writing PRs 2.1 / 2.2 / 2.3 of this rollout.",
+        "Fixing bugs surfaced by audit-failure escalations.",
+        "Adding new platform components to the audit scope (new "
+        "integration categories, additional doc files, additional "
+        "models to count).",
+    ),
+
+    what_rigby_can_do_alone=(
+        # JobContract reuses the ``what_rigby_can_do_alone`` field
+        # name from PR 1 — it's the generic "what this employee can
+        # do alone" slot. The contract dataclass name predates the
+        # multi-employee surface; the semantic is correct.
+        "Run the weekly audit routine.",
+        "Read the 6 canonical platform docs.",
+        "Inventory all integrations + env var configuration status.",
+        "Count rows in the 8 canonical database models.",
+        "Generate + persist the audit Deliverable.",
+        "Certify / reject / defer the mission via mission_verdict.",
+        "Emit escalation artifacts per the visibility guarantee.",
+        "Answer ``employee_tool action=status`` queries.",
+    ),
+)
+
+
 # ── Registry helpers ─────────────────────────────────────────────────
 
 _EMPLOYEES_BY_HANDLE: dict[str, AIEmployee] = {
     RIGBY.handle: RIGBY,
+    PLATFORM_AUDITOR.handle: PLATFORM_AUDITOR,
 }
 
 _JOBS_BY_EMPLOYEE: dict[str, dict[str, JobContract]] = {
     RIGBY.handle: {
         "docs_manager": DOCUMENTATION_MANAGER,
+    },
+    PLATFORM_AUDITOR.handle: {
+        "platform_audit": PLATFORM_AUDIT_JOB,
     },
 }
 
@@ -394,6 +672,31 @@ def list_jobs_for_employee(handle: str) -> list[JobContract]:
     if not handle:
         return []
     return list(_JOBS_BY_EMPLOYEE.get(handle.lower(), {}).values())
+
+
+def list_jobs_with_keys(handle: str) -> list[tuple[str, JobContract]]:
+    """Return ``(job_key, contract)`` tuples for every job on ``handle``.
+
+    Session 1257 PR 2.1: added to support describing employees with
+    multiple jobs (or any employee beyond Rigby) without hardcoding
+    the reverse-lookup in the describe handler. ``list_jobs_for_employee``
+    drops the key; ``list_jobs_with_keys`` preserves it.
+    """
+    if not handle:
+        return []
+    return list(_JOBS_BY_EMPLOYEE.get(handle.lower(), {}).items())
+
+
+def list_job_keys_for_employee(handle: str) -> list[str]:
+    """Return the registered job keys for ``handle``; empty if unknown.
+
+    Session 1257 PR 2.1: helper used by the describe handler's
+    unknown-job error branch to surface the actual known job keys
+    instead of hardcoding ``['docs_manager']``.
+    """
+    if not handle:
+        return []
+    return list(_JOBS_BY_EMPLOYEE.get(handle.lower(), {}).keys())
 
 
 def get_job(employee_handle: str, job_key: str) -> Optional[JobContract]:
