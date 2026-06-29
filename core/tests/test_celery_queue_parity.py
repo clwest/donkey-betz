@@ -229,3 +229,54 @@ class DocsManagerTaskRegistrationTests(SimpleTestCase):
             "core/celery.py:app.conf.imports — worker boots will not pick up "
             "the @shared_task. See S1253 hotfix.",
         )
+
+
+class PlatformAuditTaskRegistrationTests(SimpleTestCase):
+    """Session 1257 PR 2.2 lock-in: Platform Auditor task must register at
+    worker boot.
+
+    Mirrors the S1253 docs-manager registration tests. Catches both
+    regression shapes:
+      - `core.tasks_platform_audit` dropped from `app.conf.imports`
+      - `@shared_task` renamed/removed in tasks_platform_audit.py
+    """
+
+    def test_platform_auditor_run_in_registry(self):
+        from celery import current_app
+        current_app.finalize()
+        self.assertIn(
+            'platform_auditor_run',
+            current_app.tasks,
+            "platform_auditor_run missing from Celery task registry. "
+            "Either core.tasks_platform_audit was removed from "
+            "app.conf.imports in core/celery.py, or the @shared_task "
+            "decorator/name was changed in tasks_platform_audit.py. "
+            "See PR 2.2.",
+        )
+
+    def test_platform_audit_module_pinned_in_app_conf_imports(self):
+        from celery import current_app
+        imports = tuple(current_app.conf.imports or ())
+        self.assertIn(
+            'core.tasks_platform_audit',
+            imports,
+            "'core.tasks_platform_audit' removed from "
+            "core/celery.py:app.conf.imports — worker boots will not "
+            "pick up the @shared_task. See PR 2.2.",
+        )
+
+    def test_platform_audit_task_eager_import_listed(self):
+        """The eager-import hook must include core.tasks_platform_audit
+        so `app.tasks` reads at finalize time see it."""
+        import inspect
+
+        from core.celery import _eager_import_session1115_modules
+
+        source = inspect.getsource(_eager_import_session1115_modules)
+        self.assertIn(
+            "core.tasks_platform_audit", source,
+            "Platform Audit task module missing from the eager-import set "
+            "in core/celery.py:_eager_import_session1115_modules. "
+            "Without this, build_celery_audit / verify_doc_claims may "
+            "fail to see the task at finalize time. See PR 2.2.",
+        )
