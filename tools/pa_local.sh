@@ -17,31 +17,28 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1249 fresh
-# thread (Rigby create_fresh at S1249 open per S1247-pin
-# pa-3901b70e61934df7 sitting at 60/suggest_fresh after 17 turns / 7
-# topics / 13.2h elapsed). Pin: pa-e8999a1793f04e23. Title: "Session
-# 1249 — local↔prod parity menu + P3 char-training unblock".
-# Carry-forward seeded via session_tool.create_fresh (PR #2707 fix
-# verified live — starter_prompt now echoes carry_forward_summary
-# verbatim, closing S1247 Finding 2 from deliverable 6103e35c-…):
-# S1247/S1248 closes (PR #2709 session_tool retire/set_active/seed +
-# dispatcher gate, PR #2710 deliverable_tool.create status echo +
-# return_detail), P1 morning_brief 2026-06-28 verified green at S1249
-# open (CeleryTaskEvent SUCCESS 13:00 UTC, deliverable c0c1ff02
-# created 13:05 UTC, no cf708a2e workspace leak, MUSCULAR + absolute-
-# clock scrubs both 0 hits, LegacySpiderData=8363≥8170). S1249
-# priority queue: P2 local↔prod parity leverage menu (a P2c-B prod
-# RPC endpoint / b wrapper-trap cleanup / c env-parity probe beat /
-# d make env-diff mgmt cmd — Rigby's S1248 lean: B is target shape,
-# wrapper-trap is #1 footgun); P3 char-training full retirement
-# (blocked on FleetServiceKey prod query); P4 workspace leak watch
-# cf708a2e-…; P5 S1115 #12 re-audit ~2026-07-13; P6 audit-domain menu.
-# Retired at S1249 open: pa-3901b70e61934df7 (Sessions 1247-1248 —
-# S1247 PA tool gap audit deliverable 6b5570c2-…, top-3 sprint with
-# 2/3 shipped (P2a #2709, P2b #2710) + 1 deferred (P2c per Rigby
-# pick C); ended at 17 turns / 8.5k tokens / score 60 / suggest_fresh
-# after 13.2h idle).
+# the --conversation flag below. Current value: Session 1258 fresh
+# thread (Rigby create_fresh at S1258 open per Chris's explicit
+# directive — NOT score-driven; the prior pin pa-e8999a1793f04e23
+# was at 85/continue when rotated). Pin: pa-85960cfecf5e42d5. Title:
+# "Session 1258 — open + priority menu (PR 3.3 / receipts gap /
+# Tue 06:30 first-fire)". Carry-forward seeded via
+# session_tool.create_fresh covering S1257 close (PR #2744 register
+# CoS Employee #3 + PR #2745 Morning Brief task runner via
+# MissionRunner; production caller count 2→3) and S1258 priority
+# menu: P0 PR 3.3 Morning Brief beat migration (small single PR
+# flipping the generate-morning-brief-daily PeriodicTask row from
+# core.tasks.generate_morning_brief_daily → chief_of_staff_morning_brief_run
+# and deleting the legacy task body at core/tasks.py:5788-5938);
+# P1 claude_code_tool task receipts + post-back reliability (S1257
+# verification incident — code_jobs sandboxing + no AgentExecution
+# row + silent post-back failure); P2 Tue 2026-06-30 06:30 MDT
+# (12:30 UTC) first untouched beat fire watch for docs-manager;
+# P3 carryover backlog. Retired at S1258 open: pa-e8999a1793f04e23
+# (Sessions 1249-1257 — local↔prod parity arc + Employee OS arc
+# Documentation Manager + Platform Auditor + Chief of Staff
+# end-to-end ship; 16 turns / 8k tokens / score 85 / 32h elapsed at
+# rotation — elective rotation for clean S1258 thread).
 # Prior pins retired: pa-0f08fc48ec914917 (Sessions 1234-1235 →
 # Session 1236 open; ~50 turns across the 3 sessions covering
 # Session 1234 3-arc 22-PR close + Session 1235 9-PR + audit
@@ -107,4 +104,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-e8999a1793f04e23
+python tools/pa_chat.py "$@" --tools --conversation pa-85960cfecf5e42d5
