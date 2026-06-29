@@ -106,12 +106,20 @@ class RunNowArgValidationTests(TestCase):
         )
 
     def test_run_now_rejects_unknown_employee(self):
+        """Session 1257 PR 2.2: error shape generalized to name the
+        (employee, job) pair + advertise the supported pairs."""
         result = _call_run_now(
             {"action": "run_now", "employee": "ghost", "job": "docs_manager"},
             user_id=self.chris.id,
         )
         self.assertFalse(result["ok"])
-        self.assertIn("supports only employee='rigby'", result["error"])
+        self.assertIn("employee='ghost'", result["error"])
+        self.assertIn("does not support", result["error"])
+        # supported_pairs surfaces the registry contents
+        pairs = result["supported_pairs"]
+        self.assertIn(
+            {"employee": "rigby", "job": "docs_manager"}, pairs
+        )
 
     def test_run_now_rejects_unknown_job(self):
         result = _call_run_now(
@@ -119,8 +127,12 @@ class RunNowArgValidationTests(TestCase):
             user_id=self.chris.id,
         )
         self.assertFalse(result["ok"])
-        self.assertIn("supports only job='docs_manager'", result["error"])
-        self.assertIn("docs_manager", result["known_jobs"])
+        self.assertIn("job='not-a-job'", result["error"])
+        self.assertIn("does not support", result["error"])
+        pairs = result["supported_pairs"]
+        self.assertIn(
+            {"employee": "rigby", "job": "docs_manager"}, pairs
+        )
 
     def test_run_now_missing_job_returns_error(self):
         result = _call_run_now(
@@ -128,7 +140,8 @@ class RunNowArgValidationTests(TestCase):
             user_id=self.chris.id,
         )
         self.assertFalse(result["ok"])
-        self.assertIn("supports only job='docs_manager'", result["error"])
+        self.assertIn("job=''", result["error"])
+        self.assertIn("does not support", result["error"])
 
 
 class RunNowDispatchTests(TestCase):
@@ -263,3 +276,131 @@ class RunNowDispatchTests(TestCase):
         # rather than being queued.
         cc_mock.assert_not_called()
         sp_mock.assert_not_called()
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Session 1257 PR 2.2 — Platform Auditor run_now path
+# ═════════════════════════════════════════════════════════════════════
+
+
+class PlatformAuditorRunNowDispatchTests(TestCase):
+    """run_now dispatches platform_auditor_run for the new employee."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.chris = User.objects.create_user(
+            username="chris",
+            email="chris@test.donkey",
+            password="x",
+        )
+
+    def test_run_now_dispatches_platform_auditor_run(self):
+        with patch(
+            "core.tasks_platform_audit."
+            "platform_auditor_run.delay"
+        ) as delay_mock:
+            delay_mock.return_value = MagicMock(id="celery-pa-task")
+            result = _call_run_now(
+                {
+                    "action": "run_now",
+                    "employee": "platform_auditor",
+                    "job": "platform_audit",
+                },
+                user_id=self.chris.id,
+            )
+        delay_mock.assert_called_once_with()
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["employee"], "platform_auditor")
+        self.assertEqual(result["job"], "platform_audit")
+        self.assertEqual(result["task_id"], "celery-pa-task")
+        self.assertEqual(result["dispatch_status"], "queued")
+
+    def test_run_now_does_not_run_audit_inline(self):
+        """Calling run_now for platform_auditor must NOT invoke any of
+        the agent's tool methods synchronously — the cascade runs in
+        the worker, not in the dispatcher."""
+        with patch(
+            "core.tasks_platform_audit."
+            "platform_auditor_run.delay"
+        ) as delay_mock, patch(
+            "core.agents.platform_audit_agent."
+            "PlatformAuditAgent._inventory_integrations"
+        ) as inv_mock, patch(
+            "core.agents.platform_audit_agent."
+            "PlatformAuditAgent._count_database_models"
+        ) as count_mock:
+            delay_mock.return_value = MagicMock(id="celery-pa-task")
+            _call_run_now(
+                {
+                    "action": "run_now",
+                    "employee": "platform_auditor",
+                    "job": "platform_audit",
+                },
+                user_id=self.chris.id,
+            )
+        inv_mock.assert_not_called()
+        count_mock.assert_not_called()
+
+    def test_rigby_run_now_still_dispatches_docs_manager(self):
+        """Regression check — generalization must not break Rigby."""
+        with patch(
+            "core.tasks_documentation_manager."
+            "rigby_documentation_manager_daily.delay"
+        ) as delay_mock:
+            delay_mock.return_value = MagicMock(id="celery-rigby-task")
+            result = _call_run_now(
+                {
+                    "action": "run_now",
+                    "employee": "rigby",
+                    "job": "docs_manager",
+                },
+                user_id=self.chris.id,
+            )
+        delay_mock.assert_called_once_with()
+        self.assertEqual(result["employee"], "rigby")
+        self.assertEqual(result["job"], "docs_manager")
+
+    def test_supported_pairs_includes_both_employees(self):
+        """Unknown employee error advertises the supported pairs."""
+        result = _call_run_now(
+            {
+                "action": "run_now",
+                "employee": "unknown_employee",
+                "job": "something",
+            },
+            user_id=self.chris.id,
+        )
+        self.assertFalse(result["ok"])
+        pairs = result["supported_pairs"]
+        self.assertIn(
+            {"employee": "rigby", "job": "docs_manager"}, pairs
+        )
+        self.assertIn(
+            {"employee": "platform_auditor", "job": "platform_audit"},
+            pairs,
+        )
+
+    def test_wait_for_result_polls_platform_audit_run_kind(self):
+        """When wait_for_result=True, the polling helper queries
+        run_kind='platform_audit' (not the docs_cascade default)."""
+        terminal = MagicMock(id="ops-uuid", status="passed", summary={})
+        with patch(
+            "core.tasks_platform_audit."
+            "platform_auditor_run.delay"
+        ) as delay_mock, patch(
+            "core.services.td_handlers_employee._wait_for_terminal_mission",
+            return_value=terminal,
+        ) as poll_mock:
+            delay_mock.return_value = MagicMock(id="celery-pa-task")
+            _call_run_now(
+                {
+                    "action": "run_now",
+                    "employee": "platform_auditor",
+                    "job": "platform_audit",
+                    "wait_for_result": True,
+                },
+                user_id=self.chris.id,
+            )
+        # The polling call must have passed run_kind='platform_audit'
+        poll_kwargs = poll_mock.call_args.kwargs
+        self.assertEqual(poll_kwargs.get("run_kind"), "platform_audit")

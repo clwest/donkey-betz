@@ -215,15 +215,25 @@ class EmployeeHandlersMixin:
         user_id: Optional[Any],
         trace_id: str,
     ) -> Dict[str, Any]:
-        """Rigby-only: dispatch an assigned job's task immediately.
+        """Dispatch an assigned job's task immediately.
 
-        v0 supports only ``employee=rigby`` + ``job=docs_manager`` —
-        the Documentation Manager daily routine. Returns a
-        ``mission_id`` once the task has created the OpsRun row;
-        ``wait_for_result=True`` polls every 2s up to 90s for a
+        Session 1257 PR 2.2: generalized to support multiple
+        (employee, job) pairs via ``_RUN_NOW_TASKS`` registry. v0
+        supports:
+
+          * ``employee=rigby`` + ``job=docs_manager`` (run_kind=docs_cascade)
+          * ``employee=platform_auditor`` + ``job=platform_audit``
+            (run_kind=platform_audit)
+
+        Returns a ``mission_id`` once the task has created the OpsRun
+        row; ``wait_for_result=True`` polls every 2s up to 90s for a
         terminal status, otherwise returns immediately and the caller
         reads status later via ``employee_tool action=status`` (PR 3).
         """
+        # Auth gate — both registered employees run as
+        # RIGBY.runs_as_username (='chris') in v0, so the existing
+        # gate covers both. When future employees declare a
+        # different runs_as_username the gate will need broadening.
         gate_check = _verify_rigby_caller(user_id)
         if not gate_check["ok"]:
             return {
@@ -236,43 +246,36 @@ class EmployeeHandlersMixin:
         employee_handle = (
             payload.get("employee") or ""
         ).strip().lower()
-        if employee_handle != RIGBY.handle:
-            return {
-                "ok": False,
-                "error": (
-                    f"v0 run_now supports only employee='rigby'. "
-                    f"Got {employee_handle!r}."
-                ),
-            }
-
         job_key = (payload.get("job") or "").strip().lower()
-        if job_key != "docs_manager":
+
+        dispatch = _RUN_NOW_TASKS.get((employee_handle, job_key))
+        if dispatch is None:
             return {
                 "ok": False,
                 "error": (
-                    f"v0 run_now supports only job='docs_manager'. "
-                    f"Got {job_key!r}."
+                    f"v0 run_now does not support "
+                    f"(employee={employee_handle!r}, job={job_key!r})."
                 ),
-                "known_jobs": ["docs_manager"],
+                "supported_pairs": [
+                    {"employee": e, "job": j}
+                    for (e, j) in sorted(_RUN_NOW_TASKS.keys())
+                ],
             }
 
         wait = bool(payload.get("wait_for_result"))
 
         # Lazy import — keeps module load light + avoids dragging
-        # Celery into PR 1's PA-tool import surface.
-        from core.tasks_documentation_manager import (
-            rigby_documentation_manager_daily,
-        )
-
-        async_result = rigby_documentation_manager_daily.delay()
+        # Celery into the PA-tool import surface.
+        task_callable = dispatch.resolve_task()
+        async_result = task_callable.delay()
         task_id = getattr(async_result, "id", None)
 
         if not wait:
             return {
                 "ok": True,
                 "action": "run_now",
-                "employee": "rigby",
-                "job": "docs_manager",
+                "employee": employee_handle,
+                "job": job_key,
                 "task_id": task_id,
                 "dispatch_status": "queued",
                 "wait_for_result": False,
@@ -283,16 +286,19 @@ class EmployeeHandlersMixin:
                 ),
             }
 
-        # Poll the latest docs_cascade mission for a terminal status.
+        # Poll the latest mission of the matching run_kind for a terminal
+        # status.
         terminal = _wait_for_terminal_mission(
-            timeout_seconds=90, poll_interval_seconds=2
+            timeout_seconds=90,
+            poll_interval_seconds=2,
+            run_kind=dispatch.run_kind,
         )
         if terminal is None:
             return {
                 "ok": True,
                 "action": "run_now",
-                "employee": "rigby",
-                "job": "docs_manager",
+                "employee": employee_handle,
+                "job": job_key,
                 "task_id": task_id,
                 "dispatch_status": "queued",
                 "wait_for_result": True,
@@ -306,8 +312,8 @@ class EmployeeHandlersMixin:
         return {
             "ok": True,
             "action": "run_now",
-            "employee": "rigby",
-            "job": "docs_manager",
+            "employee": employee_handle,
+            "job": job_key,
             "task_id": task_id,
             "wait_for_result": True,
             "mission_id": str(terminal.id),
@@ -495,8 +501,13 @@ def _wait_for_terminal_mission(
     *,
     timeout_seconds: int,
     poll_interval_seconds: int,
+    run_kind: str = "docs_cascade",
 ):
-    """Poll the latest docs_cascade mission for a terminal status.
+    """Poll the latest mission of ``run_kind`` for a terminal status.
+
+    Session 1257 PR 2.2: parameterized on ``run_kind`` so both Rigby's
+    docs_cascade and Platform Auditor's platform_audit (and future
+    employee missions) can use the same polling helper.
 
     Returns the OpsRun row once status != 'running', or None if the
     timeout elapses first. Reads from a real DB cursor each iteration
@@ -510,7 +521,7 @@ def _wait_for_terminal_mission(
         run = (
             OpsRun.objects.filter(
                 domain="mission",
-                run_kind="docs_cascade",
+                run_kind=run_kind,
             )
             .order_by("-started_at")
             .first()
@@ -519,6 +530,42 @@ def _wait_for_terminal_mission(
             return run
         time.sleep(poll_interval_seconds)
     return None
+
+
+# ── run_now dispatch registry (Session 1257 PR 2.2) ──────────────────
+
+
+class _RunNowDispatch:
+    """Maps an (employee_handle, job_key) pair to a Celery task callable.
+
+    ``resolve_task`` lazy-imports the task module so the registry stays
+    Celery-free at PA-tool import time.
+    """
+
+    def __init__(self, *, module: str, attr: str, run_kind: str):
+        self._module = module
+        self._attr = attr
+        self.run_kind = run_kind
+
+    def resolve_task(self):
+        import importlib
+
+        mod = importlib.import_module(self._module)
+        return getattr(mod, self._attr)
+
+
+_RUN_NOW_TASKS: Dict[tuple, _RunNowDispatch] = {
+    ("rigby", "docs_manager"): _RunNowDispatch(
+        module="core.tasks_documentation_manager",
+        attr="rigby_documentation_manager_daily",
+        run_kind="docs_cascade",
+    ),
+    ("platform_auditor", "platform_audit"): _RunNowDispatch(
+        module="core.tasks_platform_audit",
+        attr="platform_auditor_run",
+        run_kind="platform_audit",
+    ),
+}
 
 
 # ── Window parser (PR 3, module-private) ─────────────────────────────

@@ -848,6 +848,13 @@ app.conf.imports = (
     # Adding the module here ensures the worker imports it at boot and
     # registers the task name in the registry.
     'core.tasks_documentation_manager',
+    # Session 1257 PR 2.2: Platform Auditor task. Same lesson as the
+    # docs-manager hotfix above — the `@shared_task platform_auditor_run`
+    # in a non-standard `tasks_platform_audit.py` module needs to be
+    # explicitly listed so worker dispatch resolves the task name on
+    # the first beat fire (PR 2.3) + on manual `run_now` dispatches
+    # via the PA tool.
+    'core.tasks_platform_audit',
 )
 
 
@@ -881,6 +888,11 @@ def _eager_import_session1115_modules(sender, **kwargs):
         'sports.tasks',
         'intelligence.tasks',
         'core.tasks_documentation_manager',
+        # Session 1257 PR 2.2: Platform Auditor task — same lesson as
+        # docs-manager. Forces the @shared_task to register at finalize
+        # time so app.tasks reads (build_celery_audit / verify_doc_claims
+        # / queue parity tests) see it without waiting for worker boot.
+        'core.tasks_platform_audit',
     )
     for mod in eager_modules:
         try:
