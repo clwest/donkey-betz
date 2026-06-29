@@ -640,11 +640,317 @@ PLATFORM_AUDIT_JOB = JobContract(
 )
 
 
+# ── Employee constant: Chief of Staff (Session 1257 PR 3.1) ──────────
+
+
+CHIEF_OF_STAFF = AIEmployee(
+    handle="chief_of_staff",
+    display_name="Chief of Staff",
+    # Honest v0: like Rigby + Platform Auditor, Chief of Staff has no
+    # dedicated User row. Acts as the ``chris`` UnifiedUser server-side
+    # when running autonomously. Tracked as a known v0 limitation.
+    runs_as_username="chris",
+    # No pinned PA chat — the brief itself is the daily-read surface
+    # (lands in the "Morning Brief" workspace + a shift-report DM into
+    # the persistent inbox thread). No dedicated chat channel in v0.
+    primary_chat_id=None,
+    notes=(
+        "Third AI employee (Session 1257). Owns the daily Chief-of-"
+        "Staff morning brief — a read-only synthesis of platform "
+        "readiness, build focus, competitive landscape, and a "
+        "rotating market lane into one consolidated brief Deliverable "
+        "Chris reads at 07:00 local. Wraps the existing "
+        "morning_brief workflow in WorkflowOrchestrationAgent "
+        "(core/services/workflow_orchestration_agent.py:733). v0 "
+        "acts as the ``chris`` UnifiedUser server-side; no dedicated "
+        "service account yet. Task runner + beat schedule land in "
+        "subsequent PRs (3.2/3.3); PR 3.1 registers the contract only."
+    ),
+)
+
+
+# ── Job constant: Daily Morning Brief (Session 1257 PR 3.1) ──────────
+
+
+MORNING_BRIEF_JOB = JobContract(
+    title="Daily Morning Brief",
+    employee_handle="chief_of_staff",
+    manager="chris",
+
+    # ── Mission ─────────────────────────────────────────────────────
+    mission=(
+        "Chief of Staff owns running the daily Chief-of-Staff "
+        "morning brief, recording evidence, certifying healthy "
+        "briefs, and escalating workflow failures. The brief is "
+        "strictly read-only synthesis: it pulls platform-readiness "
+        "telemetry, build-focus deltas, competitive-landscape signals, "
+        "and a rotating market/signal lane, then synthesizes them "
+        "into 1-3 explicit Decision Cards plus a TL;DR pointer. The "
+        "Chief of Staff does NOT send emails or external messages, "
+        "modify source documentation, change schedules, approve "
+        "decisions on Chris's behalf, execute business actions, post "
+        "publicly, edit financial records, or create/modify "
+        "users/accounts/settings. The brief is persisted as a "
+        "Deliverable in the 'Morning Brief' workspace; failures "
+        "escalate per the standard Employee OS visibility guarantee."
+    ),
+
+    responsibilities=(
+        "Run the morning brief once per weekday morning "
+        "(cadence finalized in PR 3.3 when the beat schedule lands).",
+        "Resolve the Lane 4 rotation slot per the priority chain "
+        "(caller-forced → incident → revenue → signal → calendar → "
+        "weekday default).",
+        "Pull overnight platform-readiness telemetry (SLO breaches, "
+        "failing tasks, queue backlog, fleet degradation) — Lane 1.",
+        "Pull the build-focus delta (shipping progress, blocked "
+        "initiatives, approvals needed in last 24h) — Lane 2.",
+        "Pull the competitive-landscape change-only snapshot "
+        "(competitor launches/pricing/features/fundraising in last "
+        "72h) — Lane 3.",
+        "Dispatch the rotating market/signal lane per the slot "
+        "resolved by Step 1 — Lane 4.",
+        "Synthesize 1-3 explicit Decision Cards from the 4 lanes + "
+        "governance/work/ops snapshots.",
+        "Compile the final brief markdown with TL;DR pointer to the "
+        "Decision Card and persist as a Deliverable into the "
+        "'Morning Brief' workspace.",
+        "On any step failure → escalate per the visibility guarantee "
+        "below.",
+        "On clean run → certify mission via mission_verdict + stay "
+        "silent. Silent success is the contract (the brief itself is "
+        "the visibility).",
+    ),
+
+    triggers=(
+        "Cron only (v0). Beat schedule lands in PR 3.3 — daily 07:00 "
+        "local (America/Denver) per the existing "
+        "generate_morning_brief_daily comment at "
+        "core/tasks.py:5805-5807.",
+        "Manual override via ``employee_tool action=run_now "
+        "employee=chief_of_staff job=morning_brief`` — lands in PR 3.2 "
+        "(task runner) along with the run_now registry entry.",
+    ),
+
+    daily_routine=(
+        "Step 1 — rotation_slot_resolve: pure-logic priority-chain "
+        "selection of the Lane 4 rotating slot.",
+        "Step 2 — lane_1_platform_readiness: overnight health snapshot "
+        "from system_intelligence_agent.",
+        "Step 3 — lane_2_build_focus: shipping delta + blocked "
+        "initiatives from coo_agent.",
+        "Step 4 — lane_3_competitive_landscape: competitor change "
+        "snapshot from trend_analysis_agent.",
+        "Step 5 — lane_4_rotating_focus: rotating market/signal lane "
+        "dispatched per the resolved slot.",
+        "Step 6 — decision_card_synthesis: LLM synthesis of 1-3 "
+        "explicit decisions from the 4 lanes + governance/work/ops "
+        "snapshots.",
+        "Step 7 — strategic_synthesis: compile final brief markdown "
+        "with TL;DR pointer to the Decision Card.",
+        "Step 8 — create_deliverable: persist final brief into the "
+        "'Morning Brief' workspace as a Deliverable.",
+        "Step 9 — emit verdict via mission_verdict.",
+    ),
+
+    weekly_routine=(),
+
+    mission_run_kind="morning_brief",
+
+    # ── Authority — read-only synthesis + Deliverable persistence ───
+    authority={
+        # Read-only lane data pulls
+        "read_platform_readiness_telemetry": AuthorityLevel.OBSERVE.value,
+        "read_build_focus_delta": AuthorityLevel.OBSERVE.value,
+        "read_competitive_landscape_snapshot": AuthorityLevel.OBSERVE.value,
+        "read_rotating_market_signals": AuthorityLevel.OBSERVE.value,
+        "read_governance_state": AuthorityLevel.OBSERVE.value,
+        "read_recent_action_items": AuthorityLevel.OBSERVE.value,
+        # Synthesis + Deliverable persistence
+        "resolve_rotation_slot": AuthorityLevel.EXECUTE.value,
+        "synthesize_decision_card": AuthorityLevel.EXECUTE.value,
+        "synthesize_strategic_brief": AuthorityLevel.EXECUTE.value,
+        "save_brief_to_deliverable": AuthorityLevel.EXECUTE.value,
+        "certify_mission_run": AuthorityLevel.EXECUTE.value,
+        # Recommend-only — the brief surfaces priorities but does not act
+        "recommend_daily_priorities": AuthorityLevel.RECOMMEND.value,
+        "recommend_remediations": AuthorityLevel.RECOMMEND.value,
+        # PROHIBITED — Chris's PR 3.1 directive list
+        "send_emails_externally": AuthorityLevel.PROHIBITED.value,
+        "send_external_messages": AuthorityLevel.PROHIBITED.value,
+        "modify_source_documents": AuthorityLevel.PROHIBITED.value,
+        "change_schedules": AuthorityLevel.PROHIBITED.value,
+        "approve_decisions": AuthorityLevel.PROHIBITED.value,
+        "execute_business_actions": AuthorityLevel.PROHIBITED.value,
+        "post_publicly": AuthorityLevel.PROHIBITED.value,
+        "edit_financial_records": AuthorityLevel.PROHIBITED.value,
+        "create_or_modify_users": AuthorityLevel.PROHIBITED.value,
+        "create_or_modify_accounts": AuthorityLevel.PROHIBITED.value,
+        "modify_platform_settings": AuthorityLevel.PROHIBITED.value,
+        "open_pull_request": AuthorityLevel.PROHIBITED.value,
+    },
+
+    prohibited_actions=(
+        "Send emails or any external messages to humans or systems.",
+        "Modify source documentation (docs/, CLAUDE.md, README, etc.).",
+        "Change schedules — beat tasks, PeriodicTask rows, cron entries.",
+        "Approve decisions on Chris's behalf — the brief surfaces "
+        "decision cards but never marks them resolved.",
+        "Execute business actions (Stripe charges, opportunity status "
+        "transitions, contract sign-offs, etc.).",
+        "Post publicly to any channel (blog, social, marketing site).",
+        "Edit financial records (revenue rows, expense ledgers, "
+        "invoice state).",
+        "Create or modify user accounts, service accounts, or platform "
+        "settings.",
+        "Open or merge pull requests.",
+        "Decide what is in scope for the brief (Chris owns scope; the "
+        "rotation slot is data-driven, the lanes are fixed).",
+    ),
+
+    # ── Success / failure metrics ───────────────────────────────────
+    success_metrics=(
+        "All 8 brief steps complete without raising.",
+        "Final brief Deliverable persisted into the 'Morning Brief' "
+        "workspace with the canonical sections (TL;DR, Lane 1-4 "
+        "summaries, Decision Card, recommended priorities).",
+        "Decision Card carries 1-3 explicit decisions with clear "
+        "options + recommended action.",
+        "Total mission wall time < 15 minutes (existing workflow "
+        "typically completes in 10-15 minutes).",
+        "deliverable_id + rotation_slot + lane_4_slot_used recorded "
+        "in the mission summary.",
+    ),
+
+    failure_metrics=(
+        "Any of the 8 brief steps raises or returns success=False.",
+        "create_deliverable step fails to persist the Deliverable "
+        "row (workspace lookup fails, ORM error, etc.).",
+        "LLM synthesis steps (decision_card_synthesis, "
+        "strategic_synthesis) return empty content.",
+        "Brief wall time exceeds 20 minutes (likely LLM stall).",
+        "3 failures within a 7-day rolling window → mark the job "
+        "'trust_status: under_review' in the status tool's derived "
+        "response.",
+    ),
+
+    # ── Evidence contract ───────────────────────────────────────────
+    required_summary_keys=(
+        # Lane execution evidence
+        "rotation_slot",                 # str — slot selected by Step 1
+        "lane_4_slot_used",              # str — actual slot dispatched in Step 5
+        "lanes_completed_count",         # int — 0-4
+        # Synthesis output
+        "decision_count",                # int — number of Decision Cards in the brief
+        "decision_card_chars",           # int — length of decision card markdown
+        # Deliverable output
+        "deliverable_id",                # UUID — the brief Deliverable from Step 8
+        "workspace_id",                  # UUID — "Morning Brief" workspace
+        "brief_chars",                   # int — final brief markdown length
+        # Timing + failure capture
+        "wall_time_ms",
+        "failed_step",                   # null on success
+        "error_tail",                    # null on success
+        "degraded_evidence",             # bool
+    ),
+
+    evidence_tables=(
+        "OpsRun (domain=mission, run_kind=morning_brief)",
+        "OpsRunEvent (one per lane/step + verdict_issued event)",
+        "LLMCallEvent (from decision_card + strategic synthesis + "
+        "lane sub-agent LLM calls)",
+        "ToolCallRecord (from sub-agent tool invocations)",
+        "Deliverable (morning brief — created on every run, in the "
+        "'Morning Brief' workspace)",
+    ),
+
+    # ── Drift definition ───────────────────────────────────────────
+    drift_count_definition=(
+        "Not applicable to Chief of Staff. The morning brief is "
+        "observational — its 'findings' surface as Decision Cards "
+        "rather than a docs-cascade-style drift metric. The runner "
+        "does not consult a drift-equivalent for this job."
+    ),
+
+    # ── Step timeout ────────────────────────────────────────────────
+    embed_step_timeout={},
+
+    # ── Escalation ──────────────────────────────────────────────────
+    escalation_rules=(
+        "First failure of any step → escalate immediately.",
+        "Subsequent failures with the SAME failure signature within "
+        "24h → append/reference the prior escalation rather than "
+        "create a duplicate Deliverable (24h dedupe window).",
+        "3 failures of any kind within a 7-day rolling window → mark "
+        "the job 'trust_status: under_review' in the status tool's "
+        "derived response.",
+    ),
+
+    escalation_visibility=(
+        "Create a Deliverable with "
+        "publish_intent=publish_candidate titled 'Chief of Staff "
+        "Escalation [YYYY-MM-DD]'.",
+        "Force the Deliverable to a visible state (ready or "
+        "attention-required) via the canonical status path with "
+        "audit transition source='ChiefOfStaff'.",
+        "No PA chat post for v0 — Chief of Staff has no pinned PA "
+        "conversation. Escalations are visible in the /inbox web UI "
+        "via the shift-report DM.",
+    ),
+
+    dedupe_rule=(
+        "Duplicate escalation suppression MUST key off the failure "
+        "signature derived from OpsRun.summary.failed_step + a "
+        "normalized hash of OpsRun.summary.error_tail (canonical "
+        "MissionRunner.make_error_signature). Same signature within "
+        "24h → append to or reference the prior escalation. "
+        "Different signature → new Deliverable, even if the prior "
+        "one is still open."
+    ),
+
+    # ── Boundary statements ────────────────────────────────────────
+    what_chris_approves=(
+        "The contract itself (PR 3.1 review).",
+        "Quarterly: reads ``employee_tool action=status "
+        "employee=chief_of_staff`` and decides whether to expand "
+        "Chief of Staff's authority on adjacent actions (e.g., "
+        "auto-resolving Decision Cards once history is established).",
+        "Acts on Decision Cards surfaced in the daily brief — "
+        "decisions are surfaced, not executed by Chief of Staff.",
+    ),
+
+    what_claude_handles=(
+        "Writing PRs 3.1 / 3.2 / 3.3 of this rollout.",
+        "Fixing bugs surfaced by brief-failure escalations (e.g., a "
+        "flaky lane sub-agent).",
+        "Adding new lanes to the rotation (Lane 4 slot list) or new "
+        "lanes to the brief structure.",
+    ),
+
+    what_rigby_can_do_alone=(
+        # JobContract reuses ``what_rigby_can_do_alone`` as the
+        # generic "what this employee can do alone" slot — the field
+        # name predates the multi-employee surface and is reused
+        # verbatim by Platform Auditor + Chief of Staff for the same
+        # semantic.
+        "Run the daily morning brief workflow.",
+        "Resolve the Lane 4 rotation slot.",
+        "Pull all 4 lanes' data + synthesize decision cards.",
+        "Persist the final brief Deliverable to the 'Morning Brief' "
+        "workspace.",
+        "Certify / reject / defer the mission via mission_verdict.",
+        "Emit escalation artifacts per the visibility guarantee.",
+        "Answer ``employee_tool action=status`` queries.",
+    ),
+)
+
+
 # ── Registry helpers ─────────────────────────────────────────────────
 
 _EMPLOYEES_BY_HANDLE: dict[str, AIEmployee] = {
     RIGBY.handle: RIGBY,
     PLATFORM_AUDITOR.handle: PLATFORM_AUDITOR,
+    CHIEF_OF_STAFF.handle: CHIEF_OF_STAFF,
 }
 
 _JOBS_BY_EMPLOYEE: dict[str, dict[str, JobContract]] = {
@@ -653,6 +959,9 @@ _JOBS_BY_EMPLOYEE: dict[str, dict[str, JobContract]] = {
     },
     PLATFORM_AUDITOR.handle: {
         "platform_audit": PLATFORM_AUDIT_JOB,
+    },
+    CHIEF_OF_STAFF.handle: {
+        "morning_brief": MORNING_BRIEF_JOB,
     },
 }
 
