@@ -470,8 +470,15 @@ app.conf.beat_schedule = {
     # spec § Scheduling and the Session 1228 TZ trap fix pattern.
     # Default queue is fine: this task is low-frequency (1×/day) and
     # the workflow itself routes individual agent dispatches.
+    #
+    # Session 1258 PR 3.3 — beat row task field flipped from the
+    # legacy ``core.tasks.generate_morning_brief_daily`` to the
+    # MissionRunner-backed ``chief_of_staff_morning_brief_run``.
+    # Cadence + queue + row name unchanged. Legacy task body deleted
+    # from core/tasks.py in the same PR. Workflow internals unchanged
+    # (wrap-as-single-step via MissionRunner per PR 3.2 contract).
     'generate-morning-brief-daily': {
-        'task': 'core.tasks.generate_morning_brief_daily',
+        'task': 'chief_of_staff_morning_brief_run',
         'schedule': crontab(hour=7, minute=0),  # 7:00 AM Denver
         'options': {'queue': 'default', 'expires': 3600},
     },

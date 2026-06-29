@@ -5785,157 +5785,18 @@ def generate_outreach_drafts_daily(self, limit=5, scope='all', offers=None):
     )
 
 
-@shared_task(bind=True, soft_time_limit=900, time_limit=1080)
-def generate_morning_brief_daily(self, user_id=None, dry_run=False):
-    """Dispatch the daily Chief-of-Staff morning brief workflow.
-
-    Session 1233 Sub-step C — closes the daily-CoS arc scheduling.
-    Runs the morning_brief workflow (rotation_slot_resolve →
-    4 lanes → decision_card_synthesis → strategic_synthesis →
-    create_morning_brief_deliverable) and persists the result into
-    Chris's "Morning Brief" workspace.
-
-    Args:
-        user_id: Target user UUID. If None, looks up user 'chris'
-                 (sole platform user; see CLAUDE.md § Session 1098 fix).
-        dry_run: Reserved for future use. Currently no-op — the
-                 workflow always persists. A future PR could gate
-                 the create_deliverable step on this flag.
-
-    Beat schedule: ``crontab(hour=7, minute=0)`` Denver time
-    (13:00 UTC MDT / 14:00 UTC MST per Session 1228 PRs #2569/#2570
-    TZ convention).
-
-    Returns:
-        dict with success / workflow / deliverable_id / rotation_slot /
-        date for the beat task's CeleryTaskEvent telemetry.
-    """
-    from datetime import date as _date
-    from django.contrib.auth import get_user_model
-    from core.services.workflow_orchestration_agent import (
-        WorkflowOrchestrationAgent,
-    )
-
-    User = get_user_model()
-    if user_id:
-        user = User.objects.filter(id=user_id).first()
-    else:
-        user = User.objects.filter(username='chris').first()
-
-    if not user:
-        logger.error(
-            "generate_morning_brief_daily: no target user found "
-            "(user_id=%r, fallback 'chris' lookup failed)",
-            user_id,
-        )
-        return {
-            'success': False,
-            'error': 'no target user found',
-            'workflow': 'morning_brief',
-        }
-
-    agent = WorkflowOrchestrationAgent(user=user)
-    today = _date.today().isoformat()
-
-    try:
-        result = agent.execute(
-            workflow='morning_brief',
-            topic=f'Morning Brief — {today}',
-        )
-    except Exception as e:
-        logger.error(
-            "generate_morning_brief_daily: workflow dispatch raised %s: %s",
-            type(e).__name__, e, exc_info=True,
-        )
-        return {
-            'success': False,
-            'error': f'{type(e).__name__}: {e}',
-            'workflow': 'morning_brief',
-            'date': today,
-        }
-
-    # Extract structured telemetry from the workflow result.
-    #
-    # Session 1234 D2.telemetry: the workflow's _compile_final_result sets
-    # result['steps'] (NOT 'step_results') and does not surface
-    # result['context'] at all. Pre-fix this beat task read both wrong
-    # keys, so every telemetry field (deliverable_id, rotation_slot,
-    # lane_4_slot_used, failed_step, failed_step_error) reported as None
-    # even when the underlying step results carried real values. The
-    # surfaced symptoms (deliverable_id=None despite a created brief,
-    # MORNING_BRIEF_FAILED line with failed_step=None) were both this
-    # single key mismatch. We extract from per-step result dicts
-    # directly — rotation_slot from the rotation_slot_resolve step,
-    # slot_used from the lane_4_rotating_focus step, deliverable_id
-    # from the create_deliverable step.
-    steps = result.get('steps', []) or []
-
-    def _step_by_name(name):
-        return next((s for s in steps if s.get('name') == name), None)
-
-    rotation_slot_step = _step_by_name('rotation_slot_resolve')
-    rotation_slot = (
-        (rotation_slot_step.get('result') or {}).get('rotation_slot')
-        if rotation_slot_step else None
-    )
-
-    lane_4_step = _step_by_name('lane_4_rotating_focus')
-    lane_4_slot_used = (
-        (lane_4_step.get('result') or {}).get('slot_used')
-        if lane_4_step else None
-    )
-
-    deliverable_step = _step_by_name('create_deliverable')
-    deliverable_id = (
-        (deliverable_step.get('result') or {}).get('deliverable_id')
-        if deliverable_step else None
-    )
-    workspace_id = (
-        (deliverable_step.get('result') or {}).get('workspace_id')
-        if deliverable_step else None
-    )
-    workflow_success = bool(result.get('success'))
-
-    # Session 1234 D1 fail-loud (Rigby-ratified): on workflow failure,
-    # emit a greppable line and raise so Celery records FAILURE. Before
-    # D1 this returned success=False as a normal dict and Celery saw
-    # SUCCESS — the 2026-06-25 first-fire's lane_4 collapse was invisible
-    # to ops_tool.celery_task_history. See feedback_factory_silent_none_footgun.md.
-    if not workflow_success:
-        # Find the first failed step (with its error, if any) for the log line.
-        failed_step = next(
-            (s for s in steps if not (s.get('result') or {}).get('success', True)),
-            None,
-        )
-        failed_step_name = failed_step.get('name') if failed_step else None
-        failed_step_error = (
-            (failed_step.get('result') or {}).get('error')
-            if failed_step else None
-        ) or result.get('error') or 'no error string captured'
-
-        logger.error(
-            "MORNING_BRIEF_FAILED task_id=%s user_id=%s date=%s "
-            "rotation_slot=%r lane_4_slot_used=%r failed_step=%r error=%r",
-            self.request.id, user.id, today,
-            rotation_slot, lane_4_slot_used,
-            failed_step_name, failed_step_error,
-        )
-        raise RuntimeError(
-            f"morning_brief workflow failed at step {failed_step_name!r}: "
-            f"{failed_step_error}"
-        )
-
-    return {
-        'success': True,
-        'workflow': 'morning_brief',
-        'deliverable_id': deliverable_id,
-        'workspace_id': workspace_id,
-        'rotation_slot': rotation_slot,
-        'lane_4_slot_used': lane_4_slot_used,
-        'date': today,
-        'user_id': str(user.id),
-        'dry_run': dry_run,
-    }
+# Session 1258 PR 3.3 — the legacy ``generate_morning_brief_daily``
+# task body that lived here (Sessions 1233-1234, +D1 fail-loud,
+# +D2 telemetry-extraction) was deleted. Production beat row
+# ``generate-morning-brief-daily`` now routes to
+# ``chief_of_staff_morning_brief_run`` in
+# ``core/tasks_chief_of_staff.py`` — the MissionRunner-backed
+# Chief of Staff job. Workflow internals (the 8-step morning_brief
+# workflow in ``WorkflowOrchestrationAgent``) are unchanged; the
+# wrap-as-single-step MissionRunner pattern preserves them
+# verbatim. See ``core/celery.py`` lines 463-481 for the live beat
+# schedule entry + ``core/jobs/morning_brief.py`` for the
+# job-specific runner.
 
 
 @shared_task(bind=True, soft_time_limit=600, time_limit=720, ignore_result=True)
