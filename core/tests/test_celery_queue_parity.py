@@ -188,3 +188,44 @@ class CeleryQueueParityTests(SimpleTestCase):
                 "pollute the routing config."
             )
             self.fail("\n".join(lines))
+
+
+class DocsManagerTaskRegistrationTests(SimpleTestCase):
+    """S1253 hotfix lock-in: docs-manager beat task must register at worker boot.
+
+    Background: S1252 PR #2730 added `@shared_task rigby_documentation_manager_daily`
+    in `core/tasks_documentation_manager.py` (non-standard tasks_*.py module name).
+    Cutover verification went through `manage.py run_docs_manager_daily` which
+    imports the module directly, so the worker dispatch path was never exercised.
+    First beat fire 2026-06-29 06:30 MDT was rejected with
+    `KeyError: 'rigby_documentation_manager_daily'` because the module was never
+    added to `app.conf.imports` in `core/celery.py`.
+
+    These tests catch both ways the registration can regress:
+    - module dropped from `app.conf.imports`
+    - `@shared_task` renamed/removed in the module
+    """
+
+    def test_rigby_documentation_manager_daily_in_registry(self):
+        from celery import current_app
+        current_app.finalize()
+        self.assertIn(
+            'rigby_documentation_manager_daily',
+            current_app.tasks,
+            "rigby_documentation_manager_daily missing from Celery task "
+            "registry. Either core.tasks_documentation_manager was removed "
+            "from app.conf.imports in core/celery.py, or the @shared_task "
+            "decorator/name was changed in tasks_documentation_manager.py. "
+            "See S1253 hotfix.",
+        )
+
+    def test_docs_manager_module_pinned_in_app_conf_imports(self):
+        from celery import current_app
+        imports = tuple(current_app.conf.imports or ())
+        self.assertIn(
+            'core.tasks_documentation_manager',
+            imports,
+            "'core.tasks_documentation_manager' removed from "
+            "core/celery.py:app.conf.imports — worker boots will not pick up "
+            "the @shared_task. See S1253 hotfix.",
+        )
