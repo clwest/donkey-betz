@@ -137,6 +137,13 @@ class JobContract:
     what_claude_handles: tuple[str, ...] = ()
     what_rigby_can_do_alone: tuple[str, ...] = ()
 
+    # Session 1252 PR 2 — single source of truth for the OpsRun.summary
+    # JSON key that holds the normalized error-tail hash used for
+    # 24h failure-signature dedupe. PR 2's escalation code, the dedupe
+    # lookup, and any future audit query all reference this string —
+    # changing it here is the only update needed.
+    summary_field_for_error_signature: str = "error_signature"
+
 
 # ── Employee constant ────────────────────────────────────────────────
 

@@ -99,25 +99,31 @@ class EmployeeHandlersMixin:
         user_id: Optional[Any],
         trace_id: str,
     ) -> Dict[str, Any]:
-        """Read-only inspection of the AI Employee + JobContract registry.
+        """Read-only describe + Rigby-only dispatch of an assigned job.
 
         Actions:
-          * ``describe`` — returns employee profile + assigned jobs.
-            Required arg: ``employee`` (handle). Optional: ``job``
-            (job key) to scope the response to a single job.
-
-        Returns structured JSON suitable for direct PA chat surfacing.
+          * ``describe`` (PR 1) — employee profile + assigned jobs.
+          * ``run_now`` (Session 1252 PR 2) — dispatch a job's task
+            immediately. v0 supports only ``employee=rigby``,
+            ``job=docs_manager``. Rigby-gated via
+            ``_verify_rigby_caller``. Optional ``wait_for_result=True``
+            polls the resulting OpsRun for up to 90s.
         """
         action = (payload.get("action") or "describe").lower()
+
+        if action == "run_now":
+            return self._handle_employee_run_now(
+                payload, user_id, trace_id
+            )
 
         if action != "describe":
             return {
                 "ok": False,
                 "error": (
                     f"Unknown employee_tool action {action!r}; "
-                    f"v0 supports only 'describe'."
+                    f"v0 supports 'describe' and 'run_now'."
                 ),
-                "valid_actions": ["describe"],
+                "valid_actions": ["describe", "run_now"],
             }
 
         employee_handle = (payload.get("employee") or "").strip().lower()
@@ -182,6 +188,114 @@ class EmployeeHandlersMixin:
             "employee": _dataclass_to_jsonable(employee),
             "job_count": len(jobs_payload),
             "jobs": jobs_payload,
+        }
+
+    # ── employee_tool action=run_now (Session 1252 PR 2) ─────────────
+
+    def _handle_employee_run_now(
+        self,
+        payload: Dict[str, Any],
+        user_id: Optional[Any],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Rigby-only: dispatch an assigned job's task immediately.
+
+        v0 supports only ``employee=rigby`` + ``job=docs_manager`` —
+        the Documentation Manager daily routine. Returns a
+        ``mission_id`` once the task has created the OpsRun row;
+        ``wait_for_result=True`` polls every 2s up to 90s for a
+        terminal status, otherwise returns immediately and the caller
+        reads status later via ``employee_tool action=status`` (PR 3).
+        """
+        gate_check = _verify_rigby_caller(user_id)
+        if not gate_check["ok"]:
+            return {
+                "ok": False,
+                "error": gate_check["error"],
+                "error_code": "TOOL_PERMISSION_DENIED",
+                "auth_gate": gate_check["gate_describe"],
+            }
+
+        employee_handle = (
+            payload.get("employee") or ""
+        ).strip().lower()
+        if employee_handle != RIGBY.handle:
+            return {
+                "ok": False,
+                "error": (
+                    f"v0 run_now supports only employee='rigby'. "
+                    f"Got {employee_handle!r}."
+                ),
+            }
+
+        job_key = (payload.get("job") or "").strip().lower()
+        if job_key != "docs_manager":
+            return {
+                "ok": False,
+                "error": (
+                    f"v0 run_now supports only job='docs_manager'. "
+                    f"Got {job_key!r}."
+                ),
+                "known_jobs": ["docs_manager"],
+            }
+
+        wait = bool(payload.get("wait_for_result"))
+
+        # Lazy import — keeps module load light + avoids dragging
+        # Celery into PR 1's PA-tool import surface.
+        from core.tasks_documentation_manager import (
+            rigby_documentation_manager_daily,
+        )
+
+        async_result = rigby_documentation_manager_daily.delay()
+        task_id = getattr(async_result, "id", None)
+
+        if not wait:
+            return {
+                "ok": True,
+                "action": "run_now",
+                "employee": "rigby",
+                "job": "docs_manager",
+                "task_id": task_id,
+                "dispatch_status": "queued",
+                "wait_for_result": False,
+                "note": (
+                    "Mission dispatched. Poll via "
+                    "employee_tool action=status (PR 3) or by "
+                    "looking up the OpsRun directly."
+                ),
+            }
+
+        # Poll the latest docs_cascade mission for a terminal status.
+        terminal = _wait_for_terminal_mission(
+            timeout_seconds=90, poll_interval_seconds=2
+        )
+        if terminal is None:
+            return {
+                "ok": True,
+                "action": "run_now",
+                "employee": "rigby",
+                "job": "docs_manager",
+                "task_id": task_id,
+                "dispatch_status": "queued",
+                "wait_for_result": True,
+                "wait_timeout": True,
+                "note": (
+                    "Mission still running after 90s wait cap. "
+                    "Check status later via employee_tool action=status."
+                ),
+            }
+
+        return {
+            "ok": True,
+            "action": "run_now",
+            "employee": "rigby",
+            "job": "docs_manager",
+            "task_id": task_id,
+            "wait_for_result": True,
+            "mission_id": str(terminal.id),
+            "status": terminal.status,
+            "summary": terminal.summary or {},
         }
 
     # ── mission_verdict ──────────────────────────────────────────────
@@ -259,6 +373,39 @@ class EmployeeHandlersMixin:
             "action": action,
             **result,
         }
+
+
+# ── Polling helper (run_now wait_for_result, Session 1252 PR 2) ──────
+
+
+def _wait_for_terminal_mission(
+    *,
+    timeout_seconds: int,
+    poll_interval_seconds: int,
+):
+    """Poll the latest docs_cascade mission for a terminal status.
+
+    Returns the OpsRun row once status != 'running', or None if the
+    timeout elapses first. Reads from a real DB cursor each iteration
+    so the LISTEN/NOTIFY-free poll picks up the worker's commits.
+    """
+    import time
+    from core.models_ops_runs import OpsRun
+
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        run = (
+            OpsRun.objects.filter(
+                domain="mission",
+                run_kind="docs_cascade",
+            )
+            .order_by("-started_at")
+            .first()
+        )
+        if run is not None and run.status != "running":
+            return run
+        time.sleep(poll_interval_seconds)
+    return None
 
 
 # ── Auth helper (module-private) ─────────────────────────────────────

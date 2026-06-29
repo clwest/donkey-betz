@@ -4926,26 +4926,30 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
-    # ── AI Employee framework v0 (Session 1252 PR 1) ──────────────────────
+    # ── AI Employee framework v0 (Session 1252 PR 1 + PR 2) ───────────────
     {
         "type": "function",
         "name": "employee_tool",
         "description": (
-            "Read-only inspection of the AI Employee + JobContract registry. "
-            "v0 surface: action=describe employee=rigby [job=docs_manager] "
-            "returns Rigby's profile and her assigned Documentation Manager "
-            "contract (mission, responsibilities, daily routine, authority, "
-            "evidence requirements, escalation rules). Use when the user "
-            "asks about who Rigby is, what jobs she owns, or what a specific "
-            "job contract requires of her. No state mutation."
+            "Inspect or dispatch jobs on the AI Employee registry. "
+            "Two actions in v0: (1) describe — read-only profile + job "
+            "contract for an employee. (2) run_now (Session 1252 PR 2) — "
+            "Rigby-only dispatch of an assigned job's task immediately. "
+            "Use describe when the user asks about who Rigby is, what "
+            "jobs she owns, or what a contract requires. Use run_now to "
+            "kick off the Documentation Manager daily routine on "
+            "demand (e.g., 'Rigby, run docs_manager now')."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["describe"],
-                    "description": "v0 supports describe only.",
+                    "enum": ["describe", "run_now"],
+                    "description": (
+                        "describe (read-only profile + contract) or "
+                        "run_now (Rigby-only, dispatches the job's task)."
+                    ),
                 },
                 "employee": {
                     "type": "string",
@@ -4954,8 +4958,17 @@ PA_TOOL_SCHEMAS = [
                 "job": {
                     "type": "string",
                     "description": (
-                        "Optional job key to scope the response to a single "
-                        "contract. v0 known keys: 'docs_manager'."
+                        "Job key. For describe it scopes the response; for "
+                        "run_now it selects which job to dispatch. v0 "
+                        "known keys: 'docs_manager'."
+                    ),
+                },
+                "wait_for_result": {
+                    "type": "boolean",
+                    "description": (
+                        "run_now only: when true, polls up to 90s for the "
+                        "mission to reach a terminal status before "
+                        "returning. Default false (immediate return)."
                     ),
                 },
             },
