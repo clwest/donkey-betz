@@ -1,152 +1,135 @@
 """
-Employee Communications (Session 1253 PR 4).
+Employee Communications (Session 1253 PR 4 + PR-A).
 
-Pure-function helper to post one DirectMessage per terminal mission
-from an AI employee (Rigby) into a persistent inbox thread visible to
-Chris in the existing /inbox web UI.
+Generic shift-report helper. ANY (employee, job) pair can post one
+DirectMessage per terminal mission into a persistent inbox thread.
 
-Hard contract (per Rigby SIGN-WITH-EDITS):
+PR-A (generalization): the helper is no longer hardcoded to Rigby /
+Documentation Manager. Job-specific configuration (thread subject,
+body formatter, extra metadata keys) is passed in by the caller — the
+Documentation Manager calls go through ``core.employees.comms_docs_manager``
+which carries the docs-specific defaults. See
+``docs/EMPLOYEE_OS_PRIMITIVES.md`` for the full lifecycle and the
+anti-duplication matrix.
 
-  * Persistent thread per (employee, job), keyed by
+Hard contract (preserved across the refactor):
+
+  * One persistent thread per (employee, job), keyed by
     ``metadata.employee`` + ``metadata.job``. Deterministic
-    get-or-create. Exact subject: "Rigby — Documentation Manager".
+    get-or-create. Subject ignored on lookup so typos cannot duplicate.
   * One DM per terminal mission. Idempotent on (thread, mission_id) —
     re-calling the helper for the same mission is a no-op.
   * Non-terminal missions (status='running' / 'pending') produce no DM.
   * Bounded JSON metadata only — never the full error tail.
   * Additive to existing Deliverable + PA-chat escalation. No
     replacement of either.
-  * No push notification. No mobile work. No proactive-notification
-    chain. No write surface to the LLM.
+  * No push notification, no mobile work, no proactive-notification
+    chain, no write surface to the LLM.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Sequence
 
-from django.contrib.auth import get_user_model
 from django.utils import timezone
-
-from core.employees import RIGBY, DOCUMENTATION_MANAGER
 
 
 logger = logging.getLogger(__name__)
 
 
-# ── Thread-identity constants ─────────────────────────────────────────
+# ── Shared constants ─────────────────────────────────────────────────
 
-THREAD_SUBJECT = "Rigby — Documentation Manager"
+
 THREAD_KIND = "employee_shift_report"
-EMPLOYEE_KEY = RIGBY.handle             # "rigby"
-JOB_KEY = "docs_manager"
 
 # Terminal statuses + verdicts (anything else means "still in flight").
 _TERMINAL_STATUSES = {"passed", "failed", "partial"}
 _TERMINAL_VERDICTS = {"certified", "rejected", "deferred"}
 
-
-# ── Body templates ────────────────────────────────────────────────────
-
-
-def _format_body(mission, summary: Dict[str, Any]) -> str:
-    """Build the body string per Rigby's exact templates."""
-    verdict = summary.get("verdict")
-    wall_ms = summary.get("wall_time_ms")
-    seconds = (
-        f"{wall_ms / 1000:.1f}"
-        if isinstance(wall_ms, (int, float))
-        else "?"
-    )
-
-    if verdict == "certified":
-        drift = summary.get("drift_count")
-        drift_part = (
-            f"Drift {drift} items observed."
-            if isinstance(drift, int)
-            else "Drift count unavailable."
-        )
-        return (
-            f"Docs Manager mission {mission.id} passed. "
-            f"Docs cascade completed in {seconds}s. "
-            f"{drift_part} No escalation."
-        )
-
-    if verdict == "rejected":
-        failed_step = summary.get("failed_step") or "<unknown step>"
-        escalation_id = summary.get("escalation_deliverable_id")
-        if escalation_id:
-            esc_sentence = (
-                f"Escalation deliverable {escalation_id} created."
-            )
-        else:
-            esc_sentence = "No escalation deliverable recorded."
-        return (
-            f"Docs Manager mission {mission.id} failed at "
-            f"{failed_step}. {esc_sentence}"
-        )
-
-    if verdict == "deferred":
-        return (
-            f"Docs Manager mission {mission.id} deferred. "
-            f"Awaiting follow-up review."
-        )
-
-    # Shouldn't reach — _is_terminal gates the call site. Guard anyway.
-    return (
-        f"Docs Manager mission {mission.id} reached terminal state "
-        f"with verdict={verdict!r}."
-    )
-
-
-# ── Bounded metadata projection (per Rigby edit #4) ───────────────────
-
-
-_METADATA_ALLOWED_KEYS = (
+# Base metadata keys every shift report carries. Job-specific helpers
+# may extend this set via ``extra_metadata_keys``, but never replace it.
+BASE_METADATA_KEYS: tuple[str, ...] = (
+    "employee",
+    "job",
     "mission_id",
     "verdict",
     "status",
     "wall_time_ms",
-    "drift_count",
-    "failed_step",
-    "escalation_deliverable_id",
 )
 
 
-def _build_metadata(mission, summary: Dict[str, Any]) -> Dict[str, Any]:
+# ── Body formatter (generic default) ─────────────────────────────────
+
+
+BodyFormatter = Callable[[Any, Dict[str, Any]], str]
+
+
+def default_body_formatter(mission, summary: Dict[str, Any]) -> str:
+    """Generic shift-report body when the caller supplies no formatter.
+
+    Job-specific helpers (e.g. ``comms_docs_manager.format_body``)
+    override this with templates approved by the job owner. The default
+    is a safe, structured one-liner that mentions verdict + mission_id +
+    wall time. Never references job-specific keys like ``failed_step``
+    or ``drift_count`` — those belong to docs-cascade specifics.
+    """
+    verdict = summary.get("verdict") or "<unknown>"
+    wall_ms = summary.get("wall_time_ms")
+    seconds = (
+        f"{wall_ms / 1000:.1f}s"
+        if isinstance(wall_ms, (int, float))
+        else "unknown duration"
+    )
+    return (
+        f"Mission {mission.id} reached terminal verdict "
+        f"{verdict!r} (wall {seconds})."
+    )
+
+
+# ── Metadata projection ──────────────────────────────────────────────
+
+
+def _build_metadata(
+    *,
+    employee_key: str,
+    job_key: str,
+    mission,
+    summary: Dict[str, Any],
+    extra_metadata_keys: Sequence[str],
+) -> Dict[str, Any]:
     """Project mission summary into the bounded inbox-DM metadata shape.
 
-    Hard-bounded to the seven keys Rigby signed off on. Never includes
-    error_tail, error_tail_preview, ops-run UUIDs other than
-    ``mission_id``, or anything that could grow unbounded.
+    Always carries ``BASE_METADATA_KEYS``. Caller-supplied
+    ``extra_metadata_keys`` are appended verbatim — caller is
+    responsible for keeping that set small and JSON-safe (never an
+    unbounded error tail, full LLM output, etc.).
     """
     meta: Dict[str, Any] = {
-        "employee": EMPLOYEE_KEY,
-        "job": JOB_KEY,
+        "employee": employee_key,
+        "job": job_key,
         "mission_id": str(mission.id),
         "verdict": summary.get("verdict"),
         "status": mission.status,
         "wall_time_ms": summary.get("wall_time_ms"),
-        "drift_count": summary.get("drift_count"),
-        "failed_step": summary.get("failed_step"),
-        "escalation_deliverable_id": summary.get(
-            "escalation_deliverable_id"
-        ),
     }
+    for key in extra_metadata_keys:
+        # Job-specific keys come straight from the summary; missing →
+        # null so the shape is stable.
+        meta[key] = summary.get(key)
     return meta
 
 
-# ── Terminal-state gate ───────────────────────────────────────────────
+# ── Terminal-state gate ─────────────────────────────────────────────
 
 
 def _is_terminal(mission) -> bool:
-    """True iff the mission has reached a final certified/rejected/deferred state.
+    """True iff the mission has reached a final state.
 
     Checks both ``OpsRun.status`` and ``summary.verdict`` — either side
     landing terminal is sufficient. Status alone is enough on its own;
     verdict alone catches the case where verdict was emitted but the
-    status field hasn't been refreshed yet on the caller's mission
-    handle.
+    status field hasn't been refreshed yet on the caller's handle.
     """
     if mission.status in _TERMINAL_STATUSES:
         return True
@@ -154,37 +137,47 @@ def _is_terminal(mission) -> bool:
     return summary.get("verdict") in _TERMINAL_VERDICTS
 
 
-# ── Recipient lookup ──────────────────────────────────────────────────
+# ── Recipient lookup ─────────────────────────────────────────────────
 
 
-def _resolve_recipient_user():
-    """Return the User row Rigby reports to (per the contract).
+def _resolve_recipient_user(employee):
+    """Return the User the employee reports to (per the contract).
 
-    Rigby's ``runs_as_username`` is the user she acts as server-side
-    AND the user who should see her shift reports. v0: chris.
+    Reads ``employee.runs_as_username`` — every AIEmployee declares it.
     """
+    from django.contrib.auth import get_user_model
+
     UserModel = get_user_model()
     return UserModel.objects.filter(
-        username=RIGBY.runs_as_username
+        username=employee.runs_as_username
     ).first()
 
 
-# ── Thread get-or-create ──────────────────────────────────────────────
+# ── Thread get-or-create ─────────────────────────────────────────────
 
 
-def _get_or_create_thread(recipient_user):
-    """Find or create the single persistent thread for this (employee, job).
+def _get_or_create_thread(
+    *,
+    employee_key: str,
+    job_key: str,
+    recipient_user,
+    subject: str,
+):
+    """Find or create the single persistent thread for (employee, job).
 
-    Lookup is keyed by ``metadata.employee + metadata.job`` so subject
-    typos cannot create duplicates. If two threads exist for the same
-    key (race / migration anomaly), the oldest one wins — we log a
-    warning rather than fail.
+    Lookup is keyed by ``metadata.employee + metadata.job`` only —
+    subject typos cannot cause duplicates. If multiple threads exist
+    for the same key (race / migration anomaly), the oldest wins and
+    we log a warning so cleanup can be scheduled.
+
+    Archived threads are intentionally excluded; if a thread was
+    archived, the helper creates a fresh one rather than reactivating.
     """
     from core.models_messaging import MessageThread, ThreadParticipant
 
     qs = MessageThread.objects.filter(
-        metadata__employee=EMPLOYEE_KEY,
-        metadata__job=JOB_KEY,
+        metadata__employee=employee_key,
+        metadata__job=job_key,
         is_archived=False,
     ).order_by("created_at")
 
@@ -193,17 +186,17 @@ def _get_or_create_thread(recipient_user):
         logger.warning(
             "[employee_comms] multiple shift-report threads exist for "
             "(employee=%s, job=%s); using oldest %s. Cleanup advised.",
-            EMPLOYEE_KEY, JOB_KEY, existing[0].id,
+            employee_key, job_key, existing[0].id,
         )
     if existing:
         thread = existing[0]
     else:
         thread = MessageThread.objects.create(
-            subject=THREAD_SUBJECT,
+            subject=subject,
             thread_type="dm",
             metadata={
-                "employee": EMPLOYEE_KEY,
-                "job": JOB_KEY,
+                "employee": employee_key,
+                "job": job_key,
                 "thread_kind": THREAD_KIND,
             },
         )
@@ -216,7 +209,7 @@ def _get_or_create_thread(recipient_user):
     return thread
 
 
-# ── Idempotency check ─────────────────────────────────────────────────
+# ── Idempotency check ────────────────────────────────────────────────
 
 
 def _existing_dm_for_mission(thread, mission_id_str: str):
@@ -232,14 +225,45 @@ def _existing_dm_for_mission(thread, mission_id_str: str):
 # ── Public entry point ───────────────────────────────────────────────
 
 
-def post_shift_report(mission) -> Dict[str, Any]:
-    """Post one DirectMessage shift report for a terminal mission.
+def post_shift_report(
+    *,
+    employee,
+    job: str,
+    mission,
+    body_formatter: Optional[BodyFormatter] = None,
+    extra_metadata_keys: Sequence[str] = (),
+    thread_subject: Optional[str] = None,
+    sender_type: str = "system",
+) -> Dict[str, Any]:
+    """Post one shift-report DM for a terminal mission.
+
+    Args:
+        employee: an ``AIEmployee`` (frozen dataclass) — must expose
+            ``handle``, ``display_name``, ``runs_as_username``.
+        job: the job key string (e.g. ``"docs_manager"``).
+        mission: an OpsRun row with ``id``, ``status``, ``summary``.
+        body_formatter: optional callable
+            ``(mission, summary) -> str``. Defaults to a generic
+            "Mission <id> reached verdict X" one-liner. Job-specific
+            templates (e.g., docs_manager's "passed/failed/deferred"
+            shape) live in their own module and are passed in here.
+        extra_metadata_keys: optional sequence of additional summary
+            keys to include in the DM metadata beyond
+            ``BASE_METADATA_KEYS``. Caller MUST keep this set small
+            and JSON-safe (no error_tail, no full LLM payloads).
+        thread_subject: optional thread title. Defaults to
+            ``"{employee.display_name} — {job}"``.
+        sender_type: ``DirectMessage.sender_type`` value to use.
+            Defaults to ``"system"``. Rigby callers pass ``"rigby"``
+            (one of the model's allowed choices). Constrained by
+            ``DirectMessage.SENDER_TYPE_CHOICES`` (max_length=10).
 
     Idempotent on (thread, mission_id). Non-terminal missions return
     a ``skipped`` envelope. Recipient-user-missing also skips (never
-    raises) so a cascade failure here can never crash the docs task.
+    raises) so a comms failure can never crash the caller.
 
     Returns::
+
         {
             ok: bool,
             created: bool,                # true on first write
@@ -251,6 +275,9 @@ def post_shift_report(mission) -> Dict[str, Any]:
     """
     from core.models_messaging import DirectMessage
 
+    employee_key = employee.handle
+    job_key = job
+
     if not _is_terminal(mission):
         return {
             "ok": True,
@@ -260,12 +287,13 @@ def post_shift_report(mission) -> Dict[str, Any]:
             "message_id": None,
         }
 
-    recipient = _resolve_recipient_user()
+    recipient = _resolve_recipient_user(employee)
     if recipient is None:
         logger.warning(
             "[employee_comms] no recipient user found "
-            "(username=%s); skipping shift report for mission %s.",
-            RIGBY.runs_as_username, mission.id,
+            "(employee=%s username=%s); skipping shift report for "
+            "mission %s.",
+            employee_key, employee.runs_as_username, mission.id,
         )
         return {
             "ok": True,
@@ -275,9 +303,19 @@ def post_shift_report(mission) -> Dict[str, Any]:
             "message_id": None,
         }
 
-    thread = _get_or_create_thread(recipient)
-    mission_id_str = str(mission.id)
+    subject = (
+        thread_subject
+        if thread_subject is not None
+        else f"{employee.display_name} — {job_key}"
+    )
+    thread = _get_or_create_thread(
+        employee_key=employee_key,
+        job_key=job_key,
+        recipient_user=recipient,
+        subject=subject,
+    )
 
+    mission_id_str = str(mission.id)
     existing_dm = _existing_dm_for_mission(thread, mission_id_str)
     if existing_dm is not None:
         return {
@@ -289,30 +327,35 @@ def post_shift_report(mission) -> Dict[str, Any]:
         }
 
     summary = mission.summary or {}
-    body = _format_body(mission, summary)
-    metadata = _build_metadata(mission, summary)
+    formatter: BodyFormatter = body_formatter or default_body_formatter
+    body = formatter(mission, summary)
+    metadata = _build_metadata(
+        employee_key=employee_key,
+        job_key=job_key,
+        mission=mission,
+        summary=summary,
+        extra_metadata_keys=tuple(extra_metadata_keys),
+    )
 
-    # sender=None (Rigby has no User row); sender_type='rigby' is the
-    # discriminator the inbox UI uses to render her name.
+    # sender=None: AI employees have no User row. sender_type is the
+    # discriminator the inbox UI uses to render the employee name;
+    # constrained by DirectMessage.SENDER_TYPE_CHOICES.
     msg = DirectMessage.objects.create(
         thread=thread,
         sender=None,
-        sender_type="rigby",
+        sender_type=sender_type,
         body=body,
         metadata=metadata,
     )
 
-    # Bump thread updated_at so the inbox list orders this thread to top.
     thread.updated_at = timezone.now()
     thread.save(update_fields=["updated_at"])
 
     logger.info(
-        "[employee_comms] shift_report mission=%s verdict=%s "
-        "thread=%s message=%s",
-        mission_id_str,
-        summary.get("verdict"),
-        thread.id,
-        msg.id,
+        "[employee_comms] shift_report employee=%s job=%s "
+        "mission=%s verdict=%s thread=%s message=%s",
+        employee_key, job_key, mission_id_str,
+        summary.get("verdict"), thread.id, msg.id,
     )
 
     return {

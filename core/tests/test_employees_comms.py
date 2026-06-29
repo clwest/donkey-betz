@@ -98,12 +98,13 @@ class ShiftReportCreationTests(TestCase):
         _ensure_chris_user()
 
     def test_first_shift_report_creates_one_thread(self):
-        from core.employees.comms import (
-            post_shift_report,
-            EMPLOYEE_KEY,
-            JOB_KEY,
+        from core.employees.comms_docs_manager import (
+            post_docs_manager_shift_report as post_shift_report,
             THREAD_SUBJECT,
         )
+        # PR-A: docs-manager-specific keys live next to the wrapper.
+        EMPLOYEE_KEY = 'rigby'
+        JOB_KEY = 'docs_manager' 
         from core.models_messaging import MessageThread, DirectMessage
 
         self.assertEqual(MessageThread.objects.count(), 0)
@@ -129,7 +130,7 @@ class ShiftReportCreationTests(TestCase):
         self.assertIsNone(dm.sender)  # Rigby has no User row
 
     def test_second_mission_reuses_same_thread(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import MessageThread, DirectMessage
 
         m1 = _seed_mission()
@@ -153,7 +154,7 @@ class ShiftReportCreationTests(TestCase):
 
     def test_same_mission_id_no_duplicate_dm(self):
         """Re-calling post_shift_report for the same mission is a no-op."""
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage, MessageThread
 
         mission = _seed_mission()
@@ -170,7 +171,7 @@ class ShiftReportCreationTests(TestCase):
         self.assertEqual(DirectMessage.objects.count(), 1)
 
     def test_chris_is_added_as_thread_participant(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import ThreadParticipant
 
         mission = _seed_mission()
@@ -190,7 +191,7 @@ class ShiftReportBodyTests(TestCase):
         _ensure_chris_user()
 
     def test_passed_body_uses_template(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage
 
         mission = _seed_mission(
@@ -208,7 +209,7 @@ class ShiftReportBodyTests(TestCase):
         self.assertIn("No escalation", dm.body)
 
     def test_passed_metadata_is_bounded(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage
 
         mission = _seed_mission(
@@ -242,7 +243,7 @@ class ShiftReportBodyTests(TestCase):
         self.assertNotIn("error_tail", str(dm.metadata))
 
     def test_failed_body_includes_failed_step_and_deliverable(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage
 
         deliv_id = str(uuid.uuid4())
@@ -268,7 +269,7 @@ class ShiftReportBodyTests(TestCase):
     def test_failed_without_escalation_id_still_works(self):
         """If escalation_deliverable_id is missing, fall back to the
         'No escalation deliverable recorded.' sentence."""
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage
 
         mission = _seed_mission(
@@ -284,7 +285,7 @@ class ShiftReportBodyTests(TestCase):
         self.assertIsNone(dm.metadata["escalation_deliverable_id"])
 
     def test_deferred_body_uses_template(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage
 
         mission = _seed_mission(
@@ -307,7 +308,7 @@ class ShiftReportTerminalGatingTests(TestCase):
         _ensure_chris_user()
 
     def test_running_mission_creates_no_dm(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage, MessageThread
 
         # status=running and no verdict in summary
@@ -324,7 +325,7 @@ class ShiftReportTerminalGatingTests(TestCase):
         """Verdict alone is sufficient for terminal — protects against
         the caller having a stale status field while summary.verdict
         already landed."""
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import DirectMessage
 
         mission = _seed_mission(status="running", verdict="certified")
@@ -346,7 +347,7 @@ class ThreadLookupDeterminismTests(TestCase):
         """A thread with the same metadata key but a different subject
         is still found by the helper — subject typos cannot create
         duplicates."""
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import MessageThread, DirectMessage
 
         # Pre-seed a thread with the canonical metadata but a typo
@@ -369,7 +370,7 @@ class ThreadLookupDeterminismTests(TestCase):
     def test_archived_thread_is_ignored(self):
         """If the canonical thread is archived, the helper creates a
         fresh one rather than reactivating it."""
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from core.models_messaging import MessageThread
 
         MessageThread.objects.create(
@@ -491,7 +492,7 @@ class MessagingReadIntegrationTests(TestCase):
         )
 
     def test_list_threads_surfaces_shift_report_thread(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
 
         mission = _seed_mission()
         post_shift_report(mission)
@@ -503,7 +504,7 @@ class MessagingReadIntegrationTests(TestCase):
         self.assertIn("passed", thread["last_message"])
 
     def test_get_thread_surfaces_shift_report_dm(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
 
         mission = _seed_mission()
         result = post_shift_report(mission)
@@ -519,7 +520,7 @@ class MessagingReadIntegrationTests(TestCase):
         self.assertIn(f"mission {mission.id}", msg["body"])
 
     def test_unread_count_reflects_shift_reports(self):
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
 
         for _ in range(3):
             post_shift_report(_seed_mission())
@@ -535,7 +536,7 @@ class HelperRobustnessTests(TestCase):
 
     def test_no_recipient_user_returns_skipped_not_raises(self):
         """If chris user doesn't exist (unusual), helper soft-skips."""
-        from core.employees.comms import post_shift_report
+        from core.employees.comms_docs_manager import post_docs_manager_shift_report as post_shift_report
         from django.contrib.auth import get_user_model
         UserModel = get_user_model()
         UserModel.objects.filter(username="chris").delete()
