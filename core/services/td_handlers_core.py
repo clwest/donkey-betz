@@ -3691,6 +3691,25 @@ RESEARCH DATA:
             return {'error': 'User not found'}
 
         if action == 'send_message':
+            # Session 1253 PR 4: defense-in-depth guard. The schema's
+            # action enum no longer includes 'send_message' (LLM can't
+            # see it). This guard catches any non-schema caller (e.g.
+            # a stale tool description or a direct dispatcher call).
+            # Set settings.MESSAGING_TOOL_ALLOW_SEND=True to re-enable.
+            from django.conf import settings
+            if not getattr(
+                settings, 'MESSAGING_TOOL_ALLOW_SEND', False
+            ):
+                return {
+                    'error': (
+                        'messaging_tool.send_message is disabled in v0. '
+                        'Programmatic shift reports use '
+                        'core.employees.comms.post_shift_report; arbitrary '
+                        'LLM-driven outbound messaging is not permitted.'
+                    ),
+                    'error_code': 'MESSAGING_SEND_DISABLED',
+                }
+
             recipient_username = payload.get('recipient_username', '').strip()
             message_body = payload.get('message', '').strip()
 
