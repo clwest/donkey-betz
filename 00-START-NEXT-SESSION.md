@@ -246,7 +246,7 @@ If Employee #2 needs any new model, PA tool, queue, or admin UI — **stop and r
 
 | Item | Source | Severity |
 |---|---|---|
-| **PR 1.3 candidate: replace docs-cascade closure-capture with `PostflightContext`** — see Tracked Seam Debt block below | PR #2739 (Rigby SIGN-WITH-EDITS) | medium |
+| ~~PR 1.3 candidate: replace docs-cascade closure-capture with `PostflightContext`~~ — **RESOLVED** by PR 1.3 (Session 1256). See Tracked Seam Debt block below for historical context. | PR #2739 → PR 1.3 | resolved |
 | Authority enforcement (JobContract.authority is policy, not enforced) | S1254 §3 | medium |
 | Notification channel abstraction (push + WebSocket "DM arrived" event) | PR #2735 §"What's NOT" | low |
 | Mobile messaging screen | PR-4 discovery report | low |
@@ -256,7 +256,14 @@ If Employee #2 needs any new model, PA tool, queue, or admin UI — **stop and r
 | `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low |
 | `feedback_docs_pipeline_4_step_cascade.md` memory rule update — point at the new daily-read surface (`employee_tool action=status` + shift-report DM) | S1254 deferred | low |
 
-#### Tracked seam debt — PR 1.3 candidate
+#### Tracked seam debt — PR 1.3 candidate (RESOLVED)
+
+> **Status: RESOLVED in PR 1.3 (Session 1256).** The block below is
+> preserved for historical context — it explains why the closure-
+> capture pattern appeared in PR 1.2 and what PR 1.3 replaced it with.
+> If `PostflightContext` ever grows additional fields, refer back to
+> the "Intended PR 1.3 API" section to keep the original constraints
+> in view.
 
 **Replace Documentation Manager closure-capture workaround with
 MissionRunner postflight context carrying the mission row.**
