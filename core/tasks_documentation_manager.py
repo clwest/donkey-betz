@@ -1056,13 +1056,15 @@ def _run_mission(mission: OpsRun) -> dict:
 
     mission.refresh_from_db()
 
-    # Session 1253 PR 4: shift-report DM into the persistent inbox
-    # thread. Best-effort — a comms failure must not crash or alter
-    # the docs cascade outcome. Idempotent on mission_id, so safe to
-    # call even if the task is retried.
+    # Session 1253 PR 4 (PR-A generalized): shift-report DM into the
+    # persistent inbox thread. Best-effort — a comms failure must not
+    # crash or alter the docs cascade outcome. Idempotent on
+    # mission_id, so safe to call even if the task is retried.
     try:
-        from core.employees.comms import post_shift_report
-        post_shift_report(mission)
+        from core.employees.comms_docs_manager import (
+            post_docs_manager_shift_report,
+        )
+        post_docs_manager_shift_report(mission)
     except Exception as exc:
         logger.warning(
             "[DOCS_MANAGER_TASK] shift_report post failed mission=%s "
