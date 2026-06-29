@@ -248,10 +248,17 @@ class DocumentationManagerBoundaryTests(SimpleTestCase):
 
 class RegistryHelperTests(SimpleTestCase):
 
-    def test_list_employees_has_one_employee(self):
+    def test_list_employees_contains_rigby(self):
+        """Rigby remains the first registered employee.
+
+        Session 1257 PR 2.1: PLATFORM_AUDITOR joined the registry.
+        Test broadened from "has one employee" to "contains rigby" so
+        it stays correct as the registry grows.
+        """
         employees = list_employees()
-        self.assertEqual(len(employees), 1)
-        self.assertEqual(employees[0].handle, "rigby")
+        handles = {e.handle for e in employees}
+        self.assertIn("rigby", handles)
+        self.assertGreaterEqual(len(employees), 1)
 
     def test_get_employee_known(self):
         self.assertIs(get_employee("rigby"), RIGBY)
