@@ -511,17 +511,27 @@ class NoMissionRunnerChangesTests(SimpleTestCase):
 
 
 # ═════════════════════════════════════════════════════════════════════
-# Contract — production caller count stays exactly 2 (Chief of Staff
-# task runner does NOT land in PR 3.1)
+# Contract — production caller count is exactly 3 after PR 3.2.
+# Session 1257 PR 3.2 promotes MissionRunner from 2 → 3 production
+# callers (docs_manager + platform_audit + chief_of_staff).
+# Pre-PR-3.2 wording of this test class asserted "stays exactly 2"
+# and "no chief_of_staff factory exists"; flipped here per the PR 3.2
+# contract (test_chief_of_staff_routine.ThreeProductionCallersTests is
+# the canonical assertion now — this class kept as the PR 3.1 baseline
+# guardrail, updated to the new ground truth).
 # ═════════════════════════════════════════════════════════════════════
 
 
 class ProductionCallerCountUnchangedTests(SimpleTestCase):
-    """PR 3.1 must not add a Chief of Staff production caller.
-    MissionRunner caller set must remain exactly Documentation Manager +
-    Platform Auditor."""
+    """Post-PR-3.2 production caller contract.
 
-    def test_exactly_two_production_callers(self):
+    MissionRunner caller set must contain exactly Documentation Manager
+    + Platform Auditor + Chief of Staff. Adds or removes from this
+    surface must update both this baseline class and
+    ``test_chief_of_staff_routine.ThreeProductionCallersTests``.
+    """
+
+    def test_exactly_three_production_callers(self):
         repo_root = Path(__file__).resolve().parents[2]
         core_dir = repo_root / "core"
 
@@ -542,6 +552,7 @@ class ProductionCallerCountUnchangedTests(SimpleTestCase):
                         "MissionRunner" in func_repr
                         or "build_docs_manager_runner" in func_repr
                         or "build_platform_audit_runner" in func_repr
+                        or "build_chief_of_staff_runner" in func_repr
                     ):
                         callers.add(str(py.relative_to(repo_root)))
 
@@ -554,6 +565,10 @@ class ProductionCallerCountUnchangedTests(SimpleTestCase):
                 "core/tasks_platform_audit.py",
                 "core/jobs/platform_audit.py",
             },
+            "morning_brief": {
+                "core/tasks_chief_of_staff.py",
+                "core/jobs/morning_brief.py",
+            },
         }
         observed_jobs = set()
         for path in callers:
@@ -562,34 +577,33 @@ class ProductionCallerCountUnchangedTests(SimpleTestCase):
                     observed_jobs.add(job)
         self.assertEqual(
             observed_jobs,
-            {"docs_manager", "platform_audit"},
-            "PR 3.1 must not add a Chief of Staff production caller; "
+            {"docs_manager", "platform_audit", "morning_brief"},
+            "Post-PR-3.2 production caller set must be exactly "
+            "{docs_manager, platform_audit, morning_brief}; "
             f"observed call sites: {sorted(callers)}",
         )
 
-    def test_no_chief_of_staff_runner_factory_exists(self):
-        """The build_chief_of_staff_runner / build_morning_brief_runner
-        factory belongs to PR 3.2, not PR 3.1."""
-        repo_root = Path(__file__).resolve().parents[2]
-        core_dir = repo_root / "core"
-        forbidden = ("build_morning_brief_runner", "build_chief_of_staff_runner")
-        for py in core_dir.rglob("*.py"):
-            if "/tests/" in str(py):
-                continue
-            source = py.read_text()
-            for fn_name in forbidden:
-                self.assertNotIn(
-                    f"def {fn_name}", source,
-                    f"{fn_name} defined in {py.relative_to(repo_root)} "
-                    "— belongs to PR 3.2, not PR 3.1",
-                )
+    def test_chief_of_staff_runner_factory_exists(self):
+        """PR 3.2 ships the build_chief_of_staff_runner factory in
+        core/jobs/morning_brief.py."""
+        from core.jobs.morning_brief import build_chief_of_staff_runner
 
-    def test_no_chief_of_staff_celery_task_exists(self):
-        """The chief_of_staff Celery task belongs to PR 3.2, not 3.1."""
+        # Importable + callable.
+        self.assertTrue(callable(build_chief_of_staff_runner))
+
+    def test_chief_of_staff_celery_task_exists(self):
+        """PR 3.2 ships chief_of_staff_morning_brief_run in
+        core/tasks_chief_of_staff.py."""
         repo_root = Path(__file__).resolve().parents[2]
-        tasks_file = repo_root / "core" / "tasks_morning_brief.py"
-        self.assertFalse(
+        tasks_file = repo_root / "core" / "tasks_chief_of_staff.py"
+        self.assertTrue(
             tasks_file.exists(),
-            "core/tasks_morning_brief.py exists — PR 3.1 must not "
-            "create the Celery task module (lands in PR 3.2).",
+            "core/tasks_chief_of_staff.py missing — PR 3.2 ships the "
+            "Celery task module.",
+        )
+        # And the task name itself is registered.
+        from core.celery import app
+        import core.tasks_chief_of_staff  # noqa: F401
+        self.assertIn(
+            "chief_of_staff_morning_brief_run", app.tasks,
         )
