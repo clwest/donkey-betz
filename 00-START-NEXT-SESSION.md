@@ -131,80 +131,139 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1253 — CURRENT ENTRY POINT
+## SESSION 1255 — CURRENT ENTRY POINT
 
-### SESSION 1252 CLOSED — AI Employee v0 + Documentation Manager live (3 PRs)
+### SESSION 1254 CLOSED — Employee OS Foundation (5 PRs shipped)
 
-**Session window:** 2026-06-28 Sunday late afternoon → evening (~6.5h).
-**Full handoff:** [`SESSION_1252_AI_EMPLOYEE_V0_PR1_PR2_LANDED.md`](docs/handoffs/SESSION_1252_AI_EMPLOYEE_V0_PR1_PR2_LANDED.md).
+**Session window:** 2026-06-29 Monday morning → afternoon (~7h).
+**Full handoff:** [`SESSION_1254_EMPLOYEE_OS_FOUNDATION.md`](docs/handoffs/SESSION_1254_EMPLOYEE_OS_FOUNDATION.md).
+**Canonical primitives doc:** [`docs/EMPLOYEE_OS_PRIMITIVES.md`](docs/EMPLOYEE_OS_PRIMITIVES.md) (NEW — read before any Employee OS work).
 
-**TL;DR:** Built the smallest practical AI Employee abstraction (frozen-dataclass `AIEmployee` + `JobContract`, no new DB models), gave Rigby her first real recurring job (Documentation Manager), and put it in production. PR 1 contract signed by Rigby with 6 required edits; PR 2 daily routine signed with 1 audit-trail amendment; PR 3 cutover wired the active PA pin into the worker env. **PeriodicTask is now `enabled=True`. First beat fire: Monday 2026-06-29 06:30 America/Denver.**
+**TL;DR:** Documentation Manager went from "broken first beat fire" at session open to "registered + read API + shift-report DM + generalized comms + canonical Employee OS primitives doc" at close. Chris's architectural conclusion: **the platform already contains the majority of the Employee Operating System. Documentation Manager is proof #1, not the architecture.** The largest remaining gap is no longer communications — it is extracting the reusable employee lifecycle (PR-B: MissionRunner) and proving it with Employee #2.
 
-**Session 1252 PRs (all admin-merged given Anthropic billing CI gap):**
+**Session 1254 PRs (all admin-merged given Anthropic billing CI gap):**
 
 | PR | Type | Scope | Merge SHA |
 |---|---|---|---|
-| [#2729](https://github.com/clwest/donkey-betz-platform/pull/2729) | feat | AI Employee v0 contract + verdict surface | `1fe0bb0f` |
-| [#2730](https://github.com/clwest/donkey-betz-platform/pull/2730) | feat | Documentation Manager daily routine + run_now + audit trail | `1b5b65c0` |
-| [#2731](https://github.com/clwest/donkey-betz-platform/pull/2731) | chore | Makefile env var for active PA pin | `67ab1e73` |
+| [#2733](https://github.com/clwest/donkey-betz-platform/pull/2733) | fix | Register `rigby_documentation_manager_daily` for worker boot (`app.conf.imports`) | `475bbe5f` |
+| [#2734](https://github.com/clwest/donkey-betz-platform/pull/2734) | feat | `employee_tool action=status` + `evidence_for_mission` (read-only) | `7e5209b5` |
+| [#2735](https://github.com/clwest/donkey-betz-platform/pull/2735) | feat | Documentation Manager shift-report DM into `/inbox` | `771023df` |
+| [#2736](https://github.com/clwest/donkey-betz-platform/pull/2736) | feat | Generalize shift-report comms + `EMPLOYEE_OS_PRIMITIVES.md` | `4b941a68` |
+| [#2737](https://github.com/clwest/donkey-betz-platform/pull/2737) | docs | Session 1254 close handoff | _(this commit)_ |
 
 **Headline outcomes:**
 
-- **3 PRs shipped, all Rigby-signed before merge.** Architecture review → discovery report → operational sign-off → plan-as-signed build → amendment loop when needed. Pattern worked clean across both substantive PRs.
-- **131 new tests across 6 files**, 181/181 green in 2.9s on real PostgreSQL.
-- **Documentation Manager owns**: 4-step docs cascade (build_docs_index → build_rag_corpus → sync → embed), Step 4 hard timeout enforcement (1800s subprocess), drift observation, verdict emission, escalation flow (publish_candidate Deliverable with auditable completed→ready transition via DeliverableEvent('status_transition', source='DocsManager') with ops_run_id + error_signature metadata), 24h dedupe by failure signature, pinned PA chat post.
-- **Production cutover verified end-to-end** before flipping `enabled=True`: real success run (44.4s, 12/12 summary keys, certified verdict) + controlled failure injection (escalation Deliverable in `ready`, audit row with correct metadata, PA post) + safe restore.
+- **All 4 substantive PRs Rigby-SIGNed before merge** via the plan-route-amend pattern.
+- **59 new tests; 190/190 in 3.9s on real PostgreSQL** across the employee suite at session close.
+- **Documentation Manager is live end-to-end:** beat schedule registered, worker dispatch verified, status + evidence read APIs returning correct shapes for both the worker-path success (`02480a34-…`) and the failure-injection (`eab1accc-…`), shift-report DM landing in the persistent inbox thread `d24e5e7a-…`.
+- **Comms is now employee-agnostic:** `post_shift_report(employee, job, mission, …)` accepts any AIEmployee+JobContract pair; docs-specific config is in `core/employees/comms_docs_manager.py`.
+- **First untouched beat fire:** Tue 2026-06-30 06:30 MDT = 12:30 UTC.
 
-### FIRST THING Session 1253
+### FIRST THING Session 1255
 
-**Do not** open PR 3 reflexively. Wait until Monday's first beat-driven MissionRun has produced real data — actual response shapes inform the PR 3 read API better than theoretical specs.
+**Do not** start any new architecture before re-reading [`docs/EMPLOYEE_OS_PRIMITIVES.md`](docs/EMPLOYEE_OS_PRIMITIVES.md). The anti-duplication matrix names every "do not build" model (`EmployeeMessage`, `ApprovalQueue`, `TrustScore`, `MissionRun`, `EmployeeNotification`, `EmployeeHistory`, `EmployeeStatus`) — if you find yourself wanting one of those, you've missed the canonical primitive.
 
-#### Priority 0 — Monday 06:30 first-fire watch
+#### Priority 0 — Tuesday 06:30 first untouched beat fire watch
 
-When the first beat fires at 06:30 local Monday (2026-06-29):
+When Tue 2026-06-30 06:30 MDT (12:30 UTC) hits, verify that the now-registered task runs end-to-end on its own:
 
 ```python
 from core.models_ops_runs import OpsRun, OpsRunEvent
+from core.models_messaging import DirectMessage
+from datetime import datetime, timezone as dt_tz
+lo = datetime(2026, 6, 30, 12, 29, tzinfo=dt_tz.utc)
+hi = datetime(2026, 6, 30, 12, 35, tzinfo=dt_tz.utc)
 run = OpsRun.objects.filter(
-    domain='mission', run_kind='docs_cascade'
+    domain='mission', run_kind='docs_cascade',
+    started_at__gte=lo, started_at__lte=hi,
 ).order_by('-started_at').first()
-print(run.id, run.status, run.triggered_by)
-print('summary keys:', sorted(run.summary.keys()))
-print('event labels:', list(
-    OpsRunEvent.objects.filter(run=run)
-    .order_by('created_at').values_list('label', flat=True)
-))
+assert run is not None, 'Tue 06:30 beat fire produced no OpsRun'
+assert run.triggered_by == 'beat'
+# Shift-report DM should be created too:
+dm = DirectMessage.objects.filter(metadata__mission_id=str(run.id)).first()
+assert dm is not None, 'Tue 06:30 mission produced no shift-report DM'
+print(f'  run.id={run.id}  status={run.status}  verdict={(run.summary or {}).get("verdict")}')
+print(f'  DM.id={dm.id}  body={dm.body[:80]}')
 ```
 
-Expectations:
-1. `triggered_by='beat'` (NOT 'manual')
-2. `status='passed'` (or `'failed'` with an escalation Deliverable — both are correct outcomes; failed means something actually broke and Rigby caught it)
-3. All 12 required summary keys present (`docs_indexed_count`, `documents_count_before/after`, `embeddings_count_before/after`, `embedding_delta`, `drift_count`, `drift_items_count`, `degraded_evidence`, `wall_time_ms`, `failed_step`, `error_tail`)
-4. If escalation fired: PA post in `pa-c7263e7061a0` (the active pin via env), NOT `pa-3901b70e61934df7` (the stale contract constant)
+If anything fails: the registration hotfix (#2733) shape or the shift-report wiring is broken; read `celery.log` for `unregistered task` errors and check `_existing_mission_for_today` against the run's UTC vs. local timezone semantics.
 
-#### Priority 1 — PR 3 specification refinement
+#### Priority 1 — PR-B: MissionRunner extraction
 
-After Priority 0 data exists, draft the PR 3 plan with REAL summary shapes (not theoretical). Scope per PR 1 plan §6:
+**Recommended next architectural milestone** per the S1254 handoff §4.
 
-- `employee_tool action=status employee=rigby [job=docs_manager] [window=7d|30d|90d]`
-- Trust ratio **derived on read, never persisted** (no new model)
-- `trust_status='under_review'` at 3 failures in 7d
-- Single integration test against 100 seeded MissionRuns; response < 500ms
-- After PR 3 ships: update `feedback_docs_pipeline_4_step_cascade.md` memory rule
+**Goal:** extract the reusable employee lifecycle from
+`core/tasks_documentation_manager.py` into a `MissionRunner` class
+that owns mission creation, OpsRun lifecycle, step event emission,
+summary accumulation, verdict emission, idempotency, escalation
+hooks, and shift-report dispatch. Documentation Manager becomes the
+first MissionRunner implementation.
 
-Route the PR 3 plan through Rigby for operational sign-off before any code.
+**Hard rules:**
 
-#### Priority 2 — Optional housekeeping
+- **No new `MissionRun` model.** `OpsRun(domain='mission')` IS the MissionRun. EMPLOYEE_OS_PRIMITIVES.md §2 names this explicitly.
+- **No new `EmployeeAuditLog`.** Reuse OpsRunEvent + DeliverableEvent + LLMCallEvent + ToolCallRecord.
+- **No new PA tool.** `employee_tool` covers describe / run_now / status / evidence_for_mission.
+- **MissionRunner does NOT own:** LLM execution, step semantics, business logic. Those stay in the job module.
+- **Behavior preserved exactly** — every existing docs-manager test must pass through the extracted runner.
 
-- Update `RIGBY.primary_chat_id` in `core/employees/jobs.py` to match the active pin `pa-c7263e7061a0`. Non-blocking thanks to env override. ~3-line change + test update + memory note.
-- `docs/INDEX.md` is uncommitted from PR 2 verification — will get refreshed by Monday's beat run; no need to commit manually now.
+**Concrete shape (working sketch from S1254 §4 — Rigby sign-off required before code):**
+
+```python
+class MissionRunner:
+    def __init__(self, *, employee, job_contract, shift_report_fn):
+        ...
+
+    def run(self, *, step_fns: Sequence[Callable]) -> MissionRunResult:
+        """
+        Execute steps in order, recording OpsRunEvent boundaries.
+        On step failure, halt + emit rejected verdict + call shift_report_fn.
+        On all-steps-pass, emit certified verdict + call shift_report_fn.
+        Returns a normalized result; never raises.
+        """
+```
+
+**Process (mirror S1254's Rigby-SIGN cadence):**
+
+1. Open a discovery deliverable through Rigby identifying every distinct piece of `tasks_documentation_manager.py` that belongs to "lifecycle" vs. "job semantics."
+2. Route the proposed `MissionRunner` API + extraction plan through Rigby for SIGN-WITH-EDITS before any code.
+3. Implement as a refactor PR (no behavior change). All existing tests must pass.
+4. Open a second PR that re-derives the docs-cascade flow through the runner (no behavior change but proves the seam).
+
+#### Priority 2 — Employee #2 implementation (after PR-B lands)
+
+Per S1254 §5. **Candidates:** StockAuditCoordinator, COOAgent.
+
+**Goal:** prove a second employee reuses the lifecycle with only:
+1. New `AIEmployee` + `JobContract` in `core/employees/jobs.py`
+2. New `core/tasks_<job>.py` (registered in `app.conf.imports` — see S1253 #2733 lesson)
+3. Job-specific step functions
+4. Optionally a thin `core/employees/comms_<job>.py` if a tuned body template is needed
+
+If Employee #2 needs any new model, PA tool, queue, or admin UI — **stop and re-read `EMPLOYEE_OS_PRIMITIVES.md` §2 + §4**.
+
+#### Priority 3 — Carryover and watch items
+
+| Item | Source | Severity |
+|---|---|---|
+| Authority enforcement (JobContract.authority is policy, not enforced) | S1254 §3 | medium |
+| Notification channel abstraction (push + WebSocket "DM arrived" event) | PR #2735 §"What's NOT" | low |
+| Mobile messaging screen | PR-4 discovery report | low |
+| `RIGBY.primary_chat_id` contract constant still points at stale `pa-3901b70e61934df7` (env override active; cosmetic) | S1252 carryover | low |
+| `auto-archive-stale-deliverables` interaction with publish_candidate escalation deliverables (window may eat them prematurely) | S1252 carryover | low |
+| Pre-existing failing test `test_every_route_pattern_matches_a_registered_task` (orphan `content.*` route) | S1253 #2733 PR description | low |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low |
+| `feedback_docs_pipeline_4_step_cascade.md` memory rule update — point at the new daily-read surface (`employee_tool action=status` + shift-report DM) | S1254 deferred | low |
 
 #### What NOT to do
 
-- **Don't flip the Session 1250 flags** (`RIGBY_EVENT_INTAKE_ENABLED` etc.) yet. Audit's "stop building toward a richer pipeline" rule still applies. Let Documentation Manager burn a week before exercising the intake/queue/delegation stack.
-- **Don't touch `dispatcher.execute_sync`** in the task module. The asyncio-loop footgun is well-documented in `_force_deliverable_ready`'s docstring; future in-task PA-tool operations should mirror handler contracts via direct ORM.
-- **Don't restart all celery workers.** Only the default worker needs the new env var.
-- **Don't `rm` `docs/INDEX.md`** if it shows up uncommitted — it's auto-regenerated cascade output.
+- **Don't introduce new core models** for any of: `EmployeeMessage`, `ApprovalQueue`, `TrustScore`, `MissionRun`, `EmployeeNotification`, `EmployeeHistory`, `EmployeeStatus`. The anti-duplication matrix in `EMPLOYEE_OS_PRIMITIVES.md` §2 names each substitute.
+- **Don't invent new PA tools per employee.** `employee_tool` is the canonical surface.
+- **Don't persist trust math.** Trust ratio + status are derived on read by `employee_tool action=status`. Persisting them makes policy changes (e.g., changing the under-review threshold from 3 to 5) impossible without backfill.
+- **Don't flip the Session 1250 flags** (`RIGBY_EVENT_INTAKE_ENABLED` et al.) yet. The "stop building toward a richer pipeline" rule still applies.
+- **Don't restart all celery workers** unless something is actually broken. PA worker needed restart this session for the schema enum change; that's the only kind of trigger.
+- **Don't `rm` `docs/INDEX.md`** if it shows up uncommitted — it's auto-regenerated cascade output and the daily beat run regenerates it.
+- **Don't enable `MESSAGING_TOOL_ALLOW_SEND`** without an explicit reason; free-form LLM outbound messaging is OFF by design in v0.
 
 ---
 
