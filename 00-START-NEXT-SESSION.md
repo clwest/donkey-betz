@@ -131,7 +131,92 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1255 — CURRENT ENTRY POINT
+## SESSION 1258 — CURRENT ENTRY POINT
+
+### SESSION 1257 CLOSED — Chief of Staff (Employee #3) landed end-to-end
+
+**Session window:** 2026-06-29 (continuation of S1256 MissionRunner extraction arc).
+**Full handoff:** [`SESSION_1257_EMPLOYEE_OS_PR_3_1_PR_3_2_CHIEF_OF_STAFF_LANDED.md`](docs/handoffs/SESSION_1257_EMPLOYEE_OS_PR_3_1_PR_3_2_CHIEF_OF_STAFF_LANDED.md).
+**Companion spec:** [`docs/MORNING_BRIEF_SPEC.md`](docs/MORNING_BRIEF_SPEC.md) (v1, ratified S1232).
+
+**TL;DR:** Shipped the third AI employee — Chief of Staff — through MissionRunner. The existing morning_brief workflow runs unchanged inside one MissionRunner step (wrap-as-single-step). **MissionRunner production caller count: 2 → 3** (docs_manager + platform_audit + morning_brief).
+
+**Session 1257 PRs (both admin-merged):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2744](https://github.com/clwest/donkey-betz-platform/pull/2744) | feat | PR 3.1 — register Chief of Staff as Employee #3 (contract + registry only) | `dc534924` |
+| [#2745](https://github.com/clwest/donkey-betz-platform/pull/2745) | feat | PR 3.2 — Chief of Staff Morning Brief task runner via MissionRunner | `0c8c66a4` |
+
+**Headline outcomes:**
+
+- **3 employees registered** (Rigby, Platform Auditor, Chief of Staff). **3 jobs** (`docs_manager`, `platform_audit`, `morning_brief`). **3 production MissionRunner callers** (asserted by AST scan).
+- **336/336 PR 3.2 gauntlet pass in 33s.** Real-DB PostgreSQL via `--keepdb`. `WorkflowOrchestrationAgent.execute` mocked at the import surface.
+- **Both Rigby SIGN-WITH-EDITS locks applied** from discovery (deliverable `2983377c-…`): (1) no workflow internal touches — `brief_chars` derived postflight via single ORM read of `Deliverable.content`; (2) scalar-only `OpsRun.summary` — 9 scalar fields, no envelope persistence.
+- **CoS-specific fail-loud Celery wrapper:** re-raises `RuntimeError` on `result.ok=False` (differs from Platform Auditor's wrapper, matches legacy S1234 D1 behavior).
+- **Local verification flow** — Rigby's first `claude_code_tool` dispatch FAIL'd from sandbox blindness (worker without repo access; result never posted back to PA chat). Claude verified all 8 checks locally with file:line evidence (deliverable `5523e4ca-…`), Rigby SIGN'd, PR merged.
+- **No MissionRunner public contract changes.** No workflow internal modifications. No beat row flip yet (PR 3.3 scope).
+
+### FIRST THING Session 1258
+
+#### Priority 0 — Optional: PR 3.3 Morning Brief beat migration
+
+**Scope (small, single-PR):**
+
+1. Update the `'generate-morning-brief-daily'` PeriodicTask row in `core/celery.py:473-477` — change the `task` field from `core.tasks.generate_morning_brief_daily` to `chief_of_staff_morning_brief_run`.
+2. Remove the legacy task module body at `core/tasks.py:5788-5938` (the `generate_morning_brief_daily` `@shared_task` and its full body).
+3. Verify Procfile + Makefile queue parity for the post-flip beat row to avoid the queue-routes silent-failure trap (`feedback_procfile_makefile_queue_parity.md`).
+4. Run focused gauntlet + first-fire verify on the next Railway 07:00 Denver beat.
+
+**Discovery already done.** See discovery deliverable `2983377c-…` § 9 (Beat schedule) + § 10 (Required code movement / PR 3.2 vs 3.3 split). No new discovery PR needed.
+
+**Beat schedule unchanged:** `crontab(hour=7, minute=0)` Denver, `queue='default'`, `expires=3600`. Only the `task` field flips.
+
+**Risk:** very low — same shape as docs_cascade and platform_audit beat migrations. The new task `chief_of_staff_morning_brief_run` is already registered in `app.tasks` + `app.conf.imports` as of PR #2745 merge.
+
+#### Priority 1 — Employee OS UX/infrastructure gap: `claude_code_tool` task receipts + post-back reliability
+
+**Surfaced Session 1257** during the PR #2745 verification handshake. Memory: [`project_employee_os_ux_gap_task_receipts.md`](../../.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/project_employee_os_ux_gap_task_receipts.md).
+
+The `claude_code_tool` → `claude_code_engineer_task` → `code_jobs` queue chain has three connected gaps:
+
+1. **No `AgentExecution` row written** by `claude_code_engineer_task`. Rigby's `schedule_followup` (which keys off `AgentExecution.celery_task_id`) can't bind to it. The UI has nothing to surface.
+2. **Silent post-back failure.** `_post_to_conversation` skips silently when `conversation_id` is None or the queue boundary drops it. Should fail-loud (log + retry or surface via a sentinel ChatConversation row).
+3. **No task receipt in Chat UI.** Rigby's "dispatched, task_id=…" ack looks identical to "in flight" and "stuck." Chris can't distinguish queued / running / completed / failed / posted-back without ORM digging.
+
+Plus the related **sandboxing issue**: the `code_jobs` worker that ran the engineer task lacks repo access (`fatal: not a git repository`). Either expose the repo to the worker OR refuse the dispatch with a clear error (so the engineer doesn't run + FAIL silently from blindness).
+
+**Concrete incident** (2026-06-29 21:25:53–21:26:33 UTC, task `068ee853-84e6-4fe2-a84c-30ebd80c05f7`): CeleryTaskEvent SUCCESS, 40.7s, queue=code_jobs, worker=code_jobs@Chriss-MBP.lan. Engineer ran 6 tool iterations, every one returned "fatal: not a git repository" / "File not found" / "No matches found." Result returned status=success with summary `"I could not access the repository or PR contents in this environment, so I could not perform the requested file-level verifications."` Zero `ChatConversation` rows after the dispatch ack. Rigby's `schedule_followup` failed with `No AgentExecution found with celery task_id=068ee853-…`. From Chris's POV: indefinite silence with no failure signal.
+
+**Recommended PR shape (future work):**
+
+1. **`core/services/claude_code_engineer.py`** — `_post_to_conversation` writes a sentinel `ChatConversation` row even on no-conversation_id case (with `metadata.delivery_status='no_conversation_id'`). On exception, write a `metadata.delivery_status='post_back_failed'` row + log loud.
+2. **`core/tasks.py`** `claude_code_engineer_task` — at task start, create an `AgentExecution(agent='claude_code_engineer', status='running', input_data={'task_id': self.request.id, 'conversation_id': …})` row so Rigby's `schedule_followup` has something to bind to and the UI has a surfaceable entity.
+3. **`code_jobs` worker** — either mount the repo into the worker's filesystem (so repo-level verifications work) OR have the dispatcher detect "this task needs repo access" and refuse dispatch with a clear error message returned to Rigby's tool ack.
+4. **Chat UI** — show task receipt badges keyed off `task_id` returned in the dispatcher's ack. States: queued / running / completed-and-posted / completed-but-not-posted / failed.
+
+**Severity:** medium. Doesn't block any feature, but every Rigby-led tool dispatch now requires Claude to manually verify via ORM whether the result actually landed. Until fixed, default to **local verification** for any Rigby-dispatched `claude_code_tool` task whose result Chris needs to see.
+
+#### Priority 2 — Tue 2026-06-30 06:30 first-fire watch (carried over from S1255)
+
+Documentation Manager's first untouched beat fire is still **Tue 2026-06-30 06:30 MDT = 12:30 UTC**. See the prior-priority verification script below in the Session 1255 block; that one is still the canonical script.
+
+If the first fire passes cleanly, the docs-manager arc closes. If it fails, Priority 0 (PR 3.3 beat migration) blocks until docs-manager beat is stable — the same beat-row task-flip mechanism is what PR 3.3 uses, so any docs-manager beat failure surfaces the same risk for CoS.
+
+#### Priority 3 — Carryover from S1257 → 1258
+
+| Item | Source | Severity |
+|---|---|---|
+| Legacy `core.tasks.generate_morning_brief_daily` still live + beat row still pointing at it | PR #2745 deferred to PR 3.3 | medium |
+| `claude_code_tool` task receipt / post-back / sandbox UX fix | S1257 verification incident | medium |
+| Authority enforcement (JobContract.authority is policy, not enforced) | S1254 §3 | medium |
+| `RIGBY.primary_chat_id` contract constant still points at stale `pa-3901b70e61934df7` (env override active; cosmetic) | S1252 carryover | low |
+| Pre-existing failing test `test_every_route_pattern_matches_a_registered_task` (orphan `content.*` route) | S1253 #2733 PR description | low |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low |
+
+---
+
+## SESSION 1255 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1254 CLOSED — Employee OS Foundation (5 PRs shipped)
 
