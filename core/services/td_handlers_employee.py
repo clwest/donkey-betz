@@ -577,6 +577,15 @@ _RUN_NOW_TASKS: Dict[tuple, _RunNowDispatch] = {
         attr="platform_auditor_run",
         run_kind="platform_audit",
     ),
+    # Session 1257 PR 3.2 — Chief of Staff Morning Brief.
+    # Wraps the existing morning_brief workflow as a single
+    # MissionRunner step (wrap-as-single-step pattern per discovery
+    # deliverable 2983377c-08e3-44e6-aeef-cfcf742ae4cd).
+    ("chief_of_staff", "morning_brief"): _RunNowDispatch(
+        module="core.tasks_chief_of_staff",
+        attr="chief_of_staff_morning_brief_run",
+        run_kind="morning_brief",
+    ),
 }
 
 
