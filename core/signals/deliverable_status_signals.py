@@ -142,7 +142,10 @@ def record_status_transition(sender, instance, created, **kwargs):
     Session 1227 PR3 — reads an optional ephemeral context dict
     `instance._transition_context` set by callers that want to
     enrich the event row beyond the default `{from, to, direction}`.
-    Recognized keys: `reason`, `actor_user_id`, `trace_id`, `source`.
+    Recognized keys (Session 1252 PR 2 added `ops_run_id` +
+    `error_signature` for Docs Manager escalation auditability —
+    Rigby's PR 2 sign-off requirement): `reason`, `actor_user_id`,
+    `trace_id`, `source`, `ops_run_id`, `error_signature`.
     The context is namespaced under `metadata['ctx']` to avoid
     collisions with the authoritative transition fields, and the
     attribute is removed after consumption so it can't leak to a
@@ -176,9 +179,21 @@ def record_status_transition(sender, instance, created, **kwargs):
     if ctx:
         # Namespace under 'ctx' so the {from, to, direction} authoritative
         # fields can't collide with caller-supplied keys.
+        # Session 1252 PR 2: added ``ops_run_id`` + ``error_signature``
+        # to the whitelist so the Docs Manager escalation flow can
+        # attach run + dedupe-signature pointers to the audit row.
+        # Rigby's PR 2 sign-off required these as queryable evidence
+        # fields, not just human-readable reason text.
         metadata['ctx'] = {
             k: v for k, v in ctx.items()
-            if k in ('reason', 'actor_user_id', 'trace_id', 'source')
+            if k in (
+                'reason',
+                'actor_user_id',
+                'trace_id',
+                'source',
+                'ops_run_id',
+                'error_signature',
+            )
             and v is not None
         }
 
