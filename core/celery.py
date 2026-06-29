@@ -838,6 +838,16 @@ app.conf.imports = (
     # (default False); this import only registers the task name, it
     # does not enqueue anything.
     'core.services.rigby_event_intake',
+    # Session 1253 hotfix: PR #2730 added the Documentation Manager
+    # `@shared_task rigby_documentation_manager_daily` in a non-standard
+    # tasks_documentation_manager.py module. The S1252 cutover verified
+    # the cascade through the management command (in-process import) but
+    # never exercised the worker dispatch path — so when the first beat
+    # fire at 2026-06-29 06:30 MDT sent the task message, the default
+    # worker rejected it with `KeyError: 'rigby_documentation_manager_daily'`.
+    # Adding the module here ensures the worker imports it at boot and
+    # registers the task name in the registry.
+    'core.tasks_documentation_manager',
 )
 
 
@@ -860,7 +870,19 @@ def _eager_import_session1115_modules(sender, **kwargs):
     registry.
     """
     import importlib
-    for mod in ('ai_core.tasks', 'ml.tasks', 'sports.tasks', 'intelligence.tasks'):
+    # Session 1115 set: ai_core/ml/sports/intelligence.
+    # Session 1253 hotfix: + core.tasks_documentation_manager so the
+    # docs-manager `@shared_task` registers at finalize time too (not
+    # just at worker boot). Without this, `verify_doc_claims` /
+    # build_celery_audit reading `app.tasks` early can miss the task.
+    eager_modules = (
+        'ai_core.tasks',
+        'ml.tasks',
+        'sports.tasks',
+        'intelligence.tasks',
+        'core.tasks_documentation_manager',
+    )
+    for mod in eager_modules:
         try:
             importlib.import_module(mod)
         except Exception as e:
