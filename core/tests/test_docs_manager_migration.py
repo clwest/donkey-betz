@@ -435,3 +435,318 @@ class TasksFileThinnessTests(SimpleTestCase):
             )
             mod = inspect.getmodule(fn)
             self.assertEqual(mod.__name__, "core.jobs.docs_cascade")
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Closure-capture workaround safety (Rigby PR 1.2 SIGN-WITH-EDITS)
+# ═════════════════════════════════════════════════════════════════════
+#
+# The docs cascade uses a closure-capture pattern to give postflight
+# access to the mission row that MissionRunner's postflight_fn
+# signature does not pass. These tests prove the workaround is safe:
+#
+#   * Mission is captured before postflight runs
+#   * Missing capture fails loud (no silent fallback)
+#   * Each runner has its own holder (no cross-run bleed)
+#   * Event labels + order match pre-PR-1.2 behavior
+
+
+class ClosureCaptureSafetyTests(TestCase):
+    """Rigby PR 1.2 SIGN-WITH-EDITS — workaround must fail loud."""
+
+    def setUp(self):
+        User.objects.get_or_create(
+            username="chris",
+            defaults={"email": "chris@test.donkey"},
+        )
+
+    def test_postflight_raises_when_mission_holder_empty(self):
+        """Empty holder → RuntimeError (no silent fallback)."""
+        from core.jobs.docs_cascade import _make_postflight
+
+        postflight = _make_postflight(mission_holder={})
+        with self.assertRaises(RuntimeError) as ctx:
+            postflight(True, {})
+        self.assertIn(
+            "without a captured mission row",
+            str(ctx.exception),
+        )
+
+    def test_step_wrapper_raises_on_none_mission(self):
+        """A null mission at step entry → RuntimeError."""
+        from core.employees.mission_runner import StepResult
+        from core.jobs.docs_cascade import _make_mission_capturing_step
+
+        def _inner(mission):
+            return StepResult(passed=True)
+
+        wrapped = _make_mission_capturing_step(_inner, mission_holder={})
+        with self.assertRaises(RuntimeError) as ctx:
+            wrapped(None)
+        self.assertIn("mission=None", str(ctx.exception))
+
+    def test_step_wrapper_captures_mission_into_holder(self):
+        """The wrapper writes the mission into the holder before calling
+        the inner step fn."""
+        from core.employees.mission_runner import StepResult
+        from core.jobs.docs_cascade import _make_mission_capturing_step
+        from core.models_ops_runs import OpsRun
+
+        # Synthetic mission row.
+        run = OpsRun.objects.create(
+            title="capture-test",
+            run_type="manual",
+            domain="mission",
+            run_kind="docs_cascade",
+            triggered_by="manual",
+            status="running",
+            summary={},
+        )
+
+        holder: dict = {}
+
+        def _inner(mission):
+            # By the time inner runs, the holder must already have the
+            # mission (capture happens BEFORE inner is invoked).
+            self.assertEqual(mission_holder_get(holder), str(run.id))
+            return StepResult(passed=True)
+
+        def mission_holder_get(h):
+            m = h.get("mission")
+            return str(m.id) if m is not None else None
+
+        wrapped = _make_mission_capturing_step(_inner, holder)
+        wrapped(run)
+        self.assertEqual(holder["mission"], run)
+
+    def test_two_runners_have_independent_mission_holders(self):
+        """Each build_docs_manager_runner() call must produce a runner
+        with its own mission_holder closure (no cross-run bleed)."""
+        from core.jobs.docs_cascade import build_docs_manager_runner
+
+        r1 = build_docs_manager_runner()
+        r2 = build_docs_manager_runner()
+
+        # Steps captured into the runner instances are wrapped by the
+        # builder. The wrappers close over the *holder*, not the runner.
+        # Inspecting the closure cells reveals whether they share state.
+        def _extract_holder(step_fn):
+            # _wrapped closes over (base_step_fn, mission_holder); the
+            # holder is the dict cell.
+            for cell in step_fn.__closure__ or ():
+                if isinstance(cell.cell_contents, dict):
+                    return cell.cell_contents
+            return None
+
+        holders_r1 = {id(_extract_holder(s.fn)) for s in r1.steps}
+        holders_r2 = {id(_extract_holder(s.fn)) for s in r2.steps}
+
+        # Within one runner, all step wrappers share the SAME holder.
+        self.assertEqual(len(holders_r1), 1)
+        self.assertEqual(len(holders_r2), 1)
+
+        # Across runners, holders are DIFFERENT objects.
+        self.assertNotEqual(
+            holders_r1.pop(), holders_r2.pop(),
+            "build_docs_manager_runner() must produce a fresh "
+            "mission_holder per call — cross-run bleed would corrupt "
+            "step_5 event emission",
+        )
+
+    def test_postflight_with_captured_mission_succeeds_silently(self):
+        """Sanity check: when the holder IS populated, postflight runs
+        normally (validates the guard doesn't false-positive)."""
+        from core.jobs.docs_cascade import _make_postflight
+        from core.models_ops_runs import OpsRun
+
+        run = OpsRun.objects.create(
+            title="postflight-positive",
+            run_type="manual",
+            domain="mission",
+            run_kind="docs_cascade",
+            triggered_by="manual",
+            status="running",
+            summary={},
+        )
+
+        # Failure path postflight does no probes that hit real
+        # docs/_index.json; just emits step_5_skipped. The default
+        # probes return None safely.
+        from unittest.mock import patch
+
+        postflight = _make_postflight({"mission": run})
+        summary_acc: dict = {}
+        with patch(
+            "core.jobs.docs_cascade._probe_documents_count",
+            return_value=None,
+        ), patch(
+            "core.jobs.docs_cascade._probe_embeddings_count",
+            return_value=None,
+        ):
+            postflight(False, summary_acc)
+
+        # step_5_skipped event was emitted on the captured mission.
+        from core.models_ops_runs import OpsRunEvent
+        self.assertTrue(
+            OpsRunEvent.objects.filter(
+                run=run, label="step_5_skipped"
+            ).exists()
+        )
+
+
+class EventLabelOrderPreservationTests(TestCase):
+    """Rigby PR 1.2 SIGN-WITH-EDITS — event sequence matches pre-1.2."""
+
+    def setUp(self):
+        User.objects.get_or_create(
+            username="chris",
+            defaults={"email": "chris@test.donkey"},
+        )
+
+    def _mock_all_pass(self):
+        from contextlib import ExitStack
+        from unittest.mock import MagicMock, patch
+
+        stack = ExitStack()
+        cc = stack.enter_context(
+            patch("core.jobs.docs_cascade.call_command")
+        )
+        cc.return_value = None
+        sp = stack.enter_context(
+            patch("core.jobs.docs_cascade.subprocess.run")
+        )
+        sp.return_value = MagicMock(
+            returncode=0, stdout="ok\n", stderr=""
+        )
+        stack.enter_context(
+            patch(
+                "core.jobs.docs_cascade._probe_documents_count",
+                return_value=10,
+            )
+        )
+        stack.enter_context(
+            patch(
+                "core.jobs.docs_cascade._probe_embeddings_count",
+                return_value=100,
+            )
+        )
+        stack.enter_context(
+            patch(
+                "core.jobs.docs_cascade._probe_docs_indexed_count",
+                return_value=10,
+            )
+        )
+        return stack
+
+    def _mock_step_fails(self, fail_at: str):
+        from contextlib import ExitStack
+        from unittest.mock import patch
+
+        def _cc_side(cmd, *args, **kwargs):
+            if cmd == fail_at:
+                raise SystemExit(2)
+            return None
+
+        stack = ExitStack()
+        stack.enter_context(
+            patch(
+                "core.jobs.docs_cascade.call_command",
+                side_effect=_cc_side,
+            )
+        )
+        return stack
+
+    def test_success_event_order_matches_pre_1_2(self):
+        """Successful run produces the canonical pre-1.2 event sequence."""
+        from core.models_ops_runs import OpsRun, OpsRunEvent
+        from core.tasks_documentation_manager import (
+            rigby_documentation_manager_daily,
+        )
+
+        with self._mock_all_pass():
+            result = rigby_documentation_manager_daily()
+
+        run = OpsRun.objects.get(id=result["mission_id"])
+        labels = list(
+            OpsRunEvent.objects.filter(run=run)
+            .order_by("created_at", "id")
+            .values_list("label", flat=True)
+        )
+
+        # Canonical pre-1.2 sequence — exact match:
+        expected = [
+            "run_started",
+            "step_1_index_started", "step_1_index_passed",
+            "step_2_corpus_started", "step_2_corpus_passed",
+            "step_3_sync_started", "step_3_sync_passed",
+            "step_4_embed_started", "step_4_embed_passed",
+            "step_5_drift_observed",
+            "verdict_issued:certified",
+        ]
+        self.assertEqual(labels, expected)
+
+    def test_step_3_failure_emits_step_5_skipped_not_drift(self):
+        """Failure mid-cascade emits step_5_skipped, NOT step_5_drift_observed."""
+        from core.models_ops_runs import OpsRun, OpsRunEvent
+        from core.tasks_documentation_manager import (
+            rigby_documentation_manager_daily,
+        )
+
+        with self._mock_step_fails("sync_docs_index_to_documents"):
+            result = rigby_documentation_manager_daily()
+
+        run = OpsRun.objects.get(id=result["mission_id"])
+        labels = list(
+            OpsRunEvent.objects.filter(run=run)
+            .order_by("created_at", "id")
+            .values_list("label", flat=True)
+        )
+
+        # Step 3 failed; step 4 was skipped; step_5_skipped emitted by
+        # the docs-cascade postflight (NOT step_5_drift_observed).
+        self.assertIn("step_3_sync_failed", labels)
+        self.assertIn("step_4_embed_skipped", labels)
+        self.assertIn("step_5_skipped", labels)
+        self.assertNotIn("step_5_drift_observed", labels)
+
+        # And the escalation + rejected verdict events.
+        self.assertIn("escalation_emitted", labels)
+        self.assertIn("verdict_issued:rejected", labels)
+
+    def test_no_duplicate_step_5_events_on_success(self):
+        """Sanity: success emits exactly one step_5_drift_observed and
+        zero step_5_skipped."""
+        from core.models_ops_runs import OpsRun, OpsRunEvent
+        from core.tasks_documentation_manager import (
+            rigby_documentation_manager_daily,
+        )
+
+        with self._mock_all_pass():
+            result = rigby_documentation_manager_daily()
+
+        run = OpsRun.objects.get(id=result["mission_id"])
+        labels = list(
+            OpsRunEvent.objects.filter(run=run)
+            .values_list("label", flat=True)
+        )
+        self.assertEqual(labels.count("step_5_drift_observed"), 1)
+        self.assertEqual(labels.count("step_5_skipped"), 0)
+
+    def test_no_duplicate_step_5_events_on_failure(self):
+        """Sanity: failure emits exactly one step_5_skipped and zero
+        step_5_drift_observed."""
+        from core.models_ops_runs import OpsRun, OpsRunEvent
+        from core.tasks_documentation_manager import (
+            rigby_documentation_manager_daily,
+        )
+
+        with self._mock_step_fails("build_docs_index"):
+            result = rigby_documentation_manager_daily()
+
+        run = OpsRun.objects.get(id=result["mission_id"])
+        labels = list(
+            OpsRunEvent.objects.filter(run=run)
+            .values_list("label", flat=True)
+        )
+        self.assertEqual(labels.count("step_5_skipped"), 1)
+        self.assertEqual(labels.count("step_5_drift_observed"), 0)
