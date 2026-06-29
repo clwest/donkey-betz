@@ -588,9 +588,25 @@ def _make_mission_capturing_step(
     The capture happens on every call (idempotent assignment). Steps
     receive the mission row from MissionRunner; we re-publish it into
     the holder so the postflight closure can read it.
+
+    **Safety guard (Rigby PR 1.2 SIGN-WITH-EDITS).** The wrapper
+    explicitly refuses a ``None`` mission. MissionRunner is contractually
+    required to pass the OpsRun row to every step_fn; if a future runner
+    change ever broke that, the docs cascade would silently start with
+    a missing mission and the postflight guard would also raise — but
+    failing loud at the step boundary surfaces the regression at its
+    source rather than at the postflight downstream consumer.
     """
 
     def _wrapped(mission) -> StepResult:
+        if mission is None:
+            raise RuntimeError(
+                "docs_cascade step wrapper received mission=None — "
+                "MissionRunner's step contract is broken. Cannot "
+                "populate mission_holder; the closure-capture "
+                "workaround for step_5_drift_observed / step_5_skipped "
+                "depends on a non-null mission row at step entry."
+            )
         mission_holder["mission"] = mission
         return base_step_fn(mission)
 
@@ -632,14 +648,33 @@ def _make_postflight(
     ``step_5_drift_observed`` info event onto the timeline).
     On failure: probes after-counts (state may be partially mutated) +
     emits ``step_5_skipped`` info event.
+
+    **Safety guard (Rigby PR 1.2 SIGN-WITH-EDITS).** The postflight
+    explicitly raises if the mission row was never captured. This
+    surfaces a broken closure-capture path immediately rather than
+    silently producing a mission timeline missing the load-bearing
+    ``step_5_drift_observed`` / ``step_5_skipped`` events. The
+    capture happens inside ``_make_mission_capturing_step``; an empty
+    holder at postflight time means the step loop never ran, which is
+    impossible in normal MissionRunner operation (the runner enforces
+    at least one Step via ``__init__`` validation, and step_fns are
+    always invoked before postflight).
     """
 
     def _postflight(passed: bool, summary_acc: Dict[str, Any]) -> None:
         mission = mission_holder.get("mission")
         if mission is None:
-            # No step has run — preflight failed and no step_fn fired.
-            # Without a mission row we can't emit events; bail.
-            return
+            raise RuntimeError(
+                "docs_cascade postflight invoked without a captured "
+                "mission row. The closure-capture workaround for "
+                "step_5_drift_observed / step_5_skipped requires that "
+                "at least one step_fn fired and stashed the mission "
+                "via _make_mission_capturing_step before postflight "
+                "runs. An empty holder means either the step loop was "
+                "skipped (broken MissionRunner contract) or the "
+                "wrapper was bypassed (broken docs_cascade wiring). "
+                "Investigate before silently dropping step_5 events."
+            )
 
         if passed:
             summary_acc["docs_indexed_count"] = _probe_docs_indexed_count()
