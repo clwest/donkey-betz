@@ -737,9 +737,12 @@ class EventLabelOrderPreservationTests(TestCase):
             .values_list("label", flat=True)
         )
 
-        # Canonical pre-1.2 sequence — exact match:
+        # Canonical sequence — exact match. Session 1264 added
+        # ``authority_contract_observed`` right after ``run_started``
+        # for warn-mode telemetry.
         expected = [
             "run_started",
+            "authority_contract_observed",
             "step_1_index_started", "step_1_index_passed",
             "step_2_corpus_started", "step_2_corpus_passed",
             "step_3_sync_started", "step_3_sync_passed",

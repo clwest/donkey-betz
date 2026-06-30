@@ -719,6 +719,11 @@ def build_docs_manager_runner() -> MissionRunner:
         # Job
         mission_run_kind=MISSION_RUN_KIND,
         job_title=DOCUMENTATION_MANAGER.title,
+        # Session 1264 — opt into authority warn-mode observation. The
+        # runner emits one ``authority_contract_observed`` event per
+        # mission capturing contract shape (counts + version hash).
+        # No behavior change; warn-mode never blocks.
+        job_contract=DOCUMENTATION_MANAGER,
         # Escalation (employee-specific only — workspace travels via spec)
         escalation_source=ESCALATION_SOURCE,
         escalation_title_prefix=DELIVERABLE_TITLE_PREFIX,

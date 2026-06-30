@@ -233,8 +233,11 @@ class HappyPathTests(TestCase):
             .order_by("created_at")
             .values_list("label", flat=True)
         )
+        # Session 1264 — authority_contract_observed lands right after
+        # run_started (warn-mode telemetry; never blocks).
         expected = [
             "run_started",
+            "authority_contract_observed",
             "step_1_index_started", "step_1_index_passed",
             "step_2_corpus_started", "step_2_corpus_passed",
             "step_3_sync_started", "step_3_sync_passed",
