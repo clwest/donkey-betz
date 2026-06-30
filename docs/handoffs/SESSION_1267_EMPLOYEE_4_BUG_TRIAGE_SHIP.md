@@ -184,3 +184,30 @@ None of these are work items for S1268+ yet; they're prerequisites that accrue o
 ## Closing thought
 
 The two single-day arcs in this stretch (S1259-1266 + S1267) shipped **5 employees worth of work** (3 original + Bug Triage primitives + framework `auto_emit_verdict`) under a single Rigby conversation. The platform now has 4 production AI employees with daily/weekly cadence, an authority warn-mode evidence baseline accruing across all of them, and the Employee OS primitives book demonstrably composes for new employees without inventing parallel infrastructure. The next employee Chris asks for should follow the same shape — discovery → SIGN-clean → 4 PRs → V13 → beat flip — and ship the same day if the primitives stay disciplined.
+
+## Post-close addendum — S1268 P1 (F1) discovery + SIGN
+
+After the main close was committed, Chris asked for read-only discovery on the Platform Auditor cadence gap (F1) so S1268 can open with no remaining design questions. Discovery output + Rigby SIGN-WITH-EDITS landed in [`00-START-NEXT-SESSION.md`](../../00-START-NEXT-SESSION.md) §"Priority 1".
+
+Locked decisions for S1268 P1:
+
+- **Cadence:** Sunday 06:30 America/Denver weekly (Rigby SIGN-WITH-EDITS task `7e75fc41` — shifted off the original "Mon 06:30" proposal which collided with docs_manager). Cron: `minute=30 hour=6 day_of_week=0 timezone='America/Denver'`.
+- **Sequencing:** Same-day 2 PRs, Bug Triage pattern. Second PR (flip enabled=True) gates on a manual PA run + verify expected OpsRunEvents + Audit Deliverable.
+- **Implementation scope:** 2 migrations only, ~140 LOC total. Zero code changes — PA task module + `_RUN_NOW_TASKS` entry already shipped in S1257; only the beat row is missing.
+
+The post-close discovery turn happened on the **new S1268 pin `pa-01e90a1d36f54880`** (carry-forward thread Rigby created at the rotation request). S1267 runtime path was not touched.
+
+## Final session state at close
+
+| State | Value |
+|---|---|
+| Live PRs merged this session | 6 (4 implementation + 1 close docs + 1 pin rotation) |
+| Local stack restarted post-merge | ✅ daphne + 5 celery workers + beat (verified V1-V5 green) |
+| `bug_triage_daily_run` in worker registry | ✅ (5 worker pools) |
+| `/api/employees/` returns 4 employees | ✅ |
+| `_RUN_NOW_TASKS` has Bug Triage entry | ✅ |
+| `PeriodicTask(name='bug_triage_daily_run').enabled` | ✅ True at 08:00 Denver |
+| Stale PIDs | ✅ none (all 7 PID files fresh, all referenced PIDs alive) |
+| S1267 docs cascade applied | ✅ handoff embedded for Rigby `search_docs` |
+| Rigby thread for S1268 | ✅ `pa-01e90a1d36f54880` with S1268 carry-forward seeded |
+| Working tree | clean |
