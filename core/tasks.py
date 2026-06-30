@@ -11765,7 +11765,20 @@ def enforce_db_retention():
     return _impl_enforce_db_retention()
 
 
-@shared_task(bind=True, soft_time_limit=5400, time_limit=5460, ignore_result=False)
+# Session 1262: ``max_retries=0`` + ``acks_late=False`` ensure that the
+# expensive LLM run is NEVER auto-retried on failure (the engineer task
+# burns budget on every run). The fail-loud post-back path in
+# ``_post_to_conversation`` raises on ChatConversation write failure to
+# make ``CeleryTaskEvent.status=FAILURE`` visible, but the raise must not
+# trigger a retry. See ``claude_code_engineer.py`` module-top S1262 note.
+@shared_task(
+    bind=True,
+    soft_time_limit=5400,
+    time_limit=5460,
+    ignore_result=False,
+    max_retries=0,
+    acks_late=False,
+)
 def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto'):
     """Autonomous Claude Code engineering session — reads files, writes code, creates PRs.
 
@@ -11774,14 +11787,108 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
     the Session 1229 Step 5 behavioral-delta (gpt-5-mini stalled on a
     readonly line-count task asking for clarification instead of producing
     the markdown table).
+
+    Session 1262: creates an ``AgentExecution`` row at task entry (mirror
+    of the canonical pattern in ``core/tasks_agents.py:2270-2325``) so:
+      * ``schedule_followup(task_id=…)`` can bind via
+        ``input_data__celery_task_id`` lookup
+        (``td_handlers_agents.py:5202``)
+      * ``create_implicit_followup_subscription`` arms the S1174 PR-2
+        follow-up wake so Rigby's PA conversation receives the
+        completion automatically (signal handler ↔
+        ``PAConversationConsumer.agent_completed`` already wired)
+      * the result envelope (summary / files_changed / pr_url) is
+        persisted on ``output_data`` even when ``conversation_id``
+        arrives as None — retrievable later via the execution row
+
+    The pre-S1262 silent-disappearance pattern (CeleryTaskEvent=SUCCESS
+    + zero AgentExecution + zero ChatConversation post-back across all
+    5 recent dispatches) is closed by this wiring + the fail-loud
+    ``_post_to_conversation`` changes.
     """
-    from core.services.claude_code_engineer import execute_engineering_task
-    return execute_engineering_task(
-        task_description,
+    from core.services.claude_code_engineer import (
+        _create_engineer_execution_record,
+        _persist_engineer_terminal_state,
+        execute_engineering_task,
+    )
+
+    celery_task_id = str(self.request.id) if self.request and self.request.id else ''
+    execution_record = _create_engineer_execution_record(
+        celery_task_id=celery_task_id,
+        task_description=task_description,
         conversation_id=conversation_id,
         requested_by=requested_by,
         request_mode=request_mode,
     )
+    agent_execution_id = (
+        str(execution_record.id) if execution_record is not None else None
+    )
+
+    result = None
+    try:
+        result = execute_engineering_task(
+            task_description,
+            conversation_id=conversation_id,
+            requested_by=requested_by,
+            request_mode=request_mode,
+            agent_execution_id=agent_execution_id,
+        )
+    except Exception as exc:
+        _persist_engineer_terminal_state(
+            execution_record, exception=exc,
+        )
+        raise
+    else:
+        _persist_engineer_terminal_state(
+            execution_record, result=result,
+        )
+
+    # Wire the S1174 PR-2 follow-up wake so Rigby's PA conversation
+    # receives the completion event automatically. Two helpers (both
+    # defensive; both log warn on failure; never raise):
+    #
+    #   1. ``create_implicit_followup_subscription`` arms an
+    #      ``AgentFollowupSubscription`` row for the (execution,
+    #      conversation_id) pair (no-op if conversation_id is empty —
+    #      the S1174 invariant gates non-PA dispatches).
+    #   2. ``fire_agent_followup_subscriptions`` atomically transitions
+    #      any armed-and-eligible subscription to ``state='fired'``,
+    #      persists a Rigby-authored completion ChatConversation row,
+    #      and broadcasts ``agent_completed`` to
+    #      ``pa_conversation_<conversation_id>``. Must be called AFTER
+    #      ``_persist_engineer_terminal_state`` so the subscription's
+    #      target execution is already in a terminal status.
+    #
+    # Canonical pattern: ``_impl_execute_agent_task`` calls both at the
+    # equivalent terminal-state save site
+    # (``core/tasks_agents.py:2362, 2730, 2811, 2838``).
+    if execution_record is not None and conversation_id:
+        try:
+            from core.tasks_agents import (
+                create_implicit_followup_subscription,
+                fire_agent_followup_subscriptions,
+            )
+
+            create_implicit_followup_subscription(
+                execution_record,
+                {'conversation_id': conversation_id},
+            )
+            # Re-fetch terminal state (the S1262 helpers may have
+            # updated the row after we held the local handle).
+            execution_record.refresh_from_db()
+            fire_agent_followup_subscriptions(execution_record)
+        except Exception as exc:
+            logger.warning(
+                "[CLAUDE_CODE_FOLLOWUP_WIRE_FAILED] "
+                "auto-wake wiring raised for execution_id=%s "
+                "conversation_id=%s (%s: %s) — result is still posted "
+                "via _post_to_conversation, only the auto-wake banner "
+                "is missed.",
+                execution_record.id, conversation_id,
+                type(exc).__name__, exc,
+            )
+
+    return result
 
 
 @shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
