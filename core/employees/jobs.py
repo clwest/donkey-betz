@@ -966,12 +966,358 @@ MORNING_BRIEF_JOB = JobContract(
 )
 
 
+# ── Employee constant: Bug Triage Specialist (Session 1267 PR 4.1) ───
+
+
+BUG_TRIAGE_SPECIALIST = AIEmployee(
+    handle="bug_triage_specialist",
+    display_name="Bug Triage Specialist",
+    # Honest v0: like Rigby + Platform Auditor + Chief of Staff, the
+    # Bug Triage Specialist has no dedicated User row. Acts as the
+    # ``chris`` UnifiedUser server-side when running autonomously.
+    # Tracked as a known v0 limitation.
+    runs_as_username="chris",
+    # No pinned PA chat — triage findings surface via the daily triage
+    # Deliverable + shift-report DM (post_shift_report), not via a
+    # dedicated chat thread. Empty primary_chat_id is intentional.
+    primary_chat_id=None,
+    notes=(
+        "Fourth AI employee (Session 1267). Read-only failure-pattern "
+        "reporter. Consumes CeleryTaskEvent, AgentExecution, OpsRun, "
+        "and OpsRunEvent rows in a 24h rolling window. Produces one "
+        "structured daily triage Deliverable. First downstream "
+        "employee — validates the 'primitives compose for "
+        "inter-employee data flow' claim from "
+        "``docs/EMPLOYEE_OS_PRIMITIVES.md`` §1 by consuming outputs "
+        "the existing three employees produce. v0 acts as ``chris`` "
+        "server-side; no dedicated service account yet. v0 does NOT "
+        "auto-certify — mission_verdict is left to Rigby/human review "
+        "of the daily Deliverable. Task runner + beat schedule land "
+        "in subsequent PRs (4.2/4.3); PR 4.1 registers the contract "
+        "only."
+    ),
+)
+
+
+# ── Job constant: Daily Bug Triage (Session 1267 PR 4.1) ─────────────
+
+
+BUG_TRIAGE_JOB = JobContract(
+    title="Daily Bug Triage",
+    employee_handle="bug_triage_specialist",
+    manager="chris",
+
+    # ── Mission ─────────────────────────────────────────────────────
+    mission=(
+        "Bug Triage Specialist owns running a daily failure-pattern "
+        "scan across the platform's telemetry surface, clustering "
+        "errors by signature, ranking patterns by recurrence, and "
+        "producing one structured triage Deliverable per day. The "
+        "triage is strictly read-only: it inspects CeleryTaskEvent "
+        "failures, AgentExecution failures, OpsRun verdicts, and "
+        "OpsRunEvent rows in a fixed 24h window. The specialist does "
+        "NOT modify code, open PRs, restart workers, dispatch other "
+        "employees' missions, or take remediation actions. Findings "
+        "are persisted as a structured Deliverable; failures escalate "
+        "per the standard Employee OS visibility guarantee."
+    ),
+
+    responsibilities=(
+        "Run the daily failure-pattern scan across the platform "
+        "telemetry surface once per day (cadence finalized in PR 4.3 "
+        "when the beat schedule lands — proposed: 08:00 America/Denver, "
+        "after Chief of Staff Morning Brief at 07:00 so triage "
+        "incorporates the most recent morning-brief OpsRun verdict).",
+        "Collect Celery task failures (CeleryTaskEvent status=FAILURE "
+        "in last 24h) — Step 1.",
+        "Collect agent execution failures (AgentExecution "
+        "status=failed in last 24h) — Step 2.",
+        "Collect mission verdicts (OpsRun domain=mission, last 24h) "
+        "and group by verdict — Step 3.",
+        "Collect authority-contract telemetry (OpsRunEvent "
+        "label=authority_contract_observed in last 24h) to support "
+        "the S1264 enforce-mode prereq #2 baseline accumulation — "
+        "Step 4.",
+        "Cluster failures by signature (task_name|agent_name + "
+        "error_type + first 80 chars of error_message) and rank by "
+        "occurrence count — Step 5.",
+        "Synthesize findings into one structured triage Deliverable "
+        "(Window Summary / Top Failure Patterns / Mission Verdicts "
+        "Today / Authority Telemetry Today / Recommendations / "
+        "Green Checks) — Step 6.",
+        "Mark OpsRun.status=passed/failed without auto-certification. "
+        "Mission verdict (certify/reject/defer) is left to Rigby/human "
+        "review of the daily Deliverable — Step 7.",
+        "On any step failure → escalate per the visibility guarantee "
+        "below.",
+        "On clean run → mark OpsRun.status=passed and stay silent. "
+        "The daily triage Deliverable IS the visibility; v0 does NOT "
+        "call mission_verdict.",
+    ),
+
+    triggers=(
+        "Cron only (v0). Beat schedule lands in PR 4.3 — daily at "
+        "08:00 America/Denver, after Chief of Staff Morning Brief "
+        "(07:00 Denver) so triage incorporates the most recent "
+        "morning-brief OpsRun verdict.",
+        "Manual override via ``employee_tool action=run_now "
+        "employee=bug_triage_specialist job=triage_daily`` — lands "
+        "in PR 4.2 (run_now path) along with the task runner.",
+    ),
+
+    daily_routine=(
+        "Step 1 — collect_celery_failures: query CeleryTaskEvent rows "
+        "with status=FAILURE in last 24h.",
+        "Step 2 — collect_agent_failures: query AgentExecution rows "
+        "with status=failed in last 24h.",
+        "Step 3 — collect_mission_verdicts: query OpsRun(domain="
+        "mission) rows in last 24h, group by verdict.",
+        "Step 4 — collect_authority_events: query OpsRunEvent(label="
+        "authority_contract_observed) in last 24h — supports the "
+        "S1264 enforce-mode prereq #2 baseline accumulation.",
+        "Step 5 — cluster_by_signature: group failures by "
+        "(task_name|agent_name, error_type, first 80 chars of "
+        "error_message). Rank by occurrence count.",
+        "Step 6 — generate_triage_report: synthesize the findings "
+        "into one structured Deliverable (Window Summary / Top "
+        "Failure Patterns / Mission Verdicts Today / Authority "
+        "Telemetry Today / Recommendations / Green Checks).",
+        "Step 7 — record run summary + mark OpsRun.status=passed/"
+        "failed. NO auto-certification in v0 — mission_verdict left "
+        "to Rigby/human review of the daily Deliverable.",
+    ),
+
+    # Daily job; explicit empty so the cadence is unambiguous.
+    weekly_routine=(),
+
+    mission_run_kind="bug_triage_daily",
+
+    # ── Authority — 17 entries
+    #    (4 OBSERVE + 3 EXECUTE + 1 RECOMMEND + 9 PROHIBITED)
+    #
+    # Rigby SIGN-clean count (S1266 blocking Edit 2; the earlier
+    # buggy 16-claim was recounted to 17). Read-only triage with
+    # one Deliverable-creation EXECUTE permission and zero
+    # remediation authority.
+    authority={
+        # OBSERVE (4) — telemetry reads
+        "read_celery_task_events": AuthorityLevel.OBSERVE.value,
+        "read_agent_executions": AuthorityLevel.OBSERVE.value,
+        "read_ops_runs": AuthorityLevel.OBSERVE.value,
+        "read_ops_run_events": AuthorityLevel.OBSERVE.value,
+        # EXECUTE (3) — synthesis + Deliverable persistence
+        "cluster_failures_by_signature": AuthorityLevel.EXECUTE.value,
+        "generate_triage_report": AuthorityLevel.EXECUTE.value,
+        "save_triage_to_deliverable": AuthorityLevel.EXECUTE.value,
+        # RECOMMEND (1) — surfaces remediations in the deliverable;
+        # never executes them.
+        "recommend_remediations": AuthorityLevel.RECOMMEND.value,
+        # PROHIBITED (9) — every remediation pathway explicitly denied.
+        "modify_any_file": AuthorityLevel.PROHIBITED.value,
+        "open_pull_request": AuthorityLevel.PROHIBITED.value,
+        "restart_worker": AuthorityLevel.PROHIBITED.value,
+        "dispatch_other_employee_mission": AuthorityLevel.PROHIBITED.value,
+        "modify_settings": AuthorityLevel.PROHIBITED.value,
+        "delete_database_rows": AuthorityLevel.PROHIBITED.value,
+        "execute_arbitrary_code": AuthorityLevel.PROHIBITED.value,
+        "kill_celery_task": AuthorityLevel.PROHIBITED.value,
+        "modify_periodic_task_enabled": AuthorityLevel.PROHIBITED.value,
+    },
+
+    prohibited_actions=(
+        "Modify any file (config, code, docs).",
+        "Open or merge pull requests.",
+        "Restart Celery workers or Daphne.",
+        "Dispatch a mission run for any other employee.",
+        "Kill or cancel running Celery tasks.",
+        "Enable or disable PeriodicTask rows.",
+        "Execute arbitrary code outside the named triage tools.",
+        "Delete or update rows in any database model.",
+        "Take direct remediation actions — only recommend in "
+        "deliverable.",
+    ),
+
+    # ── Success / failure metrics ───────────────────────────────────
+    success_metrics=(
+        "All 7 triage steps return without raising.",
+        "Triage Deliverable includes the 6 required sections (Window "
+        "Summary, Top Failure Patterns, Mission Verdicts Today, "
+        "Authority Telemetry Today, Recommendations, Green Checks).",
+        "Triage Deliverable persisted with deliverable_type='analysis'.",
+        "Total mission wall time < 3 minutes.",
+        "cluster_count + top_cluster_occurrences recorded in the "
+        "mission summary.",
+    ),
+
+    failure_metrics=(
+        "Any of the 7 triage steps raises or returns a malformed "
+        "shape.",
+        "Triage Deliverable missing one or more required sections.",
+        "Triage wall time exceeds 10 minutes.",
+        "3 failures of any kind within a 7-day rolling window → mark "
+        "the job 'trust_status: under_review' in the status tool's "
+        "derived response (no state change to the contract itself).",
+    ),
+
+    # ── Evidence contract (Rigby SIGN Edit 5 bounded summary) ───────
+    required_summary_keys=(
+        # Window shape
+        "window_start_iso",                      # ISO 8601, 24h ago
+        "window_end_iso",                        # ISO 8601, mission start
+        # Failure inventory (steps 1-2)
+        "celery_failures_count",                 # int
+        "agent_failures_count",                  # int
+        # Mission visibility (step 3)
+        "missions_today_total",                  # int
+        "missions_certified_count",              # int
+        "missions_rejected_count",               # int
+        "missions_deferred_count",               # int
+        "missions_in_progress_count",            # int
+        # Authority telemetry (step 4) — S1264 enforce-mode baseline
+        "authority_events_count",                # int
+        "authority_events_by_employee",          # dict[str, int]
+        # Clustering (step 5)
+        "cluster_count",                         # int — distinct signatures
+        "top_cluster_signature",                 # str — highest-occurrence
+        "top_cluster_occurrences",               # int
+        # Synthesis output (step 6)
+        "report_deliverable_id",                 # UUID
+        "report_chars",                          # int
+        "recommendations_count",                 # int
+        # Standard MissionRunner fields (bounded per Rigby Edit 5 —
+        # never persist the full error_tail into summary; the full
+        # tail lives in OpsRunEvent.detail).
+        "wall_time_ms",
+        "failed_step",
+        "error_tail_preview",                    # last N lines, not full
+        "has_full_error_tail",                   # bool
+        "degraded_evidence",
+    ),
+
+    # ── Evidence tables (Rigby SIGN D7 — includes LLMCallEvent +
+    # CeleryTaskEvent; no FailureDetection reference) ──────────────
+    evidence_tables=(
+        "OpsRun (domain=mission, run_kind=bug_triage_daily)",
+        "OpsRunEvent (one per triage step + verdict_issued + "
+        "authority_contract_observed)",
+        "CeleryTaskEvent (source-of-truth for celery failure rows "
+        "read in step 1)",
+        "LLMCallEvent (from gpt-5.2 synthesis in step 6)",
+        "ToolCallRecord (from each triage helper tool invocation "
+        "if any)",
+        "Deliverable (triage report — created on every run, not "
+        "just on escalation)",
+    ),
+
+    # ── Drift definition ────────────────────────────────────────────
+    drift_count_definition=(
+        "Drift for Bug Triage = delta in top_cluster_occurrences vs "
+        "the prior 24h window. Captured in step 5 metadata for trend "
+        "tracking. Not used as a verdict gate in v0 — purely "
+        "observational telemetry."
+    ),
+
+    # ── Step timeout ────────────────────────────────────────────────
+    # No per-step timeout override. The LLM synthesis in step 6 is
+    # bounded by the standard MissionRunner soft/hard time limits
+    # inherited from the Celery task wrapper (configured in PR 4.2).
+    embed_step_timeout={},
+
+    # ── Escalation (Rigby SIGN D3 full block verbatim) ──────────────
+    escalation_rules=(
+        "First failure of any step → escalate immediately (no "
+        "retry-then-escalate; the canonical MissionRunner pattern is "
+        "fail-fast).",
+        "Subsequent failures with the SAME failure signature within "
+        "24h → append a reference to the prior escalation Deliverable "
+        "rather than create a duplicate. Dedupe key: "
+        "MissionRunner.make_error_signature(failed_step, error_tail).",
+        "3 failures of any kind within a 7-day rolling window → mark "
+        "the job 'trust_status: under_review' in the status tool's "
+        "derived response. No state change to the JobContract itself.",
+    ),
+
+    escalation_visibility=(
+        "Create a Deliverable with "
+        "publish_intent=publish_candidate titled 'Bug Triage "
+        "Escalation [YYYY-MM-DD]' in workspace "
+        "EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME (Donkey Betz).",
+        "Force the Deliverable to a visible state (ready or "
+        "attention-required) via the canonical status path with "
+        "source='BugTriageSpecialist'. Required because "
+        "Deliverable.create currently defaults new rows to "
+        "status=completed regardless of explicit param (S1252 "
+        "footgun; mirror PA workaround at "
+        "core/jobs/platform_audit.py:_persist_audit_deliverable).",
+        "No PA chat post for v0 — Bug Triage has no pinned PA "
+        "conversation. Findings + escalations are visible in the "
+        "/inbox web UI via the shift-report DM "
+        "(post_shift_report at core/employees/comms.py).",
+    ),
+
+    # ── Dedupe rule (Rigby SIGN D8 — explicit 24h window +
+    #    canonical MissionRunner.make_error_signature) ──────────────
+    dedupe_rule=(
+        "Duplicate escalation suppression MUST key off the failure "
+        "signature derived from OpsRun.summary.failed_step + a "
+        "normalized hash of OpsRun.summary.error_tail (canonical "
+        "MissionRunner.make_error_signature). Same signature within "
+        "24h → append to or reference the prior escalation. "
+        "Different signature → new Deliverable, even if the prior "
+        "one is still open. 24h window matches PA + CoS dedupe "
+        "conventions."
+    ),
+
+    # ── Boundary statements ────────────────────────────────────────
+    what_chris_approves=(
+        "The contract itself (PR 4.1 review).",
+        "Weekly: reads ``employee_tool action=status "
+        "employee=bug_triage_specialist`` and decides if recommended "
+        "remediations warrant a follow-up PR.",
+        "Acts on the daily triage Deliverable findings.",
+        # NEW vs PA: certification surface — Bug Triage v0 does NOT
+        # auto-certify; Chris (or Rigby on his behalf) issues the
+        # mission_verdict after reading the daily Deliverable.
+        "Reviews the daily triage Deliverable and issues "
+        "mission_verdict (certify/reject/defer) via the PA tool — "
+        "v0 does not auto-certify (Rigby SIGN D1).",
+    ),
+
+    what_claude_handles=(
+        "Writing PRs 4.1 / 4.2 / 4.3 of this rollout.",
+        "Fixing bugs surfaced by triage findings (in separate PRs "
+        "after Chris reviews the deliverable).",
+        "Adding new failure-source tables to the triage scope.",
+    ),
+
+    what_rigby_can_do_alone=(
+        # JobContract reuses ``what_rigby_can_do_alone`` as the
+        # generic "what this employee can do alone" slot — the field
+        # name predates the multi-employee surface and is reused
+        # verbatim by Platform Auditor + Chief of Staff for the same
+        # semantic.
+        "Run the daily triage routine.",
+        "Read CeleryTaskEvent, AgentExecution, OpsRun, OpsRunEvent.",
+        "Cluster failures by signature.",
+        "Generate + persist the triage Deliverable.",
+        # NEW vs PA: certification stays with Rigby (the PA tool gate
+        # honors this); Bug Triage runner never calls
+        # emit_mission_verdict itself.
+        "Issue mission_verdict (certify/reject/defer) on Bug Triage "
+        "missions after reviewing the daily Deliverable.",
+        "Emit escalation artifacts per the visibility guarantee.",
+        "Answer ``employee_tool action=status`` queries.",
+    ),
+)
+
+
 # ── Registry helpers ─────────────────────────────────────────────────
 
 _EMPLOYEES_BY_HANDLE: dict[str, AIEmployee] = {
     RIGBY.handle: RIGBY,
     PLATFORM_AUDITOR.handle: PLATFORM_AUDITOR,
     CHIEF_OF_STAFF.handle: CHIEF_OF_STAFF,
+    BUG_TRIAGE_SPECIALIST.handle: BUG_TRIAGE_SPECIALIST,
 }
 
 _JOBS_BY_EMPLOYEE: dict[str, dict[str, JobContract]] = {
@@ -983,6 +1329,9 @@ _JOBS_BY_EMPLOYEE: dict[str, dict[str, JobContract]] = {
     },
     CHIEF_OF_STAFF.handle: {
         "morning_brief": MORNING_BRIEF_JOB,
+    },
+    BUG_TRIAGE_SPECIALIST.handle: {
+        "triage_daily": BUG_TRIAGE_JOB,
     },
 }
 
