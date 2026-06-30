@@ -1174,7 +1174,10 @@ CELERY_TASK_ROUTES = {
     # Existing module-based routing
     'agents.*': {'queue': 'agents'},
     'sports.*': {'queue': 'default'},
-    'content.*': {'queue': 'content'},
+    # Session 1265: removed orphan 'content.*' wildcard. Last match was
+    # content.tasks.poll_pending_trainings (deleted in S1246 cc9ab2c1
+    # alongside the full content/tasks.py file). The content QUEUE is
+    # still in use — see explicit per-task routes below.
     'ml.*': {'queue': 'ml'},
     # Session 1066: Route to long_running — loads torch/transformers via AIIncomeBuilder→MLEngine
     'intelligence.tasks.monitor_and_process_opportunities': {'queue': 'long_running'},
