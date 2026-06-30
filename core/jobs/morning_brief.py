@@ -561,6 +561,8 @@ def build_chief_of_staff_runner() -> MissionRunner:
         # Job
         mission_run_kind=MISSION_RUN_KIND,
         job_title=MORNING_BRIEF_JOB.title,
+        # Session 1264 — opt into authority warn-mode observation.
+        job_contract=MORNING_BRIEF_JOB,
         # Escalation (employee-specific only — workspace travels via spec)
         escalation_source=ESCALATION_SOURCE,
         escalation_title_prefix=DELIVERABLE_TITLE_PREFIX,
