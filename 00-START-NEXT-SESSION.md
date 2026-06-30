@@ -131,7 +131,98 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1266 — CURRENT ENTRY POINT
+## SESSION 1267 — CURRENT ENTRY POINT
+
+### SESSION 1266 CLOSED — Read-only Employee OS readiness audit + Employee #4 (Bug Triage Specialist) discovery with Rigby SIGN-clean. No code shipped — implementation held for fresh session per Chris's directive.
+
+**Session window:** 2026-06-30 (continuation of S1259-1266 single-day arc, same Rigby conversation `pa-3a226cd451494350`).
+**Full handoff:** [`SESSION_1266_EMPLOYEE_4_BUG_TRIAGE_DISCOVERY.md`](docs/handoffs/SESSION_1266_EMPLOYEE_4_BUG_TRIAGE_DISCOVERY.md).
+
+**TL;DR:** Comprehensive pre-Employee-#4 audit (10 areas, evidence-cited) returned **GO**. Bug Triage Specialist selected over 4 alternatives (Spider Auditor, Code Reviewer, Doc Curator, Cost Reporter) because it would be the **first downstream employee** consuming outputs from the existing 3 — validates "primitives compose for inter-employee data flow" claim from `EMPLOYEE_OS_PRIMITIVES.md` §1. Full JobContract draft + Rigby verifier-loop caught 3 blocking design issues (mission_verdict speaker-gate conflict + authority math 16/18 error + escalation block truncation) before any code. Final SIGN-clean.
+
+### FIRST THING Session 1267 — Employee #4 implementation directly from signed discovery package
+
+**Begin implementation immediately from the SIGN-clean discovery package** at [`docs/handoffs/SESSION_1266_EMPLOYEE_4_BUG_TRIAGE_DISCOVERY.md`](docs/handoffs/SESSION_1266_EMPLOYEE_4_BUG_TRIAGE_DISCOVERY.md). All design questions are locked. No new discovery needed.
+
+**Locked decisions (every Rigby SIGN edit applied):**
+
+| # | Decision |
+|---|---|
+| D1 | Step 7 = mark `OpsRun.status=passed/failed`; **NO auto-certification in v0**. Certification stays with Rigby/human via PA tool (mission_verdict gate is speaker-Rigby). |
+| D2 | Authority table = **17 entries** (4 OBSERVE + 3 EXECUTE + 1 RECOMMEND + 9 PROHIBITED). |
+| D3 | Full escalation block (rules + visibility + dedupe_rule) verbatim per JobContract schema. |
+| D4 | Step events fire even on 0-row queries (consistent shape). |
+| D5 | Bounded summary: `error_tail_preview` + `has_full_error_tail` (no full `error_tail`). |
+| D6 | **LIFT `_persist_to_summary` to shared helper NOW** (`core/employees/_persistence.py` NEW). Was S1261 N=2 deferral; Rigby flipped at N=4. PR 4.0 = prerequisite hygiene before contract work. |
+| D7 | Evidence tables include LLMCallEvent + CeleryTaskEvent. No FailureDetection. |
+| D8 | Dedupe uses `MissionRunner.make_error_signature` everywhere, 24h window explicit. |
+| D9 | Implementation chooses **deliverable_append vs new-deliverable-with-backlink** for "subsequent failure" path (either acceptable per Rigby). |
+
+**Implementation sequence (5 PRs proposed in handoff §"Implementation sequence"):**
+
+1. **PR 4.0** (prerequisite hygiene): LIFT `_persist_to_summary` to `core/employees/_persistence.py`. Update PA + CoS imports. Tests + Rigby SIGN.
+2. **PR 4.1**: Contract + registry. Add `BUG_TRIAGE_SPECIALIST` + `BUG_TRIAGE_JOB` to `core/employees/jobs.py`. Register in 2 dicts. Update `test_celery_queue_parity`. Rigby SIGN.
+3. **PR 4.2**: Job module + task wrapper. Write `core/jobs/bug_triage.py` (7 steps) + `core/tasks_bug_triage.py` + `core/celery.py` imports. Migration `0375_…` seeded `enabled=False`. Full test file. Manual run verification per V1-V13. Rigby SIGN.
+4. **PR 4.3**: Flip beat to `enabled=True` after PR 4.2 is green + ≥1 clean manual run.
+
+**Estimated footprint:** ~1,900-2,100 LOC across **9 files** (modified/created). Sits inside S1264-baseline estimate (1,990-2,790 LOC, 9-14 hours).
+
+**Verification gates (14 total) listed in handoff §"Verification gates".**
+
+### Carryover audit findings (NOT blocking Employee #4)
+
+Surfaced during S1266 readiness audit; form the natural next hygiene queue:
+
+| # | Finding | Source |
+|---|---|---|
+| F1 | `PeriodicTask` row missing for `platform_auditor_run` — Platform Auditor has no scheduled cadence | `PeriodicTask.objects.filter(task__icontains='audit').count() == 0` |
+| F2 | `triggered_by` field hardcoded to `'beat'` regardless of dispatch path | `core/employees/mission_runner.py:775` |
+| F3 | `pa_tool_success_rate` 30d 0.86 breach concentrated in `intelligence_tool` (534/565 = 95%) | `td_handlers_ops.py:593` + `ToolCallRecord` query |
+| F4 | 9 `autopilot_tool drift_scan` warnings still open (S1265 P3 carryover) | Rigby `autopilot_tool.drift_scan` |
+| F5 | Authority warn-mode evidence is N=1; needs ≥3 events per employee for cross-mission baseline | `OpsRunEvent.objects.filter(label='authority_contract_observed').count() == 1` |
+
+### Pre-existing S1264 carryover (unchanged)
+
+#### Priority 0 — Pre-existing SLO breaches
+
+`ops_tool action=overview window=30d`:
+- `agent_timeout_rate` 0.024014 vs target 0.002 (12× over — 28 timeouts / 1166 agent calls / 30d)
+- `celery_task_success_rate` 0.998813 vs target 0.999 (marginal — 53 failures / 44,661 tasks / 30d)
+- `pa_tool_success_rate` 0.8614 vs target 0.999 (565/4076; **95% in `intelligence_tool` — not Employee OS**)
+
+**S1265 analysis caveat:** 150 of 241 30d agent failures (62%) are sports-spider source drought (SportsOddsAnalyst + ArbitrageDetector with "Odds API returned no data"), not agent defects.
+
+#### Priority 5 — Future S1263 hygiene follow-up
+
+Shrink `_CLAUDE_CODE_AGENT_NAMES = ('claude-code', 'ClaudeCode')` → `('claude-code',)` in `claude_code_engineer.py:63` after 1+ week of clean operation. ~3-line PR.
+
+#### Priority 6 — Future S1264 follow-up — Authority enforce-mode arc
+
+Switching WARN → ENFORCE requires (documented in S1264 handoff):
+1. Symbol mapping exists (steps declare `action_classes_invoked` OR tool-name → action_class registry lands)
+2. ≥14 days clean warn-mode telemetry on N≥4 employees
+3. False-positive rate ≤5% over ≥30 days after step self-attestation lands
+4. Per-employee `trust_ratio` ≥0.75 maintained throughout warn-mode window
+5. Manual operator review on ≥3 employees confirms contract-vs-reality match
+
+None blocking — separate arc when prerequisites met. **Bug Triage adds 4th employee + accumulates authority telemetry → progresses prereq #2.**
+
+#### Priority 7 — Carryover backlog
+
+| Item | Source | Severity |
+|---|---|---|
+| ~~`_persist_to_summary` 2/3 dup consolidation~~ | ~~S1261 deferred~~ | **PROMOTED to PR 4.0 prerequisite per Rigby D6** |
+| `_resolve_chris_user` generalization in morning_brief | S1261 deferred | low |
+| `sync_celery_beat` orphan-handler revert trap (code fix) | S1258 mitigated via migration 0373 | medium |
+| PA tool surface gaps — no `celery_inspect_tool`, `evidence_for_mission` default-to-latest | S1258 verification | low |
+| `RIGBY.primary_chat_id` contract constant still stale | S1252 carryover | low — cosmetic |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low — `set_status` workaround reliable |
+
+**~~ S1266 readiness audit → Employee #4 (A vs B) decision ~~** — **CLOSED: A picked, discovery SIGN-clean, ready for implementation.**
+
+---
+
+## SESSION 1266 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1265 CLOSED — 3 PRs shipped: stale-worker guard + P2/P3 hygiene + read-only Employee/Mission HTTP API
 
