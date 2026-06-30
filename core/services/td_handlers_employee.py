@@ -586,6 +586,18 @@ _RUN_NOW_TASKS: Dict[tuple, _RunNowDispatch] = {
         attr="chief_of_staff_morning_brief_run",
         run_kind="morning_brief",
     ),
+    # Session 1267 PR 4.3 — Bug Triage Specialist.
+    # First Employee OS employee with ``auto_emit_verdict=False``:
+    # MissionRunner still flips ``OpsRun.status`` to passed/failed
+    # but does NOT write a ``verdict_issued:*`` OpsRunEvent.
+    # ``employee_tool action=mission_verdict`` is the certification
+    # surface Rigby/human uses after reviewing the daily triage
+    # Deliverable (Rigby SIGN D1 from S1266 discovery).
+    ("bug_triage_specialist", "triage_daily"): _RunNowDispatch(
+        module="core.tasks_bug_triage",
+        attr="bug_triage_daily_run",
+        run_kind="bug_triage_daily",
+    ),
 }
 
 
