@@ -247,7 +247,60 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
+# Session 1264 — typed JobContract reference for the authority warn-mode
+# observation event. ``core/employees/jobs.py`` has zero imports from
+# this module, so there is no circular risk (verified S1264 discovery).
+from core.employees.jobs import AuthorityLevel, JobContract
+
 logger = logging.getLogger(__name__)
+
+
+# Session 1264 — Authority warn-mode constants.
+#
+# Stable label per Rigby S1264 SIGN-WITH-EDITS: queries downstream key
+# off the label, so version churn lives in metadata (schema_version) not
+# the label itself. AUTHORITY_CONTRACT_SCHEMA_VERSION rises when the
+# event detail shape changes.
+AUTHORITY_CONTRACT_OBSERVED_LABEL = "authority_contract_observed"
+AUTHORITY_CONTRACT_SCHEMA_VERSION = 1
+
+
+class _AuthorityContractMalformedError(ValueError):
+    """Raised inside MissionRunner when the JobContract shape isn't
+    what warn-mode expects.
+
+    Per Rigby S1264 SIGN edit #5, malformed shape IS valuable signal.
+    The mission continues (warn-mode NEVER blocks) but the failure
+    becomes observable via ERROR log + ``summary_acc.degraded_evidence``.
+    """
+
+
+def _hash_contract_shape(
+    authority: Dict[str, str], prohibited_actions: Sequence[str]
+) -> str:
+    """Return a short stable hash of the contract's policy shape.
+
+    Used as ``contract_version_tag`` in the
+    ``authority_contract_observed`` event so cross-mission queries can
+    group runs by contract version without persisting a version field
+    on JobContract itself.
+
+    Hash inputs are sorted so order-only changes to the underlying
+    dict / tuple don't churn the tag. First 16 hex chars of SHA-256
+    are sufficient for grouping (collisions cosmetic, never
+    behavioral).
+    """
+    import hashlib
+    import json
+
+    payload = json.dumps(
+        {
+            "authority": sorted(authority.items()),
+            "prohibited_actions": sorted(prohibited_actions),
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
 # ── Constants ─────────────────────────────────────────────────────────
@@ -506,6 +559,18 @@ class MissionRunnerConfig:
     escalation_title_prefix: str = DEFAULT_ESCALATION_TITLE_PREFIX
     workspace_name: Optional[str] = None
 
+    # Session 1264 — Authority warn-mode: optional reference to the
+    # JobContract this mission runs under. Default None preserves the
+    # pre-S1264 public contract — existing callers see no behavior
+    # change. When set, ``_run_mission`` emits a single
+    # ``authority_contract_observed`` OpsRunEvent right after the
+    # ``run_started`` event so contract shape becomes queryable. Per
+    # S1264 SIGN: this is observation of the contract, NOT detection
+    # of violations (real violation detection requires future symbol
+    # mapping — step self-attestation or tool-name → action_class
+    # registry — both of which are out of scope here).
+    job_contract: Optional[JobContract] = None
+
     # Optional settings key for pin override (e.g. "RIGBY_PRIMARY_PA_PIN").
     # When set, the runner consults Django settings under this key first
     # and falls back to ``primary_chat_id`` if the setting is empty.
@@ -739,6 +804,89 @@ class MissionRunner:
         )
         return event
 
+    # ── Session 1264 — Authority warn-mode observation ────────────────
+    #
+    # Emits one ``authority_contract_observed`` info event per mission
+    # right after ``run_started``. Captures contract SHAPE only — counts
+    # by authority level + prohibited_actions count + a short hash of
+    # the contract for cross-mission grouping. This is observation of
+    # the contract, NOT detection of violations. Real violation
+    # detection requires a future symbol-mapping arc (steps declare
+    # action_classes_invoked OR tool registry maps tool names to
+    # action_class) that is intentionally out of scope here.
+    #
+    # Schema contract (per Rigby S1264 SIGN edit #1) — keep stable.
+    # Bump ``AUTHORITY_CONTRACT_SCHEMA_VERSION`` when adding/removing
+    # detail keys; queries downstream will key off
+    # ``detail.schema_version`` to ignore older rows.
+
+    def _emit_authority_contract_event(self, mission) -> None:
+        """Emit the warn-mode contract observation. No-op when contract is None.
+
+        Raises ``_AuthorityContractMalformedError`` when the contract
+        is set but its shape is not what S1264 expects (authority must
+        be dict-like; prohibited_actions must be iterable). Per Rigby
+        SIGN edit #5, malformed shape IS valuable signal — the caller
+        catches the exception and logs at ERROR level while still
+        letting the mission continue.
+        """
+        contract = self.config.job_contract
+        if contract is None:
+            return
+
+        # Shape validation. Hard-fail on malformed (Rigby SIGN edit #5).
+        authority = getattr(contract, "authority", None)
+        if not isinstance(authority, dict):
+            raise _AuthorityContractMalformedError(
+                f"JobContract.authority must be dict; got "
+                f"{type(authority).__name__}"
+            )
+        prohibited = getattr(contract, "prohibited_actions", None)
+        if not isinstance(prohibited, (tuple, list)):
+            raise _AuthorityContractMalformedError(
+                f"JobContract.prohibited_actions must be tuple/list; "
+                f"got {type(prohibited).__name__}"
+            )
+
+        level_counts = {
+            AuthorityLevel.EXECUTE.value: 0,
+            AuthorityLevel.OBSERVE.value: 0,
+            AuthorityLevel.RECOMMEND.value: 0,
+            AuthorityLevel.PROHIBITED.value: 0,
+        }
+        unknown_levels = 0
+        for action_class, level_value in authority.items():
+            if level_value in level_counts:
+                level_counts[level_value] += 1
+            else:
+                unknown_levels += 1
+
+        contract_version_tag = _hash_contract_shape(
+            authority=authority, prohibited_actions=prohibited,
+        )
+
+        self._emit_event(
+            mission,
+            AUTHORITY_CONTRACT_OBSERVED_LABEL,
+            "info",
+            schema_version=AUTHORITY_CONTRACT_SCHEMA_VERSION,
+            employee_handle=self.config.employee_handle,
+            contract_title=getattr(contract, "title", ""),
+            contract_version_tag=contract_version_tag,
+            authority_entries_total=len(authority),
+            authority_level_counts=level_counts,
+            authority_unknown_level_count=unknown_levels,
+            prohibited_actions_count=len(prohibited),
+            # Honest note in the row itself so future readers know what
+            # this means without consulting docs.
+            mode="warn",
+            note=(
+                "Observation of contract shape only; not violation "
+                "detection. Enforce-mode requires future symbol "
+                "mapping (S1264 discovery)."
+            ),
+        )
+
     # ── Step execution boundary (Rigby #4 + I5) ──────────────────────
 
     def _run_step(self, mission, step: Step) -> StepResult:
@@ -816,6 +964,36 @@ class MissionRunner:
             mission, RUN_STARTED_LABEL, "info",
             run_kind=self.config.mission_run_kind,
         )
+
+        # Session 1264 — Authority warn-mode observation. Emits ONE
+        # info event per mission right after run_started so the
+        # contract shape becomes queryable across missions. No-op when
+        # config.job_contract is None (legacy callers unchanged).
+        # Hard-fails on malformed contract shape (per Rigby S1264 SIGN
+        # edit #5 — malformed shape IS valuable signal); contained
+        # otherwise so the mission continues regardless.
+        try:
+            self._emit_authority_contract_event(mission)
+        except _AuthorityContractMalformedError as exc:
+            # Per Rigby SIGN edit #5: malformed shape is signal worth
+            # surfacing. Log loud but still don't block — warn-mode
+            # NEVER blocks missions.
+            logger.error(
+                "[MissionRunner] authority contract malformed "
+                "(mission=%s, employee=%s, run_kind=%s): %s. "
+                "Continuing mission; this is warn-mode and never blocks.",
+                mission.id, self.config.employee_handle,
+                self.config.mission_run_kind, exc,
+            )
+            summary_acc["degraded_evidence"] = True
+            summary_acc["authority_contract_error"] = str(exc)
+        except Exception as exc:  # pragma: no cover — defensive
+            # Belt-and-suspenders fail-open per S1252 PR 7 convention.
+            logger.warning(
+                "[MissionRunner] authority_contract event emission "
+                "raised; continuing. mission=%s err=%s: %s",
+                mission.id, type(exc).__name__, exc,
+            )
 
         # Preflight (Rigby #7 optional hook — contained).
         if self.preflight_fn is not None:

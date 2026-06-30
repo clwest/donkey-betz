@@ -366,9 +366,11 @@ class PlatformAuditSuccessPathTests(TestCase):
             .order_by("created_at", "id")
             .values_list("label", flat=True)
         )
-        # Expected: run_started + 5 (started/passed pairs) + verdict
+        # Expected: run_started + authority_contract_observed (S1264 warn-mode)
+        # + 5 (started/passed pairs) + verdict
         expected = [
             "run_started",
+            "authority_contract_observed",
             "step_1_read_docs_started", "step_1_read_docs_passed",
             "step_2_inventory_integrations_started",
             "step_2_inventory_integrations_passed",

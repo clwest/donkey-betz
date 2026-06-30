@@ -790,11 +790,13 @@ class SuccessPathTests(TestCase):
             .order_by("created_at", "id")
             .values_list("label", flat=True)
         )
-        # Expected: run_started + single wrapper step + verdict
+        # Expected: run_started + authority_contract_observed (S1264 warn-mode)
+        # + single wrapper step + verdict
         self.assertEqual(
             labels,
             [
                 "run_started",
+                "authority_contract_observed",
                 "step_brief_workflow_started",
                 "step_brief_workflow_passed",
                 "verdict_issued:certified",

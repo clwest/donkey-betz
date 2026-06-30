@@ -933,6 +933,8 @@ def build_platform_audit_runner() -> MissionRunner:
         # Job
         mission_run_kind=MISSION_RUN_KIND,
         job_title=PLATFORM_AUDIT_JOB.title,
+        # Session 1264 — opt into authority warn-mode observation.
+        job_contract=PLATFORM_AUDIT_JOB,
         # Escalation (employee-specific only — workspace travels via spec)
         escalation_source=ESCALATION_SOURCE,
         escalation_title_prefix=DELIVERABLE_TITLE_PREFIX,
