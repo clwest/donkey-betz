@@ -1091,7 +1091,7 @@ def _services_md_file_count() -> ClaimResult:
         p for p in services_dir.rglob('*.py')
         if '__pycache__' not in p.parts and p.name != '__init__.py'
     ]
-    expected = 351  # refreshed Session 1222 P7 (audit #6) — +15 since Session 1133
+    expected = 362  # refreshed Session 1265 — +11 since Session 1222 P7 (audit #6)
     actual = len(py_files)
     drift = abs(actual - expected)
     severity = 'ok' if drift <= 10 else ('medium' if drift <= 50 else 'high')
@@ -2001,7 +2001,7 @@ def _claude_db_models() -> ClaimResult:
 @register_claim(
     doc='CLAUDE.md',
     claim_id='agent_taxonomy_reconciliation',
-    description="CLAUDE.md stats: '83 AGENT_MAP (74 enabled, 8 rerouted, 1 blocked)'",
+    description="CLAUDE.md stats: '83 AGENT_MAP (74 enabled, 9 rerouted, 0 blocked)'",
 )
 def _claude_agent_taxonomy() -> ClaimResult:
     """Verify the reconciliation sum: fully_enabled + rerouted + blocked == AGENT_MAP."""
@@ -2026,10 +2026,11 @@ def _claude_agent_taxonomy() -> ClaimResult:
     rerouted = sorted(non_specialist & agent_map_keys - set(blocked))
     fully_enabled = total - len(blocked) - len(rerouted)
     phantom = sorted(non_specialist - agent_map_keys)
-    # Refreshed Session 1115 — matches AGENT_MAP-strict reality (74/8/1)
-    expected_claim = "74 enabled + 8 rerouted + 1 blocked = 83"
+    # Refreshed Session 1265 — matches AGENT_MAP-strict reality (74/9/0).
+    # Prior baseline S1115: 74/8/1 (CodeGeneratorAgent reclassified blocked → rerouted between).
+    expected_claim = "74 enabled + 9 rerouted + 0 blocked = 83"
     actual_claim = f"{fully_enabled} enabled + {len(rerouted)} rerouted + {len(blocked)} blocked = {total}"
-    matches = (fully_enabled == 74 and len(rerouted) == 8 and len(blocked) == 1 and total == 83)
+    matches = (fully_enabled == 74 and len(rerouted) == 9 and len(blocked) == 0 and total == 83)
     severity = 'ok' if matches else 'medium'
     note_parts = [
         f"blocked (AgentControlEntry): {blocked}",
