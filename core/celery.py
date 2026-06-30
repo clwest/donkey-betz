@@ -872,6 +872,12 @@ app.conf.imports = (
     # then the legacy task keeps firing from beat and this task is
     # callable only via run_now / Celery shell.
     'core.tasks_chief_of_staff',
+    # Session 1267 PR 4.2: Bug Triage Specialist task. Same lesson —
+    # `@shared_task bug_triage_daily_run` in a non-standard
+    # `tasks_bug_triage.py` module needs explicit listing here so
+    # worker dispatch resolves the task name on the first beat fire
+    # (PR 4.3) + on manual `run_now` dispatches via the PA tool.
+    'core.tasks_bug_triage',
 )
 
 
@@ -915,6 +921,11 @@ def _eager_import_session1115_modules(sender, **kwargs):
         # so `chief_of_staff_morning_brief_run` shows up in app.tasks
         # without waiting for worker boot.
         'core.tasks_chief_of_staff',
+        # Session 1267 PR 4.2: Bug Triage Specialist task — same
+        # lesson. Forces the @shared_task to register at finalize time
+        # so `bug_triage_daily_run` shows up in app.tasks without
+        # waiting for worker boot.
+        'core.tasks_bug_triage',
     )
     for mod in eager_modules:
         try:
