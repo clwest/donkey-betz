@@ -693,12 +693,22 @@ def _synthesize_pa_execution_receipt(
     try:
         from django.utils import timezone
         from core.models_unified_system import Agent, AgentExecution
+        from core.services.deliverable_aliases import canonicalize_agent_name
 
+        # Session 1263 — canonicalize before get_or_create. Without this,
+        # callers passing aliased names (e.g. 'ClaudeCode') spawn a fresh
+        # Agent row that should have routed to the canonical 'claude-code'
+        # row. This is how the S1262 [CLAUDE_CODE_AGENT_DUP] WARN was
+        # originally created (S1187 Recon batch wrote 7 receipts with
+        # agent_name='ClaudeCode' before the row existed). Migration
+        # 0374 consolidates the historical duplicate; this line prevents
+        # future re-creation.
+        canonical_name = canonicalize_agent_name(agent_name)
         agent_record, _created = Agent.objects.get_or_create(
-            name=agent_name,
+            name=canonical_name,
             defaults={
                 'agent_type': 'tool_direct',
-                'description': f'{agent_name} - direct tool-call receipts',
+                'description': f'{canonical_name} - direct tool-call receipts',
                 'specialization': '',
                 'is_active': True,
             },
