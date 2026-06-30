@@ -131,7 +131,103 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1264 — CURRENT ENTRY POINT
+## SESSION 1265 — CURRENT ENTRY POINT
+
+### SESSION 1264 CLOSED — MissionRunner authority warn-mode shipped; honest correction to S1260 P4 documented
+
+**Session window:** 2026-06-30 (continuation of the S1259-1263 single-day arc, same Rigby conversation `pa-85960cfecf5e42d5`).
+**Full handoff:** [`SESSION_1264_AUTHORITY_WARN_MODE.md`](docs/handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md).
+
+**TL;DR:** PR #2756 ships the smallest honest authority observability: one `authority_contract_observed` info event per mission emitted right after `run_started` capturing contract **shape** (counts + version hash) — not violation detection. The S1260 P4 plan implied a preflight hook would detect violations; independent verification this session showed the `JobContract.authority` keys are policy descriptions, not runtime symbols. No registry maps `"modify_docs_files"` / `"open_pull_request"` etc. to tool names. Violation detection requires future symbol-mapping work, intentionally out of scope. 3 production employees opt in via factory kwarg; Employees #4–#20 inherit warn-mode automatically.
+
+**Session 1264 PR (admin-merged):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2756](https://github.com/clwest/donkey-betz-platform/pull/2756) | feat | MissionRunner authority warn-mode: 9 files, +583/-3 | `0fa1b577` |
+
+**Headline outcomes:**
+
+- **Every Employee OS mission now emits a contract-observation event.** Cross-mission joins (verdict × contract shape × employee) are queryable from `OpsRunEvent` rows starting with tomorrow's first beat fires.
+- **Honest scope** — payload `note` field embeds "Observation of contract shape only; not violation detection. Enforce-mode requires future symbol mapping" so future readers don't conflate the two.
+- **Zero behavior change** — same lifecycle, same verdicts, same escalations. Mission timing extended by ~1ms for the single event emission.
+- **3-factory opt-in** — `build_docs_manager_runner` / `build_platform_audit_runner` / `build_chief_of_staff_runner` each pass their JobContract. Employee #4 onward gets warn-mode automatically just by passing `job_contract=...` in their factory.
+- **Rigby SIGN-WITH-EDITS clean** — typed `Optional[JobContract]` (no circular), counts-only payload, stable label + `schema_version=1` in metadata, malformed-shape raises but mission completes.
+
+**Key lesson — the verifier-loop caught another wrong-fix recommendation.** S1260 P4 said "JobContract.authority has zero readers — add a preflight hook." Independent verification at S1264 open showed the deeper issue: the keys are policy descriptions, not symbols. A preflight hook would read `authority["modify_docs_files"]` and have nothing to compare against. **Lesson reinforces S1261's pattern**: every audit recommendation gets verified against runtime before implementation.
+
+### FIRST THING Session 1265
+
+#### Priority 0 — Pre-existing SLO breaches (carryover from S1260, unchanged)
+
+`ops_tool action=overview window=30d` reports:
+- **`agent_timeout_rate` 0.024284** vs target 0.002 (**12× over** — 28 timeouts / 1153 agent calls / 30d)
+- **`celery_task_success_rate` 0.998825** vs target 0.999 (marginally under — 53 failures / 45,104 tasks / 30d)
+
+Investigate root causes.
+
+#### Priority 1 — Read-only Employee/Mission HTTP API
+
+S1260 P5: 5 endpoints over existing model + `core/employees/status.py`:
+- `GET /api/employees/`
+- `GET /api/employees/<handle>/`
+- `GET /api/employees/<handle>/jobs/<job_key>/status/`
+- `GET /api/missions/<id>/`
+- `GET /api/missions/<id>/evidence/`
+
+~250 LOC Django views + serializers + tests. Removes LLM dependency for routine status reads.
+
+#### Priority 2 — Hygiene: orphan route in `CELERY_TASK_ROUTES`
+
+Pre-existing test failure: `test_every_route_pattern_matches_a_registered_task` reports `content.*` orphan pattern. ~10-line PR.
+
+#### Priority 3 — Hygiene: refresh CLAUDE.md autoblock + agent taxonomy drift
+
+`refresh_doc_inventory_blocks --check` reports CLAUDE.md + AGENTS.md autoblocks WOULD UPDATE. `verify_doc_claims --only-drift` reports CLAUDE.md agent taxonomy "8 rerouted, 1 blocked" vs actual "9 rerouted, 0 blocked" and SERVICES.md file count drift (103 → 362). Combined ~15-line hygiene PR.
+
+#### Priority 4 — Employee #4
+
+**Architecturally ready.** Per S1261 + S1262 + S1263 + S1264:
+- MissionRunner contract stable; receipts pipeline + Agent row hygiene + authority warn-mode all clean
+- Per-employee boilerplate eliminated (S1261)
+- Receipts gap closed (S1262)
+- Agent row consolidated (S1263)
+- Warn-mode inherited automatically (S1264 — just pass `job_contract=...` in the factory)
+- Estimated cost: 1,990-2,790 LOC, 9-14 hours
+
+**No technical blockers. Awaiting Chris's call on which employee.**
+
+#### Priority 5 — Future S1263 hygiene follow-up
+
+Shrink `_CLAUDE_CODE_AGENT_NAMES = ('claude-code', 'ClaudeCode')` → `('claude-code',)` in `claude_code_engineer.py:63` after 1+ week of clean operation confirms no re-creation paths. ~3-line PR. Kept the fallback per Rigby S1263 SIGN-WITH-EDITS edit #3.
+
+#### Priority 6 — Future S1264 follow-up — Authority enforce-mode arc
+
+Switching WARN → ENFORCE requires (documented in S1264 handoff):
+1. Symbol mapping exists (steps declare `action_classes_invoked: tuple[str, ...]` OR tool registry maps tool names to action_class)
+2. ≥14 days clean warn-mode telemetry on N≥4 employees
+3. False-positive rate ≤5% over ≥30 days after step self-attestation lands
+4. Per-employee `trust_ratio` ≥0.75 maintained throughout warn-mode window
+5. Manual operator review on ≥3 employees confirms contract-vs-reality match
+
+None blocking — this is a separate ARC for when the prerequisites are met.
+
+#### Priority 7 — Carryover backlog
+
+| Item | Source | Severity |
+|---|---|---|
+| `_persist_to_summary` 2/3 dup consolidation | S1261 deferred | low — reconsider at N=4 |
+| `_resolve_chris_user` generalization in morning_brief | S1261 deferred | low |
+| `sync_celery_beat` orphan-handler revert trap (code fix) | S1258 mitigated via migration 0373 | medium — code fix deferred |
+| PA tool surface gaps — no `celery_inspect_tool`, `evidence_for_mission` default-to-latest | S1258 verification | low |
+| `RIGBY.primary_chat_id` contract constant still stale | S1252 carryover | low — cosmetic |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low |
+
+**~~ Priority 1 from S1263 close (MissionRunner authority_check_fn preflight hook) ~~** — **CLOSED PR #2756 as warn-mode observation (honest scope correction documented).**
+
+---
+
+## SESSION 1264 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1263 CLOSED — Duplicate Claude Code Agent row consolidated; root-cause synthesizer fix shipped
 
