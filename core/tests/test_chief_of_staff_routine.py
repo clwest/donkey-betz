@@ -1221,13 +1221,25 @@ class ChiefOfStaffBuilderTests(TestCase):
         self.assertIsInstance(runner, MissionRunner)
 
     def test_runner_config_identity(self):
-        from core.jobs.morning_brief import build_chief_of_staff_runner
+        from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
+        from core.jobs.morning_brief import (
+            _chief_of_staff_escalation_spec_factory,
+            build_chief_of_staff_runner,
+        )
 
         runner = build_chief_of_staff_runner()
         self.assertEqual(runner.config.employee_handle, "chief_of_staff")
         self.assertEqual(runner.config.mission_run_kind, "morning_brief")
         self.assertEqual(runner.config.escalation_source, "ChiefOfStaff")
-        self.assertEqual(runner.config.workspace_name, "Donkey Betz")
+        # S1261: workspace travels via the escalation spec factory now,
+        # not via config.workspace_name (which is None at default since
+        # the runner's spec-aware resolver wins when a factory is wired).
+        self.assertIsNone(runner.config.workspace_name)
+        spec = _chief_of_staff_escalation_spec_factory(None)  # type: ignore[arg-type]
+        self.assertEqual(
+            spec.workspace_name, EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
+        )
+        self.assertEqual(spec.workspace_name, "Donkey Betz")
         self.assertIsNone(runner.config.pin_settings_key)
         self.assertIsNone(runner.config.primary_chat_id)
 

@@ -65,6 +65,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from core.employees import CHIEF_OF_STAFF, MORNING_BRIEF_JOB
+from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
 from core.employees.mission_runner import (
     EscalationDeliverableSpec,
     FailureContext,
@@ -82,18 +83,12 @@ logger = logging.getLogger(__name__)
 
 MISSION_RUN_KIND = MORNING_BRIEF_JOB.mission_run_kind  # "morning_brief"
 
-# Confidence values per outcome — match docs_cascade + platform_audit
-# defaults. JobContract.success_metrics uses the same 3-in-7-days
-# under_review threshold.
-CONFIDENCE_SUCCESS_FULL = 0.95
-CONFIDENCE_SUCCESS_DEGRADED = 0.6
-CONFIDENCE_FAILURE = 0.0
-
-# Dedupe window for escalation Deliverables (hours).
-DEDUPE_WINDOW_HOURS = 24
-
-# Workspace + escalation labels.
-DONKEY_BETZ_WORKSPACE_NAME = "Donkey Betz"
+# Escalation labels (per-employee — keep here).
+# Confidence + dedupe window defaults live on ``MissionRunnerConfig``
+# (mission_runner.py:255-258 + :497-502); morning_brief takes the
+# defaults so they are NOT redeclared here. The workspace name lives in
+# ``core.employees.jobs.EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME`` and is
+# imported above.
 DELIVERABLE_TITLE_PREFIX = "Chief of Staff Escalation"
 ESCALATION_SOURCE = "ChiefOfStaff"
 
@@ -538,7 +533,7 @@ def _chief_of_staff_escalation_spec_factory(
     completed→ready with audit row).
     """
     return EscalationDeliverableSpec(
-        workspace_name=DONKEY_BETZ_WORKSPACE_NAME,
+        workspace_name=EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME,
     )
 
 
@@ -553,6 +548,10 @@ def build_chief_of_staff_runner() -> MissionRunner:
     PostflightContext pattern made this unnecessary). Same shape as
     docs_cascade + platform_audit factories.
     """
+    # Confidence + dedupe values are NOT passed — MissionRunnerConfig's
+    # field defaults (0.95 / 0.6 / 0.0 / 24h) apply. The escalation
+    # workspace travels via ``EscalationDeliverableSpec.workspace_name``
+    # on the spec factory above.
     config = MissionRunnerConfig(
         # Identity
         employee_handle=CHIEF_OF_STAFF.handle,
@@ -562,16 +561,9 @@ def build_chief_of_staff_runner() -> MissionRunner:
         # Job
         mission_run_kind=MISSION_RUN_KIND,
         job_title=MORNING_BRIEF_JOB.title,
-        # Confidence
-        confidence_success_full=CONFIDENCE_SUCCESS_FULL,
-        confidence_success_degraded=CONFIDENCE_SUCCESS_DEGRADED,
-        confidence_failure=CONFIDENCE_FAILURE,
-        # Dedupe
-        dedupe_window_hours=DEDUPE_WINDOW_HOURS,
-        # Escalation
+        # Escalation (employee-specific only — workspace travels via spec)
         escalation_source=ESCALATION_SOURCE,
         escalation_title_prefix=DELIVERABLE_TITLE_PREFIX,
-        workspace_name=DONKEY_BETZ_WORKSPACE_NAME,
         # No pin_settings_key — CoS has no pinned PA chat in v0.
         pin_settings_key=None,
     )

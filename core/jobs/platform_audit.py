@@ -49,6 +49,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from django.utils import timezone
 
 from core.employees import PLATFORM_AUDITOR, PLATFORM_AUDIT_JOB
+from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
 from core.employees.mission_runner import (
     EscalationDeliverableSpec,
     FailureContext,
@@ -66,18 +67,14 @@ logger = logging.getLogger(__name__)
 
 MISSION_RUN_KIND = PLATFORM_AUDIT_JOB.mission_run_kind  # 'platform_audit'
 
-# Confidence values per outcome. Match the docs cascade defaults — the
-# JobContract.success_metrics named the same thresholds (3 failures
-# in 7d → under_review).
-CONFIDENCE_SUCCESS_FULL = 0.95
-CONFIDENCE_SUCCESS_DEGRADED = 0.6
-CONFIDENCE_FAILURE = 0.0
-
-# Dedupe window for escalation Deliverables (hours).
-DEDUPE_WINDOW_HOURS = 24
-
-# Workspace + escalation labels.
-DONKEY_BETZ_WORKSPACE_NAME = "Donkey Betz"
+# Escalation labels (per-employee — keep here).
+# Confidence + dedupe window defaults live on ``MissionRunnerConfig``
+# (mission_runner.py:255-258 + :497-502); platform_audit takes the
+# defaults so they are NOT redeclared here. The workspace name lives in
+# ``core.employees.jobs.EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME`` and is
+# imported above (also used by the audit-deliverable workspace ORM
+# lookup below — keep the import even though config.workspace_name is
+# no longer passed).
 DELIVERABLE_TITLE_PREFIX = "Platform Audit Escalation"
 ESCALATION_SOURCE = "PlatformAuditor"
 
@@ -545,7 +542,7 @@ def _persist_audit_deliverable(
     from core.models_skin_layer import ProjectWorkspace
 
     workspace = ProjectWorkspace.objects.filter(
-        name__iexact=DONKEY_BETZ_WORKSPACE_NAME
+        name__iexact=EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
     ).first()
     workspace_id = workspace.id if workspace else None
 
@@ -807,7 +804,7 @@ def _platform_audit_escalation_spec_factory(
     completed→ready with audit row).
     """
     return EscalationDeliverableSpec(
-        workspace_name=DONKEY_BETZ_WORKSPACE_NAME,
+        workspace_name=EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME,
     )
 
 
@@ -923,6 +920,10 @@ def build_platform_audit_runner() -> MissionRunner:
     no per-call mutable state, no closure-capture (PR 1.3 PostflightContext
     pattern made this unnecessary).
     """
+    # Confidence + dedupe values are NOT passed — MissionRunnerConfig's
+    # field defaults (0.95 / 0.6 / 0.0 / 24h) apply. The escalation
+    # workspace travels via ``EscalationDeliverableSpec.workspace_name``
+    # on the spec factory above.
     config = MissionRunnerConfig(
         # Identity
         employee_handle=PLATFORM_AUDITOR.handle,
@@ -932,16 +933,9 @@ def build_platform_audit_runner() -> MissionRunner:
         # Job
         mission_run_kind=MISSION_RUN_KIND,
         job_title=PLATFORM_AUDIT_JOB.title,
-        # Confidence
-        confidence_success_full=CONFIDENCE_SUCCESS_FULL,
-        confidence_success_degraded=CONFIDENCE_SUCCESS_DEGRADED,
-        confidence_failure=CONFIDENCE_FAILURE,
-        # Dedupe
-        dedupe_window_hours=DEDUPE_WINDOW_HOURS,
-        # Escalation
+        # Escalation (employee-specific only — workspace travels via spec)
         escalation_source=ESCALATION_SOURCE,
         escalation_title_prefix=DELIVERABLE_TITLE_PREFIX,
-        workspace_name=DONKEY_BETZ_WORKSPACE_NAME,
         # No pin_settings_key — the auditor has no pinned PA chat in v0.
         pin_settings_key=None,
     )
