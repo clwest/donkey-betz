@@ -74,15 +74,17 @@ SPEC = [
         ),
     },
     {
-        "agent_name": "ClaudeCode",
+        # Session 1263: canonical name is 'claude-code' (kebab-case).
+        # Was 'ClaudeCode' pre-S1263 — see migration 0374 + deliverable_aliases.py.
+        "agent_name": "claude-code",
         "initiative_id": "6941372d-b13c-4631-91c8-749fa65c55a0",
         "initiative_name": "Initiatives-First Wiring + No-Orphan Output",
         "confidence": 0.90,
         "notes": (
-            "ClaudeCode shipped the backbone work across Sessions 1194-"
+            "claude-code shipped the backbone work across Sessions 1194-"
             "1198 (Plan C Phase 1, Session 1196 initiative diagnostic, "
             "Session 1197 kind enum, this Session 1198 inference). "
-            "Default attach target for new ClaudeCode deliverables "
+            "Default attach target for new claude-code deliverables "
             "without an explicit initiative_id."
         ),
     },
