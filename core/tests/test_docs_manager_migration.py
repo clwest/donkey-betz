@@ -20,22 +20,24 @@ from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 
 from core.employees import DOCUMENTATION_MANAGER, RIGBY
+from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
 from core.employees.mission_runner import (
+    DEFAULT_CONFIDENCE_FAILURE,
+    DEFAULT_CONFIDENCE_SUCCESS_DEGRADED,
+    DEFAULT_CONFIDENCE_SUCCESS_FULL,
+    DEFAULT_DEDUPE_WINDOW_HOURS,
     MissionRunner,
     MissionRunnerConfig,
     Step,
 )
 from core.jobs.docs_cascade import (
-    CONFIDENCE_FAILURE,
-    CONFIDENCE_SUCCESS_DEGRADED,
-    CONFIDENCE_SUCCESS_FULL,
     DELIVERABLE_TITLE_PREFIX,
-    DONKEY_BETZ_WORKSPACE_NAME,
     DRIFT_LABEL,
     ESCALATION_SOURCE,
     MISSION_RUN_KIND,
     PIN_SETTINGS_KEY,
     STEP_5_SKIPPED_LABEL,
+    _docs_escalation_spec_factory,
     build_docs_manager_runner,
 )
 
@@ -80,17 +82,21 @@ class DocsCascadeBuilderShapeTests(SimpleTestCase):
         )
 
     def test_config_confidence_values(self):
+        """S1261: docs cascade takes MissionRunnerConfig defaults — no
+        per-job override. Both literal-value + reference-to-default
+        assertions kept so future drift in either surface fails loud.
+        """
         runner = build_docs_manager_runner()
         self.assertEqual(
             runner.config.confidence_success_full,
-            CONFIDENCE_SUCCESS_FULL,
+            DEFAULT_CONFIDENCE_SUCCESS_FULL,
         )
         self.assertEqual(
             runner.config.confidence_success_degraded,
-            CONFIDENCE_SUCCESS_DEGRADED,
+            DEFAULT_CONFIDENCE_SUCCESS_DEGRADED,
         )
         self.assertEqual(
-            runner.config.confidence_failure, CONFIDENCE_FAILURE,
+            runner.config.confidence_failure, DEFAULT_CONFIDENCE_FAILURE,
         )
         self.assertEqual(runner.config.confidence_success_full, 0.95)
         self.assertEqual(runner.config.confidence_success_degraded, 0.6)
@@ -111,12 +117,31 @@ class DocsCascadeBuilderShapeTests(SimpleTestCase):
             "Docs Manager Escalation",
         )
 
-    def test_config_workspace_name(self):
-        runner = build_docs_manager_runner()
+    def test_escalation_spec_targets_donkey_betz_workspace(self):
+        """S1261: workspace name no longer travels via
+        ``config.workspace_name`` (that legacy fallback is unreachable
+        when a spec factory is wired). Instead the docs cascade's
+        escalation spec factory returns an ``EscalationDeliverableSpec``
+        whose ``workspace_name`` is the Employee OS default. Verify
+        both the spec output and the canonical constant.
+        """
+        # Spec factory ignores the FailureContext for docs cascade; pass
+        # None — the factory does not introspect it.
+        spec = _docs_escalation_spec_factory(None)  # type: ignore[arg-type]
         self.assertEqual(
-            runner.config.workspace_name, DONKEY_BETZ_WORKSPACE_NAME
+            spec.workspace_name, EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
         )
-        self.assertEqual(runner.config.workspace_name, "Donkey Betz")
+        self.assertEqual(spec.workspace_name, "Donkey Betz")
+
+    def test_config_workspace_name_not_passed(self):
+        """S1261: docs cascade no longer passes ``workspace_name`` into
+        ``MissionRunnerConfig``. Lock in that the field stays at its
+        default (None) — any future regression that re-adds the legacy
+        kwarg fails loud here. Workspace is now sourced solely from the
+        escalation spec factory above.
+        """
+        runner = build_docs_manager_runner()
+        self.assertIsNone(runner.config.workspace_name)
 
     def test_config_pin_settings_key(self):
         runner = build_docs_manager_runner()
@@ -126,8 +151,15 @@ class DocsCascadeBuilderShapeTests(SimpleTestCase):
         )
 
     def test_config_dedupe_window_24h(self):
+        """S1261: docs cascade takes MissionRunnerConfig's
+        ``dedupe_window_hours`` default (24h). Both literal + named
+        reference asserted so either-side drift fails loud.
+        """
         runner = build_docs_manager_runner()
         self.assertEqual(runner.config.dedupe_window_hours, 24)
+        self.assertEqual(
+            runner.config.dedupe_window_hours, DEFAULT_DEDUPE_WINDOW_HOURS
+        )
 
     def test_runner_has_four_cascade_steps(self):
         runner = build_docs_manager_runner()

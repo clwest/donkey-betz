@@ -252,7 +252,11 @@ class PlatformAuditBuilderTests(TestCase):
             )
 
     def test_runner_config_identity(self):
-        from core.jobs.platform_audit import build_platform_audit_runner
+        from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
+        from core.jobs.platform_audit import (
+            _platform_audit_escalation_spec_factory,
+            build_platform_audit_runner,
+        )
 
         runner = build_platform_audit_runner()
         self.assertEqual(
@@ -262,7 +266,15 @@ class PlatformAuditBuilderTests(TestCase):
         self.assertEqual(
             runner.config.escalation_source, "PlatformAuditor"
         )
-        self.assertEqual(runner.config.workspace_name, "Donkey Betz")
+        # S1261: workspace travels via the escalation spec factory now,
+        # not via config.workspace_name (which is None at default since
+        # the runner's spec-aware resolver wins when a factory is wired).
+        self.assertIsNone(runner.config.workspace_name)
+        spec = _platform_audit_escalation_spec_factory(None)  # type: ignore[arg-type]
+        self.assertEqual(
+            spec.workspace_name, EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
+        )
+        self.assertEqual(spec.workspace_name, "Donkey Betz")
         # No pin for v0 — auditor reports via inbox + audit Deliverable.
         self.assertIsNone(runner.config.pin_settings_key)
         self.assertIsNone(runner.config.primary_chat_id)

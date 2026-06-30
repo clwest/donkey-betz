@@ -51,6 +51,22 @@ class AuthorityLevel(str, enum.Enum):
     PROHIBITED = "prohibited"      # explicitly NOT permitted
 
 
+# ── Employee OS-scoped defaults ──────────────────────────────────────
+
+# Default workspace every Employee OS job operates inside today. Used by
+# each job module's escalation deliverable spec factory (and by Platform
+# Audit's inline ORM lookup for its audit deliverable). Confidence and
+# dedupe defaults already live as ``MissionRunnerConfig`` field defaults
+# in ``mission_runner.py`` — do NOT duplicate those here.
+#
+# If a future employee operates in a different workspace, the job's
+# escalation_spec_factory can return ``EscalationDeliverableSpec(
+# workspace_name="...")`` to override per-mission without changing this
+# constant. Don't promote this to a "global platform default" — it is
+# Employee OS-scoped policy.
+EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME: str = "Donkey Betz"
+
+
 # ── Core dataclasses ─────────────────────────────────────────────────
 
 

@@ -63,6 +63,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from core.employees import DOCUMENTATION_MANAGER, RIGBY
+from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
 from core.employees.mission_runner import (
     EscalationDeliverableSpec,
     FailureContext,
@@ -89,16 +90,12 @@ _STEP_4_HARD_SECONDS = DOCUMENTATION_MANAGER.embed_step_timeout.get(
     "hard_seconds", 1800
 )
 
-# Confidence values per outcome — docs-cascade-specific.
-CONFIDENCE_SUCCESS_FULL = 0.95
-CONFIDENCE_SUCCESS_DEGRADED = 0.6
-CONFIDENCE_FAILURE = 0.0
-
-# Dedupe window for escalation Deliverables (hours).
-DEDUPE_WINDOW_HOURS = 24
-
-# Workspace lookup name + escalation labels.
-DONKEY_BETZ_WORKSPACE_NAME = "Donkey Betz"
+# Escalation labels (per-employee — keep here).
+# Confidence + dedupe window defaults live on ``MissionRunnerConfig``
+# (mission_runner.py:255-258 + :497-502); the docs cascade takes the
+# defaults so they are NOT redeclared here. The workspace name lives in
+# ``core.employees.jobs.EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME`` and is
+# imported above.
 DELIVERABLE_TITLE_PREFIX = "Docs Manager Escalation"
 ESCALATION_SOURCE = "DocsManager"
 PIN_SETTINGS_KEY = "RIGBY_PRIMARY_PA_PIN"
@@ -692,7 +689,7 @@ def _docs_escalation_spec_factory(
     completed→ready with audit row).
     """
     return EscalationDeliverableSpec(
-        workspace_name=DONKEY_BETZ_WORKSPACE_NAME,
+        workspace_name=EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME,
     )
 
 
@@ -706,6 +703,12 @@ def build_docs_manager_runner() -> MissionRunner:
     commands. PR 1.3+: no per-call mutable state — the postflight reads
     ``ctx.mission`` directly from the PostflightContext MissionRunner
     constructs at run-time, so the factory is pure.
+
+    Confidence + dedupe values are NOT passed — MissionRunnerConfig's
+    field defaults (0.95 / 0.6 / 0.0 / 24h) apply. The escalation
+    workspace travels via ``EscalationDeliverableSpec.workspace_name``
+    on the spec factory above (spec precedence wins over
+    ``config.workspace_name`` per ``_resolve_workspace_for_spec``).
     """
     config = MissionRunnerConfig(
         # Identity
@@ -716,16 +719,9 @@ def build_docs_manager_runner() -> MissionRunner:
         # Job
         mission_run_kind=MISSION_RUN_KIND,
         job_title=DOCUMENTATION_MANAGER.title,
-        # Confidence
-        confidence_success_full=CONFIDENCE_SUCCESS_FULL,
-        confidence_success_degraded=CONFIDENCE_SUCCESS_DEGRADED,
-        confidence_failure=CONFIDENCE_FAILURE,
-        # Dedupe
-        dedupe_window_hours=DEDUPE_WINDOW_HOURS,
-        # Escalation
+        # Escalation (employee-specific only — workspace travels via spec)
         escalation_source=ESCALATION_SOURCE,
         escalation_title_prefix=DELIVERABLE_TITLE_PREFIX,
-        workspace_name=DONKEY_BETZ_WORKSPACE_NAME,
         # Pin override
         pin_settings_key=PIN_SETTINGS_KEY,
     )
