@@ -17,28 +17,26 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1258 fresh
-# thread (Rigby create_fresh at S1258 open per Chris's explicit
-# directive — NOT score-driven; the prior pin pa-e8999a1793f04e23
-# was at 85/continue when rotated). Pin: pa-85960cfecf5e42d5. Title:
-# "Session 1258 — open + priority menu (PR 3.3 / receipts gap /
-# Tue 06:30 first-fire)". Carry-forward seeded via
-# session_tool.create_fresh covering S1257 close (PR #2744 register
-# CoS Employee #3 + PR #2745 Morning Brief task runner via
-# MissionRunner; production caller count 2→3) and S1258 priority
-# menu: P0 PR 3.3 Morning Brief beat migration (small single PR
-# flipping the generate-morning-brief-daily PeriodicTask row from
-# core.tasks.generate_morning_brief_daily → chief_of_staff_morning_brief_run
-# and deleting the legacy task body at core/tasks.py:5788-5938);
-# P1 claude_code_tool task receipts + post-back reliability (S1257
-# verification incident — code_jobs sandboxing + no AgentExecution
-# row + silent post-back failure); P2 Tue 2026-06-30 06:30 MDT
-# (12:30 UTC) first untouched beat fire watch for docs-manager;
-# P3 carryover backlog. Retired at S1258 open: pa-e8999a1793f04e23
-# (Sessions 1249-1257 — local↔prod parity arc + Employee OS arc
-# Documentation Manager + Platform Auditor + Chief of Staff
-# end-to-end ship; 16 turns / 8k tokens / score 85 / 32h elapsed at
-# rotation — elective rotation for clean S1258 thread).
+# the --conversation flag below. Current value: Session 1265 fresh
+# thread (Rigby create_fresh at S1265 open per
+# strongly_recommend_fresh signal — score 35/100, 38 turns / 19k
+# tokens / 7 topics across S1258-1264 single-day arc). Pin:
+# pa-3a226cd451494350. Title: "Session 1265 — DBZ Ops: Priorities
+# + Current State". Carry-forward seeded via session_tool.create_fresh
+# covering S1263 (PR #2754: canonical claude-code Agent row, 12 FKs
+# migrated, deliverable_factory canonicalized) + S1264 (PR #2756:
+# MissionRunner authority warn-mode emitting authority_contract_observed
+# event per mission, schema_version=1, 3 factories opt in via
+# job_contract kwarg, no enforcement, malformed contract degrades
+# evidence non-blocking) and S1265 menu: P0 SLO breaches / P1
+# read-only employee+mission HTTP API / P2 orphan content.* route /
+# P3 CLAUDE.md autoblock+drift hygiene / P4 Employee #4 / P5
+# defensive shrink / P6 enforce-mode arc (blocked on symbol
+# mapping) / P7 carryover backlog. Retired at S1265 open:
+# pa-85960cfecf5e42d5 (Sessions 1258-1264 — S1259-1264 single-day
+# arc covering receipts-gap close + claude-code Agent row
+# consolidation + authority warn-mode; 38 turns / 19k tokens /
+# score 35 / strongly_recommend_fresh at rotation).
 # Prior pins retired: pa-0f08fc48ec914917 (Sessions 1234-1235 →
 # Session 1236 open; ~50 turns across the 3 sessions covering
 # Session 1234 3-arc 22-PR close + Session 1235 9-PR + audit
@@ -104,4 +102,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-85960cfecf5e42d5
+python tools/pa_chat.py "$@" --tools --conversation pa-3a226cd451494350
