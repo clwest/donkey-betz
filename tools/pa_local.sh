@@ -17,26 +17,29 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1265 fresh
-# thread (Rigby create_fresh at S1265 open per
-# strongly_recommend_fresh signal — score 35/100, 38 turns / 19k
-# tokens / 7 topics across S1258-1264 single-day arc). Pin:
-# pa-3a226cd451494350. Title: "Session 1265 — DBZ Ops: Priorities
-# + Current State". Carry-forward seeded via session_tool.create_fresh
-# covering S1263 (PR #2754: canonical claude-code Agent row, 12 FKs
-# migrated, deliverable_factory canonicalized) + S1264 (PR #2756:
-# MissionRunner authority warn-mode emitting authority_contract_observed
-# event per mission, schema_version=1, 3 factories opt in via
-# job_contract kwarg, no enforcement, malformed contract degrades
-# evidence non-blocking) and S1265 menu: P0 SLO breaches / P1
-# read-only employee+mission HTTP API / P2 orphan content.* route /
-# P3 CLAUDE.md autoblock+drift hygiene / P4 Employee #4 / P5
-# defensive shrink / P6 enforce-mode arc (blocked on symbol
-# mapping) / P7 carryover backlog. Retired at S1265 open:
-# pa-85960cfecf5e42d5 (Sessions 1258-1264 — S1259-1264 single-day
-# arc covering receipts-gap close + claude-code Agent row
-# consolidation + authority warn-mode; 38 turns / 19k tokens /
-# score 35 / strongly_recommend_fresh at rotation).
+# the --conversation flag below. Current value: Session 1268 fresh
+# thread (Rigby create_fresh at S1267 close — score 70/continue at
+# rotation but Chris asked for clean runway for V14 + F1 work).
+# Pin: pa-01e90a1d36f54880. Title: "Session 1268 — open + V14
+# confirmation + Platform Auditor cadence (F1)". Carry-forward
+# seeded via session_tool.create_fresh covering S1267 close (4-PR
+# Bug Triage Specialist ship — PRs #2763-#2766 + close docs #2767,
+# new MissionRunnerConfig.auto_emit_verdict primitive, V13 verified
+# empirically with first Bug Triage authority_contract_observed
+# event extending S1264 prereq #2 baseline N=1→N=2), S1268 menu:
+# P0 V14 confirmation (08:00 Denver 2026-07-01) / P1 F1 Platform
+# Auditor PeriodicTask cadence gap (mirrors PR 4.2/4.3 shape) /
+# P2-6 unchanged carryover queue. Verifier-loop workflow shape
+# carries forward.
+# Retired at S1267 close: pa-3a226cd451494350 (Sessions 1265-1267 —
+# S1265 3-PR hygiene + S1266 Employee #4 readiness audit + S1267
+# Bug Triage ship; 21 turns / 10.5k tokens / score 70 / continue
+# at rotation — Chris asked for clean runway for V14, not score
+# driven). Pre-retirement pin: pa-85960cfecf5e42d5 (Sessions 1258-
+# 1264 — S1259-1264 single-day arc covering receipts-gap close +
+# claude-code Agent row consolidation + authority warn-mode; 38
+# turns / 19k tokens / score 35 / strongly_recommend_fresh at
+# rotation).
 # Prior pins retired: pa-0f08fc48ec914917 (Sessions 1234-1235 →
 # Session 1236 open; ~50 turns across the 3 sessions covering
 # Session 1234 3-arc 22-PR close + Session 1235 9-PR + audit
@@ -102,4 +105,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-3a226cd451494350
+python tools/pa_chat.py "$@" --tools --conversation pa-01e90a1d36f54880
