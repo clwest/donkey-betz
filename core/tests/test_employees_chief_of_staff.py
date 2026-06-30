@@ -165,9 +165,11 @@ class ExistingEmployeesUnchangedTests(SimpleTestCase):
             ["platform_audit"],
         )
 
-    def test_registry_now_has_three_employees(self):
+    def test_registry_now_has_four_employees(self):
+        # Bug Triage Specialist (S1267 PR 4.1) became Employee #4.
+        # Each new employee PR bumps this count.
         employees = list_employees()
-        self.assertEqual(len(employees), 3)
+        self.assertEqual(len(employees), 4)
 
 
 # ═════════════════════════════════════════════════════════════════════
