@@ -131,7 +131,110 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1265 — CURRENT ENTRY POINT
+## SESSION 1266 — CURRENT ENTRY POINT
+
+### SESSION 1265 CLOSED — 3 PRs shipped: stale-worker guard + P2/P3 hygiene + read-only Employee/Mission HTTP API
+
+**Session window:** 2026-06-30 (S1259-1265 single-day arc closed here; fresh Rigby conversation `pa-3a226cd451494350` rotated at S1265 open).
+**Full handoff:** [`SESSION_1265_THREE_PR_HYGIENE_AND_API.md`](docs/handoffs/SESSION_1265_THREE_PR_HYGIENE_AND_API.md).
+
+**TL;DR:** Three small scoped PRs end-to-end in one session, all admin-merged after Rigby SIGN. Total surface: 9 files +910/-13, 20 new tests, 0 regressions. No MissionRunner / JobContract / Employee OS / `employee_tool` behavior changed.
+
+**Session 1265 PRs (all admin-merged):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2758](https://github.com/clwest/donkey-betz-platform/pull/2758) | fix | Stale-worker guard for `_impl_process_core_spider_data` — `[STALE_WORKER_MODEL_TABLE_MISSING]` ERROR + diagnostic dict on missing `db_table` | `8f94f66b` |
+| [#2759](https://github.com/clwest/donkey-betz-platform/pull/2759) | chore | Mechanical drift hygiene — delete orphan `'content.*'` route + CLAUDE.md autoblock refresh + 2 verifier baseline bumps | `0eb5a671` |
+| [#2760](https://github.com/clwest/donkey-betz-platform/pull/2760) | feat | Read-only Employee/Mission HTTP API — 5 `GET` endpoints, IsAdminUser-gated, thin wrappers around existing helpers | `3740bac0` |
+
+**Headline outcomes:**
+
+- **The recur class identified at S1265 open is closed.** Workers holding a pre-rename model class in `sys.modules` no longer silently flap `ProgrammingError`; the guard turns it into a single greppable `[STALE_WORKER_MODEL_TABLE_MISSING]` ERROR per fire with `worker_git_sha` attached.
+- **`verify_doc_claims --only-drift` clean.** Both previously-drifting claims (`agent_taxonomy_reconciliation`, `services_file_count_103`) refreshed to current runtime values.
+- **5 new HTTP endpoints surface Employee OS without LLM dependency.** `GET /api/employees/`, `GET /api/employees/<handle>/`, `GET /api/employees/<handle>/jobs/<job_key>/status/`, `GET /api/missions/<id>/`, `GET /api/missions/<id>/evidence/`. All `IsAdminUser`-gated (verified `chris.is_staff=True` before locking). Response shapes mirror `employee_tool` verbatim per Rigby SIGN.
+- **Architecture-review pattern at session open paid off again.** S1265 menu's P0-P7 didn't include "PR #2756 emitted 0 events" or "`process_core_spider_data` had 50 flap rows" — independent verification surfaced both. Both closed by `make celery` restart; Rigby's caveat #2 became the actual S1265 first PR.
+
+**Post-merge verification — two apparent failures that are expected behavior:**
+
+| Symptom | Explanation |
+|---|---|
+| `authority_contract_observed` event count stayed at 1 after a fresh `platform_auditor_run.delay()` | `platform_auditor_run` is **daily-idempotent** per its docstring (`already_ran=True` on re-dispatch within same calendar day). Not a regression. |
+| HTTP `derive_status` vs `employee_tool action=status` failed deep-equal | `derive_status` embeds wall-clock `as_of` / `window_start` / `window_end` fields that change between calls. The PR's contract test uses **describe** (timestamp-free) and passes. Status equivalence holds modulo timestamps — by design. |
+
+### FIRST THING Session 1266
+
+**Decide between two next-priority candidates before starting either. Do not start either until fresh session orientation.**
+
+#### Candidate A — Employee #4 discovery
+
+S1264 close noted Employee #4 is **architecturally ready**:
+- MissionRunner contract stable (S1259-1264)
+- Per-employee boilerplate eliminated (S1261)
+- Receipts pipeline + Agent row hygiene clean (S1262-1263)
+- Warn-mode inherited automatically via `job_contract=...` factory kwarg (S1264)
+- Estimated cost: 1,990-2,790 LOC, 9-14 hours
+
+**Open question:** which employee? The choice frames the entire arc:
+- Code Reviewer — high-leverage for PR quality but overlaps with Claude Code's review surface
+- Frontend Auditor — would catch UI rot, but UI changes are rare
+- Bug Triage Specialist — fits Employee OS pattern; pairs with Platform Auditor's outputs
+- Doc Search Agent — moves `search_docs` functionality into a daily routine
+- Other — Chris's call
+
+#### Candidate B — Rigby's broader drift-hygiene PR
+
+9 `autopilot_tool drift_scan` warnings deferred from S1265 P3 as **latent contract drift requiring design judgment**:
+- 2 action-enum coverage mismatches: `db_health_tool` (7 actions declared in schema but no handler branches) + `mission_verdict` (3 actions declared but no handler) — would surface as "Unknown action" GPT errors if exercised
+- 7 agent_registry orphans: DB Agent rows not in AGENT_MAP — some legitimate persona agents (System, claude-code, Rigby, rigby), some potentially stale (ValidationCheckAgent, 3DGenerationAgent, PersonalAssistant)
+
+**Design judgment required per item:**
+- For each action-enum mismatch: add missing handler branches OR trim schema entries (decide based on whether the actions are reachable via PA flow)
+- For each agent_registry orphan: confirm legitimate persona vs stale reference
+
+Estimated cost: 100-200 LOC + ~10 schema/handler decisions.
+
+### Pre-existing carryover (S1264 menu, unchanged)
+
+#### Priority 0 — Pre-existing SLO breaches
+
+`ops_tool action=overview window=30d`:
+- `agent_timeout_rate` 0.024284 vs target 0.002 (12× over — 28 timeouts / 1153 agent calls / 30d)
+- `celery_task_success_rate` 0.998825 vs target 0.999 (marginal — 53 failures / 45,104 tasks / 30d)
+
+**S1265 analysis caveat:** 150 of 241 30d agent failures (62%) are sports-spider source drought (SportsOddsAnalyst + ArbitrageDetector with "Odds API returned no data"), not agent defects. Real "agent-internal" failures ~63 over 30d = ~2/day. The agent_timeout_rate breach is genuine but bounded by the 28-row cleanup-timeout class.
+
+#### Priority 5 — Future S1263 hygiene follow-up
+
+Shrink `_CLAUDE_CODE_AGENT_NAMES = ('claude-code', 'ClaudeCode')` → `('claude-code',)` in `claude_code_engineer.py:63` after 1+ week of clean operation. ~3-line PR.
+
+#### Priority 6 — Future S1264 follow-up — Authority enforce-mode arc
+
+Switching WARN → ENFORCE requires (documented in S1264 handoff):
+1. Symbol mapping exists (steps declare `action_classes_invoked` OR tool-name → action_class registry lands)
+2. ≥14 days clean warn-mode telemetry on N≥4 employees
+3. False-positive rate ≤5% over ≥30 days after step self-attestation lands
+4. Per-employee `trust_ratio` ≥0.75 maintained throughout warn-mode window
+5. Manual operator review on ≥3 employees confirms contract-vs-reality match
+
+None blocking — separate arc when prerequisites met.
+
+#### Priority 7 — Carryover backlog
+
+| Item | Source | Severity |
+|---|---|---|
+| `_persist_to_summary` 2/3 dup consolidation | S1261 deferred | low — reconsider at N=4 |
+| `_resolve_chris_user` generalization in morning_brief | S1261 deferred | low |
+| `sync_celery_beat` orphan-handler revert trap (code fix) | S1258 mitigated via migration 0373 | medium — code fix deferred |
+| PA tool surface gaps — no `celery_inspect_tool`, `evidence_for_mission` default-to-latest | S1258 verification | low |
+| `RIGBY.primary_chat_id` contract constant still stale | S1252 carryover | low — cosmetic |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low |
+
+**~~ S1264 P1-P4 from S1265 menu ~~** — **CLOSED: P0 SLO breaches carried forward to P0 above; P1 shipped as PR #2760; P2/P3 shipped together as PR #2759.**
+
+---
+
+## SESSION 1265 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1264 CLOSED — MissionRunner authority warn-mode shipped; honest correction to S1260 P4 documented
 
