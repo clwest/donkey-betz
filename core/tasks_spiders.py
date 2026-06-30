@@ -246,10 +246,61 @@ def _impl_process_core_spider_data():
     The DIGESTIVE system monitors this table for queue depth.
 
     Runs every 2 minutes with 500 items per batch to catch up with backlog.
+
+    Session 1265: stale-worker guard. After S1243 renamed
+    ``core.SpiderData → core.LegacySpiderData`` (commit 83892860), 50
+    ProgrammingError flaps fired against the dropped ``core_spiderdata``
+    table from a worker holding the pre-rename class in ``sys.modules``
+    cache. The guard preflight-checks that the model's resolved
+    ``db_table`` exists; if not, it logs ``[STALE_WORKER_MODEL_TABLE_MISSING]``
+    and soft-fails with a diagnostic result so beat fires don't keep
+    raising the same SQL error every 2 minutes.
     """
     from core.models_unified_system import LegacySpiderData
     from intelligence.spider_agent_connector import SpiderAgentConnector
     from django.utils import timezone
+    from django.db import connection
+
+    expected_table = LegacySpiderData._meta.db_table
+    try:
+        existing_tables = connection.introspection.table_names()
+    except Exception as guard_err:
+        logger.warning(
+            "[STALE_WORKER_GUARD_SKIPPED] table_names() introspection failed: %s. "
+            "Proceeding to model query; ProgrammingError fall-through is the next "
+            "signal if the table is actually missing.",
+            guard_err,
+        )
+    else:
+        if expected_table not in existing_tables:
+            # Resolve worker git SHA for forensic enrichment (Rigby SIGN
+            # suggestion). Subprocess only fires on this rare failure
+            # branch — zero cost on the every-2-min happy path.
+            from core.services.platform_inventory import _git_sha
+            worker_git_sha = _git_sha()
+            logger.error(
+                "[STALE_WORKER_MODEL_TABLE_MISSING] "
+                "model=%s.%s db_table=%r not found in database. "
+                "worker_git_sha=%s. "
+                "Likely cause: worker has cached a pre-rename model class in sys.modules. "
+                "Action: restart the celery worker process (make celery).",
+                LegacySpiderData.__module__,
+                LegacySpiderData.__qualname__,
+                expected_table,
+                worker_git_sha,
+            )
+            return {
+                'processed': 0,
+                'solutions_created': 0,
+                'learning_records': 0,
+                'errors': 0,
+                'agents_matched': 0,
+                'remaining': 0,
+                'skipped': True,
+                'reason': 'stale_worker_model_table_missing',
+                'expected_table': expected_table,
+                'worker_git_sha': worker_git_sha,
+            }
 
     logger.info("🍽️ [DIGESTIVE] Starting core spider data processing...")
 
