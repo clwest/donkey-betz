@@ -186,7 +186,9 @@ class Command(BaseCommand):
                 'content': content,
                 'content_format': 'markdown',
                 'preview_content': preview,
-                'agent_name': 'ClaudeCode',
+                # Session 1263: canonical kebab-case name. Was 'ClaudeCode'
+                # pre-S1263 — see migration 0374 + deliverable_aliases.py.
+                'agent_name': 'claude-code',
                 'agent_task': f'Patent Workstream #{ws_num} disclosure',
                 'quality_score': 0.95,
                 'confidence_score': 0.90,
