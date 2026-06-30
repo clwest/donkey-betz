@@ -3,7 +3,7 @@ title: "Donkey Betz Platform — What It Actually Is"
 status: active
 session: 1223
 generated: 2026-05-24
-last_reviewed: 2026-06-23
+last_reviewed: 2026-06-30
 companion_doc: PLATFORM_INVENTORY.md
 ---
 
@@ -165,6 +165,25 @@ Every agent inherits from `BaseAgent` (`core/agents/base_agent.py`) which provid
 Below the code agents: DB persona rows via `DynamicPersonaAgent` fallback give you long-tail specialists. Plus **30 advisors** — functional domain specialists across investment strategy, AI/ML, content/creator economy, sports analytics, negotiation, healthcare, cybersecurity, education, operations, IP counsel, leadership coaching, regulatory compliance — accessible through `AdvisorContextBuilder`. All advisor identities are functional (no real-person names); see [`ADVISOR_AUDIT.md`](ADVISOR_AUDIT.md).
 
 **Router entry point:** `AgentRouter.route(agent_name, task, context)` performs parallel context gathering (11 workers × 10s timeout each) before dispatching to the agent. See `core/agent_router.py:738-1264`.
+
+### Layer 3.5 — Employee OS (MissionRunner)
+
+**Employee OS is a primitive-reuse pattern, not a new subsystem.** It composes existing primitives — `AIEmployee` + `JobContract` (frozen dataclasses in `core/employees/jobs.py`), `MissionRunner` (orchestrator in `core/employees/mission_runner.py`), `OpsRun(domain='mission')` + `OpsRunEvent` (audit), `emit_mission_verdict()` (terminal verdict), `Deliverable(publish_intent='publish_candidate')` (escalation), `DirectMessage` (shift report), and `employee_tool` (PA read surface) — into deterministic, audit-trail-emitting AI workers.
+
+As of Session 1258, **3 production employees** run through MissionRunner with full evidence trail:
+
+| Employee | Job | Cadence | Verdict surface |
+|---|---|---|---|
+| Rigby (Documentation Manager) | `docs_manager` | Daily 06:30 MDT, Mon-Fri | `emit_mission_verdict()` → `verdict_issued:certified\|rejected\|deferred` |
+| Platform Auditor | `platform_audit` | On-demand `employee_tool action=run_now` | same |
+| Chief of Staff | `morning_brief` | Daily 07:00 MDT | same |
+
+**MissionRunner owns lifecycle policy** (preflight → ordered steps → postflight → verdict emission → escalation with dedupe) but not domain logic — the job module's step functions supply that. Trust ratio is *derived on read* by `employee_tool action=status`; it is never persisted (no `TrustScore` model).
+
+Adding a new employee means **registering a JobContract and writing a thin Celery facade**, not building new models, queues, admin UIs, or PA tools. The 14-row anti-duplication matrix in [`EMPLOYEE_OS_PRIMITIVES.md`](EMPLOYEE_OS_PRIMITIVES.md) §2 names every wrong instinct that has cost operator hours in prior sessions. **Read it before adding Employee #4.**
+
+- **Canonical reference:** [`EMPLOYEE_OS_PRIMITIVES.md`](EMPLOYEE_OS_PRIMITIVES.md)
+- **Orientation topic file:** [`topics/employee-os.md`](topics/employee-os.md)
 
 ### Layer 4 — Personal Assistant (Rigby)
 
@@ -546,6 +565,7 @@ open http://localhost:8000/ai-studio/
 | **Agent** | A specialized AI worker. Code agents are Python classes in `core/agents/`; persona agents are DB rows routed through `DynamicPersonaAgent`. |
 | **AGENT_MAP** | Dictionary in `core/agent_router.py` mapping agent names → agent classes. Current size: 83. |
 | **Advisor** | A functional domain-specialist advisor (Value Investing Strategist, Innovation Investment Strategist, Macro Economic Strategist, Sports Analytics Pioneer, etc.) injected into prompts via `AdvisorContextBuilder`. 30 total. Identities are functional, not modeled on real-world figures. |
+| **AIEmployee** | A frozen dataclass in `core/employees/jobs.py` carrying an Employee OS identity (handle, display_name, runs_as_username, primary_chat_id, notes). Three exist as of Session 1258: Documentation Manager (Rigby), Platform Auditor, Chief of Staff. No DB model — identity is policy-as-code. |
 | **AgentMemory** | A specific memory of one agent execution. Safety-classified (`test_only`/`exploratory`/`candidate`/`approved`). |
 | **AutoTopic** | A topic auto-generated from a signal cluster, ready to drive initiative creation. |
 | **BaseAgent** | The 5,575-line base class every code agent inherits from. |
@@ -556,9 +576,13 @@ open http://localhost:8000/ai-studio/
 | **Deliberation** | Multi-reviewer review of draft content. 3 reviewers. |
 | **DeliverableAppend** | Canary path (Session 1098) for appending agent output to an existing Deliverable instead of creating a new one. |
 | **DynamicPersonaAgent** | Fallback agent that hydrates a persona from a DB row. Available as DB-backed persona rows. |
+| **Employee OS** | The primitive-reuse pattern that composes `AIEmployee` + `JobContract` + `MissionRunner` + `OpsRun(domain='mission')` + verdict + escalation + shift report into deterministic AI workers. Three production employees as of Session 1258. Canonical primitives and anti-duplication rules in [`EMPLOYEE_OS_PRIMITIVES.md`](EMPLOYEE_OS_PRIMITIVES.md). |
 | **HiveMindSession** | A multi-agent debate session with full participant tracking. |
+| **JobContract** | A frozen dataclass in `core/employees/jobs.py` carrying an Employee OS job's policy: mission, responsibilities, triggers, daily routine, authority, prohibited_actions, escalation rules, dedupe rule, evidence contract. Git-versioned, PR-reviewable. No admin UI, no migration. |
 | **Initiative** | A platform project. Has 5 stages + provenance back to signals. |
 | **LUNGS budget** | Per-provider/per-agent token budget tracking. |
+| **MissionRunner** | The Employee OS orchestrator (`core/employees/mission_runner.py`). Owns lifecycle policy — preflight → ordered steps → postflight → verdict emission → escalation with dedupe. Does *not* own domain logic; job modules supply step functions. Stable infrastructure as of Session 1258. |
+| **OpsRun** | A Django model row (`core/models_ops_runs.py`) representing one execution of an ops or mission task. `domain='mission'` + `run_kind=<job-key>` distinguishes Employee OS mission rows from generic ops rows — added in Session 1250 specifically to avoid building a separate `MissionRun` model. |
 | **PA / Rigby** | The Personal Assistant — `UnifiedPAEntrypoint`. Your single conversational interface. |
 | **PeriodicTask** | A django-celery-beat scheduled task row. 92 total, 88 enabled (down from 305 in Session 1099 after the noise-task cleanup arc through Session 1222). |
 | **PlatformInventory** | The Session 1099 runtime-derived master doc. Companion to this one. |
