@@ -131,7 +131,106 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1259 — CURRENT ENTRY POINT
+## SESSION 1262 — CURRENT ENTRY POINT
+
+### SESSIONS 1259-1261 CLOSED — Employee OS v1 production-validated; Phase 2 foundation block shipped
+
+**Session window:** 2026-06-30 (three sessions, single calendar day, single Rigby conversation `pa-85960cfecf5e42d5`).
+
+**Full handoffs:**
+- [`SESSION_1259_FIRST_FIRE_VERIFICATION.md`](docs/handoffs/SESSION_1259_FIRST_FIRE_VERIFICATION.md)
+- [`SESSION_1260_EMPLOYEE_OS_PHASE_2_PLANNING_AND_DISCOVERABILITY.md`](docs/handoffs/SESSION_1260_EMPLOYEE_OS_PHASE_2_PLANNING_AND_DISCOVERABILITY.md)
+- [`SESSION_1261_EMPLOYEE_OS_FOUNDATION_HARDENING.md`](docs/handoffs/SESSION_1261_EMPLOYEE_OS_FOUNDATION_HARDENING.md)
+
+**TL;DR:**
+1. **S1259:** Tuesday 06:30 docs-manager + 07:00 morning_brief both fired clean under MissionRunner-backed tasks. verdict=certified on both. PR #2747 cutover (legacy `core.tasks.generate_morning_brief_daily` → `chief_of_staff_morning_brief_run`) confirmed live in production. Zero escalations.
+2. **S1260:** Architecture Planning doc produced (9 sections covering authority enforcement, employee manager UX, docs discoverability, tech debt, Employee #4 readiness, scalability). PR-γ shipped: 4 surgical doc edits made Employee OS discoverable from CLAUDE.md + PLATFORM_WHAT_IT_IS.md (previously 0 mentions in any anchor doc). New `docs/topics/employee-os.md` orientation pointer.
+3. **S1261:** Foundation hardening. Independent verification corrected the S1260 audit — `MissionRunnerConfig` ALREADY had defaults for the constants the audit proposed putting in `JobContract`. PR #2750 deleted 12 redundant constants + 12 redundant kwargs across 3 jobs without expanding `JobContract` or touching `MissionRunner`.
+
+**Session 1259-1261 PRs (both admin-merged):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2749](https://github.com/clwest/donkey-betz-platform/pull/2749) | docs (S1260) | Employee OS discoverability rows in CLAUDE.md + PLATFORM_WHAT_IT_IS.md + new topics file; 4 files, +121/-17 | `e4414c96` |
+| [#2750](https://github.com/clwest/donkey-betz-platform/pull/2750) | refactor (S1261) | Delete per-job constants/kwargs duplication covered by MissionRunnerConfig defaults; centralize workspace name; 7 files, +131/-77 | `918bbbe5` |
+
+**Headline outcomes:**
+
+- **Employee OS v1 is fully production-validated.** All 3 jobs (docs_manager + platform_audit + morning_brief) run end-to-end through MissionRunner with full audit trail. First-fires verified clean.
+- **MissionRunner is now frozen infrastructure.** Zero edits across PR #2749 + #2750.
+- **`JobContract` dataclass unchanged.** Zero new fields. Per S1252 PR 1 frozen-dataclass contract.
+- **Employee OS now discoverable.** A fresh Claude/Rigby session orienting from CLAUDE.md can find Employee OS in 4 separate table rows; PLATFORM_WHAT_IT_IS.md has Layer 3.5 + 5 glossary entries.
+- **Per-employee boilerplate reduced.** Employee #4 no longer writes 4 constants + 5 kwargs that match runner defaults — confidence/dedupe/workspace policy decisions disappear from the per-employee surface.
+- **Verifier-loop pattern caught the S1260 wrong-fix recommendation** before any code was written. Saved a useless `JobContract` expansion.
+
+### FIRST THING Session 1262
+
+#### Priority 0 — Pre-existing SLO breaches (NEW, surfaced during S1260 runtime evidence sweep)
+
+`ops_tool action=overview window=30d` reports two breaches that are NOT Employee OS specific but compound with employee growth:
+
+- **`agent_timeout_rate` 0.024284** vs target 0.002 (**12× over** — 28 timeouts / 1153 agent calls / 30d)
+- **`celery_task_success_rate` 0.998825** vs target 0.999 (marginally under — 53 failures / 45,104 tasks / 30d)
+
+Investigate root causes. Likely candidates: specific agent timeouts, specific worker memory pressure, network instability. **Not a blocker for Employee #4**, but worth understanding before scaling employee count further.
+
+#### Priority 1 — `claude_code_tool` task receipts + post-back reliability (carryover from S1257, re-surfaced S1261)
+
+**Re-confirmed in S1261:** When Rigby dispatched a recursive `claude_code_tool` to verify PR #2750, the task_id returned but the post-back would not have arrived (no `AgentExecution` row, silent post-back failure, no Chat UI receipt). Worked around by sending receipts directly. The gap surfaces during Rigby-led verification flows — every time. Project memory: [`project_employee_os_ux_gap_task_receipts.md`](../../.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/project_employee_os_ux_gap_task_receipts.md).
+
+**Severity:** medium. Until fixed, default to **local verification + receipts pushed via the same PA conversation** for Rigby-dispatched `claude_code_tool` work.
+
+#### Priority 2 — MissionRunner `authority_check_fn` preflight hook (warn-mode)
+
+Recommended by S1260 Architecture Planning doc (P4 in that PR sequence; deferred from S1261). `JobContract.authority` dict + `prohibited_actions` tuple have zero runtime readers today. At N=3 employees this is tolerable; at N=20 it would be malpractice.
+
+**Smallest fix:** add optional `authority_check_fn` parameter to MissionRunner.__init__, call once at preflight (before any steps), log violations as `OpsRunEvent(label="authority_violation_observed")` but don't block. Two-PR arc: (1) param + no-op default; (2) wire warn-mode validator reading `JobContract.prohibited_actions`. Enforce-mode flip is a separate later PR after 2 weeks of clean warn-mode telemetry on N≥4 employees.
+
+#### Priority 3 — Read-only Employee/Mission HTTP API
+
+S1260 P5: 5 endpoints over existing model + `core/employees/status.py`:
+- `GET /api/employees/`
+- `GET /api/employees/<handle>/`
+- `GET /api/employees/<handle>/jobs/<job_key>/status/`
+- `GET /api/missions/<id>/`
+- `GET /api/missions/<id>/evidence/`
+
+~250 LOC Django views + serializers + tests. Removes LLM dependency for routine status reads. UI deferred until endpoint usage patterns inform page design.
+
+#### Priority 4 — Hygiene: orphan route in `CELERY_TASK_ROUTES`
+
+Pre-existing test failure: `test_every_route_pattern_matches_a_registered_task` reports `content.*` orphan pattern. Not introduced by any S1259-1261 PR. Either remove the pattern from `core/settings.py` or restore the missing `@shared_task`. ~10-line PR.
+
+#### Priority 5 — Hygiene: refresh CLAUDE.md autoblock + agent taxonomy drift
+
+`refresh_doc_inventory_blocks --check` reports CLAUDE.md + AGENTS.md autoblocks WOULD UPDATE (pre-existing drift). `verify_doc_claims --only-drift` reports CLAUDE.md agent taxonomy line says "8 rerouted, 1 blocked" but actual is "9 rerouted, 0 blocked" (CodeGeneratorAgent reclassified) and SERVICES.md file count drift (103 → 362). Combined into one ~15-line hygiene PR.
+
+#### Priority 6 — Employee #4
+
+**Architecturally ready.** Per S1261 close:
+- MissionRunner contract stable (S1259-1261 confirm)
+- Beat migration pattern documented (PR #2747 + migration 0373)
+- Test scaffold reusable (3 existing examples follow consistent structure)
+- Confidence + dedupe + workspace policy disappears from per-employee surface
+- Estimated cost: 1,990-2,790 LOC (down from S1260 estimate of 2,000-2,800), 9-14 hours
+- Domain logic dominates cost — pick an employee whose domain is well-understood first
+
+**No technical blockers. Awaiting Chris's call on which employee is next.**
+
+#### Priority 7 — Carryover backlog
+
+| Item | Source | Severity |
+|---|---|---|
+| `_persist_to_summary` 2/3 dup consolidation | S1261 deferred | low — abstraction cost ≈ duplication cost at N=2; reconsider at N=4 |
+| `_resolve_chris_user` generalization in morning_brief | S1261 deferred | low — 1/3 jobs needs User instance; defer to N≥2 |
+| `sync_celery_beat` orphan-handler revert trap (code fix) | S1258 mitigated via migration 0373 | medium — process documentation only; bug still in `sync_celery_beat.py:137-140` |
+| PA tool surface gaps — no celery_inspect_tool, evidence_for_mission needs default-to-latest | S1258 verification | low |
+| `RIGBY.primary_chat_id` contract constant still stale (env override active; cosmetic) | S1252 carryover | low |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low — workaround via `set_status` is reliable |
+
+---
+
+## SESSION 1259 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1258 CLOSED — PR 3.3 Morning Brief beat migration shipped + verified
 
