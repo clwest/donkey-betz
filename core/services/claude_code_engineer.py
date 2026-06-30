@@ -33,6 +33,264 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+
+# ── Session 1262: Claude Code task receipt reliability ──────────────────
+#
+# Prior to S1262, claude_code_engineer_task ran without writing an
+# ``AgentExecution`` row, so the canonical S1174 follow-up wake stack had
+# no anchor to bind to AND ``_post_to_conversation`` silently no-op'd when
+# ``conversation_id`` arrived as None (four call sites: success/error paths
+# in both Anthropic + OpenAI). Five recent dispatches (task_ids
+# 9d601010 / 068ee853 / bf7ca961 / 18734082 / f8a4d3c2) all returned
+# CeleryTaskEvent.status=SUCCESS but produced ZERO AgentExecution rows
+# and ZERO ChatConversation post-backs — the work happened, the result
+# vanished. The fix below mirrors the canonical pattern from
+# ``core/tasks_agents.py:2270-2325``: create an AgentExecution row at
+# task entry, update it on terminal, wire ``create_implicit_followup_
+# subscription`` so the existing S1174 stack delivers the completion.
+#
+# Per Rigby S1262 SIGN:
+#   * Use a canonical agent-name resolver with alias fallback
+#     (``"claude-code"`` preferred, ``"ClaudeCode"`` accepted) so this
+#     PR does not couple to a later agent-row consolidation.
+#   * ``conversation_id=None`` is NOT a raise — the LLM run succeeded;
+#     ERROR-log it and persist the result on the AgentExecution row.
+#   * ChatConversation write failure IS a raise (visible via
+#     CeleryTaskEvent.status=FAILURE) but ``claude_code_engineer_task``
+#     is configured with ``max_retries=0`` to avoid re-burning LLM
+#     budget.
+
+_CLAUDE_CODE_AGENT_NAMES = ("claude-code", "ClaudeCode")
+
+
+def _resolve_claude_code_agent():
+    """Resolve the canonical ``Agent`` row for claude_code_engineer_task.
+
+    Tries names in ``_CLAUDE_CODE_AGENT_NAMES`` order. Returns the first
+    active match, or any match (including inactive) as a last resort.
+    Returns None if no row exists — the caller is expected to skip
+    AgentExecution creation gracefully in that edge case (matches
+    BaseAgent.run's behavior at base_agent.py:1215-1219).
+
+    Emits a one-line WARN when more than one name resolves, so an
+    operator notices the duplication without this fix becoming
+    dependent on a consolidation PR.
+    """
+    from core.models import Agent
+
+    matches = list(
+        Agent.objects.filter(name__in=_CLAUDE_CODE_AGENT_NAMES)
+    )
+    if not matches:
+        return None
+    if len(matches) > 1:
+        names = sorted({m.name for m in matches})
+        logger.warning(
+            "[CLAUDE_CODE_AGENT_DUP] multiple Agent rows match canonical "
+            "claude_code names=%s — preferring 'claude-code'. Consolidate "
+            "in a future hygiene PR.",
+            names,
+        )
+    for preferred in _CLAUDE_CODE_AGENT_NAMES:
+        for m in matches:
+            if m.name == preferred and m.is_active:
+                return m
+    for preferred in _CLAUDE_CODE_AGENT_NAMES:
+        for m in matches:
+            if m.name == preferred:
+                return m
+    return matches[0]
+
+
+def _create_engineer_execution_record(
+    celery_task_id: str,
+    task_description: str,
+    conversation_id: Optional[str],
+    requested_by: str,
+    request_mode: str,
+):
+    """Create an ``AgentExecution`` row anchoring this dispatch.
+
+    Mirror of ``core/tasks_agents.py:2270-2325`` canonical pattern.
+    Returns the created row or None if no ``Agent`` row was resolvable
+    (defensive — never raises; failure here must not stop the work).
+
+    The row's ``input_data['celery_task_id']`` is the canonical query
+    surface used by ``td_handlers_agents.py:5202`` for the
+    ``schedule_followup(task_id=…)`` lookup. ``conversation_id`` is the
+    S1174 PR-1 field that gates the agent-follow-up wake; setting it
+    here lets ``create_implicit_followup_subscription`` arm a Phase-1
+    follow-up the existing signal handler will fire on terminal.
+    """
+    from django.utils import timezone
+
+    from core.models import AgentExecution
+
+    agent = _resolve_claude_code_agent()
+    if agent is None:
+        logger.warning(
+            "[CLAUDE_CODE_NO_AGENT_ROW] no Agent row matches names=%s — "
+            "AgentExecution telemetry skipped for task_id=%s. Result "
+            "still flows via CeleryTaskEvent + _post_to_conversation.",
+            _CLAUDE_CODE_AGENT_NAMES, celery_task_id,
+        )
+        return None
+
+    try:
+        record = AgentExecution.objects.create(
+            agent=agent,
+            task=(task_description or '')[:500],
+            status='in_progress',
+            input_data={
+                'task_description': (task_description or '')[:2000],
+                'conversation_id': conversation_id or '',
+                'requested_by': requested_by,
+                'request_mode': request_mode,
+                'celery_task_id': celery_task_id,
+                'source': 'claude_code_engineer_task',
+            },
+            output_data={},
+            last_heartbeat_at=timezone.now(),
+            conversation_id=conversation_id or None,
+        )
+        logger.info(
+            "[CLAUDE_CODE_EXECUTION_CREATED] execution_id=%s "
+            "celery_task_id=%s conversation_id=%s agent=%s",
+            record.id, celery_task_id, conversation_id or '<none>',
+            agent.name,
+        )
+        return record
+    except Exception as exc:
+        logger.warning(
+            "_create_engineer_execution_record: swallowed (%s: %s) — "
+            "telemetry skipped for task_id=%s",
+            type(exc).__name__, exc, celery_task_id,
+        )
+        return None
+
+
+def _persist_engineer_terminal_state(
+    execution_record,
+    *,
+    result: Optional[Dict[str, Any]] = None,
+    exception: Optional[BaseException] = None,
+    post_back_status: Optional[str] = None,
+) -> None:
+    """Update the AgentExecution row when the engineer task ends.
+
+    Three callable contracts:
+
+    * ``result=<dict>`` on normal completion. ``status`` is derived from
+      the result envelope: ``'completed'`` when envelope status is
+      'success' / 'contract_failure', ``'failed'`` for 'error'.
+      ``output_data`` carries the full envelope (summary, files_changed,
+      pr_url, provider, mode) so callers can retrieve the result even
+      when the post-back was skipped.
+    * ``exception=<exc>`` on raised exception. ``status='failed'``,
+      ``error_message=str(exc)``. Used by the wrapping Celery task to
+      preserve traceback context without re-raising inside this helper.
+    * ``post_back_status='failed'`` — late-binding flag set by
+      ``_post_to_conversation`` when the ChatConversation write raises
+      AFTER the LLM run already produced a result. Marks the row
+      ``status='failed'`` so the post-back failure is observable, but
+      preserves the prior ``output_data`` (the summary IS retrievable
+      from the row even though the user never saw it).
+
+    Defensive — never raises. A failure persisting telemetry must not
+    stop the wrapping task from running its own terminal handling.
+    """
+    from django.utils import timezone
+
+    if execution_record is None:
+        return
+
+    update_fields = ['status', 'completed_at']
+    try:
+        execution_record.completed_at = timezone.now()
+
+        if exception is not None:
+            execution_record.status = 'failed'
+            execution_record.error_message = str(exception)[:1000]
+            update_fields.append('error_message')
+        elif post_back_status == 'failed':
+            # The LLM run completed, but the post-back write failed.
+            # Preserve output_data so the result is still queryable.
+            existing_output = execution_record.output_data or {}
+            existing_output['post_back_status'] = 'failed'
+            execution_record.output_data = existing_output
+            execution_record.status = 'failed'
+            update_fields.append('output_data')
+        elif result is not None:
+            envelope_status = result.get('status', 'success')
+            if envelope_status in ('error',):
+                execution_record.status = 'failed'
+                err = result.get('error') or result.get('summary')
+                if err:
+                    execution_record.error_message = str(err)[:1000]
+                    update_fields.append('error_message')
+            else:
+                execution_record.status = 'completed'
+            execution_record.output_data = {
+                'status': envelope_status,
+                'summary': (result.get('summary') or '')[:2000],
+                'files_changed': result.get('files_changed') or [],
+                'pr_url': result.get('pr_url'),
+                'provider': result.get('provider', 'anthropic'),
+                'mode': result.get('mode'),
+                'iterations': result.get('iterations'),
+            }
+            update_fields.append('output_data')
+        else:
+            # Defensive fallback — no exception, no result, no flag.
+            # Mark completed with empty output so the row at least
+            # closes; should not happen in practice.
+            execution_record.status = 'completed'
+
+        execution_record.save(update_fields=update_fields)
+    except Exception as exc:
+        logger.warning(
+            "_persist_engineer_terminal_state: swallowed (%s: %s) — "
+            "AgentExecution row may be stuck in_progress",
+            type(exc).__name__, exc,
+        )
+
+
+def _mark_post_back_failed_on_execution(
+    agent_execution_id: Optional[str], reason: str
+) -> None:
+    """Late-binding helper used by ``_post_to_conversation``.
+
+    Called when ChatConversation write succeeds at the LLM-loop level
+    but fails when persisting the user-facing message. Sets
+    ``output_data['post_back_status']='failed'`` and ``status='failed'``
+    on the AgentExecution row so the post-back failure is observable in
+    ops surfaces.
+    """
+    if not agent_execution_id:
+        return
+    try:
+        from core.models import AgentExecution
+
+        record = AgentExecution.objects.filter(id=agent_execution_id).first()
+        if record is None:
+            return
+        _persist_engineer_terminal_state(
+            record, post_back_status='failed',
+        )
+        # Also stamp the reason into the existing output_data
+        try:
+            existing = record.output_data or {}
+            existing['post_back_failure_reason'] = reason[:500]
+            record.output_data = existing
+            record.save(update_fields=['output_data'])
+        except Exception:
+            pass
+    except Exception as exc:
+        logger.warning(
+            "_mark_post_back_failed_on_execution: swallowed (%s: %s)",
+            type(exc).__name__, exc,
+        )
+
 REPO_ROOT = '/app'  # Railway container path — may be read-only
 WRITABLE_ROOT = '/tmp/engineer-workspace'  # Writable clone for git operations
 
@@ -606,10 +864,11 @@ def _execute_engineering_task_openai(
 
 def execute_engineering_task(
     task_description: str,
-    conversation_id: str = None,
+    conversation_id: Optional[str] = None,
     requested_by: str = 'rigby',
     max_iterations: int = 500,
     request_mode: str = 'auto',
+    agent_execution_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Execute an engineering task using Claude with codebase tools.
@@ -714,11 +973,11 @@ def execute_engineering_task(
                 # underlying engineer.
                 result = retry
 
-            if conversation_id:
-                _post_to_conversation(
-                    conversation_id, final_text,
-                    result['files_changed'], result['pr_url'],
-                )
+            _post_to_conversation(
+                conversation_id, final_text,
+                result['files_changed'], result['pr_url'],
+                agent_execution_id=agent_execution_id,
+            )
             return {
                 'status': envelope_status,
                 'summary': final_text[:2000] if final_text else '',
@@ -730,8 +989,10 @@ def execute_engineering_task(
         except Exception as e:
             logger.error(f"[ClaudeEngineer:openai] Task failed: {e}")
             error_msg = f"Engineering task failed (openai path): {str(e)}"
-            if conversation_id:
-                _post_to_conversation(conversation_id, error_msg, [], None)
+            _post_to_conversation(
+                conversation_id, error_msg, [], None,
+                agent_execution_id=agent_execution_id,
+            )
             return {
                 'status': 'error',
                 'error': str(e),
@@ -816,9 +1077,16 @@ def execute_engineering_task(
         else:
             final_text = f"Reached max iterations ({max_iterations}). Task may be incomplete."
 
-        # Post result to conversation if specified
-        if conversation_id:
-            _post_to_conversation(conversation_id, final_text, files_changed, pr_url)
+        # Post result to conversation. Session 1262: _post_to_conversation
+        # is now fail-loud — it ERROR-logs when conversation_id is None and
+        # the AgentExecution row (queryable via agent_execution_id) carries
+        # the result envelope so callers can recover. The legacy
+        # ``if conversation_id:`` guards that produced silent drops on
+        # None are removed (the guard now lives inside _post_to_conversation).
+        _post_to_conversation(
+            conversation_id, final_text, files_changed, pr_url,
+            agent_execution_id=agent_execution_id,
+        )
 
         return {
             'status': 'success',
@@ -832,16 +1100,53 @@ def execute_engineering_task(
         logger.error(f"[ClaudeEngineer] Task failed: {e}")
         error_msg = f"Engineering task failed: {str(e)}"
 
-        if conversation_id:
-            _post_to_conversation(conversation_id, error_msg, [], None)
+        _post_to_conversation(
+            conversation_id, error_msg, [], None,
+            agent_execution_id=agent_execution_id,
+        )
 
         return {'status': 'error', 'error': str(e)}
 
 
-def _post_to_conversation(conversation_id: str, summary: str, files_changed: list, pr_url: str = None):
-    """Post engineering results back to the PA conversation."""
+def _post_to_conversation(
+    conversation_id: Optional[str],
+    summary: str,
+    files_changed: list,
+    pr_url: Optional[str] = None,
+    *,
+    agent_execution_id: Optional[str] = None,
+):
+    """Post engineering results back to the PA conversation.
+
+    Session 1262 fail-loud contract (replaces the pre-S1262 silent
+    no-op on ``conversation_id=None``):
+
+    * If ``conversation_id`` is empty/None: ERROR-log with the greppable
+      marker ``[CLAUDE_CODE_POSTBACK_DROPPED]`` and return cleanly. The
+      LLM run itself succeeded; the result is queryable via the
+      AgentExecution row (``agent_execution_id``). Do NOT raise — this
+      is a dispatch metadata issue, not a task failure.
+    * If ``ChatConversation`` creation raises: mark the AgentExecution
+      row ``status='failed'`` + ``output_data['post_back_status']='failed'``,
+      ERROR-log with marker ``[CLAUDE_CODE_POSTBACK_FAILED]``, then
+      **raise** so ``CeleryTaskEvent.status=FAILURE`` is visible. The
+      wrapping ``claude_code_engineer_task`` is configured with
+      ``max_retries=0`` so the LLM budget is not re-burned.
+    * WebSocket broadcast failure remains a WARN (S1103c handling
+      preserved): the DB row exists, the ChatUI catches on next poll.
+    """
     from core.models import ChatConversation
-    from django.contrib.auth import get_user_model
+
+    if not conversation_id:
+        logger.error(
+            "[CLAUDE_CODE_POSTBACK_DROPPED] conversation_id is empty/None — "
+            "ChatConversation post-back skipped. summary_len=%d "
+            "files_changed=%s pr_url=%s agent_execution_id=%s. "
+            "Result IS retrievable via AgentExecution.output_data when "
+            "agent_execution_id is set.",
+            len(summary or ''), files_changed, pr_url, agent_execution_id,
+        )
+        return
 
     # Build result message
     parts = [summary]
@@ -853,20 +1158,36 @@ def _post_to_conversation(conversation_id: str, summary: str, files_changed: lis
     content = '\n'.join(parts)
 
     # Resolve user
-    User = get_user_model()
     user = ChatConversation.objects.filter(
         conversation_id=conversation_id, user__isnull=False
     ).values_list('user_id', flat=True).first()
 
-    chat_row = ChatConversation.objects.create(
-        user_id=user,
-        conversation_id=conversation_id,
-        user_message=content,
-        assistant_response='',
-        source='claude-code',
-        platform='agent',
-        metadata={'autonomous': True, 'agent': 'claude_code_engineer', 'files_changed': files_changed, 'pr_url': pr_url},
-    )
+    try:
+        chat_row = ChatConversation.objects.create(
+            user_id=user,
+            conversation_id=conversation_id,
+            user_message=content,
+            assistant_response='',
+            source='claude-code',
+            platform='agent',
+            metadata={'autonomous': True, 'agent': 'claude_code_engineer', 'files_changed': files_changed, 'pr_url': pr_url},
+        )
+    except Exception as exc:
+        logger.error(
+            "[CLAUDE_CODE_POSTBACK_FAILED] ChatConversation write raised "
+            "for conversation_id=%s agent_execution_id=%s (%s: %s). "
+            "Marking AgentExecution post_back_status=failed and re-raising "
+            "so CeleryTaskEvent.status=FAILURE is visible. Task is "
+            "configured with max_retries=0; the LLM budget is NOT "
+            "re-spent.",
+            conversation_id, agent_execution_id, type(exc).__name__, exc,
+            exc_info=True,
+        )
+        _mark_post_back_failed_on_execution(
+            agent_execution_id,
+            reason=f"ChatConversation create raised: {type(exc).__name__}: {exc}",
+        )
+        raise
 
     # Broadcast via WebSocket.
     # Session 1103c: loud on failure so Claude Code→ChatUI live-message
