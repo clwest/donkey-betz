@@ -65,6 +65,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from core.employees import CHIEF_OF_STAFF, MORNING_BRIEF_JOB
+from core.employees._persistence import _persist_to_summary
 from core.employees.jobs import EMPLOYEE_OS_DEFAULT_WORKSPACE_NAME
 from core.employees.mission_runner import (
     EscalationDeliverableSpec,
@@ -134,21 +135,11 @@ def _resolve_chris_user():
 
 
 # ── Summary persistence helper ────────────────────────────────────────
-
-
-def _persist_to_summary(mission, **fields: Any) -> None:
-    """Atomically merge ``fields`` into ``mission.summary``.
-
-    Each scalar field is written individually so the summary stays
-    JSON-safe + queryable (no nested workflow envelope per Rigby S1257
-    SIGN-WITH-EDITS lock #2). MissionRunner's own ``_persist_summary``
-    later merges runner-level keys (wall_time_ms, verdict, failed_step,
-    error_tail, …) without overwriting step-written keys — the two
-    key sets don't collide.
-    """
-    existing = mission.summary or {}
-    mission.summary = {**existing, **fields}
-    mission.save(update_fields=["summary"])
+#
+# ``_persist_to_summary`` was lifted to ``core/employees/_persistence``
+# at Session 1267 PR 4.0 per Rigby SIGN decision D6 so all Employee OS
+# job runners share one canonical step-side summary writer. The
+# imported helper is functionally identical to the prior inline body.
 
 
 # ── Scalar extraction from workflow result ────────────────────────────
