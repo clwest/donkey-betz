@@ -131,7 +131,111 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1262 — CURRENT ENTRY POINT
+## SESSION 1263 — CURRENT ENTRY POINT
+
+### SESSION 1262 CLOSED — Claude Code task receipt reliability fixed (S1257 P1 gap closed)
+
+**Session window:** 2026-06-30 (continuation of S1259-1261 single-day arc, same Rigby conversation `pa-85960cfecf5e42d5`).
+**Full handoff:** [`SESSION_1262_CLAUDE_CODE_TASK_RECEIPT_RELIABILITY.md`](docs/handoffs/SESSION_1262_CLAUDE_CODE_TASK_RECEIPT_RELIABILITY.md).
+
+**TL;DR:** The receipts-gap that re-surfaced in S1261 (Rigby's recursive `claude_code_tool` silently vanished) is closed. PR #2752 makes `claude_code_engineer_task` write an `AgentExecution` row at task entry + wire the existing S1174 follow-up wake stack + makes `_post_to_conversation` fail-loud. Five recent dispatches that silently vanished (task_ids 9d601010, 068ee853, bf7ca961, 18734082, f8a4d3c2) are now diagnosable. Discovery → Rigby Phase 1 SIGN → implementation → 10 new tests + 224 regression tests → 3 live dispatches → Rigby Phase 4 SIGN → admin-merge → post-merge prod-verified, all one session.
+
+**Session 1262 PR (admin-merged):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2752](https://github.com/clwest/donkey-betz-platform/pull/2752) | fix | claude_code_engineer_task writes AgentExecution + fail-loud post-back; 3 files, +769/-31 (most additions are docstrings + tests) | `5e30143e` |
+
+**Headline outcomes:**
+
+- **Five recent silent disappearances are now diagnosable.** Every claude_code_tool dispatch writes an AgentExecution row with `input_data.celery_task_id`, persists the result envelope on `output_data`, and arms the S1174 follow-up wake. Rigby's PA conversation receives a completion banner automatically via the consumer-side auto-followup ChatConversation row.
+- **Six new greppable log markers** for diagnostics: `[CLAUDE_CODE_EXECUTION_CREATED]` INFO, `[CLAUDE_CODE_POSTBACK_DROPPED]` ERROR, `[CLAUDE_CODE_POSTBACK_FAILED]` ERROR, `[CLAUDE_CODE_AGENT_DUP]` WARN, `[CLAUDE_CODE_FOLLOWUP_WIRE_FAILED]` WARN, `[CLAUDE_CODE_NO_AGENT_ROW]` WARN.
+- **Live verification across 4 dispatches:** happy-path round 1 + round 2 (with `fire_agent_followup_subscriptions` added) + intentional failure path (`conversation_id=None`) + post-merge prod verification.
+- **Zero architectural changes.** Reuses canonical `AgentExecution` + S1174 PR-2a stack. No new models, no new tables, no new PA tools, no JobContract/MissionRunner edits. `claude_code_tool` response shape preserved verbatim.
+
+**Key lesson — two-step follow-up wiring:** `create_implicit_followup_subscription` ALONE arms the subscription but leaves it `state=armed` forever if no signal handler fires it. The canonical `_impl_execute_agent_task` calls `fire_agent_followup_subscriptions` AFTER terminal-state-save. Round 1 of verification missed the second call (sub stayed armed, banner didn't appear). Adding the explicit fire call fixed it (round 2: sub transitioned to `fired`, Rigby got the auto-banner).
+
+### FIRST THING Session 1263
+
+#### Priority 0 — 24h watch on new claude_code log markers (per Rigby SIGN suggestion)
+
+Not a blocker; hygiene. Rigby's Phase 4 SIGN suggested: *"Post-merge, I'd only recommend a quick watch on logs for the new markers for ~24h to confirm no unexpected volume."*
+
+Run periodically through tomorrow:
+```bash
+grep -hE 'CLAUDE_CODE_(POSTBACK_DROPPED|POSTBACK_FAILED|AGENT_DUP|FOLLOWUP_WIRE_FAILED|NO_AGENT_ROW)' ./celery*.log | tail -30
+```
+
+Expect mostly `[CLAUDE_CODE_AGENT_DUP]` WARN on every dispatch (until Priority 1 lands). Any unexpected `[CLAUDE_CODE_POSTBACK_FAILED]` or `[CLAUDE_CODE_FOLLOWUP_WIRE_FAILED]` lines should be investigated.
+
+#### Priority 1 — Consolidate duplicate `claude-code` Agent rows (hygiene PR)
+
+Surfaced by S1262 `[CLAUDE_CODE_AGENT_DUP]` WARN: BOTH `claude-code` and `ClaudeCode` Agent rows exist in DB (active, agent_type=tool_direct). The S1262 resolver picks `claude-code` deterministically, but the dup is noisy.
+
+**Smallest fix:** decide which name is canonical (recommend `claude-code` based on td_handlers convention), data-migration the duplicate's `AgentExecution` FK references onto the keeper, then delete the duplicate. ~10-line PR.
+
+#### Priority 2 — Pre-existing SLO breaches (NEW in S1260; still open)
+
+`ops_tool action=overview window=30d` reports two breaches that are NOT Employee OS specific but compound with employee growth:
+
+- **`agent_timeout_rate` 0.024284** vs target 0.002 (**12× over** — 28 timeouts / 1153 agent calls / 30d)
+- **`celery_task_success_rate` 0.998825** vs target 0.999 (marginally under — 53 failures / 45,104 tasks / 30d)
+
+Investigate root causes. Likely candidates: specific agent timeouts, specific worker memory pressure, network instability.
+
+#### Priority 3 — MissionRunner `authority_check_fn` preflight hook (warn-mode)
+
+Recommended by S1260 Architecture Planning doc (P4); deferred from S1261. `JobContract.authority` dict + `prohibited_actions` tuple have zero runtime readers today. At N=3 employees this is tolerable; at N=20 it would be malpractice.
+
+**Smallest fix:** add optional `authority_check_fn` parameter to MissionRunner.__init__, call once at preflight (before any steps), log violations as `OpsRunEvent(label="authority_violation_observed")` but don't block. Two-PR arc: (1) param + no-op default; (2) wire warn-mode validator reading `JobContract.prohibited_actions`. Enforce-mode flip is a separate later PR after 2 weeks of clean warn-mode telemetry on N≥4 employees.
+
+#### Priority 4 — Read-only Employee/Mission HTTP API
+
+S1260 P5: 5 endpoints over existing model + `core/employees/status.py`:
+- `GET /api/employees/`
+- `GET /api/employees/<handle>/`
+- `GET /api/employees/<handle>/jobs/<job_key>/status/`
+- `GET /api/missions/<id>/`
+- `GET /api/missions/<id>/evidence/`
+
+~250 LOC Django views + serializers + tests. Removes LLM dependency for routine status reads. UI deferred until endpoint usage patterns inform page design.
+
+#### Priority 5 — Hygiene: orphan route in `CELERY_TASK_ROUTES`
+
+Pre-existing test failure: `test_every_route_pattern_matches_a_registered_task` reports `content.*` orphan pattern. Not introduced by any S1259-1262 PR. Either remove the pattern from `core/settings.py` or restore the missing `@shared_task`. ~10-line PR.
+
+#### Priority 6 — Hygiene: refresh CLAUDE.md autoblock + agent taxonomy drift
+
+`refresh_doc_inventory_blocks --check` reports CLAUDE.md + AGENTS.md autoblocks WOULD UPDATE (pre-existing drift). `verify_doc_claims --only-drift` reports CLAUDE.md agent taxonomy line says "8 rerouted, 1 blocked" but actual is "9 rerouted, 0 blocked" (CodeGeneratorAgent reclassified) and SERVICES.md file count drift (103 → 362). Combined into one ~15-line hygiene PR.
+
+#### Priority 7 — Employee #4
+
+**Architecturally ready.** Per S1261 close:
+- MissionRunner contract stable (S1259-1262 confirm)
+- Beat migration pattern documented (PR #2747 + migration 0373)
+- Test scaffold reusable (3 existing examples follow consistent structure)
+- Confidence + dedupe + workspace policy disappears from per-employee surface
+- claude_code_tool receipts gap closed — Rigby-led verifications now reliable
+- Estimated cost: 1,990-2,790 LOC, 9-14 hours
+
+**No technical blockers. Awaiting Chris's call on which employee.**
+
+#### Priority 8 — Carryover backlog
+
+| Item | Source | Severity |
+|---|---|---|
+| `_persist_to_summary` 2/3 dup consolidation | S1261 deferred | low — abstraction cost ≈ duplication cost at N=2; reconsider at N=4 |
+| `_resolve_chris_user` generalization in morning_brief | S1261 deferred | low — 1/3 jobs needs User instance; defer to N≥2 |
+| `sync_celery_beat` orphan-handler revert trap (code fix) | S1258 mitigated via migration 0373 | medium — process documentation only; bug still in `sync_celery_beat.py:137-140` |
+| PA tool surface gaps — no celery_inspect_tool, evidence_for_mission needs default-to-latest | S1258 verification | low |
+| `RIGBY.primary_chat_id` contract constant still stale (env override active; cosmetic) | S1252 carryover | low |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low — workaround via `set_status` is reliable |
+
+**~~ Priority 1 from S1262 (claude_code_tool task receipts gap) ~~** — **CLOSED PR #2752.**
+
+---
+
+## SESSION 1262 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSIONS 1259-1261 CLOSED — Employee OS v1 production-validated; Phase 2 foundation block shipped
 
