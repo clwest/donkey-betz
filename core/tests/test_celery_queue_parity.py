@@ -280,3 +280,54 @@ class PlatformAuditTaskRegistrationTests(SimpleTestCase):
             "Without this, build_celery_audit / verify_doc_claims may "
             "fail to see the task at finalize time. See PR 2.2.",
         )
+
+
+class BugTriageTaskRegistrationTests(SimpleTestCase):
+    """Session 1267 PR 4.2 lock-in: Bug Triage Specialist task must
+    register at worker boot.
+
+    Mirrors the S1253 docs-manager + S1257 platform-audit registration
+    tests. Catches both regression shapes:
+      - ``core.tasks_bug_triage`` dropped from ``app.conf.imports``
+      - ``@shared_task`` renamed/removed in tasks_bug_triage.py
+    """
+
+    def test_bug_triage_daily_run_in_registry(self):
+        from celery import current_app
+        current_app.finalize()
+        self.assertIn(
+            'bug_triage_daily_run',
+            current_app.tasks,
+            "bug_triage_daily_run missing from Celery task registry. "
+            "Either core.tasks_bug_triage was removed from "
+            "app.conf.imports in core/celery.py, or the @shared_task "
+            "decorator/name was changed in tasks_bug_triage.py. "
+            "See PR 4.2.",
+        )
+
+    def test_bug_triage_module_pinned_in_app_conf_imports(self):
+        from celery import current_app
+        imports = tuple(current_app.conf.imports or ())
+        self.assertIn(
+            'core.tasks_bug_triage',
+            imports,
+            "'core.tasks_bug_triage' removed from "
+            "core/celery.py:app.conf.imports — worker boots will not "
+            "pick up the @shared_task. See PR 4.2.",
+        )
+
+    def test_bug_triage_task_eager_import_listed(self):
+        """The eager-import hook must include core.tasks_bug_triage
+        so `app.tasks` reads at finalize time see it."""
+        import inspect
+
+        from core.celery import _eager_import_session1115_modules
+
+        source = inspect.getsource(_eager_import_session1115_modules)
+        self.assertIn(
+            "core.tasks_bug_triage", source,
+            "Bug Triage task module missing from the eager-import set "
+            "in core/celery.py:_eager_import_session1115_modules. "
+            "Without this, build_celery_audit / verify_doc_claims may "
+            "fail to see the task at finalize time. See PR 4.2.",
+        )

@@ -1195,14 +1195,25 @@ BUG_TRIAGE_JOB = JobContract(
     ),
 
     # ── Evidence tables (Rigby SIGN D7 — includes LLMCallEvent +
-    # CeleryTaskEvent; no FailureDetection reference) ──────────────
+    # CeleryTaskEvent; no FailureDetection reference)
+    #
+    # Session 1267 PR 4.2 SIGN-WITH-EDITS update: step 6 ships
+    # deterministic markdown synthesis in v0 (no LLM call), so the
+    # LLMCallEvent line is softened from "from gpt-5.2 synthesis"
+    # to "only when LLM-augmented synthesis is enabled" so the
+    # contract stays honest about the current evidence shape. The
+    # LLMCallEvent reference remains so a future v1 that adds LLM
+    # recommendations doesn't need a contract update. ────────────────
     evidence_tables=(
         "OpsRun (domain=mission, run_kind=bug_triage_daily)",
         "OpsRunEvent (one per triage step + verdict_issued + "
         "authority_contract_observed)",
         "CeleryTaskEvent (source-of-truth for celery failure rows "
         "read in step 1)",
-        "LLMCallEvent (from gpt-5.2 synthesis in step 6)",
+        "LLMCallEvent (only when LLM-augmented synthesis is "
+        "enabled; v0 step 6 is deterministic markdown so this "
+        "table is unused per run — kept for forward compat with "
+        "v1 LLM-augmented recommendations)",
         "ToolCallRecord (from each triage helper tool invocation "
         "if any)",
         "Deliverable (triage report — created on every run, not "

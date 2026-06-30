@@ -576,6 +576,18 @@ class MissionRunnerConfig:
     # and falls back to ``primary_chat_id`` if the setting is empty.
     pin_settings_key: Optional[str] = None
 
+    # Session 1267 — Bug Triage opt-out for server-side verdict
+    # emission. Default True preserves prior behavior (Documentation
+    # Manager, Platform Auditor, Chief of Staff all auto-certify). When
+    # False, ``_run_mission`` still flips ``OpsRun.status`` to
+    # passed/failed + sets ``finished_at`` so the mission lifecycle
+    # completes, but skips the ``emit_mission_verdict`` call — no
+    # ``OpsRunEvent(label='verdict_issued:*')`` row is written.
+    # Certification stays with Rigby/human via the PA tool path, which
+    # writes the verdict_issued row when it eventually fires. Used by
+    # the Bug Triage Specialist per Rigby SIGN D1 (S1266 discovery).
+    auto_emit_verdict: bool = True
+
 
 # ── MissionRunner class ──────────────────────────────────────────────
 
@@ -1085,37 +1097,51 @@ class MissionRunner:
             )
             summary_acc.update(escalation_response)
             self._persist_summary(mission, summary_acc)
-            verdict_response = self._emit_terminal_verdict(
-                mission_id=mission.id,
-                verdict=VERDICT_REJECTED,
-                confidence=self.config.confidence_failure,
-                evidence_refs=[
-                    f"deliverable:{escalation_response.get('escalation_deliverable_id', '')}",
-                    f"ops_run:{mission.id}",
-                ],
-                notes=(
-                    f"Cascade failed at {failed_step_name}. "
-                    "See escalation deliverable for full evidence."
-                ),
+            terminal_verdict = VERDICT_REJECTED
+            terminal_confidence = self.config.confidence_failure
+            terminal_evidence_refs = [
+                f"deliverable:{escalation_response.get('escalation_deliverable_id', '')}",
+                f"ops_run:{mission.id}",
+            ]
+            terminal_notes = (
+                f"Cascade failed at {failed_step_name}. "
+                "See escalation deliverable for full evidence."
             )
         else:
-            confidence = (
+            terminal_verdict = VERDICT_CERTIFIED
+            terminal_confidence = (
                 self.config.confidence_success_degraded
                 if summary_acc["degraded_evidence"]
                 else self.config.confidence_success_full
             )
+            terminal_evidence_refs = None
+            terminal_notes = (
+                "Cascade completed cleanly. "
+                + (
+                    "Evidence degraded — counts incomplete."
+                    if summary_acc["degraded_evidence"]
+                    else "All counts captured."
+                )
+            )
+
+        # Session 1267: opt-out path for server-side verdict emission
+        # (Bug Triage v0 per Rigby SIGN D1). When auto_emit_verdict is
+        # False, MissionRunner still flips OpsRun.status + finished_at
+        # so the mission lifecycle completes, but skips the
+        # verdict_issued OpsRunEvent + emit_mission_verdict call.
+        # Rigby/human writes the actual verdict_issued row later via
+        # the PA tool path.
+        if self.config.auto_emit_verdict:
             verdict_response = self._emit_terminal_verdict(
                 mission_id=mission.id,
-                verdict=VERDICT_CERTIFIED,
-                confidence=confidence,
-                notes=(
-                    "Cascade completed cleanly. "
-                    + (
-                        "Evidence degraded — counts incomplete."
-                        if summary_acc["degraded_evidence"]
-                        else "All counts captured."
-                    )
-                ),
+                verdict=terminal_verdict,
+                confidence=terminal_confidence,
+                evidence_refs=terminal_evidence_refs,
+                notes=terminal_notes,
+            )
+        else:
+            verdict_response = self._flip_status_without_verdict(
+                mission=mission, terminal_verdict=terminal_verdict,
             )
 
         mission.refresh_from_db()
@@ -1524,6 +1550,35 @@ class MissionRunner:
                 mission_id, type(exc).__name__, exc,
             )
             return {"verdict": None, "error": str(exc)}
+
+    # ── Status-only flip (auto_emit_verdict=False path, S1267) ───────
+
+    def _flip_status_without_verdict(
+        self, *, mission, terminal_verdict: str,
+    ) -> Dict[str, Any]:
+        """Flip OpsRun.status to passed/failed without emitting verdict.
+
+        Session 1267: used when ``MissionRunnerConfig.auto_emit_verdict
+        is False`` (Bug Triage Specialist v0 per Rigby SIGN D1). The
+        mission lifecycle still completes (terminal status, finished_at
+        set), but no ``OpsRunEvent(label='verdict_issued:*')`` row is
+        written here — certification stays with Rigby/human via the PA
+        tool path which writes the verdict_issued row when it
+        eventually fires.
+
+        Idempotent: only flips from ``running``; terminal statuses are
+        preserved (matches ``emit_mission_verdict`` semantics).
+        """
+        verdict_to_status = {
+            VERDICT_CERTIFIED: "passed",
+            VERDICT_REJECTED: "failed",
+        }
+        new_status = verdict_to_status.get(terminal_verdict)
+        if mission.status == "running" and new_status:
+            mission.status = new_status
+            mission.finished_at = timezone.now()
+            mission.save(update_fields=["status", "finished_at"])
+        return {"verdict": None, "status_set": True}
 
     # ── Resolution helpers ───────────────────────────────────────────
 
