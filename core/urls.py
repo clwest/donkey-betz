@@ -4181,6 +4181,34 @@ from core.views_human_interface import get_human_interface_urls
 urlpatterns += get_human_interface_urls()
 
 # =========================================================================
+# Session 1265 P1: Read-only Employee/Mission HTTP API (IsAdminUser gated)
+# Wraps the same helpers employee_tool and derive_status/evidence_for_mission
+# already use. No new logic, no new models.
+# =========================================================================
+from core.views_employee_api import (
+    employee_list,
+    employee_detail,
+    employee_job_status,
+    mission_detail,
+    mission_evidence,
+)
+urlpatterns += [
+    path('api/employees/', employee_list, name='employee-list'),
+    path('api/employees/<str:handle>/', employee_detail, name='employee-detail'),
+    path(
+        'api/employees/<str:handle>/jobs/<str:job_key>/status/',
+        employee_job_status,
+        name='employee-job-status',
+    ),
+    path('api/missions/<uuid:mission_id>/', mission_detail, name='mission-detail'),
+    path(
+        'api/missions/<uuid:mission_id>/evidence/',
+        mission_evidence,
+        name='mission-evidence',
+    ),
+]
+
+# =========================================================================
 # Session 764: Orchestration Layer API (Multi-Agent Workflow Execution)
 # =========================================================================
 from core.views_orchestration import get_urlpatterns as get_orchestration_urls
