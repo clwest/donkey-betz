@@ -165,11 +165,24 @@ If 1 → V14 green; if 0 → check `celery-beat` worker is running, then check `
 
 After V14 green, surface should include: a new Bug Triage Deliverable in the Donkey Betz workspace, 7 step_pass + 0 verdict_issued OpsRunEvents on the new mission, a third `authority_contract_observed` event (extends S1264 baseline N=2 → N=3), and a shift-report DM in the inbox UI.
 
-### Priority 1 — F1 from S1266 audit (Platform Auditor has no scheduled cadence)
+### Priority 1 — F1 from S1266 audit (Platform Auditor has no scheduled cadence) — **fully scoped post-S1267-close**
 
-Now that Employee #4 closes and the beat-row pattern is proven twice (docs cascade + Bug Triage), the natural next hygiene item is to seed `PeriodicTask(name='platform_auditor_run', enabled=False)` then a follow-up flip-to-enabled migration. Same 2-PR shape as PR 4.2/4.3. Cadence proposal in the S1266 handoff: Monday 06:30 Denver weekly — confirm with Rigby/Chris before opening.
+After-close discovery turn (Rigby task `7e75fc41`, pin `pa-01e90a1d36f54880`) verified F1 + locked the design questions. Implementation can land on S1268 open without further discovery.
 
-**Estimated footprint:** ~50 LOC migration + ~50 LOC follow-up migration. ~1 hour of work if cadence is pre-locked.
+**Locked cadence (Rigby SIGN-WITH-EDITS):** Sunday 06:30 America/Denver weekly. Picked over the JobContract's stale "Monday 06:30 local" proposal (which collides with `rigby_documentation_manager_daily` at 06:30 Mon-Fri). Rationale: zero-collision pre-week slot; audit lands before Monday morning brief references it; PA is observational (read-only docs/integration/env/model probes) so 2-day staleness on Friday's verdicts is mild. Cron: `minute=30 hour=6 day_of_week=0 timezone='America/Denver'`.
+
+**Locked sequencing (Rigby SIGN):** Same-day 2 PRs, Bug Triage pattern. Gate the second PR on a manual PA run + verify expected OpsRunEvents + Audit Deliverable before flipping enabled=True.
+
+**Implementation scope:** 2 migrations, ~140 LOC total. **Zero code changes** — `platform_auditor_run` `@shared_task` is already wired (S1257 PR 2.2), `_RUN_NOW_TASKS` already has the `('platform_auditor', 'platform_audit')` entry, `PlatformAuditTaskRegistrationTests` in `test_celery_queue_parity.py` already locks discoverability. Only the beat row is missing.
+
+| File | Purpose | Est. LOC |
+|---|---|---|
+| `core/migrations/0377_session_1268_seed_platform_auditor_beat.py` | seeds `PeriodicTask(name='platform_auditor_run', enabled=False)` at Sun 06:30 Denver — mirrors `0375` shape exactly | ~85 |
+| `core/migrations/0378_session_1268_flip_platform_auditor_beat_enabled.py` | flips `enabled=False → True` after V13-equivalent manual run — mirrors `0376` shape exactly | ~55 |
+
+**Verification gates:** V1 = migration 0377 applies + row at enabled=False; V2 = `build_platform_audit_runner().run()` produces clean 5-step audit + Audit Deliverable; V3 = migration 0378 flips enabled=True; V4 = first Sunday 06:30 fire produces new OpsRun + Audit Deliverable. **V2 is exercisable immediately after 0377 merge** — no need to wait for cron.
+
+**Estimated effort:** ~30 min focused work + Rigby SIGN turnaround per PR.
 
 ### Priority 2 — Authority warn-mode baseline accrual (passive)
 
