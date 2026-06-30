@@ -131,7 +131,98 @@ Latest update should reflect today's date. DocumentEmbedding count should have g
 ---
 
 
-## SESSION 1263 — CURRENT ENTRY POINT
+## SESSION 1264 — CURRENT ENTRY POINT
+
+### SESSION 1263 CLOSED — Duplicate Claude Code Agent row consolidated; root-cause synthesizer fix shipped
+
+**Session window:** 2026-06-30 (continuation of S1259-1262 single-day arc, same Rigby conversation `pa-85960cfecf5e42d5`).
+**Full handoff:** [`SESSION_1263_CLAUDE_CODE_AGENT_ROW_CONSOLIDATION.md`](docs/handoffs/SESSION_1263_CLAUDE_CODE_AGENT_ROW_CONSOLIDATION.md).
+
+**TL;DR:** The S1262 `[CLAUDE_CODE_AGENT_DUP]` WARN that fired on every dispatch is closed. Migration `0374` re-pointed 12 historical FK references (7 AgentExecution + 1 AgentDream + 4 AgentMemory) from the duplicate `ClaudeCode` row to canonical `claude-code` + normalized 7 `owner_agent` strings + deleted the dup. Root-cause fix at `deliverable_factory._synthesize_pa_execution_receipt:697` (canonicalizes `agent_name` before `Agent.objects.get_or_create`) prevents future re-creation. Two mgmt commands updated to write the canonical string. Discovery → Rigby Phase 1 SIGN-WITH-EDITS → implementation → 7 new tests + 79 regression tests → live verification → Rigby Phase 4 SIGN → admin-merge → post-merge prod-verified, all one session.
+
+**Session 1263 PR (admin-merged):**
+
+| PR | Type | Scope | Merge SHA |
+|---|---|---|---|
+| [#2754](https://github.com/clwest/donkey-betz-platform/pull/2754) | fix | Migration 0374 + deliverable_factory canonicalization + 2 mgmt command string fixes; 5 files, +458/-7 | `f1af8c54` |
+
+**Headline outcomes:**
+
+- **One canonical Agent identity remains active** (`claude-code`). The duplicate is gone.
+- **All 12 historical FK references preserved** via re-pointing; the 7 S1187 Recon AgentExecution rows are still queryable under the canonical row with intact task titles.
+- **Zero `[CLAUDE_CODE_AGENT_DUP]` WARN** since the migration applied.
+- **Root cause closed at the source.** The synthesizer can't respawn the row from `'ClaudeCode'` writes anymore.
+- **Defensive safety gate** in the migration enumerates ALL reverse-FK relations (not just the 3 expected) and refuses to delete if any residual ref exists — catches future-model surprises without orphaning history.
+
+**Key lesson — synthesizers must canonicalize at write.** S1226 migration 0365 normalized `Deliverable.agent_name` STRINGS but never touched the `Agent` table. Meanwhile `deliverable_factory._synthesize_pa_execution_receipt` kept materializing Agent rows from caller-supplied alias names. Pattern worth applying to any future synthesizer that creates objects from arbitrary input strings.
+
+### FIRST THING Session 1264
+
+#### Priority 0 — Pre-existing SLO breaches (carryover from S1260, unchanged)
+
+`ops_tool action=overview window=30d` reports:
+- **`agent_timeout_rate` 0.024284** vs target 0.002 (**12× over** — 28 timeouts / 1153 agent calls / 30d)
+- **`celery_task_success_rate` 0.998825** vs target 0.999 (marginally under — 53 failures / 45,104 tasks / 30d)
+
+Investigate root causes. Likely candidates: specific agent timeouts, worker memory pressure, network instability.
+
+#### Priority 1 — MissionRunner `authority_check_fn` preflight hook (warn-mode)
+
+S1260 P4 recommendation; deferred from S1261. `JobContract.authority` dict + `prohibited_actions` tuple have zero runtime readers. At N=3 employees this is tolerable; at N=20 it would be malpractice.
+
+**Smallest fix:** optional `authority_check_fn` parameter to MissionRunner.__init__, call once at preflight (before any steps), log violations as `OpsRunEvent(label="authority_violation_observed")` but don't block. Two-PR arc: (1) param + no-op default; (2) wire warn-mode validator reading `JobContract.prohibited_actions`. Enforce-mode flip is a separate later PR after 2 weeks of clean warn-mode telemetry on N≥4 employees.
+
+#### Priority 2 — Read-only Employee/Mission HTTP API
+
+S1260 P5: 5 endpoints over existing model + `core/employees/status.py`:
+- `GET /api/employees/`
+- `GET /api/employees/<handle>/`
+- `GET /api/employees/<handle>/jobs/<job_key>/status/`
+- `GET /api/missions/<id>/`
+- `GET /api/missions/<id>/evidence/`
+
+~250 LOC Django views + serializers + tests. Removes LLM dependency for routine status reads.
+
+#### Priority 3 — Hygiene: orphan route in `CELERY_TASK_ROUTES`
+
+Pre-existing test failure: `test_every_route_pattern_matches_a_registered_task` reports `content.*` orphan pattern. Not introduced by any S1259-1263 PR. ~10-line PR.
+
+#### Priority 4 — Hygiene: refresh CLAUDE.md autoblock + agent taxonomy drift
+
+`refresh_doc_inventory_blocks --check` reports CLAUDE.md + AGENTS.md autoblocks WOULD UPDATE. `verify_doc_claims --only-drift` reports CLAUDE.md agent taxonomy "8 rerouted, 1 blocked" vs actual "9 rerouted, 0 blocked" and SERVICES.md file count drift (103 → 362). Combined ~15-line hygiene PR.
+
+#### Priority 5 — Employee #4
+
+**Architecturally ready.** Per S1261 close + S1262 receipts pipeline + S1263 consolidation:
+- MissionRunner contract stable
+- Beat migration pattern documented
+- Test scaffold reusable
+- Per-employee policy disappears from boilerplate
+- Receipts pipeline + Agent row hygiene clean
+- Estimated cost: 1,990-2,790 LOC, 9-14 hours
+
+**No technical blockers. Awaiting Chris's call on which employee.**
+
+#### Priority 6 — Future S1263 follow-up (defensive)
+
+Shrink `_CLAUDE_CODE_AGENT_NAMES = ('claude-code', 'ClaudeCode')` → `('claude-code',)` in `claude_code_engineer.py:63` after 1+ week of clean operation confirms no re-creation paths. ~3-line PR. Kept the fallback this cycle per Rigby Phase 1 SIGN-WITH-EDITS edit #3.
+
+#### Priority 7 — Carryover backlog
+
+| Item | Source | Severity |
+|---|---|---|
+| `_persist_to_summary` 2/3 dup consolidation | S1261 deferred | low — abstraction cost ≈ duplication cost at N=2 |
+| `_resolve_chris_user` generalization in morning_brief | S1261 deferred | low |
+| `sync_celery_beat` orphan-handler revert trap (code fix) | S1258 mitigated via migration 0373 | medium — code fix deferred |
+| PA tool surface gaps — no celery_inspect_tool, `evidence_for_mission` default-to-latest | S1258 verification | low |
+| `RIGBY.primary_chat_id` contract constant still stale | S1252 carryover | low — cosmetic |
+| `Deliverable.create` defaults-to-completed upstream fix | S1252 carryover | low — `set_status` workaround reliable |
+
+**~~ Priority 1 from S1262 close (consolidate duplicate `claude-code`/`ClaudeCode` Agent rows) ~~** — **CLOSED PR #2754.**
+
+---
+
+## SESSION 1263 — PRIOR ENTRY POINT (preserved for context)
 
 ### SESSION 1262 CLOSED — Claude Code task receipt reliability fixed (S1257 P1 gap closed)
 
