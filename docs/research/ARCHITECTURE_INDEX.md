@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-06-30 (v3 — added §1.6 Symbol Mapping research and §1.7 Actor Identity research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1; roadmap advanced through STAGE 1 + STAGE 1b to new STAGE 2 Authority Enforcement Design Space)
+last_verified: 2026-06-30 (v4 — added §1.8 Authority Enforcement Design Space research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1; roadmap advanced through STAGE 2 to new STAGE 3 Symbol Mapping Option Selection Design; maintenance note added that Authority Enforcement remains design-space only, not implementation) — prior v3 added §1.6 Symbol Mapping + §1.7 Actor Identity
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -370,6 +370,88 @@ based reading paths).
   at least executor_actor / sponsor_actor / principal_user as
   distinct roles.
 
+### 1.8 `authority_enforcement_design_space.md`
+
+- **Title.** Authority Enforcement Design Space — Architectural
+  Discovery
+- **Purpose.** The design-space research that must precede any
+  enforce-mode PR. Symbol Mapping (S1270) answered WHAT action;
+  Actor Attribution (S1271) answered WHO acted; this doc asks:
+  given both prereqs are shipped as research, what are the
+  possible ways the platform could eventually decide whether an
+  actor was allowed to perform a mapped action? Enumerates the
+  design space so a downstream design-with-Chris-gate mission
+  can consume it. **Design-space only — no implementation,
+  no decision.**
+- **Status.** Draft → Active (SIGN-with-edits from Rigby S1272
+  conversation `pa-cbcc410b32714f60`; **Medium confidence**;
+  8 must-fix edits folded — §3 gained 3 first-class boundaries
+  (WebSocket, Fleet, Spider) closing a completeness gap Rigby
+  flagged as "biggest architectural risk"; §9.0 neutrality
+  guardrail; §9.1 + §9.2 annotation-burden failure modes;
+  §9.6 policy-ossification risk; §8.4 rephrased separating
+  prevent-modes from audit/warn modes; §10 Tier-0 hazards
+  callout naming #1 + #8 + #15 as disproportionately-high
+  blast radius; §6.1 role-propagation rule of thumb;
+  §14 P0/P1 dependency-not-preference semantics + §14.2
+  (i)/(ii) split.
+- **Research type.** Design-Space Research + Platform-Wide
+  Inventory + Composition Analysis + Failure Analysis
+  (composite — first mission carrying design-space content per
+  §9 STAGE 2 pacing note; still research-only, not design
+  decision).
+- **Primary questions answered.**
+  - Q1–Q12 from the mission spec, answered explicitly in the
+    doc's §15.1.
+  - What are the 24 current enforcement-adjacent inputs
+    (13 RUNTIME-VERIFIED / 7 OBSERVATION-ONLY / 3 ASPIRATIONAL
+    / 1 UNKNOWN + 8 GAPS)?
+  - What are the 20 candidate enforcement boundaries
+    (17 original + 3 SIGN-added: WebSocket, Fleet, Spider)?
+  - What are the 12 enforcement modes and their 204-cell
+    (17×12) mode × boundary compatibility matrix?
+  - What are the 4 interpretations per AuthorityLevel value
+    (16 total; §5)?
+  - How do executor_actor / sponsor_actor / principal_user
+    compose across 11 canonical scenarios (§6)?
+  - How does authority enforcement compose with the 4 governance
+    planes (§7; 1 existing cross-plane touch + 8 new
+    composition questions)?
+  - Which historical incidents would each mode have prevented
+    (33-incident matrix across 4 prior catalogs; §8)?
+  - What are the 6 major design options (A-F; §9)?
+  - What are the 15 anti-patterns to avoid (§10; Tier-0
+    hazards flagged)?
+  - What are the 15 prerequisites for enforce-mode and their
+    dependency DAG (§11)?
+- **Dependencies.** §1.6 (Symbol Mapping — WHAT input premise),
+  §1.7 (Actor Attribution — WHO input premise), §1.4
+  (governance planes), §1.1, §1.3;
+  `PLATFORM_INVENTORY.md`; `EMPLOYEE_OS_PRIMITIVES.md`;
+  `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`.
+- **Recommended next reads.** §14.1 recommends Symbol Mapping
+  Option Selection Design as P0 next research. The 6 design
+  options in §9 will be consumed by that downstream mission +
+  the Authority Enforcement Design Decision that follows it.
+- **Overall importance.** Mandatory reading for anyone scoping
+  authority enforcement, evaluating one of the 6 §9 design
+  options, proposing an OpsRun schema change, or wiring a new
+  enforcement boundary. **F1 is especially load-bearing:**
+  AuthorityLevel has exactly one runtime consumer today
+  (shape-counter at `mission_runner.py:864-867`) — the enum is
+  policy metadata, not enforcement metadata; any design
+  introduces the first decision-making consumer. **F8 fail-open
+  precedent is the second load-bearing finding:** LLMEnforcer
+  at `llm_enforcer.py:237-238` sets the platform's precedent
+  for INLINE-gate error handling — any authority enforcement
+  design must decide fail-open vs. fail-closed and cite
+  rationale.
+- **Boundary caveat.** The 3 SIGN-added boundaries
+  (WebSocket / Fleet / Spider) are named but not yet
+  cross-tabulated against the 12 modes in the 204-cell matrix.
+  A future research pass or design mission should extend the
+  matrix.
+
 ---
 
 ## 2. Recommended Reading Paths
@@ -528,8 +610,9 @@ is still missing, and current maturity.
 | **Employee OS — core** | §1.1, §1.2, §1.3 | EMPLOYEE_OS_PRIMITIVES.md; topics/employee-os.md | (none today; covered by §1.1 + §1.3) | **High** — 4 production employees, fully audited |
 | **Mission System (MissionRunner)** | §1.3 (§2 row 19, §3.9, §6) | mission_runner.py (1758 lines); jobs.py:74-162 | Dedicated MissionRunner architecture doc (could lift from §1.3's flow + reuse rows) | **High** — production for 4 employees |
 | **Governance** | §1.4 (full audit; 4 planes documented) + §1.3 (§2 rows 55-56) | models_governance.py | (well-covered; downstream is Cross-plane Composition — see §5.4) | **Medium-High** — primitives fully audited; freeze/safe_mode wired; KillSwitch enforcement missing |
-| **Authority** | §1.4 (full audit; 68 entries / 30 prohibited / 35 gates) + §1.3 (§2 row 26 + §10 Q11) + §1.6 (Symbol Mapping — 57 unique action strings; 5 mapping options; 20 enforcement boundaries) + §1.7 (Actor Attribution — WHO composes with WHAT) | mission_runner.py:258-275 (S1264 warn-mode); jobs.py:41-52 (AuthorityLevel) | **Authority Enforcement Design Space** (recommended P0 next per §1.7 §13.1 — composes §1.6 + §1.7 into an actual enforcement gate) | **Medium** — both prereqs shipped as research (S1270 + S1271); runtime enforcement design pending |
-| **Actor Identity / Attribution** | §1.7 (full audit; 19 identity concepts; 22 attribution surfaces; 15 historical failures; 25 identity registries; F11 executor/sponsor/principal role vocabulary) | `AIEmployee` (jobs.py:73-92); `UnifiedUser` (models/base/models.py:86); `_resolve_runs_as_user_id` (mission_runner.py:1585-1591); `canonicalize_agent_name` (deliverable_aliases.py:39-47) | (§1.7 F1: OpsRun has no user FK — largest attribution gap; downstream design gated by §5.2b Authority Enforcement Design Space) | **Medium** — mixed strong-FK / ambiguous-CharField attribution; role vocabulary proposed but not schema-enforced |
+| **Authority** | §1.4 (full audit; 68 entries / 30 prohibited / 35 gates) + §1.3 (§2 row 26 + §10 Q11) + §1.6 (Symbol Mapping — 57 unique action strings; 5 mapping options; 20 enforcement boundaries) + §1.7 (Actor Attribution — WHO composes with WHAT) + §1.8 (Authority Enforcement Design Space — 24 inputs / 20 boundaries / 12 modes / 6 options A-F / 33 incidents / 15 anti-patterns / 15 prereqs) | mission_runner.py:258-275 (S1264 warn-mode); jobs.py:41-52 (AuthorityLevel); llm_enforcer.py:200-262 (fail-open precedent) | **Symbol Mapping Option Selection Design** (recommended P0 next per §1.8 §14.1 — pick from §1.6's 5 options + Chris gate) | **Medium-High** — all three prereqs shipped as research (S1270 + S1271 + S1272); no design decision yet; enforcement remains observation-only |
+| **Actor Identity / Attribution** | §1.7 (full audit; 19 identity concepts; 22 attribution surfaces; 15 historical failures; 25 identity registries; F11 executor/sponsor/principal role vocabulary) | `AIEmployee` (jobs.py:73-92); `UnifiedUser` (models/base/models.py:86); `_resolve_runs_as_user_id` (mission_runner.py:1585-1591); `canonicalize_agent_name` (deliverable_aliases.py:39-47) | (§1.7 F1: OpsRun has no user FK — largest attribution gap; downstream design gated by Symbol Mapping Option Selection per §1.8 §14.1) | **Medium** — mixed strong-FK / ambiguous-CharField attribution; role vocabulary proposed but not schema-enforced |
+| **Authority Enforcement (design space)** | §1.8 (full design-space discovery; 6 options A-F; 12 modes; 15 anti-patterns; 15-prereq DAG) | S1264 warn-mode; LLMEnforcer fail-open pattern; MissionRunner `_emit_authority_contract_event` | Symbol Mapping Option Selection Design + downstream Authority Enforcement Design Decision (Chris-gated per §1.8 §14.3) | **Design-space only** — no runtime enforcement designed yet; **maintenance note:** enforce-mode requires §14.1 P0 selection first; do not treat §1.8 options as implementable without downstream Chris-gated design decision |
 | **Communication (employee comms)** | §1.1 (full); §1.2 (specific path) | comms.py, comms_docs_manager.py, EMPLOYEE_OS_PRIMITIVES.md §4.7 | Inter-employee reply lane (§1.3 F4); cross-fleet messaging | **Medium** — outbound shift reports work; inter-employee design sketched but not built |
 | **Messaging (raw substrate)** | §1.1 (§2 rows 35-37); §1.3 (§2 row 36) | models_messaging.py:21-141 | inbox UI semantics for `thread_kind='inter_employee_notice'` (frontend ticket, not research) | **High** — substrate is production |
 | **Memory (employee / agent)** | (none in research library) | core/models_agent_memory.py | **Memory Architecture research doc** — esp. how do employees remember each other's past verdicts? | **Low / UNKNOWN** — no research yet |
@@ -618,21 +701,35 @@ each downstream doc assumes its upstream context.
                                                  │
                                                  ▼
                                 ┌──────────────────────────────────┐
+                                │  research/authority_enforcement_ │
+                                │  design_space.md  [§1.8]         │
+                                │  (24 inputs; 20 boundaries; 12   │
+                                │  modes; 6 options A-F; 15 anti-  │
+                                │  patterns; 15-prereq DAG; Rigby  │
+                                │  pressure-test SIGN-with-edits   │
+                                │  S1272 — 3 SIGN-added boundaries │
+                                │  WebSocket/Fleet/Spider)         │
+                                └────────────────┬─────────────────┘
+                                                 │
+                                                 ▼
+                                ┌──────────────────────────────────┐
                                 │  [Future research mission —      │
-                                │  recommended P0 per §1.7 §13.1]  │
-                                │  Authority Enforcement Design    │
-                                │  Space (composes §1.6 WHAT +     │
-                                │  §1.7 WHO into an actual         │
-                                │  enforcement gate design)        │
+                                │  recommended P0 per §1.8 §14.1]  │
+                                │  Symbol Mapping Option Selection │
+                                │  Design (picks from §1.6's 5     │
+                                │  options; Chris gate; converts   │
+                                │  research to design decision)    │
                                 └────────────────┬─────────────────┘
                                                  │
                                                  ▼
                                 ┌──────────────────────────────────┐
                                 │  [Further future research —      │
                                 │  see §9 roadmap]                 │
-                                │  Trust Propagation · Memory ·    │
-                                │  Mission Composition · Cross-    │
-                                │  Employee Scheduling · …         │
+                                │  Actor Role Propagation ·        │
+                                │  Authority Enforcement Design    │
+                                │  Decision · Trust Propagation ·  │
+                                │  Memory · Mission Composition ·  │
+                                │  Cross-Employee Scheduling · …   │
                                 └──────────────────────────────────┘
 ```
 
@@ -718,26 +815,69 @@ day rather than deferred.
 **Successor gap:** Authority Enforcement Design Space (see
 §5.2b below).
 
-### 5.2b Authority Enforcement Design Space (P0 — recommended next per §1.6 + §1.7)
+### 5.2b Authority Enforcement Design Space — CLOSED S1272
 
-- **Why it matters.** Both prereqs shipped as research (§1.6
-  Symbol Mapping = WHAT action; §1.7 Actor Attribution = WHO
-  acted). Neither is sufficient alone for enforcement. This
-  mission composes both into a design proposal: at which
-  layer(s) does an authority check fire? What data does it
-  need at that layer? What does it do on mismatch?
-- **Priority.** P0. Both S1270 and S1271 SIGN reviews named
-  this as the next mission. §1.7 §13.1 explicitly warns
-  against jumping to "OpsRun.user field" as implementation-
-  first — must consume §1.7 §8.5's 3-role vocabulary first.
-- **Dependencies.** §1.6 (5 mapping options + 20 boundaries),
-  §1.7 (17 boundaries + 3-role vocabulary + attribution class
-  distribution), §1.4 (35 existing gates + 4 governance planes).
-- **Expected outcome.** A design-space enumeration (like §1.6
-  §5's option format) for enforcement, with tradeoffs,
-  migration cost, composition semantics across the four
-  governance planes, and role-clarity constraints. **Not a
-  design decision** — Chris gates that.
+**Closed by:** `docs/research/authority_enforcement_design_space.md`
+(§1.8). Research shipped 2026-06-30; Rigby pressure-test
+SIGN-with-edits folded (Medium confidence). 24 current
+enforcement inputs classified; 20 candidate enforcement
+boundaries (17 original + 3 SIGN-added: WebSocket / Fleet /
+Spider); 12 enforcement modes with existing production
+precedents for 8; 6 major design options A-F enumerated
+neutrally (MissionRunner-centered / ToolDispatcher-centered /
+Audit-first / Human-approval / Multi-layer / Governance-plane
+composition); 33-incident historical matrix; 15 anti-patterns
+(3 flagged as Tier-0 hazards: blocking all model writes,
+enforcement before symbol mapping, silent enforcement); 15
+prerequisites forming DAG (critical path Symbol Mapping →
+Evidence Schema → Violation Event → Fallback → Layer choice →
+Test Coverage + Human Review → Rollback → Per-Employee Opt-In →
+Metrics Window → Trust + FP Thresholds). Named Symbol Mapping
+Option Selection Design as the recommended P0 next research
+per §14.1.
+
+**Maintenance note:** §1.8 is **design-space research only**.
+The 6 options A-F are enumerated for future consumption; none
+is designated for implementation. Do not treat §1.8 as an
+implementation greenlight — the downstream Authority
+Enforcement Design Decision mission (see §14.3 in that doc)
+requires Chris gate.
+
+**Successor gap:** Symbol Mapping Option Selection Design (see
+§5.2c below) — the first mission where the design space
+narrows to a specific selection.
+
+### 5.2c Symbol Mapping Option Selection Design (P0 — recommended next per §1.8 §14.1)
+
+- **Why it matters.** §1.8 F6 (33-incident cluster of 7 —
+  "Authority Symbol Mapping Gap") + F9 (Symbol Mapping choice
+  constrains enforcement mode choice: Option E enables only
+  5 of 12 modes; Options A/B/C/D enable all 12) + F11
+  (15 prereqs form DAG with Symbol Mapping at critical-path
+  root) all identify Symbol Mapping choice as the load-bearing
+  predecessor to any enforcement design decision.
+- **Priority.** P0. §1.8 §14.1 explicitly names this as the
+  next mission. Rigby SIGN-clean on the ranking at S1272
+  review.
+- **Dependencies.** §1.6 (5 mapping options A-E enumerated),
+  §1.7 (3-role vocabulary must be consumed), §1.8 (20
+  boundaries + 12 modes + option compatibility matrix). No
+  other dependencies.
+- **Expected outcome.** A design decision doc (not a research
+  doc) with Chris ratification. Should:
+  - Evaluate the 5 §1.6 options against §1.8's 20 boundaries,
+    12 modes, and 6 §9 design options
+  - Recommend a v0 option (one, or hybrid) with explicit
+    reversibility story
+  - Identify the smallest reversible design that unlocks
+    authority telemetry and future enforcement without
+    overbuilding
+  - Enumerate what must remain out-of-scope for v0 (per S1264
+    "smallest honest thing" pattern)
+  - Rigby SIGN review at close
+  - **Chris gates the actual selection.**
+- **Type.** Design decision — second design mission in the
+  STAGE 2/3 arc per §9 pacing note.
 
 ### 5.3 Trust Propagation Model (P1)
 
@@ -958,6 +1098,12 @@ matrix or re-introduces a closed failure class.
 | **Any code using `runs_as_username` or `_resolve_runs_as_user_id`** | §1.7 §2.4 + §1.7 F3 (silent-None on missing User) + §1.7 F11 (this is a principal_user selector, NOT the executor_actor) — treating it as "actor" is a documented anti-pattern |
 | **Duplicate Agent row risk** (any new agent-creation site) | §1.7 F5 (recurring failure class per S1263 PR #2754 + migration 0374) + `deliverable_aliases.py:33-47` (`canonicalize_agent_name` + `AGENT_NAME_ALIASES`) — must canonicalize at write time |
 | **PA tool actor / user context propagation** | §1.7 §7 (17 boundaries; F6 identifies 3 structural drop points) + §1.6 §6 (20 symbol boundaries) + `tool_dispatcher.py:687-720` (`AssistantProfile.get_allowed_tools` is the ONLY canonical-actor gate today per §1.7 F7) |
+| **Any authority enforcement idea** | §1.8 §9 (6 options A-F evaluated neutrally) + §1.8 §10 (15 anti-patterns incl. Tier-0 hazards) + §1.8 §11 (15-prereq DAG) — DO NOT ship enforce-mode before §5.2c Symbol Mapping Option Selection lands + Chris gates |
+| **`AuthorityLevel` enum usage anywhere new** | §1.8 F1 — enum has exactly 1 runtime consumer today (shape-counter at `mission_runner.py:864-867`); adding decision-making consumer is a design-decision-scoped change |
+| **New enforcement gate (INLINE)** | §1.8 F8 (LLMEnforcer fail-open precedent at `llm_enforcer.py:237-238`) + §1.8 §11 prereq #5 (fallback behavior must be explicit) — cite fail-open vs. fail-closed rationale |
+| **Adding action_class to any audit model** | §1.8 §11 prereq #3 (Evidence Event Schema) + §11 prereq #4 (Violation Event Schema) — schema shape must precede any model migration |
+| **WebSocket / Fleet / Spider handler that touches employee-scoped work** | §1.8 §3 rows 18-20 (added per Rigby SIGN pressure-test) — these boundaries are named but not yet mode-tabulated; design mission scope |
+| **Cross-plane governance interaction (authority × autonomy × budget × human)** | §1.8 §7.5 (8 new composition questions) + §1.4 F1 (planes don't compose today) — this is deferred future research per §1.8 §14.4 |
 | **KillSwitch (arming, status, enforcement)** | §1.4 §2.1 row 2 + §1.4 §4.6 (UNKNOWN row) + §1.4 §8 F3 (write-only finding) — DO NOT assume KillSwitch blocks dispatch today |
 | **Budget freeze / LLM cost gates** | §1.4 §2.3 + §1.4 §8 F4 (one-way sync + desync risk) + `core/llm_enforcer.py:200-260` |
 | **Human attention lifecycle (auto-approve / escalate)** | §1.4 §2.4 + §1.4 §5 (full flow + 7-condition auto-approve gate + escalation ladder) |
@@ -988,6 +1134,7 @@ influence callouts.
 | **S1269** (2026-06-30) | `governance_authority_evolution.md` (§1.4) | First architectural-discovery audit of the governance + authority surface. 63-row primitive inventory across 4 planes. 35 runtime gates. 12 governance-specific failure modes (3 new beyond S1268 collaboration audit baseline). 48 SAFE / 11 WRAPPER / 0 DO-NOT-REUSE / 0 DEPRECATED / 3 UNKNOWN. Rigby SIGN-with-edits (plane-count framing consistency, gate-count typo, two clarifications folded). | Set Symbol Mapping Architecture as the recommended P0 next research mission. Index v2 updated per maintenance rules §10.1 (this row + §1.4 + §3 domain map + §4 dependency graph + §5 gap recategorization + §7 decision matrix expansion + §9 roadmap promotion). |
 | **S1270** (2026-06-30) | `symbol_mapping_architecture.md` (§1.6) | First architectural-discovery of the WHAT question. 57 unique action_class strings (68 total entries) enumerated. 5 mapping options (A steps self-declare / B tool attribute / C hybrid / D central registry / E evidence-only) with tradeoffs. 20 candidate enforcement layers. 23 identifier registries classified. 23 historical incidents (5 YES + 10 PARTIALLY + 8 NO). F1-F11 findings incl. F11 (7 architectural blind spots via Rigby SIGN). Rigby SIGN-with-edits — 2 must-fix (§8 `_AuthorityContractMalformedError` scope narrowed; §2.6 parallel-vocabulary type/shape anchor added) + 3 optional (I-S4 wording, I-S3 dual-cite, Option E disclaimer) + 2 discoverability (AssistantProfile registry, §2.4 normalization caveat) folded. | Established the "WHAT" half of the enforcement primitive. Surfaced the WHO question that became §1.7 (Actor Attribution) as an immediate follow-on same session. |
 | **S1271** (2026-06-30) | `actor_identity_attribution_architecture.md` (§1.7) | First architectural-discovery of the WHO question. 19 identity concepts. 22 attribution surfaces classified (13 Explicit / 2 Inferred / 4 Ambiguous / 1 Unreliable / 2 Missing including OpsRun). 14 identity shape changes + 3 structural drop boundaries (HTTP→Celery, MissionRunner config→OpsRun, MissionRunner→Step.fn). 15 historical incidents (7 YES + 4 PARTIALLY + 4 NO — 73% effective case). 25 identity registries (14 SAFE + 7 WRAPPER + 0 DO-NOT-REUSE + 1 DEPRECATED + 3 UNKNOWN). 17 enforcement boundaries. Rigby pressure-test SIGN-with-edits, Medium confidence — 4 must-fix folded incl. **§8.5 introducing the executor_actor / sponsor_actor / principal_user 3-role vocabulary as normative** (biggest architectural risk: conflating the three into a single "actor" label). F1 + F9 language softened per Rigby. §3.5 added inventorying attribution patterns the platform does NOT ship. §9.4 Attribution-first counterargument acknowledged. §5 role-confusion framing note. | Established the "WHO" half of the enforcement primitive. Together with §1.6, closes the composite prereq. Set Authority Enforcement Design Space as recommended P0 next research (design mission that composes both). Index v3 updated per §10.1 (this row + §1.7 row above + §1.6 row above + §3 domain map + §4 dependency graph + §5 gap closure + §7 decision matrix expansion + §9 roadmap advancement). |
+| **S1272** (2026-06-30) | `authority_enforcement_design_space.md` (§1.8) | First design-space research — the mission that consumes S1270 + S1271 as INPUT premises and enumerates enforcement design options without picking. 24 enforcement inputs (13 RUNTIME-VERIFIED / 7 OBSERVATION-ONLY / 3 ASPIRATIONAL / 1 UNKNOWN + 8 GAPS). 20 candidate enforcement boundaries (17 original + 3 Rigby SIGN-added: WebSocket, Fleet, Spider — closing the biggest boundary-completeness gap). 12 enforcement modes with 8 existing production precedents; 4 without analog. 204-cell boundary × mode compatibility matrix (17-row form; 3 SIGN-added boundaries not yet cross-tabulated). 4-per-level AuthorityLevel semantics (16 interpretations, none chosen). 11 canonical actor-role scenarios × 3 roles + audit path. 4-plane governance composition with 8 new questions + 1 existing cross-plane touch. 33-incident consolidated historical matrix. **6 major design options A-F enumerated neutrally** (MissionRunner-centered / ToolDispatcher-centered / Audit-first / Human-approval / Multi-layer / Governance-plane composition). 15 anti-patterns (3 Tier-0 hazards: blocking all model writes, enforcement before symbol mapping, silent enforcement). 15-prereq DAG. Rigby pressure-test SIGN-with-edits, Medium confidence — 8 must-fix folded: §3 gained 3 first-class boundaries (WebSocket, Fleet, Spider); §9.0 neutrality guardrail; §9.1 + §9.2 annotation-burden failure modes; §9.6 policy-ossification risk; §8.4 rephrased separating prevent-modes from audit/warn modes; §10 Tier-0 hazards callout; §6.1 role-propagation rule of thumb; §14 P0/P1 dependency-not-preference semantics + §14.2 (i)/(ii) split. F1 (AuthorityLevel has 1 runtime consumer, a shape-counter) and F8 (LLMEnforcer fail-open precedent) are load-bearing findings. | Established the design space for authority enforcement. **First mission carrying design-space content per §9 STAGE 2 pacing note.** Set Symbol Mapping Option Selection Design as recommended P0 next research (§14.1). Maintenance note: this doc is **design-space only** — the 6 options A-F are for future consumption, not implementation. Index v4 updated per §10.1 (this row + §1.8 row + §3 domain map + §4 dependency graph + §5 gap closure §5.2b + new §5.2c + §7 decision matrix expansion + §9 roadmap advancement STAGE 2 → STAGE 3). |
 
 **Pattern observation.** The library has grown 3 docs in as
 many sessions (S1269, S1270, S1271) after the initial S1268
@@ -1049,26 +1196,64 @@ context it should have inherited.
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  STAGE 2 — Authority Enforcement Design Space  ← recommended    │
-│  next (per §1.6 §11 + §1.7 §13.1)                               │
+│  STAGE 2 — Authority Enforcement Design Space  ✓ CLOSED S1272   │
 │                                                                  │
-│  Scope: compose STAGE 1 (WHAT) + STAGE 1b (WHO) into an actual  │
-│  enforcement gate design. At which layer(s) does authority      │
-│  check fire? What data does it need? What does it do on         │
-│  mismatch? How do enforce checks compose with the four          │
-│  governance planes (autonomy / authority / budget / human)?     │
-│  MUST consume §1.7 §8.5 role vocabulary before proposing any    │
-│  actor field. Explicit anti-pattern: adding OpsRun.user without │
-│  role clarity codifies conflation as schema.                    │
+│  Shipped: docs/research/authority_enforcement_design_space.md   │
+│  24 inputs; 20 boundaries (17 + 3 SIGN-added WebSocket/Fleet/   │
+│  Spider); 12 modes; 6 design options A-F enumerated neutrally;  │
+│  15 anti-patterns (3 Tier-0 hazards); 15-prereq DAG.            │
+│  Rigby pressure-test SIGN-with-edits, Medium confidence.        │
 │                                                                  │
-│  Type: DESIGN research (not pure inventory) — Chris gates the   │
-│  design decision. Rigby SIGN review at close.                   │
+│  Type: DESIGN-SPACE research (first mission carrying design-    │
+│  space content per §9 pacing). No option chosen. No design      │
+│  decision. Chris gates any downstream selection.                │
+│                                                                  │
+│  Maintenance note: §1.8 is design-space only. The 6 options     │
+│  are for future consumption; none is designated for             │
+│  implementation. Do not treat as implementation greenlight.     │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  STAGE 3 — Symbol Mapping Option Selection Design  ← recommended│
+│  next (per §1.8 §14.1)                                          │
+│                                                                  │
+│  Scope: pick from §1.6's 5 Symbol Mapping options (A steps      │
+│  self-declare / B tool attribute / C hybrid / D central         │
+│  registry / E evidence-only). Chris-gated design decision.      │
+│  Recommend smallest reversible v0 that unlocks authority        │
+│  telemetry and future enforcement without overbuilding.         │
+│  Must respect §1.7 §8.5 3-role actor vocabulary. Must respect   │
+│  §1.8's 15-prereq DAG (Symbol Mapping is critical-path root).   │
+│                                                                  │
+│  Type: DESIGN DECISION (not pure research). Rigby SIGN review;  │
+│  Chris ratification.                                            │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  STAGE 3b — Actor Role Propagation Design  (P1)                 │
+│                                                                  │
+│  Two layers per §1.8 §14.2 clarification:                       │
+│  (i) Role schema + propagation contract — parallel-safe with    │
+│      STAGE 3 (does not depend on Symbol Mapping option)         │
+│  (ii) Implementation across boundaries — depends on STAGE 3     │
+│       shipped                                                    │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  STAGE 3c — Authority Enforcement Design Decision  (P1)         │
+│                                                                  │
+│  Convert §1.8's 6 design-space options into an actual design    │
+│  decision. Consume §1.8's 33-incident catalog, 15 anti-         │
+│  patterns, 15 prereqs. Rigby SIGN + Chris gate.                 │
 └──────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
         ▼                     ▼                     ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  STAGE 3a       │  │  STAGE 3b       │  │  STAGE 3c       │
+│  STAGE 4a       │  │  STAGE 4b       │  │  STAGE 4c       │
 │  Trust          │  │  Memory         │  │  Mission        │
 │  Propagation    │  │  Architecture   │  │  Composition    │
 │  (§5.3)         │  │  (§5.4)         │  │  (§5.6)         │
@@ -1083,15 +1268,15 @@ context it should have inherited.
          └────────────────────┼────────────────────┘
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 4                     │
+                │  STAGE 5                     │
                 │  Cross-Employee Scheduling   │
                 │  (§5.5) — depends on Stage   │
-                │  3a + 3b + 3c                │
+                │  4a + 4b + 4c                │
                 └──────────────┬───────────────┘
                               │
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 5                     │
+                │  STAGE 6                     │
                 │  Employee Delegation Design  │
                 │  (DESIGN, not research —     │
                 │  prerequisites must close    │
@@ -1100,7 +1285,7 @@ context it should have inherited.
                               │
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 6 — Implementation    │
+                │  STAGE 7 — Implementation    │
                 │  (PRs, with research as the  │
                 │  justification artifact)     │
                 └──────────────────────────────┘
@@ -1341,3 +1526,72 @@ discoverable via all 8 index sections (§1-§9 plus this appendix
 + maintenance rules). Rigby independent SIGN review on the
 index itself remains optional per §10 discipline; if requested,
 a small follow-up pass suffices.
+
+## Appendix C — v4 update pass notes (S1273 Part 1)
+
+Triggered by S1272's landing (`authority_enforcement_design_space.md`)
+during S1273's Part 1 documentation-maintenance work. This is
+the first update that includes an explicit **maintenance note**
+that a docs/research/ entry is design-space only — not
+implementation greenlight — per S1273 mission-spec requirement.
+
+**Verification pass (one round) before finalization:**
+
+- **Missing doc check.** `ls docs/research/` now shows 7 files
+  (6 research + this index). §1.8 added for `authority_enforcement_design_space.md`.
+  No subdirectories. ✓
+- **Design-space vs. implementation distinction.** §1.8 status,
+  §3 domain map row ("Authority Enforcement (design space)"),
+  §5.2b closure note, §7 decision matrix new row on enforcement
+  ideas, §8 timeline row, and §9 roadmap STAGE 2 box all
+  explicitly state that §1.8 is **design-space only**. This is
+  the explicit "maintenance note that Authority Enforcement is
+  still design-space only, not implementation" required by
+  S1273 mission spec. ✓
+- **Roadmap advancement.** Prior STAGE 2 (Authority Enforcement
+  Design Space) marked CLOSED S1272. Two new stages added
+  parallel-ordered: STAGE 3 (Symbol Mapping Option Selection
+  Design — the recommended P0 next), STAGE 3b (Actor Role
+  Propagation Design — P1 parallel-safe on Layer (i)), STAGE
+  3c (Authority Enforcement Design Decision — P1). Prior
+  STAGE 3a/3b/3c (Trust Propagation / Memory / Mission
+  Composition) renumbered to STAGE 4a/4b/4c. Downstream stages
+  bumped: Cross-Employee Scheduling → 5, Employee Delegation
+  Design → 6, Implementation → 7. ✓
+- **Dependency graph.** ASCII diagram in §4 extended with new
+  §1.8 box (with SIGN-added-boundaries callout). "Future
+  research mission" downstream box updated to point at Symbol
+  Mapping Option Selection Design (was Authority Enforcement
+  Design Space, now landed). ✓
+- **Domain map.** Authority row expanded to include §1.8;
+  "Missing research" changed from "Authority Enforcement Design
+  Space" to "Symbol Mapping Option Selection Design"; maturity
+  bumped from "Medium" to "Medium-High" (all three prereqs now
+  shipped as research). New "Authority Enforcement (design
+  space)" row added citing §1.8 with explicit design-space-only
+  maintenance note. Actor Identity row updated to reflect the
+  new gating mission. ✓
+- **Decision matrix.** 6 new rows added covering: any authority
+  enforcement idea (must consult §1.8 anti-patterns + prereqs),
+  AuthorityLevel enum usage anywhere new (F1 warning about
+  single runtime consumer), new INLINE enforcement gate (F8
+  fail-open precedent), adding action_class to any audit model
+  (prereq #3 + #4), WebSocket/Fleet/Spider handlers touching
+  employee-scoped work (§3 rows 18-20), cross-plane governance
+  interaction (§7.5 8 questions). ✓
+- **Timeline.** 1 new row appended (S1272) with content
+  summary + influence callout. ✓
+- **Discoverability.** §1.8 now surfaces via §1 (§1.8 row), §3
+  (domain map — Authority row + new Authority Enforcement row),
+  §4 (dependency graph position), §5 (§5.2b closed + new §5.2c
+  gap), §7 (6 new decision-matrix rows), §8 (timeline), §9
+  (roadmap STAGE 2 CLOSED + STAGE 3/3b/3c). ✓
+- **Frontmatter.** Bumped from "v3" to "v4" with change
+  summary. verifier_loop field expansion deferred to v5 or
+  next larger update to keep this pass focused. owner field
+  will be extended: "v4 update S1273 Part 1" at commit time. ✓
+
+**Status after v4 pass.** Publishable as v4. §1.8 discoverable
+via all 8 index sections. Maintenance note explicit at 4 sites
+(§1.8 status, §3 row, §5.2b, §9 STAGE 2 box). Rigby independent
+SIGN review on the index itself remains optional per §10.
