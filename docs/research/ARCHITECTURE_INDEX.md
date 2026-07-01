@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-06-30 (v4 — added §1.8 Authority Enforcement Design Space research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1; roadmap advanced through STAGE 2 to new STAGE 3 Symbol Mapping Option Selection Design; maintenance note added that Authority Enforcement remains design-space only, not implementation) — prior v3 added §1.6 Symbol Mapping + §1.7 Actor Identity
+last_verified: 2026-06-30 (v5 — S1273 registered `platform_architecture_inventory.md` as §1.9. Library scope broadens from Employee-OS-focused arc (§1.1-§1.8) to Employee-OS-arc PLUS whole-platform inventory (§1.9). Chris's direction at S1273 close: "the next cleanup should be updating ARCHITECTURE_INDEX.md so this becomes the whole-platform counterpart to the Employee OS research library." §1 preamble rewritten. §3 domain map extended for Revenue / Outreach / Engagement (S1273 surfaced this as a Rigby-caught missed domain). §4 dep graph extended with whole-platform arc as sibling branch. §5 new gaps §5.12-§5.14 for top-3 S1273 recommendations. §7 decision matrix +3 whole-platform rows. §8 timeline S1273 row. §9 lateral research expanded.) — prior v4 added §1.8 Authority Enforcement Design Space
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -11,29 +11,41 @@ companion_anchors:
   - docs/00-START-HERE/DOC_LIFECYCLE.md  # governs the corpus itself
   - docs/KNOWLEDGE_PIPELINE.md       # runtime flow map
   - docs/AUDIT_FINDINGS.md           # canonical Celery deferred list
+  - docs/EVENT_SYSTEM_INVENTORY.md   # observability layers (§1.9 dep)
 verifier_loop: |
-  v3 update (2026-06-30): re-inventoried docs/research/ after S1270
-  Symbol Mapping and S1271 Actor Identity landed. `ls docs/research/`
-  now shows 6 .md files (5 research + this index). Both new docs
-  registered per §10.1 maintenance rules — §1 rows added (§1.6,
-  §1.7), §3 domain map updated (Authority now has both prereqs
-  shipped; new Actor Identity / Attribution domain row added), §4
-  dependency graph updated, §5 gap §5.2 marked CLOSED S1270 and
-  new gap §5.2b Authority Enforcement Design Space introduced as
-  P0 next, §7 decision matrix expanded with 4 new rows, §8 timeline
-  appended with S1270 + S1271 rows, §9 roadmap advanced with STAGE
-  1 CLOSED, STAGE 1b (Actor Attribution) added and CLOSED, new
-  STAGE 2 Authority Enforcement Design Space slots in as recommended
-  next, downstream stages renumbered.
-  Prior v2 note (2026-06-30, S1269 close): added §1.4 governance
-  research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1.
-  Prior v1 note (S1268 close): inventoried docs/research/ at 2026-06-30.
-  Three docs present. Re-read each frontmatter before classifying.
-  After drafting, ran one self-verifier-loop pass looking for
-  missing docs, duplicate classifications, incorrect dependency
-  ordering, inconsistent statuses, and discoverability gaps —
-  adjustments folded in.
-owner: claude (drafted S1268; v2 update S1269; v3 update S1271)
+  v5 update (2026-06-30, S1273 Part 2): re-inventoried docs/research/
+  after S1273 landing. `ls docs/research/` now shows 8 .md files
+  (7 research + this index). `platform_architecture_inventory.md`
+  registered as §1.9 per §10.1 maintenance rules. Library scope
+  broadens: §1.1-§1.8 remain the Employee-OS-focused arc; §1.9 is
+  the whole-platform counterpart (Chris's explicit S1273-close
+  direction). §1 preamble rewritten to acknowledge dual-scope
+  library. §3 domain map extended for Revenue / Outreach /
+  Engagement (Rigby caught this as a missed domain during S1273
+  SIGN review; folded into §3.32 of §1.9 + registered here as new
+  Revenue Pipeline domain row). §4 dep graph extended with whole-
+  platform arc as sibling branch (does NOT depend on §1.1-§1.8 —
+  parallel scope). §5: §5.4 Memory Architecture partially covered
+  by §1.9 §3.13; new gaps §5.12 (Revenue Pipeline canonical
+  architecture doc), §5.13 (Observability Deduplication Audit),
+  §5.14 (Sports/DBAO ↔ AI Studio Integration Sketch) added per
+  S1273 top-3 recommendations. §7 decision matrix +3 whole-
+  platform rows. §8 timeline S1273 row. §9 lateral research list
+  expanded to reference the 11-mission whole-platform roadmap in
+  §1.9.
+  Prior v4 update (S1273 Part 1): S1272 Authority Enforcement
+  Design Space registered as §1.8 (Appendix C notes; frontmatter
+  bumped to v4 mid-session).
+  Prior v3 update (S1271 close): S1270 Symbol Mapping + S1271
+  Actor Identity registered as §1.6 + §1.7 (Appendix B notes).
+  Prior v2 note (S1269 close): added §1.4 governance research;
+  §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1.
+  Prior v1 note (S1268 close): inventoried docs/research/ at
+  2026-06-30. Three docs present. Re-read each frontmatter before
+  classifying. Self-verifier pass looked for missing docs,
+  duplicate classifications, incorrect dependency ordering,
+  inconsistent statuses, and discoverability gaps.
+owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2)
 ---
 
 # Architecture Research Index
@@ -101,10 +113,31 @@ frontmatter field is updated.
 
 ## 1. Current Architecture Research Library
 
-The library has **three documents today**, all produced in
-Session 1268. They build on each other. Read them in the order
-listed here unless you have a specific goal (see §2 for goal-
-based reading paths).
+The library has **two scopes as of S1273:**
+
+- **The Employee OS arc (§1.1–§1.8):** an 8-doc chain that goes
+  deep on a single subsystem. Each doc builds on the previous;
+  read in order unless goal-driven (see §2 reading paths). This
+  is the arc that began S1268 and closed STAGE 2 at S1272.
+- **The whole-platform inventory (§1.9):** one doc, whole-
+  platform scope. Independent of the Employee OS arc — read it
+  when you need to know what domains exist across all of Donkey
+  Betz, not when you're going deep on one subsystem. S1273 close
+  registered it as "the whole-platform counterpart to the
+  Employee OS research library" (Chris's direction).
+
+**When to read which.** If your work touches a subsystem the
+Employee OS arc has already researched (comms, governance,
+authority, actor identity, mission orchestration), go to §1.1-
+§1.8 for the deep dive. If your work touches a subsystem NOT in
+that arc (frontend, spiders, RAG, betting, revenue, notifications,
+etc.) — or if you're new to the platform and need the shape of
+the whole thing — start with §1.9.
+
+The two scopes will merge over time: as future missions bring
+§1.9's LIGHT-coverage domains up to DEEP, they'll get their own
+research docs registered as §1.10+, and §1.9 will remain the
+navigation-and-classification layer.
 
 ### 1.1 `employee_os_communication_substrate_audit.md`
 
@@ -452,6 +485,82 @@ based reading paths).
   A future research pass or design mission should extend the
   matrix.
 
+### 1.9 `platform_architecture_inventory.md`
+
+- **Title.** Donkey Betz Platform Architecture Inventory — first
+  whole-platform map
+- **Purpose.** The whole-platform counterpart to the Employee-OS-
+  focused §1.1-§1.8 arc. Inventories every major architectural
+  domain of Donkey Betz — 32 domains — with maturity ratings,
+  research coverage, existing docs, drift, and technical debt.
+  Names the recommended next 11 research missions. **This is the
+  doc a Staff Engineer new to the platform should read to
+  understand the shape of the whole system.**
+- **Status.** Draft → Active (SIGN-with-edits from Rigby S1273
+  conversation `pa-02cfd3206302352f`; Medium overall confidence;
+  6 substantive edits folded — (1) added missed §3.32 Revenue /
+  Outreach / Engagement Pipeline domain + §4.9 cross-domain flow;
+  (2) downgraded §3.27 Auth / Permissions maturity STABLE →
+  PARTIAL with trust-boundary enumeration; (3) upgraded §3.7 LLM
+  Provider Registry maturity WORKING → STABLE (core registry
+  stable, failover missing); (4) tightened §1 Executive Summary
+  count phrasing to autoblock-consistent language; (5) added
+  §3.31 Event Bus vs Observability separation-of-concerns
+  paragraph; (6) expanded §9 roadmap 10 → 11 missions with
+  Revenue Pipeline canonical architecture doc elevated to #2).
+- **Research type.** Architectural Inventory + Platform-Wide
+  Mapping + Maturity Classification (whole-platform composite;
+  distinct shape from §1.1-§1.8 which are Employee-OS-focused
+  audits / sketches / discovery / design-space).
+- **Primary questions answered.**
+  - What are the 32 major architectural domains of Donkey Betz?
+  - Which domains are mature (CANONICAL/STABLE) vs risky
+    (PARTIAL/EXPERIMENTAL)?
+  - Which domains are under-researched (NONE/LIGHT coverage)?
+  - What are the 9 cross-domain flows that traverse ≥ 2
+    domains?
+  - Which systems duplicate or overlap (8 categories: multiple
+    orchestration paths / multiple messaging systems / multiple
+    identity concepts / multiple memory stores / multiple
+    governance surfaces / multiple content pipelines / multiple
+    task/execution logs / multiple agent dispatch systems)?
+  - What are the 11 recommended next research missions, ranked
+    by architectural uncertainty × risk × reuse × decisions
+    unblocked?
+- **Dependencies.** `PLATFORM_INVENTORY.md` (authoritative
+  counts anchor), `PLATFORM_WHAT_IT_IS.md` (narrative anchor),
+  `EMPLOYEE_OS_PRIMITIVES.md` (canonical primitives),
+  `KNOWLEDGE_PIPELINE.md`, `EVENT_SYSTEM_INVENTORY.md`,
+  `AUDIT_FINDINGS.md` §12. Also depends on the entire Employee
+  OS arc (§1.1-§1.8) for the subset of findings that overlap;
+  cites governance-authority-evolution.md (§3.23),
+  symbol_mapping_architecture.md (§9.1), and
+  actor_identity_attribution_architecture.md (§5.3) where
+  relevant.
+- **Recommended next reads.** Depends on goal:
+  - If interested in specific domain: jump to that §3.n
+    inventory + cited docs.
+  - If interested in cross-domain flows: read §4 (9 flows).
+  - If interested in what's next: read §9 (11-mission roadmap
+    — top-3 are Authority Enforcement Design Space (§5.2c
+    here), Revenue Pipeline canonical architecture (§5.12
+    here), Observability Deduplication Audit (§5.13 here)).
+- **Overall importance.** **Foundational for whole-platform
+  understanding.** The Employee OS arc (§1.1-§1.8) is deep on
+  one subsystem; §1.9 is wide on all of them. A new hire should
+  read §1.9 first to know the map, then dive into whichever arc
+  their work touches. Existing team members should reference §1.9
+  when scoping cross-domain work or evaluating "does this touch
+  a mature domain or an experimental one?"
+- **Verifier-loop note.** Six parallel Explore sub-agents
+  produced independent domain sweeps; parent synthesized into
+  the 32-domain map. Every domain row is grounded in file:line
+  cites OR flagged UNKNOWN. Rigby SIGN-with-edits (fresh pin
+  `pa-02cfd3206302352f`, NOT the shared S1270+ arc pin
+  `pa-cbcc410b32714f60` — another Claude Code was on that pin;
+  Chris flagged the context-crossing risk mid-session; isolation
+  pin used to keep S1273 work separate).
+
 ---
 
 ## 2. Recommended Reading Paths
@@ -597,13 +706,43 @@ the factory (per memory rules
 `OpenAI()` defaults to 600s timeout, causing the zombie-thread
 class documented in collaboration audit §7 row 17.
 
+### Path H — "I need to understand the whole platform"
+
+*Added S1273 v5.* This is the whole-platform onboarding path.
+Use it when your work spans multiple domains or you're new to
+the codebase.
+
+1. `CLAUDE.md` (Quick Start + Working with Rigby + system stats).
+2. `docs/PLATFORM_WHAT_IT_IS.md` (narrative anchor — glossary +
+   subsystem summaries).
+3. `docs/PLATFORM_INVENTORY.md` (runtime anchor — authoritative
+   counts; regenerable via `generate_platform_inventory`).
+4. `docs/research/platform_architecture_inventory.md` [§1.9] —
+   the 32-domain map + 9 cross-domain flows + maturity matrix +
+   11-mission roadmap.
+5. Whichever specific §3.n inventory in §1.9 matches your work.
+6. If that subsystem has an Employee OS-arc research doc
+   (§1.1-§1.8), read it next.
+
+**Big finding to internalize:** the platform combines four
+historically-separate stacks (AI Studio + DBAO + Employee OS +
+Revenue Pipeline) under one substrate. §1.9's §1 executive
+summary + §5 duplicate/overlapping systems section will show you
+where those stacks compose cleanly and where they don't.
+
 ---
 
 ## 3. Architecture Domains
 
-The platform is partitioned into ~17 domains below. For each,
-the table lists what research exists (in this library), what
-is still missing, and current maturity.
+The platform is partitioned into ~17 domains below (the S1268-
+S1272 arc's view). For a **whole-platform 32-domain map**
+(broader scope, added S1273 v5), see `docs/research/platform_
+architecture_inventory.md` [§1.9] §2. The two are complementary:
+this table is Employee-OS-adjacent depth; §1.9's table is
+whole-platform breadth.
+
+For each row, the table lists what research exists (in this
+library), what is still missing, and current maturity.
 
 | Domain | Existing research | Canonical anchors | Missing research | Maturity |
 |---|---|---|---|---|
@@ -629,6 +768,7 @@ is still missing, and current maturity.
 | **Reliability** | §1.3 (§5 + §7) | anthropic_client_factory.py; openai_client_factory.py; cleanup beat tasks | (well-covered) | **High** — multi-layer defense |
 | **Infrastructure** | (none in research library — runtime evidence only) | topics/infrastructure.md; topics/celery-workers.md; Procfile | Redis broker persistence config — UNKNOWN (§1.3 §10 Q5) | **Medium / UNKNOWN** |
 | **Knowledge Pipeline** | (none in research library) | docs/KNOWLEDGE_PIPELINE.md | (covered by KNOWLEDGE_PIPELINE.md narrative) | **High** — production pipeline |
+| **Revenue / Outreach / Engagement** *(new domain, added S1273 v5)* | §1.9 §3.32 (LIGHT coverage — models + services + agents enumerated; no canonical topic doc) | models_outreach.py:18 (OutreachDraft); models_engagement.py:18 (EngagementEvent); models_meeting.py:18 (Meeting); models_close_pack.py:20 (ClosePack); opportunity_pipeline_orchestrator.py; ops_autopilot/revenue.py + outreach_generation.py + engagement.py | **Revenue Pipeline canonical architecture doc** (models + services + agents + PA tools + outbound channel + attribution) — see §5.12 | **WORKING** (per §1.9 §3.32) — models + services + agents shipped; whether pipeline drives revenue in prod vs is scaffolding awaiting activation is UNKNOWN |
 
 ---
 
@@ -732,6 +872,33 @@ each downstream doc assumes its upstream context.
                                 │  Cross-Employee Scheduling · …   │
                                 └──────────────────────────────────┘
 ```
+
+**Sibling arc (added S1273 v5) — whole-platform inventory.**
+`platform_architecture_inventory.md` [§1.9] is NOT downstream
+of the Employee OS arc. It's a sibling arc off the same three
+anchors:
+
+```
+                ┌─────────────────────────────────────────┐
+                │  PLATFORM_INVENTORY.md (runtime anchor) │
+                │  PLATFORM_WHAT_IT_IS.md (narrative)     │
+                │  EMPLOYEE_OS_PRIMITIVES.md (primitives) │
+                └────────────────────┬────────────────────┘
+                                     │
+                       ┌─────────────┴─────────────┐
+                       ▼                           ▼
+        ┌──────────────────────────┐  ┌───────────────────────────┐
+        │  Employee OS Arc         │  │  Whole-Platform Inventory │
+        │  §1.1 → §1.2/§1.3 →      │  │  §1.9 (S1273)             │
+        │  §1.4 → §1.6 → §1.7 →    │  │  32 domains + 9 flows +   │
+        │  §1.8 (S1268-S1272)      │  │  11-mission roadmap       │
+        └──────────────────────────┘  └───────────────────────────┘
+```
+
+§1.9 cites downstream findings from §1.4 (governance planes),
+§1.6 (symbol mapping), and §1.7 (actor identity) where the
+Employee-OS-arc research is the source of truth for a subset of
+its findings. It does NOT depend on the arc's ordering.
 
 **Reading the graph.** The two prior anchors at the top
 (`PLATFORM_INVENTORY` + `PLATFORM_WHAT_IT_IS`) and the
@@ -1023,6 +1190,68 @@ narrows to a specific selection.
 - **Expected outcome.** A scoping doc (one page) to identify
   the surfaces, NOT a full audit.
 
+### 5.12 Revenue / Outreach / Engagement Pipeline Canonical Architecture (P0-parallel — added S1273 v5 per Rigby review)
+
+- **Why it matters.** Rigby's S1273 review on §1.9 caught this
+  as a missed whole-platform domain — it exists in tools/models/
+  services but is not represented as an end-to-end platform
+  subsystem with a canonical architecture doc. Missing this
+  research means any revenue-adjacent feature has no baseline
+  to work from.
+- **Priority.** P0 (parallel with §5.2c Symbol Mapping Option
+  Selection). Different scope than the Employee OS arc; runs
+  independently.
+- **Dependencies.** §1.9 §3.32 (domain inventory shell), §1.9
+  §4.9 (cross-domain flow), models_outreach.py + models_
+  engagement.py + models_meeting.py + models_close_pack.py,
+  ops_autopilot/revenue.py + outreach_generation.py +
+  engagement.py + impact.py, opportunity_pipeline_orchestrator.py.
+- **Expected outcome.** A canonical architecture doc covering
+  models + services + agents + PA tools + outbound channel
+  integration + revenue-attribution logic. Verify runtime state
+  vs aspirational docs (`MASTER_PLAN_CREATIVE_INTELLIGENCE_
+  EMPIRE.md`, external `BILLING_MONETIZATION_SYSTEM.md`). Rigby
+  SIGN review. Result: promotes §1.9 §3.32 coverage from LIGHT
+  to DEEP + potentially spawns a §1.10 research doc.
+
+### 5.13 Observability Deduplication Audit (P1 — added S1273 v5)
+
+- **Why it matters.** Per §1.9 §5.7, the platform has 5 parallel
+  execution telemetry layers (`CeleryTaskEvent`, `LLMCallEvent`,
+  `AgentExecution`, `ToolCallRecord`, `OpsRunEvent`) plus 14+
+  event-shaped audit models. Whether they're necessary and non-
+  overlapping or duplicate is undocumented. Any future
+  observability feature is guessing at the design boundary.
+- **Priority.** P1. Touches every future observability feature.
+- **Dependencies.** `docs/EVENT_SYSTEM_INVENTORY.md`, §1.9 §3.25,
+  §1.9 §5.7.
+- **Expected outcome.** Trace a single "agent executes a tool
+  that calls the LLM" scenario through all 5 execution telemetry
+  layers + adjacent audit tables. Recommend rationalization
+  (which to keep, which to deprecate, which to merge). Rigby
+  SIGN review.
+
+### 5.14 Sports / DBAO ↔ AI Studio Integration Sketch (P1 — added S1273 v5)
+
+- **Why it matters.** Per §1.9 §3.10 + §1.9 §4.8, the DBAO
+  stack (sports/odds/betting agents + models) is
+  operationally-separate from AI Studio (content/signals/
+  initiatives/deliverables). `sports_odds` is not a valid
+  `SignalCluster` data_type track; sports predictions do NOT
+  auto-create Initiatives; betting outcomes NOT fed to
+  deliberation. Resolves the platform's biggest structural
+  question ("what IS Donkey Betz — one platform or two?").
+- **Priority.** P1. Structural question; unblocks content-
+  pipeline decisions for sports content and betting-related
+  deliberation.
+- **Dependencies.** §1.9 §3.10 (DBAO inventory), §1.9 §3.9
+  (Signal Engine), §1.9 §3.11 (Content Pipeline), §1.9 §3.12
+  (Initiative Pipeline), §1.9 §4.8 (Sports flow).
+- **Expected outcome.** Research doc documenting whether and how
+  MLPrediction / PlacedWager / SharpAction outcomes should feed
+  Signal / Initiative / Deliverable surfaces. Alternative:
+  documented intentional island. Rigby SIGN review.
+
 ---
 
 ## 6. Research Principles
@@ -1117,6 +1346,9 @@ matrix or re-introduces a closed failure class.
 | **Deliverable creation / status flips** | Memory rules `feedback_deliverable_tool_use_append_for_large_payloads`, `feedback_deliverable_status_via_content_complete`, `feedback_deliverable_create_defaults_to_completed` + §1.1 §7.8 |
 | **Spider → downstream work chains** | Path F + §1.3 §3.6 + §3.7 |
 | **Anything that says "new model"** | `EMPLOYEE_OS_PRIMITIVES.md` §2 (anti-duplication matrix) + §1.3 §9 (anti-duplication analysis). If a row matches, you are not adding a model. |
+| **Onboarding / any cross-domain scoping work** *(added S1273 v5)* | §1.9 whole-platform inventory (32-domain map + 9 cross-domain flows) — start here for shape of the system. Then dive into whichever §3.n row matches your work + cited Employee-OS-arc docs. |
+| **Anything touching Revenue / Outreach / Engagement / Meeting / ClosePack** *(added S1273 v5)* | §1.9 §3.32 + §1.9 §4.9 + §5.12 (canonical architecture doc gap) — DO NOT assume the pipeline flow described in aspirational docs (`MASTER_PLAN_CREATIVE_INTELLIGENCE_EMPIRE.md`, external `BILLING_MONETIZATION_SYSTEM.md`) matches runtime; verify. |
+| **Anything sports/betting-adjacent that touches content or signals** *(added S1273 v5)* | §1.9 §3.10 (DBAO inventory) + §1.9 §4.8 (Sports flow) + §5.14 (Integration Sketch gap). The two sides do NOT currently compose (`sports_odds` is not a valid SignalCluster data_type); do NOT assume they do. |
 
 ---
 
@@ -1134,15 +1366,23 @@ influence callouts.
 | **S1269** (2026-06-30) | `governance_authority_evolution.md` (§1.4) | First architectural-discovery audit of the governance + authority surface. 63-row primitive inventory across 4 planes. 35 runtime gates. 12 governance-specific failure modes (3 new beyond S1268 collaboration audit baseline). 48 SAFE / 11 WRAPPER / 0 DO-NOT-REUSE / 0 DEPRECATED / 3 UNKNOWN. Rigby SIGN-with-edits (plane-count framing consistency, gate-count typo, two clarifications folded). | Set Symbol Mapping Architecture as the recommended P0 next research mission. Index v2 updated per maintenance rules §10.1 (this row + §1.4 + §3 domain map + §4 dependency graph + §5 gap recategorization + §7 decision matrix expansion + §9 roadmap promotion). |
 | **S1270** (2026-06-30) | `symbol_mapping_architecture.md` (§1.6) | First architectural-discovery of the WHAT question. 57 unique action_class strings (68 total entries) enumerated. 5 mapping options (A steps self-declare / B tool attribute / C hybrid / D central registry / E evidence-only) with tradeoffs. 20 candidate enforcement layers. 23 identifier registries classified. 23 historical incidents (5 YES + 10 PARTIALLY + 8 NO). F1-F11 findings incl. F11 (7 architectural blind spots via Rigby SIGN). Rigby SIGN-with-edits — 2 must-fix (§8 `_AuthorityContractMalformedError` scope narrowed; §2.6 parallel-vocabulary type/shape anchor added) + 3 optional (I-S4 wording, I-S3 dual-cite, Option E disclaimer) + 2 discoverability (AssistantProfile registry, §2.4 normalization caveat) folded. | Established the "WHAT" half of the enforcement primitive. Surfaced the WHO question that became §1.7 (Actor Attribution) as an immediate follow-on same session. |
 | **S1271** (2026-06-30) | `actor_identity_attribution_architecture.md` (§1.7) | First architectural-discovery of the WHO question. 19 identity concepts. 22 attribution surfaces classified (13 Explicit / 2 Inferred / 4 Ambiguous / 1 Unreliable / 2 Missing including OpsRun). 14 identity shape changes + 3 structural drop boundaries (HTTP→Celery, MissionRunner config→OpsRun, MissionRunner→Step.fn). 15 historical incidents (7 YES + 4 PARTIALLY + 4 NO — 73% effective case). 25 identity registries (14 SAFE + 7 WRAPPER + 0 DO-NOT-REUSE + 1 DEPRECATED + 3 UNKNOWN). 17 enforcement boundaries. Rigby pressure-test SIGN-with-edits, Medium confidence — 4 must-fix folded incl. **§8.5 introducing the executor_actor / sponsor_actor / principal_user 3-role vocabulary as normative** (biggest architectural risk: conflating the three into a single "actor" label). F1 + F9 language softened per Rigby. §3.5 added inventorying attribution patterns the platform does NOT ship. §9.4 Attribution-first counterargument acknowledged. §5 role-confusion framing note. | Established the "WHO" half of the enforcement primitive. Together with §1.6, closes the composite prereq. Set Authority Enforcement Design Space as recommended P0 next research (design mission that composes both). Index v3 updated per §10.1 (this row + §1.7 row above + §1.6 row above + §3 domain map + §4 dependency graph + §5 gap closure + §7 decision matrix expansion + §9 roadmap advancement). |
+| **S1273** (2026-07-01) | `platform_architecture_inventory.md` (§1.9) | First whole-platform architectural inventory — the counterpart to the Employee-OS-focused §1.1-§1.8 arc. Six parallel Explore sub-agent sweeps synthesized into 32 domains (Cognition & agents: 7 / Data ingestion: 4 / Content & workflow: 2 / Revenue & GTM: 1 / Knowledge & memory: 3 / Human interface: 6 / API: 1 / Governance & ops: 4 / Infrastructure: 4). 9 cross-domain flows. 8 duplicate/overlapping system categories. Architecture Maturity Matrix rating every domain across Coverage / Maturity / Operational Health / Drift Risk / Debt Risk. 11-mission recommended research roadmap. Rigby SIGN-with-edits, Medium confidence, via fresh isolation pin `pa-02cfd3206302352f` (kept separate from shared S1270+ arc pin `pa-cbcc410b32714f60` per Chris's context-crossing directive). 6 substantive edits folded: (1) added missed §3.32 Revenue / Outreach / Engagement Pipeline domain + §4.9 flow — Rigby caught this as biggest missing platform subsystem; (2) downgraded §3.27 Auth STABLE → PARTIAL with trust-boundary enumeration; (3) upgraded §3.7 LLM Provider Registry WORKING → STABLE (core; failover missing); (4) tightened §1 Exec Summary count language; (5) added §3.31 Event Bus vs Observability separation-of-concerns paragraph; (6) expanded §9 roadmap 10 → 11 missions with Revenue Pipeline canonical architecture doc elevated to #2. | Established the whole-platform counterpart to the Employee-OS-focused arc. Chris's direction at close: "the next cleanup should be updating ARCHITECTURE_INDEX.md so this becomes the whole-platform counterpart to the Employee OS research library." Index v5 updated per §10.1 (this row + §1.9 row + §1 preamble rewrite + Path H reading path + §3 Revenue Pipeline domain row + §4 sibling-arc dependency graph extension + §5.12/§5.13/§5.14 gap entries + §7 decision matrix +3 whole-platform rows + §9 roadmap lateral research expansion referencing the 11-mission whole-platform roadmap in §1.9). Also caught + corrected v4 frontmatter drift — prior pass added Appendix C but never bumped last_verified line. |
 | **S1272** (2026-06-30) | `authority_enforcement_design_space.md` (§1.8) | First design-space research — the mission that consumes S1270 + S1271 as INPUT premises and enumerates enforcement design options without picking. 24 enforcement inputs (13 RUNTIME-VERIFIED / 7 OBSERVATION-ONLY / 3 ASPIRATIONAL / 1 UNKNOWN + 8 GAPS). 20 candidate enforcement boundaries (17 original + 3 Rigby SIGN-added: WebSocket, Fleet, Spider — closing the biggest boundary-completeness gap). 12 enforcement modes with 8 existing production precedents; 4 without analog. 204-cell boundary × mode compatibility matrix (17-row form; 3 SIGN-added boundaries not yet cross-tabulated). 4-per-level AuthorityLevel semantics (16 interpretations, none chosen). 11 canonical actor-role scenarios × 3 roles + audit path. 4-plane governance composition with 8 new questions + 1 existing cross-plane touch. 33-incident consolidated historical matrix. **6 major design options A-F enumerated neutrally** (MissionRunner-centered / ToolDispatcher-centered / Audit-first / Human-approval / Multi-layer / Governance-plane composition). 15 anti-patterns (3 Tier-0 hazards: blocking all model writes, enforcement before symbol mapping, silent enforcement). 15-prereq DAG. Rigby pressure-test SIGN-with-edits, Medium confidence — 8 must-fix folded: §3 gained 3 first-class boundaries (WebSocket, Fleet, Spider); §9.0 neutrality guardrail; §9.1 + §9.2 annotation-burden failure modes; §9.6 policy-ossification risk; §8.4 rephrased separating prevent-modes from audit/warn modes; §10 Tier-0 hazards callout; §6.1 role-propagation rule of thumb; §14 P0/P1 dependency-not-preference semantics + §14.2 (i)/(ii) split. F1 (AuthorityLevel has 1 runtime consumer, a shape-counter) and F8 (LLMEnforcer fail-open precedent) are load-bearing findings. | Established the design space for authority enforcement. **First mission carrying design-space content per §9 STAGE 2 pacing note.** Set Symbol Mapping Option Selection Design as recommended P0 next research (§14.1). Maintenance note: this doc is **design-space only** — the 6 options A-F are for future consumption, not implementation. Index v4 updated per §10.1 (this row + §1.8 row + §3 domain map + §4 dependency graph + §5 gap closure §5.2b + new §5.2c + §7 decision matrix expansion + §9 roadmap advancement STAGE 2 → STAGE 3). |
 
-**Pattern observation.** The library has grown 3 docs in as
-many sessions (S1269, S1270, S1271) after the initial S1268
-burst. The trend line is one research mission per session
-following the "each doc names the next" discipline. The
-library's *next* growth event is Authority Enforcement Design
-Space — the first mission that is a *design* rather than pure
-research, gated on Chris.
+**Pattern observation (updated S1273 v5).** The library grew
+in two waves. First wave: 5 docs in 5 sessions (S1268/S1269/
+S1270/S1271/S1272) — the Employee OS depth arc following the
+"each doc names the next" discipline. Second wave (S1273):
+a single whole-platform inventory doc that opens a sibling arc
+alongside the depth arc. The library's *next* growth events
+are now split across two arcs: (a) the Employee OS arc's STAGE
+3 Symbol Mapping Option Selection Design (the first mission
+that is a *design decision* gated on Chris), and (b) the
+whole-platform arc's top-3 next missions per §1.9 §9 —
+Revenue Pipeline canonical architecture (§5.12), Observability
+Deduplication Audit (§5.13), Sports/DBAO ↔ AI Studio
+Integration Sketch (§5.14). Parallel-safe if pursued
+independently.
 
 ---
 
@@ -1305,6 +1545,23 @@ Lateral research that does not block the main chain:
     materializes.
   • Focus Mode inventory (§5.11) — if Employee OS reasoning
     surfaces a dependency on it (flagged by Rigby S1269).
+
+  Whole-platform arc (added S1273 v5 — parallel-safe to the
+  Employee OS depth arc above):
+
+  • §5.12 Revenue / Outreach / Engagement Pipeline canonical
+    architecture doc — P0 parallel. Missed domain caught by
+    Rigby S1273 review; blocks any revenue-adjacent work.
+  • §5.13 Observability Deduplication Audit — P1. Trace a
+    single execution scenario through 5 telemetry layers.
+  • §5.14 Sports/DBAO ↔ AI Studio Integration Sketch — P1.
+    Structural question about whether platform is one or two.
+  • Full 11-mission whole-platform roadmap: see §1.9 §9
+    (Notification Unification, Event Bus Producer/Consumer
+    Map, Rigby v0 Event Intake Activation Plan, Advisor
+    Persistence Contract, Content ↔ Initiative Wiring Audit,
+    LLM Provider Failover + Cost Tracking, Claude Code
+    Tooling Design Doc, etc.).
 ```
 
 **Pacing note.** Stages 0 through 1b were pure research —
@@ -1595,3 +1852,108 @@ implementation greenlight — per S1273 mission-spec requirement.
 via all 8 index sections. Maintenance note explicit at 4 sites
 (§1.8 status, §3 row, §5.2b, §9 STAGE 2 box). Rigby independent
 SIGN review on the index itself remains optional per §10.
+
+**Frontmatter-drift note (caught S1273 v5).** The v4 pass
+updated Appendix C but forgot to update the frontmatter's
+`last_verified` and `owner` fields to reflect v4. That drift
+was carried forward until S1273 v5 caught + corrected both.
+Small process lesson: bump frontmatter in the same edit as the
+appendix note; do not defer.
+
+## Appendix D — v5 update pass notes (S1273 Part 2)
+
+Triggered by S1273's landing of `platform_architecture_
+inventory.md` (§1.9) as the first whole-platform architectural
+inventory. Chris's direction at S1273 close: "the next cleanup
+should be updating ARCHITECTURE_INDEX.md so this becomes the
+whole-platform counterpart to the Employee OS research
+library." This is the first update that expands the library's
+scope from Employee-OS-focused-only to Employee-OS-arc PLUS
+whole-platform inventory as a sibling arc.
+
+**Verification pass (one round) before finalization:**
+
+- **Missing doc check.** `ls docs/research/` now shows 8 files
+  (7 research + this index). §1.9 added for
+  `platform_architecture_inventory.md`. No subdirectories. ✓
+- **Scope split acknowledgment.** §1 preamble rewritten to
+  distinguish (a) Employee OS arc §1.1-§1.8 (deep on one
+  subsystem, S1268-S1272) from (b) whole-platform inventory
+  §1.9 (wide on all subsystems, S1273). "When to read which"
+  guidance added. ✓
+- **Reading path.** New Path H "I need to understand the whole
+  platform" added — CLAUDE.md → PLATFORM_WHAT_IT_IS →
+  PLATFORM_INVENTORY → §1.9 → specific §3.n → optional
+  Employee-OS-arc doc if subsystem covered. ✓
+- **Domain map.** New Revenue / Outreach / Engagement row
+  added citing §1.9 §3.32 + underlying models + services.
+  Rigby caught this as a missed platform subsystem during
+  S1273 SIGN review; folded into §1.9 §3.32 + registered here
+  as new domain row per §10.1. Rest of §3 unchanged — the
+  17-domain Employee-OS-adjacent view remains valid; §1.9's
+  32-domain whole-platform view is complementary. ✓
+- **Dependency graph.** Sibling-arc ASCII diagram added below
+  the main graph, showing §1.9 as parallel to the Employee OS
+  arc off the same three anchors (PLATFORM_INVENTORY +
+  PLATFORM_WHAT_IT_IS + EMPLOYEE_OS_PRIMITIVES). §1.9 cites
+  downstream findings from §1.4 + §1.6 + §1.7 where they overlap
+  its own findings, but does NOT depend on the arc's ordering. ✓
+- **Gap closures and additions.** §5.4 Memory Architecture
+  noted as partially covered by §1.9 §3.13 (Memory / Knowledge
+  / Embeddings — DEEP coverage; 5 memory tables enumerated,
+  14-day freshness contract, PA-to-Agent feedback closure,
+  auto-save ops facts). Three new gaps added — §5.12 Revenue
+  Pipeline canonical architecture (P0 parallel; missed-domain
+  finding from Rigby's S1273 review), §5.13 Observability
+  Deduplication Audit (P1; addresses §1.9 §5.7 5-layer
+  telemetry duplication), §5.14 Sports/DBAO ↔ AI Studio
+  Integration Sketch (P1; addresses §1.9 §3.10 island-vs-
+  integrated structural question). ✓
+- **Decision matrix.** 3 new whole-platform rows added:
+  onboarding / cross-domain scoping (start at §1.9); Revenue/
+  Outreach/Engagement/Meeting/ClosePack work (§1.9 §3.32 +
+  §4.9 + §5.12 gap); sports-betting content integration
+  (§1.9 §3.10 + §4.8 + §5.14 gap). ✓
+- **Timeline.** 1 new row appended (S1273, 2026-07-01) with
+  content summary + Rigby SIGN-with-edits detail (Medium
+  confidence, 6 substantive edits folded incl. missed Revenue
+  Pipeline domain) + Chris's whole-platform-counterpart
+  direction. Timeline note extended to reference the fresh
+  isolation pin `pa-02cfd3206302352f` used for §1.9's Rigby
+  review (kept separate from shared S1270+ arc pin
+  `pa-cbcc410b32714f60` mid-session per context-crossing
+  directive). ✓
+- **Pattern observation.** Section 8 pattern-observation
+  paragraph updated to reflect the two-wave library shape —
+  first wave S1268-S1272 (Employee OS depth arc), second wave
+  S1273 (whole-platform sibling arc). Next growth events now
+  split: (a) Employee OS arc STAGE 3 Symbol Mapping Option
+  Selection Design (Chris-gated); (b) whole-platform arc
+  top-3 next missions (§5.12/§5.13/§5.14). Parallel-safe. ✓
+- **Roadmap.** §9 lateral research list expanded to reference
+  whole-platform arc with §5.12/§5.13/§5.14 as the top-3 next
+  missions + pointer to §1.9 §9 for the full 11-mission
+  roadmap. ✓
+- **Frontmatter.** Bumped from "v4" to "v5" with change
+  summary. verifier_loop field expanded with v5 changes and
+  prior v1-v4 history preserved. owner field extended: "v5
+  update S1273 Part 2." Also caught + corrected v4 frontmatter
+  drift (v4 pass updated Appendix C but never bumped
+  last_verified — see Appendix C's Frontmatter-drift note
+  above). ✓
+- **Discoverability.** §1.9 now surfaces via §1 (preamble +
+  §1.9 row), §2 (new Path H), §3 (Revenue Pipeline row +
+  cross-reference to §1.9's 32-domain map), §4 (sibling-arc
+  dependency graph extension), §5 (§5.12/§5.13/§5.14 new gap
+  entries + §5.4 partial-coverage note), §7 (3 new decision-
+  matrix rows), §8 (timeline row + pattern-observation
+  update), §9 (roadmap lateral research expansion). ✓
+
+**Status after v5 pass.** Publishable as v5. §1.9 discoverable
+via all 9 index sections. Dual-scope library shape is now
+explicit throughout the doc (§1 preamble, §2 Path H, §4 sibling
+arc, §8 pattern observation, §9 lateral research). Rigby
+independent SIGN review on the index itself remains optional
+per §10.6 — the index is `authority: navigation`, not
+`authority: canonical`; anchors win when they disagree with the
+index.
