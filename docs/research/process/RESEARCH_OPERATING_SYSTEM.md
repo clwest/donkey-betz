@@ -1,10 +1,10 @@
 ---
 title: "Research Operating System — the OS every Claude Code session executes in Donkey Betz"
-status: draft
+status: active
 authority: process
 version: v2.1
 session_added: 1277
-last_verified: 2026-07-01
+last_verified: 2026-07-02 (v2.1 CANONICAL — S1279 installation complete)
 domain_slug: process
 research_group: 1277
 child_slot: standalone
@@ -25,6 +25,22 @@ related:
   - docs/research/DOMAIN_RESEARCH_PLAYBOOK.md   # specialization of §8 Research contract
   - docs/research/process/claude_research_startup_introspection.md  # evidence base
 verifier_loop: |
+  v2.1 CANONICAL (2026-07-02, S1279 installation): three P0 items landed
+  — (1) CLAUDE.md "Research Library" subsection + universal Startup
+  checklist pointing INTO the OS (not duplicating); (2) `docs/research/
+  OPEN_ARCS.md` created as machine-readable arc manifest (in-progress /
+  awaiting-summary / closed / stalled / not-started sections; §6.6
+  reconciliation source of truth for arc state); (3) `docs/00-START-
+  HERE/README.md` + `INDEX.md` extended with Research Library rows +
+  research-order entries. Status flipped `draft` → `active`.
+  Ratification state advances from READY-WITH-MINOR-FOLLOW-UP (§20.10)
+  to CANONICAL. `CURRENT_RESEARCH.md` evaluated and explicitly rejected
+  — OPEN_ARCS with `state: in-progress` filter provides the same
+  information without a duplicate maintenance surface (see §20.15).
+  No architectural changes; no §1-§19 modifications; §20.15 added as
+  a small S1279 installation record. Future improvements are
+  operational refinement, not architectural redesign. First arc to
+  open under the fully-installed OS: Group 1400 Revenue.
   v2.1 (2026-07-02, S1278 finalization): Ratification pass. Playbook
   §-ref cascade artifact cleanup: 13 in-text bugs corrected (playbook
   §5 phase discipline → §3; playbook §4 STAGE 0 → §2; playbook §17.4
@@ -3632,6 +3648,58 @@ of scope for S1278.
 flagged as blocking 'canonical' status. No architecture
 changes recommended; this is strictly to make the ratification
 state factually true and discoverability-consistent."*
+
+## 20.15 S1279 installation record
+
+S1279 installed the OS as canonical workflow. Three P0 items
+landed in one atomic commit:
+
+1. **`CLAUDE.md` extended.** New "Research Library" subsection
+   pointing into the OS + playbook + INDEX + OPEN_ARCS +
+   research-group short commands + folder layout + universal
+   8-step startup checklist. **Pointer-only** — no OS content
+   restated.
+2. **`docs/research/OPEN_ARCS.md` created.** Machine-readable
+   manifest of all research groups (in-progress / awaiting-
+   summary / closed / stalled / not-started). Source-of-truth
+   for arc state per OS §6.6 reconciliation.
+3. **`docs/00-START-HERE/README.md` + `INDEX.md` extended.**
+   New "Research Library" section + entry-point row for the
+   Research OS in the mandatory reading order. Fresh Claude
+   discovers the OS naturally from either entry point.
+
+**`CURRENT_RESEARCH.md` — recommended against.** OPEN_ARCS
+with `state: in-progress` filter answers "what's actively
+being researched" without a duplicate maintenance surface.
+`00-START-NEXT-SESSION.md` covers today's session priorities.
+A third file would duplicate one or both. Rule per OS §2.9
+do-not-duplicate list.
+
+**Validation of the success criterion** (mission spec):
+*"A brand-new Claude can discover the research framework
+without Chris writing a custom prompt."*
+
+- ✓ CLAUDE.md (auto-injected) → Research Library section →
+  Research OS
+- ✓ START-HERE README → Research Library section → Research OS
+- ✓ START-HERE INDEX → Research Library section → Research OS
+- ✓ Research OS §0–§5 → §5 router → per-class §8 startup
+  contract
+- ✓ Research OS §6 → OPEN_ARCS.md → current arc state
+- ✓ Research OS §8.1 → playbook v2 for research-class work
+- ✓ ARCHITECTURE_INDEX §7 decision matrix → prior research
+- ✓ Zero circular references
+- ✓ Zero duplicated startup instructions (CLAUDE.md points;
+  START-HERE points; OS is the single source)
+- ✓ Zero conflicting authority (§7 hierarchy governs; per-doc
+  `authority:` frontmatter declares tier)
+
+**Status flip.** OS transitions from `status: draft` to
+`status: active`. **CANONICAL as of S1279 close.**
+
+**Group 1400 Revenue** may now open under the fully-installed
+OS — the first research arc to exercise the reduced-prompt
+target rhythm from OS §12.3.
 
 ## 20.14 Session close
 

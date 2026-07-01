@@ -48,6 +48,82 @@ make start && make celery
 open http://localhost:8000/ai-studio/
 ```
 
+## Research Library
+
+Donkey Betz ships a canonical **Research Operating System** that
+governs how Claude Code approaches every class of work in the repo
+(research, design, implementation, bugs, docs, ops). Session
+S1279 installed it as the default workflow — every future session
+executes it automatically.
+
+### Where to start
+
+| For… | Read this first |
+|------|-----------------|
+| Any new session, regardless of intent | [`docs/research/process/RESEARCH_OPERATING_SYSTEM.md`](docs/research/process/RESEARCH_OPERATING_SYSTEM.md) §0–§5 (bootstrap + request classification) |
+| Starting a research group | [`docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`](docs/research/DOMAIN_RESEARCH_PLAYBOOK.md) (research-class specialization of the OS) |
+| Navigating the library | [`docs/research/ARCHITECTURE_INDEX.md`](docs/research/ARCHITECTURE_INDEX.md) §7 decision matrix |
+| Knowing what's in flight | [`docs/research/OPEN_ARCS.md`](docs/research/OPEN_ARCS.md) — machine-readable arc manifest |
+| Understanding library history | ARCHITECTURE_INDEX §8 timeline |
+
+### The Research OS in one sentence
+
+Bootstrap → classify request into 1 of 11 classes → run the
+matching startup contract → execute → close per §14 completion
+contract. Chris ratifies decisions; Rigby SIGN pressure-tests
+research; the OS makes everything in between deterministic.
+
+### Research group short commands
+
+Chris opens work with commands like:
+
+- `Start research group 1400: Revenue` — opens a new arc parent
+- `Continue research group 1300: <child slot>` — advances a child
+- `Close research group 1300` — opens the canonical summary (`xx99`)
+
+### How groups are organized
+
+```
+docs/research/
+├── ARCHITECTURE_INDEX.md            # navigation (v12)
+├── DOMAIN_RESEARCH_PLAYBOOK.md      # research-class contract (v2)
+├── OPEN_ARCS.md                     # cross-arc live manifest
+├── process/                         # the OS + startup introspection
+├── platform/                        # whole-platform-scope research
+└── domains/<slug>/                  # per-domain arcs
+    ├── NN00_<slug>_domain_scoping.md   # parent
+    ├── NN01–NN98_<slug>_<topic>_audit.md   # children
+    └── NN99_<slug>_canonical_summary.md    # summary
+```
+
+Legacy S1268–S1275 arc docs live at `docs/research/` top-level;
+they are grandfathered in place.
+
+### Startup checklist (universal, ~5 min)
+
+Every session runs these steps regardless of the requested work:
+
+1. `context-kit orient` — source-of-truth chain, latest handoff.
+2. Absorb this `CLAUDE.md` and `MEMORY.md` (both auto-injected).
+3. Read `00-START-NEXT-SESSION.md` in full.
+4. Read Research OS §0–§5 (skim §6–§9 headings) if the request
+   might touch research, docs, or governance.
+5. Record repo state (branch + SHA + `git status`).
+6. Note request context (change vs explain; explicit constraints;
+   for bugs: repro path).
+7. Classify the request via OS §5 router → load the matching §8
+   startup contract.
+8. If PA calls will happen: verify `service_context: local` via
+   `platform_config_tool overview`.
+
+Full spec: OS §4 Bootstrap Sequence.
+
+### Don't duplicate
+
+CLAUDE.md points into the Research OS. Do NOT restate OS rules,
+playbook contracts, INDEX content, or OPEN_ARCS rows here. If the
+OS changes, this section stays stable — the pointers do the work.
+
 ## System Stats
 
 > Verified 2026-04-20 against code. See PLATFORM_WHAT_IT_IS.md for full breakdown + glossary.
