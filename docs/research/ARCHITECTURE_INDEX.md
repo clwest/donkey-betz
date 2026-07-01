@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-06-30 (v2 — added §1.4 governance research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1)
+last_verified: 2026-06-30 (v3 — added §1.6 Symbol Mapping research and §1.7 Actor Identity research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1; roadmap advanced through STAGE 1 + STAGE 1b to new STAGE 2 Authority Enforcement Design Space)
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -12,14 +12,28 @@ companion_anchors:
   - docs/KNOWLEDGE_PIPELINE.md       # runtime flow map
   - docs/AUDIT_FINDINGS.md           # canonical Celery deferred list
 verifier_loop: |
-  Inventoried docs/research/ at 2026-06-30. Three docs present
-  (all S1268). Re-read each frontmatter before classifying. After
-  drafting, ran one self-verifier-loop pass looking for missing
-  docs, duplicate classifications, incorrect dependency ordering,
-  inconsistent statuses, and discoverability gaps — adjustments
-  folded in. This index will need an update whenever the next
-  research doc lands (see §10 maintenance rules).
-owner: claude (drafted S1268)
+  v3 update (2026-06-30): re-inventoried docs/research/ after S1270
+  Symbol Mapping and S1271 Actor Identity landed. `ls docs/research/`
+  now shows 6 .md files (5 research + this index). Both new docs
+  registered per §10.1 maintenance rules — §1 rows added (§1.6,
+  §1.7), §3 domain map updated (Authority now has both prereqs
+  shipped; new Actor Identity / Attribution domain row added), §4
+  dependency graph updated, §5 gap §5.2 marked CLOSED S1270 and
+  new gap §5.2b Authority Enforcement Design Space introduced as
+  P0 next, §7 decision matrix expanded with 4 new rows, §8 timeline
+  appended with S1270 + S1271 rows, §9 roadmap advanced with STAGE
+  1 CLOSED, STAGE 1b (Actor Attribution) added and CLOSED, new
+  STAGE 2 Authority Enforcement Design Space slots in as recommended
+  next, downstream stages renumbered.
+  Prior v2 note (2026-06-30, S1269 close): added §1.4 governance
+  research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1.
+  Prior v1 note (S1268 close): inventoried docs/research/ at 2026-06-30.
+  Three docs present. Re-read each frontmatter before classifying.
+  After drafting, ran one self-verifier-loop pass looking for
+  missing docs, duplicate classifications, incorrect dependency
+  ordering, inconsistent statuses, and discoverability gaps —
+  adjustments folded in.
+owner: claude (drafted S1268; v2 update S1269; v3 update S1271)
 ---
 
 # Architecture Research Index
@@ -246,11 +260,115 @@ based reading paths).
 
 - **Title.** Architecture Research Index
 - **Purpose.** Navigation. This doc.
-- **Status.** Active (v2 — S1269 added §1.4 entry for governance
-  research; §3-§9 updated per maintenance rules).
+- **Status.** Active (v3 — S1271 added §1.6 Symbol Mapping and
+  §1.7 Actor Identity entries; §3-§9 updated per maintenance
+  rules).
 - **Research type.** Navigation / Decision Record (light).
 - **Maintenance rule.** Every future research doc must update
   this index — see §10.
+
+### 1.6 `symbol_mapping_architecture.md`
+
+- **Title.** Symbol Mapping Architecture — Architectural Discovery
+- **Purpose.** The canonical research anchor for the "WHAT
+  action" question. What architectural bridge is missing between
+  `JobContract.authority` policy strings and runtime symbols
+  (tool names, step names, task names, function calls, model
+  writes)? Enumerates the design space so authority enforcement
+  can eventually be scoped.
+- **Status.** Draft → Active (SIGN-with-edits from Rigby S1270
+  conversation `pa-cbcc410b32714f60`; two must-fix + three
+  strongly-recommended optional edits folded — §8 narrowed
+  `_AuthorityContractMalformedError` scope, §2.6 added
+  parallel-vocabulary type/shape anchor, I-S4 wording softener,
+  I-S3 dual-cite F1+F3, Option E "reversibility ≠ preference"
+  disclaimer; §4.1 row 24 added for
+  `AssistantProfile.get_allowed_tools`; §2.4 normalization caveat;
+  §9 F11 with 7 architectural blind spots).
+- **Research type.** Architectural Discovery + Platform-Wide
+  Inventory + Failure Analysis (composite — same as §1.3 + §1.4
+  shape).
+- **Primary questions answered.**
+  - Q1–Q8 from the mission spec, answered explicitly in the
+    doc's §12.1.
+  - What are the 57 unique authority strings (68 total entries),
+    and where do they live?
+  - What runtime action surfaces exist (12) and which carry
+    action_class metadata today? (None.)
+  - What identifier registries already exist on the platform
+    (24) that could serve as reuse candidates?
+  - What are the five mapping options (A/B/C/D/E) and their
+    tradeoffs?
+  - Where are the 20 candidate enforcement layers?
+  - What historical failures (5 YES + 10 PARTIALLY + 8 NO of 23)
+    would Symbol Mapping have prevented?
+- **Dependencies.** §1.4 (the governance audit named this
+  mission), §1.3, §1.1; `PLATFORM_INVENTORY.md`;
+  `EMPLOYEE_OS_PRIMITIVES.md` §2 anti-duplication matrix;
+  `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`.
+- **Recommended next reads.** §1.7 (Actor Identity is the "WHO"
+  companion). Then §9 roadmap STAGE 2 (Authority Enforcement
+  Design Space) — the design mission that composes both.
+- **Overall importance.** Mandatory for anyone scoping authority
+  enforcement, adding a new employee's authority contract, or
+  proposing action_class metadata on any runtime surface.
+
+### 1.7 `actor_identity_attribution_architecture.md`
+
+- **Title.** Actor Identity & Attribution Architecture —
+  Architectural Discovery
+- **Purpose.** The canonical research anchor for the "WHO
+  performed it" question. Direct follow-on to §1.6 Symbol
+  Mapping. When the platform records an action, how does it know
+  who performed it? Both prereqs must land before authority
+  enforcement can exist.
+- **Status.** Draft → Active (SIGN-with-edits from Rigby S1271
+  conversation `pa-cbcc410b32714f60`; four must-fix + two
+  strongly-recommended optional edits folded — §8.5 added
+  introducing the executor_actor / sponsor_actor / principal_user
+  3-role vocabulary as normative for the doc + §11 F11 summary
+  finding; F1 language softened to "cannot answer reliably or
+  queryably"; F9 softened to "the cleanest enforcement primitive";
+  §3.5 added inventorying missing surfaces the platform does NOT
+  ship; §9.4 Attribution-first counterargument paragraph; §5
+  role-confusion framing note).
+- **Research type.** Architectural Discovery + Platform-Wide
+  Inventory + Failure Analysis (composite — same as §1.6 shape).
+- **Primary questions answered.**
+  - Q1–Q10 from the mission spec, answered explicitly in the
+    doc's §14.1.
+  - What actor identity concepts exist (19)?
+  - Where is actor identity recorded (22 attribution surfaces —
+    13 Explicit / 2 Inferred / 4 Ambiguous / 1 Unreliable /
+    2 Missing)?
+  - Where does identity change shape (14 shape changes, 3
+    structural drop boundaries)?
+  - What identity collisions have happened (15 historical
+    incidents; 7 YES + 4 PARTIALLY + 4 NO — 73% effective
+    case)?
+  - What existing identity registries can be reused (25 — 14 SAFE
+    + 7 WRAPPER + 0 DO-NOT-REUSE + 1 DEPRECATED + 3 UNKNOWN)?
+  - What are the 17 candidate enforcement boundaries?
+  - What does "actor" need to mean for Employee OS? (§8, six
+    semantic questions posed.)
+  - What is the relationship between actor identity and
+    authority? (§9, the WHAT + WHO = enforcement primitive.)
+  - What should the next research mission be? (§13.1 — Authority
+    Enforcement Design Space.)
+- **Dependencies.** §1.6 (Symbol Mapping is the WHAT companion),
+  §1.4 (governance planes), §1.3, §1.1; `PLATFORM_INVENTORY.md`;
+  `EMPLOYEE_OS_PRIMITIVES.md`; `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`.
+- **Recommended next reads.** §9 roadmap STAGE 2 (Authority
+  Enforcement Design Space) — the first design mission that
+  consumes both §1.6 and §1.7.
+- **Overall importance.** Mandatory for anyone touching actor
+  identity on any audit surface, adding a `user` FK to OpsRun (a
+  documented anti-pattern per §1.7 F11 without role clarity),
+  proposing an actor primitive, or scoping the delegation/trust
+  question. **F11 is especially load-bearing**: a single "actor"
+  label is insufficient — enforcement-grade attribution requires
+  at least executor_actor / sponsor_actor / principal_user as
+  distinct roles.
 
 ---
 
@@ -409,8 +527,9 @@ is still missing, and current maturity.
 |---|---|---|---|---|
 | **Employee OS — core** | §1.1, §1.2, §1.3 | EMPLOYEE_OS_PRIMITIVES.md; topics/employee-os.md | (none today; covered by §1.1 + §1.3) | **High** — 4 production employees, fully audited |
 | **Mission System (MissionRunner)** | §1.3 (§2 row 19, §3.9, §6) | mission_runner.py (1758 lines); jobs.py:74-162 | Dedicated MissionRunner architecture doc (could lift from §1.3's flow + reuse rows) | **High** — production for 4 employees |
-| **Governance** | §1.4 (full audit; 4 planes documented) + §1.3 (§2 rows 55-56) | models_governance.py | (governance research closed S1269; next gap is Symbol Mapping per §1.4 §11) | **Medium-High** — primitives fully audited; freeze/safe_mode wired; KillSwitch enforcement missing |
-| **Authority** | §1.4 (full audit; 68 entries / 30 prohibited / 35 gates) + §1.3 (§2 row 26 + §10 Q11) | mission_runner.py:258-275 (S1264 warn-mode); jobs.py:41-52 (AuthorityLevel) | **Symbol Mapping Architecture research doc** (recommended P0 next per §1.4 §11) | **Low-Medium** — warn-mode telemetry production; runtime enforcement blocked on symbol mapping |
+| **Governance** | §1.4 (full audit; 4 planes documented) + §1.3 (§2 rows 55-56) | models_governance.py | (well-covered; downstream is Cross-plane Composition — see §5.4) | **Medium-High** — primitives fully audited; freeze/safe_mode wired; KillSwitch enforcement missing |
+| **Authority** | §1.4 (full audit; 68 entries / 30 prohibited / 35 gates) + §1.3 (§2 row 26 + §10 Q11) + §1.6 (Symbol Mapping — 57 unique action strings; 5 mapping options; 20 enforcement boundaries) + §1.7 (Actor Attribution — WHO composes with WHAT) | mission_runner.py:258-275 (S1264 warn-mode); jobs.py:41-52 (AuthorityLevel) | **Authority Enforcement Design Space** (recommended P0 next per §1.7 §13.1 — composes §1.6 + §1.7 into an actual enforcement gate) | **Medium** — both prereqs shipped as research (S1270 + S1271); runtime enforcement design pending |
+| **Actor Identity / Attribution** | §1.7 (full audit; 19 identity concepts; 22 attribution surfaces; 15 historical failures; 25 identity registries; F11 executor/sponsor/principal role vocabulary) | `AIEmployee` (jobs.py:73-92); `UnifiedUser` (models/base/models.py:86); `_resolve_runs_as_user_id` (mission_runner.py:1585-1591); `canonicalize_agent_name` (deliverable_aliases.py:39-47) | (§1.7 F1: OpsRun has no user FK — largest attribution gap; downstream design gated by §5.2b Authority Enforcement Design Space) | **Medium** — mixed strong-FK / ambiguous-CharField attribution; role vocabulary proposed but not schema-enforced |
 | **Communication (employee comms)** | §1.1 (full); §1.2 (specific path) | comms.py, comms_docs_manager.py, EMPLOYEE_OS_PRIMITIVES.md §4.7 | Inter-employee reply lane (§1.3 F4); cross-fleet messaging | **Medium** — outbound shift reports work; inter-employee design sketched but not built |
 | **Messaging (raw substrate)** | §1.1 (§2 rows 35-37); §1.3 (§2 row 36) | models_messaging.py:21-141 | inbox UI semantics for `thread_kind='inter_employee_notice'` (frontend ticket, not research) | **High** — substrate is production |
 | **Memory (employee / agent)** | (none in research library) | core/models_agent_memory.py | **Memory Architecture research doc** — esp. how do employees remember each other's past verdicts? | **Low / UNKNOWN** — no research yet |
@@ -476,11 +595,35 @@ each downstream doc assumes its upstream context.
                                                   │
                                                   ▼
                                 ┌──────────────────────────────────┐
+                                │  research/symbol_mapping_        │
+                                │  architecture.md  [§1.6]         │
+                                │  (57 unique action strings; 5    │
+                                │  mapping options A-E; 20         │
+                                │  enforcement boundaries; SIGN-   │
+                                │  with-edits from Rigby S1270)    │
+                                └────────────────┬─────────────────┘
+                                                 │
+                                                 ▼
+                                ┌──────────────────────────────────┐
+                                │  research/actor_identity_        │
+                                │  attribution_architecture.md     │
+                                │  [§1.7]                          │
+                                │  (19 identity concepts; 22       │
+                                │  attribution surfaces; 25        │
+                                │  registries; F11 executor/       │
+                                │  sponsor/principal role vocab;   │
+                                │  Rigby pressure-test SIGN-with-  │
+                                │  edits S1271)                    │
+                                └────────────────┬─────────────────┘
+                                                 │
+                                                 ▼
+                                ┌──────────────────────────────────┐
                                 │  [Future research mission —      │
-                                │  recommended P0 per §1.4 §11]    │
-                                │  Symbol Mapping Architecture     │
-                                │  (action_class → runtime symbol  │
-                                │  binding; unblocks enforcement)  │
+                                │  recommended P0 per §1.7 §13.1]  │
+                                │  Authority Enforcement Design    │
+                                │  Space (composes §1.6 WHAT +     │
+                                │  §1.7 WHO into an actual         │
+                                │  enforcement gate design)        │
                                 └────────────────┬─────────────────┘
                                                  │
                                                  ▼
@@ -533,28 +676,68 @@ canonical foundation identified.
 — renumbered from prior §5.2; was P1, now P0 per §1.4 §11
 recommendation).
 
-### 5.2 Symbol Mapping Architecture (P0 — recommended next per §1.4 §11)
+### 5.2 Symbol Mapping Architecture — CLOSED S1270
 
-- **Why it matters.** §1.4 F2 + §11: enforcement of
-  `JobContract.authority` is blocked on a single foundational
-  primitive — a registry mapping action_class strings (e.g.,
-  `"modify_docs_files"`, `"open_pull_request"`) to runtime
-  symbols (tool names, function signatures, model methods).
-  S1264 warn-mode is the honest baseline given this gap.
-  Every other authority research mission (composition,
-  inheritance, trust propagation, memory) waits on it.
-- **Priority.** P0. Rigby SIGN-clean on this ranking at S1269
-  review.
-- **Dependencies.** §1.4 (the governance audit names the
-  three known options: steps self-declare
-  `action_classes_invoked`, tool registry with `action_class`
-  attribute, hybrid). `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`.
-- **Expected outcome.** A research doc that enumerates the
-  design space (3+ options), documents costs/tradeoffs for
-  each, inventories the 68 existing action_class strings,
-  identifies the smallest viable v0 (one employee + one
-  registry pattern), and marks prerequisites. **No design
-  greenlight from the doc itself** — Chris gates that.
+**Closed by:** `docs/research/symbol_mapping_architecture.md`
+(§1.6). Research shipped 2026-06-30; Rigby SIGN-with-edits
+folded. 57 unique action strings enumerated across 68 total
+entries. 5 mapping options (A steps self-declare / B tool
+attribute / C hybrid / D central registry / E evidence-only)
+inventoried with tradeoffs. 20 candidate enforcement layers
+enumerated. 23 identifier registries classified (7 SAFE + 11
+WRAPPER + 3 UNKNOWN post-Rigby-folded). §9 F11 blind spots
+capture 7 architectural categories the design mission must
+confront.
+
+**Successor gap:** Authority Enforcement Design Space (see
+§5.2b below) — first mission that composes §1.6 (WHAT) + §1.7
+(WHO) into an actual enforcement gate.
+
+### 5.2a Actor Identity & Attribution Architecture — CLOSED S1271
+
+**Closed by:** `docs/research/actor_identity_attribution_architecture.md`
+(§1.7). Research shipped 2026-06-30; Rigby pressure-test
+SIGN-with-edits folded. 19 identity concepts inventoried, 22
+attribution surfaces classified (13 Explicit / 2 Inferred / 4
+Ambiguous / 1 Unreliable / 2 Missing), 14 identity shape
+changes traced, 15 historical incidents catalogued (73%
+effective case), 25 identity registries classified (14 SAFE
++ 7 WRAPPER + 1 DEPRECATED + 3 UNKNOWN), 17 enforcement
+boundaries. **F11 introduces the executor_actor /
+sponsor_actor / principal_user 3-role vocabulary** as
+normative for downstream missions — treating any single field
+as "the actor" without declaring which role it represents
+produces "confidently wrong audit trails" (Rigby SIGN).
+
+**Not a gap that pre-existed §5.2 explicitly**, but implicit
+prerequisite that surfaced during §1.6 verifier loops (Symbol
+Mapping cannot bind action_class without knowing which actor
+attempted the action). Landed as an immediate follow-on same
+day rather than deferred.
+
+**Successor gap:** Authority Enforcement Design Space (see
+§5.2b below).
+
+### 5.2b Authority Enforcement Design Space (P0 — recommended next per §1.6 + §1.7)
+
+- **Why it matters.** Both prereqs shipped as research (§1.6
+  Symbol Mapping = WHAT action; §1.7 Actor Attribution = WHO
+  acted). Neither is sufficient alone for enforcement. This
+  mission composes both into a design proposal: at which
+  layer(s) does an authority check fire? What data does it
+  need at that layer? What does it do on mismatch?
+- **Priority.** P0. Both S1270 and S1271 SIGN reviews named
+  this as the next mission. §1.7 §13.1 explicitly warns
+  against jumping to "OpsRun.user field" as implementation-
+  first — must consume §1.7 §8.5's 3-role vocabulary first.
+- **Dependencies.** §1.6 (5 mapping options + 20 boundaries),
+  §1.7 (17 boundaries + 3-role vocabulary + attribution class
+  distribution), §1.4 (35 existing gates + 4 governance planes).
+- **Expected outcome.** A design-space enumeration (like §1.6
+  §5's option format) for enforcement, with tradeoffs,
+  migration cost, composition semantics across the four
+  governance planes, and role-clarity constraints. **Not a
+  design decision** — Chris gates that.
 
 ### 5.3 Trust Propagation Model (P1)
 
@@ -767,7 +950,14 @@ matrix or re-introduces a closed failure class.
 | **MissionRunner internals** | §1.3 §2 rows 17-23 + `mission_runner.py:1-230` + S1267 handoff |
 | **`MissionRunnerConfig.auto_emit_verdict` semantics** | §1.3 Executive Summary item 6 (corrected by Rigby S1268 SIGN-with-edits) + §1.3 §2 row 19 + §1.3 §7 row 29 (protocol invariant change) + `core/employees/mission_runner.py:1127-1145` |
 | **Governance flags or modes** | §1.4 §2.1 (full autonomy plane inventory) + §1.4 §4.6 (5 autonomy gates incl. KillSwitch UNKNOWN) + Path C |
-| **Authority enforcement (vs. observation)** | §1.4 §3 (full lifecycle trace) + §1.4 §4.7 (authority plane gates) + §1.4 §8 F2 (symbol-mapping blocker) + §1.4 §11 (Symbol Mapping Architecture P0 next) + S1264 handoff |
+| **Authority enforcement (vs. observation)** | §1.6 (5 mapping options + 20 boundaries) + §1.7 (17 boundaries + 3-role vocabulary) + §1.4 §3 (full lifecycle trace) + §1.4 §4.7 (authority plane gates) + §5.2b (Authority Enforcement Design Space P0 next) + S1264 handoff |
+| **Anything using `JobContract.authority`** | §1.6 §2 (57 unique strings enumerated) + §1.6 §5 (mapping options A-E) + §1.6 §9 F1-F10 + §1.7 F11 + §1.7 §8.5 (executor/sponsor/principal roles) — a policy string is not a runtime symbol; do NOT assume it enforces anything today |
+| **Actor identity on any new model / audit surface** | §1.7 §3.1 (22 attribution surfaces classified) + §1.7 §8.5 (3-role vocabulary) + §1.7 F11 — declare which of executor_actor / sponsor_actor / principal_user the field represents |
+| **Adding `user` FK to OpsRun (or any "actor" field)** | §1.7 F1 + §1.7 F11 + §1.7 §13.1 — DO NOT ship without role clarity first; §1.7 explicitly warns adding a "user" field to OpsRun without role clarity codifies the executor / principal conflation as schema |
+| **Any code using `agent_name` CharField** (ToolCallRecord / AgentExecution.owner_agent / LLMCallEvent) | §1.7 F4 (three ambiguous fields, undefined delegator-vs-executor semantics) + §1.7 §3.3 (evidence) — DO NOT assume the string is either delegator or executor; trace the call chain |
+| **Any code using `runs_as_username` or `_resolve_runs_as_user_id`** | §1.7 §2.4 + §1.7 F3 (silent-None on missing User) + §1.7 F11 (this is a principal_user selector, NOT the executor_actor) — treating it as "actor" is a documented anti-pattern |
+| **Duplicate Agent row risk** (any new agent-creation site) | §1.7 F5 (recurring failure class per S1263 PR #2754 + migration 0374) + `deliverable_aliases.py:33-47` (`canonicalize_agent_name` + `AGENT_NAME_ALIASES`) — must canonicalize at write time |
+| **PA tool actor / user context propagation** | §1.7 §7 (17 boundaries; F6 identifies 3 structural drop points) + §1.6 §6 (20 symbol boundaries) + `tool_dispatcher.py:687-720` (`AssistantProfile.get_allowed_tools` is the ONLY canonical-actor gate today per §1.7 F7) |
 | **KillSwitch (arming, status, enforcement)** | §1.4 §2.1 row 2 + §1.4 §4.6 (UNKNOWN row) + §1.4 §8 F3 (write-only finding) — DO NOT assume KillSwitch blocks dispatch today |
 | **Budget freeze / LLM cost gates** | §1.4 §2.3 + §1.4 §8 F4 (one-way sync + desync risk) + `core/llm_enforcer.py:200-260` |
 | **Human attention lifecycle (auto-approve / escalate)** | §1.4 §2.4 + §1.4 §5 (full flow + 7-condition auto-approve gate + escalation ladder) |
@@ -796,13 +986,16 @@ influence callouts.
 | **S1268 P0 #3** (2026-06-30) | `employee_os_collaboration_patterns.md` (§1.3) | Platform-wide audit. 64-row primitive inventory. 11 distinct collaboration substrates. 12 flow diagrams. 29 documented failure modes (12 new). Q1-Q8 answered. Rigby SIGN-with-edits — 1 substantive correction folded (MissionRunner verdict event is conditional, not guaranteed) + 1 architectural blind-spot note added (canonical idempotency key across orchestration paths). | Set the recommendation for the next research mission (Governance + Authority Evolution). Surfaced gaps that become §5.1–§5.7. |
 | **S1268 P0 #4** (2026-06-30) | `ARCHITECTURE_INDEX.md` (this doc) | The first navigation / index doc for the research library. Establishes the corpus's identity, dependency graph, and maintenance rules. | Will be cited by every future research doc's `companion_docs`. |
 | **S1269** (2026-06-30) | `governance_authority_evolution.md` (§1.4) | First architectural-discovery audit of the governance + authority surface. 63-row primitive inventory across 4 planes. 35 runtime gates. 12 governance-specific failure modes (3 new beyond S1268 collaboration audit baseline). 48 SAFE / 11 WRAPPER / 0 DO-NOT-REUSE / 0 DEPRECATED / 3 UNKNOWN. Rigby SIGN-with-edits (plane-count framing consistency, gate-count typo, two clarifications folded). | Set Symbol Mapping Architecture as the recommended P0 next research mission. Index v2 updated per maintenance rules §10.1 (this row + §1.4 + §3 domain map + §4 dependency graph + §5 gap recategorization + §7 decision matrix expansion + §9 roadmap promotion). |
+| **S1270** (2026-06-30) | `symbol_mapping_architecture.md` (§1.6) | First architectural-discovery of the WHAT question. 57 unique action_class strings (68 total entries) enumerated. 5 mapping options (A steps self-declare / B tool attribute / C hybrid / D central registry / E evidence-only) with tradeoffs. 20 candidate enforcement layers. 23 identifier registries classified. 23 historical incidents (5 YES + 10 PARTIALLY + 8 NO). F1-F11 findings incl. F11 (7 architectural blind spots via Rigby SIGN). Rigby SIGN-with-edits — 2 must-fix (§8 `_AuthorityContractMalformedError` scope narrowed; §2.6 parallel-vocabulary type/shape anchor added) + 3 optional (I-S4 wording, I-S3 dual-cite, Option E disclaimer) + 2 discoverability (AssistantProfile registry, §2.4 normalization caveat) folded. | Established the "WHAT" half of the enforcement primitive. Surfaced the WHO question that became §1.7 (Actor Attribution) as an immediate follow-on same session. |
+| **S1271** (2026-06-30) | `actor_identity_attribution_architecture.md` (§1.7) | First architectural-discovery of the WHO question. 19 identity concepts. 22 attribution surfaces classified (13 Explicit / 2 Inferred / 4 Ambiguous / 1 Unreliable / 2 Missing including OpsRun). 14 identity shape changes + 3 structural drop boundaries (HTTP→Celery, MissionRunner config→OpsRun, MissionRunner→Step.fn). 15 historical incidents (7 YES + 4 PARTIALLY + 4 NO — 73% effective case). 25 identity registries (14 SAFE + 7 WRAPPER + 0 DO-NOT-REUSE + 1 DEPRECATED + 3 UNKNOWN). 17 enforcement boundaries. Rigby pressure-test SIGN-with-edits, Medium confidence — 4 must-fix folded incl. **§8.5 introducing the executor_actor / sponsor_actor / principal_user 3-role vocabulary as normative** (biggest architectural risk: conflating the three into a single "actor" label). F1 + F9 language softened per Rigby. §3.5 added inventorying attribution patterns the platform does NOT ship. §9.4 Attribution-first counterargument acknowledged. §5 role-confusion framing note. | Established the "WHO" half of the enforcement primitive. Together with §1.6, closes the composite prereq. Set Authority Enforcement Design Space as recommended P0 next research (design mission that composes both). Index v3 updated per §10.1 (this row + §1.7 row above + §1.6 row above + §3 domain map + §4 dependency graph + §5 gap closure + §7 decision matrix expansion + §9 roadmap advancement). |
 
-**Pattern observation.** All four docs are S1268. The library
-started in a single session because that was the session where
-the platform's growth crossed the threshold at which "where
-should I read about X?" became a load-bearing question. The
-library's *next* growth event is the Governance + Authority
-Evolution doc; until that lands, this index is the front door.
+**Pattern observation.** The library has grown 3 docs in as
+many sessions (S1269, S1270, S1271) after the initial S1268
+burst. The trend line is one research mission per session
+following the "each doc names the next" discipline. The
+library's *next* growth event is Authority Enforcement Design
+Space — the first mission that is a *design* rather than pure
+research, gated on Chris.
 
 ---
 
@@ -826,21 +1019,56 @@ context it should have inherited.
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  STAGE 1 — Symbol Mapping Architecture  ← recommended next      │
-│  (per §1.4 §11; Rigby SIGN-clean on this ranking)               │
+│  STAGE 1 — Symbol Mapping Architecture  ✓ CLOSED S1270          │
 │                                                                  │
-│  Scope: enumerate the design space for binding                  │
-│  JobContract.authority action_class strings to runtime          │
-│  symbols (3 options known: steps self-declare /                 │
-│  tool registry / hybrid). Inventory the 68 existing strings.    │
-│  Identify smallest viable v0. Mark prerequisites for            │
-│  enforcement plumbing.                                          │
+│  Shipped: docs/research/symbol_mapping_architecture.md          │
+│  57 unique action_class strings; 5 mapping options (A-E);       │
+│  20 enforcement boundaries; 23 identifier registries; F11       │
+│  captures 7 architectural blind spots. Rigby SIGN-with-edits    │
+│  (2 must-fix + 3 optional + 2 discoverability folded).          │
+│                                                                  │
+│  Answered: WHAT action happened?                                │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  STAGE 1b — Actor Identity & Attribution  ✓ CLOSED S1271        │
+│  (same-session follow-on to STAGE 1; surfaced during Symbol     │
+│   Mapping verifier loops as the composite prereq)               │
+│                                                                  │
+│  Shipped: docs/research/actor_identity_attribution_             │
+│           architecture.md                                       │
+│  19 identity concepts; 22 attribution surfaces (F1: OpsRun has  │
+│  no user FK); 15 historical failures; 25 registries; §8.5       │
+│  executor/sponsor/principal 3-role vocabulary; F11 warning      │
+│  against single-actor label conflation. Rigby pressure-test     │
+│  SIGN-with-edits (4 must-fix + 2 optional folded).              │
+│                                                                  │
+│  Answered: WHO performed the action?                            │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  STAGE 2 — Authority Enforcement Design Space  ← recommended    │
+│  next (per §1.6 §11 + §1.7 §13.1)                               │
+│                                                                  │
+│  Scope: compose STAGE 1 (WHAT) + STAGE 1b (WHO) into an actual  │
+│  enforcement gate design. At which layer(s) does authority      │
+│  check fire? What data does it need? What does it do on         │
+│  mismatch? How do enforce checks compose with the four          │
+│  governance planes (autonomy / authority / budget / human)?     │
+│  MUST consume §1.7 §8.5 role vocabulary before proposing any    │
+│  actor field. Explicit anti-pattern: adding OpsRun.user without │
+│  role clarity codifies conflation as schema.                    │
+│                                                                  │
+│  Type: DESIGN research (not pure inventory) — Chris gates the   │
+│  design decision. Rigby SIGN review at close.                   │
 └──────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
         ▼                     ▼                     ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  STAGE 2a       │  │  STAGE 2b       │  │  STAGE 2c       │
+│  STAGE 3a       │  │  STAGE 3b       │  │  STAGE 3c       │
 │  Trust          │  │  Memory         │  │  Mission        │
 │  Propagation    │  │  Architecture   │  │  Composition    │
 │  (§5.3)         │  │  (§5.4)         │  │  (§5.6)         │
@@ -855,30 +1083,33 @@ context it should have inherited.
          └────────────────────┼────────────────────┘
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 3                     │
+                │  STAGE 4                     │
                 │  Cross-Employee Scheduling   │
                 │  (§5.5) — depends on Stage   │
-                │  2a + 2b + 2c                │
+                │  3a + 3b + 3c                │
                 └──────────────┬───────────────┘
                               │
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 4                     │
+                │  STAGE 5                     │
                 │  Employee Delegation Design  │
                 │  (DESIGN, not research —     │
                 │  prerequisites must close    │
                 │  first)                      │
-                └──────────────────────────────┘
+                └──────────────┬───────────────┘
                               │
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 5 — Implementation    │
+                │  STAGE 6 — Implementation    │
                 │  (PRs, with research as the  │
                 │  justification artifact)     │
                 └──────────────────────────────┘
 
 Lateral research that does not block the main chain:
 
+  • Cross-plane Composition (§1.7 F10 + governance F1) — how do
+    autonomy / authority / budget / human governance compose
+    when all four are active? Blocking STAGE 2 completeness.
   • Security / Permission scoping (§5.8) — if cross-fleet
     surfaces enter scope.
   • Configuration Architecture note (§5.9) — when feature-flag
@@ -891,11 +1122,14 @@ Lateral research that does not block the main chain:
     surfaces a dependency on it (flagged by Rigby S1269).
 ```
 
-**Pacing note.** All Stage 1 + 2 work is research-only — no
-PRs, no models. Stage 3 is the first design-with-PR-intent
-mission. Stage 4 is implementation. The discipline that holds
-this together is the verifier loop + Rigby SIGN review on
-every transition.
+**Pacing note.** Stages 0 through 1b were pure research —
+inventory + classification + failure analysis. STAGE 2
+(Authority Enforcement Design Space) is the first mission with
+*design* content: the doc will contain a proposal Chris must
+gate. Stages 3-4 return to pure research; Stage 5 is design;
+Stage 6 is implementation. The discipline that holds this
+together is the verifier loop + Rigby SIGN review on every
+transition.
 
 ---
 
@@ -1032,3 +1266,78 @@ required per S1268 mission spec scope (the spec asks for a
 verifier loop, not a Rigby pass on the index itself). If a
 future session wants Rigby's read on the index, that's a fine
 small follow-up.
+
+## Appendix B — v3 update pass notes (S1271)
+
+Triggered by the same-session landing of both `symbol_mapping_architecture.md`
+(§1.6) and `actor_identity_attribution_architecture.md` (§1.7).
+Both docs completed the verifier loop + Rigby SIGN review before
+this index update, so §10.1 was applied wholesale.
+
+**Verification pass (one round) before finalization:**
+
+- **Missing doc check.** `ls docs/research/` now shows 6 files
+  (5 research + this index). Both new docs cataloged in §1.6
+  and §1.7 respectively. No subdirectories. No hidden docs. ✓
+- **Section renumbering.** §5.2 (was "Symbol Mapping — P0
+  recommended next" pre-close) marked CLOSED with pointer to
+  §1.6. §5.2a added for Actor Attribution close. §5.2b added
+  for new P0 next research (Authority Enforcement Design
+  Space). Prior §5.3-§5.11 numbering preserved so downstream
+  references don't break; renumbering deferred to a future pass
+  if it becomes needed. ✓
+- **Roadmap stage advancement.** Prior STAGE 1 (Symbol Mapping)
+  marked CLOSED. New STAGE 1b (Actor Attribution) inserted as
+  same-session follow-on. New STAGE 2 (Authority Enforcement
+  Design Space) is the "recommended next." Prior STAGE 2a/2b/2c
+  (Trust Propagation / Memory / Mission Composition) renumbered
+  to STAGE 3a/3b/3c. Downstream stages (Cross-Employee
+  Scheduling → 4, Employee Delegation Design → 5,
+  Implementation → 6) bumped by one. ✓
+- **Dependency graph.** ASCII diagram in §4 extended with two
+  new boxes for §1.6 and §1.7 in the correct downstream
+  position, then the "Future research mission" box updated to
+  point at Authority Enforcement Design Space (was previously
+  pointing at Symbol Mapping, now landed). ✓
+- **Domain map.** Governance row's "Missing research" cleared
+  (Symbol Mapping was the pending item, now shipped);
+  downstream noted as Cross-plane Composition. Authority row
+  updated: existing research now includes §1.6 + §1.7; missing
+  research is Authority Enforcement Design Space. New "Actor
+  Identity / Attribution" domain row added citing §1.7 with
+  F1's OpsRun gap as the flagship finding. ✓
+- **Decision matrix.** 7 new rows added covering:
+  `JobContract.authority` use; actor identity on any new model /
+  audit surface; adding user field to OpsRun (explicit
+  anti-pattern warning per §1.7 F1 + F11); code using
+  `agent_name` CharField anywhere (F4 ambiguity); code using
+  `runs_as_username` (F3 + F11); duplicate Agent row risk (F5);
+  PA tool actor/user context propagation (§1.6 §6 + §1.7 §7).
+  Prior "Authority enforcement (vs. observation)" row updated
+  to cite §1.6 + §1.7 + §5.2b instead of the now-closed §1.4 §11
+  recommendation. ✓
+- **Timeline.** 2 rows appended (S1270 + S1271) with full
+  content summaries + influence callouts. Pattern observation
+  updated to reflect the 3-session growth cadence
+  (S1269/S1270/S1271) after the S1268 burst. ✓
+- **Discoverability.** Both new docs now surface via §1
+  (rows), §3 (domain map, esp. new Actor Identity row), §4
+  (dependency graph position), §5 (closed-gap + new-gap
+  entries), §7 (7 new decision-matrix rows), §8 (timeline
+  chronology), and §9 (roadmap stage boxes). Reading paths §2
+  not extended in this pass; a Path H for "understanding actor
+  identity end-to-end" was considered but deferred — Paths A-G
+  already cover the reading order via §1.6 and §1.7's
+  companion_docs frontmatter chains. Future session can add
+  Path H if requested. ✓
+- **Frontmatter last_verified.** Bumped from "v2" to "v3" with
+  a summary line naming the two shipped docs + the roadmap
+  advancement. verifier_loop field expanded with the v3
+  changes and prior v1/v2 history preserved. owner field
+  extended: "v3 update S1271." ✓
+
+**Status after v3 pass.** Publishable as v3. Both new docs are
+discoverable via all 8 index sections (§1-§9 plus this appendix
++ maintenance rules). Rigby independent SIGN review on the
+index itself remains optional per §10 discipline; if requested,
+a small follow-up pass suffices.
