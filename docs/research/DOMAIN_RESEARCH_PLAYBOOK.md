@@ -943,8 +943,14 @@ ARCHITECTURE_INDEX §1.1–§1.12).
    ### 7.4 Other affected docs
 ## 8. Follow-On Research Queue
 ## 9. Cross-Links to Delegated Arcs
-## 10. Arc Change Log
-## 11. Appendix — Provenance
+## 10. What This Research Taught Us About How to Do Research
+   ### 10.1 What worked (methodology validated across this arc)
+   ### 10.2 What to codify into playbook v3 (per §20 two-triggers rule)
+   ### 10.3 What didn't work / anti-patterns to avoid
+   ### 10.4 Suggestions for the playbook itself
+   ### 10.5 Suggestions for future canonical summaries (optional)
+## 11. Arc Change Log
+## 12. Appendix — Provenance
 ```
 
 - **§1 Executive Summary** — 500–800 words. What did the arc
@@ -965,9 +971,22 @@ ARCHITECTURE_INDEX §1.1–§1.12).
 - **§8 Follow-On Research Queue** — Ranked next-mission list.
 - **§9 Cross-Links to Delegated Arcs** — Every `delegates_to:`
   entry from the parent gets a callout.
-- **§10 Arc Change Log** — Which child, which session, which
+- **§10 What This Research Taught Us About How to Do Research** —
+  Meta-methodology retrospective. What worked in this arc that
+  future arcs should replicate? Which sub-agent overreach patterns
+  needed correction? Which patterns hit the §20 two-triggers
+  threshold and should promote to playbook v3? Which anti-patterns
+  should future audits avoid? What suggestions does this arc make
+  about the playbook itself? This is the arc's contribution to the
+  research process, not just to the domain being researched.
+  Distinct from §4 Cross-Cutting Patterns (which are about the
+  domain) and §11 Arc Change Log (which is a historical ledger of
+  what happened in this arc). §10 is what future arcs learn from
+  this one. Non-negotiable for every xx99 canonical summary
+  (adopted S1399 close 2026-07-01 per Chris directive).
+- **§11 Arc Change Log** — Which child, which session, which
   Rigby verdict, which fold edits.
-- **§11 Appendix** — Every child's file path, evidence
+- **§12 Appendix** — Every child's file path, evidence
   provenance, verifier-loop history.
 
 The `xx99` summary is bounded work. Runtime: one session.

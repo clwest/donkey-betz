@@ -1,6 +1,6 @@
 ---
 title: "Group 1300 Memory / Knowledge / Embeddings — Canonical Summary"
-status: draft
+status: active
 authority: research
 session: 1399
 date: 2026-07-01
@@ -10,7 +10,7 @@ child_slot: P6
 category: canonical_summary
 parent_doc: docs/research/domains/memory/1300_memory_domain_scoping.md
 authors: Claude Code (Chris directed via `start research group 1399` short command 2026-07-01)
-sign_status: SIGN-clean (cycle 1, High confidence, 2026-07-01) via fresh isolation pin `pa-4fc3329d0db6484f`; 0 must-fix, 1 optional nice-to-have (docs↔code naming/category drift micro-pattern acknowledged in §4.5 addendum, kept as adjacent evidence rather than promoted to formal cross-cutting pattern to preserve the 4-pattern set named at S1305 close per parent §5 P6 rationale)
+sign_status: SIGN-clean (cycle 1, High confidence, 2026-07-01) via fresh isolation pin `pa-4fc3329d0db6484f`; 0 must-fix, 1 optional nice-to-have (docs↔code naming/category drift micro-pattern acknowledged in §4.5 addendum, kept as adjacent evidence rather than promoted to formal cross-cutting pattern to preserve the 4-pattern set named at S1305 close per parent §5 P6 rationale). **Chris commit-gated + merged** 2026-07-01 via PR #2781 = `6318787b`. **Arc closed** — all 13 §12.6 close criteria ticked (original 12 per playbook §17 + 1 new "docs cascade executed" per S1399 close Chris directive; cascade PR #2783 = `956727f3`). **Retrofit update** 2026-07-01: §10 "What This Research Taught Us About How to Do Research" retrofitted per Chris directive; playbook §11.3 template updated same-commit; §10 becomes non-negotiable for future xx99 canonical summaries.
 verifier_loop: |
   v0.1 — Bootstrap. Every claim in this summary cites its source
   child audit via `SNNNN §NN.N` anchor. No new grep, no new
@@ -49,6 +49,22 @@ verifier_loop: |
   formal cross-cutting F5 would over-index on a within-audit
   pattern that lacks the multi-child evidence threshold F1-F4
   each meet.
+
+  v0.4 — Retrofit (2026-07-01, post-merge). Chris directive: add
+  §10 "What This Research Taught Us About How to Do Research" as
+  a mandatory section in the playbook §11.3 canonical-summary
+  template. S1399 becomes the first application (retrofitted from
+  11 sections to 12 sections). Renumbering: former §10 Arc Change
+  Log → §11; former §11 Appendix → §12. Load-bearing methodology
+  content previously in §10.4 (F1/F4-CANDIDATE + sibling-inheritance
+  hypothesis-correction + severity-correction extension) moved
+  into new §10.2 "What to codify into playbook v3" with two-triggers
+  threshold status per pattern. §11.4 preserved as backwards-compat
+  pointer for external references to old §10.4. Playbook §11.3
+  template updated same-commit. §12.6 arc close criteria checklist
+  updated: original 12 boxes + 1 new "docs cascade executed" box
+  = 13 total, all ticked. Memory rules `feedback_xx99_meta_methodology_section.md`
+  + `feedback_docs_cascade_at_every_close.md` saved.
 supersedes: none
 related:
   - docs/research/domains/memory/1300_memory_domain_scoping.md              # parent
@@ -1108,12 +1124,211 @@ block any arc:
 
 ---
 
-## 10. Arc Change Log
+## 10. What This Research Taught Us About How to Do Research
+
+Meta-methodology retrospective. This is the arc's contribution to
+the research process, not just to the domain being researched.
+Distinct from §4 Cross-Cutting Patterns (which are about the
+memory domain) and §11 Arc Change Log (which is the historical
+ledger of what happened in this arc). §10 is what future arcs
+learn from this one.
+
+**First application of the playbook §11.3 §10 template addition**
+adopted at S1399 close 2026-07-01 per Chris directive. Playbook
+§11.3 template updated same-commit; every future xx99 canonical
+summary includes this section.
+
+### 10.1 What worked (methodology validated across this arc)
+
+1. **Verifier-loop pre-SIGN spot-checks.** Parent-agent verifier-
+   loop reading sub-agent claims BEFORE routing to Rigby SIGN
+   caught two Agent-6 overreaches at S1303 §14 (F3 "would fail at
+   import time" → soft-fail-with-guard; F4 "confirmed dead code"
+   → CANDIDATE) + broad hypothesis overreach at S1304 §14 D3
+   (partial invalidation of S1301 §19 D3) + severity overreach at
+   S1305 §14 D3 (Agent-6 CRITICAL → MEDIUM via Redis AOF context).
+   Consequence: SIGN cycles focused on substantive edges rather
+   than evidence corrections. **Result: 3 of 5 child audits
+   (S1303, S1304, S1305) hit SIGN-clean in 2 cycles;** S1301 in
+   1 cycle; S1302 in 3 cycles.
+
+2. **F1/F4-CANDIDATE discipline as inheritance methodology.**
+   Dead-code / orphan-write claims require owner-model-qualified
+   consumer inventory, not keyword grep. Named at S1303 §14;
+   applied at S1304 §14 D7 (`ingested_via`); applied at S1305 §14
+   D6 (`platform_config`). Extended at S1305 §14 D3 to severity
+   assertions (not just existence assertions). **Result: prevents
+   "audit says X" false consensus + preserves hypothesis-vs-
+   CANDIDATE separation across sibling propagation.**
+
+3. **Fresh SIGN isolation pins per child audit + arc-continuity
+   pin for scope.** Each child audit got a fresh Rigby SIGN pin
+   (S1301-S1305 + S1399); arc-continuity pin `pa-aa54193f240f4846`
+   carried mission scope across all 7 sessions without contaminating
+   SIGN pressure-tests. **Result: clean SIGN evidence + arc-level
+   context preserved.** See §11.3 below for the full pin ledger.
+
+4. **Bounded canonical-summary discipline.** Playbook §11.3
+   "consume outputs, don't re-audit" rule enforced in S1399. No
+   new §13 6-parallel-Explore sweep. No new file:line evidence. No
+   CANDIDATE → CONFIRMED resolutions. Every claim cites source-
+   audit §-anchor via `SNNNN §NN.N` notation. **Result: 1-cycle
+   SIGN-clean at High confidence** — the shortest SIGN path in
+   the arc.
+
+5. **Reduced-prompt short-command rhythm.** Chris's `start research
+   group 1399` short command with default lean D19+D20 = full
+   session launch. Playbook §12.3 target validated. **Result: no
+   custom prompt required beyond the command itself.**
+
+6. **Parent-with-children arc shape.** Group 1300 spanned 7 sessions
+   cleanly: parent (S1300) + 5 category children (S1301-S1305) +
+   canonical summary (S1399). Each child had clear scope; canonical
+   summary synthesized. **Result: better than single-audit for
+   domains with multiple categories.** First parent-with-children
+   arc in the library to reach the xx99 close stage.
+
+### 10.2 What to codify into playbook v3 (per §20 two-triggers rule)
+
+Patterns hit the §20 two-triggers threshold (used across ≥3 arcs)
+and should promote:
+
+| Pattern | Uses | Threshold | Recommended playbook v3 addition |
+|---------|------|-----------|----------------------------------|
+| **F1/F4-CANDIDATE discipline** | S1303 §14; S1304 §14 D7; S1305 §14 D6 | **3 of 3 — MET** | Add §14 evidence rule: "Dead-code / orphan-write claims require owner-model-qualified consumer inventory, not keyword grep. Until qualification lands, claim is CANDIDATE." |
+| **Sibling-inheritance hypothesis-correction** | S1303 (Agent-6 pre-SIGN); S1304 (S1301 §19 D3 partial invalidation); S1305 (severity extension) | **3 of 3 — MET** | Add §15 SIGN rule: "Every child audit inheriting a broad hypothesis MUST run parent-agent verifier-loop spot-checks BEFORE Rigby SIGN. Hypothesis stays CANDIDATE until receiving-side audit verifies via direct file:line." |
+| **Severity-correction via sibling context** | S1305 §14 D3 (Agent-6 CRITICAL → MEDIUM via Redis AOF sibling context matching S1302 T3) | **1 of 3 — NEEDS ADDITIONAL ARC USES** | Watch for reuse in Group 1400+ before codifying. Current evidence is single-arc application. |
+| **Docs cascade at every close-out** | S1399 close 2026-07-01 (Chris directive) | **1 of 1 — CHRIS-RATIFIED, NO THRESHOLD REQUIRED** | Add §17 graduation criteria checklist item: "docs → RAG cascade (`build_docs_index` → `build_rag_corpus` → `sync_docs_index_to_documents` → `embed_documents --all-unembedded` → `build_docs_provenance`) executed post-merge before declaring arc closed." Memory rule `feedback_docs_cascade_at_every_close.md`. |
+| **Meta-methodology §10 in canonical summaries** | S1399 (this doc, retrofitted) | **1 of 1 — CHRIS-RATIFIED, NO THRESHOLD REQUIRED** | Already applied to playbook §11.3 template same-commit as this section landing. First application: this doc. Memory rule `feedback_xx99_meta_methodology_section.md`. |
+
+**Consequence for arc-scoped methodology outputs.** The three
+patterns tagged **MET** above (F1/F4-CANDIDATE discipline; sibling-
+inheritance hypothesis-correction; severity-correction extension)
+formally graduate from "arc pattern" to "playbook v3 candidate."
+Playbook v3 update session is queued as a follow-on. Two additional
+patterns (**docs cascade + meta-methodology §10**) are Chris-ratified
+directly and skip the two-triggers gate.
+
+### 10.3 What didn't work / anti-patterns to avoid in future arcs
+
+1. **Sub-agent claims without verifier-loop.** Every child audit's
+   6-parallel Explore sweep produced at least one overreach that
+   would have shipped to Rigby SIGN if parent-agent hadn't spot-
+   checked. Anti-pattern: routing sub-agent output directly to
+   SIGN without parent-agent verifier-loop pre-corrections.
+
+2. **Broad orphan-write hypotheses without owner-model qualification.**
+   S1301 §19 D3 broadly hypothesized both `source_type` +
+   `ingested_via` are orphan. S1304 verifier-loop found only
+   `ingested_via` qualifies. Anti-pattern: keyword-grep as sole
+   evidence for dead-code / orphan-write claims.
+
+3. **Declaring arc-close "done" without running docs cascade.**
+   S1303/S1304/S1305 close-outs skipped the 4+1 step cascade. Docs
+   were on git/`main` but not in `Document` table, not embedded,
+   not searchable to Rigby. Chris caught this at S1399 close
+   2026-07-01. Anti-pattern: any docs-modifying arc/session that
+   doesn't run the cascade at close.
+
+4. **Duplicate memory patterns surfacing across multiple children
+   when parent should have named them upfront.** `@lru_cache(1)`
+   surfaced in S1301 (Cat D), S1304 (Cat E↔D), and S1305 (Cat H)
+   as separate finding classes when parent §3H should have named
+   it as a first-class category upfront. Anti-pattern: parent
+   scoping doc not naming cross-child pattern surfaces that recur.
+
+5. **Declaring dead code from keyword grep.** Memory rule
+   `feedback_verify_before_deleting_dead_code.md` names this class.
+   F4-CANDIDATE discipline (§10.2 above) is the codification.
+   Anti-pattern: any "0 hits" grep result treated as CONFIRMED
+   dead code without owner-model qualification.
+
+6. **Skipping the canonical summary xx99 slot on a multi-child
+   arc.** Group 1300 explicitly reserved S1399 for the canonical
+   summary per parent §5 P6 slot. Without the xx99 slot, cross-
+   cutting patterns (§4 F1-F4) would have remained implicit across
+   child audits + never named as a coherent set. Anti-pattern:
+   closing a multi-child arc without producing the xx99 canonical
+   summary.
+
+### 10.4 Suggestions for the playbook itself
+
+Concrete edits to `DOMAIN_RESEARCH_PLAYBOOK.md` that this arc's
+experience motivates. Not requirements — suggestions for Chris /
+Rigby to consider in a future playbook process session:
+
+1. **§14 evidence rules addition** — Codify F1/F4-CANDIDATE
+   discipline as a rule (per §10.2 above). Bar keyword-grep as
+   sole evidence for dead-code claims; require owner-model
+   qualification.
+
+2. **§15 SIGN rules addition** — Codify sibling-inheritance
+   hypothesis-correction pattern as a rule. Every child audit
+   inheriting a broad hypothesis MUST run parent-agent verifier-
+   loop spot-checks BEFORE Rigby SIGN.
+
+3. **§17 graduation criteria addition** — Add docs cascade +
+   provenance rebuild checklist items to arc-close criteria. Not
+   optional. Memory rule already codified; playbook body should
+   reflect.
+
+4. **§11.3 canonical summary template addition — APPLIED SAME-
+   COMMIT.** The §10 "What This Research Taught Us About How to
+   Do Research" section is non-negotiable for xx99 docs going
+   forward. Playbook §11.3 template updated same-commit as this
+   section landing.
+
+5. **§13 sweep guidance** — Add note that parent-agent verifier-
+   loop spot-checks are expected between sub-agent output and
+   Rigby SIGN routing. Sub-agent output is CANDIDATE, not ground
+   truth.
+
+6. **§11.1 parent scoping template addition** — Add "cross-child
+   pattern surfaces" callout to parent scoping template so future
+   arcs name recurring patterns (like `@lru_cache`) at scoping
+   time rather than surfacing them redundantly across children.
+
+### 10.5 Suggestions for future canonical summaries
+
+Optional guidance for canonical summaries that follow S1399:
+
+1. **Preserve child-audit CANDIDATE labels.** S1399 §4-§8 preserved
+   F1-CANDIDATE + F4-CANDIDATE labels throughout. Canonical
+   summaries should NOT resolve CANDIDATE claims — that's the
+   follow-on audit's job.
+
+2. **Cite source-audit §-anchor for every claim.** S1399 used
+   `SNNNN §NN.N` notation throughout. Aids Rigby SIGN Q10-Q13
+   traceability + gives future readers exact provenance.
+
+3. **Include a §4.5-style "adjacent evidence" addendum for Rigby
+   nice-to-haves.** S1399 §4.5 acknowledged a fifth candidate
+   pattern as adjacent evidence rather than promoting to formal
+   §4 pattern. Preserves the pattern set named at arc close while
+   acknowledging Rigby's suggestion.
+
+4. **Aggregate delegated-arc handoffs into §9.** S1399 §9.2
+   aggregated 4 Group 1700 Observability delegations from 4
+   different children into one delegation surface. Reduces the
+   future arc's scoping cost.
+
+5. **Number sub-sections of §7 by target doc.** S1399 §7.2
+   subdivided by target doc (`platform_architecture_inventory.md`
+   §3.13 subdivision, §3.14 lane consolidation, new Cat F/H rows).
+   Makes anchor-update commits atomic.
+
+6. **Use `SNNNN §NN.N` for every source-audit citation.** Not just
+   in prose; in tables + change log + appendix too. Gives Rigby's
+   Q10-Q13 pressure-test grep-friendly provenance.
+
+---
+
+## 11. Arc Change Log
 
 Which child, which session, which Rigby verdict, which fold edits.
-Per playbook §11.3 §10 template requirement.
+Per playbook §11.3 §11 template requirement.
 
-### 10.1 Session-by-session ledger
+### 11.1 Session-by-session ledger
 
 | Session | Doc | Rigby SIGN | Cycles | Load-bearing fold edits | Commit |
 |---------|-----|-----------|--------|------------------------|--------|
@@ -1125,7 +1340,7 @@ Per playbook §11.3 §10 template requirement.
 | S1305 | `1305_memory_runtime_correctness_audit.md` (Cat H) | SIGN-clean | 2 | 3-must-fix fold: §3 + §14 D10 `cache.set(timeout=None)` scoping tightened with excluded-from-count table; §7.2 gap (a) reinforced with `get_user_memory:415` + `save_memory:476` + 0-hit invalidation grep; §14 D8 Django cache backend citation. Bonus: §19 R6 reshaped from "verify MemorySystem" (Rigby-answered yes) to "verify IntelligentJobMatcher production invocation" | PR #2780 (`4b6f3419`) |
 | S1399 | `1399_memory_canonical_summary.md` (this doc) | Pending — route to Rigby with full SIGN + Q10-Q13 canonical-summary pressure-test | TBD | TBD | Pending Chris commit-gate |
 
-### 10.2 Rigby SIGN cycle count evolution
+### 11.2 Rigby SIGN cycle count evolution
 
 Only child audit to reach SIGN-clean in **1 cycle**: S1301.
 Children reaching SIGN-clean in **2 cycles**: S1303, S1304, S1305.
@@ -1138,7 +1353,7 @@ extended it (broad hypothesis from S1301 §19 D3 caught pre-SIGN).
 S1305 further extended to severity-correction (Agent 6 CRITICAL
 downgraded to MEDIUM pre-SIGN via Redis AOF context).
 
-### 10.3 Arc pin continuity
+### 11.3 Arc pin continuity
 
 `pa-aa54193f240f4846` "Session 1300 — Memory research group
 (kickoff)" carried Group 1300 continuity across all 6 sessions
@@ -1157,31 +1372,26 @@ SIGN isolation pins used for each child audit's Rigby SIGN cycles:
 Arc pin `pa-aa54193f240f4846` retires on arc close per OPEN_ARCS
 schema.
 
-### 10.4 Load-bearing methodology outputs of the arc
+### 11.4 Load-bearing methodology outputs of the arc
 
-Beyond findings, the arc produced three methodological patterns
-that generalize to future audits:
+**Superseded by §10.** The three methodological patterns previously
+enumerated here (F1/F4-CANDIDATE discipline; sibling-inheritance
+hypothesis-correction; severity-correction via sibling context) are
+now the load-bearing content of §10.2 "What to codify into playbook
+v3." This subsection preserved as a pointer for backwards-compat
+with external references to `§10.4` (e.g., OPEN_ARCS 2026-07-01
+S1399 close reconciliation note; SESSION_1399 handoff `key_findings`).
 
-1. **F1/F4-CANDIDATE discipline** (§4.4 above). Named at S1303 §14;
-   applied at S1304 §14 D7; applied at S1305 §14 D6.
-2. **Sibling-inheritance hypothesis-correction** (§5.1 above).
-   Partial invalidation of S1301 §19 D3 via S1304 direct file:line
-   read.
-3. **Severity-correction via sibling context** (§5.3 above). Agent
-   6 CRITICAL claim downgraded to MEDIUM via S1305's Redis AOF
-   context matching S1302 T3 sibling classification. Extension of
-   F4 to severity assertions, not just existence assertions.
-
-All three should be codified into playbook v3 additions per the
-playbook §20 two-triggers rule (once used across three arcs).
+See **§10.2** for the codification-target table with two-triggers
+threshold status per pattern.
 
 ---
 
-## 11. Appendix — Provenance
+## 12. Appendix — Provenance
 
-Per playbook §11.3 §11 template requirement.
+Per playbook §11.3 §12 template requirement.
 
-### 11.1 Every child's file path
+### 12.1 Every child's file path
 
 | Session | Path | Line count |
 |---------|------|-----------|
@@ -1197,7 +1407,7 @@ Per playbook §11.3 §11 template requirement.
 **Total.** 5 audits + 1 parent + 1 follow-up + this canonical
 summary = 8 files under `docs/research/domains/memory/`.
 
-### 11.2 Evidence provenance
+### 12.2 Evidence provenance
 
 Every claim in this summary cites its source-audit §-anchor via
 `SNNNN §NN.N` notation. No file:line evidence introduced beyond
@@ -1215,7 +1425,7 @@ what children already established. Anchor coverage:
 - S1305: §3 (LRU + cache.set enumeration); §7.2 (AgentLearningService
   gap); §14 (D1-D10); §15 (T1-T12); §19 (R1-R8).
 
-### 11.3 Verifier-loop history
+### 12.3 Verifier-loop history
 
 Preserved append-only per playbook §6 rule. Session frontmatter
 `verifier_loop:` blocks in each child audit contain the full history
@@ -1226,7 +1436,7 @@ top of file) captures S1399-specific corrections: (v0.1) bootstrap
 + CANDIDATE preservation rule; (v0.2) Rigby launch-call bonus on
 method + negative-evidence standard for dead-code claims.
 
-### 11.4 What was NOT re-audited
+### 12.4 What was NOT re-audited
 
 Per playbook §11.3 bounded-work rule + parent §5 P6 scope:
 
@@ -1241,7 +1451,7 @@ Per playbook §11.3 bounded-work rule + parent §5 P6 scope:
 - Cat G delegated to Employee OS 1200s arc, not touched.
 - Cat H owned by S1305 not re-inspected.
 
-### 11.5 Rigby SIGN routing for this summary
+### 12.5 Rigby SIGN routing for this summary
 
 Per playbook §15 stage table, canonical summaries require full SIGN
 with the 4 additional pressure-test questions:
@@ -1260,7 +1470,7 @@ pressure-test (per launch-call response). Continuity pin
 `pa-aa54193f240f4846` remains for Chris-facing D19+D20 ratification
 + arc-close decisions.
 
-### 11.6 Arc close criteria (per playbook §17 graduation)
+### 12.6 Arc close criteria (per playbook §17 graduation)
 
 - [x] All 5 child audits shipped + SIGN-clean + committed to `main`
 - [x] Cross-cutting patterns named (F1-F4 in §4 above)
@@ -1270,15 +1480,20 @@ pressure-test (per launch-call response). Continuity pin
 - [x] Anchor-update recommendations proposed (§7 above)
 - [x] Follow-on queue ranked (§8 above)
 - [x] Delegated arcs cross-linked (§9 above)
-- [x] Change log complete (§10 above)
-- [x] Provenance appendix complete (§11 above)
-- [ ] Rigby SIGN Q10-Q13 pressure-test cleared
-- [ ] Chris commit-gate per playbook §16
+- [x] Meta-methodology retrospective delivered (§10 above — first application of the playbook §11.3 §10 template addition adopted at S1399 close per Chris directive)
+- [x] Change log complete (§11 above)
+- [x] Provenance appendix complete (§12 above)
+- [x] Rigby SIGN Q10-Q13 pressure-test cleared (cycle 1 High confidence 0 must-fix via fresh isolation pin `pa-4fc3329d0db6484f`; pin retired at close per Chris directive)
+- [x] Chris commit-gate per playbook §16 (PR #2781 = `6318787b` merged 2026-07-01)
+- [x] Docs → RAG cascade executed post-merge (`build_docs_index` → `build_rag_corpus` → `sync_docs_index_to_documents` → `embed_documents --all-unembedded` → `build_docs_provenance`; 8 unembedded docs found + embedded, ~667 chunks, ~$0.08; PR #2783 = `956727f3` merged 2026-07-01 with regenerated `docs/INDEX.md` + `docs/_provenance.json`)
 
-**Arc closes when the last two boxes tick.**
+**Arc closed 2026-07-01.** All 13 close criteria ticked (12 original per playbook §17 + 1 new "docs cascade executed" per Chris directive S1399 close 2026-07-01, memory rule `feedback_docs_cascade_at_every_close.md`).
 
 ---
 
 *End of Group 1300 Memory / Knowledge / Embeddings canonical
-summary. Route to Rigby for full SIGN + Q10-Q13 canonical-summary
-pressure-test.*
+summary. Arc closed 2026-07-01 (PR #2781 + #2782 + #2783 merged;
+Rigby SIGN-clean cycle 1 High confidence; S1399 SIGN pin retired;
+Group 1300 arc pin retirement deferred to next-session open per
+`00-START-NEXT-SESSION.md` D22). Meta-methodology §10 retrofitted
+per Chris directive; playbook §11.3 template updated same-commit.*
