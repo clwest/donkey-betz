@@ -38,6 +38,16 @@ Handoffs win on ship state. See OS §6.6.
 |-------|--------|-------|-----------|----------------|---------------|---------------|--------------|---------------|
 | **1300** | Memory / Knowledge / Embeddings | in-progress | `pa-aa54193f240f4846` | `1300_memory_domain_scoping.md` (S1300) | *S1301 queued — not yet launched* | 2026-07-01 | none | S1301 RAG Retrieval Lanes (Category D). Open decisions D6 (launch cadence) + D7 (parent SIGN routing) awaiting Chris ratification before S1301 begins. |
 
+> **Priority.** **Group 1300 is the arc that spawned this entire
+> research plan** — the Memory scoping session that surfaced the
+> parent-with-children pattern which then drove playbook v2, the
+> Research OS, and the S1279 installation. **Finish Group 1300
+> before opening any new arc.** Full sequence: S1301 → S1302 →
+> S1303 → S1304 → S1305 → S1399 canonical summary. Group 1400
+> Revenue and everything else in the "Not started" section waits
+> until Group 1300 either closes or reaches a natural pause point
+> where Chris chooses to parallelize.
+
 ## Awaiting summary
 
 *(none)*
@@ -54,9 +64,13 @@ Handoffs win on ship state. See OS §6.6.
 
 ## Not started (playbook §22 queue)
 
+**Blocked on Group 1300 completion** unless Chris explicitly
+parallelizes. Group 1300 is the active priority (see In-progress
+above).
+
 | Group | Domain | Priority rationale |
 |-------|--------|-------------------|
-| **1400** | Revenue / Outreach / Engagement | Business-value highest under-researched domain; Rigby-caught missed inventory in S1273 review. First arc to open under the fully-installed OS. |
+| **1400** | Revenue / Outreach / Engagement | Business-value highest under-researched domain; Rigby-caught missed inventory in S1273 review. Queued after Group 1300 completes (S1305 or S1399), OR after Chris explicitly parallelizes with an isolation-pin split. |
 | **1500** | Sports / DBAO / Intelligence | Structural question: island vs integrated (S1274 §11.3). |
 | **1600** | Content / Deliverables / Publishing | Well-inventoried; integration analysis needed. |
 | **1700** | Observability / Telemetry / SLOs | 5-layer execution-telemetry dedup audit (S1273 §5.13 + S1274 §11.6). |
