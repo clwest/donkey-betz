@@ -9,110 +9,129 @@
 ### The correct LOCAL invocation
 ```bash
 PA_API_URL=http://localhost:8000 \
-PA_API_TOKEN=<local-donkeyking-token>      \
+PA_API_TOKEN=<local-chris-token>      \
 .venv/bin/python tools/pa_chat.py "message" --conversation <id>
 ```
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation. **Active pin is `pa-aa54193f240f4846`** ("Session 1300 — Memory research group (kickoff)"), preserved across S1300 close for S1301 continuity. Fresh at S1300 open — no S1270-S1275 turn context carried forward; mission scope only. **Retired at S1300 open:** `pa-cbcc410b32714f60` (Sessions 1270-1275 — symbol_mapping research chain: architecture / actor_identity / authority_enforcement / whole-platform inventory / cross-domain integration audit / DOMAIN_RESEARCH_PLAYBOOK / option_selection / event_schema_design; 6 research docs + 2 INDEX updates over 6 sessions; not health-scored because research-only sessions don't stress the tool surface). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation. **Active arc pin is `pa-aa54193f240f4846`** ("Session 1300 — Memory research group (kickoff)"), preserved across S1301 close for S1302 continuity. Group 1300 mission scope only — no S1270-S1275 turn context carried forward.
 
-## READ THIS SECOND — S1300 ENDED EARLY; S1301 IS FIRST CHILD AUDIT OF GROUP 1300
+**Retired at S1301 close (Chris discretion):** `pa-a23736a833f646cf` — S1301 SIGN isolation pin ("S1301 SIGN — RAG Retrieval Lanes audit pressure-test (isolation)"). SIGN cycle complete; SIGN-clean verdict logged in audit §20.7 + handoff. Pin may retire when Chris approves.
 
-Session 1300 landed **only the Phase 0 parent-scoping doc** for Research Group 1300 (Memory / Knowledge / Embeddings). See `docs/handoffs/SESSION_1300_MEMORY_RESEARCH_GROUP_PARENT_SCOPING.md`. Chris close directive was "mark the git pr as ended early for core research" — meaning the actual audit sweep (Category D RAG lanes, Categories A+B+C persistence, etc.) has NOT started. That's the S1301 open job.
+Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
-### Group 1300 arc shape (locked at S1300 close)
+## READ THIS SECOND — S1301 IS DRAFT + SIGN-CLEAN; S1302 IS SECOND CHILD AUDIT OF GROUP 1300
+
+Session 1301 landed the **first child audit** under Research Group 1300 (Memory / Knowledge / Embeddings) — `docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md`, ~1200 lines, `status: draft`. Rigby SIGN-clean via fresh isolation pin `pa-a23736a833f646cf` after cycle 1 fold. **Chris commit-gate pending** on the entire S1301 artifact set (audit + INDEX v13 + OPEN_ARCS + handoff + this rotation).
+
+**Session close artifacts on the working tree (uncommitted):**
 
 ```
-S1300 (parent, complete — docs/research/domains/memory/1300_memory_domain_scoping.md)
-  → S1301 RAG Retrieval Lanes (Category D)         ← YOUR NEXT MISSION
-  → S1302 Memory Persistence Architecture (A + B + C)
-  → S1303 Conversational / Thread Memory (Category F — no §3 row yet)
-  → S1304 Documentation Corpus ↔ RAG Boundary (E ↔ D)
-  → S1305 Runtime Memory Correctness (Category H narrow)
-  → S1399 Group 1300 Canonical Summary (cross-cutting synthesis)
+docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md   [new]
+docs/research/ARCHITECTURE_INDEX.md                                       [modified, v12 → v13]
+docs/research/OPEN_ARCS.md                                                [modified, Group 1300 row + reconciliation]
+docs/handoffs/SESSION_1301_MEMORY_RAG_RETRIEVAL_LANES.md                  [new]
+00-START-NEXT-SESSION.md                                                  [modified, this file]
 ```
 
-Category G (Employee OS Mission Memory) is **delegated to the Employee OS 1200s follow-up arc** — do NOT fold into Group 1300.
+Handoff: `docs/handoffs/SESSION_1301_MEMORY_RAG_RETRIEVAL_LANES.md`.
 
-### Two open decisions gating S1301 launch
+### S1302 IS THE NEXT MISSION — Memory Persistence Architecture
 
-Chris did NOT answer these at S1300 close (session ended before greenlight):
+Per parent doc `1300_memory_domain_scoping.md` §5 P2 slot (Chris-locked D4 2026-07-01, renamed from "Memory Store Overlap Audit" to widen scope to durability + authority framing, not just overlap surfacing):
 
-- **D6 — S1301 launch cadence.** Immediate audit kickoff vs pause for Chris review of the parent doc first. **Default lean: PAUSE.** Rationale: parent doc is fresh; Chris review before P1 kickoff protects against sequencing regret.
-- **D7 — Rigby SIGN routing on parent doc.** Skip vs light SIGN before P1 kickoff. **Default lean: SKIP** per playbook §9 (SIGN attaches to audits, not scoping).
+- **Scope:** Categories A + B + C — Semantic Knowledge Memory / Personal-Adaptive Memory / Agent Working Memory.
+- **Systems (from parent §3):**
+  - **Category A — Semantic Knowledge Memory:** `AgentKnowledgeSource` (`core/models_unified_system.py:521`), `EmbeddingService` (`core/services/embedding_service.py`), `LearningBridge` migration (9 bridges S1115), spider → knowledge → agent prompt injection path.
+  - **Category B — Personal / Adaptive Memory:** `UserAgentLearning`, `AgentLearningService`, `ConversationMemory` (per-user pgvector), per-user Redis preference models.
+  - **Category C — Agent Working Memory:** `AgentMemory` (episodic), `MemoryPromotionService` (score-gated auto-save from PA turns), `FeedbackLoopEngine` (PA-to-Agent feedback closure S990).
+- **Anchor:** S1273 §3.13 (Memory / Knowledge / Embeddings) — read as prior evidence per playbook §7 cross-reference policy.
+- **Known drift (from parent §3):**
+  - No versioning on `AgentKnowledgeSource`; mutations untracked.
+  - Redis-only state → worker recycle can lose recent learning.
+  - 14-day freshness hardcoded in `ConversationOrchestrator`.
+  - `MemoryPromotionService` scoring criteria opaque (EXPERIMENTAL maturity).
+  - `spider_context['pa_content_feedback']` consumer UNKNOWN (KNOWLEDGE_RAG_MEMORY.md §6).
 
-**FIRST THING S1301 open:**
+### S1301 finding INHERITED as first-order S1302 scope
+
+Per S1301 §14.3 D3 + §17 + §19: **Two provenance systems coexist without integration.**
+
+- Row-level `DocumentEmbedding.source_type` + `ingested_via` fields (migration 0044, populated by ingestion) are NEVER READ by any retrieval path.
+- External `docs/_provenance.json` (built by `build_docs_provenance`, read by `search_docs` filter) has 464 UNKNOWN / 2156 = 21.5% coverage gap.
+- The persistence-architecture question: **who writes what metadata when, and who reads it — across Categories A + B + C?** This is a broader-than-retrieval question that S1301 explicitly surfaced but did not own. S1302 does.
+
+The audit questions this drives for S1302:
+1. Do Categories A / B / C each have their own provenance/metadata patterns? Or shared?
+2. Which cells of the "who writes / who reads" matrix are populated? Which are orphaned like D3?
+3. Where does data durability degrade (e.g., Redis-only state, 14-day windows, EXPERIMENTAL scoring)?
+4. What is the authority boundary — who is allowed to write agent memory / personal memory / knowledge memory, and how is that enforced (if at all)?
+
+### Two open decisions gating S1302 launch
+
+- **D8 — S1302 launch cadence.** Immediate audit kickoff vs pause for Chris review of the S1301 audit findings first. **Default lean: PAUSE.** Rationale: S1301 draft + INDEX v13 + OPEN_ARCS updates are pending commit-gate; sequencing S1302 open before S1301 commit could produce stacking risk.
+- **D9 — Arc pin continuity.** Retain `pa-aa54193f240f4846` (default) vs rotate to fresh Group 1300 pin. **Default lean: RETAIN** — the pin carries mission-scope context that S1302 can reuse without cross-contaminating.
+
+**FIRST THING S1302 open:**
 1. `context-kit orient`
-2. Confirm `service_context: local` via `platform_config_tool overview`.
-3. Ask Chris via the S1300 pin (`pa-aa54193f240f4846`) to resolve D6 + D7.
-4. If Chris greenlights immediate S1301: begin playbook §11 opening sequence against `docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md`, feeding the §6 provenance-filter finding from the parent doc as S1301 input.
-5. Launch playbook §7 6-sub-agent sweep for Category D scope.
-
-### Category D scope (S1301 RAG Retrieval Lanes)
-
-From parent doc §3 (Category D):
-
-- **Systems:** `core/rag_integration.py` (pgvector prod), `core/rag.py` (local Ollama keyword), `Document`, `DocumentEmbedding`, HNSW index, `ScopedRetrievalService`, `RAGObservabilityService`, `search_docs` PA tool, provenance filter mechanics.
-- **Anchor:** S1273 §3.14 + §5.4 (2-lane concern).
-- **Live symptom:** At S1300 open Rigby ran `search_docs` twice against OpsRun/MissionRunner/JobContract terms and got:
-  ```
-  pre_filter_count: 8
-  excluded_missing_provenance: 7
-  excluded_mismatch: 1
-  result_count: 0
-  ```
-  100% of semantically-matched candidates dropped via provenance filter. **This is the S1301 audit's live entry point** — trace why + document the class + propose remediation surface (not implementation).
-
-### Audit questions to answer (playbook §4 subset, tailored)
-
-Do NOT re-run all 28 playbook questions — this is a child audit under a parent that already answered arc-level structure. Focus on Category D specifically:
-
-1. What triggers `excluded_missing_provenance`? Is provenance metadata populated at ingestion or synthesized at query time?
-2. What triggers `excluded_mismatch` on `originating_session`? Is the session filter meant to exclude cross-session material by default?
-3. How does the two-lane split (§5.4) affect provenance? Does `core/rag.py` local lane have the same filter?
-4. Is this the same class as S1142 chunk-coverage gap (852 / 14,149 chunks — S1273 §3.13 known drift)?
-5. Under what queries does the platform silently return 0 results despite semantic matches existing? What is the operator-facing error surface?
-6. What is the 2-lane call-time selector research question flagged in playbook §12 §3.13 note?
+2. Confirm `service_context: local` via `platform_config_tool overview`
+3. Ask Chris via arc pin whether S1301 artifacts commit-gate is done (if yes: proceed on `main`; if no: continue stacking on `docs/session-1301-memory-rag-retrieval-lanes` branch)
+4. Resolve D8 (launch cadence) + D9 (arc pin) with Chris via `pa-aa54193f240f4846`
+5. If greenlit: create branch `docs/session-1302-memory-persistence-architecture` off appropriate base
+6. Create `docs/research/domains/memory/1302_memory_persistence_architecture_audit.md` per playbook §11.2 20-section template
+7. Launch playbook §13 6-sub-agent sweep for Categories A + B + C scope
+8. Feed S1301 §14.3 D3 finding as anchor evidence for §17 (Duplicate or Overlapping Systems) and §18 (Ownership Gaps)
 
 ---
 
 ## PA / Rigby context
 
-- **Active pin:** `pa-aa54193f240f4846` (S1300 fresh — carries mission scope only, no S1270-S1275 turn context).
-- **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + pin).
+- **Active arc pin:** `pa-aa54193f240f4846` (Group 1300 continuity — S1300 open through S1301 close).
+- **Retired at S1301 close:** `pa-a23736a833f646cf` (SIGN isolation, may retire on commit).
+- **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin).
 - **Local worker restart** needs `PA_USE_FUNCTION_CALLING=true` env or Rigby drops to keyword routing. `make celery` handles it; ad-hoc `celery -A core worker` does not.
 
-## Repo state at S1301 open
+## Repo state at S1302 open
 
-- **Branch state:** S1300 branch `docs/session-1300-memory-research-group-parent-scoping` opened as PR stacked on S1275 branch (#2773). PR body marked "ended early for core research." Should be reviewed/merged before S1301 opens a new branch, OR S1301 stacks on S1300.
-- **Handoff drift:** S1270-S1274 landed as research docs without formal `SESSION_1270_*.md` through `SESSION_1274_*.md` handoffs. Rigby's default lean at S1300 close: skip backfill (research-only sessions may intentionally skip). Chris did NOT override at S1300 close. Note: `SESSION_1275_SYMBOL_MAPPING_EVENT_SCHEMA_DESIGN.md` DOES exist on the S1275 branch (upstream of S1300 PR).
-- **ARCHITECTURE_INDEX version:** v9 (S1300 §1.13 parent scoping doc registered). S1275 branch also claims v8 with §1.12 — merge order determines final v9/v10 version numbers.
+- **Branch state:** S1301 branch `docs/session-1301-memory-rag-retrieval-lanes` stacked on `origin/docs/session-1300-memory-research-group-parent-scoping`. Working tree has 4 modified + 2 new files (all S1301 close artifacts). No commits yet.
+- **Handoff continuity:** S1301 handoff landed at `docs/handoffs/SESSION_1301_MEMORY_RAG_RETRIEVAL_LANES.md`. S1300 handoff still at `docs/handoffs/SESSION_1300_MEMORY_RESEARCH_GROUP_PARENT_SCOPING.md`. S1270-S1275 handoff-drift backfill remains deferred (Rigby default lean at S1300 close — skip; Chris did not override).
+- **ARCHITECTURE_INDEX version:** v13 (S1301 §1.16 + §8 timeline row added on this branch, not yet on main).
 
 ## Next-session first-action punch list
 
 - [ ] `context-kit orient`
 - [ ] Confirm `service_context: local` via `platform_config_tool overview`
-- [ ] Resolve D6 (S1301 launch cadence) + D7 (Rigby SIGN on parent) with Chris via `pa-aa54193f240f4846`
-- [ ] If greenlit: create branch `docs/session-1301-memory-rag-retrieval-lanes` off S1300 branch (or main if S1300 PR merged)
-- [ ] Create `docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md` per playbook §5 20-section template
-- [ ] Launch playbook §7 6-sub-agent sweep for Category D scope
-- [ ] Feed §6 provenance-filter finding as S1301 input
-- [ ] Do NOT touch Categories A/B/C/E/F/H (they have dedicated child audits later)
-- [ ] Do NOT touch Category G (delegated to Employee OS 1200s follow-up)
+- [ ] Check if S1301 artifact set was committed on `main` between sessions — if yes, S1302 branches off `main`; if no, continues stacking on `docs/session-1301-memory-rag-retrieval-lanes`
+- [ ] Resolve D8 (S1302 launch cadence) + D9 (arc pin retention) with Chris via `pa-aa54193f240f4846`
+- [ ] If greenlit: create branch `docs/session-1302-memory-persistence-architecture`
+- [ ] Create `docs/research/domains/memory/1302_memory_persistence_architecture_audit.md` per playbook §11.2 20-section template
+- [ ] Launch playbook §13 6-sub-agent sweep for Categories A + B + C scope
+- [ ] Feed S1301 §14.3 D3 finding as anchor evidence (row-level provenance orphaned; two systems, no bridge)
+- [ ] Feed S1300 parent §3 known drift bullets (14-day freshness, Redis-only state, EXPERIMENTAL scoring, opaque promotion criteria) as sweep inputs
+- [ ] Do NOT touch Category D (S1301 already owns it)
+- [ ] Do NOT touch Category E (S1304 will own it)
+- [ ] Do NOT touch Category F (S1303 will own it)
+- [ ] Do NOT touch Category G (delegated to Employee OS 1200s arc)
+- [ ] Do NOT touch Category H (S1305 will own it)
 
 ## Reference — where to look
 
 - **Parent doc:** `docs/research/domains/memory/1300_memory_domain_scoping.md`
+- **S1301 audit (draft, SIGN-clean):** `docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md`
+- **S1301 handoff:** `docs/handoffs/SESSION_1301_MEMORY_RAG_RETRIEVAL_LANES.md`
 - **S1300 handoff:** `docs/handoffs/SESSION_1300_MEMORY_RESEARCH_GROUP_PARENT_SCOPING.md`
-- **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (§7 sub-agent sweeps, §11 opening sequence)
-- **Inventory anchor:** `docs/research/platform_architecture_inventory.md` §3.13/§3.14/§3.15/§5.4
+- **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (§11.2 20-section template, §13 6-sub-agent sweep, §14 evidence rules, §15 SIGN routing, §16 commit policy)
+- **Research OS:** `docs/research/process/RESEARCH_OPERATING_SYSTEM.md`
+- **Inventory anchor:** `docs/research/platform_architecture_inventory.md` §3.13 (Memory / Knowledge / Embeddings) + §5.4 (Multi-store overlap flag)
 - **Narrative anchor:** `docs/PLATFORM_WHAT_IT_IS.md`
 - **Runtime anchor:** `docs/PLATFORM_INVENTORY.md`
 - **Cross-domain audit:** `docs/research/platform/cross_domain_integration_audit.md`
+- **KNOWLEDGE_RAG_MEMORY narrative (S1158):** `docs/narratives/KNOWLEDGE_RAG_MEMORY.md`
 
 ## Doctor warnings to expect
 
 - Inventory freshness (stale) — `python manage.py generate_platform_inventory --write` to refresh
-- Handoff numbering continuity — legitimate; S1270-S1274 skipped by intent per Rigby lean
+- Handoff numbering continuity — legitimate; S1270-S1274 skipped by intent per Rigby lean at S1300 close
 - Test count drift — minor, ignore unless writing tests
+- Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 is older than latest handoff (informational)
