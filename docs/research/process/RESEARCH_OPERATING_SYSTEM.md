@@ -3697,9 +3697,18 @@ without Chris writing a custom prompt."*
 **Status flip.** OS transitions from `status: draft` to
 `status: active`. **CANONICAL as of S1279 close.**
 
-**Group 1400 Revenue** may now open under the fully-installed
-OS — the first research arc to exercise the reduced-prompt
-target rhythm from OS §12.3.
+**Group 1300 Memory is the active priority — finish it first.**
+Group 1300 is the arc that spawned this entire process
+framework (its Phase 0 scoping surfaced the parent-with-children
+pattern that drove playbook v2, the OS, and this S1279
+installation). Sequence: S1301 RAG Retrieval Lanes →
+S1302 Memory Persistence Architecture → S1303 Conversational /
+Thread Memory → S1304 Documentation Corpus ↔ RAG Boundary →
+S1305 Runtime Memory Correctness → S1399 canonical summary.
+**Group 1400 Revenue and everything else in the playbook §22
+queue waits** until Group 1300 either closes or Chris
+explicitly parallelizes with an isolation-pin split. See
+`docs/research/OPEN_ARCS.md` for live arc state.
 
 ## 20.14 Session close
 
