@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-07-01 (v8 — S1275 registered `symbol_mapping_event_schema_design.md` as §1.12. Closes §5.2d (Symbol Mapping Event Schema Design gap). Two-surface event stream (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls) unified via new `authority_action_observed_stream` DB view; 21 payload fields; 4 v0 emitters + 1 v0 first consumer; DECLARED tier explicitly non-authoritative; drift stack with weekly sampled-truthing loop. Rigby SIGN-with-edits — 8 must-fixes + bonus #9 folded (ambient OpsRun → two-surface, drop `event_id`, drop `notes` + downscope `producer_version`, rename `delegator_actor` → `caller_actor`, reframe "5 producers" → "4 emitters + 1 consumer", rename INFERRED → DECLARED, add sampled-truthing loop, DEFINITE ≠ global truth, reserved-keys policy). §8 timeline S1275 row added. §9 roadmap STAGE 4 CLOSED; STAGE 5 has no P0 (Trust Propagation §5.3 and Employee Boundary Escalation §5.4 are both P1 — Chris picks). New §5.2e implementation-slot added (P1, blocked on Chris canonical sign-off of §1.12).) — prior v7 (2026-07-01) — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
+last_verified: 2026-07-01 (v10 — S1276 extended `DOMAIN_RESEARCH_PLAYBOOK.md` §1.11 in-place from v1 → v2. Playbook restructured into 7 parts / 24 sections; formalized fifteen areas that emerged after v1 shipped: research group lifecycle (parent → children → canonical summary → index → complete), phase discipline (research / design-preparation / design-decision / process / navigation / implementation authority values), xx99 canonical summary convention, canonical folder structure (`docs/research/domains/<slug>/`), self-describing metadata standard (adds `research_group` / `child_slot` / `dependencies_on` / `delegates_to` / `delegated_from` frontmatter fields), cross-reference policy (never duplicate — always reference), parent doc responsibilities (§8 codifies S1300 exemplar), canonical summary responsibilities (§10 pins the xx99 template), stage-scoped Rigby routing (§15 stage table), graduation criteria (§17 objective checklist per group state), dependency mapping (§18 formalizes cross-arc delegation semantics), generalization requirements (§19 pre-audit check + anti-domain-specific-language rules), evolution policy (§20 codifies additive-first + backwards-compat + reality-wins for the playbook itself). No new research findings; no §3 domain map / §5 gap / §9 roadmap changes — this is a process extension, not a research finding. Chris directed at S1276 open: playbook should evolve into the permanent foundation for all future Donkey Betz architecture research. §8 timeline S1276 row added. §1.11 body updated to cite v2 additions. Discoverability priority reinforced: playbook is the FIRST doc a fresh Claude Code should read after `CLAUDE.md` when starting a domain research group. Two-triggers rule (§20) now protects against premature codification of half-emerged patterns.) — prior v9 (2026-07-01) — S1300 registered `domains/memory/1300_memory_domain_scoping.md` as §1.13. **First parent-scoping doc in the library** — opens Research Group 1300 (Memory / Knowledge / Embeddings, playbook §12 queue slot). Phase 0 domain-definition exercise per Chris directive at S1300 open: "Pause before selecting a-f. Your clarification uncovered an architectural ambiguity rather than a simple scoping question." Doc enumerates 8 candidate memory subdomains (Categories A-H) grounded in S1273 §3.13 / §3.14 / §3.15 / §5.4 evidence, recommends parent-with-children shape citing playbook §2 rule 3, and locks Chris's 5 decisions 2026-07-01: (D1) parent-with-children over single-audit; (D2) Category G Mission Memory delegated to Employee OS 1200s arc (cross-linked, not folded); (D3) RAG excluded_missing_provenance finding parked as S1301 input under §6; (D4) P2 renamed `Memory Store Overlap Audit` → `Memory Persistence Architecture` (wider frame: durability + authority, not just overlap surfacing); (D5) S1399 canonical summary planned as arc-close deliverable (cross-cutting synthesis + PLATFORM_INVENTORY.md §3 update recommendations + follow-on queue). Group 1300 arc: S1300 parent → S1301 RAG Retrieval Lanes → S1302 Memory Persistence Architecture → S1303 Conversational/Thread Memory → S1304 Docs Corpus ↔ RAG Boundary → S1305 Runtime Memory Correctness → S1399 canonical summary. Session ended EARLY per Chris close directive — Phase 0 scoping only; no P1 audit work in this session. S1301 launch cadence + Rigby SIGN routing deferred to next session. §8 timeline S1300 row added. §9 roadmap notes Group 1300 arc opened. Playbook §11 short-command entry point exercised for the first time — validates the DOMAIN_RESEARCH_PLAYBOOK.md workflow.) — prior v8 (2026-07-01) — S1275 registered `symbol_mapping_event_schema_design.md` as §1.12. Closes §5.2d (Symbol Mapping Event Schema Design gap). Two-surface event stream (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls) unified via new `authority_action_observed_stream` DB view; 21 payload fields; 4 v0 emitters + 1 v0 first consumer; DECLARED tier explicitly non-authoritative; drift stack with weekly sampled-truthing loop. Rigby SIGN-with-edits — 8 must-fixes + bonus #9 folded (ambient OpsRun → two-surface, drop `event_id`, drop `notes` + downscope `producer_version`, rename `delegator_actor` → `caller_actor`, reframe "5 producers" → "4 emitters + 1 consumer", rename INFERRED → DECLARED, add sampled-truthing loop, DEFINITE ≠ global truth, reserved-keys policy). §8 timeline S1275 row added. §9 roadmap STAGE 4 CLOSED; STAGE 5 has no P0 (Trust Propagation §5.3 and Employee Boundary Escalation §5.4 are both P1 — Chris picks). New §5.2e implementation-slot added (P1, blocked on Chris canonical sign-off of §1.12).) — prior v7 (2026-07-01) — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -45,7 +45,7 @@ verifier_loop: |
   classifying. Self-verifier pass looked for missing docs,
   duplicate classifications, incorrect dependency ordering,
   inconsistent statuses, and discoverability gaps.
-owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK]; v8 update S1275 [§1.12 symbol_mapping_event_schema_design])
+owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK v1]; v8 update S1275 [§1.12 symbol_mapping_event_schema_design]; v9 update S1300 [§1.13 domains/memory/1300_memory_domain_scoping — first parent-scoping doc; Group 1300 arc opened]; v10 update S1276 [§1.11 DOMAIN_RESEARCH_PLAYBOOK extended v1 → v2 in-place; process framework formalization])
 ---
 
 # Architecture Research Index
@@ -647,57 +647,105 @@ navigation-and-classification layer.
 
 ### 1.11 `DOMAIN_RESEARCH_PLAYBOOK.md`
 
-- **Title.** Domain Research Playbook — standard process for
-  deep domain audits
+- **Title.** Domain Research Playbook — canonical framework
+  for every Donkey Betz architectural research group
+- **Current version.** **v2** (S1276, 2026-07-01). Extended in
+  place from v1 (S1274). v2 restructures into 7 parts / 24
+  sections and formalizes fifteen areas that emerged after v1
+  shipped. Version history in playbook §20 changelog.
 - **Purpose.** Process document that codifies the methodology
-  developed across S1268-S1274 into a **reusable playbook** so
-  future Claude Code sessions can start a domain audit with a
-  short request like "Start research group 1300: Memory" — no
-  4,000-word prompt required. Standardizes: numbering ranges
-  (1300 Memory → 1900 Event Architecture), output paths
-  (`docs/research/domains/<slug>/<session_id>_<slug>_architecture_audit.md`),
-  27 standard audit questions, 20-section document structure,
-  6 parallel Explore sub-agent sweeps, classification rules,
-  Rigby SIGN review shape, and commit rules.
+  developed across S1268-S1275 into a **reusable framework** so
+  future Claude Code sessions can start a domain research group
+  with a short request like *"Start research group 1300:
+  Memory"* — no 4,000-word prompt required. v2 additionally
+  makes arcs *closable*: Chris can now say *"Close research
+  group 1300"* and the framework produces a canonical summary.
+  Standardizes: numbering ranges (1300 Memory → 1900 Event
+  Architecture) with xx99 canonical-summary reservation,
+  parent-with-children arc lifecycle, phase discipline
+  (research / design-preparation / design-decision / process /
+  navigation / implementation), output paths
+  (`docs/research/domains/<slug>/<session_id>_<slug>_<type>.md`),
+  self-describing metadata standard, 28 canonical audit
+  questions, 20-section child audit template + parent template
+  + canonical summary template, 6 parallel Explore sub-agent
+  sweeps, classification rules (Coverage / Maturity / Risk /
+  Finding Type / Integration Strength), cross-reference
+  policy, stage-scoped Rigby SIGN routing, commit rules,
+  graduation criteria, cross-arc dependency mapping,
+  generalization requirements, and evolution policy for the
+  playbook itself.
 - **Status.** Active (process documentation — no Rigby SIGN
-  routed; this codifies existing methodology, not a research
-  finding requiring pressure-test).
-- **Research type.** Process Documentation / Meta (light —
-  captures method, does not produce findings).
+  routed per §15's own rule for `authority: process`).
+- **Research type.** Process Documentation / Meta (framework
+  for other docs; does not produce research findings itself).
 - **Primary questions answered.**
-  - How does a future Claude Code session start a domain audit?
+  - How does a future Claude Code session start a domain
+    research group (single audit vs parent-with-children)?
   - What research group ranges are planned (1300s-1900s)?
-  - What does the standard audit output structure look like?
-  - What questions must every domain audit answer?
-  - What classifications should be used for consistency across
-    audits?
-  - What is the Rigby SIGN review pattern for domain audits?
+  - What is the lifecycle of a research group (STAGE 0 parent
+    → STAGE 1 children → STAGE 2 canonical summary → STAGE 3
+    index update → STAGE 4 complete)?
+  - How do research, design-preparation, and implementation
+    differ, and how do docs signal which phase they belong to?
+  - What belongs in a parent doc vs a child audit vs a
+    canonical summary?
+  - What is the canonical folder structure and file naming?
+  - What metadata does every research doc need to be
+    self-describing?
+  - How do docs cross-reference each other without
+    duplicating content?
+  - What are the 28 canonical questions every child audit
+    must answer?
+  - What classifications must every domain audit use?
+  - What is the Rigby SIGN review policy per stage?
   - When is it OK to commit vs when should draft stay
     uncommitted?
+  - When is a research group *complete* (objective graduation
+    criteria)?
+  - How do cross-arc dependencies + delegations get recorded?
+  - How does the playbook itself evolve without breaking
+    older research groups?
 - **Dependencies.** §1.9 (32-domain map — the audit target
   list), `docs/research/platform/cross_domain_integration_audit.md`
   (integration gap map — the S1274 sibling context each domain
   audit inherits), `docs/PLATFORM_INVENTORY.md` (runtime
-  counts). Also inherits all lessons from §1.1-§1.8 methodology
-  history.
+  counts), `docs/research/domains/memory/1300_memory_domain_scoping.md`
+  (S1300 parent-with-children exemplar — the doc that proved
+  the v2 arc shape). Also inherits all lessons from §1.1-§1.8
+  methodology history.
 - **Recommended next reads.** For anyone starting a research
-  session: read this playbook first, then the S1273 §3.N row
-  for your target domain, then the S1274 §2.N + §3-§10 rows
-  for cross-domain context, then existing topic docs for the
-  domain. Only then start the sub-agent sweeps.
+  session: read this playbook first (§1-§7 minimum), then the
+  S1273 §3.N row for your target domain, then the S1274 §2.N +
+  §3-§10 rows for cross-domain context, then existing topic
+  docs for the domain. Only then execute STAGE 0 (parent) or
+  STAGE 1 (single audit).
 - **Overall importance.** **Foundational for every future
   research session.** Reading order for a fresh Claude Code:
   §1.11 (this playbook) → whatever domain the user picked.
   This should be the FIRST doc a fresh session reads after
-  `CLAUDE.md`.
-- **Initial domain queue** (from playbook §12): 1300 Memory,
-  1400 Revenue, 1500 Sports, 1600 Content, 1700 Observability,
-  1800 HumanAttention, 1900 Event Architecture. Queue order is
-  a default, not a dependency — sessions can pick any.
-- **Distinguishing property.** This is `authority: process`,
-  not `authority: research`. It sets rules for other docs
-  rather than producing findings. Chris ratified registration
-  here at S1274 close: "register it now and commit."
+  `CLAUDE.md`. The v2 additions make the framework
+  self-describing — a fresh Claude Code that reads *only* the
+  playbook + ARCHITECTURE_INDEX + PLATFORM_INVENTORY can
+  execute a research arc end-to-end.
+- **Initial domain queue** (from playbook §22): 1300 Memory
+  (opened S1300 — parent locked), 1400 Revenue, 1500 Sports,
+  1600 Content, 1700 Observability, 1800 HumanAttention, 1900
+  Event Architecture. Queue order is a default, not a
+  dependency — sessions can pick any.
+- **Distinguishing property.** This is `authority: process`
+  with `version: v2`, not `authority: research`. It sets rules
+  for other docs rather than producing findings. Chris ratified
+  v1 registration at S1274 close (*"register it now and
+  commit"*) and v1 → v2 extension at S1276 open (*"Formalize
+  the research process itself so future domain research
+  becomes repeatable"*).
+- **Backwards compatibility note.** Research groups closed
+  under v1 (Employee OS arc §1.1-§1.8, whole-platform §1.9,
+  cross-domain integration §1.10-§1.12) remain valid under
+  v1. They do not retroactively conform to v2 additions. Per
+  playbook §20, older research groups reference the playbook
+  by version — v2 does not invalidate v1 outputs.
 
 ### 1.12 `symbol_mapping_event_schema_design.md`
 
@@ -772,6 +820,96 @@ navigation-and-classification layer.
   design at review, the next research artifact is either a
   Trust Propagation Model (§5.3) or the Employee Boundary
   Escalation Contract (§5.4) — both P1s at this point.
+
+### 1.13 `domains/memory/1300_memory_domain_scoping.md`
+
+- **Title.** S1300 Memory — Parent Architecture Scoping
+  (Group 1300 mission plan)
+- **Purpose.** First **parent-scoping** doc in the library —
+  a shape not previously exercised. Chris opened S1300 with
+  the playbook §11 short command "Start research group 1300:
+  Memory" but pushed back on the standard a-f scope-pick
+  framing: "Your clarification uncovered an architectural
+  ambiguity rather than a simple scoping question. Treat this
+  as a Phase 0 domain-definition exercise." The doc answers
+  the single structural question — is "Memory" one domain or
+  a parent capability composed of multiple architectural
+  subdomains — enumerates 8 candidate subdomains (Categories
+  A-H) grounded in existing inventory evidence, and asks
+  Chris to gate parent-with-children vs single-audit before
+  any audit work begins.
+- **Status.** Active (parent — Chris decisions locked
+  2026-07-01). Phase 0 complete. Session S1300 closed early
+  per Chris directive; no P1 audit work in this session.
+- **Research type.** Domain-definition / arc scoping
+  (`authority: parent-doc`). Distinct from `authority:
+  research` (audit findings) and `authority: process`
+  (playbook rules).
+- **Primary questions answered.**
+  - Is "Memory" one domain? → No. §3 taxonomy enumerates 8
+    candidate subdomains; S1273 already treats Memory as a
+    3-row §3 cluster (§3.13/§3.14/§3.15) with §5.4 flagging
+    "Multiple Memory / Knowledge Stores" independently.
+  - Parent-with-children or single canonical audit? →
+    Parent-with-children (Chris D1, 2026-07-01). Playbook §2
+    rule 3 explicitly permits sub-grouping.
+  - What is the Group 1300 arc shape? → S1300 parent →
+    S1301 RAG Retrieval Lanes → S1302 Memory Persistence
+    Architecture → S1303 Conversational/Thread Memory →
+    S1304 Docs Corpus ↔ RAG Boundary → S1305 Runtime Memory
+    Correctness → S1399 canonical summary (7 sessions total).
+  - Which subdomain owns Employee OS mission memory? →
+    Category G delegated to Employee OS 1200s follow-up arc
+    (Chris D2). Group 1300 cross-links only; does not fold
+    G in. Boundary respected: S1273 inventory homes it
+    under §4 Employee OS, not §3.13.
+  - Where does the RAG excluded_missing_provenance finding
+    (surfaced at S1300 open — Rigby `search_docs` returned 8
+    pre-filter → 7 excluded_missing_provenance + 1
+    excluded_mismatch → 0 for OpsRun/MissionRunner/
+    JobContract queries) go? → Parked as S1301 audit input
+    under §6 (Chris D3). Not pursued in Phase 0.
+  - Why the P2 rename? → "Memory Store Overlap Audit" →
+    "Memory Persistence Architecture" (Chris D4). Wider
+    frame captures durability + write/read paths + authority
+    boundaries, not just overlap surfacing.
+  - What closes the arc? → S1399 canonical summary planned
+    (Chris D5): cross-cutting patterns across P1-P5,
+    consolidated memory-subsystem shape, `PLATFORM_INVENTORY.md`
+    §3 update recommendations, follow-on research queue.
+- **Dependencies.** `DOMAIN_RESEARCH_PLAYBOOK.md` §11 short-
+  command entry point (§1.11), `platform_architecture_inventory.md`
+  §3.13/§3.14/§3.15/§5.4 (§1.9), `docs/narratives/KNOWLEDGE_
+  RAG_MEMORY.md` (S1158 comprehensive narrative),
+  `docs/KNOWLEDGE_PIPELINE.md` (flow map).
+- **Recommended next reads.** After Chris canonical sign-off
+  on §1.13 parent scoping (and greenlight on S1301 launch
+  cadence — open D6 at S1300 close): begin `1301_memory_rag_
+  retrieval_lanes_audit.md` under playbook §11 opening
+  sequence, feeding the §6 provenance-filter finding as
+  S1301 input.
+- **Overall importance.** **First parent-scoping doc in the
+  library** — a shape not previously exercised. Introduces
+  the pattern where a research group opens with a taxonomy
+  proposal that gates whether the group is one audit or an
+  arc of child audits. Playbook §2 rule 3 already permitted
+  sub-grouping; §1.13 is the first mission to actually
+  exercise it. Also validates the DOMAIN_RESEARCH_PLAYBOOK.md
+  short-command workflow — Chris's "Start research group
+  1300: Memory" reached the playbook §11 opening sequence
+  successfully.
+- **Maintenance note.** This doc is the **parent** of Group
+  1300. It is NOT itself an audit — it is the arc-plan that
+  gates the child audits. If any child audit contradicts the
+  parent's taxonomy boundaries, the child should update the
+  parent (via a new v-number pass), not silently drift.
+  Session S1300 ended EARLY at Chris close directive —
+  Phase 0 scoping complete but no P1 audit work landed in
+  this session. Open decisions at S1300 close: (D6) S1301
+  launch cadence (default: pause for Chris review before
+  greenlight); (D7) Rigby SIGN routing on parent doc
+  (default: skip — playbook §9 attaches SIGN to audits, not
+  scoping).
 
 ---
 
@@ -1641,23 +1779,33 @@ influence callouts.
 | **S1273** (2026-07-01) | `platform_architecture_inventory.md` (§1.9) | First whole-platform architectural inventory — the counterpart to the Employee-OS-focused §1.1-§1.8 arc. Six parallel Explore sub-agent sweeps synthesized into 32 domains (Cognition & agents: 7 / Data ingestion: 4 / Content & workflow: 2 / Revenue & GTM: 1 / Knowledge & memory: 3 / Human interface: 6 / API: 1 / Governance & ops: 4 / Infrastructure: 4). 9 cross-domain flows. 8 duplicate/overlapping system categories. Architecture Maturity Matrix rating every domain across Coverage / Maturity / Operational Health / Drift Risk / Debt Risk. 11-mission recommended research roadmap. Rigby SIGN-with-edits, Medium confidence, via fresh isolation pin `pa-02cfd3206302352f` (kept separate from shared S1270+ arc pin `pa-cbcc410b32714f60` per Chris's context-crossing directive). 6 substantive edits folded: (1) added missed §3.32 Revenue / Outreach / Engagement Pipeline domain + §4.9 flow — Rigby caught this as biggest missing platform subsystem; (2) downgraded §3.27 Auth STABLE → PARTIAL with trust-boundary enumeration; (3) upgraded §3.7 LLM Provider Registry WORKING → STABLE (core; failover missing); (4) tightened §1 Exec Summary count language; (5) added §3.31 Event Bus vs Observability separation-of-concerns paragraph; (6) expanded §9 roadmap 10 → 11 missions with Revenue Pipeline canonical architecture doc elevated to #2. | Established the whole-platform counterpart to the Employee-OS-focused arc. Chris's direction at close: "the next cleanup should be updating ARCHITECTURE_INDEX.md so this becomes the whole-platform counterpart to the Employee OS research library." Index v5 updated per §10.1 (this row + §1.9 row + §1 preamble rewrite + Path H reading path + §3 Revenue Pipeline domain row + §4 sibling-arc dependency graph extension + §5.12/§5.13/§5.14 gap entries + §7 decision matrix +3 whole-platform rows + §9 roadmap lateral research expansion referencing the 11-mission whole-platform roadmap in §1.9). Also caught + corrected v4 frontmatter drift — prior pass added Appendix C but never bumped last_verified line. |
 | **S1272** (2026-06-30) | `authority_enforcement_design_space.md` (§1.8) | First design-space research — the mission that consumes S1270 + S1271 as INPUT premises and enumerates enforcement design options without picking. 24 enforcement inputs (13 RUNTIME-VERIFIED / 7 OBSERVATION-ONLY / 3 ASPIRATIONAL / 1 UNKNOWN + 8 GAPS). 20 candidate enforcement boundaries (17 original + 3 Rigby SIGN-added: WebSocket, Fleet, Spider — closing the biggest boundary-completeness gap). 12 enforcement modes with 8 existing production precedents; 4 without analog. 204-cell boundary × mode compatibility matrix (17-row form; 3 SIGN-added boundaries not yet cross-tabulated). 4-per-level AuthorityLevel semantics (16 interpretations, none chosen). 11 canonical actor-role scenarios × 3 roles + audit path. 4-plane governance composition with 8 new questions + 1 existing cross-plane touch. 33-incident consolidated historical matrix. **6 major design options A-F enumerated neutrally** (MissionRunner-centered / ToolDispatcher-centered / Audit-first / Human-approval / Multi-layer / Governance-plane composition). 15 anti-patterns (3 Tier-0 hazards: blocking all model writes, enforcement before symbol mapping, silent enforcement). 15-prereq DAG. Rigby pressure-test SIGN-with-edits, Medium confidence — 8 must-fix folded: §3 gained 3 first-class boundaries (WebSocket, Fleet, Spider); §9.0 neutrality guardrail; §9.1 + §9.2 annotation-burden failure modes; §9.6 policy-ossification risk; §8.4 rephrased separating prevent-modes from audit/warn modes; §10 Tier-0 hazards callout; §6.1 role-propagation rule of thumb; §14 P0/P1 dependency-not-preference semantics + §14.2 (i)/(ii) split. F1 (AuthorityLevel has 1 runtime consumer, a shape-counter) and F8 (LLMEnforcer fail-open precedent) are load-bearing findings. | Established the design space for authority enforcement. **First mission carrying design-space content per §9 STAGE 2 pacing note.** Set Symbol Mapping Option Selection Design as recommended P0 next research (§14.1). Maintenance note: this doc is **design-space only** — the 6 options A-F are for future consumption, not implementation. Index v4 updated per §10.1 (this row + §1.8 row + §3 domain map + §4 dependency graph + §5 gap closure §5.2b + new §5.2c + §7 decision matrix expansion + §9 roadmap advancement STAGE 2 → STAGE 3). |
 | **S1274** (2026-07-01) | `DOMAIN_RESEARCH_PLAYBOOK.md` (§1.11) | **First `authority: process` doc in the library.** Codifies the S1268-S1274 methodology into a reusable playbook so future Claude Code sessions can start domain audits with short commands ("Start research group 1300: Memory") instead of 4,000-word prompts. Establishes: research group numbering (1300s Memory → 1900s Event Architecture), output-path convention (`docs/research/domains/<slug>/<session_id>_<slug>_architecture_audit.md`), 27 standard audit questions, 20-section document template with frontmatter, 6-sub-agent parallel sweep pattern, classification rules verbatim from S1274 §11 (Coverage / Maturity / Risk / Finding Type), Rigby SIGN review shape including fresh-isolation-pin practice (S1273/S1274 lesson) and grep-verification pattern (S1274 EventBus lesson), commit rules (default: don't; when Chris says "commit it": specific index-update checklist). Not routed to Rigby — process doc, not research finding. Chris explicit direction at close of drafting: "register it now and commit." | Sets the standard for research groups 1300-1900. Should be the FIRST doc a fresh Claude Code reads after `CLAUDE.md` when starting a domain audit. Distinguishing property: `authority: process` (rules for other docs), not `authority: research` (findings). Index v7 updated per §10.1 (this row + §1.11 row + Appendix E pass notes). |
+| **S1300** (2026-07-01) | `domains/memory/1300_memory_domain_scoping.md` (§1.13) | **First parent-scoping doc in the library.** Opens Research Group 1300 (Memory / Knowledge / Embeddings — playbook §12 queue slot 1). Chris opened via playbook §11 short command (`Start research group 1300: Memory`) but paused before standard a-f scope-pick with directive: "Your clarification uncovered an architectural ambiguity rather than a simple scoping question. Treat this as a Phase 0 domain-definition exercise." Doc enumerates 8 candidate memory subdomains (A: Semantic Knowledge / B: Personal-Adaptive / C: Agent Working / D: RAG Retrieval / E: Docs Corpus / F: Conversational-Thread [no §3 row yet] / G: Employee OS Mission Memory [delegated] / H: Runtime Cache-Correctness). Recommends parent-with-children shape citing S1273 3-row Memory cluster + §5.4 multi-store overlap flag + playbook §2 rule 3 sub-group permission. Chris D1-D5 locked 2026-07-01: (D1) parent-with-children; (D2) Category G delegated to Employee OS 1200s arc; (D3) RAG excluded_missing_provenance finding (surfaced Rigby search_docs at S1300 open — 8 pre-filter → 7 excluded_missing_provenance + 1 excluded_mismatch → 0 for OpsRun/MissionRunner/JobContract) parked as S1301 input; (D4) P2 renamed "Memory Store Overlap Audit" → "Memory Persistence Architecture" (durability + authority frame); (D5) S1399 canonical summary planned as arc closer. Group 1300 shape: S1300 parent → S1301 RAG Lanes → S1302 Persistence → S1303 Conversational → S1304 Docs↔RAG Boundary → S1305 Runtime Correctness → S1399 summary (7 sessions). Session ENDED EARLY per Chris close directive — Phase 0 scoping only; no P1 audit in this session. Open decisions at close: (D6) S1301 launch cadence — default pause; (D7) Rigby SIGN routing on parent — default skip per playbook §9. Rigby not routed for SIGN on parent doc (scoping ≠ audit). | **First parent-scoping doc** — introduces the "parent doc gates arc shape via Chris decisions" pattern. Validates the DOMAIN_RESEARCH_PLAYBOOK.md §11 short-command workflow (first exercise). Chris directives at close: (a) commit approval given for S1300 parent + INDEX bump; (b) PR "marked ended early for core research" — Phase 0 landing only, P1 (S1301) deferred; (c) pin `pa-aa54193f240f4846` preserved for S1301 continuity (no rotation). Index v9 updated per §10.1 (this row + §1.13 row). |
 | **S1275** (2026-07-01) | `symbol_mapping_event_schema_design.md` (§1.12) | **First mission in the library shipping an implementation-ready schema spec.** Closes §5.2d. Takes §1.10's Option E v0 recommendation and pins the concrete event: canonical name (`authority_action_observed`), two-surface host (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls, unified via new `authority_action_observed_stream` DB view), 21 payload fields (7 required + 5 semi-required + 6 optional + 3 reserved), 4 v0 emitters + 1 v0 first consumer (Bug Triage step 4 is consumer, not "producer #5"), 4-value `mapping_confidence` enum (DEFINITE = emitter-local certainty *not* global truth, DECLARED = coverage-only *never* authoritative, HEURISTIC reserved+banned, UNKNOWN honest NULL), drift stack across 6 patterns (NULL rate + zero-fire + weighted cross-emitter disagreement + weekly sampled-truthing loop + invariant validator I1–I7 + schema-signature check), 3 golden flows, batch-mode v0 dashboard, 15-item out-of-scope list, 5-phase ~10-week rollout sketch. Five parallel Explore sub-agents produced: (1) 7-model audit surface inventory identifying OpsRunEvent-lacks-user-FK as largest gap; (2) 5 producer candidates ranked (35-44% authority string coverage estimate); (3) actor-role availability matrix showing ToolDispatcher has all 3 roles + S1271 F4 delegator/executor ambiguity flag; (4) action_class population confidence ranking; (5) drift/quality prior-art scan finding STRONG reuse for zero-fire (S1245) + claim-verification (S1099), NO precedent for cross-source truthing (largest gap). Rigby pressure-test SIGN-with-edits — **8 must-fixes + bonus #9 folded**: (1) drop "ambient OpsRun" for two-surface + UNION view; (2) drop required `event_id`, add optional `idempotency_key`; (3) kill free-text `notes`, downscope `producer_version` to canary-only, replace with 128B-capped `debug_context`; (4) rename `delegator_actor` → `caller_actor` (graph position, not 4th role) + explicit semantics block; (5) reframe "5 v0 producers" → "4 emitters + 1 consumer"; (6) rename `INFERRED` → `DECLARED` with explicit non-authoritative label; (7) add sampled-truthing loop (weekly N=25 per emitter × tier; `authority_mapping_correction` events; correction_rate KPI) — catches stable-wrong-non-NULL that other stack layers miss; (8) `DEFINITE` ≠ canonical truth (weighted disagreement + `suspected_mislabel` never "producer X wrong" — prevents false-positive alert cannon); bonus (9) reserved-keys policy + per-field caps + hard 1024B total cap. Rigby SIGN-clean on: warn-mode-only v0 choice; two-surface honesty over ambient-run synthetic grouping. | **First implementation-ready schema in the library.** Set STAGE 5 to Trust Propagation Model (§5.3) or Employee Boundary Escalation Contract (§5.4) — both P1 with no P0 in front. Maintenance note: §1.12 is design-preparation ONLY. Not implementation. Not enforce-mode. Rollout §15 is sequencing sketch, not merged PR. Index v8 updated per §10.1 (this row + §1.12 row + §5.2d closure + new §5.2e implementation-slot + §9 roadmap STAGE 4 CLOSED / no new P0 STAGE). |
+| **S1276** (2026-07-01) | `DOMAIN_RESEARCH_PLAYBOOK.md` §1.11 — **v1 → v2 extension** | **First playbook version bump.** Restructured v1 into 7 parts / 24 sections. Formalized fifteen areas that emerged after v1 shipped across the S1268-S1275 arc and the S1300 parent-scoping experiment: (§2) research group lifecycle — parent → children → canonical summary → index update → complete, five stages with rationale for each; (§3) phase discipline — the research / design-preparation / design-decision / process / navigation / implementation split with `authority:` frontmatter field distinguishing them, Symbol Mapping arc as canonical exemplar (§1.6 research → §1.10 design-prep → §1.12 design-prep → §5.2e implementation); (§4) xx99 canonical summary convention with intra-range structure (NN00 parent / NN01-NN98 children / NN99 summary); (§5) canonical folder structure with legacy-doc grandfathering rule; (§6) self-describing metadata standard — adds `research_group`, `child_slot`, `dependencies_on`, `delegates_to`, `delegated_from` frontmatter fields with a required-fields-by-doc-type matrix; (§7) cross-reference policy — never duplicate, always reference; (§8) parent doc responsibilities — codifies the S1300 exemplar into a template (§11.1); (§10) canonical summary responsibilities — pins the xx99 template (§11.3) and rationale for the slot; (§11) three doc templates — parent + child audit + canonical summary; (§15) stage-scoped Rigby routing — table maps stage to SIGN requirement, canonical summary and design-prep get extra pressure-test questions; (§17) graduation criteria — objective checklist for `single-audit` vs `parent-with-children` groups with `not-started` / `in-progress` / `awaiting-summary` / `closed` / `stalled` states; (§18) domain dependency mapping — formalizes `dependencies_on` / `delegates_to` / `delegated_from` semantics as informational-not-blocking; (§19) generalization requirements — 13-domain verification list + anti-domain-specific-language rules + pre-audit 5-minute mental check; (§20) architecture evolution policy — the playbook is a living artifact; additive-first evolution, backwards compat, reality-wins rule mirrors DOC_LIFECYCLE §2c, formal change proposal workflow, changelog now in §20. All v1 content preserved semantically. New short commands: `Continue research group NNNN: <slot>` and `Close research group NNNN`. Chris directive at S1276 open: *"formalize the research process itself so future domain research becomes repeatable instead of prompt-driven."* Not routed to Rigby — process document, not research finding (per §15's own rule for `authority: process`). | Playbook is now the load-bearing foundation for every future domain research group. v2 makes the framework self-describing: a fresh Claude Code that reads *only* the playbook + ARCHITECTURE_INDEX + PLATFORM_INVENTORY can execute a research arc end-to-end. First playbook version bump — sets the pattern for how the framework itself evolves. Older research groups closed under v1 stay valid under v1 per §20 backwards-compat rule. Index v10 updated per §10.1 (this row + §1.11 body extension). |
 | **S1274** (2026-07-01) | `symbol_mapping_option_selection_design.md` (§1.10) | **First mission in the library carrying an evidence-based recommendation Chris can gate.** Narrows §1.6's 5 Symbol Mapping options to a v0 selection. Five parallel Explore sub-agents produced: (1) 24-system runtime symbol inventory with 2 verified drifts from S1270 (REMOVED_TOOL_ALIASES 12→13; GATEWAY_TOOLS 23→22); (2) 100-cell coverage × reuse matrix (A:1/7/12, B:2/6/12, C:5/7/8, D:11/7/1 flattest, E:2/4/14); (3) drift risk ranking (A/B/C VERY HIGH; D HIGH; E MEDIUM lowest); (4) actor compatibility (E only option carrying all 3 roles end-to-end IF audit models extended); (5) failure modes + rollout + minimum viable event shape. **Recommendation: Option E — Evidence-only mapping — as v0.** Extend a minimum set of audit models with optional `action_class` field + all 3 actor role fields; instrument 3-5 highest-leverage producer sites incrementally; emit `authority_action_observed` events; NEVER blocks. **End-state (Chris-gated later):** E foundation + Option B tool schema attribute for pre-dispatch enforcement. **Explicitly rejected:** Option C bundled standalone. Rigby pressure-test SIGN-with-edits, Medium confidence, recommendation = Modify — 4 must-fix folded: (1) §8.8 tone alignment on whole-platform generalization vs. 2/4/14 matrix (Fleet/WebSocket/Spider not covered at v0 until instrumented); (2) §10.3.1 catastrophic-action graduation guardrail (4 telemetry triggers forcing Chris decision within 30 days — prevents "E-forever cope"); (3) §12.1 non-NULL misclassification drift pattern (sample-based truthing + cross-source consistency + golden-flow tests — higher-risk than producer omission); (4) §11 employee_handle vs. executor_actor clarification (employee_handle is Employee OS identity, NULL for non-mission actions; executor_actor is generalized runtime executor). Rigby SIGN-clean on: risk posture + reversibility (strongest argument); actor role separation. | **First evidence-based recommendation in the library.** Set Symbol Mapping Event Schema Design as recommended P0 next research (§16). Maintenance note: Option E is v0 recommendation ONLY. Not implementation. Not enforce-mode. §10.3.1 guardrail forces Chris re-decision within 30 days of graduation triggers. Index v6 updated per §10.1 (this row + §1.10 row + §5.2c closure + new §5.2d + §7 decision matrix expansion + §9 roadmap STAGE 3 CLOSED / new STAGE 4 Event Schema Design). |
 
-**Pattern observation (updated S1273 v5).** The library grew
-in two waves. First wave: 5 docs in 5 sessions (S1268/S1269/
-S1270/S1271/S1272) — the Employee OS depth arc following the
-"each doc names the next" discipline. Second wave (S1273):
-a single whole-platform inventory doc that opens a sibling arc
-alongside the depth arc. The library's *next* growth events
-are now split across two arcs: (a) the Employee OS arc's STAGE
-3 Symbol Mapping Option Selection Design (the first mission
-that is a *design decision* gated on Chris), and (b) the
-whole-platform arc's top-3 next missions per §1.9 §9 —
-Revenue Pipeline canonical architecture (§5.12), Observability
-Deduplication Audit (§5.13), Sports/DBAO ↔ AI Studio
-Integration Sketch (§5.14). Parallel-safe if pursued
-independently.
+**Pattern observation (updated S1276).** The library has grown
+in three waves. **First wave** (S1268-S1272): 5 docs in 5
+sessions — the Employee OS depth arc following the "each doc
+names the next" discipline. **Second wave** (S1273-S1275): the
+whole-platform sibling arc (§1.9 inventory) + cross-domain
+integration audit (§1.10 sibling) + design-preparation arc
+(§1.10 option selection → §1.12 event schema) — first
+`authority: design-preparation` docs. **Third wave** (S1274
+v1 + S1276 v2 playbook, S1300 memory scoping): the process
+framework itself. `authority: process` (playbook) and
+`authority: parent-doc` (S1300) enter the corpus. The library
+becomes self-describing — a fresh Claude Code can execute an
+arc end-to-end from playbook + INDEX alone. The library's
+*next* growth events are: (a) Group 1300 Memory children
+(S1301 RAG lanes queued next), (b) whole-platform arc's top-3
+next missions per §1.9 §9 — Revenue Pipeline canonical
+architecture (§5.12), Observability Deduplication Audit
+(§5.13), Sports/DBAO ↔ AI Studio Integration Sketch (§5.14),
+(c) Employee OS arc STAGE 5 (Trust Propagation §5.3 or
+Employee Boundary Escalation §5.4 — Chris picks). All
+parallel-safe if pursued independently, per §18 dependency
+semantics (informational, not blocking).
 
 ---
 
