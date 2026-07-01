@@ -15,114 +15,120 @@ PA_API_TOKEN=<local-chris-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation. **Active arc pin state after S1399 merge:**
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation. **Active arc pin state after S1400 open:**
 
-- **Retiring on Chris commit-gate + merge:** `pa-aa54193f240f4846` ("Session 1300 — Memory research group (kickoff)") — Group 1300 arc pin. Carried S1300 → S1301 → S1302 → S1303 → S1304 → S1305 → S1399 continuity. Retires on arc close per OPEN_ARCS schema. Verify via `session_tool.retire conversation_id=pa-aa54193f240f4846`.
-- **Also retiring on merge:** `pa-4fc3329d0db6484f` — S1399 SIGN isolation pin (Rigby SIGN-clean cycle 1 High confidence, 0 must-fix). Verify via `session_tool.retire`.
-- **Next arc pin:** to be minted at Group 1400 Revenue open (default lean per playbook §22 queue) OR at whichever single-child follow-on Chris opens instead. If Group 1400: propose short-command opening pin like `pa-<hex>` titled "Session 1400 — Revenue research group (kickoff)". Update `tools/pa_local.sh` header + memory rule `feedback_pa_chat_local_override.md` after mint.
+- **Active arc pin:** `pa-34d43795e1b24bd3` ("Session 1400 — Revenue research group (kickoff)"). Carries S1400 parent scoping context; will carry S1401 → S1406 + S1499 continuity throughout Group 1400 arc. Do NOT retire mid-arc.
+- **Recently retired:** `pa-aa54193f240f4846` (Group 1300 arc pin S1300-S1399; retired at S1400 open via `session_tool.retire force=true` — `updated_count: 29`) + `pa-4fc3329d0db6484f` (S1399 SIGN pin; retired at S1399 close — `updated_count: 2`).
+- **Next SIGN pin:** to be minted per-child at each S1401-S1406 mid-session Rigby full SIGN cycle per playbook §15 stage table.
 
 Use `tools/pa_local.sh` for all chats unless you have a reason to override.
 
-## READ THIS SECOND — GROUP 1300 CLOSED (pending Chris merge); NEXT ARC IS GROUP 1400 REVENUE (default lean)
+## READ THIS SECOND — GROUP 1400 REVENUE OPEN; S1401 CHILD A IS NEXT MISSION
 
-Session 1399 landed the **first formal xx99 canonical summary in the library** — `docs/research/domains/memory/1399_memory_canonical_summary.md`, 1224 lines, `status: draft`, `sign_status: SIGN-clean cycle 1 High confidence`. Rigby SIGN cycle 1 on fresh isolation pin `pa-4fc3329d0db6484f` returned **SIGN-clean High confidence, 0 must-fix**, 1 optional nice-to-have (docs↔code naming/category drift micro-pattern acknowledged as §4.5 adjacent evidence rather than promoted to formal F5 — Rigby explicitly said "not required if you want to keep exactly four"; parent §5 P6 rationale preserved). **Group 1300 arc closes on Chris commit-gate + merge.** ARCHITECTURE_INDEX v17 → v18 bump + §1.21 row + §8 timeline S1399 row applied same-commit per playbook §16 canonical-summary rule.
+Session 1400 opened Group 1400 Revenue arc + shipped the Phase 0 parent scoping doc at `docs/research/domains/revenue/1400_revenue_domain_scoping.md` (1363 lines, `status: active`, `category: parent_scoping`). **9 arc-open decisions Chris-locked across three "agree all" ratification rounds**: D21 (short-command launch), D23 (parent-with-children), D24 (child mission sequence A→B→C→D→E→F→xx99), D25 (F.i — full Category F Income/Jobs lane child audit as S1406), D26 (revenue-facing ops_autopilot only IN scope), D27 (§15 stage table SIGN routing), D28 (Child E owns Opportunity → Initiative wiring per Rigby Must-fix #2), D29 (Yes-two-triggers — Group 1400 pilots Chris's Phase 0 methodology; playbook v3 promotion at Group 1500 close if unchanged).
 
-**Session close artifacts committed at S1399 close:**
+**Load-bearing Group 1400 shape (Chris-locked 2026-07-01):**
+
+- 6 children + xx99: **S1401 A** (Opportunity Discovery + Scoring) → **S1402 B** (Outreach Composition + Delivery) → **S1403 C** (Engagement Inbound) → **S1404 D** (Meeting + Close) → **S1405 E** (Revenue Attribution + Analytics) → **S1406 F** (Income/Jobs lane) → **S1499 xx99** (canonical summary + Revenue Lifecycle Traceability Table).
+- 17 revenue-related Django models + 10+ services + 3 agents + 1 WebSocket consumer + 1 EventBus event + 1 Celery beat + 4 view files + 4 frontend routes + 9-file Income/Jobs adjacency (see parent §2.4 + §10.1 for full census).
+- 15 inherited findings from S1273/S1274/S1399 (see parent §11.4) — inherit, don't rediscover.
+- Chris's Phase 0 F.i/F.ii/F.iii methodology first application at parent §10/§11/§12; playbook v3 §11.1 template addition proposed at parent §9.5; promotion trigger = Group 1500 second application unchanged.
+
+**Session close artifacts committed at S1400 open (this session):**
 
 ```
-docs/research/domains/memory/1399_memory_canonical_summary.md   [new, 1224 lines]
-docs/research/ARCHITECTURE_INDEX.md                             [modified, v17 → v18]
-docs/research/OPEN_ARCS.md                                      [modified, Group 1300 row + 2 reconciliation notes]
-docs/handoffs/SESSION_1399_MEMORY_CANONICAL_SUMMARY.md          [new]
-00-START-NEXT-SESSION.md                                        [modified, this file]
+docs/research/domains/revenue/1400_revenue_domain_scoping.md   [new, 1363 lines]
+docs/research/OPEN_ARCS.md                                     [modified — Group 1400 In-progress row + Not-started queue rotation + Recent reconciliations 2026-07-01 S1400 open entry]
+tools/pa_local.sh                                              [modified — line 115 pin rotation + header ledger]
+00-START-NEXT-SESSION.md                                       [modified — this file]
+docs/handoffs/SESSION_1400_REVENUE_RESEARCH_GROUP_PARENT_SCOPING.md   [new — session handoff]
 ```
 
-Handoff: `docs/handoffs/SESSION_1399_MEMORY_CANONICAL_SUMMARY.md`.
+Handoff: `docs/handoffs/SESSION_1400_REVENUE_RESEARCH_GROUP_PARENT_SCOPING.md`.
 
-### NEXT-SESSION MISSION — Group 1400 Revenue (default lean per playbook §22 queue)
+### NEXT-SESSION MISSION — S1401 Child A (Opportunity Discovery + Scoring)
 
-Per playbook §22 queue + OPEN_ARCS.md Not-started section:
+Per Group 1400 parent doc §5 child mission sequence + §12.1 Category A row + §10.2 Category A evidence surface:
 
-- **Default lean.** Open Group 1400 Revenue via `start research group 1400` short command. Rigby caught this as a missed inventory row in S1273 review; business-value highest under-researched domain.
-- **Alternative single-child follow-ons** ranked from S1399 §8.2 top 5 (Chris picks if not doing Group 1400 yet):
-  1. **S1304 §19 R1 `ingested_via` full-tree recheck** — F1-CANDIDATE hardening. 3 known write sites (`sync_docs_index_to_documents.py:394`, `core/tasks_agents.py:4223/4290/4351`, `content/embeddings.py:654/753`); requires owner-model-qualified enumeration of every `DocumentEmbedding` consumer (not just keyword grep of `ingested_via`). Unblocks S1304 T5 wire-or-deprecate decision + §17 provenance-system reconciliation design + DB migration to remove field if truly orphan.
-  2. **S1303 §19 R1.a/b/c `ChatConversation.context_used` + `.agent_results` verification.** Three sub-questions in order: R1.a owner-model-qualified consumer inventory; R1.b runtime-vs-analytics-vs-UI classification; R1.c canonical-source-of-truth resolution (first-class fields vs `metadata` dict). Do R1.a first — determines whether any dead-code claim is permissible.
-  3. **S1305 §19 R1 `platform_config` LRU F4-CANDIDATE mutation-path audit.** Determine whether Django admin / raw ORM / mgmt-command paths mutate `ProjectWorkspace` + `UnifiedUser` without routing through setters at `platform_config.py:252, :269`. Blocks T10 remediation.
-  4. **S1305 §19 R6 `IntelligentJobMatcher` production invocation audit.** Rigby SIGN cycle 1 confirmed `MemorySystem` IS instantiated at `ai_core/agents/intelligent_job_matcher.py:57`. Remaining question: is `IntelligentJobMatcher` production-invoked? If yes → T5 MemorySystem severity HIGH; if orphan/experimental/test-only → T5 LOW. Cheap 1-hour investigation. Adjacent: `SharedMemorySystem` at `intelligence/shared_memory.py` used by `live_learning_orchestrator.py` + `command_center_ai.py` + 4 other sites.
-  5. **S1302 §15 T10 write-authority framework design-preparation ADR.** Highest-severity debt in Group 1300 arc — no auth gate on `AgentMemory.create_memory:11004`; MemoryPromotionService auto-saves on every PA turn without rate limiting. Design-preparation phase work per playbook §14.5 (implementation-in-research forbidden). Cross-arc anchor for a permission model + rate limiting + audit trail shape.
+- **Session ID.** S1401.
+- **Slot.** P1 (first child; widest surface; grounds every downstream child's evidence).
+- **Category.** A — Opportunity Discovery + Scoring.
+- **Branch.** `docs/session-1401-revenue-opportunity-discovery-scoring` off `main` post-S1400 merge.
+- **Playbook §15 SIGN routing.** Full 20-section SIGN with fresh isolation pin per §15 stage table (S1401 SIGN pin minted at mid-session).
+- **Playbook §13 sub-agent sweep.** 6 parallel Explore agents covering: (1) models `Opportunity`, `OpportunityScore`, `OpportunityDigest`, `OpportunityPredictionAccuracy`, `OpportunityInteraction`; (2) `OpportunityPipelineOrchestrator` + `OpportunityExecutionPipeline` + `opportunity_scorer.py` orchestration path; (3) `OpportunityScoringAgent` + `OpportunityPipelineAgent` behavior + prompt path; (4) `intelligence/opportunity_storage.py` + `spider_opportunity_connector.py` + `sports_opportunity_generator.py` production paths; (5) `ml_pipeline/opportunity_categorizer.py` model integration; (6) `OpportunityScannerConsumer` WebSocket + `OPPORTUNITY_SCORED` EventBus publisher/consumer graph.
+- **Playbook §11.2 20-section template.** Full 20 sections; category A questions from parent §12.1 answered explicitly.
 
-### Two open decisions gating next-session launch
+### Two open decisions gating S1401 launch
 
-- **D21 — Next-arc launch.** (i) Group 1400 Revenue (default lean); (ii) single-child follow-on from S1399 §8.2 top 5 above; (iii) parallel — open Group 1400 AND run T10 ADR concurrently. **Default lean: OPEN GROUP 1400.** Rigby-caught missed inventory + business value + playbook §22 queue default.
-- **D22 — Arc pin mint.** Fresh pin required for Group 1400. Propose short title "Session 1400 — Revenue research group (kickoff)" mirroring S1300's title pattern. Retire retirement pins BEFORE minting new arc pin to keep `tools/pa_local.sh` clean.
+- **D30 — Launch cadence.** (i) Launch S1401 next session (default lean; matches S1301-S1305 rhythm from Group 1300); (ii) parallelize S1401 + S1402 via isolation-pin split (unusual — Chris explicit call only). **Default lean: OPTION (i) — sequential.**
+- **D31 — Arc pin retention.** (i) Retain `pa-34d43795e1b24bd3` for S1401 (default lean; matches S1301-S1399 retention rhythm); (ii) mint fresh pin (Chris explicit call only). **Default lean: OPTION (i) — retain.**
 
 **FIRST THING next session open:**
 1. `context-kit orient`
-2. Confirm `service_context: local` via `platform_config_tool overview`
-3. Check if S1399 artifact set was committed to `main` between sessions — if yes, next session branches off `main` (not stacked on S1399)
-4. Verify `pa-aa54193f240f4846` + `pa-4fc3329d0db6484f` retirement status via `session_tool` (should be retired post-Chris merge)
-5. Resolve D21 (next-arc launch) + D22 (arc pin mint) with Chris via the newly-minted arc pin
-6. If Group 1400 greenlit: create branch `docs/session-1400-revenue-research-group` + `docs/research/domains/revenue/1400_revenue_domain_scoping.md` per playbook §11.1 parent-scoping template
-7. If single-child follow-on greenlit: create branch `docs/session-NNNN-<slug>` + audit doc per playbook §11.2 20-section audit template
-8. Playbook §13 6-parallel-Explore sweep for domain audits; NOT for canonical summaries
-9. Route to Rigby with full SIGN per playbook §15 stage table
+2. Confirm `service_context: local` via `platform_config_tool overview` (per Rigby local trap)
+3. Check if S1400 artifact set was committed + merged to `main` between sessions — if yes, S1401 branches off `main`
+4. Verify `pa-34d43795e1b24bd3` retention status (`session_tool.health_check`); expected `recommendation: continue` given fresh thread state
+5. Resolve D30 (launch cadence) + D31 (arc pin retention) with Chris via arc pin (both default leans align with prior Group 1300 discipline — likely a fast "agree all" round)
+6. Create branch `docs/session-1401-revenue-opportunity-discovery-scoring` off `main`
+7. Read parent doc §12.1 Category A row + §10.2 Category A evidence surface as the mission spec
+8. Read parent doc §11.4 to know which 15 findings are inherited (do NOT rediscover)
+9. Launch playbook §13 6-parallel-Explore sweep on the 6 evidence surfaces named above
+10. Draft `docs/research/domains/revenue/1401_revenue_opportunity_discovery_scoring_audit.md` per playbook §11.2 20-section template
+11. Route to Rigby with full SIGN per playbook §15 stage table (full 28-question audit SIGN, not light)
+12. Fold Rigby SIGN edits + Chris ratification + commit + PR
 
 ---
 
 ## PA / Rigby context
 
-- **Arc pin at session start:** `pa-aa54193f240f4846` (Group 1300 continuity — retires on Chris merge of S1399 PR).
-- **S1399 SIGN pin:** `pa-4fc3329d0db6484f` (SIGN-clean cycle 1 High confidence; retires on Chris merge).
-- **Retired earlier in Group 1300:** `pa-56a527a2c5528508` (S1305 SIGN, retired at S1305 close). `pa-2614a91a920642fa` (S1304 SIGN). `pa-23a38300dd84bae2` (S1303 SIGN). `pa-1b9f0f5264484c6b` (S1302 SIGN). `pa-a23736a833f646cf` (S1301 SIGN).
-- **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin). Update pin references after Group 1300 arc close.
+- **Arc pin at session start:** `pa-34d43795e1b24bd3` (Group 1400 continuity — do NOT retire mid-arc; retires at S1499 canonical summary close or at Chris explicit direction).
+- **S1400 open SIGN pins:** none minted (Light SIGN cycles 1 + 2 ran on arc pin directly; per playbook §15 Light SIGN routing does not require isolation-pin).
+- **Retired at S1400 open:** `pa-aa54193f240f4846` (Group 1300 arc pin S1300-S1399, retired via `session_tool.retire force=true`, `updated_count: 29`). `pa-4fc3329d0db6484f` (S1399 SIGN pin, retired at S1399 close).
+- **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin, updated to `pa-34d43795e1b24bd3` at S1400 open).
 - **Local worker restart** needs `PA_USE_FUNCTION_CALLING=true` env or Rigby drops to keyword routing. `make celery` handles it; ad-hoc `celery -A core worker` does not.
 
 ## Repo state at next-session open
 
-- **Branch state (at S1399 close, before merge):** `docs/session-1399-memory-canonical-summary` PR opens to `main` on push. If merged between sessions, working tree clean and next session branches off `main`.
-- **Handoff continuity:** S1399 handoff at `docs/handoffs/SESSION_1399_MEMORY_CANONICAL_SUMMARY.md`. Prior handoffs: SESSION_1300 through SESSION_1305 for Group 1300 arc.
-- **ARCHITECTURE_INDEX version:** v18 (S1399 §1.21 + §8 timeline row added).
-- **OPEN_ARCS state:** Group 1300 row in "In-progress" section pending Chris commit-gate. Post-merge, move to "Closed" section with closure reconciliation note. Group 1400 Revenue in "Not started" section becomes eligible as `in-progress` on Chris D21 verdict.
+- **Branch state (at S1400 close, before merge):** `docs/session-1400-revenue-research-group` PR opens to `main` on push. If merged between sessions, working tree clean and next session branches off `main`.
+- **Handoff continuity:** S1400 handoff at `docs/handoffs/SESSION_1400_REVENUE_RESEARCH_GROUP_PARENT_SCOPING.md`. Prior handoffs: SESSION_1300 through SESSION_1305 for Group 1300 children + SESSION_1399 for Group 1300 xx99 canonical summary.
+- **ARCHITECTURE_INDEX version:** v18 (last bumped at S1399 close). Next bump at S1499 canonical summary close per playbook §16.
+- **OPEN_ARCS state:** Group 1400 row in "In-progress" section, current-child field = "S1401 queued next" per this doc's D30/D31 lock.
 
 ## Next-session first-action punch list
 
 - [ ] `context-kit orient`
 - [ ] Confirm `service_context: local` via `platform_config_tool overview`
-- [ ] Check if S1399 artifact set is on `main` — if yes, next session branches off `main`; if no, continues stacking on `docs/session-1399-memory-canonical-summary`
-- [ ] Verify `pa-aa54193f240f4846` (arc) + `pa-4fc3329d0db6484f` (SIGN) retirement status via `session_tool`
-- [ ] Post-merge cleanup: update `tools/pa_local.sh` header + `feedback_pa_chat_local_override.md` memory rule with next-arc pin placeholder
-- [ ] Move OPEN_ARCS.md Group 1300 row from In-progress to Closed section with closure reconciliation note
-- [ ] Resolve D21 (next-arc launch: Group 1400 Revenue default lean vs single-child follow-on vs parallel) + D22 (arc pin mint) with Chris via newly-minted arc pin
-- [ ] If Group 1400 greenlit: create branch `docs/session-1400-revenue-research-group` + parent scoping doc at `docs/research/domains/revenue/1400_revenue_domain_scoping.md` per playbook §11.1 template
-- [ ] If single-child follow-on greenlit: create branch + audit doc per playbook §11.2 20-section template + launch §13 6-parallel-Explore sweep
-- [ ] Route to Rigby with full SIGN per playbook §15 stage table (light for parent scoping; full for audits; Q10-Q13 for canonical summaries)
+- [ ] Check if S1400 artifact set is on `main` — if yes, S1401 branches off `main`; if no, continues stacking on `docs/session-1400-revenue-research-group`
+- [ ] Verify `pa-34d43795e1b24bd3` health via `session_tool.health_check` (expect `recommendation: continue` given kickoff-fresh state)
+- [ ] Resolve D30 (S1401 launch cadence: sequential vs parallel-with-S1402) + D31 (arc pin retention: retain vs fresh mint) with Chris via arc pin
+- [ ] Create branch `docs/session-1401-revenue-opportunity-discovery-scoring` off `main`
+- [ ] Read parent doc §12.1 Category A row + §10.2 Category A evidence surface + §11.4 inherited findings (do NOT rediscover) before launching sub-agents
+- [ ] Launch playbook §13 6-parallel-Explore sweep on the 6 evidence surfaces named in §NEXT-SESSION MISSION above
+- [ ] Draft `1401_revenue_opportunity_discovery_scoring_audit.md` per playbook §11.2 20-section template
+- [ ] Route to Rigby with full SIGN (28 canonical questions) per playbook §15 stage table
+- [ ] Fold SIGN cycle edits + Chris ratification + commit + PR
 
 ## Reference — where to look
 
-- **Group 1300 canonical summary:** `docs/research/domains/memory/1399_memory_canonical_summary.md` — start here for anything memory-related
-- **Parent doc:** `docs/research/domains/memory/1300_memory_domain_scoping.md`
-- **All 5 child audits + S1399 canonical summary:**
-  - `docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md` (Cat D)
-  - `docs/research/domains/memory/1302_memory_persistence_architecture_audit.md` (Cat A+B+C)
-  - `docs/research/domains/memory/1303_memory_conversational_thread_memory_audit.md` (Cat F)
-  - `docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md` (Cat E↔D)
-  - `docs/research/domains/memory/1305_memory_runtime_correctness_audit.md` (Cat H)
-  - `docs/research/domains/memory/1399_memory_canonical_summary.md` (canonical summary)
-- **S1399 handoff:** `docs/handoffs/SESSION_1399_MEMORY_CANONICAL_SUMMARY.md`
-- **All 6 prior handoffs:** `docs/handoffs/SESSION_1300_*.md` through `SESSION_1305_*.md`
-- **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (§11.1 parent-scoping template, §11.2 20-section audit template, §11.3 canonical summary template, §13 6-parallel-Explore sweep, §14 evidence rules, §15 SIGN routing, §16 commit policy, §22 next-arc queue)
+- **Group 1400 parent scoping doc:** `docs/research/domains/revenue/1400_revenue_domain_scoping.md` — start here for anything Group 1400
+- **Group 1400 parent §5 mission sequence:** locked as A → B → C → D → E → F → xx99
+- **Group 1400 parent §10 F.i Domain Definition:** what Group 1400 covers (5 Chris-question answers + 7 overlap table)
+- **Group 1400 parent §11 F.ii Existing Knowledge Inventory:** 15 inherited findings — do NOT rediscover
+- **Group 1400 parent §12 F.iii Success Criteria:** what "done" looks like per child + xx99 traceability artifact
+- **Group 1400 parent §9.5 playbook v3 proposal:** codify Chris's Phase 0 methodology at playbook v3 §11.1 template (promotion gated on Group 1500 second application unchanged)
+- **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (§11.2 20-section template for S1401 audit + §13 6-parallel-Explore sweep + §14 evidence rules + §15 full-SIGN stage table + §16 commit policy)
 - **Research OS:** `docs/research/process/RESEARCH_OPERATING_SYSTEM.md`
-- **ARCHITECTURE_INDEX v18:** `docs/research/ARCHITECTURE_INDEX.md` — §1.21 for S1399 summary + §8 timeline
-- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1300 row + Not-started queue
+- **ARCHITECTURE_INDEX v18:** `docs/research/ARCHITECTURE_INDEX.md`
+- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1400 In-progress row
+- **Group 1300 canonical summary (recently closed):** `docs/research/domains/memory/1399_memory_canonical_summary.md` — F1-F4 methodology outputs inherited into Group 1400 diagnostic lenses
 - **Inventory anchor:** `docs/PLATFORM_INVENTORY.md`
 - **Narrative anchor:** `docs/PLATFORM_WHAT_IT_IS.md`
-- **Whole-platform architecture inventory:** `docs/research/platform_architecture_inventory.md` — apply S1399 §7 anchor-update recommendations (§3.13 subdivision + §3.14 lane consolidation + new Cat F/H rows) in a subsequent PR
-- **KNOWLEDGE_RAG_MEMORY narrative:** `docs/narratives/KNOWLEDGE_RAG_MEMORY.md` — apply S1399 §7.4.2 4 targeted edits in a subsequent PR
+- **Whole-platform architecture inventory §3.32 + §4.9:** Revenue Pipeline row + cross-domain flow (S1273 v2 Rigby-added)
+- **Cross-domain integration audit §2.4 + §3.7 + §5.10 + §9.6 + §14 finding #36:** S1274 findings inherited by Group 1400 (see parent §11.4)
 
 ## Doctor warnings to expect
 
-- Inventory freshness (stale) — `python manage.py generate_platform_inventory --write` to refresh; S1399 §7.1 explicitly does NOT propose direct edits, so this may be stale until Chris regenerates
-- Handoff numbering continuity — legitimate; S1270-S1274 skipped by intent per Rigby lean at S1300 close; S1306-S1398 skipped by intent (Chris directive at S1300 lock: "Plan for a 1399 canonical summary once the 1300-series research is complete")
-- Test count drift — minor, ignore unless writing tests
-- Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 is older than latest handoff (informational; S1399 §7 proposes narrative updates for a subsequent PR)
-- ARCHITECTURE_INDEX v18 update includes S1399 explicit closure signal — next arc can open cleanly
+- Inventory freshness (stale) — `python manage.py generate_platform_inventory --write` to refresh; S1400 does not update inventory rows (Phase 0 scoping only)
+- Handoff numbering continuity — legitimate; S1306-S1398 skipped by intent per Rigby lean at S1300 close ("Plan for a 1399 canonical summary once the 1300-series research is complete"); Chris's arc-numbering convention preserved for Group 1400 (S1401-S1406 + S1499)
+- Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 is older than latest handoff (informational; S1399 §7 proposed narrative updates for a subsequent PR; Group 1400 does not touch narrative anchor)
+- Docs cascade — run 4-step cascade (build_docs_index → build_rag_corpus → sync_docs_index_to_documents → embed_documents) + build_docs_provenance after S1400 PR merges to `main` per memory rule `feedback_docs_cascade_at_every_close.md`
