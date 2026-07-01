@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-01T19:21:31+00:00",
+    "generated": "2026-07-01T21:08:28+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b5e86cd766a8",
-    "doc_count": 2254,
-    "commit_count": 7329,
+    "git_head": "63f6fd8810b6",
+    "doc_count": 2258,
+    "commit_count": 7335,
     "confidence_breakdown": {
-      "HIGH": 1441,
+      "HIGH": 1444,
       "MEDIUM": 348,
-      "LOW": 1,
+      "LOW": 2,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1058,
+      "commit_count": 1060,
       "prs": [
         10,
         11,
@@ -2912,7 +2912,8 @@
         2770,
         2777,
         2783,
-        2785
+        2785,
+        2787
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7218,7 +7219,7 @@
         1216,
         1217
       ],
-      "commit_count": 16,
+      "commit_count": 18,
       "prs": [
         2213,
         2219,
@@ -7233,7 +7234,8 @@
         2502,
         2505,
         2783,
-        2785
+        2785,
+        2787
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17256,6 +17258,36 @@
       "commit_count": 2,
       "prs": [
         2786
+      ]
+    },
+    "docs/handoffs/SESSION_1401_REVENUE_OPPORTUNITY_DISCOVERY_SCORING.md": {
+      "originating_session": 1401,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "beda00e5",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(research): add revenue opportunity discovery + scoring audit (S1401) (#2788)",
+      "sessions_touched": [
+        1401
+      ],
+      "commit_count": 2,
+      "prs": [
+        2788
+      ]
+    },
+    "docs/handoffs/SESSION_1402_REVENUE_OUTREACH_COMPOSITION_DELIVERY.md": {
+      "originating_session": 1402,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "63f6fd88",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1402): Group 1400 Revenue Child B (Outreach Composition + Delivery) audit (#2789)",
+      "sessions_touched": [
+        1402
+      ],
+      "commit_count": 2,
+      "prs": [
+        2789
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32322,9 +32354,10 @@
         1302,
         1303,
         1304,
-        1399
+        1399,
+        1402
       ],
-      "commit_count": 23,
+      "commit_count": 27,
       "prs": [
         2773,
         2775,
@@ -32333,7 +32366,9 @@
         2779,
         2780,
         2781,
-        2784
+        2784,
+        2788,
+        2789
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32359,9 +32394,9 @@
       "originating_session": 990,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "b5e86cd7",
+      "first_commit_sha": "63f6fd88",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(session-1400): Group 1400 Revenue arc open \u2014 parent scoping + Phase 0 methodology first application (#2786)",
+      "first_commit_subject": "docs(session-1402): Group 1400 Revenue Child B (Outreach Composition + Delivery) audit (#2789)",
       "sessions_touched": [
         990,
         1275,
@@ -32373,9 +32408,10 @@
         1304,
         1399,
         1400,
+        1402,
         1500
       ],
-      "commit_count": 18,
+      "commit_count": 22,
       "prs": [
         2773,
         2775,
@@ -32386,7 +32422,9 @@
         2781,
         2782,
         2784,
-        2786
+        2786,
+        2788,
+        2789
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32557,6 +32595,36 @@
       "commit_count": 2,
       "prs": [
         2786
+      ]
+    },
+    "docs/research/domains/revenue/1401_revenue_opportunity_discovery_scoring_audit.md": {
+      "originating_session": 1401,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "beda00e5",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(research): add revenue opportunity discovery + scoring audit (S1401) (#2788)",
+      "sessions_touched": [
+        1401
+      ],
+      "commit_count": 2,
+      "prs": [
+        2788
+      ]
+    },
+    "docs/research/domains/revenue/1402_revenue_outreach_composition_delivery_audit.md": {
+      "originating_session": 1402,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "63f6fd88",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1402): Group 1400 Revenue Child B (Outreach Composition + Delivery) audit (#2789)",
+      "sessions_touched": [
+        1402
+      ],
+      "commit_count": 2,
+      "prs": [
+        2789
       ]
     },
     "docs/research/domains/sports/1500_sports_domain_scoping.md": {
