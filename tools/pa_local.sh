@@ -17,17 +17,23 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1270 fresh
-# thread (Rigby create_fresh at S1270 open — carrying only the mission
-# scope, no S1268/S1269 turn context).
-# Pin: pa-cbcc410b32714f60. Title: "Session 1270 — Symbol Mapping
-# Architecture research (S1264 discovery follow-through)". Carry-
-# forward seeded via session_tool.create_fresh covering S1268/S1269
-# architectural research library (5 docs — comms substrate audit +
-# protocol sketch + collaboration patterns + governance/authority
-# evolution + ARCHITECTURE_INDEX) and this session's single deliverable
-# docs/research/symbol_mapping_architecture.md (draft, routing to
-# Rigby for independent SIGN review).
+# the --conversation flag below. Current value: Session 1300 fresh
+# thread (Rigby create_fresh at S1300 open — carrying only the mission
+# scope, no S1270-S1275 turn context).
+# Pin: pa-aa54193f240f4846. Title: "Session 1300 — Memory research
+# group (kickoff)". Carry-forward: mission scope only — Research Group
+# S1300 "Memory", default scope lean (c) Employee OS mission memory
+# (OpsRun chains, JobContract execution history, OpsRunEvent audit
+# trail). Prior S1270-S1275 symbol_mapping research library context
+# intentionally excluded — fresh thread by Chris's directive at S1300
+# open ("wrong Rigby, start a new one").
+# Retired at S1300 open: pa-cbcc410b32714f60 (Sessions 1270-1275 —
+# symbol_mapping research chain: architecture / actor_identity /
+# authority_enforcement / whole-platform inventory / cross-domain
+# integration audit / DOMAIN_RESEARCH_PLAYBOOK / option_selection
+# (Option E evidence-only) / event_schema_design. 6 research docs
+# + 2 index updates over 6 sessions; not health-scored because
+# research-only sessions don't stress the tool surface).
 # Retired at S1269 close: pa-01e90a1d36f54880 (Sessions 1268-1269 —
 # 4-doc S1268 research library arc + S1269 governance/authority
 # audit; 5 substantive SIGN turns across the arc; not health-scored
@@ -106,4 +112,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-cbcc410b32714f60
+python tools/pa_chat.py "$@" --tools --conversation pa-aa54193f240f4846
