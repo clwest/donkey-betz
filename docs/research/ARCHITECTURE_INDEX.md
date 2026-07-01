@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-06-30 (v5 — S1273 registered `platform_architecture_inventory.md` as §1.9. Library scope broadens from Employee-OS-focused arc (§1.1-§1.8) to Employee-OS-arc PLUS whole-platform inventory (§1.9). Chris's direction at S1273 close: "the next cleanup should be updating ARCHITECTURE_INDEX.md so this becomes the whole-platform counterpart to the Employee OS research library." §1 preamble rewritten. §3 domain map extended for Revenue / Outreach / Engagement (S1273 surfaced this as a Rigby-caught missed domain). §4 dep graph extended with whole-platform arc as sibling branch. §5 new gaps §5.12-§5.14 for top-3 S1273 recommendations. §7 decision matrix +3 whole-platform rows. §8 timeline S1273 row. §9 lateral research expanded.) — prior v4 added §1.8 Authority Enforcement Design Space
+last_verified: 2026-07-01 (v7 — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -45,7 +45,7 @@ verifier_loop: |
   classifying. Self-verifier pass looked for missing docs,
   duplicate classifications, incorrect dependency ordering,
   inconsistent statuses, and discoverability gaps.
-owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2)
+owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK])
 ---
 
 # Architecture Research Index
@@ -561,6 +561,144 @@ navigation-and-classification layer.
   Chris flagged the context-crossing risk mid-session; isolation
   pin used to keep S1273 work separate).
 
+### 1.10 `symbol_mapping_option_selection_design.md`
+
+- **Title.** Symbol Mapping Option Selection Design — Research +
+  Design Preparation (Chris-gated decision)
+- **Purpose.** The design-preparation mission that follows §1.8
+  Authority Enforcement Design Space. Where §1.6-§1.8
+  enumerated options neutrally, §1.10 is the **first mission
+  producing an evidence-based recommendation**: which of §1.6's
+  5 Symbol Mapping options should Chris choose as v0? **The
+  recommendation is a starting point for Chris, not a
+  substitute for his decision.**
+- **Status.** Draft → Active (SIGN-with-edits from Rigby S1274
+  conversation `pa-cbcc410b32714f60`; **Medium confidence**;
+  Rigby recommendation: **Modify** — agree with Option E as v0
+  subject to 4 must-fix tightenings; all folded).
+  Four must-fix folded:
+  (1) §8.8 whole-platform generalization claim tightened —
+      "STRONG once producers exist; v0 coverage remains narrow
+      (2/4/14 per §8.1); Fleet/WebSocket/Spider excluded until
+      instrumented" (was overstated as absolute STRONG);
+  (2) §10.3.1 catastrophic-action graduation guardrail added —
+      4 telemetry triggers force Chris decision within 30 days
+      (prevents "E-forever cope");
+  (3) §12.1 non-NULL misclassification drift pattern added —
+      sample-based truthing + cross-source consistency +
+      golden-flow tests (higher-risk than producer omission
+      per Rigby "wrong-but-non-NULL action_class" concern);
+  (4) §11 employee_handle vs. executor_actor distinction
+      clarified — employee_handle is Employee OS identity
+      (NULL for non-mission actions); executor_actor is
+      generalized runtime executor. Do NOT collapse.
+- **Research type.** Design Preparation + Comparative Analysis
+  + Evidence-Based Recommendation (composite; first mission in
+  the S1268-founded library carrying an actual recommendation
+  Chris can gate).
+- **Primary questions answered.**
+  - Q1-Q10 from mission spec, answered explicitly in the doc's
+    §15 open questions + §16 next mission recommendation.
+  - Which of §1.6's 5 Symbol Mapping options is safest v0?
+  - Which is the recommended end-state?
+  - What is the smallest reversible design that unlocks
+    authority telemetry?
+  - What must remain out-of-scope for v0?
+- **Recommendation shape.**
+  - **v0 (recommended):** **Option E — Evidence-only mapping.**
+    Extend a minimum set of audit models (`ToolCallRecord`,
+    `OpsRunEvent`, `LLMCallEvent`, `CeleryTaskEvent`,
+    `AgentExecution`) with optional `action_class` field + all
+    three actor role fields; instrument 3-5 highest-leverage
+    producer sites incrementally; emit
+    `authority_action_observed` events; **never blocks**.
+  - **End-state (Chris-gated later; possibly 6-24 months
+    out):** E foundation + Option B (tool schema
+    `action_class` attribute) layered on top for pre-dispatch
+    tool-mediated enforcement.
+  - **Explicitly rejected:** Option C bundled standalone.
+  - **Deferred:** Options A, B, D as tertiary layers pending
+    telemetry evidence from Phase 5 E-only steady state.
+  - **Maintenance note:** Option E as recommendation is for v0
+    ONLY. It is **not implementation** and **not enforce-mode**.
+    Chris gates every downstream step: (a) whether to ratify
+    Option E as v0, (b) whether to graduate to E+B per §10.3.1
+    guardrail triggers, (c) whether to add more layers.
+- **Dependencies.** §1.4 (governance planes), §1.6 (5 mapping
+  options — the input premise), §1.7 (3-role vocabulary — MUST
+  be preserved), §1.8 (design space + 15-prereq DAG),
+  `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md` (warn-mode
+  precedent), `EMPLOYEE_OS_PRIMITIVES.md` §2 anti-duplication.
+- **Recommended next reads.** §16 recommends Symbol Mapping
+  Event Schema Design as the next mission (design the
+  concrete event schema + producer instrumentation contract +
+  retention policy + Bug Triage step 4 extension). Rigby SIGN
+  at close of that mission.
+- **Overall importance.** Foundational for anyone scoping the
+  first authority-enforcement PR. Reading order: §1.6 (options
+  enumerated) → §1.7 (actor vocabulary) → §1.8 (design space +
+  prereqs) → §1.10 (recommendation) → downstream Symbol Mapping
+  Event Schema Design mission (design → implementation gate).
+  **F1 load-bearing:** the recommendation is E because it is
+  the *most reversible* and *safest v0*, not because it is the
+  *best end-state*. Do not read §1.10 as "E is the answer";
+  read it as "E is the safest starting move." Chris re-decides
+  at every phase per §10.3.1 guardrail.
+
+### 1.11 `DOMAIN_RESEARCH_PLAYBOOK.md`
+
+- **Title.** Domain Research Playbook — standard process for
+  deep domain audits
+- **Purpose.** Process document that codifies the methodology
+  developed across S1268-S1274 into a **reusable playbook** so
+  future Claude Code sessions can start a domain audit with a
+  short request like "Start research group 1300: Memory" — no
+  4,000-word prompt required. Standardizes: numbering ranges
+  (1300 Memory → 1900 Event Architecture), output paths
+  (`docs/research/domains/<slug>/<session_id>_<slug>_architecture_audit.md`),
+  27 standard audit questions, 20-section document structure,
+  6 parallel Explore sub-agent sweeps, classification rules,
+  Rigby SIGN review shape, and commit rules.
+- **Status.** Active (process documentation — no Rigby SIGN
+  routed; this codifies existing methodology, not a research
+  finding requiring pressure-test).
+- **Research type.** Process Documentation / Meta (light —
+  captures method, does not produce findings).
+- **Primary questions answered.**
+  - How does a future Claude Code session start a domain audit?
+  - What research group ranges are planned (1300s-1900s)?
+  - What does the standard audit output structure look like?
+  - What questions must every domain audit answer?
+  - What classifications should be used for consistency across
+    audits?
+  - What is the Rigby SIGN review pattern for domain audits?
+  - When is it OK to commit vs when should draft stay
+    uncommitted?
+- **Dependencies.** §1.9 (32-domain map — the audit target
+  list), `docs/research/platform/cross_domain_integration_audit.md`
+  (integration gap map — the S1274 sibling context each domain
+  audit inherits), `docs/PLATFORM_INVENTORY.md` (runtime
+  counts). Also inherits all lessons from §1.1-§1.8 methodology
+  history.
+- **Recommended next reads.** For anyone starting a research
+  session: read this playbook first, then the S1273 §3.N row
+  for your target domain, then the S1274 §2.N + §3-§10 rows
+  for cross-domain context, then existing topic docs for the
+  domain. Only then start the sub-agent sweeps.
+- **Overall importance.** **Foundational for every future
+  research session.** Reading order for a fresh Claude Code:
+  §1.11 (this playbook) → whatever domain the user picked.
+  This should be the FIRST doc a fresh session reads after
+  `CLAUDE.md`.
+- **Initial domain queue** (from playbook §12): 1300 Memory,
+  1400 Revenue, 1500 Sports, 1600 Content, 1700 Observability,
+  1800 HumanAttention, 1900 Event Architecture. Queue order is
+  a default, not a dependency — sessions can pick any.
+- **Distinguishing property.** This is `authority: process`,
+  not `authority: research`. It sets rules for other docs
+  rather than producing findings. Chris ratified registration
+  here at S1274 close: "register it now and commit."
+
 ---
 
 ## 2. Recommended Reading Paths
@@ -1014,37 +1152,66 @@ requires Chris gate.
 §5.2c below) — the first mission where the design space
 narrows to a specific selection.
 
-### 5.2c Symbol Mapping Option Selection Design (P0 — recommended next per §1.8 §14.1)
+### 5.2c Symbol Mapping Option Selection Design — CLOSED S1274
 
-- **Why it matters.** §1.8 F6 (33-incident cluster of 7 —
-  "Authority Symbol Mapping Gap") + F9 (Symbol Mapping choice
-  constrains enforcement mode choice: Option E enables only
-  5 of 12 modes; Options A/B/C/D enable all 12) + F11
-  (15 prereqs form DAG with Symbol Mapping at critical-path
-  root) all identify Symbol Mapping choice as the load-bearing
-  predecessor to any enforcement design decision.
-- **Priority.** P0. §1.8 §14.1 explicitly names this as the
-  next mission. Rigby SIGN-clean on the ranking at S1272
-  review.
-- **Dependencies.** §1.6 (5 mapping options A-E enumerated),
-  §1.7 (3-role vocabulary must be consumed), §1.8 (20
-  boundaries + 12 modes + option compatibility matrix). No
-  other dependencies.
-- **Expected outcome.** A design decision doc (not a research
-  doc) with Chris ratification. Should:
-  - Evaluate the 5 §1.6 options against §1.8's 20 boundaries,
-    12 modes, and 6 §9 design options
-  - Recommend a v0 option (one, or hybrid) with explicit
-    reversibility story
-  - Identify the smallest reversible design that unlocks
-    authority telemetry and future enforcement without
-    overbuilding
-  - Enumerate what must remain out-of-scope for v0 (per S1264
-    "smallest honest thing" pattern)
-  - Rigby SIGN review at close
-  - **Chris gates the actual selection.**
-- **Type.** Design decision — second design mission in the
-  STAGE 2/3 arc per §9 pacing note.
+**Closed by:** `docs/research/symbol_mapping_option_selection_design.md`
+(§1.10). Research + design-preparation shipped 2026-07-01;
+Rigby SIGN-with-edits folded (Medium confidence; recommendation
+= Modify with 4 must-fix tightenings). **Recommendation:
+Option E — Evidence-only mapping — as v0.** Extend a minimum
+set of audit models with optional `action_class` field + all 3
+actor role fields; instrument 3-5 highest-leverage producer
+sites incrementally; emit `authority_action_observed` events;
+NEVER blocks. Explicitly rejected Option C bundled standalone;
+deferred Options A/B/D as tertiary layers pending Phase 5 E-only
+telemetry. Set Symbol Mapping Event Schema Design as
+recommended P0 next research per §16 of that doc.
+
+**Maintenance note:** Option E is the v0 recommendation. It is
+**not implementation** and **not enforce-mode**. Chris gates
+every downstream step. §10.3.1 of that doc defines 4 graduation
+triggers that force Chris re-decision within 30 days of any of:
+(a) Tier-0 hazard observed ≥1 time; (b) PROHIBITED-level
+violation rate > 0 per employee per 14-day window; (c) NULL rate
+> 30% after Phase 4; (d) ≥90 days elapsed since Phase 5. This
+prevents "E-forever cope."
+
+**Successor gap:** Symbol Mapping Event Schema Design (see
+§5.2d below) — designs the concrete event schema + producer
+instrumentation contract + retention policy for Option E's
+`authority_action_observed` event.
+
+### 5.2d Symbol Mapping Event Schema Design (P0 — recommended next per §1.10 §16)
+
+- **Why it matters.** §1.10 recommends Option E as v0 but leaves
+  the concrete event schema, producer choices, and instrumentation
+  contract to a downstream mission. Without a specific event
+  shape, "Option E" is still words on paper — no producer knows
+  what fields to populate, no consumer knows what to expect,
+  and Bug Triage step 4 has no schema to aggregate against.
+- **Priority.** P0. §1.10 §16 explicitly names this as the next
+  mission. Rigby SIGN-clean on the ranking at S1274 review.
+- **Dependencies.** §1.10 (Option E as v0 ratified by Chris),
+  §1.7 (3-role vocabulary must be preserved), §1.8 (§11
+  15-prereq DAG — prereq #3 Evidence Event Schema + prereq #4
+  Violation Event Schema are what this mission closes),
+  `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`
+  (`authority_contract_observed` precedent — this mission's
+  event is the action-level parallel).
+- **Expected outcome.** A design-preparation doc (like §1.10)
+  answering: (a) canonical v0 event name and surface (OpsRunEvent
+  label vs. new model vs. hybrid); (b) minimum viable field
+  set with types + nullability + failure modes; (c) 3-5
+  highest-leverage first producers with justification; (d)
+  action_class population strategy (definite / inferred / null);
+  (e) mapping_confidence semantics or exclusion; (f) actor role
+  population matrix per producer; (g) false-confidence prevention
+  strategy (Rigby S1274 concern: wrong-but-non-NULL); (h)
+  3-5 golden flows; (i) v0 dashboard/report shape; (j)
+  explicit out-of-scope list. Rigby SIGN review at close.
+  **Chris gates schema ratification.**
+- **Type.** Design preparation — third design mission in the
+  STAGE 2/3/4 arc per §9 pacing note.
 
 ### 5.3 Trust Propagation Model (P1)
 
@@ -1368,6 +1535,8 @@ influence callouts.
 | **S1271** (2026-06-30) | `actor_identity_attribution_architecture.md` (§1.7) | First architectural-discovery of the WHO question. 19 identity concepts. 22 attribution surfaces classified (13 Explicit / 2 Inferred / 4 Ambiguous / 1 Unreliable / 2 Missing including OpsRun). 14 identity shape changes + 3 structural drop boundaries (HTTP→Celery, MissionRunner config→OpsRun, MissionRunner→Step.fn). 15 historical incidents (7 YES + 4 PARTIALLY + 4 NO — 73% effective case). 25 identity registries (14 SAFE + 7 WRAPPER + 0 DO-NOT-REUSE + 1 DEPRECATED + 3 UNKNOWN). 17 enforcement boundaries. Rigby pressure-test SIGN-with-edits, Medium confidence — 4 must-fix folded incl. **§8.5 introducing the executor_actor / sponsor_actor / principal_user 3-role vocabulary as normative** (biggest architectural risk: conflating the three into a single "actor" label). F1 + F9 language softened per Rigby. §3.5 added inventorying attribution patterns the platform does NOT ship. §9.4 Attribution-first counterargument acknowledged. §5 role-confusion framing note. | Established the "WHO" half of the enforcement primitive. Together with §1.6, closes the composite prereq. Set Authority Enforcement Design Space as recommended P0 next research (design mission that composes both). Index v3 updated per §10.1 (this row + §1.7 row above + §1.6 row above + §3 domain map + §4 dependency graph + §5 gap closure + §7 decision matrix expansion + §9 roadmap advancement). |
 | **S1273** (2026-07-01) | `platform_architecture_inventory.md` (§1.9) | First whole-platform architectural inventory — the counterpart to the Employee-OS-focused §1.1-§1.8 arc. Six parallel Explore sub-agent sweeps synthesized into 32 domains (Cognition & agents: 7 / Data ingestion: 4 / Content & workflow: 2 / Revenue & GTM: 1 / Knowledge & memory: 3 / Human interface: 6 / API: 1 / Governance & ops: 4 / Infrastructure: 4). 9 cross-domain flows. 8 duplicate/overlapping system categories. Architecture Maturity Matrix rating every domain across Coverage / Maturity / Operational Health / Drift Risk / Debt Risk. 11-mission recommended research roadmap. Rigby SIGN-with-edits, Medium confidence, via fresh isolation pin `pa-02cfd3206302352f` (kept separate from shared S1270+ arc pin `pa-cbcc410b32714f60` per Chris's context-crossing directive). 6 substantive edits folded: (1) added missed §3.32 Revenue / Outreach / Engagement Pipeline domain + §4.9 flow — Rigby caught this as biggest missing platform subsystem; (2) downgraded §3.27 Auth STABLE → PARTIAL with trust-boundary enumeration; (3) upgraded §3.7 LLM Provider Registry WORKING → STABLE (core; failover missing); (4) tightened §1 Exec Summary count language; (5) added §3.31 Event Bus vs Observability separation-of-concerns paragraph; (6) expanded §9 roadmap 10 → 11 missions with Revenue Pipeline canonical architecture doc elevated to #2. | Established the whole-platform counterpart to the Employee-OS-focused arc. Chris's direction at close: "the next cleanup should be updating ARCHITECTURE_INDEX.md so this becomes the whole-platform counterpart to the Employee OS research library." Index v5 updated per §10.1 (this row + §1.9 row + §1 preamble rewrite + Path H reading path + §3 Revenue Pipeline domain row + §4 sibling-arc dependency graph extension + §5.12/§5.13/§5.14 gap entries + §7 decision matrix +3 whole-platform rows + §9 roadmap lateral research expansion referencing the 11-mission whole-platform roadmap in §1.9). Also caught + corrected v4 frontmatter drift — prior pass added Appendix C but never bumped last_verified line. |
 | **S1272** (2026-06-30) | `authority_enforcement_design_space.md` (§1.8) | First design-space research — the mission that consumes S1270 + S1271 as INPUT premises and enumerates enforcement design options without picking. 24 enforcement inputs (13 RUNTIME-VERIFIED / 7 OBSERVATION-ONLY / 3 ASPIRATIONAL / 1 UNKNOWN + 8 GAPS). 20 candidate enforcement boundaries (17 original + 3 Rigby SIGN-added: WebSocket, Fleet, Spider — closing the biggest boundary-completeness gap). 12 enforcement modes with 8 existing production precedents; 4 without analog. 204-cell boundary × mode compatibility matrix (17-row form; 3 SIGN-added boundaries not yet cross-tabulated). 4-per-level AuthorityLevel semantics (16 interpretations, none chosen). 11 canonical actor-role scenarios × 3 roles + audit path. 4-plane governance composition with 8 new questions + 1 existing cross-plane touch. 33-incident consolidated historical matrix. **6 major design options A-F enumerated neutrally** (MissionRunner-centered / ToolDispatcher-centered / Audit-first / Human-approval / Multi-layer / Governance-plane composition). 15 anti-patterns (3 Tier-0 hazards: blocking all model writes, enforcement before symbol mapping, silent enforcement). 15-prereq DAG. Rigby pressure-test SIGN-with-edits, Medium confidence — 8 must-fix folded: §3 gained 3 first-class boundaries (WebSocket, Fleet, Spider); §9.0 neutrality guardrail; §9.1 + §9.2 annotation-burden failure modes; §9.6 policy-ossification risk; §8.4 rephrased separating prevent-modes from audit/warn modes; §10 Tier-0 hazards callout; §6.1 role-propagation rule of thumb; §14 P0/P1 dependency-not-preference semantics + §14.2 (i)/(ii) split. F1 (AuthorityLevel has 1 runtime consumer, a shape-counter) and F8 (LLMEnforcer fail-open precedent) are load-bearing findings. | Established the design space for authority enforcement. **First mission carrying design-space content per §9 STAGE 2 pacing note.** Set Symbol Mapping Option Selection Design as recommended P0 next research (§14.1). Maintenance note: this doc is **design-space only** — the 6 options A-F are for future consumption, not implementation. Index v4 updated per §10.1 (this row + §1.8 row + §3 domain map + §4 dependency graph + §5 gap closure §5.2b + new §5.2c + §7 decision matrix expansion + §9 roadmap advancement STAGE 2 → STAGE 3). |
+| **S1274** (2026-07-01) | `DOMAIN_RESEARCH_PLAYBOOK.md` (§1.11) | **First `authority: process` doc in the library.** Codifies the S1268-S1274 methodology into a reusable playbook so future Claude Code sessions can start domain audits with short commands ("Start research group 1300: Memory") instead of 4,000-word prompts. Establishes: research group numbering (1300s Memory → 1900s Event Architecture), output-path convention (`docs/research/domains/<slug>/<session_id>_<slug>_architecture_audit.md`), 27 standard audit questions, 20-section document template with frontmatter, 6-sub-agent parallel sweep pattern, classification rules verbatim from S1274 §11 (Coverage / Maturity / Risk / Finding Type), Rigby SIGN review shape including fresh-isolation-pin practice (S1273/S1274 lesson) and grep-verification pattern (S1274 EventBus lesson), commit rules (default: don't; when Chris says "commit it": specific index-update checklist). Not routed to Rigby — process doc, not research finding. Chris explicit direction at close of drafting: "register it now and commit." | Sets the standard for research groups 1300-1900. Should be the FIRST doc a fresh Claude Code reads after `CLAUDE.md` when starting a domain audit. Distinguishing property: `authority: process` (rules for other docs), not `authority: research` (findings). Index v7 updated per §10.1 (this row + §1.11 row + Appendix E pass notes). |
+| **S1274** (2026-07-01) | `symbol_mapping_option_selection_design.md` (§1.10) | **First mission in the library carrying an evidence-based recommendation Chris can gate.** Narrows §1.6's 5 Symbol Mapping options to a v0 selection. Five parallel Explore sub-agents produced: (1) 24-system runtime symbol inventory with 2 verified drifts from S1270 (REMOVED_TOOL_ALIASES 12→13; GATEWAY_TOOLS 23→22); (2) 100-cell coverage × reuse matrix (A:1/7/12, B:2/6/12, C:5/7/8, D:11/7/1 flattest, E:2/4/14); (3) drift risk ranking (A/B/C VERY HIGH; D HIGH; E MEDIUM lowest); (4) actor compatibility (E only option carrying all 3 roles end-to-end IF audit models extended); (5) failure modes + rollout + minimum viable event shape. **Recommendation: Option E — Evidence-only mapping — as v0.** Extend a minimum set of audit models with optional `action_class` field + all 3 actor role fields; instrument 3-5 highest-leverage producer sites incrementally; emit `authority_action_observed` events; NEVER blocks. **End-state (Chris-gated later):** E foundation + Option B tool schema attribute for pre-dispatch enforcement. **Explicitly rejected:** Option C bundled standalone. Rigby pressure-test SIGN-with-edits, Medium confidence, recommendation = Modify — 4 must-fix folded: (1) §8.8 tone alignment on whole-platform generalization vs. 2/4/14 matrix (Fleet/WebSocket/Spider not covered at v0 until instrumented); (2) §10.3.1 catastrophic-action graduation guardrail (4 telemetry triggers forcing Chris decision within 30 days — prevents "E-forever cope"); (3) §12.1 non-NULL misclassification drift pattern (sample-based truthing + cross-source consistency + golden-flow tests — higher-risk than producer omission); (4) §11 employee_handle vs. executor_actor clarification (employee_handle is Employee OS identity, NULL for non-mission actions; executor_actor is generalized runtime executor). Rigby SIGN-clean on: risk posture + reversibility (strongest argument); actor role separation. | **First evidence-based recommendation in the library.** Set Symbol Mapping Event Schema Design as recommended P0 next research (§16). Maintenance note: Option E is v0 recommendation ONLY. Not implementation. Not enforce-mode. §10.3.1 guardrail forces Chris re-decision within 30 days of graduation triggers. Index v6 updated per §10.1 (this row + §1.10 row + §5.2c closure + new §5.2d + §7 decision matrix expansion + §9 roadmap STAGE 3 CLOSED / new STAGE 4 Event Schema Design). |
 
 **Pattern observation (updated S1273 v5).** The library grew
 in two waves. First wave: 5 docs in 5 sessions (S1268/S1269/
@@ -1455,19 +1624,38 @@ context it should have inherited.
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  STAGE 3 — Symbol Mapping Option Selection Design  ← recommended│
-│  next (per §1.8 §14.1)                                          │
+│  STAGE 3 — Symbol Mapping Option Selection Design  ✓ CLOSED    │
+│  S1274                                                          │
 │                                                                  │
-│  Scope: pick from §1.6's 5 Symbol Mapping options (A steps      │
-│  self-declare / B tool attribute / C hybrid / D central         │
-│  registry / E evidence-only). Chris-gated design decision.      │
-│  Recommend smallest reversible v0 that unlocks authority        │
-│  telemetry and future enforcement without overbuilding.         │
-│  Must respect §1.7 §8.5 3-role actor vocabulary. Must respect   │
-│  §1.8's 15-prereq DAG (Symbol Mapping is critical-path root).   │
+│  Shipped: docs/research/                                         │
+│    symbol_mapping_option_selection_design.md (§1.10)            │
+│  5 parallel sub-agents; 100-cell coverage matrix; drift         │
+│  ranking; actor compatibility per option; failure modes.        │
+│  **Recommendation: Option E (evidence-only) as v0** with 4      │
+│  Rigby must-fix edits folded (generalization tone alignment;    │
+│  catastrophic-action graduation guardrail; non-NULL             │
+│  misclassification drift pattern; employee_handle vs.           │
+│  executor_actor distinction). Rigby SIGN-with-edits, Medium     │
+│  confidence, recommendation = Modify.                           │
 │                                                                  │
-│  Type: DESIGN DECISION (not pure research). Rigby SIGN review;  │
-│  Chris ratification.                                            │
+│  Maintenance note: Option E is v0-only recommendation, NOT      │
+│  implementation and NOT enforce-mode. Chris gates all           │
+│  downstream steps. §10.3.1 guardrail forces re-decision.        │
+├──────────────────────────────────────────────────────────────────┤
+│  STAGE 4 — Symbol Mapping Event Schema Design  ← recommended    │
+│  next (per §1.10 §16)                                           │
+│                                                                  │
+│  Scope: design the concrete `authority_action_observed` event   │
+│  schema + producer instrumentation contract + retention policy  │
+│  + Bug Triage step 4 extension. Closes §1.8 §11 prereqs #3     │
+│  (Evidence Event Schema) and #4 (Violation Event Schema).       │
+│  Must respect actor role separation (§1.7 §8.5) and Option E    │
+│  ratification from §1.10. Recommend 3-5 highest-leverage first  │
+│  producers with justification.                                  │
+│                                                                  │
+│  Type: DESIGN PREPARATION (design-space + evidence-based        │
+│  recommendation like §1.10). Rigby SIGN review; Chris gates     │
+│  schema ratification.                                           │
 └──────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -1957,3 +2145,64 @@ independent SIGN review on the index itself remains optional
 per §10.6 — the index is `authority: navigation`, not
 `authority: canonical`; anchors win when they disagree with the
 index.
+
+
+## Appendix E — v6 + v7 update pass notes (S1274)
+
+Two concurrent S1274 registrations landed in the same day:
+
+**v6 (concurrent CC session).** Registered §1.10
+`symbol_mapping_option_selection_design.md` (STAGE 3 Symbol Mapping
+Option Selection Design mission — Chris-gated recommendation of Option
+E as v0). Frontmatter bumped v5 → v6; timeline row added; roadmap
+advanced STAGE 3 CLOSED / new STAGE 4 Event Schema Design. No
+appendix pass notes written by that pass — noted for record.
+
+**v7 (this pass).** Registered §1.11 `DOMAIN_RESEARCH_PLAYBOOK.md`.
+
+### Verification pass (v7) before finalization
+
+- **Missing doc check.** `ls docs/research/` shows the playbook
+  present as `DOMAIN_RESEARCH_PLAYBOOK.md`. Registered as §1.11. ✓
+- **Concurrent-session coordination.** Detected that a parallel CC
+  session bumped v5 → v6 for §1.10 while this session was drafting
+  the playbook. Handled by: (a) reading the current v6 frontmatter
+  before editing, (b) building on top of v6 with a v6 → v7 bump
+  rather than a v5 → v6 clash, (c) adding a note in this appendix
+  that v6 concurrent session did not add its own appendix. No
+  content loss; both S1274 registrations coexist. ✓
+- **Authority-type distinction.** §1.11 is `authority: process`, the
+  first process doc in the library. Distinguished in the §1.11 row
+  text so readers know it sets rules for other docs rather than
+  producing findings. Considered adding a new §11 "Process Documents"
+  section separately from §1; decided against — one process doc
+  today does not justify a new section, and readers looking for
+  "what to read first" benefit from playbook being adjacent to
+  research docs. ✓
+- **Discoverability.** §1.11 surfaces via §1 (row) + §8 (timeline).
+  Reading paths §2 not extended in this pass — the playbook does
+  not fit any existing goal-based path (it is for people STARTING
+  a domain audit, not any of the current A-H personas). A future
+  Path I "I want to start a domain audit" could be added if session
+  volume in the 1300-1900 range grows; deferred for now since
+  §1.11 row and §8 timeline give sufficient entry points. ✓
+- **Domain map §3.** Not updated in this pass — playbook is process
+  meta, not a domain finding. No new domain row applies. ✓
+- **Gaps §5.** Not extended in this pass — playbook sets research
+  GROUP structure (queue in §12 of the playbook itself); §5 tracks
+  research gaps in specific domains, which is orthogonal. ✓
+- **Decision matrix §7.** Not extended — playbook governs how future
+  audits get written, not what class of work triggers reading a
+  specific doc. Row could be added in future: "About to start a
+  domain audit → read DOMAIN_RESEARCH_PLAYBOOK.md first." Deferred. ✓
+- **Roadmap §9.** Not modified in this pass — playbook does not
+  advance any specific research stage; it enables the next 7 groups
+  in parallel-safe fashion (§12 of the playbook). ✓
+- **Frontmatter.** Bumped v6 → v7. verifier_loop preserved v1-v6
+  history; added v7 note about concurrent-session coordination.
+  owner field extended: "v7 update S1274 Part 2 [§1.11
+  DOMAIN_RESEARCH_PLAYBOOK]." ✓
+
+**Status after v7 pass.** Publishable as v7. §1.11 discoverable via
+§1 (row) and §8 (timeline). Concurrent v6 session note preserved.
+Rigby SIGN review on the index itself remains optional per §10.6.
