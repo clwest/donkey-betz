@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-07-01 (v10 — S1276 extended `DOMAIN_RESEARCH_PLAYBOOK.md` §1.11 in-place from v1 → v2. Playbook restructured into 7 parts / 24 sections; formalized fifteen areas that emerged after v1 shipped: research group lifecycle (parent → children → canonical summary → index → complete), phase discipline (research / design-preparation / design-decision / process / navigation / implementation authority values), xx99 canonical summary convention, canonical folder structure (`docs/research/domains/<slug>/`), self-describing metadata standard (adds `research_group` / `child_slot` / `dependencies_on` / `delegates_to` / `delegated_from` frontmatter fields), cross-reference policy (never duplicate — always reference), parent doc responsibilities (§8 codifies S1300 exemplar), canonical summary responsibilities (§10 pins the xx99 template), stage-scoped Rigby routing (§15 stage table), graduation criteria (§17 objective checklist per group state), dependency mapping (§18 formalizes cross-arc delegation semantics), generalization requirements (§19 pre-audit check + anti-domain-specific-language rules), evolution policy (§20 codifies additive-first + backwards-compat + reality-wins for the playbook itself). No new research findings; no §3 domain map / §5 gap / §9 roadmap changes — this is a process extension, not a research finding. Chris directed at S1276 open: playbook should evolve into the permanent foundation for all future Donkey Betz architecture research. §8 timeline S1276 row added. §1.11 body updated to cite v2 additions. Discoverability priority reinforced: playbook is the FIRST doc a fresh Claude Code should read after `CLAUDE.md` when starting a domain research group. Two-triggers rule (§20) now protects against premature codification of half-emerged patterns.) — prior v9 (2026-07-01) — S1300 registered `domains/memory/1300_memory_domain_scoping.md` as §1.13. **First parent-scoping doc in the library** — opens Research Group 1300 (Memory / Knowledge / Embeddings, playbook §12 queue slot). Phase 0 domain-definition exercise per Chris directive at S1300 open: "Pause before selecting a-f. Your clarification uncovered an architectural ambiguity rather than a simple scoping question." Doc enumerates 8 candidate memory subdomains (Categories A-H) grounded in S1273 §3.13 / §3.14 / §3.15 / §5.4 evidence, recommends parent-with-children shape citing playbook §2 rule 3, and locks Chris's 5 decisions 2026-07-01: (D1) parent-with-children over single-audit; (D2) Category G Mission Memory delegated to Employee OS 1200s arc (cross-linked, not folded); (D3) RAG excluded_missing_provenance finding parked as S1301 input under §6; (D4) P2 renamed `Memory Store Overlap Audit` → `Memory Persistence Architecture` (wider frame: durability + authority, not just overlap surfacing); (D5) S1399 canonical summary planned as arc-close deliverable (cross-cutting synthesis + PLATFORM_INVENTORY.md §3 update recommendations + follow-on queue). Group 1300 arc: S1300 parent → S1301 RAG Retrieval Lanes → S1302 Memory Persistence Architecture → S1303 Conversational/Thread Memory → S1304 Docs Corpus ↔ RAG Boundary → S1305 Runtime Memory Correctness → S1399 canonical summary. Session ended EARLY per Chris close directive — Phase 0 scoping only; no P1 audit work in this session. S1301 launch cadence + Rigby SIGN routing deferred to next session. §8 timeline S1300 row added. §9 roadmap notes Group 1300 arc opened. Playbook §11 short-command entry point exercised for the first time — validates the DOMAIN_RESEARCH_PLAYBOOK.md workflow.) — prior v8 (2026-07-01) — S1275 registered `symbol_mapping_event_schema_design.md` as §1.12. Closes §5.2d (Symbol Mapping Event Schema Design gap). Two-surface event stream (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls) unified via new `authority_action_observed_stream` DB view; 21 payload fields; 4 v0 emitters + 1 v0 first consumer; DECLARED tier explicitly non-authoritative; drift stack with weekly sampled-truthing loop. Rigby SIGN-with-edits — 8 must-fixes + bonus #9 folded (ambient OpsRun → two-surface, drop `event_id`, drop `notes` + downscope `producer_version`, rename `delegator_actor` → `caller_actor`, reframe "5 producers" → "4 emitters + 1 consumer", rename INFERRED → DECLARED, add sampled-truthing loop, DEFINITE ≠ global truth, reserved-keys policy). §8 timeline S1275 row added. §9 roadmap STAGE 4 CLOSED; STAGE 5 has no P0 (Trust Propagation §5.3 and Employee Boundary Escalation §5.4 are both P1 — Chris picks). New §5.2e implementation-slot added (P1, blocked on Chris canonical sign-off of §1.12).) — prior v7 (2026-07-01) — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
+last_verified: 2026-07-02 (v11 — S1277 + S1278 registered `RESEARCH_OPERATING_SYSTEM.md` (v2.1) as §1.14 and `claude_research_startup_introspection.md` as §1.15. **First `authority: process` doc that governs Claude Code's entire workflow across every request class.** S1277 produced OS v1 → v1.1 → v2 across three cycles; six new parts added in v2 for expanded mission scope (Research Philosophy, Context-Kit Integration, Documentation Ownership, Research Contract, Completion Contract, Research Debt). Two Rigby SIGN cycles (fresh isolation pins pa-95ce3cbf0a2aa0cc + pa-117d3edf9d7b80f8): 15 must-fixes folded from v1 → v1.1 SIGN; 12 must-fixes folded from v2 SIGN. S1278 ratification pass: 13 playbook §-ref cascade artifact bugs corrected; §20 finalization section added (assessment, ecosystem diagram, graduation verdict, P0/P1/P2 debt sort); third Rigby SIGN cycle on fresh pin pa-30278fb65295e74c returned High-confidence SIGN-with-edits (edits = the three P0 doc-pointer follow-up items already flagged, not architectural). Ratification verdict: **READY WITH MINOR FOLLOW-UP** — architecture complete, graduated; 3 blocking items (CLAUDE.md pointer, `OPEN_ARCS.md` creation, START-HERE pointers) all documentation-only, deferred to follow-up migration session. Once P0.1-P0.3 land, OS becomes CANONICAL. §8 timeline S1276+S1277+S1278 rows added. Introspection registered as companion evidence base for OS (§1.15). §1.11 playbook body updated to cross-reference §1.14 OS. No §3 domain map / §5 gap changes; §9 roadmap notes OS canonical arc complete. Discoverability priority: OS is now the FIRST doc a fresh Claude Code should read after `CLAUDE.md` for ANY class of work (research, implementation, bug, ops); the playbook remains first-read specifically for research-class arcs.) — prior v10 (2026-07-01) — S1276 extended `DOMAIN_RESEARCH_PLAYBOOK.md` §1.11 in-place from v1 → v2. Playbook restructured into 7 parts / 24 sections; formalized fifteen areas that emerged after v1 shipped: research group lifecycle (parent → children → canonical summary → index → complete), phase discipline (research / design-preparation / design-decision / process / navigation / implementation authority values), xx99 canonical summary convention, canonical folder structure (`docs/research/domains/<slug>/`), self-describing metadata standard (adds `research_group` / `child_slot` / `dependencies_on` / `delegates_to` / `delegated_from` frontmatter fields), cross-reference policy (never duplicate — always reference), parent doc responsibilities (§8 codifies S1300 exemplar), canonical summary responsibilities (§10 pins the xx99 template), stage-scoped Rigby routing (§15 stage table), graduation criteria (§17 objective checklist per group state), dependency mapping (§18 formalizes cross-arc delegation semantics), generalization requirements (§19 pre-audit check + anti-domain-specific-language rules), evolution policy (§20 codifies additive-first + backwards-compat + reality-wins for the playbook itself). No new research findings; no §3 domain map / §5 gap / §9 roadmap changes — this is a process extension, not a research finding. Chris directed at S1276 open: playbook should evolve into the permanent foundation for all future Donkey Betz architecture research. §8 timeline S1276 row added. §1.11 body updated to cite v2 additions. Discoverability priority reinforced: playbook is the FIRST doc a fresh Claude Code should read after `CLAUDE.md` when starting a domain research group. Two-triggers rule (§20) now protects against premature codification of half-emerged patterns.) — prior v9 (2026-07-01) — S1300 registered `domains/memory/1300_memory_domain_scoping.md` as §1.13. **First parent-scoping doc in the library** — opens Research Group 1300 (Memory / Knowledge / Embeddings, playbook §12 queue slot). Phase 0 domain-definition exercise per Chris directive at S1300 open: "Pause before selecting a-f. Your clarification uncovered an architectural ambiguity rather than a simple scoping question." Doc enumerates 8 candidate memory subdomains (Categories A-H) grounded in S1273 §3.13 / §3.14 / §3.15 / §5.4 evidence, recommends parent-with-children shape citing playbook §2 rule 3, and locks Chris's 5 decisions 2026-07-01: (D1) parent-with-children over single-audit; (D2) Category G Mission Memory delegated to Employee OS 1200s arc (cross-linked, not folded); (D3) RAG excluded_missing_provenance finding parked as S1301 input under §6; (D4) P2 renamed `Memory Store Overlap Audit` → `Memory Persistence Architecture` (wider frame: durability + authority, not just overlap surfacing); (D5) S1399 canonical summary planned as arc-close deliverable (cross-cutting synthesis + PLATFORM_INVENTORY.md §3 update recommendations + follow-on queue). Group 1300 arc: S1300 parent → S1301 RAG Retrieval Lanes → S1302 Memory Persistence Architecture → S1303 Conversational/Thread Memory → S1304 Docs Corpus ↔ RAG Boundary → S1305 Runtime Memory Correctness → S1399 canonical summary. Session ended EARLY per Chris close directive — Phase 0 scoping only; no P1 audit work in this session. S1301 launch cadence + Rigby SIGN routing deferred to next session. §8 timeline S1300 row added. §9 roadmap notes Group 1300 arc opened. Playbook §11 short-command entry point exercised for the first time — validates the DOMAIN_RESEARCH_PLAYBOOK.md workflow.) — prior v8 (2026-07-01) — S1275 registered `symbol_mapping_event_schema_design.md` as §1.12. Closes §5.2d (Symbol Mapping Event Schema Design gap). Two-surface event stream (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls) unified via new `authority_action_observed_stream` DB view; 21 payload fields; 4 v0 emitters + 1 v0 first consumer; DECLARED tier explicitly non-authoritative; drift stack with weekly sampled-truthing loop. Rigby SIGN-with-edits — 8 must-fixes + bonus #9 folded (ambient OpsRun → two-surface, drop `event_id`, drop `notes` + downscope `producer_version`, rename `delegator_actor` → `caller_actor`, reframe "5 producers" → "4 emitters + 1 consumer", rename INFERRED → DECLARED, add sampled-truthing loop, DEFINITE ≠ global truth, reserved-keys policy). §8 timeline S1275 row added. §9 roadmap STAGE 4 CLOSED; STAGE 5 has no P0 (Trust Propagation §5.3 and Employee Boundary Escalation §5.4 are both P1 — Chris picks). New §5.2e implementation-slot added (P1, blocked on Chris canonical sign-off of §1.12).) — prior v7 (2026-07-01) — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -45,7 +45,7 @@ verifier_loop: |
   classifying. Self-verifier pass looked for missing docs,
   duplicate classifications, incorrect dependency ordering,
   inconsistent statuses, and discoverability gaps.
-owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK v1]; v8 update S1275 [§1.12 symbol_mapping_event_schema_design]; v9 update S1300 [§1.13 domains/memory/1300_memory_domain_scoping — first parent-scoping doc; Group 1300 arc opened]; v10 update S1276 [§1.11 DOMAIN_RESEARCH_PLAYBOOK extended v1 → v2 in-place; process framework formalization])
+owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK v1]; v8 update S1275 [§1.12 symbol_mapping_event_schema_design]; v9 update S1300 [§1.13 domains/memory/1300_memory_domain_scoping — first parent-scoping doc; Group 1300 arc opened]; v10 update S1276 [§1.11 DOMAIN_RESEARCH_PLAYBOOK extended v1 → v2 in-place; process framework formalization]; v11 update S1277+S1278 [§1.14 RESEARCH_OPERATING_SYSTEM v2.1 canonical process framework + §1.15 claude_research_startup_introspection evidence base; three Rigby SIGN cycles; ratification READY WITH MINOR FOLLOW-UP])
 ---
 
 # Architecture Research Index
@@ -910,6 +910,131 @@ navigation-and-classification layer.
   greenlight); (D7) Rigby SIGN routing on parent doc
   (default: skip — playbook §9 attaches SIGN to audits, not
   scoping).
+
+### 1.14 `RESEARCH_OPERATING_SYSTEM.md`
+
+- **Title.** Research Operating System — the OS every Claude
+  Code session executes in Donkey Betz
+- **Current version.** **v2.1** (S1278, 2026-07-02). v1 →
+  v1.1 (S1277 Rigby SIGN fold) → v2 (S1277 re-issue with 6
+  new parts) → v2.1 (S1278 ratification + playbook cross-ref
+  cleanup + §20 finalization).
+- **Purpose.** The canonical process framework Claude Code
+  executes across **every** class of work in the repo. Where
+  the playbook (§1.11) governs research-class sessions
+  specifically, this OS is the *superset* — it defines
+  bootstrap sequence, request classification, per-class
+  startup contracts, documentation authority hierarchy,
+  research/completion contracts, research debt, ownership
+  matrix, and Context-Kit boundary. Turns onboarding
+  deterministic and prompt-independent. The success target:
+  a brand-new Claude Code reads this document, executes
+  bootstrap, classifies the user request, runs the matching
+  startup contract, and begins contributing — **without Chris
+  writing a 4,000-word prompt.**
+- **Status.** Active (v2.1 architecture COMPLETE; ratification
+  = READY WITH MINOR FOLLOW-UP; 3 P0 docs-only follow-up items
+  gate CANONICAL status).
+- **Research type.** Process Documentation / Meta / Canonical
+  framework (analogous to §1.11 playbook but broader scope).
+- **Primary questions answered.**
+  - How does a fresh Claude think? (§3 Decision tree)
+  - What does bootstrap look like? (§4 Level A + Level B)
+  - How is a request routed? (§5 11 request classes + boundary
+    rules)
+  - What state surfaces exist? (§6 session + arc + runtime)
+  - What is the documentation authority hierarchy? (§7 11 tiers
+    with truth-authority vs read-priority split)
+  - What startup contract per class? (§8.1-§8.11)
+  - What thinking templates exist? (§9 registry)
+  - What is discoverable today? (§10 audit)
+  - Who owns which doc? (§11 ownership matrix + anti-patterns)
+  - How does research reduce prompt burden? (§12 target rhythm)
+  - What is a Research Contract? (§13 8 mandatory fields)
+  - What is a Completion Contract? (§14 10-item close checklist)
+  - What is Research Debt? (§15 concept + 7 categories +
+    priority formula + escalation)
+  - What is the one-year vision? (§16)
+  - What is the Research Philosophy? (§1 stop condition +
+    anti-patterns)
+  - What is the Context-Kit boundary? (§2 ownership +
+    drift-prevention model + do-not-duplicate list)
+- **Dependencies.** `DOMAIN_RESEARCH_PLAYBOOK.md` v2 (§1.11 —
+  the research-class specialization the OS calls), all §1.1-
+  §1.13 research library entries (context for what the OS
+  governs), `docs/PLATFORM_INVENTORY.md`, `docs/PLATFORM_WHAT_IT_IS.md`,
+  `docs/00-START-HERE/DOC_LIFECYCLE.md` §2c, `docs/EMPLOYEE_OS_PRIMITIVES.md`,
+  Context-Kit skill + `docs/docs-pattern/`.
+- **Recommended next reads.** For anyone opening a new session
+  in this repo: bootstrap Level A (§4.1) is the answer. For
+  understanding *how* the OS integrates: §2 Context-Kit
+  Integration + §7 Documentation Authority. For starting
+  research work: §5 router → §8.1 RESEARCH contract → §1.11
+  playbook.
+- **Overall importance.** **Foundational — the highest-
+  authority process doc in the library.** The playbook
+  (§1.11) is one specialization of this OS. Reading order
+  for a fresh Claude Code: (1) `CLAUDE.md` — session
+  instructions; (2) OS §0-§5 — orientation + routing; (3)
+  Level B contract per §5 classification. This doc supersedes
+  no prior work; it consolidates and formalizes the process
+  discipline that emerged across S1268-S1276.
+- **Rigby SIGN history.** Three cycles across S1277-S1278:
+  (1) v1 draft → v1.1 SIGN-with-edits (Medium confidence,
+  fresh pin `pa-95ce3cbf0a2aa0cc`, 15 must-fixes folded on
+  bootstrap/router/authority/contracts/templates); (2) v2
+  extension → v2 SIGN-with-edits (Medium confidence, fresh
+  pin `pa-117d3edf9d7b80f8`, 12 must-fixes folded on the six
+  new parts); (3) v2.1 finalization → High-confidence
+  SIGN-with-edits (fresh pin `pa-30278fb65295e74c`, zero
+  factual errors, edits = docs-only follow-up items already
+  flagged as P0 non-blocking).
+- **Distinguishing property.** This is `authority: process`
+  with `version: v2.1`. Governance-tier — every future
+  Claude Code session executes it. Playbook (§1.11) is a
+  specialization; OS is the entry point.
+
+### 1.15 `claude_research_startup_introspection.md`
+
+- **Title.** Claude Code Startup + Research Execution
+  Introspection — S1276 meta-research
+- **Purpose.** Evidence base for the OS (§1.14). Documents
+  Claude Code's *actual* startup behavior (from S1276 open
+  self-observation), grep audits of CLAUDE.md + START-HERE +
+  playbook + INDEX showing what fresh Claude cannot discover
+  today, and P0/P1/P2 recommendations that seeded the OS
+  design.
+- **Status.** Active (companion evidence to §1.14).
+- **Research type.** Process Introspection / Startup Audit /
+  Failure Mode Catalog.
+- **Primary questions answered.**
+  - What does Claude Code actually do at session open today?
+  - What is mandated vs learned vs manual vs prompt-dependent?
+  - What is discoverable from CLAUDE.md alone (short answer:
+    not much)?
+  - What are the recent failure modes (wrong pin, S1273/S1274
+    numbering collision, handoff drift, domain ambiguity, RAG
+    provenance filter, multi-Claude session risk)?
+  - What P0/P1/P2 documentation changes would extinguish each
+    failure mode?
+- **Dependencies.** `CLAUDE.md`, `00-START-NEXT-SESSION.md`,
+  `docs/00-START-HERE/`, `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`,
+  `docs/research/ARCHITECTURE_INDEX.md`, MEMORY.md
+  auto-loaded feedback rules, `.claude/skills/context-kit/SKILL.md`.
+- **Recommended next reads.** Chris directive at S1276 close:
+  read Parts 1 + 4 for accuracy verification. The full Part
+  6 recommendations became the P0 items in OS §17.1 + §20.9.
+- **Overall importance.** **Foundational for understanding
+  the OS's design rationale.** Not read at every session
+  bootstrap (OS §1.14 replaces it as the operational doc),
+  but the evidence base for OS §8 discoverability audit + §20
+  fresh-Claude confusion assessment. Chris directive:
+  *"you don't need Rigby this should be for how you work with
+  the repo"* — the doc introspects Claude's repo-interaction
+  discipline, not architectural findings.
+- **Distinguishing property.** `authority: process-audit` —
+  Claude self-report, not architectural finding. Not routed
+  to Rigby per S1276 close directive.
 
 ---
 
@@ -1784,28 +1909,38 @@ influence callouts.
 | **S1276** (2026-07-01) | `DOMAIN_RESEARCH_PLAYBOOK.md` §1.11 — **v1 → v2 extension** | **First playbook version bump.** Restructured v1 into 7 parts / 24 sections. Formalized fifteen areas that emerged after v1 shipped across the S1268-S1275 arc and the S1300 parent-scoping experiment: (§2) research group lifecycle — parent → children → canonical summary → index update → complete, five stages with rationale for each; (§3) phase discipline — the research / design-preparation / design-decision / process / navigation / implementation split with `authority:` frontmatter field distinguishing them, Symbol Mapping arc as canonical exemplar (§1.6 research → §1.10 design-prep → §1.12 design-prep → §5.2e implementation); (§4) xx99 canonical summary convention with intra-range structure (NN00 parent / NN01-NN98 children / NN99 summary); (§5) canonical folder structure with legacy-doc grandfathering rule; (§6) self-describing metadata standard — adds `research_group`, `child_slot`, `dependencies_on`, `delegates_to`, `delegated_from` frontmatter fields with a required-fields-by-doc-type matrix; (§7) cross-reference policy — never duplicate, always reference; (§8) parent doc responsibilities — codifies the S1300 exemplar into a template (§11.1); (§10) canonical summary responsibilities — pins the xx99 template (§11.3) and rationale for the slot; (§11) three doc templates — parent + child audit + canonical summary; (§15) stage-scoped Rigby routing — table maps stage to SIGN requirement, canonical summary and design-prep get extra pressure-test questions; (§17) graduation criteria — objective checklist for `single-audit` vs `parent-with-children` groups with `not-started` / `in-progress` / `awaiting-summary` / `closed` / `stalled` states; (§18) domain dependency mapping — formalizes `dependencies_on` / `delegates_to` / `delegated_from` semantics as informational-not-blocking; (§19) generalization requirements — 13-domain verification list + anti-domain-specific-language rules + pre-audit 5-minute mental check; (§20) architecture evolution policy — the playbook is a living artifact; additive-first evolution, backwards compat, reality-wins rule mirrors DOC_LIFECYCLE §2c, formal change proposal workflow, changelog now in §20. All v1 content preserved semantically. New short commands: `Continue research group NNNN: <slot>` and `Close research group NNNN`. Chris directive at S1276 open: *"formalize the research process itself so future domain research becomes repeatable instead of prompt-driven."* Not routed to Rigby — process document, not research finding (per §15's own rule for `authority: process`). | Playbook is now the load-bearing foundation for every future domain research group. v2 makes the framework self-describing: a fresh Claude Code that reads *only* the playbook + ARCHITECTURE_INDEX + PLATFORM_INVENTORY can execute a research arc end-to-end. First playbook version bump — sets the pattern for how the framework itself evolves. Older research groups closed under v1 stay valid under v1 per §20 backwards-compat rule. Index v10 updated per §10.1 (this row + §1.11 body extension). |
 | **S1274** (2026-07-01) | `symbol_mapping_option_selection_design.md` (§1.10) | **First mission in the library carrying an evidence-based recommendation Chris can gate.** Narrows §1.6's 5 Symbol Mapping options to a v0 selection. Five parallel Explore sub-agents produced: (1) 24-system runtime symbol inventory with 2 verified drifts from S1270 (REMOVED_TOOL_ALIASES 12→13; GATEWAY_TOOLS 23→22); (2) 100-cell coverage × reuse matrix (A:1/7/12, B:2/6/12, C:5/7/8, D:11/7/1 flattest, E:2/4/14); (3) drift risk ranking (A/B/C VERY HIGH; D HIGH; E MEDIUM lowest); (4) actor compatibility (E only option carrying all 3 roles end-to-end IF audit models extended); (5) failure modes + rollout + minimum viable event shape. **Recommendation: Option E — Evidence-only mapping — as v0.** Extend a minimum set of audit models with optional `action_class` field + all 3 actor role fields; instrument 3-5 highest-leverage producer sites incrementally; emit `authority_action_observed` events; NEVER blocks. **End-state (Chris-gated later):** E foundation + Option B tool schema attribute for pre-dispatch enforcement. **Explicitly rejected:** Option C bundled standalone. Rigby pressure-test SIGN-with-edits, Medium confidence, recommendation = Modify — 4 must-fix folded: (1) §8.8 tone alignment on whole-platform generalization vs. 2/4/14 matrix (Fleet/WebSocket/Spider not covered at v0 until instrumented); (2) §10.3.1 catastrophic-action graduation guardrail (4 telemetry triggers forcing Chris decision within 30 days — prevents "E-forever cope"); (3) §12.1 non-NULL misclassification drift pattern (sample-based truthing + cross-source consistency + golden-flow tests — higher-risk than producer omission); (4) §11 employee_handle vs. executor_actor clarification (employee_handle is Employee OS identity, NULL for non-mission actions; executor_actor is generalized runtime executor). Rigby SIGN-clean on: risk posture + reversibility (strongest argument); actor role separation. | **First evidence-based recommendation in the library.** Set Symbol Mapping Event Schema Design as recommended P0 next research (§16). Maintenance note: Option E is v0 recommendation ONLY. Not implementation. Not enforce-mode. §10.3.1 guardrail forces Chris re-decision within 30 days of graduation triggers. Index v6 updated per §10.1 (this row + §1.10 row + §5.2c closure + new §5.2d + §7 decision matrix expansion + §9 roadmap STAGE 3 CLOSED / new STAGE 4 Event Schema Design). |
 
-**Pattern observation (updated S1276).** The library has grown
-in three waves. **First wave** (S1268-S1272): 5 docs in 5
+| **S1277+S1278** (2026-07-01/02) | `RESEARCH_OPERATING_SYSTEM.md` (§1.14) + `claude_research_startup_introspection.md` (§1.15) | **Canonical process framework for every Claude Code session — superset containing the playbook.** S1276 introspection audited actual startup behavior and named P0/P1/P2 documentation gaps. S1277 drafted OS v1 (10 request classes + Level A/B bootstrap + authority hierarchy + startup contracts + templates + navigation audit + repeatability target + one-year vision + P0/P1/P2 debt + migration plan). Rigby SIGN cycle 1 (fresh pin `pa-95ce3cbf0a2aa0cc`, Medium confidence) folded 15 must-fixes: Level A/B split; minimal-context capture; prescriptive/observational labeling; OPS/DEPLOY/INCIDENT class 11 + contract §8.11; class-boundary rules (Design-Prep vs ADR / Review vs Meta / Bug vs Ops); state-reconciliation ritual §6.6; Tier 1a/1b split; Tier 5/6 disambiguator; Tier 9/10 boundary; NAVIGATION QUERY output format; META-PROCESS drift-scan; Investigation Log + Ops Incident Report templates. S1277 re-issued expanded scope (16 parts + 14 deliverables); OS extended to v2 with six new parts: Research Philosophy (stop condition + 4 anti-patterns), Context-Kit Integration (§2 ownership matrix + §2.7.1 operational cadence + §2.9 do-not-duplicate list), Documentation Ownership (§11 matrix + 6 anti-patterns), Research Contract (§13 8 mandatory fields), Completion Contract (§14 10-item close checklist + handoff template), Research Debt (§15 concept + 7 categories + defensible formula + 90-day escalation). Renumbered existing parts 3-12 + 16-19 to match spec ordering; renumber cascade introduced 13 playbook §-ref bugs (cascade prefix-matching corrupted `playbook §N` external refs). Rigby SIGN cycle 2 (fresh pin `pa-117d3edf9d7b80f8`, Medium confidence) folded 12 must-fixes: §1.2 stop-condition enforcement rule; §1.5 additional anti-patterns; §2.3 drift-tooling + entrypoint pattern rows; §2.7.1 cadence; §2.9 DOC_LIFECYCLE + playbook templates entries; §11.1 owner tightening (CLAUDE.md single-owner = Chris; 00-START-NEXT-SESSION single-owner = Claude); §11.4 zombie/shared/verification anti-patterns; §13.1 field 5 Decision + Ratifier + Deadline format; §14.7 "Open risks / landmines" handoff section; §15.1.1 seven debt categories; §15.3 defensible priority formula `severity_weight × blocking_count × (1 + age/30)`; §15.6 debt vs follow-on clarification. S1278 ratification pass: 13 playbook cross-ref cascade artifact bugs corrected (playbook §5→§3 phase discipline, §4→§2 STAGE 0, §17.4→§11.4 templates section, §19→§13 sub-agents, §12→§9 canonical Qs, §8→§6 metadata, §9→§7 cross-ref policy, §17.1→§11.1 template). §20 finalization section added: fresh-Claude confusion audit (3 blocking items — all docs-only), missing-layer verdict (none), documentation ecosystem diagram (canonical Tier 0 Runtime → Tier 10 Archive stack + 5 side channels), knowledge lifecycle mapping (no new ledger — maps to existing surfaces), research lifecycle completeness (complete + Implementation Review as P2 gap), quick-start doc (no — §0 TL;DR suffices), graduation verdict (GRADUATED — diminishing returns reached), P0/P1/P2 debt sort consolidating three prior sessions, ratification recommendation READY-WITH-MINOR-FOLLOW-UP, migration checklist for S1279, Context-Kit boundary re-evaluation. Rigby SIGN cycle 3 (fresh pin `pa-30278fb65295e74c`, **High confidence**, zero factual errors): SIGN-with-edits where edits = the 3 P0 doc-pointer follow-up items I already flagged; NO architectural changes recommended. | **Highest-authority process doc in the library.** Playbook (§1.11) is one specialization of this OS. Reading order for a fresh Claude Code: CLAUDE.md → OS §0-§5 → §5 classification → Level B contract. §1.14 OS + §1.15 introspection register the process framework foundation. Ratification READY-WITH-MINOR-FOLLOW-UP: 3 docs-only P0 items (CLAUDE.md pointer, `OPEN_ARCS.md` creation, START-HERE additions) gate CANONICAL status. Once P0 lands (S1279 or equivalent), OS becomes CANONICAL and every future Claude session executes it. Index v11 updated per §10.1 (this row + §1.14 + §1.15 + §1.11 body cross-reference to §1.14). |
+
+**Pattern observation (updated S1278).** The library has grown
+in **four waves.** **First wave** (S1268-S1272): 5 docs in 5
 sessions — the Employee OS depth arc following the "each doc
 names the next" discipline. **Second wave** (S1273-S1275): the
 whole-platform sibling arc (§1.9 inventory) + cross-domain
-integration audit (§1.10 sibling) + design-preparation arc
-(§1.10 option selection → §1.12 event schema) — first
-`authority: design-preparation` docs. **Third wave** (S1274
-v1 + S1276 v2 playbook, S1300 memory scoping): the process
-framework itself. `authority: process` (playbook) and
-`authority: parent-doc` (S1300) enter the corpus. The library
-becomes self-describing — a fresh Claude Code can execute an
-arc end-to-end from playbook + INDEX alone. The library's
-*next* growth events are: (a) Group 1300 Memory children
-(S1301 RAG lanes queued next), (b) whole-platform arc's top-3
-next missions per §1.9 §9 — Revenue Pipeline canonical
-architecture (§5.12), Observability Deduplication Audit
-(§5.13), Sports/DBAO ↔ AI Studio Integration Sketch (§5.14),
-(c) Employee OS arc STAGE 5 (Trust Propagation §5.3 or
-Employee Boundary Escalation §5.4 — Chris picks). All
-parallel-safe if pursued independently, per §18 dependency
-semantics (informational, not blocking).
+integration audit + design-preparation arc (§1.10 option
+selection → §1.12 event schema) — first `authority: design-
+preparation` docs. **Third wave** (S1274 v1 + S1276 v2 playbook,
+S1300 memory scoping): the process framework itself.
+`authority: process` (playbook) and `authority: parent-doc`
+(S1300) enter the corpus. **Fourth wave** (S1276 introspection +
+S1277 OS + S1278 ratification): the process framework becomes
+self-executing. `authority: process-audit` (introspection) and
+canonical Research OS (§1.14) enter the corpus. A brand-new
+Claude Code can now be productive by reading only CLAUDE.md +
+MEMORY.md + `00-START-NEXT-SESSION.md` + OS §0-§5 — no custom
+prompt from Chris required. The library's *next* growth events
+are: (a) migration session S1279+ landing OS §17 P0 items
+(CLAUDE.md pointer, `OPEN_ARCS.md`, START-HERE pointers) that
+convert OS from READY-WITH-MINOR-FOLLOW-UP to CANONICAL; (b)
+Group 1400 Revenue opening under the OS+playbook contracts as
+first exercise of "Start research group NNNN" reduced-prompt
+target; (c) Group 1300 Memory children (S1301 RAG lanes queued
+next); (d) whole-platform arc's top-3 next missions per §1.9
+§9 — Revenue Pipeline canonical architecture (§5.12),
+Observability Deduplication Audit (§5.13), Sports/DBAO ↔ AI
+Studio Integration Sketch (§5.14); (e) Employee OS arc STAGE 5
+(Trust Propagation §5.3 or Employee Boundary Escalation §5.4
+— Chris picks). All parallel-safe if pursued independently,
+per §18 dependency semantics (informational, not blocking).
 
 ---
 
