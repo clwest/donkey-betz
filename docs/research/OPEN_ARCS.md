@@ -3,7 +3,7 @@ title: "Open Arcs — cross-session manifest of research groups in flight"
 status: active
 authority: state
 session_added: 1279
-last_updated: 2026-07-02
+last_updated: 2026-07-01 (S1302 close — Group 1300 current-child advanced to S1302 SIGN-clean commit-gated + S1303 queued)
 maintainer: OS-managed (playbook §16 commit gate + OS §14 completion contract)
 purpose: machine-readable navigation artifact — not a report
 schema_owner: docs/research/process/RESEARCH_OPERATING_SYSTEM.md §6.3
@@ -36,7 +36,7 @@ Handoffs win on ship state. See OS §6.6.
 
 | Group | Domain | State | Owner pin | Current parent | Current child | Last activity | Dependencies | Next expected |
 |-------|--------|-------|-----------|----------------|---------------|---------------|--------------|---------------|
-| **1300** | Memory / Knowledge / Embeddings | in-progress | `pa-aa54193f240f4846` | `1300_memory_domain_scoping.md` (S1300) | `1301_memory_rag_retrieval_lanes_audit.md` (S1301, SIGN-clean 2026-07-01 via fresh isolation pin `pa-a23736a833f646cf`; commit-gated on Chris per playbook §16). Next: S1302 queued. | 2026-07-01 | none | **S1302 Memory Persistence Architecture (Categories A + B + C — Semantic Knowledge / Personal-Adaptive / Agent Working Memory).** S1301 surfaced row-level `DocumentEmbedding.source_type`/`ingested_via` provenance semantics + "who writes what metadata when across categories" as first-order S1302 scope (per S1301 §19). |
+| **1300** | Memory / Knowledge / Embeddings | in-progress | `pa-aa54193f240f4846` | `1300_memory_domain_scoping.md` (S1300) | `1302_memory_persistence_architecture_audit.md` (S1302, SIGN-clean 2026-07-01 via fresh isolation pin `pa-1b9f0f5264484c6b` after three fold cycles; commit-gated on Chris per playbook §16). Prior child: `1301_memory_rag_retrieval_lanes_audit.md` (S1301, closed on `main` via PRs #2775 + #2776). Next: S1303 queued. | 2026-07-01 | none | **S1303 Conversational / Thread Memory (Category F).** No S1273 §3 inventory row exists for Cat F today — S1303 will land the first inventory pass. Scope per parent §3F: `ConversationSession`, PA session pin identity, `session_tool.create_fresh` carry-forward semantics, tool-call history reinjection, pin rotation policy (retire vs continue heuristics), PA `unified_pa_entrypoint` enrichment pipeline. Known drift per parent §3F: stale-thread dispatcher waste (Session 1212 deliverable 777d9cd8, ~$3.60/day on retired-thread dispatches). S1302 documented `ConversationMemory` name collision (§17.3: Django Cat B model at `core/models/conversations/models.py:19` vs in-process construct at `core/conversation_memory.py:59`) — S1303 will need to resolve the boundary between the Django model (S1302 owned) and the session/thread state (S1303 owns). |
 
 > **Priority.** **Group 1300 is the arc that spawned this entire
 > research plan** — the Memory scoping session that surfaced the
@@ -101,6 +101,8 @@ changed. Move rows between sections as state transitions
 
 - **2026-07-01 (S1301 open).** Cross-checked this file against `00-START-NEXT-SESSION.md` + `docs/handoffs/SESSION_1300_MEMORY_RESEARCH_GROUP_PARENT_SCOPING.md`. All three agreed Group 1300 was `in-progress` with S1301 queued; no reconciliation needed.
 - **2026-07-01 (S1301 close).** Group 1300 current-child field advanced from *S1301 queued* to *S1301 SIGN-clean (commit-gated) + S1302 queued next*. Dependencies unchanged. Next-expected pointer rotates to Categories A+B+C per S1301 §19 downstream routing.
+- **2026-07-01 (S1302 open).** Cross-checked this file against `00-START-NEXT-SESSION.md` + `docs/handoffs/SESSION_1301_MEMORY_RAG_RETRIEVAL_LANES.md`. Recent commits show S1301 artifacts already merged to `main` (PR #2775 = `b54b2409`, PR #2776 = `5f6b9863`); working tree clean. S1301 commit-gate status in the S1301 handoff was resolved between sessions. Reconciliation: S1302 branches off `main` (not stacked on S1301) per playbook §16. Chris ratified D8 (launch cadence: PROCEED) + D9 (arc pin: RETAIN `pa-aa54193f240f4846`) via arc pin.
+- **2026-07-01 (S1302 close).** Group 1300 current-child field advanced from *S1301 SIGN-clean (commit-gated) + S1302 queued* to *S1302 SIGN-clean (commit-gated) + S1303 queued next*. Next-expected pointer rotates to Category F Conversational/Thread Memory per S1302 §19.1 downstream routing. S1302 headline finding F1 (spider_context['pa_content_feedback'] confirmed dead code) crossed the "escalated from UNKNOWN" boundary — parent §3C UNKNOWN bullet formally resolved as `dead_code` finding. Row-level orphan-write pattern (S1301 §14.3 D3 inheritance) narrowed across three Rigby SIGN cycles from ~11 fields (v1) → 5 strict-orphan + 2 narrow-consumer-safety-filter fields (final). SIGN-clean verdict logged in audit frontmatter `sign_status` field + §20.7 fold notes.
 
 ---
 
