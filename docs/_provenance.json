@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-01T18:04:08+00:00",
+    "generated": "2026-07-01T18:33:22+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7020fa6c86c9",
+    "git_head": "3eef93896db7",
     "doc_count": 2251,
-    "commit_count": 7320,
+    "commit_count": 7324,
     "confidence_breakdown": {
       "HIGH": 1438,
       "MEDIUM": 348,
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1054,
+      "commit_count": 1056,
       "prs": [
         10,
         11,
@@ -2910,7 +2910,8 @@
         2762,
         2767,
         2770,
-        2777
+        2777,
+        2783
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7216,7 +7217,7 @@
         1216,
         1217
       ],
-      "commit_count": 12,
+      "commit_count": 14,
       "prs": [
         2213,
         2219,
@@ -7229,7 +7230,8 @@
         2239,
         2241,
         2502,
-        2505
+        2505,
+        2783
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17226,15 +17228,16 @@
       "originating_session": 1399,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "6318787b",
+      "first_commit_sha": "3eef9389",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(session-1399): Group 1300 Memory canonical summary + INDEX v18 (#2781)",
+      "first_commit_subject": "docs: retrofit S1399 with \u00a710 meta-methodology + playbook \u00a711.3 template addition (#2784)",
       "sessions_touched": [
         1399
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        2781
+        2781,
+        2784
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32303,7 +32306,7 @@
         1304,
         1399
       ],
-      "commit_count": 21,
+      "commit_count": 23,
       "prs": [
         2773,
         2775,
@@ -32311,34 +32314,36 @@
         2778,
         2779,
         2780,
-        2781
+        2781,
+        2784
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
       "originating_session": 1274,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "2a768560",
+      "first_commit_sha": "3eef9389",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "first_commit_subject": "docs: retrofit S1399 with \u00a710 meta-methodology + playbook \u00a711.3 template addition (#2784)",
       "sessions_touched": [
         1274,
         1275,
         1276,
         1300
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2773
+        2773,
+        2784
       ]
     },
     "docs/research/OPEN_ARCS.md": {
       "originating_session": 990,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "7020fa6c",
+      "first_commit_sha": "3eef9389",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs: close Group 1300 arc in OPEN_ARCS (post-S1399 merge) (#2782)",
+      "first_commit_subject": "docs: retrofit S1399 with \u00a710 meta-methodology + playbook \u00a711.3 template addition (#2784)",
       "sessions_touched": [
         990,
         1275,
@@ -32350,7 +32355,7 @@
         1304,
         1399
       ],
-      "commit_count": 14,
+      "commit_count": 16,
       "prs": [
         2773,
         2775,
@@ -32359,7 +32364,8 @@
         2779,
         2780,
         2781,
-        2782
+        2782,
+        2784
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32504,15 +32510,16 @@
       "originating_session": 1399,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "6318787b",
+      "first_commit_sha": "3eef9389",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(session-1399): Group 1300 Memory canonical summary + INDEX v18 (#2781)",
+      "first_commit_subject": "docs: retrofit S1399 with \u00a710 meta-methodology + playbook \u00a711.3 template addition (#2784)",
       "sessions_touched": [
         1399
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        2781
+        2781,
+        2784
       ]
     },
     "docs/research/employee_os_collaboration_patterns.md": {
