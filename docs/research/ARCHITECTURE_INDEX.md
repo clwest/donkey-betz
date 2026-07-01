@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-06-30
+last_verified: 2026-06-30 (v2 — added §1.4 governance research; §3/§4/§5/§7/§8/§9 updated per maintenance rules §10.1)
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -196,11 +196,58 @@ based reading paths).
   collaboration, orchestration, scheduling, mission
   coordination, or autonomy escalation.
 
-### 1.4 Index doc (this file)
+### 1.4 `governance_authority_evolution.md`
+
+- **Title.** Governance + Authority Evolution — Architectural
+  Discovery
+- **Purpose.** The canonical research anchor for every future
+  authority or governance discussion. Inventories the governance
+  + authority surface that exists today, identifies what's
+  runtime-enforced vs. observational vs. documentation-only,
+  surfaces the gaps, and recommends the next research mission
+  (Symbol Mapping Architecture).
+- **Status.** Draft → Active (SIGN-with-edits from Rigby S1269;
+  two must-fix edits folded — Exec Summary now uses canonical
+  "four planes" framing instead of mixed "two + plus" framing,
+  and gate count corrected 34→35; two clarifications folded —
+  DO-NOT-REUSE-for-enforcement language on
+  `JobContract.authority`, F4 budget-plane intent claim
+  softened).
+- **Research type.** Architectural Discovery + Platform-Wide
+  Inventory + Failure Analysis (composite — same as §1.3 shape).
+- **Primary questions answered.**
+  - Q1–Q12 from the mission spec, answered explicitly in the
+    doc's §12.1.
+  - What are the four governance planes (autonomy / authority /
+    budget / human governance) and why don't they compose today?
+  - Where is authority enforced (35 runtime gates) vs. where is
+    it only observed (warn-mode telemetry) vs. where does it
+    disappear entirely (between MissionRunner and step.fn
+    execution)?
+  - What blocks the move from warn-mode to enforce-mode?
+    (Symbol mapping — F2 + §11.)
+  - What is the canonical foundation for governance reuse?
+    (48 SAFE / 11 WRAPPER / 0 DO-NOT-REUSE / 0 DEPRECATED /
+    3 UNKNOWN.)
+- **Dependencies.** §1.1 + §1.2 + §1.3 (prior research docs);
+  `PLATFORM_INVENTORY.md`; `EMPLOYEE_OS_PRIMITIVES.md` row 17
+  (GovernanceState + KillSwitch); `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`
+  (warn-mode design + enforce-mode prereqs).
+- **Recommended next reads.** §1.5 (this index, for navigation
+  context). The recommended **next research mission** per §11
+  is Symbol Mapping Architecture (resolves §10 Q1 + Q12 of the
+  collaboration audit + this doc's §9 Q1).
+- **Overall importance.** Mandatory for anyone touching
+  authority enforcement, governance modes, kill switches,
+  budget controls, human approval lifecycles, or feature-flag
+  gates.
+
+### 1.5 Index doc (this file)
 
 - **Title.** Architecture Research Index
 - **Purpose.** Navigation. This doc.
-- **Status.** Active (first edition, S1268).
+- **Status.** Active (v2 — S1269 added §1.4 entry for governance
+  research; §3-§9 updated per maintenance rules).
 - **Research type.** Navigation / Decision Record (light).
 - **Maintenance rule.** Every future research doc must update
   this index — see §10.
@@ -251,23 +298,28 @@ each one cost real time before.
 
 ### Path C — "I want to understand governance"
 
-1. `docs/EMPLOYEE_OS_PRIMITIVES.md` row 17 (GovernanceState +
+1. `docs/research/governance_authority_evolution.md` [§1.4]
+   — the canonical anchor (4 planes; 35 gates; 12 incidents;
+   all Q1-Q12 answered).
+2. `docs/EMPLOYEE_OS_PRIMITIVES.md` row 17 (GovernanceState +
    KillSwitch).
-2. `docs/research/employee_os_collaboration_patterns.md` §2
-   rows 55-56 + §10 Q11 (open question on authority
-   enforcement).
-3. `core/models_governance.py:17-189` (GovernanceState +
+3. `docs/research/employee_os_collaboration_patterns.md` §2
+   rows 55-56 + §10 Q11 (collaboration audit's view of
+   authority enforcement).
+4. `core/models_governance.py:17-189` (GovernanceState +
    KillSwitch model definitions).
-4. `core/employees/mission_runner.py:258-275` (authority
+5. `core/employees/mission_runner.py:258-275` (authority
    warn-mode constants + S1264 design).
-5. `docs/handoffs/SESSION_1264_*.md` (authority
-   contract observation design + Rigby SIGN edits).
+6. `docs/handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`
+   (authority contract observation design + Rigby SIGN edits).
 
-**Gap to know:** there is no dedicated research doc on
-governance/authority evolution yet. Per §1.3's §11
-recommendation, that's the next research mission. Until it
-exists, `mission_runner.py:258-275` is the authoritative
-contract; warn-mode never blocks.
+**Big findings to internalize:** four governance planes don't
+compose today (autonomy / authority / budget / human
+governance). KillSwitch has full write path + TTL but **zero
+dispatch consumers** — write surface works, enforcement
+doesn't. `JobContract.authority` is observation-only;
+enforcement blocked on Symbol Mapping prerequisite (P0 next
+research per §5.2).
 
 ### Path D — "I want to build new communication"
 
@@ -357,8 +409,8 @@ is still missing, and current maturity.
 |---|---|---|---|---|
 | **Employee OS — core** | §1.1, §1.2, §1.3 | EMPLOYEE_OS_PRIMITIVES.md; topics/employee-os.md | (none today; covered by §1.1 + §1.3) | **High** — 4 production employees, fully audited |
 | **Mission System (MissionRunner)** | §1.3 (§2 row 19, §3.9, §6) | mission_runner.py (1758 lines); jobs.py:74-162 | Dedicated MissionRunner architecture doc (could lift from §1.3's flow + reuse rows) | **High** — production for 4 employees |
-| **Governance** | §1.3 (§2 rows 55-56) | models_governance.py | **Governance Evolution research doc** | **Medium** — primitives exist; cross-employee scope untested |
-| **Authority** | §1.3 (§2 row 26 + §10 Q11) | mission_runner.py:258-275 (S1264 warn-mode) | **Authority Evolution research doc** (warn → enforce; symbol mapping) | **Low** — warn-mode only; no enforcement |
+| **Governance** | §1.4 (full audit; 4 planes documented) + §1.3 (§2 rows 55-56) | models_governance.py | (governance research closed S1269; next gap is Symbol Mapping per §1.4 §11) | **Medium-High** — primitives fully audited; freeze/safe_mode wired; KillSwitch enforcement missing |
+| **Authority** | §1.4 (full audit; 68 entries / 30 prohibited / 35 gates) + §1.3 (§2 row 26 + §10 Q11) | mission_runner.py:258-275 (S1264 warn-mode); jobs.py:41-52 (AuthorityLevel) | **Symbol Mapping Architecture research doc** (recommended P0 next per §1.4 §11) | **Low-Medium** — warn-mode telemetry production; runtime enforcement blocked on symbol mapping |
 | **Communication (employee comms)** | §1.1 (full); §1.2 (specific path) | comms.py, comms_docs_manager.py, EMPLOYEE_OS_PRIMITIVES.md §4.7 | Inter-employee reply lane (§1.3 F4); cross-fleet messaging | **Medium** — outbound shift reports work; inter-employee design sketched but not built |
 | **Messaging (raw substrate)** | §1.1 (§2 rows 35-37); §1.3 (§2 row 36) | models_messaging.py:21-141 | inbox UI semantics for `thread_kind='inter_employee_notice'` (frontend ticket, not research) | **High** — substrate is production |
 | **Memory (employee / agent)** | (none in research library) | core/models_agent_memory.py | **Memory Architecture research doc** — esp. how do employees remember each other's past verdicts? | **Low / UNKNOWN** — no research yet |
@@ -416,18 +468,28 @@ each downstream doc assumes its upstream context.
            │                                      │
            ▼                                      ▼
 ┌───────────────────────────┐    ┌────────────────────────────────┐
-│  [Future: v0 PR for the   │    │  [Future research mission]     │
-│  protocol — gated by      │    │  Governance + Authority        │
-│  Chris's greenlight]      │    │  Evolution (recommended next)  │
+│  [Future: v0 PR for the   │    │  research/governance_authority_│
+│  protocol — gated by      │    │  evolution.md  [§1.4]          │
+│  Chris's greenlight]      │    │  (4 planes; 35 gates; 12 inc.; │
+│                           │    │  Symbol Mapping = P0 next)     │
 └───────────────────────────┘    └────────────────┬───────────────┘
                                                   │
                                                   ▼
                                 ┌──────────────────────────────────┐
+                                │  [Future research mission —      │
+                                │  recommended P0 per §1.4 §11]    │
+                                │  Symbol Mapping Architecture     │
+                                │  (action_class → runtime symbol  │
+                                │  binding; unblocks enforcement)  │
+                                └────────────────┬─────────────────┘
+                                                 │
+                                                 ▼
+                                ┌──────────────────────────────────┐
                                 │  [Further future research —      │
                                 │  see §9 roadmap]                 │
-                                │  Memory · Trust Propagation ·    │
-                                │  Cross-Employee Scheduling ·     │
-                                │  Mission Composition · …         │
+                                │  Trust Propagation · Memory ·    │
+                                │  Mission Composition · Cross-    │
+                                │  Employee Scheduling · …         │
                                 └──────────────────────────────────┘
 ```
 
@@ -459,7 +521,42 @@ S1268 research, with priority and rationale. Each is a
 *research* gap — i.e., something that should get its own
 research doc before it gets implemented.
 
-### 5.1 Governance + Authority Evolution (HIGH — recommended next)
+### 5.1 Governance + Authority Evolution — CLOSED S1269
+
+**Closed by:** `docs/research/governance_authority_evolution.md`
+(§1.4). Audit shipped 2026-06-30; Rigby SIGN-with-edits folded.
+4 governance planes documented; 35 runtime gates inventoried;
+warn-mode mechanics fully traced; 12 failure modes documented;
+canonical foundation identified.
+
+**Successor gap:** Symbol Mapping Architecture (see §5.2 below
+— renumbered from prior §5.2; was P1, now P0 per §1.4 §11
+recommendation).
+
+### 5.2 Symbol Mapping Architecture (P0 — recommended next per §1.4 §11)
+
+- **Why it matters.** §1.4 F2 + §11: enforcement of
+  `JobContract.authority` is blocked on a single foundational
+  primitive — a registry mapping action_class strings (e.g.,
+  `"modify_docs_files"`, `"open_pull_request"`) to runtime
+  symbols (tool names, function signatures, model methods).
+  S1264 warn-mode is the honest baseline given this gap.
+  Every other authority research mission (composition,
+  inheritance, trust propagation, memory) waits on it.
+- **Priority.** P0. Rigby SIGN-clean on this ranking at S1269
+  review.
+- **Dependencies.** §1.4 (the governance audit names the
+  three known options: steps self-declare
+  `action_classes_invoked`, tool registry with `action_class`
+  attribute, hybrid). `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`.
+- **Expected outcome.** A research doc that enumerates the
+  design space (3+ options), documents costs/tradeoffs for
+  each, inventories the 68 existing action_class strings,
+  identifies the smallest viable v0 (one employee + one
+  registry pattern), and marks prerequisites. **No design
+  greenlight from the doc itself** — Chris gates that.
+
+### 5.3 Trust Propagation Model (P1)
 
 - **Why it matters.** S1264 shipped `authority_contract_observed`
   in warn-mode only. Per `mission_runner.py:264-894`, the event
@@ -481,7 +578,7 @@ research doc before it gets implemented.
   contract?). Plus boundary cases (what happens when an
   authority contract changes mid-run?).
 
-### 5.2 Memory Architecture (MEDIUM)
+### 5.4 Memory Architecture (P1)
 
 - **Why it matters.** Employees do not "remember" each other's
   past verdicts in their reasoning today. Bug Triage *queries*
@@ -504,7 +601,7 @@ research doc before it gets implemented.
   what a "cross-employee episodic memory" layer would reuse vs.
   invent.
 
-### 5.3 Cross-Employee Scheduling (MEDIUM)
+### 5.5 Cross-Employee Scheduling (P1)
 
 - **Why it matters.** Per §1.3 §1 Finding F4 and Q8, the
   minimum missing runtime surface for inter-employee delegation
@@ -521,7 +618,7 @@ research doc before it gets implemented.
   pattern. Not a design — just the scope of the smallest
   missing piece.
 
-### 5.4 Mission Composition (MEDIUM)
+### 5.6 Mission Composition (P1)
 
 - **Why it matters.** Per Rigby S1268 review architectural-blind-
   spot note (folded into §1.3 §10 Q12), the two durable
@@ -538,7 +635,7 @@ research doc before it gets implemented.
   idempotency key (or proves none exists and what would have to
   give).
 
-### 5.5 Observability / Failure Recovery (LOW — already strong)
+### 5.7 Observability / Failure Recovery (P2 — already strong)
 
 - **Why it matters.** Observability is well-covered by §1.3 §6
   (evidence-and-auditability scoring). Failure recovery is
@@ -551,7 +648,7 @@ research doc before it gets implemented.
   taxonomy" doc that pulls the §7 incidents into a single
   reference. Not blocking.
 
-### 5.6 Security Model / Permission Model (UNKNOWN — needs scoping)
+### 5.8 Security Model / Permission Model (P2 — needs scoping)
 
 - **Why it matters.** Service-token auth is referenced
   (`core/auth_middleware.py:113` only documents
@@ -566,7 +663,7 @@ research doc before it gets implemented.
   identify which surfaces need auth; then full research if the
   surface is non-trivial.
 
-### 5.7 Configuration Architecture (UNKNOWN — possibly out of scope)
+### 5.9 Configuration Architecture (P3 — possibly out of scope)
 
 - **Why it matters.** Feature flags
   (`RIGBY_EVENT_INTAKE_ENABLED`, `MESSAGING_TOOL_ALLOW_SEND`,
@@ -580,13 +677,28 @@ research doc before it gets implemented.
 - **Expected outcome.** Either a one-page convention note OR
   a scoping doc.
 
-### 5.8 Knowledge Graph (UNKNOWN — not raised yet)
+### 5.10 Knowledge Graph (P? — not raised yet)
 
 - **Why it matters.** Mentioned in the mission spec as a
   candidate. Not raised in any prior research. No production
   evidence found for a knowledge-graph layer today.
 - **Priority.** P? — premature. Surface only if a future
   research mission has a specific use case for it.
+
+### 5.11 Focus Mode Inventory (P? — flagged by Rigby S1269 review)
+
+- **Why it matters.** Rigby's S1269 review on §1.4
+  noted that **"focus mode"** is a governance-like throttle
+  that may live outside the GovernanceState/KillSwitch plane.
+  §1.4 didn't scope focus mode (wasn't part of the original
+  evidence sweeps). A follow-up scoping pass should determine
+  whether focus mode is a fifth governance plane, a sub-feature
+  of one of the existing four, or a distinct concept entirely.
+- **Priority.** P? — depends on whether Employee OS reasoning
+  has any dependency on focus mode state. If not, deferred.
+- **Dependencies.** §1.4 (governance audit's §10.8 flags it).
+- **Expected outcome.** A scoping doc (one page) to identify
+  the surfaces, NOT a full audit.
 
 ---
 
@@ -654,8 +766,11 @@ matrix or re-introduces a closed failure class.
 | **A new AI Employee** | Path B in full + `EMPLOYEE_OS_PRIMITIVES.md` §5 quick-start |
 | **MissionRunner internals** | §1.3 §2 rows 17-23 + `mission_runner.py:1-230` + S1267 handoff |
 | **`MissionRunnerConfig.auto_emit_verdict` semantics** | §1.3 Executive Summary item 6 (corrected by Rigby S1268 SIGN-with-edits) + §1.3 §2 row 19 + §1.3 §7 row 29 (protocol invariant change) + `core/employees/mission_runner.py:1127-1145` |
-| **Governance flags or modes** | §1.3 §2 rows 55-56 + Path C |
-| **Authority enforcement (vs. observation)** | §1.3 §10 Q11 + §1.3 §11 (recommendation for Governance + Authority Evolution next research) + S1264 handoff |
+| **Governance flags or modes** | §1.4 §2.1 (full autonomy plane inventory) + §1.4 §4.6 (5 autonomy gates incl. KillSwitch UNKNOWN) + Path C |
+| **Authority enforcement (vs. observation)** | §1.4 §3 (full lifecycle trace) + §1.4 §4.7 (authority plane gates) + §1.4 §8 F2 (symbol-mapping blocker) + §1.4 §11 (Symbol Mapping Architecture P0 next) + S1264 handoff |
+| **KillSwitch (arming, status, enforcement)** | §1.4 §2.1 row 2 + §1.4 §4.6 (UNKNOWN row) + §1.4 §8 F3 (write-only finding) — DO NOT assume KillSwitch blocks dispatch today |
+| **Budget freeze / LLM cost gates** | §1.4 §2.3 + §1.4 §8 F4 (one-way sync + desync risk) + `core/llm_enforcer.py:200-260` |
+| **Human attention lifecycle (auto-approve / escalate)** | §1.4 §2.4 + §1.4 §5 (full flow + 7-condition auto-approve gate + escalation ladder) |
 | **Adding any new tool to PA** | §1.1 §4.4 (handler/schema delta gotcha) + memory rule `feedback_llm_autofills_boolean_params_with_false.md` |
 | **`messaging_tool` (any change)** | `EMPLOYEE_OS_PRIMITIVES.md` §4.7 + §1.1 §8 DO-NOT-REUSE row + `td_handlers_core.py:3693-3711` |
 | **Mission scheduling (any new beat)** | Path E + `topics/celery-workers.md` + `EMPLOYEE_OS_PRIMITIVES.md` §4.6 (app.conf.imports requirement) |
@@ -680,6 +795,7 @@ influence callouts.
 | **S1268 P0 #2** (2026-06-30) | `employee_os_communication_protocol_sketch.md` (§1.2) | First concrete inter-employee write path scoped (Platform Auditor → Chief of Staff). Helper signature, metadata envelope, threading model, 3-layer dedupe, terminal-gate, expires_at freshness boundary. Rigby SIGN-with-edits — 2 substantive edits folded (L3 helper-side dedupe + cadence Option A default). | Surfaced the question "but how does collaboration work *everywhere else* on the platform?" — which became §1.3. |
 | **S1268 P0 #3** (2026-06-30) | `employee_os_collaboration_patterns.md` (§1.3) | Platform-wide audit. 64-row primitive inventory. 11 distinct collaboration substrates. 12 flow diagrams. 29 documented failure modes (12 new). Q1-Q8 answered. Rigby SIGN-with-edits — 1 substantive correction folded (MissionRunner verdict event is conditional, not guaranteed) + 1 architectural blind-spot note added (canonical idempotency key across orchestration paths). | Set the recommendation for the next research mission (Governance + Authority Evolution). Surfaced gaps that become §5.1–§5.7. |
 | **S1268 P0 #4** (2026-06-30) | `ARCHITECTURE_INDEX.md` (this doc) | The first navigation / index doc for the research library. Establishes the corpus's identity, dependency graph, and maintenance rules. | Will be cited by every future research doc's `companion_docs`. |
+| **S1269** (2026-06-30) | `governance_authority_evolution.md` (§1.4) | First architectural-discovery audit of the governance + authority surface. 63-row primitive inventory across 4 planes. 35 runtime gates. 12 governance-specific failure modes (3 new beyond S1268 collaboration audit baseline). 48 SAFE / 11 WRAPPER / 0 DO-NOT-REUSE / 0 DEPRECATED / 3 UNKNOWN. Rigby SIGN-with-edits (plane-count framing consistency, gate-count typo, two clarifications folded). | Set Symbol Mapping Architecture as the recommended P0 next research mission. Index v2 updated per maintenance rules §10.1 (this row + §1.4 + §3 domain map + §4 dependency graph + §5 gap recategorization + §7 decision matrix expansion + §9 roadmap promotion). |
 
 **Pattern observation.** All four docs are S1268. The library
 started in a single session because that was the session where
@@ -701,33 +817,53 @@ context it should have inherited.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  STAGE 1 — Governance + Authority Evolution                     │
-│  (recommended next per §1.3 §11)                                │
+│  STAGE 0 — Governance + Authority Evolution  ✓ CLOSED S1269     │
 │                                                                  │
-│  Scope: symbol mapping for JobContract.authority, warn→enforce  │
-│  prerequisites, trust-propagation primitives, contract-change   │
-│  mid-run semantics. Resolves §1.3 §10 Q11.                      │
+│  Shipped: docs/research/governance_authority_evolution.md       │
+│  4 governance planes; 35 runtime gates; 12 failure modes;       │
+│  authority enforcement blocked on Symbol Mapping prereq         │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  STAGE 1 — Symbol Mapping Architecture  ← recommended next      │
+│  (per §1.4 §11; Rigby SIGN-clean on this ranking)               │
+│                                                                  │
+│  Scope: enumerate the design space for binding                  │
+│  JobContract.authority action_class strings to runtime          │
+│  symbols (3 options known: steps self-declare /                 │
+│  tool registry / hybrid). Inventory the 68 existing strings.    │
+│  Identify smallest viable v0. Mark prerequisites for            │
+│  enforcement plumbing.                                          │
 └──────────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
         ▼                     ▼                     ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
 │  STAGE 2a       │  │  STAGE 2b       │  │  STAGE 2c       │
-│  Cross-Employee │  │  Mission        │  │  Memory         │
-│  Scheduling     │  │  Composition    │  │  Architecture   │
-│  (§5.3)         │  │  (§5.4)         │  │  (§5.2)         │
+│  Trust          │  │  Memory         │  │  Mission        │
+│  Propagation    │  │  Architecture   │  │  Composition    │
+│  (§5.3)         │  │  (§5.4)         │  │  (§5.6)         │
 │                 │  │                 │  │                 │
-│  Minimum new    │  │  Canonical      │  │  Cross-employee │
-│  surface for    │  │  idempotency    │  │  episodic       │
-│  Employee A →   │  │  key across     │  │  memory shape   │
-│  Employee B     │  │  orchestration  │  │                 │
-│  delegation     │  │  paths          │  │                 │
+│  Inter-employee │  │  Cross-employee │  │  Canonical      │
+│  trust contract │  │  episodic       │  │  idempotency    │
+│  (today only    │  │  memory shape   │  │  key across     │
+│  per-employee   │  │                 │  │  orchestration  │
+│  trust exists)  │  │                 │  │  paths          │
 └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
          │                    │                    │
          └────────────────────┼────────────────────┘
                               ▼
                 ┌──────────────────────────────┐
                 │  STAGE 3                     │
+                │  Cross-Employee Scheduling   │
+                │  (§5.5) — depends on Stage   │
+                │  2a + 2b + 2c                │
+                └──────────────┬───────────────┘
+                              │
+                              ▼
+                ┌──────────────────────────────┐
+                │  STAGE 4                     │
                 │  Employee Delegation Design  │
                 │  (DESIGN, not research —     │
                 │  prerequisites must close    │
@@ -736,21 +872,23 @@ context it should have inherited.
                               │
                               ▼
                 ┌──────────────────────────────┐
-                │  STAGE 4 — Implementation    │
+                │  STAGE 5 — Implementation    │
                 │  (PRs, with research as the  │
                 │  justification artifact)     │
                 └──────────────────────────────┘
 
 Lateral research that does not block the main chain:
 
-  • Security / Permission scoping (§5.6) — if cross-fleet
+  • Security / Permission scoping (§5.8) — if cross-fleet
     surfaces enter scope.
-  • Configuration Architecture note (§5.7) — when feature-flag
+  • Configuration Architecture note (§5.9) — when feature-flag
     growth becomes a documentation problem.
-  • Observability consolidation (§5.5) — optional; no blocking
+  • Observability consolidation (§5.7) — optional; no blocking
     downstream.
-  • Knowledge Graph scoping (§5.8) — only if a use case
+  • Knowledge Graph scoping (§5.10) — only if a use case
     materializes.
+  • Focus Mode inventory (§5.11) — if Employee OS reasoning
+    surfaces a dependency on it (flagged by Rigby S1269).
 ```
 
 **Pacing note.** All Stage 1 + 2 work is research-only — no
