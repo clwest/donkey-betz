@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-01T18:33:22+00:00",
+    "generated": "2026-07-01T19:21:31+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3eef93896db7",
-    "doc_count": 2251,
-    "commit_count": 7324,
+    "git_head": "b5e86cd766a8",
+    "doc_count": 2254,
+    "commit_count": 7329,
     "confidence_breakdown": {
-      "HIGH": 1438,
+      "HIGH": 1441,
       "MEDIUM": 348,
       "LOW": 1,
       "UNKNOWN": 464
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1056,
+      "commit_count": 1058,
       "prs": [
         10,
         11,
@@ -2911,7 +2911,8 @@
         2767,
         2770,
         2777,
-        2783
+        2783,
+        2785
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7217,7 +7218,7 @@
         1216,
         1217
       ],
-      "commit_count": 14,
+      "commit_count": 16,
       "prs": [
         2213,
         2219,
@@ -7231,7 +7232,8 @@
         2241,
         2502,
         2505,
-        2783
+        2783,
+        2785
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17238,6 +17240,22 @@
       "prs": [
         2781,
         2784
+      ]
+    },
+    "docs/handoffs/SESSION_1400_REVENUE_RESEARCH_GROUP_PARENT_SCOPING.md": {
+      "originating_session": 1400,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b5e86cd7",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1400): Group 1400 Revenue arc open \u2014 parent scoping + Phase 0 methodology first application (#2786)",
+      "sessions_touched": [
+        1400,
+        1500
+      ],
+      "commit_count": 2,
+      "prs": [
+        2786
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32341,9 +32359,9 @@
       "originating_session": 990,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "3eef9389",
+      "first_commit_sha": "b5e86cd7",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs: retrofit S1399 with \u00a710 meta-methodology + playbook \u00a711.3 template addition (#2784)",
+      "first_commit_subject": "docs(session-1400): Group 1400 Revenue arc open \u2014 parent scoping + Phase 0 methodology first application (#2786)",
       "sessions_touched": [
         990,
         1275,
@@ -32353,9 +32371,11 @@
         1302,
         1303,
         1304,
-        1399
+        1399,
+        1400,
+        1500
       ],
-      "commit_count": 16,
+      "commit_count": 18,
       "prs": [
         2773,
         2775,
@@ -32365,7 +32385,8 @@
         2780,
         2781,
         2782,
-        2784
+        2784,
+        2786
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32521,6 +32542,35 @@
         2781,
         2784
       ]
+    },
+    "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
+      "originating_session": 1400,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b5e86cd7",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1400): Group 1400 Revenue arc open \u2014 parent scoping + Phase 0 methodology first application (#2786)",
+      "sessions_touched": [
+        1400,
+        1500
+      ],
+      "commit_count": 2,
+      "prs": [
+        2786
+      ]
+    },
+    "docs/research/domains/sports/1500_sports_domain_scoping.md": {
+      "originating_session": 1500,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "40d53771",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1500): Group 1500 Sports parent scoping (paused for sequential-arc discipline)",
+      "sessions_touched": [
+        1500
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/employee_os_collaboration_patterns.md": {
       "originating_session": 1268,
