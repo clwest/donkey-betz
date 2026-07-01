@@ -36,7 +36,7 @@ Handoffs win on ship state. See OS §6.6.
 
 | Group | Domain | State | Owner pin | Current parent | Current child | Last activity | Dependencies | Next expected |
 |-------|--------|-------|-----------|----------------|---------------|---------------|--------------|---------------|
-| **1300** | Memory / Knowledge / Embeddings | in-progress | `pa-aa54193f240f4846` | `1300_memory_domain_scoping.md` (S1300) | *S1301 queued — not yet launched* | 2026-07-01 | none | S1301 RAG Retrieval Lanes (Category D). Open decisions D6 (launch cadence) + D7 (parent SIGN routing) awaiting Chris ratification before S1301 begins. |
+| **1300** | Memory / Knowledge / Embeddings | in-progress | `pa-aa54193f240f4846` | `1300_memory_domain_scoping.md` (S1300) | `1301_memory_rag_retrieval_lanes_audit.md` (S1301, SIGN-clean 2026-07-01 via fresh isolation pin `pa-a23736a833f646cf`; commit-gated on Chris per playbook §16). Next: S1302 queued. | 2026-07-01 | none | **S1302 Memory Persistence Architecture (Categories A + B + C — Semantic Knowledge / Personal-Adaptive / Agent Working Memory).** S1301 surfaced row-level `DocumentEmbedding.source_type`/`ingested_via` provenance semantics + "who writes what metadata when across categories" as first-order S1302 scope (per S1301 §19). |
 
 > **Priority.** **Group 1300 is the arc that spawned this entire
 > research plan** — the Memory scoping session that surfaced the
@@ -99,7 +99,8 @@ changed. Move rows between sections as state transitions
 
 ## Recent reconciliations
 
-*(none — installed clean at S1279)*
+- **2026-07-01 (S1301 open).** Cross-checked this file against `00-START-NEXT-SESSION.md` + `docs/handoffs/SESSION_1300_MEMORY_RESEARCH_GROUP_PARENT_SCOPING.md`. All three agreed Group 1300 was `in-progress` with S1301 queued; no reconciliation needed.
+- **2026-07-01 (S1301 close).** Group 1300 current-child field advanced from *S1301 queued* to *S1301 SIGN-clean (commit-gated) + S1302 queued next*. Dependencies unchanged. Next-expected pointer rotates to Categories A+B+C per S1301 §19 downstream routing.
 
 ---
 
