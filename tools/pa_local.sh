@@ -17,16 +17,29 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1300 fresh
-# thread (Rigby create_fresh at S1300 open — carrying only the mission
-# scope, no S1270-S1275 turn context).
-# Pin: pa-aa54193f240f4846. Title: "Session 1300 — Memory research
+# the --conversation flag below. Current value: Session 1400 fresh
+# thread (Rigby create_fresh at S1400 open — carrying only the mission
+# scope, no S1300-S1399 memory arc turn context).
+# Pin: pa-34d43795e1b24bd3. Title: "Session 1400 — Revenue research
 # group (kickoff)". Carry-forward: mission scope only — Research Group
-# S1300 "Memory", default scope lean (c) Employee OS mission memory
-# (OpsRun chains, JobContract execution history, OpsRunEvent audit
-# trail). Prior S1270-S1275 symbol_mapping research library context
-# intentionally excluded — fresh thread by Chris's directive at S1300
-# open ("wrong Rigby, start a new one").
+# 1400 "Revenue / Outreach / Engagement", per playbook §22 default
+# queue lean; S1273 §3.32 Revenue row LIGHT coverage; Rigby-caught
+# missed domain; business-value highest under-researched domain.
+# Phase 0 parent-scoping doc drafts this session per playbook §11.1.
+# Prior S1300-S1399 memory arc research context intentionally excluded
+# — fresh thread per playbook §16 arc-open discipline.
+# Retired at S1400 open: pa-aa54193f240f4846 (Sessions 1300-1399 —
+# Memory / Knowledge / Embeddings research group; 7-session arc:
+# S1300 parent + S1301 Cat D + S1302 Cat A+B+C + S1303 Cat F +
+# S1304 Cat E↔D + S1305 Cat H + S1399 canonical summary. First
+# formal xx99 canonical summary in the library. Ended at 27 turns
+# / 13.5k tokens / score 70 / continue at rotation; retiring at
+# Group 1400 open per OPEN_ARCS §schema arc-close cleanup rule,
+# not because of health signal).
+# Retired at S1399 close: pa-4fc3329d0db6484f (Session 1399 SIGN
+# isolation pin — canonical-summary Rigby SIGN cycle 1 High
+# confidence, 0 must-fix; retired at close per session_tool.retire
+# updated_count=2, retired=true).
 # Retired at S1300 open: pa-cbcc410b32714f60 (Sessions 1270-1275 —
 # symbol_mapping research chain: architecture / actor_identity /
 # authority_enforcement / whole-platform inventory / cross-domain
@@ -112,4 +125,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-aa54193f240f4846
+python tools/pa_chat.py "$@" --tools --conversation pa-34d43795e1b24bd3
