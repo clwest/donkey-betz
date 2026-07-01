@@ -15,7 +15,44 @@ PA_API_TOKEN=<local-donkeyking-token>      \
 
 **Before your first `pa_chat.py` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation; use that if you don't want to remember the env vars. **Current pinned conversation: `pa-01e90a1d36f54880`** (Rigby created fresh at Session 1267 close via `session_tool.create_fresh` — health was 70/continue at rotation but Chris asked for clean runway for V14 + F1 work, not score-driven). Title: "Session 1268 — open + V14 confirmation + Platform Auditor cadence (F1)". **Confirm `service_context: local` via `platform_config_tool overview` at S1268 open before any other PA tool calls** (S1267's pin-trap was already fixed; this is the standard discipline). Carry-forward seeded covering S1267 close (4-PR Bug Triage Specialist ship — PRs #2763-#2766 + close docs #2767, new `MissionRunnerConfig.auto_emit_verdict` primitive, V13 verified empirically) + S1268 priority menu (P0 V14 confirmation / P1 F1 Platform Auditor cadence / P2-6 unchanged carryover) + verifier-loop workflow shape. **Retired at S1267 close:** `pa-3a226cd451494350` (Sessions 1265-1267 — S1265 3-PR hygiene + S1266 Employee #4 readiness audit + S1267 Bug Triage ship; 21 turns / 10.5k tokens / score 70 / continue at rotation). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+The local wrapper at `tools/pa_local.sh` hardcodes the right token + conversation. **`pa-01e90a1d36f54880` was RETIRED at S1269 close** — do NOT try to use it. **S1270 opens fresh:** at S1270 open, first message → confirm `service_context: local` via `platform_config_tool overview`, then ask Rigby to create a fresh pin via `session_tool.create_fresh` with a title covering S1270's actual priorities. Update `tools/pa_local.sh` `--conversation` flag to the new pin. **Retired at S1269 close:** `pa-01e90a1d36f54880` (Sessions 1268-1269 — 4-doc S1268 research library arc + S1269 governance/authority audit; 5 substantive SIGN turns across the arc; not health-scored because research-only sessions don't stress the tool surface). Use `tools/pa_local.sh` for all chats unless you have a reason to override.
+
+## READ THIS SECOND — S1268/S1269 RESEARCH LIBRARY IS LOCAL-ONLY
+
+Branch `docs/session-1268-comms-substrate-research` sits **local**, 5 commits stacked (SHAs `c7956a48` → `0310f6a5`). Contains the entire architectural research library founded across S1268/S1269:
+
+- `docs/research/employee_os_communication_substrate_audit.md` (918 lines, Rigby SIGN-clean)
+- `docs/research/employee_os_communication_protocol_sketch.md` (979 lines, Rigby SIGN-with-edits folded)
+- `docs/research/employee_os_collaboration_patterns.md` (1,540 lines, Rigby SIGN-with-edits folded)
+- `docs/research/ARCHITECTURE_INDEX.md` (1,034 lines, self-verifier passed)
+- `docs/research/governance_authority_evolution.md` (1,302 lines, Rigby SIGN-with-edits folded)
+- `docs/handoffs/SESSION_1269_ARCHITECTURAL_RESEARCH_LIBRARY_ARC.md` (this handoff)
+
+**Two paths at S1270 open:**
+- **(a) PR the branch** — recommended per the handoff. Adds the library to `main` so `context-kit orient` surfaces it on all future sessions. Docs are self-consistent + Rigby-reviewed; zero runtime changes; nothing to be scared of at review time.
+- **(b) Archive as stash** — leave local until the recommended next research mission (Symbol Mapping Architecture) drafts alongside it.
+
+**Do NOT accidentally re-do this research** on a fresh branch; the docs exist. First check `git branch --list docs/session-1268-comms-substrate-research` and `git log docs/session-1268-comms-substrate-research --oneline`.
+
+## READ THIS THIRD — S1270 PRIORITY MENU (from S1269 close)
+
+Priority menu, not a mandate. Chris picks.
+
+**P0 candidate:** **Symbol Mapping Architecture research doc** (per `governance_authority_evolution.md` §11; Rigby SIGN-clean on this ranking).
+
+Scope: enumerate the design space (3 known options — steps self-declare `action_classes_invoked`, tool registry with `action_class` attribute, hybrid). Inventory the 68 existing action_class strings from the 4 employees' authority dicts. Identify the smallest viable v0. Mark prerequisites. **Research-only.** Follows the same 5-agent parallel-sweep + Rigby SIGN pattern as the prior 5 docs.
+
+**P1 candidates** (from `governance_authority_evolution.md` §10, mapped to `ARCHITECTURE_INDEX.md` §5):
+- Trust Propagation Model (§5.3)
+- Memory Architecture (§5.4)
+- Cross-Employee Scheduling (§5.5)
+- Mission Composition (§5.6)
+
+**Non-research work S1270 could pick up:**
+- Decide branch fate (see above)
+- Patch CLAUDE.md drift (row 95-96 says 3 employees; runtime is 4 per `_EMPLOYEES_BY_HANDLE`)
+- Circle back on the S1268 protocol sketch's v0 PR (if Chris greenlights the Auditor → CoS notice path)
+- Any incident/hygiene work Rigby surfaces at S1270 open
 
 ## READ THIS SECOND — PA "CONSUME-1-THEN-HANG" IS USUALLY DISK PRESSURE
 
