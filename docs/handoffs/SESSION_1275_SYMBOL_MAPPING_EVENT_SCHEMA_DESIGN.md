@@ -114,14 +114,86 @@ Rigby returned SIGN-with-edits — 8 must-fixes + bonus #9. All folded:
 implementation PRs. Once ratified, §5.2e sequences the 5-phase
 rollout across ~10 weeks.
 
-**No P0 in front of STAGE 5.** Chris picks between:
-- **STAGE 5 §5.3** Trust Propagation Model (P1)
-- **STAGE 5 §5.4** Employee Boundary Escalation Contract (P1)
-- Whole-platform arc top-3 per §1.9 §9 — Revenue Pipeline canonical
-  architecture (§5.12), Observability Deduplication Audit (§5.13),
-  Sports/DBAO ↔ AI Studio Integration Sketch (§5.14)
+## Continue-research options (post-S1275)
 
-All parallel-safe if pursued independently.
+**The meta-observation from the S1268-S1275 arc.** After years of
+building the platform, we now have enough architectural coverage to
+spot **repeatable patterns** the research process itself has
+surfaced — and those patterns will make future work easier for
+everyone (Chris, Rigby, future Claude Code sessions, and any human
+who joins later). Examples the research arc has already produced:
+
+- **Design-preparation as its own class of doc** (S1268-style
+  architectural discovery → S1272-style design-space enumeration →
+  S1274-style option selection with evidence → S1275-style concrete
+  spec). This 4-phase cadence should be reused, not reinvented.
+- **The verifier loop** (independent grep/ORM/file-read check of
+  every research claim before landing). Caught S1274 EventBus drift
+  and S1275 producer-vs-consumer framing errors before ship.
+- **Rigby SIGN-with-edits as a first-class review type.** Every
+  arc doc since S1269 has been strengthened by 2-8 must-fix folds.
+  The pattern should be codified — `DOMAIN_RESEARCH_PLAYBOOK.md`
+  (§1.11) already starts this, but it can go further.
+- **The two-surface + UNION view pattern** (S1275 §5) as a
+  general-purpose way to reconcile "the honest place each event
+  lives" with "the single logical stream consumers read." This is
+  a *reusable architectural primitive*, not just an
+  authority-observation trick.
+- **DECLARED-vs-DEFINITE-vs-UNKNOWN as a three-tier confidence
+  vocabulary** with explicit non-authoritative rules. Same shape
+  should reappear in any future evidence-based system.
+- **Sampled-truthing as the mitigation for stable-wrong-non-NULL.**
+  Applies to every downstream system that populates a semantic
+  label from a declared source.
+
+**Immediate continue-research candidates** (Chris picks):
+
+1. **STAGE 5 §5.3 — Trust Propagation Model** (P1). Inter-employee
+   trust contract; today only per-employee trust exists.
+2. **STAGE 5 §5.4 — Employee Boundary Escalation Contract** (P1).
+   HAI escalation shape across employee boundaries.
+3. **STAGE 5 §5.5 — Cross-Employee Scheduling** (P2). Depends on
+   §5.3 + §5.4 + §5.6.
+4. **STAGE 5 §5.6 — Mission Composition** (P1). Canonical
+   idempotency key across orchestration paths.
+5. **Whole-platform arc §5.12 — Revenue Pipeline canonical
+   architecture doc** (P1). Rigby caught this as biggest missing
+   platform subsystem at S1273 SIGN.
+6. **Whole-platform arc §5.13 — Observability Deduplication
+   Audit** (P1). EventBus stream count drift caught during S1268
+   is the tip of a broader ambiguity.
+7. **Whole-platform arc §5.14 — Sports/DBAO ↔ AI Studio
+   Integration Sketch** (P1). Two sides do not compose today
+   (`sports_odds` is not a valid SignalCluster data_type).
+8. **New: Research-methodology synthesis** (P2). Codify the
+   repeatable patterns above into an extension of
+   `DOMAIN_RESEARCH_PLAYBOOK.md` (§1.11). Same-session self-audit
+   that would formalize what S1268-S1275 discovered as a *process
+   pattern library*, alongside the *architecture pattern library*.
+9. **New: `authority_action_observed_stream` view pattern
+   generalization** (P2). Extract the two-surface + UNION view
+   idea as a reusable ADR/pattern doc — applicable to any future
+   evidence stream that has mixed hosts.
+10. **New: DEFINITE-vs-DECLARED-vs-UNKNOWN confidence-tier ADR**
+    (P2). Same as above but for the confidence-vocabulary pattern.
+
+All parallel-safe if pursued independently. Chris picks by
+preference or by which pattern is closest to a real blocker.
+
+## Why merge to main before picking
+
+Reading the `docs/research/` directory should tell any observer —
+Chris, Rigby, future Claude Code, or a human onboard — **exactly
+what docs exist**. Keeping S1275 on a feature branch means the
+next session that runs `ls docs/research/` sees only S1274-era
+files and starts reasoning from an incomplete picture. Merging
+now:
+
+- Makes §1.12 discoverable via the on-main `ARCHITECTURE_INDEX.md`
+- Puts the S1275 handoff in `docs/handoffs/` where future sessions
+  actually look
+- Removes the "which branch is authoritative?" question
+- Frees the next research session to fork from a clean main
 
 ## PA pin
 
