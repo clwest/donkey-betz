@@ -17,20 +17,21 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1268 fresh
-# thread (Rigby create_fresh at S1267 close — score 70/continue at
-# rotation but Chris asked for clean runway for V14 + F1 work).
-# Pin: pa-01e90a1d36f54880. Title: "Session 1268 — open + V14
-# confirmation + Platform Auditor cadence (F1)". Carry-forward
-# seeded via session_tool.create_fresh covering S1267 close (4-PR
-# Bug Triage Specialist ship — PRs #2763-#2766 + close docs #2767,
-# new MissionRunnerConfig.auto_emit_verdict primitive, V13 verified
-# empirically with first Bug Triage authority_contract_observed
-# event extending S1264 prereq #2 baseline N=1→N=2), S1268 menu:
-# P0 V14 confirmation (08:00 Denver 2026-07-01) / P1 F1 Platform
-# Auditor PeriodicTask cadence gap (mirrors PR 4.2/4.3 shape) /
-# P2-6 unchanged carryover queue. Verifier-loop workflow shape
-# carries forward.
+# the --conversation flag below. Current value: Session 1270 fresh
+# thread (Rigby create_fresh at S1270 open — carrying only the mission
+# scope, no S1268/S1269 turn context).
+# Pin: pa-cbcc410b32714f60. Title: "Session 1270 — Symbol Mapping
+# Architecture research (S1264 discovery follow-through)". Carry-
+# forward seeded via session_tool.create_fresh covering S1268/S1269
+# architectural research library (5 docs — comms substrate audit +
+# protocol sketch + collaboration patterns + governance/authority
+# evolution + ARCHITECTURE_INDEX) and this session's single deliverable
+# docs/research/symbol_mapping_architecture.md (draft, routing to
+# Rigby for independent SIGN review).
+# Retired at S1269 close: pa-01e90a1d36f54880 (Sessions 1268-1269 —
+# 4-doc S1268 research library arc + S1269 governance/authority
+# audit; 5 substantive SIGN turns across the arc; not health-scored
+# because research-only sessions don't stress the tool surface).
 # Retired at S1267 close: pa-3a226cd451494350 (Sessions 1265-1267 —
 # S1265 3-PR hygiene + S1266 Employee #4 readiness audit + S1267
 # Bug Triage ship; 21 turns / 10.5k tokens / score 70 / continue
@@ -105,4 +106,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-01e90a1d36f54880
+python tools/pa_chat.py "$@" --tools --conversation pa-cbcc410b32714f60
