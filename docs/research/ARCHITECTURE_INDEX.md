@@ -3,7 +3,7 @@ title: "Architecture Research Index — front page of Donkey Betz's engineering 
 status: active
 authority: navigation
 session_added: 1268
-last_verified: 2026-07-01 (v7 — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
+last_verified: 2026-07-01 (v8 — S1275 registered `symbol_mapping_event_schema_design.md` as §1.12. Closes §5.2d (Symbol Mapping Event Schema Design gap). Two-surface event stream (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls) unified via new `authority_action_observed_stream` DB view; 21 payload fields; 4 v0 emitters + 1 v0 first consumer; DECLARED tier explicitly non-authoritative; drift stack with weekly sampled-truthing loop. Rigby SIGN-with-edits — 8 must-fixes + bonus #9 folded (ambient OpsRun → two-surface, drop `event_id`, drop `notes` + downscope `producer_version`, rename `delegator_actor` → `caller_actor`, reframe "5 producers" → "4 emitters + 1 consumer", rename INFERRED → DECLARED, add sampled-truthing loop, DEFINITE ≠ global truth, reserved-keys policy). §8 timeline S1275 row added. §9 roadmap STAGE 4 CLOSED; STAGE 5 has no P0 (Trust Propagation §5.3 and Employee Boundary Escalation §5.4 are both P1 — Chris picks). New §5.2e implementation-slot added (P1, blocked on Chris canonical sign-off of §1.12).) — prior v7 (2026-07-01) — S1274 registered `DOMAIN_RESEARCH_PLAYBOOK.md` as §1.11. Process document (`authority: process`, distinct from `authority: research`) that codifies the S1268-S1274 methodology into reusable short-command aliases for future domain audits. Chris explicit direction at close of playbook drafting: "register it now and commit." Playbook establishes the standard for research groups 1300-1900 (Memory / Revenue / Sports / Content / Observability / HumanAttention / Event Architecture). §8 timeline S1274 playbook row added. Discoverability priority: playbook is now the FIRST doc a fresh Claude Code should read after CLAUDE.md when starting a domain audit.) — prior v6 (2026-07-01) added §1.10 symbol_mapping_option_selection_design (concurrent S1274 mission). Prior v5 (2026-06-30) added §1.9 platform_architecture_inventory (Employee-OS arc + whole-platform inventory). Prior v4 added §1.8 Authority Enforcement Design Space
 companion_anchors:
   - docs/PLATFORM_INVENTORY.md       # runtime anchor (counts source)
   - docs/PLATFORM_WHAT_IT_IS.md      # narrative anchor (glossary)
@@ -45,7 +45,7 @@ verifier_loop: |
   classifying. Self-verifier pass looked for missing docs,
   duplicate classifications, incorrect dependency ordering,
   inconsistent statuses, and discoverability gaps.
-owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK])
+owner: claude (drafted S1268; v2 update S1269; v3 update S1271; v4 update S1273 Part 1; v5 update S1273 Part 2; v6 update S1274 Part 1 [concurrent §1.10 symbol_mapping_option_selection_design]; v7 update S1274 Part 2 [§1.11 DOMAIN_RESEARCH_PLAYBOOK]; v8 update S1275 [§1.12 symbol_mapping_event_schema_design])
 ---
 
 # Architecture Research Index
@@ -699,6 +699,80 @@ navigation-and-classification layer.
   rather than producing findings. Chris ratified registration
   here at S1274 close: "register it now and commit."
 
+### 1.12 `symbol_mapping_event_schema_design.md`
+
+- **Title.** Symbol Mapping v0 — Event Schema Design (`authority_action_observed`)
+- **Purpose.** Closes §5.2d. Takes §1.10's Option E v0
+  recommendation and pins the concrete event schema: canonical
+  name, two-surface host (`OpsRunEvent` for mission scope +
+  `ToolCallRecord.parameters` for non-mission tool calls,
+  unified via a new `authority_action_observed_stream` DB
+  view), 21 payload fields (7 required + 5 semi-required + 6
+  optional + 3 reserved), 4 v0 emitters + 1 v0 first consumer,
+  4-tier `mapping_confidence` enum with DECLARED explicitly
+  non-authoritative, drift-detection stack across 6 patterns
+  (NULL rate, wrong non-NULL via sampled truthing, zero-fire,
+  cross-emitter disagreement, invariant + reserved-keys
+  violations, schema drift), 3 golden flows, batch-mode v0
+  dashboard, 15 out-of-scope items, and a change log capturing
+  Rigby SIGN fold decisions.
+- **Status.** Draft (Rigby SIGN-with-edits folded — 8
+  must-fixes + bonus #9; awaiting Chris canonical sign-off).
+- **Research type.** Design preparation (third design mission
+  in the STAGE 2/3/4 Symbol Mapping arc, following §1.6
+  Architectural Framing and §1.10 Option Selection).
+- **Primary questions answered.**
+  - What is the canonical event name? → `authority_action_observed`
+  - Which existing audit surface(s) host it? → two-surface stream
+    (`OpsRunEvent` + `ToolCallRecord.parameters`) + UNION view
+  - What is the minimum viable schema, field by field?
+  - Which 4 emitters go first, and what is the first consumer?
+  - How is `action_class` populated per emitter × confidence tier?
+  - How does `mapping_confidence` work — and why is DECLARED
+    explicitly non-authoritative?
+  - How are the 3 actor roles + graph position + identity marker
+    kept separate?
+  - How does the design prevent wrong-but-non-NULL
+    false confidence? → sampled-truthing loop + weighted
+    cross-emitter disagreement + invariant validator + golden
+    flows
+  - What are the first 3 golden flows?
+  - What does the v0 dashboard / query API look like?
+  - What is explicitly out of scope for v0? → 15-item list
+- **Dependencies.** §1.10 (Option E as v0 ratified), §1.7
+  (3-role actor vocabulary preserved), §1.6 (architectural
+  framing), §1.8 (§11 15-prereq DAG — closes prereqs #3
+  Evidence Event Schema and #4 Violation Event Schema at v0
+  scope), `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`
+  (`authority_contract_observed` warn-mode precedent —
+  `authority_action_observed` is the action-level parallel),
+  `EMPLOYEE_OS_PRIMITIVES.md` §2 (anti-duplication —
+  justification for reusing existing audit models).
+- **Recommended next reads.** After Chris canonical sign-off:
+  the implementation prep sequence (rollout plan §15 outlines
+  P0→P5 phases across ~10 weeks). Before then: cross-read
+  against §1.10 §16 (out-of-scope list — that mission handed
+  off 11 items that §1.12 §16 closes with 15 items).
+- **Overall importance.** **First mission in the library that
+  ships a concrete implementation-ready schema.** Prior
+  Symbol Mapping missions produced framing (§1.6) and selection
+  (§1.10); this one produces the field-level spec. Not yet
+  implemented — Chris gates every subsequent PR. Rigby SIGN
+  fold captures 8 must-fixes (ambient OpsRun → two-surface,
+  drop required `event_id`, drop `notes`, downscope
+  `producer_version`, rename `delegator_actor` → `caller_actor`,
+  reframe "5 producers" → "4 emitters + 1 consumer", rename
+  INFERRED → DECLARED, add sampled-truthing loop, DEFINITE ≠
+  global truth) plus bonus #9 (reserved-keys policy + per-field
+  caps).
+- **Maintenance note.** This is the third design-preparation
+  doc in the STAGE 2/3/4 Symbol Mapping arc. Do NOT treat as
+  implementation greenlight — the rollout plan in §15 is a
+  sequencing sketch, not a merged PR. If Chris ratifies the
+  design at review, the next research artifact is either a
+  Trust Propagation Model (§5.3) or the Employee Boundary
+  Escalation Contract (§5.4) — both P1s at this point.
+
 ---
 
 ## 2. Recommended Reading Paths
@@ -1181,37 +1255,68 @@ prevents "E-forever cope."
 instrumentation contract + retention policy for Option E's
 `authority_action_observed` event.
 
-### 5.2d Symbol Mapping Event Schema Design (P0 — recommended next per §1.10 §16)
+### 5.2d Symbol Mapping Event Schema Design — CLOSED S1275
 
-- **Why it matters.** §1.10 recommends Option E as v0 but leaves
-  the concrete event schema, producer choices, and instrumentation
-  contract to a downstream mission. Without a specific event
-  shape, "Option E" is still words on paper — no producer knows
-  what fields to populate, no consumer knows what to expect,
-  and Bug Triage step 4 has no schema to aggregate against.
-- **Priority.** P0. §1.10 §16 explicitly names this as the next
-  mission. Rigby SIGN-clean on the ranking at S1274 review.
-- **Dependencies.** §1.10 (Option E as v0 ratified by Chris),
-  §1.7 (3-role vocabulary must be preserved), §1.8 (§11
-  15-prereq DAG — prereq #3 Evidence Event Schema + prereq #4
-  Violation Event Schema are what this mission closes),
-  `handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md`
-  (`authority_contract_observed` precedent — this mission's
-  event is the action-level parallel).
-- **Expected outcome.** A design-preparation doc (like §1.10)
-  answering: (a) canonical v0 event name and surface (OpsRunEvent
-  label vs. new model vs. hybrid); (b) minimum viable field
-  set with types + nullability + failure modes; (c) 3-5
-  highest-leverage first producers with justification; (d)
-  action_class population strategy (definite / inferred / null);
-  (e) mapping_confidence semantics or exclusion; (f) actor role
-  population matrix per producer; (g) false-confidence prevention
-  strategy (Rigby S1274 concern: wrong-but-non-NULL); (h)
-  3-5 golden flows; (i) v0 dashboard/report shape; (j)
-  explicit out-of-scope list. Rigby SIGN review at close.
-  **Chris gates schema ratification.**
-- **Type.** Design preparation — third design mission in the
-  STAGE 2/3/4 arc per §9 pacing note.
+**Closed by:** `docs/research/symbol_mapping_event_schema_design.md`
+(§1.12). Design-preparation doc shipped 2026-07-01; Rigby SIGN-
+with-edits folded (8 must-fixes + bonus #9). **Recommendation:
+two-surface event stream** — `OpsRunEvent.data['authority_action_observed']`
+for mission-scoped emissions + `ToolCallRecord.parameters['authority_action_observed']`
+for non-mission tool calls, unified via a new
+`authority_action_observed_stream` DB view (`UNION ALL`).
+4 v0 emitters + 1 v0 first consumer. 21 payload fields
+across 4 tiers (required / semi-required / optional / reserved).
+4-value `mapping_confidence` enum {DEFINITE (emitter-local
+certainty, not global truth), DECLARED (coverage-only, never
+authoritative), HEURISTIC (reserved, banned), UNKNOWN}. Drift
+stack: NULL-rate monitor + zero-fire audit + weighted
+cross-emitter disagreement (never marks producer wrong without
+adjudication) + weekly sampled-truthing loop with
+`authority_mapping_correction` events + invariant validator
+(I1–I7) + schema-signature check. 3 golden flows (GF-1
+Documentation Manager audit, GF-2 PA-invoked `deliverable_tool.list`,
+GF-3 employee_tool run_now for Bug Triage). Rollout: 5-phase
+sequencing over ~10 weeks P0→exit.
+
+**Maintenance note.** Design-preparation only. Not implementation.
+Not enforce-mode. Every producer wire-up requires a separate PR
+Chris gates. Rigby SIGN fold produced 8 must-fixes: (1) two-surface
++ UNION view replaces earlier "ambient OpsRun" mechanism; (2) drop
+required `event_id`; (3) drop `notes` free-text field + downscope
+`producer_version` to canary-only; (4) rename `delegator_actor` →
+`caller_actor` (graph position, not 4th role); (5) reframe "5
+producers" → "4 emitters + 1 consumer"; (6) rename `INFERRED` →
+`DECLARED` + non-authoritative label; (7) add sampled-truthing
+loop for stable-wrong-non-NULL detection; (8) `DEFINITE` ≠
+canonical truth (weighted disagreement, not "producer X is
+wrong" verdict). Bonus #9: reserved-keys policy + per-field caps.
+
+**Successor gap:** Trust Propagation Model (§5.3) or Employee
+Boundary Escalation Contract (§5.4) — both P1 at S1275 close.
+No P0 sits in front of them; Chris picks the next STAGE.
+
+### 5.2e Symbol Mapping v0 Implementation (P1 — post Chris sign-off on §1.12)
+
+- **Why it matters.** §1.12 pins the schema; §5.2e is the
+  first implementation session (not research). Rollout §15 of
+  §1.12 outlines 5 phases (P0 schema + invariant validator; P1
+  Emitter #1 MissionRunner preflight; P2 Emitter #2 step
+  lifecycle + Step.action_class; P3 Emitter #3 ToolDispatcher +
+  tool-schema action_class; P4 Emitter #4 employee_tool run_now
+  + Consumer C1 Bug Triage step 4). Estimated 10 weeks P0→exit
+  observation window.
+- **Priority.** P1 (post-research). Blocked until Chris ratifies
+  §1.12 as canonical.
+- **Dependencies.** §1.12 canonical sign-off; `EMPLOYEE_OS_PRIMITIVES.md`
+  §2 anti-duplication mandate; new `JobContract.mission_trigger_action_class`
+  field + new `Step.action_class` attribute + new
+  `pa_tool_schemas.py` per-tool `action_class` field.
+- **Expected outcome.** 5 sequential PRs mapping to §15
+  phases. Each PR carries greppable log lines +
+  `verify_authority_action_observed_claims` management command
+  registrations. No PR ships without golden-flow tests.
+- **Type.** Implementation (not research). §1.12 is the last
+  research artifact in the Symbol Mapping arc.
 
 ### 5.3 Trust Propagation Model (P1)
 
@@ -1536,6 +1641,7 @@ influence callouts.
 | **S1273** (2026-07-01) | `platform_architecture_inventory.md` (§1.9) | First whole-platform architectural inventory — the counterpart to the Employee-OS-focused §1.1-§1.8 arc. Six parallel Explore sub-agent sweeps synthesized into 32 domains (Cognition & agents: 7 / Data ingestion: 4 / Content & workflow: 2 / Revenue & GTM: 1 / Knowledge & memory: 3 / Human interface: 6 / API: 1 / Governance & ops: 4 / Infrastructure: 4). 9 cross-domain flows. 8 duplicate/overlapping system categories. Architecture Maturity Matrix rating every domain across Coverage / Maturity / Operational Health / Drift Risk / Debt Risk. 11-mission recommended research roadmap. Rigby SIGN-with-edits, Medium confidence, via fresh isolation pin `pa-02cfd3206302352f` (kept separate from shared S1270+ arc pin `pa-cbcc410b32714f60` per Chris's context-crossing directive). 6 substantive edits folded: (1) added missed §3.32 Revenue / Outreach / Engagement Pipeline domain + §4.9 flow — Rigby caught this as biggest missing platform subsystem; (2) downgraded §3.27 Auth STABLE → PARTIAL with trust-boundary enumeration; (3) upgraded §3.7 LLM Provider Registry WORKING → STABLE (core; failover missing); (4) tightened §1 Exec Summary count language; (5) added §3.31 Event Bus vs Observability separation-of-concerns paragraph; (6) expanded §9 roadmap 10 → 11 missions with Revenue Pipeline canonical architecture doc elevated to #2. | Established the whole-platform counterpart to the Employee-OS-focused arc. Chris's direction at close: "the next cleanup should be updating ARCHITECTURE_INDEX.md so this becomes the whole-platform counterpart to the Employee OS research library." Index v5 updated per §10.1 (this row + §1.9 row + §1 preamble rewrite + Path H reading path + §3 Revenue Pipeline domain row + §4 sibling-arc dependency graph extension + §5.12/§5.13/§5.14 gap entries + §7 decision matrix +3 whole-platform rows + §9 roadmap lateral research expansion referencing the 11-mission whole-platform roadmap in §1.9). Also caught + corrected v4 frontmatter drift — prior pass added Appendix C but never bumped last_verified line. |
 | **S1272** (2026-06-30) | `authority_enforcement_design_space.md` (§1.8) | First design-space research — the mission that consumes S1270 + S1271 as INPUT premises and enumerates enforcement design options without picking. 24 enforcement inputs (13 RUNTIME-VERIFIED / 7 OBSERVATION-ONLY / 3 ASPIRATIONAL / 1 UNKNOWN + 8 GAPS). 20 candidate enforcement boundaries (17 original + 3 Rigby SIGN-added: WebSocket, Fleet, Spider — closing the biggest boundary-completeness gap). 12 enforcement modes with 8 existing production precedents; 4 without analog. 204-cell boundary × mode compatibility matrix (17-row form; 3 SIGN-added boundaries not yet cross-tabulated). 4-per-level AuthorityLevel semantics (16 interpretations, none chosen). 11 canonical actor-role scenarios × 3 roles + audit path. 4-plane governance composition with 8 new questions + 1 existing cross-plane touch. 33-incident consolidated historical matrix. **6 major design options A-F enumerated neutrally** (MissionRunner-centered / ToolDispatcher-centered / Audit-first / Human-approval / Multi-layer / Governance-plane composition). 15 anti-patterns (3 Tier-0 hazards: blocking all model writes, enforcement before symbol mapping, silent enforcement). 15-prereq DAG. Rigby pressure-test SIGN-with-edits, Medium confidence — 8 must-fix folded: §3 gained 3 first-class boundaries (WebSocket, Fleet, Spider); §9.0 neutrality guardrail; §9.1 + §9.2 annotation-burden failure modes; §9.6 policy-ossification risk; §8.4 rephrased separating prevent-modes from audit/warn modes; §10 Tier-0 hazards callout; §6.1 role-propagation rule of thumb; §14 P0/P1 dependency-not-preference semantics + §14.2 (i)/(ii) split. F1 (AuthorityLevel has 1 runtime consumer, a shape-counter) and F8 (LLMEnforcer fail-open precedent) are load-bearing findings. | Established the design space for authority enforcement. **First mission carrying design-space content per §9 STAGE 2 pacing note.** Set Symbol Mapping Option Selection Design as recommended P0 next research (§14.1). Maintenance note: this doc is **design-space only** — the 6 options A-F are for future consumption, not implementation. Index v4 updated per §10.1 (this row + §1.8 row + §3 domain map + §4 dependency graph + §5 gap closure §5.2b + new §5.2c + §7 decision matrix expansion + §9 roadmap advancement STAGE 2 → STAGE 3). |
 | **S1274** (2026-07-01) | `DOMAIN_RESEARCH_PLAYBOOK.md` (§1.11) | **First `authority: process` doc in the library.** Codifies the S1268-S1274 methodology into a reusable playbook so future Claude Code sessions can start domain audits with short commands ("Start research group 1300: Memory") instead of 4,000-word prompts. Establishes: research group numbering (1300s Memory → 1900s Event Architecture), output-path convention (`docs/research/domains/<slug>/<session_id>_<slug>_architecture_audit.md`), 27 standard audit questions, 20-section document template with frontmatter, 6-sub-agent parallel sweep pattern, classification rules verbatim from S1274 §11 (Coverage / Maturity / Risk / Finding Type), Rigby SIGN review shape including fresh-isolation-pin practice (S1273/S1274 lesson) and grep-verification pattern (S1274 EventBus lesson), commit rules (default: don't; when Chris says "commit it": specific index-update checklist). Not routed to Rigby — process doc, not research finding. Chris explicit direction at close of drafting: "register it now and commit." | Sets the standard for research groups 1300-1900. Should be the FIRST doc a fresh Claude Code reads after `CLAUDE.md` when starting a domain audit. Distinguishing property: `authority: process` (rules for other docs), not `authority: research` (findings). Index v7 updated per §10.1 (this row + §1.11 row + Appendix E pass notes). |
+| **S1275** (2026-07-01) | `symbol_mapping_event_schema_design.md` (§1.12) | **First mission in the library shipping an implementation-ready schema spec.** Closes §5.2d. Takes §1.10's Option E v0 recommendation and pins the concrete event: canonical name (`authority_action_observed`), two-surface host (`OpsRunEvent` mission-scoped + `ToolCallRecord.parameters` non-mission tool calls, unified via new `authority_action_observed_stream` DB view), 21 payload fields (7 required + 5 semi-required + 6 optional + 3 reserved), 4 v0 emitters + 1 v0 first consumer (Bug Triage step 4 is consumer, not "producer #5"), 4-value `mapping_confidence` enum (DEFINITE = emitter-local certainty *not* global truth, DECLARED = coverage-only *never* authoritative, HEURISTIC reserved+banned, UNKNOWN honest NULL), drift stack across 6 patterns (NULL rate + zero-fire + weighted cross-emitter disagreement + weekly sampled-truthing loop + invariant validator I1–I7 + schema-signature check), 3 golden flows, batch-mode v0 dashboard, 15-item out-of-scope list, 5-phase ~10-week rollout sketch. Five parallel Explore sub-agents produced: (1) 7-model audit surface inventory identifying OpsRunEvent-lacks-user-FK as largest gap; (2) 5 producer candidates ranked (35-44% authority string coverage estimate); (3) actor-role availability matrix showing ToolDispatcher has all 3 roles + S1271 F4 delegator/executor ambiguity flag; (4) action_class population confidence ranking; (5) drift/quality prior-art scan finding STRONG reuse for zero-fire (S1245) + claim-verification (S1099), NO precedent for cross-source truthing (largest gap). Rigby pressure-test SIGN-with-edits — **8 must-fixes + bonus #9 folded**: (1) drop "ambient OpsRun" for two-surface + UNION view; (2) drop required `event_id`, add optional `idempotency_key`; (3) kill free-text `notes`, downscope `producer_version` to canary-only, replace with 128B-capped `debug_context`; (4) rename `delegator_actor` → `caller_actor` (graph position, not 4th role) + explicit semantics block; (5) reframe "5 v0 producers" → "4 emitters + 1 consumer"; (6) rename `INFERRED` → `DECLARED` with explicit non-authoritative label; (7) add sampled-truthing loop (weekly N=25 per emitter × tier; `authority_mapping_correction` events; correction_rate KPI) — catches stable-wrong-non-NULL that other stack layers miss; (8) `DEFINITE` ≠ canonical truth (weighted disagreement + `suspected_mislabel` never "producer X wrong" — prevents false-positive alert cannon); bonus (9) reserved-keys policy + per-field caps + hard 1024B total cap. Rigby SIGN-clean on: warn-mode-only v0 choice; two-surface honesty over ambient-run synthetic grouping. | **First implementation-ready schema in the library.** Set STAGE 5 to Trust Propagation Model (§5.3) or Employee Boundary Escalation Contract (§5.4) — both P1 with no P0 in front. Maintenance note: §1.12 is design-preparation ONLY. Not implementation. Not enforce-mode. Rollout §15 is sequencing sketch, not merged PR. Index v8 updated per §10.1 (this row + §1.12 row + §5.2d closure + new §5.2e implementation-slot + §9 roadmap STAGE 4 CLOSED / no new P0 STAGE). |
 | **S1274** (2026-07-01) | `symbol_mapping_option_selection_design.md` (§1.10) | **First mission in the library carrying an evidence-based recommendation Chris can gate.** Narrows §1.6's 5 Symbol Mapping options to a v0 selection. Five parallel Explore sub-agents produced: (1) 24-system runtime symbol inventory with 2 verified drifts from S1270 (REMOVED_TOOL_ALIASES 12→13; GATEWAY_TOOLS 23→22); (2) 100-cell coverage × reuse matrix (A:1/7/12, B:2/6/12, C:5/7/8, D:11/7/1 flattest, E:2/4/14); (3) drift risk ranking (A/B/C VERY HIGH; D HIGH; E MEDIUM lowest); (4) actor compatibility (E only option carrying all 3 roles end-to-end IF audit models extended); (5) failure modes + rollout + minimum viable event shape. **Recommendation: Option E — Evidence-only mapping — as v0.** Extend a minimum set of audit models with optional `action_class` field + all 3 actor role fields; instrument 3-5 highest-leverage producer sites incrementally; emit `authority_action_observed` events; NEVER blocks. **End-state (Chris-gated later):** E foundation + Option B tool schema attribute for pre-dispatch enforcement. **Explicitly rejected:** Option C bundled standalone. Rigby pressure-test SIGN-with-edits, Medium confidence, recommendation = Modify — 4 must-fix folded: (1) §8.8 tone alignment on whole-platform generalization vs. 2/4/14 matrix (Fleet/WebSocket/Spider not covered at v0 until instrumented); (2) §10.3.1 catastrophic-action graduation guardrail (4 telemetry triggers forcing Chris decision within 30 days — prevents "E-forever cope"); (3) §12.1 non-NULL misclassification drift pattern (sample-based truthing + cross-source consistency + golden-flow tests — higher-risk than producer omission); (4) §11 employee_handle vs. executor_actor clarification (employee_handle is Employee OS identity, NULL for non-mission actions; executor_actor is generalized runtime executor). Rigby SIGN-clean on: risk posture + reversibility (strongest argument); actor role separation. | **First evidence-based recommendation in the library.** Set Symbol Mapping Event Schema Design as recommended P0 next research (§16). Maintenance note: Option E is v0 recommendation ONLY. Not implementation. Not enforce-mode. §10.3.1 guardrail forces Chris re-decision within 30 days of graduation triggers. Index v6 updated per §10.1 (this row + §1.10 row + §5.2c closure + new §5.2d + §7 decision matrix expansion + §9 roadmap STAGE 3 CLOSED / new STAGE 4 Event Schema Design). |
 
 **Pattern observation (updated S1273 v5).** The library grew
@@ -1642,20 +1748,35 @@ context it should have inherited.
 │  implementation and NOT enforce-mode. Chris gates all           │
 │  downstream steps. §10.3.1 guardrail forces re-decision.        │
 ├──────────────────────────────────────────────────────────────────┤
-│  STAGE 4 — Symbol Mapping Event Schema Design  ← recommended    │
-│  next (per §1.10 §16)                                           │
+│  STAGE 4 — Symbol Mapping Event Schema Design  ✓ CLOSED S1275   │
 │                                                                  │
-│  Scope: design the concrete `authority_action_observed` event   │
-│  schema + producer instrumentation contract + retention policy  │
-│  + Bug Triage step 4 extension. Closes §1.8 §11 prereqs #3     │
-│  (Evidence Event Schema) and #4 (Violation Event Schema).       │
-│  Must respect actor role separation (§1.7 §8.5) and Option E    │
-│  ratification from §1.10. Recommend 3-5 highest-leverage first  │
-│  producers with justification.                                  │
+│  Shipped: docs/research/                                         │
+│    symbol_mapping_event_schema_design.md (§1.12)                │
+│  Two-surface event stream (`OpsRunEvent` mission-scoped +       │
+│  `ToolCallRecord.parameters` non-mission tool calls) unified    │
+│  via new `authority_action_observed_stream` DB view. 21 payload │
+│  fields. 4 v0 emitters + 1 v0 first consumer. Confidence enum   │
+│  {DEFINITE, DECLARED (non-authoritative), HEURISTIC (banned),   │
+│  UNKNOWN}. Drift stack: NULL rate + zero-fire (S1245 reuse) +   │
+│  weighted cross-emitter disagreement + weekly sampled truthing  │
+│  + invariants I1-I7 + schema-signature check. 3 golden flows.   │
+│  Batch-mode dashboard. 5-phase ~10-week rollout sketch.         │
+│  Rigby SIGN-with-edits (8 must-fixes + bonus #9 folded).        │
 │                                                                  │
-│  Type: DESIGN PREPARATION (design-space + evidence-based        │
-│  recommendation like §1.10). Rigby SIGN review; Chris gates     │
-│  schema ratification.                                           │
+│  Maintenance note: §1.12 is design-preparation only. Not        │
+│  implementation. Not enforce-mode. Rollout §15 is sequencing    │
+│  sketch, not merged PR. Chris gates every subsequent PR.        │
+├──────────────────────────────────────────────────────────────────┤
+│  STAGE 5 — no P0 gates the arc.                                 │
+│                                                                  │
+│  Both §5.3 Trust Propagation Model and §5.4 Employee Boundary   │
+│  Escalation Contract are P1 with no P0 in front. Chris picks    │
+│  the next STAGE.                                                │
+│                                                                  │
+│  Parallel-safe with the whole-platform arc's top-3 next         │
+│  missions per §1.9 §9 — Revenue Pipeline canonical              │
+│  architecture (§5.12), Observability Deduplication Audit        │
+│  (§5.13), Sports/DBAO ↔ AI Studio Integration Sketch (§5.14).   │
 └──────────────────────────────────────────────────────────────────┘
                               │
                               ▼
