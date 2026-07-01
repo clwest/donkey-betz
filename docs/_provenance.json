@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-06-23T19:06:58+00:00",
+    "generated": "2026-07-01T18:04:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6bceca1e7a17",
-    "doc_count": 2156,
-    "commit_count": 7141,
+    "git_head": "7020fa6c86c9",
+    "doc_count": 2251,
+    "commit_count": 7320,
     "confidence_breakdown": {
-      "HIGH": 1356,
-      "MEDIUM": 336,
-      "LOW": 0,
+      "HIGH": 1438,
+      "MEDIUM": 348,
+      "LOW": 1,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -73,11 +73,15 @@
       "sessions_touched": [
         84,
         786,
-        1143
+        1143,
+        1275,
+        1276,
+        1300
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2183
+        2183,
+        2773
       ]
     },
     "docs/00-START-HERE/README.md": {
@@ -91,12 +95,16 @@
         84,
         462,
         1101,
-        1143
+        1143,
+        1275,
+        1276,
+        1300
       ],
-      "commit_count": 7,
+      "commit_count": 9,
       "prs": [
         2183,
-        2187
+        2187,
+        2773
       ]
     },
     "docs/00-START-SESSION-10.md": {
@@ -359,17 +367,22 @@
         1115,
         1116,
         1137,
+        1138,
         1141,
         1142,
         1145,
-        1146
+        1146,
+        1217,
+        1223
       ],
-      "commit_count": 4,
+      "commit_count": 5,
       "prs": [
+        10,
         2092,
         2097,
         2177,
-        2215
+        2215,
+        2537
       ]
     },
     "docs/3D_GENERATION_VERIFICATION_REPORT.md": {
@@ -438,6 +451,7 @@
         781,
         782,
         858,
+        871,
         931,
         932,
         1099,
@@ -457,9 +471,15 @@
         1195,
         1201,
         1202,
-        1203
+        1203,
+        1218,
+        1222,
+        1234,
+        1248,
+        1250,
+        1265
       ],
-      "commit_count": 36,
+      "commit_count": 38,
       "prs": [
         415,
         2027,
@@ -469,7 +489,12 @@
         2204,
         2401,
         2442,
-        2448
+        2448,
+        2532,
+        2615,
+        2711,
+        2722,
+        2759
       ]
     },
     "docs/AGENTS_REFERENCE.md": {
@@ -484,7 +509,7 @@
         1211,
         1212
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2481
       ]
@@ -700,13 +725,15 @@
         871,
         872,
         1009,
-        1143
+        1143,
+        1234
       ],
-      "commit_count": 7,
+      "commit_count": 8,
       "prs": [
         510,
         520,
-        2186
+        2186,
+        2615
       ]
     },
     "docs/ARCHITECTURE.md": {
@@ -724,6 +751,7 @@
         432,
         858,
         863,
+        871,
         1099,
         1100,
         1101,
@@ -733,7 +761,8 @@
         1143,
         1157,
         1181,
-        1183
+        1183,
+        1234
       ],
       "commit_count": 13,
       "prs": [
@@ -741,7 +770,8 @@
         460,
         2204,
         2243,
-        2359
+        2359,
+        2615
       ]
     },
     "docs/ARCHIVE_AUDIT_REPORT.md": {
@@ -907,16 +937,23 @@
         1133,
         1143,
         1149,
-        1151
+        1151,
+        1218,
+        1222,
+        1223,
+        1234,
+        1235
       ],
-      "commit_count": 14,
+      "commit_count": 16,
       "prs": [
         2027,
         2036,
         2126,
         2145,
         2196,
-        2227
+        2227,
+        2532,
+        2633
       ]
     },
     "docs/BACKEND_REFERENCE.md": {
@@ -1165,15 +1202,17 @@
         1105,
         1137,
         1142,
-        1143
+        1143,
+        1250
       ],
-      "commit_count": 57,
+      "commit_count": 58,
       "prs": [
         415,
         2027,
         2036,
         2178,
-        2203
+        2203,
+        2722
       ]
     },
     "docs/CAPABILITY_AUDIT.md": {
@@ -1423,6 +1462,24 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/CRITICAL_PATH_HUBS.md": {
+      "originating_session": 1159,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "df5e00ff",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "feat(session-1223): close audit #4 \u2014 CRITICAL_PATH_HUB markers + PR template gate (#2536)",
+      "sessions_touched": [
+        1159,
+        1216,
+        1217,
+        1223
+      ],
+      "commit_count": 1,
+      "prs": [
+        2536
+      ]
+    },
     "docs/CTO_AGENT_INFRASTRUCTURE_ANALYSIS.md": {
       "originating_session": 98,
       "confidence": "HIGH",
@@ -1464,16 +1521,19 @@
         768,
         858,
         861,
+        871,
         931,
         932,
         1100,
         1137,
-        1142
+        1142,
+        1234
       ],
-      "commit_count": 8,
+      "commit_count": 9,
       "prs": [
         447,
-        2178
+        2178,
+        2615
       ]
     },
     "docs/DATA_FLOW_ANALYSIS_COMPLETE.md": {
@@ -1894,6 +1954,21 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/EMPLOYEE_OS_PRIMITIVES.md": {
+      "originating_session": 1253,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4b941a68",
+      "first_commit_date": "2026-06-29",
+      "first_commit_subject": "feat(session-1253-pra): generalize shift-report comms + Employee OS primitives doc (#2736)",
+      "sessions_touched": [
+        1253
+      ],
+      "commit_count": 1,
+      "prs": [
+        2736
+      ]
+    },
     "docs/ENDPOINT_AUDIT.md": {
       "originating_session": 50,
       "confidence": "MEDIUM",
@@ -1922,6 +1997,34 @@
       "commit_count": 4,
       "prs": [
         2186
+      ]
+    },
+    "docs/EVENT_SYSTEM_INVENTORY.md": {
+      "originating_session": 843,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "88622892",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "docs(session-1250-pr11): local work queue exercise + observation handoff (#2726)",
+      "sessions_touched": [
+        843,
+        861,
+        1098,
+        1250
+      ],
+      "commit_count": 11,
+      "prs": [
+        2716,
+        2717,
+        2718,
+        2719,
+        2720,
+        2721,
+        2722,
+        2723,
+        2724,
+        2725,
+        2726
       ]
     },
     "docs/EXTERNAL_APIS.md": {
@@ -2183,6 +2286,7 @@
         825,
         843,
         858,
+        861,
         900,
         908,
         931,
@@ -2202,6 +2306,7 @@
         987,
         988,
         989,
+        990,
         993,
         995,
         997,
@@ -2290,6 +2395,7 @@
         1142,
         1143,
         1144,
+        1146,
         1147,
         1149,
         1150,
@@ -2352,10 +2458,55 @@
         1212,
         1213,
         1214,
+        1215,
         1216,
-        1217
+        1217,
+        1218,
+        1219,
+        1220,
+        1221,
+        1222,
+        1223,
+        1224,
+        1225,
+        1226,
+        1227,
+        1228,
+        1229,
+        1230,
+        1231,
+        1232,
+        1233,
+        1234,
+        1235,
+        1236,
+        1237,
+        1238,
+        1239,
+        1241,
+        1242,
+        1245,
+        1246,
+        1247,
+        1248,
+        1249,
+        1250,
+        1251,
+        1253,
+        1254,
+        1255,
+        1258,
+        1260,
+        1261,
+        1262,
+        1263,
+        1264,
+        1265,
+        1266,
+        1267,
+        1302
       ],
-      "commit_count": 1028,
+      "commit_count": 1054,
       "prs": [
         10,
         11,
@@ -2691,7 +2842,75 @@
         2481,
         2482,
         2484,
-        2502
+        2502,
+        2505,
+        2509,
+        2511,
+        2514,
+        2518,
+        2521,
+        2526,
+        2531,
+        2532,
+        2534,
+        2535,
+        2536,
+        2537,
+        2538,
+        2562,
+        2563,
+        2564,
+        2565,
+        2566,
+        2567,
+        2571,
+        2572,
+        2574,
+        2575,
+        2576,
+        2577,
+        2579,
+        2583,
+        2596,
+        2599,
+        2602,
+        2603,
+        2616,
+        2635,
+        2642,
+        2648,
+        2652,
+        2654,
+        2659,
+        2708,
+        2711,
+        2716,
+        2717,
+        2718,
+        2719,
+        2720,
+        2721,
+        2722,
+        2723,
+        2724,
+        2725,
+        2726,
+        2727,
+        2737,
+        2748,
+        2749,
+        2751,
+        2752,
+        2753,
+        2754,
+        2755,
+        2756,
+        2757,
+        2761,
+        2762,
+        2767,
+        2770,
+        2777
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -3075,6 +3294,30 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/MORNING_BRIEF_SPEC.md": {
+      "originating_session": 1098,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "9a5cbc5d",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "feat(session-1233): workspace materialization + daily beat task (Sub-step C) (#2603)",
+      "sessions_touched": [
+        1098,
+        1228,
+        1232,
+        1233,
+        1234,
+        1235,
+        1242
+      ],
+      "commit_count": 5,
+      "prs": [
+        2596,
+        2599,
+        2602,
+        2603
+      ]
+    },
     "docs/MULTI_AGENT_ARCHITECTURE.md": {
       "originating_session": 129,
       "confidence": "HIGH",
@@ -3306,7 +3549,7 @@
         1202,
         1203
       ],
-      "commit_count": 64,
+      "commit_count": 60,
       "prs": [
         2025,
         2103,
@@ -3350,6 +3593,7 @@
         931,
         932,
         1088,
+        1094,
         1099,
         1100,
         1101,
@@ -3363,16 +3607,27 @@
         1133,
         1137,
         1141,
-        1142
+        1142,
+        1184,
+        1214,
+        1215,
+        1216,
+        1217,
+        1221,
+        1222,
+        1223,
+        1260
       ],
-      "commit_count": 12,
+      "commit_count": 14,
       "prs": [
         2025,
         2027,
         2120,
         2145,
         2177,
-        2178
+        2178,
+        2535,
+        2749
       ]
     },
     "docs/QA_CHECKLIST_SESSION_127.md": {
@@ -3559,6 +3814,7 @@
         702,
         768,
         858,
+        871,
         905,
         906,
         907,
@@ -3567,16 +3823,21 @@
         1100,
         1131,
         1133,
-        1143
+        1143,
+        1218,
+        1222,
+        1234
       ],
-      "commit_count": 15,
+      "commit_count": 17,
       "prs": [
         415,
         714,
         2027,
         2036,
         2145,
-        2204
+        2204,
+        2532,
+        2615
       ]
     },
     "docs/SESSION_100_PART13_FLUTTER_APP_COMPLETE.md": {
@@ -4074,6 +4335,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/SESSION_1251_CLAUDE_STARTUP_CONTEXT_PROPOSAL.md": {
+      "originating_session": 1251,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c23d3706",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "feat(session-1251-pr12a): Rigby Shift Brief \u2014 operator handoff tool (#2728)",
+      "sessions_touched": [
+        1251
+      ],
+      "commit_count": 2,
+      "prs": [
+        2728
+      ]
     },
     "docs/SESSION_125_MASTER_TODO.md": {
       "originating_session": 125,
@@ -6080,15 +6356,18 @@
         420,
         421,
         567,
+        871,
         1099,
         1100,
-        1143
+        1143,
+        1234
       ],
-      "commit_count": 18,
+      "commit_count": 19,
       "prs": [
         2027,
         2036,
-        2204
+        2204,
+        2615
       ]
     },
     "docs/SPIDER_AUDIT.md": {
@@ -6949,7 +7228,8 @@
         2237,
         2239,
         2241,
-        2502
+        2502,
+        2505
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -15152,7 +15432,7 @@
         1174,
         1175
       ],
-      "commit_count": 4,
+      "commit_count": 1,
       "prs": [
         2335
       ]
@@ -15186,7 +15466,7 @@
         1175,
         1178
       ],
-      "commit_count": 4,
+      "commit_count": 2,
       "prs": [
         2339,
         2345
@@ -15204,7 +15484,7 @@
         1175,
         1176
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2340
       ]
@@ -15222,7 +15502,7 @@
         1176,
         1177
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2341
       ]
@@ -15240,7 +15520,7 @@
         1177,
         1178
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2344
       ]
@@ -15257,7 +15537,7 @@
         1178,
         1179
       ],
-      "commit_count": 3,
+      "commit_count": 1,
       "prs": [
         2346
       ]
@@ -15273,7 +15553,7 @@
         1179,
         1180
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2349
       ]
@@ -15289,7 +15569,7 @@
         1180,
         1181
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2353
       ]
@@ -15306,7 +15586,7 @@
         1181,
         1182
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2356
       ]
@@ -15324,7 +15604,7 @@
         1182,
         1183
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2358
       ]
@@ -15343,7 +15623,7 @@
         1183,
         1184
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2357,
         2360
@@ -15360,7 +15640,7 @@
         843,
         1184
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2362
       ]
@@ -15377,7 +15657,7 @@
         1184,
         1185
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2364
       ]
@@ -15393,7 +15673,7 @@
         1185,
         1186
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2375
       ]
@@ -15411,7 +15691,7 @@
         1186,
         1187
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2378
       ]
@@ -15427,7 +15707,7 @@
         1187,
         1188
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2379
       ]
@@ -15443,7 +15723,7 @@
         1188,
         1189
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2383
       ]
@@ -15461,7 +15741,7 @@
         1189,
         1190
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2389
       ]
@@ -15477,7 +15757,7 @@
         1190,
         1191
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2391
       ]
@@ -15493,7 +15773,7 @@
         1191,
         1192
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2393
       ]
@@ -15509,7 +15789,7 @@
         1192,
         1193
       ],
-      "commit_count": 4,
+      "commit_count": 2,
       "prs": [
         2394,
         2395
@@ -15527,7 +15807,7 @@
         1193,
         1194
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2396
       ]
@@ -15544,7 +15824,7 @@
         1194,
         1195
       ],
-      "commit_count": 3,
+      "commit_count": 2,
       "prs": [
         2402
       ]
@@ -15561,7 +15841,7 @@
         1195,
         1196
       ],
-      "commit_count": 3,
+      "commit_count": 1,
       "prs": [
         2408
       ]
@@ -15577,7 +15857,7 @@
         1196,
         1197
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2415
       ]
@@ -15593,7 +15873,7 @@
         1197,
         1198
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2423
       ]
@@ -15611,7 +15891,7 @@
         1198,
         1199
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2430
       ]
@@ -15628,7 +15908,7 @@
         1199,
         1200
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2437
       ]
@@ -15645,7 +15925,7 @@
         1200,
         1201
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2440
       ]
@@ -15662,7 +15942,7 @@
         1201,
         1202
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2441
       ]
@@ -15679,7 +15959,7 @@
         1202,
         1203
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2448
       ]
@@ -15695,7 +15975,7 @@
         1203,
         1204
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2452
       ]
@@ -15711,7 +15991,7 @@
         1204,
         1205
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2455
       ]
@@ -15728,7 +16008,7 @@
         1205,
         1206
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2460
       ]
@@ -15745,7 +16025,7 @@
         1206,
         1207
       ],
-      "commit_count": 4,
+      "commit_count": 2,
       "prs": [
         2461,
         2466
@@ -15763,7 +16043,7 @@
         1207,
         1208
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2470
       ]
@@ -15782,7 +16062,7 @@
         1208,
         1209
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2472
       ]
@@ -15800,7 +16080,7 @@
         1209,
         1210
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2475
       ]
@@ -15816,7 +16096,7 @@
         1210,
         1211
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2477
       ]
@@ -15833,7 +16113,7 @@
         1211,
         1212
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2480
       ]
@@ -15850,7 +16130,7 @@
         1212,
         1213
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2482
       ]
@@ -15867,7 +16147,7 @@
         1213,
         1214
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2484
       ]
@@ -15883,7 +16163,7 @@
         1214,
         1215
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2494
       ]
@@ -15899,7 +16179,7 @@
         1215,
         1216
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2498
       ]
@@ -15915,9 +16195,1046 @@
         1216,
         1217
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2501
+      ]
+    },
+    "docs/handoffs/SESSION_1217_BOUNDED_AUDIT_EXECUTION.md": {
+      "originating_session": 1217,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "2d3f509f",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1217): close \u2014 bounded-audit execution handoff + Session 1218 start-here (#2508)",
+      "sessions_touched": [
+        1217,
+        1218
+      ],
+      "commit_count": 1,
+      "prs": [
+        2508
+      ]
+    },
+    "docs/handoffs/SESSION_1217_PREP_BOUNDED_AUDIT_EXPERIMENT.md": {
+      "originating_session": 1217,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f4d3d7fd",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1217-prep): close out bounded self-direction audit experiment (#2505)",
+      "sessions_touched": [
+        1217
+      ],
+      "commit_count": 1,
+      "prs": [
+        2505
+      ]
+    },
+    "docs/handoffs/SESSION_1218_WATCHDOG_INVESTIGATION_AND_DEAD_WEIGHT_TRIM.md": {
+      "originating_session": 1218,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "9e574fde",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1218): close \u2014 watchdog investigation + dead-weight trim handoff (#2511)",
+      "sessions_touched": [
+        1218,
+        1219
+      ],
+      "commit_count": 1,
+      "prs": [
+        2511
+      ]
+    },
+    "docs/handoffs/SESSION_1219_WATCHDOG_FIX_3_PHASE_SHIP.md": {
+      "originating_session": 1219,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "93be62a5",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1219): close \u2014 3-phase watchdog fix ship + Session 1220 start-here (#2514)",
+      "sessions_touched": [
+        1219,
+        1220
+      ],
+      "commit_count": 1,
+      "prs": [
+        2514
+      ]
+    },
+    "docs/handoffs/SESSION_1220_ZOMBIE_MONITOR_PLUS_HTTPX_INVESTIGATION.md": {
+      "originating_session": 1220,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "ebcb4d13",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1220): close \u2014 zombie monitor + httpx investigation + Session 1221 start-here (#2518)",
+      "sessions_touched": [
+        1199,
+        1219,
+        1220,
+        1221
+      ],
+      "commit_count": 1,
+      "prs": [
+        2518
+      ]
+    },
+    "docs/handoffs/SESSION_1221_TIER_1_PLUS_TIER_2_FROM_7AE61CF7.md": {
+      "originating_session": 1221,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2e757044",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1221): close \u2014 Tier 1 + Tier 2 from 7ae61cf7 + Session 1222 start-here (#2521)",
+      "sessions_touched": [
+        1220,
+        1221,
+        1222
+      ],
+      "commit_count": 1,
+      "prs": [
+        2521
+      ]
+    },
+    "docs/handoffs/SESSION_1222_CARRYOVER_QUEUE_CLEAR.md": {
+      "originating_session": 1222,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "684eb309",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1222): close \u2014 carryover queue clear + Session 1223 start-here (#2526)",
+      "sessions_touched": [
+        1075,
+        1217,
+        1221,
+        1222,
+        1223
+      ],
+      "commit_count": 1,
+      "prs": [
+        2526
+      ]
+    },
+    "docs/handoffs/SESSION_1222_V2_AUDIT_REVISIT_CLOSE.md": {
+      "originating_session": 1222,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "41a27220",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1222-v2): audit-revisit close + Session 1223 start-here (#2531)",
+      "sessions_touched": [
+        1217,
+        1222,
+        1223
+      ],
+      "commit_count": 1,
+      "prs": [
+        2531
+      ]
+    },
+    "docs/handoffs/SESSION_1223_AUDIT_8_SEED_BASELINE_CLOSE.md": {
+      "originating_session": 1223,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "bd5bcd0f",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "fix(session-1223): close audit #8 \u2014 accept Agent.objects=89 as canonical seed baseline (Path B) (#2534)",
+      "sessions_touched": [
+        1100,
+        1149,
+        1217,
+        1223
+      ],
+      "commit_count": 1,
+      "prs": [
+        2534
+      ]
+    },
+    "docs/handoffs/SESSION_1223_AUDIT_SWEEP_AND_WATCHDOG_GREEN.md": {
+      "originating_session": 1223,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "1f1bfc86",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1223): close \u2014 full audit sweep (15/15) + watchdog burn-in GREEN + Session 1224 start-here (#2538)",
+      "sessions_touched": [
+        1217,
+        1221,
+        1223,
+        1224
+      ],
+      "commit_count": 1,
+      "prs": [
+        2538
+      ]
+    },
+    "docs/handoffs/SESSION_1224_OUTREACH_PIPELINE_AND_TOKEN_BUDGET_SWEEP.md": {
+      "originating_session": 1224,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "10c69bec",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1224): close \u2014 outreach pipeline E2E + hygiene initiative + token budget sweep (#2543)",
+      "sessions_touched": [
+        317,
+        1224,
+        1225
+      ],
+      "commit_count": 1,
+      "prs": [
+        2543
+      ]
+    },
+    "docs/handoffs/SESSION_1225_OUTREACH_REFINEMENT_AND_CONVERSATION_ROTATION.md": {
+      "originating_session": 1225,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e68fc220",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1225): update close \u2014 add daily beat task #2548 + 1226 first-fire watch (#2549)",
+      "sessions_touched": [
+        1224,
+        1225,
+        1226
+      ],
+      "commit_count": 2,
+      "prs": [
+        2547,
+        2548,
+        2549
+      ]
+    },
+    "docs/handoffs/SESSION_1226_RIGBY_PLATFORM_ACCESS_UNBLOCKING.md": {
+      "originating_session": 1226,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2b38ddb7",
+      "first_commit_date": "2026-06-23",
+      "first_commit_subject": "docs(session-1226): close \u2014 Rigby platform-access unblocking + claude_code_tool wiring repair (#2555)",
+      "sessions_touched": [
+        1225,
+        1226,
+        1227
+      ],
+      "commit_count": 2,
+      "prs": [
+        2555,
+        2561
+      ]
+    },
+    "docs/handoffs/SESSION_1227_DELIVERABLE_TOOL_AUDIT_46_AND_LLM_AUTOFILL_ROOT_CAUSE.md": {
+      "originating_session": 1227,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b44e43ed",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1227): close handoff doc (reopens #2566) (#2577)",
+      "sessions_touched": [
+        1095,
+        1226,
+        1227,
+        1228
+      ],
+      "commit_count": 1,
+      "prs": [
+        2566,
+        2577
+      ]
+    },
+    "docs/handoffs/SESSION_1228_AUTOFILL_SWEEP_PLUS_BEAT_TZ_FIXES.md": {
+      "originating_session": 1228,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "d083f4ba",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1228): close \u2014 autofill sweep PR-A + PR-B + outreach/newsletter beat TZ fixes (#2572)",
+      "sessions_touched": [
+        1225,
+        1227,
+        1228,
+        1229
+      ],
+      "commit_count": 1,
+      "prs": [
+        2572
+      ]
+    },
+    "docs/handoffs/SESSION_1229_P4_PLUS_RIGBY_TOOL_SURFACE_VERIFICATION.md": {
+      "originating_session": 1229,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "9f45afe7",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1229): close handoff + Session 1230 start-here (#2579)",
+      "sessions_touched": [
+        1227,
+        1228,
+        1229,
+        1230
+      ],
+      "commit_count": 1,
+      "prs": [
+        2579
+      ]
+    },
+    "docs/handoffs/SESSION_1230_DIAGNOSTIC_LEAK_CLOSE_PLUS_ENGINEER_REQUEST_MODE.md": {
+      "originating_session": 1230,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "887be1da",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1230): close handoff + Session 1231 start-here (#2583)",
+      "sessions_touched": [
+        1230,
+        1231
+      ],
+      "commit_count": 1,
+      "prs": [
+        2583
+      ]
+    },
+    "docs/handoffs/SESSION_1231_AGENT_ERROR_PATTERN_INVESTIGATION.md": {
+      "originating_session": 1231,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "3c607a23",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1231): handoff + start-here update with F7 + F8 close + end-to-end verify (#2594)",
+      "sessions_touched": [
+        1231,
+        1232
+      ],
+      "commit_count": 4,
+      "prs": [
+        2587,
+        2588,
+        2589,
+        2590,
+        2591,
+        2594
+      ]
+    },
+    "docs/handoffs/SESSION_1232_DAILY_COS_ARC_SUB_STEP_A_CLOSE.md": {
+      "originating_session": 1232,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2ead4c69",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1232): handoff close + Session 1233 start-here (#2598)",
+      "sessions_touched": [
+        1231,
+        1232,
+        1233
+      ],
+      "commit_count": 1,
+      "prs": [
+        2598
+      ]
+    },
+    "docs/handoffs/SESSION_1233_B1_SMOKE_VERIFICATION.md": {
+      "originating_session": 1233,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "bbc1a917",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1233): B.1 + B.1.fix smoke verification evidence (#2601)",
+      "sessions_touched": [
+        1233
+      ],
+      "commit_count": 1,
+      "prs": [
+        2601
+      ]
+    },
+    "docs/handoffs/SESSION_1233_DAILY_COS_ARC_BUILD_OUT.md": {
+      "originating_session": 1233,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f2df69fa",
+      "first_commit_date": "2026-06-24",
+      "first_commit_subject": "docs(session-1233): handoff close + Session 1234 start-here (#2604)",
+      "sessions_touched": [
+        1232,
+        1233,
+        1234,
+        1235
+      ],
+      "commit_count": 1,
+      "prs": [
+        2604
+      ]
+    },
+    "docs/handoffs/SESSION_1234_BROAD_EXCEPT_SWEEP_D17_THROUGH_D21.md": {
+      "originating_session": 1234,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "312da3c0",
+      "first_commit_date": "2026-06-25",
+      "first_commit_subject": "docs(session-1234): close (third + final) \u2014 broad-except sweep arc handoff D17\u2192D21 (#2632)",
+      "sessions_touched": [
+        1234,
+        1235
+      ],
+      "commit_count": 1,
+      "prs": [
+        2632
+      ]
+    },
+    "docs/handoffs/SESSION_1234_DOCS_CORPUS_ARC_D9_THROUGH_D16.md": {
+      "originating_session": 1234,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "a57425a4",
+      "first_commit_date": "2026-06-25",
+      "first_commit_subject": "docs(session-1234): close \u2014 docs-corpus arc handoff D9\u2192D16 + start-here refresh (#2626)",
+      "sessions_touched": [
+        1234,
+        1235
+      ],
+      "commit_count": 1,
+      "prs": [
+        2626
+      ]
+    },
+    "docs/handoffs/SESSION_1234_FIRST_FIRE_FIXES_PLUS_DRIFT_FRAMING.md": {
+      "originating_session": 1234,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b8f25243",
+      "first_commit_date": "2026-06-25",
+      "first_commit_subject": "docs(session-1234): close \u2014 handoff + start-here pivot to Session 1235 + pin retirement (#2616)",
+      "sessions_touched": [
+        1234,
+        1235
+      ],
+      "commit_count": 1,
+      "prs": [
+        2616
+      ]
+    },
+    "docs/handoffs/SESSION_1235_CARRYOVER_CLOSE_PLUS_P5_3_DRIFT_SWEEP_TRANCHE_1.md": {
+      "originating_session": 1235,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "26d4d136",
+      "first_commit_date": "2026-06-25",
+      "first_commit_subject": "docs(session-1235): close \u2014 handoff + 00-START Session 1236 rollover + docs cascade (#2642)",
+      "sessions_touched": [
+        1235,
+        1236
+      ],
+      "commit_count": 1,
+      "prs": [
+        2642
+      ]
+    },
+    "docs/handoffs/SESSION_1236_P5_3_AUDIT_COMPLETE_TRANCHE_1_THROUGH_4.md": {
+      "originating_session": 1236,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "27aec6b3",
+      "first_commit_date": "2026-06-25",
+      "first_commit_subject": "docs(session-1236): close \u2014 handoff + 00-START Session 1237 rollover + docs cascade (#2648)",
+      "sessions_touched": [
+        1235,
+        1236,
+        1237
+      ],
+      "commit_count": 1,
+      "prs": [
+        2648
+      ]
+    },
+    "docs/handoffs/SESSION_1237_AUDIT_BONUS_CARRYOVERS_CLOSE.md": {
+      "originating_session": 1237,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e284f4f3",
+      "first_commit_date": "2026-06-25",
+      "first_commit_subject": "docs(session-1237): close \u2014 handoff + 00-START Session 1238 rollover + docs cascade (#2652)",
+      "sessions_touched": [
+        1235,
+        1236,
+        1237,
+        1238
+      ],
+      "commit_count": 1,
+      "prs": [
+        2652
+      ]
+    },
+    "docs/handoffs/SESSION_1238_MORNING_BRIEF_SUB_STEP_D_COMPLETE.md": {
+      "originating_session": 1238,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "25497bb0",
+      "first_commit_date": "2026-06-26",
+      "first_commit_subject": "docs(session-1238): close \u2014 handoff + 00-START Session 1239 rollover + docs cascade (#2659)",
+      "sessions_touched": [
+        1238,
+        1239
+      ],
+      "commit_count": 1,
+      "prs": [
+        2659
+      ]
+    },
+    "docs/handoffs/SESSION_1239_PA_TOOLS_AUDIT_CLEAN_PLUS_MORNING_BRIEF_LOCAL_DOGFOOD.md": {
+      "originating_session": 1239,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2eb19389",
+      "first_commit_date": "2026-06-26",
+      "first_commit_subject": "docs(session-1239): close \u2014 PA tools audit clean + morning_brief local dogfood, 2 PRs",
+      "sessions_touched": [
+        1205,
+        1239
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1240_FRONTEND_ROT_AUDIT_PLUS_AGENTSPAGE_REALITY_MAP.md": {
+      "originating_session": 1240,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "7cc907da",
+      "first_commit_date": "2026-06-26",
+      "first_commit_subject": "docs(session-1240): close handoff + S1241 entry-point + pa_local.sh rotation",
+      "sessions_touched": [
+        1240,
+        1241
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1241_PLATFORM_REALITY_AUDIT_STAND_UP.md": {
+      "originating_session": 1241,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8c17558b",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1241): close handoff + S1242 entry-point",
+      "sessions_touched": [
+        1241
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1242_PATH_C_STRUCTURED_DECISION_CARD_PLUS_DELETION_REGRET_AUDIT.md": {
+      "originating_session": 1242,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "677d45ea",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1242): afternoon close addendum + S1243 start-here updated with shadowing finding",
+      "sessions_touched": [
+        1241,
+        1242
+      ],
+      "commit_count": 2,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1243_AUDIT_METHOD_4X_VALIDATED_FOUR_PRS_PLUS_CROSS_APP_INVENTORY.md": {
+      "originating_session": 1243,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "aed9da15",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1243): close handoff + S1244 entry-point + pa_local.sh repoint",
+      "sessions_touched": [
+        1243,
+        1244
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1244_CAT_2_FULLY_CLOSED_PLUS_CELERY_AUDIT_PLUS_2_REGRESSION_CANARIES.md": {
+      "originating_session": 1244,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "25674c30",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1244): close handoff + S1245 entry-point",
+      "sessions_touched": [
+        1244
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1245_P2_CELERY_CONNECTIVITY_AUDIT_PLUS_AUDIT_FINDINGS_12_VALIDATION.md": {
+      "originating_session": 1245,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6d1be8c4",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "feat(session-1245): audit_celery_zero_fire mgmt cmd + S1115 framework re-validated",
+      "sessions_touched": [
+        1245
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1246_PART_2_WORKSPACE_TAB_AUDIT_AND_SLO_REMEDIATION.md": {
+      "originating_session": 1246,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "101b4ed9",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1246): Part 2 close handoff + S1247 start-here update + docs cascade",
+      "sessions_touched": [
+        1246
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1246_S1245_BONUS_FINDINGS_CLOSED_PLUS_AUDIT_AXIS_PLUS_CONTENT_TASK_RETIREMENT_PLUS_FLEET_VERIFICATION.md": {
+      "originating_session": 1246,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "68e86e1e",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1246): close handoff + S1247 start-here + docs index refresh",
+      "sessions_touched": [
+        1246
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1247_PA_TOOL_GAP_AUDIT_PLUS_2_FINDINGS_FIXED_AND_P2_DEFERRED.md": {
+      "originating_session": 1247,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "016a6160",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1247): close handoff + S1248 start-here + docs cascade (#2708)",
+      "sessions_touched": [
+        1247
+      ],
+      "commit_count": 1,
+      "prs": [
+        2708
+      ]
+    },
+    "docs/handoffs/SESSION_1248_P2A_P2B_SHIPPED_PLUS_LOCAL_PROD_PARITY_THEME_NAMED.md": {
+      "originating_session": 1248,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "10da9a59",
+      "first_commit_date": "2026-06-27",
+      "first_commit_subject": "docs(session-1248): close handoff + S1249 start-here + docs cascade (#2711)",
+      "sessions_touched": [
+        1248
+      ],
+      "commit_count": 1,
+      "prs": [
+        2711
+      ]
+    },
+    "docs/handoffs/SESSION_1249_P1_GREEN_PLUS_PARITY_MENU_AB_SHIPPED.md": {
+      "originating_session": 1249,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f70caebc",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "docs(session-1249): close handoff + S1250 start-here + docs cascade",
+      "sessions_touched": [
+        1249
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1250_PR10_LOCAL_INTAKE_EXERCISE.md": {
+      "originating_session": 1250,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "25fb0ee8",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "docs(session-1250-pr10): local intake exercise + observation handoff (#2725)",
+      "sessions_touched": [
+        1250
+      ],
+      "commit_count": 1,
+      "prs": [
+        2725
+      ]
+    },
+    "docs/handoffs/SESSION_1250_PR11_LOCAL_WORK_QUEUE_EXERCISE.md": {
+      "originating_session": 1250,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "88622892",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "docs(session-1250-pr11): local work queue exercise + observation handoff (#2726)",
+      "sessions_touched": [
+        1250
+      ],
+      "commit_count": 1,
+      "prs": [
+        2726
+      ]
+    },
+    "docs/handoffs/SESSION_1251_CAPABILITY_AUDIT.md": {
+      "originating_session": 1251,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "5059b9ab",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "docs(session-1251): close S1250, land capability audit, pivot to PR 12 morning brief (#2727)",
+      "sessions_touched": [
+        1250,
+        1251
+      ],
+      "commit_count": 1,
+      "prs": [
+        2727
+      ]
+    },
+    "docs/handoffs/SESSION_1252_AI_EMPLOYEE_V0_PR1_PR2_LANDED.md": {
+      "originating_session": 1252,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "45b77280",
+      "first_commit_date": "2026-06-28",
+      "first_commit_subject": "docs(session-1252): close session \u2014 AI Employee v0 + Docs Manager live (#2732)",
+      "sessions_touched": [
+        1251,
+        1252,
+        1253
+      ],
+      "commit_count": 1,
+      "prs": [
+        2732
+      ]
+    },
+    "docs/handoffs/SESSION_1254_EMPLOYEE_OS_FOUNDATION.md": {
+      "originating_session": 1254,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "d4f363f6",
+      "first_commit_date": "2026-06-29",
+      "first_commit_subject": "docs(session-1254): close session \u2014 Employee OS Foundation (#2737)",
+      "sessions_touched": [
+        1253,
+        1254,
+        1255
+      ],
+      "commit_count": 1,
+      "prs": [
+        2737
+      ]
+    },
+    "docs/handoffs/SESSION_1257_EMPLOYEE_OS_PR_3_1_PR_3_2_CHIEF_OF_STAFF_LANDED.md": {
+      "originating_session": 1257,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "ef7df741",
+      "first_commit_date": "2026-06-29",
+      "first_commit_subject": "docs(session-1257): close session \u2014 Chief of Staff (Employee #3) landed (#2746)",
+      "sessions_touched": [
+        1257
+      ],
+      "commit_count": 2,
+      "prs": [
+        2746
+      ]
+    },
+    "docs/handoffs/SESSION_1258_EMPLOYEE_OS_PR_3_3_MORNING_BRIEF_BEAT_MIGRATION.md": {
+      "originating_session": 1258,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6d8db99d",
+      "first_commit_date": "2026-06-29",
+      "first_commit_subject": "docs(session-1258): close session \u2014 PR 3.3 Morning Brief beat migration shipped + verified (#2748)",
+      "sessions_touched": [
+        1258
+      ],
+      "commit_count": 2,
+      "prs": [
+        2748
+      ]
+    },
+    "docs/handoffs/SESSION_1259_FIRST_FIRE_VERIFICATION.md": {
+      "originating_session": 1259,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b5f851c9",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1261): close sessions \u2014 S1259 first-fire verified + S1260 Phase 2 planning + PR-\u03b3 docs discoverability + S1261 foundation hardening (#2751)",
+      "sessions_touched": [
+        1259,
+        1261
+      ],
+      "commit_count": 1,
+      "prs": [
+        2751
+      ]
+    },
+    "docs/handoffs/SESSION_1260_EMPLOYEE_OS_PHASE_2_PLANNING_AND_DISCOVERABILITY.md": {
+      "originating_session": 1260,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b5f851c9",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1261): close sessions \u2014 S1259 first-fire verified + S1260 Phase 2 planning + PR-\u03b3 docs discoverability + S1261 foundation hardening (#2751)",
+      "sessions_touched": [
+        1260,
+        1261
+      ],
+      "commit_count": 1,
+      "prs": [
+        2751
+      ]
+    },
+    "docs/handoffs/SESSION_1261_EMPLOYEE_OS_FOUNDATION_HARDENING.md": {
+      "originating_session": 1261,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b5f851c9",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1261): close sessions \u2014 S1259 first-fire verified + S1260 Phase 2 planning + PR-\u03b3 docs discoverability + S1261 foundation hardening (#2751)",
+      "sessions_touched": [
+        1261
+      ],
+      "commit_count": 1,
+      "prs": [
+        2751
+      ]
+    },
+    "docs/handoffs/SESSION_1262_CLAUDE_CODE_TASK_RECEIPT_RELIABILITY.md": {
+      "originating_session": 1262,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "830edf3a",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1262): close session \u2014 claude_code_tool task receipts gap closed (PR #2752) (#2753)",
+      "sessions_touched": [
+        1262
+      ],
+      "commit_count": 1,
+      "prs": [
+        2752,
+        2753
+      ]
+    },
+    "docs/handoffs/SESSION_1263_CLAUDE_CODE_AGENT_ROW_CONSOLIDATION.md": {
+      "originating_session": 1263,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "1dfd03be",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1263): close session \u2014 duplicate Claude Code Agent row consolidated (PR #2754) (#2755)",
+      "sessions_touched": [
+        1263
+      ],
+      "commit_count": 1,
+      "prs": [
+        2754,
+        2755
+      ]
+    },
+    "docs/handoffs/SESSION_1264_AUTHORITY_WARN_MODE.md": {
+      "originating_session": 1264,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "45ec80b2",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1264): close session \u2014 MissionRunner authority warn-mode shipped (PR #2756) (#2757)",
+      "sessions_touched": [
+        1264
+      ],
+      "commit_count": 1,
+      "prs": [
+        2756,
+        2757
+      ]
+    },
+    "docs/handoffs/SESSION_1265_THREE_PR_HYGIENE_AND_API.md": {
+      "originating_session": 1265,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b17c91da",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1265): close session \u2014 3 PRs shipped (stale-worker guard / P2+P3 hygiene / Employee+Mission HTTP API) (#2761)",
+      "sessions_touched": [
+        1265
+      ],
+      "commit_count": 1,
+      "prs": [
+        2761
+      ]
+    },
+    "docs/handoffs/SESSION_1266_EMPLOYEE_4_BUG_TRIAGE_DISCOVERY.md": {
+      "originating_session": 1266,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "2b8ce0d1",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1266): close session \u2014 Employee #4 (Bug Triage Specialist) discovery + Rigby SIGN-clean (#2762)",
+      "sessions_touched": [
+        1266
+      ],
+      "commit_count": 1,
+      "prs": [
+        2762
+      ]
+    },
+    "docs/handoffs/SESSION_1267_EMPLOYEE_4_BUG_TRIAGE_SHIP.md": {
+      "originating_session": 1267,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f19eb872",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1267): post-close addendum \u2014 S1268 P1 (Platform Auditor cadence) fully scoped + Rigby SIGN (#2769)",
+      "sessions_touched": [
+        1267
+      ],
+      "commit_count": 2,
+      "prs": [
+        2767,
+        2769
+      ]
+    },
+    "docs/handoffs/SESSION_1269_ARCHITECTURAL_RESEARCH_LIBRARY_ARC.md": {
+      "originating_session": 1269,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f05f3c64",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1269): close session \u2014 architectural research library arc (S1268 + S1269, 5 docs + index v2)",
+      "sessions_touched": [
+        1269
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1275_SYMBOL_MAPPING_EVENT_SCHEMA_DESIGN.md": {
+      "originating_session": 1275,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 3,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/handoffs/SESSION_1300_MEMORY_RESEARCH_GROUP_PARENT_SCOPING.md": {
+      "originating_session": 1300,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 2,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/handoffs/SESSION_1301_MEMORY_RAG_RETRIEVAL_LANES.md": {
+      "originating_session": 1301,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b54b2409",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1301): Memory RAG Retrieval Lanes audit + INDEX v13 (#2775)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300,
+        1301
+      ],
+      "commit_count": 2,
+      "prs": [
+        2775
+      ]
+    },
+    "docs/handoffs/SESSION_1302_MEMORY_PERSISTENCE_ARCHITECTURE.md": {
+      "originating_session": 1302,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "c053272a",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1302): Memory Persistence Architecture audit + INDEX v14 (#2777)",
+      "sessions_touched": [
+        990,
+        1302
+      ],
+      "commit_count": 1,
+      "prs": [
+        2777
+      ]
+    },
+    "docs/handoffs/SESSION_1303_MEMORY_CONVERSATIONAL_THREAD_MEMORY.md": {
+      "originating_session": 1303,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6365f33f",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1303): Memory Conversational / Thread Memory audit + INDEX v15 (#2778)",
+      "sessions_touched": [
+        1303
+      ],
+      "commit_count": 1,
+      "prs": [
+        2778
+      ]
+    },
+    "docs/handoffs/SESSION_1304_MEMORY_DOCS_RAG_BOUNDARY.md": {
+      "originating_session": 1304,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4271e913",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1304): Memory Docs Corpus \u2194 RAG Boundary audit + INDEX v16 (#S1304) (#2779)",
+      "sessions_touched": [
+        1304
+      ],
+      "commit_count": 1,
+      "prs": [
+        2779
+      ]
+    },
+    "docs/handoffs/SESSION_1305_MEMORY_RUNTIME_CORRECTNESS.md": {
+      "originating_session": 1305,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "4b6f3419",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(research): add memory runtime-correctness audit (S1305) + INDEX v17 (#2780)",
+      "sessions_touched": [
+        1305
+      ],
+      "commit_count": 2,
+      "prs": [
+        2780
+      ]
+    },
+    "docs/handoffs/SESSION_1399_MEMORY_CANONICAL_SUMMARY.md": {
+      "originating_session": 1399,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6318787b",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1399): Group 1300 Memory canonical summary + INDEX v18 (#2781)",
+      "sessions_touched": [
+        1399
+      ],
+      "commit_count": 2,
+      "prs": [
+        2781
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -29740,9 +31057,10 @@
         471,
         472,
         473,
-        474
+        474,
+        1242
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/plans/CONTENT_FLOW_UNIFICATION_PLAN.md": {
@@ -30960,6 +32278,397 @@
       "prs": [
         2261
       ]
+    },
+    "docs/research/ARCHITECTURE_INDEX.md": {
+      "originating_session": 990,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "734eb696",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1272): research authority enforcement design space; register in ARCHITECTURE_INDEX (v4)",
+      "sessions_touched": [
+        990,
+        1268,
+        1269,
+        1271,
+        1272,
+        1273,
+        1274,
+        1275,
+        1276,
+        1300,
+        1301,
+        1302,
+        1303,
+        1304,
+        1399
+      ],
+      "commit_count": 21,
+      "prs": [
+        2773,
+        2775,
+        2777,
+        2778,
+        2779,
+        2780,
+        2781
+      ]
+    },
+    "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
+      "originating_session": 1274,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1274,
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 3,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/research/OPEN_ARCS.md": {
+      "originating_session": 990,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "7020fa6c",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs: close Group 1300 arc in OPEN_ARCS (post-S1399 merge) (#2782)",
+      "sessions_touched": [
+        990,
+        1275,
+        1276,
+        1300,
+        1301,
+        1302,
+        1303,
+        1304,
+        1399
+      ],
+      "commit_count": 14,
+      "prs": [
+        2773,
+        2775,
+        2777,
+        2778,
+        2779,
+        2780,
+        2781,
+        2782
+      ]
+    },
+    "docs/research/actor_identity_attribution_architecture.md": {
+      "originating_session": 1271,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "5fd68dcf",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1271): research actor identity and attribution architecture",
+      "sessions_touched": [
+        1271
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/authority_enforcement_design_space.md": {
+      "originating_session": 1272,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "734eb696",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1272): research authority enforcement design space; register in ARCHITECTURE_INDEX (v4)",
+      "sessions_touched": [
+        1272
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/domains/memory/1300_memory_domain_scoping.md": {
+      "originating_session": 1275,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 2,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/research/domains/memory/1301_followup_provenance_classifier_bug.md": {
+      "originating_session": 1275,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "5f6b9863",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs: provenance classifier mislabels S1301 audit as session-1275 (search_docs filter hazard) (#2776)",
+      "sessions_touched": [
+        1275,
+        1301
+      ],
+      "commit_count": 2,
+      "prs": [
+        2776
+      ]
+    },
+    "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md": {
+      "originating_session": 1275,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b54b2409",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1301): Memory RAG Retrieval Lanes audit + INDEX v13 (#2775)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300,
+        1301
+      ],
+      "commit_count": 2,
+      "prs": [
+        2775
+      ]
+    },
+    "docs/research/domains/memory/1302_memory_persistence_architecture_audit.md": {
+      "originating_session": 990,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "c053272a",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1302): Memory Persistence Architecture audit + INDEX v14 (#2777)",
+      "sessions_touched": [
+        990,
+        1302
+      ],
+      "commit_count": 1,
+      "prs": [
+        2777
+      ]
+    },
+    "docs/research/domains/memory/1303_memory_conversational_thread_memory_audit.md": {
+      "originating_session": 1303,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6365f33f",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1303): Memory Conversational / Thread Memory audit + INDEX v15 (#2778)",
+      "sessions_touched": [
+        1303
+      ],
+      "commit_count": 1,
+      "prs": [
+        2778
+      ]
+    },
+    "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md": {
+      "originating_session": 1304,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4271e913",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1304): Memory Docs Corpus \u2194 RAG Boundary audit + INDEX v16 (#S1304) (#2779)",
+      "sessions_touched": [
+        1304
+      ],
+      "commit_count": 1,
+      "prs": [
+        2779
+      ]
+    },
+    "docs/research/domains/memory/1305_memory_runtime_correctness_audit.md": {
+      "originating_session": 1305,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "4b6f3419",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(research): add memory runtime-correctness audit (S1305) + INDEX v17 (#2780)",
+      "sessions_touched": [
+        1305
+      ],
+      "commit_count": 2,
+      "prs": [
+        2780
+      ]
+    },
+    "docs/research/domains/memory/1399_memory_canonical_summary.md": {
+      "originating_session": 1399,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6318787b",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1399): Group 1300 Memory canonical summary + INDEX v18 (#2781)",
+      "sessions_touched": [
+        1399
+      ],
+      "commit_count": 2,
+      "prs": [
+        2781
+      ]
+    },
+    "docs/research/employee_os_collaboration_patterns.md": {
+      "originating_session": 1268,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "904b7d3c",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1268): audit platform-wide collaboration patterns for Employee OS reuse",
+      "sessions_touched": [
+        1268
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/employee_os_communication_protocol_sketch.md": {
+      "originating_session": 1268,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c7956a48",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1268): audit communication substrate and sketch Employee OS notice protocol",
+      "sessions_touched": [
+        1268
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/employee_os_communication_substrate_audit.md": {
+      "originating_session": 1268,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c7956a48",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1268): audit communication substrate and sketch Employee OS notice protocol",
+      "sessions_touched": [
+        1268
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/governance_authority_evolution.md": {
+      "originating_session": 1269,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "0310f6a5",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1269): audit governance and authority evolution; register in ARCHITECTURE_INDEX",
+      "sessions_touched": [
+        1269
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/cross_domain_integration_audit.md": {
+      "originating_session": 1274,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "d21d051a",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1274): research cross-domain integration audit",
+      "sessions_touched": [
+        1274
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform_architecture_inventory.md": {
+      "originating_session": 1273,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "16260d1c",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1273): research whole-platform architecture inventory; register in ARCHITECTURE_INDEX (v5)",
+      "sessions_touched": [
+        1273
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
+      "originating_session": 1275,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 4,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/research/process/claude_research_startup_introspection.md": {
+      "originating_session": 1275,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 2,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/research/symbol_mapping_architecture.md": {
+      "originating_session": 1270,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "505013b0",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1270): research symbol mapping architecture; rotate PA session pin",
+      "sessions_touched": [
+        1270
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/symbol_mapping_event_schema_design.md": {
+      "originating_session": 1275,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "2a768560",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(S1275): symbol mapping v0 event schema design + INDEX v8 (#2773)",
+      "sessions_touched": [
+        1275,
+        1276,
+        1300
+      ],
+      "commit_count": 2,
+      "prs": [
+        2773
+      ]
+    },
+    "docs/research/symbol_mapping_option_selection_design.md": {
+      "originating_session": 1274,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "52ec6b54",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1274): select evidence-only symbol mapping v0",
+      "sessions_touched": [
+        1274
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/roadmap/00-GAP-ANALYSIS.md": {
       "originating_session": 738,
@@ -34447,7 +36156,7 @@
         1201,
         1202
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2441
       ]
@@ -34550,7 +36259,7 @@
       "sessions_touched": [
         1198
       ],
-      "commit_count": 2,
+      "commit_count": 1,
       "prs": [
         2431
       ]
@@ -34574,7 +36283,7 @@
         1198,
         1199
       ],
-      "commit_count": 10,
+      "commit_count": 6,
       "prs": [
         2397,
         2419,
@@ -34610,7 +36319,7 @@
         1184,
         1185
       ],
-      "commit_count": 4,
+      "commit_count": 2,
       "prs": [
         2364,
         2370
@@ -35300,7 +37009,7 @@
         1181,
         1183
       ],
-      "commit_count": 4,
+      "commit_count": 3,
       "prs": [
         2204,
         2359
@@ -35456,6 +37165,21 @@
       "prs": [
         1080,
         2221
+      ]
+    },
+    "docs/topics/employee-os.md": {
+      "originating_session": 1260,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "e4414c96",
+      "first_commit_date": "2026-06-30",
+      "first_commit_subject": "docs(session-1260-pr-g): make Employee OS discoverable from CLAUDE.md + PLATFORM_WHAT_IT_IS.md (#2749)",
+      "sessions_touched": [
+        1260
+      ],
+      "commit_count": 1,
+      "prs": [
+        2749
       ]
     },
     "docs/topics/fleet-doc-verifier-rollout.md": {
@@ -35673,9 +37397,11 @@
         1142,
         1143,
         1157,
-        1158
+        1158,
+        1218,
+        1222
       ],
-      "commit_count": 33,
+      "commit_count": 34,
       "prs": [
         1080,
         1081,
@@ -35686,7 +37412,8 @@
         2036,
         2178,
         2204,
-        2251
+        2251,
+        2532
       ]
     },
     "docs/topics/spider-network.md": {
