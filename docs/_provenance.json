@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-02T04:49:55+00:00",
+    "generated": "2026-07-02T13:46:09+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "327e593fe3fb",
-    "doc_count": 2269,
-    "commit_count": 7360,
+    "git_head": "1fba69ed7d8a",
+    "doc_count": 2271,
+    "commit_count": 7364,
     "confidence_breakdown": {
-      "HIGH": 1453,
+      "HIGH": 1455,
       "MEDIUM": 349,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1072,
+      "commit_count": 1074,
       "prs": [
         10,
         11,
@@ -2919,7 +2919,8 @@
         2794,
         2796,
         2798,
-        2800
+        2800,
+        2802
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7225,7 +7226,7 @@
         1216,
         1217
       ],
-      "commit_count": 30,
+      "commit_count": 32,
       "prs": [
         2213,
         2219,
@@ -7247,7 +7248,8 @@
         2794,
         2796,
         2798,
-        2800
+        2800,
+        2802
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17391,6 +17393,21 @@
       "commit_count": 2,
       "prs": [
         2801
+      ]
+    },
+    "docs/handoffs/SESSION_1501_SPORTS_CAT_A_AUDIT.md": {
+      "originating_session": 1501,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "1fba69ed",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1501): Group 1500 Cat A Sports Odds Ingestion & Normalization child audit \u2014 SIGN-clean cycle 2 (#2803)",
+      "sessions_touched": [
+        1501
+      ],
+      "commit_count": 2,
+      "prs": [
+        2803
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32464,9 +32481,10 @@
         1404,
         1405,
         1406,
-        1500
+        1500,
+        1501
       ],
-      "commit_count": 39,
+      "commit_count": 41,
       "prs": [
         2773,
         2775,
@@ -32483,7 +32501,8 @@
         2795,
         2797,
         2799,
-        2801
+        2801,
+        2803
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32529,9 +32548,10 @@
         1404,
         1405,
         1406,
-        1500
+        1500,
+        1501
       ],
-      "commit_count": 34,
+      "commit_count": 36,
       "prs": [
         2773,
         2775,
@@ -32550,7 +32570,8 @@
         2795,
         2797,
         2799,
-        2801
+        2801,
+        2803
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32844,6 +32865,21 @@
       "commit_count": 4,
       "prs": [
         2801
+      ]
+    },
+    "docs/research/domains/sports/1501_sports_odds_ingestion_normalization_audit.md": {
+      "originating_session": 1501,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "1fba69ed",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1501): Group 1500 Cat A Sports Odds Ingestion & Normalization child audit \u2014 SIGN-clean cycle 2 (#2803)",
+      "sessions_touched": [
+        1501
+      ],
+      "commit_count": 2,
+      "prs": [
+        2803
       ]
     },
     "docs/research/employee_os_collaboration_patterns.md": {
