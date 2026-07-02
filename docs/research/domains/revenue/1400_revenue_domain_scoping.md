@@ -423,23 +423,49 @@ via `engagement.py` + `revenue.py`.
 (`models_unified_system.py:2613`); `OpportunityOutcome`
 (`models_unified_system.py:3394`); `OpportunityContent`
 (`models_unified_system.py:2805`);
-`ops_autopilot/revenue.py` (top-level revenue module);
-`ops_autopilot/impact.py`; `intelligence/revenue_integration.py`
-+ `intelligence/revenue_tracking_bridge.py`;
-`learning_bridges/revenue_attribution_bridge.py`;
-`views_revenue.py` + `views_revenue_analytics.py` +
-`views_revenue_tracking.py`; frontend routes `revenue`,
-`revenue-dashboard`, `revenue-opportunities`, `opportunity-detail`;
+**revenue attribution algorithm at
+`core/services/ops_autopilot/impact.py:1233-1290`
+(`MultiTouchAttributor._attribute_event`; 70% last-touch + 30%
+assist split; writes `ImpactCredit` at
+`core/models_impact_credit.py`) — S1405 F.E6 anchor correction
+lands here;** `core/services/ops_autopilot/revenue.py` contains
+**pipeline forecasting engines only** (`RevenuePipelineAutomator`,
+`OutboundLeadEngine`, `OutreachSequencer`, `CloseTheDealEngine`,
+`RevenueOrchestrator`, `ClosePackAutonomyEngine`), NOT attribution;
+`core/services/ops_autopilot/impact.py` full attribution engine
+(`ImpactCollector` at `:238-505`, `PortfolioAllocator` at
+`:509-841`, `GoalAwareAllocator` at `:842-1162`,
+`MultiTouchAttributor` at `:1163-1480`, `AttributionDebtController`
+at `:1481+`); `intelligence/revenue_integration.py` +
+`intelligence/revenue_tracking_bridge.py` (**actual paths —
+`intelligence/`, NOT `core/services/intelligence/`; S1405 F.E3
+dual-representation drift**); `core/learning_bridges/revenue_attribution_bridge.py`
+(signal-driven Revenue → UserAgentLearning bridge);
+`core/views_revenue.py` + `core/views_revenue_analytics.py` +
+`core/views_revenue_tracking.py`; **frontend routes actually used:
+`/analytics` (calls `/api/v1/analytics/charts/revenue/`) +
+`/intelligence` (opportunity discovery, no revenue endpoints
+called) — S1405 F.E4 anchor correction: the 4 named routes
+`/revenue`, `/revenue-dashboard`, `/revenue-opportunities`,
+`/opportunity-detail` DO NOT EXIST in `frontend/src/App.tsx`
+(grep: 0 matches)**;
 Celery beat `calculate-daily-revenue-metrics`
-(`intelligence.tasks.calculate_daily_revenue_metrics`).
+(`intelligence.tasks.calculate_daily_revenue_metrics` at
+`intelligence/tasks.py:1462-1495`; queue `'default'`; runs
+12:15 AM Denver; writes `RevenueMetrics.update_metrics_for_date`
+— **independent path, NOT connected to `ops_autopilot` or
+`ImpactEvent` chain**).
 
 **S1273 §3.32 fragment.** "ImpactEvent" step of §4.9 flow +
 §3.32 "Major services" `revenue.py` + `impact.py` bullets.
 
 **Drift already flagged.**
 - Revenue attribution logic in `ops_autopilot/revenue.py` was
-  UNKNOWN per S1273 §3.32 "Known drift" second bullet. Child E
-  produces the definitive attribution logic map.
+  UNKNOWN per S1273 §3.32 "Known drift" second bullet. **S1405
+  F.E6 RESOLVED via anchor correction: algorithm lives in
+  `ops_autopilot/impact.py:1233-1290` (MultiTouchAttributor._attribute_event),
+  NOT `revenue.py`.** Child E produced the definitive attribution
+  logic map (S1405 audit §5.1 + §7.4).
 - S1274 §14 finding #36 flagged "Revenue Pipeline — no runtime
   owner" at HIGH severity — the beat task `calculate-daily-
   revenue-metrics` may be the runtime owner de-facto, but no
@@ -1148,11 +1174,19 @@ the source when the finding surfaces in its own investigation.
   resolves S1274 §2.4 line 294 MISSING. What does the integrity
   audit design look like (S1274 §5.10 orphan-record risk)?
 - **Category E must answer:** What is the revenue attribution
-  algorithm (`ops_autopilot/revenue.py`) — resolves S1273 §3.32
+  algorithm (**S1405 F.E6 correction: actual location is
+  `core/services/ops_autopilot/impact.py:1233-1290` MultiTouchAttributor._attribute_event,
+  NOT `ops_autopilot/revenue.py`**) — resolves S1273 §3.32
   UNKNOWN drift. How does `ImpactEvent` emission work (write/read
-  registry) — resolves S1274 §2.4 STRONG classification. How do
-  4 frontend routes + 3 view files serve distinct vs overlapping
-  needs? What is the runtime owner recommendation (resolves
+  registry) — resolves S1274 §2.4 STRONG classification. **S1405
+  F.E4 correction to "4 frontend routes":** the named routes
+  `/revenue`, `/revenue-dashboard`, `/revenue-opportunities`,
+  `/opportunity-detail` DO NOT EXIST in
+  `frontend/src/App.tsx`. Revenue features surfaced via
+  `/analytics` + `/intelligence` routes. Cat E instead answers:
+  how do these actual routes + 3 view files (with S1405 F.E5
+  duplicate-endpoint drift) serve distinct vs overlapping needs?
+  What is the runtime owner recommendation (resolves
   S1274 §14 finding #36 HIGH)?
 - **Category F must answer:** Is the Income/Jobs lane
   (`FreelanceOpportunity` + 9-file `intelligence/` adjacency)
