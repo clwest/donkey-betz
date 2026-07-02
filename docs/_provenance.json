@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-02T15:37:43+00:00",
+    "generated": "2026-07-02T16:34:21+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7b7011e027e4",
-    "doc_count": 2275,
-    "commit_count": 7372,
+    "git_head": "e0c08aa5d372",
+    "doc_count": 2277,
+    "commit_count": 7376,
     "confidence_breakdown": {
-      "HIGH": 1459,
+      "HIGH": 1461,
       "MEDIUM": 349,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1078,
+      "commit_count": 1079,
       "prs": [
         10,
         11,
@@ -7228,7 +7228,7 @@
         1216,
         1217
       ],
-      "commit_count": 36,
+      "commit_count": 37,
       "prs": [
         2213,
         2219,
@@ -17438,6 +17438,19 @@
       "first_commit_subject": "docs(session-1503): Group 1500 Cat C Sports Wager Tracking & Outcome Verification child audit \u2014 SIGN-with-edits cycle 1 (F1-F14 folds landed)",
       "sessions_touched": [
         1503
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_1504_SPORTS_CAT_D_AUDIT.md": {
+      "originating_session": 1504,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "18942738",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1504): Group 1500 Cat D Sports Betting Content Pipeline child audit \u2014 SIGN-with-edits cycle 1 (F1-F11 folds landed)",
+      "sessions_touched": [
+        1504
       ],
       "commit_count": 1,
       "prs": []
@@ -32516,9 +32529,10 @@
         1500,
         1501,
         1502,
-        1503
+        1503,
+        1504
       ],
-      "commit_count": 44,
+      "commit_count": 45,
       "prs": [
         2773,
         2775,
@@ -32586,9 +32600,10 @@
         1500,
         1501,
         1502,
-        1503
+        1503,
+        1504
       ],
-      "commit_count": 39,
+      "commit_count": 40,
       "prs": [
         2773,
         2775,
@@ -32944,6 +32959,19 @@
       "first_commit_subject": "docs(session-1503): Group 1500 Cat C Sports Wager Tracking & Outcome Verification child audit \u2014 SIGN-with-edits cycle 1 (F1-F14 folds landed)",
       "sessions_touched": [
         1503
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/domains/sports/1504_sports_betting_content_pipeline_audit.md": {
+      "originating_session": 1504,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "18942738",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1504): Group 1500 Cat D Sports Betting Content Pipeline child audit \u2014 SIGN-with-edits cycle 1 (F1-F11 folds landed)",
+      "sessions_touched": [
+        1504
       ],
       "commit_count": 1,
       "prs": []
