@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-02T03:11:05+00:00",
+    "generated": "2026-07-02T04:07:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7e80e54eb20d",
-    "doc_count": 2266,
-    "commit_count": 7351,
+    "git_head": "27d2a36bfef6",
+    "doc_count": 2268,
+    "commit_count": 7355,
     "confidence_breakdown": {
-      "HIGH": 1451,
+      "HIGH": 1452,
       "MEDIUM": 349,
-      "LOW": 2,
+      "LOW": 3,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1068,
+      "commit_count": 1070,
       "prs": [
         10,
         11,
@@ -2917,7 +2917,8 @@
         2790,
         2792,
         2794,
-        2796
+        2796,
+        2798
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7223,7 +7224,7 @@
         1216,
         1217
       ],
-      "commit_count": 26,
+      "commit_count": 28,
       "prs": [
         2213,
         2219,
@@ -7243,7 +7244,8 @@
         2790,
         2792,
         2794,
-        2796
+        2796,
+        2798
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17357,6 +17359,21 @@
       "commit_count": 2,
       "prs": [
         2797
+      ]
+    },
+    "docs/handoffs/SESSION_1499_REVENUE_CANONICAL_SUMMARY_ARC_CLOSE.md": {
+      "originating_session": 1499,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "27d2a36b",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(research): add revenue canonical summary + Group 1400 arc close (S1499) (#2799)",
+      "sessions_touched": [
+        1499
+      ],
+      "commit_count": 2,
+      "prs": [
+        2799
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32431,7 +32448,7 @@
         1405,
         1406
       ],
-      "commit_count": 35,
+      "commit_count": 37,
       "prs": [
         2773,
         2775,
@@ -32446,7 +32463,8 @@
         2791,
         2793,
         2795,
-        2797
+        2797,
+        2799
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32472,9 +32490,9 @@
       "originating_session": 727,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "7e80e54e",
+      "first_commit_sha": "27d2a36b",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(session-1406): Group 1400 Revenue Child F (Freelance/Gig \u2014 Income-Jobs lane) audit (#2797)",
+      "first_commit_subject": "docs(research): add revenue canonical summary + Group 1400 arc close (S1499) (#2799)",
       "sessions_touched": [
         727,
         990,
@@ -32494,7 +32512,7 @@
         1406,
         1500
       ],
-      "commit_count": 30,
+      "commit_count": 32,
       "prs": [
         2773,
         2775,
@@ -32511,7 +32529,8 @@
         2791,
         2793,
         2795,
-        2797
+        2797,
+        2799
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32775,6 +32794,21 @@
       "commit_count": 2,
       "prs": [
         2797
+      ]
+    },
+    "docs/research/domains/revenue/1499_revenue_canonical_summary.md": {
+      "originating_session": 1499,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "27d2a36b",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(research): add revenue canonical summary + Group 1400 arc close (S1499) (#2799)",
+      "sessions_touched": [
+        1499
+      ],
+      "commit_count": 2,
+      "prs": [
+        2799
       ]
     },
     "docs/research/domains/sports/1500_sports_domain_scoping.md": {
