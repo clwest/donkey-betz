@@ -400,7 +400,7 @@ enforced in Categories D and F specifically.
 - **Systems:** `SportsContentContextBuilder`
   (`core/services/sports_content_context.py:27`), Celery task
   `generate_daily_betting_brief` (`core/tasks.py:6188`; beat @
-  07:00 MT via `core/celery.py:784`), Celery task
+  07:00 MT via `core/celery.py:783`), Celery task
   `daily_betting_digest` (`core/tasks.py:6102`), Discord `/odds`
   command (`core/services/discord_bot.py:1108`), sports-scoped
   intelligence hook `_impl_collect_sports_odds_intelligence`
