@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-02T19:08:15+00:00",
+    "generated": "2026-07-02T20:00:16+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7151d9cd966f",
-    "doc_count": 2281,
-    "commit_count": 7384,
+    "git_head": "1cd0d9fe8083",
+    "doc_count": 2283,
+    "commit_count": 7388,
     "confidence_breakdown": {
-      "HIGH": 1465,
+      "HIGH": 1467,
       "MEDIUM": 349,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1082,
+      "commit_count": 1084,
       "prs": [
         10,
         11,
@@ -2923,7 +2923,8 @@
         2802,
         2804,
         2806,
-        2812
+        2812,
+        2814
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7229,7 +7230,7 @@
         1216,
         1217
       ],
-      "commit_count": 40,
+      "commit_count": 42,
       "prs": [
         2213,
         2219,
@@ -7255,7 +7256,8 @@
         2802,
         2804,
         2806,
-        2812
+        2812,
+        2814
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17485,6 +17487,21 @@
       "commit_count": 2,
       "prs": [
         2813
+      ]
+    },
+    "docs/handoffs/SESSION_1599_SPORTS_CANONICAL_SUMMARY.md": {
+      "originating_session": 1599,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "1cd0d9fe",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1599): Group 1500 Sports/DBAO/Intelligence arc CLOSED at xx99 canonical summary (#2815)",
+      "sessions_touched": [
+        1599
+      ],
+      "commit_count": 2,
+      "prs": [
+        2815
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32564,9 +32581,10 @@
         1503,
         1504,
         1505,
-        1506
+        1506,
+        1599
       ],
-      "commit_count": 49,
+      "commit_count": 51,
       "prs": [
         2773,
         2775,
@@ -32587,7 +32605,8 @@
         2803,
         2805,
         2811,
-        2813
+        2813,
+        2815
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32639,9 +32658,10 @@
         1503,
         1504,
         1505,
-        1506
+        1506,
+        1599
       ],
-      "commit_count": 44,
+      "commit_count": 46,
       "prs": [
         2773,
         2775,
@@ -32664,7 +32684,8 @@
         2803,
         2805,
         2811,
-        2813
+        2813,
+        2815
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33044,6 +33065,21 @@
       "commit_count": 2,
       "prs": [
         2813
+      ]
+    },
+    "docs/research/domains/sports/1599_sports_canonical_summary.md": {
+      "originating_session": 1599,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "1cd0d9fe",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1599): Group 1500 Sports/DBAO/Intelligence arc CLOSED at xx99 canonical summary (#2815)",
+      "sessions_touched": [
+        1599
+      ],
+      "commit_count": 2,
+      "prs": [
+        2815
       ]
     },
     "docs/research/employee_os_collaboration_patterns.md": {
