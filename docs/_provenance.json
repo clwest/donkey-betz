@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-02T22:19:34+00:00",
+    "generated": "2026-07-02T23:08:17+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "ecadcec27220",
-    "doc_count": 2289,
-    "commit_count": 7400,
+    "git_head": "f19174c2a363",
+    "doc_count": 2291,
+    "commit_count": 7404,
     "confidence_breakdown": {
-      "HIGH": 1473,
-      "MEDIUM": 349,
+      "HIGH": 1474,
+      "MEDIUM": 350,
       "LOW": 3,
       "UNKNOWN": 464
     },
@@ -2507,7 +2507,7 @@
         1302,
         1601
       ],
-      "commit_count": 1090,
+      "commit_count": 1092,
       "prs": [
         10,
         11,
@@ -2928,7 +2928,8 @@
         2814,
         2816,
         2818,
-        2820
+        2820,
+        2822
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7235,7 +7236,7 @@
         1217,
         1601
       ],
-      "commit_count": 48,
+      "commit_count": 50,
       "prs": [
         2213,
         2219,
@@ -7265,7 +7266,8 @@
         2814,
         2816,
         2818,
-        2820
+        2820,
+        2822
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17555,6 +17557,22 @@
       "commit_count": 2,
       "prs": [
         2821
+      ]
+    },
+    "docs/handoffs/SESSION_1603_CONTENT_CAT_D_AUDIT.md": {
+      "originating_session": 1603,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f19174c2",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1603): Group 1600 Cat D Deliverable Base + Specialized Variants child audit \u2014 SIGN-with-edits cycle 1 (F1-F18 folds landed) (#2823)",
+      "sessions_touched": [
+        862,
+        1603
+      ],
+      "commit_count": 2,
+      "prs": [
+        2823
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32608,6 +32626,7 @@
       "first_commit_subject": "docs(session-1272): research authority enforcement design space; register in ARCHITECTURE_INDEX (v4)",
       "sessions_touched": [
         727,
+        862,
         990,
         1268,
         1269,
@@ -32638,9 +32657,10 @@
         1599,
         1600,
         1601,
-        1602
+        1602,
+        1603
       ],
-      "commit_count": 57,
+      "commit_count": 59,
       "prs": [
         2773,
         2775,
@@ -32665,7 +32685,8 @@
         2815,
         2817,
         2819,
-        2821
+        2821,
+        2823
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32696,6 +32717,7 @@
       "first_commit_subject": "docs(session-1500): Group 1500 Sports/DBAO/Intelligence arc open \u2014 parent scoping + Phase 0 methodology 2nd application (#2801)",
       "sessions_touched": [
         727,
+        862,
         990,
         1275,
         1276,
@@ -32721,9 +32743,10 @@
         1599,
         1600,
         1601,
-        1602
+        1602,
+        1603
       ],
-      "commit_count": 52,
+      "commit_count": 54,
       "prs": [
         2773,
         2775,
@@ -32750,7 +32773,8 @@
         2815,
         2817,
         2819,
-        2821
+        2821,
+        2823
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32822,6 +32846,22 @@
       "commit_count": 2,
       "prs": [
         2821
+      ]
+    },
+    "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md": {
+      "originating_session": 862,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "f19174c2",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1603): Group 1600 Cat D Deliverable Base + Specialized Variants child audit \u2014 SIGN-with-edits cycle 1 (F1-F18 folds landed) (#2823)",
+      "sessions_touched": [
+        862,
+        1603
+      ],
+      "commit_count": 2,
+      "prs": [
+        2823
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
