@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-02T02:20:20+00:00",
+    "generated": "2026-07-02T03:11:05+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4920c4483d69",
-    "doc_count": 2264,
-    "commit_count": 7347,
+    "git_head": "7e80e54eb20d",
+    "doc_count": 2266,
+    "commit_count": 7351,
     "confidence_breakdown": {
-      "HIGH": 1450,
-      "MEDIUM": 348,
+      "HIGH": 1451,
+      "MEDIUM": 349,
       "LOW": 2,
       "UNKNOWN": 464
     },
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1066,
+      "commit_count": 1068,
       "prs": [
         10,
         11,
@@ -2916,7 +2916,8 @@
         2787,
         2790,
         2792,
-        2794
+        2794,
+        2796
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7222,7 +7223,7 @@
         1216,
         1217
       ],
-      "commit_count": 24,
+      "commit_count": 26,
       "prs": [
         2213,
         2219,
@@ -7241,7 +7242,8 @@
         2787,
         2790,
         2792,
-        2794
+        2794,
+        2796
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17339,6 +17341,22 @@
       "commit_count": 2,
       "prs": [
         2795
+      ]
+    },
+    "docs/handoffs/SESSION_1406_REVENUE_FREELANCE_GIG_INCOME_JOBS.md": {
+      "originating_session": 1406,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7e80e54e",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1406): Group 1400 Revenue Child F (Freelance/Gig \u2014 Income-Jobs lane) audit (#2797)",
+      "sessions_touched": [
+        727,
+        1406
+      ],
+      "commit_count": 2,
+      "prs": [
+        2797
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32384,13 +32402,14 @@
       ]
     },
     "docs/research/ARCHITECTURE_INDEX.md": {
-      "originating_session": 990,
+      "originating_session": 727,
       "confidence": "MEDIUM",
       "match_source": "body",
       "first_commit_sha": "734eb696",
       "first_commit_date": "2026-06-30",
       "first_commit_subject": "docs(session-1272): research authority enforcement design space; register in ARCHITECTURE_INDEX (v4)",
       "sessions_touched": [
+        727,
         990,
         1268,
         1269,
@@ -32409,9 +32428,10 @@
         1402,
         1403,
         1404,
-        1405
+        1405,
+        1406
       ],
-      "commit_count": 33,
+      "commit_count": 35,
       "prs": [
         2773,
         2775,
@@ -32425,7 +32445,8 @@
         2789,
         2791,
         2793,
-        2795
+        2795,
+        2797
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32448,13 +32469,14 @@
       ]
     },
     "docs/research/OPEN_ARCS.md": {
-      "originating_session": 990,
+      "originating_session": 727,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "4920c448",
+      "first_commit_sha": "7e80e54e",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(session-1405): Group 1400 Revenue Child E (Attribution + Analytics) audit (#2795)",
+      "first_commit_subject": "docs(session-1406): Group 1400 Revenue Child F (Freelance/Gig \u2014 Income-Jobs lane) audit (#2797)",
       "sessions_touched": [
+        727,
         990,
         1275,
         1276,
@@ -32469,9 +32491,10 @@
         1403,
         1404,
         1405,
+        1406,
         1500
       ],
-      "commit_count": 28,
+      "commit_count": 30,
       "prs": [
         2773,
         2775,
@@ -32487,7 +32510,8 @@
         2789,
         2791,
         2793,
-        2795
+        2795,
+        2797
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32735,6 +32759,22 @@
       "commit_count": 2,
       "prs": [
         2795
+      ]
+    },
+    "docs/research/domains/revenue/1406_revenue_freelance_gig_income_jobs_audit.md": {
+      "originating_session": 727,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "7e80e54e",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1406): Group 1400 Revenue Child F (Freelance/Gig \u2014 Income-Jobs lane) audit (#2797)",
+      "sessions_touched": [
+        727,
+        1406
+      ],
+      "commit_count": 2,
+      "prs": [
+        2797
       ]
     },
     "docs/research/domains/sports/1500_sports_domain_scoping.md": {
