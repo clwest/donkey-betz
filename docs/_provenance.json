@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-01T22:00:35+00:00",
+    "generated": "2026-07-02T01:13:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b4d7cce6057c",
-    "doc_count": 2260,
-    "commit_count": 7339,
+    "git_head": "0f9bb207b223",
+    "doc_count": 2262,
+    "commit_count": 7343,
     "confidence_breakdown": {
-      "HIGH": 1446,
+      "HIGH": 1448,
       "MEDIUM": 348,
       "LOW": 2,
       "UNKNOWN": 464
@@ -2506,7 +2506,7 @@
         1267,
         1302
       ],
-      "commit_count": 1062,
+      "commit_count": 1064,
       "prs": [
         10,
         11,
@@ -2914,7 +2914,8 @@
         2783,
         2785,
         2787,
-        2790
+        2790,
+        2792
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7220,7 +7221,7 @@
         1216,
         1217
       ],
-      "commit_count": 20,
+      "commit_count": 22,
       "prs": [
         2213,
         2219,
@@ -7237,7 +7238,8 @@
         2783,
         2785,
         2787,
-        2790
+        2790,
+        2792
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17305,6 +17307,21 @@
       "commit_count": 2,
       "prs": [
         2791
+      ]
+    },
+    "docs/handoffs/SESSION_1404_REVENUE_MEETING_CLOSE.md": {
+      "originating_session": 1404,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "0f9bb207",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1404): Group 1400 Revenue Child D (Meeting + Close) audit (#2793)",
+      "sessions_touched": [
+        1404
+      ],
+      "commit_count": 2,
+      "prs": [
+        2793
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32373,9 +32390,10 @@
         1304,
         1399,
         1402,
-        1403
+        1403,
+        1404
       ],
-      "commit_count": 29,
+      "commit_count": 31,
       "prs": [
         2773,
         2775,
@@ -32387,7 +32405,8 @@
         2784,
         2788,
         2789,
-        2791
+        2791,
+        2793
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32413,9 +32432,9 @@
       "originating_session": 990,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "b4d7cce6",
+      "first_commit_sha": "0f9bb207",
       "first_commit_date": "2026-07-01",
-      "first_commit_subject": "docs(session-1403): Group 1400 Revenue Child C (Engagement Inbound) audit (#2791)",
+      "first_commit_subject": "docs(session-1404): Group 1400 Revenue Child D (Meeting + Close) audit (#2793)",
       "sessions_touched": [
         990,
         1275,
@@ -32429,9 +32448,10 @@
         1400,
         1402,
         1403,
+        1404,
         1500
       ],
-      "commit_count": 24,
+      "commit_count": 26,
       "prs": [
         2773,
         2775,
@@ -32445,7 +32465,8 @@
         2786,
         2788,
         2789,
-        2791
+        2791,
+        2793
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32661,6 +32682,21 @@
       "commit_count": 2,
       "prs": [
         2791
+      ]
+    },
+    "docs/research/domains/revenue/1404_revenue_meeting_close_audit.md": {
+      "originating_session": 1404,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "0f9bb207",
+      "first_commit_date": "2026-07-01",
+      "first_commit_subject": "docs(session-1404): Group 1400 Revenue Child D (Meeting + Close) audit (#2793)",
+      "sessions_touched": [
+        1404
+      ],
+      "commit_count": 2,
+      "prs": [
+        2793
       ]
     },
     "docs/research/domains/sports/1500_sports_domain_scoping.md": {
