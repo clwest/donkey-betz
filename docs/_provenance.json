@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-03T13:39:38+00:00",
+    "generated": "2026-07-03T18:46:09+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f2ebfb2e2cbf",
-    "doc_count": 2303,
-    "commit_count": 7430,
+    "git_head": "726714fdf1be",
+    "doc_count": 2305,
+    "commit_count": 7434,
     "confidence_breakdown": {
-      "HIGH": 1485,
+      "HIGH": 1487,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2506,9 +2506,10 @@
         1267,
         1302,
         1601,
+        1700,
         1701
       ],
-      "commit_count": 1106,
+      "commit_count": 1108,
       "prs": [
         10,
         11,
@@ -2937,7 +2938,8 @@
         2830,
         2832,
         2834,
-        2835
+        2835,
+        2836
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7245,9 +7247,10 @@
         1156,
         1216,
         1217,
-        1601
+        1601,
+        1700
       ],
-      "commit_count": 62,
+      "commit_count": 64,
       "prs": [
         2213,
         2219,
@@ -7284,7 +7287,8 @@
         2828,
         2830,
         2832,
-        2834
+        2834,
+        2836
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17681,6 +17685,21 @@
       "commit_count": 2,
       "prs": [
         2835
+      ]
+    },
+    "docs/handoffs/SESSION_1702_OBSERVABILITY_CAT_B_LLM_CALL_EVENT_AUDIT.md": {
+      "originating_session": 1702,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "726714fd",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1702): Group 1700 Cat B LLMCallEvent child audit \u2014 SIGN-with-edits cycle 1 (F1-F3 folds landed) \u2014 SECOND child under Group 1700 (#2837)",
+      "sessions_touched": [
+        1702
+      ],
+      "commit_count": 2,
+      "prs": [
+        2837
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32776,9 +32795,10 @@
         1606,
         1699,
         1700,
-        1701
+        1701,
+        1702
       ],
-      "commit_count": 71,
+      "commit_count": 73,
       "prs": [
         2773,
         2775,
@@ -32810,7 +32830,8 @@
         2829,
         2831,
         2833,
-        2835
+        2835,
+        2837
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32875,9 +32896,10 @@
         1606,
         1699,
         1700,
-        1701
+        1701,
+        1702
       ],
-      "commit_count": 66,
+      "commit_count": 68,
       "prs": [
         2773,
         2775,
@@ -32911,7 +32933,8 @@
         2829,
         2831,
         2833,
-        2835
+        2835,
+        2837
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33218,6 +33241,21 @@
       "commit_count": 2,
       "prs": [
         2835
+      ]
+    },
+    "docs/research/domains/observability/1702_observability_cat_b_llm_call_event_audit.md": {
+      "originating_session": 1702,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "726714fd",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1702): Group 1700 Cat B LLMCallEvent child audit \u2014 SIGN-with-edits cycle 1 (F1-F3 folds landed) \u2014 SECOND child under Group 1700 (#2837)",
+      "sessions_touched": [
+        1702
+      ],
+      "commit_count": 2,
+      "prs": [
+        2837
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
