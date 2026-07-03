@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-03T03:13:45+00:00",
+    "generated": "2026-07-03T04:11:45+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "d1bd14f90a39",
-    "doc_count": 2297,
-    "commit_count": 7418,
+    "git_head": "965d5e4687dc",
+    "doc_count": 2299,
+    "commit_count": 7422,
     "confidence_breakdown": {
-      "HIGH": 1479,
+      "HIGH": 1481,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2507,7 +2507,7 @@
         1302,
         1601
       ],
-      "commit_count": 1098,
+      "commit_count": 1100,
       "prs": [
         10,
         11,
@@ -2932,7 +2932,8 @@
         2822,
         2824,
         2826,
-        2828
+        2828,
+        2830
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7242,7 +7243,7 @@
         1217,
         1601
       ],
-      "commit_count": 56,
+      "commit_count": 58,
       "prs": [
         2213,
         2219,
@@ -7276,7 +7277,8 @@
         2822,
         2824,
         2826,
-        2828
+        2828,
+        2830
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17628,6 +17630,21 @@
       "commit_count": 2,
       "prs": [
         2829
+      ]
+    },
+    "docs/handoffs/SESSION_1699_CONTENT_CANONICAL_SUMMARY.md": {
+      "originating_session": 1699,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "965d5e46",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1699): Group 1600 Content / Deliverables / Publishing xx99 Canonical Summary \u2014 GROUP 1600 CLOSED \u2014 SIGN-with-edits cycle 1 (F1-F4 folds landed) \u2014 LAST session under Group 1600 (#2831)",
+      "sessions_touched": [
+        1699
+      ],
+      "commit_count": 2,
+      "prs": [
+        2831
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32720,9 +32737,10 @@
         1603,
         1604,
         1605,
-        1606
+        1606,
+        1699
       ],
-      "commit_count": 65,
+      "commit_count": 67,
       "prs": [
         2773,
         2775,
@@ -32751,7 +32769,8 @@
         2823,
         2825,
         2827,
-        2829
+        2829,
+        2831
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32813,9 +32832,10 @@
         1603,
         1604,
         1605,
-        1606
+        1606,
+        1699
       ],
-      "commit_count": 60,
+      "commit_count": 62,
       "prs": [
         2773,
         2775,
@@ -32846,7 +32866,8 @@
         2823,
         2825,
         2827,
-        2829
+        2829,
+        2831
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32980,6 +33001,21 @@
       "commit_count": 2,
       "prs": [
         2829
+      ]
+    },
+    "docs/research/domains/content/1699_content_canonical_summary.md": {
+      "originating_session": 1699,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "965d5e46",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1699): Group 1600 Content / Deliverables / Publishing xx99 Canonical Summary \u2014 GROUP 1600 CLOSED \u2014 SIGN-with-edits cycle 1 (F1-F4 folds landed) \u2014 LAST session under Group 1600 (#2831)",
+      "sessions_touched": [
+        1699
+      ],
+      "commit_count": 2,
+      "prs": [
+        2831
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
