@@ -13,12 +13,13 @@ tools/pa_local.sh "message"
 
 **Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-## READ THIS SECOND — GROUP 1700 IN-PROGRESS; S1704 CAT D CLOSED; NEXT = S1705 CAT E
+## READ THIS SECOND — GROUP 1700 IN-PROGRESS; S1705 CAT E CLOSED; NEXT = S1706 CAT F (LAST CHILD BEFORE S1799 xx99)
 
-The local wrapper at `tools/pa_local.sh:128` points at Group 1700 arc pin. **Active arc pin state after S1704 close:**
+The local wrapper at `tools/pa_local.sh:128` points at Group 1700 arc pin. **Active arc pin state after S1705 close:**
 
-- **Active Group 1700 arc pin: `pa-e7fbacc996b34b44`** (Rigby `session_tool.create_fresh` at S1700 open — title "Session 1700 — Observability research group (kickoff)"). Continues in service across Group 1700 arc (S1701 CLOSED + S1702 CLOSED + S1703 CLOSED + S1704 CLOSED + S1705-S1706 children pending + S1799 xx99 canonical summary). SIGN routing at S1704 landed on arc pin per S1600/S1700/S1701/S1702/S1703 parent-scoping precedent (arc pin doubles as SIGN pin; fresh SIGN pin `pa-f7417e6ac21d4f23` minted per playbook §15 but routed-around by wrapper hard-code at L128; fresh SIGN pin retired at S1704 close per §16 with `updated_count=1, retired=true`).
-- **Retired post-S1704 (mid-arc cross-domain refresh SIGN pin, 2026-07-03):** Fresh SIGN isolation pin `pa-99cacc35a73e4dbb` (minted + used + retired for cross-domain integration audit v3 refresh SIGN — see READ THIS FOURTH below; NOT a Group 1700 artifact).
+- **Active Group 1700 arc pin: `pa-e7fbacc996b34b44`** (Rigby `session_tool.create_fresh` at S1700 open — title "Session 1700 — Observability research group (kickoff)"). Continues in service across Group 1700 arc (S1701 CLOSED + S1702 CLOSED + S1703 CLOSED + S1704 CLOSED + S1705 CLOSED + S1706 child pending + S1799 xx99 canonical summary). SIGN routing at S1705 landed on arc pin per S1600/S1700/S1701/S1702/S1703/S1704 parent-scoping precedent (arc pin doubles as SIGN pin; fresh SIGN pin `pa-09c46ee3a0d34069` minted per playbook §15 but routed-around by wrapper hard-code at L128; fresh SIGN pin retired at S1705 close per §16 with `updated_count=1, retired=true, previously_active=true`).
+- **Retired at S1705 close:** Fresh SIGN isolation pin `pa-09c46ee3a0d34069`.
+- **Retired post-S1704 (mid-arc cross-domain refresh SIGN pin, 2026-07-03):** Fresh SIGN isolation pin `pa-99cacc35a73e4dbb` (NOT a Group 1700 artifact; cross-arc research-library maintenance).
 - **Retired at S1704 close:** Fresh SIGN isolation pin `pa-f7417e6ac21d4f23`.
 - **Retired at S1704 open:** Fresh SIGN isolation pin `pa-f1a30b7ed5bb4042` (S1703 owed-retire).
 - **Retired at S1702 close:** Fresh SIGN isolation pin `pa-c3927ab78c52479a`.
@@ -32,125 +33,109 @@ The local wrapper at `tools/pa_local.sh:128` points at Group 1700 arc pin. **Act
 
 **No wrapper rotation owed at next-session open** — arc pin in service through Group 1700 close at S1799.
 
-## READ THIS THIRD — S1704 CAT D TOOLCALLRECORD AUDIT LANDED; NEXT = S1705 CAT E OPSRUNEVENT
+## READ THIS THIRD — S1705 CAT E OPS RUN EVENT AUDIT LANDED; NEXT = S1706 CAT F ADJACENT/SEPARATION BOUNDARIES
 
-Session 1704 shipped the **Group 1700 Cat D ToolCallRecord child audit** at `docs/research/domains/observability/1704_observability_cat_d_tool_call_record_audit.md` (`status: active`, `category: child_audit`, `session: 1704`, `child_slot: P4`, `domain_slug: observability`, `research_group: 1700`, `head_commit`: (this session's commit), `authority: child-audit`; ~1050 lines post-fold; playbook §11.2 20-section child audit template FOURTH application under Group 1700; playbook §13 6-parallel-Explore sweep + §14 verifier-loop applied pre-Explore + post-Explore; Rigby SIGN cycle 1 SIGN-with-edits at Medium-High confidence — F1-F4 folds landed pre-commit). **16-consecutive-fully-clean-arms sub-pattern CONFIRMED via D48 21st arm** on arc pin `pa-e7fbacc996b34b44` (single-batch 4-question pattern per S1701/S1702/S1703 precedent).
+Session 1705 shipped the **Group 1700 Cat E OpsRun + OpsRunEvent child audit** at `docs/research/domains/observability/1705_observability_cat_e_ops_run_event_audit.md` (`status: active`, `category: child_audit`, `session: 1705`, `child_slot: P5`, `domain_slug: observability`, `research_group: 1700`, `head_commit`: (this session's commit), `authority: child-audit`; 916 lines pre-fold + ~60 lines added by F1-F7 folds; playbook §11.2 20-section child audit template FIFTH application under Group 1700; playbook §13 6-parallel-Explore sweep + §14 verifier-loop applied pre-Explore + post-Explore; Rigby SIGN cycle 1 SIGN-with-edits at Medium/Medium-High confidence — F1-F7 folds landed pre-commit). **17-consecutive-fully-clean-arms sub-pattern CONFIRMED via D48 22nd arm** on arc pin `pa-e7fbacc996b34b44` (single-batch 4-question pattern per S1701/S1702/S1703/S1704 precedent).
 
-**9 load-bearing findings locked in S1704 audit §1.1 Executive Summary:**
+**9 load-bearing findings locked in S1705 audit §1.1 Executive Summary:**
 
-- **F1 (CRITICAL, §17)** — 100% NULL trace_id at 4144 rows at HEAD (ORM-verified 2026-07-03). All three writer paths hardcode trace_id=None: dispatcher at `core/services/tool_dispatcher.py:961` (comment: "dispatcher trace_id 'td-N-hex' isn't a UUID"), S970 wrapper at `core/agents/base_agent.py:451-459` doesn't thread trace_id, BaseAgent default's inline recorder at `core/agents/base_agent.py:3302-3310` also doesn't. Kills S1703 F9 Option B (trace_id spine) at runtime + kills `deliverable_provenance.py:105` chain empirically for every deliverable.
-- **F2 (HIGH, §17)** — ToolCallRecord has NO `execution_id` + NO `tool_call_id` + NO `call_id` + NO `celery_task_id` + NO `task_id` columns. Only correlation candidates are `trace_id` (F1 empty), `conversation_id` (21.9% populated, PA subset), `agent_name` (semantic string match, 39 distinct values). Confirms S1702 F9 + S1703 F6 accounting-rule enforceability gap from Cat D side.
-- **F3 (MEDIUM, verifier-loop corrected, §14+§17)** — Pre-Explore prior "31 unwrapped agents write ZERO rows" was OVERSTATED. Post-Explore verifier correction: 31 AGENT_MAP agents inherit BaseAgent's default `_execute_tool_call` at :3168-3316 — the default has its OWN `finally`-block writer at :3302 (S1085 pattern tagged at :3188 — "Record built-in tool calls (wrapper only catches subclass overrides)"). Empirically 29 of 31 base-inherited agents show 0 rows at HEAD — an idle/pure-LLM-agent distribution, NOT a coverage-mechanism bug.
-- **F4 (MEDIUM, §17)** — `analyze_pa_tool_patterns` (`core/tasks.py:12375` → `tasks_agents.py:6124`) + `aggregate_tool_call_stats` (`core/tasks.py:8282` → `tasks_ops.py:3325-3386`) both DEFINED as `@shared_task`, both queue-routed via settings.py:1294 + :1580, but NEITHER in `core/celery.py` beat schedule NOR present in `PeriodicTask` table (0 matches). Consequence: PAToolInsight=0 rows + ToolCallAggregate=0 rows at HEAD. WRITE-ONLY-FORGOTTEN pattern from Group 1500 F.B3 reproduces here.
-- **F5 (MEDIUM, §15)** — No date-based retention for any of the three Cat D tables. Cat A precedent (`CELERY_TASK_EVENT_RETENTION_DAYS`) exists; Cat B has watchdog but no retention (S1702 F4 HIGH); Cat D has neither. 4144 rows over 20 days extrapolates to ~73k rows/year at current cadence.
-- **F6 (POSITIVE differentiator vs S1703 F4, §7+§9)** — PA path DOES write 907 ToolCallRecord rows (22% of total) via `ToolDispatcher.execute(agent_name='PersonalAssistant', conversation_id=…, pa_trace_id=…)` invoked from `unified_pa_entrypoint.py:1830+`. **Material Cat D vs Cat C difference**: S1703 F4 (CRITICAL) reported Cat C zero PA coverage; Cat D has partial PA coverage via the dispatcher.
-- **F7 (LOW, §17)** — Two dead-writer methods verified via zero-caller grep. Retained per `feedback_verify_before_deleting_dead_code.md` memory rule.
-- **F8 (LOW, §14+§17)** — No Django admin registration for ToolCallRecord / ToolCallAggregate / PAToolInsight. Analog to Cat C T-11 (S1703 §15).
-- **F9 (D74 axis contribution, §9)** — Cat D **blocks all four spine-posture options** unless a primitive is populated at write time. Cat D is **actively broken for Option B today** (100% NULL trace_id runtime credibility problem) vs **incomplete-not-broken for Option A** (execution_id column absent — schema absence rather than runtime failure). Option B has smallest schema lift (column exists + indexed) but the coordination lift is equivalent to Option A's.
+- **F1 (HIGH, §17)** — 0/224 OpsRunEvent rows carry cross-cat correlation IDs in `detail` JSON at HEAD (ORM-verified 2026-07-03: execution_id=0, trace_id=0, task_id=0, tool_call_id=0, agent_execution_id=0, llm_call_id=0, celery_task_id=0). DESIGN-INTENT writer at `core/signals/rigby_delegation_signals.py:79-84` (Session 1250 PR 8) IS built to populate `execution_id` in detail on delegated-execution post-save, but handler is gated by `settings.RIGBY_DELEGATION_ENABLED` (default `False` per `rigby_delegation_signals.py:22-25`). Distinct from S1704 F1 (Cat D schema+runtime failure): Cat E is intentionally-flag-gated (DESIGN-INTENT-LATENT).
+- **F2 (HIGH, §17)** — Cat E schema has NO cross-cat correlation columns. Only `mission_id` (indexed, mission-domain only) + implicit `run` FK. Parallel to S1704 F2.
+- **F3 (MEDIUM, verifier-loop-corrected, §14+§17)** — CLAUDE.md at :150-172 + PLATFORM_INVENTORY autoblock claim "3 Employees" but registry `_EMPLOYEES_BY_HANDLE` at `core/employees/jobs.py` has **4** handles verified via ORM: rigby (docs_manager), platform_auditor (platform_audit), chief_of_staff (morning_brief), **bug_triage_specialist (triage_daily — added S1267 PR 4.1)**. Runtime works correctly; drift on-doc-only. Owed to xx99 anchor-update.
+- **F4 (POSITIVE differentiator vs S1704 F4, §7+§9)** — CTO/COO/Trend Analysis daily diagnostic pipelines EXIST at `core/services/diagnostics/{cto_daily,coo_daily}.py` + `core/services/scheduled_diagnostic_runner.py` AND ARE beat-wired at `core/celery.py:306-329` at 07:15/07:30/07:45 Denver (queue: long_running, expires: 7200). NOT WRITE-ONLY-FORGOTTEN. Material Cat E vs Cat D difference: S1704 F4 found two aggregation tasks beat-orphan; Cat E has three fully-wired daily aggregations.
+- **F5 (MEDIUM, §9+§17)** — But those three daily aggregations do NOT consume OpsRunEvent (CTO reads CeleryTaskEvent + AgentExecution; COO reads Deliverable + ActionItem + Initiative backlog; Trend Analysis reads LegacySpiderData + SignalCluster). **OpsRunEvent has ZERO downstream aggregation consumer.** Resolves parent §5.E producer-vs-consumer question: OpsRunEvent is a **PRODUCER-ONLY primary source of mission telemetry**. Canonical verdict at HEAD per Rigby SIGN Q3(d) fold; could evolve if future work introduces cross-table correlation IDs + explicit aggregation pipeline — post-arc T-slot.
+- **F6 (MEDIUM, §15)** — No date-based retention for OpsRun/OpsRunEvent. Parallel to S1704 F5 + S1702 F4. Current cadence: 36 OpsRun over 20 days → ~657/year projected; 224 OpsRunEvent → ~4,088/year projected. Small cadence but unaudited-headroom.
+- **F7 (MEDIUM, §9+§17)** — `evidence_for_mission` join at `docs/topics/employee-os.md:64-65` EMPIRICALLY BROKEN for ToolCallRecord — two orthogonal write-gap paths (S1704 F1 100% NULL trace_id + Cat D dispatcher never threads `parameters.ops_run_id`). LLMCallEvent join by `metadata__ops_run_id` WORKS (`mission_verdict.py:117-150` populates). D4 HIGH held per Rigby SIGN Q2(b) fold (Chris-facing operator surface justifies HIGH even though upstream root cause is Cat D-side).
+- **F8 (POSITIVE, §7+§13)** — MissionRunner nine invariants I1-I9 all VERIFIED at HEAD via source read + contract test at `test_mission_runner.MissionRunnerImportContractTests` @ `core/tests/test_mission_runner.py:181-250`. Cat E writer-mechanism maturity **STABLE**.
+- **F9 (D74 axis contribution, §9)** — Cat E provides **LATENT-VIABLE-BUT-FLAG-GATED evidence** for spine correlation posture. Distinct axis cell from Cat D actively-broken (S1704 F1) + Cat C coverage-gap (S1703 F4). Cat E is NOT actively-broken and NOT schema-broken. Rigby SIGN Q3(b) fold nuance: flipping the Cat E flag DOES yield partial usefulness on the Cat E → Cat C axis via execution_id detail-JSON thread, even if Cat D remains broken; ToolCallRecord join (F7) remains blocking irrespective of flag state.
 
-**§9 D74 axis-contribution:** Cat D provides load-bearing NEGATIVE evidence for spine correlation posture — all four S1703 F9 options collapse to same Cat D prerequisite (populate a spine primitive at write time). This is the load-bearing Cat D evidence for the xx99 posture decision.
+**§9 D74 axis-contribution:** Cat E adds a fourth axis cell (LATENT-VIABLE-BUT-FLAG-GATED) to the cross-cat correlation matrix. Cat E is the "cheapest to unblock" for Option B via `RIGBY_DELEGATION_ENABLED=True`, but by itself resolves nothing for the ToolCallRecord join.
 
-**§16 Boundary violation matrix: 5 candidates all LEGITIMATE.** ToolDispatcher._record_tool_call_sync + BaseAgent._record_tool_call + ToolCallRecord.record classmethod + unified_pa_entrypoint._record_tool_call (deprecated but retained) + test fixtures — no unexpected writer sites via grep.
+**§16 Boundary violation matrix: 5 candidates all LEGITIMATE.** MissionRunner + OpsRunTracker + rigby_event_intake + rigby_delegation_signals (flag-gated) + mission_verdict PA tool — no unexpected writer sites via grep. BodyCoordinator NOT integrated (I9 boundary held). `tasks_ops.py` cross-imports from `core.tasks` are LEGITIMATE extraction artifact per file header.
 
-**Maturity STABLE for writer mechanism + PARTIAL for coverage + BROKEN for cross-cat correlation contract + DEAD for downstream pipelines + Risk HIGH.**
+**Maturity STABLE for writer mechanism (F8 I1-I9 verified) + PARTIAL for coverage + NAMED-BUT-BROKEN for cross-cat correlation contract (F7) + STRONG for downstream orthogonal (F4) + EMPTY for OpsRunEvent-consuming pipelines (F5) + Risk MEDIUM.**
 
-**Rigby SIGN cycle 1 SIGN-with-edits at Medium-High confidence** on arc pin `pa-e7fbacc996b34b44` (fresh SIGN pin `pa-f7417e6ac21d4f23` minted per playbook §15 but routed-around by `tools/pa_local.sh:128` wrapper hard-code — S1600/S1700/S1701/S1702/S1703 precedent applies; fresh SIGN pin retired at S1704 close per §16 with `updated_count=1, retired=true`). **F1-F4 folds landed pre-commit:**
+**Rigby SIGN cycle 1 SIGN-with-edits at Medium/Medium-High confidence** on arc pin `pa-e7fbacc996b34b44` (fresh SIGN pin `pa-09c46ee3a0d34069` minted per playbook §15 but routed-around by `tools/pa_local.sh:128` wrapper hard-code — S1600/S1700/S1701/S1702/S1703/S1704 precedent applies; fresh SIGN pin retired at S1705 close per §16 with `updated_count=1, retired=true, previously_active=true`). **F1-F7 folds landed pre-commit:**
 
-- **F1 (Medium)** — §1.1 F9 + §9.2 spine bottom-line wording tightened. Replaced "negative evidence on all four options equally" with "blocks all options; actively broken for Option B today (100% NULL trace_id)" + explicit Option A [incomplete-not-broken] vs Option B [broken-not-blocked] distinction + spine-lift decomposition.
-- **F2 (Low)** — §14 drift D7 severity escalated MEDIUM → HIGH + new drift row D9 HIGH added for parent §3.B accounting-rule column-set citation.
-- **F3 (Low)** — §1.1 F9 + §9.2 explicit "schema lift vs coordination lift" decomposition for Option B.
-- **F4 (Low)** — §19 R2 addendum: R2 F1 trace_id write coverage repair is gating prerequisite for Option B posture evaluation.
+- **F1 (Q2(b) Medium)** — §14 D4 severity justification block (HIGH held for Chris-facing operator surface despite upstream root cause).
+- **F2 (Q3(b) Medium-High)** — §1.1 F9 nuance about partial Cat E usefulness of flag flip via execution_id detail-JSON thread (unlocks Cat E → Cat C axis even if Cat D remains broken).
+- **F3 (Q3(d) Medium)** — §1.1 F5 canonical verdict block (producer-only at HEAD; could evolve post-arc if future work adds correlation IDs + aggregation pipeline).
+- **F4 (Q4(a) Medium)** — §19 R2 sequencing note (lowest-cost lever but should be sequenced after R1 D74 posture decision).
+- **F5 (Q4(b) Medium)** — §19 R3 cross-cat remediation scope (HIGH held but remediation depends on S1704 R2 + S1703 R1).
+- **F6 (Q4(c) Medium)** — §19 R6 1-2 sentence xx99 §7.4 scope discipline.
+- **F7 (Q4(d) Medium)** — §19 R2 scope discipline per playbook §14.5 (record recommended toggle as evidence-plan decision, do NOT implement flag flip during xx99).
 
-**Rigby CONFIRM verdicts (no folds required beyond F1-F4):** Q1 coverage-completeness High + Q2 drift-severity Medium-High + Q3 D74 axis correctness Medium-High + Q4 R1-R12 ranking + xx99 scope discipline Medium-High.
+**Rigby CONFIRM verdicts:** Q1 coverage-completeness Medium-High (SIGN-clean) + Q2 drift-severity Medium (1 fold) + Q3 D74 axis correctness Medium-High (2 folds) + Q4 R1-R12 ranking + xx99 scope discipline Medium (4 folds).
 
-**Session close artifacts committed at S1704 close:**
+**Session close artifacts committed at S1705 close:**
 
 ```
-docs/research/domains/observability/1704_observability_cat_d_tool_call_record_audit.md  [new; ~1050 lines post-fold; Cat D child audit; F1-F4 folds landed pre-commit; FOURTH child under Group 1700]
-docs/research/ARCHITECTURE_INDEX.md                                                     [modified — v46 → v47 with §1.50 S1704 registration + §8 timeline S1704 row + line-6 v47 preamble]
-docs/research/OPEN_ARCS.md                                                              [modified — Group 1700 In-progress row current-child updated S1703 → S1704; line-6 preamble bumped]
-docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md                 [new — S1704 handoff]
-00-START-NEXT-SESSION.md                                                                 [modified — this file; S1704 Cat D CLOSED; next-session priority = S1705 Cat E OpsRunEvent]
+docs/research/domains/observability/1705_observability_cat_e_ops_run_event_audit.md  [new; ~975 lines post-fold; Cat E child audit; F1-F7 folds landed pre-commit; FIFTH child under Group 1700]
+docs/research/ARCHITECTURE_INDEX.md                                                   [modified — v47 → v48 with §1.51 S1705 registration + §8 timeline S1705 row + line-6 v48 preamble]
+docs/research/OPEN_ARCS.md                                                            [modified — Group 1700 In-progress row current-child updated S1704 → S1705]
+docs/handoffs/SESSION_1705_OBSERVABILITY_CAT_E_OPS_RUN_EVENT_AUDIT.md                  [new — S1705 handoff]
+00-START-NEXT-SESSION.md                                                              [modified — this file; S1705 Cat E CLOSED; next-session priority = S1706 Cat F Adjacent/Separation Boundaries]
 ```
 
-Handoff: `docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md`.
+Handoff: `docs/handoffs/SESSION_1705_OBSERVABILITY_CAT_E_OPS_RUN_EVENT_AUDIT.md`.
 
-## READ THIS FOURTH — MID-ARC CROSS-DOMAIN REFRESH LANDED POST-S1704 (2026-07-03)
+### NEXT-SESSION MISSION — S1706 CAT F ADJACENT/SEPARATION BOUNDARIES CHILD AUDIT (D72 P6 slot — LAST CHILD BEFORE S1799 xx99)
 
-**Between the S1704 close and this handoff, an ad-hoc mid-arc refresh landed at `docs/research/platform/cross_domain_integration_audit.md` §14 (append-only Post-S1274 Arc-Close Refresh Log). This is NOT a Group 1700 artifact — it is cross-arc research library maintenance triggered mid-Group-1700 by Chris directive.**
+Per D72 P6 slot + parent §5 sequence: **S1706 Cat F audit** — Adjacent/Separation Boundaries. This is the **LAST child audit before S1799 xx99 canonical summary** (parent's 6-child sequence P1-P6 + xx99 P7 concludes).
 
-**What shipped:**
+Per parent §5.F six sub-slots (Rigby SIGN cycle 1 F2 fold at S1700 open established sub-slotting to prevent internal scope-magnet):
 
-- **PR #2843** = `800fd957` — `docs(cross-domain-audit): v3 append-only refresh log after Group 1300/1400/1500/1600 arc closes`. Adds §14 (~397 lines) to `cross_domain_integration_audit.md`. S1274 v2 baseline (§1–§13) preserved verbatim. §14 subsections: §14.0 vocabulary + source-scope; §14.1 arc-close inventory; §14.2 Memory (S1399) refinements + new connections; §14.3 Revenue (S1499); §14.4 Sports (S1599); §14.5 Content (S1699); §14.6 cross-arc pattern crystallizations CX-P1..CX-P6; §14.7 refresh gaps; §14.8 reserved for Group 1700 xx99 close. Frontmatter: v3 verifier_loop entry; `last_verified: 2026-07-03`; 4 arc canonical summaries added to `companion_anchors`.
-- **PR #2844** = `09fa83f9` — `docs: refresh RAG cascade artifacts after cross-domain-audit v3 refresh merge`. Post-merge 4+1 step docs cascade run. Refreshes `docs/INDEX.md` + `docs/_provenance.json`. Cascade steps: `build_docs_index` (2859 docs) → `build_rag_corpus` (28036 chunks) → `sync_docs_index_to_documents` (2 updated / 2857 skipped / 0 errors) → `embed_documents --all-unembedded` (4 docs / 315 chunks — the S1703 + S1704 audits picked up here in the same run) → `build_docs_provenance` (2309 docs; HIGH=1491 / MEDIUM=351 / LOW=3 / UNKNOWN=464).
+- **F.a HeartBeat / Body Systems** — `HeartBeat` model + BodyVitalsService + 9-body-system health scan. **Stop condition:** catalog export gap + cold-start correctness issue (S1273 lines 1964-1965); do NOT design the export pipeline or fix cold-start.
+- **F.b SLO framework audit** — single ad-hoc `check_learning_loop_slo` task at `core/tasks.py:12492` (S1273 line 1969). **Stop condition:** catalog what SLO coverage exists today (single task; no meta-framework); do NOT design systemic SLO framework.
+- **F.c Event-model catalog + WRITE-ONLY-FORGOTTEN audit** — 14+ event-shaped models from S1273 lines 1912-1917 (DeliverableEvent + ImpactEvent + EngagementEvent + TriggerEvent + FleetEvent + CockpitIncidentEvent + CockpitAutopilotEvent + ThreatEvent + ABTestEvent + ConversionEvent + BadContextEvent + RelationshipEvent + AuditLog + NotificationLog). **Stop condition:** catalog producer/consumer wiring per model; do NOT act on deprecation decisions (Group 1900 territory).
+- **F.d Doc-claim verifier drift as meta-observability signal** — `core/services/doc_claim_verification.py` + `verify_doc_claims` command. **Stop condition:** catalog whether verifier drift is a telemetry-worthy signal; do NOT integrate verifier drift into observability infrastructure or fix verifier bugs.
+- **F.e Observability↔Event-Architecture terminology boundary** — clarify where "Observability" ends and "Event System" begins. **Stop condition:** produce terminology recommendation for xx99 §5 posture-decision brief; do NOT rename subsystems or refactor terminology at HEAD.
 
-**Rigby SIGN status for cross-domain refresh:**
+Cat F canonical questions the child audit gathers evidence for:
 
-- SIGN-with-edits cycle 1 substantive at Medium-High confidence via fresh isolation pin `pa-99cacc35a73e4dbb` (retired post-fold with `force=true`, 8 rows updated).
-- 8 folds + 1 nice-to-have landed pre-commit. F1 (MUST-FIX) = §14.4 Sports Signal Engine row relabel to `MISSING + POSTURE-PENDING (remedy)`. F2/F3 = §14.3 Revenue Observability row wording + scope-leak source anchor fix. F4 = §14.5 Content → Memory pipeline-side clarification. F5 = §14.0 source scope narrowing. F6 = CX-P2 single-arc scope-honest rename. F7 = **CX-P6 NEW Parallel-schema drift pattern** (Revenue + Sports 2-arc evidence). F8 = POSTURE-PENDING reframed as overlay tag, not a 5th peer classification. Plus CX-P5 F1/F4-CANDIDATE discipline sub-bullet + CX-P6 abstraction-level opener sentence.
-- 0 must-fix outstanding; 0 severity flips at commit-time. Verdict: **SIGN-clean-post-folds**.
+- **Inherits from S1705 F6:** Does the retention-policy gap extend to any of the 14+ Cat F event-shaped models? Which have retention, which don't?
+- **Inherits from S1705 F5:** Are any of the Cat F event-shaped models PRODUCER-ONLY vs consumer? Which have downstream aggregation pipelines?
+- **Inherits from S1705 F4:** Are any Cat F event models beat-wired to CTO/COO/Trend Analysis daily (or analog)? Which are WRITE-ONLY-FORGOTTEN like S1704 F4?
+- **Inherits from S1705 F1:** Does the HeartBeat export gap have DESIGN-INTENT-LATENT flag-gated writer or SCHEMA+RUNTIME failure like Cat D F1?
+- **F.c cross-arc handoffs:** Group 1500 §14.3 SportsBettingBrief WRITE-ONLY-FORGOTTEN precedent detection + Group 1600 T0/Gate DeliverableEvent consumer-contract handoff.
+- **F.e xx99 posture question:** Should Group 1700 catalog terminology boundary as strict / permeable / not-yet-decided?
 
-**Consequences for next-session open:**
+**S1706 audit shape:**
 
-- **Docs cascade is FRESH** — post-merge 4+1 step cascade completed at PR #2844 merge. **Standby Claude does NOT need to re-run cascade at S1705 open** unless further arc/session work modifies docs.
-- **HEAD commit at next-session open is `09fa83f9`** (cascade artifacts PR merge), NOT `main` from S1704 close (`a69d7421`). Any branch cut for S1705 branches off `09fa83f9`.
-- **No pin rotations owed** — SIGN pin `pa-99cacc35a73e4dbb` retired; `tools/pa_local.sh:128` still points at Group 1700 arc pin `pa-e7fbacc996b34b44`.
-- **Rigby corpus is up-to-date** — the §14 refresh content is now embedded and searchable via `search_docs` + `kb_tool semantic_search`.
-- **Group 1700 xx99 (S1799) canonical summary will need to consume §14.8** — currently reserved as a placeholder for the Observability arc close. When S1799 lands, its §7 anchor-update recommendations should include populating §14.8 in the cross-domain refresh log (analog to how §14.2–§14.5 consume the prior four arc closes).
-
-**Reading pointer:** `docs/research/platform/cross_domain_integration_audit.md` §14 (line 1977 onward, 2346 lines total). CX-P6 Parallel-schema drift pattern is at §14.6 and is 2-arc evidenced (Revenue F.E3 + Sports RealtimeIntelligenceEngine + `/ws/dbao/` MOCK-DATA-CONSUMER + DBAO NAMING-CONVENTION-WITHOUT-MATERIALIZATION) with same root cause: no declared source-of-truth hierarchy between mainline and intelligence/demo/realtime planes.
-
-### NEXT-SESSION MISSION — S1705 CAT E OPSRUNEVENT CHILD AUDIT (D72 P5 slot)
-
-Per D72 P5 slot + parent §5 sequence: **S1705 Cat E audit** — OpsRun + OpsRunEvent.
-
-Cat E canonical questions the child audit gathers evidence for:
-
-- Does `MissionRunner` (`core/employees/mission_runner.py`) actually write OpsRun rows at HEAD (Employee OS integration reality check per parent §3.E load-bearing question)?
-- Are there orphan OpsRun rows (missions started but no MissionRunner integration)?
-- How does OpsRunEvent correlate to the 4 prior layers (CeleryTaskEvent, LLMCallEvent, AgentExecution, ToolCallRecord)? Is OpsRunEvent a **producer** (introducing its own event contract) or a **consumer** (writing aggregate outcome from prior-layer events)?
-- **Inherits from S1704 F4:** Does MissionRunner + Ops Autopilot exhibit the same WRITE-ONLY-FORGOTTEN pattern (aggregation surface defined but beat-schedule-absent)?
-- **Inherits from S1704 F1:** Does the Employee OS `evidence_for_mission` join at `docs/topics/employee-os.md:64-65` also break because Cat D's trace_id is 100% NULL? Does OpsRunEvent.detail JSON contain trace_id or execution_id references that are populated?
-- **Inherits from S1702 T-8:** Does `MissionRunner` thread `mission_id` into `llm_call_span` metadata (Cat B mission-cost attribution gap)?
-- **Inherits from S1703 F8:** Does the `rigby_delegation_signals` writer (S1703 §10) also write OpsRunEvent lifecycle rows? Does the signal fan-out have the same `.update()` bypass gap?
-- **Cross-arc reference:** Group 1500 §14.3 SportsBettingBrief WRITE-ONLY-FORGOTTEN pattern precedent detection.
-
-Per parent §3.E boundary discipline: **P5 catalogs Ops/Mission telemetry writer coverage + WRITE-ONLY-FORGOTTEN detection + producer-vs-consumer contract framing + cross-layer correlation posture; ADR to activate Rigby v0 event intake (`RIGBY_EVENT_INTAKE_ENABLED=False` per parent §6.2) is post-arc T-slot per §6.3 parked candidate.** Do NOT attempt to design Rigby intake activation in S1705.
-
-**S1705 audit shape:**
-
-- Playbook §11.2 20-section child audit template (child_slot: P5; domain_slug: observability; research_group: 1700).
+- Playbook §11.2 20-section child audit template (child_slot: P6; domain_slug: observability; research_group: 1700).
 - 6-parallel-Explore sub-agents per §13.
 - Parent-Claude verifier-loop per §14 on load-bearing binary claims (pre-Explore + post-Explore).
-- **Required full Rigby SIGN cycle 1** per playbook §15 stage-table child row (not optional light SIGN — child audit is research finding).
-- Fresh SIGN isolation pin per playbook §15 promoted rule (arc pin `pa-e7fbacc996b34b44` continues as arc context; SIGN routing will land on arc pin per S1700/S1701/S1702/S1703/S1704 wrapper hard-code precedent unless wrapper enhancement lands).
-- Applies parent D69-D74 + Cat A S1701 §9 axis evidence + Cat B S1702 F9 axis contribution + Cat C S1703 F9 axis contribution + Cat D S1704 F9 axis contribution.
+- **Required full Rigby SIGN cycle 1** per playbook §15 stage-table child row (D48 23rd arm anticipated).
+- Fresh SIGN isolation pin per playbook §15 promoted rule (arc pin `pa-e7fbacc996b34b44` continues as arc context; SIGN routing will land on arc pin per S1700-S1705 wrapper hard-code precedent).
+- Applies parent D69-D74 + Cat A S1701 §9 axis evidence + Cat B S1702 F9 axis contribution + Cat C S1703 F9 axis contribution + Cat D S1704 F9 axis contribution + Cat E S1705 F9 axis contribution.
 
 Session flow at next-session open:
 
 1. `context-kit orient` (session-open protocol per memory rule).
-2. ~~Check if S1704 artifact set merged to `main`~~ **— DONE (S1704 landed `a69d7421` between sessions).**
-3. ~~If not yet merged: Chris merge + PR merge~~ **— DONE.**
-4. ~~Run post-merge 4-step docs cascade + `build_docs_provenance`~~ **— DONE at PR #2844 = `09fa83f9` (2026-07-03; both S1704 cascade artifacts + cross-domain refresh cascade artifacts landed in a single cascade run). Do NOT re-run at S1705 open unless you modify docs first.**
-5. Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 22nd arm start).
-6. Mint fresh SIGN isolation pin for S1705 via Rigby `session_tool.create_fresh` (title: "Session 1705 — Group 1700 Cat E OpsRunEvent audit — SIGN isolation").
-7. Dispatch 6-parallel Explore sweep on Cat E surface (OpsRun + OpsRunEvent models + MissionRunner writer path + Ops Autopilot pipelines + DiagnosticPipelineService consumer surface + rigby_delegation_signals cross-cat writer per S1703 §10 + producer-vs-consumer contract evidence + WRITE-ONLY-FORGOTTEN detection).
+2. Check if S1705 artifact set merged to `main` (audit doc + INDEX v48 + OPEN_ARCS + handoff + start-here).
+3. If not yet merged: Chris merge + PR merge.
+4. Run post-merge 4-step docs cascade + `build_docs_provenance` per memory rule `feedback_docs_cascade_at_every_close.md`.
+5. Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 23rd arm start).
+6. Mint fresh SIGN isolation pin for S1706 via Rigby `session_tool.create_fresh` (title: "Session 1706 — Group 1700 Cat F Adjacent/Separation Boundaries audit — SIGN isolation").
+7. Dispatch 6-parallel Explore sweep on Cat F surface (five sub-slots F.a-F.e).
 8. Parent-Claude verifier-loop on any pre-Explore binary claims.
-9. Draft S1705 audit per playbook §11.2 20-section template.
-10. Rigby SIGN cycle 1 (single-batch 4-question pattern per S1701/S1702/S1703/S1704 precedent).
+9. Draft S1706 audit per playbook §11.2 20-section template.
+10. Rigby SIGN cycle 1 (single-batch 4-question pattern per S1701-S1705 precedent).
 11. Land Rigby folds pre-commit.
-12. Retire SIGN isolation pin at S1705 close per playbook §16.
-13. Update ARCHITECTURE_INDEX v47 → v48 with §1.51 S1705 registration + §8 timeline row + line-6 preamble.
-14. Update OPEN_ARCS Group 1700 In-progress row with S1705 child close note.
-15. Write S1705 handoff + overwrite this `00-START-NEXT-SESSION.md`.
+12. Retire SIGN isolation pin at S1706 close per playbook §16.
+13. Update ARCHITECTURE_INDEX v48 → v49 with §1.52 S1706 registration + §8 timeline row + line-6 preamble.
+14. Update OPEN_ARCS Group 1700 In-progress row with S1706 child close note. **Prepare row for imminent transition to Awaiting summary** (Group 1700 arc reaches 7/8 = 87.5% at S1706 close; S1799 xx99 canonical summary next).
+15. Write S1706 handoff + overwrite this `00-START-NEXT-SESSION.md` to point at S1799 xx99 canonical summary as next-session priority.
 
-**Not next (unless Chris specifies):** any specific implementation work per playbook §14.5 no-implementation rule. Rigby v0 event intake activation + F4 dark-pipeline reactivation + F1 trace_id write coverage repair are post-arc T-slot per parent §3.E boundary discipline + §6.2 parked candidate.
+**Not next (unless Chris specifies):** any specific implementation work per playbook §14.5 no-implementation rule. HeartBeat export activation + SLO framework design + event-model deprecation decisions + doc-claim verifier integration + terminology renames are all post-arc T-slot per parent §6.
 
-### Post-arc queued items (Chris-gated, inherited from prior arcs + additions from S1704)
+### Post-arc queued items (Chris-gated, inherited from prior arcs + additions from S1705)
 
-- **From S1704 §19:** R1 (HIGH) F9 D74 axis posture decision (Cat D contribution: all four options blocked by same Cat D prerequisite; Option B actively broken today vs Option A incomplete-not-broken) + R2 (HIGH) F1 trace_id write coverage repair — gating prerequisite for Option B posture evaluation per Rigby SIGN F4 fold + R3 (HIGH) F4 mining + aggregation pipeline reactivation (Cat D-internal scope, NOT Group 1900 territory per Rigby Q4 verdict) + R4 (MEDIUM) F2 schema-level correlation columns (execution_id + tool_call_id) + R5 (MEDIUM) F5 retention policy + R6 (MEDIUM) F3 base-inherited-agent activity audit + R7 (MEDIUM) F6 conversation_id backfill + R8 (MEDIUM) T-7 PA history tool + R9 (LOW) F8 admin registration + R10 (LOW) T-9 dead-code cleanup + R11 (LOW) T-13 non-BaseAgent overrides + R12 (LOW) T-11 PAToolInsight dedup enforcement.
-- **From S1704 §14:** D1 LOW parent §3.D 74-agent count drift + D2 MEDIUM agent-system.md :107-113 S970 coverage-claim omits Flow 2/3 + D3 MEDIUM personal-assistant.md omits F6 PA path coverage + D4 LOW PLATFORM_INVENTORY no per-model row count + D5 LOW PLATFORM_WHAT_IT_IS narrative-thin + D7 HIGH parent §5 `tool_call_id` HYPOTHESIS refuted + D8 LOW PAToolInsight docstring dedup contract not schema-enforced + D9 HIGH parent §3.B accounting-rule column-set citation — all owed to xx99 anchor-update PR.
-- **From S1703 §19:** R1 (HIGH) F4 PA path AgentExecution coverage + R2 (HIGH) F1 + F2 landmine + docstring cleanup ADR (xx99 evidence-plan framing only) + R3 (HIGH) F6 ToolCallRecord ↔ AgentExecution correlation posture + R4-R10 additional.
+- **From S1705 §19:** R1 (HIGH) F9 D74 axis posture decision (Cat E contribution: fourth axis cell LATENT-VIABLE-BUT-FLAG-GATED); R2 (HIGH) F1 rigby_delegation flag posture — **sequencing note per Rigby SIGN Q4(a) fold: after R1 posture decision** + **scope discipline per Q4(d) fold: no flip during xx99 per §14.5**; R3 (HIGH) F7 evidence_for_mission join repair — **cross-cat remediation scope per Q4(b) fold: depends on S1704 R2 + S1703 R1**; R4 (MEDIUM) F2 schema-level correlation columns; R5 (MEDIUM) F6 retention policy; R6 (MEDIUM) F5 producer-vs-consumer contract doc — **1-2 sentence canonical note in xx99 §7.4 per Q4(c) fold**; R7 (MEDIUM) F3 employee count drift regen (`generate_platform_inventory` + CLAUDE.md autoblock refresh); R8-R12 LOW.
+- **From S1705 §14:** D1+D2 MEDIUM 3-vs-4 employees drift on CLAUDE.md + PLATFORM_INVENTORY autoblock + D3 LOW parent §5.E scope-clarification + D4 HIGH F7 named-but-broken evidence_for_mission ToolCallRecord join + D5 LOW migration additive-only confirmed + D6 LOW `tasks_ops.py` extraction status ambiguous + D7 INFORMATIONAL rigby_delegation flag OFF + D8 LOW ARCHITECTURE_INDEX §8 timeline drift (S1605/S1606/S1699 missing rows) — all owed to xx99 anchor-update PR.
+- **From S1704 §19:** R1 (HIGH) F9 D74 posture decision + R2 (HIGH) F1 trace_id write coverage repair — gating prerequisite for Option B posture evaluation + R3 (HIGH) F4 mining + aggregation pipeline reactivation + R4-R12 additional.
+- **From S1704 §14:** D1-D9 owed to xx99 anchor-update PR.
+- **From S1703 §19:** R1 (HIGH) F4 PA path AgentExecution coverage + R2 (HIGH) F1 + F2 landmine + docstring cleanup ADR + R3 (HIGH) F6 ToolCallRecord ↔ AgentExecution correlation posture + R4-R10 additional.
 - **From S1703 §14:** D1-D6 owed to xx99 anchor-update PR.
 - **From S1702 §19:** R1 (HIGH) F2 PA path adoption + R2 (HIGH) F1 multi-model dedup posture + R3 (HIGH) F4 retention posture + R4-R10 additional.
 - **From S1702 §14:** D1-D6 owed to xx99 anchor-update PR.
@@ -167,48 +152,51 @@ Session flow at next-session open:
 **FIRST THING next session open:**
 
 1. `context-kit orient`
-2. ~~Check if S1704 artifact set is on `main`~~ **— DONE. HEAD is `09fa83f9` (post-cross-domain-refresh cascade); branch off `main` from there.**
-3. ~~Chris merge + PR merge~~ **— DONE.**
-4. ~~Run post-merge 4-step docs cascade + `build_docs_provenance`~~ **— DONE at PR #2844 = `09fa83f9`. Skip at S1705 open unless doc modifications happen first.**
+2. Check if S1705 artifact set is on `main`
+3. Chris merge + PR merge if not
+4. Run post-merge 4-step docs cascade + `build_docs_provenance` per memory rule
 5. Verify `service_context: local` via `platform_config_tool overview` on arc pin
-6. Mint fresh SIGN isolation pin for S1705 via Rigby `session_tool.create_fresh`
-7. Execute S1705 Cat E OpsRunEvent child audit per D72 P5 slot
+6. Mint fresh SIGN isolation pin for S1706 via Rigby `session_tool.create_fresh`
+7. Execute S1706 Cat F Adjacent/Separation Boundaries child audit per D72 P6 slot
 
 ---
 
 ## PA / Rigby context
 
 - **Arc pin at session start:** `pa-e7fbacc996b34b44` (Group 1700 arc pin; in service through Group 1700 close at S1799). `tools/pa_local.sh:128` points at active arc pin — no rotation needed.
-- **S1704 SIGN routing:** SIGN-with-edits cycle 1 at Medium-High confidence (single-batch 4-question) on arc pin `pa-e7fbacc996b34b44` (S1600/S1700/S1701/S1702/S1703 parent-scoping precedent: arc pin doubles as SIGN pin; fresh SIGN pin `pa-f7417e6ac21d4f23` minted per playbook §15 but routed-around by wrapper hard-code — retired at S1704 close per §16 with `updated_count=1, retired=true`). F1-F4 folds landed pre-commit; single-batch 4-question pattern held clean per D48 21st arm.
+- **S1705 SIGN routing:** SIGN-with-edits cycle 1 at Medium/Medium-High confidence (single-batch 4-question) on arc pin `pa-e7fbacc996b34b44` (S1600/S1700/S1701/S1702/S1703/S1704 parent-scoping precedent: arc pin doubles as SIGN pin; fresh SIGN pin `pa-09c46ee3a0d34069` minted per playbook §15 but routed-around by wrapper hard-code — retired at S1705 close per §16 with `updated_count=1, retired=true, previously_active=true`). F1-F7 folds landed pre-commit; single-batch 4-question pattern held clean per D48 22nd arm.
 - **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin at line 128 currently pointing at Group 1700 active arc pin).
 - **Local worker restart** needs `PA_USE_FUNCTION_CALLING=true` env or Rigby drops to keyword routing. `make celery` handles it; ad-hoc `celery -A core worker` does not.
-- **Rigby SIGN worker-instability pattern (D48 21-arc CODIFICATION-READY-STRENGTHENED-EVEN-FURTHER at S1704 close):** S1405+S1406+S1499+S1501+S1502+S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700+S1701+S1702+S1703+S1704 21-arc pattern confirmed. **SIXTEEN-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700+S1701+S1702+S1703+S1704 CONFIRMED at S1704 close per single-batch-4-question criterion.** D48 preemptive stability-probe gate 22nd arm anticipated at next-session S1705 child audit open. Memory rules `feedback_rigby_sign_worker_instability_recovery.md` + `feedback_rigby_deliverable_content.md` + `feedback_rigby_tool_verification.md` apply.
+- **Rigby SIGN worker-instability pattern (D48 22-arc CODIFICATION-READY-STRENGTHENED-EVEN-FURTHER at S1705 close):** S1405+S1406+S1499+S1501+S1502+S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700+S1701+S1702+S1703+S1704+S1705 22-arc pattern confirmed. **SEVENTEEN-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700+S1701+S1702+S1703+S1704+S1705 CONFIRMED at S1705 close per single-batch-4-question criterion.** D48 preemptive stability-probe gate 23rd arm anticipated at next-session S1706 child audit open. Memory rules `feedback_rigby_sign_worker_instability_recovery.md` + `feedback_rigby_deliverable_content.md` + `feedback_rigby_tool_verification.md` apply.
 
 ## Repo state at next-session open
 
-- **Branch state (2026-07-03 post-cross-domain-refresh):** `main` at HEAD `09fa83f9` (PR #2844 cross-domain cascade artifacts). S1704 audit doc + cascade + cross-domain refresh v3 + cross-domain cascade all merged. Working tree clean; branch off `main` for S1705.
+- **Branch state (2026-07-03 post-S1705):** `main` at HEAD (this session's commit). S1705 audit doc + INDEX v48 + OPEN_ARCS + handoff + start-here refresh all landed. Working tree clean; branch off `main` for S1706.
 - **Head-commit ledger (2026-07-03 activity, oldest → newest):**
   - `690311df` — PR #2841 S1704 Cat D ToolCallRecord audit
   - `a69d7421` — PR #2842 S1704 cascade artifacts
   - `800fd957` — PR #2843 cross-domain-audit v3 append-only refresh (§14)
-  - `09fa83f9` — PR #2844 cross-domain cascade artifacts (current HEAD)
-- **Handoff continuity:** S1704 handoff at `docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md`. No new handoff for the mid-arc cross-domain refresh (it is not a session; it is ad-hoc research-library maintenance documented in the PR bodies + `verifier_loop` v3 entry inside the target doc). Prior handoffs: SESSION_1703 (Observability Cat C AgentExecution); SESSION_1702 (Observability Cat B LLMCallEvent); SESSION_1701 (Observability Cat A CeleryTaskEvent); SESSION_1700 (Observability arc-open parent scoping); SESSION_1699 (Content Group 1600 xx99 canonical summary); SESSION_1606 (Content Cat F LAST child); SESSION_1605-1601 (Content Cat E/A/B/D/C children); SESSION_1600 (Content arc-open parent scoping); SESSION_1599 (Sports arc-close canonical summary); SESSION_1506 → SESSION_1500 (Sports arc); SESSION_1499 → SESSION_1400 (Revenue arc); SESSION_1399 (Memory Group 1300 canonical summary).
-- **ARCHITECTURE_INDEX version:** v47 (bumped this session with §1.50 S1704 registration + §8 timeline S1704 row + line-6 v47 preamble). Next bump at S1705 child audit close (v47 → v48 with §1.51 S1705 registration).
-- **OPEN_ARCS state:** Group 1700 row remains In-progress; current-child updated S1703 → S1704. Group 1600 remains Closed; Group 1500 remains Closed; Group 1400 remains Closed; Group 1300 remains Closed.
+  - `09fa83f9` — PR #2844 cross-domain cascade artifacts
+  - `a991971a` — PR #2845 start-here mid-arc cross-domain refresh context
+  - (this session's commit) — S1705 Cat E audit + INDEX v48 + OPEN_ARCS + handoff + start-here
+- **Handoff continuity:** S1705 handoff at `docs/handoffs/SESSION_1705_OBSERVABILITY_CAT_E_OPS_RUN_EVENT_AUDIT.md`. Prior handoffs: SESSION_1704 (Observability Cat D ToolCallRecord); SESSION_1703 (Observability Cat C AgentExecution); SESSION_1702 (Observability Cat B LLMCallEvent); SESSION_1701 (Observability Cat A CeleryTaskEvent); SESSION_1700 (Observability arc-open parent scoping); SESSION_1699 (Content Group 1600 xx99 canonical summary); SESSION_1606 (Content Cat F LAST child); SESSION_1605-1601 (Content Cat E/A/B/D/C children); SESSION_1600 (Content arc-open parent scoping); SESSION_1599 (Sports arc-close canonical summary); SESSION_1506 → SESSION_1500 (Sports arc); SESSION_1499 → SESSION_1400 (Revenue arc); SESSION_1399 (Memory Group 1300 canonical summary).
+- **ARCHITECTURE_INDEX version:** v48 (bumped this session with §1.51 S1705 registration + §8 timeline S1705 row + line-6 v48 preamble). Next bump at S1706 child audit close (v48 → v49 with §1.52 S1706 registration).
+- **OPEN_ARCS state:** Group 1700 row remains In-progress; current-child updated S1704 → S1705. **S1706 close will trigger Awaiting summary transition preparation** (S1799 xx99 is next after S1706). Group 1600 remains Closed; Group 1500 remains Closed; Group 1400 remains Closed; Group 1300 remains Closed.
 
 ## Next-session first-action punch list
 
 - [ ] `context-kit orient`
-- [x] ~~Check if S1704 artifact set is on `main`~~ **— YES (HEAD `09fa83f9`)**
-- [x] ~~Chris merge + PR merge~~ **— DONE (PRs #2841, #2842, #2843, #2844 all merged 2026-07-03)**
-- [x] ~~Post-merge 4-step docs cascade + `build_docs_provenance`~~ **— DONE at PR #2844**
-- [ ] Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 22nd arm start)
-- [ ] Mint fresh SIGN isolation pin for S1705 via Rigby `session_tool.create_fresh`
-- [ ] Execute S1705 Cat E OpsRunEvent child audit per playbook §11.2 20-section template
+- [ ] Check if S1705 artifact set is on `main`
+- [ ] Chris merge + PR merge if not
+- [ ] Post-merge 4-step docs cascade + `build_docs_provenance` per memory rule
+- [ ] Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 23rd arm start)
+- [ ] Mint fresh SIGN isolation pin for S1706 via Rigby `session_tool.create_fresh`
+- [ ] Execute S1706 Cat F Adjacent/Separation Boundaries child audit per playbook §11.2 20-section template
 
 ## Reference — where to look
 
-- **S1704 Cat D audit doc:** `docs/research/domains/observability/1704_observability_cat_d_tool_call_record_audit.md` — playbook §11.2 20-section template FOURTH application under Group 1700; §1.1 F1-F9 lock-in table; §17 F1 100% NULL trace_id (ORM-verified); §17 F2 NO execution_id/tool_call_id/call_id/celery_task_id/task_id columns; §14 F3 verifier-loop-corrected 31-agent coverage story; §17 F4 WRITE-ONLY-FORGOTTEN pair; §9 F9 Cat D provides NEGATIVE load-bearing evidence for xx99 D74 posture (all four options blocked by same prerequisite; Option B actively broken vs Option A incomplete-not-broken); §19 R1-R12 follow-on queue; §20.6 Rigby SIGN cycle 1 F1-F4 fold notes.
+- **S1705 Cat E audit doc:** `docs/research/domains/observability/1705_observability_cat_e_ops_run_event_audit.md` — playbook §11.2 20-section template FIFTH application under Group 1700; §1.1 F1-F9 lock-in table; §17 F1 0/224 rows execution_id-in-detail (ORM-verified); §17 F2 no execution_id/trace_id/tool_call_id/celery_task_id/task_id columns; §14 F3 4-vs-3 employee count verifier-loop-corrected drift; §7+§9 F4 CTO/COO/Trend Analysis daily fully beat-wired POSITIVE differentiator vs S1704 F4; §9 F5 producer-only canonical role resolution; §15 F6 no-retention; §9+§17 F7 evidence_for_mission ToolCallRecord join empirically broken; §7+§13 F8 MissionRunner I1-I9 all VERIFIED via source + contract test POSITIVE finding; §9 F9 D74 fourth axis cell LATENT-VIABLE-BUT-FLAG-GATED; §19 R1-R12 follow-on queue; §20.6 Rigby SIGN cycle 1 F1-F7 fold notes.
+- **S1704 Cat D audit doc:** `docs/research/domains/observability/1704_observability_cat_d_tool_call_record_audit.md`.
 - **S1703 Cat C audit doc:** `docs/research/domains/observability/1703_observability_cat_c_agent_execution_audit.md`.
 - **S1702 Cat B audit doc:** `docs/research/domains/observability/1702_observability_cat_b_llm_call_event_audit.md`.
 - **S1701 Cat A audit doc:** `docs/research/domains/observability/1701_observability_cat_a_celery_task_event_audit.md`.
@@ -216,27 +204,27 @@ Session flow at next-session open:
 - **S1699 canonical summary doc (fourth §11.3 §10 application):** `docs/research/domains/content/1699_content_canonical_summary.md`.
 - **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (§11.1 parent template + §11.2 child template + §11.3 canonical summary template + §11.3 §10 meta-methodology template + §22 default queue lean).
 - **Research OS:** `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` (§8.1 RESEARCH contract + §12.3 "Start Group NNNN" target).
-- **ARCHITECTURE_INDEX v47:** `docs/research/ARCHITECTURE_INDEX.md` — S1704 §1.50 + line-6 v47 preamble + §8 timeline S1704 row.
-- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1700 In-progress row current-child S1704.
-- **Cat E (OpsRun + OpsRunEvent) entry points for S1705:** `core/models_ops_runs.py:11-117` (OpsRun + OpsRunEvent models; `domain` enum = {ops, mission}) + `core/tasks_ops.py` (writer; introduced S1250 PR3) + `core/employees/mission_runner.py` (Employee OS orchestrator; per CLAUDE.md "no separate MissionRun model — uses `OpsRun(domain='mission')` + `OpsRunEvent` audit rows") + `core/services/ops_autopilot/` (DiagnosticPipelineService consumer: CTO daily + COO daily + Trend Analysis daily).
-- **Topic docs:** `docs/topics/employee-os.md` (Employee OS MissionRunner + OpsRun narrative; :64-65 `evidence_for_mission` join surface; may exhibit F1 100% NULL trace_id failure from Cat E side).
+- **ARCHITECTURE_INDEX v48:** `docs/research/ARCHITECTURE_INDEX.md` — S1705 §1.51 + line-6 v48 preamble + §8 timeline S1705 row.
+- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1700 In-progress row current-child S1705; S1706 close will trigger Awaiting summary transition preparation.
+- **Cat F (Adjacent/Separation Boundaries) entry points for S1706:** Six sub-slots per parent §5.F — F.a HeartBeat: `core/models_heart.py:HeartBeat` + `core/services/heart.py` + `core/services/body_vitals.py:run_all_systems_scan`; F.b SLO framework: `core/tasks.py:12492:check_learning_loop_slo`; F.c 14+ event-shaped models: `docs/EVENT_SYSTEM_INVENTORY.md` + S1273 lines 1912-1917 catalog (DeliverableEvent + ImpactEvent + EngagementEvent + TriggerEvent + FleetEvent + CockpitIncidentEvent + CockpitAutopilotEvent + ThreatEvent + ABTestEvent + ConversionEvent + BadContextEvent + RelationshipEvent + AuditLog + NotificationLog); F.d doc-claim verifier: `core/services/doc_claim_verification.py` + `verify_doc_claims` command; F.e Observability↔Event-Architecture terminology boundary.
+- **Topic docs:** `docs/topics/employee-os.md` (:64-65 evidence_for_mission gap per S1705 F7); `docs/topics/celery-workers.md` (Cat A entry); `docs/topics/agent-system.md` (Cat C/D entry).
 - **Inventory anchor:** `docs/PLATFORM_INVENTORY.md`.
 - **Narrative anchor:** `docs/PLATFORM_WHAT_IT_IS.md`.
-- **Cross-domain refresh (mid-arc, 2026-07-03):** `docs/research/platform/cross_domain_integration_audit.md` §14 (line 1977+) — appended v3 refresh log consuming Group 1300/1400/1500/1600 arc closes. §14.8 reserved for Group 1700 xx99 close consumption. CX-P6 Parallel-schema drift is 2-arc evidenced (Revenue + Sports).
+- **Cross-domain refresh (mid-arc, 2026-07-03):** `docs/research/platform/cross_domain_integration_audit.md` §14 (line 1977+) — appended v3 refresh log; §14.8 reserved for Group 1700 xx99 close consumption at S1799.
 
 ## Doctor warnings to expect
 
 - Inventory freshness (unchanged this session — research doc; no runtime changes).
-- Handoff numbering continuity — S1704 = FOURTH child under Group 1700; S1705-S1706 children + S1799 xx99 anticipated.
+- Handoff numbering continuity — S1705 = FIFTH child under Group 1700; S1706 child + S1799 xx99 anticipated.
 - Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 remains older than latest handoff (informational; Group 1700 xx99 anchor-update will surface narrative-anchor gap).
-- Docs cascade — run 4-step cascade + `build_docs_provenance` after S1704 PR merges to `main` per memory rule `feedback_docs_cascade_at_every_close.md`.
-- CLAUDE.md 3-vs-4 employees narrative drift — still flagged.
+- Docs cascade — run 4-step cascade + `build_docs_provenance` after S1705 PR merges to `main` per memory rule `feedback_docs_cascade_at_every_close.md`.
+- **CLAUDE.md 3-vs-4 employees narrative drift — CONFIRMED via S1705 F3 (ORM-verified 4 handles).** Explicitly owed to xx99 anchor-update PR.
 - Group 1400 + Group 1500 + Group 1300 post-arc §7 anchor-updates still pending (inherited).
 - Group 1400 + Group 1500 + Group 1600 T1 CRITICAL remediation queues still pending (inherited); Group 1600 T0/Gate R.CONTENT.XX99-ADR-BUNDLE-D65A-D65B-D65C-D65E blocks 20 T1 items.
 - **§8 timeline table drift** — missing rows for S1605 + S1606 + S1699 (Group 1600); owed to follow-up docs PR.
 - **5 doc PRs still owed** for `auto_publish "daily 6 AM"` cross-arc CORRECTION per S1699 §7.4 (not addressed this session per scope discipline).
-- **D48 preemptive stability-probe gate 21st-arm CONFIRMED CLEAN at S1704 close** — 16-consecutive-fully-clean-arms sub-pattern CODIFICATION-READY-STRENGTHENED-EVEN-FURTHER for playbook v3 §15.
+- **D48 preemptive stability-probe gate 22nd-arm CONFIRMED CLEAN at S1705 close** — 17-consecutive-fully-clean-arms sub-pattern CODIFICATION-READY-STRENGTHENED-EVEN-FURTHER for playbook v3 §15.
 - **Playbook v3 §11.1 template promotion:** CONFIRMED-STRENGTHENED via fourth-application (S1700).
-- **Playbook v3 §11.2 template promotion:** FOURTH application under Group 1700 (S1704) CONFIRMED — methodology durable across four child audits in one arc.
+- **Playbook v3 §11.2 template promotion:** FIFTH application under Group 1700 (S1705) CONFIRMED — methodology durable across five child audits in one arc.
 - **Arc pin `pa-e7fbacc996b34b44` in service** through Group 1700 close; wrapper rotation NOT owed at next-session open.
-- **`tools/pa_local.sh:128` wrapper enhancement** — hard-codes arc pin with no runtime `--conversation` override. Fresh SIGN pins minted for child audits get routed to arc pin (S1600/S1700/S1701/S1702/S1703/S1704 precedent applies: arc pin doubles as SIGN pin). Nice-to-have follow-up.
+- **`tools/pa_local.sh:128` wrapper enhancement** — hard-codes arc pin with no runtime `--conversation` override. Fresh SIGN pins minted for child audits get routed to arc pin (S1600/S1700/S1701/S1702/S1703/S1704/S1705 precedent applies: arc pin doubles as SIGN pin). Nice-to-have follow-up.
