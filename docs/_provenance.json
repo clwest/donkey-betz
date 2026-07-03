@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-03T04:11:45+00:00",
+    "generated": "2026-07-03T04:59:13+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "965d5e4687dc",
-    "doc_count": 2299,
-    "commit_count": 7422,
+    "git_head": "55b62da97938",
+    "doc_count": 2301,
+    "commit_count": 7426,
     "confidence_breakdown": {
-      "HIGH": 1481,
+      "HIGH": 1483,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2507,7 +2507,7 @@
         1302,
         1601
       ],
-      "commit_count": 1100,
+      "commit_count": 1102,
       "prs": [
         10,
         11,
@@ -2933,7 +2933,8 @@
         2824,
         2826,
         2828,
-        2830
+        2830,
+        2832
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7243,7 +7244,7 @@
         1217,
         1601
       ],
-      "commit_count": 58,
+      "commit_count": 60,
       "prs": [
         2213,
         2219,
@@ -7278,7 +7279,8 @@
         2824,
         2826,
         2828,
-        2830
+        2830,
+        2832
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17645,6 +17647,21 @@
       "commit_count": 2,
       "prs": [
         2831
+      ]
+    },
+    "docs/handoffs/SESSION_1700_OBSERVABILITY_ARC_OPEN.md": {
+      "originating_session": 1700,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "55b62da9",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1700): Group 1700 Observability / Telemetry / SLOs arc-open parent scoping \u2014 SIGN-with-edits cycle 1 (F1-F6 folds landed) \u2014 FIRST session under Group 1700 (#2833)",
+      "sessions_touched": [
+        1700
+      ],
+      "commit_count": 2,
+      "prs": [
+        2833
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32738,9 +32755,10 @@
         1604,
         1605,
         1606,
-        1699
+        1699,
+        1700
       ],
-      "commit_count": 67,
+      "commit_count": 69,
       "prs": [
         2773,
         2775,
@@ -32770,7 +32788,8 @@
         2825,
         2827,
         2829,
-        2831
+        2831,
+        2833
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32833,9 +32852,10 @@
         1604,
         1605,
         1606,
-        1699
+        1699,
+        1700
       ],
-      "commit_count": 62,
+      "commit_count": 64,
       "prs": [
         2773,
         2775,
@@ -32867,7 +32887,8 @@
         2825,
         2827,
         2829,
-        2831
+        2831,
+        2833
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33144,6 +33165,21 @@
       "prs": [
         2781,
         2784
+      ]
+    },
+    "docs/research/domains/observability/1700_observability_domain_scoping.md": {
+      "originating_session": 1700,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "55b62da9",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1700): Group 1700 Observability / Telemetry / SLOs arc-open parent scoping \u2014 SIGN-with-edits cycle 1 (F1-F6 folds landed) \u2014 FIRST session under Group 1700 (#2833)",
+      "sessions_touched": [
+        1700
+      ],
+      "commit_count": 2,
+      "prs": [
+        2833
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
