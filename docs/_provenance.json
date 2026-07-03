@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-03T18:46:09+00:00",
+    "generated": "2026-07-03T19:31:51+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "726714fdf1be",
-    "doc_count": 2305,
-    "commit_count": 7434,
+    "git_head": "8afbc4586244",
+    "doc_count": 2307,
+    "commit_count": 7438,
     "confidence_breakdown": {
-      "HIGH": 1487,
+      "HIGH": 1489,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2509,7 +2509,7 @@
         1700,
         1701
       ],
-      "commit_count": 1108,
+      "commit_count": 1110,
       "prs": [
         10,
         11,
@@ -2939,7 +2939,8 @@
         2832,
         2834,
         2835,
-        2836
+        2836,
+        2838
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7248,9 +7249,10 @@
         1216,
         1217,
         1601,
-        1700
+        1700,
+        1701
       ],
-      "commit_count": 64,
+      "commit_count": 66,
       "prs": [
         2213,
         2219,
@@ -7288,7 +7290,8 @@
         2830,
         2832,
         2834,
-        2836
+        2836,
+        2838
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17700,6 +17703,21 @@
       "commit_count": 2,
       "prs": [
         2837
+      ]
+    },
+    "docs/handoffs/SESSION_1703_OBSERVABILITY_CAT_C_AGENT_EXECUTION_AUDIT.md": {
+      "originating_session": 1703,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8afbc458",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1703): Group 1700 Cat C AgentExecution child audit \u2014 SIGN-with-edits cycle 1 (F1-F4 folds landed) \u2014 THIRD child under Group 1700 (#2839)",
+      "sessions_touched": [
+        1703
+      ],
+      "commit_count": 2,
+      "prs": [
+        2839
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32796,9 +32814,10 @@
         1699,
         1700,
         1701,
-        1702
+        1702,
+        1703
       ],
-      "commit_count": 73,
+      "commit_count": 75,
       "prs": [
         2773,
         2775,
@@ -32831,7 +32850,8 @@
         2831,
         2833,
         2835,
-        2837
+        2837,
+        2839
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32897,9 +32917,10 @@
         1699,
         1700,
         1701,
-        1702
+        1702,
+        1703
       ],
-      "commit_count": 68,
+      "commit_count": 70,
       "prs": [
         2773,
         2775,
@@ -32934,7 +32955,8 @@
         2831,
         2833,
         2835,
-        2837
+        2837,
+        2839
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33256,6 +33278,21 @@
       "commit_count": 2,
       "prs": [
         2837
+      ]
+    },
+    "docs/research/domains/observability/1703_observability_cat_c_agent_execution_audit.md": {
+      "originating_session": 1703,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8afbc458",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1703): Group 1700 Cat C AgentExecution child audit \u2014 SIGN-with-edits cycle 1 (F1-F4 folds landed) \u2014 THIRD child under Group 1700 (#2839)",
+      "sessions_touched": [
+        1703
+      ],
+      "commit_count": 2,
+      "prs": [
+        2839
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
