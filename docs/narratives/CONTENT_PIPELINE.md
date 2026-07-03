@@ -237,7 +237,7 @@ structure ≥ 0.55.
   `long_running` queue, EditorAgent, limit 5, max 3 rounds.
 - `reevaluate_enhanced_blogs` — every 6h at :10, `content`
   queue.
-- `auto_publish_approved_blogs` — daily 6 AM, `content` queue.
+- `auto_publish_approved_blogs` — **NOT SCHEDULED at HEAD** (S1605 T.15.E4 CONFIRMED-ABSENT via Rigby runtime probe: 0 events 30d + 0 PeriodicTask rows). Task defined at `core/tasks.py:8056` + queue-routed at `settings.py:1394` but never registered in `core/celery.py` beat_schedule; historical "daily 6 AM" claim is DRIFT.
 - `score_unscored_deliverables` — every 6h at :15, `default`
   queue, heuristic scoring (0.1–1.0).
 
