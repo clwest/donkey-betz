@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-03T02:21:30+00:00",
+    "generated": "2026-07-03T03:13:45+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a52651fd2407",
-    "doc_count": 2295,
-    "commit_count": 7414,
+    "git_head": "d1bd14f90a39",
+    "doc_count": 2297,
+    "commit_count": 7418,
     "confidence_breakdown": {
-      "HIGH": 1477,
+      "HIGH": 1479,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2507,7 +2507,7 @@
         1302,
         1601
       ],
-      "commit_count": 1096,
+      "commit_count": 1098,
       "prs": [
         10,
         11,
@@ -2931,7 +2931,8 @@
         2820,
         2822,
         2824,
-        2826
+        2826,
+        2828
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7241,7 +7242,7 @@
         1217,
         1601
       ],
-      "commit_count": 54,
+      "commit_count": 56,
       "prs": [
         2213,
         2219,
@@ -7274,7 +7275,8 @@
         2820,
         2822,
         2824,
-        2826
+        2826,
+        2828
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17611,6 +17613,21 @@
       "commit_count": 2,
       "prs": [
         2827
+      ]
+    },
+    "docs/handoffs/SESSION_1606_CONTENT_CAT_F_AUDIT.md": {
+      "originating_session": 1606,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "d1bd14f9",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1606): Group 1600 Cat F Cross-Domain Integration Lens & Posture Decision Framing child audit \u2014 SIGN-with-edits cycle 1 (F1-F10 folds landed) \u2014 LAST child under Group 1600 (#2829)",
+      "sessions_touched": [
+        1606
+      ],
+      "commit_count": 2,
+      "prs": [
+        2829
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32702,9 +32719,10 @@
         1602,
         1603,
         1604,
-        1605
+        1605,
+        1606
       ],
-      "commit_count": 63,
+      "commit_count": 65,
       "prs": [
         2773,
         2775,
@@ -32732,7 +32750,8 @@
         2821,
         2823,
         2825,
-        2827
+        2827,
+        2829
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32793,9 +32812,10 @@
         1602,
         1603,
         1604,
-        1605
+        1605,
+        1606
       ],
-      "commit_count": 58,
+      "commit_count": 60,
       "prs": [
         2773,
         2775,
@@ -32825,7 +32845,8 @@
         2821,
         2823,
         2825,
-        2827
+        2827,
+        2829
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32944,6 +32965,21 @@
       "commit_count": 2,
       "prs": [
         2827
+      ]
+    },
+    "docs/research/domains/content/1606_content_cross_domain_integration_lens_audit.md": {
+      "originating_session": 1606,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "d1bd14f9",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1606): Group 1600 Cat F Cross-Domain Integration Lens & Posture Decision Framing child audit \u2014 SIGN-with-edits cycle 1 (F1-F10 folds landed) \u2014 LAST child under Group 1600 (#2829)",
+      "sessions_touched": [
+        1606
+      ],
+      "commit_count": 2,
+      "prs": [
+        2829
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
