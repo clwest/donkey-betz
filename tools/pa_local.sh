@@ -17,17 +17,26 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1400 fresh
-# thread (Rigby create_fresh at S1400 open — carrying only the mission
-# scope, no S1300-S1399 memory arc turn context).
-# Pin: pa-34d43795e1b24bd3. Title: "Session 1400 — Revenue research
-# group (kickoff)". Carry-forward: mission scope only — Research Group
-# 1400 "Revenue / Outreach / Engagement", per playbook §22 default
-# queue lean; S1273 §3.32 Revenue row LIGHT coverage; Rigby-caught
-# missed domain; business-value highest under-researched domain.
-# Phase 0 parent-scoping doc drafts this session per playbook §11.1.
-# Prior S1300-S1399 memory arc research context intentionally excluded
-# — fresh thread per playbook §16 arc-open discipline.
+# the --conversation flag below. Current value: Session 1700 fresh
+# thread (Rigby create_fresh at S1700 open — carrying only the mission
+# scope, no S1600 Content arc turn context).
+# Pin: pa-e7fbacc996b34b44. Title: "Session 1700 — Observability
+# research group (kickoff)". Carry-forward: mission scope only —
+# Research Group 1700 "Observability / Telemetry / SLOs", per playbook
+# §22 default queue lean and OS §12.3 target; S1274 §11.6 5-layer
+# execution-telemetry dedup audit + S1273 §5.13 evidence base.
+# D1 ratified: Group 1700 = Observability. D2 ratified: delegate event
+# architecture to Group 1900. D3 ratified: parent scoping only this
+# session (S1700), P1 child audit next-session. Playbook §11.1 parent
+# template. Prior S1600 arc context intentionally excluded per playbook
+# §16 arc-open fresh-thread discipline.
+# Retired at S1700 open: pa-f52acf3f8d394faa (Sessions 1600-1699 —
+# Content / Deliverables / Publishing research group; 8-doc arc:
+# S1600 parent + 6 child audits S1601-S1606 + S1699 xx99 canonical
+# summary. Fourth application of playbook §11.3 §10 meta-methodology
+# template. Retired at S1699 close via session_tool.retire force=true
+# after currently-bound-thread refusal + explicit override per playbook
+# §16 final-arc-close discipline; updated_count: 30, retired: true).
 # Retired at S1400 open: pa-aa54193f240f4846 (Sessions 1300-1399 —
 # Memory / Knowledge / Embeddings research group; 7-session arc:
 # S1300 parent + S1301 Cat D + S1302 Cat A+B+C + S1303 Cat F +
@@ -125,4 +134,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-f52acf3f8d394faa
+python tools/pa_chat.py "$@" --tools --conversation pa-e7fbacc996b34b44
