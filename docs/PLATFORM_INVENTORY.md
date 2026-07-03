@@ -1,7 +1,7 @@
 # Platform Master Inventory
 
-**Generated:** 2026-06-22 12:59:48
-**Git HEAD:** `554a41d3`
+**Generated:** 2026-07-02 20:16:33
+**Git HEAD:** `f3fe1493`
 
 > Runtime-derived snapshot of the Donkey Betz platform. Regenerate with `python manage.py generate_platform_inventory`.
 > Companion to `core/services/doc_claim_verification.py` — this doc captures the ground truth; the verifier flags where doc claims drift from it.
@@ -10,16 +10,16 @@
 
 | Subsystem | Headline |
 |---|---|
-| [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 87 rows in Agent table. |
+| [Agents](#agents) | 83 agents in AGENT_MAP (74 enabled, 9 rerouted, 0 blocked); 90 rows in Agent table. |
 | [Spiders](#spiders) | 80 spiders across 41 categories (80 working, 0 placeholder) |
-| [Services](#services) | 112 `*Service` classes across 348 files in core/services/ |
-| [Celery Tasks](#celery-tasks) | 408 user-defined Celery tasks (excludes celery.* internals) |
-| [Celery Beat — Scheduled Tasks](#beat-schedule) | 81 enabled + 6 disabled = 87 PeriodicTask rows |
-| [Personal Assistant (PA) Tools](#pa-tools) | 109 tool schemas + 174 registered handlers; 8 enrichment services |
-| [Database Models](#database-models) | 588 concrete models across 23 apps |
-| [URL Routes](#url-routes) | 1857 path() patterns across all core/urls*.py files |
-| [Django View Files](#views-files) | 208 files matching core/views*.py |
-| [Django Management Commands](#management-commands) | 193 management commands in core/management/commands/ |
+| [Services](#services) | 112 `*Service` classes across 362 files in core/services/ |
+| [Celery Tasks](#celery-tasks) | 415 user-defined Celery tasks (excludes celery.* internals) |
+| [Celery Beat — Scheduled Tasks](#beat-schedule) | 92 enabled + 5 disabled = 97 PeriodicTask rows |
+| [Personal Assistant (PA) Tools](#pa-tools) | 113 tool schemas + 156 registered handlers; 8 enrichment services |
+| [Database Models](#database-models) | 585 concrete models across 23 apps |
+| [URL Routes](#url-routes) | 1864 path() patterns across all core/urls*.py files |
+| [Django View Files](#views-files) | 209 files matching core/views*.py |
+| [Django Management Commands](#management-commands) | 199 management commands in core/management/commands/ |
 | [Discord Integration](#discord) | 96 @*.command decorators, 48 @app_commands.command, 25 Cog classes in discord_bot.py |
 | [Body Systems](#body-systems) | 9 body systems monitored by run_all_systems_scan |
 | [LLM Providers](#llm-providers) | 6 providers registered in LLMProviderRegistry |
@@ -29,8 +29,8 @@
 | [Initiative Pipeline](#initiative-pipeline) | 5 pipeline stages (auto-dispatch on stages [4, 5]) |
 | [Frontend (React + Vite)](#frontend) | 61 routes in App.tsx, 5 workspace primary tabs, 9 betting dashboard tabs |
 | [Infrastructure](#infrastructure) | 10 Procfile processes, 3 distinct Redis DB indices in settings |
-| [Code Statistics](#code-stats) | 2,137 Python files, 1,020,385 lines across core/ + ai_core/ + intelligence/ |
-| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 69 OK, 4 drifts |
+| [Code Statistics](#code-stats) | 2,290 Python files, 1,071,506 lines across core/ + ai_core/ + intelligence/ |
+| [Doc-vs-Reality Verifier State](#verifier-state) | 73 registered claims across 34 docs: 73 OK, 0 drifts |
 
 ## Table of Contents
 
@@ -59,11 +59,11 @@
 <a id="agents"></a>
 ## Agents
 
-**Headline:** 83 agents in AGENT_MAP (74 enabled, 8 rerouted, 1 blocked); 87 rows in Agent table.
+**Headline:** 83 agents in AGENT_MAP (74 enabled, 9 rerouted, 0 blocked); 90 rows in Agent table.
 
 **Code location:** `core/agent_router.py AGENT_MAP`
 
-**Notes:** AGENT_MAP total = 83 (74 enabled + 8 rerouted + 1 blocked). DB Agent rows = 87. Top agent_type breakdown: core=65, creative=8, tool_direct=3, content=3, clean_architecture=2, research=2, analytics=2, automation=1, engineering=1. Blocked: ['CodeGeneratorAgent']. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeReviewAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
+**Notes:** AGENT_MAP total = 83 (74 enabled + 9 rerouted + 0 blocked). DB Agent rows = 90. Top agent_type breakdown: core=65, creative=8, tool_direct=6, content=3, analytics=2, research=2, clean_architecture=2, engineering=1, automation=1. Blocked: []. Rerouted: ['AudioAgent', 'COOAgent', 'CTOAgent', 'CodeGeneratorAgent', 'CodeReviewAgent', 'DevOpsAgent', 'FullStackDeveloperAgent', 'VideoAgent', 'WorkflowAgent'].
 
 | Name | Module | Status |
 |---|---|---|
@@ -81,7 +81,7 @@
 | CTOAgent | core.agents.executive.cto_agent | rerouted |
 | CampaignOrchestratorAgent | core.agents.campaign_orchestrator_agent | enabled |
 | CharacterTrainingAgent | core.agents.training.character_training_agent | enabled |
-| CodeGeneratorAgent | core.agents.code_generator_agent | blocked |
+| CodeGeneratorAgent | core.agents.code_generator_agent | rerouted |
 | CodeReviewAgent | core.agents.code_review_agent | rerouted |
 | CompetitorAnalysisAgent | core.agents.business.competitor_analysis_agent | enabled |
 | ContentAuditAgent | core.agents.security.content_audit_agent | enabled |
@@ -246,7 +246,7 @@
 <a id="services"></a>
 ## Services
 
-**Headline:** 112 `*Service` classes across 348 files in core/services/
+**Headline:** 112 `*Service` classes across 362 files in core/services/
 
 **Code location:** `core/services/`
 
@@ -368,11 +368,11 @@
 <a id="celery-tasks"></a>
 ## Celery Tasks
 
-**Headline:** 408 user-defined Celery tasks (excludes celery.* internals)
+**Headline:** 415 user-defined Celery tasks (excludes celery.* internals)
 
 **Code location:** `core/tasks.py + siblings`
 
-**Notes:** Top 10 modules by task count: core.tasks=340, intelligence.tasks=14, sports=8, (top-level)=7, core.tasks_agents=6, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
+**Notes:** Top 10 modules by task count: core.tasks=343, intelligence.tasks=14, (top-level)=11, sports=8, core.tasks_agents=6, ai_core.tasks=5, ml=5, roi_metrics=4, narrative_drift=3, content_studio=2
 
 | Task |
 |---|
@@ -776,12 +776,12 @@
 |  |
 |  |
 |  |
-| ... | _(8 more rows truncated)_ |
+| ... | _(15 more rows truncated)_ |
 
 <a id="beat-schedule"></a>
 ## Celery Beat — Scheduled Tasks
 
-**Headline:** 81 enabled + 6 disabled = 87 PeriodicTask rows
+**Headline:** 92 enabled + 5 disabled = 97 PeriodicTask rows
 
 **Code location:** `django_celery_beat.PeriodicTask + core/tasks_schedule.py`
 
@@ -793,6 +793,7 @@
 | auto-archive-stale-deliverables | core.tasks.auto_archive_stale_deliverables | yes | default |
 | auto-promote-low-risk-decisions | core.tasks.auto_promote_low_risk_decisions | yes | default |
 | backfill-spider-embeddings | core.tasks.backfill_spider_embeddings | no | ml |
+| bug_triage_daily_run | bug_triage_daily_run | yes | (default) |
 | calculate-daily-revenue-metrics | intelligence.tasks.calculate_daily_revenue_metrics | yes | default |
 | celery.backend_cleanup | celery.backend_cleanup | yes | (default) |
 | check-celery-health | core.tasks.check_celery_health | yes | broadcast |
@@ -828,7 +829,10 @@
 | cleanup-stale-running-experiments | core.tasks.cleanup_stale_running_experiments | yes | long_running |
 | cleanup-stale-scoring-requests | core.tasks.cleanup_stale_scoring_requests | yes | default |
 | cleanup-stuck-agent-executions | core.tasks.cleanup_stale_agent_executions | yes | broadcast |
+| cleanup-stuck-llm-calls | core.tasks.cleanup_stale_llm_calls | yes | broadcast |
+| collect-kalshi-prediction-markets | core.tasks.collect_kalshi_prediction_markets | yes | long_running |
 | collect-real-opportunities | ai_core.tasks.collect_real_opportunities | yes | long_running |
+| collect-sports-odds-intelligence | core.tasks.collect_sports_odds_intelligence | yes | long_running |
 | coo-daily-diagnostic | core.tasks.run_coo_daily_diagnostic | yes | long_running |
 | cto-daily-diagnostic | core.tasks.run_cto_daily_diagnostic | yes | long_running |
 | curate-signal-clusters | curate_signal_clusters | yes | long_running |
@@ -841,10 +845,14 @@
 | expire-old-suggestions | core.tasks.expire_old_suggestions | yes | default |
 | expire-overdue-validations | core.tasks.expire_overdue_validations | yes | default |
 | expire-stale-followup-subscriptions | core.tasks.expire_stale_followup_subscriptions | yes | broadcast |
+| generate-daily-betting-brief | core.tasks.generate_daily_betting_brief | yes | default |
+| generate-morning-brief-daily | chief_of_staff_morning_brief_run | yes | default |
 | generate-operator-edge-newsletter | core.tasks.generate_operator_edge_newsletter | no | content |
+| generate-outreach-drafts-daily | core.tasks.generate_outreach_drafts_daily | yes | content |
 | heart-service-heartbeat | core.tasks.run_heartbeat | yes | broadcast |
 | initiative-activity-tick | core.tasks.initiative_activity_tick | yes | default |
 | maintain-dream-backlog | core.tasks.maintain_dream_backlog | yes | default |
+| market-intelligence-scan | core.tasks.market_intelligence_scan | yes | long_running |
 | monitor-celery-health | core.tasks.monitor_celery_health | yes | broadcast |
 | monitor-isolation-progress | core.tasks.monitor_isolation_progress | yes | default |
 | pa-acks-health-capture | core.tasks.capture_pa_acks_health_snapshot | yes | broadcast |
@@ -857,9 +865,11 @@
 | purge-finaloverrides-90d | core.tasks.purge_finaloverrides_older_than_90d | yes | broadcast |
 | reap-zombie-work | core.tasks.reap_zombie_work | yes | default |
 | reconcile-experiment-status-outcome | core.tasks.reconcile_experiment_status_outcome | yes | long_running |
+| refresh-docs-corpus-daily | core.tasks.refresh_docs_corpus | yes | default |
 | report-pending-review-metrics | core.tasks.report_pending_review_metrics | yes | default |
 | rescan-active-workspaces | core.tasks.rescan_active_workspaces | yes | default |
-| run-spider-network | core.tasks.run_spider_network | no | long_running |
+| rigby_documentation_manager_daily | rigby_documentation_manager_daily | yes | (default) |
+| run-spider-network | core.tasks.run_spider_network | yes | long_running |
 | scan-concerns-for-human-action | core.tasks.scan_concerns_for_human_action | yes | default |
 | scan-income-spider-orchestrator | intelligence.tasks.scan_income_spider_orchestrator | no | long_running |
 | scan-spider-opportunities | intelligence.tasks.scan_spider_opportunities | no | long_running |
@@ -878,14 +888,18 @@
 <a id="pa-tools"></a>
 ## Personal Assistant (PA) Tools
 
-**Headline:** 109 tool schemas + 174 registered handlers; 8 enrichment services
+**Headline:** 113 tool schemas + 156 registered handlers; 8 enrichment services
 
 **Code location:** `core/services/pa_tool_schemas.py + tool_dispatcher.py`
 
-**Notes:** Schemas: 109. Handlers (self.register in tool_dispatcher.py): 174. Intent-mapped: 106. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
+**Notes:** Schemas: 113. Handlers (self.register in tool_dispatcher.py): 156. Intent-mapped: 106. Unique enrichment services (8): ['advisor', 'blog_performance', 'domain_context', 'intelligence_enricher', 'platform_briefing', 'proactive_intelligence', 'spider_trends', 'strategic_memory'].
 
 | Schema name | Canonical intent |
 |---|---|
+|  |  |
+|  |  |
+|  |  |
+|  |  |
 |  |  |
 |  |  |
 |  |  |
@@ -999,9 +1013,9 @@
 <a id="database-models"></a>
 ## Database Models
 
-**Headline:** 588 concrete models across 23 apps
+**Headline:** 585 concrete models across 23 apps
 
-**Notes:** By app: core=479, content=23, sports=14, agents=10, mythology=7, persistence=7, ai_intelligence=6, django_celery_beat=6, self_awareness=6, coleadership=5, ai_opportunities=4, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
+**Notes:** By app: core=480, content=23, sports=14, agents=10, mythology=7, persistence=7, django_celery_beat=6, self_awareness=6, ai_intelligence=5, coleadership=5, style_memory=4, django_celery_results=3, intelligence=3, auth=2, pipelines=2, admin=1, ai_opportunities=1, authtoken=1, contenttypes=1, learning_bridges=1, ml=1, rendering=1, sessions=1
 
 | Model | App | DB Table |
 |---|---|---|
@@ -1010,10 +1024,10 @@
 | AgentChannelMembership | agents |  |
 | AgentChannelMessage | agents |  |
 | AgentContribution | agents |  |
-| AgentExecution | agents |  |
 | AgentOrchestration | agents |  |
 | AgentPerformanceMetrics | agents |  |
 | AgentRegistry | agents |  |
+| AgentTaskExecution | agents |  |
 | AgentTool | agents |  |
 | UnifiedAgentTemplate | agents |  |
 | AgentKnowledgeBase | ai_intelligence |  |
@@ -1021,15 +1035,11 @@
 | AgentLearningSession | ai_intelligence |  |
 | LearningDocument | ai_intelligence |  |
 | LearningEmbedding | ai_intelligence |  |
-| LearningInsight | ai_intelligence |  |
 | AIStrategy | ai_opportunities |  |
-| GeneratedProject | ai_opportunities |  |
-| ProjectDeployment | ai_opportunities |  |
-| ProjectFile | ai_opportunities |  |
 | Group | auth |  |
 | Permission | auth |  |
 | Token | authtoken |  |
-| AgentRecommendation | coleadership |  |
+| AdvisorDecisionRecommendation | coleadership |  |
 | CoLeadershipDecision | coleadership |  |
 | CoLeadershipPreferences | coleadership |  |
 | DecisionOutcome | coleadership |  |
@@ -1042,6 +1052,7 @@
 | ContentGeneration | content |  |
 | ContentTemplate | content |  |
 | ContentWorkflow | content |  |
+| ContentWorkflowExecution | content |  |
 | Document | content |  |
 | DocumentEmbedding | content |  |
 | Feedback | content |  |
@@ -1054,7 +1065,6 @@
 | UserCreativePreference | content |  |
 | VideoHistory | content |  |
 | VideoTranscript | content |  |
-| WorkflowExecution | content |  |
 | WorkflowFavorite | content |  |
 | WorkflowHistory | content |  |
 | ContentType | contenttypes |  |
@@ -1077,7 +1087,6 @@
 | AgentAccuracyMetrics | core |  |
 | AgentAssignment | core |  |
 | AgentCategory | core |  |
-| AgentChannel | core |  |
 | AgentCollaboration | core |  |
 | AgentControlEntry | core |  |
 | AgentConversation | core |  |
@@ -1094,7 +1103,6 @@
 | AgentLLMConfig | core |  |
 | AgentLearning | core |  |
 | AgentLearningConnection | core |  |
-| AgentLearningSession | core |  |
 | AgentMemory | core |  |
 | AgentMessage | core |  |
 | AgentMood | core |  |
@@ -1320,6 +1328,7 @@
 | LearningProgress | core |  |
 | LearningProgressSnapshot | core |  |
 | LearningReadbackEvent | core |  |
+| LegacySpiderData | core |  |
 | LegalCase | core |  |
 | LegalDocument | core |  |
 | LegalMemory | core |  |
@@ -1369,6 +1378,7 @@
 | OriginalityScore | core |  |
 | OutreachDraft | core |  |
 | PAToolInsight | core |  |
+| PaMessageFeedback | core |  |
 | PartnershipProject | core |  |
 | Party | core |  |
 | PerformanceComparison | core |  |
@@ -1400,23 +1410,27 @@
 | ProactiveAlert | core |  |
 | ProactiveNotification | core |  |
 | ProjectActivity | core |  |
+| ProjectChannel | core |  |
 | ProjectCollaborator | core |  |
 | ProjectComment | core |  |
 | ProjectEnvVar | core |  |
 | ProjectInsight | core |  |
 | ProjectPresence | core |  |
-| ... | _(188 more rows truncated)_ |
+| ProjectRepo | core |  |
+| ProjectResearchFeedback | core |  |
+| ProjectSpiderPriority | core |  |
+| ... | _(185 more rows truncated)_ |
 
 <a id="url-routes"></a>
 ## URL Routes
 
-**Headline:** 1857 path() patterns across all core/urls*.py files
+**Headline:** 1864 path() patterns across all core/urls*.py files
 
 **Code location:** `core/urls*.py`
 
 | Prefix | Count |
 |---|---|
-| api | 1776 |
+| api | 1783 |
 | (root) | 5 |
 | sports | 4 |
 | marketplace | 4 |
@@ -1478,13 +1492,12 @@
 <a id="views-files"></a>
 ## Django View Files
 
-**Headline:** 208 files matching core/views*.py
+**Headline:** 209 files matching core/views*.py
 
 **Code location:** `core/views*.py`
 
 | File |
 |---|
-| views.py |
 | views_ab_testing.py |
 | views_advanced_workflows.py |
 | views_advisor_api.py |
@@ -1544,6 +1557,7 @@
 | views_dashboard_api.py |
 | views_dashboard_stats.py |
 | views_davinci.py |
+| views_db_health_rpc.py |
 | views_deliberation.py |
 | views_deliverables.py |
 | views_demo_pipeline.py |
@@ -1556,6 +1570,7 @@
 | views_docs_index.py |
 | views_ecosystem.py |
 | views_ecosystem_activation.py |
+| views_employee_api.py |
 | views_enhanced_profile.py |
 | views_executor_runs.py |
 | views_f2f.py |
@@ -1587,7 +1602,6 @@
 | views_interview.py |
 | views_isolation_control.py |
 | views_job_application_system.py |
-| views_knowledge.py |
 | views_learning.py |
 | views_learning_dashboard.py |
 | views_learning_journey.py |
@@ -1613,6 +1627,7 @@
 | views_opportunity.py |
 | views_ops_console.py |
 | views_orchestration.py |
+| views_outreach.py |
 | views_pdf_export.py |
 | views_personal_assistant.py |
 | views_personal_assistant_dev.py |
@@ -1696,7 +1711,7 @@
 <a id="management-commands"></a>
 ## Django Management Commands
 
-**Headline:** 193 management commands in core/management/commands/
+**Headline:** 199 management commands in core/management/commands/
 
 **Code location:** `core/management/commands/`
 
@@ -1712,6 +1727,7 @@
 | python manage.py askdocs |
 | python manage.py assign_agent_voices |
 | python manage.py assign_memories_to_rooms |
+| python manage.py audit_celery_zero_fire |
 | python manage.py audit_database |
 | python manage.py audit_deliverable_endpoints |
 | python manage.py auto_remediate |
@@ -1725,6 +1741,7 @@
 | python manage.py backfill_deliverable_workspaces |
 | python manage.py backfill_deliverables |
 | python manage.py backfill_doc_provenance |
+| python manage.py backfill_docs_enrichment |
 | python manage.py backfill_dream_origins |
 | python manage.py backfill_evolution_xp |
 | python manage.py backfill_experiment_learnings |
@@ -1805,6 +1822,7 @@
 | python manage.py fleet_health_rollup |
 | python manage.py force_agent_cycle |
 | python manage.py full_system_demo |
+| python manage.py generate_agents_reference |
 | python manage.py generate_ironwood_sprites |
 | python manage.py generate_platform_inventory |
 | python manage.py generate_sample_data |
@@ -1839,9 +1857,12 @@
 | python manage.py repo_knowledge_audit |
 | python manage.py report_initiative_kinds |
 | python manage.py rescore_opportunities |
+| python manage.py rigby_intake_lag_check |
+| python manage.py rigby_intake_status |
 | python manage.py rotate_fleet_key |
 | python manage.py run_code_agent |
 | python manage.py run_discord_bot |
+| python manage.py run_docs_manager_daily |
 | python manage.py run_smoke_tests |
 | python manage.py run_ui_smoke |
 | python manage.py seed_agent_initiative_affinities |
@@ -2063,30 +2084,30 @@
 <a id="code-stats"></a>
 ## Code Statistics
 
-**Headline:** 2,137 Python files, 1,020,385 lines across core/ + ai_core/ + intelligence/
+**Headline:** 2,290 Python files, 1,071,506 lines across core/ + ai_core/ + intelligence/
 
 | Tree | Files | Lines |
 |---|---|---|
-| core | 1731 | 853986 |
-| ai_core | 295 | 119912 |
-| intelligence | 111 | 46487 |
-| TOTAL (python) | 2137 | 1020385 |
+| core | 1883 | 906871 |
+| ai_core | 294 | 118924 |
+| intelligence | 113 | 45711 |
+| TOTAL (python) | 2290 | 1071506 |
 
 <a id="verifier-state"></a>
 ## Doc-vs-Reality Verifier State
 
-**Headline:** 73 registered claims across 34 docs: 69 OK, 4 drifts
+**Headline:** 73 registered claims across 34 docs: 73 OK, 0 drifts
 
 **Code location:** `core/services/doc_claim_verification.py (run via `python manage.py verify_doc_claims`)`
 
-**Notes:** Severity rollup: ok=69, low=0, medium=2, high=2, error=0. Top drifting docs: core/management/commands/load_all_agents_advisors.py, docs/SERVICES.md, docs/BACKEND_INVENTORY.md.
+**Notes:** Severity rollup: ok=73, low=0, medium=0, high=0, error=0. Top drifting docs: .
 
 | Doc | OK | Drift | Error |
 |---|---|---|---|
 | CLAUDE.md | 10 | 0 | 0 |
 | core/epa_handlers/td_handlers_ops.py | 1 | 0 | 0 |
 | core/learning_bridges/base.py | 1 | 0 | 0 |
-| core/management/commands/load_all_agents_advisors.py | 0 | 2 | 0 |
+| core/management/commands/load_all_agents_advisors.py | 2 | 0 | 0 |
 | core/models_document_registry.py | 1 | 0 | 0 |
 | core/models_unified_system.py | 1 | 0 | 0 |
 | core/services/advisor_context_builder.py | 1 | 0 | 0 |
@@ -2095,7 +2116,7 @@
 | docs/AGENTS.md | 3 | 0 | 0 |
 | docs/API_PATH_POLICY.md | 2 | 0 | 0 |
 | docs/ARCHITECTURE.md | 1 | 0 | 0 |
-| docs/BACKEND_INVENTORY.md | 5 | 1 | 0 |
+| docs/BACKEND_INVENTORY.md | 6 | 0 | 0 |
 | docs/BEAT_AUDIT.md | 1 | 0 | 0 |
 | docs/BODY_SYSTEM_AUDIT.md | 1 | 0 | 0 |
 | docs/CAPABILITIES.md | 4 | 0 | 0 |
@@ -2105,7 +2126,7 @@
 | docs/LEARNING_BRIDGE_AUDIT.md | 1 | 0 | 0 |
 | docs/ML_AUDIT.md | 1 | 0 | 0 |
 | docs/PA_TOOL_AUDIT.md | 2 | 0 | 0 |
-| docs/SERVICES.md | 1 | 1 | 0 |
+| docs/SERVICES.md | 2 | 0 | 0 |
 | docs/SPIDERS.md | 3 | 0 | 0 |
 | docs/SPIDER_AUDIT.md | 2 | 0 | 0 |
 | docs/topics/agent-system.md | 2 | 0 | 0 |
