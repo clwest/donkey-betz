@@ -1,9 +1,9 @@
 ---
 title: "Cross-Domain Integration Audit — how domains connect, fail to connect, overlap, and violate boundaries"
-status: draft
+status: draft (S1274 baseline preserved; post-arc refresh log at §14)
 authority: research
 session_added: 1274
-last_verified: 2026-07-01
+last_verified: 2026-07-03
 companion_anchors:
   - docs/research/platform_architecture_inventory.md   # 32-domain map (S1273 — parent)
   - docs/research/ARCHITECTURE_INDEX.md                # library navigation (v5)
@@ -13,7 +13,30 @@ companion_anchors:
   - docs/AUDIT_FINDINGS.md                             # Celery deferred list
   - docs/research/governance_authority_evolution.md    # 4 governance planes
   - docs/research/actor_identity_attribution_architecture.md # 19 identity concepts
+  - docs/research/domains/memory/1399_memory_canonical_summary.md   # Group 1300 close (S1399, 2026-07-01)
+  - docs/research/domains/revenue/1499_revenue_canonical_summary.md # Group 1400 close (S1499, 2026-07-01)
+  - docs/research/domains/sports/1599_sports_canonical_summary.md   # Group 1500 close (S1599, 2026-07-02)
+  - docs/research/domains/content/1699_content_canonical_summary.md # Group 1600 close (S1699, 2026-07-02)
 verifier_loop: |
+  v3 (2026-07-03, post-Group-1300/1400/1500/1600 arc closes):
+  refresh-log addition WITHOUT modifying v2 body. Reason: v2 §2
+  STRONG/WEAK/MISSING/OVERCOUPLED classifications carry Rigby
+  SIGN-with-edits ratification from S1274; four subsequent
+  research groups (S1300 Memory, S1400 Revenue, S1500 Sports,
+  S1600 Content) closed canonical summaries during 2026-07-01 →
+  2026-07-02 and produced file:line evidence that CONFIRMS,
+  REFINES, or ADDS to the v2 baseline. Preservation discipline:
+  new §14 "Post-S1274 Arc-Close Refresh Log" records the deltas
+  as an append-only ledger; v2 rows in §2, §3, §4, §5, §6, §11
+  are NOT edited in place; readers cross-reference §14 for the
+  latest verdict on any specific pair. Playbook §14.5 research
+  boundary preserved (no ADRs authored here; only refresh
+  bookkeeping). Post-arc anchor-updates from S1399 §7 + S1499
+  §7 + S1599 §7 + S1699 §7 that target THIS doc are consumed at
+  §14; anchor-updates targeting other docs (INDEX v-bumps,
+  platform_architecture_inventory.md subdivisions, new topic
+  docs) remain owned by their respective canonical summaries and
+  are not folded here.
   v2 (2026-07-01, S1274): Rigby SIGN-with-edits folded from fresh
   isolation pin `pa-7442a2e2665bd18e` (Medium confidence). Rigby
   independently grepped the codebase and caught two factual errors
@@ -1951,6 +1974,375 @@ Novel S1274 contributions (per Agent 6 §Top 5 novel findings):
 
 ---
 
-**End of draft. Status: research / draft — Rigby SIGN-with-edits
-folded S1274 v2 via isolation pin `pa-7442a2e2665bd18e`
-(Medium confidence). Not committed unless Chris explicitly asks.**
+## 14. Post-S1274 Arc-Close Refresh Log (2026-07-03)
+
+### 14.0 What this section is
+
+An **append-only ledger** of cross-domain findings produced by
+research arcs that closed AFTER the S1274 v2 baseline was ratified.
+Four groups closed 2026-07-01 → 2026-07-02: Group 1300 Memory
+(S1399), Group 1400 Revenue (S1499), Group 1500 Sports (S1599),
+Group 1600 Content (S1699). Each produced a canonical summary with
+file:line-cited evidence directly relevant to this doc.
+
+**What this section is NOT.** A rewrite of §2 tables. An
+overwriting of Rigby's S1274 v2 folds. A new §13-style parallel-
+Explore sweep. An ADR. All claims cite source-audit `SNNNN §NN.N`
+anchors; no new file:line evidence is introduced beyond what the
+arcs already established.
+
+**Source scope for §14 (v3 fold F5).** §14 consumes **arc-produced
+evidence relevant to S1274 baseline touchpoints** — not "§7 anchor-
+update recommendations targeting this doc" as a general framing.
+Cross-checked at v3 SIGN: of the four arcs' `§7 Anchor-Update
+Recommendations` sections, exactly **one entry** explicitly targets
+`cross_domain_integration_audit.md` — the S1499 §7.1.6 "Revenue →
+Inbox MISSING" broadening to "Revenue → any outbound channel
+MISSING" (consumed at §14.3). All other §14 material is arc file:line
+evidence that clarifies, extends, or adds to baseline touchpoints
+without being an explicit anchor-update recommendation directed at
+this doc.
+
+**Verdict vocabulary:**
+
+- **CONFIRMED** — v2 baseline classification upheld by arc
+  evidence with new file:line cite.
+- **REFINED** — v2 baseline classification broadened, narrowed,
+  or reframed by arc evidence (severity/scope shift preserved).
+- **NEW** — cross-domain connection or pattern not present in
+  the S1274 15-finding baseline.
+- **POSTURE-PENDING (overlay tag — v3 fold F8)** — a governance-
+  gated verdict overlay tag that can attach to any of
+  STRONG/WEAK/MISSING/OVERCOUPLED/UNKNOWN. **It encodes decision
+  state, not wiring state — orthogonal to the baseline
+  classes.** When POSTURE-PENDING appears, it implies **ADR owed
+  (Chris-gated)** as a distinct prerequisite from
+  audit/verification. §14 uses this overlay in composite labels
+  like `MISSING + POSTURE-PENDING (remedy)` where the wiring
+  classification and the governance-gate are both stated. Do
+  NOT read POSTURE-PENDING as a 5th peer classification value.
+
+### 14.1 Arcs closed since S1274 v2
+
+| Arc | Close session | Canonical summary | Close date | Refresh subsection |
+|-----|---------------|-------------------|-----------|-------------------|
+| Group 1300 Memory | S1399 | `docs/research/domains/memory/1399_memory_canonical_summary.md` | 2026-07-01 | §14.2 |
+| Group 1400 Revenue | S1499 | `docs/research/domains/revenue/1499_revenue_canonical_summary.md` | 2026-07-01 | §14.3 |
+| Group 1500 Sports | S1599 | `docs/research/domains/sports/1599_sports_canonical_summary.md` | 2026-07-02 | §14.4 |
+| Group 1600 Content | S1699 | `docs/research/domains/content/1699_content_canonical_summary.md` | 2026-07-02 | §14.5 |
+
+Cross-arc pattern crystallizations at §14.6. Refresh gaps at §14.7.
+
+### 14.2 Group 1300 Memory arc (S1399, closed 2026-07-01)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1399 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.5 Memory (13) → UserAgentLearning (13) | OVERCOUPLED (S1269 F5) | **CONFIRMED** — arc produced full evidence chain; still MEDIUM | S1305 §14 D3/D4 |
+| §5.8 Memory / Documents / Embeddings (5+ models — MEDIUM risk) | Data-consistency contract missing | **REFINED to 7 flavors named Cat A–H** (Semantic Knowledge / Personal-Adaptive / Agent Working / RAG Retrieval / Documentation Corpus / Conversational-Thread / Mission Memory delegated / Runtime Correctness). Cat F Conversational/Thread Memory + Cat H Runtime Memory Correctness are FIRST-INVENTORY LANDINGS not present in v2. | S1399 §3.1; S1303 §4; S1305 §14 D1-D10 |
+| §11 risk #19 (5+ memory stores) | MEDIUM (S1273 §5.4; Agent 2 §8) | **RESOLVED to arc synthesis** — Group 1300 delivered the store map + 4 arc-wide patterns (F1 provenance-filter drift; F2 orphan-write; F3 Redis-only durability + LRU staleness; F4 CANDIDATE discipline methodology) | S1399 §4 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **Redis 4-DB topology, not 3.** DB 1 Django cache; DB 2 Celery broker; DB 3 Celery results; **DB 5 `AgentLearningService`** raw redis client at `agent_learning_service.py:145` — invisible to Django `cache.clear()`. Doc-drift owed to `docs/topics/infrastructure.md` (3 → 4 DBs). Source: S1305 §14 D8/D9; consolidated at S1399 §3.2.
+- **Two RAG lanes, no runtime selector.** LOCAL `core.rag.top_k` on `.rag/corpus.jsonl` vs PROD `core.rag_integration.search_embeddings` via `DocumentEmbedding` + HNSW. `search_docs` hardcodes LOCAL; `kb_tool semantic_search` hardcodes PROD. **PA turn does NOT auto-invoke either lane** (retrieval is tool-call-only). Source: S1301 §7.1; S1399 §3.4.
+- **`AgentMemory.create_memory` write-authority MISSING.** No user FK gate, no rate limiting, no audit of who created what. `MemoryPromotionService` auto-saves on every PA turn. **Highest-severity debt item in the Memory arc (T10 HIGH).** Source: S1302 §15 T10; S1399 §6.4. Post-arc write-authority framework ADR queued.
+- **`AgentLearningService` within-process consistency gap.** `save_memory:476` writes Redis but never clears the in-process `_user_memories` dict; same-process `get_user_memory:415` short-circuits to dict and returns pre-save entry. Source: S1305 §14 D4.
+
+**POSTURE-PENDING:**
+
+- Turn-context → RAG enrichment: intentional-separation vs drift decision (S1304 §19 R5). Symmetry gap with `BaseAgent._get_relevant_knowledge_for_task` (agents get auto-enrichment; PA does not).
+
+### 14.3 Group 1400 Revenue arc (S1499, closed 2026-07-01)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1499 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.4 Revenue Pipeline (32) → Initiative Pipeline (12) | MISSING (Agent 3 §2.6) | **CONFIRMED** — no `Opportunity → Initiative` code path exists | S1401 + S1405; S1499 §5.1 row 4 |
+| §2.4 Revenue Pipeline (32) → Observability (25) | STRONG via `ImpactEvent` at `ops_autopilot/impact.py:375+` | **REFINED (evidence pointer corrected)** — attribution algorithm at `core/services/ops_autopilot/impact.py::MultiTouchAttributor._attribute_event:1233-1290` (70% last-touch / 30% assist); parent scoping doc named wrong file | S1405 §14 F.E6 |
+| §2.4 Revenue Pipeline (32) → Inbox (17) | MISSING; outbound channel UNKNOWN (S1273 §10.3) | **REFINED (broadened)** — "Revenue → any outbound channel MISSING," not just Inbox. Grep-negative at HEAD `beda00e5` for `send_outreach\|dispatch_outreach\|deliver_outreach\|outreach.send` + `sendgrid\|postmark\|mailgun\|smtplib\|EMAIL_BACKEND` (0 mainline hits). Scope now spans email + LinkedIn + Rigby-DM + in-app — **no channel exists at all**. | S1402 §14 F.B1; S1499 §7.1.6 |
+| §2.4 Revenue Pipeline (32) → HumanAttention (16) | MISSING (Agent 3 §2.6) | **CONFIRMED arc-wide** — zero HAI writers from Meeting/ClosePack/CloseTheDealEngine/ClosePackAutonomyEngine (arc-wide 0.07% ops_autopilot, 2 rows of 3061). Approval gates procedural-at-operator-judgment only, not schema-enforced. | S1404 §14 F.D1; S1499 §5.1 row 6 |
+| §11 risk #36 (Revenue Pipeline no runtime owner HIGH) | HIGH; Pipeline agents lack JobContracts; no beat | **RESOLVED (proposed)** — UNANIMOUS across all 6 children. D55 (ii) resolution: **two sibling JobContracts** — Revenue Employee (Cat A/B/C/D/E) + Income/Jobs Employee (Cat F, gated on T4 dormancy disposition). Employee OS 1200s arc owns implementation. | S1499 §4.5, §7.4; D55 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **Learning-bridge fires on core `Revenue` only, not intelligence `RevenueRecord`.** `revenue_attribution_bridge.py:227` writes `UserAgentLearning` on core Revenue rows; intelligence `RevenueRecord`/`RevenueSource`/`ProposalTracker` orphaned from the bridge. **Dual-schema drift F.E3 CONFIRMED HIGH.** Chris/Rigby architectural decision required — missing bridge vs intentional source-of-truth hierarchy. Source: S1405 §14 F.E3; S1499 §3.3, §6.4.
+- **Cat F Freelance/Gig lane orphaned from `ImpactEvent` → learning chain entirely.** Zero `ImpactEvent` writes from any of 10 Cat F files (grep-negative). Freelance lifecycle → revenue → attribution → learning chain completely severed. Source: S1406 §14 F.F6; S1499 §4.4.
+- **20-writer convergence on `Opportunity` mainline with zero canonical write-authority contract.** Dominant `spider_decision_bridge.py` at 2630 rows (99.96%); 19 non-dominant writers UNCLASSIFIED (tests / migrations / dead code / legitimate alternate ingestion). Consolidates F.A1 dual-representation + F.E3 dual-schema into single parallel-schema umbrella. Source: S1406 §14 F.F2; S1499 §3.3, §5.2.
+- **`_impl_run_freelance_opportunity_scout` UNGUARDED 5-phantom-field writer.** At `core/tasks_ops.py:2239-2251` — runtime `FieldError` guaranteed if invoked. Task not beat-scheduled locally; PROD status UNKNOWN. Source: S1406 §14 F.F1.
+
+**POSTURE-PENDING:**
+
+- T1 parallel-schema + source-of-truth ADR (Revenue schema vs realtime intelligence_engine).
+- T5 outreach delivery ADR (SendGrid/Postmark/SES/Mailgun/LinkedIn/Rigby-DM).
+- T6 HumanAttention interlock ADR (ship-to-go-live prerequisite).
+- T7 write-authority + routing-authority framework ADR (8-site F2 remediation).
+- T8 state-machine completion ADR (16 declared / 6 reachable across `Meeting`/`ClosePack`/`OpportunityRevenue`/`OpportunityOutcome`).
+
+**Content ↔ Revenue delivery gap** (2-of-2 pattern, cross-linked to §14.5): `OutreachDraft` + Newsletter both content-generation-only ZERO outbound at HEAD. See §14.5 Content perspective.
+
+### 14.4 Group 1500 Sports arc (S1599, closed 2026-07-02)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1599 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.2 Sports/DBAO (10) → Signal Engine (9) | MISSING — `sports_odds` is not a valid `SignalCluster` data_type track (S1273 §3.10) | **MISSING + POSTURE-PENDING (remedy)** — wiring class MISSING is confirmed; 6-arc consumer-side pattern COMPLETED (P11) extends S1274 §14 finding #6 with zero `SignalCluster` emit from any of 5 market agents + coordinator (Cat B), wager settlement (Cat C), betting content pipeline (Cat D), frontend (Cat E), Cat F. **Remedy is Chris-gated** — extend enum vs build sports-native aggregator (T1 R.SPORTS.POSTURE). See §14.0 POSTURE-PENDING overlay-tag definition. | S1502 §14.3; S1503 §14.3; S1504 §14; S1505 §14.6; S1506 §14; S1599 §4 P11 |
+| §2.2 Sports/DBAO (10) → Revenue Pipeline (32) | MISSING — Betting outcomes not fed to opportunity attribution | **CONFIRMED** — no bridge exists at HEAD; posture-tied to T1 R.SPORTS.POSTURE | S1599 §9 |
+| §14 finding #6 (SignalCluster pattern_type) | HIGH — Sports cascade absent | **CONFIRMED and extended to 6-arc pattern** as above | S1599 §4 P11 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **`BettingOutcomeVerifier` ↔ `MLPrediction` DECOUPLED-VERIFICATION-SYSTEMS (CRITICAL).** Two independent verification pipelines run without cross-reference; zero FK, zero method call, zero shared join. **Retrain loop cannot close.** Prediction correctness is set by a separate task `evaluate_ml_predictions` at `core/tasks.py:6192`. Source: S1506 §14.2 F.F2; S1599 §4 P2. **Within-Sports connection MISSING** — this is a cross-service boundary within the same domain that behaves like a cross-domain gap.
+- **Sports → Memory PARTIAL bridge (5-arc pattern).** `SportsBettingLearningBridge.record_wager_outcome()` at `core/learning_bridges/sports_betting_bridge.py:532, 606` writes `AgentMemory` + `UserAgentLearning` for **2 of 4 market agents**; zero `AgentKnowledgeSource` writes. Extends S1274 baseline row 305 (HumanAttention → Memory STRONG) with a Sports-specific partial coverage. Source: S1506 §14.6 F.F6; S1599 §4 P12.
+- **DBAO codename NAMING-CONVENTION-WITHOUT-MATERIALIZATION (CRITICAL).** 6 declared artifacts (schema + 2 WS routes + env-vars + header) with **zero runtime state** and 2 unimplemented handler stubs. `docs/research/domains/sports/1500_sports_domain_scoping.md` §3.10 first surfaced; S1506 §14.1 F.F1 confirmed. Chris-gated ADR post-arc — materialize / demote / archive. Source: S1506 §14.1; S1599 §5.7 D61 parked.
+- **`/ws/dbao/` + `/ws/dbao-dashboard/` MOCK-DATA-CONSUMER (CRITICAL).** `NewPagesConsumer.send_dbao_metrics` at `core/new_pages_consumer.py:310-331` synthesizes every metric field via `random.randint()` + `random.uniform()`; passes client-side authenticity heuristics. Source: S1505 §14.1 F.E1; S1506 §14.7. **Boundary violation** — belongs at §7 alongside asymmetric-auth patterns.
+- **`RealtimeIntelligenceEngine` SCOPE-CLAIM-EXCEEDS-IMPLEMENTATION (HIGH).** Cross-domain loops named as cross-domain in code + docs but populated with hardcoded demo data. Source: S1506 §14.9 F.F5.
+- **`sports_intelligence: True` DECLARED-FEATURE-FLAG-GATES-NOTHING (HIGH).** Hardcoded literal reported as capability but consulted nowhere at runtime. Source: S1506 §14.4 F.F3.
+- **Discord HOT-PATH-CHOKE bypass (HIGH).** `/odds` + `/futures` + `/slip` Discord commands instantiate `TheOddsSpider` directly instead of routing through `SportsBettingCoordinator`. Boundary violation — belongs at §7 Class 5 (Agents/Modules Bypassing Shared Primitives). Source: S1504 §14; S1506 §14.5.
+- **`verify_betting_outcomes` beat ZERO-FIRE (CRITICAL).** Neither task variant (`core.tasks.verify_betting_outcomes` OR `sports.tasks.verify_betting_outcomes`) has a `PeriodicTask` row or `core/celery.py` beat entry. Rigby ORM probe returns zero `CeleryTaskEvent` firings for both variants over 30d. **Pre-restore-beat idempotency gate required BEFORE beat restoration** (`_settle_wager()` lacks `select_for_update()` + `@transaction.atomic()`). Source: S1503 §14.1 + §15.14.
+- **`daily_betting_digest` beat ZERO-FIRE (CRITICAL).** Same class as `verify_betting_outcomes`; docstring claims "8 AM MST daily"; no beat entry; `CeleryTaskEvent` 30d = 0. Source: S1504 §14.1 F.D1.
+- **Fixture / entity identity unresolved (P13 2-arc pattern).** TheOdds `event_id` vs Kalshi `ticker` vs `sports.models.Game.external_id` live in different namespaces; no reconciler; `Game.get_or_create(external_id=event_id)` creates duplicates when the same fixture is referenced by different vendor IDs. Source: S1501 §14.2; S1502 §15 debt #12.
+- **`SportsBettingBrief` WRITE-ONLY-FORGOTTEN (HIGH).** 2 writers (Cat D shim + Session 1000 pipeline); 0 readers. REST endpoint `get_betting_brief` at `core/views_odds_sports.py:3237` computes on-the-fly via `SportsBettingCoordinator.generate_brief()`, never reads persisted model. Cross-arc: also flagged by Cat D of the Content arc (see §14.5). Source: S1504 §14.3 F.D3; S1505 §14.4.
+
+**Four-axis compound maturity shape.** Sports domain maturity is not one category but four compound axes: (1) DBAO product-line materialization — NAMING-CONVENTION-WITHOUT-MATERIALIZATION; (2) Intelligence surface — DECLARED-FEATURE-FLAG-GATES-NOTHING at flag layer + LATENT-ZERO-FIRE at engine layer + DOMAIN-NEUTRAL at REST/frontend layer; (3) Discord sports surface — HOT-PATH-CHOKE-BYPASS at read commands + WORKING at write commands + DUAL-COORDINATOR-BYPASS at periodic digest; (4) Cross-domain feedback — DECOUPLED-VERIFICATION-SYSTEMS + PARTIAL-LEARNING-BRIDGE + zero SignalCluster emission. Source: S1599 §1, §3.5.
+
+**POSTURE-PENDING:**
+
+- T1 R.SPORTS.POSTURE Chris-gated ADR (integration vs island) — blocks T2 `SignalCluster` shim vs sports-native aggregator; blocks T2 Discord surface refactor; blocks T3 Memory arc learning-bridge upgrade.
+- T1 R.DBAO.CODENAME Chris-gated ADR — materialize / demote / archive.
+- T2 `SportsBettingBrief` consumer-or-remove ADR (posture-tied).
+
+### 14.5 Group 1600 Content arc (S1699, closed 2026-07-02)
+
+**Content ↔ 7 cross-domain surfaces (S1699 §3 consolidated map + Cat F §20 evidence plan). This is the Content perspective on cross-domain integration and complements the domain-outward classifications in v2 §2.**
+
+| Content ↔ Target | Verdict | Anchor |
+|------------------|---------|--------|
+| Content → Signal Engine | **WORKING consumer.** `ClaimsPackBuilder` consumes `SignalCluster` (active) + `LegacySpiderData` (72h window) + `DocumentEmbedding` (cosine similarity) as three-source assembly. | S1601 §7, §14; S1699 §3 |
+| Content → Sports | **PARTIAL.** `SportsContentContextBuilder` HOT-PATH-CHOKE-BYPASS (Discord fast path bypasses); `SportsBettingBrief` WRITE-ONLY-FORGOTTEN cross-confirmed with §14.4. | S1504 §5.1; S1504 §14.3; S1699 §3, §4.1 |
+| Content → Revenue | **EXPERIMENTAL (2-of-2 ZERO outbound).** `OutreachDraft` + Newsletter both content-generation-only ZERO outbound at HEAD. See cross-arc pattern in §14.6. | S1699 §4.1; cross-links S1402 F.B1 (see §14.3) |
+| Content → Memory | **INPUT STABLE; PIPELINE-SIDE OUTPUT ABSENT (PA-tool feedback bridge PARTIAL).** `_record_content_feedback` at `td_handlers_content.py:184` (8 call sites) writes operator feedback to `AgentMemory`; pipeline-side verdict → memory bridge does NOT close. `ContentLearningLoopBridge` PARTIAL not ABSENT (F6 fold correction). | S1606 §9.4; S1699 §3, §4.5, §5.7 Contradiction 1 |
+| Content → Discord | **PARTIAL (fire-and-forget).** Discord broadcast rail has ZERO gate integration; no retract path (immutable-once-broadcast). | S1604 §14; S1699 §3 |
+| Content → Frontend | **INTEGRATED API + ISLAND auth.** 2 adapters at HEAD (blogsApi + deliverablesApi; `newsletterApi` NOT present per F1 Cat F self-caught grep 0-hit correction); REST + Frontend auth boundary asymmetric-CRITICAL. | S1606 §1.1; S1699 §5.7 Contradiction 4 |
+| Content → Employee OS | **PARTIAL governance layer (Documentation Manager overlap).** UNK-F3 open: whether a Content Employee analog to D55 is warranted or whether the Documentation Manager `JobContract` on RIGBY already covers Content-adjacent authority. | S1699 §6.1 UNK-F3, §9.1 |
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1699 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.3 Content Pipeline (11) → Inbox (17) | MISSING — Deliverable status → notification (Agent 3 §2.2) | **CONFIRMED and extended.** Post-publish correction structurally ABSENT across all 3 rails (Discord broadcast fire-and-forget; Newsletter dry_run parked >4mo with ZERO live-send infrastructure; Frontend approve/publish has no un-approve or retract). | S1604 §14 T.15.C1/T.15.C2; S1699 §4.3 |
+| §2.3 Content Pipeline (11) → PA (1) via Rigby intake | WEAK — `DeliverableEvent → rigby_event_intake` gated by `RIGBY_EVENT_INTAKE_ENABLED=False` (Agent 3 §3.1) | **REFINED** — 4-tool Cat E surface (`content_tool` + `deliverable_tool` + `content_review_panel` + `newsletter_tool`) is WORKING with tactical split, but REST + Frontend surfaces carry ZERO auth decorator CRITICAL asymmetric-auth-boundary. | S1605 §14 T.15.E2, T.15.E3; S1699 §3 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **`auto_publish_approved_blogs` beat MISSING at HEAD despite 5 doc sources claiming "daily 6 AM."** RUNTIME-CONFIRMED via `ops_tool.celery_task_history` (30d = 0 events) + `scheduled_tasks_tool` (0 filtered). **Beat NEVER FIRES.** 5 doc PRs owed at Content arc §7.4 (topic doc + narrative + `AUDIT_FINDINGS.md` + CLAUDE.md autoblock + prior handoffs). `S1604 D.14.C5` audit-trail gap MOOT because beat never fires. Cross-arc CORRECTION pattern (S1605 F1 → S1606 F8 → S1699 §5.7 Contradiction 5). Source: S1605 §14 T.15.E4; S1606 §14 F8; S1699 §5.7 Contradiction 5.
+- **Post-publish correction structurally ABSENT arc-wide.** Zero retract / errata / unpublish paths at HEAD across all publish surfaces. If integration posture D65c selected, this is P1 multi-quarter `ContentLifecycleEngine` remediation; if island posture selected, per-rail ADR required. Source: S1604 §14 T.15.C1; S1699 §4.3.
+- **Newsletter live-send infrastructure ABSENT (CRITICAL).** dry_run parked >4mo; EXPERIMENTAL. Source: S1604 §14 T.15.C2; S1699 §3.
+- **Triple-gate composition contract MISSING (HIGH).** PublishGate is SelfBlog-only at HEAD; no unified gate that composes Deliverable + variant + rail. Source: S1604 §14; S1699 §4.
+- **Silent-partial-source failure at Cat A pipeline (HIGH).** Three try/except blocks in `ClaimsPackBuilder` swallow source failures independently; pipeline continues degraded without a degraded-status contract to consumers. Source: S1601 §14 F2; S1699 §4.2.
+- **RAG workspace-scoping CRITICAL (riskiest Content arc finding).** Absent at HEAD. Source: S1601 §14 F4; S1699 §1.
+- **`SportsBettingBrief` + `BlockchainAuditBrief` — UNFINISHED-ORPHAN Deliverable variants (CRITICAL).** Confirms §14.4 finding from Content side; cross-arc handoff T1.h `SportsBettingBrief` consumer-or-remove ADR re-scope. Source: S1603 §1; S1699 §9.
+
+**POSTURE-PENDING (four orthogonal Chris-gated ADRs, D65a-D65e):**
+
+- **D65a Deliverable canonicalization** — container-level integration vs island (SelfBlog factory adoption complete vs 5 structural-island variants preserved).
+- **D65b PublishGate canonicalization** — gate-level SelfBlog-only extendable to variants vs per-variant gates.
+- **D65c Lifecycle transition ownership** — orchestrator-level unified `ContentLifecycleEngine` vs per-rail correction.
+- **D65e Rigby PA-tool + enforcement centralization** — cross-boundary UnifiedContentAuthLayer vs per-surface auth ADR.
+
+### 14.6 Cross-arc pattern crystallizations
+
+Patterns visible only from the multi-arc vantage that this refresh
+section provides. Each cites the arc-anchors where it was
+independently surfaced.
+
+**CX-P1 — Runtime-owner MISSING pattern.** S1274 §14 finding #36
+identified this for Revenue (HIGH). Group 1400 confirmed
+**UNANIMOUS 6/6** and proposed D55 two-sibling JobContract
+resolution. Group 1300 Memory arc did NOT hit this pattern (Memory
+scope has clear ownership per surface). Group 1500 Sports arc has
+NO JobContract for the sports domain either (Cat F §5.4) —
+extending the pattern to a second unresolved domain. Group 1600
+Content arc UNK-F3 preserves the question of whether Content
+needs a JobContract or the Documentation Manager on RIGBY covers.
+**Consolidated status: 2 of 4 closed arcs identify runtime-owner
+MISSING as a load-bearing gap (Revenue + Sports); 1 open
+(Content); 1 well-owned (Memory).** Anchor: S1499 §4.5; S1599
+§5.4; S1699 §6.1 UNK-F3.
+
+**CX-P2 (single-arc / cross-domain artifact) — Write-only-forgotten
+variants.** *(cross-domain within a single arc; promote to full CX
+once corroborated by a second arc — v3 fold F6 scope-honest
+rename.)* Same pattern class recurred across Deliverable variants
+(SportsBettingBrief 2 writers 0 readers + BlockchainAuditBrief
+same shape) with an identical remediation shape: "consumer-or-
+remove ADR." The two variants span Sports-adjacent and Content-
+adjacent domains but were surfaced within a single arc (Group 1600
+Content Cat D), not independently across two arcs — the honest
+scope is "cross-domain artifact discovered inside one arc." Content
+arc §9 T1.h explicitly delegates `SportsBettingBrief` consumer-or-
+remove decision back to Sports arc T2 post-arc slate, posture-tied
+to Sports T1 R.SPORTS.POSTURE. Anchor: S1504 §14.3; S1505 §14.4;
+S1603 §1; S1699 §9.
+
+**CX-P3 — ZERO outbound delivery pattern class.** Content arc §4.1
+identifies 2-of-2 at Content ↔ Revenue level: `OutreachDraft` +
+Newsletter both content-generation-only ZERO outbound at HEAD.
+Root cause traces to S1402 F.B1 (Revenue arc) — pattern predates
+Group 1600. UNK-F2 preserves the open question of whether the
+pattern class unifies to 3-of-3 (with `BlockchainAuditBrief` from
+Sports-adjacent) OR represents three separate delivery domains.
+**Consolidated status:** Content arc §5.7 Contradiction 2 F3 fold
+resolved to 2-of-2 for this doc's purposes; unification decision
+Chris-gated post-arc. Anchor: S1402 §14 F.B1; S1699 §4.1, §5.7
+Contradiction 2.
+
+**CX-P4 — POSTURE-PENDING as an arc-close disposition (overlay-tag
+framing per v3 fold F8).** Sports arc closed with T1 R.SPORTS.POSTURE
++ T1 R.DBAO.CODENAME un-resolved BY DESIGN (Cat F consolidates
+evidence; Chris ADR resolves post-arc). Content arc closed with 4
+orthogonal Chris-gated posture axes (D65a/b/c/e) un-resolved BY
+DESIGN. Revenue arc closed with T1 parallel-schema + T4 income-lane
+dormancy (latter resolved (b) dormant-planned at S1499). Memory arc
+did NOT surface a posture-pending axis. **Consolidated status:
+POSTURE-PENDING is now a recognized close disposition, distinct
+from CANDIDATE (unverified evidence) — but it does NOT compete with
+the v2 baseline classes (STRONG/WEAK/MISSING/OVERCOUPLED/UNKNOWN).**
+POSTURE-PENDING encodes *decision state* (governance-gate); the v2
+baseline classes encode *wiring state*. The two axes are orthogonal:
+a connection can be MISSING + POSTURE-PENDING (Sports → Signal
+Engine at §14.4), WEAK + POSTURE-PENDING (a hypothetical partially-
+wired-pending-ADR case), etc. A future v4 §2 refresh would surface
+POSTURE-PENDING as an **overlay tag column** alongside the existing
+classification column, not as a replacement value. Do NOT read
+POSTURE-PENDING as a 5th peer classification — that framing was
+removed in v3. Anchor: §14.0 vocabulary; S1599 D59 posture-decision
+framing; S1699 D65a/b/c/e four-axis handoff.
+
+**CX-P5 — Meta-methodology §10 template propagation.** All 4
+arcs applied the playbook §11.3 §10 "What This Research Taught
+Us About How to Do Research" section (S1399 first; S1499 second;
+S1599 third; S1699 fourth). Distinct from cross-domain
+connections but load-bearing for how future arcs will be run
+against the surfaces this doc catalogs. Playbook v3 candidate
+patterns MET across arcs: F1/F4-CANDIDATE discipline; sibling-
+inheritance hypothesis-correction; docs cascade at every close;
+meta-methodology §10 as canonical-summary requirement; D48
+stability-probe gate + warmup-ping (11-consecutive-clean-arms
+sub-pattern at S1699 close). Sub-pattern (per v3 fold, adjacent
+to CX-P5): **candidate-state discipline (F1/F4) propagates
+across arcs as a gating mechanism for claims** — claims stay
+CANDIDATE until owner-model-qualified consumer inventory lands;
+this discipline is visible in Memory + Revenue arcs and is a
+methodology property, not a system-crystallization property.
+Anchor: S1399 §10.2; S1499 §10.2; S1599 §10.2; S1699 §10.2.
+
+**CX-P6 — Parallel-schema drift (mainline vs intelligence/demo
+planes) (NEW, v3 fold F7).** Multiple arcs surfaced the same
+architectural class: **two schemas or two representations of the
+same conceptual entity exist in parallel with no declared source-
+of-truth hierarchy or bridge**. This is not "schema drift" in the
+narrow sense — it is **parallel-plane representation drift**
+(mainline vs intelligence / demo / realtime plane), which produces
+a false "integrated" posture at read-side while data flows silently
+diverge. Independently confirmed at 2 arcs minimum:
+
+- **Revenue arc S1499:** core `Revenue`/`OpportunityRevenue`/`OpportunityOutcome`
+  (mainline Django) vs intelligence `RevenueRecord`/`RevenueSource`/`ProposalTracker`
+  — `revenue_attribution_bridge.py:227` fires on core `Revenue` only;
+  intelligence-side orphaned. F.E3 CONFIRMED HIGH. Umbrella track
+  T1 R.E3 ADR post-arc. Anchor: S1405 §14 F.E3; S1499 §3.3.
+- **Revenue arc S1499 (Discovery lane variant):** mainline Django
+  `Opportunity` (persistent) vs `intelligence_engine.get_current_opportunities()`
+  (in-memory realtime, 5 consumer sites at `OpportunityScannerConsumer`).
+  Sync contract UNKNOWN. F.A1 CONFIRMED HIGH. Same class as above;
+  operational implications differ (cache staleness, WebSocket read
+  semantics). Anchor: S1401 §14 F.A1; S1499 §3.3.
+- **Sports arc S1599:** intelligence-vs-mainline drift throughout
+  Cat F — `RealtimeIntelligenceEngine` SCOPE-CLAIM-EXCEEDS-IMPLEMENTATION
+  (cross-domain loops named as cross-domain in code/docs but populated
+  with hardcoded demo data); `/ws/dbao/` + `/ws/dbao-dashboard/`
+  MOCK-DATA-CONSUMER (synthesizes every metric field via
+  `random.randint()` + `random.uniform()`); DBAO codename
+  NAMING-CONVENTION-WITHOUT-MATERIALIZATION (6 declared artifacts
+  + zero runtime state). **Sports arc four-axis compound maturity
+  frames this as its own axis (Intelligence surface — DECLARED-
+  FEATURE-FLAG-GATES-NOTHING at flag layer + LATENT-ZERO-FIRE at
+  engine layer + DOMAIN-NEUTRAL at REST/frontend layer).** Anchor:
+  S1506 §14.1, §14.7, §14.9; S1599 §3.5 four-axis synthesis.
+
+**Consolidated status: 2 of 4 closed arcs surface this pattern
+class independently, with same root cause (no declared source-of-
+truth hierarchy) but different operational surfaces (persistence
+divergence vs realtime representation divergence vs demo-vs-live
+plane split).** Umbrella track: post-arc design-preparation ADR
+should decide reconciliation policy per axis (integration =
+missing bridge; island = intentional plane separation with
+explicit contract). Cross-references: Revenue T1 R.E3 + Revenue
+T1 R.A1 + Sports T1 R.SPORTS.POSTURE + Sports T1 R.DBAO.CODENAME
+all feed this decision.
+
+### 14.7 Refresh gaps and future arc coverage
+
+**What §14 does NOT refresh.**
+
+- Domain pairs where no arc has closed since S1274: HumanAttention
+  ↔ Governance; Body Systems ↔ *; Advisors persistence; Inbox
+  fanout; Web Push wiring; Mobile Expo push UI. These retain v2
+  classifications unchanged.
+- Cross-domain connections involving domains with active but
+  unclosed arcs. As of 2026-07-03, Group 1700 Observability is
+  in-progress (S1704 Cat D ToolCallRecord audit next). When
+  Group 1700 closes, §14.8 (new subsection) will add
+  Observability-side refinements.
+- Boundary violations at §7 refined by arc evidence. New patterns
+  worth §7 augmentation include Sports arc MOCK-DATA-CONSUMER
+  (§14.4), HOT-PATH-CHOKE-BYPASS (§14.4), Content arc auth-
+  boundary asymmetry (§14.5). These are noted in §14 but §7
+  itself is preserved from v2.
+- §11 risk matrix additions. New CRITICAL / HIGH findings from
+  arc closes are not slotted into the v2 §11 numbered ranking
+  (which stops at #40+). A future v4 refresh could integrate
+  §14 findings into a re-ranked §11.
+
+**What the queue looks like.** Per `docs/research/OPEN_ARCS.md`:
+
+- Group 1700 Observability / Telemetry / SLOs — IN-PROGRESS (S1700
+  parent + S1701-S1703 children closed; S1704-S1706 pending; S1799
+  canonical summary pending). Will produce a §14.8 subsection.
+- Group 1800 HumanAttention / Feedback / Learning — NOT STARTED.
+  Will re-audit the HumanAttention ↔ * connections at v2 §2.6.
+- Group 1900 Event / Integration / Runtime Architecture — NOT
+  STARTED. Downstream of S1274 §11.1 EventBus adoption; inherits
+  Group 1700 delegation of event bus / routing / schema
+  versioning.
+
+**Cross-arc delegated items owed to future arcs (per canonical
+summaries §9):**
+
+- **Group 1700 Observability** — filter-drop telemetry (Cat D
+  Memory + E↔D Memory boundary); orphan-write telemetry (Revenue
+  F2 pattern); EventBus adoption for Cat F Memory + Revenue T5
+  streams; zero-fire beat detection (Sports Cat C + Cat D);
+  MOCK-DATA-CONSUMER detection (Sports Cat E); worker-recycle
+  instrumentation (Memory Cat H).
+- **Employee OS 1200s arc** — Cat G Mission Memory (Memory
+  delegation); Revenue Employee + Income/Jobs Employee JobContracts
+  (Revenue T2/T3); Content Employee analog decision (Content
+  UNK-F3).
+
+### 14.8 Reserved for Group 1700 Observability arc close
+
+*(To be populated when S1799 canonical summary lands.)*
+
+---
+
+**End of draft. Status: research / draft — S1274 v2 Rigby SIGN-
+with-edits fold preserved via isolation pin `pa-7442a2e2665bd18e`
+(Medium confidence); v3 post-arc-close refresh log appended at §14
+on 2026-07-03 (append-only; S1274 baseline §1–§13 unmodified).
+Not committed unless Chris explicitly asks.**
+
