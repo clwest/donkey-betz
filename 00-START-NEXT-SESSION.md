@@ -13,105 +13,108 @@ tools/pa_local.sh "message"
 
 **Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-## READ THIS SECOND — GROUP 1700 OPENED AT S1700; ARC PIN IN SERVICE FOR CHILDREN
+## READ THIS SECOND — GROUP 1700 IN-PROGRESS; S1701 CAT A CLOSED; NEXT = S1702 CAT B
 
-The local wrapper at `tools/pa_local.sh:128` points at Group 1700 arc pin. **Active arc pin state after S1700 close:**
+The local wrapper at `tools/pa_local.sh:128` points at Group 1700 arc pin. **Active arc pin state after S1701 close:**
 
-- **Active Group 1700 arc pin: `pa-e7fbacc996b34b44`** (Rigby `session_tool.create_fresh` at S1700 open — title "Session 1700 — Observability research group (kickoff)"). Continues in service across Group 1700 arc (S1701-S1706 children + S1799 xx99 canonical summary). SIGN isolation pins for child audits MINTED FRESH per playbook §15 stage-table child row.
-- **Retired at S1700 open:** Group 1600 arc pin `pa-f52acf3f8d394faa` (via `session_tool.retire force=true` at S1699 close per playbook §16 final-arc-close discipline).
+- **Active Group 1700 arc pin: `pa-e7fbacc996b34b44`** (Rigby `session_tool.create_fresh` at S1700 open — title "Session 1700 — Observability research group (kickoff)"). Continues in service across Group 1700 arc (S1701 CLOSED + S1702-S1706 children pending + S1799 xx99 canonical summary). SIGN routing at S1701 landed on arc pin (fresh SIGN pin `pa-3147aef9db4945ac` minted but routed-around by wrapper hard-code — S1600 parent-scoping precedent: arc pin doubles as SIGN pin).
+- **Retired at S1701 close:** Fresh SIGN isolation pin `pa-3147aef9db4945ac` (was unused because wrapper hard-code routed SIGN to arc pin; retired per playbook §16 discipline with `updated_count=1, retired=true`).
+- **Retired at S1700 open:** Group 1600 arc pin `pa-f52acf3f8d394faa`.
 - **Retired earlier at S1699 close:** SIGN isolation pin `pa-846b6c4a532947c3`.
 - **Retired earlier at S1606 close:** SIGN isolation pin `pa-8cfafefb67864f83`.
 - **Retired earlier at S1605-S1601 closes:** SIGN isolation pins `pa-b1b26f4f35474df8` + `pa-4ce64003711de4f1` + `pa-8af9063864bf4a7f` + `pa-1c5298d807d7a1d2` + `pa-9f075a024552b663`.
 - **Retired earlier at S1599 close:** Group 1500 arc pin `pa-791b3db549a64e54`.
 - **Retired earlier at S1499 close:** Group 1400 arc pin `pa-34d43795e1b24bd3` + SIGN isolation pin `pa-877f1919efaa48e4`.
 
-**No wrapper rotation owed at next-session open** — arc pin in service through Group 1700 close.
+**No wrapper rotation owed at next-session open** — arc pin in service through Group 1700 close at S1799.
 
-## READ THIS THIRD — GROUP 1700 PARENT SCOPING LANDED WITH F1-F6 FOLDS; NEXT SESSION = S1701 CAT A CELERYTASKEVENT AUDIT
+## READ THIS THIRD — S1701 CAT A CELERYTASKEVENT AUDIT LANDED; NEXT = S1702 CAT B LLMCallEvent
 
-Session 1700 shipped the **Group 1700 Observability / Telemetry / SLOs parent scoping doc** at `docs/research/domains/observability/1700_observability_domain_scoping.md` (`status: active`, `category: parent_scoping`, `session: 1700`, `child_slot: P0` implicit, `domain_slug: observability`, `research_group: 1700`, `authority: parent-doc + FOURTH application of Chris's Phase 0 3-step methodology`; ~1250 lines post-fold; playbook §11.1 parent template FOURTH application after S1400 first + S1500 second + S1600 third; playbook v3 §11.1 template promotion CONFIRMED-STRENGTHENED via fourth-application meta-methodology). **All D-decisions locked via Chris "agree all + SIGN" round + F1-F6 folds landed pre-commit.**
+Session 1701 shipped the **Group 1700 Cat A CeleryTaskEvent child audit** at `docs/research/domains/observability/1701_observability_cat_a_celery_task_event_audit.md` (`status: active`, `category: child_audit`, `session: 1701`, `child_slot: P1`, `domain_slug: observability`, `research_group: 1700`, `head_commit: b8194e24`, `authority: child-audit`; 1082 lines post-fold; playbook §11.2 20-section child audit template FIRST application under Group 1700; playbook §13 6-parallel-Explore sweep + §14 verifier-loop applied pre-Explore + post-Explore; Rigby SIGN cycle 1 SIGN-with-edits at High confidence — F1-F3 folds landed pre-commit). **13-consecutive-fully-clean-arms sub-pattern CONFIRMED via D48 18th arm** on arc pin `pa-e7fbacc996b34b44` (single-batch 4-question pattern per S1701 precedent).
 
-**D-decisions locked at S1700 open + close:**
+**6 load-bearing findings locked in S1701 audit §1 Executive Summary:**
 
-- **D1** (S1700 open via terminal card) — Group 1700 = Observability confirmed per playbook §22 default lean + OS §12.3 target.
-- **D2** (S1700 open via terminal card) — Delegate event architecture (event bus, routing, schema versioning) to Group 1900.
-- **D3** (S1700 open via terminal card) — Parent-only this session; P1 CeleryTaskEvent audit kicks off next-session.
-- **D69** — Parent shape PARENT-WITH-CHILDREN 6-child arc (P1 Cat A + P2 Cat B + P3 Cat C + P4 Cat D + P5 Cat E + P6 Cat F + P7 xx99 canonical summary).
-- **D70** — Six categories A–F with boundary rules per §3 (Cat C 3-class landmine + F1 boundary sentence; Cat F sub-slotted F.a-F.e per F2; Cat B/D accounting rule per F3).
-- **D71** — Delegation boundary with Group 1900 explicit: "Observability owns producer-side telemetry contract completeness; Event Architecture owns cross-domain event routing."
-- **D72** — Child sequence P1→P2→P3→P4→P5→P6→P7 sequential per §5 with F10 dependency clauses embedded (P5 depends-on-P2 explicit per F4 MUST-FIX fold).
-- **D73** — Posture-decision framing = evidence plan NOT recommendation (xx99 does NOT select; Chris-gated post-arc ADR resolves D74 axis).
-- **D74** — Arc lens question locked: "Are the 5 execution-telemetry layers structurally separable, OR do they need canonical unification (single execution_id + trace_id spine spanning task→LLM→agent→tool→ops)?" — evidence-plan framing only; F5 correlation-primitives box makes the load-bearing sub-question explicit (is execution_id spine-shaped or single-call-scoped at HEAD?).
+- **F1** — QUEUED status is NOT ghost state: legitimate gateway writer at `td_handlers_gateway.py:988` (`cockpit_tool.trigger_task`) fills pre-prerun polling gap so status polling doesn't fall through to AsyncResult PENDING.
+- **F2** — Parent §3 A signal-handler line-range drift (`:74-177` claimed vs `:74-300` actual with 5 handlers, not 3). MEDIUM D1 doc-vs-runtime drift; owed to xx99 anchor-update PR.
+- **F3** — REVOKED status is NOT ghost state: 2 legitimate writers found — `ops_autopilot.py:100` (stuck-task sweep) + `td_handlers_gateway.py:1041` (user-initiated `cockpit_tool.revoke_task`).
+- **F4** — `on_agent_task_failure_bridge` at `core/celery_telemetry.py:240-286` is a legitimate S1219 P1 **cross-cat exception** (Cat A→Cat C fire-alarm circuit-breaker), categorically distinct from parallel writers per Rigby SIGN F1 terminology fold. Hard-SIGKILL gap remains 30-min cleanup watchdog territory.
+- **F5** — agent_name backfill intentional gradual-fill debt (S1169 no-backfill stance).
+- **F6** — Monitor-task overhead debt (S1167) PARTIALLY closed — decorator-side timeouts landed S1169; probe-decomposition root fix per `celery-workers.md:255-276` remains deferred (§19 R2 HIGH priority).
 
-**Rigby light SIGN cycle 1 SIGN-with-edits at High confidence** via arc pin `pa-e7fbacc996b34b44` (parent-stage precedent: arc pin doubles as SIGN pin per S1600 pattern). 4 pressure-test questions batched single-turn (D48 17th arm HOLDING CLEAN). **F1-F6 folds landed pre-commit:**
+**§9 Correlation primitive posture (D74 axis evidence):** task_id is coverage-complete singleton primitive at `core/models_celery_telemetry.py:33`; **8 downstream models** (`AISeriesItem`, `ContentPipelineRun`, `ConceptForgeRun`, `SpiderExecution`, `WorkflowExecution`, `ScheduledImageGeneration`, `WorkflowRun`, `ExecutionRun`) carry `celery_task_id` as scalar CharField without FK. Cat A's D74 contribution: task_id is a singleton primitive with 8 string-based non-FK downstream references, NOT a canonical spine.
 
-- **F1** — Cat C boundary rule: added sentence "P3 MUST identify the actual write path(s) and canonical table/class used at runtime at HEAD; ADR to remove/merge the deprecated 2 is explicitly out-of-scope."
-- **F2** — Cat F internally sub-slotted into F.a Body Systems + F.b SLO framework + F.c Event-model catalog + F.d Doc-claim verifier drift + F.e Terminology boundary; each sub-slot has explicit stop condition.
-- **F3** — Cat B ↔ Cat D accounting rule: "LLM calls made from inside a tool invocation remain Cat B; Cat D never attempts to own LLM cost; dedup via correlation keys (execution_id + trace_id + tool_call_id)."
-- **F4** — P5 dependency clause changed from "Depends on P1 + P3 + P4" to "Depends on P1 + P2 + P3 + P4" (MUST-FIX: mission-scoped LLM cost aggregation).
-- **F5** — New §5 "Correlation primitives (working definitions — HYPOTHESIS-TO-BE-VERIFIED)" box with 5 primitives: task_id / execution_id / trace_id / tool_call_id / mission_id.
-- **F6** — §7 anti-scope items 19/20/21: Frontend/WebSocket/client telemetry + Auth token/OAuth telemetry + "RigbyTelemetry" or any new observability layer buildout.
+**§16 Boundary violation matrix: 5 candidates all LEGITIMATE** (1 cross-cat exception + 4 parallel writers). Recommendation for xx99: codify Cat A boundary rule with 4 sub-clauses + separate cross-cat exception sub-clause for B1.
 
-**AgentExecution 3-class landmine catalogued** at HEAD `2b7dbd89` — `intelligence/models/agent_execution.py:11` + `intelligence/models.py:587` + `core/models_unified_system.py:882` with stale S287 deprecation notice pointing at S391 compatibility shim that no longer holds an `AgentExecution` class. P3 Cat C boundary discipline: catalog + name canonical + define correlation contract; deprecation ADR is post-arc T-slot.
+**Maturity STABLE + Research Coverage MODERATE + Risk MEDIUM.**
 
-**D48 preemptive stability-probe gate 17th arm HOLDING CLEAN — TWELVE-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700 CONFIRMED per batch-processing criterion.** Codification-ready-STRENGTHENED-FURTHER for playbook v3 §15.
+**Rigby SIGN cycle 1 SIGN-with-edits at High confidence** on arc pin `pa-e7fbacc996b34b44` (fresh SIGN pin `pa-3147aef9db4945ac` minted per playbook §15 but routed-around by `tools/pa_local.sh:128` wrapper hard-code — S1600 parent-scoping precedent applies). **F1-F3 folds landed pre-commit:**
 
-**Session close artifacts committed at S1700 close:**
+- **F1 (MEDIUM)** — Boundary terminology clarity: labeled `on_agent_task_failure_bridge` explicitly as "LEGITIMATE CROSS-CAT EXCEPTION (Cat A→Cat C)" distinct from 4 parallel writers.
+- **F2 (LOW)** — Downstream `celery_task_id` count consistency (7→8 with 8 models enumerated inline).
+- **F3 (LOW)** — D10 severity footnote (Cat A LOW + xx99 elevation flagged).
+
+**Rigby CONFIRM verdicts (no folds required):** Q1 coverage-completeness High + Q2 drift severity Medium-High + Q3 correlation-primitive posture High (GIN-index question correctly deferred to P3 Cat C via U4) + Q4 R1-R8 ranking Medium-High (R2 monitor-task probe-decomposition stays HIGH as separate follow-on; R7 WebSocket push correctly LOW downstream of Group 1900).
+
+**Session close artifacts committed at S1701 close:**
 
 ```
-docs/research/domains/observability/1700_observability_domain_scoping.md    [new; parent scoping doc; F1-F6 folds landed pre-commit; ~1250 lines; FIRST session under Group 1700]
-docs/research/ARCHITECTURE_INDEX.md                                          [modified — v42 → v43; §1.46 registration + line-6 preamble bump + §8 timeline row]
-docs/research/OPEN_ARCS.md                                                   [modified — Group 1700 row MOVED from Not-started to In-progress; line-6 preamble bump]
-tools/pa_local.sh                                                            [modified — line-128 rotated to arc pin pa-e7fbacc996b34b44]
-docs/handoffs/SESSION_1700_OBSERVABILITY_ARC_OPEN.md                        [new — S1700 handoff]
-00-START-NEXT-SESSION.md                                                     [modified — this file; Group 1700 arc OPEN]
+docs/research/domains/observability/1701_observability_cat_a_celery_task_event_audit.md   [new; 1082 lines post-fold; Cat A child audit; F1-F3 folds landed pre-commit; FIRST child under Group 1700]
+docs/research/ARCHITECTURE_INDEX.md                                                        [modified — v43 → v44 with §1.47 S1701 registration + §8 timeline S1701 row + line-6 v44 preamble]
+docs/research/OPEN_ARCS.md                                                                 [modified — Group 1700 In-progress row current-child updated S1700 → S1701; line-6 preamble bumped]
+docs/handoffs/SESSION_1701_OBSERVABILITY_CAT_A_CELERY_TASK_EVENT_AUDIT.md                  [new — S1701 handoff]
+00-START-NEXT-SESSION.md                                                                   [modified — this file; S1701 Cat A CLOSED; next-session priority = S1702 Cat B LLMCallEvent]
 ```
 
-Handoff: `docs/handoffs/SESSION_1700_OBSERVABILITY_ARC_OPEN.md`.
+Handoff: `docs/handoffs/SESSION_1701_OBSERVABILITY_CAT_A_CELERY_TASK_EVENT_AUDIT.md`.
 
-### NEXT-SESSION MISSION — S1701 CAT A CELERYTASKEVENT CHILD AUDIT (D72 P1 slot)
+### NEXT-SESSION MISSION — S1702 CAT B LLMCallEvent CHILD AUDIT (D72 P2 slot)
 
-Per D72 P1 slot + D3 next-session cadence: **S1701 Cat A audit** — Task/Worker Execution Telemetry (`CeleryTaskEvent`).
+Per D72 P2 slot + parent §5 sequence: **S1702 Cat B audit** — LLM Call Telemetry (`LLMCallEvent`).
 
-Cat A canonical questions the child audit gathers evidence for:
-- Does signal handler at `core/celery_telemetry.py:74-177` cover all task states across all workers?
-- Is the agent_name dimension (Session 1169) retroactively defensible or backfill-incomplete?
-- What is observed-vs-configured retention window at HEAD (`CELERY_TASK_EVENT_RETENTION_DAYS` default 30)?
-- What is the monitor-task overhead spiral risk (Session 1167 precedent)?
-- What is the observability-of-observability meta answer per parent §2.7?
+Cat B canonical questions the child audit gathers evidence for:
 
-Per F5 correlation-primitives box (`task_id` primitive row): P1 verifies task_id coverage completeness + retention — grounding for downstream P2-P5 execution_id correlation contract.
+- What is the scope of `LLMCallEvent.execution_id` — does it span a full agent-tool-LLM sequence, or just a single LLM call? **Inherits from Cat A S1701 §9:** `LLMCallEvent.execution_id` is a UUIDField implicitly pointing to `AgentExecution.id` without FK declaration. Does the execution_id inherit from CeleryTaskEvent.task_id, or is it disjoint?
+- Does every LLM caller route through `core/services/llm_call_wrapper.py` (S1098 wrapper) — or are there rogue direct `Anthropic()` / `OpenAI()` invocations bypassing telemetry? Cross-check Memory rules `feedback_anthropic_client_factory.md` + `feedback_openai_client_factory.md`.
+- Is cost accounting accurate? S1224 `gpt-5* max_completion_tokens` floor precedent — are there sites still under 4000-token budget that silently return empty content with `finish_reason='length'`?
+- 6-provider coverage: OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini per `LLMProviderRegistry`. Which providers are wrapped, which bypass?
+- Cat B/Cat D accounting rule per parent F3 fold: LLM calls made from inside a tool invocation remain **Cat B**; Cat D never attempts to own LLM cost.
 
-**S1701 audit shape:**
-- Playbook §11.2 20-section child audit template (child_slot: P1; domain_slug: observability; research_group: 1700).
+Per F5 correlation-primitives box (`execution_id` primitive row): P2 verifies execution_id scope + inheritance-from-task_id + FK-declaration-status — feeds directly into xx99's D74 axis resolution.
+
+**S1702 audit shape:**
+
+- Playbook §11.2 20-section child audit template (child_slot: P2; domain_slug: observability; research_group: 1700).
 - 6-parallel-Explore sub-agents per §13.
-- Parent-Claude verifier-loop per §14 on load-bearing binary claims.
+- Parent-Claude verifier-loop per §14 on load-bearing binary claims (pre-Explore + post-Explore).
 - **Required full Rigby SIGN cycle 1** per playbook §15 stage-table child row (not optional light SIGN — child audit is research finding).
-- Fresh SIGN isolation pin per playbook §15 promoted rule (arc pin `pa-e7fbacc996b34b44` continues as arc context; SIGN pin is fresh isolation pin minted per child).
-- Applies parent D69 D70 D71 D72 D73 D74 + D62 = (a) 6-sibling exemplar 4-item pre-brief mini-schema per surface upfront per S1699 §10.2 codify-ready candidate.
+- Fresh SIGN isolation pin per playbook §15 promoted rule (arc pin `pa-e7fbacc996b34b44` continues as arc context; SIGN routing will land on arc pin per S1700/S1701 wrapper hard-code precedent unless wrapper enhancement lands).
+- Applies parent D69-D74 + Cat A S1701 D74 axis evidence contribution (task_id singleton + 8 downstream non-FK references).
 
 Session flow at next-session open:
 
 1. `context-kit orient` (session-open protocol per memory rule).
-2. Check if S1700 artifact set merged to `main` between sessions.
+2. Check if S1701 artifact set merged to `main` between sessions.
 3. If not yet merged: Chris merge + PR merge.
 4. **Run post-merge 4-step docs cascade + `build_docs_provenance`** per `feedback_docs_cascade_at_every_close.md`.
-5. Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 stability probe 18th arm start).
-6. Mint fresh SIGN isolation pin for S1701 via Rigby `session_tool.create_fresh` (title: "Session 1701 — Group 1700 Cat A CeleryTaskEvent audit — SIGN isolation").
-7. Dispatch 6-parallel Explore sweep on Cat A surface (signal handlers + retention + agent_name dimension + monitor-task overhead + 3 PA-tool consumers).
+5. Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 19th arm start).
+6. Mint fresh SIGN isolation pin for S1702 via Rigby `session_tool.create_fresh` (title: "Session 1702 — Group 1700 Cat B LLMCallEvent audit — SIGN isolation").
+7. Dispatch 6-parallel Explore sweep on Cat B surface (LLMCallEvent model + llm_call_wrapper flow + 6 provider coverage + client-factory boundary + cost accounting + execution_id scope).
 8. Parent-Claude verifier-loop on any pre-Explore binary claims.
-9. Draft S1701 audit per playbook §11.2 20-section template.
-10. Rigby SIGN cycle 1 via fresh isolation pin; batch A/B/C per Memory rule `feedback_rigby_sign_worker_instability_recovery.md`.
+9. Draft S1702 audit per playbook §11.2 20-section template.
+10. Rigby SIGN cycle 1 (single-batch 4-question pattern per S1701 precedent).
 11. Land Rigby folds pre-commit.
-12. Retire SIGN isolation pin at S1701 close per playbook §16.
-13. Update ARCHITECTURE_INDEX v43 → v44 with §1.47 S1701 registration + line-6 preamble.
-14. Update OPEN_ARCS Group 1700 In-progress row with S1701 child close note.
-15. Write S1701 handoff + overwrite this `00-START-NEXT-SESSION.md`.
+12. Retire SIGN isolation pin at S1702 close per playbook §16.
+13. Update ARCHITECTURE_INDEX v44 → v45 with §1.48 S1702 registration + §8 timeline row + line-6 preamble.
+14. Update OPEN_ARCS Group 1700 In-progress row with S1702 child close note.
+15. Write S1702 handoff + overwrite this `00-START-NEXT-SESSION.md`.
 
-**Not next (unless Chris specifies):** any specific implementation work per playbook §14.5 no-implementation rule. Deprecation ADR for AgentExecution 3-class landmine is post-arc T-slot per Cat C F1 boundary rule.
+**Not next (unless Chris specifies):** any specific implementation work per playbook §14.5 no-implementation rule. R2 monitor-task probe-decomposition root fix is a separate follow-on ops/infra initiative (per Rigby SIGN Q4 verdict; NOT bundled with xx99 anchor-update tranche).
 
-### Post-arc queued items (Chris-gated, inherited from prior arcs)
+### Post-arc queued items (Chris-gated, inherited from prior arcs + additions from S1701)
 
+- **From S1701 §19:** R1 (HIGH) task_id ↔ execution_id spine posture is xx99 (S1799) scope. **R2 (HIGH) monitor-task probe-decomposition root fix — separate follow-on ops/infra initiative** (T2 debt open since S1167). R3-R5 MEDIUM Cat A follow-ons (agent_name backfill % measurement + retention-cleanup failure detection + QUEUED-transition timeout). R6-R8 LOW (RSS platform-quirk test coverage + realtime WebSocket push + 8-downstream FK reconciliation).
+- **From S1701 §14:** D1 (MEDIUM) signal-handler line-range drift + D2 (MEDIUM) field-set drift owed to xx99 anchor-update PR for `docs/topics/celery-workers.md` + `docs/PLATFORM_WHAT_IT_IS.md` narrative + parent §3 A scope box correction.
+- **From S1701 §20.5:** `tools/pa_local.sh` wrapper enhancement to support per-child SIGN pin routing is a nice-to-have (not blocking). Wrapper currently hard-codes arc pin at L128.
 - **From Group 1600 (S1699):** T0/Gate R.CONTENT.XX99-ADR-BUNDLE-D65A-D65B-D65C-D65E; T1 (20 items) including RAG-SCOPE + citation integrity + force-bypass; T3 CROSS-DOMAIN-EMPLOYEE-ANALOG; cross-arc: Group 1500 T1.h SportsBettingBrief consumer-or-remove + Group 1400 R.B1 OutreachDraft delivery.
 - **From Group 1500 (S1599):** T1 R.SPORTS.POSTURE + R.DBAO.CODENAME Chris-gated ADRs; T1 CRITICAL remediation sequences.
 - **From Group 1400 (S1499):** T1-T10 unified follow-on queue tier structure (still pending).
@@ -120,68 +123,72 @@ Session flow at next-session open:
 - **5 doc PRs owed** for `auto_publish "daily 6 AM"` cross-arc CORRECTION per S1699 §7.4.
 
 **FIRST THING next session open:**
+
 1. `context-kit orient`
-2. Check if S1700 artifact set is on `main` — if yes, next session branches off `main`
+2. Check if S1701 artifact set is on `main` — if yes, next session branches off `main`
 3. If not yet merged: Chris merge + PR merge
 4. **Run post-merge 4-step docs cascade + `build_docs_provenance`** per `feedback_docs_cascade_at_every_close.md`
 5. Verify `service_context: local` via `platform_config_tool overview` on arc pin
-6. Mint fresh SIGN isolation pin for S1701
-7. Execute S1701 Cat A CeleryTaskEvent child audit per D72 P1 slot
+6. Mint fresh SIGN isolation pin for S1702
+7. Execute S1702 Cat B LLMCallEvent child audit per D72 P2 slot
 
 ---
 
 ## PA / Rigby context
 
 - **Arc pin at session start:** `pa-e7fbacc996b34b44` (Group 1700 arc pin; in service through Group 1700 close at S1799). `tools/pa_local.sh:128` points at active arc pin — no rotation needed.
-- **S1700 SIGN routing:** Light SIGN cycle 1 SIGN-with-edits at High confidence (single 4-question batch) on arc pin `pa-e7fbacc996b34b44` (arc pin doubles as SIGN pin per parent-scoping precedent). F1-F6 folds landed pre-commit; 4-question single-batch pattern held clean per D48 17th arm.
+- **S1701 SIGN routing:** SIGN-with-edits cycle 1 at High confidence (single-batch 4-question) on arc pin `pa-e7fbacc996b34b44` (S1600 parent-scoping precedent: arc pin doubles as SIGN pin; fresh SIGN pin `pa-3147aef9db4945ac` minted per playbook §15 but routed-around by wrapper hard-code — retired at S1701 close). F1-F3 folds landed pre-commit; single-batch 4-question pattern held clean per D48 18th arm.
 - **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin at line 128 currently pointing at Group 1700 active arc pin).
 - **Local worker restart** needs `PA_USE_FUNCTION_CALLING=true` env or Rigby drops to keyword routing. `make celery` handles it; ad-hoc `celery -A core worker` does not.
-- **Rigby SIGN worker-instability pattern (D48 17-arc CODIFICATION-READY-STRENGTHENED-FURTHER at S1700 close):** S1405+S1406+S1499+S1501+S1502+S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700 17-arc pattern confirmed. **TWELVE-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700 CONFIRMED at S1700 close per batch-processing criterion.** D48 preemptive stability-probe gate 18th arm anticipated at next-session S1701 child audit open on fresh SIGN isolation pin. Memory rules `feedback_rigby_sign_worker_instability_recovery.md` + `feedback_rigby_deliverable_content.md` + `feedback_rigby_tool_verification.md` apply.
+- **Rigby SIGN worker-instability pattern (D48 18-arc CODIFICATION-READY-STRENGTHENED-FURTHER at S1701 close):** S1405+S1406+S1499+S1501+S1502+S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700+S1701 18-arc pattern confirmed. **THIRTEEN-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN S1503+S1504+S1505+S1506+S1601+S1602+S1603+S1604+S1605+S1606+S1699+S1700+S1701 CONFIRMED at S1701 close per single-batch-4-question criterion.** D48 preemptive stability-probe gate 19th arm anticipated at next-session S1702 child audit open. Memory rules `feedback_rigby_sign_worker_instability_recovery.md` + `feedback_rigby_deliverable_content.md` + `feedback_rigby_tool_verification.md` apply.
 
 ## Repo state at next-session open
 
-- **Branch state (at S1700 close, before merge):** `docs/session-1700-observability-arc-open` PR opens to `main` on push. If merged between sessions, working tree clean and next session branches off `main`.
-- **Handoff continuity:** S1700 handoff at `docs/handoffs/SESSION_1700_OBSERVABILITY_ARC_OPEN.md`. Prior handoffs: SESSION_1699 (Content Group 1600 xx99 canonical summary); SESSION_1606 (Content Cat F LAST child); SESSION_1605-1601 (Content Cat E/A/B/D/C children); SESSION_1600 (Content arc-open parent scoping); SESSION_1599 (Sports arc-close canonical summary); SESSION_1506 → SESSION_1500 (Sports arc); SESSION_1499 → SESSION_1400 (Revenue arc); SESSION_1399 (Memory Group 1300 canonical summary).
-- **ARCHITECTURE_INDEX version:** v43 (bumped this session with §1.46 S1700 registration + line-6 preamble bump + §8 timeline row). Next bump at S1701 child audit close (v43 → v44 with §1.47 S1701 registration).
-- **OPEN_ARCS state:** Group 1700 row MOVED from Not-started §22 queue to In-progress (before Group 1600 Closed row per newer-at-top convention). Group 1600 remains in Closed; Group 1500 remains in Closed; Group 1400 remains in Closed; Group 1300 remains in Closed.
+- **Branch state (at S1701 close, before merge):** `docs/session-1701-observability-cat-a-celery-task-event-audit` PR opens to `main` on push. If merged between sessions, working tree clean and next session branches off `main`.
+- **Handoff continuity:** S1701 handoff at `docs/handoffs/SESSION_1701_OBSERVABILITY_CAT_A_CELERY_TASK_EVENT_AUDIT.md`. Prior handoffs: SESSION_1700 (Observability arc-open parent scoping); SESSION_1699 (Content Group 1600 xx99 canonical summary); SESSION_1606 (Content Cat F LAST child); SESSION_1605-1601 (Content Cat E/A/B/D/C children); SESSION_1600 (Content arc-open parent scoping); SESSION_1599 (Sports arc-close canonical summary); SESSION_1506 → SESSION_1500 (Sports arc); SESSION_1499 → SESSION_1400 (Revenue arc); SESSION_1399 (Memory Group 1300 canonical summary).
+- **ARCHITECTURE_INDEX version:** v44 (bumped this session with §1.47 S1701 registration + §8 timeline S1701 row + line-6 v44 preamble). Next bump at S1702 child audit close (v44 → v45 with §1.48 S1702 registration).
+- **OPEN_ARCS state:** Group 1700 row remains In-progress; current-child updated S1700 (parent) → S1701 (Cat A child). Group 1600 remains in Closed; Group 1500 remains in Closed; Group 1400 remains in Closed; Group 1300 remains in Closed.
 
 ## Next-session first-action punch list
 
 - [ ] `context-kit orient`
-- [ ] Check if S1700 artifact set is on `main` — if yes, next session branches off `main`
+- [ ] Check if S1701 artifact set is on `main` — if yes, next session branches off `main`
 - [ ] If not yet merged: Chris merge + PR merge
 - [ ] **Run post-merge 4-step docs cascade + `build_docs_provenance`** per `feedback_docs_cascade_at_every_close.md`
-- [ ] Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 18th arm start)
-- [ ] Mint fresh SIGN isolation pin for S1701 via Rigby `session_tool.create_fresh`
-- [ ] Execute S1701 Cat A CeleryTaskEvent child audit per playbook §11.2 20-section template
+- [ ] Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 19th arm start)
+- [ ] Mint fresh SIGN isolation pin for S1702 via Rigby `session_tool.create_fresh`
+- [ ] Execute S1702 Cat B LLMCallEvent child audit per playbook §11.2 20-section template
 
 ## Reference — where to look
 
-- **S1700 parent scoping doc:** `docs/research/domains/observability/1700_observability_domain_scoping.md` — playbook §11.1 template FOURTH application; §3 six-category taxonomy A–F with F1-F3 folds; §4 PARENT-WITH-CHILDREN verdict with 4 evidence bullets; §5 P1→P7 sequence with F4 P5 depends-on-P2 fold + F5 Correlation primitives box; §7 21-item anti-scope with F6 three adds; §8 D69-D74 all Chris-locked.
+- **S1701 Cat A audit doc:** `docs/research/domains/observability/1701_observability_cat_a_celery_task_event_audit.md` — playbook §11.2 20-section template FIRST application under Group 1700; §16 Boundary violations matrix (5 candidates all legitimate — 1 cross-cat exception + 4 parallel writers); §9 correlation-primitive posture (task_id singleton + 8 downstream non-FK references) as D74 axis evidence; §19 R1-R8 follow-on queue; §20.5 Rigby SIGN cycle 1 fold notes.
+- **S1700 parent scoping doc:** `docs/research/domains/observability/1700_observability_domain_scoping.md` — playbook §11.1 template FOURTH application; §3 six-category taxonomy A–F with F1-F3 folds; §4 PARENT-WITH-CHILDREN verdict; §5 P1→P7 sequence with F5 correlation primitives box; §7 21-item anti-scope with F6 three adds; §8 D69-D74 all Chris-locked.
 - **S1699 canonical summary doc (fourth §11.3 §10 application):** `docs/research/domains/content/1699_content_canonical_summary.md`.
 - **S1600 parent scoping doc (third §11.1 application):** `docs/research/domains/content/1600_content_domain_scoping.md`.
 - **S1500 parent scoping doc (second §11.1 application):** `docs/research/domains/sports/1500_sports_domain_scoping.md`.
 - **S1400 parent scoping doc (first §11.1 application):** `docs/research/domains/revenue/1400_revenue_domain_scoping.md`.
 - **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (§11.1 parent template + §11.2 child template + §11.3 canonical summary template + §11.3 §10 meta-methodology template + §22 default queue lean).
 - **Research OS:** `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` (§8.1 RESEARCH contract + §12.3 "Start Group NNNN" target).
-- **ARCHITECTURE_INDEX v43:** `docs/research/ARCHITECTURE_INDEX.md` — S1700 §1.46 + line-6 preamble + §8 timeline row.
-- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1700 row moved to In-progress.
-- **Observability entry points (per S1273 §3.25):** `core/models_celery_telemetry.py` (CeleryTaskEvent) + `core/celery_telemetry.py:74-177` (signal handlers) + `core/models_llm_telemetry.py:30-100` (LLMCallEvent) + `core/services/llm_call_wrapper.py` (S1098 wrapper) + `intelligence/models/agent_execution.py:11` (canonical AgentExecution) + `core/models_tool_calls.py:19` (ToolCallRecord) + `core/models_ops_runs.py:11-117` (OpsRun + OpsRunEvent) + `core/models_heart.py:HeartBeat` + `core/services/body_vitals.py:run_all_systems_scan`.
-- **Topic docs:** `docs/topics/celery-workers.md` + `docs/topics/agent-system.md`.
+- **ARCHITECTURE_INDEX v44:** `docs/research/ARCHITECTURE_INDEX.md` — S1701 §1.47 + line-6 v44 preamble + §8 timeline S1701 row.
+- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1700 In-progress row current-child S1701.
+- **Cat B (LLMCallEvent) entry points for S1702:** `core/models_llm_telemetry.py:30-100` (LLMCallEvent model) + `core/services/llm_call_wrapper.py` (S1098 wrapper) + Memory rules `feedback_anthropic_client_factory.md` + `feedback_openai_client_factory.md` + `feedback_gpt5_max_completion_tokens_floor.md` + `feedback_llm_autofills_boolean_params_with_false.md`.
+- **Topic docs:** `docs/topics/celery-workers.md` (Cat A operator playbook) + `docs/topics/agent-system.md` (ToolCallRecord + AgentExecution wrapper).
 - **Inventory anchor:** `docs/PLATFORM_INVENTORY.md`.
 - **Narrative anchor:** `docs/PLATFORM_WHAT_IT_IS.md`.
 
 ## Doctor warnings to expect
 
 - Inventory freshness (unchanged this session — research doc; no runtime changes).
-- Handoff numbering continuity — S1700 opens Group 1700 numbering (S1700 arc-open parent + anticipated S1701-S1706 children + S1799 xx99).
-- Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 remains older than latest handoff (informational; Group 1700 will surface narrative touchpoints at xx99 if Chris ratifies).
-- Docs cascade — run 4-step cascade + `build_docs_provenance` after S1700 PR merges to `main` per memory rule `feedback_docs_cascade_at_every_close.md`.
+- Handoff numbering continuity — S1701 = FIRST child under Group 1700; S1702-S1706 children + S1799 xx99 anticipated.
+- Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 remains older than latest handoff (informational; Group 1700 xx99 anchor-update will surface D10 narrative-anchor gap per Rigby SIGN F3).
+- Docs cascade — run 4-step cascade + `build_docs_provenance` after S1701 PR merges to `main` per memory rule `feedback_docs_cascade_at_every_close.md`.
 - CLAUDE.md 3-vs-4 employees narrative drift — still flagged; awaits subsequent `verify_doc_claims --only-drift` verifier PR (inherited from S1499 §7.2 fold).
 - Group 1400 + Group 1500 + Group 1300 post-arc §7 anchor-updates still pending (inherited).
 - Group 1400 + Group 1500 + Group 1600 T1 CRITICAL remediation queues still pending (inherited); Group 1600 T0/Gate R.CONTENT.XX99-ADR-BUNDLE-D65A-D65B-D65C-D65E blocks 20 T1 items.
 - **§8 timeline table drift** flagged in S1700 timeline row body: missing rows for S1605 + S1606 + S1699 (Group 1600); owed to follow-up docs PR.
 - **5 doc PRs still owed** for `auto_publish "daily 6 AM"` cross-arc CORRECTION per S1699 §7.4 (not addressed this session per scope discipline).
-- **D48 preemptive stability-probe gate 17th-arm CONFIRMED at S1700 close** — 12-consecutive-fully-clean-arms sub-pattern CODIFICATION-READY-STRENGTHENED-FURTHER for playbook v3 §15.
+- **D48 preemptive stability-probe gate 18th-arm CONFIRMED CLEAN at S1701 close** — 13-consecutive-fully-clean-arms sub-pattern CODIFICATION-READY-STRENGTHENED-FURTHER for playbook v3 §15.
 - **Playbook v3 §11.1 template promotion:** CONFIRMED-STRENGTHENED via fourth-application (S1700); formal codification is a separate follow-up per Chris ratification.
+- **Playbook v3 §11.2 template promotion:** FIRST application under Group 1700 (S1701) CONFIRMED — same as prior 5 group arcs; methodology durable across new arc.
 - **Arc pin `pa-e7fbacc996b34b44` in service** through Group 1700 close; wrapper rotation NOT owed at next-session open.
+- **`tools/pa_local.sh:128` wrapper enhancement** — hard-codes arc pin with no runtime `--conversation` override. Fresh SIGN pins minted for child audits get routed to arc pin (S1600 precedent applies: arc pin doubles as SIGN pin). Nice-to-have follow-up per S1701 §20.5 pin nuance flag.
