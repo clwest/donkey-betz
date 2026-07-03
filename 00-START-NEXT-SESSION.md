@@ -18,6 +18,7 @@ tools/pa_local.sh "message"
 The local wrapper at `tools/pa_local.sh:128` points at Group 1700 arc pin. **Active arc pin state after S1704 close:**
 
 - **Active Group 1700 arc pin: `pa-e7fbacc996b34b44`** (Rigby `session_tool.create_fresh` at S1700 open — title "Session 1700 — Observability research group (kickoff)"). Continues in service across Group 1700 arc (S1701 CLOSED + S1702 CLOSED + S1703 CLOSED + S1704 CLOSED + S1705-S1706 children pending + S1799 xx99 canonical summary). SIGN routing at S1704 landed on arc pin per S1600/S1700/S1701/S1702/S1703 parent-scoping precedent (arc pin doubles as SIGN pin; fresh SIGN pin `pa-f7417e6ac21d4f23` minted per playbook §15 but routed-around by wrapper hard-code at L128; fresh SIGN pin retired at S1704 close per §16 with `updated_count=1, retired=true`).
+- **Retired post-S1704 (mid-arc cross-domain refresh SIGN pin, 2026-07-03):** Fresh SIGN isolation pin `pa-99cacc35a73e4dbb` (minted + used + retired for cross-domain integration audit v3 refresh SIGN — see READ THIS FOURTH below; NOT a Group 1700 artifact).
 - **Retired at S1704 close:** Fresh SIGN isolation pin `pa-f7417e6ac21d4f23`.
 - **Retired at S1704 open:** Fresh SIGN isolation pin `pa-f1a30b7ed5bb4042` (S1703 owed-retire).
 - **Retired at S1702 close:** Fresh SIGN isolation pin `pa-c3927ab78c52479a`.
@@ -74,6 +75,31 @@ docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md        
 
 Handoff: `docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md`.
 
+## READ THIS FOURTH — MID-ARC CROSS-DOMAIN REFRESH LANDED POST-S1704 (2026-07-03)
+
+**Between the S1704 close and this handoff, an ad-hoc mid-arc refresh landed at `docs/research/platform/cross_domain_integration_audit.md` §14 (append-only Post-S1274 Arc-Close Refresh Log). This is NOT a Group 1700 artifact — it is cross-arc research library maintenance triggered mid-Group-1700 by Chris directive.**
+
+**What shipped:**
+
+- **PR #2843** = `800fd957` — `docs(cross-domain-audit): v3 append-only refresh log after Group 1300/1400/1500/1600 arc closes`. Adds §14 (~397 lines) to `cross_domain_integration_audit.md`. S1274 v2 baseline (§1–§13) preserved verbatim. §14 subsections: §14.0 vocabulary + source-scope; §14.1 arc-close inventory; §14.2 Memory (S1399) refinements + new connections; §14.3 Revenue (S1499); §14.4 Sports (S1599); §14.5 Content (S1699); §14.6 cross-arc pattern crystallizations CX-P1..CX-P6; §14.7 refresh gaps; §14.8 reserved for Group 1700 xx99 close. Frontmatter: v3 verifier_loop entry; `last_verified: 2026-07-03`; 4 arc canonical summaries added to `companion_anchors`.
+- **PR #2844** = `09fa83f9` — `docs: refresh RAG cascade artifacts after cross-domain-audit v3 refresh merge`. Post-merge 4+1 step docs cascade run. Refreshes `docs/INDEX.md` + `docs/_provenance.json`. Cascade steps: `build_docs_index` (2859 docs) → `build_rag_corpus` (28036 chunks) → `sync_docs_index_to_documents` (2 updated / 2857 skipped / 0 errors) → `embed_documents --all-unembedded` (4 docs / 315 chunks — the S1703 + S1704 audits picked up here in the same run) → `build_docs_provenance` (2309 docs; HIGH=1491 / MEDIUM=351 / LOW=3 / UNKNOWN=464).
+
+**Rigby SIGN status for cross-domain refresh:**
+
+- SIGN-with-edits cycle 1 substantive at Medium-High confidence via fresh isolation pin `pa-99cacc35a73e4dbb` (retired post-fold with `force=true`, 8 rows updated).
+- 8 folds + 1 nice-to-have landed pre-commit. F1 (MUST-FIX) = §14.4 Sports Signal Engine row relabel to `MISSING + POSTURE-PENDING (remedy)`. F2/F3 = §14.3 Revenue Observability row wording + scope-leak source anchor fix. F4 = §14.5 Content → Memory pipeline-side clarification. F5 = §14.0 source scope narrowing. F6 = CX-P2 single-arc scope-honest rename. F7 = **CX-P6 NEW Parallel-schema drift pattern** (Revenue + Sports 2-arc evidence). F8 = POSTURE-PENDING reframed as overlay tag, not a 5th peer classification. Plus CX-P5 F1/F4-CANDIDATE discipline sub-bullet + CX-P6 abstraction-level opener sentence.
+- 0 must-fix outstanding; 0 severity flips at commit-time. Verdict: **SIGN-clean-post-folds**.
+
+**Consequences for next-session open:**
+
+- **Docs cascade is FRESH** — post-merge 4+1 step cascade completed at PR #2844 merge. **Standby Claude does NOT need to re-run cascade at S1705 open** unless further arc/session work modifies docs.
+- **HEAD commit at next-session open is `09fa83f9`** (cascade artifacts PR merge), NOT `main` from S1704 close (`a69d7421`). Any branch cut for S1705 branches off `09fa83f9`.
+- **No pin rotations owed** — SIGN pin `pa-99cacc35a73e4dbb` retired; `tools/pa_local.sh:128` still points at Group 1700 arc pin `pa-e7fbacc996b34b44`.
+- **Rigby corpus is up-to-date** — the §14 refresh content is now embedded and searchable via `search_docs` + `kb_tool semantic_search`.
+- **Group 1700 xx99 (S1799) canonical summary will need to consume §14.8** — currently reserved as a placeholder for the Observability arc close. When S1799 lands, its §7 anchor-update recommendations should include populating §14.8 in the cross-domain refresh log (analog to how §14.2–§14.5 consume the prior four arc closes).
+
+**Reading pointer:** `docs/research/platform/cross_domain_integration_audit.md` §14 (line 1977 onward, 2346 lines total). CX-P6 Parallel-schema drift pattern is at §14.6 and is 2-arc evidenced (Revenue F.E3 + Sports RealtimeIntelligenceEngine + `/ws/dbao/` MOCK-DATA-CONSUMER + DBAO NAMING-CONVENTION-WITHOUT-MATERIALIZATION) with same root cause: no declared source-of-truth hierarchy between mainline and intelligence/demo/realtime planes.
+
 ### NEXT-SESSION MISSION — S1705 CAT E OPSRUNEVENT CHILD AUDIT (D72 P5 slot)
 
 Per D72 P5 slot + parent §5 sequence: **S1705 Cat E audit** — OpsRun + OpsRunEvent.
@@ -103,9 +129,9 @@ Per parent §3.E boundary discipline: **P5 catalogs Ops/Mission telemetry writer
 Session flow at next-session open:
 
 1. `context-kit orient` (session-open protocol per memory rule).
-2. Check if S1704 artifact set merged to `main` between sessions.
-3. If not yet merged: Chris merge + PR merge.
-4. **Run post-merge 4-step docs cascade + `build_docs_provenance`** per `feedback_docs_cascade_at_every_close.md`.
+2. ~~Check if S1704 artifact set merged to `main`~~ **— DONE (S1704 landed `a69d7421` between sessions).**
+3. ~~If not yet merged: Chris merge + PR merge~~ **— DONE.**
+4. ~~Run post-merge 4-step docs cascade + `build_docs_provenance`~~ **— DONE at PR #2844 = `09fa83f9` (2026-07-03; both S1704 cascade artifacts + cross-domain refresh cascade artifacts landed in a single cascade run). Do NOT re-run at S1705 open unless you modify docs first.**
 5. Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 22nd arm start).
 6. Mint fresh SIGN isolation pin for S1705 via Rigby `session_tool.create_fresh` (title: "Session 1705 — Group 1700 Cat E OpsRunEvent audit — SIGN isolation").
 7. Dispatch 6-parallel Explore sweep on Cat E surface (OpsRun + OpsRunEvent models + MissionRunner writer path + Ops Autopilot pipelines + DiagnosticPipelineService consumer surface + rigby_delegation_signals cross-cat writer per S1703 §10 + producer-vs-consumer contract evidence + WRITE-ONLY-FORGOTTEN detection).
@@ -141,9 +167,9 @@ Session flow at next-session open:
 **FIRST THING next session open:**
 
 1. `context-kit orient`
-2. Check if S1704 artifact set is on `main` — if yes, next session branches off `main`
-3. If not yet merged: Chris merge + PR merge
-4. **Run post-merge 4-step docs cascade + `build_docs_provenance`** per `feedback_docs_cascade_at_every_close.md`
+2. ~~Check if S1704 artifact set is on `main`~~ **— DONE. HEAD is `09fa83f9` (post-cross-domain-refresh cascade); branch off `main` from there.**
+3. ~~Chris merge + PR merge~~ **— DONE.**
+4. ~~Run post-merge 4-step docs cascade + `build_docs_provenance`~~ **— DONE at PR #2844 = `09fa83f9`. Skip at S1705 open unless doc modifications happen first.**
 5. Verify `service_context: local` via `platform_config_tool overview` on arc pin
 6. Mint fresh SIGN isolation pin for S1705 via Rigby `session_tool.create_fresh`
 7. Execute S1705 Cat E OpsRunEvent child audit per D72 P5 slot
@@ -160,17 +186,22 @@ Session flow at next-session open:
 
 ## Repo state at next-session open
 
-- **Branch state (at S1704 close, before merge):** `docs/session-1704-observability-cat-d-tool-call-record-audit` PR opens to `main` on push. If merged between sessions, working tree clean and next session branches off `main`.
-- **Handoff continuity:** S1704 handoff at `docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md`. Prior handoffs: SESSION_1703 (Observability Cat C AgentExecution); SESSION_1702 (Observability Cat B LLMCallEvent); SESSION_1701 (Observability Cat A CeleryTaskEvent); SESSION_1700 (Observability arc-open parent scoping); SESSION_1699 (Content Group 1600 xx99 canonical summary); SESSION_1606 (Content Cat F LAST child); SESSION_1605-1601 (Content Cat E/A/B/D/C children); SESSION_1600 (Content arc-open parent scoping); SESSION_1599 (Sports arc-close canonical summary); SESSION_1506 → SESSION_1500 (Sports arc); SESSION_1499 → SESSION_1400 (Revenue arc); SESSION_1399 (Memory Group 1300 canonical summary).
+- **Branch state (2026-07-03 post-cross-domain-refresh):** `main` at HEAD `09fa83f9` (PR #2844 cross-domain cascade artifacts). S1704 audit doc + cascade + cross-domain refresh v3 + cross-domain cascade all merged. Working tree clean; branch off `main` for S1705.
+- **Head-commit ledger (2026-07-03 activity, oldest → newest):**
+  - `690311df` — PR #2841 S1704 Cat D ToolCallRecord audit
+  - `a69d7421` — PR #2842 S1704 cascade artifacts
+  - `800fd957` — PR #2843 cross-domain-audit v3 append-only refresh (§14)
+  - `09fa83f9` — PR #2844 cross-domain cascade artifacts (current HEAD)
+- **Handoff continuity:** S1704 handoff at `docs/handoffs/SESSION_1704_OBSERVABILITY_CAT_D_TOOL_CALL_RECORD_AUDIT.md`. No new handoff for the mid-arc cross-domain refresh (it is not a session; it is ad-hoc research-library maintenance documented in the PR bodies + `verifier_loop` v3 entry inside the target doc). Prior handoffs: SESSION_1703 (Observability Cat C AgentExecution); SESSION_1702 (Observability Cat B LLMCallEvent); SESSION_1701 (Observability Cat A CeleryTaskEvent); SESSION_1700 (Observability arc-open parent scoping); SESSION_1699 (Content Group 1600 xx99 canonical summary); SESSION_1606 (Content Cat F LAST child); SESSION_1605-1601 (Content Cat E/A/B/D/C children); SESSION_1600 (Content arc-open parent scoping); SESSION_1599 (Sports arc-close canonical summary); SESSION_1506 → SESSION_1500 (Sports arc); SESSION_1499 → SESSION_1400 (Revenue arc); SESSION_1399 (Memory Group 1300 canonical summary).
 - **ARCHITECTURE_INDEX version:** v47 (bumped this session with §1.50 S1704 registration + §8 timeline S1704 row + line-6 v47 preamble). Next bump at S1705 child audit close (v47 → v48 with §1.51 S1705 registration).
 - **OPEN_ARCS state:** Group 1700 row remains In-progress; current-child updated S1703 → S1704. Group 1600 remains Closed; Group 1500 remains Closed; Group 1400 remains Closed; Group 1300 remains Closed.
 
 ## Next-session first-action punch list
 
 - [ ] `context-kit orient`
-- [ ] Check if S1704 artifact set is on `main` — if yes, next session branches off `main`
-- [ ] If not yet merged: Chris merge + PR merge
-- [ ] **Run post-merge 4-step docs cascade + `build_docs_provenance`** per `feedback_docs_cascade_at_every_close.md`
+- [x] ~~Check if S1704 artifact set is on `main`~~ **— YES (HEAD `09fa83f9`)**
+- [x] ~~Chris merge + PR merge~~ **— DONE (PRs #2841, #2842, #2843, #2844 all merged 2026-07-03)**
+- [x] ~~Post-merge 4-step docs cascade + `build_docs_provenance`~~ **— DONE at PR #2844**
 - [ ] Verify `service_context: local` via `platform_config_tool overview` on arc pin `pa-e7fbacc996b34b44` (D48 22nd arm start)
 - [ ] Mint fresh SIGN isolation pin for S1705 via Rigby `session_tool.create_fresh`
 - [ ] Execute S1705 Cat E OpsRunEvent child audit per playbook §11.2 20-section template
@@ -191,6 +222,7 @@ Session flow at next-session open:
 - **Topic docs:** `docs/topics/employee-os.md` (Employee OS MissionRunner + OpsRun narrative; :64-65 `evidence_for_mission` join surface; may exhibit F1 100% NULL trace_id failure from Cat E side).
 - **Inventory anchor:** `docs/PLATFORM_INVENTORY.md`.
 - **Narrative anchor:** `docs/PLATFORM_WHAT_IT_IS.md`.
+- **Cross-domain refresh (mid-arc, 2026-07-03):** `docs/research/platform/cross_domain_integration_audit.md` §14 (line 1977+) — appended v3 refresh log consuming Group 1300/1400/1500/1600 arc closes. §14.8 reserved for Group 1700 xx99 close consumption. CX-P6 Parallel-schema drift is 2-arc evidenced (Revenue + Sports).
 
 ## Doctor warnings to expect
 
