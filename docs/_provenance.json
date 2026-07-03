@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-03T01:23:34+00:00",
+    "generated": "2026-07-03T02:21:30+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "0862a187d514",
-    "doc_count": 2293,
-    "commit_count": 7408,
+    "git_head": "a52651fd2407",
+    "doc_count": 2295,
+    "commit_count": 7414,
     "confidence_breakdown": {
-      "HIGH": 1476,
-      "MEDIUM": 350,
+      "HIGH": 1477,
+      "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
     },
@@ -2507,7 +2507,7 @@
         1302,
         1601
       ],
-      "commit_count": 1094,
+      "commit_count": 1096,
       "prs": [
         10,
         11,
@@ -2930,7 +2930,8 @@
         2818,
         2820,
         2822,
-        2824
+        2824,
+        2826
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -3531,6 +3532,7 @@
         800,
         972,
         987,
+        1077,
         1088,
         1098,
         1099,
@@ -3567,9 +3569,10 @@
         1196,
         1201,
         1202,
-        1203
+        1203,
+        1605
       ],
-      "commit_count": 60,
+      "commit_count": 62,
       "prs": [
         2025,
         2103,
@@ -3597,7 +3600,8 @@
         2401,
         2408,
         2442,
-        2448
+        2448,
+        2827
       ]
     },
     "docs/PLATFORM_WHAT_IT_IS.md": {
@@ -7237,7 +7241,7 @@
         1217,
         1601
       ],
-      "commit_count": 52,
+      "commit_count": 54,
       "prs": [
         2213,
         2219,
@@ -7269,7 +7273,8 @@
         2818,
         2820,
         2822,
-        2824
+        2824,
+        2826
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17590,6 +17595,22 @@
       "commit_count": 2,
       "prs": [
         2825
+      ]
+    },
+    "docs/handoffs/SESSION_1605_CONTENT_CAT_E_AUDIT.md": {
+      "originating_session": 1605,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a52651fd",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1605): Group 1600 Cat E Rigby-Facing PA Tooling + Approval UX child audit \u2014 SIGN-with-edits cycle 1 \u2192 SIGN-clean-post-folds (F1-F10 folds landed) (#2827)",
+      "sessions_touched": [
+        1077,
+        1605
+      ],
+      "commit_count": 2,
+      "prs": [
+        2827
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -30641,18 +30662,21 @@
         964,
         988,
         1033,
+        1077,
         1150,
         1157,
         1158,
         1159,
-        1160
+        1160,
+        1605
       ],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         2247,
         2256,
         2257,
-        2263
+        2263,
+        2827
       ]
     },
     "docs/narratives/DECISION_COMMAND.md": {
@@ -32645,6 +32669,7 @@
         727,
         862,
         990,
+        1077,
         1268,
         1269,
         1271,
@@ -32676,9 +32701,10 @@
         1601,
         1602,
         1603,
-        1604
+        1604,
+        1605
       ],
-      "commit_count": 61,
+      "commit_count": 63,
       "prs": [
         2773,
         2775,
@@ -32705,7 +32731,8 @@
         2819,
         2821,
         2823,
-        2825
+        2825,
+        2827
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32738,6 +32765,7 @@
         727,
         862,
         990,
+        1077,
         1275,
         1276,
         1300,
@@ -32764,9 +32792,10 @@
         1601,
         1602,
         1603,
-        1604
+        1604,
+        1605
       ],
-      "commit_count": 56,
+      "commit_count": 58,
       "prs": [
         2773,
         2775,
@@ -32795,7 +32824,8 @@
         2819,
         2821,
         2823,
-        2825
+        2825,
+        2827
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32898,6 +32928,22 @@
       "commit_count": 2,
       "prs": [
         2825
+      ]
+    },
+    "docs/research/domains/content/1605_content_rigby_pa_tooling_approval_ux_audit.md": {
+      "originating_session": 1077,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "a52651fd",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1605): Group 1600 Cat E Rigby-Facing PA Tooling + Approval UX child audit \u2014 SIGN-with-edits cycle 1 \u2192 SIGN-clean-post-folds (F1-F10 folds landed) (#2827)",
+      "sessions_touched": [
+        1077,
+        1605
+      ],
+      "commit_count": 2,
+      "prs": [
+        2827
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
@@ -37843,6 +37889,7 @@
         1035,
         1048,
         1064,
+        1077,
         1099,
         1100,
         1101,
@@ -37863,9 +37910,10 @@
         1168,
         1169,
         1170,
+        1605,
         2026
       ],
-      "commit_count": 35,
+      "commit_count": 37,
       "prs": [
         1110,
         1206,
@@ -37880,7 +37928,8 @@
         2027,
         2204,
         2251,
-        2322
+        2322,
+        2827
       ]
     },
     "docs/topics/collaboration-protocol.md": {
@@ -37909,15 +37958,18 @@
         1001,
         1034,
         1035,
+        1077,
         1103,
         1120,
         1146,
-        1147
+        1147,
+        1605
       ],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         1080,
-        2221
+        2221,
+        2827
       ]
     },
     "docs/topics/employee-os.md": {
