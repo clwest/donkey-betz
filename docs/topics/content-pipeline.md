@@ -173,7 +173,7 @@ Scheduled tasks that move blogs through the pipeline without manual intervention
 | `auto_enhance_blogs` | Every 4h at :45 | content | EditorAgent enhances oldest `needs_enhancement` blogs (limit 5, `save=True`) |
 | `enhance_all_blogs_needing_enhancement` | Every 6h at :40 | long_running | EditorAgent improves needs_enhancement blogs (limit 5, max 3 rounds) |
 | `reevaluate_enhanced_blogs` | Every 6h at :10 | content | Re-score enhanced blogs through PublishGate |
-| `auto_publish_approved_blogs` | Daily 6 AM | content | Move approved+publish_ready blogs to published |
+| `auto_publish_approved_blogs` | **DRIFT — NOT SCHEDULED at HEAD** (S1605 T.15.E4: task defined at `core/tasks.py:8056` + queue-routed at `settings.py:1394` but absent from `core/celery.py` beat_schedule; Rigby runtime probe 30d = 0 events + 0 PeriodicTask rows) | content | Would move approved+publish_ready blogs to published if scheduled |
 
 **Enhancement guard:** `stats_snapshot['enhancement_count']` tracks rounds per blog. After 3 unsuccessful rounds, the blog is skipped to prevent infinite loops.
 
@@ -186,7 +186,7 @@ Before Session 1033, blogs that reached `needs_enhancement` had no automatic pat
 draft → evaluate_unscored_blogs → needs_enhancement
   → auto_enhance_blogs (EditorAgent with save=True)
     → pending_review → reevaluate_enhanced_blogs (PublishGate re-scores)
-      → approved → auto_publish_approved_blogs → published
+      → approved → auto_publish_approved_blogs (NOT SCHEDULED at HEAD per S1605 T.15.E4) → published (in practice: only via REST publish endpoint or manual dispatch)
 ```
 
 **`auto_enhance_blogs` task** (`core/tasks.py`):

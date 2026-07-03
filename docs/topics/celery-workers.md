@@ -160,7 +160,7 @@ Agents are dispatched from 3 independent paths (plus 3 secondary paths). Disabli
 
 **Learning & Intelligence:** run_learning_loop_cycle (6h), mine_learning_patterns (12h), discover_success_patterns (6h)
 
-**Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand), auto_enhance_blogs (4h, Session 1033), enhance_all_blogs_needing_enhancement (6h), reevaluate_enhanced_blogs (6h), auto_publish_approved_blogs (daily 6AM)
+**Content Generation:** generate_self_blog_task (6h), generate_self_blog_deliberation_task (on-demand), generate_podcast_task (on-demand), auto_enhance_blogs (4h, Session 1033), enhance_all_blogs_needing_enhancement (6h), reevaluate_enhanced_blogs (6h), auto_publish_approved_blogs (**task defined at `core/tasks.py:8056` + queue-routed at `core/settings.py:1394` but NOT in `core/celery.py` beat_schedule at HEAD — S1605 T.15.E4 CONFIRMED-ABSENT via Rigby ops_tool.celery_task_history 30d = 0 events + scheduled_tasks_tool = 0 filtered from 92 total_enabled; "daily 6 AM" is DRIFT**)
 
 **Quality Scoring:** score_unscored_deliverables (6h, Session 1033)
 
