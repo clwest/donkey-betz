@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-02 22:57
+**Generated:** 2026-07-03 06:30
 **Current Session:** 1701
 **Total Documentation:** 2851 files | 801,760 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 5,995 |
+| Total cross-references | 5,970 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -36,7 +36,7 @@
 | `CLAUDE.md` | 238 | CLAUDE - AI Session Entry Point |
 | `docs/INDEX.md` | 145 | INDEX |
 | `docs/PLATFORM_WHAT_IT_IS.md` | 122 | PLATFORM WHAT IT IS |
-| `docs/archive/old-structure/capabilities/07_Neural_Visualization/README.md` | 120 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
+| `docs/archive/superseded-docs/README.md` | 120 | 📚 Unified Donkey Betz - Documentation Index |
 | `docs/AGENTS.md` | 76 | AGENTS |
 | `docs/research/ARCHITECTURE_INDEX.md` | 59 | ARCHITECTURE INDEX |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 59 | DOC LIFECYCLE |
@@ -175,7 +175,7 @@
 | [FRONTEND_INTEGRATION_NOTE.md](FRONTEND_INTEGRATION_NOTE.md) | 8 | 2026-05-24 |
 | [GOLDEN_GOOSE_STRATEGY.md](GOLDEN_GOOSE_STRATEGY.md) | 8 | 2026-05-24 |
 | [HANDOFF_NUMBERING_GAPS.md](HANDOFF_NUMBERING_GAPS.md) | 45 | 2026-05-22 |
-| [INDEX.md](INDEX.md) | 398 | 2026-07-02 |
+| [INDEX.md](INDEX.md) | 398 | 2026-07-03 |
 | [INTELLIGENCE_SYSTEMS.md](INTELLIGENCE_SYSTEMS.md) | 8 | 2026-05-24 |
 | [KNOWLEDGE_PIPELINE.md](KNOWLEDGE_PIPELINE.md) | 475 | 2026-01-21 |
 | [LEARNING_BRIDGE_AUDIT.md](LEARNING_BRIDGE_AUDIT.md) | 154 | 2026-05-25 |
@@ -254,11 +254,11 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 398 | 2026-07-03 04:00 |
 | 1700_observability_domain_scoping.md | research | 1,201 | 2026-07-02 22:56 |
 | OPEN_ARCS.md | research | 169 | 2026-07-02 22:56 |
 | ARCHITECTURE_INDEX.md | research | 4,010 | 2026-07-02 22:56 |
 | SESSION_1700_OBSERVABILITY_ARC_OPEN.md | handoffs | 143 | 2026-07-02 22:56 |
-| INDEX.md | docs | 398 | 2026-07-02 22:13 |
 | 1699_content_canonical_summary.md | research | 2,017 | 2026-07-02 22:03 |
 | SESSION_1699_CONTENT_CANONICAL_SUMMARY.md | handoffs | 129 | 2026-07-02 22:03 |
 | 1606_content_cross_domain_integration_lens_audit.md | research | 1,228 | 2026-07-02 21:11 |
