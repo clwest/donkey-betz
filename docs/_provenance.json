@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-02T23:08:17+00:00",
+    "generated": "2026-07-03T01:23:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f19174c2a363",
-    "doc_count": 2291,
-    "commit_count": 7404,
+    "git_head": "0862a187d514",
+    "doc_count": 2293,
+    "commit_count": 7408,
     "confidence_breakdown": {
-      "HIGH": 1474,
+      "HIGH": 1476,
       "MEDIUM": 350,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2507,7 +2507,7 @@
         1302,
         1601
       ],
-      "commit_count": 1092,
+      "commit_count": 1094,
       "prs": [
         10,
         11,
@@ -2929,7 +2929,8 @@
         2816,
         2818,
         2820,
-        2822
+        2822,
+        2824
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7236,7 +7237,7 @@
         1217,
         1601
       ],
-      "commit_count": 50,
+      "commit_count": 52,
       "prs": [
         2213,
         2219,
@@ -7267,7 +7268,8 @@
         2816,
         2818,
         2820,
-        2822
+        2822,
+        2824
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17573,6 +17575,21 @@
       "commit_count": 2,
       "prs": [
         2823
+      ]
+    },
+    "docs/handoffs/SESSION_1604_CONTENT_CAT_C_AUDIT.md": {
+      "originating_session": 1604,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "0862a187",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1604): Group 1600 Cat C PublishGate + Publish Rails child audit \u2014 SIGN-with-edits cycle 1 \u2192 SIGN-clean-post-folds (F1-F14 folds landed) (#2825)",
+      "sessions_touched": [
+        1604
+      ],
+      "commit_count": 2,
+      "prs": [
+        2825
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32658,9 +32675,10 @@
         1600,
         1601,
         1602,
-        1603
+        1603,
+        1604
       ],
-      "commit_count": 59,
+      "commit_count": 61,
       "prs": [
         2773,
         2775,
@@ -32686,7 +32704,8 @@
         2817,
         2819,
         2821,
-        2823
+        2823,
+        2825
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32744,9 +32763,10 @@
         1600,
         1601,
         1602,
-        1603
+        1603,
+        1604
       ],
-      "commit_count": 54,
+      "commit_count": 56,
       "prs": [
         2773,
         2775,
@@ -32774,7 +32794,8 @@
         2817,
         2819,
         2821,
-        2823
+        2823,
+        2825
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -32862,6 +32883,21 @@
       "commit_count": 2,
       "prs": [
         2823
+      ]
+    },
+    "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md": {
+      "originating_session": 1604,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "0862a187",
+      "first_commit_date": "2026-07-02",
+      "first_commit_subject": "docs(session-1604): Group 1600 Cat C PublishGate + Publish Rails child audit \u2014 SIGN-with-edits cycle 1 \u2192 SIGN-clean-post-folds (F1-F14 folds landed) (#2825)",
+      "sessions_touched": [
+        1604
+      ],
+      "commit_count": 2,
+      "prs": [
+        2825
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
