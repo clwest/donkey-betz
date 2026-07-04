@@ -17,19 +17,31 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1700 fresh
-# thread (Rigby create_fresh at S1700 open — carrying only the mission
-# scope, no S1600 Content arc turn context).
-# Pin: pa-e7fbacc996b34b44. Title: "Session 1700 — Observability
-# research group (kickoff)". Carry-forward: mission scope only —
-# Research Group 1700 "Observability / Telemetry / SLOs", per playbook
-# §22 default queue lean and OS §12.3 target; S1274 §11.6 5-layer
-# execution-telemetry dedup audit + S1273 §5.13 evidence base.
-# D1 ratified: Group 1700 = Observability. D2 ratified: delegate event
-# architecture to Group 1900. D3 ratified: parent scoping only this
-# session (S1700), P1 child audit next-session. Playbook §11.1 parent
-# template. Prior S1600 arc context intentionally excluded per playbook
-# §16 arc-open fresh-thread discipline.
+# the --conversation flag below. Current value: Session 1700 arc pin
+# (RETIRED at S1799 close per playbook §16 arc-close discipline — see
+# below); rotation to next arc's fresh pin is OWED at next-session open
+# (playbook §22 default queue lean: Group 1900 Event Architecture next
+# per Group 1700 xx99 §9.1 handoff; Chris-gated).
+#
+# **Retired at S1799 close: pa-e7fbacc996b34b44** (Sessions 1700-1706 +
+# S1799 — Group 1700 Observability / Telemetry / SLOs research group;
+# 8-doc arc: S1700 parent + 6 child audits S1701-S1706 + S1799 xx99
+# canonical summary; playbook §11.1 template FOURTH application + §11.3
+# 12-section template FIFTH application + §11.3 §10 meta-methodology
+# template FIFTH application. Retired via session_tool.retire at S1799
+# close per playbook §16 arc-close discipline (mirrors S1699 Group 1600 +
+# S1599 Group 1500 + S1499 Group 1400 + S1399 Group 1300 arc pin retire
+# precedent); updated_count: 31, retired: true, previously_active: true.
+# **Wrapper hard-code below still points at this retired pin — next
+# session MUST rotate at open before any further work per Rigby
+# pin_rotation_notice.** Executive Summary verdict: Observability is
+# STABLE-at-writers + PARTIAL-at-consumers + UNBOUNDED-at-retention +
+# LATENT-at-cross-cat-correlation-spine; six D74 axis cells locked; two
+# paired T0/Gate items (RETENTION-UNIFIED-ADR + D74-SPINE-POSTURE); §10
+# meta-methodology fifth application with MC-1 + MC-2 both
+# CODIFICATION-READY. D48 24th arm HOLDING CLEAN — 19-consecutive-
+# fully-clean-arms sub-pattern S1503+…+S1706+S1799 CONFIRMED.)
+#
 # Retired at S1700 open: pa-f52acf3f8d394faa (Sessions 1600-1699 —
 # Content / Deliverables / Publishing research group; 8-doc arc:
 # S1600 parent + 6 child audits S1601-S1606 + S1699 xx99 canonical
