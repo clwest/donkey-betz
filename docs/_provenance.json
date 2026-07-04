@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T15:35:37+00:00",
+    "generated": "2026-07-04T16:18:10+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6745c316ecfe",
-    "doc_count": 2333,
-    "commit_count": 7494,
+    "git_head": "6d3148c5e99b",
+    "doc_count": 2335,
+    "commit_count": 7498,
     "confidence_breakdown": {
-      "HIGH": 1515,
+      "HIGH": 1517,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1138,
+      "commit_count": 1140,
       "prs": [
         10,
         11,
@@ -2956,7 +2956,9 @@
         2862,
         2864,
         2865,
-        2866
+        2866,
+        2867,
+        2868
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7269,7 +7271,7 @@
         1701,
         1800
       ],
-      "commit_count": 94,
+      "commit_count": 96,
       "prs": [
         2213,
         2219,
@@ -7323,7 +7325,9 @@
         2862,
         2864,
         2865,
-        2866
+        2866,
+        2867,
+        2868
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17945,6 +17949,21 @@
       "commit_count": 2,
       "prs": [
         2867
+      ]
+    },
+    "docs/handoffs/SESSION_1901_AUTHORITY_ENFORCEMENT_CAT_A.md": {
+      "originating_session": 1901,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6d3148c5",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1901): Group 1900 P1 Cat A Actor Role Propagation Design LANDED \u2014 TWELFTH-consecutive application of playbook \u00a711.2 20-section child audit template + FIRST child audit under Group 1900 Authority Enforcement Design Space arc; ships Layer i three-role schema + propagation contract + Layer ii per-boundary propagation-contract table for all 20 S1272 \u00a73.1 boundaries + drop-boundary register + parallel-safety verification with S1274 Option E audit-model extension pattern; Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 3 folds landed pre-commit (Q1 \u00a77.2.1 F11 mechanical-prohibition sentence + Q2 \u00a77.6 principal_user column-type clarification `principal_user_id` int FK for Option E audit columns + Q4 \u00a77.4.1 F6c-adjacent Boundary 10 async signal register entry); Q3 optional column-header rename skipped as non-load-bearing; D48 33rd arm turn 1 CLEAN \u2192 28-consecutive-fully-clean-arms sub-pattern EXTENDED per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 27 \u2192 28 consecutive) (#2869)",
+      "sessions_touched": [
+        1901
+      ],
+      "commit_count": 2,
+      "prs": [
+        2869
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -33055,9 +33074,10 @@
         1805,
         1806,
         1899,
-        1900
+        1900,
+        1901
       ],
-      "commit_count": 101,
+      "commit_count": 103,
       "prs": [
         2773,
         2775,
@@ -33104,7 +33124,8 @@
         2861,
         2863,
         2865,
-        2867
+        2867,
+        2869
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33184,9 +33205,10 @@
         1805,
         1806,
         1899,
-        1900
+        1900,
+        1901
       ],
-      "commit_count": 96,
+      "commit_count": 98,
       "prs": [
         2773,
         2775,
@@ -33235,7 +33257,8 @@
         2861,
         2863,
         2865,
-        2867
+        2867,
+        2869
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33277,6 +33300,21 @@
       "commit_count": 2,
       "prs": [
         2867
+      ]
+    },
+    "docs/research/domains/authority_enforcement/1901_authority_enforcement_cat_a_actor_role_propagation_design.md": {
+      "originating_session": 1901,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6d3148c5",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1901): Group 1900 P1 Cat A Actor Role Propagation Design LANDED \u2014 TWELFTH-consecutive application of playbook \u00a711.2 20-section child audit template + FIRST child audit under Group 1900 Authority Enforcement Design Space arc; ships Layer i three-role schema + propagation contract + Layer ii per-boundary propagation-contract table for all 20 S1272 \u00a73.1 boundaries + drop-boundary register + parallel-safety verification with S1274 Option E audit-model extension pattern; Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 3 folds landed pre-commit (Q1 \u00a77.2.1 F11 mechanical-prohibition sentence + Q2 \u00a77.6 principal_user column-type clarification `principal_user_id` int FK for Option E audit columns + Q4 \u00a77.4.1 F6c-adjacent Boundary 10 async signal register entry); Q3 optional column-header rename skipped as non-load-bearing; D48 33rd arm turn 1 CLEAN \u2192 28-consecutive-fully-clean-arms sub-pattern EXTENDED per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 27 \u2192 28 consecutive) (#2869)",
+      "sessions_touched": [
+        1901
+      ],
+      "commit_count": 2,
+      "prs": [
+        2869
       ]
     },
     "docs/research/domains/content/1600_content_domain_scoping.md": {
