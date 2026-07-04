@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T00:47:01+00:00",
+    "generated": "2026-07-04T01:47:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "47ab77f1757e",
-    "doc_count": 2315,
-    "commit_count": 7460,
+    "git_head": "eef2280f48f8",
+    "doc_count": 2317,
+    "commit_count": 7462,
     "confidence_breakdown": {
-      "HIGH": 1497,
+      "HIGH": 1499,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2507,9 +2507,10 @@
         1302,
         1601,
         1700,
-        1701
+        1701,
+        1800
       ],
-      "commit_count": 1120,
+      "commit_count": 1122,
       "prs": [
         10,
         11,
@@ -2945,7 +2946,8 @@
         2842,
         2844,
         2847,
-        2849
+        2849,
+        2851
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7255,9 +7257,10 @@
         1217,
         1601,
         1700,
-        1701
+        1701,
+        1800
       ],
-      "commit_count": 76,
+      "commit_count": 78,
       "prs": [
         2213,
         2219,
@@ -7301,7 +7304,8 @@
         2842,
         2844,
         2847,
-        2849
+        2849,
+        2851
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17788,6 +17792,21 @@
       "commit_count": 2,
       "prs": [
         2850
+      ]
+    },
+    "docs/handoffs/SESSION_1800_HUMAN_ATTENTION_ARC_OPEN.md": {
+      "originating_session": 1800,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "eef2280f",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1800): Group 1800 HumanAttention / Feedback / Learning arc OPENED at parent Phase 0 scoping \u2014 playbook \u00a711.1 FIFTH application \u2014 D75-D80 Chris-locked via \"agree all\" round (#2851)",
+      "sessions_touched": [
+        1800
+      ],
+      "commit_count": 2,
+      "prs": [
+        2851
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32889,9 +32908,10 @@
         1704,
         1705,
         1706,
-        1799
+        1799,
+        1800
       ],
-      "commit_count": 83,
+      "commit_count": 85,
       "prs": [
         2773,
         2775,
@@ -32929,7 +32949,8 @@
         2841,
         2846,
         2848,
-        2850
+        2850,
+        2851
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33000,9 +33021,10 @@
         1704,
         1705,
         1706,
-        1799
+        1799,
+        1800
       ],
-      "commit_count": 78,
+      "commit_count": 80,
       "prs": [
         2773,
         2775,
@@ -33042,7 +33064,8 @@
         2841,
         2846,
         2848,
-        2850
+        2850,
+        2851
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33191,6 +33214,21 @@
       "commit_count": 2,
       "prs": [
         2831
+      ]
+    },
+    "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
+      "originating_session": 1800,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "eef2280f",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1800): Group 1800 HumanAttention / Feedback / Learning arc OPENED at parent Phase 0 scoping \u2014 playbook \u00a711.1 FIFTH application \u2014 D75-D80 Chris-locked via \"agree all\" round (#2851)",
+      "sessions_touched": [
+        1800
+      ],
+      "commit_count": 2,
+      "prs": [
+        2851
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
