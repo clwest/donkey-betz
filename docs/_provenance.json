@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T18:40:11+00:00",
+    "generated": "2026-07-04T19:27:55+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f470868b9b95",
-    "doc_count": 2341,
-    "commit_count": 7510,
+    "git_head": "f7d3f43dbb39",
+    "doc_count": 2343,
+    "commit_count": 7514,
     "confidence_breakdown": {
-      "HIGH": 1523,
+      "HIGH": 1525,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1146,
+      "commit_count": 1148,
       "prs": [
         10,
         11,
@@ -2964,7 +2964,9 @@
         2871,
         2872,
         2873,
-        2874
+        2874,
+        2875,
+        2876
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7277,7 +7279,7 @@
         1701,
         1800
       ],
-      "commit_count": 102,
+      "commit_count": 104,
       "prs": [
         2213,
         2219,
@@ -7339,7 +7341,9 @@
         2871,
         2872,
         2873,
-        2874
+        2874,
+        2875,
+        2876
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18042,6 +18046,21 @@
       "prs": [
         2199,
         2241
+      ]
+    },
+    "docs/handoffs/SESSION_1999_AUTHORITY_ENFORCEMENT_CANONICAL_SUMMARY.md": {
+      "originating_session": 1999,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f7d3f43d",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1999): Group 1900 Authority Enforcement Design Space ARC CLOSED at S1999 xx99 canonical summary \u2014 SEVENTH formal xx99 in the Research OS library (#2877)",
+      "sessions_touched": [
+        1999
+      ],
+      "commit_count": 2,
+      "prs": [
+        2877
       ]
     },
     "docs/handoffs/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md": {
@@ -33135,9 +33154,10 @@
         1901,
         1902,
         1903,
-        1904
+        1904,
+        1999
       ],
-      "commit_count": 109,
+      "commit_count": 111,
       "prs": [
         2773,
         2775,
@@ -33188,7 +33208,8 @@
         2869,
         2871,
         2873,
-        2875
+        2875,
+        2877
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33272,9 +33293,10 @@
         1901,
         1902,
         1903,
-        1904
+        1904,
+        1999
       ],
-      "commit_count": 104,
+      "commit_count": 106,
       "prs": [
         2773,
         2775,
@@ -33327,7 +33349,8 @@
         2869,
         2871,
         2873,
-        2875
+        2875,
+        2877
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33429,6 +33452,21 @@
       "commit_count": 2,
       "prs": [
         2875
+      ]
+    },
+    "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md": {
+      "originating_session": 1999,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f7d3f43d",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1999): Group 1900 Authority Enforcement Design Space ARC CLOSED at S1999 xx99 canonical summary \u2014 SEVENTH formal xx99 in the Research OS library (#2877)",
+      "sessions_touched": [
+        1999
+      ],
+      "commit_count": 2,
+      "prs": [
+        2877
       ]
     },
     "docs/research/domains/content/1600_content_domain_scoping.md": {
