@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T16:18:10+00:00",
+    "generated": "2026-07-04T17:12:50+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6d3148c5e99b",
-    "doc_count": 2335,
-    "commit_count": 7498,
+    "git_head": "b2f06b9d9044",
+    "doc_count": 2337,
+    "commit_count": 7502,
     "confidence_breakdown": {
-      "HIGH": 1517,
+      "HIGH": 1519,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1140,
+      "commit_count": 1142,
       "prs": [
         10,
         11,
@@ -2958,7 +2958,9 @@
         2865,
         2866,
         2867,
-        2868
+        2868,
+        2869,
+        2870
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7271,7 +7273,7 @@
         1701,
         1800
       ],
-      "commit_count": 96,
+      "commit_count": 98,
       "prs": [
         2213,
         2219,
@@ -7327,7 +7329,9 @@
         2865,
         2866,
         2867,
-        2868
+        2868,
+        2869,
+        2870
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17964,6 +17968,21 @@
       "commit_count": 2,
       "prs": [
         2869
+      ]
+    },
+    "docs/handoffs/SESSION_1902_AUTHORITY_ENFORCEMENT_CAT_B.md": {
+      "originating_session": 1902,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b2f06b9d",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1902): Group 1900 P2 Cat B Authority Enforcement Design Decision LANDED \u2014 Chris D-gate ratified all 8 D-verdicts (D86-D93) via \"agree all\" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 3 folds landed pre-commit (Q1 \u00a77.7 language de-endorsement from \"PRIMARY/Rejected\" to mechanical-state classifications per S1272 \u00a79 neutrality guardrail + Q2 \u00a717.2 roll-up recompute (13 fail-open + 1 fail-closed + 3 observation-only + 3 structural-drop = 20) + Boundary 11 rollback-infeasibility rationale caveat distinct from Boundary 12 never-block-model-writes exemplar + \u00a717.2.1 precedence roll-up + Q3 \u00a712.8 D93 `metrics_min_events_per_employee=50` data-sufficiency floor promoted from Alternative 3 into recommended lean); Q4 fold info-carrying only (Option E label collision + views_human_interface.py line drift already flagged in \u00a714.4); FIRST application of playbook \u00a711.2 20-section child audit template MODIFIED for design-decision framing per parent \u00a75.2 (\u00a77 Runtime Flows \u2192 Decision-Grade Options Analysis; \u00a712 Research Coverage \u2192 Decision Rationale + Alternatives Rejected; \u00a717 Duplicate or Overlapping Systems \u2192 Enforcement Binding Points map); SECOND child audit under Group 1900 arc; ships \u00a717 Enforcement Binding Points map (20-row table per S1272 \u00a73.1 \u00d7 D88 evaluation_order \u00d7 D89 fail_posture \u00d7 P1 \u00a77.3 row_ref citation; KillSwitch precedes at every boundary per D88 partial precedence K>A>F>B>H) + \u00a77 Decision-Grade Options Analysis (6 options mechanically-classified against S1274 Option E v0) + \u00a712 8 Chris-ratified D-verdicts (D86 hybrid Option C-primary + Option A-adjacent scaffolding / D87 5-mode subset per S1272 \u00a74.3 F9 / D88 partial precedence / D89 fail-open per F8 LLMEnforcer / D90 3-value enforce_authority_mode string enum / D91 two-tier per-employee opt-in with max-strictness composition / D92 symmetric-flip rollback / D93 5 SystemConfiguration keys with data-sufficiency floor); D48 34th arm turn 1 CLEAN \u2192 29-consecutive-fully-clean-arms sub-pattern EXTENDED per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 28 \u2192 29 consecutive); SIGN cycle 2 SKIPPED as unnecessary given Chris agree-all path; verifier-loop caught 6 drifts inherited to xx99 \u00a77 anchor-update recommendations (parent \u00a75.2 F8\u2192F9 + 4\u21925 modes / S1272 GAP-7 KillSwitch write-only REFUTED with 6 verified read sites / S1272 \u00a73.1 Boundary 16 line drift :84\u2192:154 / Option E label collision S1272 \u00a79.5 Multi-layer vs S1274 Symbol Mapping / CLAUDE.md 3-vs-runtime-4 employee_handles drift / HAI auto-approve 7-vs-8 gate count reconciliation) (#2871)",
+      "sessions_touched": [
+        1902
+      ],
+      "commit_count": 2,
+      "prs": [
+        2871
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -33075,9 +33094,10 @@
         1806,
         1899,
         1900,
-        1901
+        1901,
+        1902
       ],
-      "commit_count": 103,
+      "commit_count": 105,
       "prs": [
         2773,
         2775,
@@ -33125,7 +33145,8 @@
         2863,
         2865,
         2867,
-        2869
+        2869,
+        2871
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33206,9 +33227,10 @@
         1806,
         1899,
         1900,
-        1901
+        1901,
+        1902
       ],
-      "commit_count": 98,
+      "commit_count": 100,
       "prs": [
         2773,
         2775,
@@ -33258,7 +33280,8 @@
         2863,
         2865,
         2867,
-        2869
+        2869,
+        2871
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33315,6 +33338,21 @@
       "commit_count": 2,
       "prs": [
         2869
+      ]
+    },
+    "docs/research/domains/authority_enforcement/1902_authority_enforcement_cat_b_authority_enforcement_design_decision.md": {
+      "originating_session": 1902,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b2f06b9d",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1902): Group 1900 P2 Cat B Authority Enforcement Design Decision LANDED \u2014 Chris D-gate ratified all 8 D-verdicts (D86-D93) via \"agree all\" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 3 folds landed pre-commit (Q1 \u00a77.7 language de-endorsement from \"PRIMARY/Rejected\" to mechanical-state classifications per S1272 \u00a79 neutrality guardrail + Q2 \u00a717.2 roll-up recompute (13 fail-open + 1 fail-closed + 3 observation-only + 3 structural-drop = 20) + Boundary 11 rollback-infeasibility rationale caveat distinct from Boundary 12 never-block-model-writes exemplar + \u00a717.2.1 precedence roll-up + Q3 \u00a712.8 D93 `metrics_min_events_per_employee=50` data-sufficiency floor promoted from Alternative 3 into recommended lean); Q4 fold info-carrying only (Option E label collision + views_human_interface.py line drift already flagged in \u00a714.4); FIRST application of playbook \u00a711.2 20-section child audit template MODIFIED for design-decision framing per parent \u00a75.2 (\u00a77 Runtime Flows \u2192 Decision-Grade Options Analysis; \u00a712 Research Coverage \u2192 Decision Rationale + Alternatives Rejected; \u00a717 Duplicate or Overlapping Systems \u2192 Enforcement Binding Points map); SECOND child audit under Group 1900 arc; ships \u00a717 Enforcement Binding Points map (20-row table per S1272 \u00a73.1 \u00d7 D88 evaluation_order \u00d7 D89 fail_posture \u00d7 P1 \u00a77.3 row_ref citation; KillSwitch precedes at every boundary per D88 partial precedence K>A>F>B>H) + \u00a77 Decision-Grade Options Analysis (6 options mechanically-classified against S1274 Option E v0) + \u00a712 8 Chris-ratified D-verdicts (D86 hybrid Option C-primary + Option A-adjacent scaffolding / D87 5-mode subset per S1272 \u00a74.3 F9 / D88 partial precedence / D89 fail-open per F8 LLMEnforcer / D90 3-value enforce_authority_mode string enum / D91 two-tier per-employee opt-in with max-strictness composition / D92 symmetric-flip rollback / D93 5 SystemConfiguration keys with data-sufficiency floor); D48 34th arm turn 1 CLEAN \u2192 29-consecutive-fully-clean-arms sub-pattern EXTENDED per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 28 \u2192 29 consecutive); SIGN cycle 2 SKIPPED as unnecessary given Chris agree-all path; verifier-loop caught 6 drifts inherited to xx99 \u00a77 anchor-update recommendations (parent \u00a75.2 F8\u2192F9 + 4\u21925 modes / S1272 GAP-7 KillSwitch write-only REFUTED with 6 verified read sites / S1272 \u00a73.1 Boundary 16 line drift :84\u2192:154 / Option E label collision S1272 \u00a79.5 Multi-layer vs S1274 Symbol Mapping / CLAUDE.md 3-vs-runtime-4 employee_handles drift / HAI auto-approve 7-vs-8 gate count reconciliation) (#2871)",
+      "sessions_touched": [
+        1902
+      ],
+      "commit_count": 2,
+      "prs": [
+        2871
       ]
     },
     "docs/research/domains/content/1600_content_domain_scoping.md": {
