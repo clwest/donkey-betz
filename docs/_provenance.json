@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T14:07:39+00:00",
+    "generated": "2026-07-04T15:35:37+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "ed13cba316a7",
-    "doc_count": 2331,
-    "commit_count": 7490,
+    "git_head": "6745c316ecfe",
+    "doc_count": 2333,
+    "commit_count": 7494,
     "confidence_breakdown": {
-      "HIGH": 1513,
+      "HIGH": 1515,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1136,
+      "commit_count": 1138,
       "prs": [
         10,
         11,
@@ -2954,7 +2954,9 @@
         2858,
         2860,
         2862,
-        2864
+        2864,
+        2865,
+        2866
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7267,7 +7269,7 @@
         1701,
         1800
       ],
-      "commit_count": 92,
+      "commit_count": 94,
       "prs": [
         2213,
         2219,
@@ -7319,7 +7321,9 @@
         2858,
         2860,
         2862,
-        2864
+        2864,
+        2865,
+        2866
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17926,6 +17930,21 @@
       "commit_count": 2,
       "prs": [
         2865
+      ]
+    },
+    "docs/handoffs/SESSION_1900_AUTHORITY_ENFORCEMENT_ARC_OPEN.md": {
+      "originating_session": 1900,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6745c316",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1900): Group 1900 Authority Enforcement Design Space arc OPENED at S1900 parent Phase 0 scoping \u2014 SIXTH application of playbook \u00a711.1 9-section parent scoping template; Chris D-override of \u00a722 default queue lean (Event Architecture) via line-select at platform_architecture_inventory.md:191; D81-D85 Chris-ratified via agree-all round + Q5=(b) 4-child + CONSOLIDATION; Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 5 folds landed pre-commit (Q1 \u00a75.2 migration-recommendation clarifier + Q2 \u00a78 D86/D87 \u2192 O1/O2 operational-defaults reclassification + Q3(a) \u00a75.2 + \u00a77.2 migration-recommendation dual clarifier + Q3(b) \u00a75.4 adjacent-domain audit \u2192 separation-boundary posture audit rename + P4 checks/does-NOT-check mini-table + Q4 \u00a75.2 Enforcement Binding Points map required P2 deliverable); D48 32nd arm turn 1 CLEAN \u2192 27-consecutive-fully-clean-arms sub-pattern EXTENDED (MC-2 CODIFICATION-CONFIRMED milestone extended 26 \u2192 27 consecutive) (#2867)",
+      "sessions_touched": [
+        1900
+      ],
+      "commit_count": 2,
+      "prs": [
+        2867
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -33035,9 +33054,10 @@
         1804,
         1805,
         1806,
-        1899
+        1899,
+        1900
       ],
-      "commit_count": 99,
+      "commit_count": 101,
       "prs": [
         2773,
         2775,
@@ -33083,7 +33103,8 @@
         2859,
         2861,
         2863,
-        2865
+        2865,
+        2867
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33162,9 +33183,10 @@
         1804,
         1805,
         1806,
-        1899
+        1899,
+        1900
       ],
-      "commit_count": 94,
+      "commit_count": 96,
       "prs": [
         2773,
         2775,
@@ -33212,7 +33234,8 @@
         2859,
         2861,
         2863,
-        2865
+        2865,
+        2867
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33240,6 +33263,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md": {
+      "originating_session": 1900,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "6745c316",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1900): Group 1900 Authority Enforcement Design Space arc OPENED at S1900 parent Phase 0 scoping \u2014 SIXTH application of playbook \u00a711.1 9-section parent scoping template; Chris D-override of \u00a722 default queue lean (Event Architecture) via line-select at platform_architecture_inventory.md:191; D81-D85 Chris-ratified via agree-all round + Q5=(b) 4-child + CONSOLIDATION; Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 5 folds landed pre-commit (Q1 \u00a75.2 migration-recommendation clarifier + Q2 \u00a78 D86/D87 \u2192 O1/O2 operational-defaults reclassification + Q3(a) \u00a75.2 + \u00a77.2 migration-recommendation dual clarifier + Q3(b) \u00a75.4 adjacent-domain audit \u2192 separation-boundary posture audit rename + P4 checks/does-NOT-check mini-table + Q4 \u00a75.2 Enforcement Binding Points map required P2 deliverable); D48 32nd arm turn 1 CLEAN \u2192 27-consecutive-fully-clean-arms sub-pattern EXTENDED (MC-2 CODIFICATION-CONFIRMED milestone extended 26 \u2192 27 consecutive) (#2867)",
+      "sessions_touched": [
+        1900
+      ],
+      "commit_count": 2,
+      "prs": [
+        2867
+      ]
     },
     "docs/research/domains/content/1600_content_domain_scoping.md": {
       "originating_session": 1600,
