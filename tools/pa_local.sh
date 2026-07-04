@@ -17,18 +17,39 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1800 arc pin
-# (Rigby create_fresh at S1800 open — carrying only the mission scope,
-# no S1700 Observability arc turn context).
-# Pin: pa-ae5931ea706b4537. Title: "Session 1800 — HumanAttention /
-# Feedback / Learning research group (kickoff)". Carry-forward: mission
-# scope only — Research Group 1800 "HumanAttention / Feedback / Learning"
-# per Chris D-override of playbook §22 default queue lean (which had
-# Group 1900 Event Architecture next per Group 1700 xx99 §9.1 handoff).
-# Rationale: Round-trip learning loop scope expansion; per OPEN_ARCS
-# Not-started queue Group 1800 priority row. Prior S1700 Observability
-# arc context intentionally excluded per playbook §16 arc-open
-# fresh-thread discipline.
+# the --conversation flag below. Current value: Session 1900 arc pin
+# (Rigby create_fresh at S1900 open — carrying only mission scope,
+# no S1800 HumanAttention arc turn context per playbook §16 arc-open
+# fresh-thread discipline).
+# Pin: pa-2bd1613ce2bd4a9c. Title: "Session 1900 — Group 1900
+# Authority Enforcement Design Space parent scoping". Carry-forward:
+# mission scope only — Research Group 1900 "Authority Enforcement
+# Design Space" per Chris D-override 2026-07-04 of playbook §22
+# default queue lean (which had Group 1900 Event / Integration /
+# Runtime Architecture next per Group 1800 xx99 §8.1 T0/Gate
+# R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES handoff). Rationale: Chris
+# line-select signal at platform_architecture_inventory.md:191 —
+# §9 STAGE 2 top-1 next-research recommendation per S1273
+# (composes S1270 Symbol Mapping + S1271 Actor Identity; four-plane
+# governance surface — autonomy / authority / budget / human — with
+# PARTIAL maturity + HIGH drift risk; KillSwitch full write path +
+# zero enforcement readers per S1273 Rigby v2 review).
+#
+# **Retired at S1900 open: pa-ae5931ea706b4537** (Sessions 1800-1806 +
+# S1899 — Group 1800 HumanAttention / Feedback / Learning research group;
+# 8-doc arc: S1800 parent + 6 child audits S1801-S1806 + S1899 xx99
+# canonical summary; playbook §11.1 template FIFTH application + §11.2
+# 20-section template ELEVENTH application overall + §11.3 12-section
+# canonical-summary template SIXTH application + §11.3 §10 meta-
+# methodology template SIXTH application. Retired via session_tool.retire
+# at S1899 close per playbook §16 arc-close discipline (mirrors S1799
+# Group 1700 + S1699 Group 1600 + S1599 Group 1500 + S1499 Group 1400 +
+# S1399 Group 1300 arc pin retire precedent); updated_count=23,
+# retired=true. SIXTH formal xx99 canonical summary in the Research OS
+# library. D48 31st arm turn 1 CLEAN; 26-consecutive-fully-clean-arms
+# sub-pattern EXTENDED at S1899 close per MC-2 CODIFICATION-CONFIRMED
+# milestone extension. Meta-methodology promotions: MC-1 + MC-2 + MC-3
+# CODIFICATION-CONFIRMED; MC-4 + MC-5 CODIFICATION-READY.)
 #
 # **Retired at S1800 open: pa-e7fbacc996b34b44** (Sessions 1700-1706 +
 # S1799 — Group 1700 Observability / Telemetry / SLOs research group;
@@ -138,11 +159,15 @@
 # pa-e11847db632a4ee8 (Session 1194), pa-a60842917d36 (Session 1184),
 # pa-8f8ef45338ce4a24 (Sessions 1182-83).
 #
-# NOTE on retirement: session_tool has no `retire` action (Rigby surfaced
-# at Session 1213 close). "Retirement" = stop using the old thread +
-# repin here. The fact that no explicit retire mechanism exists is exactly
-# what Session 1212 stale-thread dispatcher audit deliverable 777d9cd8-…
-# is about (~$3.60/day wasted on retired-thread dispatches). P2 carryover.
+# NOTE on retirement: `session_tool.retire` DOES exist and works cleanly
+# (superseded S1213 note — verified S1301 close 2026-07-01 per memory
+# rule feedback_session_tool_retire_works.md; Rigby retired SIGN pin
+# pa-a23736a833f646cf with updated_count=5, retired=true). Use
+# `session_tool.retire conversation_id=<pin>` at arc close per playbook
+# §16 arc-close discipline. The Session 1212 stale-thread dispatcher
+# audit deliverable 777d9cd8-… remains open as P2 carryover for the
+# broader repin-hygiene work, but the retire mechanism itself is
+# operational.
 #
 # IF YOU MANUALLY RESTART A CELERY WORKER (not via `make celery`):
 # pass PA_USE_FUNCTION_CALLING=true in the env. Without it, the PA
@@ -153,4 +178,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-ae5931ea706b4537
+python tools/pa_chat.py "$@" --tools --conversation pa-2bd1613ce2bd4a9c
