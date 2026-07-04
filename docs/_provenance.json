@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T04:38:37+00:00",
+    "generated": "2026-07-04T12:32:09+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "c8db38371735",
-    "doc_count": 2325,
-    "commit_count": 7478,
+    "git_head": "5e5757476686",
+    "doc_count": 2327,
+    "commit_count": 7482,
     "confidence_breakdown": {
-      "HIGH": 1507,
+      "HIGH": 1509,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1130,
+      "commit_count": 1132,
       "prs": [
         10,
         11,
@@ -2951,7 +2951,8 @@
         2852,
         2854,
         2856,
-        2858
+        2858,
+        2860
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7264,7 +7265,7 @@
         1701,
         1800
       ],
-      "commit_count": 86,
+      "commit_count": 88,
       "prs": [
         2213,
         2219,
@@ -7313,7 +7314,8 @@
         2852,
         2854,
         2856,
-        2858
+        2858,
+        2860
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17875,6 +17877,21 @@
       "commit_count": 2,
       "prs": [
         2859
+      ]
+    },
+    "docs/handoffs/SESSION_1805_HUMAN_ATTENTION_CAT_E_VERIFICATION_LOOP_AUDIT.md": {
+      "originating_session": 1805,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "5e575747",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1805): Group 1800 Cat E S746 verification loop + record_verification trigger discovery + writer inventory child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.83 (\u00a71 partial-liveness sharper-framing verbatim adopted + F1 severity scoping-clarification LOW-arch-when-scoped-strictly-to-beat-drift + \u00a77.4 three-plane manual/automated/learning liveness table addition + R0 dual-sub-decision R0a-scope + R0b-coupling-contract reshape + \u00a720.9 miss-vector rule-out extended folds landed pre-commit) \u2014 FIFTH child under Group 1800; TENTH application overall of playbook \u00a711.2 20-section child template (#2861)",
+      "sessions_touched": [
+        1805
+      ],
+      "commit_count": 2,
+      "prs": [
+        2861
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32981,9 +32998,10 @@
         1801,
         1802,
         1803,
-        1804
+        1804,
+        1805
       ],
-      "commit_count": 93,
+      "commit_count": 95,
       "prs": [
         2773,
         2775,
@@ -33026,7 +33044,8 @@
         2853,
         2855,
         2857,
-        2859
+        2859,
+        2861
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33102,9 +33121,10 @@
         1801,
         1802,
         1803,
-        1804
+        1804,
+        1805
       ],
-      "commit_count": 88,
+      "commit_count": 90,
       "prs": [
         2773,
         2775,
@@ -33149,7 +33169,8 @@
         2853,
         2855,
         2857,
-        2859
+        2859,
+        2861
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33312,15 +33333,17 @@
         1801,
         1802,
         1803,
-        1804
+        1804,
+        1805
       ],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
         2851,
         2853,
         2855,
         2857,
-        2859
+        2859,
+        2861
       ]
     },
     "docs/research/domains/human_attention/1801_human_attention_cat_a_human_attention_item_core_audit.md": {
@@ -33381,6 +33404,21 @@
       "commit_count": 2,
       "prs": [
         2859
+      ]
+    },
+    "docs/research/domains/human_attention/1805_human_attention_cat_e_verification_loop_child_audit.md": {
+      "originating_session": 1805,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "5e575747",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1805): Group 1800 Cat E S746 verification loop + record_verification trigger discovery + writer inventory child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.83 (\u00a71 partial-liveness sharper-framing verbatim adopted + F1 severity scoping-clarification LOW-arch-when-scoped-strictly-to-beat-drift + \u00a77.4 three-plane manual/automated/learning liveness table addition + R0 dual-sub-decision R0a-scope + R0b-coupling-contract reshape + \u00a720.9 miss-vector rule-out extended folds landed pre-commit) \u2014 FIFTH child under Group 1800; TENTH application overall of playbook \u00a711.2 20-section child template (#2861)",
+      "sessions_touched": [
+        1805
+      ],
+      "commit_count": 2,
+      "prs": [
+        2861
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
