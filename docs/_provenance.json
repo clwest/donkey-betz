@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T20:44:13+00:00",
+    "generated": "2026-07-04T21:47:14+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "45a5d732b6a6",
-    "doc_count": 2347,
-    "commit_count": 7522,
+    "git_head": "d24316655113",
+    "doc_count": 2348,
+    "commit_count": 7526,
     "confidence_breakdown": {
-      "HIGH": 1529,
+      "HIGH": 1530,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1152,
+      "commit_count": 1154,
       "prs": [
         10,
         11,
@@ -2970,7 +2970,9 @@
         2877,
         2878,
         2879,
-        2880
+        2880,
+        2881,
+        2882
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7283,7 +7285,7 @@
         1701,
         1800
       ],
-      "commit_count": 108,
+      "commit_count": 110,
       "prs": [
         2213,
         2219,
@@ -7351,7 +7353,9 @@
         2877,
         2878,
         2879,
-        2880
+        2880,
+        2881,
+        2882
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -33195,9 +33199,10 @@
         1904,
         1999,
         2000,
-        2001
+        2001,
+        2002
       ],
-      "commit_count": 115,
+      "commit_count": 117,
       "prs": [
         2773,
         2775,
@@ -33251,7 +33256,8 @@
         2875,
         2877,
         2879,
-        2881
+        2881,
+        2883
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33338,9 +33344,10 @@
         1904,
         1999,
         2000,
-        2001
+        2001,
+        2002
       ],
-      "commit_count": 110,
+      "commit_count": 112,
       "prs": [
         2773,
         2775,
@@ -33396,7 +33403,8 @@
         2875,
         2877,
         2879,
-        2881
+        2881,
+        2883
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33665,6 +33673,21 @@
       "commit_count": 2,
       "prs": [
         2881
+      ]
+    },
+    "docs/research/domains/event_integration_architecture/2002_event_integration_architecture_cat_b_hai_event_contract_design_child_audit.md": {
+      "originating_session": 2002,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "d2431665",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2002): Group 2000+ P2 Cat B HAI Event Contract Design child audit \u2014 SECOND child under Group 2000+ + SIXTEENTH-consecutive playbook \u00a711.2 20-section application + FIRST design-contract-shape audit under Research OS (#2883)",
+      "sessions_touched": [
+        2002
+      ],
+      "commit_count": 2,
+      "prs": [
+        2883
       ]
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
