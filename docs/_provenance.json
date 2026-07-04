@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T12:32:09+00:00",
+    "generated": "2026-07-04T13:15:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "5e5757476686",
-    "doc_count": 2327,
-    "commit_count": 7482,
+    "git_head": "8743bfeb42d4",
+    "doc_count": 2329,
+    "commit_count": 7486,
     "confidence_breakdown": {
-      "HIGH": 1509,
+      "HIGH": 1511,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1132,
+      "commit_count": 1134,
       "prs": [
         10,
         11,
@@ -2952,7 +2952,8 @@
         2854,
         2856,
         2858,
-        2860
+        2860,
+        2862
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7265,7 +7266,7 @@
         1701,
         1800
       ],
-      "commit_count": 88,
+      "commit_count": 90,
       "prs": [
         2213,
         2219,
@@ -7315,7 +7316,8 @@
         2854,
         2856,
         2858,
-        2860
+        2860,
+        2862
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17892,6 +17894,21 @@
       "commit_count": 2,
       "prs": [
         2861
+      ]
+    },
+    "docs/handoffs/SESSION_1806_HUMAN_ATTENTION_CAT_F_ADJACENT_SEPARATION_AUDIT.md": {
+      "originating_session": 1806,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8743bfeb",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1806): Group 1800 Cat F Adjacent / Separation Boundaries CONSOLIDATION child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.82 \u2014 SIXTH AND LAST child under Group 1800; ELEVENTH application overall of playbook \u00a711.2 20-section child template; FIRST library CONSOLIDATION child audit (#2863)",
+      "sessions_touched": [
+        1806
+      ],
+      "commit_count": 2,
+      "prs": [
+        2863
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32999,9 +33016,10 @@
         1802,
         1803,
         1804,
-        1805
+        1805,
+        1806
       ],
-      "commit_count": 95,
+      "commit_count": 97,
       "prs": [
         2773,
         2775,
@@ -33045,7 +33063,8 @@
         2855,
         2857,
         2859,
-        2861
+        2861,
+        2863
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33122,9 +33141,10 @@
         1802,
         1803,
         1804,
-        1805
+        1805,
+        1806
       ],
-      "commit_count": 90,
+      "commit_count": 92,
       "prs": [
         2773,
         2775,
@@ -33170,7 +33190,8 @@
         2855,
         2857,
         2859,
-        2861
+        2861,
+        2863
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33419,6 +33440,21 @@
       "commit_count": 2,
       "prs": [
         2861
+      ]
+    },
+    "docs/research/domains/human_attention/1806_human_attention_cat_f_adjacent_separation_boundaries_child_audit.md": {
+      "originating_session": 1806,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8743bfeb",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1806): Group 1800 Cat F Adjacent / Separation Boundaries CONSOLIDATION child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.82 \u2014 SIXTH AND LAST child under Group 1800; ELEVENTH application overall of playbook \u00a711.2 20-section child template; FIRST library CONSOLIDATION child audit (#2863)",
+      "sessions_touched": [
+        1806
+      ],
+      "commit_count": 2,
+      "prs": [
+        2863
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
