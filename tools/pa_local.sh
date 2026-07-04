@@ -17,23 +17,44 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1900 arc pin
-# (Rigby create_fresh at S1900 open — carrying only mission scope,
-# no S1800 HumanAttention arc turn context per playbook §16 arc-open
-# fresh-thread discipline).
-# Pin: pa-2bd1613ce2bd4a9c. Title: "Session 1900 — Group 1900
-# Authority Enforcement Design Space parent scoping". Carry-forward:
-# mission scope only — Research Group 1900 "Authority Enforcement
-# Design Space" per Chris D-override 2026-07-04 of playbook §22
-# default queue lean (which had Group 1900 Event / Integration /
-# Runtime Architecture next per Group 1800 xx99 §8.1 T0/Gate
-# R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES handoff). Rationale: Chris
-# line-select signal at platform_architecture_inventory.md:191 —
-# §9 STAGE 2 top-1 next-research recommendation per S1273
-# (composes S1270 Symbol Mapping + S1271 Actor Identity; four-plane
-# governance surface — autonomy / authority / budget / human — with
-# PARTIAL maturity + HIGH drift risk; KillSwitch full write path +
-# zero enforcement readers per S1273 Rigby v2 review).
+# the --conversation flag below. Current value: Session 2000 arc pin
+# (Rigby create_fresh at S2000 open — carrying only mission scope,
+# no S1900 Authority Enforcement arc turn context per playbook §16
+# arc-open fresh-thread discipline).
+# Pin: pa-dd7e973617da464d. Title: "Session 2000 — Group 2000+
+# Event / Integration Architecture parent scoping". Carry-forward:
+# mission scope only — Research Group 2000+ "Event / Integration
+# Architecture" per Chris ratification 2026-07-04 of playbook §22
+# default queue lean at S2000 open (accepting default over any
+# D-override — first Group 2000+ opening that consumes the default
+# after two consecutive D-overrides at S1800 HumanAttention +
+# S1900 Authority Enforcement). Rationale: playbook §22 default
+# queue lean + inherits R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES
+# (Group 1800 T0/Gate — source_kind enum + six-plane HAI event-
+# emission gap) + F.SYMBOL-MAPPING-STATUS-VERIFICATION (Group 1900
+# P3 §19) + F.PER-USER-AUTHORITY-MECHANISM (Group 1900 P3 §19).
+# Scopes: event bus / routing / schema versioning + HAI event
+# schema (record_decision + record_verification + auto_approve +
+# auto_escalate transitions) + six-plane learning-surface event-
+# emission coverage.
+#
+# **Retired at S2000 open: pa-2bd1613ce2bd4a9c** (Sessions 1900-1904 +
+# S1999 — Group 1900 Authority Enforcement Design Space research group;
+# 6-doc arc: S1900 parent + S1901 P1 Cat A Actor Role Propagation Design
+# + S1902 P2 Cat B Authority Enforcement Design Decision + S1903 P3 Cat C
+# Cross-Plane Composition Design + S1904 P4 Cat F Adjacent / Separation
+# Boundaries CONSOLIDATION + S1999 xx99 canonical summary; playbook §11.1
+# template SIXTH application + §11.3 12-section canonical-summary template
+# SEVENTH application + §11.3 §10 meta-methodology template SEVENTH
+# application. Retired via session_tool.retire at S1999 close per playbook
+# §16 arc-close discipline; updated_count=23, retired=true. SEVENTH formal
+# xx99 canonical summary in the Research OS library. Runtime target 6
+# sessions ACHIEVED — 6/6 = 100%; runtime cap 8 never invoked. D48 37th arm
+# turn 1 CLEAN → 32-consecutive-fully-clean-arms sub-pattern EXTENDED at
+# S1999 SIGN cycle 1 per single-batch-4-question criterion (MC-2
+# CODIFICATION-CONFIRMED milestone extended 31 → 32 consecutive). Meta-
+# methodology promotions: MC-4 CODIFICATION-CONFIRMED with scope guardrails
+# + MC-5 CODIFICATION-CONFIRMED + MC-6 CODIFICATION-READY.)
 #
 # **Retired at S1900 open: pa-ae5931ea706b4537** (Sessions 1800-1806 +
 # S1899 — Group 1800 HumanAttention / Feedback / Learning research group;
@@ -178,15 +199,17 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-# **RETIRED at S1999 close 2026-07-04:** pa-2bd1613ce2bd4a9c (Group 1900
-# Authority Enforcement Design Space arc pin; retired via session_tool.retire
-# per playbook §16 arc-close discipline; updated_count=23, retired=true).
-# SIXTH formal arc-pin retirement in Research OS after S1399/S1499/S1599/
-# S1699/S1799/S1899. Group 1900 arc closed 6/6 sessions = 100% (S1900 +
-# S1901 + S1902 + S1903 + S1904 + S1999). Pin left in wrapper below until
-# next-arc open rotates it (or reset to null-arc default per Chris preference).
-# Next-arc lean: Group 2000+ Event / Integration Architecture per playbook
-# §22 default (inheriting R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES from Group
-# 1800 T0/Gate + F.SYMBOL-MAPPING-STATUS-VERIFICATION + F.PER-USER-AUTHORITY-
-# MECHANISM from Group 1900 P3 §19) OR Chris D-override selection.
-python tools/pa_chat.py "$@" --tools --conversation pa-2bd1613ce2bd4a9c
+# **ACTIVE at S2000 open 2026-07-04:** pa-dd7e973617da464d (Group 2000+
+# Event / Integration Architecture arc pin; minted at S2000 open via
+# session_tool.create_fresh per playbook §16 arc-open fresh-thread
+# discipline). SEVENTH formal arc under the Research OS after Groups
+# 1300/1400/1500/1600/1700/1800/1900. Chris ratified default per playbook
+# §22 at S2000 open (accepting Event / Integration Architecture over any
+# D-override — first Group 2000+ opening that consumes the default after
+# two consecutive D-overrides at S1800 HumanAttention + S1900 Authority
+# Enforcement). Inherits R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES (Group
+# 1800 T0/Gate — source_kind enum + six-plane HAI event schema +
+# record_decision/record_verification/auto_approve/auto_escalate
+# transitions) + F.SYMBOL-MAPPING-STATUS-VERIFICATION + F.PER-USER-
+# AUTHORITY-MECHANISM (Group 1900 P3 §19).
+python tools/pa_chat.py "$@" --tools --conversation pa-dd7e973617da464d
