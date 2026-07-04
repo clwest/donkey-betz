@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T20:07:39+00:00",
+    "generated": "2026-07-04T20:44:13+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b5e837410b72",
-    "doc_count": 2345,
-    "commit_count": 7518,
+    "git_head": "45a5d732b6a6",
+    "doc_count": 2347,
+    "commit_count": 7522,
     "confidence_breakdown": {
-      "HIGH": 1527,
+      "HIGH": 1529,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1150,
+      "commit_count": 1152,
       "prs": [
         10,
         11,
@@ -2968,7 +2968,9 @@
         2875,
         2876,
         2877,
-        2878
+        2878,
+        2879,
+        2880
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7281,7 +7283,7 @@
         1701,
         1800
       ],
-      "commit_count": 106,
+      "commit_count": 108,
       "prs": [
         2213,
         2219,
@@ -7347,7 +7349,9 @@
         2875,
         2876,
         2877,
-        2878
+        2878,
+        2879,
+        2880
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18080,6 +18084,21 @@
       "commit_count": 2,
       "prs": [
         2879
+      ]
+    },
+    "docs/handoffs/SESSION_2001_EVENT_INTEGRATION_ARCHITECTURE_P1_CAT_A_EVENTBUS_PRODUCER_CONSUMER_MAP.md": {
+      "originating_session": 2001,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "45a5d732",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2001): Group 2000+ Event / Integration Architecture P1 Cat A EventBus Producer/Consumer Map + Contract Verification child audit \u2014 FIRST child under Group 2000+ + FIFTEENTH-consecutive playbook \u00a711.2 20-section application; Rigby SIGN cycle 1 CLEAN on preserved arc pin pa-dd7e973617da464d with 3 folds landed pre-commit (F9 CRITICAL consumer beat dormancy + F7 STRENGTHENED MODEL_TRAINED MLModelVersion bypass + F11 EXPANDED to three substrates for spider-data \u2192 agents); 18 findings F1-F18 covering zero-UNKNOWN 8-stream + 1-DLQ producer/consumer map + \u03b1/\u03b2/\u03b3/\u03b4 per-stream contract verification tables; corrects S1273 \u00a73.31 MODEL_TRAINED UNKNOWN \u2192 MISSING + S1274 \u00a76.2 DLQ unbounded \u2192 bounded MAXLEN=1000; ARCHITECTURE_INDEX v65 \u2192 v66 + \u00a71.69 registration; OPEN_ARCS Group 2000+ row bumped S2000 parent shipped + S2001 P1 shipped \u2192 next=S2002 P2 HAI Event Contract Design (#2881)",
+      "sessions_touched": [
+        2001
+      ],
+      "commit_count": 2,
+      "prs": [
+        2881
       ]
     },
     "docs/handoffs/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md": {
@@ -33175,9 +33194,10 @@
         1903,
         1904,
         1999,
-        2000
+        2000,
+        2001
       ],
-      "commit_count": 113,
+      "commit_count": 115,
       "prs": [
         2773,
         2775,
@@ -33230,7 +33250,8 @@
         2873,
         2875,
         2877,
-        2879
+        2879,
+        2881
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33316,9 +33337,10 @@
         1903,
         1904,
         1999,
-        2000
+        2000,
+        2001
       ],
-      "commit_count": 108,
+      "commit_count": 110,
       "prs": [
         2773,
         2775,
@@ -33373,7 +33395,8 @@
         2873,
         2875,
         2877,
-        2879
+        2879,
+        2881
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33627,6 +33650,21 @@
       "commit_count": 2,
       "prs": [
         2879
+      ]
+    },
+    "docs/research/domains/event_integration_architecture/2001_event_integration_architecture_cat_a_eventbus_producer_consumer_map_child_audit.md": {
+      "originating_session": 2001,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "45a5d732",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2001): Group 2000+ Event / Integration Architecture P1 Cat A EventBus Producer/Consumer Map + Contract Verification child audit \u2014 FIRST child under Group 2000+ + FIFTEENTH-consecutive playbook \u00a711.2 20-section application; Rigby SIGN cycle 1 CLEAN on preserved arc pin pa-dd7e973617da464d with 3 folds landed pre-commit (F9 CRITICAL consumer beat dormancy + F7 STRENGTHENED MODEL_TRAINED MLModelVersion bypass + F11 EXPANDED to three substrates for spider-data \u2192 agents); 18 findings F1-F18 covering zero-UNKNOWN 8-stream + 1-DLQ producer/consumer map + \u03b1/\u03b2/\u03b3/\u03b4 per-stream contract verification tables; corrects S1273 \u00a73.31 MODEL_TRAINED UNKNOWN \u2192 MISSING + S1274 \u00a76.2 DLQ unbounded \u2192 bounded MAXLEN=1000; ARCHITECTURE_INDEX v65 \u2192 v66 + \u00a71.69 registration; OPEN_ARCS Group 2000+ row bumped S2000 parent shipped + S2001 P1 shipped \u2192 next=S2002 P2 HAI Event Contract Design (#2881)",
+      "sessions_touched": [
+        2001
+      ],
+      "commit_count": 2,
+      "prs": [
+        2881
       ]
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
