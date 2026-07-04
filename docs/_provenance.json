@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T01:47:08+00:00",
+    "generated": "2026-07-04T02:32:14+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "eef2280f48f8",
-    "doc_count": 2317,
-    "commit_count": 7462,
+    "git_head": "b66158a5d231",
+    "doc_count": 2319,
+    "commit_count": 7466,
     "confidence_breakdown": {
-      "HIGH": 1499,
+      "HIGH": 1501,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1122,
+      "commit_count": 1124,
       "prs": [
         10,
         11,
@@ -2947,7 +2947,8 @@
         2844,
         2847,
         2849,
-        2851
+        2851,
+        2852
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7260,7 +7261,7 @@
         1701,
         1800
       ],
-      "commit_count": 78,
+      "commit_count": 80,
       "prs": [
         2213,
         2219,
@@ -7305,7 +7306,8 @@
         2844,
         2847,
         2849,
-        2851
+        2851,
+        2852
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17807,6 +17809,21 @@
       "commit_count": 2,
       "prs": [
         2851
+      ]
+    },
+    "docs/handoffs/SESSION_1801_HUMAN_ATTENTION_CAT_A_HAI_CORE_AUDIT.md": {
+      "originating_session": 1801,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b66158a5",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1801): Group 1800 Cat A HumanAttentionItem Core child audit LANDED \u2014 SIGN-with-edits cycle 1 (F1/D5/F5 folds landed pre-commit) \u2014 FIRST child under Group 1800; SIXTH application overall of playbook \u00a711.2 20-section child template (#2853)",
+      "sessions_touched": [
+        1801
+      ],
+      "commit_count": 2,
+      "prs": [
+        2853
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32909,9 +32926,10 @@
         1705,
         1706,
         1799,
-        1800
+        1800,
+        1801
       ],
-      "commit_count": 85,
+      "commit_count": 87,
       "prs": [
         2773,
         2775,
@@ -32950,7 +32968,8 @@
         2846,
         2848,
         2850,
-        2851
+        2851,
+        2853
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33022,9 +33041,10 @@
         1705,
         1706,
         1799,
-        1800
+        1800,
+        1801
       ],
-      "commit_count": 80,
+      "commit_count": 82,
       "prs": [
         2773,
         2775,
@@ -33065,7 +33085,8 @@
         2846,
         2848,
         2850,
-        2851
+        2851,
+        2853
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33220,15 +33241,32 @@
       "originating_session": 1800,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "eef2280f",
+      "first_commit_sha": "b66158a5",
       "first_commit_date": "2026-07-03",
-      "first_commit_subject": "docs(session-1800): Group 1800 HumanAttention / Feedback / Learning arc OPENED at parent Phase 0 scoping \u2014 playbook \u00a711.1 FIFTH application \u2014 D75-D80 Chris-locked via \"agree all\" round (#2851)",
+      "first_commit_subject": "docs(session-1801): Group 1800 Cat A HumanAttentionItem Core child audit LANDED \u2014 SIGN-with-edits cycle 1 (F1/D5/F5 folds landed pre-commit) \u2014 FIRST child under Group 1800; SIXTH application overall of playbook \u00a711.2 20-section child template (#2853)",
       "sessions_touched": [
-        1800
+        1800,
+        1801
+      ],
+      "commit_count": 4,
+      "prs": [
+        2851,
+        2853
+      ]
+    },
+    "docs/research/domains/human_attention/1801_human_attention_cat_a_human_attention_item_core_audit.md": {
+      "originating_session": 1801,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b66158a5",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1801): Group 1800 Cat A HumanAttentionItem Core child audit LANDED \u2014 SIGN-with-edits cycle 1 (F1/D5/F5 folds landed pre-commit) \u2014 FIRST child under Group 1800; SIXTH application overall of playbook \u00a711.2 20-section child template (#2853)",
+      "sessions_touched": [
+        1801
       ],
       "commit_count": 2,
       "prs": [
-        2851
+        2853
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
