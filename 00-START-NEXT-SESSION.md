@@ -2,9 +2,11 @@
 
 ---
 
-## READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP
+## READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP + RETIRED ARC PIN
 
 `tools/pa_chat.py:38` has `DEFAULT_BASE_URL = "http://localhost:8000"` (already local by default as of S1249 PR #2712). The `.env` file's `PA_API_TOKEN` is the **production** token — if you call `pa_chat.py` bare against local without a local-token override, you'll get 401. Always use `tools/pa_local.sh` (sets URL + local token + arc pin).
+
+**RETIRED ARC PIN NOTICE:** Group 1900 arc pin `pa-2bd1613ce2bd4a9c` was **retired at S1999 close 2026-07-04** via `session_tool.retire` (updated_count=23, retired=true). SIXTH formal arc-pin retirement in Research OS. `tools/pa_local.sh:192` still references the retired pin — **first thing next session: rotate the wrapper pin to the next-arc fresh pin (minted via `session_tool.create_fresh` when next arc opens)** OR reset to null-arc default. Do NOT dispatch into the retired pin — Rigby's rotation notice explicitly warned.
 
 ### The correct LOCAL invocation
 ```bash
@@ -13,183 +15,173 @@ tools/pa_local.sh "message"
 
 **Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-## READ THIS SECOND — GROUP 1900 P4 CAT F CHRIS-AGREE-ALL-RATIFIED AT S1904; NEXT = S1999 XX99 CANONICAL SUMMARY (ARC CLOSE)
+## READ THIS SECOND — GROUP 1900 AUTHORITY ENFORCEMENT DESIGN SPACE ARC CLOSED AT S1999; NEXT-ARC = GROUP 2000+ EVENT / INTEGRATION ARCHITECTURE (playbook §22 default OR Chris D-override)
 
-Group 1900 Authority Enforcement Design Space arc opened at S1900 parent scoping; S1901 P1 Cat A Actor Role Propagation Design landed; S1902 P2 Cat B Authority Enforcement Design Decision Chris-D-gate-ratified; S1903 P3 Cat C Cross-Plane Composition Design Chris-agree-all-ratified; **S1904 P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION LANDED at S1904 — CHRIS RATIFIED all F1-F12 findings + §17.1 per-plane separation-boundary posture register + §19 20-item T-tier queue via "agree all" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at Medium-High confidence 2026-07-04 with 6 folds landed pre-commit**. FOURTH AND LAST child audit under Group 1900 arc + FOURTEENTH-consecutive application of playbook §11.2 20-section child audit template + SECOND-consecutive CONSOLIDATION shape application under Research OS (first at S1806 Group 1800 Cat F).
+**Group 1900 Authority Enforcement Design Space arc CLOSED at S1999 canonical summary 2026-07-04 — SEVENTH FORMAL XX99 CANONICAL SUMMARY IN THE RESEARCH OS LIBRARY** after S1399 Memory first + S1499 Revenue second + S1599 Sports third + S1699 Content fourth + S1799 Observability fifth + S1899 HumanAttention sixth. Chris ratified S1999 canonical summary via **"agree all"** shortcut on Group 1900 arc pin `pa-2bd1613ce2bd4a9c` (FIFTH-consecutive Group 1900 "agree all" pattern). ~2100 lines post-Rigby-SIGN-folds. Runtime target 6 sessions ACHIEVED — 6/6 = 100%; runtime cap 8 sessions never invoked.
 
-- **Active arc pin:** `pa-2bd1613ce2bd4a9c` (Group 1900 arc pin; preserved from S1900 open per S1801-S1806 arc-pin-durable-by-sixth-application precedent — SEVENTH-consecutive routing session under Group 1900; retirement scheduled at S1999 xx99 close per playbook §16 arc-close discipline).
-- **Retired at prior arc closes:** Group 1800 arc pin `pa-ae5931ea706b4537` (retired at S1900 open per playbook §16 arc-close discipline). See `tools/pa_local.sh` comment block for full ledger.
+- **Retired at S1999 close:** Group 1900 arc pin `pa-2bd1613ce2bd4a9c` (Sessions 1900-1904 + S1999 — Authority Enforcement Design Space research group; 6-doc arc: S1900 parent + S1901 P1 Cat A Actor Role Propagation Design + S1902 P2 Cat B Authority Enforcement Design Decision + S1903 P3 Cat C Cross-Plane Composition Design + S1904 P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION + S1999 xx99 canonical summary). Retired via `session_tool.retire` at S1999 close per playbook §16 arc-close discipline (mirrors S1399/S1499/S1599/S1699/S1799/S1899 arc pin retire precedent). **SIXTH formal arc-pin retirement in Research OS.**
 
-## READ THIS THIRD — S1904 P4 CAT F CHRIS-AGREE-ALL-RATIFIED; NEXT = S1999 XX99 CANONICAL SUMMARY
+## READ THIS THIRD — S1999 XX99 CANONICAL SUMMARY LANDED; NEXT-SESSION = GROUP 2000+ ARC-OPEN
 
-Session 1904 shipped the **Group 1900 P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION** at `docs/research/domains/authority_enforcement/1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md` (`status: draft`, `category: child_audit_consolidation`, `session: 1904`, `child_slot: P4_cat_f`, `domain_slug: authority_enforcement`, `research_group: 1900`, `authority: research-consolidation`; ~1700 lines post-Chris-agree-all-ratification + Rigby SIGN cycle 1 6 folds landed).
+Session 1999 shipped the **Group 1900 xx99 canonical summary** at `docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md` (`status: draft`, `category: canonical_summary`, `session: 1999`, `child_slot: xx99`, `domain_slug: authority_enforcement`, `research_group: 1900`, `authority: canonical summary for Group 1900`; ~2100 lines post-Chris-agree-all-ratification + Rigby SIGN cycle 1 4 folds landed).
 
-**P4 ships:**
+**S1999 xx99 ships:**
 
-- **§17.1 per-plane separation-boundary posture register (P4 first-class deliverable)** — 5 PERMEABLE-BROKEN (Memory + Content + HAI + Employee OS + API) + 2 STRUCTURAL-DROP (Sports + Discord) + 1 CLEAN (Frontend); 0 STABLE, 0 CANONICAL.
-- **12 F-numbered findings** — F1 Memory signal-aggregation cross-plane read verified at `signal_aggregation_service.py:211` + F2 Content PublishGate × Authority composition gap + F3 Sports intentional-deferral STRUCTURAL-DROP + F4 HAI `review_mode`-only Freeze read verified at `human_attention_lifecycle.py:243` + K/A/LOW_RISK_SOURCES three composition gaps + F5 Employee OS canonical-read-discipline design-only at HEAD (enforce_authority_mode field CONFIRMED-absent via direct grep; expected per staged rollout T1) + F6 Frontend CLEAN (verified read-only) + F7 API 209-view distributed enforcement gap + F8 Discord S1903 Q8 3-prerequisite STRUCTURAL-DROP (all 3 verified as real blockers) + F9 Cross-plane F5 HYPOTHESIS DISPROVE (running tally 1 pass / 5 disprove aggregate cross-arc) + F10 zero-authority-check-at-boundary durable-across-P1-P2-P3-P4 + F11 propagation-contract structural drops consolidated across 5+ planes + F12 test-gap durable-across-P1-P2-P3-P4 TEST-GAP-CONFIRMED.
-- **RISK-SPLIT framing** — F5 = systemic risk (blocks xx99 §5 canonical seam statement); F8 = immediate enforcement-gap risk.
-- **§19 T-slot queue** — 20 items across T0/Gate + T1 + T2 + T3 distributed across 7 arcs (Group 1300 T3 signal-agg doc + Group 1500 T3 arbitrage + Group 1600 T1 PublishGate + Group 1800 3 items + Group 1900 5 items + API T3 + Discord T2).
-- **6 P4-added T-tier items** — T1 R.CONTENT.PUBLISHGATE-AUTHORITY-COMPOSITION + T2 R.AUTHORITY.SEAM-BOUNDARY-TEST-COVERAGE + T2 R.AUTHORITY.CROSS-PLANE-FAIL-OPEN-CODIFICATION (per S1902 D89/F8 precedent + exceptions register) + T3 R.MEMORY.SIGNAL-AGG-AUTHORITY-COUPLING-DOC + T3 R.SPORTS.ARBITRAGE-AUTHORITY-COMPOSITION + T3 R.AUTHORITY.API-LAYER-AUTHORITY-INSTRUMENTATION. R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE elevated from S1903 T3 to P4 T2 per F4 severity.
-- **5 meta-methodology datapoints for xx99 §10** — Rigby T-tier hygiene rule + CONSOLIDATION-shape non-accusatory framing rule + F5 HYPOTHESIS DISPROVE 6-consecutive tally + STRUCTURAL-DROP semantics clarification + CLEAN posture write-boundary contract requirement.
+- **§1 Executive Summary** framing arc-close as **"design-complete, runtime-scaffolding"** canonical statement for cross-arc consumers.
+- **§2 Per-child rollup** on 28 canonical playbook questions across P1/P2/P3/P4 + load-bearing S1272 §14 3-mission framing (§14.2 Actor Role Propagation + §14.3 Authority Enforcement Design Decision + §14.4 Cross-Plane Composition Design all closed at Group 1900).
+- **§3 Consolidated domain shape** ASCII diagram + 7 reader takeaways.
+- **§4 10 cross-cutting patterns CX-1 through CX-10 durable-at-N** (design-complete-runtime-scaffolding + structural drop-class cross-plane cascade + F5 HYPOTHESIS DISPROVE + fail-open canonical + aspirational precedence + undocumented cross-plane reads + Chris "agree all" durable-at-four + verifier-loop catch cadence + TEST-GAP-CONFIRMED + parent-scoping-drift-caught-at-child).
+- **§5 Resolved contradictions + canonical seam-posture statement** — 11-item table folding all P1/P2/P3/P4 drifts + P4 T0/Gate R.AUTHORITY.CANONICAL-SEAM-STATEMENT CONSUMED as canonical framing.
+- **§6 16 unresolved unknowns** enumerated with resolution paths.
+- **§7 Anchor-update recommendations** for PLATFORM_INVENTORY + PLATFORM_WHAT_IT_IS + ARCHITECTURE_INDEX v63→v64 + 8 other affected docs + targeted S1902 §14.2 KillSwitch classification correction PR + inherited prior xx99 drift.
+- **§8 20-item T-tier queue** (1 T0/Gate CONSUMED + 7 T1 + 6 T2 + 7 T3 including T3.7 R.AUTHORITY.S1902-KILLSWITCH-CLASSIFICATION-CORRECTION-PR added per Rigby SIGN Q3 fold) + §8.4.1 dependency/blocker map + §8.5 cross-arc inheritance across 7 arcs.
+- **§9 Cross-links to 10 delegated arcs** (Groups 1300/1400/1500/1600/1700/1800/2000+ Event Architecture + Employee OS + API + Discord).
+- **§10 Meta-methodology promotions** — MC-4 CODIFICATION-CONFIRMED with scope guardrails + MC-5 CODIFICATION-CONFIRMED + MC-6 CODIFICATION-READY + MC-7/MC-8/MC-9/MC-10 CANDIDATES new. **MC-2 CODIFICATION-CONFIRMED milestone extended 26 → 32 across Group 1900** (D48 sub-pattern held CLEAN across all Group 1900 SIGN cycles). Inherited MC-1 (verifier-loop REQUIRED) + MC-3 (F5 discipline under utility-rate framing) both applied 4-6 additional times durably.
+- **§11 Arc Change Log** — 25 SIGN folds landed pre-Chris-gate across arc (5 S1900 + 3 S1901 + 3 S1902 + 4 S1903 + 6 S1904 + 4 S1999).
+- **§12 Appendix — Provenance + verifier-loop history + SIGN cycle 1 record + arc close-out artifacts.**
 
-**Chris ratification 2026-07-04** via **"agree all"** shortcut per Group 1900 arc pattern on arc pin `pa-2bd1613ce2bd4a9c` — ratifies all F1-F12 findings + §17.1 posture verdicts + §19 20-item T-tier queue as-is with no line-item overrides. **FOURTH-consecutive Chris "agree all" application within Group 1900 arc** (S1902 D-gate + S1903 Q-resolutions + S1903 SIGN cycle 1 folds + S1904 all-findings-ratification).
+**Chris ratification 2026-07-04** via **"agree all"** shortcut on Group 1900 arc pin `pa-2bd1613ce2bd4a9c` — ratifies canonical summary as-is with all 4 Rigby SIGN cycle 1 folds landed. **FIFTH-consecutive Chris "agree all" application within Group 1900 arc**.
 
-**Rigby SIGN cycle 1 SIGN-with-edits at Medium-High confidence 2026-07-04** on Group 1900 arc pin `pa-2bd1613ce2bd4a9c`. **6 folds landed pre-commit:** Q1a Memory F1 signal/aggregation-surface framing tightening + Q1b T3 tier hygiene rule codified + Q2 F5 non-accusatory scheduling phrasing + Q3(a) Sports STRUCTURAL-DROP parenthetical + Q3(b) Frontend CLEAN verification note + Q4(c) CROSS-PLANE-FAIL-OPEN-CODIFICATION wording tighten. **SIGN cycle 2 SKIPPED** per Rigby explicit statement. **D48 36th arm turn 1 CLEAN → 31-consecutive-fully-clean-arms sub-pattern EXTENDED at S1904 SIGN cycle 1** per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 30 → 31 consecutive).
+**Rigby SIGN cycle 1 SIGN-with-edits at High confidence 0.78 2026-07-04** on Group 1900 arc pin `pa-2bd1613ce2bd4a9c`. **4 folds landed pre-commit:** Q1 §5.2 anti-misread clause ("not nearly graduated; architecturally specified but operationally un-enforced") + Q2 §10.2 MC-4 scope-guardrail language (CONFIRMED = repeatable-across-shapes NOT proven-universal) + Q3 §8.4.1 dependency/blocker map + T3.7 R.AUTHORITY.S1902-KILLSWITCH-CLASSIFICATION-CORRECTION-PR explicit doc-hygiene line item + Q4 §5.2 fail-open scaffolding-period caveat (temporary safety valve, not permanent policy default). **SIGN cycle 2 SKIPPED** per Group 1900 arc precedent. **D48 37th arm turn 1 CLEAN → 32-consecutive-fully-clean-arms sub-pattern EXTENDED at S1999 SIGN cycle 1** per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 31 → 32 consecutive).
 
-### xx99 §5 4-child sequence P1→P4 with xx99 (COMPLETE at P4)
+### Group 1900 arc final ledger
 
 - **P1 (S1901 Cat A)** — Actor Role Propagation Design — **LANDED 2026-07-04** ✅
-- **P2 (S1902 Cat B)** — Authority Enforcement Design Decision — **LANDED 2026-07-04** ✅ (Chris D-gate ratified via "agree all")
-- **P3 (S1903 Cat C)** — Cross-Plane Composition Design — **LANDED 2026-07-04** ✅ (Chris ratified via "agree all")
-- **P4 (S1904 Cat F)** — **Adjacent / Separation Boundaries CONSOLIDATION** — **LANDED 2026-07-04** ✅ (Chris ratified via "agree all")
-- **xx99 (S1999)** — canonical summary per playbook §11.3 12-section SEVENTH application + §10 SEVENTH meta-methodology application — **NEXT SESSION**.
+- **P2 (S1902 Cat B)** — Authority Enforcement Design Decision — **LANDED 2026-07-04** ✅ (Chris D-gate 8 D-verdicts D86-D93 via "agree all")
+- **P3 (S1903 Cat C)** — Cross-Plane Composition Design — **LANDED 2026-07-04** ✅ (Chris 9 designed resolutions via "agree all")
+- **P4 (S1904 Cat F)** — Adjacent / Separation Boundaries CONSOLIDATION — **LANDED 2026-07-04** ✅ (Chris all F1-F12 findings via "agree all")
+- **xx99 (S1999)** — Canonical summary — **LANDED 2026-07-04** ✅ (Chris via "agree all" — arc close; SEVENTH formal xx99 in Research OS)
 
-**Runtime target: 6 sessions.** **Runtime cap: 8 sessions.** After S1904: 1 session remaining (S1999 xx99). Arc timeline HOLDING.
-
-### Session close artifacts committed at S1904 close
+### Session close artifacts committed at S1999 close
 
 ```
-docs/research/domains/authority_enforcement/1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md   [new; ~1700 lines post-Chris-agree-all-ratification + Rigby SIGN cycle 1 6 folds landed]
-docs/research/ARCHITECTURE_INDEX.md                                                                                            [modified — v62 → v63 with §1.66 S1904 registration + line-6 v63 preamble; v62 preamble preserved as tail]
-docs/research/OPEN_ARCS.md                                                                                                     [modified — Group 1900 row Sessions column bumped to "S1900 + S1901 + S1902 + S1903 + S1904 → next: S1999 xx99 canonical summary"; Notes column appended with S1904 close paragraph; last_updated bumped with S1904 preamble; S1903 close preamble preserved as tail]
-docs/handoffs/SESSION_1904_AUTHORITY_ENFORCEMENT_CAT_F.md                                                                       [new — S1904 handoff]
-00-START-NEXT-SESSION.md                                                                                                       [modified — this file; S1904 close; next-session priority = S1999 xx99 canonical summary]
+docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md   [new; ~2100 lines post-Chris-agree-all-ratification + Rigby SIGN cycle 1 4 folds landed]
+docs/research/ARCHITECTURE_INDEX.md                                                            [modified — v63 → v64 with §1.67 S1999 registration + line-6 v64 preamble; v63 preamble preserved as tail]
+docs/research/OPEN_ARCS.md                                                                     [modified — Group 1900 row moved In-progress → Closed; last_updated bumped with S1999 close preamble; S1904 close preamble preserved as tail]
+tools/pa_local.sh                                                                              [modified — retirement note added at lines 179-192; pin left in wrapper until next-arc open rotates it]
+docs/handoffs/SESSION_1999_AUTHORITY_ENFORCEMENT_CANONICAL_SUMMARY.md                          [new — S1999 handoff]
+00-START-NEXT-SESSION.md                                                                       [modified — this file; S1999 close; next-session priority = Group 2000+ Event / Integration Architecture arc-open OR Chris D-override]
 ```
 
-Handoff: `docs/handoffs/SESSION_1904_AUTHORITY_ENFORCEMENT_CAT_F.md`.
+Handoff: `docs/handoffs/SESSION_1999_AUTHORITY_ENFORCEMENT_CANONICAL_SUMMARY.md`.
 
-### NEXT-SESSION MISSION — S1999 XX99 CANONICAL SUMMARY (GROUP 1900 ARC CLOSE)
+### NEXT-SESSION MISSION — GROUP 2000+ EVENT / INTEGRATION ARCHITECTURE ARC-OPEN (or Chris D-override)
 
-Execute **S1999 Group 1900 xx99 canonical summary** per parent §5.5:
+Execute **Group 2000+ arc-open parent scoping** per playbook §22 default queue lean OR **Chris D-override selection** at open (prior arc-open precedent: S1800 selected HumanAttention over Event Architecture per S1799 §9.1 handoff; S1900 selected Authority Enforcement over Event Architecture per S1273 §9 STAGE 2 top-1 recommendation).
 
-**Playbook §11.3 12-section canonical-summary template SEVENTH application** + **§11.3 §10 meta-methodology template SEVENTH application** (adopted S1399 close per Chris directive).
+**Playbook §11.1 SEVENTH application** of 9-section parent scoping template (after S1400 Revenue first + S1500 Sports second + S1600 Content third + S1700 Observability fourth + S1800 HumanAttention fifth + S1900 Authority Enforcement sixth).
 
-**Consumes:**
-- P1 (§7 actor-role propagation contract + F6 structural drop register)
-- P2 (§17 Enforcement Binding Points map + 8 Chris-ratified D-verdicts D86-D93)
-- P3 (§17.1 Plane Precedence Policy + §7.4.1 D94 KillSwitch Enforcement Reader Design + §14.1 KillSwitch classification correction)
-- P4 (§17.1 per-plane separation-boundary posture register + §7 Cat F per-plane propagation-contract touchpoint map + 20-item T-tier queue + 5 meta-methodology datapoints)
+**Group 2000+ inherits (candidate next-arc scope, subject to Chris ratification):**
 
-**Deliverables (all 12 sections + Appendix):**
-- §1 Executive Summary (500–800 words)
-- §2 What This Arc Answered (per-child rollup: which questions each child answered)
-- §3 Consolidated Domain Shape (single map/diagram — authority enforcement domain reader mental model)
-- §4 Cross-Cutting Patterns (themes across children — e.g., "authority is design-complete, runtime-scaffolding")
-- §5 Resolved Contradictions
-- §6 Unresolved Unknowns (explicit list; promotes to §8)
-- §7 Anchor-Update Recommendations (PLATFORM_INVENTORY + PLATFORM_WHAT_IT_IS + CLAUDE.md + docs/topics/authority-*-boundaries.md batch + S1902 §14.2 KillSwitch classification correction PR)
-- §8 Follow-On Research Queue (unified 20-item T-tier from P4 §19 + inherited items)
-- §9 Cross-Links to Delegated Arcs (Group 2000+ Event Architecture + F.SYMBOL-MAPPING-STATUS-VERIFICATION + F.PER-USER-AUTHORITY-MECHANISM)
-- §10 What This Research Taught Us About How to Do Research (5 P4 meta-methodology candidates + inherited from P1/P2/P3; SEVENTH meta-methodology application)
-- §11 Arc Change Log (S1900 + S1901 + S1902 + S1903 + S1904 + S1999 timeline with Rigby SIGN verdicts + Chris ratifications)
-- §12 Appendix — Provenance
-
-**Deliverable:** `docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md`.
-
-**Prereqs:** P1 + P2 + P3 + P4 all shipped ✅ (all at S1904 close).
-
-**Rigby SIGN cadence:** Cycle 1 single-batch 4-question routed via Group 1900 arc pin `pa-2bd1613ce2bd4a9c` per playbook §15 stage-table canonical-summary row + §16 arc-pin durable-by-seventh-application (Group 1900 SEVENTH-consecutive routing session at S1904; EIGHTH-consecutive at S1999).
-
-**Chris-gate:** Ratification at close + arc pin retirement via `session_tool.retire` per playbook §16 arc-close discipline (SIXTH formal arc-pin retirement in Research OS after S1899/S1799/S1699/S1599/S1499/S1399).
-
-**Runtime target:** 1 session.
+- **R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES** (Group 1800 T0/Gate handoff) — HAI event schema (record_decision + record_verification + auto_approve + auto_escalate transitions); source_kind enum + six-plane learning-surface event-emission gap.
+- **F.SYMBOL-MAPPING-STATUS-VERIFICATION** (Group 1900 P3 §19) — S1274 Option E v0 graduation status monitoring; Q6 + Q8 deferrals depend on Symbol Mapping runtime registry graduation.
+- **F.PER-USER-AUTHORITY-MECHANISM** (Group 1900 P3 §19) — per-user authority resolution mechanism required by Q6; currently authority is per-employee (JobContract concept).
+- **Cross-arc T-slot inheritance** — Groups 1300/1400/1500/1600/1700/1800/1900 post-arc queues remain Chris-gated.
 
 **Session flow at next-session open:**
 
 1. `context-kit orient` (session-open protocol per memory rule).
-2. Check if S1904 artifact set + cascade refresh PR merged to `main`.
+2. Check if S1999 artifact set + cascade refresh PR merged to `main`.
 3. If not yet merged: Chris merge + PR merge.
-4. Run post-merge 4-step docs cascade + `build_docs_provenance` per memory rule (or batch into xx99 open PR per Chris preference; `feedback_cascade_pr_must_include_embed_step.md` — cascade PR MUST include step 4 embed).
-5. Verify `service_context: local` via `platform_config_tool overview` on Group 1900 arc pin `pa-2bd1613ce2bd4a9c`.
-6. Execute S1999 xx99 canonical summary per playbook §11.3 12-section template + §10 SEVENTH meta-methodology application.
-7. NO Explore sub-agents (canonical summary consumes prior child outputs per playbook §13 rule).
-8. Apply verifier-loop pre + post per playbook §14 REQUIRED (MC-1 CODIFICATION-CONFIRMED).
-9. Route Rigby SIGN cycle 1 single-batch 4-question on canonical summary.
-10. Chris ratification at close (standard, not multi-verdict D-gate).
-11. D48 37th arm anticipated CLEAN turn 1 → 32-consecutive-clean-arms sub-pattern EXTENSION milestone.
-12. Fold any SIGN-with-edits at Chris ratification.
-13. Bump ARCHITECTURE_INDEX v63 → v64 with §1.67 S1999 registration + line-6 v64 preamble.
-14. Move OPEN_ARCS Group 1900 row from In-progress to Closed section + retire arc pin `pa-2bd1613ce2bd4a9c` via `session_tool.retire`.
-15. Write S1999 handoff + overwrite `00-START-NEXT-SESSION.md` to point at next arc (Group 2000+ per playbook §22 default queue or Chris D-override).
+4. Run post-merge 4-step docs cascade + `build_docs_provenance` per memory rule (or batch into next arc-open PR per Chris preference; `feedback_cascade_pr_must_include_embed_step.md` — cascade PR MUST include step 4 embed + state chunk count in PR body as evidence).
+5. **Rotate `tools/pa_local.sh` wrapper pin** — mint fresh next-arc pin via `session_tool.create_fresh` (title matching next-arc scope) + edit `tools/pa_local.sh:192` to reference the new pin + update wrapper header ledger with S1999 retirement documentation + retired-pins carry-forward log.
+6. Verify `service_context: local` via `platform_config_tool overview` on fresh next-arc pin.
+7. Chris selects Group 2000+ scope (Event / Integration Architecture default OR D-override).
+8. Execute parent scoping per playbook §11.1 SEVENTH application.
+9. Route Rigby SIGN cycle 1 on parent scoping (optional per playbook §15 stage-table default; Chris opts in or skips).
+10. Chris D-verdict ratification at close (D8N+1 series continuing from D93; likely D95-D100 range depending on scope shape).
+11. Bump ARCHITECTURE_INDEX v64 → v65 with §1.68 next-parent registration.
+12. Move OPEN_ARCS Group 2000+ row from Not-started → In-progress (or add new row if Group 2000+ scope is Chris-D-overridden).
+13. Write handoff + overwrite `00-START-NEXT-SESSION.md`.
 
-**Not next (unless Chris specifies):** any specific implementation work per playbook §14.5 no-implementation rule. All 20 T-slot items in P4 §19 remain post-arc Chris-gated items pending xx99 close and arc pin retirement.
+**Not next (unless Chris specifies):** any Group 1900 post-arc T-slot execution. The 20 T-slot items in Group 1900 xx99 §8 queue (see below) remain Chris-gated post-arc execution items pending next-arc opens or Chris-selected T-slot execution focus.
 
-### Post-arc queued items (Chris-gated; extended from P4)
+### Post-arc queued items (Chris-gated; inherited from all closed arcs)
 
-- **From Group 1900 P4 (S1904 close):** §19 T-tier queue extended by 6 P4-added items — T1 R.CONTENT.PUBLISHGATE-AUTHORITY-COMPOSITION + T2 R.AUTHORITY.SEAM-BOUNDARY-TEST-COVERAGE + T2 R.AUTHORITY.CROSS-PLANE-FAIL-OPEN-CODIFICATION + T3 R.MEMORY.SIGNAL-AGG-AUTHORITY-COUPLING-DOC + T3 R.SPORTS.ARBITRAGE-AUTHORITY-COMPOSITION + T3 R.AUTHORITY.API-LAYER-AUTHORITY-INSTRUMENTATION; R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE elevated S1903 T3 → P4 T2. Total Group 1900 §19 queue at S1904 close: 20 items across T0/Gate + T1 + T2 + T3 distributed across 7 arcs.
-- **From Group 1900 P3 (S1903 close):** §19 T-tier queue — T2 R.AUTHORITY.DISCORD-DISPATCH-ENFORCEMENT-INSTRUMENTATION + T3 R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE (elevated by P4) + T3 R.AUTHORITY.LOW-RISK-SOURCES-EXPLICIT-AUTHORITY-TAGS. **§7.4.1 D94 KillSwitch Enforcement Reader Design spec** available for T2 R.AUTHORITY.KILLSWITCH-DISPATCH-EXPANSION execution.
-- **From Group 1900 P2 (S1902 close):** §19 T-tier queue — T1 R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS + R.AUTHORITY.VIOLATION-EVENT-SCHEMA + R.AUTHORITY.RETROSPECTIVE-SCAN-TASK + R.AUTHORITY.OPTION-E-MIGRATION-TRIGGER; T2 R.AUTHORITY.KILLSWITCH-DISPATCH-EXPANSION (P3 §7.4.1 D94 reader spec available) + R.AUTHORITY.STEP-ACTION-DECLARATION; T3 R.AUTHORITY.PER-LEVEL-BOUNDARY-BINDING + R.AUTHORITY.CLAUDE-MD-EMPLOYEE-COUNT-ANCHOR-UPDATE.
-- **From Group 1900 P1 (S1901 close):** §19 T-tier queue — T0/Gate R.AUTHORITY.ENFORCEMENT-BINDING-POINTS-MAP **CONSUMED** at S1902 §17 + T1 4 items (R.AUTHORITY.ACTOR-KWARGS-CELERY + R.AUTHORITY.ACTOR-STEP-CONTEXT + R.AUTHORITY.EVENT-SCHEMA-EXTENSION + R.AUTHORITY.OPSRUN-ACTOR-COLUMNS) + T2 3 items + T3 4 items + 3 cross-arc handoffs.
-- **From Group 1800 (S1899 close):** T0/Gate 6 items (R.HAI.LEARNING-PLANE-CONTRACT-ADR joint Group 1300+1800 + R.HAI.DUPLICATE-FILE-COLLISION-CONSOLIDATION + R.HAI.LOOP-COUPLING-REPAIR-ADR-BUNDLE + R.HAI.RETENTION-UNIFIED-ADR durable-at-five + R.HAI.SOURCE-KIND-ENUM-ADR joint schema-change + R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES parked for Group 2000+ Event / Integration arc) + T1 12 items + T2 14 items + T3 15 items = 47 total unified follow-on queue.
-- **From Group 1700 (S1799)** — R.OBSERVABILITY.RETENTION-UNIFIED-ADR + R.OBSERVABILITY.D74-SPINE-POSTURE (pairs with Group 1800 R.HAI.RETENTION-UNIFIED-ADR — recommend unified cross-arc retention ADR bundle).
+- **Group 1900 §8 T0/Gate:** R.AUTHORITY.CANONICAL-SEAM-STATEMENT (CONSUMED at S1999 xx99 §5 — resolves).
+- **Group 1900 §8 T1 7 items:** R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS **(highest-priority per F5 severity; blocks entire two-tier composition contract runtime landing)** + R.AUTHORITY.ACTOR-KWARGS-CELERY + R.AUTHORITY.ACTOR-STEP-CONTEXT + R.AUTHORITY.VIOLATION-EVENT-SCHEMA + R.AUTHORITY.RETROSPECTIVE-SCAN-TASK + R.AUTHORITY.OPTION-E-MIGRATION-TRIGGER + R.CONTENT.PUBLISHGATE-AUTHORITY-COMPOSITION.
+- **Group 1900 §8 T2 6 items:** R.AUTHORITY.KILLSWITCH-DISPATCH-EXPANSION (P3 §7.4.1 D94 reader spec available) + R.AUTHORITY.STEP-ACTION-DECLARATION + R.AUTHORITY.DISCORD-DISPATCH-ENFORCEMENT-INSTRUMENTATION + R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE (elevated per P4 F4 severity) + R.AUTHORITY.SEAM-BOUNDARY-TEST-COVERAGE + R.AUTHORITY.CROSS-PLANE-FAIL-OPEN-CODIFICATION.
+- **Group 1900 §8 T3 7 items:** R.AUTHORITY.PER-LEVEL-BOUNDARY-BINDING + R.AUTHORITY.CLAUDE-MD-EMPLOYEE-COUNT-ANCHOR-UPDATE + R.AUTHORITY.LOW-RISK-SOURCES-EXPLICIT-AUTHORITY-TAGS + R.AUTHORITY.API-LAYER-AUTHORITY-INSTRUMENTATION + R.MEMORY.SIGNAL-AGG-AUTHORITY-COUPLING-DOC + R.SPORTS.ARBITRAGE-AUTHORITY-COMPOSITION + R.AUTHORITY.S1902-KILLSWITCH-CLASSIFICATION-CORRECTION-PR (net-add per Rigby SIGN Q3 fold).
+- **From Group 1800 (S1899 close):** T0/Gate 6 items (R.HAI.LEARNING-PLANE-CONTRACT-ADR joint Group 1300+1800 + R.HAI.DUPLICATE-FILE-COLLISION-CONSOLIDATION + R.HAI.LOOP-COUPLING-REPAIR-ADR-BUNDLE + R.HAI.RETENTION-UNIFIED-ADR + R.HAI.SOURCE-KIND-ENUM-ADR + R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES parked for Group 2000+) + T1 12 items + T2 14 items + T3 15 items = 47 total unified follow-on queue.
+- **From Group 1700 (S1799):** T0/Gate paired (R.OBSERVABILITY.RETENTION-UNIFIED-ADR + R.OBSERVABILITY.D74-SPINE-POSTURE) + T1 9 items + T2 17 items + T3 21 items. Recommend unified cross-arc retention ADR bundle including Group 1800 R.HAI.RETENTION-UNIFIED-ADR + Group 1900 authority-audit event volume.
 - **From Group 1600/1500/1400/1300 closes** — prior T-slot execution queues remain Chris-gated.
 - **§8 timeline table drift** — missing rows for S1605 + S1606 + S1699 (Group 1600); inherited.
 - **5 doc PRs owed** for `auto_publish "daily 6 AM"` cross-arc CORRECTION per S1699 §7.4.
-- **CLAUDE.md 10-vs-9 body systems drift + 3-vs-4 employees drift** — inherited + reinforced by S1902 Explore 5 (4 employee handles firing warn-mode events).
+- **CLAUDE.md 10-vs-9 body systems drift** (Group 1700 xx99 handoff, unresolved) + **3-vs-4 employees drift CONFIRMED** by Group 1900 P2 §14.2 + Explore 5 warn-mode observation (queued as T3.2 R.AUTHORITY.CLAUDE-MD-EMPLOYEE-COUNT-ANCHOR-UPDATE).
 
-### S1904 anchor-update recommendations queued for xx99
+### S1999 anchor-update recommendations queued for future maintenance batches
 
-The following drifts caught at S1904 verifier-loop should be batched into the S1999 xx99 canonical summary §7 anchor-update recommendations:
+The following anchor-update recommendations from S1999 §7 should be batched into cross-arc doc hygiene PRs (some already applied at S1999 close; others queued for future maintenance):
 
-1. **Signal-aggregation cross-plane read documentation** — `docs/topics/spider-network.md` (owns signal-aggregation topic) or PLATFORM_WHAT_IT_IS.md governance planes section needs to name the `signal_aggregation_service.py:211` cross-plane read pattern per F1 finding.
-2. **HAI `review_mode` line drift `:240` → `:243`** (Explore 4 caught line drift; MC-1 verifier hygiene datapoint).
-3. **Memory PERMEABLE-BROKEN posture correction** (Explore 1 initially classified `no_boundary`; elevated via direct read at `:211`).
-4. **Employee OS `enforce_authority_mode` design-vs-runtime gap confirmation** (verifier grep confirms absent at HEAD; explicitly queued in P2 §19 T1 — not new drift, confirms existing queue item).
-5. **7-8 new `docs/topics/authority-<plane>-boundaries.md` first-inventory landings** OR targeted per-plane topic doc refresh + PLATFORM_INVENTORY.md §Authority Enforcement seam sub-section (per Explore 5 aggregate coverage classification LIGHT-to-NONE across all 8 planes).
-6. (Inherited from S1903 §14, unchanged) S1902 §14.2 KillSwitch classification correction + S1902 close OPEN_ARCS preamble omission + Explore 2 F4 refutation misread caveat.
-7. (Inherited from S1902 §14.4, unchanged) Parent §5.2 F8-vs-F9 constraint drift + 4-vs-5 modes count; S1272 §3.1 Boundary 16 line drift `:84-100` → `:154`; Option E label collision; CLAUDE.md 3-vs-runtime-4 employee_handles drift; HAI auto-approve 7-vs-8 gate count reconciliation.
+1. **APPLIED at S1999:** ARCHITECTURE_INDEX v63 → v64 with §1.67 S1999 registration + line-6 v64 preamble.
+2. **APPLIED at S1999:** OPEN_ARCS Group 1900 row moved In-progress → Closed.
+3. **APPLIED at S1999:** tools/pa_local.sh retirement annotation.
+4. **QUEUED (targeted PR):** S1902 §14.2 KillSwitch classification correction PR (T3.7 R.AUTHORITY.S1902-KILLSWITCH-CLASSIFICATION-CORRECTION-PR added per Rigby SIGN Q3 fold).
+5. **QUEUED (maintenance batch):** PLATFORM_INVENTORY.md § "Authority Enforcement" subsystem + § "KillSwitch reads" runtime-derived table + § "Signal-aggregation cross-plane read".
+6. **QUEUED (maintenance batch):** PLATFORM_WHAT_IT_IS.md "Authority" narrative + "Governance planes" narrative + "Employee OS" narrative + F.e terminology glossary.
+7. **QUEUED (maintenance batch):** docs/topics/employee-os.md + docs/topics/spider-network.md + docs/topics/agent-system.md + docs/AUDIT_FINDINGS.md + docs/DISCORD_INTEGRATION.md + docs/topics/frontend.md + docs/topics/content-pipeline.md.
+8. **QUEUED (maintenance batch):** CLAUDE.md 3-vs-4 employees drift correction (T3.2 R.AUTHORITY.CLAUDE-MD-EMPLOYEE-COUNT-ANCHOR-UPDATE).
+9. **QUEUED (inherited from S1899):** CLAUDE.md 10-vs-9 body systems drift + S1699 §7.4 auto_publish 5 doc PRs owed + §8 timeline S1605/S1606/S1699 missing rows + Option E label collision S1272 §9.5 rename.
 
 **FIRST THING next session open:**
 
 1. `context-kit orient`
-2. Check if S1904 artifact set + cascade refresh PR are on `main`
+2. Check if S1999 artifact set + cascade refresh PR are on `main`
 3. Chris merge + PR merge if not
-4. Post-merge 4-step docs cascade + `build_docs_provenance` per memory rule (or batch into xx99 open PR)
-5. Verify `service_context: local` on Group 1900 arc pin `pa-2bd1613ce2bd4a9c`
-6. Execute S1999 xx99 canonical summary per playbook §11.3 12-section template + §10 SEVENTH meta-methodology application
+4. Post-merge 4-step docs cascade + `build_docs_provenance` per memory rule (or batch into next arc-open PR)
+5. **Rotate `tools/pa_local.sh` wrapper pin — mint fresh next-arc pin via `session_tool.create_fresh` + edit `tools/pa_local.sh:192` + update header ledger with S1999 retirement documentation**
+6. Verify `service_context: local` on fresh next-arc pin
+7. Chris selects Group 2000+ scope (Event / Integration Architecture default OR D-override)
+8. Execute Group 2000+ arc-open parent scoping per playbook §11.1 SEVENTH application
 
 ---
 
 ## PA / Rigby context
 
-- **Arc pin at session start:** `pa-2bd1613ce2bd4a9c` (Group 1900 arc pin; preserved from S1900 open per S1801-S1806 arc-pin-durable-by-sixth-application precedent; SEVENTH-consecutive routing session under Group 1900; retirement scheduled at S1999 xx99 close).
-- **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin at line 156).
+- **Arc pin at session start:** **RETIRED — no active arc pin.** Group 1900 arc pin `pa-2bd1613ce2bd4a9c` retired at S1999 close via `session_tool.retire` (updated_count=23, retired=true). Next-arc pin will be minted at Group 2000+ open via `session_tool.create_fresh` (title matching next-arc scope).
+- **PA Chat tool:** `tools/pa_local.sh "message"` (wrapper — sets URL + local token + arc pin). **First-thing next session:** rotate line 192 to fresh next-arc pin.
 - **Local worker restart** needs `PA_USE_FUNCTION_CALLING=true` env or Rigby drops to keyword routing. `make celery` handles it; ad-hoc `celery -A core worker` does not.
-- **Rigby SIGN worker-instability pattern (D48 36th arm CLEAN at S1904 SIGN cycle 1):** 36 arms; **31-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN EXTENDED at S1904 close — MC-2 CODIFICATION-CONFIRMED milestone extended 30 → 31 consecutive** per single-batch-4-question criterion. D48 37th arm anticipated at S1999 xx99 canonical summary SIGN cycle 1.
-- **SIGN routing pattern (arc-pin durable-by-sixth-application CONFIRMED at S1806 close; MC-4 CODIFICATION-READY at S1899 close):** Group 1900 as 4-child arc does NOT observe MC-4 sixth-application under 6-child arcs criterion; MC-4 promotion path deferred to future 6-child arc. **Group 1900 arc-pin preserved from S1900 open through S1904 close per arc-standard behavior; SEVENTH-consecutive routing session at S1904**.
+- **Rigby SIGN worker-instability pattern (D48 37th arm CLEAN at S1999 SIGN cycle 1):** 37 arms; **32-CONSECUTIVE-FULLY-CLEAN-ARMS SUB-PATTERN EXTENDED at S1999 close — MC-2 CODIFICATION-CONFIRMED milestone extended 31 → 32 consecutive** per single-batch-4-question criterion. D48 38th arm anticipated at Group 2000+ arc-open SIGN cycle 1 (if Chris routes light SIGN on parent scoping per playbook §15 stage-table).
+- **SIGN routing pattern (arc-pin durable-by-seventh-application CONFIRMED at S1999 close; MC-4 CODIFICATION-CONFIRMED with scope guardrails):** Group 1900 as 4-child arc + Group 1800 as 6-child arc jointly proved MC-4 promotion criterion "verified across two distinct arc shapes" — playbook v3 language "default standard for parent-with-children arcs; exceptions allowed when child count or structure introduces new routing hazards." Third-arc verification under a distinct shape (e.g., 5-child or 8-child arc) would upgrade confidence further but is NOT required for CONFIRMED status.
 
 ## Repo state at next-session open
 
-- **Branch state (2026-07-04 post-S1904):** `main` at HEAD `c902e003` at S1904 session open; S1904 close artifact set pending Chris commit-gate on new branch `research/session-1904-authority-enforcement-cat-f-adjacent-separation-boundaries-consolidation`.
-- **Head-commit ledger (2026-07-04 activity, oldest → newest, culminating at S1904 open):**
-  - `f7104f9f` — PR #2873 S1903 P3 Cat C Cross-Plane Composition Design
-  - `c902e003` — PR #2874 S1903 docs cascade refresh (current `main` HEAD at S1904 open)
-  - _(S1904 commit — this session)_ — S1904 P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION + INDEX v62 → v63 + OPEN_ARCS Group 1900 row bump + handoff + start-here overwrite
-- **Handoff continuity:** S1904 handoff at `docs/handoffs/SESSION_1904_AUTHORITY_ENFORCEMENT_CAT_F.md`. Prior: SESSION_1903 (Group 1900 P3 Cat C) / SESSION_1902 (Group 1900 P2 Cat B) / SESSION_1901 (Group 1900 P1 Cat A) / SESSION_1900 (Group 1900 arc-open parent scoping) / SESSION_1899 (Group 1800 xx99 canonical summary) / SESSION_1806 (Group 1800 Cat F CONSOLIDATION) / SESSION_1805 (Cat E S746 verification) / SESSION_1804 (Cat D HumanPreference) / SESSION_1803 (Cat C Learning bridges) / SESSION_1802 (Cat B FeedbackProcessor) / SESSION_1801 (Cat A HAI Core) / SESSION_1800 (Group 1800 arc-open parent scoping).
-- **ARCHITECTURE_INDEX version:** v63 (bumped this session with §1.66 S1904 registration + line-6 v63 preamble; v62 preamble preserved as tail).
-- **OPEN_ARCS state:** Group 1900 row Sessions column bumped to "S1900 + S1901 + S1902 + S1903 + S1904 → next: S1999 xx99 canonical summary"; last_updated bumped. Groups 1800/1700/1600/1500/1400/1300 remain Closed.
+- **Branch state (2026-07-04 post-S1904):** `main` at HEAD `c8159897` at S1999 open; S1999 close artifact set pending Chris commit-gate on new branch `research/session-1999-authority-enforcement-canonical-summary`.
+- **Head-commit ledger (2026-07-04 activity, culminating at S1904 close, oldest → newest):**
+  - `6745c316` — PR #2867 S1900 parent scoping
+  - `6044c682` — PR #2868 S1900 cascade
+  - `6d3148c5` — PR #2869 S1901 P1 Cat A
+  - `871af32c` — PR #2870 S1901 cascade
+  - `b2f06b9d` — PR #2871 S1902 P2 Cat B
+  - `f1b5bf6d` — PR #2872 S1902 cascade
+  - `f7104f9f` — PR #2873 S1903 P3 Cat C
+  - `c902e003` — PR #2874 S1903 cascade
+  - `f470868b` — PR #2875 S1904 P4 Cat F
+  - `c8159897` — PR #2876 S1904 cascade refresh (current `main` HEAD at S1999 open)
+  - _(S1999 commit — this session)_ — S1999 xx99 canonical summary + INDEX v63 → v64 + OPEN_ARCS transition + pa_local retirement annotation + handoff + start-here overwrite
+- **Handoff continuity:** S1999 handoff at `docs/handoffs/SESSION_1999_AUTHORITY_ENFORCEMENT_CANONICAL_SUMMARY.md`. Prior: SESSION_1904 (Group 1900 P4 Cat F) / SESSION_1903 (Group 1900 P3 Cat C) / SESSION_1902 (Group 1900 P2 Cat B) / SESSION_1901 (Group 1900 P1 Cat A) / SESSION_1900 (Group 1900 arc-open parent scoping) / SESSION_1899 (Group 1800 xx99 canonical summary).
+- **ARCHITECTURE_INDEX version:** v64 (bumped this session with §1.67 S1999 registration + line-6 v64 preamble; v63 preamble preserved as tail).
+- **OPEN_ARCS state:** Group 1900 row moved In-progress → Closed. Groups 1300/1400/1500/1600/1700/1800/1900 all Closed. In-progress section empty.
 
 ## Next-session first-action punch list
 
 - [ ] `context-kit orient`
-- [ ] Check if S1904 artifact set + cascade refresh PR are on `main`
+- [ ] Check if S1999 artifact set + cascade refresh PR are on `main`
 - [ ] Chris merge + PR merge if not
-- [ ] Post-merge 4-step docs cascade + `build_docs_provenance` per memory rule (or batch into xx99 open PR)
-- [ ] Verify `service_context: local` on Group 1900 arc pin `pa-2bd1613ce2bd4a9c`
-- [ ] Execute S1999 xx99 canonical summary per playbook §11.3 12-section template + §10 SEVENTH meta-methodology application
-- [ ] NO Explore sub-agents (canonical summary consumes prior child outputs)
-- [ ] Apply verifier-loop pre + post per playbook §14 REQUIRED
-- [ ] Route Rigby SIGN cycle 1 single-batch 4-question on canonical summary
-- [ ] Chris ratification at close
-- [ ] Fold any SIGN-with-edits at Chris ratification
-- [ ] Bump ARCHITECTURE_INDEX v63 → v64 with §1.67 S1999 registration
-- [ ] Move OPEN_ARCS Group 1900 row from In-progress to Closed section
-- [ ] Retire Group 1900 arc pin `pa-2bd1613ce2bd4a9c` via `session_tool.retire`
-- [ ] Write S1999 handoff + overwrite `00-START-NEXT-SESSION.md` to point at next arc
+- [ ] Post-merge 4-step docs cascade + `build_docs_provenance` per memory rule (or batch into next arc-open PR)
+- [ ] **Rotate `tools/pa_local.sh` wrapper pin** — mint fresh next-arc pin via `session_tool.create_fresh` + edit `tools/pa_local.sh:192` + update header ledger with S1999 retirement documentation
+- [ ] Verify `service_context: local` on fresh next-arc pin
+- [ ] Chris selects Group 2000+ scope (Event / Integration Architecture default OR D-override)
+- [ ] Execute Group 2000+ arc-open parent scoping per playbook §11.1 SEVENTH application
+- [ ] Optional Rigby light SIGN cycle 1 on parent scoping per playbook §15 stage-table default
+- [ ] Chris D-verdict ratification at close (D95-D100 range likely depending on scope shape)
+- [ ] Bump ARCHITECTURE_INDEX v64 → v65 with §1.68 next-parent registration
+- [ ] Move OPEN_ARCS Group 2000+ row from Not-started → In-progress
+- [ ] Write next-session handoff + overwrite `00-START-NEXT-SESSION.md`
 
 ## Reference — where to look
 
+- **S1999 xx99 canonical summary:** `docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md`
 - **S1904 P4 doc:** `docs/research/domains/authority_enforcement/1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md`
 - **S1903 P3 doc:** `docs/research/domains/authority_enforcement/1903_authority_enforcement_cat_c_cross_plane_composition_design.md`
 - **S1902 P2 doc:** `docs/research/domains/authority_enforcement/1902_authority_enforcement_cat_b_authority_enforcement_design_decision.md`
@@ -202,32 +194,30 @@ The following drifts caught at S1904 verifier-loop should be batched into the S1
   - `docs/research/symbol_mapping_event_schema_design.md` (S1275)
   - `docs/research/actor_identity_attribution_architecture.md` (S1271 — 3 actor roles; F6 3 drops; F11 mechanical prohibition)
   - `docs/research/governance_authority_evolution.md` (S1269 — 4 planes don't compose; §2.4 HAI auto-approve gate; §7.5 8 composition questions; F1 F4)
-  - `docs/research/platform_architecture_inventory.md` (S1273 — §9 STAGE 2 top-1 = Chris line-select origin at :191)
-- **Prior xx99 canonical summaries (6 formal + upcoming S1999 SEVENTH):** `1899_human_attention_canonical_summary.md` + `1799_observability_canonical_summary.md` + `1699_content_canonical_summary.md` + `1599_sports_canonical_summary.md` + `1499_revenue_canonical_summary.md` + `1399_memory_canonical_summary.md`
-- **CONSOLIDATION precedent:** `1806_human_attention_cat_f_adjacent_separation_boundaries_child_audit.md` (S1806 Group 1800 Cat F; first CONSOLIDATION application under Research OS)
+  - `docs/research/platform_architecture_inventory.md` (S1273 — §9 STAGE 2 top-1 = Chris line-select origin at :191 for Group 1900)
+- **Prior xx99 canonical summaries (7 formal — all Closed):** `1899_human_attention_canonical_summary.md` + `1799_observability_canonical_summary.md` + `1699_content_canonical_summary.md` + `1599_sports_canonical_summary.md` + `1499_revenue_canonical_summary.md` + `1399_memory_canonical_summary.md` + `1999_authority_enforcement_canonical_summary.md` (THIS session).
+- **CONSOLIDATION precedents:** `1806_human_attention_cat_f_adjacent_separation_boundaries_child_audit.md` (S1806 Group 1800 Cat F; FIRST CONSOLIDATION application under Research OS; 5 sub-slots) + `1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md` (S1904 Group 1900 Cat F; SECOND CONSOLIDATION application; 8 sub-slots proven).
 - **Playbook:** `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`
 - **Research OS:** `docs/research/process/RESEARCH_OPERATING_SYSTEM.md`
-- **ARCHITECTURE_INDEX v63:** `docs/research/ARCHITECTURE_INDEX.md` — §1.66 S1904 registration + line-6 v63 preamble
-- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1900 In-progress row with S1904 close + Group 2000+ Event Architecture slot reservation
+- **ARCHITECTURE_INDEX v64:** `docs/research/ARCHITECTURE_INDEX.md` — §1.67 S1999 registration + line-6 v64 preamble
+- **OPEN_ARCS:** `docs/research/OPEN_ARCS.md` — Group 1900 Closed row (top of Closed section) + Group 2000+ Not-started section (or fresh Chris D-override slot to open at next arc)
 - **Inventory anchor:** `docs/PLATFORM_INVENTORY.md`
 - **Narrative anchor:** `docs/PLATFORM_WHAT_IT_IS.md`
 
 ## Doctor warnings to expect
 
 - Inventory freshness (unchanged this session — research doc; no runtime changes).
-- Handoff numbering continuity — S1904 close; S1999 next.
+- Handoff numbering continuity — S1999 close.
 - Narrative anchor freshness — `PLATFORM_WHAT_IT_IS.md` dated 2026-05-24 remains older than latest handoff.
-- Docs cascade — cascade PR pending Chris merge; post-S1904 cascade batched into arc-child PR OR standalone follow-up per Chris preference (`feedback_cascade_pr_must_include_embed_step.md` — cascade PR MUST include step 4 embed).
-- **CLAUDE.md 10-vs-9 body systems drift + 3-vs-4 employees drift** — inherited from Group 1700 xx99 anchor-update PR (unresolved) + reinforced by S1902 Explore 5 (4 employee handles firing warn-mode events).
-- Group 1400/1500/1600/1700/1800 post-arc §7 anchor-updates still pending (inherited).
-- Group 1400/1500/1600/1700 T1 CRITICAL remediation queues still pending; Group 1600 T0/Gate R.CONTENT.XX99-ADR-BUNDLE + Group 1700 paired T0/Gate (RETENTION-UNIFIED-ADR + D74-SPINE-POSTURE) + Group 1800 T0/Gate 6-item bundle still pending; Group 1900 P1 T0/Gate R.AUTHORITY.ENFORCEMENT-BINDING-POINTS-MAP **CONSUMED at S1902**; Group 1900 P4 T0/Gate R.AUTHORITY.CANONICAL-SEAM-STATEMENT **CONSUMED-AT-S1999** (xx99 §5 emits).
-- **§8 timeline table drift** — missing rows for S1605 + S1606 + S1699 (Group 1600); may be resolved by S1999 xx99 §7 anchor-update batch.
+- Docs cascade — cascade PR pending Chris merge; post-S1999 cascade batched into arc-close PR OR standalone follow-up per Chris preference (`feedback_cascade_pr_must_include_embed_step.md` — cascade PR MUST include step 4 embed + state chunk count in PR body as evidence).
+- **CLAUDE.md 10-vs-9 body systems drift + 3-vs-4 employees drift** — inherited from Group 1700 xx99 anchor-update PR (unresolved) + reinforced by S1902 Explore 5 (4 employee handles firing warn-mode events); queued as T3.2 R.AUTHORITY.CLAUDE-MD-EMPLOYEE-COUNT-ANCHOR-UPDATE for post-arc execution.
+- Group 1400/1500/1600/1700/1800/1900 post-arc §7 anchor-updates still pending (inherited + Group 1900 net-adds documented in §7 above).
+- Group 1400/1500/1600/1700 T1 CRITICAL remediation queues still pending; Group 1600 T0/Gate R.CONTENT.XX99-ADR-BUNDLE + Group 1700 paired T0/Gate (RETENTION-UNIFIED-ADR + D74-SPINE-POSTURE) + Group 1800 T0/Gate 6-item bundle + Group 1900 §8 20-item T-tier queue all pending.
+- **§8 timeline table drift** — missing rows for S1605 + S1606 + S1699 (Group 1600); inherited.
 - **5 doc PRs still owed** for `auto_publish "daily 6 AM"` cross-arc CORRECTION per S1699 §7.4.
-- **D48 36th arm turn 1 CLEAN at S1904 SIGN cycle 1** — 31-consecutive-fully-clean-arms sub-pattern EXTENDED at S1904 per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 30 → 31 consecutive).
-- **Playbook v3 §11.2 template FOURTEENTH-consecutive application at S1904 close** — child audit template proven durable through 14 consecutive applications since S1801; MC-5 CODIFICATION-READY at S1899 close is CODIFICATION-CONFIRMED promotion candidate at S1999 xx99.
-- **§16 CONSOLIDATION shape SECOND-consecutive application at S1904 close** (first at S1806) — proves CONSOLIDATION shape scales from 5 sub-slots (S1806) to 8 sub-slots (S1904) without template modification; codification candidate at S1999 xx99.
-- **Arc pin `pa-2bd1613ce2bd4a9c` preserved from S1900 open through S1904 close** (SEVENTH-consecutive routing session under Group 1900) per S1801-S1806 arc-pin-durable-by-sixth-application precedent (Group 1900 as 4-child arc does NOT observe MC-4 sixth-application under 6-child arcs criterion).
-- **Event Architecture scope deferred to Group 2000+ slot** per Chris D-override 2026-07-04.
-- **S1904 verifier-loop caught 3 drifts inherited to xx99 §7 anchor-update recommendations** (HAI review_mode line drift :240→:243; Memory PERMEABLE-BROKEN posture correction; Employee OS enforce_authority_mode SPECULATIVE→CONFIRMED-absent design-vs-runtime gap confirmation).
-- **Inherited S1902 close OPEN_ARCS preamble omission** — S1902 close did not prepend its own preamble to line 6 of OPEN_ARCS; folded into same targeted S1902 correction PR as §14.2 KillSwitch classification correction per Rigby SIGN Q3 fold (still queued).
-- **Group 1900 arc CLOSE-READY at S1904 close** — 4-child sequence P1→P4 all landed; xx99 S1999 is the arc-close session; runtime target 6 sessions HOLDING at 5 sessions used (S1900 + S1901 + S1902 + S1903 + S1904 + S1999 = 6 sessions total when xx99 lands).
+- **D48 37th arm turn 1 CLEAN at S1999 SIGN cycle 1** — 32-consecutive-fully-clean-arms sub-pattern EXTENDED at S1999 per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 31 → 32 consecutive).
+- **Playbook §11.3 12-section canonical-summary template SEVENTH-consecutive application at S1999 close** — canonical-summary template proven durable through 7 consecutive applications; MC-5 CODIFICATION-CONFIRMED at S1999 confirmed durable via 4 additional consecutive Group 1900 §11.2 applications + TWO shape variations proven (design-decision framing at P2 + CONSOLIDATION at P4).
+- **§16 CONSOLIDATION shape SECOND-consecutive application at S1904 close** (first at S1806) — MC-6 CODIFICATION-READY at S1999. Scales from 5 sub-slots to 8 sub-slots.
+- **Arc pin `pa-2bd1613ce2bd4a9c` RETIRED at S1999 close** via session_tool.retire (updated_count=23, retired=true). SIXTH formal arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/S1899.
+- **Next-arc queue lean:** Group 2000+ Event / Integration Architecture per playbook §22 default OR Chris D-override selection at next-arc open.
+- **Group 1900 arc closed** — Group 1900 §19 20-item T-tier queue is Chris-gated post-arc execution plan; execution begins when Chris selects T-slot focus OR when downstream arc scope requires T-slot completion.
