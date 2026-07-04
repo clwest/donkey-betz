@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T19:27:55+00:00",
+    "generated": "2026-07-04T20:07:39+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f7d3f43dbb39",
-    "doc_count": 2343,
-    "commit_count": 7514,
+    "git_head": "b5e837410b72",
+    "doc_count": 2345,
+    "commit_count": 7518,
     "confidence_breakdown": {
-      "HIGH": 1525,
+      "HIGH": 1527,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1148,
+      "commit_count": 1150,
       "prs": [
         10,
         11,
@@ -2966,7 +2966,9 @@
         2873,
         2874,
         2875,
-        2876
+        2876,
+        2877,
+        2878
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7279,7 +7281,7 @@
         1701,
         1800
       ],
-      "commit_count": 104,
+      "commit_count": 106,
       "prs": [
         2213,
         2219,
@@ -7343,7 +7345,9 @@
         2873,
         2874,
         2875,
-        2876
+        2876,
+        2877,
+        2878
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18061,6 +18065,21 @@
       "commit_count": 2,
       "prs": [
         2877
+      ]
+    },
+    "docs/handoffs/SESSION_2000_EVENT_INTEGRATION_ARCHITECTURE_PARENT_SCOPING.md": {
+      "originating_session": 2000,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b5e83741",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2000): Group 2000+ Event / Integration Architecture ARC OPENED at S2000 parent scoping \u2014 SEVENTH application of playbook \u00a711.1 9-section template + EIGHTH Research OS domain arc (#2879)",
+      "sessions_touched": [
+        2000
+      ],
+      "commit_count": 2,
+      "prs": [
+        2879
       ]
     },
     "docs/handoffs/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md": {
@@ -33155,9 +33174,10 @@
         1902,
         1903,
         1904,
-        1999
+        1999,
+        2000
       ],
-      "commit_count": 111,
+      "commit_count": 113,
       "prs": [
         2773,
         2775,
@@ -33209,7 +33229,8 @@
         2871,
         2873,
         2875,
-        2877
+        2877,
+        2879
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33294,9 +33315,10 @@
         1902,
         1903,
         1904,
-        1999
+        1999,
+        2000
       ],
-      "commit_count": 106,
+      "commit_count": 108,
       "prs": [
         2773,
         2775,
@@ -33350,7 +33372,8 @@
         2871,
         2873,
         2875,
-        2877
+        2877,
+        2879
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33589,6 +33612,21 @@
       "commit_count": 2,
       "prs": [
         2831
+      ]
+    },
+    "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
+      "originating_session": 2000,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "b5e83741",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2000): Group 2000+ Event / Integration Architecture ARC OPENED at S2000 parent scoping \u2014 SEVENTH application of playbook \u00a711.1 9-section template + EIGHTH Research OS domain arc (#2879)",
+      "sessions_touched": [
+        2000
+      ],
+      "commit_count": 2,
+      "prs": [
+        2879
       ]
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
