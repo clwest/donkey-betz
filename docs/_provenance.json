@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T17:12:50+00:00",
+    "generated": "2026-07-04T17:50:42+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b2f06b9d9044",
-    "doc_count": 2337,
-    "commit_count": 7502,
+    "git_head": "f7104f9f4dfd",
+    "doc_count": 2339,
+    "commit_count": 7506,
     "confidence_breakdown": {
-      "HIGH": 1519,
+      "HIGH": 1521,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1142,
+      "commit_count": 1144,
       "prs": [
         10,
         11,
@@ -2960,7 +2960,9 @@
         2867,
         2868,
         2869,
-        2870
+        2870,
+        2871,
+        2872
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7273,7 +7275,7 @@
         1701,
         1800
       ],
-      "commit_count": 98,
+      "commit_count": 100,
       "prs": [
         2213,
         2219,
@@ -7331,7 +7333,9 @@
         2867,
         2868,
         2869,
-        2870
+        2870,
+        2871,
+        2872
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17983,6 +17987,21 @@
       "commit_count": 2,
       "prs": [
         2871
+      ]
+    },
+    "docs/handoffs/SESSION_1903_AUTHORITY_ENFORCEMENT_CAT_C.md": {
+      "originating_session": 1903,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f7104f9f",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1903): Group 1900 P3 Cat C Cross-Plane Composition Design LANDED \u2014 Chris ratified all 9 designed resolutions (Q1-Q8 + \u00a717.1 Plane Precedence Policy + \u00a77.4.1 D94 KillSwitch Enforcement Reader Design) via \"agree all\" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 4 folds landed pre-commit (Q1 \u00a717.1 Freeze double-surface clarification \"one policy plane with two read-sites\" 4-point sub-section preventing implementation-time reordering debates + Q2 \u00a77.4.1 Boundary 16 optional insertion at HAI decide endpoint views_human_interface.py:154 + rate-limited logger.warning structured killswitch_missed_reader:<boundary> prefix per F8 alignment avoids alert fatigue + Q3 \u00a714.1 downstream doc hygiene \"do BOTH targeted S1902 correction PR + xx99 \u00a77 anchor-update batch\" preventing P4 posture audit consuming stale drift + Q4 \u00a77.7 canonical read discipline MissionRunner.resolved_enforce_authority_mode post-init + Alternative 3 rejection rationale tightening naming boundary-rehydration + per-step-override as inconsistency vectors distinct from dataclass mutation); THIRD child audit under Group 1900 arc + THIRTEENTH-consecutive application of playbook \u00a711.2 20-section child audit template (standard shape \u2014 not design-decision-modified since P3 is research + design not multi-verdict D-gate framing); ships \u00a717.1 Plane Precedence Policy (canonical resolution order KillSwitch > Autonomy > Authority(PROHIBITED) > Freeze > Authority(RECOMMEND) > Budget > HAI auto-approve + \u00a717.2 4 sub-precedence rules + \u00a717.3 composition mode taxonomy alignment PRECEDENCE primary + LAYERED sub-case + INDEPENDENT residual per S1272 \u00a77.6) + \u00a77.4.1 D94 KillSwitch Enforcement Reader Design (canonical fail-open shape + 4 REQUIRED insertion boundaries 2 tool_dispatcher + 3 PA gateway + 6 mission_runner pre-dispatch + 18 fleet_dispatch + 1 OPTIONAL 16 HAI decide per Rigby Q2 fold + rate-limited structured logging + T2 slot deferred execution) + \u00a77 8 Q designed resolutions (Q1 Autonomy precedes Authority NATURAL / Q2 Asymmetric layering Budget-first on LLM sub-path + Authority-first on pre-dispatch / Q3 RECOMMEND does NOT auto-create HAI queue-flood prevention / Q4 K > A ASPIRATIONAL today per \u00a714.1 / Q5 Freeze SHOULD block auto-approve T3 R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE / Q6 LOW_RISK_SOURCES explicit authority tags DEFERRED T3 / Q7 Max-strictness two-tier composition at MissionRunner.__init__ per S1902 D91 with canonical read discipline / Q8 Discord FORMAL DEFERRAL T2 R.AUTHORITY.DISCORD-DISPATCH-ENFORCEMENT-INSTRUMENTATION 3 upstream prerequisites) + \u00a714.1 KNOWN DRIFT S1902 \u00a714.2 KillSwitch classification correction (all 6 verified reads governance.py:2192, 2370, 2508, 2545 + intelligence.py:1569, 1717 are management/audit/cleanup contexts ZERO enforcement dispatch \u2014 refutes \"4 dispatch-consumer\" claim; Rigby SIGN Q3 fold recommends BOTH targeted S1902 correction PR + xx99 \u00a77 anchor-update batch) + 3 P3-added T-tier items extending S1902 \u00a719 queue (T2 Discord + T3 auto-approve-freeze-gate + T3 LOW_RISK_SOURCES-authority-tags); D48 35th arm turn 1 CLEAN \u2192 30-consecutive-fully-clean-arms sub-pattern EXTENDED per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 29 \u2192 30 consecutive); SIGN cycle 2 SKIPPED as unnecessary given Chris agree-all path; verifier-loop caught 3 post-Explore drifts (\u00a714.1 KillSwitch classification correction + \u00a714.2 Explore 2 F4 refutation misread \u2014 F4 is desync-risk framing not sync-direction refutation + \u00a714.3 Explore 6 KillSwitch classification alignment with \u00a714.1); inherited S1902 close OPEN_ARCS preamble omission flagged (S1902 close did not prepend its own preamble to line 6 of OPEN_ARCS; folded into same targeted S1902 correction PR as \u00a714.2 KillSwitch classification correction per Rigby SIGN Q3 fold) (#2873)",
+      "sessions_touched": [
+        1903
+      ],
+      "commit_count": 2,
+      "prs": [
+        2873
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -33095,9 +33114,10 @@
         1899,
         1900,
         1901,
-        1902
+        1902,
+        1903
       ],
-      "commit_count": 105,
+      "commit_count": 107,
       "prs": [
         2773,
         2775,
@@ -33146,7 +33166,8 @@
         2865,
         2867,
         2869,
-        2871
+        2871,
+        2873
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33228,9 +33249,10 @@
         1899,
         1900,
         1901,
-        1902
+        1902,
+        1903
       ],
-      "commit_count": 100,
+      "commit_count": 102,
       "prs": [
         2773,
         2775,
@@ -33281,7 +33303,8 @@
         2865,
         2867,
         2869,
-        2871
+        2871,
+        2873
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33353,6 +33376,21 @@
       "commit_count": 2,
       "prs": [
         2871
+      ]
+    },
+    "docs/research/domains/authority_enforcement/1903_authority_enforcement_cat_c_cross_plane_composition_design.md": {
+      "originating_session": 1903,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f7104f9f",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1903): Group 1900 P3 Cat C Cross-Plane Composition Design LANDED \u2014 Chris ratified all 9 designed resolutions (Q1-Q8 + \u00a717.1 Plane Precedence Policy + \u00a77.4.1 D94 KillSwitch Enforcement Reader Design) via \"agree all\" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at High confidence 2026-07-04 with 4 folds landed pre-commit (Q1 \u00a717.1 Freeze double-surface clarification \"one policy plane with two read-sites\" 4-point sub-section preventing implementation-time reordering debates + Q2 \u00a77.4.1 Boundary 16 optional insertion at HAI decide endpoint views_human_interface.py:154 + rate-limited logger.warning structured killswitch_missed_reader:<boundary> prefix per F8 alignment avoids alert fatigue + Q3 \u00a714.1 downstream doc hygiene \"do BOTH targeted S1902 correction PR + xx99 \u00a77 anchor-update batch\" preventing P4 posture audit consuming stale drift + Q4 \u00a77.7 canonical read discipline MissionRunner.resolved_enforce_authority_mode post-init + Alternative 3 rejection rationale tightening naming boundary-rehydration + per-step-override as inconsistency vectors distinct from dataclass mutation); THIRD child audit under Group 1900 arc + THIRTEENTH-consecutive application of playbook \u00a711.2 20-section child audit template (standard shape \u2014 not design-decision-modified since P3 is research + design not multi-verdict D-gate framing); ships \u00a717.1 Plane Precedence Policy (canonical resolution order KillSwitch > Autonomy > Authority(PROHIBITED) > Freeze > Authority(RECOMMEND) > Budget > HAI auto-approve + \u00a717.2 4 sub-precedence rules + \u00a717.3 composition mode taxonomy alignment PRECEDENCE primary + LAYERED sub-case + INDEPENDENT residual per S1272 \u00a77.6) + \u00a77.4.1 D94 KillSwitch Enforcement Reader Design (canonical fail-open shape + 4 REQUIRED insertion boundaries 2 tool_dispatcher + 3 PA gateway + 6 mission_runner pre-dispatch + 18 fleet_dispatch + 1 OPTIONAL 16 HAI decide per Rigby Q2 fold + rate-limited structured logging + T2 slot deferred execution) + \u00a77 8 Q designed resolutions (Q1 Autonomy precedes Authority NATURAL / Q2 Asymmetric layering Budget-first on LLM sub-path + Authority-first on pre-dispatch / Q3 RECOMMEND does NOT auto-create HAI queue-flood prevention / Q4 K > A ASPIRATIONAL today per \u00a714.1 / Q5 Freeze SHOULD block auto-approve T3 R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE / Q6 LOW_RISK_SOURCES explicit authority tags DEFERRED T3 / Q7 Max-strictness two-tier composition at MissionRunner.__init__ per S1902 D91 with canonical read discipline / Q8 Discord FORMAL DEFERRAL T2 R.AUTHORITY.DISCORD-DISPATCH-ENFORCEMENT-INSTRUMENTATION 3 upstream prerequisites) + \u00a714.1 KNOWN DRIFT S1902 \u00a714.2 KillSwitch classification correction (all 6 verified reads governance.py:2192, 2370, 2508, 2545 + intelligence.py:1569, 1717 are management/audit/cleanup contexts ZERO enforcement dispatch \u2014 refutes \"4 dispatch-consumer\" claim; Rigby SIGN Q3 fold recommends BOTH targeted S1902 correction PR + xx99 \u00a77 anchor-update batch) + 3 P3-added T-tier items extending S1902 \u00a719 queue (T2 Discord + T3 auto-approve-freeze-gate + T3 LOW_RISK_SOURCES-authority-tags); D48 35th arm turn 1 CLEAN \u2192 30-consecutive-fully-clean-arms sub-pattern EXTENDED per single-batch-4-question criterion (MC-2 CODIFICATION-CONFIRMED milestone extended 29 \u2192 30 consecutive); SIGN cycle 2 SKIPPED as unnecessary given Chris agree-all path; verifier-loop caught 3 post-Explore drifts (\u00a714.1 KillSwitch classification correction + \u00a714.2 Explore 2 F4 refutation misread \u2014 F4 is desync-risk framing not sync-direction refutation + \u00a714.3 Explore 6 KillSwitch classification alignment with \u00a714.1); inherited S1902 close OPEN_ARCS preamble omission flagged (S1902 close did not prepend its own preamble to line 6 of OPEN_ARCS; folded into same targeted S1902 correction PR as \u00a714.2 KillSwitch classification correction per Rigby SIGN Q3 fold) (#2873)",
+      "sessions_touched": [
+        1903
+      ],
+      "commit_count": 2,
+      "prs": [
+        2873
       ]
     },
     "docs/research/domains/content/1600_content_domain_scoping.md": {
