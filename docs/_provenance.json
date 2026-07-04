@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T13:15:08+00:00",
+    "generated": "2026-07-04T14:07:39+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8743bfeb42d4",
-    "doc_count": 2329,
-    "commit_count": 7486,
+    "git_head": "ed13cba316a7",
+    "doc_count": 2331,
+    "commit_count": 7490,
     "confidence_breakdown": {
-      "HIGH": 1511,
+      "HIGH": 1513,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1134,
+      "commit_count": 1136,
       "prs": [
         10,
         11,
@@ -2953,7 +2953,8 @@
         2856,
         2858,
         2860,
-        2862
+        2862,
+        2864
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7266,7 +7267,7 @@
         1701,
         1800
       ],
-      "commit_count": 90,
+      "commit_count": 92,
       "prs": [
         2213,
         2219,
@@ -7317,7 +7318,8 @@
         2856,
         2858,
         2860,
-        2862
+        2862,
+        2864
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17909,6 +17911,21 @@
       "commit_count": 2,
       "prs": [
         2863
+      ]
+    },
+    "docs/handoffs/SESSION_1899_HUMAN_ATTENTION_XX99_CANONICAL_SUMMARY.md": {
+      "originating_session": 1899,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "ed13cba3",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1899): Group 1800 HumanAttention / Feedback / Learning xx99 canonical summary + arc close LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.80 (7 folds landed pre-commit; Q1 MC-3 hardening + Q2 CX-6/CX-2 discriminator + Q3 defer-post-T0/Gate + Q3 four-option UNDERMINE additions) \u2014 SIXTH formal xx99 canonical summary in the Research OS library; SIXTH application of playbook \u00a711.3 12-section template + \u00a711.3 \u00a710 meta-methodology template (#2865)",
+      "sessions_touched": [
+        1899
+      ],
+      "commit_count": 2,
+      "prs": [
+        2865
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -33017,9 +33034,10 @@
         1803,
         1804,
         1805,
-        1806
+        1806,
+        1899
       ],
-      "commit_count": 97,
+      "commit_count": 99,
       "prs": [
         2773,
         2775,
@@ -33064,7 +33082,8 @@
         2857,
         2859,
         2861,
-        2863
+        2863,
+        2865
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33142,9 +33161,10 @@
         1803,
         1804,
         1805,
-        1806
+        1806,
+        1899
       ],
-      "commit_count": 92,
+      "commit_count": 94,
       "prs": [
         2773,
         2775,
@@ -33191,7 +33211,8 @@
         2857,
         2859,
         2861,
-        2863
+        2863,
+        2865
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33455,6 +33476,21 @@
       "commit_count": 2,
       "prs": [
         2863
+      ]
+    },
+    "docs/research/domains/human_attention/1899_human_attention_canonical_summary.md": {
+      "originating_session": 1899,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "ed13cba3",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1899): Group 1800 HumanAttention / Feedback / Learning xx99 canonical summary + arc close LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.80 (7 folds landed pre-commit; Q1 MC-3 hardening + Q2 CX-6/CX-2 discriminator + Q3 defer-post-T0/Gate + Q3 four-option UNDERMINE additions) \u2014 SIXTH formal xx99 canonical summary in the Research OS library; SIXTH application of playbook \u00a711.3 12-section template + \u00a711.3 \u00a710 meta-methodology template (#2865)",
+      "sessions_touched": [
+        1899
+      ],
+      "commit_count": 2,
+      "prs": [
+        2865
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
