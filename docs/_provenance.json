@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T03:15:31+00:00",
+    "generated": "2026-07-04T03:58:15+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "d2b58e944a3e",
-    "doc_count": 2321,
-    "commit_count": 7470,
+    "git_head": "3c2006519e36",
+    "doc_count": 2323,
+    "commit_count": 7474,
     "confidence_breakdown": {
-      "HIGH": 1503,
+      "HIGH": 1505,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1126,
+      "commit_count": 1128,
       "prs": [
         10,
         11,
@@ -2949,7 +2949,8 @@
         2849,
         2851,
         2852,
-        2854
+        2854,
+        2856
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7262,7 +7263,7 @@
         1701,
         1800
       ],
-      "commit_count": 82,
+      "commit_count": 84,
       "prs": [
         2213,
         2219,
@@ -7309,7 +7310,8 @@
         2849,
         2851,
         2852,
-        2854
+        2854,
+        2856
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17841,6 +17843,21 @@
       "commit_count": 2,
       "prs": [
         2855
+      ]
+    },
+    "docs/handoffs/SESSION_1803_HUMAN_ATTENTION_CAT_C_LEARNING_BRIDGES_AUDIT.md": {
+      "originating_session": 1803,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "3c200651",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1803): Group 1800 Cat C Learning bridges + duplicate-service inventory child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.84 (F2/F4-collision-mechanism/F5-serialization-boundary/F7-LearningPatternEngine-inclusion/F8-drift-framing + Q4 compound-impact + R0 elevation folds landed pre-commit) \u2014 THIRD child under Group 1800; EIGHTH application overall of playbook \u00a711.2 20-section child template (#2857)",
+      "sessions_touched": [
+        1803
+      ],
+      "commit_count": 2,
+      "prs": [
+        2857
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32945,9 +32962,10 @@
         1799,
         1800,
         1801,
-        1802
+        1802,
+        1803
       ],
-      "commit_count": 89,
+      "commit_count": 91,
       "prs": [
         2773,
         2775,
@@ -32988,7 +33006,8 @@
         2850,
         2851,
         2853,
-        2855
+        2855,
+        2857
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33062,9 +33081,10 @@
         1799,
         1800,
         1801,
-        1802
+        1802,
+        1803
       ],
-      "commit_count": 84,
+      "commit_count": 86,
       "prs": [
         2773,
         2775,
@@ -33107,7 +33127,8 @@
         2850,
         2851,
         2853,
-        2855
+        2855,
+        2857
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33262,19 +33283,21 @@
       "originating_session": 1800,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "d2b58e94",
+      "first_commit_sha": "3c200651",
       "first_commit_date": "2026-07-03",
-      "first_commit_subject": "docs(session-1802): Group 1800 Cat B FeedbackProcessor + HumanFeedbackRecord child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.82 (F1/F4-severity/F5/Q4 folds landed pre-commit) \u2014 SECOND child under Group 1800; SEVENTH application overall of playbook \u00a711.2 20-section child template (#2855)",
+      "first_commit_subject": "docs(session-1803): Group 1800 Cat C Learning bridges + duplicate-service inventory child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.84 (F2/F4-collision-mechanism/F5-serialization-boundary/F7-LearningPatternEngine-inclusion/F8-drift-framing + Q4 compound-impact + R0 elevation folds landed pre-commit) \u2014 THIRD child under Group 1800; EIGHTH application overall of playbook \u00a711.2 20-section child template (#2857)",
       "sessions_touched": [
         1800,
         1801,
-        1802
+        1802,
+        1803
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
         2851,
         2853,
-        2855
+        2855,
+        2857
       ]
     },
     "docs/research/domains/human_attention/1801_human_attention_cat_a_human_attention_item_core_audit.md": {
@@ -33305,6 +33328,21 @@
       "commit_count": 2,
       "prs": [
         2855
+      ]
+    },
+    "docs/research/domains/human_attention/1803_human_attention_cat_c_learning_bridges_child_audit.md": {
+      "originating_session": 1803,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "3c200651",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1803): Group 1800 Cat C Learning bridges + duplicate-service inventory child audit LANDED \u2014 SIGN-with-edits cycle 1 at High confidence 0.84 (F2/F4-collision-mechanism/F5-serialization-boundary/F7-LearningPatternEngine-inclusion/F8-drift-framing + Q4 compound-impact + R0 elevation folds landed pre-commit) \u2014 THIRD child under Group 1800; EIGHTH application overall of playbook \u00a711.2 20-section child template (#2857)",
+      "sessions_touched": [
+        1803
+      ],
+      "commit_count": 2,
+      "prs": [
+        2857
       ]
     },
     "docs/research/domains/memory/1300_memory_domain_scoping.md": {
