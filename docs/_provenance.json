@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T21:47:14+00:00",
+    "generated": "2026-07-04T22:50:35+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "d24316655113",
-    "doc_count": 2348,
-    "commit_count": 7526,
+    "git_head": "a638a0bea56d",
+    "doc_count": 2350,
+    "commit_count": 7530,
     "confidence_breakdown": {
-      "HIGH": 1530,
+      "HIGH": 1532,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1154,
+      "commit_count": 1156,
       "prs": [
         10,
         11,
@@ -2972,7 +2972,9 @@
         2879,
         2880,
         2881,
-        2882
+        2882,
+        2883,
+        2884
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7285,7 +7287,7 @@
         1701,
         1800
       ],
-      "commit_count": 110,
+      "commit_count": 112,
       "prs": [
         2213,
         2219,
@@ -7355,7 +7357,9 @@
         2879,
         2880,
         2881,
-        2882
+        2882,
+        2883,
+        2884
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18103,6 +18107,21 @@
       "commit_count": 2,
       "prs": [
         2881
+      ]
+    },
+    "docs/handoffs/SESSION_2003_EVENT_INTEGRATION_ARCHITECTURE_P3_CAT_C_CROSS_SUBSTRATE_COMPOSITION_DESIGN.md": {
+      "originating_session": 2003,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "a638a0be",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2003): Group 2000+ P3 Cat C Cross-Substrate Composition Design child audit \u2014 THIRD child under Group 2000+ + SEVENTEENTH-consecutive playbook \u00a711.2 20-section application + SECOND design-contract-shape audit under Research OS after S2002 (#2885)",
+      "sessions_touched": [
+        2003
+      ],
+      "commit_count": 2,
+      "prs": [
+        2885
       ]
     },
     "docs/handoffs/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md": {
@@ -33200,9 +33219,10 @@
         1999,
         2000,
         2001,
-        2002
+        2002,
+        2003
       ],
-      "commit_count": 117,
+      "commit_count": 119,
       "prs": [
         2773,
         2775,
@@ -33257,7 +33277,8 @@
         2877,
         2879,
         2881,
-        2883
+        2883,
+        2885
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33345,9 +33366,10 @@
         1999,
         2000,
         2001,
-        2002
+        2002,
+        2003
       ],
-      "commit_count": 112,
+      "commit_count": 114,
       "prs": [
         2773,
         2775,
@@ -33404,7 +33426,8 @@
         2877,
         2879,
         2881,
-        2883
+        2883,
+        2885
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33688,6 +33711,21 @@
       "commit_count": 2,
       "prs": [
         2883
+      ]
+    },
+    "docs/research/domains/event_integration_architecture/2003_event_integration_architecture_cat_c_cross_substrate_composition_design_child_audit.md": {
+      "originating_session": 2003,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "a638a0be",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2003): Group 2000+ P3 Cat C Cross-Substrate Composition Design child audit \u2014 THIRD child under Group 2000+ + SEVENTEENTH-consecutive playbook \u00a711.2 20-section application + SECOND design-contract-shape audit under Research OS after S2002 (#2885)",
+      "sessions_touched": [
+        2003
+      ],
+      "commit_count": 2,
+      "prs": [
+        2885
       ]
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
