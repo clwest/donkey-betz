@@ -178,4 +178,15 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
+# **RETIRED at S1999 close 2026-07-04:** pa-2bd1613ce2bd4a9c (Group 1900
+# Authority Enforcement Design Space arc pin; retired via session_tool.retire
+# per playbook §16 arc-close discipline; updated_count=23, retired=true).
+# SIXTH formal arc-pin retirement in Research OS after S1399/S1499/S1599/
+# S1699/S1799/S1899. Group 1900 arc closed 6/6 sessions = 100% (S1900 +
+# S1901 + S1902 + S1903 + S1904 + S1999). Pin left in wrapper below until
+# next-arc open rotates it (or reset to null-arc default per Chris preference).
+# Next-arc lean: Group 2000+ Event / Integration Architecture per playbook
+# §22 default (inheriting R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES from Group
+# 1800 T0/Gate + F.SYMBOL-MAPPING-STATUS-VERIFICATION + F.PER-USER-AUTHORITY-
+# MECHANISM from Group 1900 P3 §19) OR Chris D-override selection.
 python tools/pa_chat.py "$@" --tools --conversation pa-2bd1613ce2bd4a9c
