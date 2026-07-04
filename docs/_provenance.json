@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-03T23:53:36+00:00",
+    "generated": "2026-07-04T00:47:01+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "9d61a9e365a2",
-    "doc_count": 2313,
-    "commit_count": 7456,
+    "git_head": "47ab77f1757e",
+    "doc_count": 2315,
+    "commit_count": 7460,
     "confidence_breakdown": {
-      "HIGH": 1495,
+      "HIGH": 1497,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2509,7 +2509,7 @@
         1700,
         1701
       ],
-      "commit_count": 1118,
+      "commit_count": 1120,
       "prs": [
         10,
         11,
@@ -2944,7 +2944,8 @@
         2840,
         2842,
         2844,
-        2847
+        2847,
+        2849
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7256,7 +7257,7 @@
         1700,
         1701
       ],
-      "commit_count": 74,
+      "commit_count": 76,
       "prs": [
         2213,
         2219,
@@ -7299,7 +7300,8 @@
         2840,
         2842,
         2844,
-        2847
+        2847,
+        2849
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -17771,6 +17773,21 @@
       "commit_count": 2,
       "prs": [
         2848
+      ]
+    },
+    "docs/handoffs/SESSION_1799_OBSERVABILITY_CANONICAL_SUMMARY.md": {
+      "originating_session": 1799,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "47ab77f1",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1799): Group 1700 Observability xx99 canonical summary + arc-close \u2014 SIGN-with-edits cycle 1 (F1 fold landed) \u2014 FIFTH arc-close canonical summary + Group 1700 COMPLETE (8/8 = 100%) (#2850)",
+      "sessions_touched": [
+        1799
+      ],
+      "commit_count": 2,
+      "prs": [
+        2850
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -32871,9 +32888,10 @@
         1703,
         1704,
         1705,
-        1706
+        1706,
+        1799
       ],
-      "commit_count": 81,
+      "commit_count": 83,
       "prs": [
         2773,
         2775,
@@ -32910,7 +32928,8 @@
         2839,
         2841,
         2846,
-        2848
+        2848,
+        2850
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -32980,9 +32999,10 @@
         1703,
         1704,
         1705,
-        1706
+        1706,
+        1799
       ],
-      "commit_count": 76,
+      "commit_count": 78,
       "prs": [
         2773,
         2775,
@@ -33021,7 +33041,8 @@
         2839,
         2841,
         2846,
-        2848
+        2848,
+        2850
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33403,6 +33424,21 @@
       "commit_count": 2,
       "prs": [
         2848
+      ]
+    },
+    "docs/research/domains/observability/1799_observability_canonical_summary.md": {
+      "originating_session": 1799,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "47ab77f1",
+      "first_commit_date": "2026-07-03",
+      "first_commit_subject": "docs(session-1799): Group 1700 Observability xx99 canonical summary + arc-close \u2014 SIGN-with-edits cycle 1 (F1 fold landed) \u2014 FIFTH arc-close canonical summary + Group 1700 COMPLETE (8/8 = 100%) (#2850)",
+      "sessions_touched": [
+        1799
+      ],
+      "commit_count": 2,
+      "prs": [
+        2850
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
