@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T17:50:42+00:00",
+    "generated": "2026-07-04T18:40:11+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f7104f9f4dfd",
-    "doc_count": 2339,
-    "commit_count": 7506,
+    "git_head": "f470868b9b95",
+    "doc_count": 2341,
+    "commit_count": 7510,
     "confidence_breakdown": {
-      "HIGH": 1521,
+      "HIGH": 1523,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1144,
+      "commit_count": 1146,
       "prs": [
         10,
         11,
@@ -2962,7 +2962,9 @@
         2869,
         2870,
         2871,
-        2872
+        2872,
+        2873,
+        2874
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7275,7 +7277,7 @@
         1701,
         1800
       ],
-      "commit_count": 100,
+      "commit_count": 102,
       "prs": [
         2213,
         2219,
@@ -7335,7 +7337,9 @@
         2869,
         2870,
         2871,
-        2872
+        2872,
+        2873,
+        2874
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18002,6 +18006,21 @@
       "commit_count": 2,
       "prs": [
         2873
+      ]
+    },
+    "docs/handoffs/SESSION_1904_AUTHORITY_ENFORCEMENT_CAT_F.md": {
+      "originating_session": 1904,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f470868b",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1904): Group 1900 P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION LANDED \u2014 Chris ratified all F1-F12 findings + \u00a717.1 per-plane separation-boundary posture register + \u00a719 20-item T-tier queue via \"agree all\" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at Medium-High confidence 2026-07-04 with 6 folds landed pre-commit (#2875)",
+      "sessions_touched": [
+        1904
+      ],
+      "commit_count": 2,
+      "prs": [
+        2875
       ]
     },
     "docs/handoffs/SESSION_197_UI_CONSOLIDATION_PLAN.md": {
@@ -33115,9 +33134,10 @@
         1900,
         1901,
         1902,
-        1903
+        1903,
+        1904
       ],
-      "commit_count": 107,
+      "commit_count": 109,
       "prs": [
         2773,
         2775,
@@ -33167,7 +33187,8 @@
         2867,
         2869,
         2871,
-        2873
+        2873,
+        2875
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33250,9 +33271,10 @@
         1900,
         1901,
         1902,
-        1903
+        1903,
+        1904
       ],
-      "commit_count": 102,
+      "commit_count": 104,
       "prs": [
         2773,
         2775,
@@ -33304,7 +33326,8 @@
         2867,
         2869,
         2871,
-        2873
+        2873,
+        2875
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33391,6 +33414,21 @@
       "commit_count": 2,
       "prs": [
         2873
+      ]
+    },
+    "docs/research/domains/authority_enforcement/1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md": {
+      "originating_session": 1904,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f470868b",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-1904): Group 1900 P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION LANDED \u2014 Chris ratified all F1-F12 findings + \u00a717.1 per-plane separation-boundary posture register + \u00a719 20-item T-tier queue via \"agree all\" shortcut post-Rigby SIGN cycle 1 SIGN-with-edits at Medium-High confidence 2026-07-04 with 6 folds landed pre-commit (#2875)",
+      "sessions_touched": [
+        1904
+      ],
+      "commit_count": 2,
+      "prs": [
+        2875
       ]
     },
     "docs/research/domains/content/1600_content_domain_scoping.md": {
