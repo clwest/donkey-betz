@@ -17,13 +17,20 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1700 arc pin
-# (RETIRED at S1799 close per playbook §16 arc-close discipline — see
-# below); rotation to next arc's fresh pin is OWED at next-session open
-# (playbook §22 default queue lean: Group 1900 Event Architecture next
-# per Group 1700 xx99 §9.1 handoff; Chris-gated).
+# the --conversation flag below. Current value: Session 1800 arc pin
+# (Rigby create_fresh at S1800 open — carrying only the mission scope,
+# no S1700 Observability arc turn context).
+# Pin: pa-ae5931ea706b4537. Title: "Session 1800 — HumanAttention /
+# Feedback / Learning research group (kickoff)". Carry-forward: mission
+# scope only — Research Group 1800 "HumanAttention / Feedback / Learning"
+# per Chris D-override of playbook §22 default queue lean (which had
+# Group 1900 Event Architecture next per Group 1700 xx99 §9.1 handoff).
+# Rationale: Round-trip learning loop scope expansion; per OPEN_ARCS
+# Not-started queue Group 1800 priority row. Prior S1700 Observability
+# arc context intentionally excluded per playbook §16 arc-open
+# fresh-thread discipline.
 #
-# **Retired at S1799 close: pa-e7fbacc996b34b44** (Sessions 1700-1706 +
+# **Retired at S1800 open: pa-e7fbacc996b34b44** (Sessions 1700-1706 +
 # S1799 — Group 1700 Observability / Telemetry / SLOs research group;
 # 8-doc arc: S1700 parent + 6 child audits S1701-S1706 + S1799 xx99
 # canonical summary; playbook §11.1 template FOURTH application + §11.3
@@ -146,4 +153,4 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-python tools/pa_chat.py "$@" --tools --conversation pa-e7fbacc996b34b44
+python tools/pa_chat.py "$@" --tools --conversation pa-ae5931ea706b4537
