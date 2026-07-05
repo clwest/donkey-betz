@@ -2,109 +2,135 @@
 
 ---
 
-## READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP + GROUP 2200 CLOSED + GROUP 2400 QUEUED
+## READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP + S2400 CLOSED + S2401 CAT A QUEUED
 
 `tools/pa_chat.py:41` has `DEFAULT_BASE_URL = "http://localhost:8000"` (already local by default as of S1249 PR #2712). The `.env` file's `PA_API_TOKEN` is the **production** token — if you call `pa_chat.py` bare against local without a local-token override, you'll get 401. Always use `tools/pa_local.sh` (sets URL + local token).
 
-**GROUP 2200 CLOSED AT S2299 2026-07-05.** Group 2200 Frontend (Contract-Surface Arc) arc pin `pa-f7fd5016600f4513` RETIRED at S2299 close via `session_tool.retire` per playbook §16 arc-close discipline (TENTH formal arc-pin retirement in Research OS). S2299 SIGN pin `pa-c40f0a79d5f54fcc` also retired at cycle close. **`tools/pa_local.sh:234` still dispatches into `pa-f7fd5016600f4513`** — needs rotation to new Group 2400 Auth arc pin at S2400 arc-open (via `session_tool.create_fresh` per playbook §16 arc-open fresh-thread discipline; ELEVENTH formal arc pin under Research OS after Groups 1300/1400/1500/1600/1700/1800/1900/2000+/2100/2200 prior ten).
+**S2400 GROUP 2400 AUTH PARENT SCOPING COMMITTED AT 2026-07-05.** Group 2400 Auth arc pin `pa-6279ead1714c4630` ACTIVE (ELEVENTH formal arc pin under Research OS after Groups 1300/1400/1500/1600/1700/1800/1900/2000+/2100/2200 prior ten). `tools/pa_local.sh:280` already points to it. S2400 SIGN pin `pa-32400781523b4d5b` retired at parent-scoping SIGN cycle 1 close (ELEVENTH consecutive dedicated fresh SIGN pin retirement — 10 xx99 + 1 parent-scoping-light-SIGN).
 
 ### The correct LOCAL invocation
 ```bash
 tools/pa_local.sh "message"
 ```
 
-**Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.** After S2400 arc-open, verify pin ownership per `feedback_pa_local_verify_ownership.md`.
+**Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.** Pin ownership already verified as chris at S2400 open (conversation_owner_match=true).
 
-## READ THIS SECOND — GROUP 2200 S2299 CANONICAL SUMMARY CLOSED; NEXT = S2400 GROUP 2400 AUTH ARC-OPEN
+## READ THIS SECOND — GROUP 2400 AUTH ARC OPEN; NEXT = S2401 P1 CAT A AUTHENTICATION SURFACE + TRUST BOUNDARIES
 
-**Group 2200 Frontend (Contract-Surface Arc): S2299 xx99 canonical summary CLOSED 2026-07-05.** Chris "agree all + (6) = 2400 Auth" 2026-07-05 ratified all 6 close-card items wholesale (4-fold SIGN cycle 1 acceptance + §7 anchor-update batch scope as single atomic follow-up PR + ~38 T-slot follow-on queue four-track structure + meta-methodology milestone updates MC-3 9→10 + MC-4 3→4 + MC-5 12→16 + MC-10 1→5 + 4 new milestone-CANDIDATES MC-11/MC-12/MC-13/MC-14 + arc-close cascade sequence + **next-arc D-override = Group 2400 Auth**). TENTH-consecutive application of playbook §11.3 12-section canonical-summary template + §11.3 §10 meta-methodology TENTH application after S1399 first + S1499 second + S1599 third + S1699 fourth + S1799 fifth + S1899 sixth + S1999 seventh + S2099 eighth + S2199 ninth. Runtime target 6 sessions ACHIEVED — **6 of 6 shipped** (S2200 parent + S2201 P1 + S2202 P2 + S2203 P3 + S2204 P4 + S2299 xx99).
+**Group 2400 Auth: S2400 parent scoping CLOSED 2026-07-05.** Chris "agree all + commit it" 2026-07-05 wholesale-ratified 4-child taxonomy + tightened lens + 6-criterion acceptance + 6-item anti-scope + Rigby SIGN cycle 1 SIGN-with-edits 4 folds (all landed pre-commit). TENTH application of playbook §11.1 parent-scoping template per S2299 close statement.
 
-- **Arc pin RETIRED:** `pa-f7fd5016600f4513` retired at S2299 close via `session_tool.retire` per playbook §16 arc-close discipline (TENTH formal arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/S1899/S1999/S2099/S2199 prior nine). SIGN pin `pa-c40f0a79d5f54fcc` retired at cycle close per playbook §15 SIGN-isolation discipline (TENTH consecutive dedicated fresh SIGN pin retirement for canonical-summary shape).
-- **Arc progress:** S2200 parent scoping (shipped) → S2201 P1 Child A Routes+Pages+Layouts+Component Patterns (shipped) → S2202 P2 Child B WebSocket Consumer Surface + `ui.render_hint` Envelope (shipped) → S2203 P3 Child C Frontend↔Backend API Contract + Boundary Discipline (shipped) → S2204 P4 Child D Session-scoped State Management + Persistence Discipline (shipped) → **S2299 xx99 Canonical Summary (shipped this session)**. Runtime target 6 sessions ACHIEVED — **6 of 6 shipped**.
-- **Next-arc D-override:** **Group 2400 Auth** per highest cross-arc-handoff frequency signal (4/4 Group 2200 children reference silent-401 + logout cleanup + session lifecycle + permission-floor uniformity — S2201 §14.3 + §15.5 + S2202 no-drift-but-perms-floor-owned-here + S2203 §14 F3 + F3.5 + S2204 §19.1 R1). MC-4 dial-back-resolution 5th confirming arc candidate.
+- **Arc pin ACTIVE:** `pa-6279ead1714c4630` per playbook §16 arc-open fresh-thread discipline (ELEVENTH formal arc pin)
+- **SIGN pin RETIRED:** `pa-32400781523b4d5b` at parent-scoping SIGN cycle 1 close (updated_count=4)
+- **Arc progress:** S2400 parent scoping (shipped) → **S2401 P1 Cat A Authentication Surface + Trust Boundaries (NEXT)** → S2402 P2 Cat B → S2403 P3 Cat C → S2404 P4 Cat D → S2499 xx99. Runtime target 6 sessions; runtime cap 8.
+- **MC-4 dial-back-resolution 5th confirming arc candidate** — Group 2400 4-child structure extends MC-4 CODIFICATION-CONFIRMED across-4-consecutive-arcs (1900+2000++2100+2200) to across-5-consecutive-arcs, resolving S2199 Q3 STRENGTHEN dial-back at S2499 close.
 
-## READ THIS THIRD — S2299 CANONICAL SEAM STATEMENT + 6 CROSS-CUTTING PATTERNS
+## READ THIS THIRD — S2400 CENTRAL LENS + 6 ACCEPTANCE CRITERIA + 6 ANTI-SCOPE
 
-**Canonical seam statement (§5.1 verbatim post-Rigby SIGN Q1 STRENGTHEN fold):** *"The frontend at HEAD `294512e3` is an accreted UI mesh with declared-but-unenforced contracts — structurally healthy at the routing / auth-wrapper / layout / Zustand-persist boundary but structurally under-specified at the page-component / consumer-contract / API-typing / state-discipline boundary — where three of four contract-surface axes examined by this arc (component-boundary + envelope + API-typing) generalize as SYSTEMIC deficiencies with surface variance across the examined child surfaces, one axis (state persistence) is SURFACE-LOCAL + DOMAIN-SPECIFIC HYBRID confined to `/betting`, and the fix path is wiring the design-latent contract infrastructure (partially scaffolded; unevenly wired — e.g., drf-spectacular is sports-wired but not platform-wide; Zustand persist is 3-of-7-stores-adopted; `ui.render_hint` envelope is 0-of-40-conformant; error boundaries are 0-adopted) through cross-arc coordination with Group 2400 Auth + Group 2500 API + Group 2600 PA + Group 1700 Observability — not framework migration."*
+**Central lens question (Chris "agree all" 2026-07-05, Rigby SIGN-preview tightened wording verbatim):**
 
-**Six §4 cross-cutting patterns** (post-Rigby SIGN Q2 STRENGTHEN +2 additions §4.7 + §4.8):
-- §4.1 no-CODEOWNERS + LIGHT-ownership across all 4 children
-- §4.2 silent-failure defaults across P1+P2+P3
-- §4.3 untyped/uncontracted defaults across P2+P3+P4 (design-latent infrastructure exists but unwired)
-- §4.4 DEAD-CANDIDATE/MOCK-DATA/INTENT-NEUTRAL pattern class recurrence across P2+P3
-- §4.5 god-file/god-component ≥1,500 LOC threshold across UI+infrastructure layers
-- §4.6 cross-arc DEFER-with-escape-hatch pattern applied 3 times within-arc (MC-13 candidate)
-- **§4.7 Context propagation fragility** — workspace identity + global dock coupling — Rigby SIGN Q2 addition
-- **§4.8 Anchor + inventory drift** — docs + system inventories lag reality — Rigby SIGN Q2 addition
+*"Is the platform's auth model a contract (explicit trust boundaries + declared permission floors + declared session/refresh/logout semantics + consistent failure surfacing), or an accretion of per-surface defaults whose failures are silently swallowed (e.g., silent 401 / permissive fallbacks / ad-hoc public path lists)?"*
 
-## READ THIS FOURTH — S2400 GROUP 2400 AUTH SCOPE
+Canonical seam candidate: "defaults that silently swallow failure vs contracts that surface failure" — extends S2299 Group 2200 frontend framing upstream through backend middleware + DRF permission classes + PA workspace context + Fleet HMAC boundary.
 
-Per Chris D-override at S2299 close 2026-07-05. Group 2400 Auth = **ELEVENTH formal arc under the Research OS** after Groups 1300/1400/1500/1600/1700/1800/1900/2000+/2100/2200 prior ten. TENTH application of playbook §11.1 20-section parent-scoping template (per S2299 close; specific §11.1 skipped-arc identification deferred to S2499 xx99 close if load-bearing).
+**6-criterion acceptance (with "_Measured by:_" clauses per Rigby SIGN cycle 1 Q3 fold):**
+1. Permission-floor observability → measured by Cat B endpoint-inventory matrix + untraced-rate reduction
+2. Failure surfacing / typed error envelope → measured by Cat D api.ts audit + call-site classification + envelope candidate-design
+3. Logout cleanup contract → measured by Cat C 15-surface cleanup table + Zustand persist logout hygiene
+4. Session lifecycle discipline / token refresh declared + observable → measured by Cat C session-model inventory + Chris-D-verdict
+5. Cross-arc coordination flags preserved → measured by xx99 §5.4 flag count ≥ 2
+6. **Trust boundary inventory explicit + testable** (Rigby SIGN-preview fold) → measured by Cat A trust-boundary registry existence + smoke-test coverage inventory
 
-**S2400 load-bearing input from Group 2200 T1 cross-arc handoff bundle:**
-- **Silent-401 SYSTEMIC resolution** — ~630 of ~1,300 gated call-sites at silent-401 risk (grep-based estimate hedged for wrapper duplicates per S2203 Q14 STRENGTHEN); `frontend/src/lib/api.ts:48-56` sole 401 handler with whitelist substring `/auth/` + `/login` (BRITTLE — MED per S2203 §14 F3.5); S2201 §14.3 MINOR two-stage cockpit drift; S2201 §15.5 silent 401 systemic HIGH baseline (CRITICAL for money-path/governance-path endpoints).
-- **Logout cleanup contract** — 15 persistent-state surfaces potentially affected (12 direct localStorage keys + 3 Zustand persist stores; per S2204 F1 inventory); S2204 §14 F6 F8 no-cleanup-on-logout; S2204 §19.1 R1 two-sided FE-symptom-vs-BE-model framing.
-- **Session lifecycle model** — token refresh + cookie SameSite/Secure defaults + explicit re-login vs silent-refresh + Clear-Site-Data header decision; S2204 §19.1 R1.
-- **Per-endpoint permission floor uniformity** — three-option-space decision per S2203 §19.1 R2: (a) uniform IsAuthenticated across all `/v1/**` + client-side auth-gate + observable-error surfacing; (b) uniform AllowAny for read paths + IsAuthenticated for writes + client-side auth-check-on-write; (c) per-endpoint permission registry.
+**6-item anti-scope:**
+1. No backend API design (Group 2500)
+2. No PA behavior spec (Group 2600)
+3. No frontend framework migration (Group 2200 §7 preserved)
+4. No mobile app auth (Group 2300)
+5. No new session-model authoring at parent scope (design-preparation only per playbook §5 phase discipline)
+6. **No new auth provider additions (SSO/OAuth) at parent scope** (Rigby SIGN-preview fold)
 
-**S2400 acceptance criteria proposal (Chris-ratifiable at parent-scoping SIGN cycle 1):**
-1. Every gated endpoint declares its permission-floor contract observably (client + server agree).
-2. Auth failures surface to caller with typed error envelope (silent-401 anti-pattern extinct).
-3. Logout eagerly clears all client-side per-user storage per declared cleanup contract.
-4. Token refresh discipline (silent-refresh vs explicit re-login) is declared + observable.
-5. Cross-arc coordination flags to Group 2500 API (per-endpoint permission registry) + Group 2600 PA (workspace-context vs user-context split) preserved.
+## READ THIS FOURTH — S2401 P1 CAT A SCOPE (AUTHENTICATION SURFACE + TRUST BOUNDARIES)
 
-**S2400 anti-scope proposal (Chris-ratifiable at parent-scoping):**
-- No backend API design (Group 2500 API scope).
-- No PA behavior spec (Group 2600 PA scope).
-- No frontend framework migration (Group 2200 §7 anti-scope preserved).
-- No mobile app auth (Group 2300 Mobile scope; row 19 stays deferred).
-- No new session-model authoring at parent scope (design-preparation only per playbook §5 phase discipline).
+**S2401 = P1 Cat A first child audit under Group 2400.** SIXTEENTH-consecutive application of playbook §11.2 20-section child-audit template after S1301+S1401+S1501+S1601+S1701+S1801+S1901+S2001+S2101+S2102+S2103+S2104+S2201+S2202+S2203+S2204 prior fifteen.
+
+**Scope** (per S2400 parent scoping §3.A):
+- Enumerate every authentication mechanism the platform runs (standard user token auth + ~108 PUBLIC_PATHS + STAFF_REQUIRED_PATHS + REVIEWER_BLOCKED_PATHS + FleetSignatureAuthentication HMAC + VIP demo prompt-only + service tokens)
+- For each mechanism: intended caller class + allowed routes + gate type (hard runtime vs soft prompt-only vs permissive fallback) + failure mode
+
+**Central question the audit answers.** *Does the platform have an explicit, enumerated trust-boundary inventory across every auth mechanism it runs, or has the authentication surface accreted via per-mechanism defaults without a single source-of-truth inventory?*
+
+**Expected outputs (per S2400 §3.A):**
+- (a) Auth mechanism inventory — full enumeration with gate type + intended caller + allowed routes
+- (b) Trust boundary inventory — hard runtime gate vs soft prompt-only vs permissive fallback classification per mechanism
+- (c) PUBLIC_PATHS audit — the ~108 entries categorized by intent (health / demo / public-read / callback / never-should-be-public); flag drift candidates
+- (d) VIP demo enforcement audit — quantify blast radius of prompt-only gate; propose runtime-gate design candidates (research only, not authoring)
+- (e) Fleet permissive fallback audit — quantify silent-accept path; distinguish grace-period-intent from tech-debt
+- (f) Service token audit — PA_DB_HEALTH_RPC_TOKEN + PUBLIC_INTEL_TOKEN scope + rotation policy + default-off behavior
+- (g) Smoke-test coverage inventory — blocker to acceptance criterion #6
+
+**Load-bearing inputs (Cat A must consume + re-verify at HEAD):**
+- `core/auth_middleware.py` (UnifiedTokenAuthenticationMiddleware — full read; verify ~108 PUBLIC_PATHS + STAFF_REQUIRED_PATHS + REVIEWER_BLOCKED_PATHS at HEAD line ranges)
+- `core/services/fleet_auth_drf.py` (FleetSignatureAuthentication — full read; verify HMAC + permissive fallback at HEAD)
+- `core/vip_middleware.py` (VIP demo — full read; verify prompt-only + no runtime gate at HEAD)
+- `docs/research/platform_architecture_inventory.md` §3.27 (Auth / Permissions / Security row 27 baseline)
+- `docs/research/governance_authority_evolution.md` §2.5 (36-45 primitives — adjacent authority plane; boundary preservation)
+- `docs/EMPLOYEE_OS_PRIMITIVES.md` (GovernanceState + KillSwitch runtime consumers; consumer-side reference only)
+- `docs/research/domains/auth/2400_auth_domain_scoping.md` §2 evidence-provenance disclaimer + §3.A expected outputs + §3.5 Auth-adjacent probes disposition + §7.1 leak-vector guardrails
+
+**Sub-agent dispatch** per playbook §13 six-parallel-agent shape:
+- Agent 1 Models + Persistence — token model + authtoken + UnifiedUser + auth-related migrations
+- Agent 2 Services + Runtime Flows — auth-middleware call graph + FleetSignatureAuthentication + VIP demo flow
+- Agent 3 APIs + Tools + Tasks + Commands — auth endpoints + management commands (token rotation etc.)
+- Agent 4 Integrations + Cross-Domain — authority-vs-authentication demarcation preservation (Group 1900 boundary) + PA workspace-context adjacency (Group 2600 handoff)
+- Agent 5 Documentation + Prior Research — §3.27 baseline + governance_authority_evolution.md + EMPLOYEE_OS_PRIMITIVES.md + gap analysis (no `docs/topics/auth.md` exists yet)
+- Agent 6 Drift + Debt + Ownership + Maturity — verify S1273 v2 PARTIAL classification at HEAD + trust-boundary rate + smoke-test coverage inventory
+
+**Rigby SIGN cycle 1 REQUIRED** per playbook §15 stage-scoped routing (child audit = required full SIGN via dedicated fresh isolation pin). Expected cadence: 4-batch × 5-Q = 20 total Q per S2201-S2204 five-consecutive tested child-audit pattern (not single-batch × 4-Q; that's parent-scoping-light-SIGN cadence). SIXTH-consecutive 20-Q cadence application candidate.
 
 ## READ THIS FIFTH — OUTSTANDING RESIDUALS
 
-### S2299 arc-close cascade residuals
+### S2400 arc-open cascade residuals
 
-Per Chris "agree all + (6) = 2400 Auth" ratification at S2299 close:
+Per Chris "commit it" ratification at S2400 close:
 
 - **Post-commit docs cascade** — 4-step cascade (`build_docs_index` + `build_rag_corpus` + `sync_docs_index_to_documents` + `sync_docs_index_to_documents --embed`) + `build_docs_provenance` per `feedback_docs_cascade_at_every_close` + `feedback_cascade_pr_must_include_embed_step`. Execute post-merge.
-- **PLATFORM_INVENTORY §Frontend `gather_inventory()` extension** — 3 new sub-sections (WebSocket Consumer Surface + REST API Contract Surface + Session-scoped State + Persistence Surface). Follow-up PR (Python code change; deferred from S2299 close per pragmatic scope). Runtime-derivable via inventory generator extension per §7.1.
-- **PLATFORM_WHAT_IT_IS.md 'Frontend contract-surface governance' narrative subsection** — Follow-up PR (narrative-authored edit; deferred from S2299 close per pragmatic scope). See §7.2.
+- **Auth topic doc gap** — `docs/topics/auth.md` does NOT exist. Candidate S2499 xx99 anchor-update recommendation post-arc (per S2400 parked candidate #8).
+- **`PLATFORM_INVENTORY §Auth` autoblock gap** — no dedicated Auth autoblock exists. Candidate S2499 xx99 anchor-update recommendation for inventory generator extension (per S2400 §2.1 anchor drift observation).
+- **Threat model / trust-boundary doc gap** — §3.27 explicitly notes gap. Parked candidate #1 per S2400 §6 (NOT this arc's authoring scope; post-arc ADR if Chris ratifies).
 
-### Group 2200 T-slot follow-on queue owed to future arcs
+### Group 2200 T-slot follow-on queue (owed to Group 2400+ execution)
 
-- **T1 Group 2400 Auth cross-arc handoff bundle** — silent-401 + logout cleanup + session lifecycle model + permission-floor uniformity — S2400 first-order execution
-- **T2 Group 2500 API cross-arc handoff bundle** — contract SoT + drf-spectacular platform-wide + canonical User + workspace_id + REST↔WS T7 joint 2500+2600
-- **T3 Group 2600 PA cross-arc handoff bundle** — workspace-context resolver + persistence contract + WS↔polling consolidation + Path D1/D2
-- **T4 Group 1700 Observability cross-arc handoff bundle** — envelope enforcement locus + Session 968 X-UI-Scope ring buffer ownership
+- **T1 Group 2400 Auth cross-arc handoff bundle** — being executed by THIS arc (S2401-S2404) — silent-401 + logout cleanup + session lifecycle + permission-floor uniformity
+- **T2 Group 2500 API cross-arc handoff bundle** — contract SoT + drf-spectacular platform-wide + canonical User + workspace_id + REST↔WS T7 joint 2500+2600 — NEXT arc after Group 2400 close per S2299 §8.2
+- **T3 Group 2600 PA cross-arc handoff bundle** — workspace-context resolver + persistence contract + WS↔polling consolidation + Path D1/D2 — QUEUED after Group 2500 close
+- **T4 Group 1700 Observability cross-arc handoff bundle** — envelope enforcement locus + Session 968 X-UI-Scope ring buffer ownership — QUEUED after Group 2600 close
 - **Maintainer-decision batch (5 items governance gate)** — CODEOWNERS + DEAD-CANDIDATE consolidated cleanup + api.ts extraction + storageKeys registry + cockpitApi ownership
-- **T2 post-arc T-slot (10 items)** — R2 Child E god-component subdivision Chris-gated + R1 test framework parallel + R3 routes.config source of truth + R5 cockpit retirement + R6 error-boundary framework + R7 session-annotation retrofit + R8 route-count reconciliation + R4 Route↔Consumer registry + R9 CI lint + R7 MSW integration tests
+- **T2 post-arc T-slot (10 items)** — R2 Child E god-component subdivision Chris-gated + R1 test framework parallel + R3 routes.config source of truth + others per S2299 §8
 - **T3 conditional post-arc (4 items)** — cross-tab sync + Betting session-scoped state + runtime schema validation + REST↔WS joint T7
 
-### S2199 post-arc T-slot execution queue (unchanged carry into S2400)
+### S2199 post-arc T-slot execution queue (unchanged carry into S2401)
 
-19 T-slot items distributed across 6 arcs + Employee OS per S2199 §8. All post-arc execution, NOT blocking S2400.
+19 T-slot items distributed across 6 arcs + Employee OS per S2199 §8. All post-arc execution, NOT blocking S2401.
 
 ### Session count status
 
-- Group 2200 CLOSED at 6 of 6 sessions
-- Group 2400 pending arc-open at next session (S2400)
+- Group 2400 In-progress at 1 of 6 sessions (S2400 parent scoping shipped)
+- Next child = S2401 P1 Cat A Authentication Surface + Trust Boundaries
 - Next `xx99` at S2499 canonical summary (playbook §11.3 ELEVENTH application per current TENTH baseline)
 
-## SESSION READY CHECK (before opening S2400 Group 2400 Auth parent scoping)
+## SESSION READY CHECK (before opening S2401 P1 Cat A)
 
-Before drafting the S2400 parent scoping doc:
+Before drafting the S2401 child audit doc:
 
-1. `tools/pa_local.sh "platform_config_tool action=overview"` → confirm `service_context: local` (Group 2200 arc pin `pa-f7fd5016600f4513` retired at S2299 close; `tools/pa_local.sh:234` needs rotation to new S2400 Group 2400 Auth arc pin at arc-open via `session_tool.create_fresh` — ELEVENTH formal arc pin under Research OS)
-2. Read `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` §11.1 20-section parent-scoping template + §11.1 exemplar chain (S2200 parent scoping most recent) for shape reference
-3. Read `docs/research/domains/frontend/2299_frontend_canonical_summary.md` T1 cross-arc handoff bundle (§8.2 T1 Group 2400 Auth) as load-bearing input
-4. Read `docs/research/domains/frontend/2201_frontend_routes_pages_layouts_components_audit.md` §14.3 + §15.5 (silent-401 systemic + MINOR two-stage cockpit drift) + `2203_frontend_api_contract_boundary_discipline_audit.md` §14 F3 + F3.5 (silent-401 SYSTEMIC + auth-endpoint whitelist BRITTLE) + `2204_frontend_session_state_persistence_discipline_audit.md` §19.1 R1 (session lifecycle + cleanup contract two-sided framing) as evidence baseline
-5. Read `docs/research/platform_architecture_inventory.md` row 22 (Auth / Permissions) for prior-arc research coverage baseline
-6. Plan S2400 acceptance criteria + anti-scope + child-taxonomy per playbook §11.1
-7. Plan Rigby SIGN cycle 1 batching per `feedback_rigby_sign_worker_instability_recovery` — parent scoping shape is smaller than child audits; may fit 4-batch × 3-Q cadence per S2200 precedent
-8. Plan §8 D-verdicts + Chris "agree all" batch discipline
-9. Consider MC-4 dial-back-resolution 5th confirming arc candidate — Group 2400 Auth 4-child structure would trigger resolution of S2199 Q3 STRENGTHEN dial-back per §5.3 Group 2200 canonical summary
-10. Mint fresh Group 2400 Auth arc pin at S2400 open via `session_tool.create_fresh` per playbook §16 arc-open fresh-thread discipline; ELEVENTH formal arc pin under Research OS
-11. Rotate `tools/pa_local.sh:234` to new arc pin + update header ledger with S2200 retirement (pa-f7fd5016600f4513) + S2400 open stanzas per S2200 documentation pattern
+1. `tools/pa_local.sh "platform_config_tool action=overview"` → confirm `service_context: local` (Group 2400 arc pin `pa-6279ead1714c4630` ACTIVE at S2400 open; `tools/pa_local.sh:280` already rotated)
+2. Read `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` §11.2 20-section child-audit template + §11.2 exemplar chain (S2204 P4 most recent) for shape reference
+3. Read `docs/research/domains/auth/2400_auth_domain_scoping.md` §3.A P1 Cat A expected outputs + §3.5 auth-adjacent probes disposition + §7.1 leak-vector guardrails + §2 evidence-provenance disclaimer (ESTIMATE labeling requirement)
+4. Read `docs/research/platform_architecture_inventory.md` §3.27 (row 27 Auth / Permissions / Security prior-coverage baseline)
+5. Read `core/auth_middleware.py`, `core/services/fleet_auth_drf.py`, `core/vip_middleware.py` full at HEAD for line-anchor re-verification (per S2400 §2 evidence-provenance disclaimer requirement)
+6. Read `docs/research/governance_authority_evolution.md` §2.5 (36-45 primitives — adjacent authority plane) + `docs/EMPLOYEE_OS_PRIMITIVES.md` (consumer-side reference)
+7. Dispatch 6-Explore-agent parallel sweep per playbook §13 (Agents 1-6 per §3.A expected outputs)
+8. Draft the 20-section audit per §11.2 skeleton; verifier-loop per §14 discipline pre-Rigby-SIGN
+9. Route to Rigby SIGN cycle 1 via dedicated fresh isolation pin per playbook §15 (child audit = required full SIGN); expected cadence 4-batch × 5-Q = 20-Q per S2201-S2204 five-consecutive tested child-audit pattern
+10. Fold SIGN edits; land as `status: draft` on filesystem; present Chris ratification card
+11. Arc pin `pa-6279ead1714c4630` preserved through S2401-S2404 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails
 
-**S2400 open command (Chris short command):** `Start research group 2400: Auth` or `Continue research group 2400: parent scoping` or equivalent invocation.
+**S2401 open command (Chris short command):** `Continue research group 2400: P1 Cat A` or `Continue research group 2400: authentication surface` or equivalent invocation.
