@@ -102,3 +102,46 @@ All three use the same async flow: dispatch task → poll status → display res
 - **Workspace Files tab:** `FilesTab.tsx` now supports file preview, inline edit/save, and file history on the live workspace surface.
 - **controlledSubTab prop:** 4 original tabs suppress inner navigation when parent drives sub-tab selection
 - **Bundle optimization:** 2,253 KB (down from 3,062 KB, -26.5%)
+
+## Contract-Surface Governance (Group 2200 arc close, S2299 2026-07-05)
+
+Group 2200 Frontend (Contract-Surface Arc) closed at S2299 canonical summary. See [`../research/domains/frontend/2299_frontend_canonical_summary.md`](../research/domains/frontend/2299_frontend_canonical_summary.md) for full arc synthesis. Six acceptance criteria (S2200 §lens block post-Q3 SIGN STRENGTHEN fold) govern the frontend as a contract surface:
+
+1. **Route contract** — Every route in App.tsx maps to owned page + layout with declared consumer contract. **PARTIAL** at S2299 close (route ownership map extractable but not durable contract source-of-truth).
+2. **Envelope contract** — Every WebSocket consumer emits envelopes conforming to `ui.render_hint` shared schema. **UNMET** (0/40 conformance at HEAD; DEFERRED to Group 1700 Observability arc close per S2202 §20.6 Option (c) + Path A/B/C triad + escape hatch).
+3. **API contract** — Frontend↔backend API calls enumerated + typed against single source of truth. **UNMET** (6.85% typed-response coverage in `api.ts` Coverage A / ~11.8% globally Coverage B; drf-spectacular INSTALLED but wired only in `sports/views.py` 16 `@extend_schema` decorators; DEFERRED to Group 2500 API arc close per S2203 §20.6).
+4. **State contract** — Session-scoped state has declared persistence discipline per surface. **PARTIAL** (3 of 7 Zustand stores + 6 of 12 direct localStorage DECLARED per formalized 4-criteria rubric; Path A DECLARE `storageKeys.ts` registry + Path B EXTEND version+migrate to authStore + navigationStore both HIGH-confidence; Path D1/D2 workspace-persistence + focused-entity DEFERRED to Group 2600 PA).
+5. **Component boundaries** — Component/page/layout boundaries visible + navigable; no god-component pathologies. **PARTIAL** (6 of 38 pages ≥1,500 LOC across ≥3 surfaces; Child E spin-out trigger MET at S2201; execution-sequence lead: CommandCenterPage 2,551 + AgentsPage 4,695 + BettingPage 3,023; R1 test framework parallel as safety track).
+6. **Failure-mode discipline** — Loading / error states + error boundaries + auth-failure handling standardized + observable. **UNMET** (no error boundaries anywhere; silent-401 SYSTEMIC via `api.ts:48-56`; DEFERRED-DISTRIBUTED to Group 2400 Auth + Group 2500 API + post-arc T-slot).
+
+## WebSocket Consumer Surface (Group 2200 S2202 arc close)
+
+- **125 backend route entries** across `**/routing.py` files (per S2202 Explore Agent A1).
+- **~50-60 unique consumer classes** after de-duplication.
+- **8 frontend subscription sites** across ~5 unique endpoints (`useWebSocket` hook + `useSystemEvents:371-416` switch dispatch multiplexing 14 event types).
+- **≈4% whole-frontend coverage ratio** (surface variance: PA 20% > Command-Center 12% > Workspace 4% > Betting 0%).
+- **0/40 emit-site `ui.render_hint` envelope conformance rate** (S2099 §14.3.4 F16 UNCHANGED at HEAD).
+- **5 confirmed MOCK-DATA consumers** (`/ws/dbao/` + `/ws/profile/` + `/ws/sports/` live-scores + `/ws/decision-command/` + `/ws/sports-betting/`) + 3 HYBRID + 2 EMPTY + 11 DEAD-CANDIDATE INTENT-NEUTRAL routes.
+- **TokenAuthMiddlewareStack uniformly applied** 125/125 (no auth drift at Child B slice).
+
+## REST API Contract Surface (Group 2200 S2203 arc close)
+
+- **93 api-module exports** in `frontend/src/lib/api.ts` (4,194 LOC + 407-session churn Session 688 → Session 1095).
+- **919 total API calls** in api.ts + **6.85% typed-response coverage** (Coverage A, api.ts only); **~11.8% globally** (Coverage B, 115/973 with cockpitApi.ts merged).
+- **`cockpitApi.ts` typed island** 54 functions with 96% typed via `@/types/cockpit` — sole typed island (scoped to `/cockpit/*` ops-surface).
+- **4 primary cross-cutter api-modules** (`humanApi` + `assistantApi` + `workspaceApi` + `contentApi`) span ≥2 major surfaces each.
+- **drf-spectacular INSTALLED + PARTIAL-WIRED** — `requirements.txt` + `SPECTACULAR_SETTINGS` + `sports/views.py` 16 `@extend_schema` decorators; `core/*.py` 0 decorators.
+- **silent-401 SYSTEMIC** via `api.ts:48-56` (~630 of ~1,300 gated call-sites at silent-401 risk per grep estimate hedged for wrapper duplicates).
+- **18 verifier-confirmed DEAD-CANDIDATE api-modules** (~18-25 pending R3 full TSX sweep).
+
+## Session-scoped State + Persistence Surface (Group 2200 S2204 arc close)
+
+- **7 Zustand stores** (`authStore` + `navigationStore` + `paStore` + `workspaceStore` + `assistantContextStore` + `bodyStore` + `unifiedStore`).
+- **3 Zustand persist stores** (`auth-storage` + `navigation-store` + `pa-dock-state`); paStore uniquely v3+migrate as exemplar.
+- **12 direct localStorage keys** across 9 files (6 DECLARED / 6 ACCIDENTAL per formalized 4-criteria rubric: C1 constant / C2 typed accessor / C3 graceful fallback / C4 template disciplined).
+- **0 sessionStorage** usage; **0 IndexedDB** usage.
+- **1 cookie read** (`paStore.ts:241` reads `sessionid` for feedback POST).
+- **1 in-memory ring buffer** (Session 968 X-UI-Scope request-log at `api.ts:3968-4051`, 200-entry cap, dev-only).
+- **Naming convention drift**: 6 kebab-case + 3 snake_case + 3 camelCase across 12 direct keys (3 Zustand persist keys all kebab-case).
+- **F5 F2 hazard site**: `workspaceStore.activeWorkspace` in-memory-only creates PA-context-loss on refresh — 144 consumer sites, 12 PA-side; borderline HIGH conditional on Group 2600 PA correctness disposition.
+- **Falsifier verdict**: SURFACE-LOCAL + DOMAIN-SPECIFIC HYBRID — 14 of 15 persisted keys outside `/betting`; 0 of 15 inside; does NOT generalize whole-frontend.
