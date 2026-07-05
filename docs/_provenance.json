@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T21:55:41+00:00",
+    "generated": "2026-07-05T22:57:02+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "e617af59ba6e",
-    "doc_count": 2383,
-    "commit_count": 7590,
+    "git_head": "7bc09933a8a1",
+    "doc_count": 2385,
+    "commit_count": 7593,
     "confidence_breakdown": {
-      "HIGH": 1564,
+      "HIGH": 1566,
       "MEDIUM": 352,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2512,9 +2512,10 @@
         2199,
         2200,
         2203,
-        2299
+        2299,
+        2402
       ],
-      "commit_count": 1186,
+      "commit_count": 1188,
       "prs": [
         10,
         11,
@@ -2994,7 +2995,8 @@
         2906,
         2907,
         2909,
-        2911
+        2911,
+        2912
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -3633,9 +3635,10 @@
         1201,
         1202,
         1203,
-        1605
+        1605,
+        2402
       ],
-      "commit_count": 62,
+      "commit_count": 64,
       "prs": [
         2025,
         2103,
@@ -3664,7 +3667,8 @@
         2408,
         2442,
         2448,
-        2827
+        2827,
+        2912
       ]
     },
     "docs/PLATFORM_WHAT_IT_IS.md": {
@@ -7309,9 +7313,10 @@
         2199,
         2200,
         2203,
-        2299
+        2299,
+        2402
       ],
-      "commit_count": 142,
+      "commit_count": 144,
       "prs": [
         2213,
         2219,
@@ -7399,7 +7404,8 @@
         2906,
         2907,
         2909,
-        2911
+        2911,
+        2912
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18447,11 +18453,26 @@
       "originating_session": 2402,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "e617af59",
+      "first_commit_sha": "8bc1b0c0",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2402): Group 2400 Cat B Authorization + Permission-Floor Uniformity Audit",
+      "first_commit_subject": "docs(session-2402): Group 2400 Cat B Authorization + Permission-Floor Uniformity Audit (#2912)",
       "sessions_touched": [
         2402
+      ],
+      "commit_count": 2,
+      "prs": [
+        2912
+      ]
+    },
+    "docs/handoffs/SESSION_2403_AUTH_P3_CAT_C.md": {
+      "originating_session": 2403,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "7bc09933",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2403): Group 2400 Cat C Session Lifecycle + Logout Cleanup Contract Audit",
+      "sessions_touched": [
+        2403
       ],
       "commit_count": 1,
       "prs": []
@@ -33515,9 +33536,10 @@
         2299,
         2400,
         2401,
-        2402
+        2402,
+        2403
       ],
-      "commit_count": 150,
+      "commit_count": 152,
       "prs": [
         2773,
         2775,
@@ -33587,7 +33609,8 @@
         2905,
         2907,
         2908,
-        2910
+        2910,
+        2912
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33694,9 +33717,10 @@
         2299,
         2400,
         2401,
-        2402
+        2402,
+        2403
       ],
-      "commit_count": 145,
+      "commit_count": 147,
       "prs": [
         2773,
         2775,
@@ -33768,7 +33792,8 @@
         2905,
         2907,
         2908,
-        2910
+        2910,
+        2912
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33832,11 +33857,26 @@
       "originating_session": 2402,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "e617af59",
+      "first_commit_sha": "8bc1b0c0",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2402): Group 2400 Cat B Authorization + Permission-Floor Uniformity Audit",
+      "first_commit_subject": "docs(session-2402): Group 2400 Cat B Authorization + Permission-Floor Uniformity Audit (#2912)",
       "sessions_touched": [
         2402
+      ],
+      "commit_count": 2,
+      "prs": [
+        2912
+      ]
+    },
+    "docs/research/domains/auth/2403_session_lifecycle_logout_cleanup_contract_audit.md": {
+      "originating_session": 2403,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "7bc09933",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2403): Group 2400 Cat C Session Lifecycle + Logout Cleanup Contract Audit",
+      "sessions_touched": [
+        2403
       ],
       "commit_count": 1,
       "prs": []
