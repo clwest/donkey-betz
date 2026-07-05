@@ -6,7 +6,7 @@
 
 `tools/pa_chat.py:41` has `DEFAULT_BASE_URL = "http://localhost:8000"` (already local by default as of S1249 PR #2712). The `.env` file's `PA_API_TOKEN` is the **production** token — if you call `pa_chat.py` bare against local without a local-token override, you'll get 401. Always use `tools/pa_local.sh` (sets URL + local token + arc pin).
 
-**ACTIVE ARC PIN:** Group 2100 arc pin `pa-18b095bb7c4740be` is ACTIVE post-S2102 close 2026-07-04. `tools/pa_local.sh:215` dispatches into this pin. Do NOT rotate this pin during the Group 2100 arc (S2100 → S2101 → S2102 → **S2103** → S2104 → S2199) — playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails at S1999 close (guardrails-retained-but-generalized per S2099 MC-4 extension).
+**ACTIVE ARC PIN:** Group 2100 arc pin `pa-18b095bb7c4740be` is ACTIVE post-S2103 close 2026-07-04. `tools/pa_local.sh:215` dispatches into this pin. Do NOT rotate this pin during the Group 2100 arc (S2100 → S2101 → S2102 → S2103 → **S2104** → S2199) — playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails at S1999 close (guardrails-retained-but-generalized per S2099 MC-4 extension).
 
 ### The correct LOCAL invocation
 ```bash
@@ -15,86 +15,70 @@ tools/pa_local.sh "message"
 
 **Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-## READ THIS SECOND — GROUP 2100 P2 INGESTION PIPELINE AUDIT LANDED AT S2102; NEXT-SESSION = S2103 P3 RETRIEVAL AUTHORITY FRAMEWORK + CORPUS GOVERNANCE DESIGN
+## READ THIS SECOND — GROUP 2100 P3 RETRIEVAL AUTHORITY FRAMEWORK + CORPUS GOVERNANCE DESIGN LANDED AT S2103; NEXT-SESSION = S2104 P4 BEHAVIOR SUBSTRATE STRUCTURED OBSERVATION + INTEGRATION
 
-**Group 2100 RAG / Document Loading (Knowledge Loop) arc: S2102 P2 Ingestion / Chunking / Embedding Pipeline Audit CLOSED 2026-07-04 → next is S2103 P3 Retrieval Authority FRAMEWORK + Corpus Governance Design** per parent scoping `2100_rag_document_loading_domain_scoping.md` §5.3.
+**Group 2100 RAG / Document Loading (Knowledge Loop) arc: S2103 P3 Retrieval Authority FRAMEWORK + Corpus Governance Design CLOSED 2026-07-04 → next is S2104 P4 Behavior Substrate: Structured Observation of RAG-Quality → SIGN-Quality Coupling + Integration** per parent scoping `2100_rag_document_loading_domain_scoping.md` §5.4.
 
-- **Active arc pin:** `pa-18b095bb7c4740be` — preserved through S2103 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails.
-- **Arc progress:** S2100 parent scoping (shipped) → S2101 P1 (shipped) → S2102 P2 (shipped this session) → **S2103 P3 (next)** → S2104 P4 Behavior Substrate Structured Observation + Integration → S2199 xx99 canonical summary. Runtime target: 6 sessions on track — 3 of 6 shipped.
+- **Active arc pin:** `pa-18b095bb7c4740be` — preserved through S2104 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails.
+- **Arc progress:** S2100 parent scoping (shipped) → S2101 P1 (shipped) → S2102 P2 (shipped) → S2103 P3 (shipped this session) → **S2104 P4 (next)** → S2199 xx99 canonical summary. Runtime target: 6 sessions on track — 4 of 6 shipped.
 
-## READ THIS THIRD — S2102 P2 SHIP STATE
+## READ THIS THIRD — S2103 P3 SHIP STATE
 
-**P2 audit doc:** `docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md` (~1,795 lines post-fold; `status: active` post-Rigby-SIGN + post-Chris-ratification).
+**P3 doc:** `docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md` (~2,150 lines post-fold; `status: active` post-Rigby-SIGN + post-Chris-ratification).
 
 **SIGN cycle 1 result:** CLEAN with 20 STRENGTHEN + 0 CLEAN + 0 FOLD + 0 REJECT across 20 Qs in 4 batches. All 20 STRENGTHEN folds landed pre-commit. Cycle 2 NOT required per Rigby explicit closure.
 
-**Chris ratified 10 items via "agree all" 2026-07-04:**
-1. F1 three-chunker regime + severity split MEDIUM-now / HIGH-blocker-for-P3
-2. F2 overlap-metadata data lie — **D2100.11 candidate** for Chris D-verdict at close; retrofill choice (a) forward-fix only vs (b) forward-fix + retrofill OPEN
-3. F3 dual-cascade paths HIGH + recommended lean (b) fold A into B; (c) UNLIKELY
-4. F4 build_rag_corpus on_warning MEDIUM + risk-class + promote-to-HIGH trigger
-5. F5-partial derivation acquitted / upstream Document.source unresolved (U1)
-6. F6 backfill dormancy reclassified LOW / incomplete-wiring (NOT drift NOT design-intent) + over-claim admission
-7. F7 EventBus MISSING dual-severity MEDIUM current / HIGH criticality-as-enabler
-8. F8 step-4 timeout derivative/contingent on F3 option choice
-9. §15 T-table +2 HIGH + 3 MEDIUM + 1 LOW + T11-into-T10' merge
-10. draft→active + commit/PR + post-merge docs cascade + `build_docs_provenance`
+**Chris ratified 10 items via "agree all" 2026-07-04** with picks (7)=(b) fold Path A into Path B + (8)=(b) forward-fix + retrofill after PROD probe + (9)=(a) de-scope backfill enum + (10)=(yes) proceed.
 
-**Headline P2 findings for P3 to build on:**
-- **Three chunkers, not two.** Parent §5.2 framed two-lane LOCAL vs PROD; audit refines to three physical chunkers: A `build_rag_corpus.chunk_text` (1200-char no-overlap → LOCAL jsonl); B `sync_docs_index_to_documents.chunk_content` (1000+200 → sync_docs DocumentEmbedding); C `content/embeddings.TextSplitter` (1000+200 semantic → async DocumentEmbedding). Two DocumentEmbedding populations coexist with different chunker provenance, no schema field records which.
-- **Overlap-metadata data lie.** 24,980 sync_docs chunks overlap semantically but persist `overlap_size=0`. Data-integrity defect surfaces as D2100.11.
-- **Dual cascade paths.** Path A `refresh_docs_corpus` scheduled daily 4 AM Denver + Path B `docs_cascade.py` MissionRunner UNSCHEDULED — architectural debt with divergent safety scaffolding.
-- **`_derive_source_type` acquitted** — defaults to `'unknown'` NOT `'api'`. Upstream `Document.source='api'` write-site trace deferred to U1.
-- **Backfill dormancy = incomplete wiring** (S2101 D5 reclassified, over-claim admission).
-- **EventBus MISSING across both paths** — cross-refs S2001 F3 SPIDER_DATA MISSING-producer.
+**Headline P3 findings for P4 to build on:**
+- **F1 seven-evidence-axes + one-meta-rule framework** (RATIFIED per D2100.8; Q3 SIGN reframed axis 8 → post-scoring meta-rule).
+- **F2 three-part conflict-resolution rule** (definitional split + precedence clarifiers + tie-break; RATIFIED per Q7 SIGN).
+- **F3 dual-cascade Chris D-verdict lean (b) fold Path A into Path B** with 3-step retirement + idempotency-acceptance-check.
+- **F4 five-meaning governance disambiguation table** (Q5/Q6/Q7/Q8-b × 5 dimensions fully populated per parent W5).
+- **F5 D2100.9 hybrid metadata contract ratified** — 9 core-required + 2 core-available + 3 profiles + 4 derivable + 5 aspirational.
+- **F6 owner assignments two-employee shape** — Rigby EXECUTE + Chief of Staff RECOMMEND; NO new AIEmployee handles.
+- **F7 five-state lifecycle model** with superseded DE-RANKED-not-EXCLUDED refinement (Q11 SIGN).
+- **F8 D2100.11 F2 retrofill Chris D-verdict lean (b) forward-fix + retrofill AFTER PROD probe** (Q13 SIGN gate).
+- **Verifier-loop discharges:** U1 root-caused (`sync_docs_index_to_documents.py:340` `source=ContentSource.IMPORTED` → monoculture); R2.9 discharged (no 4th chunker at `core/rag_integration.py`).
 
-## READ THIS FOURTH — S2103 P3 RETRIEVAL AUTHORITY FRAMEWORK + CORPUS GOVERNANCE DESIGN SCOPE
+## READ THIS FOURTH — S2104 P4 BEHAVIOR SUBSTRATE STRUCTURED OBSERVATION + INTEGRATION SCOPE
 
-Per parent scoping §5.3 + S2102 §19.1 handoff:
+Per parent scoping §5.4 + S2103 §19.1 handoff:
 
-**Scope.** Design (NOT implement) two coupled substrates: (a) a **retrieval authority FRAMEWORK** — NOT a single universal ranking — with axes and conflict-resolution rules for constructing query-appropriate authority orderings; (b) corpus governance that names owner(s) for the E↔D boundary and formalizes cascade discipline / artifact lifecycle model across five distinct governance meanings.
+**Scope.** Structured observation (Option A per W1 revision) — retrospectively review recent Rigby SIGN cycles for documented RAG-quality incidents. Classify how each affected SIGN quality. Produce qualitative "RAG quality affects SIGN quality" evidence brief. Then synthesize across P1-P3 findings and answer the central lens question. Option B (controlled experiment) parked as post-arc T-slot per §6.3.
 
-**Load-bearing questions per parent §5.3:**
-- 8-axis retrieval authority framework (D2100.8 adopted): primary vs synthesized / runtime vs research / specificity / recency / supersession / canonical status / lifecycle status + conflict-resolution rule with runtime-facts vs research-posture split
-- D2100.9 hybrid metadata contract shape: core-required set + doc-type profile
-- Governance-term disambiguation across 5 meanings (ownership / discipline / enforcement / documentation / policy)
-- Q5 superseded outranking canonical
-- Q6 draft/active/canonical/superseded/deprecated distinction
-- Q7 Rigby knows finding authoritative
-- Q8-b SHOULD-carry metadata (contract side)
+**Central lens question P4 answers:** *"Is Rigby's RAG corpus a passive document search index, or is it a governed institutional knowledge layer that can reliably shape future research, SIGN cycles, and platform decisions?"*
 
-**P3 triage list per Q18 SIGN STRENGTHEN 2026-07-04 (from S2102 §19.1):**
+**P4 triage list per S2103 §19.1 Q18 SIGN STRENGTHEN 2026-07-04:**
 
-- **P3.1 must-ship — R3.5 dual-cascade resolution** (F3 discharge). Sets the canonical path and constrains every other P3 handoff. Chris ratified recommended lean = option (b) fold A into B OR option (a) wire B + deprecate A. Option (c) retire B UNLIKELY per S1252/S1253 intent.
-- **P3.2 must-ship — R3.2 D2100.9 hybrid metadata contract.** Depends on P3.1 canonical-path decision. MUST cover `chunker_id`, `chunker_version`, `overlap_size_actual` (fix F2 by contract), upstream `Document.source` provenance carry-forward.
-- **P3.3 must-ship — R3.3 owner assignments** for §18 UNASSIGNED axes: Path A cascade, chunker regimes, `_derive_source_type`, `Document.source` write-sites, DocumentEmbedding schema, `docs/_provenance.json` writes. Discharges S1304 T8 STILL-VALID.
-- **P3.x backlog** (Chris may split into P3a/P3b or defer to post-arc):
-  - R3.1 topic doc `docs/topics/docs-ingestion-cascade.md` (S1304 T4, S2101 T4, S2102 T4 STILL-VALID)
-  - R3.4 cascade governance canonical doc (replace informal MEMORY.md rules)
-  - R3.6 backfill activation criteria (F6 discharge — de-scope OR schedule)
-  - R3.7 chunker consolidation design (F1 discharge — retire B in favor of C)
-  - R3.8 provenance-index scheduling decision (S1304 T1 + S2102 §15.4 reclassification)
+**MUST-SHIP (5 items):**
+- **R4.1 — Chunker-population correlation observation** (from P2). Test whether recent SIGN cycles that failed retrieval-quality checks correlate with hitting Chunker B (sync-cascade) or Chunker C (async) populations. If N ≥ 10 observed cases show B-vs-C imbalance, F2 elevates from MEDIUM to HIGH.
+- **R4.2 — Institutional-knowledge-layer acceptance criteria observation** per parent §5.1 criteria 2-5. Criterion 2 becomes measurable once F1 chunker regimes are documented (S2102) and F5 metadata contract lands post-arc.
+- **R4.3 — Corpus Health Score dimension additions.** Add dimensions for P3 §14 F1 axes coverage ratio, F5 metadata contract population rate, F7 lifecycle-status transition validity rate. Feeds §5.5 dimension list per D2100.10.
+- **R4.4 — D2100.7 conditional-elevation logic for freshness bounds.** P4 explicitly discharges the D2100.7 rule per Q15 SIGN STRENGTHEN 2026-07-04 at S2101 close. IF P4 finds repeated, attributable patterns where freshness bounds correlate with retrieval / decision failures AND framework provides enforceable remediation hooks → elevate from hypothesis → provisional contract. IF weak evidence → keep as hypothesis.
+- **R4.6 — Retrieval-authority framework acceptance observation** (P3-new). After post-arc T18/T19 lands, P4 observes N ≥ 10 retrieval queries with authority-provenance labels emitted; classify whether authority-ordering matches human-judged authority for each query. Feeds framework calibration (post-P4).
 
-**Delegated inheritance handoffs P3 discharges from P1/P2:**
-- S2101 R3.1 D2100.9 core-required set ratification with post-P2 chunker_id + chunker_version additions
-- S2101 R3.2 8-axis retrieval authority framework design
-- S2101 R3.3 ownership assignments per §18 UNASSIGNED axes
-- S2101 R3.4 cascade governance canonical doc
-- S2101 R3.5 provenance-index rebuild scheduling
-- S2102 R3.5 dual-cascade resolution (F3)
-- S2102 R3.6 backfill activation criteria (F6)
-- S2102 R3.7 chunker consolidation design (F1)
-- S2102 R3.8 provenance-index scheduling decision
+**BACKLOG (3 items):**
+- **R4.5 — Path A vs Path B activation observation** (WILL RUN per Chris pick (b) at S2103 close — F3 wires Path B beat via lean (b) fold Path A into Path B). Observe N ≥ 10 daily runs for escalation Deliverable dedupe accuracy + step_5 drift observation reliability.
+- **R4.7 — Artifact lifecycle-transition observation** (gated on T21 post-arc landing). After state-machine lands, P4 observes N ≥ 10 lifecycle transitions; classify whether transitions match designed rules.
+- **R4.8 — Governance-dimension mixed-mode observation** (framework methodology). Observe SIGN cycles where governance-term over-load surfaced as a drift; classify whether P3 §14 F4 disambiguation table would have prevented the drift.
 
-**D2100.11 candidate ratification path:** Chris "agree all" at S2102 close surfaced D2100.11 as F2 retrofill decision. May land as ratified D-verdict at P3 open OR as separate execution PR, whichever ships first. Options (a) forward-fix only vs (b) forward-fix + retrofill historical 24,980 sync_docs rows.
+**D2100.7 conditional-elevation logic Chris-verdict at close card:** Q15 SIGN STRENGTHEN 2026-07-04 at S2101 close established N ≥ 10 concrete observed cases threshold; P4 must produce evidence + classification for elevation decision.
 
-**Expected shape.** Playbook §11.2 20-section template (ELEVENTH-consecutive application). ~1000-1500 lines. Design-preparation authority per D2100.5 (no implementation this arc).
+**Corpus Health Score standing-metric-or-arc-artifact-only Chris-verdict** per D2100.10 deferral to P4 close: decide whether Corpus Health Score becomes standing governance metric (with dashboard + cadence + Rigby SIGN preamble surface) OR remains Group 2100 arc artifact only.
+
+**Delegated inheritance handoffs P4 discharges from P1/P2/P3:**
+- S2101 R4.1-R4.4 (knowledge-debt category incidence + acceptance criteria + Corpus Health calibration + D2100.7 conditional elevation)
+- S2102 R4.1-R4.5 (chunker correlation + acceptance criteria + Corpus Health dimensions + D2100.7 + Path A/B activation)
+- S2103 R4.1-R4.8 (all P3 handoffs — 5 must-ship + 3 backlog per Q18 SIGN triage)
+
+**Expected shape.** Playbook §11.2 20-section template (TWELFTH-consecutive application after S1301+S1401+S1501+S1601+S1701+S1801+S1901+S2001+S2101+S2102+S2103). ~1000-1500 lines. Observation shape (Option A) — retrospective structured observation across N ≥ 10 documented incidents; NOT controlled experiment.
 
 ## READ THIS FIFTH — OUTSTANDING RESIDUALS
 
 ### §7 anchor-update batch from S2099 (still queued as separate follow-up PR)
 
-Per Q4b SIGN batch-discipline attestation at S2099 close + parent §5.5 handoff: the §7 anchor-update batch is queued as a single atomic follow-up PR — NOT bundled with S2102 close per parallel-safety scope discipline. Batch scope:
+Per Q4b SIGN batch-discipline attestation at S2099 close + parent §5.5 handoff: the §7 anchor-update batch is queued as a single atomic follow-up PR — NOT bundled with S2103 close per parallel-safety scope discipline. Batch scope:
 
 - 10 per-plane topic docs
 - 1 index / overview doc
@@ -105,22 +89,27 @@ Per Q4b SIGN batch-discipline attestation at S2099 close + parent §5.5 handoff:
 - `CLAUDE.md` Detailed Breakdown row (Fleet Events)
 - `OPEN_ARCS.md` Closed section
 
-Owner: Group 2000+ residual (Claude next session or dedicated batch session). Not blocking S2103 P3 open but should land before S2199 to keep anchors current.
+Owner: Group 2000+ residual (Claude next session or dedicated batch session). Not blocking S2104 P4 open but should land before S2199 to keep anchors current.
 
-## SESSION READY CHECK (before opening S2103 P3)
+### S2103 post-arc T-slot execution queue
 
-Before writing the S2103 P3 design-preparation doc:
+Enumerated at S2103 §15 T-table + §19.3 (12 T-slots + 2 Chris-D-verdict-candidates). Track A (T13 canonical path) + Track B (T22 metadata contract enables T21/T18/T19) + independent (T20 owner PR + T23/T24/T25 docs + T-D2100.11 retrofill + T-F6 backfill retirement). All post-arc execution, NOT blocking S2104 P4.
+
+## SESSION READY CHECK (before opening S2104 P4)
+
+Before writing the S2104 P4 observation doc:
 1. `tools/pa_local.sh "platform_config_tool action=overview"` → confirm `service_context: local`
 2. Verify arc pin ownership: Rigby returns `conversation_owner_match=true` OR pa-18b095bb7c4740be appears in donkeyking's `session_tool.list_recent`
-3. Read parent scoping doc `docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md` §5.3 + §7 anti-scope + §8 ratified D-verdicts
-4. Read S2101 P1 audit §5.3 candidate lists (7-field core-required + 3 doc-type profiles + 18-field ROI-trim) + §19.2 (P3 handoffs R3.1-R3.5)
-5. Read S2102 P2 audit at `docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md` §14 (F1-F8 findings), §15 (T-table T11-T17 including T13 HIGH dual-cascade + T16 HIGH KD-2 substrate), §17 (Path A vs Path B duplicate + Chunker B/C overlap), §18 (UNASSIGNED ownership matrix), §19.1 (P3 triage list P3.1-P3.3 must-ships + backlog), §19.2 (P4 handoffs), §20.4 (U1-U6 unknowns including U6 LOCAL↔PROD comparability)
-6. Verifier-loop pre-draft:
-   - Grep for `Document.objects.create(source=` and `Document(source=` — discharge U1 upstream trace for F5
-   - Grep for `content/rag_integration.py` write-side — potential 4th chunker per R2.9 Explore 3 flag
-   - Grep for existing 5-meaning governance terminology in docs/ (ownership / discipline / enforcement / documentation / policy) to detect prior semantic drift
-   - Sample S1904 §17 posture-register format for §17.1 candidate patterns
-   - Read `core/employees/jobs.py:DOCUMENTATION_MANAGER` for R3.3 owner-assignment starting point
-7. Plan Rigby SIGN cycle 1 batching per `feedback_rigby_sign_worker_instability_recovery` — 4-5 findings per batch; expect governance-design shape to yield MORE folds than descriptive-audit shape (S2003 P3 governance-design yielded 12 folds in 4 batches)
+3. Read parent scoping doc `docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md` §5.4 + §7 anti-scope + §8 ratified D-verdicts + D2100.7 conditional-elevation rule + D2100.10 Corpus Health Score deferred-to-P4-close
+4. Read S2101 P1 audit §5.3 candidate lists + §19.3 (P4 handoffs R4.1-R4.4)
+5. Read S2102 P2 audit §14 (F1-F8 findings), §17 (Path A vs Path B + Chunker B/C overlap), §19.2 (P4 handoffs R4.1-R4.5)
+6. Read S2103 P3 audit §14 (F1-F8 design decisions), §17 (§17.1 spec-readiness register + §17.2 governance-dimension posture), §19.1 (P4 triage — 5 must-ship + 3 backlog)
+7. Enumerate recent Rigby SIGN cycles (last 5-10) with documented RAG-quality incidents — pull from OpsRun / SIGN cycle records + arc-close cards. Target N ≥ 10 concrete cases per Q6 SIGN threshold from S2101 close.
+8. Verifier-loop pre-draft:
+   - ORM probe `OpsRun.objects.filter(domain='mission', run_kind='docs_cascade').order_by('-created_at')[:30]` for Path B mission run history (if any)
+   - Grep for `[RIGBY_SIGN_*]` structured logs to identify SIGN cycle transitions
+   - Sample structured logs for `[DOCS_CORPUS_REFRESH*]` cascade events
+   - Check `AgentExecution.objects.filter(agent_key='rigby_documentation_manager').order_by('-created_at')[:30]`
+9. Plan Rigby SIGN cycle 1 batching per `feedback_rigby_sign_worker_instability_recovery` — 4-5 findings per batch; expect observation-shape to yield fewer folds than descriptive-audit or design-preparation shape (structured observation shape historically cleaner than governance-design)
 
-**S2103 P3 open command (Chris short command):** `Start research group 2103` or `Continue research group 2100` — either invokes S2103 P3 Cat C Retrieval Authority Framework + Corpus Governance Design under Group 2100 arc pin `pa-18b095bb7c4740be`.
+**S2104 P4 open command (Chris short command):** `Start research group 2104` or `Continue research group 2100` — either invokes S2104 P4 Cat D Behavior Substrate Structured Observation + Integration under Group 2100 arc pin `pa-18b095bb7c4740be`.
