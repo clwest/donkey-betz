@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T19:11:30+00:00",
+    "generated": "2026-07-05T19:56:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "c2bf0a29ee28",
-    "doc_count": 2377,
-    "commit_count": 7579,
+    "git_head": "fe2d76248847",
+    "doc_count": 2378,
+    "commit_count": 7583,
     "confidence_breakdown": {
-      "HIGH": 1559,
+      "HIGH": 1560,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2511,9 +2511,10 @@
         1800,
         2199,
         2200,
-        2203
+        2203,
+        2299
       ],
-      "commit_count": 1180,
+      "commit_count": 1182,
       "prs": [
         10,
         11,
@@ -2990,7 +2991,8 @@
         2900,
         2903,
         2904,
-        2906
+        2906,
+        2907
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7304,9 +7306,10 @@
         1800,
         2199,
         2200,
-        2203
+        2203,
+        2299
       ],
-      "commit_count": 136,
+      "commit_count": 138,
       "prs": [
         2213,
         2219,
@@ -7391,7 +7394,8 @@
         2900,
         2903,
         2904,
-        2906
+        2906,
+        2907
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18393,14 +18397,16 @@
       "originating_session": 2299,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "c2bf0a29",
+      "first_commit_sha": "be56a17d",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2299): Group 2200 Frontend (Contract-Surface Arc) Canonical Summary + Arc Close",
+      "first_commit_subject": "docs(session-2299): Group 2200 Frontend (Contract-Surface Arc) Canonical Summary + Arc Close (#2907)",
       "sessions_touched": [
         2299
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2907
+      ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33457,9 +33463,10 @@
         2202,
         2203,
         2204,
-        2299
+        2299,
+        2400
       ],
-      "commit_count": 144,
+      "commit_count": 147,
       "prs": [
         2773,
         2775,
@@ -33526,7 +33533,9 @@
         2901,
         2902,
         2904,
-        2905
+        2905,
+        2907,
+        2908
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33629,9 +33638,10 @@
         2202,
         2203,
         2204,
-        2299
+        2299,
+        2400
       ],
-      "commit_count": 139,
+      "commit_count": 142,
       "prs": [
         2773,
         2775,
@@ -33700,7 +33710,9 @@
         2901,
         2902,
         2904,
-        2905
+        2905,
+        2907,
+        2908
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33728,6 +33740,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/domains/auth/2400_auth_domain_scoping.md": {
+      "originating_session": 2400,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fe2d7624",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2400): Group 2400 Auth Domain Scoping (Arc Open) (#2908)",
+      "sessions_touched": [
+        2400
+      ],
+      "commit_count": 2,
+      "prs": [
+        2908
+      ]
     },
     "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md": {
       "originating_session": 1900,
@@ -34108,14 +34135,16 @@
       "originating_session": 2299,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "c2bf0a29",
+      "first_commit_sha": "be56a17d",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2299): Group 2200 Frontend (Contract-Surface Arc) Canonical Summary + Arc Close",
+      "first_commit_subject": "docs(session-2299): Group 2200 Frontend (Contract-Surface Arc) Canonical Summary + Arc Close (#2907)",
       "sessions_touched": [
         2299
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2907
+      ]
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
       "originating_session": 1800,
@@ -34901,8 +34930,10 @@
         1273,
         2299
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2907
+      ]
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
       "originating_session": 1275,
@@ -39550,7 +39581,7 @@
         1158,
         2299
       ],
-      "commit_count": 21,
+      "commit_count": 22,
       "prs": [
         1097,
         1101,
@@ -39561,7 +39592,8 @@
         2027,
         2036,
         2204,
-        2251
+        2251,
+        2907
       ]
     },
     "docs/topics/infrastructure.md": {
