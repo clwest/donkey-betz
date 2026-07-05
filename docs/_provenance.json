@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T00:04:32+00:00",
+    "generated": "2026-07-05T00:49:37+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "e0bb2bb309ba",
-    "doc_count": 2352,
-    "commit_count": 7534,
+    "git_head": "8dff0a669934",
+    "doc_count": 2354,
+    "commit_count": 7537,
     "confidence_breakdown": {
-      "HIGH": 1534,
+      "HIGH": 1536,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1158,
+      "commit_count": 1160,
       "prs": [
         10,
         11,
@@ -2976,7 +2976,9 @@
         2883,
         2884,
         2885,
-        2886
+        2886,
+        2887,
+        2888
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7289,7 +7291,7 @@
         1701,
         1800
       ],
-      "commit_count": 114,
+      "commit_count": 116,
       "prs": [
         2213,
         2219,
@@ -7363,7 +7365,9 @@
         2883,
         2884,
         2885,
-        2886
+        2886,
+        2887,
+        2888
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18184,6 +18188,19 @@
         2199,
         2241
       ]
+    },
+    "docs/handoffs/SESSION_2099_EVENT_INTEGRATION_ARCHITECTURE_CANONICAL_SUMMARY.md": {
+      "originating_session": 2099,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8dff0a66",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2099): Group 2000+ Event / Integration Architecture xx99 CANONICAL SUMMARY \u2014 EIGHTH formal xx99 in Research OS + EIGHTH playbook \u00a711.3 application + arc CLOSED",
+      "sessions_touched": [
+        2099
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_20_HANDOFF_OVERNIGHT_TEST.md": {
       "originating_session": 20,
@@ -33240,9 +33257,10 @@
         2001,
         2002,
         2003,
-        2004
+        2004,
+        2099
       ],
-      "commit_count": 121,
+      "commit_count": 122,
       "prs": [
         2773,
         2775,
@@ -33389,9 +33407,10 @@
         2001,
         2002,
         2003,
-        2004
+        2004,
+        2099
       ],
-      "commit_count": 116,
+      "commit_count": 117,
       "prs": [
         2773,
         2775,
@@ -33765,6 +33784,19 @@
       "prs": [
         2887
       ]
+    },
+    "docs/research/domains/event_integration_architecture/2099_event_integration_architecture_canonical_summary.md": {
+      "originating_session": 2099,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8dff0a66",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2099): Group 2000+ Event / Integration Architecture xx99 CANONICAL SUMMARY \u2014 EIGHTH formal xx99 in Research OS + EIGHTH playbook \u00a711.3 application + arc CLOSED",
+      "sessions_touched": [
+        2099
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
       "originating_session": 1800,
