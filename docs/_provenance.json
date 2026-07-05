@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T02:58:19+00:00",
+    "generated": "2026-07-05T03:42:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "fcc0a9a6567b",
-    "doc_count": 2359,
-    "commit_count": 7548,
+    "git_head": "34ce91edaa4c",
+    "doc_count": 2361,
+    "commit_count": 7552,
     "confidence_breakdown": {
-      "HIGH": 1541,
+      "HIGH": 1543,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1164,
+      "commit_count": 1166,
       "prs": [
         10,
         11,
@@ -2979,7 +2979,8 @@
         2886,
         2887,
         2888,
-        2892
+        2892,
+        2894
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7292,7 +7293,7 @@
         1701,
         1800
       ],
-      "commit_count": 120,
+      "commit_count": 122,
       "prs": [
         2213,
         2219,
@@ -7369,7 +7370,8 @@
         2886,
         2887,
         2888,
-        2892
+        2892,
+        2894
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18245,6 +18247,21 @@
       "commit_count": 2,
       "prs": [
         2893
+      ]
+    },
+    "docs/handoffs/SESSION_2103_RAG_DOCUMENT_LOADING_RETRIEVAL_AUTHORITY_FRAMEWORK_CORPUS_GOVERNANCE_DESIGN.md": {
+      "originating_session": 2103,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "34ce91ed",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2103): Group 2100 P3 Retrieval Authority FRAMEWORK + Corpus Governance Design \u2014 THIRD child audit under Group 2100 RAG / Document Loading (Knowledge Loop) arc + ELEVENTH-consecutive playbook \u00a711.2 20-section child-audit template application; Rigby SIGN cycle 1 CLEAN with 20 STRENGTHEN + 0 CLEAN + 0 FOLD + 0 REJECT across 4 batches (Q1-Q20) with all 20 folds landed pre-commit on preserved Group 2100 arc pin pa-18b095bb7c4740be; Cycle 2 NOT required per Rigby explicit closure; all 10 close-card items RATIFIED via Chris \"agree all\" 2026-07-04 with picks 7=(b) fold Path A into Path B + 8=(b) forward-fix + retrofill after PROD probe + 9=(a) de-scope backfill enum + 10=(yes) proceed (#2895)",
+      "sessions_touched": [
+        2103
+      ],
+      "commit_count": 2,
+      "prs": [
+        2895
       ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33293,9 +33310,10 @@
         2099,
         2100,
         2101,
-        2102
+        2102,
+        2103
       ],
-      "commit_count": 127,
+      "commit_count": 129,
       "prs": [
         2773,
         2775,
@@ -33354,7 +33372,8 @@
         2885,
         2887,
         2891,
-        2893
+        2893,
+        2895
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33448,9 +33467,10 @@
         2099,
         2100,
         2101,
-        2102
+        2102,
+        2103
       ],
-      "commit_count": 122,
+      "commit_count": 124,
       "prs": [
         2773,
         2775,
@@ -33511,7 +33531,8 @@
         2885,
         2887,
         2891,
-        2893
+        2893,
+        2895
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -34259,6 +34280,21 @@
       "commit_count": 2,
       "prs": [
         2893
+      ]
+    },
+    "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md": {
+      "originating_session": 2103,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "34ce91ed",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2103): Group 2100 P3 Retrieval Authority FRAMEWORK + Corpus Governance Design \u2014 THIRD child audit under Group 2100 RAG / Document Loading (Knowledge Loop) arc + ELEVENTH-consecutive playbook \u00a711.2 20-section child-audit template application; Rigby SIGN cycle 1 CLEAN with 20 STRENGTHEN + 0 CLEAN + 0 FOLD + 0 REJECT across 4 batches (Q1-Q20) with all 20 folds landed pre-commit on preserved Group 2100 arc pin pa-18b095bb7c4740be; Cycle 2 NOT required per Rigby explicit closure; all 10 close-card items RATIFIED via Chris \"agree all\" 2026-07-04 with picks 7=(b) fold Path A into Path B + 8=(b) forward-fix + retrofill after PROD probe + 9=(a) de-scope backfill enum + 10=(yes) proceed (#2895)",
+      "sessions_touched": [
+        2103
+      ],
+      "commit_count": 2,
+      "prs": [
+        2895
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
