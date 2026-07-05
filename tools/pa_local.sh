@@ -199,17 +199,27 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-# **ACTIVE at S2000 open 2026-07-04:** pa-dd7e973617da464d (Group 2000+
-# Event / Integration Architecture arc pin; minted at S2000 open via
-# session_tool.create_fresh per playbook §16 arc-open fresh-thread
-# discipline). SEVENTH formal arc under the Research OS after Groups
-# 1300/1400/1500/1600/1700/1800/1900. Chris ratified default per playbook
-# §22 at S2000 open (accepting Event / Integration Architecture over any
-# D-override — first Group 2000+ opening that consumes the default after
-# two consecutive D-overrides at S1800 HumanAttention + S1900 Authority
-# Enforcement). Inherits R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES (Group
-# 1800 T0/Gate — source_kind enum + six-plane HAI event schema +
-# record_decision/record_verification/auto_approve/auto_escalate
-# transitions) + F.SYMBOL-MAPPING-STATUS-VERIFICATION + F.PER-USER-
-# AUTHORITY-MECHANISM (Group 1900 P3 §19).
-python tools/pa_chat.py "$@" --tools --conversation pa-dd7e973617da464d
+# **ACTIVE at S2100 open 2026-07-04:** pa-18b095bb7c4740be (Group 2100
+# RAG / Document Loading arc pin — Knowledge Loop framing per Chris +
+# Claude conceptual proposal 2026-07-04, verified S1799 zero "loop"
+# framing + S1899 one finding-level "learning-loop-coupling" use, not
+# arc-frame doctrine; minted at S2100 open via session_tool.create_fresh
+# per playbook §16 arc-open fresh-thread discipline). NINTH formal arc
+# under the Research OS after Groups 1300/1400/1500/1600/1700/1800/1900/
+# 2000+. Chris D-override at S2099 close ratified RAG Document Loading
+# over playbook §22 default queue (per project_2100_plus_queue_ranking.md
+# draft with RAG elevated to #1 based on Rigby SIGN quality dependency
+# argument). Parent scoping: parallel-safe draft written pre-arc-open
+# 2026-07-04 during S2002 with W1-W3/W7/W9/W11 revisions + Claude-
+# originated §5.5 RAG Corpus Health Score addition; formal S2100 arc-
+# open flips draft → active. Inherits Group 1300 S1304 docs↔RAG
+# boundary audit findings (depth-not-territory reframe; G5 boundary-
+# unowned + T1 provenance-rebuild-cadence + T2 lru_cache staleness) +
+# Group 2000+ S2001 F3 SPIDER_DATA MISSING-producer / WEAK-consumer +
+# F9 CRITICAL dormant-consumer pattern.
+# Retired at S2099 close: pa-dd7e973617da464d (Group 2000+ Event /
+# Integration Architecture arc pin — SEVENTH formal arc; EIGHTH formal
+# arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
+# S1899/S1999; retired=true, updated_count=35, previously_active=true
+# via session_tool.retire per playbook §16 arc-close discipline).
+python tools/pa_chat.py "$@" --tools --conversation pa-18b095bb7c4740be
