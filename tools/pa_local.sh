@@ -17,25 +17,37 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 2200 arc pin
-# (Rigby create_fresh at S2200 open — carrying only mission scope,
-# no S2100 RAG / Document Loading arc turn context per playbook §16
+# the --conversation flag below. Current value: Session 2400 arc pin
+# (Rigby create_fresh at S2400 open — carrying only mission scope,
+# no S2200 Frontend Contract-Surface arc turn context per playbook §16
 # arc-open fresh-thread discipline).
-# Pin: pa-f7fd5016600f4513. Title: "Group 2200 Frontend arc pin
-# (S2200 open)". Carry-forward: mission scope only — Research Group
-# 2200 "Frontend" per Chris D-override at S2199 close 2026-07-05
-# (post-S2099 project memory queue ranking: 2200 Frontend / 2300
-# Mobile / 2400 Auth / 2500 API / 2600 PA). Scopes: React app in
-# frontend/ (~61 routes in App.tsx + Command Center + 5-tab
-# workspace + 9-tab betting dashboard) + WebSocket consumer surface
-# (~33+ consumer classes + ui.render_hint envelope adoption gaps
-# per S2003 §10.3.4 D4 + S2099 §14.3.4 unenforced) + Frontend↔
-# backend API contract inventory + boundary discipline + session-
-# scoped state management + component vs page vs layout patterns.
-# NINTH-consecutive parent-with-children arc — candidate MC-4
-# 5th-arc extension trigger per S2199 Q3 STRENGTHEN dial-back
-# ("fully generalized" removal contingent on 5th arc or materially
-# different stress condition).
+# Pin: pa-6279ead1714c4630. Title: "Group 2400 Auth arc pin
+# (S2400 open)". Carry-forward: mission scope only — Research Group
+# 2400 "Auth (Session Lifecycle + Permission Floor + Silent-401
+# Resolution)" per Chris D-override at S2299 close 2026-07-05
+# ("agree all + (6) = 2400 Auth"). Ratified over any playbook §22
+# default queue lean per highest cross-arc-handoff-frequency signal
+# (4/4 Group 2200 children reference silent-401 + logout cleanup +
+# session lifecycle + permission-floor uniformity — S2201 §14.3 +
+# §15.5 + S2202 no-drift-but-perms-floor-owned-here + S2203 §14 F3 +
+# F3.5 + S2204 §19.1 R1). Scopes (per S2400 parent scoping to be
+# ratified this session): authentication surface (token + session +
+# caller identity + ~108 PUBLIC_PATHS + STAFF_REQUIRED_PATHS +
+# REVIEWER_BLOCKED_PATHS per §3.27 platform_architecture_inventory)
+# + authorization + trust boundaries (VIP demo prompt-only + Fleet
+# permissive fallback + service tokens) + session lifecycle (token
+# refresh + cookie discipline + Clear-Site-Data + logout cleanup
+# contract + 15-surface storageKeys sweep) + frontend integration
+# (silent-401 SYSTEMIC + api.ts:48-56 + typed error envelope +
+# whitelist BRITTLE). TENTH-consecutive parent-with-children arc —
+# MC-4 dial-back-resolution 5th confirming arc candidate (Group 2400
+# Auth 4-child structure would trigger resolution of S2199 Q3
+# STRENGTHEN dial-back per §5.3 Group 2200 canonical summary).
+# ELEVENTH formal arc pin under Research OS after Groups 1300/1400/
+# 1500/1600/1700/1800/1900/2000+/2100/2200 prior ten. Health check
+# at open: platform_config_tool overview = service_context: local
+# ✓ + session_tool create_fresh = pa-6279ead1714c4630 ✓ (S2400
+# arc-open turn 1, 2026-07-05).
 #
 # **Retired at S2000 open: pa-2bd1613ce2bd4a9c** (Sessions 1900-1904 +
 # S1999 — Group 1900 Authority Enforcement Design Space research group;
@@ -198,24 +210,58 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-# **ACTIVE at S2200 open 2026-07-05:** pa-f7fd5016600f4513 (Group 2200
-# Frontend arc pin — minted at S2200 open via session_tool.create_fresh
-# per playbook §16 arc-open fresh-thread discipline). TENTH formal arc
-# under the Research OS after Groups 1300/1400/1500/1600/1700/1800/1900/
-# 2000+/2100. Chris D-override at S2199 close 2026-07-05 ratified
-# Frontend over any playbook §22 default queue lean, per post-S2099
-# project memory queue ranking (2200 Frontend / 2300 Mobile / 2400 Auth /
-# 2500 API / 2600 PA). Scopes: React app in frontend/ (~61 routes in
-# App.tsx + Command Center + 5-tab workspace + 9-tab betting dashboard) +
-# WebSocket consumer surface (~33+ consumer classes + ui.render_hint
-# envelope adoption gaps per S2003 §10.3.4 D4 + S2099 §14.3.4 unenforced) +
-# Frontend↔backend API contract inventory + boundary discipline +
-# session-scoped state management + component vs page vs layout
-# patterns. NINTH-consecutive parent-with-children arc — candidate
-# MC-4 5th-arc extension trigger per S2199 Q3 STRENGTHEN dial-back
-# ("fully generalized" removal contingent on 5th arc or materially
-# different stress condition). Health check at open: score=100
-# recommendation=continue, turn_count=1.
+# **ACTIVE at S2400 open 2026-07-05:** pa-6279ead1714c4630 (Group 2400
+# Auth arc pin — minted at S2400 open via session_tool.create_fresh
+# per playbook §16 arc-open fresh-thread discipline). ELEVENTH formal
+# arc under the Research OS after Groups 1300/1400/1500/1600/1700/1800/
+# 1900/2000+/2100/2200. Chris D-override at S2299 close 2026-07-05
+# ("agree all + (6) = 2400 Auth") ratified Auth over any playbook §22
+# default queue lean, per highest cross-arc-handoff-frequency signal
+# (4/4 Group 2200 children reference silent-401 + logout cleanup +
+# session lifecycle + permission-floor uniformity — S2201 §14.3 +
+# §15.5 + S2202 no-drift-but-perms-floor-owned-here + S2203 §14 F3 +
+# F3.5 + S2204 §19.1 R1). Load-bearing inputs: S2299 §8.2 T1 Group
+# 2400 Auth cross-arc handoff bundle + §3.27 Auth / Permissions /
+# Security prior-coverage row (LIGHT research coverage + PARTIAL
+# maturity per Rigby S1273 review; VIP demo prompt-only + Fleet
+# permissive fallback + no threat-model/trust-boundary doc). Scopes
+# (per S2400 parent scoping to be ratified this session): authentication
+# surface + authorization + trust boundaries + session lifecycle +
+# frontend integration. TENTH-consecutive parent-with-children arc —
+# MC-4 dial-back-resolution 5th confirming arc candidate (Group 2400
+# Auth 4-child structure would trigger resolution of S2199 Q3
+# STRENGTHEN dial-back per §5.3 Group 2200 canonical summary). Health
+# check at open: platform_config_tool overview = service_context: local
+# ✓ + session_tool create_fresh = pa-6279ead1714c4630 ✓ (S2400
+# arc-open turn 1).
+# **Retired at S2400 open: pa-f7fd5016600f4513** (Sessions 2200-2204 +
+# S2299 — Group 2200 Frontend (Contract-Surface Arc) research group;
+# 6-doc arc: S2200 parent + S2201 P1 Child A Routes+Pages+Layouts+
+# Component Patterns + S2202 P2 Child B WebSocket Consumer Surface +
+# ui.render_hint Envelope + S2203 P3 Child C Frontend↔Backend API
+# Contract + Boundary Discipline + S2204 P4 Child D Session-scoped
+# State Management + Persistence Discipline + S2299 xx99 canonical
+# summary; playbook §11.1 template NINTH application + §11.3 12-section
+# canonical-summary template TENTH application + §11.3 §10 meta-
+# methodology template TENTH application after S1399/S1499/S1599/S1699/
+# S1799/S1899/S1999/S2099/S2199 prior nine. Retired via session_tool.retire
+# at S2299 close per playbook §16 arc-close discipline; TENTH formal
+# arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
+# S1899/S1999/S2099/S2199. TENTH formal xx99 canonical summary in the
+# Research OS library. Runtime target 6 sessions ACHIEVED — 6/6 = 100%;
+# runtime cap 8 never invoked. Canonical seam statement: "accreted UI
+# mesh with declared-but-unenforced contracts — structurally healthy at
+# the routing / auth-wrapper / layout / Zustand-persist boundary but
+# structurally under-specified at the page-component / consumer-contract
+# / API-typing / state-discipline boundary — three of four contract-
+# surface axes SYSTEMIC with surface variance + one axis SURFACE-LOCAL
+# + DOMAIN-SPECIFIC HYBRID confined to /betting; fix path = wiring the
+# design-latent contract infrastructure through cross-arc coordination
+# with Group 2400 Auth + Group 2500 API + Group 2600 PA + Group 1700
+# Observability, not framework migration." Chris "agree all + (6) =
+# 2400 Auth" 2026-07-05 ratified all 6 close-card items wholesale —
+# including next-arc D-override = Group 2400 Auth per highest cross-
+# arc-handoff-frequency signal.)
 # Retired at S2199 close: pa-18b095bb7c4740be (Group 2100 RAG /
 # Document Loading — Knowledge Loop arc pin; NINTH formal arc;
 # NINTH formal arc-pin retirement in Research OS after S1399/S1499/
@@ -231,4 +277,4 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
-python tools/pa_chat.py "$@" --tools --conversation pa-f7fd5016600f4513
+python tools/pa_chat.py "$@" --tools --conversation pa-6279ead1714c4630
