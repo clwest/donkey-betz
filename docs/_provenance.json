@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T16:52:40+00:00",
+    "generated": "2026-07-05T17:33:06+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b8a5db0c7f86",
-    "doc_count": 2371,
-    "commit_count": 7569,
+    "git_head": "965cb2d45cc4",
+    "doc_count": 2373,
+    "commit_count": 7572,
     "confidence_breakdown": {
-      "HIGH": 1553,
+      "HIGH": 1555,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2512,7 +2512,7 @@
         2199,
         2200
       ],
-      "commit_count": 1174,
+      "commit_count": 1176,
       "prs": [
         10,
         11,
@@ -2986,7 +2986,8 @@
         2896,
         2898,
         2899,
-        2900
+        2900,
+        2903
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7301,7 +7302,7 @@
         2199,
         2200
       ],
-      "commit_count": 130,
+      "commit_count": 132,
       "prs": [
         2213,
         2219,
@@ -7383,7 +7384,8 @@
         2896,
         2898,
         2899,
-        2900
+        2900,
+        2903
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18350,6 +18352,19 @@
       "prs": [
         2902
       ]
+    },
+    "docs/handoffs/SESSION_2203_FRONTEND_API_CONTRACT_BOUNDARY_DISCIPLINE_AUDIT.md": {
+      "originating_session": 2203,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "965cb2d4",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2203): Group 2200 Cat C Frontend\u2194Backend API Contract + Boundary Discipline Audit",
+      "sessions_touched": [
+        2203
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33403,9 +33418,10 @@
         2199,
         2200,
         2201,
-        2202
+        2202,
+        2203
       ],
-      "commit_count": 139,
+      "commit_count": 140,
       "prs": [
         2773,
         2775,
@@ -33570,9 +33586,10 @@
         2199,
         2200,
         2201,
-        2202
+        2202,
+        2203
       ],
-      "commit_count": 134,
+      "commit_count": 135,
       "prs": [
         2773,
         2775,
@@ -34012,6 +34029,19 @@
       "prs": [
         2902
       ]
+    },
+    "docs/research/domains/frontend/2203_frontend_api_contract_boundary_discipline_audit.md": {
+      "originating_session": 2203,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "965cb2d4",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2203): Group 2200 Cat C Frontend\u2194Backend API Contract + Boundary Discipline Audit",
+      "sessions_touched": [
+        2203
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
       "originating_session": 1800,
