@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T03:42:08+00:00",
+    "generated": "2026-07-05T04:41:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "34ce91edaa4c",
-    "doc_count": 2361,
-    "commit_count": 7552,
+    "git_head": "8e622aa6f379",
+    "doc_count": 2363,
+    "commit_count": 7557,
     "confidence_breakdown": {
-      "HIGH": 1543,
+      "HIGH": 1545,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1166,
+      "commit_count": 1168,
       "prs": [
         10,
         11,
@@ -2980,7 +2980,8 @@
         2887,
         2888,
         2892,
-        2894
+        2894,
+        2896
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7293,7 +7294,7 @@
         1701,
         1800
       ],
-      "commit_count": 122,
+      "commit_count": 124,
       "prs": [
         2213,
         2219,
@@ -7371,7 +7372,8 @@
         2887,
         2888,
         2892,
-        2894
+        2894,
+        2896
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18262,6 +18264,21 @@
       "commit_count": 2,
       "prs": [
         2895
+      ]
+    },
+    "docs/handoffs/SESSION_2104_RAG_DOCUMENT_LOADING_BEHAVIOR_SUBSTRATE_STRUCTURED_OBSERVATION_INTEGRATION.md": {
+      "originating_session": 2104,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8e622aa6",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2104): Group 2100 P4 Behavior Substrate Structured Observation + Integration (#2897)",
+      "sessions_touched": [
+        2104
+      ],
+      "commit_count": 2,
+      "prs": [
+        2897
       ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33311,9 +33328,10 @@
         2100,
         2101,
         2102,
-        2103
+        2103,
+        2104
       ],
-      "commit_count": 129,
+      "commit_count": 131,
       "prs": [
         2773,
         2775,
@@ -33373,7 +33391,8 @@
         2887,
         2891,
         2893,
-        2895
+        2895,
+        2897
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33468,9 +33487,10 @@
         2100,
         2101,
         2102,
-        2103
+        2103,
+        2104
       ],
-      "commit_count": 124,
+      "commit_count": 126,
       "prs": [
         2773,
         2775,
@@ -33532,7 +33552,8 @@
         2887,
         2891,
         2893,
-        2895
+        2895,
+        2897
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -34295,6 +34316,21 @@
       "commit_count": 2,
       "prs": [
         2895
+      ]
+    },
+    "docs/research/domains/rag_document_loading/2104_rag_document_loading_behavior_substrate_structured_observation_integration.md": {
+      "originating_session": 2104,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "8e622aa6",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2104): Group 2100 P4 Behavior Substrate Structured Observation + Integration (#2897)",
+      "sessions_touched": [
+        2104
+      ],
+      "commit_count": 2,
+      "prs": [
+        2897
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
