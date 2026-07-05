@@ -6,7 +6,7 @@
 
 `tools/pa_chat.py:41` has `DEFAULT_BASE_URL = "http://localhost:8000"` (already local by default as of S1249 PR #2712). The `.env` file's `PA_API_TOKEN` is the **production** token — if you call `pa_chat.py` bare against local without a local-token override, you'll get 401. Always use `tools/pa_local.sh` (sets URL + local token + arc pin).
 
-**ACTIVE ARC PIN:** Group 2100 arc pin `pa-18b095bb7c4740be` is ACTIVE as of S2100 open 2026-07-04 (minted via `session_tool.create_fresh` after `pa-dd7e973617da464d` retired at S2099 close). `tools/pa_local.sh:215` dispatches into this pin. Do NOT rotate this pin during the Group 2100 arc (S2100 → S2101 → **S2102** → S2103 → S2104 → S2199) — playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails at S1999 close (guardrails-retained-but-generalized per S2099 MC-4 extension).
+**ACTIVE ARC PIN:** Group 2100 arc pin `pa-18b095bb7c4740be` is ACTIVE post-S2101 close 2026-07-04. `tools/pa_local.sh:215` dispatches into this pin. Do NOT rotate this pin during the Group 2100 arc (S2100 → S2101 → **S2102** → S2103 → S2104 → S2199) — playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails at S1999 close (guardrails-retained-but-generalized per S2099 MC-4 extension).
 
 ### The correct LOCAL invocation
 ```bash
@@ -15,72 +15,77 @@ tools/pa_local.sh "message"
 
 **Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.**
 
-## READ THIS SECOND — GROUP 2100 P0 PARENT SCOPING LANDED AT S2100; NEXT-SESSION = S2101 P1 CAT A CORPUS STATE REALITY→KNOWLEDGE GAP AUDIT
+## READ THIS SECOND — GROUP 2100 P1 CAT A CORPUS STATE AUDIT LANDED AT S2101; NEXT-SESSION = S2102 P2 INGESTION / CHUNKING / EMBEDDING PIPELINE AUDIT
 
-**Group 2100 RAG / Document Loading (Knowledge Loop) arc: S2100 parent scoping shipped → next is S2101 P1 Cat A Corpus State Reality→Knowledge Gap Audit** per parent `2100_rag_document_loading_domain_scoping.md` §5.1.
+**Group 2100 RAG / Document Loading (Knowledge Loop) arc: S2101 P1 Cat A Corpus State Reality→Knowledge Gap Audit CLOSED 2026-07-04 → next is S2102 P2 Ingestion / Chunking / Embedding Pipeline Audit** per parent scoping `2100_rag_document_loading_domain_scoping.md` §5.2.
 
-- **Active arc pin:** `pa-18b095bb7c4740be` — preserved through S2101 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails.
-- **Arc progress:** S2100 parent scoping (shipped) → S2101 P1 (next) → S2102 P2 Ingestion Pipeline → S2103 P3 Retrieval Authority Framework + Corpus Governance Design → S2104 P4 Behavior Substrate Structured Observation + Integration → S2199 xx99 canonical summary. Runtime target: 6 sessions (matches Groups 1900 + 2000+ shape).
+- **Active arc pin:** `pa-18b095bb7c4740be` — preserved through S2102 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails.
+- **Arc progress:** S2100 parent scoping (shipped) → S2101 P1 (shipped this session) → **S2102 P2 (next)** → S2103 P3 Retrieval Authority Framework + Corpus Governance Design → S2104 P4 Behavior Substrate Structured Observation + Integration → S2199 xx99 canonical summary. Runtime target: 6 sessions on track.
 
-## READ THIS THIRD — S2100 PARENT SCOPING FRAMING + RATIFICATION STATE
+## READ THIS THIRD — S2101 P1 SHIP STATE
 
-Parent scoping doc: `docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md` (~1400+ lines post-SIGN-fold; `status: active`).
+**P1 audit doc:** `docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md` (~1521 lines post-fold; `status: active` post-Rigby-SIGN + post-Chris-ratification).
 
-**Arc frame (Chris + Claude conceptual, NOT inherited canonical doctrine — verified S1799 zero "loop" mentions + S1899 one finding-level "learning-loop-coupling" use, not arc-frame doctrine):**
-- Group 1700 = execution / observability lens (retro-fitted)
-- Group 1800 = human feedback / learning lens (retro-fitted; partial S1899 finding-level support)
-- **Group 2100 = knowledge lens (proposed)** — how does validated research / code / doc knowledge become operational memory that improves Rigby's future behavior?
+**SIGN cycle 1 result:** CLEAN with 14 STRENGTHEN + 2 CLEAN + 0 FOLD + 0 REJECT across 16 Qs in 4 batches. All 14 STRENGTHEN folds landed pre-commit.
 
-Loop-closure rubric: *Execution Loop = execution signals feed ops governance; Learning Loop = human feedback feeds preference/skill updates; Knowledge Loop = corpus governance feeds retrieval behavior + decisions.*
+**Chris ratified 10 items via "agree all" 2026-07-04:**
+1. F1 `source_type='api'` monoculture + S1304 D3 carry-forward
+2. F2 metadata population asymmetry as working hypothesis (P2 discharges)
+3. D1a/D1b silent-drop split (LOW instance / MEDIUM pattern)
+4. KD-1..KD-7 knowledge-debt taxonomy
+5. 7-field core-required metadata contract (added `provenance_axis` per Q13 SIGN)
+6. 3 doc-type profiles (A research artifact / B handoff / C topic doc)
+7. 4 derivable-at-ingest + 5 aspirational-deferred (Chris's 18-field ROI-trim)
+8. Partial S1304 re-attestation + §15.2.1 explicit non-re-attest enumeration
+9. R4.4 conditional-elevation logic for D2100.7 (N≥10 threshold; P4 tests)
+10. draft→active + commit/PR + post-merge docs cascade + `build_docs_provenance`
 
-**Reality → Research → Knowledge → Behavior conceptual model** — arc audits Research → Knowledge and Knowledge → Behavior transitions.
+**Headline P1 findings for P2 to build on:**
+- LOCAL corpus materially complete but semantically thin. All 2908 Documents embedded (0 orphans, 51789 chunks, avg 17.81/doc, p50=11 p95=47 p99=169 max=443, 29 outliers > p99).
+- Institutional-knowledge-layer acceptance criteria: 1/5 MET (embed coverage); 2-5 not evaluable from static snapshot.
+- F1 `source_type='api'` monoculture — S1304 D3 consumer alive but discriminative axis lost at write time.
+- F2 metadata population asymmetry — 48.2% chunks empty metadata (correlates to `ingested_via='sync_docs'` path).
+- F3 build_docs_index silent-drop of 5 template files (D1a instance / D1b MEDIUM silent-drop-telemetry pattern).
+- F4 `build_docs_provenance` unscheduled (S1304 T1 STILL-VALID; 0 periodic tasks match `provenance`).
+- F5 Documentation Manager scope covers cascade execution/verification/escalation but NOT schema/retrieval semantics/authority framework.
 
-**Central lens question (maturity form per Q3 SIGN fold):** *"Where on the spectrum from passive index → governed institutional knowledge layer does Rigby's corpus currently sit, and what contracts (authority / freshness / governance / behavior) are required to reach the next maturity tier?"* Institutional-knowledge-layer defined with 5 falsifiable acceptance criteria per §1 preamble.
+## READ THIS FOURTH — S2102 P2 INGESTION / CHUNKING / EMBEDDING PIPELINE AUDIT SCOPE
 
-**Load-bearing hypothesis (D2100.7 conditional elevation rule per Q12 SIGN fold):** "RAG freshness bounds SIGN quality" is a hypothesis. Group 2100 P4 delivers Option A structured observation (retrospective incident review, N ≥ 10 cases per Q6 SIGN fold). If P4 finds repeated attributable patterns with enforceable remediation hooks → elevate hypothesis → provisional contract. If weak → keep as hypothesis.
+Per parent scoping §5.2 + P1 handoff §19.1:
 
-**D-verdicts (all 10 RATIFIED or EXECUTED as of 2026-07-04):**
-- D2100.1a [B] Scope lock (RATIFIED via Chris "agree all")
-- D2100.1b [NB] Framing adoption with Q1-fold disclaimer (RATIFIED)
-- D2100.2 [B] 4-child + xx99 taxonomy Option (b) (RATIFIED)
-- D2100.3 Arc pin mint (EXECUTED — pa-18b095bb7c4740be)
-- D2100.4 Rigby SIGN cycle 1 (EXECUTED — 9 STRENGTHEN + 3 CLEAN + 0 FOLD + 0 REJECT)
-- D2100.5 Design-preparation authority only (RATIFIED via Chris directive point 9)
-- D2100.6 Central lens question with Q3-fold maturity form (RATIFIED)
-- D2100.7 Hypothesis + Q12-fold conditional elevation (RATIFIED)
-- D2100.8 [B for P3 close] 8-axis retrieval authority framework adoption (RATIFIED IN PRINCIPLE)
-- D2100.9 [B for P1 close] Hybrid metadata contract shape (RATIFIED)
-- D2100.10 [NB] Health Score as standing governance metric (DEFERRED to P4 close; revisit S2199)
-
-## READ THIS FOURTH — S2101 P1 CAT A CORPUS STATE REALITY→KNOWLEDGE GAP AUDIT SCOPE
-
-Per parent §5.1:
-
-**Scope.** Audit the current state of the RAG corpus. What documents exist on disk (Reality), what's in the Document table (Research → institutional record), what's embedded and retrievable (Knowledge), and where the gaps are.
+**Scope.** Audit the ingestion cascade end-to-end. `build_docs_index` → `build_rag_corpus` → `sync_docs_index_to_documents [--embed]` → `embed_documents`. Plus the two-lane structure (LOCAL keyword vs PROD pgvector) and chunking strategy analysis.
 
 **Load-bearing questions:**
-- Corpus state gap matrix: on-disk → `docs/_index.json` → `.rag/corpus.jsonl` → `Document` rows → `DocumentEmbedding` rows deltas per cascade step
-- Q1 (redistributed per W7): How do we know every closed research artifact is embedded?
-- Q4: How do we detect missing embeddings after cascade PRs?
-- Q8-a: What metadata EXISTS in `DocumentEmbedding` schema today? (P3 designs SHOULD-carry contract.)
-- 18-field metadata ROI-trim (schema-present / derivable at ingest / requires frontmatter / research-artifact-specific)
-- Fatal-if-missing categorization (per D2100.9 hybrid contract): core required + doc-type profile
+- Chunking / lanes / cadence — LOCAL fixed 1200-char vs PROD configurable semantic; two-lane synchronization contract enforced or aspirational?
+- Embedding cadence + refresh triggers — what triggers re-embedding? Content-change detection? File mtime? Content hash? None?
+- Embedding-model migration — what happens when `embedding_model` changes?
+- Chunking version tagging — do chunks carry `chunking_version` metadata?
+- Q3 (redistributed per W7) — How do we detect stale embeddings after docs change?
+- Cascade mechanism — document flow as mechanism reference, not just command list; where does each step succeed silently / fail silently / log?
+- Doc/content hashing substrate — what fields exist in schema today? What's required for automatic stale-detection?
 
-**Belongs-to boundary rule (per Q5 SIGN fold):** P1 deliverable = gap matrix + metadata inventory (static snapshot) with high-level "likely cause" tags only — does NOT explain causality beyond brief hypotheses (that's P2's job).
+**Handoffs P2 discharges from P1:**
+- R2.1 — Publish `docs/topics/docs-ingestion-cascade.md` (S1304 T4)
+- R2.2 — Two-lane chunking-strategy audit (10.66 vs 17.81 chunks/doc divergence)
+- R2.3 — `content_hash` propagation to chunk-time (KD-2 detection substrate)
+- R2.4 — `source_type` monoculture root-cause (audit `content/embeddings.py:45-63` `_derive_source_type`)
+- R2.5 — Discharge S1399 §19 R1 for `ingested_via` (full-tree read-side sweep; wire consumer OR deprecate)
+- R2.6 — Cascade EventBus emission design (cross-ref S2001 F3 SPIDER_DATA MISSING-producer)
 
-**Expected shape.** ~700-1000 lines. 20-section playbook §11.2 template child-audit shape. Ships: Reality→Knowledge gap matrix + metadata inventory table + knowledge-debt classification framework + core-required metadata contract candidate list.
+**Delegated inheritance:**
+- S1304 G3 `lru_cache(1)` staleness (T2 HIGH — STILL-VALID per S2101 §20.1)
+- S1304 §14 D7 `ingested_via` orphan — write-site full-tree recheck
+- S2001 F3 SPIDER_DATA WEAK consumer — spider-data → embedding path under-specification
+- S2001 F9 dormant-consumer risk pattern — backfill beat dormancy check
+- P1 KD-2 (stale-embed-post-content-change) — measurable only with P2 hash substrate
 
-**Inherits from prior work:**
-- S1304 §14 D7 `DocumentEmbedding.ingested_via` orphan claim — full-tree recheck routed via S1399 §19 R1
-- S1304 §15 T1 provenance-index rebuild cadence — freshness inventory side
-- MEMORY.md `feedback_cascade_pr_must_include_embed_step` — informalize S1802 6-unembedded-docs incident as knowledge-debt sample
-- Group 2000+ S2001 F3 SPIDER_DATA MISSING-producer / WEAK-consumer
+**Expected shape.** ~800-1100 lines. Ships: cascade flow diagram + lane-divergence matrix + chunking strategy tradeoff analysis + embedding cadence proposed design.
 
 ## READ THIS FIFTH — OUTSTANDING RESIDUALS
 
-### §7 anchor-update batch from S2099 (queued as separate follow-up PR)
+### §7 anchor-update batch from S2099 (still queued as separate follow-up PR)
 
-Per Q4b SIGN batch-discipline attestation at S2099 close + parent §5.5 handoff: the §7 anchor-update batch is queued as a single atomic follow-up PR — NOT bundled with S2100 arc-open per parallel-safety scope discipline. Batch scope:
+Per Q4b SIGN batch-discipline attestation at S2099 close + parent §5.5 handoff: the §7 anchor-update batch is queued as a single atomic follow-up PR — NOT bundled with S2101 close per parallel-safety scope discipline. Batch scope:
 
 - 10 per-plane topic docs
 - 1 index / overview doc
@@ -91,15 +96,20 @@ Per Q4b SIGN batch-discipline attestation at S2099 close + parent §5.5 handoff:
 - `CLAUDE.md` Detailed Breakdown row (Fleet Events)
 - `OPEN_ARCS.md` Closed section
 
-Owner: Group 2000+ residual (Claude next session or dedicated batch session). Not blocking S2101 P1 open but should land before S2199 to keep anchors current.
+Owner: Group 2000+ residual (Claude next session or dedicated batch session). Not blocking S2102 P2 open but should land before S2199 to keep anchors current.
 
-## SESSION READY CHECK (before opening S2101 P1)
+## SESSION READY CHECK (before opening S2102 P2)
 
-Before writing the S2101 P1 audit:
+Before writing the S2102 P2 audit:
 1. `tools/pa_local.sh "platform_config_tool action=overview"` → confirm `service_context: local`
 2. Verify arc pin ownership: Rigby returns `conversation_owner_match=true`
-3. Read parent scoping doc `docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md` §5.1 + §7 anti-scope + §8 ratified D-verdicts
-4. Read S1304 boundary audit `docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md` for depth/lens starting inventory
-5. Verifier-loop pre-draft: sample corpus row counts via ORM (`Document.objects.count()`, `DocumentEmbedding.objects.count()`); list latest 20 files under `docs/` + check embedded state for each; validate S1304 findings still hold (grep `lru_cache(1)` at `_load_provenance_docs`, check `AIEmployee` handles for docs owner, check beat schedule for embedding periodic tasks)
+3. Read parent scoping doc `docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md` §5.2 + §7 anti-scope + §8 ratified D-verdicts
+4. Read S2101 P1 audit at `docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md` §14 (Known Drift), §15 (Known Technical Debt), §19.1 (P2 handoffs R2.1-R2.6)
+5. Verifier-loop pre-draft:
+   - grep `build_docs_index` + `build_rag_corpus` + `sync_docs_index_to_documents` + `embed_documents` command source; sample each cascade command's docstring + arg surface
+   - grep `content/embeddings.py:45-63` `_derive_source_type` for `source_type` write-site derivation logic
+   - grep all three `ingested_via=` write-sites: `sync_docs_index_to_documents.py:394`, `core/tasks_agents.py:4223/4290/4351`, `content/embeddings.py:654/753`
+   - sample `refresh_docs_corpus` task body for cascade orchestration mechanism
+   - measure chunking divergence: sample chunk sizes in `.rag/corpus.jsonl` vs `DocumentEmbedding.chunk_size`
 
-**S2101 P1 open command (Chris short command):** `Start research group 2101` or `Continue research group 2100` — either invokes S2101 P1 Cat A Corpus State Reality→Knowledge Gap Audit under Group 2100 arc pin `pa-18b095bb7c4740be`.
+**S2102 P2 open command (Chris short command):** `Start research group 2102` or `Continue research group 2100` — either invokes S2102 P2 Cat B Ingestion / Chunking / Embedding Pipeline Audit under Group 2100 arc pin `pa-18b095bb7c4740be`.
