@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T02:03:42+00:00",
+    "generated": "2026-07-05T02:58:19+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f91f078146a7",
-    "doc_count": 2357,
-    "commit_count": 7544,
+    "git_head": "fcc0a9a6567b",
+    "doc_count": 2359,
+    "commit_count": 7548,
     "confidence_breakdown": {
-      "HIGH": 1539,
+      "HIGH": 1541,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1162,
+      "commit_count": 1164,
       "prs": [
         10,
         11,
@@ -2978,7 +2978,8 @@
         2885,
         2886,
         2887,
-        2888
+        2888,
+        2892
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7291,7 +7292,7 @@
         1701,
         1800
       ],
-      "commit_count": 118,
+      "commit_count": 120,
       "prs": [
         2213,
         2219,
@@ -7367,7 +7368,8 @@
         2885,
         2886,
         2887,
-        2888
+        2888,
+        2892
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18228,6 +18230,21 @@
       "commit_count": 2,
       "prs": [
         2891
+      ]
+    },
+    "docs/handoffs/SESSION_2102_RAG_DOCUMENT_LOADING_INGESTION_CHUNKING_EMBEDDING_PIPELINE_AUDIT.md": {
+      "originating_session": 2102,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fcc0a9a6",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2102): Group 2100 P2 Ingestion / Chunking / Embedding Pipeline Audit \u2014 SECOND child audit under Group 2100 RAG / Document Loading (Knowledge Loop) arc + TENTH-consecutive playbook \u00a711.2 20-section child-audit template application; Rigby SIGN cycle 1 CLEAN with 20 STRENGTHEN + 0 CLEAN + 0 FOLD + 0 REJECT across 4 batches (Q1-Q20) with all 20 folds landed pre-commit on preserved Group 2100 arc pin pa-18b095bb7c4740be; Cycle 2 NOT required per Rigby explicit closure; all 10 close-card items RATIFIED via Chris \"agree all\" 2026-07-04 (#2893)",
+      "sessions_touched": [
+        2102
+      ],
+      "commit_count": 2,
+      "prs": [
+        2893
       ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33275,9 +33292,10 @@
         2004,
         2099,
         2100,
-        2101
+        2101,
+        2102
       ],
-      "commit_count": 125,
+      "commit_count": 127,
       "prs": [
         2773,
         2775,
@@ -33335,7 +33353,8 @@
         2883,
         2885,
         2887,
-        2891
+        2891,
+        2893
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33428,9 +33447,10 @@
         2004,
         2099,
         2100,
-        2101
+        2101,
+        2102
       ],
-      "commit_count": 120,
+      "commit_count": 122,
       "prs": [
         2773,
         2775,
@@ -33490,7 +33510,8 @@
         2883,
         2885,
         2887,
-        2891
+        2891,
+        2893
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -34223,6 +34244,21 @@
       "commit_count": 2,
       "prs": [
         2891
+      ]
+    },
+    "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md": {
+      "originating_session": 2102,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fcc0a9a6",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2102): Group 2100 P2 Ingestion / Chunking / Embedding Pipeline Audit \u2014 SECOND child audit under Group 2100 RAG / Document Loading (Knowledge Loop) arc + TENTH-consecutive playbook \u00a711.2 20-section child-audit template application; Rigby SIGN cycle 1 CLEAN with 20 STRENGTHEN + 0 CLEAN + 0 FOLD + 0 REJECT across 4 batches (Q1-Q20) with all 20 folds landed pre-commit on preserved Group 2100 arc pin pa-18b095bb7c4740be; Cycle 2 NOT required per Rigby explicit closure; all 10 close-card items RATIFIED via Chris \"agree all\" 2026-07-04 (#2893)",
+      "sessions_touched": [
+        2102
+      ],
+      "commit_count": 2,
+      "prs": [
+        2893
       ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
