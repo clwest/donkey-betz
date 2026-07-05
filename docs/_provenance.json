@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-05T14:55:57+00:00",
+    "generated": "2026-07-05T15:34:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "5d16a662d0d5",
-    "doc_count": 2365,
-    "commit_count": 7559,
+    "git_head": "c7583d15a445",
+    "doc_count": 2367,
+    "commit_count": 7563,
     "confidence_breakdown": {
-      "HIGH": 1545,
+      "HIGH": 1549,
       "MEDIUM": 351,
-      "LOW": 5,
+      "LOW": 3,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -2508,9 +2508,10 @@
         1601,
         1700,
         1701,
-        1800
+        1800,
+        2199
       ],
-      "commit_count": 1170,
+      "commit_count": 1172,
       "prs": [
         10,
         11,
@@ -2982,7 +2983,8 @@
         2892,
         2894,
         2896,
-        2898
+        2898,
+        2899
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7293,9 +7295,10 @@
         1601,
         1700,
         1701,
-        1800
+        1800,
+        2199
       ],
-      "commit_count": 126,
+      "commit_count": 128,
       "prs": [
         2213,
         2219,
@@ -7375,7 +7378,8 @@
         2892,
         2894,
         2896,
-        2898
+        2898,
+        2899
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18285,15 +18289,30 @@
     },
     "docs/handoffs/SESSION_2199_RAG_DOCUMENT_LOADING_CANONICAL_SUMMARY.md": {
       "originating_session": 2199,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "268dbe26",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2199): Group 2100 xx99 Canonical Summary for RAG / Document Loading (Knowledge Loop) (#2899)",
       "sessions_touched": [
         2199
       ],
-      "commit_count": 0,
+      "commit_count": 2,
+      "prs": [
+        2899
+      ]
+    },
+    "docs/handoffs/SESSION_2200_FRONTEND_DOMAIN_SCOPING.md": {
+      "originating_session": 2200,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c7583d15",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2200): Group 2200 Frontend (Contract-Surface Arc) \u2014 S2200 parent scoping under new Group 2200 arc + NINTH-consecutive playbook \u00a711.1 20-section parent-scoping template application; Rigby SIGN cycle 1 SIGN-with-edits at High confidence with 4 batches \u00d7 3 questions = 12 total Q + 11 folds landed pre-commit (Q1-Q3 STRENGTHEN framing+rubric + Q4-Q5 STRENGTHEN child scope + Q6 CLEAN-with-micro-fold + Q7-Q9 STRENGTHEN anti-scope+cross-arc + Q10 STRENGTHEN timebox+sampling + Q11 FOLD arithmetic correction: Group 2200 = 4th 4-child arc NOT 5th per \u00a74 table + Q12 SIGN-with-edits verdict) via dedicated SIGN pin pa-7e056489aecf4b7e (retired at cycle close via session_tool.retire updated_count=5); Cycle 2 NOT required; Chris \"agree all\" 2026-07-05 ratified 4-item close card wholesale (11 SIGN folds accepted + Q11 arithmetic downgrade MC-4 dial-back deferred to Group 2300+ + arc-open cascade + commit-gate); arc pin pa-f7fd5016600f4513 minted at S2200 open via session_tool.create_fresh per playbook \u00a716 arc-open fresh-thread discipline TENTH formal arc pin; prior pa-18b095bb7c4740be retired at S2199 close NINTH formal arc-pin retirement; ARCHITECTURE_INDEX v76 \u2192 v77 with \u00a71.80 registration; OPEN_ARCS Group 2100 In-progress \u2192 Closed row transition + Group 2200 In-progress row added; MC-2 CODIFICATION-CONFIRMED extended 41 \u2192 42 (D48 43rd arm CLEAN) + MC-3 CODIFICATION-CONFIRMED extended 8 \u2192 9 (NINTH-consecutive \u00a711.1 application) + MC-4 4th-arc confirmation extended 3 \u2192 4 (dial-back resolution deferred to Group 2300+); central lens question Chris-locked verbatim \"Is the frontend a governed contract surface with disciplined data flow, or an accreted UI mesh where routes / consumers / state / API calls have grown without a shared boundary policy?\"; 4-children shape Chris-locked (A/B/C/D with P5 folded into A); 6 acceptance criteria (Q3 fold added 6th failure-mode); \u00a77.1 5-vector scope guardrails (Q7+Q9); S1505 findings HYPOTHESIS reframe + 4 falsifier criteria (Q8); per-surface reporting constraint (Q1); timebox + sampling rule (Q10); T0/Gate as decision + measurement gate (Q2/Q5/Q8); Child E spin-out trigger (Q4); B1/B2 sub-axes (Q5); render-authority split for Groups 1300/1600/1800 (Q9); runtime target 6 sessions ready to run \u2014 1 of 6 shipped",
+      "sessions_touched": [
+        2200
+      ],
+      "commit_count": 1,
       "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33344,9 +33363,11 @@
         2101,
         2102,
         2103,
-        2104
+        2104,
+        2199,
+        2200
       ],
-      "commit_count": 131,
+      "commit_count": 134,
       "prs": [
         2773,
         2775,
@@ -33407,7 +33428,8 @@
         2891,
         2893,
         2895,
-        2897
+        2897,
+        2899
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33503,9 +33525,11 @@
         2101,
         2102,
         2103,
-        2104
+        2104,
+        2199,
+        2200
       ],
-      "commit_count": 126,
+      "commit_count": 129,
       "prs": [
         2773,
         2775,
@@ -33568,7 +33592,8 @@
         2891,
         2893,
         2895,
-        2897
+        2897,
+        2899
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33893,6 +33918,19 @@
       "first_commit_subject": "docs(session-2099): Group 2000+ Event / Integration Architecture xx99 CANONICAL SUMMARY \u2014 EIGHTH formal xx99 in Research OS + EIGHTH playbook \u00a711.3 application + arc CLOSED",
       "sessions_touched": [
         2099
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/domains/frontend/2200_frontend_domain_scoping.md": {
+      "originating_session": 2200,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c7583d15",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2200): Group 2200 Frontend (Contract-Surface Arc) \u2014 S2200 parent scoping under new Group 2200 arc + NINTH-consecutive playbook \u00a711.1 20-section parent-scoping template application; Rigby SIGN cycle 1 SIGN-with-edits at High confidence with 4 batches \u00d7 3 questions = 12 total Q + 11 folds landed pre-commit (Q1-Q3 STRENGTHEN framing+rubric + Q4-Q5 STRENGTHEN child scope + Q6 CLEAN-with-micro-fold + Q7-Q9 STRENGTHEN anti-scope+cross-arc + Q10 STRENGTHEN timebox+sampling + Q11 FOLD arithmetic correction: Group 2200 = 4th 4-child arc NOT 5th per \u00a74 table + Q12 SIGN-with-edits verdict) via dedicated SIGN pin pa-7e056489aecf4b7e (retired at cycle close via session_tool.retire updated_count=5); Cycle 2 NOT required; Chris \"agree all\" 2026-07-05 ratified 4-item close card wholesale (11 SIGN folds accepted + Q11 arithmetic downgrade MC-4 dial-back deferred to Group 2300+ + arc-open cascade + commit-gate); arc pin pa-f7fd5016600f4513 minted at S2200 open via session_tool.create_fresh per playbook \u00a716 arc-open fresh-thread discipline TENTH formal arc pin; prior pa-18b095bb7c4740be retired at S2199 close NINTH formal arc-pin retirement; ARCHITECTURE_INDEX v76 \u2192 v77 with \u00a71.80 registration; OPEN_ARCS Group 2100 In-progress \u2192 Closed row transition + Group 2200 In-progress row added; MC-2 CODIFICATION-CONFIRMED extended 41 \u2192 42 (D48 43rd arm CLEAN) + MC-3 CODIFICATION-CONFIRMED extended 8 \u2192 9 (NINTH-consecutive \u00a711.1 application) + MC-4 4th-arc confirmation extended 3 \u2192 4 (dial-back resolution deferred to Group 2300+); central lens question Chris-locked verbatim \"Is the frontend a governed contract surface with disciplined data flow, or an accreted UI mesh where routes / consumers / state / API calls have grown without a shared boundary policy?\"; 4-children shape Chris-locked (A/B/C/D with P5 folded into A); 6 acceptance criteria (Q3 fold added 6th failure-mode); \u00a77.1 5-vector scope guardrails (Q7+Q9); S1505 findings HYPOTHESIS reframe + 4 falsifier criteria (Q8); per-surface reporting constraint (Q1); timebox + sampling rule (Q10); T0/Gate as decision + measurement gate (Q2/Q5/Q8); Child E spin-out trigger (Q4); B1/B2 sub-axes (Q5); render-authority split for Groups 1300/1600/1800 (Q9); runtime target 6 sessions ready to run \u2014 1 of 6 shipped",
+      "sessions_touched": [
+        2200
       ],
       "commit_count": 1,
       "prs": []
@@ -34350,16 +34388,18 @@
     },
     "docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md": {
       "originating_session": 2199,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "268dbe26",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2199): Group 2100 xx99 Canonical Summary for RAG / Document Loading (Knowledge Loop) (#2899)",
       "sessions_touched": [
         2199
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2899
+      ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
       "originating_session": 1400,

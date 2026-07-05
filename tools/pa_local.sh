@@ -17,26 +17,25 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 2000 arc pin
-# (Rigby create_fresh at S2000 open — carrying only mission scope,
-# no S1900 Authority Enforcement arc turn context per playbook §16
+# the --conversation flag below. Current value: Session 2200 arc pin
+# (Rigby create_fresh at S2200 open — carrying only mission scope,
+# no S2100 RAG / Document Loading arc turn context per playbook §16
 # arc-open fresh-thread discipline).
-# Pin: pa-dd7e973617da464d. Title: "Session 2000 — Group 2000+
-# Event / Integration Architecture parent scoping". Carry-forward:
-# mission scope only — Research Group 2000+ "Event / Integration
-# Architecture" per Chris ratification 2026-07-04 of playbook §22
-# default queue lean at S2000 open (accepting default over any
-# D-override — first Group 2000+ opening that consumes the default
-# after two consecutive D-overrides at S1800 HumanAttention +
-# S1900 Authority Enforcement). Rationale: playbook §22 default
-# queue lean + inherits R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES
-# (Group 1800 T0/Gate — source_kind enum + six-plane HAI event-
-# emission gap) + F.SYMBOL-MAPPING-STATUS-VERIFICATION (Group 1900
-# P3 §19) + F.PER-USER-AUTHORITY-MECHANISM (Group 1900 P3 §19).
-# Scopes: event bus / routing / schema versioning + HAI event
-# schema (record_decision + record_verification + auto_approve +
-# auto_escalate transitions) + six-plane learning-surface event-
-# emission coverage.
+# Pin: pa-f7fd5016600f4513. Title: "Group 2200 Frontend arc pin
+# (S2200 open)". Carry-forward: mission scope only — Research Group
+# 2200 "Frontend" per Chris D-override at S2199 close 2026-07-05
+# (post-S2099 project memory queue ranking: 2200 Frontend / 2300
+# Mobile / 2400 Auth / 2500 API / 2600 PA). Scopes: React app in
+# frontend/ (~61 routes in App.tsx + Command Center + 5-tab
+# workspace + 9-tab betting dashboard) + WebSocket consumer surface
+# (~33+ consumer classes + ui.render_hint envelope adoption gaps
+# per S2003 §10.3.4 D4 + S2099 §14.3.4 unenforced) + Frontend↔
+# backend API contract inventory + boundary discipline + session-
+# scoped state management + component vs page vs layout patterns.
+# NINTH-consecutive parent-with-children arc — candidate MC-4
+# 5th-arc extension trigger per S2199 Q3 STRENGTHEN dial-back
+# ("fully generalized" removal contingent on 5th arc or materially
+# different stress condition).
 #
 # **Retired at S2000 open: pa-2bd1613ce2bd4a9c** (Sessions 1900-1904 +
 # S1999 — Group 1900 Authority Enforcement Design Space research group;
@@ -199,27 +198,37 @@
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
 export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
-# **ACTIVE at S2100 open 2026-07-04:** pa-18b095bb7c4740be (Group 2100
-# RAG / Document Loading arc pin — Knowledge Loop framing per Chris +
-# Claude conceptual proposal 2026-07-04, verified S1799 zero "loop"
-# framing + S1899 one finding-level "learning-loop-coupling" use, not
-# arc-frame doctrine; minted at S2100 open via session_tool.create_fresh
-# per playbook §16 arc-open fresh-thread discipline). NINTH formal arc
+# **ACTIVE at S2200 open 2026-07-05:** pa-f7fd5016600f4513 (Group 2200
+# Frontend arc pin — minted at S2200 open via session_tool.create_fresh
+# per playbook §16 arc-open fresh-thread discipline). TENTH formal arc
 # under the Research OS after Groups 1300/1400/1500/1600/1700/1800/1900/
-# 2000+. Chris D-override at S2099 close ratified RAG Document Loading
-# over playbook §22 default queue (per project_2100_plus_queue_ranking.md
-# draft with RAG elevated to #1 based on Rigby SIGN quality dependency
-# argument). Parent scoping: parallel-safe draft written pre-arc-open
-# 2026-07-04 during S2002 with W1-W3/W7/W9/W11 revisions + Claude-
-# originated §5.5 RAG Corpus Health Score addition; formal S2100 arc-
-# open flips draft → active. Inherits Group 1300 S1304 docs↔RAG
-# boundary audit findings (depth-not-territory reframe; G5 boundary-
-# unowned + T1 provenance-rebuild-cadence + T2 lru_cache staleness) +
-# Group 2000+ S2001 F3 SPIDER_DATA MISSING-producer / WEAK-consumer +
-# F9 CRITICAL dormant-consumer pattern.
+# 2000+/2100. Chris D-override at S2199 close 2026-07-05 ratified
+# Frontend over any playbook §22 default queue lean, per post-S2099
+# project memory queue ranking (2200 Frontend / 2300 Mobile / 2400 Auth /
+# 2500 API / 2600 PA). Scopes: React app in frontend/ (~61 routes in
+# App.tsx + Command Center + 5-tab workspace + 9-tab betting dashboard) +
+# WebSocket consumer surface (~33+ consumer classes + ui.render_hint
+# envelope adoption gaps per S2003 §10.3.4 D4 + S2099 §14.3.4 unenforced) +
+# Frontend↔backend API contract inventory + boundary discipline +
+# session-scoped state management + component vs page vs layout
+# patterns. NINTH-consecutive parent-with-children arc — candidate
+# MC-4 5th-arc extension trigger per S2199 Q3 STRENGTHEN dial-back
+# ("fully generalized" removal contingent on 5th arc or materially
+# different stress condition). Health check at open: score=100
+# recommendation=continue, turn_count=1.
+# Retired at S2199 close: pa-18b095bb7c4740be (Group 2100 RAG /
+# Document Loading — Knowledge Loop arc pin; NINTH formal arc;
+# NINTH formal arc-pin retirement in Research OS after S1399/S1499/
+# S1599/S1699/S1799/S1899/S1999/S2099; retired via session_tool.retire
+# per playbook §16 arc-close discipline. 6-doc arc: S2100 parent +
+# S2101 P1 Corpus State + S2102 P2 Ingestion Pipeline + S2103 P3
+# Retrieval Authority Framework + Governance Design + S2104 P4
+# Behavior Substrate Structured Observation + Integration + S2199
+# xx99 canonical summary. NINTH xx99 canonical summary in the Research
+# OS library. Runtime target 6 sessions ACHIEVED — 6/6 = 100%.)
 # Retired at S2099 close: pa-dd7e973617da464d (Group 2000+ Event /
 # Integration Architecture arc pin — SEVENTH formal arc; EIGHTH formal
 # arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
-python tools/pa_chat.py "$@" --tools --conversation pa-18b095bb7c4740be
+python tools/pa_chat.py "$@" --tools --conversation pa-f7fd5016600f4513
