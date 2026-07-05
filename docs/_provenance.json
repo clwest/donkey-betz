@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T18:22:54+00:00",
+    "generated": "2026-07-05T19:11:30+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "545a637d4077",
-    "doc_count": 2375,
-    "commit_count": 7576,
+    "git_head": "c2bf0a29ee28",
+    "doc_count": 2377,
+    "commit_count": 7579,
     "confidence_breakdown": {
-      "HIGH": 1557,
+      "HIGH": 1559,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2513,7 +2513,7 @@
         2200,
         2203
       ],
-      "commit_count": 1178,
+      "commit_count": 1180,
       "prs": [
         10,
         11,
@@ -2989,7 +2989,8 @@
         2899,
         2900,
         2903,
-        2904
+        2904,
+        2906
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7305,7 +7306,7 @@
         2200,
         2203
       ],
-      "commit_count": 134,
+      "commit_count": 136,
       "prs": [
         2213,
         2219,
@@ -7389,7 +7390,8 @@
         2899,
         2900,
         2903,
-        2904
+        2904,
+        2906
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18386,6 +18388,19 @@
       "prs": [
         2905
       ]
+    },
+    "docs/handoffs/SESSION_2299_FRONTEND_CANONICAL_SUMMARY.md": {
+      "originating_session": 2299,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c2bf0a29",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2299): Group 2200 Frontend (Contract-Surface Arc) Canonical Summary + Arc Close",
+      "sessions_touched": [
+        2299
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33441,9 +33456,10 @@
         2201,
         2202,
         2203,
-        2204
+        2204,
+        2299
       ],
-      "commit_count": 143,
+      "commit_count": 144,
       "prs": [
         2773,
         2775,
@@ -33612,9 +33628,10 @@
         2201,
         2202,
         2203,
-        2204
+        2204,
+        2299
       ],
-      "commit_count": 138,
+      "commit_count": 139,
       "prs": [
         2773,
         2775,
@@ -34086,6 +34103,19 @@
       "prs": [
         2905
       ]
+    },
+    "docs/research/domains/frontend/2299_frontend_canonical_summary.md": {
+      "originating_session": 2299,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c2bf0a29",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2299): Group 2200 Frontend (Contract-Surface Arc) Canonical Summary + Arc Close",
+      "sessions_touched": [
+        2299
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
       "originating_session": 1800,
@@ -34868,9 +34898,10 @@
       "first_commit_date": "2026-07-01",
       "first_commit_subject": "docs(session-1273): research whole-platform architecture inventory; register in ARCHITECTURE_INDEX (v5)",
       "sessions_touched": [
-        1273
+        1273,
+        2299
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
@@ -39516,9 +39547,10 @@
         1115,
         1143,
         1157,
-        1158
+        1158,
+        2299
       ],
-      "commit_count": 20,
+      "commit_count": 21,
       "prs": [
         1097,
         1101,
