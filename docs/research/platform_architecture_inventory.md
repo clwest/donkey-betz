@@ -225,7 +225,7 @@ where known.
 | 15 | Documentation / Research Knowledge System | `docs/` corpus + `verify_doc_claims` registry + `_index.json` + research library | STABLE | CANONICAL |
 | 16 | Human Interface / HumanAttention | `HumanAttentionItem` decision surface; 8-state lifecycle; verification loop (S746) | WORKING | MODERATE |
 | 17 | Inbox / Messaging / Notifications | `MessageThread` + `DirectMessage`; 3 notification systems (Web Push, Expo, Discord) | WORKING | MODERATE |
-| 18 | Frontend / Workspace UI | React + Vite; 61 routes; 5-tab workspace (S1100); Command Center "Now" Hub (S931) | STABLE | DEEP |
+| 18 | Frontend / Workspace UI | React + Vite; 61 routes; 5-tab workspace (S1100); Command Center "Now" Hub (S931). **Group 2200 Frontend (Contract-Surface Arc) closed at S2299** — 6-session arc + canonical seam statement + 6-pattern §4 cross-cutting-patterns rollup. **DOWNGRADED per S2201 §20.6 Chris-ratified 2026-07-05 at S2299 close** — routing + layout STABLE at both sub-axes but contract discipline (tests + typed API + boundaries + ownership) blocks STABLE at whole-frontend anchor level. See `docs/research/domains/frontend/2299_frontend_canonical_summary.md`. | WORKING | MEDIUM |
 | 19 | Mobile App | Expo scaffolding; `MobilePushToken` + `expo_push.py`; UI unknown | PARTIAL | LIGHT |
 | 20 | Discord Bot | 96 commands / 48 slash + 48 prefix / 25 Cog classes in single 11,676-line file | WORKING | MODERATE |
 | 21 | Voice / Avatar Surfaces | ElevenLabs TTS (prod), Runway (prod for image→video), HeyGen F2F (stub) | PARTIAL | LIGHT |
