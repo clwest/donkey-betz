@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-05T19:56:59+00:00",
+    "generated": "2026-07-05T20:58:18+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "fe2d76248847",
-    "doc_count": 2378,
-    "commit_count": 7583,
+    "git_head": "5104f949cb32",
+    "doc_count": 2381,
+    "commit_count": 7587,
     "confidence_breakdown": {
-      "HIGH": 1560,
-      "MEDIUM": 351,
+      "HIGH": 1562,
+      "MEDIUM": 352,
       "LOW": 3,
       "UNKNOWN": 464
     },
@@ -2514,7 +2514,7 @@
         2203,
         2299
       ],
-      "commit_count": 1182,
+      "commit_count": 1184,
       "prs": [
         10,
         11,
@@ -2992,7 +2992,8 @@
         2903,
         2904,
         2906,
-        2907
+        2907,
+        2909
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7309,7 +7310,7 @@
         2203,
         2299
       ],
-      "commit_count": 138,
+      "commit_count": 140,
       "prs": [
         2213,
         2219,
@@ -7395,7 +7396,8 @@
         2903,
         2904,
         2906,
-        2907
+        2907,
+        2909
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18406,6 +18408,37 @@
       "commit_count": 2,
       "prs": [
         2907
+      ]
+    },
+    "docs/handoffs/SESSION_2400_AUTH_PARENT_SCOPING.md": {
+      "originating_session": 2400,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "798399ec",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs: refresh docs cascade artifacts after S2400 open (#2909)",
+      "sessions_touched": [
+        2400
+      ],
+      "commit_count": 2,
+      "prs": [
+        2909
+      ]
+    },
+    "docs/handoffs/SESSION_2401_AUTH_P1_CAT_A.md": {
+      "originating_session": 2401,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "5104f949",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2401): Group 2400 Cat A Authentication Surface + Trust Boundaries Audit (#2910)",
+      "sessions_touched": [
+        1171,
+        2401
+      ],
+      "commit_count": 2,
+      "prs": [
+        2910
       ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33389,6 +33422,7 @@
         862,
         990,
         1077,
+        1171,
         1268,
         1269,
         1271,
@@ -33464,9 +33498,10 @@
         2203,
         2204,
         2299,
-        2400
+        2400,
+        2401
       ],
-      "commit_count": 147,
+      "commit_count": 149,
       "prs": [
         2773,
         2775,
@@ -33535,7 +33570,8 @@
         2904,
         2905,
         2907,
-        2908
+        2908,
+        2910
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33569,6 +33605,7 @@
         862,
         990,
         1077,
+        1171,
         1275,
         1276,
         1300,
@@ -33639,9 +33676,10 @@
         2203,
         2204,
         2299,
-        2400
+        2400,
+        2401
       ],
-      "commit_count": 142,
+      "commit_count": 144,
       "prs": [
         2773,
         2775,
@@ -33712,7 +33750,8 @@
         2904,
         2905,
         2907,
-        2908
+        2908,
+        2910
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33754,6 +33793,22 @@
       "commit_count": 2,
       "prs": [
         2908
+      ]
+    },
+    "docs/research/domains/auth/2401_authentication_surface_trust_boundaries_audit.md": {
+      "originating_session": 1171,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "5104f949",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2401): Group 2400 Cat A Authentication Surface + Trust Boundaries Audit (#2910)",
+      "sessions_touched": [
+        1171,
+        2401
+      ],
+      "commit_count": 2,
+      "prs": [
+        2910
       ]
     },
     "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md": {
