@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-04T22:50:35+00:00",
+    "generated": "2026-07-05T00:04:32+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a638a0bea56d",
-    "doc_count": 2350,
-    "commit_count": 7530,
+    "git_head": "e0bb2bb309ba",
+    "doc_count": 2352,
+    "commit_count": 7534,
     "confidence_breakdown": {
-      "HIGH": 1532,
+      "HIGH": 1534,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1156,
+      "commit_count": 1158,
       "prs": [
         10,
         11,
@@ -2974,7 +2974,9 @@
         2881,
         2882,
         2883,
-        2884
+        2884,
+        2885,
+        2886
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7287,7 +7289,7 @@
         1701,
         1800
       ],
-      "commit_count": 112,
+      "commit_count": 114,
       "prs": [
         2213,
         2219,
@@ -7359,7 +7361,9 @@
         2881,
         2882,
         2883,
-        2884
+        2884,
+        2885,
+        2886
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18122,6 +18126,21 @@
       "commit_count": 2,
       "prs": [
         2885
+      ]
+    },
+    "docs/handoffs/SESSION_2004_EVENT_INTEGRATION_ARCHITECTURE_P4_CAT_F_ADJACENT_SEPARATION_BOUNDARIES.md": {
+      "originating_session": 2004,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "e0bb2bb3",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2004): Group 2000+ P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION child audit \u2014 FOURTH child under Group 2000+ + EIGHTEENTH-consecutive playbook \u00a711.2 20-section application + THIRD-consecutive CONSOLIDATION shape under Research OS after S1806 + S1904 (#2887)",
+      "sessions_touched": [
+        2004
+      ],
+      "commit_count": 2,
+      "prs": [
+        2887
       ]
     },
     "docs/handoffs/SESSION_206_DASHBOARDS_SPIDERS_FEATURES.md": {
@@ -33220,9 +33239,10 @@
         2000,
         2001,
         2002,
-        2003
+        2003,
+        2004
       ],
-      "commit_count": 119,
+      "commit_count": 121,
       "prs": [
         2773,
         2775,
@@ -33278,7 +33298,8 @@
         2879,
         2881,
         2883,
-        2885
+        2885,
+        2887
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33367,9 +33388,10 @@
         2000,
         2001,
         2002,
-        2003
+        2003,
+        2004
       ],
-      "commit_count": 114,
+      "commit_count": 116,
       "prs": [
         2773,
         2775,
@@ -33427,7 +33449,8 @@
         2879,
         2881,
         2883,
-        2885
+        2885,
+        2887
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33726,6 +33749,21 @@
       "commit_count": 2,
       "prs": [
         2885
+      ]
+    },
+    "docs/research/domains/event_integration_architecture/2004_event_integration_architecture_cat_f_adjacent_separation_boundaries_child_audit.md": {
+      "originating_session": 2004,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "e0bb2bb3",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2004): Group 2000+ P4 Cat F Adjacent / Separation Boundaries CONSOLIDATION child audit \u2014 FOURTH child under Group 2000+ + EIGHTEENTH-consecutive playbook \u00a711.2 20-section application + THIRD-consecutive CONSOLIDATION shape under Research OS after S1806 + S1904 (#2887)",
+      "sessions_touched": [
+        2004
+      ],
+      "commit_count": 2,
+      "prs": [
+        2887
       ]
     },
     "docs/research/domains/human_attention/1800_human_attention_domain_scoping.md": {
