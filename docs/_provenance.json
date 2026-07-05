@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-05T04:41:08+00:00",
+    "generated": "2026-07-05T14:55:57+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8e622aa6f379",
-    "doc_count": 2363,
-    "commit_count": 7557,
+    "git_head": "5d16a662d0d5",
+    "doc_count": 2365,
+    "commit_count": 7559,
     "confidence_breakdown": {
       "HIGH": 1545,
       "MEDIUM": 351,
-      "LOW": 3,
+      "LOW": 5,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1168,
+      "commit_count": 1170,
       "prs": [
         10,
         11,
@@ -2981,7 +2981,8 @@
         2888,
         2892,
         2894,
-        2896
+        2896,
+        2898
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7294,7 +7295,7 @@
         1701,
         1800
       ],
-      "commit_count": 124,
+      "commit_count": 126,
       "prs": [
         2213,
         2219,
@@ -7373,7 +7374,8 @@
         2888,
         2892,
         2894,
-        2896
+        2896,
+        2898
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18280,6 +18282,19 @@
       "prs": [
         2897
       ]
+    },
+    "docs/handoffs/SESSION_2199_RAG_DOCUMENT_LOADING_CANONICAL_SUMMARY.md": {
+      "originating_session": 2199,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2199
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -34332,6 +34347,19 @@
       "prs": [
         2897
       ]
+    },
+    "docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md": {
+      "originating_session": 2199,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2199
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
       "originating_session": 1400,
