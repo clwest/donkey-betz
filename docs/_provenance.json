@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T01:21:10+00:00",
+    "generated": "2026-07-05T02:03:42+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "1268ce6df25c",
-    "doc_count": 2355,
-    "commit_count": 7540,
+    "git_head": "f91f078146a7",
+    "doc_count": 2357,
+    "commit_count": 7544,
     "confidence_breakdown": {
-      "HIGH": 1537,
+      "HIGH": 1539,
       "MEDIUM": 351,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2510,7 +2510,7 @@
         1701,
         1800
       ],
-      "commit_count": 1161,
+      "commit_count": 1162,
       "prs": [
         10,
         11,
@@ -7291,7 +7291,7 @@
         1701,
         1800
       ],
-      "commit_count": 117,
+      "commit_count": 118,
       "prs": [
         2213,
         2219,
@@ -18214,6 +18214,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/handoffs/SESSION_2101_RAG_DOCUMENT_LOADING_CORPUS_STATE_REALITY_KNOWLEDGE_GAP_AUDIT.md": {
+      "originating_session": 2101,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f91f0781",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2101): Group 2100 P1 Cat A Corpus State Reality\u2192Knowledge Gap Audit \u2014 FIRST child audit under Group 2100 RAG / Document Loading (Knowledge Loop) arc + NINTH-consecutive playbook \u00a711.2 20-section child-audit template application; Rigby SIGN cycle 1 CLEAN with 14 STRENGTHEN + 2 CLEAN + 0 FOLD + 0 REJECT across 4 batches (Q1-Q16) with 14 folds landed pre-commit on preserved Group 2100 arc pin pa-18b095bb7c4740be; all 10 close-card items RATIFIED via Chris \"agree all\" 2026-07-04 (#2891)",
+      "sessions_touched": [
+        2101
+      ],
+      "commit_count": 2,
+      "prs": [
+        2891
+      ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33259,9 +33274,10 @@
         2003,
         2004,
         2099,
-        2100
+        2100,
+        2101
       ],
-      "commit_count": 123,
+      "commit_count": 125,
       "prs": [
         2773,
         2775,
@@ -33318,7 +33334,8 @@
         2881,
         2883,
         2885,
-        2887
+        2887,
+        2891
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33410,9 +33427,10 @@
         2003,
         2004,
         2099,
-        2100
+        2100,
+        2101
       ],
-      "commit_count": 118,
+      "commit_count": 120,
       "prs": [
         2773,
         2775,
@@ -33471,7 +33489,8 @@
         2881,
         2883,
         2885,
-        2887
+        2887,
+        2891
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -34190,6 +34209,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md": {
+      "originating_session": 2101,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "f91f0781",
+      "first_commit_date": "2026-07-04",
+      "first_commit_subject": "docs(session-2101): Group 2100 P1 Cat A Corpus State Reality\u2192Knowledge Gap Audit \u2014 FIRST child audit under Group 2100 RAG / Document Loading (Knowledge Loop) arc + NINTH-consecutive playbook \u00a711.2 20-section child-audit template application; Rigby SIGN cycle 1 CLEAN with 14 STRENGTHEN + 2 CLEAN + 0 FOLD + 0 REJECT across 4 batches (Q1-Q16) with 14 folds landed pre-commit on preserved Group 2100 arc pin pa-18b095bb7c4740be; all 10 close-card items RATIFIED via Chris \"agree all\" 2026-07-04 (#2891)",
+      "sessions_touched": [
+        2101
+      ],
+      "commit_count": 2,
+      "prs": [
+        2891
+      ]
     },
     "docs/research/domains/revenue/1400_revenue_domain_scoping.md": {
       "originating_session": 1400,
