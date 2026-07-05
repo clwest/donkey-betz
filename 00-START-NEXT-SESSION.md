@@ -2,155 +2,171 @@
 
 ---
 
-## READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP + S2403 CLOSED + S2404 CAT D QUEUED
+## READ THIS FIRST — LOCAL vs PRODUCTION RIGBY TRAP + S2404 CLOSED + S2499 XX99 QUEUED
 
 `tools/pa_chat.py:41` has `DEFAULT_BASE_URL = "http://localhost:8000"` (already local by default as of S1249 PR #2712). The `.env` file's `PA_API_TOKEN` is the **production** token — if you call `pa_chat.py` bare against local without a local-token override, you'll get 401. Always use `tools/pa_local.sh` (sets URL + local token).
 
-**S2403 GROUP 2400 AUTH P3 CAT C CHILD AUDIT COMMITTED AT 2026-07-05.** Group 2400 Auth arc pin `pa-6279ead1714c4630` PRESERVED through S2403 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails (MC-14 CANDIDATE-threshold-satisfied extended to 4-arc-stages via Group 2200 + Group 2400 Cat A + Cat B + Cat C = 4 confirming arc-stages). `tools/pa_local.sh:280` unchanged. S2403 SIGN pin `pa-5096f5fc07754b18` retired at child-audit SIGN cycle 1 close (FOURTEENTH consecutive dedicated fresh SIGN pin retirement — 10 xx99 + 1 parent-scoping-light-SIGN + Cat A + Cat B + this cycle).
+**S2404 GROUP 2400 AUTH P4 CAT D CHILD AUDIT COMMITTED AT 2026-07-05.** Group 2400 Auth arc pin `pa-6279ead1714c4630` PRESERVED through S2404 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails (MC-14 CANDIDATE-threshold-satisfied extended to 5-arc-stages via Group 2200 + Group 2400 Cat A + Cat B + Cat C + Cat D = 5 confirming arc-stages). `tools/pa_local.sh:280` restored to arc pin post-SIGN cycle 1 close. S2404 SIGN pin `pa-015448e962ad4038` retired at child-audit SIGN cycle 1 close (FIFTEENTH consecutive dedicated fresh SIGN pin retirement — 10 xx99 + 1 parent-scoping-light-SIGN + Cat A + Cat B + Cat C + this cycle).
 
 ### The correct LOCAL invocation
 ```bash
 tools/pa_local.sh "message"
 ```
 
-**Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.** Pin ownership already verified as chris at S2401 open (conversation_owner_match=true) — Cat A + Cat B + Cat C preserved pin, so verification carries forward.
+**Before your first `pa_local.sh` call each session, ask Rigby to run `platform_config_tool overview` and confirm `service_context: local`.** Pin ownership already verified as chris at S2401 open (conversation_owner_match=true) — Cat A + Cat B + Cat C + Cat D preserved pin, so verification carries forward.
 
-## READ THIS SECOND — GROUP 2400 AUTH ARC IN-PROGRESS (4 OF 6 SHIPPED); NEXT = S2404 P4 CAT D FRONTEND INTEGRATION + SILENT-401 SYSTEMIC RESOLUTION
+## READ THIS SECOND — GROUP 2400 AUTH ARC IN-PROGRESS (5 OF 6 SHIPPED); NEXT = S2499 P5 XX99 CANONICAL SUMMARY
 
-**Group 2400 Auth: S2403 P3 Cat C CLOSED 2026-07-05.** Chris "commit it" 2026-07-05 ratified 32-fold SIGN-with-edits wholesale at MED-HIGH confidence (~0.82; HIGHER than Cat A 0.74 + Cat B ~0.8); status flipped `draft` → `active`. EIGHTEENTH-consecutive application of playbook §11.2 20-section child-audit template per S2402 handoff.
+**Group 2400 Auth: S2404 P4 Cat D CLOSED 2026-07-05.** Chris "commit it" 2026-07-05 ratified 12-fold SIGN-with-edits wholesale at MED-HIGH confidence (~0.80-0.85; HIGHEST Group 2400 child confidence to date exceeding Cat A 0.74 + Cat B ~0.8 + Cat C ~0.82); status flipped `draft` → `active`. NINETEENTH-consecutive application of playbook §11.2 20-section child-audit template per S2403 handoff.
 
 - **Arc pin PRESERVED:** `pa-6279ead1714c4630` per playbook §16 arc-standard behavior (retirement at S2499 close)
-- **SIGN pin RETIRED:** `pa-5096f5fc07754b18` at S2403 SIGN cycle 1 close (updated_count=4)
-- **Arc progress:** S2400 parent scoping (shipped) + S2401 P1 Cat A (shipped) + S2402 P2 Cat B (shipped) + S2403 P3 Cat C (shipped) → **S2404 P4 Cat D Frontend Integration + Silent-401 SYSTEMIC Resolution (NEXT)** → S2499 xx99. Runtime target 6 sessions — **4 of 6 shipped**; runtime cap 8.
-- **MC-4 dial-back-resolution 5th confirming arc candidate** — Group 2400 4-child structure post-S2403 close continues MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails momentum toward across-5-consecutive-arcs, resolving S2199 Q3 STRENGTHEN dial-back at S2499 close.
+- **SIGN pin RETIRED:** `pa-015448e962ad4038` at S2404 SIGN cycle 1 close (updated_count=6)
+- **Arc progress:** S2400 parent scoping (shipped) + S2401 P1 Cat A (shipped) + S2402 P2 Cat B (shipped) + S2403 P3 Cat C (shipped) + S2404 P4 Cat D (shipped) → **S2499 P5 xx99 canonical summary (NEXT)**. Runtime target 6 sessions — **5 of 6 shipped**; runtime cap 8.
+- **MC-4 dial-back-resolution 5th confirming arc RESOLUTION CANDIDATE at S2499 close** — Group 2400 Auth 4-child structure completes MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails across-5-consecutive-arcs (1900+2000++2100+2200+2400), resolving S2199 Q3 STRENGTHEN dial-back at S2499 close per §5.3 Group 2200 canonical summary. Auth was materially different in scope (full auth stack, not a single UI surface family) — 5th-arc extension IS a validated stress test.
 
-## READ THIS THIRD — S2403 CAT C LOAD-BEARING INPUTS FOR S2404 CAT D
+## READ THIS THIRD — S2404 CAT D LOAD-BEARING INPUTS FOR S2499 XX99
 
-**S2403 7 headline findings (post-Rigby-SIGN-fold ranking; 4 HIGH + 3 non-HIGH):**
+**S2404 11 headline Cat D findings (6 HIGH + 5 non-HIGH):**
 
-- **F-C-VIP-1 HIGH** (declared-fictional class) — `VIPInvite.account_expires_at` (14d) NOT ENFORCED at runtime; HEAD-verified via `views_vip_invite.py:85-163` + `invite.is_valid` at `models_vip_invite.py:95-103` checks ONLY `token_expires_at`; response body returns `account_expires_at.isoformat()` at `:161` (server tells client an expiry it will NEVER enforce). Risk-gating prerequisite for shipping any α/β/γ expiry-signal-bearing UX.
-- **F-C-REFRESH-1 HIGH** (contract-absent class) — No session-token refresh endpoint; grep zero-match for auth-surface refresh in `core/urls.py` (3 `refresh` matches all non-auth). Combined with Cat A F-TOKEN-1: implicit contract "token permanent absent password event."
-- **F-C-CSD-1 HIGH** (contract-absent class) — Zero Clear-Site-Data header emission on logout at HEAD `8bc1b0c0`. Neither `logout_view` (`auth_views.py:84-94`) nor `logout_enhanced_view` (`auth_views_enhanced.py:539-556`) sets the header.
-- **F-C-STORE-1 HIGH** (silent-swallow aggregate + contract-absent per-surface) — 14 of 15 client-side persistence surfaces lack DECLARED logout-cleanup contract. S2204 §14 F1 15-surface baseline PRESERVED at HEAD (zero delta). Declared cleanup rate 1/15 = 6.7%.
-- **F-C-COOKIE-1 LOW-MED** (contract-absent class; documentary gap only) — `SESSION_COOKIE_DOMAIN` + `SESSION_COOKIE_PATH` + `CSRF_COOKIE_DOMAIN` NOT declared. Django defaults correct at HEAD.
-- **F-C-LOGOUT-1 MED** (silent-swallow class) — Basic logout (`auth_views.py:84-94`) has NO permission decorator; silent 200 on unauth. Enhanced fixes with `@permission_classes([IsAuthenticated])` at `:540`.
-- **F-C-COCKPIT-1 MED** (silent-swallow bounded) — Cockpit two-stage MINOR-DRIFT re-verified STILL-LIVE at HEAD `frontend/src/App.tsx:134-149` (16 `/cockpit/*` `<Navigate>` NOT wrapped by `ProtectedRoute`).
+- **F-D-CALL-1 HIGH** (technical_debt / silent-degrade) — 803 consumer call-sites at HEAD `31398008` (57 direct api.<verb>() + 667 useQuery/useMutation + 79 raw fetch bypass); ~99% silent-swallow rate via api.ts:48-56 console.warn-only path; extends S2203 A3 ~630 baseline via verifier-loop-resolved denominator.
+- **F-D-BYPASS-1 HIGH** (boundary_violation / silent-degrade) — 79 raw fetch() across 31 files bypass api.ts interceptor entirely (9.8% of consumer surface); no token attach, no 401 catch, no observability. Notable: LiveMetricsDashboard.tsx:94 uses `fetch('/api/platform/live-metrics/', {credentials:'include'})`.
+- **F-D-SIDEBAR-1 HIGH** (missing_connection / silent-degrade NEW BEYOND CAT C) — `Sidebar.tsx:356` onClick clears authStore + syncUser(null) + Zustand persist localStorage clear, but does NOT invoke `authApi.logout()`. Backend `authtoken_token` DB row never deleted via sidebar path. Combined with F-C-REFRESH-1 (no refresh endpoint) + Cat A F-DEC-1 (no expiry): attacker-valid window on leaked token = indefinite.
+- **F-D-ENVELOPE-1 HIGH** (missing_connection / silent-degrade) — Grep verified 0 `AxiosError|axios.isAxiosError` matches across `frontend/src/`. Typed-error-envelope adoption is greenfield.
+- **F-D-BOUNDARY-1 HIGH** (missing_connection / silent-degrade) — Grep verified 0 error boundaries anywhere (S2201 §15.5 CONFIRMED-STILL-LIVE at HEAD).
+- **F-D-PA-1 HIGH** (technical_debt / silent-degrade; Rigby Q10 fold escalated MED→HIGH) — PA-chat endpoints (`/pa/chat/`, `/pa/chat/status/`, `/pa/conversations/`) do NOT match whitelist substring. 401 mid-conversation = silent reject. PA UI enters undefined state (looks like agent-hang).
+- **F-D-WHITELIST-1 MED** (drift / silent-degrade) — Extends S2203 §14 F3.5 BRITTLE substring; 0 false-positives at HEAD but scales badly.
+- **F-D-OWN-1 MED** (unclear_owner / **governance NON-silent-degrade**) — CODEOWNERS file absent at `.github/`, root, `docs/`. HEAD-verified.
+- **F-D-OWN-2 MED** (unclear_owner / **governance NON-silent-degrade**) — No CI test-harness for silent-401 rate observability. Extends F-B-OWN-6.
+- **F-D-EVENT-1 MED** (event_gap / silent-degrade) — Zero auth-event emission on any observability channel; `console.warn` only signal is browser-side.
+- **F-D-COCKPIT-1 MED** (drift / silent-degrade + ownership-drift-risk flag per Rigby Q19 fold) — 16 cockpit `<Navigate>` at `frontend/src/App.tsx:134-149` NOT wrapped by ProtectedRoute STILL-LIVE at HEAD.
 
-**§14.2 15-surface storageKeys × logout-cleanup CONTRACT table** — 1 CLEAN (`auth-storage` functional-null-state) + 3 PARTIAL + 11 NO-CLEANUP; 8 of 15 surfaces have MED+ cross-user leakage severity.
+**§14.1 silent-degrade class rate (Rigby Q5 fold):** 17 of 19 findings (89.5%) silent-degrade class. 2 governance findings F-D-OWN-1 + F-D-OWN-2 explicitly named as non-silent-degrade. **Q20 fold TRIGGER #2 CONFIRMED** (Cat C 92.9% + Cat D 89.5% both above codification threshold). Tightened codification claim: silent-degrade dominance across Cat C + Cat D exceeds §20 dual-trigger threshold; promote to v3 candidate focused on **auth failure handling (401/403/refresh/logout)** with explicit UX + telemetry requirements — scope-bounded to auth plane.
 
-**§14.3 21-loci lifecycle-observability rate table extension** — 5 WORKING + 5 PARTIAL + 11 DEAD; blocker to acceptance criterion #4 (session-lifecycle discipline undeclared at more than half of observable surfaces).
+**§14.5 803-call-site classification by inheritance-path** — 57 direct + 667 hook + 79 raw fetch; 724 interceptor-routed (90.2%) + 79 bypass (9.8%); ~99% silent-swallow rate at HEAD.
 
-**7 cross-arc coordination flags emitted** (CF-C1 → Group 2500 API refresh + logout envelope + Clear-Site-Data + CF-C2 → Group 2600 PA workspace-context + session_tool retire on user logout + CF-C3 → Group 1700 Observability lifecycle transition observability single tracking unit with sub-bullets; explicitly extends Cat A CF-2 + Cat B CF-B5 for xx99 §5.4 Observability umbrella roll-up + CF-C4 → Group 2300 Mobile MobilePushToken revoked_at cascade + CF-C5 → Group 2200 Frontend R1/R5/R6 execution + CF-C6 → Cat D S2404 silent-401 + typed-error envelope alignment + CF-C7 → Group 1900 Governance KillSwitch attestation on logout boundary preserved).
+**7 cross-arc coordination flags emitted (CF-D1 → CF-D7)** — CF-D1 Group 2500 API (refresh + envelope + CSD + typed-error + registry) + CF-D2 Group 2600 PA (retire cascade + workspace-context + PA-chat exposure) + CF-D3 Group 1700 Observability (umbrella roll-up extends Cat A CF-2 + Cat B CF-B5 + Cat C CF-C3; adds silent-401 rate + `authHandling: 'suppress_redirect'` telemetry per Rigby Q7 fold) + CF-D4 Group 2300 Mobile + CF-D5 Group 2200 R6 error-boundary framework ⚠ **BLOCKING PREREQUISITE for option-γ** (Rigby Q18 fold) + CF-D6 Group 1900 (KillSwitch preservation) + CF-D7 Group 2400 Auth internal xx99 α/β/γ × 2 intersection with Cat C α/β/γ.
 
-**Cat C recommendation lean for xx99 Chris D-verdict:** Option **(β) explicit-re-login** as PROPOSED PRIMARY DEFAULT for REMEDIATION WINDOW (compatible with F-TOKEN-1 baseline; no refresh endpoint required; user-visible = observable; compatible with Cat D typed-error-envelope work) + Option **(α) silent-refresh** and Option **(γ) hybrid** as post-arc ENHANCEMENT candidates.
+**§19.1 typed-error-envelope decision space (α/β/γ):** Cat D proposes **Option (γ) React-Query error callbacks + top-level ErrorBoundary** as PROPOSED PRIMARY DEFAULT (γ = mechanism; Cat C β "explicit re-login" = message/UX policy nested inside γ per Rigby Q6 fold). Handler MUST distinguish 401/403 vs network/offline vs 5xx (Rigby Q9 fold). Copy MUST avoid time-based "expired" until F-C-VIP-1 resolves (use "Sign-in required" preserving Cat C risk-gate).
 
-**Cat C emerging weak-spot pattern (Q20 fold):** **silent-degrade vs explicit-failure ambiguity on session-lifecycle plane** — playbook §20 codification candidate at S2499 xx99 close. Distinct from Cat B denominator-ambiguity (Cat B = measurement/metrics; Cat C = runtime UX/telemetry). 13-of-14 Cat C findings are silent-degrade class. **Two-trigger rule:** Cat C = TRIGGER #1; Cat D likely surfaces TRIGGER #2 in silent-401 SYSTEMIC audit (F-C-CSD-1 + F-C-STORE-1 + F-C-TAB-1 all point to Cat D's frontend caller surface).
+**§19.1 whitelist-replacement decision space (α/β/γ × 2 second axis):** Cat D proposes **Option (γ) per-api-module `authHandling: 'default' | 'suppress_redirect'` string enum** (Rigby Q7 fold — NOT boolean; harder to misuse) + telemetry event on every `suppress_redirect` use.
 
-**S2404 Cat D inherits from Cat A + Cat B + Cat C:** Cat A §7 runtime-flow-per-caller-class + §14.5 trust-boundary rate table + Cat B §14 F-B-CRIT-2 silent-401 SYSTEMIC (necessary-enabling-condition downstream of F-B-CRIT-1) + Cat B §14.5 21-loci permission-floor rate table + §19.1 three-option decision space precedent (a/b/c) + Cat C §14.2 15-surface storageKeys × logout-cleanup CONTRACT table + §14.3 21-loci lifecycle-observability rate table + §19.1 three-option decision space (α/β/γ) + F-C-VIP-1 risk-gating constraint + emerging weak-spot Q20 fold silent-degrade-vs-explicit-failure TRIGGER #2 candidate.
+**Cat A/B/C findings STILL-LIVE at HEAD 31398008:** F-DEC-1 (numeric drift-down 68/9→65/10; applied uses 64/9 with definition site in denominator) + F-WS-1 + F-B-CRIT-1 + F-B-CRIT-2 + F-C-VIP-1 + F-C-REFRESH-1 + F-C-CSD-1 + F-C-STORE-1 + F-C-LOGOUT-1 + F-C-COCKPIT-1 all CONFIRMED-STILL-LIVE.
 
-## READ THIS FOURTH — S2404 P4 CAT D SCOPE (FRONTEND INTEGRATION + SILENT-401 SYSTEMIC RESOLUTION)
+## READ THIS FOURTH — S2499 P5 XX99 SCOPE (CANONICAL SUMMARY + ARC CLOSE)
 
-**S2404 = P4 Cat D fourth child audit under Group 2400.** NINETEENTH-consecutive application of playbook §11.2 20-section child-audit template after S1301+S1401+S1501+S1601+S1701+S1801+S1901+S2001+S2101+S2102+S2103+S2104+S2201+S2202+S2203+S2204+S2401+S2402+S2403 prior eighteen.
+**S2499 = P5 xx99 canonical summary + arc close under Group 2400.** ELEVENTH-consecutive application of playbook §11.3 12-section canonical-summary template + §11.3 §10 meta-methodology after S1399+S1499+S1599+S1699+S1799+S1899+S1999+S2099+S2199+S2299 prior ten.
 
-**Scope** (per S2400 parent scoping §3.D):
-- Enumerate the frontend surface of the auth contract: `frontend/src/lib/api.ts:48-56` silent-401 handler + whitelist substring behavior + ~630 call-site blast radius (S2203 A3 baseline) + typed error envelope design candidates + error-boundary framework integration coordination
-- Execute T1 cross-arc handoff: how does Group 2400 Auth deliver the contract to the frontend such that acceptance criteria #1 (permission-floor observability) + #2 (failure surfacing) both hold at api.ts layer?
-- Re-verify Cat A + Cat B + Cat C findings at HEAD: Session 1171 503-fork exists on HTTP path only (Cat A F-DEC-1 decorator + F-WS-1 WS + Cat B F-B-MED-3 asymmetry) — Cat D audits FE-caller side of these
+**Scope** (per playbook §11.3 12-section template):
+- §1 Executive Summary (500-800 words consolidating all four categories)
+- §2 What This Arc Answered — per-child rollup of 28 canonical questions
+- §3 Consolidated Domain Shape — single map of auth surface
+- §4 Cross-Cutting Patterns — themes visible only across multiple children (e.g., silent-degrade dominance; declared-fictional class introduction; two-sided FE-symptom-vs-BE-model framing)
+- §5 Resolved Contradictions — where children disagreed; canonical verdict
+- §6 Unresolved Unknowns — explicit list; promotes to §8
+- §7 Anchor-Update Recommendations (concrete edits; xx99 applies them):
+  - §7.1 PLATFORM_INVENTORY (add §Auth autoblock per Cat A AU-1 + Cat B AU-B2 + Cat C AU-C2 + Cat D AU-D3)
+  - §7.2 PLATFORM_WHAT_IT_IS (add §Auth narrative subsection per Cat A/B/C/D)
+  - §7.3 ARCHITECTURE_INDEX (α/β/γ × 2 decision matrix pointer per Cat D AU-D6)
+  - §7.4 Other affected docs (CREATE `docs/topics/auth.md` + AU-D7 DOC_LIFECYCLE cross-link; refresh `docs/topics/frontend.md` per Cat D AU-D1; CODEOWNERS declaration per Cat D AU-D5)
+- §8 Follow-On Research Queue — ranked next-mission list (rank-1 co-equal P0 batch preserved from Cat A/B/C + Cat D tiered ordering P0-A/B/C per Rigby Q15 fold)
+- §9 Cross-Links to Delegated Arcs — CF-A1..CF-A7 + CF-B1..CF-B5 + CF-C1..CF-C7 + CF-D1..CF-D7 = ~26 total cross-arc coordination flags (dedup + roll-up); umbrella observability roll-up to Group 1700 preserved
+- §10 What This Research Taught Us About How to Do Research — meta-methodology retrospective per playbook §11.3 (NON-NEGOTIABLE per feedback_xx99_meta_methodology_section); ELEVENTH-consecutive §10 application. Load-bearing §10.2 codification candidate: silent-degrade-vs-explicit-failure ambiguity on auth-failure-handling plane (Cat C TRIGGER #1 + Cat D TRIGGER #2 CONFIRMED); scope-bounded per Rigby Q5 fold
+- §11 Arc Change Log — child + session + Rigby verdict + fold edits ledger
+- §12 Appendix — provenance + file paths + verifier-loop history
 
-**Central question the audit answers.** *Does the frontend integration surface expose auth failures as first-class typed errors observable at every gated call site, or does the "silent-401 SYSTEMIC" + "brittle whitelist" pattern (S2203 §14 F3 F3.5) require redesign at the api.ts layer + cross-arc coordination with error-boundary framework + typed-error-envelope adoption?*
+**Central question xx99 answers.** *Does the Group 2400 Auth arc consolidate a canonical answer to the parent scoping central lens question ("Is the platform's auth model a contract, or an accretion of per-surface defaults whose failures are silently swallowed?"), and what is the Chris D-verdict on Cat B (a)/(b)/(c) + Cat C (α)/(β)/(γ) + Cat D α/β/γ × 2 decision spaces?*
 
-**Expected outputs (per S2400 §3.D):**
-- (a) `api.ts:48-56` audit — full behavior enumeration (redirect target + whitelist substring rules + retry semantics + wrapper-duplicate accounting from S2203 Q14)
-- (b) Silent-401 call-site inventory — extend S2203 A3 grep-based ~630 estimate. Per call-site: money-path / governance-path / read-path / write-path classification (CRITICAL for money + governance)
-- (c) Typed error envelope design candidates three options: (α) throw typed exceptions per HTTP status; (β) return discriminated-union response types; (γ) React-Query error callbacks with typed error envelope. Recommend a lean; escalate to Chris D-verdict.
-- (d) Whitelist replacement design — S2203 §14 F3.5 BRITTLE substring → replacement candidates: (α) explicit endpoint list registry; (β) 401-response-suppression header from BE; (γ) per-api-module explicit `noAuthRedirect` flag
-- (e) Cross-arc coordination flags — error-boundary framework (S2299 §8.3 R6) + typed-error-envelope adoption (Group 2200 post-arc T-slot) + T1 handoff execution readiness + Cat C three-option decision space intersection
+**Load-bearing inputs (xx99 must consume + consolidate):**
+- All four Cat A/B/C/D child audit docs at HEAD `31398008` (Cat D)
+- Central lens question from S2400 parent scoping
+- 6-criterion acceptance from S2400 §5 (§14.5 trust-boundary rate + §14.5 permission-floor rate + §14.2 15-surface × cleanup + §14.5 803-call-site + smoke-test coverage + failure-mode discipline)
+- 6-item anti-scope from S2400 §7 (preserved through arc; no in-scope-drift observed)
+- Cat A + Cat B + Cat C + Cat D findings inheritance chain (~40 findings total; deduplicate + consolidate)
+- 26 cross-arc coordination flags CF-A/B/C/D + roll-up rules per Cat C Q11 fold
+- MC-4 5th confirming arc resolution: extends CODIFICATION-CONFIRMED-with-scope-guardrails across-5-consecutive-arcs; resolves S2199 Q3 STRENGTHEN dial-back
+- MC-10 codification-ready at 10-arc baseline (9 arcs of 20-Q child cadence + 6 arcs of parent-scoping-light-SIGN cadence + this)
+- MC-14 CANDIDATE-threshold-satisfied extended to 5-arc-stages
 
-**Load-bearing inputs (Cat D must consume + re-verify at HEAD):**
-- `frontend/src/lib/api.ts:48-56` silent-401 handler + interceptor logic
-- `frontend/src/lib/api.ts` axios request interceptor at `:29` (reads token from authStore)
-- `docs/research/domains/frontend/2203_frontend_api_contract_boundary_discipline_audit.md` §14 F3 silent-401 SYSTEMIC + F3.5 whitelist BRITTLE + A3 ~630 call-site grep baseline
-- `docs/research/domains/frontend/2201_frontend_routes_pages_layouts_components_audit.md` §15.5 silent 401 systemic + no error boundaries anywhere
-- `docs/research/domains/auth/2401_authentication_surface_trust_boundaries_audit.md` §7 runtime-flow-per-caller-class + §14.5 trust-boundary rate + F-DEC-1 `@token_auth_required` decorator drift (68 uses across 9 view files)
-- `docs/research/domains/auth/2402_authorization_permission_floor_uniformity_audit.md` §14 F-B-CRIT-2 silent-401 SYSTEMIC + §14.5 21-loci permission-floor + §19.1 three-option decision space (a/b/c)
-- `docs/research/domains/auth/2403_session_lifecycle_logout_cleanup_contract_audit.md` §14.2 15-surface × cleanup + §14.3 21-loci lifecycle-observability + §19.1 three-option decision space (α/β/γ) + F-C-VIP-1 risk-gating constraint
+**Sub-agent dispatch shape (playbook §11.3 note):** xx99 canonical summaries do NOT spawn sub-agents. Single-doc synthesis by parent Claude.
 
-**Sub-agent dispatch** per playbook §13 six-parallel-agent shape:
-- Agent 1 Models + Persistence — Token expiry field candidates + response envelope shape candidates (typed error envelope options)
-- Agent 2 Services + Runtime Flows — api.ts interceptor behavior + axios retry semantics + frontend router integration (`ProtectedRoute` gate; `Sidebar.tsx:356` logout onClick)
-- Agent 3 APIs + Tools + Tasks + Commands — silent-401 call-site inventory extension (S2203 A3 ~630 baseline; grep for `await api.` + `api.get/post/put/delete/patch(` sites; money-path/governance-path classification)
-- Agent 4 Integrations + Cross-Domain — S2203 F3 wrapper-duplicate accounting + Group 2200 error-boundary R6 execution readiness + Cat C 15-surface cleanup coordination + typed-error-envelope adoption blueprint
-- Agent 5 Documentation + Prior Research — S2203 F3/F3.5 aggregation + S2201 §15.5 + Cat A/B/C findings inheritance table
-- Agent 6 Drift + Debt + Ownership + Maturity — silent-401 SYSTEMIC drift matrix + typed-error-envelope debt matrix + FE integration ownership + PARTIAL maturity verdict; silent-degrade-vs-explicit-failure Q20 TRIGGER #2 confirmation candidate
+**Rigby SIGN cycle 1 REQUIRED via dedicated fresh isolation pin per playbook §15** (canonical summary = required light SIGN, single-batch × 4-Q per S1399-S2299 TEN-consecutive tested pattern — ELEVENTH-consecutive same-cadence application candidate at canonical-summary stage; NOT the 20-Q child-audit cadence).
 
-**Rigby SIGN cycle 1 REQUIRED** per playbook §15 stage-scoped routing (child audit = required full SIGN via dedicated fresh isolation pin). Expected cadence: 4-batch × 5-Q = 20 total Q per S2201-S2403 EIGHT-consecutive tested pattern (NINTH-consecutive 20-Q cadence application candidate; MC-10 codification-ready-pending-Chris at 9-arc baseline).
+**Arc pin retirement.** `pa-6279ead1714c4630` MUST be retired at S2499 close via `session_tool.retire` per playbook §16 arc-close discipline (ELEVENTH formal arc-pin retirement in Research OS after Groups 1300/1400/1500/1600/1700/1800/1900/2000+/2100/2200 prior ten). SIGN pin minted fresh; retired at cycle close (SIXTEENTH consecutive dedicated fresh SIGN pin retirement).
 
 ## READ THIS FIFTH — OUTSTANDING RESIDUALS
 
-### S2403 arc-close cascade residuals
+### S2404 arc-close cascade residuals
 
-Per Chris "commit it" ratification at S2403 close:
+Per Chris "commit it" ratification at S2404 close:
 
 - **Post-commit docs cascade** — 4-step cascade (`build_docs_index` + `build_rag_corpus` + `sync_docs_index_to_documents` + `sync_docs_index_to_documents --embed`) + `build_docs_provenance` per `feedback_docs_cascade_at_every_close` + `feedback_cascade_pr_must_include_embed_step`. Execute post-merge.
-- **Auth topic doc gap preserved** — `docs/topics/auth.md` + `docs/topics/session_lifecycle.md` do NOT exist. Cat C AU-C1 recommends session-lifecycle subsection in prospective topics/auth.md; if separate, MUST cross-link. Candidate S2499 xx99 anchor-update recommendations per Cat C §19.4.
-- **`PLATFORM_INVENTORY §Auth` autoblock gap preserved** — no dedicated Auth autoblock exists. Candidate S2499 xx99 anchor-update recommendations per Cat A §19.4 AU-1 + Cat B AU-B2 + Cat C AU-C2.
-- **`PLATFORM_WHAT_IT_IS §Auth` narrative subsection gap preserved** — no dedicated Auth subsection exists. Candidate S2499 xx99 anchor-update recommendations per Cat A + Cat B + Cat C §19.4.
-- **Session-lifecycle test coverage gap** — 0-of-17 session-lifecycle endpoints have declared smoke-test coverage. Blocker to acceptance criterion #6 for session plane; extends Cat A F-CRIT-2 pattern. Post-arc smoke-test authoring.
+- **Auth topic doc gap preserved** — `docs/topics/auth.md` + `docs/topics/session_lifecycle.md` do NOT exist. Cat D AU-D2 recommends CREATE with 4 subsections (Cat A mechanism inventory + Cat B permission-floor + Cat C session-lifecycle + Cat D FE integration); AU-D7 requires DOC_LIFECYCLE cross-link inside. Candidate S2499 xx99 anchor-update per §7.4.
+- **`PLATFORM_INVENTORY §Auth` autoblock gap preserved** — no dedicated Auth autoblock exists. Cat D AU-D3 extends Cat A AU-1 + Cat B AU-B2 + Cat C AU-C2 with silent-401-rate + typed-error-envelope-adoption + interceptor-bypass rate columns. Candidate S2499 xx99 anchor-update per §7.1.
+- **`PLATFORM_WHAT_IT_IS §Auth` narrative subsection gap preserved** — no dedicated Auth subsection exists. Cat D AU-D4 extends Cat A/B/C recommendations. Add narrative for silent-degrade-vs-explicit-failure ambiguity as codified §20 weak-spot pattern (post-Q20 fold TRIGGER #2 CONFIRMED). Candidate S2499 xx99 anchor-update per §7.2.
+- **CODEOWNERS declaration** — Cat D AU-D5 remediation; single-file addition. Candidate S2499 xx99 §7.4.
+- **ARCHITECTURE_INDEX α/β/γ × 2 decision matrix pointer** — Cat D AU-D6 addition per Rigby Q16 fold. Candidate S2499 xx99 §7.3.
+- **Auth acceptance criteria (S2400 §5)** — 6 criteria + acceptance/deferral verdict per criterion at xx99 close.
+- **Session-lifecycle test coverage gap** — 0-of-17 session-lifecycle endpoints have declared smoke-test coverage. Blocker to acceptance criterion #6; extends Cat A F-CRIT-2. Post-arc smoke-test authoring in follow-on queue.
 
-### S2403 CRITICAL findings post-arc remediation queue (Cat C additions to Cat A + Cat B rank-1)
+### S2404 CRITICAL findings post-arc remediation queue (rank-1 co-equal P0 batch with Cat D tiered ordering per Rigby Q15 fold)
 
-Per Cat C §19.2 rank-1 co-equal P0 batch preserved from Cat A + Cat B + extended by Cat C (POST-ARC — not this session's authoring scope):
+Per Cat D §19.2 rank-1 co-equal P0 batch preserved from Cat A + Cat B + Cat C + extended by Cat D (POST-ARC — not xx99's authoring scope):
 
-- **Cat A F-CRIT-1** PURGE_SECRET hardcoded fallback remediation (P0 PR)
-- **Cat A F-BND-4a** Unauthenticated bet-placement WRITE remediation (P0 PR)
-- **F-C-VIP-1 NEW P0 CANDIDATE** — VIPInvite.account_expires_at ENFORCEMENT (runtime middleware check OR periodic beat task); risk-gate prerequisite for shipping any α/β/γ expiry-signal-bearing UX per §19.1 constraint
-- **F-B-CRIT-1** Permission-floor implicit-inheritance rate ~80-90% ESTIMATE (post-arc option (a)/(b)/(c) Chris D-verdict at xx99)
-- **F-B-CRIT-2** Silent-401 SYSTEMIC as F-B-CRIT-1 downstream symptom (owned by Cat D S2404 — this arc's next session)
-- **F-B-HIGH-1** STAFF_REQUIRED_PATHS phantom-entries cleanup OR add explicit views
-- **F-B-HIGH-4** auth_views_enhanced.py `@authentication_classes([])` + `[IsAuthenticated]` per-site CRITICAL escalation
-- **F-B-OWN-6** CI test-harness enforce permission-floor declarations
-- **F-C-REFRESH-1** refresh discipline decision-space execution (post-Chris-verdict at xx99)
-- **F-C-CSD-1** Clear-Site-Data emission on logout
-- **F-C-STORE-1** 15-surface × logout-cleanup declared contract execution
-- **F-C-TAB-1** cross-tab storage-event listener
+**P0-A platform-wide / whole-auth-surface blast radius:**
+- Cat D F-D-CALL-1 803-scale silent-401 remediation
+- Cat D F-D-BYPASS-1 79-raw-fetch bypass reconciliation
+- Cat D F-D-ENVELOPE-1 Typed-error-envelope (α/β/γ decision post-Chris-D-verdict at xx99)
+- Cat D F-D-BOUNDARY-1 Error-boundary framework establishment (S2299 §8.3 R6 execution)
 
-### Group 2200 T-slot follow-on queue (owed to Group 2400+ execution — unchanged)
+**P0-B token lifecycle / security window:**
+- Cat D F-D-SIDEBAR-1 Sidebar backend-token-revoke fix (single-line addition per Cat C AU-C1)
+- Cat C F-C-REFRESH-1 refresh discipline decision-space execution
+- Cat C F-C-VIP-1 VIPInvite.account_expires_at ENFORCEMENT (risk-gate prerequisite for α/β/γ)
+- Cat C F-C-CSD-1 Clear-Site-Data emission on logout
+- Cat C F-C-STORE-1 15-surface × logout-cleanup declared contract execution
 
-- **T1 Group 2400 Auth cross-arc handoff bundle** — being executed by THIS arc (S2401-S2404) — silent-401 + logout cleanup + session lifecycle + permission-floor uniformity — **S2403 Cat C DELIVERED session-lifecycle evidence** + Cat D S2404 owns silent-401 SYSTEMIC + typed-error envelope + T1 handoff execution readiness
-- **T2 Group 2500 API cross-arc handoff bundle** — NEXT arc after Group 2400 close per S2299 §8.2 (Cat B CF-B1 + Cat C CF-C1 both elevate registry + refresh-endpoint + logout-envelope + Clear-Site-Data design-prep candidate)
-- **T3 Group 2600 PA cross-arc handoff bundle** — QUEUED after Group 2500 close (Cat B CF-B2 + Cat C CF-C2 both elevate workspace-context authz + `session_tool.retire` cascade + paStore field-list completeness)
-- **T4 Group 1700 Observability cross-arc handoff bundle** — QUEUED after Group 2600 close (Cat B CF-B5 + Cat C CF-C3 both elevate 503-fork asymmetry + login/logout event emit + smoke-test coverage; xx99 Observability umbrella roll-up)
-- **Maintainer-decision batch (5 items governance gate)** — CODEOWNERS + DEAD-CANDIDATE consolidated cleanup + api.ts extraction + storageKeys registry + cockpitApi ownership
+**P0-C endpoint-specific:**
+- Cat A F-CRIT-1 PURGE_SECRET hardcoded fallback remediation (preserved)
+- Cat A F-BND-4a Unauthenticated bet-placement WRITE remediation (preserved money-path boundary)
+- Cat B F-B-CRIT-1 Permission-floor implicit-inheritance ~80-90% (Chris D-verdict at xx99 on (a)/(b)/(c))
+- Cat B F-B-CRIT-2 Silent-401 SYSTEMIC (Cat D delivered 803-scale evidence + α/β/γ × 2 decision-space)
+- Cat D F-D-WHITELIST-1 Whitelist replacement (α/β/γ decision post-Chris-D-verdict at xx99)
+
+### Group 2200 T-slot follow-on queue (owed to Group 2400+ execution — updated with Cat D contribution)
+
+- **T1 Group 2400 Auth cross-arc handoff bundle** — DELIVERED by Group 2400 arc (S2401-S2404) — silent-401 + logout cleanup + session lifecycle + permission-floor uniformity — **S2404 Cat D DELIVERED frontend integration evidence + Silent-401 SYSTEMIC 803-scale + typed-error envelope α/β/γ × 2 decision-space + T1 handoff execution readiness**
+- **T2 Group 2500 API cross-arc handoff bundle** — NEXT arc after Group 2400 close per S2299 §8.2 (Cat B CF-B1 + Cat C CF-C1 + Cat D CF-D1 all elevate registry + refresh-endpoint + logout-envelope + Clear-Site-Data + typed-error-envelope design-prep candidate)
+- **T3 Group 2600 PA cross-arc handoff bundle** — QUEUED after Group 2500 close (Cat B CF-B2 + Cat C CF-C2 + Cat D CF-D2 all elevate workspace-context authz + `session_tool.retire` cascade + PA-chat 401 UX design + paStore field-list completeness)
+- **T4 Group 1700 Observability cross-arc handoff bundle** — QUEUED after Group 2600 close (Cat B CF-B5 + Cat C CF-C3 + Cat D CF-D3 all elevate 503-fork asymmetry + login/logout event emit + silent-401 rate + `authHandling: 'suppress_redirect'` telemetry + smoke-test coverage; xx99 Observability umbrella roll-up)
+- **Maintainer-decision batch (5 items governance gate)** — CODEOWNERS (Cat D AU-D5) + DEAD-CANDIDATE consolidated cleanup + api.ts extraction + storageKeys registry + cockpitApi ownership
 - **T2 post-arc T-slot (10 items)** — per S2299 §8
 - **T3 conditional post-arc (4 items)** — cross-tab sync + Betting session-scoped state + runtime schema validation + REST↔WS joint T7
+- **Cat D contribution to follow-on queue** — silent-401 rate telemetry design (F-D-OWN-2 + CF-D3) + 79-raw-fetch classification refinement (Rigby Q17 fold: 3-axis by auth-required + credentials mode + response type) + optional non-401 failure envelope audit (Rigby Q17 fold — JSON parse + network offline + timeout + aborted)
 
-### S2199 post-arc T-slot execution queue (unchanged carry into S2404)
+### S2199 post-arc T-slot execution queue (unchanged carry into S2499)
 
-19 T-slot items distributed across 6 arcs + Employee OS per S2199 §8. All post-arc execution, NOT blocking S2404.
+19 T-slot items distributed across 6 arcs + Employee OS per S2199 §8. All post-arc execution, NOT blocking S2499.
 
 ### Session count status
 
-- Group 2400 In-progress at 4 of 6 sessions (S2400 parent + S2401 P1 Cat A + S2402 P2 Cat B + S2403 P3 Cat C shipped)
-- Next child = S2404 P4 Cat D Frontend Integration + Silent-401 SYSTEMIC Resolution
-- Next `xx99` at S2499 canonical summary (playbook §11.3 ELEVENTH application per current TENTH baseline)
+- Group 2400 In-progress at 5 of 6 sessions (S2400 parent + S2401 P1 Cat A + S2402 P2 Cat B + S2403 P3 Cat C + S2404 P4 Cat D shipped)
+- Next child = S2499 P5 xx99 canonical summary
+- xx99 = playbook §11.3 12-section canonical-summary template + §11.3 §10 meta-methodology ELEVENTH-consecutive application after S1399/S1499/S1599/S1699/S1799/S1899/S1999/S2099/S2199/S2299 ten prior
 
-## SESSION READY CHECK (before opening S2404 P4 Cat D)
+## SESSION READY CHECK (before opening S2499 P5 xx99)
 
-Before drafting the S2404 child audit doc:
+Before drafting the S2499 xx99 canonical summary:
 
-1. `tools/pa_local.sh "platform_config_tool action=overview"` → confirm `service_context: local` (Group 2400 arc pin `pa-6279ead1714c4630` PRESERVED through S2403; `tools/pa_local.sh:280` unchanged from S2400 open)
-2. Read `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` §11.2 20-section child-audit template + §11.2 exemplar chain (S2403 P3 Cat C most recent) for shape reference
-3. Read `docs/research/domains/auth/2403_session_lifecycle_logout_cleanup_contract_audit.md` fully — Cat D's primary Cat-C-inheritance load-bearing input; §14.2 15-surface × cleanup + §14.3 21-loci lifecycle-observability + §19.1 three-option decision space (α/β/γ) precedent for Cat D's typed-error-envelope three-option (α/β/γ)
-4. Read `docs/research/domains/auth/2402_authorization_permission_floor_uniformity_audit.md` §14 F-B-CRIT-2 silent-401 SYSTEMIC necessary-enabling-condition + §19.1 three-option decision space (a/b/c) precedent
-5. Read `docs/research/domains/auth/2401_authentication_surface_trust_boundaries_audit.md` §7 runtime-flow-per-caller-class + §14.5 trust-boundary rate + F-DEC-1 decorator drift + F-WS-1 WS silent-swallow
-6. Read `docs/research/domains/auth/2400_auth_domain_scoping.md` §3.D P4 Cat D expected outputs + §3.5 auth-adjacent probes disposition + §7.1 leak-vector guardrails
-7. Read `docs/research/domains/frontend/2203_frontend_api_contract_boundary_discipline_audit.md` §14 F3 silent-401 SYSTEMIC + F3.5 whitelist BRITTLE + A3 ~630 call-site grep baseline
-8. Read `docs/research/domains/frontend/2201_frontend_routes_pages_layouts_components_audit.md` §15.5 silent 401 systemic + error boundary gap
-9. Dispatch 6-Explore-agent parallel sweep per playbook §13 (Agents 1-6 per §3.D expected outputs)
-10. Draft the 20-section audit per §11.2 skeleton; verifier-loop per §14 discipline pre-Rigby-SIGN (especially: Rigby caught VIP invite exchange + Django logout HEAD-verification blocking-fold at Cat C Batch 2 — Cat D should PRE-EMPTIVELY HEAD-verify all load-bearing claims before Rigby-SIGN; denominator discipline pre-emption succeeded at Cat C — apply same discipline to Cat D)
-11. Route to Rigby SIGN cycle 1 via dedicated fresh isolation pin per playbook §15 (child audit = required full SIGN); expected cadence 4-batch × 5-Q = 20-Q per S2201-S2403 EIGHT-consecutive tested pattern
-12. Fold SIGN edits; land as `status: draft` on filesystem; present Chris ratification card
-13. Arc pin `pa-6279ead1714c4630` preserved through S2404 per playbook §16 arc-standard behavior + MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails + MC-14 CANDIDATE-threshold-satisfied extended-to-4-arc-stages
-14. **After Cat D close: xx99 S2499 canonical summary next** — playbook §11.3 12-section canonical-summary template + §11.3 §10 meta-methodology ELEVENTH application after S1399/S1499/S1599/S1699/S1799/S1899/S1999/S2099/S2199/S2299 ten prior
+1. `tools/pa_local.sh "platform_config_tool action=overview"` → confirm `service_context: local` (Group 2400 arc pin `pa-6279ead1714c4630` PRESERVED through S2404; `tools/pa_local.sh:280` unchanged from S2400 open post-cycle-restore)
+2. Read `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` §11.3 12-section canonical-summary template + §11.3 §10 meta-methodology + §11.3 exemplar chain (S2299 most recent) for shape reference
+3. Read all four Cat A/B/C/D child audit docs fully — S2499 primary load-bearing input; consolidate + deduplicate + roll-up
+4. Read `docs/research/domains/auth/2400_auth_domain_scoping.md` §5 acceptance criteria + §7 anti-scope for xx99 verdict inputs
+5. NO sub-agent dispatch per playbook §11.3 note — single-doc synthesis by parent Claude
+6. Draft the 12-section canonical summary per §11.3 skeleton with §10 meta-methodology NON-NEGOTIABLE (per feedback_xx99_meta_methodology_section)
+7. Route to Rigby SIGN cycle 1 via dedicated fresh isolation pin per playbook §15 (canonical summary = required light SIGN); expected cadence single-batch × 4-Q per S1399-S2299 TEN-consecutive tested pattern (ELEVENTH-consecutive candidate)
+8. Fold SIGN edits; land as `status: draft` on filesystem; present Chris ratification card
+9. Retire arc pin `pa-6279ead1714c4630` via `session_tool.retire` at S2499 close per playbook §16 arc-close discipline (ELEVENTH formal arc-pin retirement)
+10. Execute anchor-update batch per §7 recommendations (PLATFORM_INVENTORY §Auth autoblock + PLATFORM_WHAT_IT_IS §Auth narrative + ARCHITECTURE_INDEX v87 → v88 with §1.91 registration + CREATE `docs/topics/auth.md` + refresh `docs/topics/frontend.md` + CODEOWNERS declaration)
+11. Post-close docs cascade + build_docs_provenance per `feedback_docs_cascade_at_every_close` + `feedback_cascade_pr_must_include_embed_step` — MANDATORY
 
-**S2404 open command (Chris short command):** `Continue research group 2400: P4 Cat D` or `Continue research group 2400: silent-401` or equivalent invocation.
+**S2499 open command (Chris short command):** `Close research group 2400` or `Continue research group 2400: xx99` or equivalent invocation.
