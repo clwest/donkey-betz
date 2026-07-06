@@ -947,7 +947,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         import hashlib
         import json as _json
         try:
-            from core.models_tool_calls import ToolCallRecord
+            from core.models_tool_calls import ToolCallRecord, resolve_trace_uuid
         except ImportError:
             return  # Model not migrated yet — silent skip on fresh DBs.
 
@@ -957,8 +957,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         )
         result_size = len(result_str.encode('utf-8', errors='replace'))
 
+        # Arc I-0100 P2 (IB-1799-T1-01): resolve trace_id to UUID via
+        # feature-flagged helper. When TOOL_CALL_TRACE_ID_ENFORCED is
+        # OFF (default), returns None — preserves current behavior. When
+        # ON, generates a fresh UUID (dispatcher trace_id is "tool-N-hex"
+        # string form, not UUID-parseable). Original string preserved
+        # in task_summary below per F8-i dual-format acceptance.
         ToolCallRecord.objects.create(
-            trace_id=None,  # dispatcher trace_id ('td-N-hex') isn't a UUID
+            trace_id=resolve_trace_uuid(result.trace_id),
             conversation_id=conversation_id,
             agent_name=agent_name,
             tool_name=tool_name,
