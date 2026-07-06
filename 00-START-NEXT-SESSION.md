@@ -108,7 +108,7 @@ Only run this checklist AFTER seed PR merged:
 2. Read `docs/research/implementation/BACKLOG.md` T0 + Arc I-0100 seed rows + `IB-1799-T*` cluster in full.
 3. Read `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md` in full.
 4. Read `docs/research/domains/observability/1799_observability_canonical_summary.md` §1 canonical verdict + §5 D74 six-axis correlation-spine + §8 T1 leaf tail (this discharges the IDBT-0001 slice for 1799).
-5. Read IOS §4.3 Stage 1 Scoping + §5.1 pre-code gates + §7.2 Stage 1 SIGN discipline + §14.14 pin lifecycle.
+5. Read IOS §4.3 Stage 1 Scoping + §5.1 pre-code gates + §7.2 Stage 1 SIGN discipline + §15.14 pin lifecycle.
 6. Read `docs/topics/celery-workers.md` + `docs/topics/infrastructure.md` + `docs/topics/agent-system.md` for existing observability + agent-execution context.
 7. Draft Arc I-0100 scoping doc per §4.3 template.
 8. Route to Rigby SIGN cycle 1 on fresh arc-scoped pin.
