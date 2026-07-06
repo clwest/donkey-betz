@@ -139,6 +139,24 @@ RIGBY_DELEGATION_ENABLED = os.environ.get(
     'RIGBY_DELEGATION_ENABLED', 'false'
 ).lower() == 'true'
 
+# Arc I-0100 P2 (IB-1799-T1-01): write-side fix for the 100% NULL
+# ToolCallRecord.trace_id invariant per 1799 xx99 §1 point 1 + Arc
+# I-0100 scoping §5 P2 F3 fold "ships unconditional of D74 posture"
+# (SPEC_COMPLETE per F3 SIGN-clean verdict). Default OFF. When False,
+# all 3 writer sites (tool_dispatcher, base_agent, unified_pa_entrypoint
+# deprecated path) preserve the current trace_id=None behavior — no
+# behavioral change from pre-flag main. When True, writers populate
+# ToolCallRecord.trace_id with a valid UUID; the human-readable string
+# form (e.g., "tool-42-a1b2c3d4" or "pa-1-45705add") remains in
+# task_summary + logs + WebSocket events for backward compatibility
+# with hidden text-form readers (per Arc I-0100 F8-i dual-format
+# acceptance window mitigation). Downstream: makes
+# deliverable_provenance.py:105 chain populate for tool calls linked
+# via AgentExecution.trace_id join.
+TOOL_CALL_TRACE_ID_ENFORCED = os.environ.get(
+    'TOOL_CALL_TRACE_ID_ENFORCED', 'false'
+).lower() == 'true'
+
 # Session 1252 PR 2: pinned PA conversation that Rigby posts escalation
 # summaries into when a Documentation Manager mission fails. Resolves
 # at runtime so the active pin can be updated without amending the
