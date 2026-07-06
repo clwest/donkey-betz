@@ -17,37 +17,69 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 2400 arc pin
-# (Rigby create_fresh at S2400 open — carrying only mission scope,
-# no S2200 Frontend Contract-Surface arc turn context per playbook §16
-# arc-open fresh-thread discipline).
-# Pin: pa-6279ead1714c4630. Title: "Group 2400 Auth arc pin
-# (S2400 open)". Carry-forward: mission scope only — Research Group
-# 2400 "Auth (Session Lifecycle + Permission Floor + Silent-401
-# Resolution)" per Chris D-override at S2299 close 2026-07-05
-# ("agree all + (6) = 2400 Auth"). Ratified over any playbook §22
-# default queue lean per highest cross-arc-handoff-frequency signal
-# (4/4 Group 2200 children reference silent-401 + logout cleanup +
-# session lifecycle + permission-floor uniformity — S2201 §14.3 +
-# §15.5 + S2202 no-drift-but-perms-floor-owned-here + S2203 §14 F3 +
-# F3.5 + S2204 §19.1 R1). Scopes (per S2400 parent scoping to be
-# ratified this session): authentication surface (token + session +
-# caller identity + ~108 PUBLIC_PATHS + STAFF_REQUIRED_PATHS +
-# REVIEWER_BLOCKED_PATHS per §3.27 platform_architecture_inventory)
-# + authorization + trust boundaries (VIP demo prompt-only + Fleet
-# permissive fallback + service tokens) + session lifecycle (token
-# refresh + cookie discipline + Clear-Site-Data + logout cleanup
-# contract + 15-surface storageKeys sweep) + frontend integration
-# (silent-401 SYSTEMIC + api.ts:48-56 + typed error envelope +
-# whitelist BRITTLE). TENTH-consecutive parent-with-children arc —
-# MC-4 dial-back-resolution 5th confirming arc candidate (Group 2400
-# Auth 4-child structure would trigger resolution of S2199 Q3
-# STRENGTHEN dial-back per §5.3 Group 2200 canonical summary).
-# ELEVENTH formal arc pin under Research OS after Groups 1300/1400/
-# 1500/1600/1700/1800/1900/2000+/2100/2200 prior ten. Health check
-# at open: platform_config_tool overview = service_context: local
-# ✓ + session_tool create_fresh = pa-6279ead1714c4630 ✓ (S2400
-# arc-open turn 1, 2026-07-05).
+# the --conversation flag below. Current value: Session 2500 arc pin
+# (session_tool create_fresh at S2500 open — carrying only mission
+# scope, no S2400 Auth arc turn context per playbook §16 arc-open
+# fresh-thread discipline).
+# Pin: pa-a03b111768464b3f. Title: "Group 2500 API arc pin
+# (S2500 open)". Carry-forward: mission scope only — Research Group
+# 2500 "API (Contract SoT + Silent-401 remediation + Typed-error-
+# envelope + Per-endpoint permission registry + Refresh endpoint +
+# Logout envelope + Clear-Site-Data + drf-spectacular retrofit + api.ts
+# extraction + REST↔WS strictness joint 2500+2600)" per S2299 §8.2 +
+# S2499 §8.4 T2 NEXT arc queue. Selected over 2300 Mobile / 2600 PA
+# per highest cross-arc-handoff-frequency signal (4/4 Group 2200
+# children referenced API contract discipline — S2203 F1 SoT-ABSENT +
+# F3 silent-401 SYSTEMIC + F4 mega-module api.ts 4194-LOC + F5 18
+# DEAD-CANDIDATE modules; ALL 4 Cat A/B/C/D children of Group 2400
+# emitted CF-*1 flags to Group 2500 — refresh endpoint + logout
+# envelope + Clear-Site-Data + typed-error-envelope + per-endpoint
+# permission registry design-prep + drf-spectacular retrofit).
+# Scopes (per S2500 parent scoping to be ratified this session):
+# backend API contract SoT (drf-spectacular platform-wide retrofit;
+# sports/views.py 16 @extend_schema decorators + core/*.py 0
+# decorators baseline per S2203 F1) + money-path API surface
+# (placeBetMutation + revenueApi + incomeBuilderApi + distributionApi)
+# + governance-path (decisionsApi + dreamsApi + advisorsApi +
+# platformApi) + PA-path (assistantApi + /pa/chat/*) + refresh
+# endpoint contract (F-C-REFRESH-1 downstream) + logout envelope +
+# Clear-Site-Data emission (F-C-CSD-1) + typed-error-envelope Cat D
+# α/β/γ input + per-endpoint permission registry Cat B c input +
+# api.ts extraction (S2203 R4; 4194-LOC + 93 exports + 407-session
+# churn) + REST↔WS message contract joint 2500+2600 (S2203 T7 +
+# S2202 T6). ELEVENTH-consecutive parent-with-children arc under
+# Research OS. TWELFTH formal arc pin under Research OS after
+# Groups 1300/1400/1500/1600/1700/1800/1900/2000+/2100/2200/2400
+# prior eleven. Health check at open: platform_config_tool overview
+# = service_context: local ✓ + session_tool create_fresh =
+# pa-a03b111768464b3f ✓ (S2500 arc-open turn 1, 2026-07-05).
+#
+# **Retired at S2500 open: pa-6279ead1714c4630** (Sessions 2400-2404
+# + S2499 — Group 2400 Auth Session Lifecycle + Permission Floor +
+# Silent-401 Resolution research group; 6-doc arc: S2400 parent +
+# S2401 P1 Cat A Authentication Surface + S2402 P2 Cat B Authorization
+# / Permission-Floor Uniformity + S2403 P3 Cat C Session Lifecycle +
+# S2404 P4 Cat D Frontend Integration / Silent-401 SYSTEMIC Resolution
+# + S2499 xx99 canonical summary; playbook §11.1 template ELEVENTH
+# application + §11.2 20-section template FOURTEENTH application
+# overall + §11.3 12-section canonical-summary template ELEVENTH
+# application + §11.3 §10 meta-methodology template ELEVENTH
+# application. Retired via session_tool.retire force=true at S2499
+# close per playbook §16 arc-close discipline; updated_count=25,
+# retired=true, previously_active=true. ELEVENTH formal arc-pin
+# retirement in Research OS. ELEVENTH xx99 canonical summary in the
+# Research OS library. Runtime target 6 sessions ACHIEVED — 6/6 =
+# 100%. Canonical verdict: "ACCRETION with declared-but-unenforced
+# contracts" — Chris "commit it" 2026-07-05 ratified xx99 SIGN-with-
+# edits (4 folds Q1 minor tightening + Q2 MC-4 methodological-not-
+# platform-state + Q2 §10.4 MC-14 threshold rule + Q3 §10.2
+# conditional promotion rule). Rigby SIGN cycle 1 SIGN-with-edits at
+# HIGH confidence (~0.88 — HIGHEST in Group 2400 arc; monotonically-
+# increasing confidence across arc). 19 findings STILL-LIVE at HEAD
+# for T2 Group 2500 API arc + T3 Group 2600 PA + T4 Group 1700
+# Observability distribution. Meta-methodology: §10.2 MC-14 threshold-
+# rule + §10.2 §10 conditional-promotion-rule + Cat A CF-3 roll-up +
+# Cat B/C/D CF-B/C/D1 seven-flag umbrella all CODIFICATION-READY.)
 #
 # **Retired at S2000 open: pa-2bd1613ce2bd4a9c** (Sessions 1900-1904 +
 # S1999 — Group 1900 Authority Enforcement Design Space research group;
@@ -277,4 +309,4 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
-python tools/pa_chat.py "$@" --tools --conversation pa-6279ead1714c4630
+python tools/pa_chat.py "$@" --tools --conversation pa-a03b111768464b3f

@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-06T00:16:40+00:00",
+    "generated": "2026-07-06T01:26:11+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "0c4dba392c48",
-    "doc_count": 2390,
-    "commit_count": 7604,
+    "git_head": "8a809f6de200",
+    "doc_count": 2392,
+    "commit_count": 7606,
     "confidence_breakdown": {
       "HIGH": 1571,
       "MEDIUM": 352,
-      "LOW": 3,
+      "LOW": 5,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -2517,7 +2517,7 @@
         2403,
         2499
       ],
-      "commit_count": 1194,
+      "commit_count": 1196,
       "prs": [
         10,
         11,
@@ -3001,7 +3001,8 @@
         2912,
         2914,
         2916,
-        2917
+        2917,
+        2919
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7323,7 +7324,7 @@
         2403,
         2499
       ],
-      "commit_count": 150,
+      "commit_count": 152,
       "prs": [
         2213,
         2219,
@@ -7415,7 +7416,8 @@
         2912,
         2914,
         2916,
-        2917
+        2917,
+        2919
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18518,6 +18520,19 @@
       "prs": [
         2916
       ]
+    },
+    "docs/handoffs/SESSION_2500_API_PARENT_SCOPING.md": {
+      "originating_session": 2500,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2500
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33872,6 +33887,19 @@
         1272
       ],
       "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/domains/api/2500_api_domain_scoping.md": {
+      "originating_session": 2500,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2500
+      ],
+      "commit_count": 0,
       "prs": []
     },
     "docs/research/domains/auth/2400_auth_domain_scoping.md": {
