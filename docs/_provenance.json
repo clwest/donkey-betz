@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-06T16:59:21+00:00",
+    "generated": "2026-07-06T17:50:11+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3ff694a19256",
-    "doc_count": 2412,
-    "commit_count": 7639,
+    "git_head": "b3ac1cae1a98",
+    "doc_count": 2413,
+    "commit_count": 7641,
     "confidence_breakdown": {
       "HIGH": 1586,
       "MEDIUM": 352,
-      "LOW": 5,
+      "LOW": 6,
       "UNKNOWN": 469
     },
     "excludes": [
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1216,
+      "commit_count": 1218,
       "prs": [
         10,
         11,
@@ -3015,7 +3015,8 @@
         2929,
         2930,
         2932,
-        2934
+        2934,
+        2936
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7340,7 +7341,7 @@
         2502,
         2504
       ],
-      "commit_count": 172,
+      "commit_count": 174,
       "prs": [
         2213,
         2219,
@@ -7443,7 +7444,8 @@
         2929,
         2930,
         2932,
-        2934
+        2934,
+        2936
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18837,6 +18839,19 @@
         2199,
         2241
       ]
+    },
+    "docs/handoffs/SESSION_2699_PA_CANONICAL_SUMMARY.md": {
+      "originating_session": 2699,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2699
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
       "originating_session": 273,
