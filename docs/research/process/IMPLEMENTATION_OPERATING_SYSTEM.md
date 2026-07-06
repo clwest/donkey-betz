@@ -1,6 +1,6 @@
 ---
 title: "Implementation Operating System — how research findings become shipped code"
-status: active v1 (Chris-ratified 2026-07-06; D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc)
+status: active v1.1 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings — see verifier_loop.)
 authority: process
 session_added: 2500
 last_verified: 2026-07-06
@@ -71,6 +71,39 @@ verifier_loop: |
   IOS does NOT replace, edit, or collapse the Research OS; it adds
   the downstream execution-phase governance layer that §8.4
   IMPLEMENTATION contract calls for at phase scale.
+  active v1.1 (2026-07-06): execution-refinement patch after IOS
+  Part 11 first execution (Chris directive following the first
+  production implementation-planning session — treated as the
+  first real validation that Research OS + IOS were sufficient for
+  a fresh Claude session). First execution surfaced 7 findings
+  (A–J in that session's deliverable 5); Chris directed adoption
+  ahead of the §14.2 two-trigger codification threshold. Applied
+  edits: (1) §11.2 Step 1 leaf-decision granularity rule (one
+  intake row per Chris-ratifiable decision unit, not per §8 tier
+  bundle); (2) §2.4 cascade-housekeeping exclusion (PLATFORM_INVENTORY
+  + ARCHITECTURE_INDEX + topic-doc refreshes discharged by the
+  4-step docs cascade, not implementation intake); (3) §2.2
+  `intake_id` scheme extended with 5 prefixes (IB-<arc>-<seq>,
+  IB-Q<queue>-<seq>, IB-CDA-<seq>, IB-CDA14-<seq>,
+  IB-CXP<n>-<seq>); (4) §15.3 phase-transition supersession rule
+  (active IOS + implementation-planning Chris directive overrides
+  `00-START-NEXT-SESSION.md` Research-OS next-session trajectory);
+  (5) §11.2 Step 6 + §11.3 default Rigby routing for ratification
+  cards via a fresh IOS-scoped SIGN pin, terminal-only only on
+  explicit Chris directive; (6) §15.6 rule 6 `verify_doc_claims`
+  command variant clarified (use unfiltered command; sum per-doc
+  drift columns; total == 0 = clean; `--only-drift` returns
+  "No matching claims to run" on zero drift, which is ambiguous);
+  (7) new §15.14 Rigby SIGN pin lifecycle across phase
+  transitions (paused research T-slot pin preserved as comment
+  above `tools/pa_local.sh:361`; fresh IOS-scoped pin minted per
+  implementation session for Rigby interactions; on IOS phase exit
+  → restore paused research pin). No open D-question reopened.
+  Not routed to a fresh Rigby SIGN cycle — refinements derived
+  from a live session's execution transcript + Chris directive;
+  §14.2 two-trigger codification threshold not met on any single
+  finding, but Chris explicitly waived the wait per his
+  refinement-authority prerogative.
 
 ---
 
@@ -340,7 +373,7 @@ see §13 D2). Each row has the following fields:
 
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
-| `intake_id` | string, `IB-<arc>-<seq>` | Yes | Stable ID (e.g., `IB-2299-014`) |
+| `intake_id` | string | Yes | Stable ID per one of five schemes (codified at v1.1): `IB-<arc>-<seq>` (single sending-arc origin, e.g., `IB-2299-014`); `IB-Q<queue>-<seq>` (queue-construction rows without a single arc provenance — first queue = `Q1`, subsequent full reconstructions = `Q2`, etc.; e.g., `IB-Q1-BOOT-01`); `IB-CDA-<seq>` (cross_domain_integration_audit §2 STRONG/WEAK/MISSING/OVERCOUPLED rows, e.g., `IB-CDA-014`); `IB-CDA14-<seq>` (cross_domain_integration_audit §14 refresh deltas, e.g., `IB-CDA14-005`); `IB-CXP<n>-<seq>` (CX-P<n> pattern-derived, e.g., `IB-CXP3-01`). Prefixes distinguish provenance for cross-source dedup + backlog grep. |
 | `source_ref` | string | Yes | Citation: `<xx99 doc>:§N` or `cross_domain_integration_audit.md:§14.N` or `<CX-P>` |
 | `source_type` | enum | Yes | `xx99_anchor_update` \| `xx99_recommendation` \| `cross_domain_MISSING` \| `cross_domain_WEAK` \| `cross_domain_OVERCOUPLED` \| `cx_pattern` \| `t4_cross_arc_delegate` |
 | `work_type_tier` | enum | Yes | `T0` \| `T1` \| `T2` \| `T3` \| `T4` \| `T5` — per §3.1 |
@@ -412,6 +445,7 @@ Some findings look implementable but should be rejected at intake:
 | **Already shipped or superseded** — detected via `git log` search for the finding's `source_ref` or an existing `pr_refs` entry in `BACKLOG.md` | Backlog dedup: flip existing intake to `SHIPPED`; do not create a new row |
 | **Cannot name `affected_surfaces` concretely** — no file paths / models / tools listed | Route back to research (evidence too thin) OR §8.5 BUG INVESTIGATION (if a specific symptom exists) |
 | **Multi-domain finding with no cross_domain_integration_audit row** — the disconnect is claimed but not mapped | Route to cross_domain audit refresh first; re-intake after audit row lands |
+| **Cascade-housekeeping anchor-update** — `PLATFORM_INVENTORY.md` refresh, `ARCHITECTURE_INDEX.md` v-bump, `docs/topics/*.md` refresh, `docs/INDEX.md` regeneration, `build_docs_provenance` output. Codified at v1.1 execution refinement. | Discharged by the 4-step docs cascade at every arc close (MEMORY rule `feedback_docs_cascade_at_every_close` + Wave 1 `build-docs-cascade.yml` per §D11). Do NOT create implementation intake — cascade is arc-orthogonal housekeeping, not a discharge-worthy fix. Substantive §7 anchor updates that are NOT covered by the cascade (e.g., new topic-doc creation for a new subsystem, structural inventory refactor) still admit as intake. |
 
 ## 2.5 The ADR corpus operationalization
 
@@ -1343,6 +1377,31 @@ follow-on queue + §5 recommendations. Iterate every §14 audit
 row's MISSING/WEAK/OVERCOUPLED entry. Iterate every CX-P pattern.
 Produce a raw candidate list (expected: 100–300 items).
 
+**Leaf-decision granularity rule (v1.1 execution refinement).**
+One intake row per Chris-ratifiable decision unit — NOT one row
+per §8 tier bundle. A §8 block that reads "T1 CRITICAL ADRs (20
+items)" produces 20 rows, one per sub-decision (each with its own
+`source_ref: §8.2.<label>`), not 1 bundle row. A CX-P4 posture
+gate that manifests across 7 domains produces 7 rows (one per
+domain), not 1 row per pattern. If the source doc does not
+enumerate the sub-decisions concretely enough to name
+`affected_surfaces` for each, the extraction is under-specified —
+route back to research (§2.4 reject condition "cannot name
+affected_surfaces concretely") rather than emit a bundle row.
+
+Rationale: bundle rows silently collapse ratifiable units under a
+single `chris_gate: PENDING` and break §11.3 per-tier
+ratification (Chris cannot "agree all" against a bundle he cannot
+see). First execution surfaced this via ~20 bundle rows across
+1699/1799/1899/1999/2099/2199/2299/2499/2599/2699 — the deep-late
+arcs where §8 blocks are richest.
+
+Extraction sizing hint: leaf granularity for the current 13-arc
+corpus is expected to yield ~250–400 rows post-dedup, not ~150.
+Extractors that return <200 rows for the current corpus are
+likely bundling; re-run with explicit leaf-granularity
+instructions.
+
 **Step 2 — Dedup.** Merge duplicates: findings that appear in
 multiple xx99 summaries or reference the same disconnect are
 folded into a single intake row.
@@ -1357,10 +1416,18 @@ row. Apply the cross-domain dependency bump (§3.3).
 **Step 5 — Tier.** Bucket into P0 / P1 / P2 / P3 / DEFER per
 score-to-tier mapping.
 
-**Step 6 — Ratify.** Present tiered backlog to Chris via PA
-chat as an "agree all with overrides" ratification card. Chris
+**Step 6 — Ratify.** Present tiered backlog to Chris **via Rigby
+in PA chat** (per MEMORY rule `feedback_rigby_comms` and v1.1
+execution refinement) as an "agree all with overrides"
+ratification card, using a **fresh IOS-scoped SIGN pin** minted
+per §15.14 pin lifecycle (e.g.,
+`session_tool.create_fresh label='ios-part11-first-queue-ratification'`).
+Terminal-only presentation is permitted only when Chris
+**explicitly** requests it in the same session (e.g., "present the
+ratification card in the terminal, not via Rigby"). Chris
 overrides any tier assignment; ratified backlog is written to
-`BACKLOG.md`.
+`BACKLOG.md` only **after** ratification closes; the SIGN pin
+retires at ratification close per §15.14.
 
 ## 11.3 Chris ratification gate
 
@@ -1372,6 +1439,11 @@ scope:
   implementation arc even if the top-scored P0 is not it.
 - **Reversibility.** Chris can revoke tier assignments in any
   subsequent session.
+- **Routing (v1.1 execution refinement).** Ratification card
+  routes through Rigby via a fresh IOS-scoped SIGN pin (§15.14)
+  by default. Chris may waive to terminal-only for a specific
+  session by explicit directive; the waiver does not persist
+  across sessions.
 
 ## 11.4 First queue is a snapshot, not a plan
 
@@ -1925,6 +1997,31 @@ request occupies:
 
 Ambiguous phase → ask Chris. Never guess.
 
+**Phase-transition supersession rule (v1.1 execution refinement).**
+When IOS is `status: active` AND Chris opens a session with an
+implementation-planning framing (examples: "first implementation-
+planning session," "start Part 11," "open implementation arc
+I-NNNN," "construct the first implementation backlog"), the
+Research-OS next-session trajectory encoded in
+`00-START-NEXT-SESSION.md` (typically a "T-slot Group NNNN
+arc-open" row inherited from the last research arc close) does
+**NOT** override IOS phase detection. The active implementation
+phase supersedes the paused research trajectory until Chris
+explicitly re-enters research via a Research OS command
+(`Start / Continue / Close research group NNNN`).
+
+Rationale: `00-START-NEXT-SESSION.md` is Research-OS-authored at
+the previous research arc close and does not know about IOS
+activation or Chris's per-session phase directive. Session-scoped
+Chris directive is authoritative per CLAUDE.md tier precedence +
+§15.2.a Tier 2 (CLAUDE.md wins over Research OS + IOS on
+session-scoped override). Corollary: `00-START-NEXT-SESSION.md`
+should be updated at IOS phase entry to reflect *paused research
+trajectory + active implementation phase*, but a stale file does
+not block implementation session start. Fresh Claude sessions
+must apply this rule during Level C step C.9 phase determination
+rather than defaulting to the file's stale row.
+
 ## 15.4 Active-arc detection
 
 For an implementation phase request, determine:
@@ -1977,10 +2074,16 @@ Before the session declares startup complete, verify:
    active arc.** No arc advances past Stage 2 with an
    unratified ADR.
 6. **Docs cascade currency.** Run `python manage.py
-   verify_doc_claims --only-drift` and report the drift count.
-   Do NOT auto-fix drift during a startup — surface it and let
-   the request continue only if drift is orthogonal to the arc's
-   surface.
+   verify_doc_claims` (unfiltered) and sum the per-doc `drift`
+   column across the summary table. **Total drift == 0 is
+   clean.** The `--only-drift` filter returns "No matching claims
+   to run" when zero rows drift — that message is ambiguous
+   (indistinguishable from "no claims registered") and is NOT a
+   substitute for the unfiltered summary. Report the drift count
+   from the unfiltered run. Do NOT auto-fix drift during a
+   startup — surface it and let the request continue only if
+   drift is orthogonal to the arc's surface. Command variant
+   clarified at v1.1 execution refinement.
 7. **Fleet-key surface parity.** If the arc touches
    `FleetServiceKey`, `FleetPAChatAuditRow`, `FleetArtifact`, or
    any Procfile-routed queue, run the 3-axis sweep from MEMORY
@@ -2167,6 +2270,77 @@ class-scoped bootstrap document per class (a Playbook-style
 formalization), Part 15 becomes the reference implementation for
 implementation-class Level B. No IOS content changes; the pointer
 in Research OS §4.2 catches up.
+
+## 15.14 Rigby SIGN pin lifecycle across phase transitions
+
+Chris's session pin lives at `tools/pa_local.sh:361` (per S1300+
+convention). Under Research OS, arc pins are minted at arc-open,
+preserved through the arc, and retired at arc-close (Research OS
+22-consecutive-arc SIGN-pin retirement discipline; IOS §7.2 for
+implementation arcs mirrors this). IOS activation introduces a
+new lifecycle question: what happens to the paused research
+T-slot pin when IOS supersedes for an implementation session?
+
+**Rule (v1.1 execution refinement).**
+
+- **On IOS phase entry with a research pin still active in
+  `:361`.** Preserve the research pin as a comment line above
+  `:361` in the wrapper header (e.g.,
+  `# paused-research-T4-Group1700: pa-44a6eb70d8814e34 (from S2699 close)`)
+  and rotate `:361` to a **fresh IOS-scoped pin** minted via
+  `session_tool.create_fresh label='ios-<phase>-<seq>'`.
+  Example labels: `ios-part11-first-queue-ratification`,
+  `ios-arc-open-I-0100`. This isolates IOS routing from
+  paused-research context and prevents SIGN cross-contamination
+  (per MEMORY rule
+  `feedback_rigby_sign_worker_instability_recovery`).
+- **During IOS Part 11 first-queue construction (pre-arc).** One
+  IOS-scoped pin per Chris ratification cycle. Retire the pin at
+  ratification close via `session_tool.retire force=true`
+  (matching Research OS + IOS §7.2 SIGN-pin retirement
+  discipline).
+- **On implementation arc open (`I-NNNN`).** Mint an arc-scoped
+  pin at Stage 1 open, matching Research OS + IOS §7.2. Preserve
+  through Stages 1–6; retire at Stage 6 close.
+- **On IOS phase exit** (Chris opens a Research OS command
+  `Start / Continue / Close research group NNNN`). **Restore**
+  the paused research pin — rotate `:361` back to the preserved
+  value from the comment line, and delete the comment. If IOS
+  minted a session-scoped pin that has not yet retired, retire
+  it first per §11.2 Step 6 close discipline.
+- **On terminal-only ratification (Chris explicit directive).**
+  No pin minted; execution stays in shell + doc surface. Skip
+  §15.14 pin lifecycle entirely for that specific ratification.
+
+**Prohibitions.**
+
+- Do NOT overwrite a paused-research pin without preserving it
+  as a comment above `:361`.
+- Do NOT retire a paused-research pin during IOS activity — it
+  belongs to the paused research arc, not to IOS. Retirement is
+  the sending arc's Stage 6 or xx99 canonical close author's
+  responsibility.
+- Do NOT reuse a paused-research pin for IOS routing — arc
+  context bleeds across pins (violates SIGN isolation
+  discipline; see MEMORY rule
+  `feedback_rigby_sign_worker_instability_recovery`).
+- Do NOT mint a fresh IOS pin before IOS Level C startup
+  completes (§15.10 pin-mint prohibition remains in force during
+  startup itself; the rule applies to post-startup implementation
+  session work).
+
+**Rationale.** First execution surfaced ambiguity when T4 Group
+1700 Observability arc pin `pa-44a6eb70d8814e34` was live at
+`:361` while IOS Part 11 Step 6 needed a Rigby route.
+Alternatives evaluated:
+- Reuse the T4 pin → mixes arc contexts (SIGN cross-contamination).
+- Mint without preserving → loses the T4 resume path (Research
+  OS arc-pin-durable-through-arc discipline broken).
+- Retire the T4 pin → misappropriates the pin from the paused
+  research arc.
+
+Preserve + rotate is the only shape that satisfies all three
+constraints simultaneously.
 
 ---
 
