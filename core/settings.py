@@ -157,6 +157,23 @@ TOOL_CALL_TRACE_ID_ENFORCED = os.environ.get(
     'TOOL_CALL_TRACE_ID_ENFORCED', 'false'
 ).lower() == 'true'
 
+# Arc I-0100 P4 (IB-1799-T1-02): write-side implementation of ADR-0002
+# Option 1 (per-turn core.AgentExecution write). Default OFF. When False,
+# the PA agentic loop does NOT create AgentExecution rows for its own
+# turns — preserves the current 0-row-per-PA-turn baseline
+# (1799 xx99 §1 point 2 Cat C). When True, every process_message() call
+# creates one AgentExecution row per PA turn with agent=<canonical
+# PersonalAssistant Agent row created by migration 0377>,
+# input_data['source']='pa', input_data['trace_id']=<PA trace>,
+# conversation_id=<pin>, task=<user message>, status=lifecycle. The
+# LLMCallEvent.execution_id join key populates for PA-driven LLM calls
+# per ADR-0002 §3.3 correlation contract. See
+# docs/adr/ADR-0002-pa-write-shape-and-correlation-contract.md §3.4
+# rollout for the Chris-directive-gated flag-flip discipline.
+PA_AGENT_EXECUTION_WRITE_ENABLED = os.environ.get(
+    'PA_AGENT_EXECUTION_WRITE_ENABLED', 'false'
+).lower() == 'true'
+
 # Session 1252 PR 2: pinned PA conversation that Rigby posts escalation
 # summaries into when a Documentation Manager mission fails. Resolves
 # at runtime so the active pin can be updated without amending the
