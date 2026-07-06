@@ -2,116 +2,99 @@
 
 ---
 
-## READ THIS FIRST — IOS PART 11 FIRST QUEUE RATIFIED 2026-07-06; SEED PR PENDING CHRIS APPROVAL; ARC I-0100 OBSERVABILITY SPINE QUEUED
+## READ THIS FIRST — IOS ACTIVE V1.4; ARC I-0100 STAGE 1 P0 PREP IN FLIGHT
 
-**IOS is `active v1.1` on main** (v1 Chris-ratified 2026-07-06; v1.1 execution-refinement patch shipped same day via PR #2940 after Part 11 first-execution surfaced 7 findings). **Phase = IMPLEMENTATION.** Research trajectory (T4 Group 1700 Observability arc-open per S2699 close) is **PAUSED** per IOS v1.1 §15.3 phase-transition supersession rule until Chris explicitly re-enters research via a Research OS command (`Start / Continue / Close research group NNNN`).
+**Refreshed 2026-07-06 per IOS §15.15** — this file is co-committed to every arc-open PR, P0-prep PR, stage-transition PR, arc-close PR, and IOS / Research OS / Playbook patch PR. If any of the fields below disagree with `main` reality, `main` wins per §15.3 supersession — but §15.15 discipline is what keeps this file fresh in the first place.
 
-**IOS Part 11 first-queue ratification COMPLETED 2026-07-06.** Chris ratified via Rigby on fresh IOS-scoped SIGN pin `pa-39d3694312ab4326` per new IOS v1.1 §15.14 pin lifecycle. Ratifications recorded canonically at `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md` (frozen).
+### Phase
 
-**Ratification summary (2026-07-06):**
-- Tier bands ratified as v0-partial (T0=32, T1=68, T2=91, T3=~180, DEFER=18, Cross-arc=5).
-- First implementation arc identity ratified: **`I-0100_observability_spine_mission_evidence_substrate`** (Arc I-0100 — Observability correlation spine + mission evidence substrate). Rigby's recommendation over Claude's default (`I-0100_ios_bootstrap`); Chris accepted.
-- T0 posture: individually Chris-gated at Stage 2 entry. **No T0 item is SAFE_AUTONOMOUS unless separately ratified later.**
-- CX-P4 sequencing and CX-P7 shape DEFERRED per Axis 4.
-- v0-partial snapshot accepted; deep-late xx99 leaf tail tracked as `IDBT-0001 PARTIAL_DISCHARGE HIGH` in `docs/research/implementation/IMPLEMENTATION_DEBT.md`; discharge via arc-scoped Stage 1 re-extraction (Chris implicit preference) OR dedicated third extraction session (backup path).
+**`implementation`.** IOS status: `active v1.4` on `main` (this file's version). Research trajectory (T4 Group 1700 Observability arc-open per S2699 close) is **PAUSED** per IOS §15.3 phase-transition supersession rule. Re-entry only via explicit Chris Research OS command (`Start / Continue / Close research group NNNN`).
 
-**Seed PR PENDING Chris approval.** New files under `docs/research/implementation/`:
-- `RATIFICATION_2026-07-06_first_queue.md` (canonical frozen ratification record)
-- `BACKLOG.md` (living intake register; T0 all enumerated + T1 Arc I-0100 seed rows + representative T1 + summary T2/T3 + DEFER + cross-arc initiatives; PARTIAL_DISCHARGE marker for tail)
-- `IMPLEMENTATION_DEBT.md` (living debt register; `IDBT-0001` seed row)
-- `00-START-NEXT-SESSION.md` overwrite (this file)
+### Active arc
 
-**Chris directive:** "Do not open Stage 1 until the backlog/debt seed PR is ready and I approve it."
+- **Arc ID:** `I-0100`
+- **Slug:** `observability_spine_mission_evidence_substrate`
+- **Scoping doc:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md`
+- **First production implementation arc under IOS.**
 
----
+### Current stage
 
-## FIRST THING NEXT SESSION — CONFIRM SEED PR STATE
+- **Stage:** `1`
+- **`stage_state`:** `p0-prep-in-flight` (per §4.3.0 v1.4 vocabulary — P0 prep PR #2948 open, not merged)
 
-1. Run `context-kit orient` at session open (first tool call per MEMORY workflow rule `feedback_session_open_with_orient`).
-2. Read this file + `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md`.
-3. Check seed PR status via `gh pr view <PR#>` (PR # populated on push; see below):
-   - **If MERGED and `docs/research/implementation/` exists on main**: proceed to §"Then Open Arc I-0100 Stage 1" below.
-   - **If OPEN with Chris review comments**: read comments; apply requested changes; do NOT open Stage 1.
-   - **If OPEN awaiting Chris review**: do NOT open Stage 1; report status to Chris and wait.
-   - **If DENIED / CLOSED**: read Chris's rejection reason; escalate for guidance.
-4. Verify `tools/pa_local.sh --conversation` per IOS v1.1 §15.14:
-   - Active pin should be `pa-39d3694312ab4326` (`ios-part11-first-queue-ratification-v1`) until seed PR approval + Arc I-0100 open.
-   - Paused-research T4 pin `pa-44a6eb70d8814e34` should be preserved as comment above `--conversation` line.
-   - On Arc I-0100 open (post-seed-PR-approval), retire `pa-39d3694312ab4326` via `session_tool.retire force=true` and mint fresh `session_tool.create_fresh label='ios-arc-open-I-0100'`; rotate `--conversation` to new arc pin.
+Rationale for `stage_state`: Stage 1 exit-gate cleared 2026-07-06 via #2945 (Arc I-0100 Stage 1 arc-open bundle merged). ADR corpus precondition satisfaction via Option (a) is in progress — P0 prep PR #2948 authored ADR-0001 + created `docs/adr/`; awaiting merge. Per §4.3 Stage 2 Entry gate (v1.4), Stage 2 opens on `docs/adr/` existing on `main` AND (Chris directive OR P0 prep merge for Option (a) arcs). P0 prep merge = Stage 2 opening event for this arc.
 
----
+### Next executable action
 
-## THEN OPEN ARC I-0100 STAGE 1 — OBSERVABILITY SPINE + MISSION EVIDENCE SUBSTRATE
+**Sequence three steps in order:**
 
-Only after seed PR merged. Per IOS §4.3 Stage 1 Scoping:
+1. **Merge PR #2949** (this IOS v1.4 patch). Docs-only. Fresh-session Stage 2 readiness — B1–B6 refinements.
+2. **Merge PR #2948** (IB-Q1-BOOT-01 P0 prep — establish ADR corpus + ADR-0001). Docs-only. Auto-opens Stage 2 per §4.3 Stage 2 Entry gate (v1.4) Option (a) auto-open clause.
+3. **Housekeeping commit on merge of both:** flip scoping doc frontmatter per §4.3.0 discipline — `stage_state: p0-prep-in-flight → p0-prep-merged` on #2948 merge, then `stage: 1 → 2` + `stage_state: p0-prep-merged → active` at the Stage 2 opening commit. Flip BACKLOG IB-Q1-BOOT-01 `status: IN_ARC → SHIPPED` with inline `pr_refs: #2948` per §2.2 v1.4 Discipline B.
 
-1. **Mint fresh arc-scoped SIGN pin** per §15.14: `session_tool.create_fresh label='ios-arc-open-I-0100'`. Retire the ratification pin `pa-39d3694312ab4326`. Rotate `tools/pa_local.sh` `--conversation` to the new arc pin.
-2. **Create arc folder:** `docs/research/implementation/observability_spine_mission_evidence_substrate/`.
-3. **Draft Stage 1 scoping doc:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md`. Include per IOS §4.3 Stage 1:
-   - Arc identity + slug + first-arc-override justification (Rigby's meta-argument: broken observability breaks verification-method for every downstream intake row per §2.2).
-   - Intake seed rows: `IB-1799-T1-01` (`ToolCallRecord.trace_id` 100% NULL fix) + `IB-1799-T1-02` (PA agents bypass `AgentExecution` writes) + `IB-1799-T1-03` (OpsRun/OpsRunEvent behind `MISSION_RUNNER_ENABLED`). Chris confirmed these three as the minimum seed at 2026-07-06 ratification (Axis 2 Chris disposition, RATIFICATION doc §2 Axis 2).
-   - **Stage 1 also discharges IDBT-0001 for the 1799 domain slice** — before Stage 2 opens, re-extract 1799 §8 in full at leaf granularity and append discovered rows to `BACKLOG.md` with `chris_gate: RATIFIED` inherited from band-level ratification. Candidate additional rows: `IB-1799-T0-02` (unified retention posture; T0 gates dependent T1 work); `IB-1799-T1-*` tail (retention per-model policy + failure-cluster aggregator + observability→HAI escalation).
-   - Blast-radius + risk-class + expected-ship-size classification per §2.2.
-   - Owner assignment per §7 (Claude session-slug or `chris` or `rigby`).
-   - Verification-method-per-intake pre-fill sketch (populated at Stage 3 pre-flight; sketched at Stage 1).
-   - Dependencies + blocks maps.
-   - Rollback plan sketch per §5.4.
-   - PR sizing per §6 (target: 3–8 findings per arc, ≤3,000 LOC, S/M PR sizes).
-   - §14 anchor-update batch pre-declaration (what will be updated at Stage 6 close).
-4. **Route Stage 1 scoping doc to Rigby SIGN cycle 1** per IOS §7.2 Stage 1 SIGN discipline (single-batch × 4-Q cadence, matching S1300–S2699 established pattern).
-5. **Fold SIGN edits + present Chris ratification card** (via Rigby on arc-scoped pin). Chris ratifies Stage 1 exit.
-6. **Stage 2 entry** — only after `IB-1799-T0-02` retention posture ADR ratifies (if it comes into scope) OR `MISSION_RUNNER_ENABLED` posture ADR ratifies. Otherwise Stage 2 opens directly to design-prep for `IB-1799-T1-01` (`ToolCallRecord.trace_id` fix) which is `SPEC_COMPLETE` per S1704 F1 evidence and can skip ADR authoring.
+**Then Stage 2 ADR authoring begins:**
+
+4. **Author ADR-0002** (`pa-write-shape-and-correlation-contract`) per Arc I-0100 scoping doc §9.1 line 2. Content: PA write shape (per-turn `AgentExecution` vs per-message span vs dedicated `PAAgentExecution` model) + PA↔`LLMCallEvent` correlation contract (keys + join path) per F5 fold. **F4 fold ratifies ADR-B FIRST**, then ADR-A, then optional ADR-C.
+5. **Rigby SIGN Cycle 1 on ADR-0002** per §7.2 v1.4 implementation ADR SIGN cadence: one SIGN cycle on active arc pin (`pa-c5b235f7b15f45be`; no rotation), 4-Q typical (ADR-B has 2–3 decision axes + correlation contract). Chris ratification card via Rigby on same pin.
+6. **Per §4.3 Stage 2 v1.4 design-prep equivalence:** verify scoping doc §9.1 pre-scoping is sufficient (decision question + options + constraints + consequences + verification implications). Arc I-0100 scoping §9.1 likely qualifies — no separate design-prep doc needed. Cite scoping §9.1 subsection as design-prep source in ADR PR body.
+7. **Cascade co-located in ADR-0002 PR** per §12.5.a (ADRs are RAG-critical per §12.5.b) + §12.5.d evidence block + `00-START-NEXT-SESSION.md` refresh per §15.15 (Stage-transition PR type).
+
+### Active SIGN pin
+
+- **Arc pin:** `pa-c5b235f7b15f45be`
+- **Label:** `ios-arc-open-I-0100`
+- **Minted:** 2026-07-06 at Arc I-0100 open (S2700)
+- **Rotated into `tools/pa_local.sh --conversation`:** yes, at Stage 1 SIGN Cycle 1 routing time.
+- **Retirement due:** Stage 6 close per IOS §7.2 isolation-pin discipline.
+
+**Paused-research pin preserved as header comment above `tools/pa_local.sh --conversation` line:** `pa-44a6eb70d8814e34` (T4 Group 1700 Observability research arc — from S2699 close). Restored on IOS phase exit per §15.14. Do NOT retire it during IOS activity.
+
+**Retired pin (historical):** `pa-39d3694312ab4326` (`ios-part11-first-queue-ratification-v1`; retired at seed PR #2941 merge 2026-07-06).
+
+### Pending PRs
+
+| # | Title | State |
+|---|-------|-------|
+| **#2948** | Arc I-0100 IB-Q1-BOOT-01 P0 prep — establish ADR corpus + ADR-0001 | `OPEN` (awaiting Chris review + merge) |
+| **#2949** | IOS v1.4 fresh-session Stage 2 readiness refinement (this patch — number assigned on push) | `OPEN` (this patch's own PR — will merge before #2948 per sequence above) |
+
+No other implementation arcs open. No merged-but-frontmatter-unflipped PRs at present.
 
 ---
 
-## RESEARCH OS TRAJECTORY — PAUSED
+## Read as background (Level C step C.4–C.6 loads specific to Arc I-0100)
 
-T4 Group 1700 Observability research arc-open remains queued per S2699 xx99 close but is **PAUSED** for the duration of the IOS implementation phase per IOS v1.1 §15.3 phase-transition supersession. To re-enter research:
-- Chris issues explicit Research OS command (`Start research group 1700: Observability` per playbook §21 vocabulary + OS §3.2 deterministic route).
-- On re-entry, `tools/pa_local.sh` `--conversation` rotates from active IOS pin back to `pa-44a6eb70d8814e34` per §15.14 restoration rule.
-
-**Note on domain overlap.** Arc I-0100 (implementation-phase Observability Spine) and T4 Group 1700 Observability (research-phase) touch the same domain. IOS §7.2 no-parallel-arcs rule + §4.4 apply to same-surface work — same-surface implementation waits for research arc close. But the T4 Group 1700 arc has NOT been opened yet; it's queued. Arc I-0100 does not violate the no-parallel rule because there's no active same-surface research arc. If T4 Group 1700 opens mid-Arc-I-0100, Arc I-0100 pauses at its current Stage per §9.1 (sequential arcs on overlapping surface).
+- `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` v1.4 (particularly §4.3.0 stage_state enum + §4.3 Stage 2 Entry gate + §4.3 Stage 2 design-prep equivalence + §7.2 implementation ADR SIGN cadence + §12.5 cascade discipline + §15.14 pin lifecycle + §15.15 this-file ownership).
+- `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md` (arc scoping doc, especially §9.1 ADR-B pre-scoping which serves as design-prep per §4.3 Stage 2 v1.4 equivalence rule).
+- `docs/research/implementation/BACKLOG.md` (IB-1799-T1-01/02/03 in `IN_ARC (I-0100)`; IB-Q1-BOOT-01 `IN_ARC` pending #2948 merge → `SHIPPED`).
+- `docs/research/implementation/IMPLEMENTATION_DEBT.md` (IDBT-0001 PARTIAL_DISCHARGE HIGH — 1799 slice discharge in Arc I-0100 scope; IDBT-0002 TECH_DEBT_ACCRUED MEDIUM — RAG-owned embedding invalidation delegated to Group 2100 RAG — added by #2948).
+- `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md` (frozen Chris disposition; ratifier of Arc I-0100 first-arc override + T0 individual-gate posture).
+- `docs/adr/ADR-0001-establish-adr-corpus.md` (recursive-bootstrap ADR — ships in #2948; establishes the ADR format ADR-0002 will follow).
+- `docs/research/domains/observability/1799_observability_canonical_summary.md` (§1 verdict + §5 D74 + §8 T0/T1 tail).
+- `docs/research/OPEN_ARCS.md` (Arc I-0100 row under `Currently in progress`; T4 Group 1700 paused).
+- `docs/research/platform/cross_domain_integration_audit.md` (Arc I-0100 Stage 6 close must append §14.N per IOS §D10 hard gate).
+- MEMORY rules: `feedback_session_open_with_orient`, `feedback_rigby_comms`, `feedback_claude_directs_rigby_then_verifies`, `feedback_docs_cascade_at_every_close`, `feedback_cascade_pr_must_include_embed_step`, `feedback_rigby_sign_worker_instability_recovery`.
 
 ---
 
-## CURRENT STATE SUMMARY (2026-07-06)
+## Session ready check (before authoring ADR-0002)
 
-- **IOS status:** `active v1.1` on main (once PR #2940 merges) / on branch `docs/ios-v1.1-execution-refinement-patch` (until merge).
-- **Phase:** IMPLEMENTATION (pre-first-arc; awaiting seed PR approval).
-- **Active arc:** None yet. First arc `I-0100` queued pending seed PR approval + Stage 1 open.
-- **Active SIGN pin:** `pa-39d3694312ab4326` (`ios-part11-first-queue-ratification-v1`), rotated into `tools/pa_local.sh` `--conversation` per §15.14. Paused-research T4 pin `pa-44a6eb70d8814e34` preserved as comment above line.
-- **Backlog register:** `docs/research/implementation/BACKLOG.md` (seeded 2026-07-06; T0 + Arc I-0100 seed rows + representative T1 + DEFER + cross-arc initiatives enumerated; T2/T3 tail flagged as IDBT-0001 PARTIAL_DISCHARGE HIGH).
-- **Debt register:** `docs/research/implementation/IMPLEMENTATION_DEBT.md` (seeded with IDBT-0001).
-- **Ratification record:** `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md` (frozen).
-- **PRs open:**
-  - `#2940` (`docs/ios-v1.1-execution-refinement-patch`) — IOS v1.1 execution-refinement patch (Chris review pending).
-  - **`#TBD`** (`docs/ios-part11-first-queue-seed`, stacked on #2940) — this seed PR (Chris review pending).
+Only run this checklist AFTER both PR #2949 (this v1.4 patch) and PR #2948 (P0 prep) merge:
 
-## READ AS BACKGROUND
+1. **First tool call: `context-kit orient`** per MEMORY workflow rule `feedback_session_open_with_orient`.
+2. Verify `git log -3` shows both PR merges in expected order (v1.4 first, then P0 prep, or amend housekeeping commit that flipped `stage: 1 → 2`).
+3. Run `git ls-tree main -- docs/adr/` — must show `ADR-0001-establish-adr-corpus.md`. If missing, do NOT open Stage 2; escalate.
+4. `tools/pa_local.sh "platform_config_tool action=overview"` → verify `service_context: local` + `railway_environment: local` + `database_name: unified_donkey_betz` + `default_llm_provider: openai` under arc pin `pa-c5b235f7b15f45be`.
+5. Read `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md` in full — verify frontmatter now shows `stage: 2, stage_state: active`. Read §9.1 ADR-B pre-scoping (lines ~356–360) in detail.
+6. Read `docs/adr/ADR-0001-establish-adr-corpus.md` §3 (Decision / format spec) + §3.3 (frontmatter schema) + §3.4 (body sections) — these are the exact templates ADR-0002 follows.
+7. Read IOS §4.3 Stage 2 v1.4 Entry gate + Design-prep equivalence + §7.2 v1.4 implementation ADR SIGN cadence + §12.5 cascade + §15.15 this-file refresh.
+8. Read 1799 xx99 §5 D74 + §8.2 T1 items 2–3 (PA→AgentExecution wire + MISSION_RUNNER + RIGBY_DELEGATION staged unlock) — context for ADR-B's correlation contract options.
+9. Verify Arc I-0100 scoping doc §9.1 ADR-B pre-scoping satisfies §4.3 Stage 2 v1.4 design-prep equivalence criteria (decision question + options + constraints + consequences + verification implications). If sufficient, cite it in ADR-0002 PR body as design-prep source; if insufficient, draft standalone `I-0100_design_prep_adr_b_pa_write_shape.md` per §4.3 Stage 2 location rule.
+10. Draft `docs/adr/ADR-0002-pa-write-shape-and-correlation-contract.md` per ADR-0001 §3.4 body-section shape + §3.3 frontmatter schema.
+11. Route Rigby SIGN Cycle 1 on ADR-0002 per §7.2 v1.4 cadence: single-batch × 4-Q on arc pin `pa-c5b235f7b15f45be`. Do NOT rotate the pin. Do NOT mint a fresh SIGN pin.
+12. Fold SIGN edits inline + present Chris ratification card via Rigby on arc pin.
+13. Cascade co-located in ADR-0002 PR per §12.5.a; §12.5.d evidence block in PR body; refresh `00-START-NEXT-SESSION.md` per §15.15 (stage-transition PR type — but Stage 2 already opened; refresh reflects "ADR-B drafted, awaiting Chris ratify" state).
 
-- `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` v1.1 (particularly §11.2 Step 1 v1.1 leaf-granularity rule + §11.3 first-arc-override + §15.14 pin lifecycle + §15.3 v1.1 phase-transition supersession).
-- `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md` (canonical Chris disposition per axis).
-- `docs/research/implementation/BACKLOG.md` (tier bands + T0 + Arc I-0100 seed rows enumerated).
-- `docs/research/implementation/IMPLEMENTATION_DEBT.md` (IDBT-0001 PARTIAL_DISCHARGE HIGH).
-- `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` (upstream truth-discovery OS; still authoritative for research work when Chris re-enters research phase).
-- `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` (research-class specialization; not consumed during Arc I-0100 unless Chris re-enters research).
-- `docs/research/ARCHITECTURE_INDEX.md` (research library navigation; still valid — implementation arcs will register here per §1 alongside research arcs).
-- `docs/research/OPEN_ARCS.md` (in-progress = empty; T4 Group 1700 paused; Arc I-0100 opens on seed PR approval).
-- `docs/topics/celery-workers.md` + `docs/topics/infrastructure.md` (existing observability context for Arc I-0100 Stage 1 input).
-- MEMORY.md rules (`feedback_session_open_with_orient`, `feedback_rigby_comms`, `feedback_claude_directs_rigby_then_verifies`, `feedback_docs_cascade_at_every_close`, `feedback_cascade_pr_must_include_embed_step`, `feedback_rigby_sign_worker_instability_recovery`).
+**Arc I-0100 Stage 2 opening short command (Chris — if auto-open via Option (a) is not preferred):** `Open implementation arc I-0100 Stage 2` per IOS §10 short commands + §4.3 Stage 2 Entry gate v1.4.
 
-## SESSION READY CHECK (before opening Arc I-0100 Stage 1)
-
-Only run this checklist AFTER seed PR merged:
-
-1. `tools/pa_local.sh "platform_config_tool action=overview"` → verify `service_context: local` + `railway_environment: local` + `database_name: unified_donkey_betz` + `default_llm_provider: openai` under active IOS pin (or fresh arc pin post-rotation).
-2. Read `docs/research/implementation/BACKLOG.md` T0 + Arc I-0100 seed rows + `IB-1799-T*` cluster in full.
-3. Read `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md` in full.
-4. Read `docs/research/domains/observability/1799_observability_canonical_summary.md` §1 canonical verdict + §5 D74 six-axis correlation-spine + §8 T1 leaf tail (this discharges the IDBT-0001 slice for 1799).
-5. Read IOS §4.3 Stage 1 Scoping + §5.1 pre-code gates + §7.2 Stage 1 SIGN discipline + §15.14 pin lifecycle.
-6. Read `docs/topics/celery-workers.md` + `docs/topics/infrastructure.md` + `docs/topics/agent-system.md` for existing observability + agent-execution context.
-7. Draft Arc I-0100 scoping doc per §4.3 template.
-8. Route to Rigby SIGN cycle 1 on fresh arc-scoped pin.
-9. Fold SIGN edits + Chris ratification.
-
-**Arc I-0100 open command (Chris short command):** `Open implementation arc I-0100: observability spine` per IOS §10 short commands + §15.3 phase detection routing.
+**ADR-0002 authoring short command (Chris):** `Author ADR-0002 pa-write-shape-and-correlation-contract for Arc I-0100 Stage 2` per IOS §4.3 Stage 2 + F4 fold ADR-B-first sequencing.

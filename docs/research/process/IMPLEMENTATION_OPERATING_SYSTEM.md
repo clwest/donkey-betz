@@ -1,6 +1,6 @@
 ---
 title: "Implementation Operating System — how research findings become shipped code"
-status: active v1.3 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings. v1.3 = cascade-discipline refinement 2026-07-06 codifying pre-PR vs post-merge cascade policy + PR-body evidence block after the arc-open PR / separate-cascade-PR pattern recurred 3× same-day (#2941→#2942, #2943→#2946, #2945→#2946) leaving Rigby's RAG stale during Chris ratification windows — see verifier_loop.)
+status: active v1.4 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings. v1.3 = cascade-discipline refinement 2026-07-06 codifying pre-PR vs post-merge cascade policy + PR-body evidence block after the arc-open PR / separate-cascade-PR pattern recurred 3× same-day. v1.4 = fresh-session Stage 2 readiness refinement 2026-07-06 codifying B1–B6 gaps found when simulating a cold Claude session opening Stage 2 for Arc I-0100 after IB-Q1-BOOT-01 P0 prep PR opened: stage_state enum, Stage 2 entry gate + opening ceremony, design-prep equivalence via scoping §9, pr_refs/arc_ref inline syntax, implementation ADR SIGN cadence, and 00-START-NEXT-SESSION.md ownership — see verifier_loop.)
 authority: process
 session_added: 2500
 last_verified: 2026-07-06
@@ -104,6 +104,50 @@ verifier_loop: |
   §14.2 two-trigger codification threshold not met on any single
   finding, but Chris explicitly waived the wait per his
   refinement-authority prerogative.
+  active v1.4 (2026-07-06): fresh-session Stage 2 readiness refinement
+  patch after Chris directed a cold-Claude simulation of Stage 2
+  startup for Arc I-0100 (post-#2948 IB-Q1-BOOT-01 P0 prep PR open,
+  pre-ADR-0002 authoring). The simulation walked Level A → Level B
+  → Level C bootstrap treating only repo artifacts (CLAUDE.md +
+  MEMORY.md + doc tree) as input, no conversation context. Six
+  gaps (B1–B6) surfaced that would materially confuse a fresh
+  session opening Stage 2. Chris ratified all six via directive
+  "Proceed with full IOS v1.4: apply B1–B6. Accept all six
+  findings as real fresh-session Stage 2 gaps." Applied edits:
+  (B1) §4.3 preamble gains stage_state enum {exit-gate-cleared,
+  p0-prep-in-flight, p0-prep-merged, active, awaiting-close}
+  replacing the previous ad-hoc frontmatter values; (B2) §4.3
+  Stage 2 gains explicit Entry gate clause — Stage 2 opens on
+  (a) docs/adr/ exists on main AND (b) either Chris explicit
+  directive OR P0-prep-PR merge for Option (a) arcs; frontmatter
+  stage: flips 1 → 2 at Stage 2 opening; (B3) §4.3 Stage 2 gains
+  design-prep equivalence clause — if scoping doc §9 pre-scopes
+  the ADR with decision question + options + constraints +
+  consequences + verification implications, that section IS the
+  design-prep artifact; (B4) §2.2 schema gains inline-syntax
+  requirement for arc_ref and pr_refs when BACKLOG table shape
+  cannot expose them as proper columns; §15.6 rule 10 gains
+  tolerance for the inline syntax; (B5) §7.2 Stage 2 SIGN row
+  gains explicit cadence — one Rigby SIGN cycle per ADR on the
+  active arc pin, 2-Q minimum / 4-Q typical / 6-Q max, no pin
+  rotation between ADRs; (B6) new §15.15 codifies
+  00-START-NEXT-SESSION.md as RAG-critical startup infrastructure
+  co-committed to every arc-open PR / P0-prep PR / stage-
+  transition PR / arc-close PR; adds refreshed-file schema
+  requirement (phase + active arc + current stage + stage_state
+  + next executable action + active SIGN pin + pending PRs).
+  §14.2 two-trigger codification threshold: single trigger from
+  Arc I-0100 pre-ADR-0002 cold-session simulation; Chris invoked
+  refinement-authority prerogative on the ratification directive.
+  No Rigby SIGN cycle routed — refinement is docs-only
+  clarification with no runtime effect and no open D-question
+  reopened. Applied under IOS v1.4 = active status via same-
+  session commit. Dogfooded: this patch's own PR runs the full
+  5-step cascade + build_docs_provenance locally before PR open
+  per IOS v1.3 §12.5.a, commits docs/INDEX.md + docs/_provenance
+  .json diffs alongside the IOS edit, includes the §12.5.d
+  cascade evidence block, and updates 00-START-NEXT-SESSION.md
+  per new §15.15 (structural test of the codified rule).
   active v1.3 (2026-07-06): cascade-discipline refinement patch
   after the arc-open PR / separate-cascade-PR pattern recurred three
   times same-day (#2941 seed → #2942 cascade; #2943 IOS v1.2 patch
@@ -477,6 +521,41 @@ session can grep the backlog by `status`, `affected_domain`,
 `risk_class`, or `blast_radius` and answer "what's shippable
 next?" without a human synthesizing.
 
+**BACKLOG surface discipline for `arc_ref` and `pr_refs`
+(v1.4).** The §2.2 schema treats `arc_ref` and `pr_refs` as
+first-class fields, but the `BACKLOG.md` table shape today
+collapses them into free-text `affected_surfaces` / `notes`
+cells (10-column markdown tables cannot expose every field as
+its own column without hurting grep-friendliness). To keep
+§15.6 rule 10 (PR-state drift verification) mechanically
+runnable, use one of the following disciplines:
+
+- **Discipline A (preferred, adopt as tables migrate).** Expose
+  `arc_ref` and `pr_refs` as their own table columns in
+  `BACKLOG.md`. Rule 10 greps the column directly.
+- **Discipline B (transitional / until tables migrate).**
+  Embed the fields inline in the row's `affected_surfaces` or
+  `notes` cell using the exact literal syntax:
+  - `arc_ref: I-NNNN` (one arc per row; if the intake spans
+    multiple arcs, list them comma-separated:
+    `arc_ref: I-NNNN, I-MMMM`)
+  - `pr_refs: #NNNN, #MMMM` (GitHub PR numbers with the `#`
+    prefix; comma-separated; may include closed PRs — status
+    is queried via `gh pr view` per §15.6 rule 10).
+  - Additional related-ADR reference: `adr_ref: ADR-NNNN`.
+
+The inline syntax is chosen so `grep -oE '(arc_ref|pr_refs|
+adr_ref): [^|]*' BACKLOG.md` produces a mechanically parseable
+result even when the fields live inside cell prose. Discipline
+B is permitted indefinitely; Discipline A is the aspirational
+target for the next BACKLOG structural refactor arc.
+
+**Fresh Claude sessions MUST prefer Discipline A when present
+and fall back to Discipline B grep only if the row lacks
+dedicated columns.** Codified after v1.4 fresh-session Stage 2
+simulation surfaced that §15.6 rule 10's `pr_refs` sweep could
+not run against Discipline B rows without an explicit syntax.
+
 ## 2.3 Intake triggers
 
 An intake item is **created** by one of:
@@ -699,7 +778,55 @@ choice in §13 D1 (e.g., merge into the same numeric space).
 ## 4.3 The six stages
 
 Each implementation arc runs through six stages, mirroring the
-research arc lifecycle from Playbook §2:
+research arc lifecycle from Playbook §2.
+
+### 4.3.0 Stage-state vocabulary (v1.4)
+
+The scoping doc's frontmatter `stage:` field names the current
+Stage (1..6). The frontmatter `stage_state:` field names the
+current sub-state within that Stage. Fresh Claude sessions grep
+these two fields to determine "where the arc is right now"
+without conversation context (per §15.8 cold-resume invariant).
+
+The `stage_state:` enum, codified at v1.4 execution-refinement
+patch after Arc I-0100 Stage 1 → Stage 2 transition surfaced
+that ad-hoc frontmatter values could not distinguish
+"exit-gate cleared" from "P0 prep in-flight" from "P0 prep
+merged" from "Stage 2 opened":
+
+| `stage_state` | Meaning | Applies to which stages |
+|---------------|---------|-------------------------|
+| **`exit-gate-cleared`** | The stage's exit checklist is complete but the next stage has not opened yet. Terminal state for the current stage. | Any of 1..6; typical for 1, 2, 3, 4, 5 |
+| **`p0-prep-in-flight`** | A P0 prep PR (per Stage 1 v1.2 ADR corpus precondition Option (a) OR any future analogous bootstrap dependency) is open but not merged. Arc is in the transitional window between Stage 1 exit and Stage 2 open. | Between Stage 1 and Stage 2 only |
+| **`p0-prep-merged`** | P0 prep PR merged; Stage 2 has not been formally opened yet (Chris directive or Option (a) auto-open per §4.3 Stage 2 Entry gate pending). | Between Stage 1 and Stage 2 only |
+| **`active`** | Stage is open and doing work. PRs being drafted, SIGN cycles running, ratifications in-flight. | Any of 1..6 |
+| **`awaiting-close`** | Stage 6 close doc is drafted + cascade run + audit refresh drafted; awaiting Chris "commit it". Terminal-of-arc precondition. | Stage 6 only |
+
+**Frontmatter update discipline.** `stage:` and `stage_state:`
+MUST flip in the same commit that produces the state change:
+
+- **Stage N exit cleared → Stage N+1 pending.** `stage: N`
+  unchanged; `stage_state:` flips to `exit-gate-cleared`.
+- **P0 prep PR opens (Option (a) arcs).** `stage: 1` unchanged;
+  `stage_state:` flips `exit-gate-cleared → p0-prep-in-flight`.
+  The commit that opens the P0 prep PR includes the frontmatter
+  flip.
+- **P0 prep PR merges.** `stage: 1` unchanged; `stage_state:`
+  flips `p0-prep-in-flight → p0-prep-merged`. Housekeeping
+  flip; may batch with the next arc-touching PR.
+- **Stage N+1 opens.** `stage:` flips `N → N+1`; `stage_state:`
+  flips to `active`. The commit that OPENS Stage N+1 (the first
+  Stage N+1 PR, or the Chris-directive-recording PR) carries
+  the frontmatter flip.
+- **Stage 6 close draft complete.** `stage: 6`; `stage_state:`
+  flips `active → awaiting-close`. The commit that produces the
+  Stage 6 close doc carries the flip.
+- **Arc close.** Arc leaves `OPEN_ARCS.md#In-progress` and
+  moves to `#Closed`. Scoping doc frontmatter `status:` may
+  flip `active → superseded` per Playbook convention if the arc
+  produced a canonical close doc that supersedes the scoping
+  doc; otherwise `status: active` remains and the arc is
+  "closed with the scoping doc still live as reference."
 
 ### Stage 1 — Scoping
 
@@ -777,11 +904,79 @@ dependency was not called out in the Stage 1 exit contract.
 
 ### Stage 2 — Design-preparation + ADR (if required)
 
+**Entry gate (v1.4).** Stage 2 opens ONLY when BOTH of the
+following are true:
+
+1. **ADR corpus exists on `main`.** `docs/adr/` directory is
+   committed to `main` AND `ADR-0001-establish-adr-corpus.md`
+   is `status: accepted` on `main`. Verified via `git ls-tree
+   main -- docs/adr/` and frontmatter grep.
+2. **Opening event.** ONE of:
+   - **Chris explicit directive.** `Open implementation arc
+     I-NNNN Stage 2` OR equivalent session-scoped short command.
+   - **Option (a) P0 prep PR merge (auto-open).** If the arc
+     selected Option (a) at Stage 1 exit (bundle IB-Q1-BOOT-01
+     as in-arc P0 prep PR — see the ADR corpus precondition
+     block below), the P0 prep PR merge IS the Stage 2 opening
+     event. No separate Chris directive required — the Chris
+     ratification of Option (a) at Stage 1 exit carries forward
+     to Stage 2 open. Claude records the auto-open in the next
+     commit that advances the arc.
+
+**Frontmatter flip discipline (per §4.3.0).** The commit that
+records Stage 2 opening (Chris directive OR the first Stage 2
+PR OR a housekeeping commit acknowledging Option (a) auto-open)
+MUST flip the scoping doc frontmatter:
+
+- `stage:` `1 → 2`
+- `stage_state:` `p0-prep-merged → active` (Option (a) arcs) OR
+  `exit-gate-cleared → active` (Chris-directive arcs that
+  skipped the P0 prep path).
+
+The `stage_state:` values enumerated in §4.3.0 make the
+transition mechanically greppable by fresh Claude sessions.
+
 **What.** For every intake item with `risk_class: NEEDS_ADR` or
 `NEEDS_RIGBY_SIGN_PLUS_CHRIS`, produce a design-preparation doc
 per §8.2 and (if `NEEDS_ADR`) a subsequent ADR per §8.3.
 
-**Location.** Design-prep docs live at
+**Design-prep equivalence (v1.4).** If the arc scoping doc §9
+(Next step + ADR checkpoint) pre-scopes an ADR with ALL of the
+following:
+
+- **Decision question** — the specific choice the ADR resolves
+  ("shall we adopt X, Y, or Z for shape A?").
+- **Options enumerated** — at least the top-N candidate options
+  the ADR will consider, with the shape of each.
+- **Constraints named** — hard requirements the ADR must respect
+  (retention windows, compatibility promises, blast radius
+  ceilings, ratified-upstream-decision inputs).
+- **Consequences per option** — what each option enables and
+  obligates, at least sketched.
+- **Verification implications** — how ratifying this ADR affects
+  the Stage 3 pre-flight verification-method interface for
+  downstream intake rows.
+
+… then that scoping doc §9 section IS the design-preparation
+artifact for that ADR — no separate `I-NNNN_<slug>_design_prep_
+<topic>.md` file is required. The ADR PR body cites the scoping
+doc §9 subsection as its design-prep source (e.g., "design-prep:
+`I-NNNN_scoping.md` §9.1 ADR-B pre-scoping"). Codified after
+Arc I-0100 scoping doc §9.1 pre-scoped ADR-B/A/C without
+separate design-prep files, matching Rigby SIGN Cycle 1 F5 fold
+which specified the PA↔LLMCallEvent correlation contract inside
+scoping §9 rather than a follow-on design-prep doc.
+
+If the scoping doc §9 is INSUFFICIENT (e.g., only names the ADR
+target without option enumeration OR omits constraints OR does
+not name verification implications), a standalone design-prep
+doc IS required at `docs/research/implementation/<slug>/
+I-NNNN_<slug>_design_prep_<topic>.md` with `authority: design-
+preparation`. Claude decides which shape at Stage 2 entry;
+Rigby SIGN cycle on the ADR will pressure-test the design-prep
+adequacy either way.
+
+**Location.** Design-prep docs (when present) live at
 `docs/research/implementation/<slug>/I-NNNN_<slug>_design_prep_<topic>.md`
 with `authority: design-preparation`. ADRs live at
 `docs/adr/ADR-MMMM-<slug>.md` with `authority: design-decision`.
@@ -1218,11 +1413,64 @@ Chris is **not** required for:
 | Stage | Rigby SIGN required? | Cadence |
 |-------|---------------------|---------|
 | 1 Scoping | Yes | Single-batch × 4-Q, matching S1300–S2400 pattern |
-| 2 Design-prep + ADR | Yes | Per §8.2 / §8.3 |
+| 2 Design-prep + ADR | Yes | **One SIGN cycle per ADR** (v1.4). See implementation ADR SIGN cadence below. |
 | 3 Pre-flight | **Conditional — see below** | Single-batch × 2-Q if triggered |
 | 4 Build | No | Rigby has no repo-write surface |
 | 5 Verify | Yes | Rigby exercises the surface; produces tool-output blocks. **Capped — see §9.4.** |
 | 6 Close | Yes | Full SIGN on the canonical close doc |
+
+**Implementation ADR SIGN cadence (v1.4).** Stage 2 SIGN
+mechanics were previously under-specified (§7.2 pre-v1.4 only
+said "per §8.2 / §8.3"). Codified after Arc I-0100 pre-ADR-0002
+cold-session simulation surfaced that a fresh Claude session
+would not know Q-count or pin discipline for ADR SIGN routing:
+
+- **One Rigby SIGN cycle per ADR.** ADR-A, ADR-B, ADR-C each
+  get their own dedicated SIGN cycle. Do NOT bundle multiple
+  ADRs into one SIGN cycle — SIGN cross-contamination erodes
+  fold-per-ADR traceability and violates the single-decision-
+  per-cycle discipline.
+- **Active arc SIGN pin — no rotation between ADRs.** ADRs
+  within the same arc share the arc's SIGN pin (per §7.2
+  isolation-pin discipline). Pin retirement is Stage 6 close
+  ONLY, unless the arc stalls per §4.5. Fresh SIGN pin per
+  ADR would fragment arc SIGN history and cost the arc-pin-
+  durable-through-arc property.
+- **Q-count sized to ADR decision complexity.**
+  - **2-Q minimum.** ADRs with a single narrow decision (one
+    option-shape to ratify, few constraints). Example: format-
+    or naming-decision ADRs.
+  - **4-Q typical.** ADRs with 2–3 decision axes OR
+    correlation-contract semantics OR multi-option ratification.
+    Example: Arc I-0100 ADR-B (PA write shape × correlation
+    contract × keys × join path).
+  - **6-Q max.** ADRs with 4+ decision axes OR posture bundles
+    (spine-posture-plus-retention-constraints-plus-deprecation-
+    plan). Example: Arc I-0100 ADR-C (D74 six-axis correlation-
+    spine posture + retention as required decision input +
+    deprecation plan sketch). Q-count above 6 → split the ADR
+    into two independently-ratifiable ADRs; do not add a 7th Q.
+- **Cadence style.** Match the S1300–S2699 established pattern:
+  single-batch × N-Q per cycle. Streaming multi-batch SIGN is
+  NOT the shape for ADRs (that pattern is Rigby SIGN-worker-
+  instability recovery per MEMORY rule
+  `feedback_rigby_sign_worker_instability_recovery`, not
+  default cadence).
+- **Cycle 2 requested only on BLOCKED verdict.** If Cycle 1
+  returns SIGN-with-edits (no BLOCKED), fold and Chris-ratify;
+  no Cycle 2 needed. If Cycle 1 returns BLOCKED on any Q, Cycle
+  2 addresses only the BLOCKED items on the same pin.
+- **ADR PR body cites the SIGN cycle.** Under a `## Rigby SIGN
+  Cycle 1` section, the ADR PR body lists per-Q verdict +
+  confidence + folds applied. Matches Stage 1 arc-open PR
+  pattern from Arc I-0100 (#2945).
+
+**SIGN vs ratification separation.** Rigby SIGN is a
+pressure-test on the ADR's decision quality, not a
+ratification. Chris ratification remains a separate act after
+SIGN cycle 1 folds are applied (Chris "agree all F1-FN"
+wholesale ratification is the S1399-forward pattern; per-fold
+ratification is also acceptable).
 
 **Stage 3 SIGN is mandatory when** the arc's planned PRs include
 any of:
@@ -2429,7 +2677,14 @@ Before the session declares startup complete, verify:
     in `git log` locally. Catches: "we thought it merged" (squash
     changed SHA), "it got reverted" (revert commit not applied
     to backlog), "PR closed without merging" (session state
-    drifted from GitHub).
+    drifted from GitHub). **v1.4 tolerance:** if the BACKLOG row
+    uses Discipline B inline syntax (per §2.2 v1.4), grep for
+    `pr_refs: #NNNN, #MMMM` inside the row's `notes` or
+    `affected_surfaces` cell — same downstream `gh pr view`
+    check applies to each `#NNNN` extracted. Rows with no
+    `pr_refs` field populated (neither column nor inline) are
+    skipped by this rule; the arc's Stage 6 close checklist
+    (§4.3) still requires per-row `pr_refs` before close.
 
 Any check failing → escalate to Chris before proceeding. Do not
 auto-remediate.
@@ -2668,6 +2923,123 @@ Alternatives evaluated:
 
 Preserve + rotate is the only shape that satisfies all three
 constraints simultaneously.
+
+## 15.15 `00-START-NEXT-SESSION.md` ownership (v1.4)
+
+`00-START-NEXT-SESSION.md` is the fresh-session entry point —
+Level A universal bootstrap (Research OS §4.1) reads it in the
+first three files of every new session. §15.3 phase-transition
+supersession rule already establishes that a stale file does
+not BLOCK implementation session start (fresh sessions apply
+supersession during Level C step C.9 rather than defaulting to
+the file's row). But "stale but not blocking" is not the same
+as "current" — a stale file wastes fresh-session context on
+disambiguating what the current state actually is.
+
+Codified after v1.4 fresh-session Stage 2 simulation surfaced
+that the file remained anchored on "IOS Part 11 first-queue
+ratification COMPLETED; Seed PR PENDING Chris approval" while
+main had already moved through IOS v1.1 / v1.2 / v1.3 / seed
+PR merge / Arc I-0100 Stage 1 arc-open merge / P0 prep PR
+opening — five session-scale state transitions un-reflected.
+
+### 15.15.a Classification
+
+`00-START-NEXT-SESSION.md` is **RAG-critical startup
+infrastructure**, on par with the artifact types enumerated in
+§12.5.b. Cascade discipline (§12.5.a v1.3) applies to any PR
+that modifies it.
+
+### 15.15.b Update-triggering PR types
+
+Every PR of any of the following types MUST co-commit a
+refreshed `00-START-NEXT-SESSION.md`:
+
+- **Arc-open PR.** The PR that opens a new implementation arc
+  (Stage 1 arc-open bundle).
+- **P0 prep PR.** The PR that discharges IB-Q1-BOOT-01 or any
+  future analogous P0 prep dependency (per §4.3 Stage 1 v1.2
+  ADR corpus precondition Option (a)).
+- **Stage-transition PR.** Any PR that flips the scoping doc
+  frontmatter `stage:` field (per §4.3.0 discipline). This
+  covers: Stage 2 opening PR, Stage 3 pre-flight completion,
+  Stage 4→5 completion of the last planned PR, Stage 5→6
+  verification-completion, Stage 6 close doc PR.
+- **Arc-close PR.** The Stage 6 close doc PR.
+- **IOS / Research OS / Playbook patch PRs.** Meta-process
+  changes that alter the fresh-session experience directly
+  (any patch to `IMPLEMENTATION_OPERATING_SYSTEM.md`,
+  `RESEARCH_OPERATING_SYSTEM.md`, or `DOMAIN_RESEARCH_
+  PLAYBOOK.md`).
+
+Update-triggering PRs that do NOT touch `00-START-NEXT-SESSION
+.md` are considered incomplete — the reviewer (Chris) is
+authorized to request the refresh before merge.
+
+### 15.15.c Refreshed-file schema
+
+The refreshed `00-START-NEXT-SESSION.md` MUST contain:
+
+1. **Phase** — one of `research` / `implementation` /
+   `mixed` (with which phase leads). If `implementation`,
+   note the active IOS status (`active vN.M`) and any
+   supersession-of-research-trajectory rule per §15.3.
+2. **Active arc** — arc ID + slug + scoping doc path.
+3. **Current stage** — `1` / `2` / `3` / `4` / `5` / `6` per
+   scoping doc frontmatter.
+4. **`stage_state`** — enum value per §4.3.0.
+5. **Next executable action** — one sentence naming the
+   specific concrete next commit / PR / SIGN cycle. Not "keep
+   working on the arc"; instead "author ADR-0002 (pa-write-
+   shape-and-correlation-contract) per Arc I-0100 scoping doc
+   §9.1 line 2 and route to Rigby SIGN Cycle 1 on arc pin."
+6. **Active SIGN pin** — the arc-scoped SIGN pin (per §7.2
+   isolation discipline), with its label + creation session
+   + any paused-research-pin preservation note per §15.14.
+7. **Pending PRs** — every open PR by number + title + state
+   (`OPEN`, `REVIEW_REQUESTED`, `CHANGES_REQUESTED`,
+   `MERGED_AWAITING_HOUSEKEEPING`). List merged-but-frontmatter
+   -unflipped PRs as `MERGED_AWAITING_HOUSEKEEPING` so the
+   next session knows housekeeping is due.
+8. **Read as background** — pointer list to xx99 summaries,
+   scoping doc, BACKLOG, DEBT, and other Level C step C.4-C.6
+   loads specific to the active arc.
+9. **Session ready check** — a numbered ordered list a fresh
+   session runs BEFORE opening its planned Stage entry
+   (mirrors the existing `SESSION READY CHECK` section
+   pattern used in previous file revisions).
+
+### 15.15.d Interaction with §12.5 cascade discipline
+
+`00-START-NEXT-SESSION.md` diffs run the cascade per §12.5.a
+because the file is RAG-critical per §15.15.a. Cascade evidence
+block per §12.5.d appears in the update-triggering PR's body
+alongside any other RAG-critical artifact evidence. If the PR
+touches ONLY `00-START-NEXT-SESSION.md` and no other artifact
+(rare, but possible for pure housekeeping refreshes at Stage
+transition boundaries), the cascade evidence block covers that
+single file.
+
+### 15.15.e Interaction with §15.3 supersession rule
+
+§15.3 corollary "should be updated at IOS phase entry" is
+now enforceable per §15.15.b. The rule remains that a stale
+file does not block session start — but stale files are
+progressively rarer as §15.15 discipline takes hold. Fresh
+sessions should still apply §15.3 supersession as a safety
+net during Level C step C.9, not as the primary reliance path.
+
+### 15.15.f v1.4 dogfood
+
+This v1.4 patch PR (which codifies §15.15) itself refreshes
+`00-START-NEXT-SESSION.md` per §15.15.b (IOS patch PR type).
+The refreshed file reflects: IOS `active v1.4`; active arc
+`I-0100`; current stage `1`; `stage_state: p0-prep-in-flight`
+(PR #2948 open, not merged); next executable action = merge
+this v1.4 patch and #2948 in the correct order, then flip
+frontmatter, then author ADR-0002; active SIGN pin
+`pa-c5b235f7b15f45be`; pending PRs = #2948 (P0 prep) and this
+v1.4 patch PR.
 
 ---
 
