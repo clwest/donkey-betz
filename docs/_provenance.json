@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-06T03:52:26+00:00",
+    "generated": "2026-07-06T12:10:28+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "09ddee03f86b",
-    "doc_count": 2398,
-    "commit_count": 7617,
+    "git_head": "87624a3d1b9f",
+    "doc_count": 2399,
+    "commit_count": 7620,
     "confidence_breakdown": {
       "HIGH": 1578,
       "MEDIUM": 352,
-      "LOW": 3,
+      "LOW": 4,
       "UNKNOWN": 465
     },
     "excludes": [
@@ -2519,7 +2519,7 @@
         2500,
         2502
       ],
-      "commit_count": 1202,
+      "commit_count": 1204,
       "prs": [
         10,
         11,
@@ -3007,7 +3007,8 @@
         2919,
         2920,
         2922,
-        2924
+        2924,
+        2926
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7331,7 +7332,7 @@
         2500,
         2502
       ],
-      "commit_count": 158,
+      "commit_count": 160,
       "prs": [
         2213,
         2219,
@@ -7427,7 +7428,8 @@
         2919,
         2920,
         2922,
-        2924
+        2924,
+        2926
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18580,13 +18582,28 @@
       "originating_session": 2503,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "09ddee03",
+      "first_commit_sha": "cac85aed",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(research): add API error-envelope + refresh + logout contracts design-prep audit (S2503)",
+      "first_commit_subject": "docs(research): add API error-envelope + refresh + logout contracts design-prep audit (S2503) (#2925)",
       "sessions_touched": [
         2503
       ],
-      "commit_count": 1,
+      "commit_count": 2,
+      "prs": [
+        2925
+      ]
+    },
+    "docs/handoffs/SESSION_2504_API_P4_CAT_D_PERMISSION_FLOOR_REGISTRY_REST_WS_T7_JOINT_DESIGN_PREP.md": {
+      "originating_session": 2504,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2504
+      ],
+      "commit_count": 0,
       "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33997,12 +34014,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "09ddee03",
+      "first_commit_sha": "cac85aed",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(research): add API error-envelope + refresh + logout contracts design-prep audit (S2503)",
+      "first_commit_subject": "docs(research): add API error-envelope + refresh + logout contracts design-prep audit (S2503) (#2925)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2925
+      ]
     },
     "docs/research/domains/auth/2400_auth_domain_scoping.md": {
       "originating_session": 2400,
