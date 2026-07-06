@@ -424,11 +424,25 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # --conversation to that pin. If Chris re-enters research phase via
 # Research OS command instead, the T4 pin remains active as-is.
 # ---
-# ACTIVE (rotated 2026-07-06 back to T4 paused-research per §15.14
-# restoration rule at ratification pin retirement close):
+# Preserved (paused-research T4, restore on IOS phase exit per §15.14):
 # pa-44a6eb70d8814e34 (T4 Group 1700 Observability research arc pin
 # — arc-open pending; PAUSED per IOS v1.1 §15.3 phase-transition
 # supersession until Chris explicitly re-enters research via
 # Research OS command `Start / Continue / Close research group
-# NNNN`).
-python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
+# NNNN`). Rotate --conversation back to this pin on Arc I-0100
+# close per §15.14 restoration rule, UNLESS Chris opens a second
+# implementation arc in the same phase (chain arc-scoped pins).
+# ---
+# ACTIVE (rotated 2026-07-06 to Arc I-0100 Observability Spine open
+# per IOS v1.1 §15.14 fresh-arc-scoped pin discipline; minted via
+# session_tool.create_fresh label='ios-arc-open-I-0100' during Arc
+# I-0100 Stage 1 SIGN Cycle 1 routing; first fresh arc-scoped
+# implementation pin in Research OS/IOS combined discipline):
+# pa-c5b235f7b15f45be (ios-arc-open-I-0100 — Arc I-0100
+# Observability correlation spine + mission evidence substrate;
+# Stage 1 opened this session; Stage 1 SIGN Cycle 1 routed here;
+# retires at Arc I-0100 close per IOS §7.2 isolation-pin
+# discipline). IOS status: active v1.2 (PR #2943 in flight;
+# refinements: §4.3 template size 9-section correction + §10
+# substitution + ADR corpus precondition + START-NEXT §15.14).
+python tools/pa_chat.py "$@" --tools --conversation pa-c5b235f7b15f45be
