@@ -5,12 +5,14 @@ authority: implementation-scoping
 arc_id: I-0100
 arc_slug: observability_spine_mission_evidence_substrate
 stage: 2
-stage_state: active
+stage_state: design-prep-in-flight
 stage_transition_history:
   - {stage: 1, state: exit-gate-cleared, at: 2026-07-06, event: "Rigby SIGN Cycle 1 SIGN-with-edits + Chris agree-all-F1-F8 ratification (Stage 1 arc-open bundle #2945 merged)"}
   - {stage: 1, state: p0-prep-in-flight, at: 2026-07-06, event: "P0 prep PR #2948 opened (IB-Q1-BOOT-01 discharge; ADR corpus establishment)"}
   - {stage: 1, state: p0-prep-merged, at: 2026-07-06, event: "PR #2948 merged; docs/adr/ + ADR-0001 on main; Stage 2 Entry gate v1.4 auto-open clause satisfied"}
-  - {stage: 2, state: active, at: 2026-07-06, event: "This housekeeping PR — Stage 2 opening ceremony per IOS §4.3 Stage 2 Entry gate v1.4 Option (a) auto-open; frontmatter flipped 1 → 2 per §4.3.0 v1.4 discipline"}
+  - {stage: 2, state: active, at: 2026-07-06, event: "Housekeeping PR #2950 — Stage 2 opening ceremony per IOS §4.3 Stage 2 Entry gate v1.4 Option (a) auto-open; frontmatter flipped 1 → 2 per §4.3.0 v1.4 discipline"}
+  - {stage: 2, state: active, at: 2026-07-06, event: "ADR-B / ADR-0002 (pa-write-shape-and-correlation-contract) ratified 2026-07-06 via Chris agree-all-F1-F8; PR #2951 merged"}
+  - {stage: 2, state: design-prep-in-flight, at: 2026-07-06, event: "ADR-A design-prep authoring opened per IOS v1.5 §4.3 Stage 2 mandatory design-prep rule + §4.3.0 v1.5 flip discipline; target: I-0100_design_prep_adr_a_mission_runner_staged_enable.md + ADR-0003"}
 session_opened: 2700
 session_ratified: 2700
 opened: 2026-07-06

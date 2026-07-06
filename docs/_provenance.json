@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-06T22:48:22+00:00",
+    "generated": "2026-07-06T23:10:58+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "09b89507e8f3",
+    "git_head": "14abfe03d172",
     "doc_count": 2422,
-    "commit_count": 7673,
+    "commit_count": 7675,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1237,
+      "commit_count": 1239,
       "prs": [
         10,
         11,
@@ -3025,7 +3025,8 @@
         2948,
         2949,
         2950,
-        2951
+        2951,
+        2952
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7350,7 +7351,7 @@
         2502,
         2504
       ],
-      "commit_count": 193,
+      "commit_count": 195,
       "prs": [
         2213,
         2219,
@@ -7463,7 +7464,8 @@
         2948,
         2949,
         2950,
-        2951
+        2951,
+        2952
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -35652,17 +35654,18 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "296e3de1",
+      "first_commit_sha": "14abfe03",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(process): IOS v1.4 fresh-session Stage 2 readiness \u2014 B1\u2013B6 refinements (#2949)",
+      "first_commit_subject": "docs(process): IOS v1.5 design-preparation first-class artifact refinement (#2952)",
       "sessions_touched": [],
-      "commit_count": 12,
+      "commit_count": 14,
       "prs": [
         2939,
         2940,
         2943,
         2947,
-        2949
+        2949,
+        2952
       ]
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
