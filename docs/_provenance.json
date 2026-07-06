@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T20:29:13+00:00",
+    "generated": "2026-07-06T21:12:52+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4ae93e999c6a",
-    "doc_count": 2418,
-    "commit_count": 7655,
+    "git_head": "375239681cb8",
+    "doc_count": 2419,
+    "commit_count": 7661,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 474
+      "UNKNOWN": 475
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1223,
+      "commit_count": 1225,
       "prs": [
         10,
         11,
@@ -3018,7 +3018,8 @@
         2934,
         2936,
         2937,
-        2939
+        2939,
+        2942
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7343,7 +7344,7 @@
         2502,
         2504
       ],
-      "commit_count": 179,
+      "commit_count": 181,
       "prs": [
         2213,
         2219,
@@ -7449,7 +7450,8 @@
         2934,
         2936,
         2937,
-        2939
+        2939,
+        2942
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -33986,7 +33988,7 @@
         2499,
         2500
       ],
-      "commit_count": 160,
+      "commit_count": 162,
       "prs": [
         2773,
         2775,
@@ -34066,7 +34068,8 @@
         2920,
         2929,
         2930,
-        2937
+        2937,
+        2945
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -35506,13 +35509,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "4ae93e99",
+      "first_commit_sha": "37523968",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): IOS Part 11 first-queue seed \u2014 BACKLOG + DEBT + ratification record (Arc I-0100 Observability Spine ratified) (#2941)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 1 arc-open bundle \u2014 Observability Correlation Spine + Mission Evidence Substrate (#2945)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        2941
+        2941,
+        2945
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
@@ -35539,6 +35543,19 @@
       "commit_count": 2,
       "prs": [
         2941
+      ]
+    },
+    "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "37523968",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 1 arc-open bundle \u2014 Observability Correlation Spine + Mission Evidence Substrate (#2945)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2945
       ]
     },
     "docs/research/platform/cross_domain_integration_audit.md": {
@@ -35578,14 +35595,15 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "84fdafa9",
+      "first_commit_sha": "f5f7dba8",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(process): IOS v1.1 execution-refinement patch (#2940)",
+      "first_commit_subject": "docs(process): IOS v1.2 execution-refinement patch \u2014 Arc I-0100 Stage 1 first-execution findings (#2943)",
       "sessions_touched": [],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
         2939,
-        2940
+        2940,
+        2943
       ]
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
