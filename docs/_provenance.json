@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T14:14:07+00:00",
+    "generated": "2026-07-06T15:04:47+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7ddd8ce60a0a",
-    "doc_count": 2406,
-    "commit_count": 7627,
+    "git_head": "5d6a2de56d78",
+    "doc_count": 2408,
+    "commit_count": 7631,
     "confidence_breakdown": {
-      "HIGH": 1582,
+      "HIGH": 1584,
       "MEDIUM": 352,
-      "LOW": 5,
-      "UNKNOWN": 467
+      "LOW": 4,
+      "UNKNOWN": 468
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1210,
+      "commit_count": 1212,
       "prs": [
         10,
         11,
@@ -3012,7 +3012,8 @@
         2926,
         2927,
         2928,
-        2929
+        2929,
+        2930
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7337,7 +7338,7 @@
         2502,
         2504
       ],
-      "commit_count": 166,
+      "commit_count": 168,
       "prs": [
         2213,
         2219,
@@ -7437,7 +7438,8 @@
         2926,
         2927,
         2928,
-        2929
+        2929,
+        2930
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18648,16 +18650,33 @@
     },
     "docs/handoffs/SESSION_2601_PA_CAT_A_ENDPOINT_CONTRACT_SOT.md": {
       "originating_session": 2601,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a1d02917",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA P1 Cat A endpoint contract SoT (S2601) (#2930)",
       "sessions_touched": [
         2601
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2930
+      ]
+    },
+    "docs/handoffs/SESSION_2602_PA_CAT_B_CLIENT_CONTRACT_SURFACE.md": {
+      "originating_session": 2602,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "5d6a2de5",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA P2 Cat B client contract surface (S2602) (#2931)",
+      "sessions_touched": [
+        2602
+      ],
+      "commit_count": 2,
+      "prs": [
+        2931
+      ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33912,7 +33931,7 @@
         2499,
         2500
       ],
-      "commit_count": 156,
+      "commit_count": 158,
       "prs": [
         2773,
         2775,
@@ -33990,7 +34009,8 @@
         2915,
         2916,
         2920,
-        2929
+        2929,
+        2930
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -34981,14 +35001,29 @@
       "originating_session": 2601,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "a1d02917",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA P1 Cat A endpoint contract SoT (S2601) (#2930)",
       "sessions_touched": [
         2601
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2930
+      ]
+    },
+    "docs/research/domains/pa/2602_pa_client_contract_surface_design_prep_audit.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "5d6a2de5",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA P2 Cat B client contract surface (S2602) (#2931)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2931
+      ]
     },
     "docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md": {
       "originating_session": 2100,
