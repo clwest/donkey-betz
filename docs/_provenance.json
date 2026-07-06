@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T21:24:08+00:00",
+    "generated": "2026-07-06T21:55:38+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3475c9e57093",
-    "doc_count": 2419,
-    "commit_count": 7663,
+    "git_head": "b83efa8c9ab2",
+    "doc_count": 2420,
+    "commit_count": 7666,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 475
+      "UNKNOWN": 476
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1227,
+      "commit_count": 1230,
       "prs": [
         10,
         11,
@@ -3020,7 +3020,8 @@
         2937,
         2939,
         2942,
-        2946
+        2946,
+        2947
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7345,7 +7346,7 @@
         2502,
         2504
       ],
-      "commit_count": 183,
+      "commit_count": 186,
       "prs": [
         2213,
         2219,
@@ -7453,8 +7454,20 @@
         2937,
         2939,
         2942,
-        2946
+        2946,
+        2947
       ]
+    },
+    "docs/adr/ADR-0001-establish-adr-corpus.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "6d5c39bc",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
       "originating_session": 1143,
@@ -35511,11 +35524,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "37523968",
+      "first_commit_sha": "6d5c39bc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 1 arc-open bundle \u2014 Observability Correlation Spine + Mission Evidence Substrate (#2945)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 4,
+      "commit_count": 5,
       "prs": [
         2941,
         2945
@@ -35525,11 +35538,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "4ae93e99",
+      "first_commit_sha": "6d5c39bc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): IOS Part 11 first-queue seed \u2014 BACKLOG + DEBT + ratification record (Arc I-0100 Observability Spine ratified) (#2941)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 3,
       "prs": [
         2941
       ]
@@ -35551,11 +35564,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "37523968",
+      "first_commit_sha": "6d5c39bc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 1 arc-open bundle \u2014 Observability Correlation Spine + Mission Evidence Substrate (#2945)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 3,
       "prs": [
         2945
       ]
@@ -35597,15 +35610,16 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "f5f7dba8",
+      "first_commit_sha": "b83efa8c",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(process): IOS v1.2 execution-refinement patch \u2014 Arc I-0100 Stage 1 first-execution findings (#2943)",
+      "first_commit_subject": "docs(process): IOS v1.3 cascade-discipline refinement \u2014 pre-PR vs post-merge cascade policy + PR-body evidence block (#2947)",
       "sessions_touched": [],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         2939,
         2940,
-        2943
+        2943,
+        2947
       ]
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
