@@ -1,6 +1,6 @@
 ---
 title: "Implementation Operating System — how research findings become shipped code"
-status: draft (v1.1 — post-Rigby SIGN cycle 1 folds; awaiting Chris D1–D12 ratification)
+status: active v1 (Chris-ratified 2026-07-06; D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc)
 authority: process
 session_added: 2500
 last_verified: 2026-07-06
@@ -50,6 +50,24 @@ verifier_loop: |
   required per Rigby explicit verdict pattern (no BLOCKED, all
   edits structural/clarifying). Chris ratification of D1–D12 open
   questions is the next gate before status flips `draft → active`.
+  v1.2 (2026-07-06): Chris ratified D1–D12 via directive "Default
+  stance: accept the IOS v1.1 recommendations unless there is a
+  concrete reason not to." Ratifications recorded inline in §13
+  under each D. D1–D7, D9, D10, D12 accepted at recommended option.
+  D8 deferred until first-queue construction OR explicit Chris
+  directive. D11 accepted with Wave 1 (build-docs-cascade.yml
+  GitHub Action) required before scaling beyond two implementation
+  arcs — Wave 1 becomes a first-class arc-open gate for the third
+  arc. Status flipped `draft (v1.1) → active v1`. Rigby SIGN pin
+  `pa-f9164418e56940ea` retired at v1.2 close per Research OS
+  22-consecutive-arc SIGN-pin retirement discipline. Full 4-step
+  docs cascade (build_docs_index → build_rag_corpus →
+  sync_docs_index_to_documents → embed_documents --all-unembedded)
+  + build_docs_provenance executed at v1.2 close per MEMORY rule
+  feedback_cascade_pr_must_include_embed_step. First implementation
+  arc identity remains open (D8 deferred); first-queue construction
+  Part 11 procedure has NOT been executed and requires explicit
+  Chris directive.
   IOS does NOT replace, edit, or collapse the Research OS; it adds
   the downstream execution-phase governance layer that §8.4
   IMPLEMENTATION contract calls for at phase scale.
@@ -1454,6 +1472,13 @@ The following decisions require Chris's explicit ratification
 before IOS graduates from `draft` to `active`. Each is a distinct
 question, ratifiable separately.
 
+**Ratified 2026-07-06 (Chris directive):** "Default stance: accept
+the IOS v1.1 recommendations unless there is a concrete reason not
+to." D1–D7, D9, D10, D12 accepted at the recommended option. D8
+deferred. D11 accepted with Wave 1 required before scaling beyond
+two implementation arcs. Ratifications recorded inline below;
+recommendations preserved as historical record.
+
 ## D1 — Implementation arc tree location
 
 Two options:
@@ -1469,6 +1494,9 @@ Two options:
 
 **Recommendation:** Option A. **Ratification needed.**
 
+**Ratified 2026-07-06 (Chris):** Option A — implementation arcs
+live under `docs/research/implementation/<slug>/`.
+
 ## D2 — Implementation arc numbering
 
 Two options:
@@ -1480,6 +1508,9 @@ Two options:
 
 **Recommendation:** Option A. **Ratification needed.**
 
+**Ratified 2026-07-06 (Chris):** Option A — `I-NNNN` prefix.
+First implementation arc will be numbered `I-0100` per §4.2.
+
 ## D3 — ADR corpus establishment
 
 - **Option A (recommended).** Install `docs/adr/` with the format
@@ -1490,6 +1521,11 @@ Two options:
   habits but leaves §8.3 P1 gap open.
 
 **Recommendation:** Option A. **Ratification needed.**
+
+**Ratified 2026-07-06 (Chris):** Option A — install `docs/adr/`.
+Closes the Research OS §8.3 P1 gap. Bootstrap ADR
+(`ADR-0001-establish-adr-corpus.md`) is one of the three
+Appendix C first-artifact deliverables.
 
 ## D4 — Backlog register location
 
@@ -1504,6 +1540,11 @@ Two options:
 **Recommendation:** Start with A; upgrade to C if usage volume
 justifies. **Ratification needed.**
 
+**Ratified 2026-07-06 (Chris):** Option A — start with
+`docs/research/implementation/BACKLOG.md`. Upgrade to Option C
+mirror if usage volume justifies (revisit after 2 arcs per D5
+cadence).
+
 ## D5 — Batch size ceilings + Chris review bandwidth
 
 Values proposed in §6.4 + §9.2 are estimates. Chris may want
@@ -1511,6 +1552,11 @@ tighter or looser ceilings based on real capacity.
 
 **Recommendation:** Ratify proposed values as v1; revisit after
 2 arcs run. **Ratification needed.**
+
+**Ratified 2026-07-06 (Chris):** Values ratified as v1 defaults.
+Recalibrate after the first 2 implementation arcs close. §9.2
++ §9.5 already labeled as "v1 default hypotheses" and "observed
+defaults" respectively — no further edits needed.
 
 ## D6 — Implementation debt register scope
 
@@ -1521,6 +1567,10 @@ tighter or looser ceilings based on real capacity.
   Debt register.
 
 **Recommendation:** Option A. **Ratification needed.**
+
+**Ratified 2026-07-06 (Chris):** Option A — separate
+`IMPLEMENTATION_DEBT.md`. Distinct register from Research Debt;
+keeps phase debt scoped by phase authority.
 
 ## D7 — Rigby SIGN pacing against research arcs
 
@@ -1535,6 +1585,10 @@ does IOS defer to research pacing? Options:
 
 **Recommendation:** Option A. **Ratification needed.**
 
+**Ratified 2026-07-06 (Chris):** Option A — distinct-surface
+parallel permitted. Same-surface implementation waits for research
+arc close per §4.4 no-parallel-arcs rule.
+
 ## D8 — First implementation arc identity
 
 **IOS does not preselect the first arc.** Chris ratifies which
@@ -1545,6 +1599,11 @@ directive without queue construction).
 Chris directive to run first-queue construction is separate from
 this question.
 
+**Ratified 2026-07-06 (Chris):** **DEFERRED** — decision held
+until after first-queue construction (Part 11) OR an explicit
+Chris directive. No first arc chosen at v1.2 ratification. IOS
+graduates to `active v1` without a first-arc pick.
+
 ## D9 — IOS install-record location
 
 Mirroring Research OS §19 install record + §20 mission
@@ -1554,6 +1613,9 @@ deliverables. Where does the IOS install record live?
 - **Option B.** Separate `IOS_INSTALL.md`.
 
 **Recommendation:** Option A. **Ratification needed.**
+
+**Ratified 2026-07-06 (Chris):** Option A — install record lives
+at Appendix §A.4 of this doc. Kept co-located with the OS itself.
 
 ## D10 — Enforcement of cross_domain audit refresh at implementation arc close
 
@@ -1566,6 +1628,11 @@ lagging). At implementation arc close, should refresh be:
   refresh caught up in a batch.
 
 **Recommendation:** Option A. Chris ratification needed.
+
+**Ratified 2026-07-06 (Chris):** Option A — hard gate. Every
+implementation arc close (Stage 6) requires the
+`cross_domain_integration_audit.md §14.N` refresh entry as a
+non-skippable exit condition per §4.3 Stage 6.
 
 ## D11 — IOS gate runner (automation scope)
 
@@ -1591,6 +1658,14 @@ automate the parts of §5.1 / §15.6 that historically drift?
 move IOS from draft v1 → active v1** if the goal is trustworthiness
 at volume. Wave 2 can lag behind Wave 1. **Ratification needed.**
 
+**Ratified 2026-07-06 (Chris):** Option A — two-wave gate-runner
+accepted. **Wave 1 required before scaling beyond two implementation
+arcs.** Wave 2 remains recommended before scaling past 5 arcs but
+is not blocking at v1.2. The Wave 1 requirement becomes a
+first-class arc-open gate: no third implementation arc opens
+until `build-docs-cascade.yml` GitHub Action is installed and
+green on at least one prior arc-close PR.
+
 ## D12 — Playbook v3 update cadence
 
 Every implementation arc §8 methodology section may propose
@@ -1603,6 +1678,11 @@ Playbook or IOS codifications. Should IOS reserve a dedicated
 - **Option B.** Ad-hoc when Chris notices drift.
 
 **Recommendation:** Option A. **Ratification needed.**
+
+**Ratified 2026-07-06 (Chris):** Option A — every 2 arcs that
+surface candidate patterns, schedule an explicit process-update
+session. Prevents playbook / IOS drift while keeping cadence
+predictable.
 
 ---
 
@@ -2189,10 +2269,12 @@ IOS itself specifies at §7.2).
   Medium confidence. 20 discrete folds applied per §A.7.3 ledger.
   Cycle 2 not required per Rigby verdict pattern (no BLOCKED
   condition on any question; all edits structural/clarifying).
-  Pin `pa-f9164418e56940ea` remains open pending Chris D1–D12
-  ratification; retirement queued for post-ratification
-  (`session_tool.retire force=true`) per Research OS
-  22-consecutive-arc SIGN-pin retirement discipline.
+  **Pin retired 2026-07-06 at v1.2 close** via
+  `session_tool.retire conversation_id=pa-f9164418e56940ea
+  force=true` per Research OS 22-consecutive-arc SIGN-pin
+  retirement discipline (FIRST SIGN-pin retirement under IOS;
+  ripples the Research OS retirement pattern forward into
+  implementation-phase governance).
 
 ### A.7.1 Cycle 1 pressure-test payload (4 questions)
 
