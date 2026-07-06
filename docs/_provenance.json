@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T22:57:02+00:00",
+    "generated": "2026-07-05T23:39:20+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7bc09933a8a1",
-    "doc_count": 2385,
-    "commit_count": 7593,
+    "git_head": "4e6c1ee814a2",
+    "doc_count": 2387,
+    "commit_count": 7598,
     "confidence_breakdown": {
-      "HIGH": 1566,
+      "HIGH": 1568,
       "MEDIUM": 352,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2513,9 +2513,10 @@
         2200,
         2203,
         2299,
-        2402
+        2402,
+        2403
       ],
-      "commit_count": 1188,
+      "commit_count": 1190,
       "prs": [
         10,
         11,
@@ -2996,7 +2997,8 @@
         2907,
         2909,
         2911,
-        2912
+        2912,
+        2914
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7314,9 +7316,10 @@
         2200,
         2203,
         2299,
-        2402
+        2402,
+        2403
       ],
-      "commit_count": 144,
+      "commit_count": 146,
       "prs": [
         2213,
         2219,
@@ -7405,7 +7408,8 @@
         2907,
         2909,
         2911,
-        2912
+        2912,
+        2914
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18468,14 +18472,31 @@
       "originating_session": 2403,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "7bc09933",
+      "first_commit_sha": "c0bc969a",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2403): Group 2400 Cat C Session Lifecycle + Logout Cleanup Contract Audit",
+      "first_commit_subject": "docs(session-2403): Group 2400 Cat C Session Lifecycle + Logout Cleanup Contract Audit (#2913)",
       "sessions_touched": [
         2403
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2913
+      ]
+    },
+    "docs/handoffs/SESSION_2404_AUTH_P4_CAT_D.md": {
+      "originating_session": 2404,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4e6c1ee8",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2404): Group 2400 Cat D Frontend Integration + Silent-401 SYSTEMIC Resolution Audit (#2915)",
+      "sessions_touched": [
+        2404
+      ],
+      "commit_count": 2,
+      "prs": [
+        2915
+      ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33537,9 +33558,10 @@
         2400,
         2401,
         2402,
-        2403
+        2403,
+        2404
       ],
-      "commit_count": 152,
+      "commit_count": 155,
       "prs": [
         2773,
         2775,
@@ -33610,7 +33632,9 @@
         2907,
         2908,
         2910,
-        2912
+        2912,
+        2913,
+        2915
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33718,9 +33742,10 @@
         2400,
         2401,
         2402,
-        2403
+        2403,
+        2404
       ],
-      "commit_count": 147,
+      "commit_count": 150,
       "prs": [
         2773,
         2775,
@@ -33793,7 +33818,9 @@
         2907,
         2908,
         2910,
-        2912
+        2912,
+        2913,
+        2915
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33872,14 +33899,31 @@
       "originating_session": 2403,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "7bc09933",
+      "first_commit_sha": "c0bc969a",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2403): Group 2400 Cat C Session Lifecycle + Logout Cleanup Contract Audit",
+      "first_commit_subject": "docs(session-2403): Group 2400 Cat C Session Lifecycle + Logout Cleanup Contract Audit (#2913)",
       "sessions_touched": [
         2403
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2913
+      ]
+    },
+    "docs/research/domains/auth/2404_frontend_integration_silent_401_systemic_resolution_audit.md": {
+      "originating_session": 2404,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4e6c1ee8",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2404): Group 2400 Cat D Frontend Integration + Silent-401 SYSTEMIC Resolution Audit (#2915)",
+      "sessions_touched": [
+        2404
+      ],
+      "commit_count": 2,
+      "prs": [
+        2915
+      ]
     },
     "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md": {
       "originating_session": 1900,
