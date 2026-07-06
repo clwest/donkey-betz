@@ -96,7 +96,7 @@ verifier_loop: |
   "No matching claims to run" on zero drift, which is ambiguous);
   (7) new §15.14 Rigby SIGN pin lifecycle across phase
   transitions (paused research T-slot pin preserved as comment
-  above `tools/pa_local.sh:361`; fresh IOS-scoped pin minted per
+  above `tools/pa_local.sh` `--conversation` line (grep-anchored, currently ~:411); fresh IOS-scoped pin minted per
   implementation session for Rigby interactions; on IOS phase exit
   → restore paused research pin). No open D-question reopened.
   Not routed to a fresh Rigby SIGN cycle — refinements derived
@@ -2273,7 +2273,7 @@ in Research OS §4.2 catches up.
 
 ## 15.14 Rigby SIGN pin lifecycle across phase transitions
 
-Chris's session pin lives at `tools/pa_local.sh:361` (per S1300+
+Chris's session pin lives at `tools/pa_local.sh` `--conversation` line (grep-anchored, currently ~:411) (per S1300+
 convention). Under Research OS, arc pins are minted at arc-open,
 preserved through the arc, and retired at arc-close (Research OS
 22-consecutive-arc SIGN-pin retirement discipline; IOS §7.2 for
