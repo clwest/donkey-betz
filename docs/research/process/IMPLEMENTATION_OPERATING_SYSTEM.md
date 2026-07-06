@@ -1,6 +1,6 @@
 ---
 title: "Implementation Operating System — how research findings become shipped code"
-status: active v1.4 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings. v1.3 = cascade-discipline refinement 2026-07-06 codifying pre-PR vs post-merge cascade policy + PR-body evidence block after the arc-open PR / separate-cascade-PR pattern recurred 3× same-day. v1.4 = fresh-session Stage 2 readiness refinement 2026-07-06 codifying B1–B6 gaps found when simulating a cold Claude session opening Stage 2 for Arc I-0100 after IB-Q1-BOOT-01 P0 prep PR opened: stage_state enum, Stage 2 entry gate + opening ceremony, design-prep equivalence via scoping §9, pr_refs/arc_ref inline syntax, implementation ADR SIGN cadence, and 00-START-NEXT-SESSION.md ownership — see verifier_loop.)
+status: active v1.5 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings. v1.3 = cascade-discipline refinement 2026-07-06 codifying pre-PR vs post-merge cascade policy + PR-body evidence block after the arc-open PR / separate-cascade-PR pattern recurred 3× same-day. v1.4 = fresh-session Stage 2 readiness refinement 2026-07-06 codifying B1–B6 gaps. v1.5 = design-preparation first-class artifact refinement 2026-07-06 replacing v1.4 §4.3 Stage 2 optional equivalence rule with mandatory standalone design-prep artifact for every NEEDS_ADR intake with design_state POSTURE_PENDING or NONE; two-trigger evidence from Arc I-0100 ADR-B (ADR-0002 shipped standalone design-prep after equivalence assessment failed on consequences-per-option) and ADR-A (equivalence assessment failed on options-not-enumerated — same structural pattern) — see verifier_loop.)
 authority: process
 session_added: 2500
 last_verified: 2026-07-06
@@ -104,6 +104,59 @@ verifier_loop: |
   §14.2 two-trigger codification threshold not met on any single
   finding, but Chris explicitly waived the wait per his
   refinement-authority prerogative.
+  active v1.5 (2026-07-06): design-preparation first-class artifact
+  refinement after two-trigger evidence surfaced during Arc I-0100
+  Stage 2. Trigger 1: ADR-B / ADR-0002 (`pa-write-shape-and-
+  correlation-contract`) authoring at session S2700 assessed Arc
+  I-0100 scoping doc §9.1 line 2 against v1.4 §4.3 Stage 2 design-
+  prep equivalence criteria and found it INSUFFICIENT (consequences-
+  per-option under-specified for Options 1 and 2). Standalone
+  design-prep artifact `I-0100_design_prep_adr_b_pa_write_shape.md`
+  authored per Chris directive "The Stage 1 scoping document should
+  remain a Stage 1 artifact." ADR-0002 accepted 2026-07-06 with 8
+  Rigby SIGN Cycle 1 folds (Chris wholesale ratification). Chris
+  recorded design-prep-first-class as a codification candidate at
+  memory `project_ios_v15_design_prep_first_class_codification_
+  candidate` and pre-authorized v1.5 ship on second trigger.
+  Trigger 2: ADR-A pre-authoring equivalence assessment against
+  Arc I-0100 scoping §9.1 line 3 found it INSUFFICIENT on a DIFFERENT
+  structural dimension — options-not-even-enumerated (only ONE
+  staged-enable pattern named via F8-iii reference). Same underlying
+  failure mode as ADR-B: scoping doc §9 is a Stage 1 artifact and
+  Stage 1 does not do the "option trade-space" analysis that ADR
+  authoring requires. Chris ratified v1.5 ship-authorization on
+  second trigger per prior directive: "If ADR-A also requires
+  standalone design-prep, that becomes the second trigger and we
+  can ship IOS v1.5 with stronger evidence." Applied edits:
+  (1) §4.3.0 stage_state enum extended with `design-prep-in-flight`
+  as a Stage 2 sub-state for arcs where design-prep + ADR are
+  split across sessions; (2) §4.3 Stage 2 "Design-prep equivalence"
+  clause REMOVED and replaced with mandatory-standalone-design-prep-
+  artifact rule for every NEEDS_ADR intake with design_state
+  POSTURE_PENDING or NONE (SPEC_COMPLETE / CX-P10 items remain
+  exempt per §3.1.b); (3) §4.3 Stage 2 canonical design-prep
+  template codified using the 3+-option × 5-field consequence-
+  matrix + pressure-test structure from ADR-0002 design-prep;
+  (4) §12.5.b RAG-critical artifact list extended with design-
+  preparation docs (authority: design-preparation) explicitly;
+  (5) §14.1 codification-candidates-example list gains "Design-
+  prep as first-class artifact" entry marked codified at v1.5;
+  (6) §14.2 gains codification-exception note recognizing Chris
+  refinement-authority prerogative as legitimate single-trigger
+  path when the trigger is broad-observation-of-systematic-gap.
+  §14.2 two-trigger codification threshold met by ADR-B + ADR-A
+  same-arc double-trigger — stronger evidence than two arcs'
+  single-trigger would provide because both failures come from
+  the same design-decision session cadence + same scoping doc +
+  same authoring approach, confirming the failure is structural
+  not incidental. No Rigby SIGN cycle routed — refinement is
+  docs-only clarification with no runtime effect and no open
+  D-question reopened. Applied under IOS v1.5 = active status
+  via same-session commit. Dogfooded: this patch's own PR runs
+  the full 5-step cascade + build_docs_provenance locally before
+  PR open per IOS v1.3 §12.5.a, refreshes 00-START-NEXT-SESSION.md
+  per §15.15, and cites ADR-0002 + design-prep + ADR-A assessment
+  as v1.5 provenance in the PR body.
   active v1.4 (2026-07-06): fresh-session Stage 2 readiness refinement
   patch after Chris directed a cold-Claude simulation of Stage 2
   startup for Arc I-0100 (post-#2948 IB-Q1-BOOT-01 P0 prep PR open,
@@ -799,6 +852,7 @@ merged" from "Stage 2 opened":
 | **`exit-gate-cleared`** | The stage's exit checklist is complete but the next stage has not opened yet. Terminal state for the current stage. | Any of 1..6; typical for 1, 2, 3, 4, 5 |
 | **`p0-prep-in-flight`** | A P0 prep PR (per Stage 1 v1.2 ADR corpus precondition Option (a) OR any future analogous bootstrap dependency) is open but not merged. Arc is in the transitional window between Stage 1 exit and Stage 2 open. | Between Stage 1 and Stage 2 only |
 | **`p0-prep-merged`** | P0 prep PR merged; Stage 2 has not been formally opened yet (Chris directive or Option (a) auto-open per §4.3 Stage 2 Entry gate pending). | Between Stage 1 and Stage 2 only |
+| **`design-prep-in-flight`** | Stage 2 is open; a standalone design-preparation artifact is being authored (per v1.5 §4.3 Stage 2 mandatory design-prep rule) but the downstream ADR has not yet been drafted OR SIGN'd. Applies when design-prep + ADR are split across sessions (design-prep session first, ADR session second). If design-prep + ADR ship in the same session (bundled per §6.3), this sub-state is skipped and stage_state remains `active` throughout. | Stage 2 only |
 | **`active`** | Stage is open and doing work. PRs being drafted, SIGN cycles running, ratifications in-flight. | Any of 1..6 |
 | **`awaiting-close`** | Stage 6 close doc is drafted + cascade run + audit refresh drafted; awaiting Chris "commit it". Terminal-of-arc precondition. | Stage 6 only |
 
@@ -818,6 +872,13 @@ MUST flip in the same commit that produces the state change:
   flips to `active`. The commit that OPENS Stage N+1 (the first
   Stage N+1 PR, or the Chris-directive-recording PR) carries
   the frontmatter flip.
+- **Design-prep session begins (Stage 2 only, v1.5).** `stage: 2`
+  unchanged; `stage_state:` flips `active → design-prep-in-flight`
+  in the commit that opens the design-prep authoring session.
+  When the design-prep artifact is committed and the downstream
+  ADR authoring begins in a subsequent session, flip back to
+  `active`. Bundled design-prep + ADR (same PR per §6.3 rules)
+  skip this sub-state entirely.
 - **Stage 6 close draft complete.** `stage: 6`; `stage_state:`
   flips `active → awaiting-close`. The commit that produces the
   Stage 6 close doc carries the flip.
@@ -937,49 +998,135 @@ The `stage_state:` values enumerated in §4.3.0 make the
 transition mechanically greppable by fresh Claude sessions.
 
 **What.** For every intake item with `risk_class: NEEDS_ADR` or
-`NEEDS_RIGBY_SIGN_PLUS_CHRIS`, produce a design-preparation doc
-per §8.2 and (if `NEEDS_ADR`) a subsequent ADR per §8.3.
+`NEEDS_RIGBY_SIGN_PLUS_CHRIS`:
 
-**Design-prep equivalence (v1.4).** If the arc scoping doc §9
-(Next step + ADR checkpoint) pre-scopes an ADR with ALL of the
-following:
+1. Produce a standalone design-preparation artifact per §4.3.a
+   Design-preparation mandatory rule (v1.5).
+2. Produce a subsequent ADR per §8.3 citing the design-prep as
+   canonical source.
 
-- **Decision question** — the specific choice the ADR resolves
-  ("shall we adopt X, Y, or Z for shape A?").
-- **Options enumerated** — at least the top-N candidate options
-  the ADR will consider, with the shape of each.
-- **Constraints named** — hard requirements the ADR must respect
-  (retention windows, compatibility promises, blast radius
-  ceilings, ratified-upstream-decision inputs).
-- **Consequences per option** — what each option enables and
-  obligates, at least sketched.
-- **Verification implications** — how ratifying this ADR affects
-  the Stage 3 pre-flight verification-method interface for
-  downstream intake rows.
+Design-prep + ADR may bundle into one PR (per §6.3 rules) OR
+ship across sessions (design-prep session first, ADR session
+second — `stage_state: design-prep-in-flight` per §4.3.0
+between).
 
-… then that scoping doc §9 section IS the design-preparation
-artifact for that ADR — no separate `I-NNNN_<slug>_design_prep_
-<topic>.md` file is required. The ADR PR body cites the scoping
-doc §9 subsection as its design-prep source (e.g., "design-prep:
-`I-NNNN_scoping.md` §9.1 ADR-B pre-scoping"). Codified after
-Arc I-0100 scoping doc §9.1 pre-scoped ADR-B/A/C without
-separate design-prep files, matching Rigby SIGN Cycle 1 F5 fold
-which specified the PA↔LLMCallEvent correlation contract inside
-scoping §9 rather than a follow-on design-prep doc.
+**Design-preparation mandatory rule (v1.5).** Every NEEDS_ADR
+intake item with `design_state: POSTURE_PENDING` OR
+`design_state: NONE` MUST produce a standalone design-preparation
+artifact at `docs/research/implementation/<slug>/I-NNNN_<slug>_
+design_prep_<topic>.md` with `authority: design-preparation`
+BEFORE the ADR is authored.
 
-If the scoping doc §9 is INSUFFICIENT (e.g., only names the ADR
-target without option enumeration OR omits constraints OR does
-not name verification implications), a standalone design-prep
-doc IS required at `docs/research/implementation/<slug>/
-I-NNNN_<slug>_design_prep_<topic>.md` with `authority: design-
-preparation`. Claude decides which shape at Stage 2 entry;
-Rigby SIGN cycle on the ADR will pressure-test the design-prep
-adequacy either way.
+**Exemption.** Intake rows with `design_state: SPEC_COMPLETE`
+(CX-P10 pattern per §3.1.b — spec IS the ADR) skip Stage 2
+ADR authoring entirely and therefore do not require design-prep.
+CX-P10 SPEC_COMPLETE items go directly to Stage 3 pre-flight.
 
-**Location.** Design-prep docs (when present) live at
+**Rationale.** Codified at v1.5 from two-trigger evidence in
+Arc I-0100 Stage 2 (see verifier_loop v1.5). The v1.4 optional
+equivalence rule ("scoping doc §9 IS the design-prep if it
+pre-scopes with decision + options + constraints + consequences
++ verification") created a judgment call at every Stage 2 opening
+that failed systematically because scoping doc §9 is a Stage 1
+artifact and Stage 1 does not do the "option trade-space" analysis
+ADR authoring requires. Arc I-0100 ADR-B failed on consequences-
+per-option depth; ADR-A failed on options-not-even-enumerated —
+same underlying failure mode, different structural dimension.
+Making design-prep mandatory removes the judgment call and makes
+Stage 2 deterministic for fresh Claude sessions per §15.8 cold-
+resume completeness invariant.
+
+**Location.** Design-prep docs live at
 `docs/research/implementation/<slug>/I-NNNN_<slug>_design_prep_<topic>.md`
 with `authority: design-preparation`. ADRs live at
 `docs/adr/ADR-MMMM-<slug>.md` with `authority: design-decision`.
+
+### 4.3.a Canonical design-preparation template (v1.5)
+
+Every design-prep artifact follows this canonical structure. Grep-
+friendly section headers. Optional §10 meta-methodology section
+permitted for arcs producing multiple design-prep artifacts.
+
+- **Frontmatter.** `title`, `authority: design-preparation`,
+  `status: active | superseded`, `arc_id`, `arc_slug`, `adr_target`,
+  `adr_slug_reserved`, `session_authored`, `authored`, `authored_by`,
+  `source_finding_refs`, `sign_cycle_1` (blank until SIGN routes),
+  `sign_cycle_1_pin`, `companion_docs`, `verifier_loop`.
+- **§1 Context.** What the ADR must decide; what code state today
+  is; what the observability / correctness / compliance gap is.
+  Cites xx99 finding(s) + arc scoping doc source_refs. Reading
+  upstream CODE at this step is Yes-required (per Arc I-0100
+  ADR-B design-prep §1 pattern — the Session 1174 PR-1
+  `conversation_id` field was the single decisive fact for
+  Option 1 dominance; scoping doc §9 could not surface it because
+  Stage 1 does not read code at that granularity).
+- **§2 Decision questions.** Explicit numbered Q1–QN questions the
+  ADR resolves. Q-count typically 2–4 for a single-domain ADR;
+  bundled ADRs may have more.
+- **§3 Constraints.** Table of hard requirements the ADR must
+  respect: constraint | source (which xx99 / scoping fold / MEMORY
+  rule / ratified upstream artifact) | load-bearing implication.
+- **§4 Options × consequence-field matrix.** **Required 3+ options
+  (or explicit "no true alternative existed" statement).**
+  Consequence fields adapt per domain but MUST include AT LEAST:
+  - **Schema shape** (or domain-analog: rollout phases, data model
+    changes, API surface changes).
+  - **Backward compatibility** (or domain-analog: caller
+    compatibility, in-flight-request safety).
+  - **Migration surface** (or domain-analog: config changes,
+    feature-flag introductions, migration ordering).
+  - **Rigby tool-surface / operator surface impact.**
+  - **Runtime / storage / volume implications** (or domain-analog:
+    OpsRunEvent volume, DB write volume, API call rate).
+  Fields may be added per ADR domain (e.g., ADR-A rollout-posture
+  design-prep may add "operator-intervention surface" and "rollback
+  ease" fields). Field-COUNT ≥ 5 per option.
+- **§5 Pressure test.** Scoring matrix: option × criterion → verdict.
+  Criteria drawn from §3 constraints + additional judgment criteria
+  (blast radius per §5.0 definition, reversibility per ADR-0001 §3.5
+  scale, post-arc follow-on debt). Include non-blocking counter-
+  arguments for rejected options (preserves them for ADR §5
+  Alternatives inheritance).
+- **§6 Verification implications.** How ratifying each option affects
+  the Stage 3 pre-flight verification-method interface for
+  downstream intake rows. If ADR contains a correlation-contract
+  or interface-contract sub-decision (e.g., ADR-B F5 fold), specify
+  keys + join paths + concrete ORM query interfaces here.
+- **§7 Recommendation.** Which option to adopt + rationale + sub-
+  decisions inside the option (per Arc I-0100 ADR-B design-prep
+  §7.1 sub-option 1(i) vs 1(ii) pattern). Stage 3 pre-flight
+  follow-on items also enumerated here (§7.2 pattern).
+- **§8 Alternatives considered.** Full alternative enumeration for
+  ADR §5 Alternatives inheritance. Rejection reasons.
+- **§9 Provenance.** Author, consumed sources (files + lines),
+  Rigby SIGN Cycle target (pending or completed), Chris ratification
+  target (ADR body — design-prep does not need standalone Chris
+  ratification; it is pressure-tested by the SIGN cycle on the
+  downstream ADR).
+- **§10 (optional) Meta-methodology.** What this design-prep taught
+  us about how to do design-prep. Feeds into IOS v-next candidate
+  observations per §14.
+
+**Canonical example.** Arc I-0100 ADR-B design-prep
+(`docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_b_pa_write_shape.md`)
+is the reference implementation of this template. Fresh Claude
+sessions authoring their first design-prep artifact should read
+that document in full before applying §4.3.a to their target ADR.
+
+**Bundling with ADR PR.** Design-prep + ADR MAY ship in the same PR
+(cascade covers both files; §12.5.a rule applies). Design-prep MAY
+ALSO ship in a preceding standalone PR — useful when the design-prep
+authoring session is scoped separately from the ADR session (e.g.,
+long-analysis design-prep on Monday, ADR authoring on Tuesday).
+Standalone design-prep PR follows the same §12.5.a cascade rule
+(design-prep is RAG-critical per §12.5.b).
+
+**SIGN routing (per §7.2 v1.4 shared-arc-pin rule).** Design-prep
+artifacts are NOT independently SIGN'd — they are pressure-tested
+BY the SIGN cycle on the downstream ADR. Do NOT route a Rigby SIGN
+cycle for the design-prep alone. The ADR SIGN cycle Q-set naturally
+pressure-tests the design-prep §4 matrix + §5 pressure test + §7
+recommendation (per Arc I-0100 ADR-B SIGN Cycle 1 Q1–Q4 pattern).
 
 **Exit gate.** Every `NEEDS_ADR` intake item has a ratified ADR
 before Stage 3 begins.
@@ -1969,6 +2116,17 @@ matches a bullet below, cascade co-locates:
   I-NNNN_<slug>_scoping.md` at Stage 1 open. Rigby SIGN Cycle 1
   reads the scoping doc; if it isn't in RAG, SIGN is grepping the
   diff hunk, not the corpus.
+- **Design-preparation docs (v1.5).** `docs/research/
+  implementation/<slug>/I-NNNN_<slug>_design_prep_<topic>.md` with
+  `authority: design-preparation`. Ships in the same PR as the
+  downstream ADR (bundled) OR in a preceding standalone PR (split
+  session). Either way, RAG-critical because (a) Rigby SIGN Cycle
+  on the downstream ADR reads the design-prep as authoritative
+  context; (b) Chris ratifies ADRs against corpus context that
+  includes design-prep; (c) fresh Claude sessions authoring
+  subsequent design-prep artifacts reference prior design-prep
+  as canonical template exemplar (per §4.3.a canonical example
+  reference).
 - **ADRs.** `docs/adr/ADR-NNNN-<slug>.md` at Stage 2 authoring.
   Chris ratifies ADRs against corpus context; RAG must have the
   ADR body when the ratification card lands.
@@ -2355,6 +2513,15 @@ codified:
   §9.2 revises the ceilings.
 - **Cross-domain arc scope.** If cross-cutting arcs recur, IOS
   may need a distinct "cross-arc" child template.
+- **[CODIFIED v1.5] Design-preparation as first-class artifact.**
+  Two-trigger evidence surfaced during Arc I-0100 Stage 2 (ADR-B
+  consequences-per-option depth failure + ADR-A options-not-
+  enumerated failure) demonstrated that v1.4 §4.3 Stage 2 optional
+  equivalence rule failed systematically. Codified at v1.5 as
+  mandatory standalone design-preparation artifact for every
+  NEEDS_ADR intake with design_state POSTURE_PENDING or NONE. See
+  v1.5 verifier_loop entry + §4.3 Stage 2 v1.5 mandatory rule +
+  §4.3.a canonical template.
 
 ## 14.2 Codification triggers
 
@@ -2365,6 +2532,59 @@ Codification of a new IOS rule requires:
 2. Chris ratification of the codification (draft PR → Chris
    review → ratified → IOS v-bump).
 3. INDEX entry noting the version bump.
+
+### 14.2.a Chris refinement-authority prerogative (v1.5 formalization)
+
+Precedent established at v1.1 / v1.2 / v1.3 / v1.4 / v1.5:
+
+Chris may waive the two-trigger threshold and directly authorize
+IOS codification via explicit directive when the trigger is a
+broad-observation-of-systematic-gap rather than an incidental-arc-
+finding. Triggers meeting this standard:
+
+- **Same-session multi-recurrence.** A pattern that recurs 3+ times
+  in one session (v1.3 cascade-discipline refinement — arc-open PR
+  / separate cascade PR pattern recurred 3× same-day).
+- **Cold-session simulation surfacing systematic gaps.** Fresh
+  Claude simulation of a stage boundary reveals ≥3 independent
+  determinism gaps (v1.4 fresh-session Stage 2 readiness — B1–B6
+  gaps).
+- **First-execution surface of previously-hypothesized gaps.**
+  First execution of a Part 11 / Stage 1 / Stage 2 procedure
+  surfaces gaps IOS anticipated but had not codified (v1.1 execution
+  refinement — 7 findings from Part 11 first execution; v1.2
+  execution refinement — 4 findings from Arc I-0100 Stage 1 first
+  execution).
+- **Two-triggers-in-one-arc-of-different-structural-dimension.**
+  Same arc's ADR-B and ADR-A both fail the same rule but on
+  DIFFERENT structural dimensions (v1.5 design-prep first-class —
+  ADR-B failed on consequences-per-option depth; ADR-A failed on
+  options-not-enumerated). Two failure modes strengthen the
+  systematic-gap classification even from one arc.
+
+Codification via refinement-authority prerogative still requires:
+
+- Chris explicit directive naming the refinement (not implicit).
+- Full docs-only PR with cascade + evidence block per §12.5.
+- verifier_loop entry documenting the trigger evidence + Chris
+  directive text.
+- Same shape as v1.1/v1.2/v1.3/v1.4/v1.5 execution-refinement /
+  cascade-discipline / fresh-session-readiness / design-prep-first-
+  class patches.
+
+Prerogative does NOT bypass:
+
+- Rigby SIGN cycle IF the refinement changes SIGN routing / cadence
+  / ratification-gate rules (v1.4 §7.2 v1.4 ADR SIGN cadence patch
+  was not routed to SIGN because it codifies existing cadence
+  patterns from S1300–S2699, not new SIGN semantics).
+- The four IOS non-goals (§0.3). Prerogative refinements cannot
+  turn IOS into a runtime tool, a project-management tool, or a
+  Research OS replacement.
+- Retroactive ratification of past IOS violations. Prerogative
+  refinements codify NEW rules going forward; they do not
+  post-hoc bless past ADR authorings that broke the rule as it
+  would exist after codification.
 
 ## 14.3 IOS versioning
 
