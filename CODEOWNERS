@@ -1,0 +1,47 @@
+# CODEOWNERS — established at S2499 Group 2400 Auth arc close per Cat D F-D-OWN-1 remediation (AU-D5 anchor-update).
+#
+# This is a MINIMUM VIABLE declaration to close the F-D-OWN-1
+# governance-class finding (CODEOWNERS absent at all three canonical
+# locations: .github/, root, docs/ at HEAD 4e6c1ee8 per Cat D
+# HEAD-verification).
+#
+# Full ownership refinement lives in follow-on T-slot batch:
+# - Cross-arc typed-error-envelope + whitelist-replacement ownership
+#   remains UNASSIGNED at Group 2400 close; will be reassigned at
+#   T2 Group 2500 API arc.
+# - Frontend-specific ownership (api.ts + authStore.ts + Sidebar.tsx)
+#   refined at S2600+ per Group 2200 T-slot maintainer-decision batch.
+#
+# Reference: docs/research/domains/auth/2499_auth_canonical_summary.md §7.4 AU-D5.
+
+# Default owner (all files) — solo operator per git log
+* @clwest
+
+# Auth surface (Group 2400 arc scope; primary owner)
+/core/auth_middleware.py @clwest
+/core/auth_views.py @clwest
+/core/auth_views_enhanced.py @clwest
+/core/api_responses.py @clwest
+/core/services/fleet_auth_drf.py @clwest
+/core/vip_middleware.py @clwest
+/core/models_vip_invite.py @clwest
+/core/ws_auth_middleware.py @clwest
+
+# Frontend integration surface (Cat D scope)
+/frontend/src/lib/api.ts @clwest
+/frontend/src/stores/authStore.ts @clwest
+/frontend/src/components/layout/Sidebar.tsx @clwest
+/frontend/src/App.tsx @clwest
+
+# Research library
+/docs/research/ @clwest
+/docs/topics/ @clwest
+
+# Handoffs + session state
+/docs/handoffs/ @clwest
+/00-START-NEXT-SESSION.md @clwest
+
+# Anchors
+/docs/PLATFORM_INVENTORY.md @clwest
+/docs/PLATFORM_WHAT_IT_IS.md @clwest
+/CLAUDE.md @clwest
