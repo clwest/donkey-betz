@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-05T23:39:20+00:00",
+    "generated": "2026-07-06T00:04:17+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4e6c1ee814a2",
-    "doc_count": 2387,
-    "commit_count": 7598,
+    "git_head": "4481debe744a",
+    "doc_count": 2390,
+    "commit_count": 7600,
     "confidence_breakdown": {
-      "HIGH": 1568,
+      "HIGH": 1571,
       "MEDIUM": 352,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2514,9 +2514,10 @@
         2203,
         2299,
         2402,
-        2403
+        2403,
+        2499
       ],
-      "commit_count": 1190,
+      "commit_count": 1192,
       "prs": [
         10,
         11,
@@ -2998,7 +2999,8 @@
         2909,
         2911,
         2912,
-        2914
+        2914,
+        2916
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7317,9 +7319,10 @@
         2203,
         2299,
         2402,
-        2403
+        2403,
+        2499
       ],
-      "commit_count": 146,
+      "commit_count": 148,
       "prs": [
         2213,
         2219,
@@ -7409,7 +7412,8 @@
         2909,
         2911,
         2912,
-        2914
+        2914,
+        2916
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18496,6 +18500,21 @@
       "commit_count": 2,
       "prs": [
         2915
+      ]
+    },
+    "docs/handoffs/SESSION_2499_AUTH_XX99_CANONICAL_SUMMARY.md": {
+      "originating_session": 2499,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4481debe",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2499): Group 2400 Auth Canonical Summary + ARC CLOSE (#2916)",
+      "sessions_touched": [
+        2499
+      ],
+      "commit_count": 2,
+      "prs": [
+        2916
       ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -33559,9 +33578,10 @@
         2401,
         2402,
         2403,
-        2404
+        2404,
+        2499
       ],
-      "commit_count": 155,
+      "commit_count": 157,
       "prs": [
         2773,
         2775,
@@ -33634,7 +33654,8 @@
         2910,
         2912,
         2913,
-        2915
+        2915,
+        2916
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33743,9 +33764,10 @@
         2401,
         2402,
         2403,
-        2404
+        2404,
+        2499
       ],
-      "commit_count": 150,
+      "commit_count": 152,
       "prs": [
         2773,
         2775,
@@ -33820,7 +33842,8 @@
         2910,
         2912,
         2913,
-        2915
+        2915,
+        2916
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33923,6 +33946,21 @@
       "commit_count": 2,
       "prs": [
         2915
+      ]
+    },
+    "docs/research/domains/auth/2499_auth_canonical_summary.md": {
+      "originating_session": 2499,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4481debe",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2499): Group 2400 Auth Canonical Summary + ARC CLOSE (#2916)",
+      "sessions_touched": [
+        2499
+      ],
+      "commit_count": 2,
+      "prs": [
+        2916
       ]
     },
     "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md": {
@@ -39563,6 +39601,21 @@
         2027,
         2036,
         2204
+      ]
+    },
+    "docs/topics/auth.md": {
+      "originating_session": 2499,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "4481debe",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2499): Group 2400 Auth Canonical Summary + ARC CLOSE (#2916)",
+      "sessions_touched": [
+        2499
+      ],
+      "commit_count": 2,
+      "prs": [
+        2916
       ]
     },
     "docs/topics/body-systems.md": {
