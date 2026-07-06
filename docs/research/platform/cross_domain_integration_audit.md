@@ -1,12 +1,12 @@
 ---
 title: "Cross-Domain Integration Audit — how domains connect, fail to connect, overlap, and violate boundaries"
-status: draft (S1274 baseline preserved; post-arc refresh log at §14)
+status: draft (S1274 baseline preserved; post-arc refresh log at §14; v4 appended 2026-07-05)
 authority: research
 session_added: 1274
-last_verified: 2026-07-03
+last_verified: 2026-07-05
 companion_anchors:
   - docs/research/platform_architecture_inventory.md   # 32-domain map (S1273 — parent)
-  - docs/research/ARCHITECTURE_INDEX.md                # library navigation (v5)
+  - docs/research/ARCHITECTURE_INDEX.md                # library navigation (v88 as of S2499)
   - docs/PLATFORM_INVENTORY.md                          # runtime counts anchor
   - docs/EVENT_SYSTEM_INVENTORY.md                     # 14+ event models catalogue
   - docs/EMPLOYEE_OS_PRIMITIVES.md                     # anti-duplication matrix
@@ -17,7 +17,45 @@ companion_anchors:
   - docs/research/domains/revenue/1499_revenue_canonical_summary.md # Group 1400 close (S1499, 2026-07-01)
   - docs/research/domains/sports/1599_sports_canonical_summary.md   # Group 1500 close (S1599, 2026-07-02)
   - docs/research/domains/content/1699_content_canonical_summary.md # Group 1600 close (S1699, 2026-07-02)
+  - docs/research/domains/observability/1799_observability_canonical_summary.md   # Group 1700 close (S1799, 2026-07-03)
+  - docs/research/domains/human_attention/1899_human_attention_canonical_summary.md # Group 1800 close (S1899, 2026-07-04)
+  - docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md # Group 1900 close (S1999, 2026-07-04)
+  - docs/research/domains/event_integration_architecture/2099_event_integration_architecture_canonical_summary.md # Group 2000+ close (S2099, 2026-07-04)
+  - docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md # Group 2100 close (S2199, 2026-07-04)
+  - docs/research/domains/frontend/2299_frontend_canonical_summary.md # Group 2200 close (S2299, 2026-07-05)
+  - docs/research/domains/auth/2499_auth_canonical_summary.md # Group 2400 close (S2499, 2026-07-05)
 verifier_loop: |
+  v4 (2026-07-05, post-Group-1700/1800/1900/2000+/2100/2200/2400 arc closes):
+  append-only refresh EXTENDING v3 §14 ledger for 7 additional arc
+  closes without modifying v3 body or v2 baseline §1-§13. New
+  §14.8 through §14.14 subsections capture per-arc deltas (v2
+  baseline refinements + NEW cross-domain connections + POSTURE-
+  PENDING). §14.1 arcs-closed table extended with 7 new rows.
+  §14.6 cross-arc pattern crystallizations extended: CX-P1
+  runtime-owner MISSING now 3-of-11 unresolved (Revenue + Sports +
+  HumanAttention un-owned; Content UNK-F3 open; Memory + Observability
+  + Authority + Event + RAG + Frontend + Auth well-owned OR
+  ownership out-of-scope); CX-P4 POSTURE-PENDING as arc-close
+  disposition now confirmed at 7 arcs (Sports + Content + Revenue +
+  Observability D74 + Authority + Event + Auth); CX-P6 parallel-
+  schema drift extended to 3 of 11 closed arcs (Revenue + Sports +
+  Observability D74-B dedup unresolved). NEW CX-P7
+  declared-but-unenforced-contract pattern (Frontend + Auth
+  independently — canonical seam statement across BOTH arcs);
+  scope-bounded auth-failure-handling codification candidate CONFIRMED
+  at two-trigger threshold (Cat C 92.9% + Cat D 89.5% silent-degrade
+  class). NEW CX-P8 monotonically-increasing SIGN confidence across
+  child audits within a single arc (Group 2400 Auth Cat A 0.74 →
+  Cat B 0.80 → Cat C 0.82 → Cat D 0.85 → xx99 0.88); pattern-
+  candidate — method matures across children within an arc. §14.7
+  refresh gaps updated: Group 2300 Mobile / 2500 API / 2600 PA
+  arcs remain NOT-STARTED; T2 Group 2500 API is the T2 NEXT arc
+  per S2299 §8.2 + S2499 §8.4. v2 rows in §2, §3, §4, §5, §6, §11
+  remain NOT edited in place; v3 §14.2-§14.7 preserved verbatim;
+  readers cross-reference §14.8-§14.14 for latest verdict on any
+  domain touched by the 7 new arcs. Playbook §14.5 research
+  boundary preserved (no ADRs authored here; only refresh
+  bookkeeping).
   v3 (2026-07-03, post-Group-1300/1400/1500/1600 arc closes):
   refresh-log addition WITHOUT modifying v2 body. Reason: v2 §2
   STRONG/WEAK/MISSING/OVERCOUPLED classifications carry Rigby
@@ -2030,8 +2068,15 @@ this doc.
 | Group 1400 Revenue | S1499 | `docs/research/domains/revenue/1499_revenue_canonical_summary.md` | 2026-07-01 | §14.3 |
 | Group 1500 Sports | S1599 | `docs/research/domains/sports/1599_sports_canonical_summary.md` | 2026-07-02 | §14.4 |
 | Group 1600 Content | S1699 | `docs/research/domains/content/1699_content_canonical_summary.md` | 2026-07-02 | §14.5 |
+| Group 1700 Observability | S1799 | `docs/research/domains/observability/1799_observability_canonical_summary.md` | 2026-07-03 | §14.8 |
+| Group 1800 HumanAttention | S1899 | `docs/research/domains/human_attention/1899_human_attention_canonical_summary.md` | 2026-07-04 | §14.9 |
+| Group 1900 Authority Enforcement | S1999 | `docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md` | 2026-07-04 | §14.10 |
+| Group 2000+ Event / Integration Architecture | S2099 | `docs/research/domains/event_integration_architecture/2099_event_integration_architecture_canonical_summary.md` | 2026-07-04 | §14.11 |
+| Group 2100 RAG / Document Loading | S2199 | `docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md` | 2026-07-04 | §14.12 |
+| Group 2200 Frontend (Contract-Surface) | S2299 | `docs/research/domains/frontend/2299_frontend_canonical_summary.md` | 2026-07-05 | §14.13 |
+| Group 2400 Auth (Session Lifecycle + Permission Floor + Silent-401) | S2499 | `docs/research/domains/auth/2499_auth_canonical_summary.md` | 2026-07-05 | §14.14 |
 
-Cross-arc pattern crystallizations at §14.6. Refresh gaps at §14.7.
+Cross-arc pattern crystallizations at §14.6 (updated at v4 with CX-P7 + CX-P8; CX-P1/P4/P6 extended). Refresh gaps at §14.7 (v4 update: Group 2300 Mobile / 2500 API / 2600 PA remain NOT-STARTED; T2 Group 2500 API is next per S2299 §8.2 + S2499 §8.4).
 
 ### 14.2 Group 1300 Memory arc (S1399, closed 2026-07-01)
 
@@ -2285,64 +2330,371 @@ explicit contract). Cross-references: Revenue T1 R.E3 + Revenue
 T1 R.A1 + Sports T1 R.SPORTS.POSTURE + Sports T1 R.DBAO.CODENAME
 all feed this decision.
 
+**v4 fold note (2026-07-05, post-Group-1700-through-2400 closes).**
+CX-P1 extends to 11 closed arcs analysis: **3 of 11 unresolved runtime-owner
+gaps** (Revenue + Sports + HumanAttention un-owned; Content UNK-F3 open;
+Memory + Observability + Authority + Event + RAG + Frontend + Auth
+well-owned OR ownership out-of-scope). Frontend arc §4.1 no-CODEOWNERS
++ LIGHT-ownership finding (S2201 F4) extends the pattern to a **static
+governance layer** distinct from runtime dispatch ownership. Auth arc
+F-D-OWN-1 CODEOWNERS absent + F-D-OWN-2 CI test-harness absent are
+classified as governance NON-silent-degrade class (see CX-P7 below) —
+same underlying pattern, different classification lens. **CX-P4 confirmed
+at 7 arcs** now (Sports + Content + Revenue + Observability D74 + HAI
+D80 + Authority + Event + RAG post-arc T-slots + Auth Cat B a/b/c +
+Cat C α/β/γ + Cat D α/β/γ × 2). POSTURE-PENDING is stable close-
+disposition class. **CX-P6 parallel-schema drift extends to 3+ arcs**
+(Revenue F.E3 + F.A1 + Sports Cat F + Observability D74-B DEEP-WIRED-BUT-
+DEDUP-UNRESOLVED for LLM-telemetry duplication). Still not 4+ arcs;
+umbrella track un-resolved at Group 2400 close. **CX-P5 meta-methodology
+§10 template propagation extends to 11 canonical summaries** (S1399 through
+S2499 without exception; ELEVENTH-consecutive at S2499 close).
+
+**CX-P7 — Declared-but-unenforced contract pattern (NEW at v4).** Two
+arcs independently converged on canonical seam statements describing
+the same architectural posture: **a mechanism declares a contract but
+the runtime does not enforce it.** Group 2200 Frontend §5.1: "accreted
+UI mesh with declared-but-unenforced contracts — structurally healthy
+at the routing/auth-wrapper/layout/Zustand-persist boundary but
+structurally under-specified at the page-component/consumer-contract/
+API-typing/state-discipline boundary." Group 2400 Auth §1: "ACCRETION
+with declared-but-unenforced contracts. Mechanisms generally work at
+file-precision in the sampled surfaces; contract silently violated
+across all four contract axes examined." **Same architectural posture,
+different domains, independent framings.** Instances span both arcs:
+
+- **Frontend arc:** drf-spectacular is sports-wired but not platform-wide;
+  Zustand persist is 3-of-7-stores-adopted; `ui.render_hint` envelope is
+  0-of-40-conformant; error boundaries are 0-adopted.
+- **Auth arc Cat A:** VIP demo declares read-only for `vip_demo_viewer`
+  role (prompt-only injection) but PA has no runtime gate on write ops;
+  FleetSignatureAuthentication declares HMAC signature check but
+  permissive fallback silently passes unverified callers.
+- **Auth arc Cat B:** DRF default TokenAuthentication declares
+  IsAuthenticated inheritance for ~80-90% of endpoints implicitly, but
+  rate UNOBSERVABLE (no registry + no CI test-harness); STAFF_REQUIRED_PATHS
+  declares 3 gated paths but 2 of 3 are phantom entries.
+- **Auth arc Cat C:** VIPInvite.account_expires_at (14d) declared as
+  field in model + returned in response body but NEVER checked at
+  runtime (declared-fictional class introduced by Cat C).
+- **Auth arc Cat D:** api.ts:47 inline comment declares "Only redirect
+  to login for explicit auth endpoints / Other 401s should be handled
+  by the component" — implying component-level handling — but 0 typed
+  AxiosError catches + 0 error boundaries + ~99% silent-swallow rate
+  means the "handled by the component" contract is NOT enforced;
+  Sidebar.tsx:356 declares logout via authStore.logout() but does NOT
+  call authApi.logout() — declares logout without backend revoke.
+
+**Consolidated status: 2 of 11 closed arcs surface this pattern class
+independently, framed via canonical seam statements at both arc closes.**
+Two-trigger threshold met per playbook §20 codification rule; scope-
+bounded promotion candidate. Umbrella track: **Group 2500 API arc
+opening will re-test the pattern class** — does the pattern extend to
+backend API contract SoT, or does it stay bounded to Frontend + Auth?
+The two-sided FE-symptom-vs-BE-model discipline of Cat B ROOT CAUSE +
+Cat D SYMPTOM (§14.14) suggests the pattern is not solely a frontend
+artifact. Anchor: S2299 §5.1; S2499 §1; S2499 §4.1 (Cat D + xx99
+6-cross-cutting-patterns).
+
+**CX-P8 — Silent-degrade-vs-explicit-failure ambiguity codification
+candidate (NEW at v4).** Cat C Group 2400 Auth (S2403) surfaced 13-of-14
+findings as silent-degrade class (92.9%) as playbook §20 codification
+TRIGGER #1. Cat D Group 2400 Auth (S2404) surfaced 17-of-19 findings
+as silent-degrade class (89.5%) as TRIGGER #2. Both above threshold;
+two-trigger requirement met. **Tightened scope-bounded codification
+(xx99 Rigby SIGN Q3 fold):** promote to playbook v3 candidate focused
+on **auth failure handling (401/403/refresh/logout) with explicit UX +
+telemetry requirements** — NOT general silent-degrade-anywhere
+codification. **Conditional promotion rule:** general codification if
+a 3rd trigger surfaces in a non-auth plane (Groups 2500 API / 2600 PA
+/ 1700 Observability). Anchor: S2403 §14 silent-degrade rate + S2404
+§14.1 silent-degrade rate + S2499 §10.2 codification claim.
+
+**CX-P9 — Monotonically-increasing SIGN confidence across child audits
+within a single arc (NEW-CANDIDATE at v4; pending 2nd arc for confirmation).**
+Group 2400 Auth arc exhibited monotonically-increasing Rigby SIGN
+confidence across children: Cat A 0.74 → Cat B ~0.80 → Cat C ~0.82 →
+Cat D ~0.80-0.85 → xx99 ~0.88. Evidence that the arc's method matured
+across children. Pattern-candidate — waiting for a future arc to
+independently exhibit monotonicity. If confirmed, playbook v3 note
+about arc-open-vs-arc-close method-drift discipline could crystallize.
+Not yet strong enough for codification. Anchor: S2401-S2499 SIGN
+confidence ledger; S2499 §11 arc change log.
+
+**CX-P10 — Design-complete + runtime-scaffolding verdict class as
+close disposition (NEW at v4).** Three arcs closed with the same
+verdict class: **specification consolidated + Chris-ratified via multiple
+"agree all" rounds; runtime binding not yet wired.** Group 1900 Authority
+Enforcement (S1999) — 17 design decisions ratified; only Boundary 5
+warn-mode observation event fires; enforce_authority_mode field ABSENT
+at HEAD. Group 2000+ Event/Integration Architecture (S2099) —
+design-complete, runtime-scaffolding, closure-gated on 4 T1 items.
+Group 2100 RAG/Document Loading (S2199) — design-governed corpus
+substrate spec-complete via P3, evidence-supported via P4, execution-
+pending. **Consolidated status: 3 of 11 closed arcs close with
+design-complete/runtime-scaffolding class**, distinct from CX-P4
+POSTURE-PENDING (governance-gate un-resolution). Design-complete
+encodes *specification state* (Chris-ratified); POSTURE-PENDING encodes
+*decision state* (Chris ADR needed to select from options). The two
+classes are orthogonal. Anchor: S1999 §1; S2099 §1; S2199 §1.
+
 ### 14.7 Refresh gaps and future arc coverage
 
-**What §14 does NOT refresh.**
+**What §14 does NOT refresh (v4 update 2026-07-05).**
 
-- Domain pairs where no arc has closed since S1274: HumanAttention
-  ↔ Governance; Body Systems ↔ *; Advisors persistence; Inbox
-  fanout; Web Push wiring; Mobile Expo push UI. These retain v2
-  classifications unchanged.
+- Domain pairs where no arc has closed since S1274 AND no arc from
+  the v3/v4 refresh has touched them: Body Systems ↔ *; Advisors
+  persistence; Inbox fanout; Web Push wiring; Mobile Expo push UI.
+  These retain v2 classifications unchanged. **NEW at v4:** HumanAttention
+  ↔ Governance surface refined at §14.9 + §14.10 (Group 1800 + Group
+  1900 both closed since v3).
 - Cross-domain connections involving domains with active but
-  unclosed arcs. As of 2026-07-03, Group 1700 Observability is
-  in-progress (S1704 Cat D ToolCallRecord audit next). When
-  Group 1700 closes, §14.8 (new subsection) will add
-  Observability-side refinements.
-- Boundary violations at §7 refined by arc evidence. New patterns
-  worth §7 augmentation include Sports arc MOCK-DATA-CONSUMER
-  (§14.4), HOT-PATH-CHOKE-BYPASS (§14.4), Content arc auth-
-  boundary asymmetry (§14.5). These are noted in §14 but §7
-  itself is preserved from v2.
-- §11 risk matrix additions. New CRITICAL / HIGH findings from
-  arc closes are not slotted into the v2 §11 numbered ranking
-  (which stops at #40+). A future v4 refresh could integrate
-  §14 findings into a re-ranked §11.
+  unclosed arcs. As of 2026-07-05: **NONE currently in-progress**
+  (Group 2400 Auth closed at S2499 2026-07-05; T2 Group 2500 API is
+  the T2 NEXT queued arc per S2299 §8.2 + S2499 §8.4 but has not
+  opened yet). When Group 2500 API opens + closes, §14.15 (new
+  subsection) will add API-side refinements.
+- Boundary violations at §7 refined by arc evidence. **NEW at v4:**
+  Frontend arc §4.4 DEAD-CANDIDATE/MOCK-DATA/INTENT-NEUTRAL pattern
+  class recurrence at §14.13 + Auth arc F-D-BYPASS-1 79 raw fetch
+  interceptor-bypass + F-D-SIDEBAR-1 backend-token-not-revoked
+  boundary at §14.14 all worth §7 augmentation. These are noted in
+  §14 but §7 itself is preserved from v2 per append-only discipline.
+- §11 risk matrix additions. **NEW at v4:** Auth arc P0 rank-1
+  co-equal batch (14 items with Cat D Rigby Q15 fold tiered ordering
+  P0-A/B/C) is not slotted into v2 §11 numbered ranking. Silent-401
+  SYSTEMIC + 803-consumer-call-site surface would rank at top of a
+  re-ranked §11. A future v5 refresh could integrate §14.8-§14.14
+  findings into re-ranked §11.
 
-**What the queue looks like.** Per `docs/research/OPEN_ARCS.md`:
+**What the queue looks like (v4 update 2026-07-05).** Per
+`docs/research/OPEN_ARCS.md`:
 
-- Group 1700 Observability / Telemetry / SLOs — IN-PROGRESS (S1700
-  parent + S1701-S1703 children closed; S1704-S1706 pending; S1799
-  canonical summary pending). Will produce a §14.8 subsection.
-- Group 1800 HumanAttention / Feedback / Learning — NOT STARTED.
-  Will re-audit the HumanAttention ↔ * connections at v2 §2.6.
-- Group 1900 Event / Integration / Runtime Architecture — NOT
-  STARTED. Downstream of S1274 §11.1 EventBus adoption; inherits
-  Group 1700 delegation of event bus / routing / schema
-  versioning.
+- Group 1700 Observability / Telemetry / SLOs — **CLOSED at S1799
+  2026-07-03; §14.8 delivered.**
+- Group 1800 HumanAttention / Feedback / Learning — **CLOSED at
+  S1899 2026-07-04; §14.9 delivered.**
+- Group 1900 Authority Enforcement — **CLOSED at S1999 2026-07-04;
+  §14.10 delivered.**
+- Group 2000+ Event / Integration Architecture — **CLOSED at S2099
+  2026-07-04; §14.11 delivered.**
+- Group 2100 RAG / Document Loading — **CLOSED at S2199 2026-07-04;
+  §14.12 delivered.**
+- Group 2200 Frontend (Contract-Surface) — **CLOSED at S2299
+  2026-07-05; §14.13 delivered.**
+- Group 2400 Auth — **CLOSED at S2499 2026-07-05; §14.14 delivered.**
+- Group 2300 Mobile — NOT STARTED. Post-S2099 project memory queue
+  ranking placed after Auth per Chris D-override at S2199 close.
+  Will re-audit Mobile Expo push UI + MobilePushToken.revoked_at
+  cascade + mobile-side 401-handling parity (Auth CF-D4 delegation).
+- Group 2500 API — **NOT STARTED; T2 NEXT** per S2299 §8.2 + S2499
+  §8.4. Chris-gated open. Will consume Group 2400 4-axis handoff
+  bundle (refresh endpoint + logout envelope + Clear-Site-Data +
+  typed-error-envelope Cat D α/β/γ + per-endpoint permission registry
+  Cat B c) + F-B-HIGH-1 phantom cleanup + F-B-HIGH-4 auth_views_enhanced.py
+  fixes + drf-spectacular retrofit (S2203 F1).
+- Group 2600 PA — NOT STARTED; T3 queued after Group 2500 close.
+  Will consume Group 2400 CF-D2 delegation (session_tool.retire
+  cascade on user logout + workspace-context authz + PA-chat 401 UX
+  design + paStore field-list completeness).
 
 **Cross-arc delegated items owed to future arcs (per canonical
-summaries §9):**
+summaries §9; v4 update 2026-07-05).**
 
-- **Group 1700 Observability** — filter-drop telemetry (Cat D
-  Memory + E↔D Memory boundary); orphan-write telemetry (Revenue
-  F2 pattern); EventBus adoption for Cat F Memory + Revenue T5
-  streams; zero-fire beat detection (Sports Cat C + Cat D);
-  MOCK-DATA-CONSUMER detection (Sports Cat E); worker-recycle
-  instrumentation (Memory Cat H).
-- **Employee OS 1200s arc** — Cat G Mission Memory (Memory
-  delegation); Revenue Employee + Income/Jobs Employee JobContracts
-  (Revenue T2/T3); Content Employee analog decision (Content
-  UNK-F3).
+- **Group 1700 Observability** — CLOSED at S1799; delegations RECEIVED
+  documented at §14.8. Post-Group-1700-close delegations to §14 tracker:
+  Cat D + Group 2400 CF-D3 umbrella roll-up (silent-401 rate telemetry
+  + `authHandling: 'suppress_redirect'` telemetry + 503-fork asymmetry
+  smoke-test coverage).
+- **Employee OS 1200s arc** — Cat G Mission Memory (Memory delegation);
+  Revenue Employee + Income/Jobs Employee JobContracts (Revenue T2/T3);
+  Content Employee analog decision (Content UNK-F3); Group 1900 Authority
+  Enforcement 3 T1 items (R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS + R.AUTHORITY.ACTOR-KWARGS-CELERY
+  + R.AUTHORITY.ACTOR-STEP-CONTEXT runtime landing). Group 2000+ Event
+  Architecture T1 R.EVENTS.COMPOSITION-CONTRACT-CONSISTENCY-REGISTER + T2
+  R.EVENTS.EMPLOYEE-OS-EVENTBUS-CANONICAL-ADOPTION.
+- **Group 2500 API (T2 NEXT)** — will consume: Group 2400 4-axis handoff
+  bundle (refresh + envelope + CSD + typed-error + registry); Group 2200
+  T1 contract SoT + drf-spectacular platform-wide extension + REST↔WS
+  T7; Group 1400 Revenue T1 parallel-schema ADR (F.A1 + F.E3); Group
+  1500 Sports T1 R.SPORTS.POSTURE + R.DBAO.CODENAME ADRs (integration
+  vs island); Group 1600 Content D65e Rigby PA-tool + enforcement
+  centralization axis.
+- **Group 2600 PA (T3)** — will consume: Group 2400 CF-D2 delegation
+  (session_tool.retire cascade + workspace-context authz + PA-chat 401
+  UX + paStore); Group 2200 T1 workspace-context resolver + persistence
+  contract + WS↔polling consolidation.
+- **Group 2300 Mobile (parallel)** — will consume: Group 2400 CF-D4
+  delegation (parallel silent-401 audit + MobilePushToken.revoked_at
+  cascade + 401-handling parity between web + mobile).
 
-### 14.8 Reserved for Group 1700 Observability arc close
+### 14.8 Group 1700 Observability arc (S1799, closed 2026-07-03)
 
-*(To be populated when S1799 canonical summary lands.)*
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1799 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.8 EventBus (v2 fold: UNKNOWN → WEAK "partially implemented, weakly adopted") | WEAK per Rigby SIGN cycle 1 | **REFINED to six-plane producer/consumer/correlation graph** with three cross-cutting axes: correlation-spine + retention + consumer-partial-wiring. Six categories evaluated (Cat A CeleryTaskEvent + Cat B LLMCallEvent + Cat C AgentExecution + Cat D ToolCallRecord + Cat E OpsRun+OpsRunEvent + Cat F Adjacent). Every writer discipline intact (26 boundary candidates → 26 LEGITIMATE); every consumer surface at-best partially-wired. | S1799 §1 + §3 + §4 |
+| §11 EventBus row (v2 fold: CRITICAL → HIGH) | HIGH | **CONFIRMED as HIGH baseline + retention posture UNBOUNDED-at-writer-side** (only Cat A + FleetEvent have date-based purge — 1/14 event models). Correlation-spine posture LATENT-at-cross-cat-correlation-spine per S1704 F1 100% NULL trace_id. | S1799 §1 D74 six-axis + §14.5.4 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **D74 six-axis correlation-spine framing.** Observability delivered a first-of-kind arc-lens question: "which single identifier does the platform's correlation spine hang on?" — answered with negative evidence on all four candidate options (task_id VERIFIED / execution_id REVISED / trace_id PARTIALLY REVISED / tool_call_id REFUTED / mission_id CONFIRMED). Source: S1799 §5 D74 six-axis + F5 correlation-primitive HYPOTHESIS box.
+- **Retention pattern INCONSISTENT arc-wide.** Only Cat A CeleryTaskEvent + 1/14 event models (FleetEvent) have date-based purge; 12/14 models UNBOUNDED at write side. Cross-cutting axis; blocks D74 posture selection. Source: S1799 §1 axis F + T0/Gate R.OBSERVABILITY.RETENTION-UNIFIED-ADR (paired with D74 spine posture per S1706 Rigby SIGN F2 fold).
+- **Cat A + Cat B + Cat C observed-writer discipline vs Cat D actively-broken consumer.** S1704 F1 identified ToolCallRecord as 100% NULL trace_id at write side; no cross-cat consumer can join to spine. Source: S1704 F1; S1799 §1 axis D.
+- **PA path coverage gap at AgentExecution.** S1703 F1+F2+D4 three-class landmine reframe: PA-invoked agents skip AgentExecution writes because PA tool dispatch bypasses the `dispatch_agent` code path. Source: S1703 F1; S1799 §1 axis C.
+- **Cat E flag-gated design-intent.** OpsRun + OpsRunEvent LATENT-VIABLE-BUT-FLAG-GATED — code exists + tables exist, but capability is gated behind `MISSION_RUNNER_ENABLED` disabled at HEAD. Source: S1705 F1; S1799 §1 axis E.
+
+**POSTURE-PENDING (two paired T0/Gate ADRs):**
+
+- **R.OBSERVABILITY.RETENTION-UNIFIED-ADR** — spans A-F retention policy; must be first-class field in D74 spine ADR regardless of posture (paired per Rigby SIGN F2 fold).
+- **R.OBSERVABILITY.D74-SPINE-POSTURE** — selects A/B/C/D axis-cell for the correlation-spine. Nine T1 items depend.
+
+**Cross-arc delegation IN (§9):** 4 aggregated delegations INHERITED from Groups 1300 Memory + 1400 Revenue + 1500 Sports + 1600 Content per S1699 §9 delegation table. Group 1700 acts as observability-side consumer for zero-fire beat detection (Sports Cat C+D), orphan-write telemetry (Revenue F2), MOCK-DATA-CONSUMER detection (Sports Cat E), EventBus adoption for Memory Cat F + Revenue T5 streams.
+
+**Cross-arc delegation OUT (§9):** Group 1900 Event Architecture receives F.c 14-model catalog + F.e PERMEABLE terminology + Cat E producer-only role. Group 1300 Memory receives Cat C execution_id downstream `UserAgentLearning` alignment. Group 1400 Revenue receives R.A2 LLMCallEvent scoring-rate probe unblock.
+
+### 14.9 Group 1800 HumanAttention / Feedback / Learning arc (S1899, closed 2026-07-04)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1899 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.6 HumanAttention (16) → Memory (13) | STRONG per Agent 4 §5.2 | **REFINED to six-plane learning-surface fragmentation:** Plane 1 human-mediated canonical (FeedbackProcessor → AgentLearning + LearningInsight LIVE) + Plane 2 autonomous canonical (9 LearningBridges → UserAgentLearning 22+ sites LIVE, 100% autonomous zero HAI touches) + Plane 3 external intelligence (Reddit LIVE-on-demand + Bluesky NEAR-DORMANT, NOT LearningBridge ABC inheritors) + Plane 4 user-interaction ephemeral (AgentLearningService LIVE 13 callers Redis-only) + Plane 5 unscheduled async (AgentLearningEngine DEFINED-BUT-UNSCHEDULED Redis pubsub zero publishers) + Plane 6 unused ORM-tree (PersistentLearningEngine DEFINED-BUT-UNUSED zero imports). **No shared source_kind provenance tag; no cross-plane query surface.** | S1899 §1 six-plane + F7 CRITICAL compound learning-loop |
+| §2.6 HumanAttention → * (many pairs; Agent 4 §5.6) | Multiple STRONG/WEAK | **CONFIRMED with F7 CRITICAL compound learning-loop false-confidence pattern** across FOUR break-points durable across arc (S1801 D5 + S1804 F4 + S1805 F4 + S1806 arc-close): FeedbackProcessor post_save does NOT invoke update_learned_stats; auto-approve bypasses record_decision; source_weights excluded from save update_fields; record_verification emits nothing. | S1899 §1 F7 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **F3 HIGH IMMEDIATE CORRECTNESS — silent import-path-dependent collisions on 2 duplicate-FILE class-name pairs.** BoardroomLearningService × 2 files + UnifiedLearningPipeline × 2 files. Same class name, different files, silently importable depending on Python import order. Source: S1899 §14 F3.
+- **Six-plane fragmentation vs one-planeness of v2 §2.6 baseline.** v2 treated HumanAttention → Memory as one STRONG pair; Group 1800 arc surfaced six distinct write-planes with different durability, ownership, provenance, and query surfaces. Source: S1899 §1 §3 six-plane; extends v2 §2.6 with per-plane classification.
+- **Cross-arc delegation OUT.** Group 1300 Memory receives source_kind enum + AgentLearning schema-change ADR joint (T0/Gate). Group 1400 Revenue receives Revenue Opportunity → HAI MISSING gap (extends §14.3 F.D1). Group 1500 Sports receives verify-beat T-slot + two-task-variant reconciliation + AgentLearningSystem ownership U3. Group 1600 Content receives PALearningInsightsService + PAToolLearningEnricher discoverability. Group 1700 Observability receives Failure Cluster → HAI CRITICAL + retention-unified ADR bundle. Group 1900 Event Architecture receives source_kind enum + six-plane event-emission gap + HAI event candidates (T0/Gate handoff).
+
+**POSTURE-PENDING (D80 four-option posture-decision brief):**
+
+- **D80 four-option posture-decision** with F7 CRITICAL constraint framing + "with-assumptions-pending-fix" recommendation OR defer-post-T0/Gate safe default (Rigby SIGN Q3 fold #3 — both Chris-gated; xx99 did NOT select). 6 T0/Gate ADRs, 12 T1, 14 T2, 15 T3 = 47 total post-arc items.
+
+### 14.10 Group 1900 Authority Enforcement arc (S1999, closed 2026-07-04)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S1999 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.7 Governance / Authority (multiple pairs) | STRONG/WEAK per Agent 4 | **REFINED to per-plane separation-boundary posture register (P4 first-class deliverable):** 5 PERMEABLE-BROKEN (Memory + Content + HAI + Employee OS + API) + 2 STRUCTURAL-DROP (Sports + Discord) + 1 CLEAN (Frontend); **0 STABLE, 0 CANONICAL**. Governance authority evolution doc + 4-plane framing preserved as design-preparation input to this arc. | S1999 §17.1 per-plane register |
+| §11 governance rows | Multiple HIGH/MEDIUM | **RESOLVED into 17 discrete design decisions across P1/P2/P3/P4** via 4 successive "agree all" rounds (S1902 D-gate + S1903 Q-resolutions + S1903 SIGN folds + S1904 all-findings) plus S1999 xx99 close (FIFTH-consecutive). Runtime state at HEAD: **only Boundary 5 warn-mode observation event fires** (13 events / 5 days / 4 employee_handles at S1902 close); AuthorityLevel enum has 1 runtime consumer (level_counts accumulator at `mission_runner.py:863-874`); 6 KillSwitch reads all management/audit/cleanup ZERO enforcement dispatch. **Verdict: design-complete, runtime-scaffolding.** | S1999 §1 |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **Design-complete vs runtime-scaffolding as arc-close verdict class.** First arc to distinguish "specification consolidated + Chris-ratified" from "runtime binding not yet wired." Feed-forward pattern for Group 2000+ + Group 2100 (both closed with same class of verdict).
+- **`enforce_authority_mode` field ABSENT at HEAD.** P4 §14.3.3 direct grep verified. Field does not exist yet; enforcement dispatch would require adding it via T1 R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS.
+- **`signal_aggregation_service.py:211` cross-plane read UNDOCUMENTED.** Direct authority-plane read from signal-aggregation service without documented interface. Delegated to Memory arc (T3 R.MEMORY.SIGNAL-AGG-AUTHORITY-COUPLING-DOC).
+- **Cross-arc delegation OUT.** Employee OS receives 3 T1 items (R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS + R.AUTHORITY.ACTOR-KWARGS-CELERY + R.AUTHORITY.ACTOR-STEP-CONTEXT runtime landing). Group 1600 Content receives T1 R.CONTENT.PUBLISHGATE-AUTHORITY-COMPOSITION. Group 1700 Observability receives authority-audit event retention posture pairing. Group 2000+ Event Architecture receives F.SYMBOL-MAPPING-STATUS-VERIFICATION + F.PER-USER-AUTHORITY-MECHANISM + R.EVENTS.HAI-EVENT-CONTRACT-CANDIDATES.
+
+**POSTURE-PENDING:**
+
+- **T1 R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS** highest-priority per F5 severity — blocks enforcement dispatch expansion.
+- **T2 R.AUTHORITY.KILLSWITCH-DISPATCH-EXPANSION** with P3 D94 reader spec.
+- **T2 R.AUTHORITY.AUTO-APPROVE-FREEZE-GATE** elevated per P4 F4.
+- 20-item T-tier queue distributed across 7 arcs + §8.4.1 dependency/blocker map.
+
+### 14.11 Group 2000+ Event / Integration Architecture arc (S2099, closed 2026-07-04)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S2099 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.8 EventBus (WEAK "partially implemented, weakly adopted") | WEAK per Rigby v2 fold | **REFINED to substrate landscape with 6 named intra-application substrates + 1 INTENTIONAL SIDECAR (Fleet Events per Chris D-verdict S2004) + 1 deprecated `redis.publish()` drift.** | S2099 §3.1 |
+| §11 EventBus row (HIGH) | HIGH | **CONFIRMED as design-complete, runtime-scaffolding, closure-gated on 4 T1 items:** composition-consistency register + HAI dual-emission wiring + spider-data substrate consolidation + F.PER-USER-AUTHORITY emission wiring. Register is strict closure pre-req for HAI + spider-data + F.PER-USER-AUTHORITY per Q1a SIGN fold. | S2099 §1 + T1 ordering |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **10-plane distribution seam-posture:** 2 PERMEABLE-BROKEN (Memory + Content) + 2 PARTIAL (Sports + API) + 3 WORKING (Observability + Authority Enforcement + Employee OS) + 1 EXPERIMENTAL (HAI) + 1 STRUCTURAL-DROP (Discord) + 1 CLEAN-delegated (Frontend); **0 STABLE, 0 CANONICAL.** Extends Authority §17.1 per-plane register to event/integration plane. Source: S2099 §5.1-§5.2.
+- **Fleet Events INTENTIONAL SIDECAR** — Chris D-verdict S2004 ratified Fleet Events NOT-canonical-EventBus; classified as intentional sidecar with dedicated §13.1.5 sidecar subtable in EVENT_SYSTEM_INVENTORY. First arc to classify a substrate as intentional-sidecar (distinct from drift/DEAD/MOCK).
+- **§10 meta-methodology promotions.** MC-3 (F18 test-gap durable-at-3 arcs) CODIFICATION-CONFIRMED. MC-4 (arc-pin routing durability) CODIFICATION-CONFIRMED — guardrails retained but generalized in applicability. MC-5 (§11.2 20-section child template) CODIFICATION-CONFIRMED extended 15 → 18. MC-6 (Cat F CONSOLIDATION pattern) CODIFICATION-CONFIRMED. **F5 HYPOTHESIS DISPROVE evidence-rollup heuristic codification-confirmed** — cross-arc tally 1 pass / 7 disprove durable-at-seven; DISPROVE-dominant pattern is CANONICAL per Q11 SIGN STRENGTHEN.
+- **Cross-arc delegation OUT (10 arcs).** Delegations to Groups 1300/1500/1600/1700/1800/1900 + Employee OS + API + Discord + Frontend distributed. Group 1300 Memory receives F13 Fleet Events receiver post-classification + T3 R.MEMORY.WRITER-PLANE-EVENT-EMISSION-DOC. Group 1700 Observability receives T1 F15b DLQ reader + T2 R.EVENTS.OBSERVABILITY-SYSTEM-ALERT-EMISSION. Group 1800 HAI receives T1 R.EVENTS.HAI-DUAL-EMISSION-WIRING (highest T1 priority per F5 severity). Group 1900 Authority receives T1 R.EVENTS.PER-USER-AUTHORITY-EMISSION-WIRING (three-event contract).
+
+**POSTURE-PENDING:**
+
+- 2 T0/Gate (R.EVENTS.CANONICAL-SEAM-STATEMENT CONSUMED + R.EVENTS.FLEET-EVENTS-CLASSIFICATION-ADR RATIFIED as option (3) INTENTIONAL SIDECAR).
+- 7 T1 (T1 ordering per Q10 SIGN STRENGTHEN: #1 composition-consistency register strict closure pre-req + #2 HAI dual-emission wiring parallel-executable + #3 spider-data substrate consolidation + #4 per-user-authority + #5 authority.violation-event-schema + #6 content deliverable-event emission wiring + #7 DLQ correctness closure F14+F15).
+
+### 14.12 Group 2100 RAG / Document Loading (Knowledge Loop) arc (S2199, closed 2026-07-04)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S2199 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.5 Memory / Documents / Embeddings (RAG lane) | v2 §14.2 refined "Two RAG lanes, no runtime selector" | **REFINED to design-governed corpus substrate — spec-complete via P3, evidence-supported via P4, execution-pending via post-arc T-slots** — in transition toward runtime-governed institutional knowledge layer along maturity gradient passive → spec-complete → execution-complete. | S2199 §1 |
+| §11 risk #19 (5+ memory stores) — RESOLVED at Group 1300 per §14.2 | v2 §14.2 fold | **EXTENDED to RAG corpus governance framing** — Group 2100 delivered spec for retrieval authority + governance framework layered on top of the corpus substrate; execution pending. | S2199 §1 spec-complete/execution-pending |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **RAG corpus as design-governed substrate.** First arc to frame a substrate as spec-governed + evidence-supported + execution-pending in three-stage maturity gradient. Extends design-complete/runtime-scaffolding class from Authority + Event arcs to Knowledge Loop arc.
+- **§14 6-doc-arc structure applied to Knowledge Loop.** S2100 parent + S2101 P1 Corpus State + S2102 P2 Ingestion Pipeline + S2103 P3 Retrieval Authority Framework + Governance Design + S2104 P4 Behavior Substrate Structured Observation + Integration + S2199 xx99 canonical summary. **F5 correlation-primitive HYPOTHESIS box** discipline first-application from Observability MC-3 template (F5 DISPROVE dominant pattern preserved at S2199).
+- **Cross-arc delegation OUT.** 2 flags post-Q19 shrink 3→2: (i) cascade lifecycle-event architecture co-execution with Group 2000+; (ii) retrieval-surface counter operator-surface with Group 1700.
+- **19 T-slot follow-on queue** distributed as 2 T0/Gate (T22 Track B + T13 Track A) + 6 T1 + 9 T2 + 2 T3.
+
+**POSTURE-PENDING:**
+
+- T0/Gate T22 Track B + T13 Track A.
+- 6 T1 items — T18/T19/T21/T26a/T27/T-D2100.11.
+
+### 14.13 Group 2200 Frontend (Contract-Surface Arc) (S2299, closed 2026-07-05)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S2299 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.9 Frontend → * (multiple) | Various STRONG/WEAK; Content → Frontend REFINED at §14.5 | **REFINED to canonical seam statement (verbatim from S2299 §5.1 post-Rigby SIGN Q1 fold):** "The frontend at HEAD `294512e3` is an *accreted UI mesh with declared-but-unenforced contracts — structurally healthy at the routing/auth-wrapper/layout/Zustand-persist boundary but structurally under-specified at the page-component/consumer-contract/API-typing/state-discipline boundary — where three of four contract-surface axes examined by this arc (component-boundary + envelope + API-typing) generalize as SYSTEMIC deficiencies with surface variance across the examined child surfaces, one axis (state persistence) is SURFACE-LOCAL + DOMAIN-SPECIFIC HYBRID confined to `/betting`, and the fix path is wiring the design-latent contract infrastructure (partially scaffolded; unevenly wired) through cross-arc coordination with Group 2400 Auth + Group 2500 API + Group 2600 PA + Group 1700 Observability — not framework migration."* | S2299 §5.1 |
+| §7 boundary violations (v2) | Multiple | **CONFIRMED and EXTENDED with S2201 §14.3 cockpit two-stage MINOR-DRIFT (frontend-side session-lifecycle ambiguity symptom) + S2201 §15.5 silent-401 SYSTEMIC + S2202 F1 MOCK-DATA-CONSUMER multi-surface + S2202 F3 envelope-conformance 0/40 primary + S2203 §14 F1 SoT-ABSENT-at-platform-scale + F3 silent-401 SYSTEMIC ~630/1300 call-sites at risk + F3.5 whitelist BRITTLE.** These are frontend-side symptoms feeding four-axis T1 handoff bundle to Group 2400 Auth. | S2299 §8.2 T1 handoff |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **Four-axis T1 handoff bundle owed to Group 2400 Auth.** silent-401 + logout cleanup + session lifecycle + permission-floor uniformity. Two-sided FE-symptom-vs-BE-model framing per S2203 §14 F3 + S2204 §19.1 R1 mirror. Discharged in full at Group 2400 close (see §14.14).
+- **Six §4 cross-cutting patterns:** §4.1 no-CODEOWNERS + LIGHT-ownership across all 4 children (extends CX-P1 to Frontend arc) + §4.2 silent-failure defaults across P1+P2+P3 + §4.3 untyped/uncontracted defaults across P2+P3+P4 (design-latent infrastructure exists but unwired) + §4.4 DEAD-CANDIDATE/MOCK-DATA/INTENT-NEUTRAL pattern class recurrence across P2+P3 + §4.5 god-file/god-component ≥1,500 LOC threshold generalizes across UI+infrastructure layers + §4.6 cross-arc DEFER-with-escape-hatch pattern 3-within-arc + §4.7 Context propagation fragility workspace-identity + global-dock-coupling + §4.8 Anchor + inventory drift docs-and-inventories-lag-reality.
+- **CODEOWNERS absent + LIGHT-ownership pattern.** Extends CX-P1 runtime-owner MISSING to Frontend surface with F4 finding.
+- **Cross-arc delegation OUT (4 flags, no shrink; distinct integration surfaces):** (i) silent-401 + logout cleanup contract with Group 2400 Auth (T1); (ii) contract SoT + drf-spectacular extension with Group 2500 API (T1); (iii) workspace-context resolver + persistence contract with Group 2600 PA (T1); (iv) envelope enforcement locus + Session 968 X-UI-Scope ring buffer ownership with Group 1700 Observability (T1).
+
+**POSTURE-PENDING (§7 anti-scope preserved from arc scope — no fixes, no framework migration):**
+
+- ~38 T-slot follow-on queue four-track structure. **T1 cross-arc handoffs (4 items)** distributed to Group 2400 Auth + Group 2500 API + Group 2600 PA + Group 1700 Observability. **Maintainer-decision batch (5 items)** — CODEOWNERS + DEAD-CANDIDATE consolidated cleanup + api.ts extraction + storageKeys registry + cockpitApi ownership. **T2 post-arc T-slot (10 items) + T3 conditional post-arc (4 items).**
+
+### 14.14 Group 2400 Auth (Session Lifecycle + Permission Floor + Silent-401 Resolution) arc (S2499, closed 2026-07-05)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S2499 verdict | Source anchor |
+|-----------|-------------------|---------------|---------------|
+| §2.9 Frontend → Auth / Session Auth boundary | STRONG per Agent 4 §5.7 | **REFINED to canonical verdict on central lens question (Chris-locked at S2400 open):** *"Is the platform's auth model a contract... or an accretion of per-surface defaults whose failures are silently swallowed?"* **VERDICT: "ACCRETION with declared-but-unenforced contracts"** (Rigby SIGN Q1 fold tightening: "mechanisms generally work at file-precision in the sampled surfaces"). Pattern is not scattered defects — it is one architectural posture surfacing consistently at every axis the arc looked at. | S2499 §1 |
+| §7 boundary violations (v2) | Multiple | **CONFIRMED and EXTENDED with 4 layers of contract mesh:** Cat A trust boundaries declared without runtime enforcement (VIP demo prompt-only + Fleet permissive fallback + PURGE_SECRET hardcoded fallback + WebSocket middleware DEAD in ASGI stack) + Cat B permission floors implicit at ~80-90% ESTIMATE inheritance rate + Cat C session lifecycle contract undeclared across 14/15 client-side persistence surfaces (6.7% declared cleanup rate) + zero Clear-Site-Data emission + no refresh endpoint + VIPInvite account_expires_at declared-fictional + Cat D frontend caller ~99% silent-swallow rate across 803 consumer call-sites (57 direct + 667 useQuery/useMutation + 79 raw fetch bypass) with zero typed AxiosError catches and zero error boundaries. | S2499 §3 consolidated shape + §14 numerical summary |
+
+**NEW cross-domain connections not on v2 baseline:**
+
+- **Four-axis contract mesh:** identity-attach + authorization floor + session lifecycle plane + frontend caller surface. Each layer works mechanically; each layer silently violates its contract at boundary. Pattern generalizes across whole auth stack.
+- **803-consumer-call-site classification by inheritance-path** — 57 direct + 667 hook + 79 raw fetch; 724 interceptor-routed (90.2%) + 79 bypass (9.8%); ~99% silent-swallow rate at HEAD.
+- **Sidebar logout does NOT revoke backend token (F-D-SIDEBAR-1 NEW HIGH FINDING).** `frontend/src/components/layout/Sidebar.tsx:356` clears authStore + syncUser(null) + Zustand persist localStorage clear, but does NOT invoke `authApi.logout()`. Backend `authtoken_token` DB row never deleted via sidebar path. Combined with F-C-REFRESH-1 (no refresh endpoint) + Cat A F-DEC-1 (no expiry): attacker-valid window on leaked token = indefinite. Cross-domain: Auth ↔ Frontend integration + Sidebar UI ↔ backend logout endpoint. Source: S2404 §16 F-D-SIDEBAR-1; S2499 §3.
+- **PA-chat 401 silent-swallow (F-D-PA-1 HIGH per Rigby Q10 fold — escalated MED→HIGH).** `/pa/chat/`, `/pa/chat/status/`, `/pa/conversations/` endpoints do NOT match whitelist substring; 401 mid-conversation = silent reject = agent-hang UX. PA is control-plane per CLAUDE.md workflow rules. Cross-domain: Auth ↔ PA integration. Source: S2404 §14 F-D-PA-1.
+- **Three three-option decision spaces enumerated for Chris D-verdict:** Cat B (a)/(b)/(c) permission-floor + Cat C (α)/(β)/(γ) session-lifecycle + Cat D α/β/γ × 2 typed-error-envelope + whitelist-replacement. Cat D Rigby Q6 fold reconciled γ (mechanism) with Cat C β (UX policy) as nested composition — γ = RQ error callback + top-level ErrorBoundary + Cat C β "explicit re-login" as message/UX policy nested inside γ.
+- **F-C-VIP-1 risk-gate constraint preserved through xx99.** Shipping any α/β/γ envelope UX must NOT surface time-based expiry semantics until F-C-VIP-1 (VIPInvite.account_expires_at 14d not enforced at runtime) resolves. Copy guidance per Cat D Rigby Q9 fold: use "Sign-in required" / "Authentication required" / "Please sign in again" (no time-based claim) until F-C-VIP-1 resolves post-arc.
+- **26 cross-arc coordination flags roll up into 7 delegate arcs** (T2 Group 2500 API NEXT + T3 Group 2600 PA + T4 Group 1700 Observability umbrella + T5 Group 2300 Mobile + Group 2200 R6 error-boundary framework BLOCKING PREREQUISITE for option-γ + Group 1900 KillSwitch preservation + Group 2400 internal). Single-tracking-unit discipline for delegate arcs receiving ≥3 upstream flags (Cat C Q11 fold + Cat D CF-D3).
+
+**POSTURE-PENDING:**
+
+- **P0-A platform-wide:** F-D-CALL-1 803-scale silent-401 remediation + F-D-BYPASS-1 79-raw-fetch bypass + F-D-ENVELOPE-1 typed-error-envelope + F-D-BOUNDARY-1 error-boundary framework establishment (S2299 §8.3 R6 BLOCKING PREREQUISITE for option-γ).
+- **P0-B token lifecycle:** F-D-SIDEBAR-1 backend-token-revoke fix + F-C-REFRESH-1 refresh discipline + F-C-VIP-1 VIPInvite.account_expires_at ENFORCEMENT (risk-gate prerequisite for α/β/γ) + F-C-CSD-1 Clear-Site-Data emission + F-C-STORE-1 15-surface × logout-cleanup declared contract.
+- **P0-C endpoint-specific:** F-CRIT-1 PURGE_SECRET + F-BND-4a bet-placement unauth + F-B-CRIT-1 permission-floor ~80-90% + F-B-CRIT-2 silent-401 SYSTEMIC + F-D-WHITELIST-1 whitelist replacement.
+- Co-equal contract preserved per Cat A/B/C precedent; tiers surface blast-radius truth for implementation sequencing.
+
+**Q20 fold codification candidate CONFIRMED at two-trigger threshold.** Silent-degrade-vs-explicit-failure ambiguity — Cat C TRIGGER #1 (13-of-14 findings silent-degrade class = 92.9%) + Cat D TRIGGER #2 (17-of-19 findings silent-degrade class = 89.5%; 2 non-silent-degrade findings both governance class: F-D-OWN-1 CODEOWNERS + F-D-OWN-2 CI test-harness per Cat D Rigby Q5 fold). Both above §20 codification threshold. **Tightened codification claim (scope-bounded):** promote to playbook v3 candidate focused on **auth failure handling (401/403/refresh/logout) with explicit UX + telemetry requirements** — NOT general silent-degrade-anywhere codification. **Conditional promotion rule (xx99 Rigby SIGN Q3 fold):** general codification blocked pending 3rd trigger in non-auth plane (Groups 2500 API / 2600 PA / 1700 Observability).
+
+**MC-4 5th confirming arc RESOLVED at xx99 close.** Group 2400 Auth 4-child structure completes MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails across-5-consecutive-arcs (1900 + 2000+ + 2100 + 2200 + 2400). **Resolution is methodological, not platform-state** per xx99 Rigby SIGN Q2 fold — codification-confirmed with scope guardrails + full-stack stress test in Auth PASSED, NOT "platform auth fixed." **MC-14 CANDIDATE preserved** at 5-arc-stages threshold with proposed §16 threshold rule for playbook v3 (5 arc-stages = provisional-confirmed; codification-confirmation requires 1 additional non-adjacent domain OR 2 more groups).
 
 ---
 
 **End of draft. Status: research / draft — S1274 v2 Rigby SIGN-
 with-edits fold preserved via isolation pin `pa-7442a2e2665bd18e`
 (Medium confidence); v3 post-arc-close refresh log appended at §14
-on 2026-07-03 (append-only; S1274 baseline §1–§13 unmodified).
-Not committed unless Chris explicitly asks.**
+on 2026-07-03 (append-only; S1274 baseline §1–§13 unmodified); v4
+append-only refresh extending §14 with §14.8-§14.14 for Groups
+1700/1800/1900/2000+/2100/2200/2400 arc closes on 2026-07-05
+(append-only; v2 baseline + v3 §14.2-§14.7 preserved verbatim).**
 
