@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-06T02:16:43+00:00",
+    "generated": "2026-07-06T03:06:49+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "29430cfdfad3",
-    "doc_count": 2394,
-    "commit_count": 7610,
+    "git_head": "82cda5fa24a5",
+    "doc_count": 2396,
+    "commit_count": 7613,
     "confidence_breakdown": {
-      "HIGH": 1575,
+      "HIGH": 1577,
       "MEDIUM": 352,
       "LOW": 3,
       "UNKNOWN": 464
@@ -2518,7 +2518,7 @@
         2499,
         2500
       ],
-      "commit_count": 1198,
+      "commit_count": 1200,
       "prs": [
         10,
         11,
@@ -3004,7 +3004,8 @@
         2916,
         2917,
         2919,
-        2920
+        2920,
+        2922
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7327,7 +7328,7 @@
         2499,
         2500
       ],
-      "commit_count": 154,
+      "commit_count": 156,
       "prs": [
         2213,
         2219,
@@ -7421,7 +7422,8 @@
         2916,
         2917,
         2919,
-        2920
+        2920,
+        2922
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18554,6 +18556,19 @@
       "prs": [
         2921
       ]
+    },
+    "docs/handoffs/SESSION_2502_API_P2_CAT_B_FRONTEND_API_CLIENT_ARCHITECTURE_DESIGN_PREP.md": {
+      "originating_session": 2502,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "82cda5fa",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2502): Group 2500 P2 Cat B Frontend API-Client Architecture Design-Prep + Rigby SIGN Cycle 1 Close",
+      "sessions_touched": [
+        2502
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33943,6 +33958,19 @@
       "prs": [
         2921
       ]
+    },
+    "docs/research/domains/api/2502_api_frontend_client_architecture_design_prep_audit.md": {
+      "originating_session": 2502,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "82cda5fa",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2502): Group 2500 P2 Cat B Frontend API-Client Architecture Design-Prep + Rigby SIGN Cycle 1 Close",
+      "sessions_touched": [
+        2502
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/domains/auth/2400_auth_domain_scoping.md": {
       "originating_session": 2400,
