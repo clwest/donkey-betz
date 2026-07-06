@@ -17,17 +17,30 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 2500 arc pin
-# (session_tool create_fresh at S2500 open — carrying only mission
-# scope, no S2400 Auth arc turn context per playbook §16 arc-open
+# the --conversation flag below. Current value: Session 2600 arc pin
+# (session_tool create_fresh at S2600 open — carrying only mission
+# scope, no S2500 API arc turn context per playbook §16 arc-open
 # fresh-thread discipline).
-# Pin: pa-a03b111768464b3f. Title: "Group 2500 API arc pin
-# (S2500 open)". Carry-forward: mission scope only — Research Group
-# 2500 "API (Contract SoT + Silent-401 remediation + Typed-error-
-# envelope + Per-endpoint permission registry + Refresh endpoint +
-# Logout envelope + Clear-Site-Data + drf-spectacular retrofit + api.ts
-# extraction + REST↔WS strictness joint 2500+2600)" per S2299 §8.2 +
-# S2499 §8.4 T2 NEXT arc queue. Selected over 2300 Mobile / 2600 PA
+# Pin: pa-c17a8d7e0660413b. Title: "Group 2600 PA arc pin
+# (S2600 open)". Carry-forward: mission scope only — Research Group
+# 2600 "PA (cross-arc handoff bundle — /api/pa/chat/ + /api/assistant/*
+# endpoint DECLARATION side + workspace-context authz + REST↔WS T7
+# joint dual-owner 2500+2600)" per S2599 §8.2 T3 NEXT arc queue.
+# Consumes 4 CF-* originated S2501-S2504: CF-2600-PA (S2501 Cat A) +
+# CF-D6 (S2504 Cat D REST↔WS T7 joint). Selected over 1700
+# Observability / 2300 Mobile (parallel) / 1600 Content per T-slot
+# queue T3 assignment at S2599 xx99 close. Health check at open:
+# platform_config_tool overview = service_context: local ✓ +
+# session_tool create_fresh = pa-c17a8d7e0660413b ✓ (S2600 arc-open
+# turn 1, 2026-07-06). THIRTEENTH formal arc pin under Research OS
+# after Groups 1300/1400/1500/1600/1700/1800/1900/2000+/2100/2200/
+# 2400/2500 prior twelve. TWELFTH-consecutive parent-with-children
+# arc under Research OS.
+#
+# ---- HISTORICAL LEDGER (chronological, newest first) ----
+#
+# **S2500 arc opened 2026-07-05 (pa-a03b111768464b3f):**
+# Selected over 2300 Mobile / 2600 PA
 # per highest cross-arc-handoff-frequency signal (4/4 Group 2200
 # children referenced API contract discipline — S2203 F1 SoT-ABSENT +
 # F3 silent-401 SYSTEMIC + F4 mega-module api.ts 4194-LOC + F5 18
@@ -345,4 +358,4 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
-python tools/pa_chat.py "$@" --tools --conversation pa-a03b111768464b3f
+python tools/pa_chat.py "$@" --tools --conversation pa-c17a8d7e0660413b
