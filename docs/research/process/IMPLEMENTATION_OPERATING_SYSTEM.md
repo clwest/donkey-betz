@@ -1,6 +1,6 @@
 ---
 title: "Implementation Operating System — how research findings become shipped code"
-status: active v1.2 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings — see verifier_loop.)
+status: active v1.3 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings. v1.3 = cascade-discipline refinement 2026-07-06 codifying pre-PR vs post-merge cascade policy + PR-body evidence block after the arc-open PR / separate-cascade-PR pattern recurred 3× same-day (#2941→#2942, #2943→#2946, #2945→#2946) leaving Rigby's RAG stale during Chris ratification windows — see verifier_loop.)
 authority: process
 session_added: 2500
 last_verified: 2026-07-06
@@ -104,6 +104,44 @@ verifier_loop: |
   §14.2 two-trigger codification threshold not met on any single
   finding, but Chris explicitly waived the wait per his
   refinement-authority prerogative.
+  active v1.3 (2026-07-06): cascade-discipline refinement patch
+  after the arc-open PR / separate-cascade-PR pattern recurred three
+  times same-day (#2941 seed → #2942 cascade; #2943 IOS v1.2 patch
+  → #2946 cascade; #2945 Arc I-0100 Stage 1 arc-open bundle → #2946
+  cascade). Between arc-open PR merge and cascade PR merge, Rigby's
+  RAG could not search the new artifact — arc scoping docs, IOS
+  refinements, and BACKLOG changes were invisible during exactly
+  the window when Chris would ratify them. §12.5 previously
+  described cascade as an arc-close activity only; in practice
+  every RAG-critical doc surface — arc scoping docs, ADRs, close
+  docs, IOS patches, RATIFICATION records, and BACKLOG/DEBT/
+  OPEN_ARCS updates — needs to be RAG-visible as soon as the PR
+  merges, which requires cascade to co-locate in the same PR, not
+  a follow-up PR. Chris's directive naming the frequency and
+  impact of the pattern was the trigger; §14.2 two-trigger
+  codification threshold met via 3-in-one-day recurrence.
+  Applied edits: (1) §4.3 Stage 1 exit gate + Stage 2 exit gate +
+  Stage 6 close: cascade evidence block required in the SAME PR
+  as the artifact, not a follow-up PR; (2) §5.2 pre-merge gate 10
+  added — cascade evidence block for RAG-critical artifact types;
+  (3) §12.5 expanded from 4 lines to full pre-PR vs post-merge
+  policy: RAG-critical artifact list, PR-body evidence block
+  template, Chris-explicit-deferral clause, D11 Wave 1 interaction
+  note; (4) §13 D11 cross-reference added noting Wave 1 automation
+  discharges the post-merge embed step while §12.5 v1.3 rule
+  covers the pre-merge co-location discipline (superset). No
+  §14.2 codification threshold ambiguity — three recurrences in
+  one session meets the threshold; Chris invoked
+  refinement-authority prerogative on the same directive
+  triggering the patch. No Rigby SIGN cycle routed — refinement
+  is docs-only clarification with no runtime effect and no open
+  D-question reopened. Applied under IOS v1.3 = active status via
+  same-session commit. Dogfooded: this patch's own PR runs the
+  full 4-step cascade + `build_docs_provenance` locally before PR
+  open, commits the two versioned cascade artifacts (`docs/INDEX
+  .md` + `docs/_provenance.json`) alongside the IOS edit, and
+  includes the §12.5 v1.3 PR-body cascade evidence block as its
+  first structural test of the codified rule.
   active v1.2 (2026-07-06): execution-refinement patch after Arc
   I-0100 Stage 1 first execution (first production implementation
   arc under IOS v1.1). Fresh Claude session executed startup +
@@ -702,6 +740,17 @@ Chris "agree all" or explicit ratification.
 §10 Stage checklist snapshot (per substitution list above); if
 missing, Stage 1 does not close.
 
+**Cascade co-location (v1.3 §12.5 discipline).** The arc-open
+PR that carries this Stage 1 scoping doc MUST run the full
+5-step cascade locally BEFORE opening the PR, commit the
+`docs/INDEX.md` + `docs/_provenance.json` diffs alongside the
+scoping doc, and include the §12.5.d PR-body cascade evidence
+block. A follow-up cascade PR is NOT permitted for arc-open —
+the scoping doc must be RAG-visible for Rigby SIGN Cycle 1 to
+work off corpus rather than diff hunk. Codified after the
+arc-open PR / separate-cascade-PR pattern recurred 3× same-day
+2026-07-06 (see verifier_loop v1.3).
+
 **ADR corpus precondition (v1.2 execution refinement).** If any
 admitted intake row has `risk_class: NEEDS_ADR`, Stage 1 close
 additionally requires verification that `docs/adr/` directory
@@ -739,6 +788,18 @@ with `authority: design-preparation`. ADRs live at
 
 **Exit gate.** Every `NEEDS_ADR` intake item has a ratified ADR
 before Stage 3 begins.
+
+**Cascade co-location per ADR PR (v1.3 §12.5 discipline).** Each
+ADR PR (one ADR per PR default) MUST run the full 5-step cascade
+locally BEFORE opening the PR, co-commit `docs/INDEX.md` +
+`docs/_provenance.json`, and include the §12.5.d PR-body cascade
+evidence block. Design-preparation docs (`I-NNNN_<slug>_design_
+prep_<topic>.md`) that ship in the same PR as their ADR are
+covered by that PR's cascade run; standalone design-prep PRs
+without an ADR follow the same discipline (design-prep is
+RAG-critical because Chris ratifies design decisions against
+corpus context). If multiple ADRs bundle into one PR (permitted
+per §6.3), one cascade run covers the bundle.
 
 ### Stage 3 — Pre-flight
 
@@ -828,9 +889,15 @@ route back to Stage 3 with a fix plan.
 3. **Docs cascade** (4-step: `build_docs_index` +
    `build_rag_corpus` + `sync_docs_index_to_documents` +
    `sync_docs_index_to_documents --embed`) plus
-   `build_docs_provenance`. Per MEMORY rule
-   `feedback_cascade_pr_must_include_embed_step`, the PR body
-   must include the embed step and state chunk count as evidence.
+   `build_docs_provenance`. Per §12.5 v1.3 discipline + MEMORY
+   rule `feedback_cascade_pr_must_include_embed_step`, cascade
+   runs LOCALLY BEFORE the close PR opens; `docs/INDEX.md` +
+   `docs/_provenance.json` diffs co-commit alongside the close
+   doc + audit refresh; PR body includes the §12.5.d cascade
+   evidence block with chunk count for step 4. A follow-up
+   cascade PR is NOT permitted for arc-close — the close doc is
+   RAG-critical for Rigby SIGN on the close doc and for future
+   research/intake cross-referencing the just-shipped arc.
 4. **OPEN_ARCS.md update** — arc moved from `Currently in
    progress` to `Closed`.
 5. **Backlog cleanup** — every discharged intake row flips to
@@ -997,6 +1064,17 @@ Per PR, at review-time:
    Z") gets an independent verification: ORM probe, `git log`
    cross-check, or file:line cite. Sub-agent claims (Explore /
    Plan / general-purpose) are especially subject to this rule.
+10. **Cascade evidence block (v1.3).** If the PR touches any
+    RAG-critical artifact type per §12.5.b (arc scoping docs,
+    ADRs, close docs, IOS / RESEARCH OS / Playbook patches,
+    RATIFICATION records, scope-changing BACKLOG / DEBT /
+    OPEN_ARCS updates, or cross_domain_integration_audit §14
+    appends), the PR MUST include the §12.5.d cascade evidence
+    block AND co-commit the resulting `docs/INDEX.md` +
+    `docs/_provenance.json` diffs from a locally-run 5-step
+    cascade. Follow-up cascade PRs are permitted only for
+    artifact types listed in §12.5.c OR under Chris-explicit
+    deferral per §12.5.a.
 
 ## 5.3 Post-merge gates (before arc closes)
 
@@ -1598,13 +1676,173 @@ follows:
 
 ## 12.5 Cascade discipline
 
-Per MEMORY rule `feedback_cascade_pr_must_include_embed_step`,
-the full 4-step docs cascade + `build_docs_provenance` runs at
-every arc close. IOS enforces this at Stage 6 exit.
+Per MEMORY rules `feedback_docs_pipeline_4_step_cascade`,
+`feedback_docs_cascade_at_every_close`, and
+`feedback_cascade_pr_must_include_embed_step`, the full 4-step
+docs cascade + `build_docs_provenance` MUST run so Rigby's RAG
+stays in-sync with `main`. IOS v1.3 (2026-07-06) refines the
+timing rule after the arc-open PR / separate-cascade-PR pattern
+recurred three times same-day (see verifier_loop entry).
 
-**Automation candidate (D11).** A GitHub Action
-`build-docs-cascade.yml` triggered on merge of any arc-close PR
-could make the cascade non-skippable. Deferred to D11 in §13.
+### 12.5.a The rule (pre-PR vs post-merge cascade)
+
+Cascade timing is determined by the artifact type in the PR, not
+by convenience.
+
+**Pre-PR cascade required (co-locate in the same PR as the
+artifact):** Any PR whose changed files include a RAG-critical
+artifact type (see §12.5.b) MUST run the full 5-step cascade
+locally before PR open, commit the resulting `docs/INDEX.md` +
+`docs/_provenance.json` diffs to the same PR, and include the
+PR-body cascade evidence block (§12.5.d). This prevents the
+window between artifact merge and cascade-PR merge where the
+artifact exists on `main` but is invisible to Rigby's RAG — the
+exact window during which Chris typically ratifies via Rigby.
+
+**Post-merge cascade PR permitted:** For PRs that do NOT change
+any RAG-critical artifact type (§12.5.c), a follow-up cascade PR
+may run after merge on a batched cadence (typically at session
+close or arc-close). Post-merge cascade PRs must still cite the
+5-step evidence block (§12.5.d) so the batching is auditable.
+
+**Chris-explicit deferral clause:** Chris may explicitly defer
+cascade to a follow-up PR by directive on any specific PR (e.g.,
+urgent fix, blocked-on-embed-timing, prod incident). Deferral
+must be recorded in the PR body under a `## Cascade deferral
+(Chris-explicit)` section citing the directive.
+
+### 12.5.b RAG-critical artifact types (pre-PR cascade required)
+
+These artifact types are the ones Rigby must be able to search
+during the review + ratification window. If any changed file
+matches a bullet below, cascade co-locates:
+
+- **Arc scoping docs.** `docs/research/implementation/<slug>/
+  I-NNNN_<slug>_scoping.md` at Stage 1 open. Rigby SIGN Cycle 1
+  reads the scoping doc; if it isn't in RAG, SIGN is grepping the
+  diff hunk, not the corpus.
+- **ADRs.** `docs/adr/ADR-NNNN-<slug>.md` at Stage 2 authoring.
+  Chris ratifies ADRs against corpus context; RAG must have the
+  ADR body when the ratification card lands.
+- **Implementation arc close docs.** `docs/research/
+  implementation/<slug>/I-NNNN99_<slug>_implementation_close.md`
+  at Stage 6.
+- **This doc (IOS) and companion OS docs.** `docs/research/
+  process/IMPLEMENTATION_OPERATING_SYSTEM.md`,
+  `docs/research/process/RESEARCH_OPERATING_SYSTEM.md`,
+  `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`. Any patch to
+  process authority must land searchable so Rigby's next SIGN
+  cycle reads the current version, not the pre-patch version.
+- **RATIFICATION records.** `docs/research/implementation/
+  RATIFICATION_YYYY-MM-DD_<slug>.md` frozen records.
+- **BACKLOG + DEBT registers when changing scope, not
+  housekeeping.** `docs/research/implementation/BACKLOG.md`
+  when adding new intake rows, flipping `TRIAGED → IN_ARC`, or
+  materializing T4 delegates. `docs/research/implementation/
+  IMPLEMENTATION_DEBT.md` when adding rows at any severity.
+  Status-flip-only housekeeping (e.g., `IN_ARC → SHIPPED` after
+  merge) is exempt.
+- **OPEN_ARCS.md at arc open or close.** `docs/research/
+  OPEN_ARCS.md` when adding a new in-progress arc row, closing an
+  arc row, or stalling an arc. Metadata-only touch-ups (e.g.,
+  `last_updated:` banner refresh) are exempt.
+- **Cross-domain integration audit §14 refresh appends.**
+  `docs/research/platform/cross_domain_integration_audit.md`
+  when appending §14.N implementation-side deltas per §8.2.
+
+### 12.5.c Post-merge cascade PR permitted (deferrable)
+
+Artifact types that do NOT require pre-PR cascade — a batched
+follow-up PR is acceptable:
+
+- Runtime code changes with no doc surface (`core/**`, `frontend
+  /**`, `tests/**`, migrations, Procfile, Makefile).
+- Handoff documents (`docs/handoffs/SESSION_NNNN_*.md`) — write
+  history, not query surface.
+- Topic doc refreshes (`docs/topics/<subsystem>.md`) triggered
+  by mechanical drift — batchable at session close.
+- PLATFORM_INVENTORY regenerations (`docs/PLATFORM_INVENTORY.md`
+  via `generate_platform_inventory`).
+- Auto-generated INDEX.md refresh when there is no other doc
+  change (mechanical noise).
+- Ephemeral scratch (`.claude/scratch/**`).
+
+### 12.5.d PR-body cascade evidence block (canonical template)
+
+Every PR — pre-PR co-located OR post-merge batched — records
+cascade evidence via this block, so an auditor can reproduce the
+run:
+
+```
+## Cascade evidence (per IOS §12.5)
+
+| Step | Command | Result |
+|------|---------|--------|
+| 1 | `build_docs_index` | <N> docs indexed; <N> with frontmatter; <N> lines; active=<N>, draft=<N>, superseded=<N> |
+| 2 | `build_rag_corpus` | **<N> chunks** across <N> files (chunk_size=1200); wrote `.rag/corpus.jsonl` |
+| 3 | `sync_docs_index_to_documents` | Created <N>, Updated <N>, Skipped <N>, Errors <N> |
+| 4 | `embed_documents --all-unembedded` | Found <N> unembedded docs; processed [list]; **embedded <N> chunks** |
+| 5 | `build_docs_provenance` | <N> commits parsed; <N> docs indexed; wrote `_provenance.json` |
+
+Files changed by cascade: `docs/INDEX.md`, `docs/_provenance.json`.
+```
+
+Step 4 chunk count is the critical evidence field per MEMORY rule
+`feedback_cascade_pr_must_include_embed_step` — it demonstrates
+that embed actually ran on the RAG-critical artifact, not just
+that indexing swept it. A block with `<N> = 0` on step 4 for a
+pre-PR-cascade artifact is a PR-body red flag (means the artifact
+was already embedded from a prior sync, OR the artifact was not
+actually picked up — verify which).
+
+### 12.5.e Stage-by-Stage cascade contract
+
+The rule concretely applies at these Stage boundaries per §4.3:
+
+- **Stage 1 (Scoping) exit → arc-open PR.** Pre-PR cascade
+  REQUIRED (scoping doc is RAG-critical per §12.5.b). Cascade
+  runs BEFORE the arc-open PR opens; evidence block included in
+  the PR body; INDEX.md + `_provenance.json` co-committed.
+- **Stage 2 (Design-prep + ADR) → each ADR PR.** Pre-PR cascade
+  REQUIRED per ADR PR (ADRs are RAG-critical per §12.5.b).
+- **Stage 3 (Pre-flight).** No cascade — pre-flight is a scoping-
+  doc §7 update; cascade of the scoping doc already ran at
+  Stage 1. Pre-flight §7 edit rides on the next Stage 4 PR OR
+  batches into a Stage 6 cascade.
+- **Stage 4 (Build).** No pre-PR cascade unless the Stage 4 PR
+  itself touches a RAG-critical artifact (rare — most Stage 4
+  PRs are runtime code). Topic doc drift touched by Stage 4 PRs
+  can batch to Stage 6 cascade.
+- **Stage 5 (Verify).** No cascade — verification produces tool-
+  output blocks, not doc changes.
+- **Stage 6 (Close) → close doc PR.** Pre-PR cascade REQUIRED
+  (close doc is RAG-critical; audit §14 refresh is RAG-critical).
+  This IS the "cascade at every close" MEMORY rule's canonical
+  application.
+
+### 12.5.f Interaction with D11 Wave 1 automation
+
+D11 Wave 1 (`build-docs-cascade.yml` GitHub Action, per §13 D11)
+partially discharges this rule but does NOT replace it. Wave 1
+automates the post-merge embed step on any PR whose body cites
+`arc-close: I-NNNN99`. The §12.5 v1.3 rule is a superset:
+
+- **§12.5 v1.3 pre-PR co-location covers everything Wave 1 does
+  NOT.** Wave 1 runs after merge; §12.5 v1.3 runs before PR open.
+  The two do not conflict — Wave 1 backstops the post-merge
+  embed step, §12.5 v1.3 covers the pre-merge review window.
+- **§12.5 v1.3 also covers arc-open and Stage 2 PRs**, which are
+  NOT arc-close and therefore NOT triggered by Wave 1's
+  `arc-close:` body cite. Without §12.5 v1.3, Wave 1 alone would
+  leave every Stage 1 and Stage 2 PR under the stale-RAG risk
+  the pattern already exhibited.
+- **Wave 2 (§13 D11)** — future `manage.py ios_gate_check` command
+  — could enforce §12.5 v1.3 as a pre-Stage-6-close check by
+  validating that every RAG-critical artifact touched in the arc
+  has a corresponding cascade evidence block in the PR history.
+
+Rule prioritization: §12.5 v1.3 discipline is the primary mechanism;
+Wave 1 automation is the safety net; Wave 2 is the auditor.
 
 ---
 
@@ -1815,6 +2053,17 @@ is not blocking at v1.2. The Wave 1 requirement becomes a
 first-class arc-open gate: no third implementation arc opens
 until `build-docs-cascade.yml` GitHub Action is installed and
 green on at least one prior arc-close PR.
+
+**Cross-reference (v1.3 §12.5.f).** IOS v1.3 codifies pre-PR
+cascade co-location for RAG-critical artifacts as a superset of
+Wave 1's post-merge coverage. Wave 1 automates the post-merge
+embed backstop on arc-close PRs; §12.5 v1.3 covers arc-open
+(Stage 1) + ADR (Stage 2) + close (Stage 6) PR bodies + the
+pre-review-window RAG visibility contract. Wave 1 is still
+required per this D11 ratification; §12.5 v1.3 does not
+substitute for it. Wave 2 could additionally enforce §12.5 v1.3
+as a pre-Stage-6-close check that every RAG-critical artifact
+in the arc has a cascade evidence block in the PR history.
 
 ## D12 — Playbook v3 update cadence
 
