@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T19:35:45+00:00",
+    "generated": "2026-07-06T20:29:13+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "bed3bbef1314",
-    "doc_count": 2415,
-    "commit_count": 7647,
+    "git_head": "4ae93e999c6a",
+    "doc_count": 2418,
+    "commit_count": 7655,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 471
+      "UNKNOWN": 474
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1221,
+      "commit_count": 1223,
       "prs": [
         10,
         11,
@@ -3017,7 +3017,8 @@
         2932,
         2934,
         2936,
-        2937
+        2937,
+        2939
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7342,7 +7343,7 @@
         2502,
         2504
       ],
-      "commit_count": 177,
+      "commit_count": 179,
       "prs": [
         2213,
         2219,
@@ -7447,7 +7448,8 @@
         2932,
         2934,
         2936,
-        2937
+        2937,
+        2939
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -35500,6 +35502,45 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/implementation/BACKLOG.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "4ae93e99",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): IOS Part 11 first-queue seed \u2014 BACKLOG + DEBT + ratification record (Arc I-0100 Observability Spine ratified) (#2941)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2941
+      ]
+    },
+    "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "4ae93e99",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): IOS Part 11 first-queue seed \u2014 BACKLOG + DEBT + ratification record (Arc I-0100 Observability Spine ratified) (#2941)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2941
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "4ae93e99",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): IOS Part 11 first-queue seed \u2014 BACKLOG + DEBT + ratification record (Arc I-0100 Observability Spine ratified) (#2941)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2941
+      ]
+    },
     "docs/research/platform/cross_domain_integration_audit.md": {
       "originating_session": 1274,
       "confidence": "HIGH",
@@ -35537,12 +35578,15 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "bed3bbef",
+      "first_commit_sha": "84fdafa9",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(process): Implementation Operating System v1.1 draft + Rigby SIGN cycle 1 close",
+      "first_commit_subject": "docs(process): IOS v1.1 execution-refinement patch (#2940)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 6,
+      "prs": [
+        2939,
+        2940
+      ]
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
       "originating_session": 1275,

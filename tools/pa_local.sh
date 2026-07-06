@@ -409,20 +409,26 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
 # ---
-# paused-research-T4-Group-1700-Observability: pa-44a6eb70d8814e34
-# (T4 Group 1700 Observability research arc pin — arc-open pending;
-# rotated ACTIVE at S2699 close 2026-07-06 per playbook §16 arc-close
-# protocol. PAUSED at IOS Part 11 first-execution 2026-07-06 per IOS
-# v1.1 §15.14 Rigby SIGN pin lifecycle across phase transitions —
-# active IOS supersedes pending T4 research arc-open until Chris
-# explicitly re-enters research via Research OS command
-# `Start / Continue / Close research group NNNN`. On IOS phase exit,
-# rotate --conversation below back to pa-44a6eb70d8814e34.)
+# Retired at IOS Part 11 first-queue-ratification close 2026-07-06:
+# pa-39d3694312ab4326 (ios-part11-first-queue-ratification-v1)
+# — TWENTY-FIRST consecutive dedicated fresh SIGN pin retirement
+# under Research OS/IOS combined discipline; FIRST post-active-IOS
+# pin retirement per IOS v1.1 §15.14 (Part 11 Step 6 Rigby routing
+# lifecycle). Retired via session_tool.retire force=true; updated
+# 2 rows. Post-retirement: --conversation rotated back to
+# paused-research T4 Group 1700 Observability pin per §15.14
+# restoration rule (Arc I-0100 Stage 1 not yet open; opens next
+# session per 00-START-NEXT-SESSION.md sequence). On Arc I-0100
+# Stage 1 open next session, mint fresh arc-scoped pin via
+# session_tool.create_fresh label='ios-arc-open-I-0100' and rotate
+# --conversation to that pin. If Chris re-enters research phase via
+# Research OS command instead, the T4 pin remains active as-is.
 # ---
-# ACTIVE (rotated 2026-07-06 for IOS Part 11 first-queue-ratification
-# per IOS v1.1 §15.14): pa-39d3694312ab4326
-# (ios-part11-first-queue-ratification-v1 — fresh IOS-scoped SIGN pin
-# minted for Part 11 Step 6 ratification card routing. Retire at
-# ratification close via session_tool.retire force=true, then restore
-# paused-research-T4 pin above.)
-python tools/pa_chat.py "$@" --tools --conversation pa-39d3694312ab4326
+# ACTIVE (rotated 2026-07-06 back to T4 paused-research per §15.14
+# restoration rule at ratification pin retirement close):
+# pa-44a6eb70d8814e34 (T4 Group 1700 Observability research arc pin
+# — arc-open pending; PAUSED per IOS v1.1 §15.3 phase-transition
+# supersession until Chris explicitly re-enters research via
+# Research OS command `Start / Continue / Close research group
+# NNNN`).
+python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
