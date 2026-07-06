@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-06T15:04:47+00:00",
+    "generated": "2026-07-06T15:51:30+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "5d6a2de56d78",
-    "doc_count": 2408,
-    "commit_count": 7631,
+    "git_head": "04ec1cbd8ffe",
+    "doc_count": 2410,
+    "commit_count": 7634,
     "confidence_breakdown": {
-      "HIGH": 1584,
+      "HIGH": 1585,
       "MEDIUM": 352,
-      "LOW": 4,
+      "LOW": 5,
       "UNKNOWN": 468
     },
     "excludes": [
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1212,
+      "commit_count": 1214,
       "prs": [
         10,
         11,
@@ -3013,7 +3013,8 @@
         2927,
         2928,
         2929,
-        2930
+        2930,
+        2932
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7338,7 +7339,7 @@
         2502,
         2504
       ],
-      "commit_count": 168,
+      "commit_count": 170,
       "prs": [
         2213,
         2219,
@@ -7439,7 +7440,8 @@
         2927,
         2928,
         2929,
-        2930
+        2930,
+        2932
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18677,6 +18679,19 @@
       "prs": [
         2931
       ]
+    },
+    "docs/handoffs/SESSION_2603_PA_CAT_C_WORKSPACE_AUTHZ_SESSION_LIFECYCLE.md": {
+      "originating_session": 2603,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "04ec1cbd",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA P3 Cat C workspace authz + session lifecycle (S2603)",
+      "sessions_touched": [
+        2603
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -35024,6 +35039,19 @@
       "prs": [
         2931
       ]
+    },
+    "docs/research/domains/pa/2603_pa_workspace_authz_session_lifecycle_design_prep_audit.md": {
+      "originating_session": 2603,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "04ec1cbd",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA P3 Cat C workspace authz + session lifecycle (S2603)",
+      "sessions_touched": [
+        2603
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md": {
       "originating_session": 2100,
