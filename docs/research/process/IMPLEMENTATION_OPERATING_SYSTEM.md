@@ -1,6 +1,6 @@
 ---
 title: "Implementation Operating System — how research findings become shipped code"
-status: active v1.1 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings — see verifier_loop.)
+status: active v1.2 (v1 Chris-ratified 2026-07-06 with D1–D7, D9, D10, D12 accepted at recommended option; D8 deferred; D11 accepted with Wave 1 required before 3rd arc. v1.1 = execution-refinement patch 2026-07-06 after Part 11 first-execution surfaced 7 findings. v1.2 = execution-refinement patch 2026-07-06 after Arc I-0100 Stage 1 first-execution surfaced 4 findings — see verifier_loop.)
 authority: process
 session_added: 2500
 last_verified: 2026-07-06
@@ -104,6 +104,41 @@ verifier_loop: |
   §14.2 two-trigger codification threshold not met on any single
   finding, but Chris explicitly waived the wait per his
   refinement-authority prerogative.
+  active v1.2 (2026-07-06): execution-refinement patch after Arc
+  I-0100 Stage 1 first execution (first production implementation
+  arc under IOS v1.1). Fresh Claude session executed startup +
+  Stage 1 scoping plan production per user directive following
+  the seed PR merge (#2941). Session surfaced 4 findings during
+  planning: (1) §4.3 mis-labeled Playbook §11.1 as "20-section"
+  parent-scoping template — actual is 9-section (§11.2 is the
+  20-section child audit template); (2) §4.3 Stage 1 mandates a
+  "Stage checklist snapshot" section in exit-gate prose but does
+  NOT enumerate it in the substitution list, risking omission by
+  a fresh Claude session that reads the ordered substitutions
+  and misses the exit-gate prose; (3) `00-START-NEXT-SESSION.md`
+  §"SESSION READY CHECK" step 5 miscites `§14.14 pin lifecycle` —
+  correct citation is §15.14 (§14 is Meta-learning ledger);
+  (4) ADR corpus precondition unstated at Stage 1 exit — if any
+  admitted intake row is `NEEDS_ADR` but `docs/adr/` directory
+  does not yet exist on `main`, Stage 2 opens into an incoherent
+  state ("ADR required, nowhere to put it"). Applied edits:
+  §4.3 template size 20→9 with §11.1 section list inline;
+  §4.3 substitution list gains §10 Stage checklist snapshot as
+  explicit ordered substitution (removed from exit-gate prose,
+  cited from exit gate); §4.3 exit gate gains ADR corpus
+  precondition rule (verify `docs/adr/` exists; bundle
+  `IB-Q1-BOOT-01` as in-arc prep PR OR block close); §D3 gains
+  cross-reference to §4.3 Stage 1 exit precondition;
+  `00-START-NEXT-SESSION.md` §"SESSION READY CHECK" step 5
+  citation fixed §14.14 → §15.14. §14.2 two-trigger codification
+  threshold not met (single trigger from Arc I-0100 Stage 1
+  planning); Chris explicitly waived the wait per his
+  refinement-authority prerogative on the session-open directive
+  "Apply the four IOS refinements discovered in §6 first." No
+  Rigby SIGN cycle routed for this patch — refinements are
+  docs-only clarifications with no runtime effect and no
+  open D-question reopened. Applied under IOS v1.2 = active
+  status via same-session commit.
 
 ---
 
@@ -631,7 +666,11 @@ research arc lifecycle from Playbook §2:
 ### Stage 1 — Scoping
 
 **What.** Draft `docs/research/implementation/<slug>/I-NNNN_<slug>_scoping.md`
-using the Playbook §11.1 20-section parent-scoping template,
+using the Playbook §11.1 **9-section** parent-scoping template
+(§1 Why + §2 Existing inventory + §3 Candidate subdomain taxonomy
++ §4 Parent-vs-single recommendation + §5 Child mission sequence
++ §6 Parked candidate issues + §7 Anti-scope + §8 Decisions
+recorded + §9 Next step + Appendix — Frontmatter provenance),
 **modified for implementation** by these substitutions:
 
 - §3 "Candidate subdomain taxonomy" → "Intake items admitted to
@@ -643,18 +682,49 @@ using the Playbook §11.1 20-section parent-scoping template,
   reverted if it fails post-merge).
 - §9 "Next step" → same, but with an **ADR checkpoint** if any
   admitted finding has `risk_class: NEEDS_ADR`.
+- **§10 (added by IOS — NOT in Playbook §11.1) "Stage checklist
+  snapshot"** — a mechanically-enumerated list of every exit-gate
+  item for every planned stage, one line each, that a future
+  Claude session can grep to determine current stage without
+  interpretation. Without the snapshot, stage inference is
+  interpretive and the arc is not cold-resumable per §15.8.
+  Promoted from exit-gate prose to explicit substitution at IOS
+  v1.2 execution-refinement patch (2026-07-06) after Arc I-0100
+  Stage 1 first execution surfaced that a fresh Claude session
+  reading the substitution list can miss a section mandated only
+  in the exit-gate paragraph.
 
 **Who.** Claude drafts; Rigby SIGN on Q1–Q4 as in research arcs;
 Chris "agree all" or explicit ratification.
 
 **Exit gate.** Chris "commit it"; parent doc status flips
-`draft → active`; arc-pin minted. **Scoping doc MUST include a
-"Stage checklist snapshot" section** — a mechanically-enumerated
-list of every exit-gate item for every planned stage, one line
-each, that a future Claude session can grep to determine current
-stage without interpretation. Without the snapshot, stage
-inference is interpretive and the arc is not cold-resumable per
-§15.8.
+`draft → active`; arc-pin minted. Scoping doc MUST include the
+§10 Stage checklist snapshot (per substitution list above); if
+missing, Stage 1 does not close.
+
+**ADR corpus precondition (v1.2 execution refinement).** If any
+admitted intake row has `risk_class: NEEDS_ADR`, Stage 1 close
+additionally requires verification that `docs/adr/` directory
+exists on `main` OR a concrete plan to establish it. If absent
+at Stage 1 close time, one of the following MUST be true:
+
+- **Option (a) — Bundle prep.** Admit `IB-Q1-BOOT-01`
+  (author `ADR-0001-establish-adr-corpus.md` per IOS §D3
+  Appendix C bootstrap) as an in-arc P0 prep PR that ships
+  BEFORE Stage 2 opens. The prep PR creates `docs/adr/` and
+  the recursive-bootstrap ADR; subsequent ADRs written in
+  Stage 2 have a home.
+- **Option (b) — Blocking gate.** Block Stage 1 close until
+  `IB-Q1-BOOT-01` ships via a separate arc.
+
+Both options are permitted; Claude drafts, Chris ratifies which
+per arc. Missing this check produces the incoherent Stage 2
+state of "ADR required but nowhere to put it" and stalls the arc
+silently. Codified after Arc I-0100 Stage 1 first execution
+surfaced that IB-Q1-BOOT-01 is a covert dependency of every
+implementation arc whose intake includes any `NEEDS_ADR` row —
+which is currently EVERY T0 arc and most T1 arcs — but the
+dependency was not called out in the Stage 1 exit contract.
 
 ### Stage 2 — Design-preparation + ADR (if required)
 
@@ -1598,6 +1668,14 @@ First implementation arc will be numbered `I-0100` per §4.2.
 Closes the Research OS §8.3 P1 gap. Bootstrap ADR
 (`ADR-0001-establish-adr-corpus.md`) is one of the three
 Appendix C first-artifact deliverables.
+
+**Cross-reference (v1.2 execution refinement).** Enforcement of
+this ratification at implementation arcs is deferred to §4.3
+Stage 1 exit gate ADR corpus precondition. Any arc admitting a
+`NEEDS_ADR` intake MUST verify `docs/adr/` exists on `main` at
+Stage 1 close OR bundle `IB-Q1-BOOT-01` as an in-arc P0 prep PR
+OR block Stage 1 close until a separate arc ships the corpus.
+See §4.3 Stage 1 for the concrete rule.
 
 ## D4 — Backlog register location
 
