@@ -422,9 +422,9 @@ to determine current stage without interpretation.
   [x] IB-1799-T0-02 conditional admit documented in scoping §3.3 (per F2 fold)
   [x] IDBT-0001 1799-slice discharge scope declared in scoping §3.5
 
-[STAGE 2 DESIGN-PREP + ADR] — status: NOT OPENED (per Chris directive: do not open Stage 2)
-  [ ] IOS v1.2 §4.3 ADR corpus precondition satisfied (Option (a) chosen — bundle IB-Q1-BOOT-01 as in-arc P0 prep PR)
-  [ ] P0 prep PR: `IB-Q1-BOOT-01` ships (`ADR-0001-establish-adr-corpus.md` + `docs/adr/` dir creation)
+[STAGE 2 DESIGN-PREP + ADR] — status: P0 prep in-flight (ADR authoring NOT opened per Chris directive)
+  [x] IOS v1.2 §4.3 ADR corpus precondition satisfied at P0 prep PR authoring (Option (a) executing — bundle IB-Q1-BOOT-01 as in-arc P0 prep PR; PR opened 2026-07-06)
+  [~] P0 prep PR: `IB-Q1-BOOT-01` ships (`ADR-0001-establish-adr-corpus.md` + `docs/adr/` dir creation) — **PR opened 2026-07-06 awaiting review + merge; cascade co-located in-PR per IOS v1.3 §12.5.a; IDBT-0002 recorded delegating RAG embed-invalidation gap to Group 2100 RAG**
   [ ] ADR-B drafted (PA-write shape + PA↔LLMCallEvent correlation contract per F5)
   [ ] ADR-A drafted (MISSION_RUNNER + RIGBY_DELEGATION staged-enable posture per F8-iii)
   [ ] ADR-C drafted (D74 spine posture with retention as decision input per F2)
