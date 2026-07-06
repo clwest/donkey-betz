@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T18:14:30+00:00",
+    "generated": "2026-07-06T19:35:45+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a6e33fa202e6",
-    "doc_count": 2414,
-    "commit_count": 7642,
+    "git_head": "bed3bbef1314",
+    "doc_count": 2415,
+    "commit_count": 7647,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 470
+      "UNKNOWN": 471
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1219,
+      "commit_count": 1221,
       "prs": [
         10,
         11,
@@ -3016,7 +3016,8 @@
         2930,
         2932,
         2934,
-        2936
+        2936,
+        2937
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7341,7 +7342,7 @@
         2502,
         2504
       ],
-      "commit_count": 175,
+      "commit_count": 177,
       "prs": [
         2213,
         2219,
@@ -7445,7 +7446,8 @@
         2930,
         2932,
         2934,
-        2936
+        2936,
+        2937
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18844,14 +18846,16 @@
       "originating_session": 2699,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "a6e33fa2",
+      "first_commit_sha": "e4dfa851",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(research): Group 2600 PA canonical summary + arc close (S2699 xx99)",
+      "first_commit_subject": "docs(research): Group 2600 PA canonical summary + arc close (S2699 xx99) (#2937)",
       "sessions_touched": [
         2699
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2937
+      ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
       "originating_session": 273,
@@ -33980,7 +33984,7 @@
         2499,
         2500
       ],
-      "commit_count": 158,
+      "commit_count": 160,
       "prs": [
         2773,
         2775,
@@ -34059,7 +34063,8 @@
         2916,
         2920,
         2929,
-        2930
+        2930,
+        2937
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -35106,12 +35111,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "a6e33fa2",
+      "first_commit_sha": "e4dfa851",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(research): Group 2600 PA canonical summary + arc close (S2699 xx99)",
+      "first_commit_subject": "docs(research): Group 2600 PA canonical summary + arc close (S2699 xx99) (#2937)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2937
+      ]
     },
     "docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md": {
       "originating_session": 2100,
@@ -35503,10 +35510,11 @@
       "sessions_touched": [
         1274
       ],
-      "commit_count": 5,
+      "commit_count": 7,
       "prs": [
         2843,
-        2918
+        2918,
+        2937
       ]
     },
     "docs/research/platform_architecture_inventory.md": {
@@ -35524,6 +35532,17 @@
       "prs": [
         2907
       ]
+    },
+    "docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "bed3bbef",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(process): Implementation Operating System v1.1 draft + Rigby SIGN cycle 1 close",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
       "originating_session": 1275,
