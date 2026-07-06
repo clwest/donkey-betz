@@ -2117,13 +2117,18 @@ class UnifiedPAEntrypoint:
         to delete once a grep confirms zero external uses.
         """
         import hashlib
-        from core.models_tool_calls import ToolCallRecord
+        from core.models_tool_calls import ToolCallRecord, resolve_trace_uuid
 
         result_str = json.dumps(tool_result.result, default=str) if tool_result.result else ''
         result_size = len(result_str.encode('utf-8', errors='replace'))
 
+        # Arc I-0100 P2 (IB-1799-T1-01): resolve trace_id to UUID via
+        # feature-flagged helper. Default OFF returns None (current
+        # behavior). Flag ON generates a fresh UUID (PA trace_id is
+        # "pa-N-hex" string form, not UUID-parseable). Original string
+        # preserved in task_summary below per F8-i dual-format acceptance.
         ToolCallRecord.objects.create(
-            trace_id=None,  # PA trace_id is "pa-N-hex" not UUID; store in task_summary
+            trace_id=resolve_trace_uuid(trace_id),
             conversation_id=self.conversation_id,  # Session 1085: link PA tool records to conversation
             agent_name='PersonalAssistant',
             tool_name=tool_name,

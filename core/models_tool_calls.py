@@ -12,8 +12,50 @@ import uuid
 import hashlib
 import json
 from typing import Any, Optional
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
+
+
+def resolve_trace_uuid(trace_id_input: Any) -> Optional[uuid.UUID]:
+    """Arc I-0100 P2 (IB-1799-T1-01) helper — resolve a caller's
+    ``trace_id`` argument into a UUID suitable for
+    ``ToolCallRecord.trace_id`` (UUIDField).
+
+    Feature-flagged via ``settings.TOOL_CALL_TRACE_ID_ENFORCED`` (see
+    docstring in core/settings.py). Behavior:
+
+    - Flag **OFF** (default) → returns ``None`` regardless of input,
+      preserving current 100% NULL behavior. Ensures pre-flag main and
+      flag-off environments are behaviorally identical.
+    - Flag **ON** → returns a UUID:
+      1. If ``trace_id_input`` is already a ``uuid.UUID``, return it.
+      2. If ``trace_id_input`` is a UUID-parseable string, parse + return.
+      3. If ``trace_id_input`` is a non-UUID string (e.g., "tool-42-hex"
+         or "pa-1-hex"), generate a fresh ``uuid.uuid4()`` and return
+         it. The original string is preserved by the caller in
+         ``task_summary`` (per F8-i dual-format acceptance).
+      4. If ``trace_id_input`` is None, generate a fresh
+         ``uuid.uuid4()``.
+
+    Callers preserve human-readable trace_id in ``task_summary`` OR
+    log lines regardless of flag state, ensuring backward compatibility
+    with any hidden text-form readers.
+    """
+    if not getattr(settings, "TOOL_CALL_TRACE_ID_ENFORCED", False):
+        return None
+    if isinstance(trace_id_input, uuid.UUID):
+        return trace_id_input
+    if trace_id_input:
+        try:
+            return uuid.UUID(str(trace_id_input))
+        except (ValueError, TypeError):
+            # Non-UUID string form (e.g., "tool-N-hex" / "pa-N-hex").
+            # Generate a fresh UUID so the DB row participates in
+            # provenance joins; caller keeps the string form in
+            # task_summary per F8-i dual-format acceptance.
+            return uuid.uuid4()
+    return uuid.uuid4()
 
 
 class ToolCallRecord(models.Model):
@@ -184,13 +226,12 @@ class ToolCallRecord(models.Model):
         # Store full result only if under 64KB
         full_result = result_str if result_size < 65536 else ''
 
-        # Parse UUIDs if strings
-        trace_uuid = None
-        if trace_id:
-            try:
-                trace_uuid = uuid.UUID(str(trace_id))
-            except (ValueError, TypeError):
-                pass
+        # Arc I-0100 P2 (IB-1799-T1-01): resolve trace_id via
+        # feature-flagged helper. Preserves the pre-flag swallow-and-NULL
+        # behavior when TOOL_CALL_TRACE_ID_ENFORCED=False; generates a
+        # fresh UUID for non-UUID strings when flag=True. Human-readable
+        # trace_id string preserved in task_summary by callers.
+        trace_uuid = resolve_trace_uuid(trace_id)
 
         conv_uuid = None
         if conversation_id:
