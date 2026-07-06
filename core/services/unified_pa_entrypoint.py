@@ -549,6 +549,147 @@ class UnifiedPAEntrypoint:
             self._hallucination_flagging_service = HallucinationFlaggingService()
         return self._hallucination_flagging_service
 
+    # ─────────────────────────────────────────────────────────────────
+    # Arc I-0100 P4 (IB-1799-T1-02) — per ADR-0002 §3.1 Option 1
+    # ─────────────────────────────────────────────────────────────────
+
+    def _pa_agent_execution_writes_enabled(self) -> bool:
+        """Return True iff ``settings.PA_AGENT_EXECUTION_WRITE_ENABLED``
+        is truthy. Wrapped in a method so tests can ``override_settings``
+        cleanly and so import-time state doesn't cache the value."""
+        from django.conf import settings as _settings
+        return bool(getattr(_settings, "PA_AGENT_EXECUTION_WRITE_ENABLED", False))
+
+    def _maybe_create_pa_turn_execution(
+        self, message: str, trace_id: str, context: Dict[str, Any],
+    ):
+        """Create one ``AgentExecution`` row for this PA turn per ADR-0002
+        §3.1 Option 1. Returns the row (or None when the feature flag is
+        off / the write fails).
+
+        Fields populated per ADR-0002 §3.1:
+
+        - ``agent`` → FK to canonical PA Agent row (migration 0377)
+        - ``user`` → current PA session user
+        - ``task`` → user message (truncated per model TextField)
+        - ``status`` → ``'pending'`` (lifecycle transitions on
+          finalize)
+        - ``input_data['source']`` → ``'pa'`` (discriminator marker)
+        - ``input_data['trace_id']`` → PA ``trace_id`` for
+          cross-turn / cross-session aggregation (Session 1172
+          live-ticker join key)
+        - ``input_data['intent']`` → ``None`` at start; filled by
+          finalize when resolved
+        - ``input_data['message_preview']`` → first 200 chars of
+          user message (task field carries the fuller form)
+        - ``conversation_id`` → PA session pin (Session 1174 PR-1
+          field)
+        - ``owner_agent`` → ``'PersonalAssistant'`` (Session 843)
+
+        Failure is soft: exceptions during row creation are swallowed
+        + logged; the PA loop continues without persistence. Prevents
+        write-path faults from breaking user-facing responses.
+        """
+        if not self._pa_agent_execution_writes_enabled():
+            return None
+        try:
+            from core.models_unified_system import Agent, AgentExecution
+
+            pa_agent = Agent.objects.filter(name="PersonalAssistant").first()
+            if pa_agent is None:
+                logger.warning(
+                    "[%s] PA_AGENT_EXECUTION_WRITE_ENABLED=True but canonical "
+                    "PersonalAssistant Agent row missing (expected from "
+                    "migration 0377). Skipping PA execution write.",
+                    trace_id,
+                )
+                return None
+
+            return AgentExecution.objects.create(
+                agent=pa_agent,
+                user=self.user,
+                task=(message or "")[:4000],
+                status="pending",
+                input_data={
+                    "source": "pa",
+                    "trace_id": trace_id,
+                    "intent": None,
+                    "message_preview": (message or "")[:200],
+                    "lane": self._lane,
+                },
+                conversation_id=self.conversation_id or None,
+                owner_agent="PersonalAssistant",
+            )
+        except Exception as exc:  # pragma: no cover — defensive
+            # ADR-0002 §3.4 rollout: write-path failures MUST NOT break the
+            # user-facing turn. Emit a greppable log line per §5.2 pre-merge
+            # gate 7 (silent-degrade emission rule).
+            logger.warning(
+                "[%s] [PA_AGENT_EXECUTION_WRITE_DEGRADED] "
+                "PA execution row create failed: %s",
+                trace_id, exc,
+            )
+            return None
+
+    def _maybe_finalize_pa_turn_execution(
+        self, pa_execution, status: str, response: Optional[Any] = None,
+        error_message: str = "", start_time: Optional[float] = None,
+        intent: Optional[str] = None,
+    ):
+        """Update the PA turn's ``AgentExecution`` row to a terminal
+        status per ADR-0002 §3.1 lifecycle. Called at process_message
+        return / exception sites.
+
+        ``status`` ∈ {``'completed'``, ``'failed'``}.
+
+        Failure to update is soft: exceptions swallowed + logged.
+        """
+        if pa_execution is None:
+            return
+        try:
+            from django.utils import timezone
+
+            duration_ms = None
+            if start_time is not None:
+                duration_ms = int((time.time() - start_time) * 1000)
+
+            input_data = pa_execution.input_data or {}
+            if intent is not None:
+                input_data["intent"] = intent
+
+            output_data = pa_execution.output_data or {}
+            if response is not None:
+                output_data["response_preview"] = (
+                    (getattr(response, "content", None) or "")[:400]
+                )
+                output_data["latency_ms"] = getattr(response, "latency_ms", None)
+                output_data["tool_run_count"] = len(
+                    getattr(response, "tool_runs", None) or []
+                )
+                if getattr(response, "intent", None):
+                    input_data["intent"] = response.intent
+
+            pa_execution.status = status
+            pa_execution.input_data = input_data
+            pa_execution.output_data = output_data
+            if error_message:
+                pa_execution.error_message = error_message[:5000]
+            if duration_ms is not None:
+                pa_execution.execution_time_ms = duration_ms
+            pa_execution.completed_at = timezone.now()
+            pa_execution.save(
+                update_fields=[
+                    "status", "input_data", "output_data",
+                    "error_message", "execution_time_ms", "completed_at",
+                ]
+            )
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.warning(
+                "[PA_AGENT_EXECUTION_WRITE_DEGRADED] "
+                "PA execution row finalize failed (status=%s): %s",
+                status, exc,
+            )
+
     async def process_message(
         self,
         message: str,
@@ -569,6 +710,15 @@ class UnifiedPAEntrypoint:
         trace_id = self._generate_trace_id()
         start_time = time.time()
         context = context or {}
+
+        # Arc I-0100 P4 (IB-1799-T1-02): create one AgentExecution row per
+        # PA turn when PA_AGENT_EXECUTION_WRITE_ENABLED=True. Off by default
+        # → returns None → downstream finalize calls no-op. Failures are
+        # soft (logged; never break the user-facing turn). See ADR-0002
+        # §3.1 for the ratified field-population contract.
+        _pa_execution = self._maybe_create_pa_turn_execution(
+            message, trace_id, context,
+        )
 
         logger.info(f"[{trace_id}] Processing message: {message[:100]}...")
 
@@ -1038,7 +1188,10 @@ class UnifiedPAEntrypoint:
             except Exception as e:
                 logger.debug(f"[{trace_id}] Memory promotion skipped: {e}")
 
-            return PAResponse(
+            # Arc I-0100 P4 (IB-1799-T1-02): finalize the PA turn's
+            # AgentExecution row with status='completed'. No-op when
+            # PA_AGENT_EXECUTION_WRITE_ENABLED=False (create returned None).
+            _final_response = PAResponse(
                 content=content,
                 trace_id=trace_id,
                 tool_runs=tool_runs,
@@ -1053,10 +1206,23 @@ class UnifiedPAEntrypoint:
                 response_id=response_id,
                 lane=self._lane,
             )
+            self._maybe_finalize_pa_turn_execution(
+                _pa_execution, status="completed",
+                response=_final_response, start_time=start_time,
+                intent=intent,
+            )
+            return _final_response
 
         except Exception as e:
             latency_ms = int((time.time() - start_time) * 1000)
             logger.error(f"[{trace_id}] Error processing message: {e}", exc_info=True)
+
+            # Arc I-0100 P4 (IB-1799-T1-02): finalize the PA turn's
+            # AgentExecution row with status='failed'.
+            self._maybe_finalize_pa_turn_execution(
+                _pa_execution, status="failed",
+                error_message=str(e), start_time=start_time,
+            )
 
             return PAResponse(
                 content=f"I'm sorry, I encountered an error processing your request. (trace: {trace_id})",
