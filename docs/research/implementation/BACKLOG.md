@@ -20,6 +20,12 @@ This is the **living** intake register for IOS-governed implementation work. It 
 |------|----------|-------|--------|
 | 2026-07-06 | v0-partial (first queue) | Tier bands + Arc I-0100 first-arc identity + T0 individual-gate posture | [RATIFICATION_2026-07-06_first_queue.md](RATIFICATION_2026-07-06_first_queue.md) |
 
+## Arc-open history
+
+| Date | Arc | Stage-at-open | Intake rows flipped `IN_ARC` | Scoping doc |
+|------|-----|--------------|------------------------------|-------------|
+| 2026-07-06 | **I-0100** — Observability Correlation Spine + Mission Evidence Substrate | Stage 1 exit-gate cleared (Rigby SIGN Cycle 1 SIGN-with-edits + 8 folds ratified via Chris "agree all F1-F8") | `IB-1799-T1-01`, `IB-1799-T1-02`, `IB-1799-T1-03` (3 T1 rows). Also admitted (BACKLOG flip deferred to Stage 2): `IB-1799-T0-01` architecture-only ADR-C track per F1 fold; `IB-1799-T0-02` conditional as required decision INPUT to ADR-C per F2 fold. Also bundled as in-arc P0 prep PR per IOS v1.2 §4.3 ADR corpus precondition Option (a): `IB-Q1-BOOT-01` (BACKLOG flip pending P0 open). | [observability_spine_mission_evidence_substrate/I-0100_scoping.md](observability_spine_mission_evidence_substrate/I-0100_scoping.md) |
+
 ## Tier band totals (as of 2026-07-06 ratification)
 
 | Tier | v0-partial row count | Chris gate | Notes |
@@ -159,9 +165,9 @@ Substantive anchor-update work not covered by cascade (new topic doc creation fo
 
 | intake_id | source_ref | source_type | title | affected_domains | risk_class | design_state | status | chris_gate | affected_surfaces |
 |---|---|---|---|---|---|---|---|---|---|
-| `IB-1799-T1-01` | 1799 §1 axis D + S1704 F1 | xx99_followon_T1 | Fix `ToolCallRecord.trace_id` 100% NULL at write-side (blocks cross-cat consumer join) | observability | NEEDS_RIGBY_SIGN_PLUS_CHRIS | SPEC_COMPLETE | TRIAGED | RATIFIED (band) | `core/models_events.py` (ToolCallRecord), write-side call-sites |
-| `IB-1799-T1-02` | 1799 §1 axis C + S1703 F1 | xx99_followon_T1 | Wire PA-invoked agents → `AgentExecution` writes (PA tool dispatch currently bypasses `dispatch_agent` code path) | observability,pa,agents | NEEDS_RIGBY_SIGN_PLUS_CHRIS | POSTURE_PENDING | TRIAGED | RATIFIED (band) | `core/agents/base_agent.py`, `core/services/tool_dispatcher.py`, PA tool dispatch code path |
-| `IB-1799-T1-03` | 1799 §1 axis E + S1705 F1 | xx99_followon_T1 | Unlock OpsRun + OpsRunEvent via `MISSION_RUNNER_ENABLED` (code exists; gated behind disabled flag) | observability,employee_os | NEEDS_ADR | POSTURE_PENDING | TRIAGED | RATIFIED (band) | `core/employees/mission_runner.py`, `core/models_ops_runs.py`, feature flag config |
+| `IB-1799-T1-01` | 1799 §1 axis D + S1704 F1 | xx99_followon_T1 | Fix `ToolCallRecord.trace_id` 100% NULL at write-side (blocks cross-cat consumer join) | observability | NEEDS_RIGBY_SIGN_PLUS_CHRIS | SPEC_COMPLETE | IN_ARC (I-0100) | RATIFIED (band) | `core/services/tool_dispatcher.py:961`, `core/agents/base_agent.py:451-459` (S970 wrapper), `core/agents/base_agent.py:3302-3310` (S1085 inline recorder), `core/services/unified_pa_entrypoint.py` (PA `pa-N-hex` → UUID conversion). Scoping doc: `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md` §3.1 + §5 P2. Rollout: feature flag `TOOL_CALL_TRACE_ID_ENFORCED` + dual-format acceptance during transition per F8-i mitigation. |
+| `IB-1799-T1-02` | 1799 §1 axis C + S1703 F1 | xx99_followon_T1 | Wire PA-invoked agents → `AgentExecution` writes (PA tool dispatch currently bypasses `dispatch_agent` code path); ADR-B specifies PA↔LLMCallEvent correlation contract per F5 fold | observability,pa,agents | NEEDS_RIGBY_SIGN_PLUS_CHRIS | POSTURE_PENDING | IN_ARC (I-0100) | RATIFIED (band) | `core/agents/base_agent.py`, `core/services/tool_dispatcher.py`, `core/services/unified_pa_entrypoint.py`, `core/models_unified_system.py` (potential FK addition) OR `core/models_pa_execution.py` (new model per ADR-B option 3). Scoping doc: `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md` §3.1 + §5 P4. ADR-B gate; P4 depends on P2 merged. |
+| `IB-1799-T1-03` | 1799 §1 axis E + S1705 F1 | xx99_followon_T1 | Unlock OpsRun + OpsRunEvent via `MISSION_RUNNER_ENABLED` + paired `RIGBY_DELEGATION_ENABLED` staged unlock per F8-iii | observability,employee_os | NEEDS_ADR | POSTURE_PENDING | IN_ARC (I-0100) | RATIFIED (band) | `core/employees/mission_runner.py`, `core/models_ops_runs.py`, `core/services/rigby_delegation_signals.py:79-84`, `settings.py` feature-flag config. Scoping doc: `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md` §3.1 + §5 P3. ADR-A gate; staged rollout (shadow → partial → full) with volume threshold auto-disable per §7.3 R2/R3. |
 
 ### Memory T1 leaf rows
 
