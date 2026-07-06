@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T23:10:58+00:00",
+    "generated": "2026-07-06T23:19:47+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "14abfe03d172",
-    "doc_count": 2422,
-    "commit_count": 7675,
+    "git_head": "5b93cb97ad71",
+    "doc_count": 2424,
+    "commit_count": 7676,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 478
+      "UNKNOWN": 480
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1239,
+      "commit_count": 1240,
       "prs": [
         10,
         11,
@@ -7351,7 +7351,7 @@
         2502,
         2504
       ],
-      "commit_count": 195,
+      "commit_count": 196,
       "prs": [
         2213,
         2219,
@@ -7493,6 +7493,17 @@
       "prs": [
         2951
       ]
+    },
+    "docs/adr/ADR-0003-mission-runner-staged-enable-posture.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "5b93cb97",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
       "originating_session": 1143,
@@ -35589,6 +35600,17 @@
         2941
       ]
     },
+    "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_a_mission_runner_staged_enable.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "5b93cb97",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_b_pa_write_shape.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -35606,11 +35628,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "2718be88",
+      "first_commit_sha": "5b93cb97",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 opening ceremony \u2014 housekeeping stage-transition (#2950)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture",
       "sessions_touched": [],
-      "commit_count": 6,
+      "commit_count": 7,
       "prs": [
         2945,
         2948,

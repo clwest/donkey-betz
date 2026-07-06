@@ -5,7 +5,7 @@ authority: implementation-scoping
 arc_id: I-0100
 arc_slug: observability_spine_mission_evidence_substrate
 stage: 2
-stage_state: design-prep-in-flight
+stage_state: active
 stage_transition_history:
   - {stage: 1, state: exit-gate-cleared, at: 2026-07-06, event: "Rigby SIGN Cycle 1 SIGN-with-edits + Chris agree-all-F1-F8 ratification (Stage 1 arc-open bundle #2945 merged)"}
   - {stage: 1, state: p0-prep-in-flight, at: 2026-07-06, event: "P0 prep PR #2948 opened (IB-Q1-BOOT-01 discharge; ADR corpus establishment)"}
@@ -13,6 +13,7 @@ stage_transition_history:
   - {stage: 2, state: active, at: 2026-07-06, event: "Housekeeping PR #2950 — Stage 2 opening ceremony per IOS §4.3 Stage 2 Entry gate v1.4 Option (a) auto-open; frontmatter flipped 1 → 2 per §4.3.0 v1.4 discipline"}
   - {stage: 2, state: active, at: 2026-07-06, event: "ADR-B / ADR-0002 (pa-write-shape-and-correlation-contract) ratified 2026-07-06 via Chris agree-all-F1-F8; PR #2951 merged"}
   - {stage: 2, state: design-prep-in-flight, at: 2026-07-06, event: "ADR-A design-prep authoring opened per IOS v1.5 §4.3 Stage 2 mandatory design-prep rule + §4.3.0 v1.5 flip discipline; target: I-0100_design_prep_adr_a_mission_runner_staged_enable.md + ADR-0003"}
+  - {stage: 2, state: active, at: 2026-07-06, event: "ADR-A / ADR-0003 (mission-runner-staged-enable-posture) ratified 2026-07-06 via Chris agree-all-F1-F8; PR #2953 merged; stage_state flipped design-prep-in-flight → active per §4.3.0 v1.5 discipline. Stage 2 ADR authoring complete except optional ADR-C (F4 fold third-place); Stage 3 pre-flight ready to open for P2/P3/P4 runtime discharge."}
 session_opened: 2700
 session_ratified: 2700
 opened: 2026-07-06
@@ -435,12 +436,13 @@ to determine current stage without interpretation.
   [x] P0 prep PR: `IB-Q1-BOOT-01` shipped (`ADR-0001-establish-adr-corpus.md` + `docs/adr/` dir) — **PR #2948 merged 2026-07-06; cascade co-located per IOS v1.3 §12.5.a (33 chunks embedded for ADR-0001); IDBT-0002 recorded delegating RAG embed-invalidation gap to Group 2100 RAG**
   [x] IOS v1.4 fresh-session Stage 2 readiness refinement shipped (PR #2949 merged 2026-07-06) — codifies §4.3.0 stage_state enum + §4.3 Stage 2 Entry gate + design-prep equivalence + §7.2 ADR SIGN cadence + §15.15 00-START-NEXT ownership; unblocks Stage 2 mechanically for fresh Claude sessions
   [x] Stage 2 opening ceremony executed (this housekeeping PR): scoping frontmatter `stage: 1 → 2` + `stage_state: p0-prep-merged → active` per §4.3.0 v1.4 discipline; BACKLOG `IB-Q1-BOOT-01: IN_ARC → SHIPPED` with `pr_refs: #2948` per §2.2 v1.4 Discipline B inline syntax; 00-START-NEXT-SESSION.md refreshed per §15.15 (Stage-transition PR type)
-  [ ] ADR-B drafted (PA-write shape + PA↔LLMCallEvent correlation contract per F5)
-  [ ] ADR-A drafted (MISSION_RUNNER + RIGBY_DELEGATION staged-enable posture per F8-iii)
-  [ ] ADR-C drafted (D74 spine posture with retention as decision input per F2)
-  [ ] Rigby SIGN cycle on ADR-B → Chris "ratified" (FIRST per F4 fold)
-  [ ] Rigby SIGN cycle on ADR-A → Chris "ratified" (SECOND per F4 fold)
-  [ ] Rigby SIGN cycle on ADR-C (optional) → Chris "ratified" (THIRD per F4 fold)
+  [x] IOS v1.5 design-prep first-class artifact refinement shipped (PR #2952 merged 2026-07-06) — replaces v1.4 §4.3 Stage 2 equivalence rule with mandatory standalone design-prep artifact for every NEEDS_ADR intake with design_state POSTURE_PENDING or NONE; §4.3.a canonical template + §14.2.a Chris refinement-authority prerogative formalization
+  [x] ADR-B drafted + design-prep authored (`I-0100_design_prep_adr_b_pa_write_shape.md`) — PA-write shape + PA↔LLMCallEvent correlation contract per F5 fold; ships in PR #2951 alongside ADR-0002
+  [x] ADR-A drafted + design-prep authored (`I-0100_design_prep_adr_a_mission_runner_staged_enable.md`) — RIGBY_DELEGATION_ENABLED staged-enable posture per F8-iii + rollback triggers (correcting scoping doc §5 P3 MISSION_RUNNER_ENABLED naming to sole runtime flag `RIGBY_DELEGATION_ENABLED` per ADR-0003 §2.1 F8 terminology binding); ships in PR #2953 alongside ADR-0003
+  [ ] ADR-C drafted (D74 spine posture with retention as decision input per F2) — OPTIONAL per F4 fold; not authored (Chris directive pending)
+  [x] Rigby SIGN cycle on ADR-B → Chris "agree all F1-F8" ratified 2026-07-06 (FIRST per F4 fold); PR #2951 merged. ADR-0002 accepted.
+  [x] Rigby SIGN cycle on ADR-A → Chris "agree all F1-F8" ratified 2026-07-06 (SECOND per F4 fold); PR #2953 merged. ADR-0003 accepted.
+  [ ] Rigby SIGN cycle on ADR-C (optional) → Chris "ratified" (THIRD per F4 fold) — DEFERRED unless Chris directs authoring
 
 [STAGE 3 PRE-FLIGHT]
   [ ] Rollback plan committed per PR (§5.4) — matched to §7.2 table

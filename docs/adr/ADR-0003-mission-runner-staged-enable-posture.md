@@ -2,11 +2,11 @@
 title: "ADR-0003 — RIGBY_DELEGATION_ENABLED staged-enable posture (formerly known as MISSION_RUNNER_ENABLED per scoping doc §5 P3)"
 adr_id: ADR-0003
 slug: mission-runner-staged-enable-posture
-status: proposed
+status: accepted
 authority: design-decision
 proposed: 2026-07-06
-ratified: (open)
-ratifier: (open)
+ratified: 2026-07-06
+ratifier: chris
 supersedes: (none)
 superseded_by: (none)
 intake_id: IB-1799-T1-03
@@ -42,7 +42,7 @@ companion_docs:
 
 ## 1. Status
 
-**Proposed** — routed to Rigby SIGN Cycle 1 on arc pin `pa-c5b235f7b15f45be` per IOS §7.2 v1.4 implementation ADR SIGN cadence. Awaiting Chris ratification via Rigby ratification card. Status flips `proposed → accepted` on Chris "agree all Fn" (or per-fold ratification per §7.2 v1.4).
+**Accepted** — Chris ratified 2026-07-06 via directive "Agree all F1-F8. Ratify ADR-0003 as accepted. The core architectural decision remains unchanged: Option 5 hybrid rollout. Phase 1 synthetic shadow validation. Phase 2 direct full enable. RIGBY_DELEGATION_ENABLED is the canonical runtime gate. MISSION_RUNNER_ENABLED remains documentation alias only for historical continuity." Rigby SIGN Cycle 1 completed same day (SIGN-with-edits + 8 folds F1-F8 applied inline + no BLOCKED + no Cycle 2). Matches S1399-forward wholesale-ratification pattern.
 
 ## 2. Context
 
@@ -313,7 +313,7 @@ Total: 8 folds F1-F8 applied inline. All folds are additive-clarifying (hard req
 
 ### 7.2 Chris ratification
 
-**Pending.** Ratification card presented via Rigby on arc pin after SIGN Cycle 1 folds applied. `status` frontmatter flips `proposed → accepted` on Chris "agree all Fn" or per-fold ratification per §7.2 v1.4 SIGN-vs-ratification separation.
+**Ratified 2026-07-06.** Chris "agree all F1-F8" wholesale ratification via terminal directive: "Agree all F1-F8. Ratify ADR-0003 as accepted. The core architectural decision remains unchanged: Option 5 hybrid rollout. Phase 1 synthetic shadow validation. Phase 2 direct full enable. RIGBY_DELEGATION_ENABLED is the canonical runtime gate. MISSION_RUNNER_ENABLED remains documentation alias only for historical continuity." `status` frontmatter flipped `proposed → accepted`; `ratified: 2026-07-06`, `ratifier: chris` populated.
 
 ### 7.3 Related PRs
 
