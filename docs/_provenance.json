@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T13:29:02+00:00",
+    "generated": "2026-07-06T14:14:07+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "76342fd54abf",
-    "doc_count": 2403,
-    "commit_count": 7625,
+    "git_head": "7ddd8ce60a0a",
+    "doc_count": 2406,
+    "commit_count": 7627,
     "confidence_breakdown": {
-      "HIGH": 1581,
+      "HIGH": 1582,
       "MEDIUM": 352,
-      "LOW": 4,
-      "UNKNOWN": 466
+      "LOW": 5,
+      "UNKNOWN": 467
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1208,
+      "commit_count": 1210,
       "prs": [
         10,
         11,
@@ -3011,7 +3011,8 @@
         2924,
         2926,
         2927,
-        2928
+        2928,
+        2929
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7336,7 +7337,7 @@
         2502,
         2504
       ],
-      "commit_count": 164,
+      "commit_count": 166,
       "prs": [
         2213,
         2219,
@@ -7435,7 +7436,8 @@
         2924,
         2926,
         2927,
-        2928
+        2928,
+        2929
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18631,13 +18633,28 @@
     },
     "docs/handoffs/SESSION_2600_PA_PARENT_SCOPING.md": {
       "originating_session": 2600,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7ddd8ce6",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA parent scoping (S2600 arc-open) (#2929)",
+      "sessions_touched": [
+        2600
+      ],
+      "commit_count": 2,
+      "prs": [
+        2929
+      ]
+    },
+    "docs/handoffs/SESSION_2601_PA_CAT_A_ENDPOINT_CONTRACT_SOT.md": {
+      "originating_session": 2601,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2600
+        2601
       ],
       "commit_count": 0,
       "prs": []
@@ -33895,7 +33912,7 @@
         2499,
         2500
       ],
-      "commit_count": 154,
+      "commit_count": 156,
       "prs": [
         2773,
         2775,
@@ -33972,7 +33989,8 @@
         2913,
         2915,
         2916,
-        2920
+        2920,
+        2929
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -34945,6 +34963,32 @@
       "prs": [
         2850
       ]
+    },
+    "docs/research/domains/pa/2600_pa_domain_scoping.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "7ddd8ce6",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(research): Group 2600 PA parent scoping (S2600 arc-open) (#2929)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2929
+      ]
+    },
+    "docs/research/domains/pa/2601_pa_backend_endpoint_contract_sot_design_prep_audit.md": {
+      "originating_session": 2601,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2601
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/research/domains/rag_document_loading/2100_rag_document_loading_domain_scoping.md": {
       "originating_session": 2100,
