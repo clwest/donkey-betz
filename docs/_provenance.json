@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T03:06:49+00:00",
+    "generated": "2026-07-06T03:52:26+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "82cda5fa24a5",
-    "doc_count": 2396,
-    "commit_count": 7613,
+    "git_head": "09ddee03f86b",
+    "doc_count": 2398,
+    "commit_count": 7617,
     "confidence_breakdown": {
-      "HIGH": 1577,
+      "HIGH": 1578,
       "MEDIUM": 352,
       "LOW": 3,
-      "UNKNOWN": 464
+      "UNKNOWN": 465
     },
     "excludes": [
       "docs/archive/",
@@ -2516,9 +2516,10 @@
         2402,
         2403,
         2499,
-        2500
+        2500,
+        2502
       ],
-      "commit_count": 1200,
+      "commit_count": 1202,
       "prs": [
         10,
         11,
@@ -3005,7 +3006,8 @@
         2917,
         2919,
         2920,
-        2922
+        2922,
+        2924
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7326,9 +7328,10 @@
         2402,
         2403,
         2499,
-        2500
+        2500,
+        2502
       ],
-      "commit_count": 156,
+      "commit_count": 158,
       "prs": [
         2213,
         2219,
@@ -7423,7 +7426,8 @@
         2917,
         2919,
         2920,
-        2922
+        2922,
+        2924
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18561,11 +18565,26 @@
       "originating_session": 2502,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "82cda5fa",
+      "first_commit_sha": "f6c845be",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2502): Group 2500 P2 Cat B Frontend API-Client Architecture Design-Prep + Rigby SIGN Cycle 1 Close",
+      "first_commit_subject": "docs(session-2502): Group 2500 P2 Cat B Frontend API-Client Architecture Design-Prep + Rigby SIGN Cycle 1 Close (#2923)",
       "sessions_touched": [
         2502
+      ],
+      "commit_count": 2,
+      "prs": [
+        2923
+      ]
+    },
+    "docs/handoffs/SESSION_2503_API_P3_CAT_C_ERROR_ENVELOPE_REFRESH_LOGOUT_CONTRACTS_DESIGN_PREP.md": {
+      "originating_session": 2503,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "09ddee03",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(research): add API error-envelope + refresh + logout contracts design-prep audit (S2503)",
+      "sessions_touched": [
+        2503
       ],
       "commit_count": 1,
       "prs": []
@@ -33963,12 +33982,25 @@
       "originating_session": 2502,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "82cda5fa",
+      "first_commit_sha": "f6c845be",
       "first_commit_date": "2026-07-05",
-      "first_commit_subject": "docs(session-2502): Group 2500 P2 Cat B Frontend API-Client Architecture Design-Prep + Rigby SIGN Cycle 1 Close",
+      "first_commit_subject": "docs(session-2502): Group 2500 P2 Cat B Frontend API-Client Architecture Design-Prep + Rigby SIGN Cycle 1 Close (#2923)",
       "sessions_touched": [
         2502
       ],
+      "commit_count": 2,
+      "prs": [
+        2923
+      ]
+    },
+    "docs/research/domains/api/2503_api_error_envelope_refresh_logout_contracts_design_prep_audit.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "09ddee03",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(research): add API error-envelope + refresh + logout contracts design-prep audit (S2503)",
+      "sessions_touched": [],
       "commit_count": 1,
       "prs": []
     },
