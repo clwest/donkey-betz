@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-06T21:55:38+00:00",
+    "generated": "2026-07-06T22:00:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b83efa8c9ab2",
+    "git_head": "c49dd861ba82",
     "doc_count": 2420,
-    "commit_count": 7666,
+    "commit_count": 7669,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1230,
+      "commit_count": 1233,
       "prs": [
         10,
         11,
@@ -3021,7 +3021,8 @@
         2939,
         2942,
         2946,
-        2947
+        2947,
+        2949
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7346,7 +7347,7 @@
         2502,
         2504
       ],
-      "commit_count": 186,
+      "commit_count": 189,
       "prs": [
         2213,
         2219,
@@ -7455,18 +7456,19 @@
         2939,
         2942,
         2946,
-        2947
+        2947,
+        2949
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "6d5c39bc",
+      "first_commit_sha": "c49dd861",
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -35524,11 +35526,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "6d5c39bc",
+      "first_commit_sha": "c49dd861",
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 5,
+      "commit_count": 6,
       "prs": [
         2941,
         2945
@@ -35538,11 +35540,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "6d5c39bc",
+      "first_commit_sha": "c49dd861",
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 3,
+      "commit_count": 4,
       "prs": [
         2941
       ]
@@ -35564,11 +35566,11 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "6d5c39bc",
+      "first_commit_sha": "c49dd861",
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
       "sessions_touched": [],
-      "commit_count": 3,
+      "commit_count": 4,
       "prs": [
         2945
       ]
@@ -35610,16 +35612,17 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "b83efa8c",
+      "first_commit_sha": "296e3de1",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(process): IOS v1.3 cascade-discipline refinement \u2014 pre-PR vs post-merge cascade policy + PR-body evidence block (#2947)",
+      "first_commit_subject": "docs(process): IOS v1.4 fresh-session Stage 2 readiness \u2014 B1\u2013B6 refinements (#2949)",
       "sessions_touched": [],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
         2939,
         2940,
         2943,
-        2947
+        2947,
+        2949
       ]
     },
     "docs/research/process/RESEARCH_OPERATING_SYSTEM.md": {
