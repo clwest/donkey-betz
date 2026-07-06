@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "generated": "2026-07-06T22:00:24+00:00",
+    "generated": "2026-07-06T22:04:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "c49dd861ba82",
+    "git_head": "f3f27dfc2f10",
     "doc_count": 2420,
     "commit_count": 7669,
     "confidence_breakdown": {
@@ -3022,6 +3022,7 @@
         2942,
         2946,
         2947,
+        2948,
         2949
       ]
     },
@@ -7457,6 +7458,7 @@
         2942,
         2946,
         2947,
+        2948,
         2949
       ]
     },
@@ -7464,12 +7466,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "c49dd861",
+      "first_commit_sha": "f3f27dfc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001 (#2948)",
       "sessions_touched": [],
       "commit_count": 2,
-      "prs": []
+      "prs": [
+        2948
+      ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
       "originating_session": 1143,
@@ -35526,27 +35530,29 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "c49dd861",
+      "first_commit_sha": "f3f27dfc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001 (#2948)",
       "sessions_touched": [],
       "commit_count": 6,
       "prs": [
         2941,
-        2945
+        2945,
+        2948
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "c49dd861",
+      "first_commit_sha": "f3f27dfc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001 (#2948)",
       "sessions_touched": [],
       "commit_count": 4,
       "prs": [
-        2941
+        2941,
+        2948
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md": {
@@ -35566,13 +35572,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "c49dd861",
+      "first_commit_sha": "f3f27dfc",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001",
+      "first_commit_subject": "docs(implementation): Arc I-0100 IB-Q1-BOOT-01 P0 prep \u2014 establish ADR corpus + ADR-0001 (#2948)",
       "sessions_touched": [],
       "commit_count": 4,
       "prs": [
-        2945
+        2945,
+        2948
       ]
     },
     "docs/research/platform/cross_domain_integration_audit.md": {
