@@ -2688,6 +2688,166 @@ summaries §9; v4 update 2026-07-05).**
 
 **MC-4 5th confirming arc RESOLVED at xx99 close.** Group 2400 Auth 4-child structure completes MC-4 CODIFICATION-CONFIRMED-with-scope-guardrails across-5-consecutive-arcs (1900 + 2000+ + 2100 + 2200 + 2400). **Resolution is methodological, not platform-state** per xx99 Rigby SIGN Q2 fold — codification-confirmed with scope guardrails + full-stack stress test in Auth PASSED, NOT "platform auth fixed." **MC-14 CANDIDATE preserved** at 5-arc-stages threshold with proposed §16 threshold rule for playbook v3 (5 arc-stages = provisional-confirmed; codification-confirmation requires 1 additional non-adjacent domain OR 2 more groups).
 
+### 14.15 Group 2500 API arc (S2599, closed 2026-07-06)
+
+**Backfill entry (v5 append-only 2026-07-06).** Group 2500 API closed at S2599 canonical summary 2026-07-06 (post-Group 2400 close). This §14.15 subsection lands the missed §14 refresh at S2699 close per Rigby SIGN cycle 1 APPROVED WITH REFINEMENTS 2026-07-06 (dedicated fresh SIGN isolation pin `pa-db34dc63aa9e4023` — TWENTIETH-consecutive-adjacent SIGN pin retirement — routing classification options per Chris directive before write). All wiring-state labels reflect 5 Rigby SIGN refinements Chris "agree all" 2026-07-06 ratified wholesale.
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S2599 verdict | Wiring state (per Rigby SIGN) | Source anchor |
+|-----------|-------------------|---------------|-------------------------------|---------------|
+| §2.9 Frontend → Backend API surface | STRONG per Agent 4 §5.7 | **REFINED to 4-layered domain shape** (BACKEND DECLARATION plane Cat A + WIRE CONTRACT plane Cat C + CONSUMER DECLARATION plane Cat B + PERMISSION-FLOOR + REST↔WS plane Cat D). Canonical verdict: "majority IMPLICIT-INHERITANCE with ISLAND-DECLARATION pockets and ZERO cross-transport SoT." | **WEAK + POSTURE-PENDING** (Rigby SIGN refinement #1 — the same paragraph asserts implicit inheritance + shape-blind consumer + zero cross-transport SoT; not STRONG wiring, functioning mechanism with inconsistent contract/SoT) | S2599 §1, §3 |
+| §11 API row | Multiple HIGH/MEDIUM | **REFINED with 3 decision-space quadrants + 1 established Cat D γ ⊃ Cat C β nesting** (typed-error-envelope γ mechanism nests Cat C session-lifecycle β UX policy inside γ default handler) | **POSTURE-PENDING overlay on top of mixed WEAK/MISSING** — quadrants are decision-space, not wiring-state; underlying wiring is mixed (WEAK/STRONG-adjacent mechanism + explicitly greenfield governance/SoT MISSING) | S2599 §1, §2 |
+
+**NEW cross-domain connections not on v2 baseline (wiring-state per Rigby SIGN):**
+
+- **4-shape 401 heterogeneity end-to-end pipeline (Cat A → Cat B → 803-site consumer).** Cat A emission (Family A/B/C/D per Cat A §14.6 F6) → Cat B SHAPE-BLIND interceptor (`api.ts:43-62` reads status + URL substring, not body) → 803-site consumer flow (57 direct + 667 hook + 79 raw fetch bypass; Cat B §14 F3 + F5 + Cat D §14 F-D-CALL-1 preserves). Design-order sequencing: any envelope-shape SoT selection requiring consumer discrimination requires SHAPE-BLIND replacement to land first (or simultaneously). **Wiring-state: WEAK** — works but shape-blind at choke point, blocking any envelope SoT strategy without replacement. **Verdict: NEW** cross-plane pipeline, not local defect. Source: S2599 §4.2.
+- **285-entry path-list gate registry short-circuiting DRF at `core/auth_middleware.py:94-561`** (265 PUBLIC + 6 other lists including STAFF_REQUIRED + REVIEWER_BLOCKED + OPTIONAL_AUTH + PUBLIC_PATHS_EXACT + REVIEWER_ALLOWED). Middleware evaluates FIRST + short-circuits DRF dispatch → source of F-B-HIGH-2 dead-code inversion at `/api/v1/betting/place/`. **Wiring-state: OVERCOUPLED** (Rigby SIGN refinement #3 — pre-DRF short-circuit + huge enumerated registry = tight coupling + high blast radius + dead-code inversion behavior). **Verdict: NEW** cross-domain auth gate mechanism, not just another endpoint permission issue. Source: S2504 §14.3; S2599 §3.
+- **838 explicit `@permission_classes` decorator sites + 74 class-attr sites across 126 files.** Route-indexed 838/1,856 = 49% decoration-site density (NOT explicit-permission coverage rate per Cat D §1.1 D1-D6 canonical denominator contract — Rigby xx99 SIGN Q1 STRENGTHEN fold prevents quote-mining). **Wiring-state: WEAK** — high decoration density ≠ governed permission floor / SoT; evidences fragmentation and manual scatter (potentially misleading if mistaken as "coverage"). **Verdict: NEW** inventory-scale signal. Source: S2504 §14.1; S2599 §3.1.
+- **`FleetCapabilityRequired.for_capability(*path)` MECHANISM PRIMITIVE at `core/services/fleet_auth_drf.py:215-263`.** Viable exemplar for per-endpoint permission-floor governance. **Wiring-state: STRONG (local exemplar) / WEAK (system-level)** — encoded as "STRONG-EXEMPLAR but does not upgrade the overall domain." **Verdict: NEW** concrete primitive enabling governance, but not the governance itself (F-D-REGISTRY-1 GREENFIELD at HEAD). Source: S2504 §14.3 + §4.3.
+- **4 GREENFIELD governance layers:** Cat B (c) permission-floor + Cat D whitelist-replacement γ + Cat D REST↔WS T7 joint + F-D-WSENVELOPE-1 (0/40 WS envelope conformance across 87 Consumer classes per Cat D §14.2). **Wiring-state: MISSING + POSTURE-PENDING** (Rigby SIGN refinement #2 — labeled greenfield with 0/40 conformance = missing wiring; governance/SoT pieces explicitly greenfield). **Verdict: NEW**. Source: S2599 §4.3.
+- **REST↔WS T7 joint dual-owned Group 2500 API + Group 2600 PA (CF-D6).** 120 WS routes (drift -5 from S2202 baseline 125) + 87 Consumer classes + 100% TokenAuthMiddlewareStack routing + 0/40 envelope conformance at REST-adjacent WS layer. **Wiring-state: OVERCOUPLED (structure) + WEAK (conformance/SoT)** (Rigby SIGN refinement #4 — weak because 0/40 envelope conformance + no SoT across transports; overcoupled because dual-owner joint increases coordination cost/blast radius; explicitly avoids "delivered = STRONG" framing). **Verdict: REFINED** — CF-D6 already exists as §14.14 handoff-flag; §14.15 extends/connects, doesn't invent. Source: S2504 §14.2 + CF-D6; S2599 §3, §9.
+- **Cross-cutting patterns (§4.1-§4.4 all four in-arc):** §4.1 declared-but-unenforced contract (4-child; all four planes exhibit "declared in code/docs/schema without runtime enforcement at consumption") + §4.2 SHAPE-BLIND consumer surface (Cat B + Cat C + Cat D end-to-end pipeline) + §4.3 greenfield governance layers (2 GREENFIELD + 1 EXPERIMENTAL per Cat D §13) + §4.4 fragmentation across parallel layers (Cat A F6 + Cat C F1 + Cat C F6 + Cat C F2 + Cat D F-D-4LAYERSPLIT-1). **These are pattern abstractions, not wiring touchpoints — kept as NEW arc patterns with POSTURE-PENDING framing, not baseline wiring labels.** **Verdict: NEW** arc-level crystallizations. Source: S2599 §4.
+
+**POSTURE-PENDING (3 decision-space quadrants + 1 established nesting per S2599 §1):**
+
+- **Quadrant I (backend DECLARATION):** Cat A Path A/B/C strictness (Full drf-spectacular + codegen / Money-path-only / Mixed) + drf-spectacular wire-up decision (INSTALLED_APPS + URL routes + management command).
+- **Quadrant II (consumer DECLARATION):** Cat B (a)/(b)/(c) long-term governance + SHAPE-BLIND interceptor replacement decision.
+- **Quadrant III (error / lifecycle CONTRACT):** Cat C α/β/γ session-lifecycle + envelope SoT + refresh-endpoint necessity + Clear-Site-Data emission locus + F-C-VIP-1 4-option enforcement rubric.
+- **Quadrant IV (permission-floor + REST↔WS T7):** Cat B (a)/(b)/(c) permission-floor + Cat D typed-error-envelope α/β/γ + Cat D whitelist-replacement α/β/γ + REST↔WS T7 Path A/B/C strictness.
+- **Nesting established (Cat D §9.1 Q12):** Cat D typed-error-envelope γ = mechanism ⊃ Cat C session-lifecycle β = UX policy nested inside γ default handler. All other pairings ORTHOGONAL unless xx99 explicitly couples.
+
+**Cross-arc pattern crystallizations extending §14.6 (CX-P7 + CX-P8 CANDIDATE per Rigby SIGN cycle 1):**
+
+- **CX-P7 CANDIDATE (NEW at Group 2500) — "Declared-but-unenforced contract" as recurrent arc-close class across all 4 planes.** Cat A F1 SoT-ABSENT + Cat C F3 refresh-endpoint ABSENT + Cat C F7 F-C-VIP-1 + Cat D F-D-REGISTRY-1 + Cat D F-D-WSENVELOPE-1. **Wiring-state tendency: WEAK/MISSING** (pattern-level; describing systemic failure to enforce contracts). **Recognition threshold met: 5 evidence points in one arc.** **CX-P elevation call: NOT elevated at cycle 1** — Rigby SIGN Q3 fold — awaits second-arc explicit evidence enumeration (Group 2600 PA §14.16 partially confirms but F-B-HIGH-3 STRONG counterexample complicates dominance claim). Source: S2599 §4.1.
+- **CX-P8 CANDIDATE (NEW at Group 2500) — "SHAPE-BLIND consumer surface end-to-end pipeline."** 4-shape 401 heterogeneity (Cat A emission) → SHAPE-BLIND interceptor (Cat B attach) → 803-scale consumer flow (Cat D propagation) = single end-to-end pattern. **Wiring-state: WEAK** (mechanism present; contract/SoT blocked). **CX-P elevation call: NOT elevated at cycle 1** — Rigby SIGN Q3 fold — awaits second-arc explicit shape-blind choke + propagation demonstration at comparable scale before promoting from domain-local to cross-domain. Source: S2599 §4.2.
+- **CX-P4 extension (POSTURE-PENDING as arc-close disposition).** 3 quadrants + 1 established nesting is a specific case of POSTURE-PENDING as arc-close disposition (extends §14.6 CX-P4). Group 2500 preserves the pattern with quadrant structure + nesting-couple. **Verdict: CONFIRMED as extension** of CX-P4 closure disposition format. Source: S2599 §1.
+
+**Cross-arc delegations OUT (per S2599 §9):**
+
+- **Group 2600 PA (T3 NEXT)** — CF-D6 REST↔WS T7 joint dual-owner PA side + CF-2600-PA REST endpoint DECLARATION side + F-B-HIGH-3 workspace-membership implicit-gate (S2402 preserved) + CF-C2 (S2503) session-lifecycle handoff. **DISCHARGED at Group 2600 close S2699 xx99 2026-07-06 — see §14.16.**
+- **Group 1700 Observability (T4)** — envelope-shape telemetry emit-signature + per-Consumer conformance metrics + REST↔WS parallel-delivery reconciliation-layer ownership candidate.
+- **Group 2300 Mobile (parallel arc)** — CF-D4 parallel silent-401 audit + MobilePushToken.revoked_at cascade + 401-handling parity between web + mobile.
+- **Group 1600 Content (secondary)** — CF-C8 envelope shape variability from Cat C S2503.
+
+---
+
+### 14.16 Group 2600 PA arc (S2699, closed 2026-07-06)
+
+**Baseline touchpoints refined.**
+
+| v2 anchor | v2 classification | S2699 verdict | Wiring state (per Rigby SIGN) | Source anchor |
+|-----------|-------------------|---------------|-------------------------------|---------------|
+| §2 PA subsystem → * (multiple) | Various STRONG/WEAK/MISSING per Agent 4 | **REFINED to 4-plane consolidated shape:** PLANE 1 REST BOUNDARY (Cat A 34 endpoints per F11 canonical + 3 parallel `/chat/` REST) + PLANE 2 CLIENT SURFACE (Cat B 3 consumer surfaces: assistantApi 20 methods 25% typed + paStore 16 fields + tools/pa_chat.py 100% untyped + 3 canonical WS message classes `observed-JSON-only`) + PLANE 3 IDENTITY WORKSPACE-CONTEXT SESSION-LIFECYCLE (Cat C C1 + C2 sub-tracks + Group 2400 α/β/γ DEFERRED cascade) + PLANE 4 REST↔WS T7 JOINT (Cat D 5 URL patterns / 4 distinct Consumer classes / F-D2 canonical envelope-declaration matrix). Canonical arc-close verdict (§1): *"PA subsystem MECHANISM is OPERATIONAL across all four contract planes; DECLARATION/SoT is consistently partial/implicit across all four planes — arc-close diagnosis is design-plane governance + compensating-controls policy, NOT systemic runtime failure."* | **WEAK (mechanism operational) + POSTURE-PENDING (SoT/decl explicitness + governance completion pending)** — encoded as "operational across planes; declaration/SoT partial/implicit across planes." | S2699 §1, §3 |
+| Cat A F-B-HIGH-3 workspace-membership implicit-gate (S2402 preserved; propagated in S2699 §4.5) | STRONG-adjacent per S2402 §14.2 | **VERDICT-READY at Cat C1 closure** (Chris D-verdict-request 5-way at S2699 §11 ratification card). Semantics: user-owns-workspace via `ProjectWorkspace.user` OneToOneField (NOT junction table); fails-closed at `_write_files_to_workspace()` on active-workspace resolution + user-ownership check; enforcement point at handler-internal `execute_with_workspace()` at `core/agents/base_agent.py:5355` → `WorkspaceManager.get_active_workspace()` at `workspace_manager.py:1697`. | **STRONG / CONFIRMED** (Rigby SIGN refinement #5 — fails-closed write-boundary enforcement; kept explicitly STRONG as COUNTEREXAMPLE inside broader WEAK/implicit SoT framing). | S2699 §4.5 F-B-HIGH-3 propagation; Cat C §7.2 fails-closed clarifier |
+| §14.14 CF-D6 REST↔WS T7 joint (dual-owned Group 2500 API + Group 2600 PA) | STRUCTURAL-DUAL-OWNER framing at Group 2400 close | **DUAL-OWNER PA side DELIVERED by Cat D S2604** — 3 canonical PA-client WS message classes at `observed-JSON-only` grade (F-D2 canonical envelope-declaration matrix per AC-D2 canonical artifact) + §7.4 T7 cross-transport consistency rule (both REST + WS non-streaming per F-D1 fold VC-5; parallel-delivery reconciliation gap UNOWNED at HEAD). | **OVERCOUPLED (structure) + WEAK (conformance/SoT)** (Rigby SIGN refinement #4 applied to §14.16 — PA side "delivered" adds artifacts but joint remains overcoupled dual-owner with incomplete envelope conformance SoT; explicitly avoids "delivered = STRONG"). | S2699 §3, §9 |
+
+**PA-internal 4-plane pairwise coupling matrix (per Rigby SIGN Q2 answer):**
+
+Interpretation: for each plane-pair within Cat B canonical 4-plane structure, classify relationship as ORTHOGONAL / NESTED (mechanism ⊃ policy — structured coupling, not OVERCOUPLED) / COUPLED / OVERCOUPLED / UNKNOWN.
+
+| # | Pair | Classification | Rationale |
+|---|------|----------------|-----------|
+| 1 | P1 REST boundary ↔ P2 client surface | **WEAK coupling** | Works, but consumer surfaces partially implicit / hetero |
+| 2 | P1 REST boundary ↔ P3 identity/workspace/lifecycle | **NESTED (mechanism ⊃ policy)** | REST auth/workspace resolution mechanism contains identity/workspace policy enforcement (supports STRONG F-B-HIGH-3) |
+| 3 | P1 REST boundary ↔ P4 REST↔WS T7 joint | **WEAK / POSTURE-PENDING** | REST↔WS alignment incomplete; envelope/conformance not canonical |
+| 4 | P2 client surface ↔ P3 identity/workspace/lifecycle | **WEAK coupling** | Client behavior depends on session/workspace context, but SoT is partial/implicit |
+| 5 | P2 client surface ↔ P4 REST↔WS T7 joint | **WEAK / POSTURE-PENDING** | WS client classes exist but not at canonical envelope contract |
+| 6 | P3 identity/workspace/lifecycle ↔ P4 REST↔WS T7 joint | **WEAK** | Identity/lifecycle semantics extend into WS path; contract not uniformly enforced |
+| 7 | P3(C1 workspace-context) ↔ P1 REST | **STRONG** | Enforced at write boundary (F-B-HIGH-3 STRONG counterexample) |
+| 8 | P3(C2 session-lifecycle) ↔ P1 REST | **WEAK / POSTURE-PENDING** | Policy/mechanism separation exists but SoT incomplete |
+| 9 | P3(C1 workspace-context) ↔ P2 client | **WEAK** | Client context resolution partially implicit |
+| 10 | P3(C2 session-lifecycle) ↔ P2 client | **WEAK** | Client session behavior not governed by single SoT |
+| 11 | P4 (CF-D6 joint) ↔ Group 2500 API Cat D (cross-arc) | **OVERCOUPLED** | Structural dual-owner joint; shared contract surface with incomplete conformance |
+
+**NEW cross-domain connections not on v2 baseline (per PA integration matrix + Rigby SIGN wiring-state per pair):**
+
+| Domain pair | Wiring state | Verdict | Rationale |
+|---|---|---|---|
+| **PA → Auth (Group 2400)** | **STRONG (mechanism) + POSTURE-PENDING (α/β/γ + Cat C2 lifecycle)** | REFINED | Mechanism working (DRF auth chain + FleetSignatureAuthentication + TokenAuthMiddleware + PA WS `close(4001)` EXPLICIT stronger than platform silent-degrade default per OBS-D-1 intentional divergence at Cat D §15.2). Cat C2 α/β/γ upstream verdict DEFERRED per Group 2400 xx99. F-B-HIGH-3 attribution propagation across 4-child chain: Cat A observes → Cat B single-sentence → Cat C1 OWNS closure → Cat D §9.3 orthogonal-at-HEAD coupling axis. |
+| **PA → API (Group 2500) baseline inheritance + PA-specific delta** | **WEAK (baseline inheritance) + PARTIAL (PA-specific delta)** | CONFIRMED baseline + REFINED delta | Baseline inheritance per parent §2.6.A hard constraint from S2599. PA-specific delta: F5-analog HARD-INVALID / NON-SELECTABLE for Path C-pure at Cat C1 (F5+F-C7) + Cat D (F-D1 F5-analog + F-D-B1-4 + F-D-B2-6) — stricter than Group 2500 baseline. Cat A F8 baseline codification NEGATIVE at `/api/pa/chat/` (soft F5-analog: Path C-pure strictly-worse). |
+| **PA → Observability (Group 1700) — T4 PRIMARY handoff** | **MISSING + POSTURE-PENDING** | NEW | Envelope-shape telemetry ABSENT at HEAD (0 shape-version fields across 3 canonical PA-client WS message classes). Cat D §10.4 AC-D8 telemetry emit-signature candidates + per-Consumer conformance metrics + REST↔WS parallel-delivery reconciliation-layer ownership (DEBT-D-4 HIGH) + audit-log hook signature spec (Cat C DEBT-C1-4 SINGLE MOST IMPORTANT per Rigby SIGN Batch 2 Q3(e)). Downgraded WEAK→MISSING per Rigby SIGN refinement #2 (GREENFIELD governance layer = MISSING). |
+| **PA → Frontend (Group 2200)** | **WEAK (payload) + PARTIAL (cleanup)** | REFINED | workspaceStore + paStore + assistantApi paChat integrated (payload path); Cat B §4.1 F-B4 U7 paStore 16-field dump reveals 2 UNKNOWN intent fields (`isDockOpen`, `isDockMinimized`) → Cat C2 verdict-scope. 5 syncUser-wiped + 7 persisted + 2 UNKNOWN intent. |
+| **PA → Workspace + Agent-Registry** | **STRONG** | CONFIRMED | `execute_with_workspace()` at `core/agents/base_agent.py:5355` + `WorkspaceManager.get_active_workspace()` at `workspace_manager.py:1697` + WORKSPACE_AWARE_AGENTS dispatcher at `core/epa_handlers_tools.py:3873-3922` (20 agents). Handler-internal implicit-gate. This is a P1↔P3(C1) coupling row and F-B-HIGH-3 STRONG counterexample per Rigby SIGN refinement #5. |
+| **PA → Mobile (Group 2300, parallel arc, secondary stakeholder)** | **WEAK** | NEW | CF-C4 MobilePushToken.revoked_at NOT set at PA logout (Cat C DEBT-C2-8 + S2403 §9.2 CF-C4 preserved). PA WS mobile client interception UNKNOWN — no mobile-specific PA WS client evidence at HEAD (Cat D §9.1). |
+| **PA → Discord** | **ORTHOGONAL** | CONFIRMED | Anti-scope #5 preserved; 4-child verified 0 discord-adjacent PA state touches. |
+| **PA → Content (Group 1600, secondary stakeholder)** | **ORTHOGONAL + F-C4 coupling axis** | REFINED | Anti-scope #6 preserved at REST/client layers. F-C4 coupling: PA-produced content lifecycle inheritance from Cat C2 retention verdict — Deliverable + Blog + DocumentEmbedding + ToolCallRecord = retention-impact surfaces. |
+| **PA → Fleet-Federation** | **MISSING** | NEW | FleetSignatureAuthentication conveys NO workspace_id at HEAD (Cat C §9.1 boundary gap; anti-scope #7 preserved). |
+| **PA → Memory (Group 1300)** | **ADJACENT** | REFINED | F-C4 fold coupling axis: PA-produced DocumentEmbedding retention lifecycle inherits from Group 1300 embedding-layer retention decisions. |
+| **REST↔WS T7 joint (dual-owner PA side per CF-D6)** | **OVERCOUPLED (structure) + WEAK (conformance/SoT)** | REFINED | Rigby SIGN refinement #4 applied. Cat D §7.4 T7 cross-transport consistency rule delivered (both REST + WS non-streaming; parallel-delivery reconciliation-layer UNOWNED at HEAD → §9.1a cross-arc ownership decision). |
+
+**POSTURE-PENDING (5 Chris-D-verdict axes at S2699 §11 ratification card):**
+
+- **Cat A** Path A/B/C+island — F8 baseline codification NEGATIVE at `/api/pa/chat/` (soft F5-analog: Path C-pure strictly-worse).
+- **Cat B** (a) typed assistantApi.ts island / (b) SHAPE-BLIND preserved / (c) hybrid / (d) defer-no-decision (per Rigby SIGN Q3 tightening — "UNKNOWN" reworded to "defer/no decision").
+- **Cat C1** Path A (WorkspaceMember DRF class — requires class CREATION) / Path B (7th middleware path-list constant — boundary gate by path list, NOT membership per Rigby Q3 clarifier) / Path C+compensating (audit-log hook + ADR + docs section — DEBT-C1-4 SINGLE MOST IMPORTANT) — **Path C-pure HARD-INVALID per F5+F-C7** (F5-analog closure discipline).
+- **Cat C2** α/β/γ/PA-override (arc-pin lifetime decoupled) / defer+constraints (F-C1 fold) — Group 2400 α/β/γ DEFERRED cascade risk per §14.14.
+- **Cat D** Path A (typed WS envelope) / Path B (CONNECT handshake only) / Path C+observability-compensation (SoT-declared + envelope-shape telemetry + shape-version fields per Group 1700 T4 handoff) — **Path C-pure HARD-INVALID / NON-SELECTABLE per F-D1 F5-analog + F-D-B1-4 + F-D-B2-6**.
+- **Cross-arc ownership decision (§9.1a):** REST↔WS reconciliation-layer ownership options — (i) reopen at Group 2500 API arc as post-close residual / (ii) Group 2600 post-verdict follow-on requiring dedicated design-prep session / (iii) split telemetry T4 + reconciliation separate T-slot. Relocated to §9 per FOLD-B2-§11-2 (out of §11 ratification card).
+
+**Cross-arc pattern crystallizations extending §14.6 (CX-P7 + CX-P8 second-arc confirmation-pending; CX-P9/P10/P11 NEW CANDIDATE):**
+
+- **CX-P7 CANDIDATE — second-arc confirmation-pending.** "Declared-but-unenforced contract" recurs at PA-slice scope across all 4 planes (Cat A 0/34 `@extend_schema` + Cat B 3 WS classes `observed-JSON-only` + Cat C1 workspace-authz implicit-gate + Cat D F-D-WSENVELOPE-1 PA-slice preservation). **CX-P elevation call: NOT elevated at Group 2600 despite two-arc trigger threshold met — Rigby SIGN Q3 fold caution:** PA F-B-HIGH-3 STRONG counterexample within PA scope complicates dominance claim; promotion condition requires ≥3-5 explicit enforcement-missing points across ≥2 planes (not just implicit/partial) plus explicit second-arc evidence enumeration.
+- **CX-P8 CANDIDATE — second-arc confirmation-pending.** "SHAPE-BLIND consumer surface end-to-end pipeline" recurs at PA-slice scope (Cat A hand-constructed dict responses → Cat B 25% typed rate assistantApi + 100% untyped pa_chat.py → Cat D 3 WS classes `observed-JSON-only` + 0 shape-version fields). **CX-P elevation call: NOT elevated at Group 2600 — Rigby SIGN Q3 fold caution:** PA case needs explicit shape-blind choke + propagation demonstration at comparable scale before promoting from domain-local to cross-domain.
+- **CX-P9 CANDIDATE (NEW at Group 2600) — "F5-analog HARD-INVALID / NON-SELECTABLE closure discipline."** Cat C1 F5+F-C7 + Cat D F-D1 F5-analog + F-D-B1-4 + F-D-B2-6 parallel structural discipline preventing paper-victory Path C-pure ratification. Emerged from within Group 2600 arc. **Wiring-state at pattern level: methodology/closure-format (analogous to CX-P4 posture-pending overlay).** Single-arc trigger; awaits second arc.
+- **CX-P10 CANDIDATE (NEW at Group 2600) — "Compensating-controls pattern as arc's closure criterion."** Cat C1 Path C+compensating (audit-log hook + ADR + docs section) + Cat D Path C+observability-compensation (envelope-shape telemetry + shape-version fields) parallel structural discipline. Emerged within Group 2600. Single-arc trigger.
+- **CX-P11 CANDIDATE (NEW at Group 2600) — "Entrypoint multiplicity + legacy compat routes → contract fragmentation."** 3 parallel `/chat/` REST endpoints (Cat A §17) + v1 legacy DEAD-CODE from client (Cat B §17) + 4 WS Consumer classes / 5 URL patterns + PersonalAssistantConsumer naming collision (Cat D §17.1). Cross-plane driver of §4.1 fragmentation. **Mechanism explanation:** multiple entrypoints create multiple schema surfaces; absent a single declared SoT + enforcement, drift becomes the default. Single-arc trigger.
+- **CX-P4 extension:** 5-way parallel Chris-D-verdict axes + F5-analog HARD-INVALID annotations per axis = extension of POSTURE-PENDING as arc-close disposition (§14.6). Group 2600 adds F5-analog hard-invalidation dimension not present in Groups 1500/1600/1700/1800/1900/2000+/2100/2200/2400/2500. **Verdict: CONFIRMED as extension** — Group 2600 preserves POSTURE-PENDING pattern class with F5-analog closure-discipline overlay.
+
+**Cross-arc delegation OUT (per S2699 §9):**
+
+- **T4 Group 1700 Observability (PRIMARY handoff — telemetry-scoped after F-S2699-Q4-3 split)** — envelope-shape telemetry emit-signature (Cat D §10.4 AC-D8 canonical candidates: `pa.ws.envelope.conformance.grade` + `pa.ws.unauthorized_connect.count` extends S2504 §7.4 measurement-handoff canonical + `pa.ws.emit.latency_histogram` + `pa.ws.agent_completed.reconciliation_delta`) + per-Consumer conformance metrics for 4 PA-related Consumers at HEAD + `doc_claim_verification` PA-slice claim registration hooks (AU-DCV-1) + audit-log hook signature + emit-point observability plane (Cat C DEBT-C1-4 SINGLE MOST IMPORTANT).
+- **§9.1a REST↔WS reconciliation-layer ownership** — cross-arc ownership decision options (i)/(ii)/(iii) — labeled "cross-arc ownership decision (not purely T4)."
+- **T5 Group 2300 Mobile (parallel arc, secondary stakeholder)** — CF-C4 MobilePushToken.revoked_at lifecycle at PA logout + PA WS mobile client interception UNKNOWN.
+- **T6 Group 1600 Content (secondary stakeholder)** — CF-C8 fold F-C4 retention-impact surfaces (Deliverable + Blog + DocumentEmbedding + ToolCallRecord) — PA-produced content lifecycle inheritance from Cat C2 verdict.
+- **Group 2400 xx99 (if reopened)** — PA-slice α/β/γ application evidence.
+- **Group 1300 Memory** — F-C4 fold coupling axis: PA-produced DocumentEmbedding retention lifecycle inheritance from Group 1300 embedding-layer retention decisions.
+- **Group 2500 API S2599 (baseline inheritance)** — per parent §2.6.A hard constraint; Group 2600 arc does NOT re-litigate; xx99 records adoption + PA-specific delta.
+
+---
+
+### 14.17 Refresh gaps and future arc coverage (v5 update, appended 2026-07-06)
+
+**Append-only per Rigby SIGN Q4 discipline** — do NOT edit §14.7 in place; §14.17 lands as new subsection preserving §14.7 v3/v4 preserved state. §14.7 queue snapshot is FROZEN at v4; §14.17 is authoritative post-Group-2500-and-2600-close.
+
+**What §14 does NOT refresh (v5 update 2026-07-06).**
+
+- Domain pairs where no arc has closed since S1274 AND no arc from the v3/v4/v5 refresh has touched them: Body Systems ↔ *; Advisors persistence; Inbox fanout; Web Push wiring; Mobile Expo push UI. These retain v2 classifications unchanged. **NEW at v5:** PA ↔ Fleet-Federation MISSING flagged at §14.16 (FleetSignatureAuthentication conveys NO workspace_id) — added to §14 domain-pair refinements but not a v2 baseline pair per se.
+- Cross-domain connections involving domains with active but unclosed arcs. **As of 2026-07-06: NONE currently in-progress** (Group 2600 PA closed at S2699 2026-07-06; T4 Group 1700 Observability is the NEXT queued arc per S2699 §9.1 telemetry-scoped PRIMARY handoff bundle but has not opened yet). When Group 1700 opens + closes, §14.18 (new subsection) will add observability-side refinements.
+- Boundary violations at §7 refined by arc evidence. **NEW at v5:** Cat D §14.3 285-entry path-list gate registry OVERCOUPLED framing + F-B-HIGH-3 STRONG counterexample within broader WEAK/implicit SoT framing (Rigby SIGN refinement #5) both worth §7 augmentation. Noted in §14 but §7 preserved from v2 per append-only discipline.
+- §11 risk matrix additions. **NEW at v5:** Group 2500 API 3-quadrant + 1 nesting POSTURE-PENDING framing + Group 2600 PA 5-way Chris-D-verdict axes with F5-analog HARD-INVALID annotations both not slotted into v2 §11 numbered ranking. A future v6 refresh could integrate §14.8-§14.16 findings into re-ranked §11.
+
+**What the queue looks like (v5 update 2026-07-06).** Per `docs/research/OPEN_ARCS.md`:
+
+- Group 1700 Observability / Telemetry / SLOs — **CLOSED at S1799 2026-07-03; §14.8 delivered.**
+- Group 1800 HumanAttention / Feedback / Learning — **CLOSED at S1899 2026-07-04; §14.9 delivered.**
+- Group 1900 Authority Enforcement — **CLOSED at S1999 2026-07-04; §14.10 delivered.**
+- Group 2000+ Event / Integration Architecture — **CLOSED at S2099 2026-07-04; §14.11 delivered.**
+- Group 2100 RAG / Document Loading — **CLOSED at S2199 2026-07-04; §14.12 delivered.**
+- Group 2200 Frontend (Contract-Surface) — **CLOSED at S2299 2026-07-05; §14.13 delivered.**
+- Group 2400 Auth — **CLOSED at S2499 2026-07-05; §14.14 delivered.**
+- Group 2500 API — **CLOSED at S2599 2026-07-06; §14.15 delivered at v5 backfill 2026-07-06.**
+- Group 2600 PA — **CLOSED at S2699 2026-07-06; §14.16 delivered at v5 2026-07-06.**
+- Group 2300 Mobile — NOT STARTED. Post-Group-2500-and-2600-close, mobile is next non-parallel candidate OR parallel arc with T4 Group 1700 Observability per S2699 §9.2 secondary-stakeholder framing.
+- **T4 Group 1700 Observability — NOT STARTED; NEXT per S2699 §9.1** telemetry-scoped PRIMARY handoff bundle from Group 2600 PA close. **Arc pin ACTIVE:** `pa-44a6eb70d8814e34` (minted at S2699 close; `tools/pa_local.sh:361` rotated 2026-07-06 per playbook §16 arc-close protocol). Will consume: Cat D §10.4 AC-D8 telemetry emit-signature candidates + Cat C §15.1 DEBT-C1-4 audit-log hook design-spec requirement + §9.1a REST↔WS reconciliation-layer ownership decision options (i)/(ii)/(iii).
+
+**Cross-arc pattern CX-P elevation status (v5 update 2026-07-06).**
+
+- **CX-P7 CANDIDATE ("Declared-but-unenforced contract")** — surfaced at Group 2500 + Group 2600. **NOT ELEVATED at v5** per Rigby SIGN Q3 fold — PA F-B-HIGH-3 STRONG counterexample complicates dominance claim; promotion condition = ≥3-5 explicit enforcement-missing points across ≥2 planes (not just implicit/partial) plus explicit third-arc evidence enumeration. Watching Group 1700 Observability + Group 2300 Mobile arc closes for confirmation.
+- **CX-P8 CANDIDATE ("SHAPE-BLIND consumer surface pipeline")** — surfaced at Group 2500 + partially at Group 2600. **NOT ELEVATED at v5** per Rigby SIGN Q3 fold — PA case needs explicit shape-blind choke + propagation demonstration at comparable scale (Group 2500's 803-site consumer flow is the reference). Watching Group 1700 Observability + Group 2300 Mobile.
+- **CX-P9 CANDIDATE (NEW at Group 2600) — "F5-analog HARD-INVALID / NON-SELECTABLE closure discipline"** — single-arc trigger. Watching next parent-with-4-children arc for parallel structural discipline emergence.
+- **CX-P10 CANDIDATE (NEW at Group 2600) — "Compensating-controls pattern as arc's closure criterion"** — single-arc trigger. Watching next arc for structural pattern replication.
+- **CX-P11 CANDIDATE (NEW at Group 2600) — "Entrypoint multiplicity + legacy compat routes → contract fragmentation"** — single-arc trigger. Watching next arc for cross-domain entrypoint fragmentation recurrence.
+- **CX-P4 extension (POSTURE-PENDING with F5-analog closure-discipline overlay)** — CONFIRMED at Group 2600. Group 2600 adds F5-analog hard-invalidation dimension to POSTURE-PENDING pattern class.
+
+**Cross-arc delegated items owed to future arcs (per canonical summaries §9; v5 update 2026-07-06).**
+
+- **Group 1700 Observability (T4 NEXT)** — will consume: Group 2600 PA S2699 §9.1 telemetry-scoped PRIMARY handoff (envelope-shape telemetry + per-Consumer conformance + `doc_claim_verification` PA-slice registration + audit-log hook) + §9.1a REST↔WS reconciliation-layer ownership decision. Group 2500 API S2599 §7.4 measurement-handoff canonical (WS unauthorized-connect metric) already partially discharged; Group 1700 T4 extends. Group 2400 Auth Cat D + Group 2400 CF-D3 umbrella roll-up already CONSUMED at Group 1700 close (§14.8).
+- **Group 2300 Mobile (parallel)** — will consume: Group 2400 CF-D4 delegation (parallel silent-401 audit + MobilePushToken.revoked_at cascade + 401-handling parity between web + mobile) + Group 2600 CF-C4 preserved (MobilePushToken lifecycle at PA logout) + PA WS mobile client interception UNKNOWN.
+- **Group 1600 Content (secondary stakeholder for both Group 2500 + Group 2600)** — CF-C8 fold F-C4 retention-impact surfaces (Deliverable + Blog + DocumentEmbedding + ToolCallRecord) — PA-produced content lifecycle inheritance from Cat C2 verdict.
+- **Group 2400 (if reopened)** — PA-slice α/β/γ application evidence + F-B-HIGH-3 STRONG counterexample framing from PA arc.
+- **Group 1300 Memory** — PA-produced DocumentEmbedding retention lifecycle F-C4 coupling axis.
+
 ---
 
 **End of draft. Status: research / draft — S1274 v2 Rigby SIGN-
@@ -2696,5 +2856,12 @@ with-edits fold preserved via isolation pin `pa-7442a2e2665bd18e`
 on 2026-07-03 (append-only; S1274 baseline §1–§13 unmodified); v4
 append-only refresh extending §14 with §14.8-§14.14 for Groups
 1700/1800/1900/2000+/2100/2200/2400 arc closes on 2026-07-05
-(append-only; v2 baseline + v3 §14.2-§14.7 preserved verbatim).**
+(append-only; v2 baseline + v3 §14.2-§14.7 preserved verbatim);
+v5 append-only refresh extending §14 with §14.15 backfill for
+Group 2500 API arc close 2026-07-06 + §14.16 for Group 2600 PA
+arc close 2026-07-06 + §14.17 refresh gaps queue update 2026-07-06
+(append-only; v2 baseline + v3 §14.2-§14.7 + v4 §14.8-§14.14
+preserved verbatim; 5 Rigby SIGN refinements Chris "agree all"
+2026-07-06 ratified via dedicated SIGN pin `pa-db34dc63aa9e4023`
+30th consecutive dedicated fresh SIGN pin retirement candidate).**
 

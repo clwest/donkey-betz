@@ -17,15 +17,65 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 2600 arc pin
-# (session_tool create_fresh at S2600 open — carrying only mission
-# scope, no S2500 API arc turn context per playbook §16 arc-open
-# fresh-thread discipline).
-# Pin: pa-c17a8d7e0660413b. Title: "Group 2600 PA arc pin
-# (S2600 open)". Carry-forward: mission scope only — Research Group
-# 2600 "PA (cross-arc handoff bundle — /api/pa/chat/ + /api/assistant/*
-# endpoint DECLARATION side + workspace-context authz + REST↔WS T7
-# joint dual-owner 2500+2600)" per S2599 §8.2 T3 NEXT arc queue.
+# the --conversation flag below. Current value: Session 1700 arc pin
+# (session_tool create_fresh at S1700 open at S2699 xx99 close —
+# carrying only mission scope, no S2600 PA arc turn context per
+# playbook §16 arc-open fresh-thread discipline).
+# Pin: pa-44a6eb70d8814e34. Title: "T4 Group 1700 Observability arc
+# pin (S1700 open) — envelope telemetry + conformance + reconciliation
+# + audit-log hook (handoff from Group 2600 PA close)". Carry-forward:
+# mission scope only — Research Group 1700 Observability (T4 primary
+# handoff from Group 2600 PA S2699 xx99 close per §9.1 telemetry-scoped
+# + §9.1a cross-arc reconciliation-layer ownership decision) selected
+# via T-slot queue advance ratified at S2699 xx99 close 2026-07-06.
+# Load-bearing inputs at S1700 open: PA-slice envelope-shape telemetry
+# emit-signature (Cat D AC-D8 canonical candidates: pa.ws.envelope.
+# conformance.grade + pa.ws.unauthorized_connect.count +
+# pa.ws.emit.latency_histogram + pa.ws.agent_completed.
+# reconciliation_delta) + per-Consumer conformance metrics for 4
+# PA-related Consumers at HEAD + doc_claim_verification 4-child
+# convergent PA-slice claim registration hooks (AU-DCV-1) + audit-log
+# hook signature + emit-point observability plane for Cat C1 Path
+# C+compensating (DEBT-C1-4 "SINGLE MOST IMPORTANT" per Rigby SIGN
+# Batch 2 Q3(e) at S2603 close) + optional cross-arc reconciliation-
+# layer ownership decision (§9.1a options i/ii/iii). Prior legacy pin:
+# pa-c17a8d7e0660413b (Group 2600 PA arc).
+#
+# **Retired at S2699 xx99 close: pa-c17a8d7e0660413b** (Sessions
+# 2600-2604 + S2699 — Group 2600 PA (Cross-Arc Handoff Bundle
+# Consuming CF-2600-PA + CF-D6 + F-B-HIGH-3 + Workspace-Context Authz
+# + REST↔WS T7 Joint Dual-Owner PA Side) research group; 6-doc arc:
+# S2600 parent scoping + S2601 P1 Cat A PA Endpoint Contract SoT
+# Design-Prep + S2602 P2 Cat B PA-Client Contract Surface Design-Prep
+# + S2603 P3 Cat C PA Workspace-Context Authz + Session-Lifecycle
+# Design-Prep (2 parallel sub-tracks C1+C2) + S2604 P4 Cat D PA
+# REST↔WS T7 Joint Contract SoT (dual-owner PA side) Design-Prep +
+# S2699 xx99 canonical summary; playbook §11.1 SEVENTH-consecutive
+# parent-with-4-children application + §11.2 20-section child-audit
+# template TWENTY-FIRST → TWENTY-FOURTH consecutive at Cat A/B/C/D +
+# §11.3 12-section canonical-summary template THIRTEENTH-consecutive
+# candidate + §11.3 §10 5-subsection meta-methodology template
+# THIRTEENTH-consecutive candidate (adopted S1399 close 2026-07-01;
+# unbroken S1399→S2699 chain). Retired via session_tool.retire at
+# S2699 close per playbook §16 arc-close discipline; ELEVENTH formal
+# arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/
+# S1799/S1899/S1999/S2099/S2199/S2299/S2499/S2599 twelve prior
+# (Group 2400 Auth S2499 close + Group 2500 API S2599 close bracket
+# Group 2600 PA). THIRTEENTH formal xx99 canonical summary in the
+# Research OS library. Runtime target 6 sessions ACHIEVED — 6/6 = 100%;
+# runtime cap 8 never invoked. Canonical arc-close verdict: "PA
+# subsystem MECHANISM is OPERATIONAL across all four contract planes
+# (REST endpoint dispatch, client consumption, workspace-context
+# resolution, and WS envelope broadcast); PA subsystem DECLARATION/SoT
+# is consistently partial/implicit across all four planes; arc-close
+# diagnosis is design-plane governance + compensating-controls policy,
+# NOT systemic runtime failure. Structural signature: this arc's
+# closure criterion treated compensating-controls as required whenever
+# SoT claims were not enforceable at runtime (Cat C1 F5+F-C7 + Cat D
+# F-D1 F5-analog HARD-INVALID / NON-SELECTABLE for Path C-pure)."
+# Chris "agree all" 2026-07-06 wholesale ratifications: shape-card
+# SIGN-preview 14+ folds + SIGN cycle 1 13 folds + 3 sub-tighteners
+# per S2699 close. Retired via session_tool.retire per playbook §16.
 # Consumes 4 CF-* originated S2501-S2504: CF-2600-PA (S2501 Cat A) +
 # CF-D6 (S2504 Cat D REST↔WS T7 joint). Selected over 1700
 # Observability / 2300 Mobile (parallel) / 1600 Content per T-slot
@@ -358,4 +408,4 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
-python tools/pa_chat.py "$@" --tools --conversation pa-c17a8d7e0660413b
+python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
