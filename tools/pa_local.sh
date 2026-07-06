@@ -408,4 +408,21 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # arc-pin retirement in Research OS after S1399/S1499/S1599/S1699/S1799/
 # S1899/S1999; retired=true, updated_count=35, previously_active=true
 # via session_tool.retire per playbook §16 arc-close discipline).
-python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
+# ---
+# paused-research-T4-Group-1700-Observability: pa-44a6eb70d8814e34
+# (T4 Group 1700 Observability research arc pin — arc-open pending;
+# rotated ACTIVE at S2699 close 2026-07-06 per playbook §16 arc-close
+# protocol. PAUSED at IOS Part 11 first-execution 2026-07-06 per IOS
+# v1.1 §15.14 Rigby SIGN pin lifecycle across phase transitions —
+# active IOS supersedes pending T4 research arc-open until Chris
+# explicitly re-enters research via Research OS command
+# `Start / Continue / Close research group NNNN`. On IOS phase exit,
+# rotate --conversation below back to pa-44a6eb70d8814e34.)
+# ---
+# ACTIVE (rotated 2026-07-06 for IOS Part 11 first-queue-ratification
+# per IOS v1.1 §15.14): pa-39d3694312ab4326
+# (ios-part11-first-queue-ratification-v1 — fresh IOS-scoped SIGN pin
+# minted for Part 11 Step 6 ratification card routing. Retire at
+# ratification close via session_tool.retire force=true, then restore
+# paused-research-T4 pin above.)
+python tools/pa_chat.py "$@" --tools --conversation pa-39d3694312ab4326
