@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-06T12:52:00+00:00",
+    "generated": "2026-07-06T13:29:02+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "e547641de361",
-    "doc_count": 2402,
-    "commit_count": 7623,
+    "git_head": "76342fd54abf",
+    "doc_count": 2403,
+    "commit_count": 7625,
     "confidence_breakdown": {
       "HIGH": 1581,
       "MEDIUM": 352,
-      "LOW": 3,
+      "LOW": 4,
       "UNKNOWN": 466
     },
     "excludes": [
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1206,
+      "commit_count": 1208,
       "prs": [
         10,
         11,
@@ -3010,7 +3010,8 @@
         2922,
         2924,
         2926,
-        2927
+        2927,
+        2928
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7335,7 +7336,7 @@
         2502,
         2504
       ],
-      "commit_count": 162,
+      "commit_count": 164,
       "prs": [
         2213,
         2219,
@@ -7433,7 +7434,8 @@
         2922,
         2924,
         2926,
-        2927
+        2927,
+        2928
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18616,13 +18618,28 @@
       "originating_session": 2599,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "e547641d",
+      "first_commit_sha": "76342fd5",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(research): add Group 2500 API canonical summary (S2599 xx99 arc close)",
+      "first_commit_subject": "docs(research): Group 2500 API canonical summary (S2599 xx99 arc close) (#2928)",
       "sessions_touched": [
         2599
       ],
-      "commit_count": 1,
+      "commit_count": 2,
+      "prs": [
+        2928
+      ]
+    },
+    "docs/handoffs/SESSION_2600_PA_PARENT_SCOPING.md": {
+      "originating_session": 2600,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2600
+      ],
+      "commit_count": 0,
       "prs": []
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
@@ -34061,12 +34078,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "e547641d",
+      "first_commit_sha": "76342fd5",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(research): add Group 2500 API canonical summary (S2599 xx99 arc close)",
+      "first_commit_subject": "docs(research): Group 2500 API canonical summary (S2599 xx99 arc close) (#2928)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2928
+      ]
     },
     "docs/research/domains/auth/2400_auth_domain_scoping.md": {
       "originating_session": 2400,
