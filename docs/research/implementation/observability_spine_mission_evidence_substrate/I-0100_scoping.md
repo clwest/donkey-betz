@@ -1,11 +1,16 @@
 ---
-title: "Arc I-0100 — Observability Correlation Spine + Mission Evidence Substrate (Stage 1 Scoping)"
+title: "Arc I-0100 — Observability Correlation Spine + Mission Evidence Substrate (Stages 1–2)"
 status: active
 authority: implementation-scoping
 arc_id: I-0100
 arc_slug: observability_spine_mission_evidence_substrate
-stage: 1
-stage_state: exit-gate-cleared
+stage: 2
+stage_state: active
+stage_transition_history:
+  - {stage: 1, state: exit-gate-cleared, at: 2026-07-06, event: "Rigby SIGN Cycle 1 SIGN-with-edits + Chris agree-all-F1-F8 ratification (Stage 1 arc-open bundle #2945 merged)"}
+  - {stage: 1, state: p0-prep-in-flight, at: 2026-07-06, event: "P0 prep PR #2948 opened (IB-Q1-BOOT-01 discharge; ADR corpus establishment)"}
+  - {stage: 1, state: p0-prep-merged, at: 2026-07-06, event: "PR #2948 merged; docs/adr/ + ADR-0001 on main; Stage 2 Entry gate v1.4 auto-open clause satisfied"}
+  - {stage: 2, state: active, at: 2026-07-06, event: "This housekeeping PR — Stage 2 opening ceremony per IOS §4.3 Stage 2 Entry gate v1.4 Option (a) auto-open; frontmatter flipped 1 → 2 per §4.3.0 v1.4 discipline"}
 session_opened: 2700
 session_ratified: 2700
 opened: 2026-07-06
@@ -29,9 +34,10 @@ paused_research_pin: pa-44a6eb70d8814e34 (T4 Group 1700 Observability — preser
 retired_pin_prior: pa-39d3694312ab4326 (ios-part11-first-queue-ratification-v1; retired at seed PR merge 2026-07-06 per RATIFICATION §3 lifecycle)
 sign_cycle_1: SIGN-with-edits (Rigby; single-batch × 4-Q per IOS §7.2; 8 folds applied; no BLOCKED; Cycle 2 not requested)
 sign_cycle_1_pin: pa-c5b235f7b15f45be
-adr_corpus_precondition: PENDING — no NEEDS_ADR intake ships in Stage 4 until `docs/adr/` exists on main. Enforcement path selected: Option (a) bundle IB-Q1-BOOT-01 as in-arc P0 prep PR before Stage 2 opens (per IOS v1.2 §4.3).
+adr_corpus_precondition: SATISFIED via Option (a) — IB-Q1-BOOT-01 shipped as P0 prep PR #2948 (merged 2026-07-06); `docs/adr/` + `ADR-0001-establish-adr-corpus.md` (status accepted) on main. NEEDS_ADR intake can now ship ADR-authoring PRs in Stage 2.
 ratification_record: docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md §2 Axis 2
 ios_status_at_open: active v1.2 (patch PR #2943 in flight — §4.3 template 9-section correction + §10 substitution + ADR corpus precondition + START-NEXT §15.14 citation fix)
+ios_status_at_stage_2_open: active v1.4 (via #2947 v1.3 + #2949 v1.4 — cascade discipline codified + Stage 2 Entry gate + design-prep equivalence + ADR SIGN cadence + §15.15 00-START-NEXT-SESSION ownership all in force at Stage 2 opening)
 companion_docs:
   - docs/research/domains/observability/1799_observability_canonical_summary.md
   - docs/research/implementation/BACKLOG.md
@@ -72,7 +78,7 @@ verifier_loop: |
 
 # Arc I-0100 — Observability Correlation Spine + Mission Evidence Substrate
 
-**Stage 1 Scoping — status `active` (Chris ratified 2026-07-06)**
+**Stages 1–2 — status `active`; current `stage: 2, stage_state: active` (Stage 2 opened 2026-07-06 via P0 prep PR #2948 merge auto-open per IOS §4.3 Stage 2 Entry gate v1.4 Option (a) clause). Chris ratified Stage 1 exit 2026-07-06 via "agree all F1-F8" wholesale fold ratification.**
 
 Template: Playbook §11.1 9-section parent-scoping template with IOS v1.2
 §4.3 substitutions (§3 taxonomy → intake items; §5 child mission → PR
@@ -423,8 +429,10 @@ to determine current stage without interpretation.
   [x] IDBT-0001 1799-slice discharge scope declared in scoping §3.5
 
 [STAGE 2 DESIGN-PREP + ADR] — status: P0 prep in-flight (ADR authoring NOT opened per Chris directive)
-  [x] IOS v1.2 §4.3 ADR corpus precondition satisfied at P0 prep PR authoring (Option (a) executing — bundle IB-Q1-BOOT-01 as in-arc P0 prep PR; PR opened 2026-07-06)
-  [~] P0 prep PR: `IB-Q1-BOOT-01` ships (`ADR-0001-establish-adr-corpus.md` + `docs/adr/` dir creation) — **PR opened 2026-07-06 awaiting review + merge; cascade co-located in-PR per IOS v1.3 §12.5.a; IDBT-0002 recorded delegating RAG embed-invalidation gap to Group 2100 RAG**
+  [x] IOS v1.2 §4.3 ADR corpus precondition satisfied at Stage 2 opening (Option (a) executed — bundle IB-Q1-BOOT-01 shipped as P0 prep PR #2948 merged 2026-07-06)
+  [x] P0 prep PR: `IB-Q1-BOOT-01` shipped (`ADR-0001-establish-adr-corpus.md` + `docs/adr/` dir) — **PR #2948 merged 2026-07-06; cascade co-located per IOS v1.3 §12.5.a (33 chunks embedded for ADR-0001); IDBT-0002 recorded delegating RAG embed-invalidation gap to Group 2100 RAG**
+  [x] IOS v1.4 fresh-session Stage 2 readiness refinement shipped (PR #2949 merged 2026-07-06) — codifies §4.3.0 stage_state enum + §4.3 Stage 2 Entry gate + design-prep equivalence + §7.2 ADR SIGN cadence + §15.15 00-START-NEXT ownership; unblocks Stage 2 mechanically for fresh Claude sessions
+  [x] Stage 2 opening ceremony executed (this housekeeping PR): scoping frontmatter `stage: 1 → 2` + `stage_state: p0-prep-merged → active` per §4.3.0 v1.4 discipline; BACKLOG `IB-Q1-BOOT-01: IN_ARC → SHIPPED` with `pr_refs: #2948` per §2.2 v1.4 Discipline B inline syntax; 00-START-NEXT-SESSION.md refreshed per §15.15 (Stage-transition PR type)
   [ ] ADR-B drafted (PA-write shape + PA↔LLMCallEvent correlation contract per F5)
   [ ] ADR-A drafted (MISSION_RUNNER + RIGBY_DELEGATION staged-enable posture per F8-iii)
   [ ] ADR-C drafted (D74 spine posture with retention as decision input per F2)
