@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-06T01:26:11+00:00",
+    "generated": "2026-07-06T02:16:43+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8a809f6de200",
-    "doc_count": 2392,
-    "commit_count": 7606,
+    "git_head": "29430cfdfad3",
+    "doc_count": 2394,
+    "commit_count": 7610,
     "confidence_breakdown": {
-      "HIGH": 1571,
+      "HIGH": 1575,
       "MEDIUM": 352,
-      "LOW": 5,
+      "LOW": 3,
       "UNKNOWN": 464
     },
     "excludes": [
@@ -2515,9 +2515,10 @@
         2299,
         2402,
         2403,
-        2499
+        2499,
+        2500
       ],
-      "commit_count": 1196,
+      "commit_count": 1198,
       "prs": [
         10,
         11,
@@ -3002,7 +3003,8 @@
         2914,
         2916,
         2917,
-        2919
+        2919,
+        2920
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7322,9 +7324,10 @@
         2299,
         2402,
         2403,
-        2499
+        2499,
+        2500
       ],
-      "commit_count": 152,
+      "commit_count": 154,
       "prs": [
         2213,
         2219,
@@ -7417,7 +7420,8 @@
         2914,
         2916,
         2917,
-        2919
+        2919,
+        2920
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -18523,16 +18527,33 @@
     },
     "docs/handoffs/SESSION_2500_API_PARENT_SCOPING.md": {
       "originating_session": 2500,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "77564f76",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2500): Group 2500 API Domain Scoping + ARC OPEN (#2920)",
       "sessions_touched": [
         2500
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2920
+      ]
+    },
+    "docs/handoffs/SESSION_2501_API_P1_CAT_A_BACKEND_CONTRACT_SOT_DESIGN_PREP.md": {
+      "originating_session": 2501,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "29430cfd",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2501): Group 2500 P1 Cat A Backend API Contract SoT Design-Prep + Rigby SIGN Cycle 1 Close (#2921)",
+      "sessions_touched": [
+        2501
+      ],
+      "commit_count": 2,
+      "prs": [
+        2921
+      ]
     },
     "docs/handoffs/SESSION_261_AGENT_CONVERSATION_UPGRADE.md": {
       "originating_session": 261,
@@ -33596,9 +33617,10 @@
         2402,
         2403,
         2404,
-        2499
+        2499,
+        2500
       ],
-      "commit_count": 157,
+      "commit_count": 159,
       "prs": [
         2773,
         2775,
@@ -33672,7 +33694,8 @@
         2912,
         2913,
         2915,
-        2916
+        2916,
+        2920
       ]
     },
     "docs/research/DOMAIN_RESEARCH_PLAYBOOK.md": {
@@ -33782,9 +33805,10 @@
         2402,
         2403,
         2404,
-        2499
+        2499,
+        2500
       ],
-      "commit_count": 152,
+      "commit_count": 154,
       "prs": [
         2773,
         2775,
@@ -33860,7 +33884,8 @@
         2912,
         2913,
         2915,
-        2916
+        2916,
+        2920
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -33891,16 +33916,33 @@
     },
     "docs/research/domains/api/2500_api_domain_scoping.md": {
       "originating_session": 2500,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "77564f76",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2500): Group 2500 API Domain Scoping + ARC OPEN (#2920)",
       "sessions_touched": [
         2500
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2920
+      ]
+    },
+    "docs/research/domains/api/2501_api_backend_contract_sot_design_prep_audit.md": {
+      "originating_session": 2501,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "29430cfd",
+      "first_commit_date": "2026-07-05",
+      "first_commit_subject": "docs(session-2501): Group 2500 P1 Cat A Backend API Contract SoT Design-Prep + Rigby SIGN Cycle 1 Close (#2921)",
+      "sessions_touched": [
+        2501
+      ],
+      "commit_count": 2,
+      "prs": [
+        2921
+      ]
     },
     "docs/research/domains/auth/2400_auth_domain_scoping.md": {
       "originating_session": 2400,
