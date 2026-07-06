@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-06T00:04:17+00:00",
+    "generated": "2026-07-06T00:16:40+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4481debe744a",
+    "git_head": "0c4dba392c48",
     "doc_count": 2390,
-    "commit_count": 7600,
+    "commit_count": 7604,
     "confidence_breakdown": {
       "HIGH": 1571,
       "MEDIUM": 352,
@@ -2517,7 +2517,7 @@
         2403,
         2499
       ],
-      "commit_count": 1192,
+      "commit_count": 1194,
       "prs": [
         10,
         11,
@@ -3000,7 +3000,8 @@
         2911,
         2912,
         2914,
-        2916
+        2916,
+        2917
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7322,7 +7323,7 @@
         2403,
         2499
       ],
-      "commit_count": 148,
+      "commit_count": 150,
       "prs": [
         2213,
         2219,
@@ -7413,7 +7414,8 @@
         2911,
         2912,
         2914,
-        2916
+        2916,
+        2917
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -35121,9 +35123,10 @@
       "sessions_touched": [
         1274
       ],
-      "commit_count": 3,
+      "commit_count": 5,
       "prs": [
-        2843
+        2843,
+        2918
       ]
     },
     "docs/research/platform_architecture_inventory.md": {
