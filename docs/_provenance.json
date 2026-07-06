@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-06T22:32:59+00:00",
+    "generated": "2026-07-06T22:48:22+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "2718be883d2a",
-    "doc_count": 2420,
-    "commit_count": 7671,
+    "git_head": "09b89507e8f3",
+    "doc_count": 2422,
+    "commit_count": 7673,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 476
+      "UNKNOWN": 478
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1235,
+      "commit_count": 1237,
       "prs": [
         10,
         11,
@@ -3024,7 +3024,8 @@
         2947,
         2948,
         2949,
-        2950
+        2950,
+        2951
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7349,7 +7350,7 @@
         2502,
         2504
       ],
-      "commit_count": 191,
+      "commit_count": 193,
       "prs": [
         2213,
         2219,
@@ -7461,7 +7462,8 @@
         2947,
         2948,
         2949,
-        2950
+        2950,
+        2951
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -7475,6 +7477,19 @@
       "commit_count": 2,
       "prs": [
         2948
+      ]
+    },
+    "docs/adr/ADR-0002-pa-write-shape-and-correlation-contract.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "09b89507",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-B (ADR-0002) \u2014 PA write shape + PA\u2194LLMCallEvent correlation contract (#2951)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2951
       ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
@@ -35532,16 +35547,17 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "2718be88",
+      "first_commit_sha": "09b89507",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 opening ceremony \u2014 housekeeping stage-transition (#2950)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-B (ADR-0002) \u2014 PA write shape + PA\u2194LLMCallEvent correlation contract (#2951)",
       "sessions_touched": [],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         2941,
         2945,
         2948,
-        2950
+        2950,
+        2951
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
@@ -35569,6 +35585,19 @@
       "commit_count": 2,
       "prs": [
         2941
+      ]
+    },
+    "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_b_pa_write_shape.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "09b89507",
+      "first_commit_date": "2026-07-06",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-B (ADR-0002) \u2014 PA write shape + PA\u2194LLMCallEvent correlation contract (#2951)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2951
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md": {
