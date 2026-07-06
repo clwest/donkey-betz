@@ -125,6 +125,10 @@ frontend/dist/
 # Local verification output
 .pyright-after.txt
 
+# Claude Code session scratchpads (shape cards, SIGN preview drafts,
+# ratification card drafts, etc.) — working notes, not part of the codebase.
+.claude/scratch/
+
 # context-kit scratch output
 # Note: ignore *contents* (`.context-kit/*`) rather than the directory
 # (`.context-kit/`). Git cannot re-include a file with `!path` if its
