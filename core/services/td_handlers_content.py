@@ -3146,9 +3146,20 @@ class ContentHandlersMixin:
 
         elif action == 'by_agent':
             if not agent_name:
-                # List active agents with execution counts
+                # List active agents with execution counts.
+                # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite
+                # sweep 2026-07-06): exclude PA meta-agent rows —
+                # "active agents with execution counts" ranking
+                # (top-30, no filter) treats each agent__name as a
+                # router-agent dispatch target; PA agentic loop
+                # volume would dominate incorrectly. Use agent__name
+                # form per ADR-0002 F1 fold equivalent (Postgres
+                # JSONField NULL-semantics make the
+                # input_data__source='pa' form unsafe for
+                # pre-flag-flip rows).
                 agent_counts = dict(
                     AgentExecution.objects.filter(created_at__gte=cutoff)
+                    .exclude(agent__name='PersonalAssistant')
                     .values('agent__name')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:30]
@@ -3213,8 +3224,18 @@ class ContentHandlersMixin:
                 created_at__gte=cutoff, status='failed'
             ).count()
 
+            # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+            # 2026-07-06): exclude PA meta-agent rows — `stats`
+            # action by_agent ranking (top-15 with avg_time) treats
+            # each agent__name as a router-agent dispatch target;
+            # PA agentic loop volume would dominate the count +
+            # skew avg_time. Use agent__name form per ADR-0002 F1
+            # fold equivalent (Postgres JSONField NULL-semantics
+            # make the input_data__source='pa' form unsafe for
+            # pre-flag-flip rows).
             by_agent = list(
                 AgentExecution.objects.filter(created_at__gte=cutoff)
+                .exclude(agent__name='PersonalAssistant')
                 .values('agent__name')
                 .annotate(
                     count=Count('id'),
