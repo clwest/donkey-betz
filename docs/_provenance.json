@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-07T15:20:43+00:00",
+    "generated": "2026-07-07T15:46:32+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7413aa0ed7e3",
-    "doc_count": 2430,
-    "commit_count": 7731,
+    "git_head": "c39db4394a76",
+    "doc_count": 2431,
+    "commit_count": 7734,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 486
+      "UNKNOWN": 487
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1249,
+      "commit_count": 1252,
       "prs": [
         10,
         11,
@@ -3030,7 +3030,9 @@
         2953,
         2956,
         2958,
-        2979
+        2979,
+        2980,
+        2982
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7355,7 +7357,7 @@
         2502,
         2504
       ],
-      "commit_count": 205,
+      "commit_count": 208,
       "prs": [
         2213,
         2219,
@@ -7473,7 +7475,9 @@
         2953,
         2956,
         2958,
-        2979
+        2979,
+        2980,
+        2982
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -34049,7 +34053,7 @@
         2499,
         2500
       ],
-      "commit_count": 165,
+      "commit_count": 168,
       "prs": [
         2773,
         2775,
@@ -34131,7 +34135,9 @@
         2930,
         2937,
         2945,
-        2977
+        2977,
+        2980,
+        2982
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -35575,7 +35581,7 @@
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 P3 code-merged-flag-flip-blocked \u2014 housekeeping (#2958)",
       "sessions_touched": [],
-      "commit_count": 19,
+      "commit_count": 22,
       "prs": [
         2941,
         2945,
@@ -35585,7 +35591,9 @@
         2953,
         2956,
         2958,
-        2977
+        2977,
+        2980,
+        2982
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
@@ -35619,12 +35627,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "7413aa0e",
+      "first_commit_sha": "87dbd95a",
       "first_commit_date": "2026-07-07",
-      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 1 arc-open bundle \u2014 RAG Corpus Substrate Maturity Gradient (contingency-gated with Authority per-plane posture fallback)",
+      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 1 arc-open bundle \u2014 RAG Corpus Substrate Maturity Gradient (contingency-gated with Authority per-plane posture fallback) (#2980)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2980
+      ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
@@ -35725,12 +35735,28 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "7413aa0e",
+      "first_commit_sha": "c39db439",
       "first_commit_date": "2026-07-07",
-      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 1 arc-open bundle \u2014 RAG Corpus Substrate Maturity Gradient (contingency-gated with Authority per-plane posture fallback)",
+      "first_commit_subject": "docs(implementation): Arc I-0200 P1 severability determination CLOSED SEVERABLE \u2014 IB-2199-T0-01 flipped IN_ARC (I-0200) (#2982)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        2980,
+        2982
+      ]
+    },
+    "docs/research/implementation/rag_corpus_substrate_maturity/I-0200_severability_determination.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "c39db439",
+      "first_commit_date": "2026-07-07",
+      "first_commit_subject": "docs(implementation): Arc I-0200 P1 severability determination CLOSED SEVERABLE \u2014 IB-2199-T0-01 flipped IN_ARC (I-0200) (#2982)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2982
+      ]
     },
     "docs/research/platform/cross_domain_integration_audit.md": {
       "originating_session": 1274,
