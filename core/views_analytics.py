@@ -2349,8 +2349,16 @@ def top_performers_v2(request):
 
     performers = []
     try:
-        # Get agents with execution stats
-        agents = Agent.objects.all()[:50]  # Limit for performance
+        # Get agents with execution stats.
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # "top_performers" ranks router-agent job execution success;
+        # PA agentic loop volume would dominate the ranking incorrectly.
+        # Cross-model exclusion at the Agent-model query level (mirrors
+        # the PR-A3 stale-agent detection pattern at
+        # views_diagnostics.py:3280): excluding at Agent-model here
+        # avoids iterating a per-agent AgentExecution query for a PA
+        # bucket that we already know we don't want to rank.
+        agents = Agent.objects.exclude(name='PersonalAssistant')[:50]  # Limit for performance
         for agent in agents:
             executions = AgentExecution.objects.filter(
                 agent_name=agent.name,
@@ -2627,9 +2635,15 @@ def comparison_v2(request):
                 comparison['by_status'][status] = 0
             comparison['by_status'][status] += 1
 
-        # By agent (top 10)
+        # By agent (top 10).
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # by_agent ranking treats each agent as a router-agent dispatch
+        # target; PA agentic loop volume would dominate the ranking
+        # incorrectly. Use agent__name form per ADR-0002 F1 fold
+        # equivalent (Postgres JSONField NULL-semantics make the
+        # input_data__source='pa' form unsafe for pre-flag-flip rows).
         agent_counts = {}
-        for exec in executions:
+        for exec in executions.exclude(agent__name='PersonalAssistant'):
             agent = exec.agent_name or 'unknown'
             if agent not in agent_counts:
                 agent_counts[agent] = 0
@@ -2668,6 +2682,15 @@ def breakdown_v2(request):
 
     try:
         executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows when
+        # dimension='agent' — per-agent breakdown treats each agent as
+        # a router-agent dispatch target; PA agentic loop volume would
+        # dominate incorrectly. Other dimensions (status, all) are
+        # intentionally cross-source. Use agent__name form per ADR-0002
+        # F1 fold equivalent (Postgres JSONField NULL-semantics make
+        # the input_data__source='pa' form unsafe for pre-flag-flip rows).
+        if dimension == 'agent':
+            executions = executions.exclude(agent__name='PersonalAssistant')
 
         for exec in executions:
             if dimension == 'agent':
