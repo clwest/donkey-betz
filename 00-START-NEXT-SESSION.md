@@ -2,43 +2,34 @@
 
 ---
 
-## READ THIS FIRST — ARC I-0200 STAGE 2 DESIGN-PREP RATIFIED; ADR-0004 BODY DEFERRED UNTIL DESIGN-PREP PR MERGES
+## READ THIS FIRST — ARC I-0200 ADR-0004 ACCEPTED PROVISIONAL; STAGE 3 SKIPPED; STAGE 6 CLOSE DOC PENDING CHRIS DIRECTIVE
 
-**Refreshed 2026-07-07 (Stage 2 opened; design-prep authored; Rigby SIGN-with-edits MED-HIGH + Chris "Agree All" ratified; design-prep PR in flight).**
+**Refreshed 2026-07-07 (ADR-0004 authored + Rigby SIGN-with-edits MED-HIGH + Chris "Agree All" + ADR-0004 PR merged; `IB-2199-T0-01` flipped `IN_ARC → SHIPPED`; Stage 3 SKIPPED per docs-only scope; Stage 6 close doc drafting authorized on separate Chris directive).**
 
 ### What just happened (session-scope summary)
 
 1. **Arc I-0100 closed** 2026-07-07 under LOCAL operating model (PR #2976 + #2977 + #2978 + #2979 all merged).
 2. **Second-arc selection SIGN → Chris Agree-All** 2026-07-07. Selection SIGN pin `pa-6a4e2eff5594486b` retired. Ratification record at `docs/research/implementation/RATIFICATION_2026-07-07_second_arc_I-0200.md`.
-3. **Arc I-0200 Stage 1 opened + merged** 2026-07-07 as `87dbd95a` via PR #2980. Rigby SIGN-with-edits MED-HIGH; folds F9-F14; Chris "Agree All". Arc-scoped pin `pa-1b76ee75adbf4031`.
-4. **P1 severability determination CLOSED SEVERABLE + merged** 2026-07-07 as `c39db4394` via PR #2982 (superseded auto-closed #2981 post-#2980 base-branch-deletion). All three Q-Sev YES with F12 evidence citations from 2199 xx99 §1 lines 74/84/76. Rigby SIGN-with-edits MED-HIGH; folds F15-F16; Chris "Agree All". `IB-2199-T0-01` flipped `TRIAGED → IN_ARC (I-0200)`. Fallback path not triggered.
-5. **Stage 2 opened + Design-Prep authored + Rigby SIGN + Chris Agree-All** 2026-07-07. Design-prep at `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_design_prep_rag_corpus_substrate_maturity.md` per IOS v1.5 §4.3.a + Chris-directed arc-scoped IOS §14.2 workflow refinement (SIGN design-prep BEFORE ADR body — deviates from §4.3.a default; recorded in design-prep §9.2 Provenance). Rigby SIGN Cycle 1 SIGN-with-edits MED-HIGH (Q1 SIGN-clean 0.86 + Q2 SIGN-with-edits 0.78 + Q3 SIGN-clean 0.88 + Q4 SIGN-with-edits 0.74); folds F17 (C9 downgrade to recommended-ops-constraint) + F18 (Stage 5 verification interface tool-realistic — replaced `deliverable_tool.list` with `repo_tool.search` + `search_docs` + `kb_tool` + `repo_tool.read_file`) applied. Chris "Agree All" ratified Option 1 (verbatim 2199 §5.1 seam statement + two-field PROVISIONAL frontmatter + per-slot enumerated T-slots T22/T13/T18/T19/T21/T26a/T27/T29). Design-prep PR in flight.
+3. **Arc I-0200 Stage 1 opened + merged** 2026-07-07 as `87dbd95a` via PR #2980. Rigby SIGN-with-edits MED-HIGH; folds F9-F14. Arc-scoped pin `pa-1b76ee75adbf4031`.
+4. **P1 severability CLOSED SEVERABLE + merged** 2026-07-07 as `c39db4394` via PR #2982 (superseded auto-closed #2981). Rigby SIGN-with-edits MED-HIGH; folds F15-F16. `IB-2199-T0-01` flipped `TRIAGED → IN_ARC (I-0200)`.
+5. **Stage 2 opened + Design-Prep authored + Rigby SIGN + Chris Agree-All + merged** 2026-07-07 as `c87878dd` via PR #2983. Rigby SIGN-with-edits MED-HIGH; folds F17-F18. Chris-directed arc-scoped IOS §14.2 workflow refinement recorded in design-prep §9.2.
+6. **ADR-0004 body authored + Rigby SIGN + Chris Agree-All + merged** 2026-07-07 as `<TBD-populated-post-merge>` via PR #<TBD>. Rigby SIGN-with-edits MED-HIGH (Q1 SIGN-with-edits 0.84 + Q2 SIGN-clean 0.86 + Q3 SIGN-with-edits 0.77 + Q4 SIGN-with-edits 0.74); folds F19 (§3.1 strict-verbatim seam) + F20 (§4.4 forward-compat rule) + F21 (§6 rollback step 4 de-speculate cleanup command). Chris "Agree All" ratified Option 1 exactly as ratified in design-prep + all three folds + successor-trigger policy. `IB-2199-T0-01` flipped `IN_ARC → SHIPPED` with `adr_ref: ADR-0004`.
 
 ### Phase
 
-**`implementation`.** IOS `active v1.5` on `main`. **Active arc: I-0200 (Stage 2 `stage_state: design-prep-in-flight`; design-prep ratified; ADR-0004 body deferred until design-prep PR merges).**
+**`implementation`.** IOS `active v1.5` on `main`. **Active arc: I-0200 (Stage 2 ADR-0004 accepted PROVISIONAL; Stage 3 SKIPPED per docs-only scope; Stage 6 close doc drafting deferred to explicit Chris directive).**
 
 ### Active arc
 
-**Arc I-0200 — RAG Corpus Substrate Maturity Gradient (default path locked; design-prep Option 1 ratified).**
+**Arc I-0200 — RAG Corpus Substrate Maturity Gradient (default path locked; ADR-0004 accepted PROVISIONAL).**
 
 ### CURRENT_STAGE / CURRENT_GATE / CURRENT_STATUS (§10 cold-resume tokens)
 
 ```
 CURRENT_STAGE=2
-CURRENT_GATE=Stage_2_design_prep_RATIFIED_pending_design_prep_PR_merge_then_ADR-0004_body_drafting
-CURRENT_STATUS=Design-prep-Rigby-SIGN-with-edits-MED-HIGH-F17-F18-Chris-Agree-All-2026-07-07-ADR-0004-body-DEFERRED-until-design-prep-PR-merges
+CURRENT_GATE=ADR-0004_RATIFIED_and_MERGED_IB-2199-T0-01_flipped_SHIPPED_pending_Stage_3_pre_flight_SKIPPED_and_Stage_6_close
+CURRENT_STATUS=ADR-0004-Chris-Agree-All-2026-07-07-Rigby-SIGN-with-edits-MED-HIGH-F19-F21-applied-IB-2199-T0-01-SHIPPED-Stage-3-SKIPPED-per-docs-only-scope-Stage-6-close-doc-next
 ```
-
-### Ratified ADR-0004 shape (do NOT deviate without Chris directive)
-
-- **Content:** verbatim 2199 xx99 §1 line 74 seam statement — "design-governed corpus substrate — spec-complete via P3, evidence-supported via P4, execution-pending via post-arc T-slots — in transition toward runtime-governed institutional knowledge layer along the maturity gradient passive → spec-complete → execution-complete."
-- **Frontmatter (Option 1a):** `status: accepted` + `provisional: true` + `provisional_reason: "IB-2199-BOR-01 (RAG search_docs + kb_tool retrieval end-to-end verification) undischarged; post-ratification discharge required per Arc I-0200 P1 severability determination §6 constraint 2"`.
-- **T-slot naming:** per-slot enumeration in Consequences section — T22 D2100.9 metadata contract validation (Track B); T13 dual-cascade F3 R3.5 resolution (Track A); T18 axis-scoring ranker; T19 conflict-resolution rule engine; T21 lifecycle state machine; T26a retrieval-surface consistency Detect-and-Flag; T27 SIGN preamble corpus-hygiene gate; T29 Corpus Health Score dashboard. Order per 2199 xx99 §1 line 82.
-- **No runtime enforcement claims.** Docs-only classification ADR.
-- **Stage 5 verification interface (per F15 lock + F18):** `search_docs` + `kb_tool.semantic_search` + `repo_tool.search` (frontmatter field patterns) + `repo_tool.read_file`. No `manage.py` execution. No live-index query. No `deliverable_tool.list`.
-- **File:** `docs/adr/ADR-0004-rag-corpus-substrate-maturity-gradient.md`.
-- **Sub-option 1(iv):** ADR corpus schema extension (`provisional: bool` + `provisional_reason: str`) does NOT require companion PR to `ADR-0001-establish-adr-corpus.md` (additive frontmatter fields permitted per ADR-0001 §3.2 pattern). If Rigby SIGN flags this at ADR body SIGN, escalate to Chris.
 
 ### Guardrails (still in force)
 
@@ -47,49 +38,56 @@ CURRENT_STATUS=Design-prep-Rigby-SIGN-with-edits-MED-HIGH-F17-F18-Chris-Agree-Al
   - "No runtime code."
   - "Do not admit companion rows."
   - "Do not change feature flags."
-  - "Do not draft ADR-0004 until the design-prep PR is merged." (added 2026-07-07 at design-prep ratification)
 
 ### Next executable action
 
-**Await design-prep PR merge.** Once merged:
-1. Fresh branch off `main` for ADR-0004 body PR.
-2. Draft `docs/adr/ADR-0004-rag-corpus-substrate-maturity-gradient.md` per ratified Option 1 shape.
-3. Route ADR-0004 to Rigby SIGN Cycle 1 on `pa-1b76ee75adbf4031` per IOS §7.2 single-batch × 4-Q cadence.
-4. Apply any folds pre-Chris-ratification.
-5. Present to Chris for "Agree All" ratification of ADR-0004 body.
-6. On Chris ratification: run cascade; commit + push + open PR with §12.5.d evidence block.
-7. On PR merge: BACKLOG.md `IB-2199-T0-01` flips `IN_ARC → SHIPPED` with `pr_refs` + `adr_ref: ADR-0004` per IOS §2.2 v1.4 Discipline B inline syntax.
+**Await Chris explicit directive to open Stage 6 close for Arc I-0200.** Per IOS §4.3 Stage 6 canonical close doc discipline (mirroring Playbook §11.3 xx99 template + Arc I-0100 `I-010099_observability_spine_implementation_close.md` PR #2976 pattern):
+
+1. Fresh branch off `main` for Stage 6 close bundle.
+2. Draft `docs/research/implementation/rag_corpus_substrate_maturity/I-020099_rag_corpus_substrate_maturity_implementation_close.md`.
+3. Append `cross_domain_integration_audit.md §14.N` refresh entry (D10 hard gate per IOS §4.3 Stage 6).
+4. Flip scoping doc `stage: 2 → 6`, `stage_state: active → awaiting-close` per IOS §4.3.0 v1.5 discipline.
+5. Retire arc-scoped SIGN pin `pa-1b76ee75adbf4031` per §7.2 isolation-pin discipline (mirror Arc I-0100 PR #2977 + #2978 pattern).
+6. Rotate `tools/pa_local.sh --conversation` back to paused-research T4 pin `pa-44a6eb70d8814e34` per §15.14 restoration rule.
+7. Run 5-step cascade + commit + push + open PR + admin-merge.
+8. Fast-forward main + verify.
+
+**Stage 3 explicitly SKIPPED** per docs-only ADR scope + F15 lock (Stage 5 verification bounded to documentation cross-check; no runtime pre-flight; no `manage.py` execution; no live-index query). Rationale documented in scoping doc §10 + will be documented in Stage 6 close doc §7.
+
+**Stage 4 (Build) is MERGED INTO STAGE 2** per scoping doc §5 P2 row (ADR PR IS the shipping vehicle for docs-only ADR). No separate Build stage.
+
+**Stage 5 (Verify) — LIGHT VERIFY at Stage 6 close** per F15 lock: Rigby exercises the ratified maturity classification via read-only documentation cross-check (search_docs / kb_tool.semantic_search / repo_tool.search / repo_tool.read_file per F18); Claude independently verifies via git-log + file Read + BACKLOG.md status column checks. No runtime probes.
 
 ### Deferred (not blocking, not urgent)
 
 - **IOS §14.2 codification candidates surfaced by Arc I-0200:**
-  - CC-1 arc-scoped workflow overrides — first live trigger via design-prep SIGN before ADR body (Chris §14.2 refinement-authority); awaiting second arc.
-  - CC-2 PROVISIONAL ADR pattern selection (Option 1a two-field pattern ratified as design-prep-side template); awaiting second PROVISIONAL ADR.
-  - CC-3 docs-only ADR "code state" definition per design-prep §1.2 — single trigger.
+  - **CC-1** Arc-scoped workflow overrides — SECOND application via ADR body SIGN following design-prep SIGN; SIGN-both-independently pattern (rather than §4.3.a default of design-prep pressure-tested BY ADR SIGN). Awaiting second arc for §4.3.a amendment proposal.
+  - **CC-2** PROVISIONAL ADR pattern — FIRST live ratification of two-field pattern (`status: accepted` + `provisional: true`) in ADR corpus. Awaiting second PROVISIONAL ADR.
+  - **CC-3** Docs-only ADR "code state" definition per design-prep §1.2 — single trigger.
+  - **CC-4 (NEW — from F20)** Additive-frontmatter forward-compat rule: ADR corpus consumers MUST ignore unknown frontmatter keys. Could codify as ADR-0001 §3.3 companion amendment if Chris directs. Single trigger.
+  - **CC-5 (NEW — from F19)** §3.1 research→ADR strict-verbatim discipline: ADR body must present source-ratified content in strict-verbatim form without ADR-side re-quoting or paraphrase drift. Single trigger.
   - Rigby's second-consecutive-stronger-than-Claude first-arc argument at TWO-trigger threshold for IOS §11.3 amendment.
   - Contingency-gated arc seed pattern first live application via P1 SEVERABLE outcome.
   - Severability-gate as Stage 1 first-class exit condition — Rigby Q3 non-contradiction cross-check pattern.
-  - PROVISIONAL ADR frontmatter taxonomy (Option a vs b).
 - **`project_deployment_state_between_merged_and_active.md`** — 2/4 triggers from Arc I-0100.
 
 ### Read as background
 
-- **Design-prep:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_design_prep_rag_corpus_substrate_maturity.md` (357 lines; F17+F18 applied; Chris Agree-All 2026-07-07).
-- **P1 severability determination:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_severability_determination.md` (SEVERABLE; F15+F16+Q2/Q3).
-- **Scoping doc:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md` (Stage 2 in-flight; §10 checklist updated).
+- **ADR-0004:** `docs/adr/ADR-0004-rag-corpus-substrate-maturity-gradient.md` (accepted PROVISIONAL; Chris Agree-All 2026-07-07; F19-F21 applied).
+- **Design-prep:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_design_prep_rag_corpus_substrate_maturity.md`.
+- **P1 severability determination:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_severability_determination.md`.
+- **Scoping doc:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md`.
 - **Ratification record:** `docs/research/implementation/RATIFICATION_2026-07-07_second_arc_I-0200.md`.
-- **RAG xx99 canonical:** `docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md` §1 seam statement + §5.1 verbatim + §8 T-slot queue.
-- **Arc I-0100 ADR-B design-prep reference:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_b_pa_write_shape.md`.
-- **ADR corpus schema:** `docs/adr/ADR-0001-establish-adr-corpus.md`.
-- **IOS canonical:** `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` v1.5 §4.3 + §4.3.a + §4.3.0 stage-state enum + §7.2 SIGN routing + §14.2 Chris refinement-authority + §15.14 pin lifecycle.
-- **BACKLOG at HEAD:** `docs/research/implementation/BACKLOG.md` — arc-open history rows for I-0100 close + I-0200 open + P1 close + Stage 2 open/design-prep ratification.
+- **Arc I-0100 close reference (Stage 6 canonical pattern):** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md`.
+- **RAG xx99 canonical:** `docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md`.
+- **IOS canonical:** `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` v1.5.
 
 ### Session ready check (before next action)
 
 1. **First tool call:** `context-kit orient`.
-2. Verify design-prep PR merged: `gh pr view <design-prep-PR-num> --json state` — expect `MERGED`.
-3. Verify wrapper pin: `grep 'conversation pa-' tools/pa_local.sh | tail -1` — expect `pa-1b76ee75adbf4031`.
+2. Verify ADR-0004 merged: `git log --oneline main | grep -i 'ADR-0004' | head -3`.
+3. Verify wrapper pin: `grep 'conversation pa-' tools/pa_local.sh | tail -1` — expect `pa-1b76ee75adbf4031` (rotates back to `pa-44a6eb70d8814e34` at Stage 6 close).
 4. Verify service_context via `platform_config_tool overview` on `pa-1b76ee75adbf4031` — expect `service_context=local`.
 5. Verify runtime flags: `grep -E 'PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — both env-driven `false`.
-6. Read the design-prep §7 recommendation + §7.1 sub-options + P1 determination §6 required ADR shape.
-7. Follow "Next executable action" sequence above.
+6. Read Arc I-0100 close doc as Stage 6 template reference.
+7. Await Chris directive to open Stage 6 or take any other next action.
