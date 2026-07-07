@@ -727,6 +727,17 @@ class UnifiedPAEntrypoint:
         _inj = scan_for_injection(message, source='user_input')
         if _inj.severity == 'block':
             latency_ms = int((time.time() - start_time) * 1000)
+            # Arc I-0100 P4 Stop Condition #2 (Chris Option A ratified
+            # 2026-07-06): finalize the PA turn's AgentExecution row
+            # as failed with intent='blocked' before early-returning.
+            # Prevents status='pending' orphan rows when
+            # PA_AGENT_EXECUTION_WRITE_ENABLED=True. No-op when flag
+            # OFF (create returned None).
+            self._maybe_finalize_pa_turn_execution(
+                _pa_execution, status="failed",
+                error_message=f"injection_blocked:{_inj.pattern_name}",
+                start_time=start_time, intent="blocked",
+            )
             return PAResponse(
                 content="I can't process that request. Please rephrase.",
                 trace_id=trace_id,
@@ -752,6 +763,15 @@ class UnifiedPAEntrypoint:
                 # Handle triage responses
                 content = await self.handle_triage_response(message)
                 latency_ms = int((time.time() - start_time) * 1000)
+                # Arc I-0100 P4 Stop Condition #2 (Chris Option A
+                # ratified 2026-07-06): finalize as completed with
+                # intent='triage' before early-returning. Triage
+                # response IS a successful turn outcome. Prevents
+                # status='pending' orphan rows.
+                self._maybe_finalize_pa_turn_execution(
+                    _pa_execution, status="completed",
+                    start_time=start_time, intent="triage",
+                )
                 return PAResponse(
                     content=content,
                     trace_id=trace_id,
@@ -785,6 +805,17 @@ class UnifiedPAEntrypoint:
                     content = await self.start_triage('attention')  # Default to attention
 
                 latency_ms = int((time.time() - start_time) * 1000)
+                # Arc I-0100 P4 Stop Condition #2 (Chris Option A
+                # ratified 2026-07-06): finalize as completed with
+                # intent='triage-start' before early-returning.
+                # Distinct from 'triage' (session-continuation) so
+                # the two lifecycle transitions can be told apart
+                # in downstream diagnostics. Prevents status='pending'
+                # orphan rows.
+                self._maybe_finalize_pa_turn_execution(
+                    _pa_execution, status="completed",
+                    start_time=start_time, intent="triage-start",
+                )
                 return PAResponse(
                     content=content,
                     trace_id=trace_id,
