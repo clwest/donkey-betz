@@ -17,17 +17,22 @@
 # account." Memory rule: feedback_pa_local_verify_ownership.md.
 #
 # To change the default conversation (e.g., start a new thread), edit
-# the --conversation flag below. Current value: Session 1700 arc pin
-# (session_tool create_fresh at S1700 open at S2699 xx99 close —
-# carrying only mission scope, no S2600 PA arc turn context per
-# playbook §16 arc-open fresh-thread discipline).
-# Pin: pa-44a6eb70d8814e34. Title: "T4 Group 1700 Observability arc
-# pin (S1700 open) — envelope telemetry + conformance + reconciliation
-# + audit-log hook (handoff from Group 2600 PA close)". Carry-forward:
-# mission scope only — Research Group 1700 Observability (T4 primary
-# handoff from Group 2600 PA S2699 xx99 close per §9.1 telemetry-scoped
-# + §9.1a cross-arc reconciliation-layer ownership decision) selected
-# via T-slot queue advance ratified at S2699 xx99 close 2026-07-06.
+# the --conversation flag below. Current value: Arc I-0200 arc-scoped
+# SIGN pin (session_tool.create_fresh at Arc I-0200 Stage 1 open
+# 2026-07-07 per IOS §4.3 Stage 1 arc-open protocol + §15.14 arc-scoped
+# pin lifecycle).
+# Pin: pa-1b76ee75adbf4031. Title: "ios-arc-open-I-0200". Carry-forward:
+# Arc I-0200 contingency-gated seed — default IB-2199-T0-01 (RAG corpus
+# substrate maturity gradient) IF Stage 1 confirms severability from
+# IB-2199-BOR-01, ELSE auto-switch to IB-1999-T0-01 (Authority per-plane
+# posture). Rigby SIGN F1-F8 folds ratified via Chris "Agree All"
+# 2026-07-07. Ratification record: `docs/research/implementation/
+# RATIFICATION_2026-07-07_second_arc_I-0200.md`. Prior legacy pins:
+# pa-44a6eb70d8814e34 (T4 Group 1700 Observability, paused-research per
+# §15.14 phase-transition supersession — preserved as comment above
+# --conversation line for restoration at Arc I-0200 close);
+# pa-6a4e2eff5594486b (Arc I-0200 selection SIGN review; retired
+# 2026-07-07 post-Chris-Agree-All).
 # Load-bearing inputs at S1700 open: PA-slice envelope-shape telemetry
 # emit-signature (Cat D AC-D8 canonical candidates: pa.ws.envelope.
 # conformance.grade + pa.ws.unauthorized_connect.count +
@@ -441,16 +446,43 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # runtime flags remain `false` by default. Operating model: LOCAL-only
 # per PR #2972 guardrail.
 # ---
-# ACTIVE (restored 2026-07-07 to paused-research T4 Group 1700
-# Observability pin per IOS v1.1 §15.14 restoration rule at Arc I-0100
-# Stage 6 close; unchanged pin identity — the pin was never retired,
-# only paused per §15.3 phase-transition supersession while Arc I-0100
-# was active):
-# pa-44a6eb70d8814e34 (T4 Group 1700 Observability research arc pin
-# — arc-open pending until Chris explicitly re-enters research via
-# Research OS command `Start / Continue / Close research group NNNN`).
-# On any future implementation-phase arc open, mint a fresh
-# arc-scoped pin via `session_tool.create_fresh label='ios-arc-open-
-# I-NNNN'` and rotate --conversation to that pin; the T4 pin is
-# preserved as-is for research-phase re-entry.
-python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
+# Retired at Arc I-0200 selection SIGN close 2026-07-07:
+# pa-6a4e2eff5594486b (ios-arc-open-I-0200-sign-review) — Arc I-0200
+# second-arc selection SIGN review pin; minted 2026-07-07 at Chris
+# directive to route Claude's IOS Part 11 ranking through Rigby SIGN
+# before Chris ratification; Rigby returned SIGN-with-edits MED
+# confidence with 8 folds F1-F8 (2199-provisional-pending-severability
+# + re-score-without-contested-boosts + BOR-classification-at-Stage-1
+# + auto-switch-to-1999-on-BOR-fail + remove-+2-bump + deterministic-
+# fallback-1999 + re-rank-if-severable-but-bumped + 1999-T1-01-blocker-
+# type-classification); Chris "Agree All" recorded 2026-07-07 —
+# ratifies contingency structure (default seed IB-2199-T0-01 if
+# severable from IB-2199-BOR-01; auto-switch to IB-1999-T0-01 if not
+# severable); retired via `session_tool.retire force=true` post-
+# ratification, updated_count=4, retired=true, previously_active=true.
+# SECOND consecutive dedicated fresh SIGN pin retirement under IOS
+# active discipline after `pa-39d3694312ab4326` (first-queue-
+# ratification). Ratification record: `docs/research/implementation/
+# RATIFICATION_2026-07-07_second_arc_I-0200.md`.
+# ---
+# PRESERVED AS COMMENT / paused-research during Arc I-0200 phase
+# (per IOS v1.1 §15.14 phase-transition supersession rule; pin
+# unchanged, restored on IOS phase exit at Arc I-0200 close or Chris
+# Research OS re-entry command, whichever comes first):
+# pa-44a6eb70d8814e34 (T4 Group 1700 Observability research arc pin;
+# arc-open state paused during Arc I-0200; not retired). Restoration
+# discipline mirrors Arc I-0100 → post-close rotation pattern (PR
+# #2978): on Arc I-0200 close, `tools/pa_local.sh --conversation`
+# rotates back to this pin unless Chris re-enters research phase
+# earlier via `Start / Continue / Close research group NNNN`.
+# ---
+# ACTIVE (minted 2026-07-07 at Arc I-0200 Stage 1 open per IOS §4.3
+# Stage 1 arc-open protocol + §15.14 arc-scoped pin lifecycle;
+# mirrors `pa-c5b235f7b15f45be` role for Arc I-0100):
+# pa-1b76ee75adbf4031 (ios-arc-open-I-0200 — Arc I-0200 RAG corpus
+# substrate maturity / Authority per-plane posture, contingent per
+# ratified severability gate). Arc-scoped pin covers Stage 1
+# scoping SIGN Cycle 1 through Stage 6 implementation close.
+# Retirement discharge: at Arc I-0200 Stage 6 close, mirroring
+# Arc I-0100 pattern PR #2978.
+python tools/pa_chat.py "$@" --tools --conversation pa-1b76ee75adbf4031

@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-07T13:57:55+00:00",
+    "generated": "2026-07-07T14:45:13+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "168cc83be358",
+    "git_head": "678a75953190",
     "doc_count": 2428,
-    "commit_count": 7728,
+    "commit_count": 7730,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1246,
+      "commit_count": 1248,
       "prs": [
         10,
         11,
@@ -3029,7 +3029,8 @@
         2952,
         2953,
         2956,
-        2958
+        2958,
+        2979
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7354,7 +7355,7 @@
         2502,
         2504
       ],
-      "commit_count": 202,
+      "commit_count": 204,
       "prs": [
         2213,
         2219,
@@ -7471,7 +7472,8 @@
         2952,
         2953,
         2956,
-        2958
+        2958,
+        2979
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {

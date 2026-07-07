@@ -2,83 +2,89 @@
 
 ---
 
-## READ THIS FIRST — ARC I-0100 FULLY CLOSED (LOCAL); NO ACTIVE ARC; AWAITING CHRIS DIRECTIVE FOR NEXT ARC
+## READ THIS FIRST — ARC I-0200 STAGE 1 IN-PROGRESS (SEVERABILITY DETERMINATION PENDING)
 
-**Refreshed 2026-07-07 (post-close-out: arc SIGN pin retired + wrapper rotation confirmed + docs cascade PR opened).**
+**Refreshed 2026-07-07 (Stage 1 arc-open bundle drafted; Rigby SIGN Cycle 1 on scoping doc pending; Chris Agree-All ratified selection).**
 
-### What just happened (arc-scope summary)
+### What just happened (session-scope summary)
 
-Arc I-0100 (`observability_spine_mission_evidence_substrate`) — the first production implementation arc under IOS active v1.5 — is **FULLY CLOSED under the LOCAL operating model**. All three T1 intakes are in terminal dispositions and all arc-close ritual actions are discharged.
-
-| Intake | ADR | Terminal Disposition | Runtime PRs | Acceptance |
-|--------|-----|---------------------|-------------|------------|
-| **IB-1799-T1-01 (P2)** | SPEC_COMPLETE (F3) | **SHIPPED** under flag OFF | #2954 | No acceptance required |
-| **IB-1799-T1-02 (P4)** | ADR-0002 | **LOCAL_ACCEPTED / PRODUCTION_DEFERRED** | #2955 + #2970 (async fix) | PR #2973 |
-| **IB-1799-T1-03 (P3)** | ADR-0003 | **LOCAL_ACCEPTED / PRODUCTION_DEFERRED** | #2957 + #2974 (SC#1) | PR #2975 |
-
-**Canonical close doc:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md` (PR #2976).
-
-**Operating model:** LOCAL-only, per PR #2972's guardrail. No prod endpoint responded during the arc; no prod DB was touched; no prod flag was flipped.
-
-**Flag defaults (unchanged throughout the arc):**
-- `RIGBY_DELEGATION_ENABLED` — env-driven `false` at `core/settings.py:138-140`.
-- `PA_AGENT_EXECUTION_WRITE_ENABLED` — env-driven `false` at `core/settings.py:173-174`.
-
-### Arc I-0100 close-out actions — DISCHARGED
-
-Both Stage 6 close-time ritual steps flagged in the close doc §7 are now complete:
-
-1. **Arc SIGN pin retired** — `pa-c5b235f7b15f45be` (label `ios-arc-open-I-0100`) retired via Rigby `session_tool.retire` at session-open time. Response: `retired: true, updated_count: 0, previously_active: false, is_current_bound: false`. Idempotent housekeeping — the pin was already inactive at session-tool state; the retire call locked the terminal disposition.
-2. **Wrapper rotation confirmed** — `tools/pa_local.sh:456` points at `pa-44a6eb70d8814e34` (T4 Group 1700 Observability paused-research pin), rotated via PR #2978 at Stage 6 close-time housekeeping. Unchanged since.
-
-No further Arc I-0100 work is expected. Do not reopen the arc; the scoping frontmatter is locked at `status: closed-local`, `stage: 6`, `stage_state: closed`, `close_ratified_pr: 2976`.
+1. **Arc I-0100 closed** 2026-07-07 under LOCAL operating model (all 3 T1 intakes terminal; PR #2976 close doc merged; #2977 + #2978 + #2979 close-out cascade all landed).
+2. **Second-arc selection SIGN → Chris Agree-All 2026-07-07.** Claude produced IOS-methodology-only ranking; routed to Rigby via selection SIGN pin `pa-6a4e2eff5594486b`. Rigby returned SIGN-with-edits MED confidence with 8 folds F1-F8 and a 7-axis contingency-gated ratification card. Chris ratified via "Agree All" — default seed `IB-2199-T0-01` (RAG corpus substrate maturity gradient) IF Stage 1 confirms severability from `IB-2199-BOR-01`; ELSE auto-switch to `IB-1999-T0-01` (Authority per-plane posture). Selection SIGN pin retired same day. Ratification record committed at `docs/research/implementation/RATIFICATION_2026-07-07_second_arc_I-0200.md`.
+3. **Arc I-0200 Stage 1 opened** 2026-07-07. Arc-scoped SIGN pin `pa-1b76ee75adbf4031` (label `ios-arc-open-I-0200`) minted; `tools/pa_local.sh --conversation` rotated; paused-research T4 pin (`pa-44a6eb70d8814e34`) preserved as `# PRESERVED AS COMMENT` block per §15.14 phase-transition supersession. Stage 1 scoping doc drafted at `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md`.
 
 ### Phase
 
-**`implementation`.** IOS `active v1.5` on `main`. No active arc.
+**`implementation`.** IOS `active v1.5` on `main`. **Active arc: I-0200 (Stage 1, `stage_state: active`).**
 
 ### Active arc
 
-**None.** Arc I-0100 closed via PR #2976 merge; no successor opened.
+**Arc I-0200 — RAG Corpus Substrate Maturity Gradient (default) / Authority per-plane Posture (fallback).** Contingency-gated seed per Rigby-SIGN-with-edits-then-Chris-Agree-All 2026-07-07. Neither seed row flipped `IN_ARC` at arc-open — flip pending Stage 1 severability determination outcome.
 
-### Guardrail (still in force — carried forward from PR #2972)
+### Contingency structure (Rigby-ratified, Chris Agree-All 2026-07-07)
 
-**Do not attempt Railway/prod verification unless Chris explicitly provides a live prod access path.** The historical Railway URL is dead (404 `x-railway-fallback: true`) and Railway CLI is unauthenticated with no project link. Repeated probes waste session budget and produce noise. If any future arc needs prod validation, that path opens with Chris naming the environment (URL + auth token, or `railway link` + `railway run …`, or a read-only prod `DATABASE_URL`).
+| Path | Seed | Slug | Trigger |
+|------|------|------|---------|
+| **Default** | `IB-2199-T0-01` (RAG corpus substrate maturity gradient; 2199 §1 canonical seam) | `rag_corpus_substrate_maturity` | Stage 1 severability determination concludes `IB-2199-T0-01` IS severable from `IB-2199-BOR-01` (RAG `search_docs` + `kb_tool` retrieval end-to-end verification; audit §2.5) |
+| **Fallback (auto-switch)** | `IB-1999-T0-01` (Authority per-plane posture; 1999 §17.1) | `authority_per_plane_posture` | Stage 1 severability determination concludes `IB-2199-T0-01` is NOT severable → reclassifies to `BLOCKED_ON_RESEARCH`; `IB-1999-T0-01` auto-flips `IN_ARC`; arc folder renames |
+
+**Auto-switch mechanic per RATIFICATION_2026-07-07 §2 Axis 5:** No re-ratification required. Chris "Agree All" ratifies the outcome-conditional mechanic itself. Only a Chris-explicit override of the auto-switch requires a separate directive at Stage 1 severability determination time.
+
+### Fold list ratified via "Agree All" (F1–F8)
+
+- **F1** Treat `IB-2199-T0-01` as provisional pending severability; otherwise demote to `BLOCKED_ON_RESEARCH`.
+- **F2** Re-score without contested boosts; don't let bumps decide arc identity.
+- **F3** Stage 1 must classify `IB-2199-BOR-01` as in-arc enabling vs external blocker.
+- **F4** If BOR is required, immediately switch seed to `IB-1999-T0-01` (no limbo).
+- **F5** Withdraw §3.3 +2 cross-domain bump unless positive cross-domain dependency evidence is cited.
+- **F6** Deterministic fallback — if 2199 blocked, 1999 becomes seed by mechanical rank.
+- **F7** If 2199 severable but bump removed, re-rank; if 1999 outranks, seed = 1999 unless Chris overrides.
+- **F8** For `IB-1999-T1-01`, Stage 1 must classify blocker type (posture-clarity vs unknown-fact) to decide admission.
+
+### Guardrails (still in force)
+
+- **LOCAL-only operating model** carried forward from PR #2972. No Railway/prod verification unless Chris explicitly provides a live prod access path.
+- **No runtime code** in Arc I-0200 per Chris directive 2026-07-07 at ratification. Arc scope is documentation + ADR only.
+- **No Stage 2 ADR authoring opens** until Stage 1 severability determination closes with Chris ratification.
+- **No companion-row admission until Stage 1 proves it** per Chris directive + Axis 4.
 
 ### Next executable action
 
-**Chris sequencing directive determines the next arc.** No admin cleanup remains for Arc I-0100. The next session's work opens one of these two paths:
+**Route Stage 1 scoping doc to Rigby SIGN Cycle 1** on arc-scoped pin `pa-1b76ee75adbf4031` per IOS §7.2 single-batch × 4-Q cadence. SIGN Q1-Q4 pressure-test:
 
-- **(c) Open a new implementation arc.** Candidates already-triaged in `docs/research/implementation/BACKLOG.md`:
-  - `IB-1399-T1-*` — memory arc T1 rows
-  - `IB-1499-T1-*` — revenue arc T1 rows
-  - `IB-1599-T1-*` — sports arc T1 rows
-  - `IB-1699-T1-*` — content arc T1 rows
-  - Any T0/gate row from the 32-row register requiring individual Chris gate at Stage 2 entry
-- **(d) Return to research phase.** T4 Group 1700 Observability is the currently-pinned research thread (`tools/pa_local.sh:456` already routes to `pa-44a6eb70d8814e34`). Load-bearing inputs are documented in the wrapper's comment block (envelope-shape telemetry emit-signature + per-Consumer conformance metrics + doc_claim_verification hooks + audit-log hook signature + Cat C1 Path C+compensating debt-C1-4 + optional §9.1a cross-arc reconciliation-layer ownership decision).
+- Q1 Contingency structure encoding (is the severability gate mechanic sound?)
+- Q2 §9.3 severability determination method (three-question test — sufficient?)
+- Q3 Companion-row evaluation rules (Axis 4 encoding — captures the binary admit/hold-out shape?)
+- Q4 §10 Stage checklist snapshot (is the stage-transition mechanic greppable + reversible?)
 
-**My read:** No default — this is a Chris sequencing decision. Do not open (c) or advance (d) without an explicit directive. If Chris is silent at session open, ask before touching either lane.
+After Rigby SIGN response: apply folds in-branch, present to Chris for Stage 1 exit-gate ratification via "Agree All" or explicit fold-by-fold response. Merge arc-open PR with §12.5.d cascade evidence block. Then next session opens Stage 1 severability determination (P1 PR).
 
 ### Deferred (not blocking, not urgent)
 
-- **`project_deployment_state_between_merged_and_active.md` — 2 triggers so far** (Arc I-0100 P3 + P4). Chris directive: apply four-trigger threshold before proposing IOS v1.6 to name the "code-merged, flag-flip-blocked" state. Do NOT propose v1.6 until pattern surfaces in 2+ more independent arcs. Use ad-hoc terminology in the interim.
+- **IOS §14.2 codification candidates surfaced by this arc** (per RATIFICATION_2026-07-07 §6):
+  - Contingency-gated arc seed pattern (single trigger; awaiting second before IOS v1.6 §4.3 proposal).
+  - Severability-gate as Stage 1 first-class exit condition (single trigger).
+  - Rigby's second-consecutive-stronger-than-Claude first-arc argument reaches TWO-trigger threshold for IOS §11.3 amendment — deferred to a dedicated IOS-patch session (do NOT bundle into Arc I-0200 scope).
+  - Bump-withdrawal discipline (F5) as §3.3 hardening (single trigger).
+- **`project_deployment_state_between_merged_and_active.md`** — 2/4 triggers from Arc I-0100. Do NOT propose IOS v1.6 until pattern surfaces in 2+ more independent arcs.
 
 ### Read as background
 
-- **Arc I-0100 canonical close:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md` (PR #2976).
-- **P3 acceptance:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_p3_local_activation_acceptance.md` (PR #2975).
-- **P4 acceptance:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_p4_local_activation_acceptance.md` (PR #2973).
-- **LOCAL-only reality codified:** PR #2972.
-- **All 3 ADRs:** `docs/adr/ADR-000{1,2,3}*.md`.
-- **All 3 runtime discharge PRs on main:** #2954 (P2), #2955 + #2970 (P4), #2957 + #2974 (P3).
-- **BACKLOG:** `docs/research/implementation/BACKLOG.md` — T0/T1/T2/T3/DEFER rows for next-arc selection under (c).
-- **T4 paused research pin context:** `tools/pa_local.sh:20-42` comment block.
+- **Arc I-0200 scoping doc:** `docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md` (441 lines).
+- **Arc I-0200 ratification record:** `docs/research/implementation/RATIFICATION_2026-07-07_second_arc_I-0200.md` (166 lines).
+- **RAG xx99 canonical:** `docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md` §1 seam statement + §5.1 verbatim + §8 T-slot queue.
+- **Authority xx99 canonical:** `docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md` §17.1 per-plane posture map.
+- **Arc I-0100 close reference:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md` (PR #2976).
+- **First-queue ratification precedent:** `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md`.
+- **IOS canonical:** `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` v1.5 §3.1 + §3.1.b + §3.2 + §3.3 + §4.3 + §5.1 + §7.2 + §11.2 + §11.3 + §11.4 + §15.14.
+- **BACKLOG at HEAD:** `docs/research/implementation/BACKLOG.md` — arc-open history rows for I-0100 close + I-0200 open; contingent-status flags on IB-2199-T0-01 + IB-1999-T0-01.
+- **Paused research pin context:** `tools/pa_local.sh:20-34` (comment header for the arc-scoped pin) + `tools/pa_local.sh:463-472` (paused-research T4 preservation block).
 
 ### Session ready check (before next action)
 
 1. **First tool call:** `context-kit orient`.
-2. Verify no in-flight arc: `grep -A2 '^## In-progress' docs/research/OPEN_ARCS.md | head -20` — the table should be empty of live rows.
-3. Verify wrapper pin unchanged: `grep 'conversation pa-' tools/pa_local.sh | tail -1` — expect `pa-44a6eb70d8814e34`.
-4. Verify runtime flags OFF: `grep -E 'PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — both env-driven `false` defaults.
-5. Read Chris sequencing directive from the current session.
-6. If directive names (c) or (d), execute per that path's discipline. If ambiguous or absent, ask.
+2. Verify Arc I-0200 in-flight: `grep -A2 '^## In-progress' docs/research/OPEN_ARCS.md | head -6` — should show I-0200 row.
+3. Verify wrapper pin: `grep 'conversation pa-' tools/pa_local.sh | tail -1` — expect `pa-1b76ee75adbf4031`.
+4. Verify service_context via `platform_config_tool overview` on `pa-1b76ee75adbf4031` — expect `service_context=local` + `database_name=unified_donkey_betz` + `default_llm_provider=openai`.
+5. Verify runtime flags (unchanged from Arc I-0100 close): `grep -E 'PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — both env-driven `false` defaults.
+6. Read this doc + Arc I-0200 scoping doc §9.3 severability determination method.
+7. If Rigby SIGN Cycle 1 not yet routed, route it. If routed and returned, apply folds + present to Chris.
