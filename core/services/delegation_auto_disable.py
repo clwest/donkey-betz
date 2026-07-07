@@ -84,15 +84,22 @@ bug reproducing for different inputs.
 
 # ─── Monitoring-surface integration status ──────────────────────────
 
-MONITORING_SURFACE_INTEGRATED: Final[bool] = False
-"""FALSE — actual monitoring integration deferred to Phase 2 flag-flip
-time per ADR-0003 §3.4. When TRUE, a monitoring surface actively
-consumes these constants and can trigger the flag flip to False on
-threshold breach.
+MONITORING_SURFACE_INTEGRATED: Final[bool] = True
+"""TRUE — monitoring surface wired via
+``core.services.delegation_auto_disable_monitor`` (see module) +
+``manage.py delegation_auto_disable_check`` (Arc I-0100 P3 Stop
+Condition #1 discharge). On threshold breach, ``trip()`` sets a shared
+cache-key kill sentinel (``KILL_SWITCH_KEY``). The delegation entry
+points at ``core.services.rigby_mission_delegation.delegate_work_item``
+and ``core.signals.rigby_delegation_signals.on_delegation_lifecycle``
+short-circuit on ``is_tripped()`` in addition to the existing
+``settings.RIGBY_DELEGATION_ENABLED`` check.
 
-**Chris directive precondition for setting to True + flipping
-RIGBY_DELEGATION_ENABLED to True:** the monitoring surface providing
-these triggers MUST be identified + wired at Phase 2 open.
+Under the LOCAL-only operating model per PR #2972 + P4 acceptance
+PR #2973, monitor invocation is on-demand via the management command
+above. When production arrives, a follow-on arc would wire the same
+monitor module to a periodic beat task; the constants + kill-switch
+surface here do not need to change.
 """
 
 
