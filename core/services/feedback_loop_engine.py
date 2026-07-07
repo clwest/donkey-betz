@@ -523,27 +523,30 @@ class FeedbackLoopEngine:
                 status='completed'
             ).count()
 
-            # Best performing agents
+            # Best performing agents.
+            # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+            # per-agent success-rate rankings treat PA as a router-agent
+            # dispatch target when it isn't.
             best_agents = self.AgentExecution.objects.filter(
                 created_at__gte=since
-            ).values('agent__name').annotate(
+            ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
                 total=Count('id'),
                 successes=Count('id', filter=Q(status='completed'))
             ).filter(total__gte=self.MIN_EXECUTIONS_FOR_METRICS).annotate(
                 success_rate=F('successes') * 1.0 / F('total')
             ).order_by('-success_rate')[:5]
 
-            # Most active agents
+            # Most active agents (exclude PA per §4.2 F1 fold).
             most_active = self.AgentExecution.objects.filter(
                 created_at__gte=since
-            ).values('agent__name').annotate(
+            ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
                 count=Count('id')
             ).order_by('-count')[:5]
 
-            # Agents needing attention (low success rate)
+            # Agents needing attention — low success rate (exclude PA per §4.2 F1 fold).
             needs_attention = self.AgentExecution.objects.filter(
                 created_at__gte=since
-            ).values('agent__name').annotate(
+            ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
                 total=Count('id'),
                 failures=Count('id', filter=Q(status='failed'))
             ).filter(
