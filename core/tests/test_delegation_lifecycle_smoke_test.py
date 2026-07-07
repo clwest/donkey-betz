@@ -137,10 +137,14 @@ class DelegationAutoDisableThresholdsTests(TestCase):
             BASELINE_OPSRUNEVENT_DAILY * VOLUME_MULTIPLIER,
         )
 
-    def test_monitoring_surface_defaults_false(self):
-        """MONITORING_SURFACE_INTEGRATED=False until Chris directive."""
+    def test_monitoring_surface_integrated(self):
+        """MONITORING_SURFACE_INTEGRATED=True after Arc I-0100 P3 Stop
+        Condition #1 discharge — the ``delegation_auto_disable_monitor``
+        module + ``delegation_auto_disable_check`` management command
+        are the wired consumer + kill-switch surface.
+        """
         from core.services.delegation_auto_disable import MONITORING_SURFACE_INTEGRATED
-        self.assertFalse(MONITORING_SURFACE_INTEGRATED)
+        self.assertTrue(MONITORING_SURFACE_INTEGRATED)
 
     def test_null_rate_threshold_is_5_percent(self):
         """F7 fold: 5% NULL-rate over 10min triggers auto-disable."""

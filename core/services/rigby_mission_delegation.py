@@ -157,6 +157,13 @@ def delegate_work_item(work_item_id: str) -> dict[str, Any]:
     if not getattr(settings, "RIGBY_DELEGATION_ENABLED", False):
         return _disabled_response("rigby delegation is disabled (flag off)")
 
+    from core.services.delegation_auto_disable_monitor import is_tripped
+    if is_tripped():
+        return _disabled_response(
+            "rigby delegation is auto-disabled (kill switch tripped)",
+            kill_switch=True,
+        )
+
     from core.models_rigby_work_items import RigbyWorkItem
     from core.models_ops_runs import OpsRunEvent
     # ``execute_agent_task`` is the @shared_task wrapper in core.tasks;
