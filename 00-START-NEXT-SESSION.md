@@ -2,9 +2,9 @@
 
 ---
 
-## READ THIS FIRST — ARC I-0100 STAGE 4 COMPLETE; P4 ASYNC-WRITE FIX MERGED (#2970); LOCAL CANARY PASSED; ARC PREPARING FOR CLOSE
+## READ THIS FIRST — ARC I-0100 STAGE 4 COMPLETE; P4 ASYNC-WRITE FIX MERGED (#2970); LOCAL CANARY PASSED; LOCAL A1 DISCHARGED; NO PROD DEPLOYMENT AVAILABLE
 
-**Refreshed 2026-07-07 post PR #2970 merge.**
+**Refreshed 2026-07-07 (second pass — local-only reality codified per Chris directive; no production deployment currently available to verify against).**
 
 ### Session summary (2026-07-07 local canary loop)
 
@@ -27,12 +27,21 @@ initially read as a separate Finding 2, actually a downstream symptom.
   works end-to-end.**
 - Rollback drill (flag OFF) — zero writes, zero events, zero warnings.
   Guard short-circuits before the write path.
-- A1 verified LOCAL only (migration 0377 applied on
-  `localhost:5432/unified_donkey_betz` + canonical row present with
-  `agent_type='meta'` + `specialization='personal_assistant'` after
-  local UPDATE).
-- **Prod untouched** — no Railway CLI, no prod URL, no prod DB, no
-  prod flag change.
+- **LOCAL A1 discharged.** Migration
+  `0377_arc_i0100_p4_canonical_pa_agent` applied on
+  `localhost:5432/unified_donkey_betz`. Canonical PersonalAssistant
+  Agent row present (`id=c37a2f81-41d3-4ac5-bbf3-4c894c0b22c0`,
+  `name='PersonalAssistant'`, `agent_type='meta'`,
+  `specialization='personal_assistant'`, `is_active=True`).
+  Re-verified 2026-07-07 (second pass by Claude Code, read-only ORM).
+- **No production deployment currently available/verifiable.** Arc
+  I-0100 activation is LOCAL-only until Chris explicitly creates or
+  identifies production. The historical Railway URL
+  (`donkey-betz-platform-production.up.railway.app`) returns 404
+  `x-railway-fallback: true`; Railway CLI is unauthenticated with
+  no project link.
+- **Prod untouched** (no prod endpoint responded; all reads were
+  local ORM against `localhost:5432/unified_donkey_betz`).
 - `PA_AGENT_EXECUTION_WRITE_ENABLED` remains `false` by default
   (`core/settings.py:173-175` unchanged; PA worker env verified via
   `ps -E`).
@@ -72,7 +81,7 @@ Both P3 and P4 required an implicit intermediate state between "code merged" and
 2. Early-return path finalization decision (injection blocked, triage mode). **Locally-verified after PR #2970**: 3 canary rows all landed `completed`, zero pending orphans.
 3. `LLMCallEvent.execution_id` end-to-end join verification post-flag-flip. **Locally-verified after PR #2970**: 3 LLMCallEvent rows joined 1:1 to 3 canary AgentExecution rows.
 
-_Note: All three are LOCAL-verified only. Prod A1 verification (migration 0377 applied on prod DB) still pending — prod URL was unreachable this session._
+_Note: All three are LOCAL-verified. Prod verification is not applicable — no production deployment currently exists. Arc I-0100 activation is LOCAL-only until Chris explicitly creates or identifies production._
 
 **IB-1799-T1-03 (P3) — 4 stop conditions before `RIGBY_DELEGATION_ENABLED=True`:**
 1. Monitoring surface integration (`MONITORING_SURFACE_INTEGRATED=True` in `core/services/delegation_auto_disable.py`).
@@ -82,17 +91,22 @@ _Note: All three are LOCAL-verified only. Prod A1 verification (migration 0377 a
 
 **IB-1799-T1-01 (P2)** — no stop conditions; SHIPPED under flag OFF.
 
+### Guardrail — do not attempt prod verification
+
+**Do not attempt Railway/prod verification unless Chris explicitly provides a live prod access path.** The historical Railway URL is dead (404 `x-railway-fallback: true`) and Railway CLI is unauthenticated with no project link. Repeated probes waste session budget and produce noise. If Arc I-0100 activation needs prod validation later, that path opens with Chris naming the environment (URL + auth token, or `railway link` + `railway run …`, or a read-only prod `DATABASE_URL`).
+
 ### Next executable action
 
-**Chris sequencing directive determines next action.** Candidate paths:
+**Chris sequencing directive determines next action.** Prod-side paths are removed until a production deployment exists. Candidate paths:
 
-- **(a) Verify A1 on production DB.** Confirm migration 0377 applied on prod + canonical `PersonalAssistant` Agent row exists prod-side. Blocked this session because the Railway URL in `tools/pa_chat.py` returned 404 on every probe (`Server: railway-hikari`; `{"code":404,"message":"Application not found"}`) and no other prod entrypoint was available. Needs your action: either point me at the current prod URL, run `railway login && railway link && railway run python manage.py showmigrations core | grep 0377` yourself, or hand me an authenticated prod PA token + URL.
-- **(b) P4 canary on prod after A1 verified.** Mirror the local canary once A1 is confirmed prod-side. Needs your explicit go-ahead on flag flip.
-- **(c) Address P3 stop condition #1** (monitoring surface integration). Identify which monitoring/ops surface consumes `delegation_auto_disable` constants + wire actual flag-flip-to-False action on threshold breach.
-- **(d) Author ADR-0004 (ADR-C, optional per F4).** D74 six-axis correlation-spine posture. Architecture-only per F1 fold; requires standalone design-prep per IOS v1.5. Ratifies with retention as INPUT per F2 fold.
-- **(e) Stage 6 arc-close preparation.** Draft the arc canonical close doc `I-010099_observability_spine_implementation_close.md` per IOS §4.3 Stage 6. Note: Arc I-0100 close criteria per §4.5 requires every intake `SHIPPED/RETRACTED/DEFERRED/BLOCKED_ON_RESEARCH`. Currently 1 SHIPPED + 2 IN_ARC-flag-blocked. Close is blocked pending stop-condition discharge OR reclassification.
+- **(a) Longer local canary of P4.** Extend the flag-ON canary window locally (e.g. 30+ turns, mixing sync and async invocation paths, with rollback drill in the middle) to build additional confidence in `AgentExecution` + `LLMCallEvent` write correctness before any future activation. Local-executable.
+- **(b) Local activation validation as terminal state.** Treat the local canary results as the terminal validation for Arc I-0100 P4 under the current local-only regime — draft the LOCAL activation-acceptance bundle and formally pause the prod flag flip until prod exists.
+- **(c) Pause Arc I-0100 until a production deployment exists.** Reclassify P4 + P3 as `DEFERRED` (activation-blocked-on-prod) per IOS §4.5, close the arc at Stage 6 on that basis, and reopen a follow-on arc when Chris stands up prod.
+- **(d) Address P3 stop condition #1** (monitoring surface integration). Identify which monitoring/ops surface consumes `delegation_auto_disable` constants + wire actual flag-flip-to-False action on threshold breach. Local-executable, orthogonal to (a)/(b)/(c).
+- **(e) Author ADR-0004 (ADR-C, optional per F4).** D74 six-axis correlation-spine posture. Architecture-only per F1 fold; requires standalone design-prep per IOS v1.5. Ratifies with retention as INPUT per F2 fold. Local-executable, orthogonal to (a)/(b)/(c).
+- **(f) Stage 6 arc-close preparation.** Draft the arc canonical close doc `I-010099_observability_spine_implementation_close.md` per IOS §4.3 Stage 6. Note: Arc I-0100 close criteria per §4.5 requires every intake `SHIPPED/RETRACTED/DEFERRED/BLOCKED_ON_RESEARCH`. Currently 1 SHIPPED + 2 IN_ARC-flag-blocked. Close is blocked pending stop-condition discharge OR reclassification (see path (c)).
 
-**My read:** P4 stop conditions #2 + #3 are locally-verified after PR #2970; the last local gate is discharge #1 acceptance (assumed complete per handoff). The natural next-executable action is **(a) prod A1 verification** — without that, no prod canary can start and P4 stays IN_ARC. Once A1 is confirmed prod-side, (b) becomes the operator-driven flag flip. ADR-C and Stage 6 close remain blocked on stop-condition discharge.
+**My read:** (a)/(b)/(c) are the three high-level branches for handling activation without prod. (a) is "keep gathering local confidence." (b) is "declare LOCAL A1 the terminal validation for this regime and stop pretending a prod flip is imminent." (c) is "reclassify + close the arc, reopen when prod exists." (d)/(e)/(f) are orthogonal local work that stays available under any branch. Chris picks.
 
 ### Active SIGN pin
 
