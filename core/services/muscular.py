@@ -447,10 +447,12 @@ class MuscularSystemService:
         cutoff_24h = timezone.now() - timedelta(hours=24)
         weak_muscles = []
 
-        # Get agents with executions in last 24h
+        # Get agents with executions in last 24h.
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # per-agent success rate treats PA as a "muscle" incorrectly.
         agents_with_activity = AgentExecution.objects.filter(
             created_at__gte=cutoff_24h
-        ).values('agent__name').annotate(
+        ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
             total=Count('id'),
             successful=Count('id', filter=Q(status='completed')),
             failed=Count('id', filter=Q(status='failed'))
@@ -479,10 +481,13 @@ class MuscularSystemService:
         cutoff_24h = timezone.now() - timedelta(hours=24)
         overworked_muscles = []
 
-        # Get execution counts per agent
+        # Get execution counts per agent.
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # "overworked muscles" detection assumes each agent is a
+        # router-agent dispatch target, not the PA agentic loop.
         agent_counts = AgentExecution.objects.filter(
             created_at__gte=cutoff_24h
-        ).values('agent__name').annotate(
+        ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
             count=Count('id'),
             total_tokens=Sum('tokens_used'),
             total_cost=Sum('cost')

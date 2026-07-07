@@ -642,10 +642,15 @@ class LearningPatternEngine:
             # === Miner A: Agent Success Rate (from AgentExecution) ===
             from core.models_unified_system import AgentExecution
 
+            # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+            # per-agent success-rate learning patterns don't apply to
+            # PA agentic loop (PA is a meta-orchestrator, not a router
+            # agent). Learning system feeds for PA turns will require
+            # a separate design decision (Category C review).
             agent_stats = AgentExecution.objects.filter(
                 created_at__gte=since,
                 status__in=['completed', 'failed'],
-            ).values('agent__name').annotate(
+            ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
                 total=Count('id'),
                 completed=Count('id', filter=Q(status='completed')),
                 failed=Count('id', filter=Q(status='failed')),
