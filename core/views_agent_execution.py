@@ -765,10 +765,15 @@ def monitoring_alerts(request):
         now = timezone.now()
         cutoff = now - timedelta(hours=24)
 
-        # Check for agents with high failure rates
+        # Check for agents with high failure rates.
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # per-agent failure-rate alerts treat each agent__name as a
+        # router-agent job target; PA failures come from a different
+        # execution model. agent__name form is safer than
+        # input_data__source='pa' for pre-flag-flip rows (JSON NULL).
         agent_stats = AgentExecution.objects.filter(
             created_at__gte=cutoff
-        ).values('agent__name').annotate(
+        ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
             total=Count('id'),
             failed=Count('id', filter=Q(status='failed')),
         )
@@ -793,10 +798,13 @@ def monitoring_alerts(request):
         # Session 761: Raised from 30s to 60s - many agents legitimately take longer
         # (coordinators orchestrate sub-agents, research agents do deep queries,
         # ThinkingAgent does multi-step reasoning ~37s)
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # slow-agent alerts are for router-agent latency, not PA
+        # agentic loop latency (different execution model).
         slow_agents = AgentExecution.objects.filter(
             created_at__gte=cutoff,
             status='completed'
-        ).values('agent__name').annotate(
+        ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
             avg_time=Avg('execution_time_ms'),
             count=Count('id')
         ).filter(avg_time__gt=60000, count__gte=3)

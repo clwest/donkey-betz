@@ -351,10 +351,14 @@ def context_injection_metrics(request):
             'with_advisor_context': with_advisor,
         })
 
-    # Get per-agent breakdown
+    # Get per-agent breakdown.
+    # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+    # per-agent integration-health breakdown treats each agent__name
+    # as a router-agent target; PA agentic loop is a distinct
+    # execution model.
     agent_metrics = AgentExecution.objects.filter(
         created_at__gte=last_7d
-    ).values('agent__name').annotate(
+    ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
         total=Count('id'),
         avg_time=Avg('execution_time_ms'),
     ).order_by('-total')[:20]

@@ -166,10 +166,16 @@ def analytics_summary(request):
         created_at__gte=last_7d
     ).count()
 
-    # Top agents today
+    # Top agents today.
+    # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+    # "Top agents" ranking treats each agent__name as a router-agent
+    # dispatch target; PA agentic loop volume would dominate the
+    # ranking incorrectly. Use agent__name form per ADR-0002 F1 fold
+    # equivalent (Postgres JSONField NULL-semantics make the
+    # input_data__source='pa' form unsafe for pre-flag-flip rows).
     top_agents = AgentExecution.objects.filter(
         created_at__gte=last_24h
-    ).values('agent__name').annotate(
+    ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
         count=Count('id')
     ).order_by('-count')[:5]
 
