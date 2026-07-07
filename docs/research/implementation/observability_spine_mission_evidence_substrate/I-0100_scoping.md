@@ -1,11 +1,13 @@
 ---
 title: "Arc I-0100 — Observability Correlation Spine + Mission Evidence Substrate (Stages 1–2)"
-status: active
+status: closed-local
 authority: implementation-scoping
 arc_id: I-0100
 arc_slug: observability_spine_mission_evidence_substrate
-stage: 2
-stage_state: active
+stage: 6
+stage_state: closed
+canonical_close_doc: I-010099_observability_spine_implementation_close.md
+close_ratified_pr: 2976
 stage_transition_history:
   - {stage: 1, state: exit-gate-cleared, at: 2026-07-06, event: "Rigby SIGN Cycle 1 SIGN-with-edits + Chris agree-all-F1-F8 ratification (Stage 1 arc-open bundle #2945 merged)"}
   - {stage: 1, state: p0-prep-in-flight, at: 2026-07-06, event: "P0 prep PR #2948 opened (IB-Q1-BOOT-01 discharge; ADR corpus establishment)"}
