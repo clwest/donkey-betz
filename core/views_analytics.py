@@ -1504,11 +1504,19 @@ def get_chart_content_production(request):
             day = timezone.now() - timedelta(days=i)
             day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_start + timedelta(days=1)
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.1 #1 ratified): exclude
+            # PA meta-agent rows — daily completion counts feed the
+            # production-trend chart; readers interpret the per-day
+            # number as router-agent throughput. PA agentic loop volume
+            # would inflate the trend without semantic value. Use
+            # agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip rows).
             count = AgentExecution.objects.filter(
                 created_at__gte=day_start,
                 created_at__lt=day_end,
                 status='completed'
-            ).count()
+            ).exclude(agent__name='PersonalAssistant').count()
             executions_by_day.append({
                 'date': day_start.strftime('%Y-%m-%d'),
                 'count': count
@@ -1556,10 +1564,18 @@ def get_chart_revenue(request):
             day = timezone.now() - timedelta(days=i)
             day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_start + timedelta(days=1)
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.1 #2 ratified): exclude
+            # PA meta-agent rows — daily cost feeds the revenue chart;
+            # readers interpret per-day cost as router-agent-job cost.
+            # PA agentic loop cost is a separate cost category and
+            # skews the revenue attribution. Use agent__name form per
+            # ADR-0002 F1 fold equivalent (Postgres JSONField
+            # NULL-semantics make the input_data__source='pa' form
+            # unsafe for pre-flag-flip rows).
             executions = AgentExecution.objects.filter(
                 created_at__gte=day_start,
                 created_at__lt=day_end
-            )
+            ).exclude(agent__name='PersonalAssistant')
             day_cost = sum(float(e.cost or 0) for e in executions)
             total_cost += day_cost
             daily_costs.append({

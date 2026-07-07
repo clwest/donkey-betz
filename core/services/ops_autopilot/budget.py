@@ -595,12 +595,26 @@ class ROIEnforcer:
 
         try:
             from core.models_unified_system import AgentExecution
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.1 #6 ratified):
+            # explicit PA exclude. The agent__name__in allowlist above
+            # already prevents PA from naturally appearing in the
+            # aggregate (agent_names comes from the agent_spend list,
+            # which does not include PA). The explicit .exclude() here
+            # is defensive + documents the semantic intent: this
+            # aggregation attributes router-agent ROI outcomes only.
+            # If a future caller passes 'PersonalAssistant' in
+            # agent_names, this exclude keeps ROI attribution correct.
+            # Use agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip rows).
             outcomes = list(
                 AgentExecution.objects.filter(
                     created_at__gte=window_start,
                     status='completed',
                     agent__name__in=agent_names,
-                ).values('agent__name').annotate(
+                ).exclude(agent__name='PersonalAssistant').values(
+                    'agent__name'
+                ).annotate(
                     completed=Count('id'),
                 )
             )

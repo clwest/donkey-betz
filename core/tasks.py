@@ -10453,10 +10453,20 @@ def _gather_live_system_metrics():
     # =========================================================================
     try:
         from core.models_unified_system import AgentExecution
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.1 #5 ratified): exclude
+        # PA meta-agent rows — top_failing_agents ranks router-agent
+        # job failures in the periodic system SLO report; PA agentic
+        # loop failures would dominate the ranking incorrectly. Same
+        # shape as PR-A3 top_failing_agents_24h. Use agent__name form
+        # per ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form unsafe
+        # for pre-flag-flip rows).
         recent_failures = AgentExecution.objects.filter(
             status='failed',
             created_at__gte=last_7d
-        ).values('agent__name').annotate(count=Count('id')).order_by('-count')[:10]
+        ).exclude(agent__name='PersonalAssistant').values(
+            'agent__name'
+        ).annotate(count=Count('id')).order_by('-count')[:10]
         metrics['errors']['top_failing_agents'] = list(recent_failures)
     except Exception as e:
         metrics['errors']['failing_agents_error'] = str(e)
