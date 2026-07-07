@@ -579,8 +579,18 @@ def monitoring_dashboard(request):
         delta = period_map.get(period, timedelta(hours=24))
         cutoff = timezone.now() - delta
 
-        # Get executions in the period
-        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+        # Get executions in the period.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Q5 Rigby SIGN-clean +
+        # Chris agree-all 2026-07-06 → exclude_pa): performance
+        # overview reflects router-agent job health/throughput; PA
+        # agentic loop rows distort baseline and mislead the
+        # success/failure metric family. Use agent__name form per
+        # ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
+        executions = AgentExecution.objects.filter(
+            created_at__gte=cutoff
+        ).exclude(agent__name='PersonalAssistant')
 
         # Overall metrics
         total_executions = executions.count()

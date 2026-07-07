@@ -5215,8 +5215,19 @@ def _impl_agent_daily_summary():
         # Gather daily statistics
         yesterday = timezone.now() - timedelta(days=1)
 
-        # Agent executions
-        executions = AgentExecution.objects.filter(created_at__gte=yesterday)
+        # Agent executions.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 4 Q4b Rigby
+        # SIGN-with-edits + Chris agree-all 2026-07-06 → exclude_pa):
+        # daily-stats reporter shares the digest semantic with
+        # tasks.py:5576 — cross-source router-agent throughput. PA
+        # secondary line (Q4b edit fold) deferred as separate
+        # backlog item per PR-A6 scope. Use agent__name form per
+        # ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
+        executions = AgentExecution.objects.filter(
+            created_at__gte=yesterday
+        ).exclude(agent__name='PersonalAssistant')
         execution_count = executions.count()
         successful = executions.filter(status='completed').count()
         failed = executions.filter(status='failed').count()
