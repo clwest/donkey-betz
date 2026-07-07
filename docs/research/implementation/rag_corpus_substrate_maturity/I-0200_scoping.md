@@ -1,13 +1,18 @@
 ---
-title: "Arc I-0200 — RAG Corpus Substrate Maturity Gradient (Stage 1; contingency-gated seed with Authority per-plane posture fallback)"
+title: "Arc I-0200 — RAG Corpus Substrate Maturity Gradient (Stages 1–2; default path locked; ADR-0004 design-prep in flight)"
 status: active
 authority: implementation-scoping
 arc_id: I-0200
 arc_slug: rag_corpus_substrate_maturity
 fallback_arc_slug: authority_per_plane_posture
-stage: 1
-stage_state: active
+stage: 2
+stage_state: design-prep-in-flight
+stage_transition_history:
+  - {stage: 1, state: exit-gate-cleared, at: 2026-07-07, event: "Rigby SIGN Cycle 1 SIGN-with-edits MED-HIGH + Chris agree-all-F9-F14 (Stage 1 arc-open bundle PR #2980 merged as 87dbd95a)"}
+  - {stage: 1, state: p1-close-ratified, at: 2026-07-07, event: "P1 severability determination CLOSED SEVERABLE per Chris Agree-All (Rigby SIGN-with-edits MED-HIGH + F15-F16 folds; PR #2982 merged as c39db4394 — supersedes auto-closed #2981 post-#2980 base-branch-deletion)"}
+  - {stage: 2, state: design-prep-in-flight, at: 2026-07-07, event: "Stage 2 opened per Chris explicit directive following P1 close. IOS v1.5 §4.3 Stage 2 Entry gate satisfied — ADR corpus precondition SATISFIED via Arc I-0100 PR #2948; opening event = Chris explicit directive per Entry-gate clause 2(a). Design-prep first-class artifact authoring opened per IOS v1.5 §4.3.a mandatory rule; §4.3.0 v1.5 stage_state flip active → design-prep-in-flight applied. ADR-0004 authoring DEFERRED per Chris directive 'Do not author ADR-0004 in this turn.'"}
 session_opened: 2701
+session_stage_2_opened: 2701
 opened: 2026-07-07
 ratifier: chris
 first_arc_override: false
@@ -365,9 +370,9 @@ Grep-friendly enumeration of every exit-gate item for every planned stage. One l
 **F13 clarification (Rigby SIGN Cycle 1 fold) — canonical cold-resume tokens** (single-line grep target so `grep CURRENT_STAGE docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md` returns arc state without reading the checklist):
 
 ```
-CURRENT_STAGE=1
-CURRENT_GATE=P1_SEVERABILITY_DETERMINED_SEVERABLE_pending_Chris_directive_to_open_Stage_2
-CURRENT_STATUS=P1-SIGN-with-edits-MED-HIGH-F15-F16-Chris-Agree-All-2026-07-07-IB-2199-T0-01-flipped-IN_ARC-I-0200
+CURRENT_STAGE=2
+CURRENT_GATE=Stage_2_design_prep_RATIFIED_pending_design_prep_PR_merge_then_ADR-0004_body_drafting
+CURRENT_STATUS=Design-prep-Rigby-SIGN-with-edits-MED-HIGH-F17-F18-Chris-Agree-All-2026-07-07-ADR-0004-body-DEFERRED-until-design-prep-PR-merges
 ```
 
 ```
@@ -407,8 +412,9 @@ CURRENT_STATUS=P1-SIGN-with-edits-MED-HIGH-F15-F16-Chris-Agree-All-2026-07-07-IB
   [x] P1 Chris ratifies severability determination outcome via "Agree All" 2026-07-07
   [x] Path branch executed (SEVERABLE outcome): BACKLOG IB-2199-T0-01 TRIAGED → IN_ARC (I-0200); IB-1999-T0-01 remains TRIAGED for future arc
   [ ] Companion-row admission decisions recorded per Axis 4 (binary admit/hold-out per candidate row) — DEFERRED per Chris directive "Do not admit companion rows"; happens as a distinct Stage 2 opening event (or explicit Chris directive), not as part of P1
-  [ ] P2 design-prep doc authored per IOS v1.5 §4.3.a mandatory design-prep rule — NOT STARTED per Chris directive "Do not author the ADR yet"
-  [ ] P2 ADR authored (`ADR-000N-rag-corpus-substrate-maturity-gradient.md`) — MUST be PROVISIONAL per §6 required ADR shape from I-0200_severability_determination.md (Option a `status: accepted` + `provisional: true` + `provisional_reason: "BOR-01 undischarged"` OR Option b `status: provisional` with explicit ADR §1 definition)
+  [x] P2 design-prep doc authored per IOS v1.5 §4.3.a mandatory design-prep rule — `I-0200_design_prep_rag_corpus_substrate_maturity.md` drafted 2026-07-07 at Stage 2 opening ceremony per Chris explicit directive; Rigby SIGN Cycle 1 SIGN-with-edits MED-HIGH on arc-scoped pin `pa-1b76ee75adbf4031`; folds F17 (C9 downgrade to recommended-ops-constraint) + F18 (Stage 5 verification interface tool-realistic) applied
+  [x] Chris ratifies design-prep via "Agree All" 2026-07-07 — Option 1 accepted; F17-F18 folds ratified; ADR-0004 body drafting authorized post-PR-merge (Chris-directed arc-scoped IOS §14.2 workflow refinement per §9.2 recording — design-prep independently SIGN'd + Chris-ratified BEFORE ADR body drafting; deviates from §4.3.a default)
+  [ ] P2 ADR-0004 authored (`ADR-0004-rag-corpus-substrate-maturity-gradient.md`) — DEFERRED per Chris directive "Do not author ADR-0004 in this turn"; MUST be PROVISIONAL per §6 required ADR shape from I-0200_severability_determination.md (Option a `status: accepted` + `provisional: true` + `provisional_reason: "BOR-01 undischarged"` OR Option b `status: provisional` with explicit ADR §1 definition)
   [ ] P2 Rigby SIGN Cycle 1 on ADR
   [ ] P2 Chris "agree all" or explicit ratification of ADR; ADR frontmatter flips to `status: accepted`
   [ ] P2 PR merged; BACKLOG row flips `IN_ARC → SHIPPED` with `pr_refs` populated + `adr_ref` populated per IOS §2.2 v1.4 Discipline B inline syntax
