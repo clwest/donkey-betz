@@ -366,8 +366,8 @@ Grep-friendly enumeration of every exit-gate item for every planned stage. One l
 
 ```
 CURRENT_STAGE=1
-CURRENT_GATE=Stage_1_EXIT_CLEARED_pending_P1_severability_determination
-CURRENT_STATUS=SIGN-with-edits-MED-HIGH-folds-F9-F14-Chris-Agree-All-2026-07-07
+CURRENT_GATE=P1_SEVERABILITY_DETERMINED_SEVERABLE_pending_Chris_directive_to_open_Stage_2
+CURRENT_STATUS=P1-SIGN-with-edits-MED-HIGH-F15-F16-Chris-Agree-All-2026-07-07-IB-2199-T0-01-flipped-IN_ARC-I-0200
 ```
 
 ```
@@ -400,17 +400,15 @@ CURRENT_STATUS=SIGN-with-edits-MED-HIGH-folds-F9-F14-Chris-Agree-All-2026-07-07
   [x] Scoping doc `status: draft → active` (frontmatter updated at Chris ratification 2026-07-07)
 
 [STAGE 2 DESIGN-PREP + ADR (parameterized on severability outcome)]
-  [ ] Stage 1 exit-gate cleared (all above [x])
-  [ ] IOS v1.5 §4.3 Stage 2 Entry gate satisfied — ADR corpus precondition SATISFIED (Arc I-0100 PR #2948 shipped docs/adr/ + ADR-0001)
-  [ ] P1 severability determination doc drafted (`I-0200_severability_determination.md`); Q-Sev-1 + Q-Sev-2 + Q-Sev-3 answered with evidence
-  [ ] P1 Rigby SIGN Cycle 1 on severability determination
-  [ ] P1 Chris ratifies severability determination outcome via "Agree All"
-  [ ] Path branch executed:
-      - IF severable: BACKLOG IB-2199-T0-01 TRIAGED → IN_ARC (I-0200); IB-1999-T0-01 remains TRIAGED
-      - IF NOT severable: BACKLOG IB-2199-T0-01 TRIAGED → BLOCKED_ON_RESEARCH; IB-1999-T0-01 TRIAGED → IN_ARC (I-0200); arc folder rename (rag_corpus_substrate_maturity/ → authority_per_plane_posture/); scoping doc frontmatter `arc_slug` flip
-  [ ] Companion-row admission decisions recorded per Axis 4 (binary admit/hold-out per candidate row)
-  [ ] P2 design-prep doc authored per IOS v1.5 §4.3.a mandatory design-prep rule
-  [ ] P2 ADR authored (`ADR-000N-rag-corpus-substrate-maturity-gradient.md` OR `ADR-000N-authority-per-plane-posture.md`)
+  [x] Stage 1 exit-gate cleared (all above [x])
+  [x] IOS v1.5 §4.3 Stage 2 Entry gate satisfied — ADR corpus precondition SATISFIED (Arc I-0100 PR #2948 shipped docs/adr/ + ADR-0001)
+  [x] P1 severability determination doc drafted (`I-0200_severability_determination.md`); Q-Sev-1 + Q-Sev-2 + Q-Sev-3 answered with evidence
+  [x] P1 Rigby SIGN Cycle 1 on severability determination — SIGN-with-edits MED-HIGH; F15 (Stage 5 verification scope documentation-cross-check-only lock) + F16 (companion outcomes not re-ratified by P1) applied
+  [x] P1 Chris ratifies severability determination outcome via "Agree All" 2026-07-07
+  [x] Path branch executed (SEVERABLE outcome): BACKLOG IB-2199-T0-01 TRIAGED → IN_ARC (I-0200); IB-1999-T0-01 remains TRIAGED for future arc
+  [ ] Companion-row admission decisions recorded per Axis 4 (binary admit/hold-out per candidate row) — DEFERRED per Chris directive "Do not admit companion rows"; happens as a distinct Stage 2 opening event (or explicit Chris directive), not as part of P1
+  [ ] P2 design-prep doc authored per IOS v1.5 §4.3.a mandatory design-prep rule — NOT STARTED per Chris directive "Do not author the ADR yet"
+  [ ] P2 ADR authored (`ADR-000N-rag-corpus-substrate-maturity-gradient.md`) — MUST be PROVISIONAL per §6 required ADR shape from I-0200_severability_determination.md (Option a `status: accepted` + `provisional: true` + `provisional_reason: "BOR-01 undischarged"` OR Option b `status: provisional` with explicit ADR §1 definition)
   [ ] P2 Rigby SIGN Cycle 1 on ADR
   [ ] P2 Chris "agree all" or explicit ratification of ADR; ADR frontmatter flips to `status: accepted`
   [ ] P2 PR merged; BACKLOG row flips `IN_ARC → SHIPPED` with `pr_refs` populated + `adr_ref` populated per IOS §2.2 v1.4 Discipline B inline syntax
