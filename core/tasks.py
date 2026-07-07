@@ -5573,7 +5573,19 @@ def _build_operational_context():
     # --- Agent Executions (72h) ---
     try:
         from core.models import AgentExecution
-        execs = AgentExecution.objects.filter(created_at__gte=window_72h)
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 4 Q4a Rigby
+        # SIGN-with-edits + Chris agree-all 2026-07-06 → exclude_pa):
+        # Chris's daily 72h digest "agent executions summary" reads
+        # as router-agent job throughput; PA agentic loop volume
+        # would inflate counts without representing shipped work.
+        # Relabel + optional secondary PA line deferred as separate
+        # backlog item per PR-A6 scope. Use agent__name form per
+        # ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
+        execs = AgentExecution.objects.filter(
+            created_at__gte=window_72h
+        ).exclude(agent__name='PersonalAssistant')
         total = execs.count()
         completed = execs.filter(status='completed').count()
         failed = execs.filter(status='failed').count()

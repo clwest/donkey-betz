@@ -1480,13 +1480,20 @@ def get_chart_content_production(request):
     # Get content creation stats from agent executions (content-producing agents)
     content_by_type = {}
     try:
-        # Count executions by agent type as a proxy for content production
+        # Count executions by agent type as a proxy for content production.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Q5 Rigby SIGN-clean +
+        # Chris agree-all 2026-07-06 → exclude_pa): if PA gains a
+        # writer subskill later, promotion happens via explicit
+        # capability flag, not implicit inclusion. Use agent__name
+        # form per ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form unsafe
+        # for pre-flag-flip rows).
         content_agents = ['ImageAgent', 'VideoAgent', 'AudioAgent', 'ContentWriterAgent',
                          'PodcastCoordinatorAgent', 'ResearchAgent', 'ThreeDAgent']
         executions = AgentExecution.objects.filter(
             created_at__gte=cutoff,
             status='completed'
-        )
+        ).exclude(agent__name='PersonalAssistant')
         for exec in executions:
             agent_name = exec.agent_name or 'other'
             if agent_name in content_agents:
@@ -2516,16 +2523,24 @@ def forecast_v2(request):
             day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_start + timedelta(days=1)
 
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 1 Q1a
+            # Rigby SIGN-with-edits + Chris agree-all 2026-07-06 →
+            # exclude_pa): forecast historical inputs project
+            # router-agent throughput/cost; PA rows inflate baseline
+            # without representing routed job load. Use agent__name
+            # form per ADR-0002 F1 fold equivalent (Postgres JSONField
+            # NULL-semantics make the input_data__source='pa' form
+            # unsafe for pre-flag-flip rows).
             if metric == 'executions':
                 value = AgentExecution.objects.filter(
                     created_at__gte=day_start,
                     created_at__lt=day_end
-                ).count()
+                ).exclude(agent__name='PersonalAssistant').count()
             elif metric == 'cost':
                 execs = AgentExecution.objects.filter(
                     created_at__gte=day_start,
                     created_at__lt=day_end
-                )
+                ).exclude(agent__name='PersonalAssistant')
                 value = sum(float(e.cost or 0) for e in execs)
             else:
                 value = 0
@@ -2587,10 +2602,19 @@ def trends_v2(request):
             day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
             day_end = day_start + timedelta(days=1)
 
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 1 Q1b
+            # Rigby SIGN-clean + Chris agree-all 2026-07-06 →
+            # exclude_pa): trends_v2 daily aggregation includes
+            # success_rate, which PA rows would poison at the
+            # denominator (PA reflects orchestration/UX, not
+            # router-agent job health). Use agent__name form per
+            # ADR-0002 F1 fold equivalent (Postgres JSONField
+            # NULL-semantics make the input_data__source='pa' form
+            # unsafe for pre-flag-flip rows).
             execs = AgentExecution.objects.filter(
                 created_at__gte=day_start,
                 created_at__lt=day_end
-            )
+            ).exclude(agent__name='PersonalAssistant')
 
             if metric == 'executions':
                 value = execs.count()
@@ -2760,7 +2784,19 @@ def export_v2(request):
     }
 
     try:
-        executions = AgentExecution.objects.filter(created_at__gte=cutoff).order_by('-created_at')[:100]
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 1 Q1c
+        # Rigby SIGN-with-edits + Chris agree-all 2026-07-06 →
+        # exclude_pa): export_v2 raw executions dump is a
+        # user-facing "download my recent activity" surface; users
+        # expect agent-run rows they initiated/owned, not internal
+        # PA loop rows. Debug/opt-in inclusion parameter deferred
+        # as separate backlog item per PR-A6 scope. Use agent__name
+        # form per ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
+        executions = AgentExecution.objects.filter(
+            created_at__gte=cutoff
+        ).exclude(agent__name='PersonalAssistant').order_by('-created_at')[:100]
 
         for exec in executions:
             export_data['executions'].append({

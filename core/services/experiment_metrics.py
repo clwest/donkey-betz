@@ -146,11 +146,20 @@ class ExperimentMetricsService:
         effective_start = max(window_start, experiment_start)
 
         try:
-            # Session 841: Filter by THIS experiment only, not all executions
+            # Session 841: Filter by THIS experiment only, not all executions.
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Q5 Rigby SIGN-clean
+            # + Chris agree-all 2026-07-06 → exclude_pa): experiment
+            # error-rate should isolate the experimented system; PA
+            # orchestration failures are confounders unless the
+            # experiment is explicitly about PA routing. Use
+            # agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip
+            # rows).
             executions = AgentExecution.objects.filter(
                 created_at__gte=effective_start,
                 experiment=self.experiment  # Scope to this experiment
-            )
+            ).exclude(agent__name='PersonalAssistant')
 
             total = executions.count()
 
@@ -163,7 +172,7 @@ class ExperimentMetricsService:
                 )
                 executions = AgentExecution.objects.filter(
                     created_at__gte=effective_start,
-                )
+                ).exclude(agent__name='PersonalAssistant')
                 total = executions.count()
 
             # Session 841: Require minimum sample size before calculating error rate

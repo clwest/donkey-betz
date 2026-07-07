@@ -209,10 +209,21 @@ class PAKnowledgeInjector:
 
             last_24h = timezone.now() - timedelta(hours=24)
 
-            # Get execution stats
+            # Get execution stats.
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 3 Q3a
+            # Rigby SIGN-clean + Chris agree-all 2026-07-06 →
+            # exclude_pa): when PA reads its own agent-execution
+            # context for downstream routing, including PA rows
+            # creates a self-referential feedback loop where PA
+            # "learns" it is the top agent by generating its own
+            # rows — pure routing-context noise. Use agent__name
+            # form per ADR-0002 F1 fold equivalent (Postgres
+            # JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip
+            # rows).
             executions = AgentExecution.objects.filter(
                 created_at__gte=last_24h
-            )
+            ).exclude(agent__name='PersonalAssistant')
 
             total_executions = executions.count()
             successful = executions.filter(success=True).count()

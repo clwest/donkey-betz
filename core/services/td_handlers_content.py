@@ -3101,7 +3101,18 @@ class ContentHandlersMixin:
         # AgentExecution has no 'success' field — use status='completed'/'failed'
 
         if action == 'recent':
-            qs = AgentExecution.objects.filter(created_at__gte=cutoff)
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Q5 Rigby
+            # SIGN-with-edits + Chris agree-all 2026-07-06 →
+            # exclude_pa): user-facing hourly activity log — users
+            # expect meaningful actions, not PA meta-loop rows.
+            # Debug/opt-in inclusion parameter deferred as separate
+            # backlog item per PR-A6 scope. Use agent__name form
+            # per ADR-0002 F1 fold equivalent (Postgres JSONField
+            # NULL-semantics make the input_data__source='pa' form
+            # unsafe for pre-flag-flip rows).
+            qs = AgentExecution.objects.filter(
+                created_at__gte=cutoff
+            ).exclude(agent__name='PersonalAssistant')
 
             if agent_name:
                 qs = qs.filter(agent__name__icontains=agent_name)

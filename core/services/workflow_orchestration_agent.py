@@ -4838,7 +4838,20 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             window_minutes = 30
             since = _tz.now() - timedelta(minutes=window_minutes)
 
-            ae_qs = AgentExecution.objects.filter(created_at__gte=since)
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Q5 Rigby
+            # SIGN-with-edits + Chris agree-all 2026-07-06 →
+            # exclude_pa): 30-min liveness health check should cover
+            # runnable worker agents; PA is a meta-orchestrator with
+            # its own separate health surface (SIGN edit fold:
+            # optionally add a separate PA-loop health metric,
+            # deferred as backlog item per PR-A6 scope). Use
+            # agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip
+            # rows).
+            ae_qs = AgentExecution.objects.filter(
+                created_at__gte=since,
+            ).exclude(agent__name='PersonalAssistant')
             ae_count = ae_qs.count()
             distinct_agents = ae_qs.values_list(
                 'agent__name', flat=True,

@@ -113,7 +113,21 @@ class PlatformContextService:
             from django.db.models import Count, Q
 
             cutoff = timezone.now() - timedelta(hours=hours_back)
-            qs = AgentExecution.objects.filter(created_at__gte=cutoff)
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 3 Q3b
+            # Rigby SIGN-with-edits + Chris agree-all 2026-07-06 →
+            # default exclude_pa): multi-caller API needs stable
+            # default semantics (router-agent jobs). include_pa
+            # opt-in parameter deferred as separate backlog item
+            # per PR-A6 scope (SIGN edit fold: parameterize as
+            # include_pa: bool = False so ops-dashboard callers
+            # that need full-platform totals can opt in). Use
+            # agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip
+            # rows).
+            qs = AgentExecution.objects.filter(
+                created_at__gte=cutoff
+            ).exclude(agent__name='PersonalAssistant')
             if agent_names:
                 qs = qs.filter(agent__name__in=agent_names)
 
