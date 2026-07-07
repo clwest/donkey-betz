@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-07T00:03:24+00:00",
+    "generated": "2026-07-07T00:25:11+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "719af21e0cf2",
+    "git_head": "f92f285f1bba",
     "doc_count": 2424,
-    "commit_count": 7682,
+    "commit_count": 7686,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1242,
+      "commit_count": 1244,
       "prs": [
         10,
         11,
@@ -3027,7 +3027,8 @@
         2950,
         2951,
         2952,
-        2953
+        2953,
+        2956
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7352,7 +7353,7 @@
         2502,
         2504
       ],
-      "commit_count": 198,
+      "commit_count": 200,
       "prs": [
         2213,
         2219,
@@ -7467,7 +7468,8 @@
         2950,
         2951,
         2952,
-        2953
+        2953,
+        2956
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -35564,18 +35566,19 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "3b26102e",
+      "first_commit_sha": "78db3da0",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture (#2953)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 P2 SHIPPED + P4 code-merged-flag-blocked \u2014 housekeeping (#2956)",
       "sessions_touched": [],
-      "commit_count": 12,
+      "commit_count": 14,
       "prs": [
         2941,
         2945,
         2948,
         2950,
         2951,
-        2953
+        2953,
+        2956
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {

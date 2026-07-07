@@ -2,7 +2,7 @@
 
 ---
 
-## READ THIS FIRST — ARC I-0100 STAGE 4 IN FLIGHT; P2 SHIPPED + P4 CODE-MERGED-FLAG-BLOCKED; P3 NEXT
+## READ THIS FIRST — ARC I-0100 STAGE 4 COMPLETE; ALL 3 RUNTIME PRs MERGED; ARC PREPARING FOR CLOSE
 
 **Refreshed 2026-07-06 per IOS §15.15.**
 
@@ -17,47 +17,49 @@
 
 ### Current stage
 
-- **Stage:** `2` (Stage 2 architecture complete; Stage 3 pre-flight running per-PR; runtime PRs shipping)
+- **Stage:** `2` (Stage 2 architecture + Stage 4 runtime PRs complete; Stage 5 verification per-PR done; Stage 6 close prep next)
 - **`stage_state`:** `active`
 
-### Runtime discharge progress
+### Runtime discharge — all 3 T1 PRs merged 2026-07-06
 
-| Intake | ADR | PR | Merged | Status | Flag |
-|--------|-----|-----|--------|--------|------|
-| **IB-1799-T1-01** (P2) | SPEC_COMPLETE (F3) | #2954 | 2026-07-06 | **SHIPPED** | `TOOL_CALL_TRACE_ID_ENFORCED=false` (default; flag-flip is operator decision) |
-| **IB-1799-T1-02** (P4) | ADR-0002 | #2955 | 2026-07-06 | **IN_ARC — code-merged, flag-flip-blocked** | `PA_AGENT_EXECUTION_WRITE_ENABLED=false` (3 STOP CONDITIONS block flip) |
-| **IB-1799-T1-03** (P3) | ADR-0003 | (not opened) | — | pending Stage 3 pre-flight assumption-lock gate | `RIGBY_DELEGATION_ENABLED=false` |
-| **IB-1799-T0-01** (ADR-C track, F1 fold) | ADR-0004 (not authored) | — | — | admitted architecture-only | N/A |
-| **IB-1799-T0-02** (retention input to ADR-C, F2 fold) | ADR-0004 (not authored) | — | — | conditional admit | N/A |
+| Intake | ADR | PR | Status | Flag |
+|--------|-----|-----|--------|------|
+| **IB-1799-T1-01** (P2) | SPEC_COMPLETE (F3) | #2954 | **SHIPPED** | `TOOL_CALL_TRACE_ID_ENFORCED=false` (Chris operator decision only) |
+| **IB-1799-T1-02** (P4) | ADR-0002 | #2955 | **IN_ARC** — code-merged, flag-flip-blocked | `PA_AGENT_EXECUTION_WRITE_ENABLED=false` (3 STOP CONDITIONS) |
+| **IB-1799-T1-03** (P3) | ADR-0003 | #2957 | **IN_ARC** — code-merged, flag-flip-blocked | `RIGBY_DELEGATION_ENABLED=false` (4 STOP CONDITIONS) |
 
-### P4 stop conditions (block flag flip to True — DO NOT set flag=true until all three discharged)
+**Housekeeping PR #TBD** (this file's refresh) is the associated post-merge housekeeping for P3.
 
-1. **~150-site `AgentExecution` consumer sweep.** Each site classified as (a) source-scoped correctly with `.exclude(input_data__source='pa')` OR (b) intentionally cross-source. Categorization pattern sampled in #2955 PR body.
-2. **Early-return path finalization decision.** Chris directive OR Claude analysis on whether injection-blocked (line 721) and triage-mode (line 746) paths should also create AgentExecution rows.
-3. **`LLMCallEvent.execution_id` end-to-end join verification.** Post-flag-flip Stage 5 verification confirms the correlation contract populates `execution_id` for PA-driven LLM calls per ADR-0002 §3.3.
+### Deployment-state observation (memory-only per Chris directive)
 
-Row IB-1799-T1-02 flips `IN_ARC → SHIPPED` only when Chris ratifies all three discharge + directs the flag flip.
+Both P3 and P4 required an implicit intermediate state between "code merged" and "runtime activated" — a "code-merged, runtime intentionally blocked by deployment gates" state. IOS §2.2 status enum has no name for this. **Per Chris 2026-07-06 directive: four-trigger threshold applies. Do NOT propose IOS v1.6 until pattern surfaces in 2+ more independent arcs.** See memory entry `project_deployment_state_between_merged_and_active.md`.
+
+### Stop conditions summary
+
+**IB-1799-T1-02 (P4) — 3 stop conditions before `PA_AGENT_EXECUTION_WRITE_ENABLED=True`:**
+1. ~150-site `AgentExecution` consumer sweep + classification.
+2. Early-return path finalization decision (injection blocked, triage mode).
+3. `LLMCallEvent.execution_id` end-to-end join verification post-flag-flip.
+
+**IB-1799-T1-03 (P3) — 4 stop conditions before `RIGBY_DELEGATION_ENABLED=True`:**
+1. Monitoring surface integration (`MONITORING_SURFACE_INTEGRATED=True` in `core/services/delegation_auto_disable.py`).
+2. Phase 2 evidence bundle Chris review per ADR-0003 §3.1 F1.
+3. Re-verification of A1-A6 assumption-lock gates at flag-flip time.
+4. Ratified §3.1 F1 entry gate.
+
+**IB-1799-T1-01 (P2)** — no stop conditions; SHIPPED under flag OFF.
 
 ### Next executable action
 
-**Open P3 Stage 3 pre-flight** for IB-1799-T1-03 per Chris sequencing directive. Requires ADR-0003 §3.3.a 6-row assumption-lock table to pass:
+**Chris sequencing directive determines next action.** Candidate paths:
 
-1. `DELEGATION_ROUTING` cardinality == 1 (single-agent `monitor` → `TrendAnalysisAgent`).
-2. Delegable-work-item daily cadence `< 10/day`.
-3. Handler code (`rigby_delegation_signals.on_delegation_lifecycle`) unchanged since 2026-07-06.
-4. `RIGBY_DELEGATION_ENABLED` remains sole runtime gate (no `MISSION_RUNNER_ENABLED` code references).
-5. MissionRunner class contract unchanged (nine invariants I1-I9 per S1705 F1).
-6. Existing 3-employee OpsRun/OpsRunEvent write path unaffected.
+- **(a) Address P4 stop condition #1** (~150-site consumer sweep). Batchable; low risk. Progresses P4 toward SHIPPED.
+- **(b) Address P4 stop condition #2** (early-return path decision). Small — either move create earlier in `process_message` OR add finalize at early-return sites. Progresses P4 toward SHIPPED.
+- **(c) Address P3 stop condition #1** (monitoring surface integration). Identify which monitoring/ops surface consumes `delegation_auto_disable` constants + wire actual flag-flip-to-False action on threshold breach.
+- **(d) Author ADR-0004 (ADR-C, optional per F4).** D74 six-axis correlation-spine posture. Architecture-only per F1 fold; requires standalone design-prep per IOS v1.5. Ratifies with retention as INPUT per F2 fold.
+- **(e) Stage 6 arc-close preparation.** Draft the arc canonical close doc `I-010099_observability_spine_implementation_close.md` per IOS §4.3 Stage 6. Note: Arc I-0100 close criteria per §4.5 requires every intake `SHIPPED/RETRACTED/DEFERRED/BLOCKED_ON_RESEARCH`. Currently 1 SHIPPED + 2 IN_ARC-flag-blocked. Close is blocked pending stop-condition discharge OR reclassification.
 
-If all 6 pass: author P3 PR (`manage.py delegation_lifecycle_smoke_test` command + Phase 1 exercise + Phase 2 flag-flip trigger + auto-disable trigger implementation).
-
-If any assumption fails: snap back to design-prep Option 2b full-3-phase per ADR-0003 §3.3 reversibility.
-
-**Alternative next actions** (Chris sequencing dependent):
-
-- **(a) Address a subset of P4 stop conditions.** Consumer sweep sampling / classification for a batch of the 150 sites; OR early-return path decision; OR LLMCallEvent wrapper contextvar work.
-- **(b) Author ADR-0004 (ADR-C, optional per F4).** D74 six-axis correlation-spine posture. Architecture-only per F1 fold; requires standalone design-prep per IOS v1.5.
-- **(c) Stage 6 arc-close preparation.** After all runtime discharges complete (SHIPPED), draft the arc canonical close doc.
+**My read:** Chris's sequencing directive is authoritative. P3 + P4 stop conditions are the natural next work — they progress two IN_ARC rows toward SHIPPED. ADR-C is optional and can be deferred to arc close prep. Stage 6 arc close is blocked until stop conditions discharge.
 
 ### Active SIGN pin
 
@@ -68,44 +70,62 @@ If any assumption fails: snap back to design-prep Option 2b full-3-phase per ADR
 
 | # | Title | State |
 |---|-------|-------|
-| **#TBD** (this housekeeping PR) | Arc I-0100 P4 merge annotations + BACKLOG update | `OPEN` (awaiting Chris review) |
+| **#TBD** (this housekeeping PR) | Arc I-0100 P3 merge annotations | `OPEN` (awaiting Chris review) |
 
-Once #TBD merges, no other pending Arc I-0100 PRs until P3 Stage 3 pre-flight opens.
+Once #TBD merges, no other Arc I-0100 PRs pending. Next PR opens on Chris sequencing directive.
 
 ---
 
-## Read as background (Level C step C.4–C.6 loads for P3 Stage 3 pre-flight opening)
+## Arc I-0100 implementation dependency graph (post-merge state)
 
-- `docs/adr/ADR-0003-mission-runner-staged-enable-posture.md` §3.3.a assumption-lock table + §3.2 Phase 1 shadow-audit-synthetic command sketch.
-- `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_a_mission_runner_staged_enable.md` (design-prep for full option analysis).
-- `docs/research/implementation/BACKLOG.md` IB-1799-T1-03 row (`adr_ref: ADR-0003`; `pr_refs: pending P3`).
-- Arc I-0100 scoping doc §5 P3 rollout + §7.3 R2/R3 risks + §8 F8-iii pattern.
-- 1799 xx99 §1 point 3 + §8.2 T1 item 3 (Cat E OpsRun/OpsRunEvent design-intent-latent).
-- `core/signals/rigby_delegation_signals.py` (handler; R3 dormancy target).
-- `core/services/rigby_mission_delegation.py` (`delegate_work_item` + `DELEGATION_ROUTING`).
-- `core/settings.py:138-140` (`RIGBY_DELEGATION_ENABLED` flag).
-- IOS v1.5 §4.3 Stage 3 pre-flight + §5.1 pre-code gates.
+```
+ADR-0001 (accepted) ────┐
+ADR-0002 (accepted) ─┐  │
+ADR-0003 (accepted) ─┼──┼─── P2 (#2954, SHIPPED) — no stop conditions
+                     │  │       │
+                     │  │       └── P4 (#2955, IN_ARC-flag-blocked)
+                     │  │             └── 3 stop conditions gate `PA_AGENT_EXECUTION_WRITE_ENABLED=True`
+                     │  │
+                     │  └────── P3 (#2957, IN_ARC-flag-blocked)
+                     │                └── 4 stop conditions gate `RIGBY_DELEGATION_ENABLED=True`
+                     │
+                     └────── ADR-C (not authored; optional per F4; architecture-only track)
+```
+
+**Stage 4 exit gate per IOS §4.3:** "Every planned PR merged; every regression test green." — **SATISFIED** (P2 + P4 + P3 all merged; combined 33/33 tests pass).
+
+**Stage 6 arc-close criteria per IOS §4.5:** "Every intake item admitted at Stage 1 has status SHIPPED, RETRACTED, DEFERRED, or BLOCKED_ON_RESEARCH." — **NOT YET SATISFIED**. Two rows remain IN_ARC-flag-blocked.
+
+Path to close:
+1. Discharge P3 + P4 stop conditions → row flips to SHIPPED, OR
+2. Reclassify P3 + P4 as DEFERRED (with runtime activation as a follow-on arc's discharge), OR
+3. Ratify a new arc-close-permitted state (e.g., "code-merged, activation deferred").
+
+Chris sequencing directive determines path.
+
+---
+
+## Read as background
+
+- All 3 accepted ADRs: `docs/adr/ADR-000{1,2,3}*.md`
+- All 2 design-prep artifacts: `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_{b,a}_*.md`
+- Arc I-0100 scoping doc §5 planned PR sequence + §7.3 risks + §8 F-folds + §9.3 verification interface.
+- All 3 runtime PRs merged: #2954 (P2), #2955 (P4), #2957 (P3).
+- P4 stop conditions: `#2955 PR body Pre-flag-flip requirements section`.
+- P3 stop conditions: `#2957 PR body Pre-flag-flip requirements section` + `core/services/delegation_auto_disable.py`.
+- 1799 xx99 §1 verdicts + §2.5 Cat E evidence.
+- IOS v1.5 §4.3 Stage 6 close + §4.5 arc graduation criteria + §5.3 post-merge gates.
 - MEMORY rules (as usual).
-- MEMORY project entry: `project_ios_v15_design_prep_first_class_codification_candidate` (SHIPPED).
+- **MEMORY project entry:** `project_deployment_state_between_merged_and_active.md` (2 triggers so far; four-trigger threshold).
 
 ---
 
-## Session ready check (before P3 Stage 3 pre-flight opening)
+## Session ready check (before next action)
 
 1. **First tool call:** `context-kit orient`.
-2. Verify housekeeping PR merged: `git log --oneline -5` includes this file's refresh.
-3. Verify all Arc I-0100 accepted ADRs on main: `grep '^status: accepted' docs/adr/ADR-000{1,2,3}*.md` returns 3 matches.
-4. Verify BACKLOG IB-1799-T1-01 SHIPPED, T1-02 IN_ARC-flag-blocked, T1-03 IN_ARC pending.
-5. Verify both runtime flags OFF: `grep -E 'TOOL_CALL_TRACE_ID_ENFORCED|PA_AGENT_EXECUTION_WRITE_ENABLED' core/settings.py` — both env-driven, defaults `false`.
-6. `tools/pa_local.sh "platform_config_tool action=overview"` — verify local context on arc pin.
-7. Read ADR-0003 §3.3.a assumption-lock table in full + §3.2 smoke-test sketch.
-8. Read IOS §4.3 Stage 3 pre-flight in full + §5.1 pre-code gates 1-10.
-9. Run assumption-lock verification queries (all 6 read-only; no code changes yet):
-   - `python -c "from core.services.rigby_mission_delegation import DELEGATION_ROUTING; print(len(DELEGATION_ROUTING), DELEGATION_ROUTING)"`
-   - `python manage.py shell -c "from core.models_rigby_work_items import RigbyWorkItem; from django.utils import timezone; from datetime import timedelta; c = RigbyWorkItem.objects.filter(created_at__gte=timezone.now()-timedelta(days=30)).count(); print(f'30d cadence: {c/30:.2f}/day')"`
-   - `git log --since=2026-07-06 -- core/signals/rigby_delegation_signals.py` — expect zero commits.
-   - `grep -rn "MISSION_RUNNER_ENABLED" core/ agents/ | grep -v test_ | grep -v .md:` — expect zero code matches.
-   - Run `test_mission_runner.MissionRunnerImportContractTests` — expect pass.
-   - Baseline `OpsRun.objects.filter(created_at__gte=<30d>, ops_run_kind='mission').count()` — record for post-flag-flip comparison.
-10. If all 6 assumption-lock gates pass: author P3 PR per ADR-0003 §3.1 Option 5 hybrid.
-11. If any fail: STOP + report + snap back to design-prep Option 2b full-3-phase.
+2. Verify housekeeping PR merged: `git log --oneline -5` includes #TBD.
+3. Verify all 3 runtime PRs on main via `git log --oneline | head -10`.
+4. Verify all 3 runtime flags OFF: `grep -E 'TOOL_CALL_TRACE_ID_ENFORCED|PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — all env-driven `false` defaults.
+5. Verify combined test suite green: `python manage.py test core.tests.test_tool_call_record_trace_id core.tests.test_pa_agent_execution_write core.tests.test_delegation_lifecycle_smoke_test --keepdb` — expect 33/33 OK.
+6. Read Chris sequencing directive from prior session.
+7. If directive names one of the 5 candidate next actions above (a-e), execute per that action's Stage 3 pre-flight discipline. If ambiguous, ask.
