@@ -690,6 +690,80 @@ class UnifiedPAEntrypoint:
                 status, exc,
             )
 
+    # ─────────────────────────────────────────────────────────────────
+    # Arc I-0100 P4 Stop Condition #3 — PA↔LLMCallEvent correlation
+    # (Chris Option 1 ratified 2026-07-06). Per ADR-0002 §3.3 primary
+    # join key: LLMCallEvent.execution_id == AgentExecution.id.
+    # ─────────────────────────────────────────────────────────────────
+
+    async def _pa_wrapped_enforce_real_ai(
+        self, pa_execution, pa_trace_id: str, iteration: int,
+        **enforcer_kwargs,
+    ) -> Dict[str, Any]:
+        """Wrap ``self.llm_enforcer.enforce_real_ai`` with an
+        ``llm_call_span`` so each PA LLM call creates one
+        ``LLMCallEvent`` row keyed to the PA turn's ``AgentExecution``
+        row (per ADR-0002 §3.3 primary join key).
+
+        Rollback contract: when ``PA_AGENT_EXECUTION_WRITE_ENABLED=False``
+        the caller passes ``pa_execution=None`` and this helper
+        BYPASSES the span entirely — the LLM call goes through
+        ``asyncio.to_thread(self.llm_enforcer.enforce_real_ai, ...)``
+        exactly like the pre-Stop-3 code path. Zero LLMCallEvent rows
+        get created; flag-off behavior is bit-for-bit identical.
+
+        When the flag is ON (``pa_execution`` non-None), the span is
+        wrapped with ``execution_id=pa_execution.id``,
+        ``agent_name='PersonalAssistant'``,
+        ``metadata={'pa_trace_id': <trace>, 'iteration': <n>}``. A
+        synthetic ``{'usage': {'input_tokens': …, 'output_tokens': …}}``
+        response shape is attached to the span so
+        ``LLMCallEvent.tokens_in / tokens_out`` populate from the
+        enforcer's return dict (which is flat, not nested-usage
+        shaped — see ``llm_call_wrapper._extract_usage``).
+
+        Retries within the loop reuse the same ``pa_execution.id``
+        naturally, so multiple LLMCallEvent rows share one
+        ``execution_id`` (satisfies §3.3 verification query #3 —
+        retry chain).
+        """
+        if pa_execution is None:
+            # Flag OFF — bypass the wrapper (rollback contract).
+            return await asyncio.to_thread(
+                self.llm_enforcer.enforce_real_ai, **enforcer_kwargs,
+            )
+
+        from core.services.llm_call_wrapper import llm_call_span
+
+        exec_id = getattr(pa_execution, "id", None)
+
+        def _sync_wrapped():
+            with llm_call_span(
+                provider="openai",
+                model="gpt-5.2",
+                execution_id=exec_id,
+                agent_name="PersonalAssistant",
+                metadata={
+                    "pa_trace_id": pa_trace_id,
+                    "iteration": iteration,
+                },
+            ) as span:
+                result = self.llm_enforcer.enforce_real_ai(**enforcer_kwargs)
+                # enforce_real_ai returns a flat dict with
+                # input_tokens / output_tokens keys.
+                # llm_call_wrapper._extract_usage looks for a nested
+                # usage shape ({'usage': {'input_tokens': …}}) — build
+                # one so tokens_in / tokens_out populate on the row.
+                span.attach_response({
+                    "usage": {
+                        "input_tokens": result.get("input_tokens"),
+                        "output_tokens": result.get("output_tokens"),
+                    },
+                })
+                return result
+
+        return await asyncio.to_thread(_sync_wrapped)
+
     async def process_message(
         self,
         message: str,
@@ -864,8 +938,13 @@ class UnifiedPAEntrypoint:
 
             if getattr(settings, 'PA_USE_FUNCTION_CALLING', False):
                 # ── New path: GPT-5.2 function calling ──────────────────────
+                # Arc I-0100 P4 Stop Condition #3: thread the PA
+                # AgentExecution row into the agentic loop so its
+                # LLM calls emit LLMCallEvent rows keyed to the PA
+                # turn per ADR-0002 §3.3.
                 content, tool_runs_raw, fc_meta, response_id = await self._run_agentic_loop(
-                    message, full_context, trace_id
+                    message, full_context, trace_id,
+                    pa_execution=_pa_execution,
                 )
                 tool_runs = tool_runs_raw
 
@@ -1572,12 +1651,20 @@ class UnifiedPAEntrypoint:
         trace_id: str,
         max_iterations: int = 12,  # Session 1199: raised from 8 to handle tagging/bulk-ops turns (detail-fetch-merge-update needs ~2x read-only Q&A budget). Was Session 1075 raise from 5; was Session 1043 default 8.
         total_timeout: float = 120.0,
+        pa_execution: Any = None,
     ) -> tuple[str, List[Dict], List[Dict], Optional[str]]:
         """
         Core agentic loop: GPT-5.2 decides which tools to call.
 
         Returns (content, tool_runs, fc_metadata, response_id)
         where fc_metadata captures the GPT function call info (name, arguments, call_id).
+
+        Arc I-0100 P4 Stop Condition #3: ``pa_execution`` (the row
+        from ``_maybe_create_pa_turn_execution``) is threaded in so
+        every LLM call inside the loop can be wrapped with an
+        ``llm_call_span`` keyed to ``pa_execution.id`` per ADR-0002
+        §3.3. ``pa_execution=None`` (flag OFF) preserves pre-Stop-3
+        behavior exactly — no LLMCallEvent rows created.
         """
         # Session 1199 — reset silent-fallback flag at top of each agentic
         # loop run. Set to True deep inside the loop iff the LLM dumps
@@ -1612,13 +1699,15 @@ class UnifiedPAEntrypoint:
 
             logger.info(f"[{trace_id}] FC iteration {iteration+1}/{max_iterations} (final={is_final})")
 
-            # Call GPT-5.2 with tools
-            # Always pass messages as input_messages — on iteration 1 it's the full
-            # messages array; on subsequent iterations it's the tool_call_output items.
-            # previous_response_id provides conversation continuity; input provides
-            # the new content (tool outputs) that the API needs to continue.
-            result = await asyncio.to_thread(
-                self.llm_enforcer.enforce_real_ai,
+            # Call GPT-5.2 with tools.
+            # Arc I-0100 P4 Stop Condition #3: PA LLM calls flow
+            # through llm_call_span (via _pa_wrapped_enforce_real_ai)
+            # so each call creates one LLMCallEvent row keyed to
+            # pa_execution.id per ADR-0002 §3.3. Flag OFF
+            # (pa_execution=None) → bypass wrapper, pre-Stop-3
+            # behavior preserved bit-for-bit.
+            result = await self._pa_wrapped_enforce_real_ai(
+                pa_execution, trace_id, iteration,
                 prompt=message,
                 input_messages=messages,
                 tools=PA_TOOL_SCHEMAS if not is_final else None,
@@ -1626,7 +1715,7 @@ class UnifiedPAEntrypoint:
                 task_type='conversation',
                 max_tokens=self._estimate_max_tokens(message),
                 agent_name='PersonalAssistant',
-                trace_id=trace_id,
+                trace_id=trace_id,  # forwarded to enforce_real_ai
             )
 
             if not result.get('success'):
@@ -1665,8 +1754,8 @@ class UnifiedPAEntrypoint:
                             "Please summarize them for the user:\n" + tool_summary
                         ),
                     })
-                    summary_result = await asyncio.to_thread(
-                        self.llm_enforcer.enforce_real_ai,
+                    summary_result = await self._pa_wrapped_enforce_real_ai(
+                        pa_execution, trace_id, iteration,
                         prompt=message,
                         input_messages=fresh_messages,
                         tools=None,
@@ -1719,8 +1808,8 @@ class UnifiedPAEntrypoint:
                             "role": "user",
                             "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
                         })
-                        final_result = await asyncio.to_thread(
-                            self.llm_enforcer.enforce_real_ai,
+                        final_result = await self._pa_wrapped_enforce_real_ai(
+                            pa_execution, trace_id, iteration,
                             prompt=message,
                             input_messages=fresh_messages,
                             tools=None,
@@ -1795,8 +1884,8 @@ class UnifiedPAEntrypoint:
                     parts = [result.get('response', '')]
                     for cont_i in range(2):
                         logger.info(f"[{trace_id}] Truncation continuation {cont_i+1}/2 ({len(''.join(parts))} chars so far)")
-                        cont_result = await asyncio.to_thread(
-                            self.llm_enforcer.enforce_real_ai,
+                        cont_result = await self._pa_wrapped_enforce_real_ai(
+                            pa_execution, trace_id, iteration,
                             prompt="continue",
                             input_messages=[{"role": "user", "content": "continue"}],
                             tools=None,
@@ -1830,8 +1919,8 @@ class UnifiedPAEntrypoint:
                 # has pending tool_calls, so OpenAI rejects continuations without
                 # function_call_output. Rebuild fresh messages instead.
                 fresh_messages = self._build_messages_array(message, context)
-                final_result = await asyncio.to_thread(
-                    self.llm_enforcer.enforce_real_ai,
+                final_result = await self._pa_wrapped_enforce_real_ai(
+                    pa_execution, trace_id, iteration,
                     prompt=message,
                     input_messages=fresh_messages,
                     tools=None,
@@ -1866,8 +1955,8 @@ class UnifiedPAEntrypoint:
                     "role": "user",
                     "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
                 })
-                final_result = await asyncio.to_thread(
-                    self.llm_enforcer.enforce_real_ai,
+                final_result = await self._pa_wrapped_enforce_real_ai(
+                    pa_execution, trace_id, iteration,
                     prompt=message,
                     input_messages=fresh_messages,
                     tools=None,
