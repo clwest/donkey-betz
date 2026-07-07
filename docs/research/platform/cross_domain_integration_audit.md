@@ -2850,6 +2850,47 @@ Interpretation: for each plane-pair within Cat B canonical 4-plane structure, cl
 
 ---
 
+### 14.18 Arc I-0200 implementation-arc close (RAG Corpus Substrate Maturity Gradient — closed 2026-07-07)
+
+**First implementation-arc §14 entry** in the audit (§14.2 through §14.17 are all research-arc closes). Arc I-0200 (`rag_corpus_substrate_maturity`) discharged `IB-2199-T0-01` via ADR-0004 (accepted PROVISIONAL) — the first live ratification of the two-field PROVISIONAL pattern (`status: accepted` + `provisional: true` + `provisional_reason`) in the ADR corpus. Docs-only implementation arc: no runtime code changed, no feature flag introduced or flipped, no migration executed, no production access. Terminal state: Chris "Agree All" 2026-07-07 via close-PR merge (this refresh commits alongside the close doc `I-020099_rag_corpus_substrate_maturity_implementation_close.md`).
+
+**Deltas from §14.12 (Group 2100 RAG / Document Loading research arc):**
+
+- **T0 discharge landed at platform-ADR layer.** 2199 xx99 §1 line 74 canonical seam statement is now codified as `ADR-0004 §3.1`. Downstream arcs SHOULD cite ADR-0004 (or its successor if PROVISIONAL flips) instead of `2199 xx99 §1 line 74`.
+- **T-slot follow-on queue names carried into ADR-0004 §4.1.** T22 / T13 / T18 / T19 / T21 / T26a / T27 / T29 explicitly named as post-arc requirements with owner assignments preserved from 2199 xx99 §8.
+- **`IB-2199-BOR-01` remains `BLOCKED_ON_RESEARCH`.** ADR-0004 §4.2 names as post-ratification requirement; discharge requires a future research arc; PR #2984 did NOT discharge.
+
+**Cross-arc coordination flags (new from Arc I-0200):**
+
+- **BOR-01 discharge is now a first-class implementation-arc prerequisite** for any ADR-0004-successor. Whichever future arc reopens the RAG maturity classification MUST cite the BOR-01 discharge result.
+- **T-slot execution PRs each blocked on prior T-slots per §8 dependency structure.** T22 unblocks T18/T19/T21 (Track B). T13 unblocks Track A. T26a directly discharges 2199 §14 F5 live-incident.
+
+**Codification candidates surfaced (single-trigger, awaiting second arc unless noted):**
+
+- **CC-1** Arc-scoped workflow overrides — Chris §14.2 refinement recognized. Two-application evidence within one arc (design-prep SIGN + ADR body SIGN). Codification threshold ambiguity per close-doc §6.3.
+- **CC-2** PROVISIONAL ADR two-field pattern (Option 1a) — first live ratification.
+- **CC-3** Docs-only ADR "code state" definition per design-prep §1.2.
+- **CC-4** Additive-frontmatter forward-compat rule ("consumers MUST ignore unknown frontmatter keys"). Candidate ADR-0001 §3.3 companion amendment.
+- **CC-5** §3.1 research→ADR strict-verbatim discipline (from F19 fold).
+
+**Repository drift notes recorded at close (per close doc §6):**
+
+- Scoping `stage_state` frontmatter drift (fixed in this close bundle).
+- Design-prep §7.1 Sub-option 1(iv) mis-cited ADR-0001 §3.2 instead of §3.3 (recorded; not amended in this bundle).
+- CC-1 two-application-within-arc ambiguity (recorded; codification deferred).
+- CC-4 ADR-0001 forward-compat rule candidate (recorded; codification deferred).
+- **Arc I-0100 §14 audit-refresh gap** — I-0100's close bundle (PR #2976) did NOT append a §14 entry. Recorded here for audit trail; backfill deferred.
+
+**Ratification chain (5 Chris "Agree All" events on 2026-07-07):** selection SIGN (F1-F8) → Stage 1 exit (F9-F14) → P1 severability determination (SEVERABLE + F15-F16) → Stage 2 design-prep (Option 1 + F17-F18) → ADR body (F19-F21).
+
+**PRs landed:** #2980 (Stage 1 arc-open) + #2982 (P1 severability determination) + #2983 (Stage 2 design-prep) + #2984 (ADR-0004 body). This close PR is the fifth.
+
+**Arc-scoped SIGN pin:** `pa-1b76ee75adbf4031` retires at close-PR merge per §15.14; wrapper rotates back to paused-research T4 pin `pa-44a6eb70d8814e34`.
+
+**Guardrails carried forward from Arc I-0100:** LOCAL-only operating model per PR #2972; no prod verification without Chris-provided access path.
+
+---
+
 **End of draft. Status: research / draft — S1274 v2 Rigby SIGN-
 with-edits fold preserved via isolation pin `pa-7442a2e2665bd18e`
 (Medium confidence); v3 post-arc-close refresh log appended at §14
@@ -2863,5 +2904,8 @@ arc close 2026-07-06 + §14.17 refresh gaps queue update 2026-07-06
 (append-only; v2 baseline + v3 §14.2-§14.7 + v4 §14.8-§14.14
 preserved verbatim; 5 Rigby SIGN refinements Chris "agree all"
 2026-07-06 ratified via dedicated SIGN pin `pa-db34dc63aa9e4023`
-30th consecutive dedicated fresh SIGN pin retirement candidate).**
+30th consecutive dedicated fresh SIGN pin retirement candidate);
+v6 append-only refresh extending §14 with §14.18 for Arc I-0200
+implementation-arc close 2026-07-07 (first implementation-arc §14
+entry; append-only; v2 baseline + v3 + v4 + v5 preserved verbatim).**
 
