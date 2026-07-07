@@ -954,9 +954,18 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
         try:
             from core.models import AgentExecution
 
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.3 Family 2 Q2a
+            # Rigby SIGN-clean + Chris agree-all 2026-07-06 →
+            # exclude_pa): daily podcast agent-failure / slow-success
+            # stories should narrate router-agent job execution
+            # reliability, not PA meta-loop / tooling failures which
+            # read as product/ops issues. Use agent__name form per
+            # ADR-0002 F1 fold equivalent (Postgres JSONField
+            # NULL-semantics make the input_data__source='pa' form
+            # unsafe for pre-flag-flip rows).
             executions = AgentExecution.objects.filter(
                 started_at__gte=cutoff
-            ).select_related().order_by('-started_at')[:20]
+            ).exclude(agent__name='PersonalAssistant').select_related().order_by('-started_at')[:20]
 
             for ex in executions:
                 ex_text = f"{ex.agent_name} {ex.task or ''}".lower()
