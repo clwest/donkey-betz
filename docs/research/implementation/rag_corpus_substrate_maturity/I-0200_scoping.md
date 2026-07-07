@@ -371,8 +371,8 @@ Grep-friendly enumeration of every exit-gate item for every planned stage. One l
 
 ```
 CURRENT_STAGE=2
-CURRENT_GATE=Stage_2_design_prep_RATIFIED_pending_design_prep_PR_merge_then_ADR-0004_body_drafting
-CURRENT_STATUS=Design-prep-Rigby-SIGN-with-edits-MED-HIGH-F17-F18-Chris-Agree-All-2026-07-07-ADR-0004-body-DEFERRED-until-design-prep-PR-merges
+CURRENT_GATE=ADR-0004_RATIFIED_and_MERGED_IB-2199-T0-01_flipped_SHIPPED_pending_Stage_3_pre_flight_SKIPPED_and_Stage_6_close
+CURRENT_STATUS=ADR-0004-Chris-Agree-All-2026-07-07-Rigby-SIGN-with-edits-MED-HIGH-F19-F21-applied-IB-2199-T0-01-SHIPPED-Stage-3-SKIPPED-per-docs-only-scope-Stage-6-close-doc-next
 ```
 
 ```
@@ -414,7 +414,7 @@ CURRENT_STATUS=Design-prep-Rigby-SIGN-with-edits-MED-HIGH-F17-F18-Chris-Agree-Al
   [ ] Companion-row admission decisions recorded per Axis 4 (binary admit/hold-out per candidate row) — DEFERRED per Chris directive "Do not admit companion rows"; happens as a distinct Stage 2 opening event (or explicit Chris directive), not as part of P1
   [x] P2 design-prep doc authored per IOS v1.5 §4.3.a mandatory design-prep rule — `I-0200_design_prep_rag_corpus_substrate_maturity.md` drafted 2026-07-07 at Stage 2 opening ceremony per Chris explicit directive; Rigby SIGN Cycle 1 SIGN-with-edits MED-HIGH on arc-scoped pin `pa-1b76ee75adbf4031`; folds F17 (C9 downgrade to recommended-ops-constraint) + F18 (Stage 5 verification interface tool-realistic) applied
   [x] Chris ratifies design-prep via "Agree All" 2026-07-07 — Option 1 accepted; F17-F18 folds ratified; ADR-0004 body drafting authorized post-PR-merge (Chris-directed arc-scoped IOS §14.2 workflow refinement per §9.2 recording — design-prep independently SIGN'd + Chris-ratified BEFORE ADR body drafting; deviates from §4.3.a default)
-  [ ] P2 ADR-0004 authored (`ADR-0004-rag-corpus-substrate-maturity-gradient.md`) — DEFERRED per Chris directive "Do not author ADR-0004 in this turn"; MUST be PROVISIONAL per §6 required ADR shape from I-0200_severability_determination.md (Option a `status: accepted` + `provisional: true` + `provisional_reason: "BOR-01 undischarged"` OR Option b `status: provisional` with explicit ADR §1 definition)
+  [x] P2 ADR-0004 authored (`docs/adr/ADR-0004-rag-corpus-substrate-maturity-gradient.md`) — drafted 2026-07-07 per ratified Option 1 (verbatim 2199 §1 line 74 seam + two-field PROVISIONAL frontmatter `status: accepted` + `provisional: true` + `provisional_reason` naming IB-2199-BOR-01 + per-slot T-slot enumeration T22/T13/T18/T19/T21/T26a/T27/T29). Rigby SIGN Cycle 1 SIGN-with-edits MED-HIGH; F19-F21 folds applied pre-Chris-ratification. Chris "Agree All" 2026-07-07 ratified. `IB-2199-T0-01` status: `IN_ARC (I-0200) → SHIPPED` at ADR-0004 PR merge per IOS §2.2 v1.4 Discipline B inline syntax.
   [ ] P2 Rigby SIGN Cycle 1 on ADR
   [ ] P2 Chris "agree all" or explicit ratification of ADR; ADR frontmatter flips to `status: accepted`
   [ ] P2 PR merged; BACKLOG row flips `IN_ARC → SHIPPED` with `pr_refs` populated + `adr_ref` populated per IOS §2.2 v1.4 Discipline B inline syntax

@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-07T15:46:32+00:00",
+    "generated": "2026-07-07T16:12:12+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "c39db4394a76",
-    "doc_count": 2431,
-    "commit_count": 7734,
+    "git_head": "c87878dd3b29",
+    "doc_count": 2432,
+    "commit_count": 7736,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 487
+      "UNKNOWN": 488
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1252,
+      "commit_count": 1254,
       "prs": [
         10,
         11,
@@ -3032,7 +3032,8 @@
         2958,
         2979,
         2980,
-        2982
+        2982,
+        2983
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7357,7 +7358,7 @@
         2502,
         2504
       ],
-      "commit_count": 208,
+      "commit_count": 210,
       "prs": [
         2213,
         2219,
@@ -7477,7 +7478,8 @@
         2958,
         2979,
         2980,
-        2982
+        2982,
+        2983
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -34053,7 +34055,7 @@
         2499,
         2500
       ],
-      "commit_count": 168,
+      "commit_count": 170,
       "prs": [
         2773,
         2775,
@@ -34137,7 +34139,8 @@
         2945,
         2977,
         2980,
-        2982
+        2982,
+        2983
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -35581,7 +35584,7 @@
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 P3 code-merged-flag-flip-blocked \u2014 housekeeping (#2958)",
       "sessions_touched": [],
-      "commit_count": 22,
+      "commit_count": 24,
       "prs": [
         2941,
         2945,
@@ -35593,7 +35596,8 @@
         2958,
         2977,
         2980,
-        2982
+        2982,
+        2983
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
@@ -35731,18 +35735,32 @@
         2977
       ]
     },
+    "docs/research/implementation/rag_corpus_substrate_maturity/I-0200_design_prep_rag_corpus_substrate_maturity.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "c87878dd",
+      "first_commit_date": "2026-07-07",
+      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 2 opened + Design-Prep for ADR-0004 authored + Rigby SIGN + Chris Agree-All (#2983)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        2983
+      ]
+    },
     "docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "c39db439",
+      "first_commit_sha": "c87878dd",
       "first_commit_date": "2026-07-07",
-      "first_commit_subject": "docs(implementation): Arc I-0200 P1 severability determination CLOSED SEVERABLE \u2014 IB-2199-T0-01 flipped IN_ARC (I-0200) (#2982)",
+      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 2 opened + Design-Prep for ADR-0004 authored + Rigby SIGN + Chris Agree-All (#2983)",
       "sessions_touched": [],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         2980,
-        2982
+        2982,
+        2983
       ]
     },
     "docs/research/implementation/rag_corpus_substrate_maturity/I-0200_severability_determination.md": {
