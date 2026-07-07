@@ -2557,7 +2557,19 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
             elif data_type == 'agent_executions':
                 from core.models import AgentExecution
 
-                queryset = AgentExecution.objects.select_related('agent')
+                # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+                # research "agent_executions" data type renders per-row
+                # execution history + aggregate stats (failure_rate,
+                # status_distribution, avg_execution_time_ms) that are
+                # interpreted as router-agent job execution metrics; PA
+                # agentic loop volume would distort both the rendered
+                # rows and the aggregate stats. Use agent__name form
+                # per ADR-0002 F1 fold equivalent (Postgres JSONField
+                # NULL-semantics make the input_data__source='pa' form
+                # unsafe for pre-flag-flip rows).
+                queryset = AgentExecution.objects.select_related('agent').exclude(
+                    agent__name='PersonalAssistant'
+                )
 
                 if filter_type == 'failed':
                     queryset = queryset.filter(status='failed')
@@ -2566,8 +2578,8 @@ Always delegate tasks you cannot perform yourself rather than refusing."""
 
                 queryset = queryset.order_by('-created_at')[:limit]
 
-                # Summary stats
-                all_executions = AgentExecution.objects.all()
+                # Summary stats (also PA-excluded for consistency with rendered rows)
+                all_executions = AgentExecution.objects.exclude(agent__name='PersonalAssistant')
                 status_counts = dict(all_executions.values('status').annotate(
                     count=Count('id')
                 ).values_list('status', 'count'))

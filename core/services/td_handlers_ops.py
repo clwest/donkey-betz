@@ -445,10 +445,17 @@ class OpsHandlersMixin:
             }
             if include_breakdowns and agent_failed > 0:
                 from core.models_unified_system import AgentExecution
+                # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+                # "top_failing_agents" ranks router-agent job failures;
+                # PA agentic loop failures would dominate the ranking
+                # incorrectly. Use agent__name form per ADR-0002 F1 fold
+                # equivalent (Postgres JSONField NULL-semantics make the
+                # input_data__source='pa' form unsafe for pre-flag-flip rows).
                 top_agents = list(
                     AgentExecution.objects.filter(
                         created_at__gte=cutoff, status='failed'
-                    ).values('agent__name')
+                    ).exclude(agent__name='PersonalAssistant')
+                    .values('agent__name')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:5]
                 )
@@ -476,11 +483,18 @@ class OpsHandlersMixin:
                 'denominator': total_execs,
             }
             if include_breakdowns and timeout_execs > 0:
+                # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+                # "top_timeout_agents" ranks router-agent job timeouts;
+                # PA agentic loop timeouts would dominate the ranking
+                # incorrectly. Use agent__name form per ADR-0002 F1 fold
+                # equivalent (Postgres JSONField NULL-semantics make the
+                # input_data__source='pa' form unsafe for pre-flag-flip rows).
                 top_timeout = list(
                     AgentExecution.objects.filter(
                         created_at__gte=cutoff, status='failed',
                         error_message__icontains='timed out'
-                    ).values('agent__name')
+                    ).exclude(agent__name='PersonalAssistant')
+                    .values('agent__name')
                     .annotate(count=Count('id'))
                     .order_by('-count')[:5]
                 )
@@ -4027,12 +4041,19 @@ class OpsHandlersMixin:
                 atype = a['agent_type'] or 'unknown'
                 by_agent_type[atype] = all_agents.filter(agent_type=atype).count()
 
-            # Get agents with recent activity (last 7 days)
+            # Get agents with recent activity (last 7 days).
+            # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+            # "active_last_7d" counts distinct router-agent job dispatch
+            # targets; PA agentic loop activity would inflate the count.
+            # Use agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip rows).
             now = timezone.now()
             active_ids = set(
                 AgentExecution.objects.filter(
                     created_at__gte=now - timedelta(days=7),
-                ).values_list('agent_id', flat=True)
+                ).exclude(agent__name='PersonalAssistant')
+                .values_list('agent_id', flat=True)
             )
 
             # Router breakdown: routable, blocked, non-specialist
