@@ -633,7 +633,17 @@ class MuscularSystemService:
         weak_agents = []
         overworked_agents = []
 
-        per_agent_stats = executions.values('agent__name').annotate(
+        # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+        # 2026-07-06): exclude PA meta-agent rows — per_agent_stats
+        # inside determine_status feeds weak/overworked-agents
+        # detection; these are router-agent job-health verdicts,
+        # not PA orchestration health. Use agent__name form per
+        # ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
+        per_agent_stats = executions.exclude(
+            agent__name='PersonalAssistant'
+        ).values('agent__name').annotate(
             count=Count('id'),
             successful=Count('id', filter=Q(status='completed')),
             failed=Count('id', filter=Q(status='failed'))

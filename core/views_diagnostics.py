@@ -1624,11 +1624,18 @@ def cockpit_ops_overview(request):
         result['health']['overall_tone'] = 'amber'
     result['health']['checks'] = checks
 
-    # 2. Top failing agents
+    # 2. Top failing agents.
+    # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+    # 2026-07-06): exclude PA meta-agent rows — top-failing ranks
+    # router-agent job failures; PA agentic loop failures would
+    # dominate incorrectly. Use agent__name form per ADR-0002 F1
+    # fold equivalent (Postgres JSONField NULL-semantics make the
+    # input_data__source='pa' form unsafe for pre-flag-flip rows).
     try:
         from core.models_unified_system import AgentExecution
         agg = list(
             AgentExecution.objects.filter(created_at__gte=cutoff)
+            .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(
                 failed_count=Count('id', filter=Q(status='failed')),
@@ -2181,11 +2188,20 @@ def cockpit_alerts(request):
     except Exception as e:
         logger.debug("Alerts error_spike: %s", e)
 
-    # 2. Agents with high failure rate
+    # 2. Agents with high failure rate.
+    # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+    # 2026-07-06): exclude PA meta-agent rows — high-failure-rate
+    # alerts target router-agent job health; PA agentic loop
+    # failure rate is a different denominator and would false-
+    # positive alert on PA orchestration churn. Use agent__name
+    # form per ADR-0002 F1 fold equivalent (Postgres JSONField
+    # NULL-semantics make the input_data__source='pa' form unsafe
+    # for pre-flag-flip rows).
     try:
         from core.models_unified_system import AgentExecution
         agg = list(
             AgentExecution.objects.filter(created_at__gte=cutoff)
+            .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(
                 failed=Count('id', filter=Q(status='failed')),
@@ -3178,8 +3194,18 @@ def _eval_failure_spike_pause(policy):
     threshold = t.get('failure_rate_pct', 50)
     cutoff = now() - timedelta(hours=hours)
 
+    # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+    # 2026-07-06): exclude PA meta-agent rows — per-agent
+    # failure-rate policy threshold check evaluates router-agent
+    # jobs against the policy; PA agentic loop failure rate is a
+    # different denominator and would trigger the policy against
+    # PA orchestration behavior. Use agent__name form per ADR-0002
+    # F1 fold equivalent (Postgres JSONField NULL-semantics make
+    # the input_data__source='pa' form unsafe for pre-flag-flip
+    # rows).
     agents = (
         AgentExecution.objects.filter(created_at__gte=cutoff)
+        .exclude(agent__name='PersonalAssistant')
         .values('agent__name')
         .annotate(
             total=Count('id'),
@@ -4339,9 +4365,18 @@ def cockpit_learning_loop(request):
     try:
         from core.models_unified_system import AgentExecution
 
-        # Per-agent stats for last 30 days
+        # Per-agent stats for last 30 days.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+        # 2026-07-06): exclude PA meta-agent rows — 30-day per-agent
+        # success/failure/avg_time top-25 ranks router-agent job
+        # execution health; PA agentic loop volume would dominate
+        # the ranking + skew success_rate + avg_time. Use agent__name
+        # form per ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
         agent_stats = list(
             AgentExecution.objects.filter(created_at__gte=cutoff_30d)
+            .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(
                 total=Count('id'),
