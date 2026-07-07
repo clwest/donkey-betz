@@ -1,18 +1,24 @@
 ---
-title: "Arc I-0200 — RAG Corpus Substrate Maturity Gradient (Stages 1–2; default path locked; ADR-0004 design-prep in flight)"
-status: active
+title: "Arc I-0200 — RAG Corpus Substrate Maturity Gradient (Stages 1–6; CLOSED LOCAL; ADR-0004 accepted PROVISIONAL)"
+status: closed-local
 authority: implementation-scoping
 arc_id: I-0200
 arc_slug: rag_corpus_substrate_maturity
 fallback_arc_slug: authority_per_plane_posture
-stage: 2
-stage_state: design-prep-in-flight
+canonical_close_doc: I-020099_rag_corpus_substrate_maturity_implementation_close.md
+close_ratified_pr: (open — populated post-PR-open)
+stage: 6
+stage_state: awaiting-close
 stage_transition_history:
   - {stage: 1, state: exit-gate-cleared, at: 2026-07-07, event: "Rigby SIGN Cycle 1 SIGN-with-edits MED-HIGH + Chris agree-all-F9-F14 (Stage 1 arc-open bundle PR #2980 merged as 87dbd95a)"}
   - {stage: 1, state: p1-close-ratified, at: 2026-07-07, event: "P1 severability determination CLOSED SEVERABLE per Chris Agree-All (Rigby SIGN-with-edits MED-HIGH + F15-F16 folds; PR #2982 merged as c39db4394 — supersedes auto-closed #2981 post-#2980 base-branch-deletion)"}
   - {stage: 2, state: design-prep-in-flight, at: 2026-07-07, event: "Stage 2 opened per Chris explicit directive following P1 close. IOS v1.5 §4.3 Stage 2 Entry gate satisfied — ADR corpus precondition SATISFIED via Arc I-0100 PR #2948; opening event = Chris explicit directive per Entry-gate clause 2(a). Design-prep first-class artifact authoring opened per IOS v1.5 §4.3.a mandatory rule; §4.3.0 v1.5 stage_state flip active → design-prep-in-flight applied. ADR-0004 authoring DEFERRED per Chris directive 'Do not author ADR-0004 in this turn.'"}
+  - {stage: 2, state: design-prep-ratified, at: 2026-07-07, event: "Stage 2 design-prep authored + Rigby SIGN-with-edits MED-HIGH (folds F17-F18 applied) + Chris 'Agree All' ratified 2026-07-07 - Option 1. PR #2983 merged as c87878dd. ADR-0004 body drafting authorized post-design-prep-PR-merge."}
+  - {stage: 2, state: exit-gate-cleared, at: 2026-07-07, event: "ADR-0004 body authored + Rigby SIGN-with-edits MED-HIGH (folds F19-F21 applied) + Chris 'Agree All' ratified 2026-07-07. IB-2199-T0-01 flipped IN_ARC → SHIPPED per IOS §2.2 v1.4 Discipline B inline syntax with adr_ref: ADR-0004 + pr_refs: #2984. PR #2984 merged as 84b45a11. Stage 3 SKIPPED per docs-only scope + F15 lock. Stage 4 merged into Stage 2 (ADR PR IS the shipping vehicle). Stage 5 verify bounded to documentation cross-check at Stage 6 close time."}
+  - {stage: 6, state: awaiting-close, at: 2026-07-07, event: "Stage 6 opened per Chris directive following ADR-0004 merge. Canonical close doc I-020099_rag_corpus_substrate_maturity_implementation_close.md drafted; cross_domain_integration_audit.md §14.18 appended (first implementation-arc §14 entry); arc-scoped SIGN pin pa-1b76ee75adbf4031 retirement + wrapper rotation back to paused-research T4 pin pa-44a6eb70d8814e34 both bundled per §15.14; 5-step cascade + §12.5.d evidence block in close PR."}
 session_opened: 2701
 session_stage_2_opened: 2701
+session_stage_6_opened: 2701
 opened: 2026-07-07
 ratifier: chris
 first_arc_override: false
@@ -370,9 +376,9 @@ Grep-friendly enumeration of every exit-gate item for every planned stage. One l
 **F13 clarification (Rigby SIGN Cycle 1 fold) — canonical cold-resume tokens** (single-line grep target so `grep CURRENT_STAGE docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md` returns arc state without reading the checklist):
 
 ```
-CURRENT_STAGE=2
-CURRENT_GATE=ADR-0004_RATIFIED_and_MERGED_IB-2199-T0-01_flipped_SHIPPED_pending_Stage_3_pre_flight_SKIPPED_and_Stage_6_close
-CURRENT_STATUS=ADR-0004-Chris-Agree-All-2026-07-07-Rigby-SIGN-with-edits-MED-HIGH-F19-F21-applied-IB-2199-T0-01-SHIPPED-Stage-3-SKIPPED-per-docs-only-scope-Stage-6-close-doc-next
+CURRENT_STAGE=6
+CURRENT_GATE=Stage_6_close_doc_drafted_audit_section_14_18_appended_pending_Rigby_SIGN_on_close_doc_and_Chris_ratification_via_close_PR_merge
+CURRENT_STATUS=Arc-I-0200-CLOSED-LOCAL-pending-close-PR-merge-4-Chris-Agree-All-events-21-folds-F1-F21-ratified-ADR-0004-accepted-PROVISIONAL-first-implementation-arc-14-entry-drift-notes-recorded
 ```
 
 ```

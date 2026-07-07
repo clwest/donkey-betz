@@ -467,22 +467,39 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # ---
 # PRESERVED AS COMMENT / paused-research during Arc I-0200 phase
 # (per IOS v1.1 §15.14 phase-transition supersession rule; pin
-# unchanged, restored on IOS phase exit at Arc I-0200 close or Chris
-# Research OS re-entry command, whichever comes first):
+# unchanged since 2026-07-06 arc-lifecycle preservation; restored to
+# ACTIVE 2026-07-07 at Arc I-0200 Stage 6 close per §15.14 restoration
+# rule mirroring Arc I-0100 PR #2978 pattern):
 # pa-44a6eb70d8814e34 (T4 Group 1700 Observability research arc pin;
-# arc-open state paused during Arc I-0200; not retired). Restoration
-# discipline mirrors Arc I-0100 → post-close rotation pattern (PR
-# #2978): on Arc I-0200 close, `tools/pa_local.sh --conversation`
-# rotates back to this pin unless Chris re-enters research phase
-# earlier via `Start / Continue / Close research group NNNN`.
+# implementation-phase supersession terminated 2026-07-07). Research-
+# phase re-entry available via Chris explicit `Start / Continue /
+# Close research group NNNN` directive.
 # ---
-# ACTIVE (minted 2026-07-07 at Arc I-0200 Stage 1 open per IOS §4.3
-# Stage 1 arc-open protocol + §15.14 arc-scoped pin lifecycle;
-# mirrors `pa-c5b235f7b15f45be` role for Arc I-0100):
+# Retired at Arc I-0200 Stage 6 close 2026-07-07:
 # pa-1b76ee75adbf4031 (ios-arc-open-I-0200 — Arc I-0200 RAG corpus
-# substrate maturity / Authority per-plane posture, contingent per
-# ratified severability gate). Arc-scoped pin covers Stage 1
-# scoping SIGN Cycle 1 through Stage 6 implementation close.
-# Retirement discharge: at Arc I-0200 Stage 6 close, mirroring
-# Arc I-0100 pattern PR #2978.
-python tools/pa_chat.py "$@" --tools --conversation pa-1b76ee75adbf4031
+# substrate maturity gradient; Stage 1 opened 2026-07-07 S2701;
+# Stage 6 closed 2026-07-07 via close doc
+# `I-020099_rag_corpus_substrate_maturity_implementation_close.md`
+# in this Stage 6 close PR). SECOND fresh arc-scoped implementation-
+# pin retirement in Research OS + IOS combined discipline (after
+# `pa-c5b235f7b15f45be` from Arc I-0100 close PR #2977); retired via
+# `session_tool.retire conversation_id='pa-1b76ee75adbf4031'
+# force=true` routed through the restored paused-research T4 pin
+# `pa-44a6eb70d8814e34` per §15.14 restoration rule. Terminal intake
+# disposition on retirement: IB-2199-T0-01 SHIPPED (I-0200) with
+# adr_ref: ADR-0004 + pr_refs: #2984. Operating model: LOCAL-only
+# per PR #2972 guardrail (unchanged from Arc I-0100).
+# ---
+# ACTIVE (restored 2026-07-07 to paused-research T4 Group 1700
+# Observability pin per IOS v1.1 §15.14 restoration rule at Arc I-0200
+# Stage 6 close; unchanged pin identity — the pin was never retired,
+# only paused per §15.3 phase-transition supersession while Arc I-0200
+# was active):
+# pa-44a6eb70d8814e34 (T4 Group 1700 Observability research arc pin
+# — arc-open pending until Chris explicitly re-enters research via
+# Research OS command `Start / Continue / Close research group NNNN`).
+# On any future implementation-phase arc open, mint a fresh
+# arc-scoped pin via `session_tool.create_fresh label='ios-arc-open-
+# I-NNNN'` and rotate --conversation to that pin; the T4 pin is
+# preserved as-is for research-phase re-entry.
+python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
