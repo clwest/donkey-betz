@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-06T23:19:47+00:00",
+    "generated": "2026-07-07T00:03:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "5b93cb97ad71",
+    "git_head": "719af21e0cf2",
     "doc_count": 2424,
-    "commit_count": 7676,
+    "commit_count": 7682,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1240,
+      "commit_count": 1242,
       "prs": [
         10,
         11,
@@ -3026,7 +3026,8 @@
         2949,
         2950,
         2951,
-        2952
+        2952,
+        2953
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7351,7 +7352,7 @@
         2502,
         2504
       ],
-      "commit_count": 196,
+      "commit_count": 198,
       "prs": [
         2213,
         2219,
@@ -7465,7 +7466,8 @@
         2949,
         2950,
         2951,
-        2952
+        2952,
+        2953
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -7498,12 +7500,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "5b93cb97",
+      "first_commit_sha": "3b26102e",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture (#2953)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        2953
+      ]
     },
     "docs/agents/AGENT_ECOSYSTEM_COMPLETE_GUIDE.md": {
       "originating_session": 1143,
@@ -35560,17 +35564,18 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "09b89507",
+      "first_commit_sha": "3b26102e",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-B (ADR-0002) \u2014 PA write shape + PA\u2194LLMCallEvent correlation contract (#2951)",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture (#2953)",
       "sessions_touched": [],
-      "commit_count": 10,
+      "commit_count": 12,
       "prs": [
         2941,
         2945,
         2948,
         2950,
-        2951
+        2951,
+        2953
       ]
     },
     "docs/research/implementation/IMPLEMENTATION_DEBT.md": {
@@ -35604,12 +35609,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "5b93cb97",
+      "first_commit_sha": "3b26102e",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture (#2953)",
       "sessions_touched": [],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        2953
+      ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_b_pa_write_shape.md": {
       "originating_session": null,
@@ -35628,15 +35635,16 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "5b93cb97",
+      "first_commit_sha": "3b26102e",
       "first_commit_date": "2026-07-06",
-      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture",
+      "first_commit_subject": "docs(implementation): Arc I-0100 Stage 2 ADR-A (ADR-0003) \u2014 RIGBY_DELEGATION_ENABLED staged-enable posture (#2953)",
       "sessions_touched": [],
-      "commit_count": 7,
+      "commit_count": 9,
       "prs": [
         2945,
         2948,
-        2950
+        2950,
+        2953
       ]
     },
     "docs/research/platform/cross_domain_integration_audit.md": {
