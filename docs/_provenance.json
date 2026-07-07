@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-07T14:45:13+00:00",
+    "generated": "2026-07-07T15:20:43+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "678a75953190",
-    "doc_count": 2428,
-    "commit_count": 7730,
+    "git_head": "7413aa0ed7e3",
+    "doc_count": 2430,
+    "commit_count": 7731,
     "confidence_breakdown": {
       "HIGH": 1587,
       "MEDIUM": 352,
       "LOW": 5,
-      "UNKNOWN": 484
+      "UNKNOWN": 486
     },
     "excludes": [
       "docs/archive/",
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1248,
+      "commit_count": 1249,
       "prs": [
         10,
         11,
@@ -7355,7 +7355,7 @@
         2502,
         2504
       ],
-      "commit_count": 204,
+      "commit_count": 205,
       "prs": [
         2213,
         2219,
@@ -34049,7 +34049,7 @@
         2499,
         2500
       ],
-      "commit_count": 164,
+      "commit_count": 165,
       "prs": [
         2773,
         2775,
@@ -35575,7 +35575,7 @@
       "first_commit_date": "2026-07-06",
       "first_commit_subject": "docs(implementation): Arc I-0100 P3 code-merged-flag-flip-blocked \u2014 housekeeping (#2958)",
       "sessions_touched": [],
-      "commit_count": 18,
+      "commit_count": 19,
       "prs": [
         2941,
         2945,
@@ -35614,6 +35614,17 @@
       "prs": [
         2941
       ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-07_second_arc_I-0200.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "7413aa0e",
+      "first_commit_date": "2026-07-07",
+      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 1 arc-open bundle \u2014 RAG Corpus Substrate Maturity Gradient (contingency-gated with Authority per-plane posture fallback)",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
@@ -35709,6 +35720,17 @@
         2953,
         2977
       ]
+    },
+    "docs/research/implementation/rag_corpus_substrate_maturity/I-0200_scoping.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "7413aa0e",
+      "first_commit_date": "2026-07-07",
+      "first_commit_subject": "docs(implementation): Arc I-0200 Stage 1 arc-open bundle \u2014 RAG Corpus Substrate Maturity Gradient (contingency-gated with Authority per-plane posture fallback)",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/platform/cross_domain_integration_audit.md": {
       "originating_session": 1274,
