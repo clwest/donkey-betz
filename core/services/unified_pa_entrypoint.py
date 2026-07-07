@@ -690,6 +690,41 @@ class UnifiedPAEntrypoint:
                 status, exc,
             )
 
+    async def _maybe_create_pa_turn_execution_async(
+        self, message: str, trace_id: str, context: Dict[str, Any],
+    ):
+        """Async-safe wrapper for use inside ``async def process_message``.
+
+        The underlying sync helper performs ORM writes, which Django
+        refuses inside a running event loop
+        (``SynchronousOnlyOperation``). This wrapper hops to a worker
+        thread via ``sync_to_async`` so the ORM operations execute on
+        a sync-safe stack while preserving the soft-fail semantics of
+        the sync helper (returns ``None`` when flag OFF or on any
+        failure — never raises to the caller).
+        """
+        from asgiref.sync import sync_to_async
+        return await sync_to_async(self._maybe_create_pa_turn_execution)(
+            message, trace_id, context,
+        )
+
+    async def _maybe_finalize_pa_turn_execution_async(
+        self, pa_execution, status: str, response: Optional[Any] = None,
+        error_message: str = "", start_time: Optional[float] = None,
+        intent: Optional[str] = None,
+    ):
+        """Async-safe wrapper for the finalize helper. Same rationale as
+        ``_maybe_create_pa_turn_execution_async``. Fast-paths the
+        ``pa_execution is None`` case (flag OFF or create failed) to
+        avoid a needless thread hop, matching the sync helper's early
+        return."""
+        if pa_execution is None:
+            return
+        from asgiref.sync import sync_to_async
+        return await sync_to_async(self._maybe_finalize_pa_turn_execution)(
+            pa_execution, status, response, error_message, start_time, intent,
+        )
+
     # ─────────────────────────────────────────────────────────────────
     # Arc I-0100 P4 Stop Condition #3 — PA↔LLMCallEvent correlation
     # (Chris Option 1 ratified 2026-07-06). Per ADR-0002 §3.3 primary
@@ -789,8 +824,11 @@ class UnifiedPAEntrypoint:
         # PA turn when PA_AGENT_EXECUTION_WRITE_ENABLED=True. Off by default
         # → returns None → downstream finalize calls no-op. Failures are
         # soft (logged; never break the user-facing turn). See ADR-0002
-        # §3.1 for the ratified field-population contract.
-        _pa_execution = self._maybe_create_pa_turn_execution(
+        # §3.1 for the ratified field-population contract. Uses the async
+        # wrapper because ``process_message`` is async and the sync ORM
+        # inside the helper raises ``SynchronousOnlyOperation`` if called
+        # directly.
+        _pa_execution = await self._maybe_create_pa_turn_execution_async(
             message, trace_id, context,
         )
 
@@ -807,7 +845,7 @@ class UnifiedPAEntrypoint:
             # Prevents status='pending' orphan rows when
             # PA_AGENT_EXECUTION_WRITE_ENABLED=True. No-op when flag
             # OFF (create returned None).
-            self._maybe_finalize_pa_turn_execution(
+            await self._maybe_finalize_pa_turn_execution_async(
                 _pa_execution, status="failed",
                 error_message=f"injection_blocked:{_inj.pattern_name}",
                 start_time=start_time, intent="blocked",
@@ -842,7 +880,7 @@ class UnifiedPAEntrypoint:
                 # intent='triage' before early-returning. Triage
                 # response IS a successful turn outcome. Prevents
                 # status='pending' orphan rows.
-                self._maybe_finalize_pa_turn_execution(
+                await self._maybe_finalize_pa_turn_execution_async(
                     _pa_execution, status="completed",
                     start_time=start_time, intent="triage",
                 )
@@ -886,7 +924,7 @@ class UnifiedPAEntrypoint:
                 # the two lifecycle transitions can be told apart
                 # in downstream diagnostics. Prevents status='pending'
                 # orphan rows.
-                self._maybe_finalize_pa_turn_execution(
+                await self._maybe_finalize_pa_turn_execution_async(
                     _pa_execution, status="completed",
                     start_time=start_time, intent="triage-start",
                 )
@@ -1316,7 +1354,7 @@ class UnifiedPAEntrypoint:
                 response_id=response_id,
                 lane=self._lane,
             )
-            self._maybe_finalize_pa_turn_execution(
+            await self._maybe_finalize_pa_turn_execution_async(
                 _pa_execution, status="completed",
                 response=_final_response, start_time=start_time,
                 intent=intent,
@@ -1329,7 +1367,7 @@ class UnifiedPAEntrypoint:
 
             # Arc I-0100 P4 (IB-1799-T1-02): finalize the PA turn's
             # AgentExecution row with status='failed'.
-            self._maybe_finalize_pa_turn_execution(
+            await self._maybe_finalize_pa_turn_execution_async(
                 _pa_execution, status="failed",
                 error_message=str(e), start_time=start_time,
             )

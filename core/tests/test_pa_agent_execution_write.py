@@ -27,7 +27,7 @@ import asyncio
 import uuid
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 
 from core.models_unified_system import Agent, AgentExecution
 from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
@@ -266,6 +266,123 @@ class SoftFailBehaviorTests(TestCase):
             # Restore
             pa_agent.name = original_name
             pa_agent.save()
+
+
+class AsyncContextRegressionTests(TransactionTestCase):
+    """Regression coverage for the sync-in-async ORM bug caught during
+    local canary of PR #2955: ``_maybe_create_pa_turn_execution`` and
+    ``_maybe_finalize_pa_turn_execution`` are pure sync, but
+    ``process_message`` is ``async def``. Calling the sync helpers
+    directly from the async loop raises
+    ``SynchronousOnlyOperation``, the try/except swallows it, and every
+    PA turn silently emits a ``[PA_AGENT_EXECUTION_WRITE_DEGRADED]``
+    log line with zero rows written. The fix introduces the
+    ``_maybe_*_async`` wrappers which hop the ORM to a worker thread
+    via ``sync_to_async``. These tests exercise the wrappers from a
+    real event loop so any regression re-surfaces immediately.
+
+    Uses ``TransactionTestCase`` because ``sync_to_async`` runs the
+    wrapped ORM on a worker thread using its own DB connection —
+    ``TestCase``'s single-transaction isolation hides those writes
+    from the outer assertion path."""
+
+    def setUp(self):
+        # TransactionTestCase truncates tables between tests, which wipes
+        # the migration-created PA Agent row. Re-materialize the row so
+        # ``_maybe_create_pa_turn_execution`` finds it.
+        Agent.objects.get_or_create(
+            name="PersonalAssistant",
+            defaults={
+                "agent_type": "meta",
+                "specialization": "personal_assistant",
+                "description": "Canonical PA meta-agent row (test setup).",
+            },
+        )
+        self.user = User.objects.create_user(
+            username="p4-async-regression",
+            email="p4async@example.com",
+            password="x",
+        )
+
+    def _make_entry(self, conversation_id="pa-async-regression-01"):
+        entry = UnifiedPAEntrypoint(
+            user=self.user,
+            conversation_id=conversation_id,
+        )
+        entry._lane = "default"
+        return entry
+
+    @override_settings(PA_AGENT_EXECUTION_WRITE_ENABLED=True)
+    def test_async_create_wrapper_writes_row_from_event_loop(self):
+        entry = self._make_entry()
+        baseline = AgentExecution.objects.filter(input_data__source="pa").count()
+
+        async def _run():
+            return await entry._maybe_create_pa_turn_execution_async(
+                "async-regression create",
+                trace_id="pa-async-create-1",
+                context={},
+            )
+
+        row = asyncio.run(_run())
+        self.assertIsNotNone(row)
+        row.refresh_from_db()
+        self.assertEqual(row.status, "pending")
+        self.assertEqual(row.input_data["source"], "pa")
+        self.assertEqual(row.input_data["trace_id"], "pa-async-create-1")
+        after = AgentExecution.objects.filter(input_data__source="pa").count()
+        self.assertEqual(after, baseline + 1)
+
+    @override_settings(PA_AGENT_EXECUTION_WRITE_ENABLED=True)
+    def test_async_finalize_wrapper_transitions_row_from_event_loop(self):
+        entry = self._make_entry(conversation_id="pa-async-finalize-01")
+
+        class _Fake:
+            content = "async wrapper OK"
+            latency_ms = 12
+            tool_runs = []
+            intent = "general"
+
+        async def _run():
+            row = await entry._maybe_create_pa_turn_execution_async(
+                "async-regression finalize",
+                trace_id="pa-async-finalize-1",
+                context={},
+            )
+            await entry._maybe_finalize_pa_turn_execution_async(
+                row, status="completed",
+                response=_Fake(), start_time=None, intent="general",
+            )
+            return row
+
+        row = asyncio.run(_run())
+        self.assertIsNotNone(row)
+        row.refresh_from_db()
+        self.assertEqual(row.status, "completed")
+        self.assertEqual(row.input_data["intent"], "general")
+        self.assertIsNotNone(row.completed_at)
+
+    @override_settings(PA_AGENT_EXECUTION_WRITE_ENABLED=False)
+    def test_async_wrapper_flag_off_no_row_from_event_loop(self):
+        entry = self._make_entry(conversation_id="pa-async-off-01")
+        baseline = AgentExecution.objects.filter(input_data__source="pa").count()
+
+        async def _run():
+            row = await entry._maybe_create_pa_turn_execution_async(
+                "async-regression flag-off",
+                trace_id="pa-async-off-1",
+                context={},
+            )
+            # Finalize should no-op safely on a None row
+            await entry._maybe_finalize_pa_turn_execution_async(
+                row, status="completed", start_time=None,
+            )
+            return row
+
+        row = asyncio.run(_run())
+        self.assertIsNone(row)
+        after = AgentExecution.objects.filter(input_data__source="pa").count()
+        self.assertEqual(after, baseline)
 
 
 class MigrationReverseSafetyTests(TestCase):
