@@ -119,9 +119,16 @@ def compute_runs_metrics(hours: int = 24) -> dict:
 
     total = qs.count()
 
-    # By-agent counts (DB aggregation — fast)
+    # By-agent counts (DB aggregation — fast).
+    # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+    # by-agent ranking treats each agent__name as a router-agent
+    # dispatch target; PA agentic loop volume would dominate the
+    # ranking incorrectly. Use agent__name form per ADR-0002 F1 fold
+    # equivalent (Postgres JSONField NULL-semantics make the
+    # input_data__source='pa' form unsafe for pre-flag-flip rows).
     by_agent = list(
-        qs.values('agent__name')
+        qs.exclude(agent__name='PersonalAssistant')
+        .values('agent__name')
         .annotate(count=Count('id'))
         .order_by('-count')[:20]
     )

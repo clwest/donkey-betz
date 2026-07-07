@@ -2542,17 +2542,25 @@ class ValueRealizationEngine:
         cutoff = tz.now() - timedelta(days=days)
         events = {}
 
-        # Agent executions (successful)
+        # Agent executions (successful).
+        # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+        # "value_events_report" counts router-agent job completions +
+        # ranks top per-agent; PA agentic loop volume would inflate the
+        # agent_completions metric + dominate the top_agents ranking.
+        # Use agent__name form per ADR-0002 F1 fold equivalent
+        # (Postgres JSONField NULL-semantics make the
+        # input_data__source='pa' form unsafe for pre-flag-flip rows).
         try:
             from core.models_unified_system import AgentExecution
             agent_count = AgentExecution.objects.filter(
                 created_at__gte=cutoff, status='completed'
-            ).count()
+            ).exclude(agent__name='PersonalAssistant').count()
             events['agent_completions'] = agent_count
 
             # Top agents by usage
             top_agents = list(
                 AgentExecution.objects.filter(created_at__gte=cutoff, status='completed')
+                .exclude(agent__name='PersonalAssistant')
                 .values('agent__name')
                 .annotate(count=Count('id'))
                 .order_by('-count')[:10]

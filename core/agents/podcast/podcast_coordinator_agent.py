@@ -1024,9 +1024,15 @@ Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your
             from django.db.models import Count, Avg
 
             from django.db.models import Q as DjangoQ
+            # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+            # "platform_stats" story narrates router-agent job execution;
+            # PA agentic loop volume would inflate the total + skew the
+            # success rate. Use agent__name form per ADR-0002 F1 fold
+            # equivalent (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip rows).
             stats = AgentExecution.objects.filter(
                 started_at__gte=cutoff
-            ).aggregate(
+            ).exclude(agent__name='PersonalAssistant').aggregate(
                 total=Count('id'),
                 avg_time=Avg('execution_time_ms'),
                 failures=Count('id', filter=DjangoQ(status='failed'))
