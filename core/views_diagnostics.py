@@ -3277,7 +3277,16 @@ def _eval_stale_agent_alert(policy):
         AgentExecution.objects.filter(created_at__gte=cutoff)
         .values_list('agent__name', flat=True).distinct()
     )
-    all_agents = set(Agent.objects.filter(is_active=True).values_list('name', flat=True))
+    # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent from the
+    # "all active agents" universe so PA doesn't get flagged as a
+    # stale router-agent when PA_AGENT_EXECUTION_WRITE_ENABLED=False.
+    # PA is a meta-orchestrator, not a router-agent target; stale-
+    # agent alerts are for router-agents that have gone dormant.
+    all_agents = set(
+        Agent.objects.filter(is_active=True)
+        .exclude(name='PersonalAssistant')
+        .values_list('name', flat=True)
+    )
     stale = all_agents - agents_with_runs
 
     proposals = []
