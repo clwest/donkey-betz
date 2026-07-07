@@ -97,16 +97,24 @@ def collect_metrics(now: datetime, cutoff_24h: datetime, cutoff_7d: datetime) ->
     fail_rate_7d = (exec_7d_failed / exec_7d_total) if exec_7d_total else 0.0
     delta_vs_7d = fail_rate_24h - fail_rate_7d
 
+    # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
+    # "top failing agents" ranks router-agent job dispatches; PA
+    # agentic loop failures come from a different execution model
+    # and would distort the CTO daily diagnostic. Use agent__name
+    # form per Chris directive (safer than input_data__source='pa'
+    # for pre-flag-flip rows; see PR-A1 commit for JSON NULL edge case).
     top_failing_agents_24h = list(
         AgentExecution.objects.filter(
             created_at__gte=cutoff_24h, status='failed'
-        ).values('agent__name').annotate(count=Count('id')).order_by('-count')[:10]
+        ).exclude(agent__name='PersonalAssistant')
+        .values('agent__name').annotate(count=Count('id')).order_by('-count')[:10]
     )
     agent_7d = dict(
         (r['agent__name'], r['count'])
         for r in AgentExecution.objects.filter(
             created_at__gte=cutoff_7d, status='failed'
-        ).values('agent__name').annotate(count=Count('id'))
+        ).exclude(agent__name='PersonalAssistant')
+        .values('agent__name').annotate(count=Count('id'))
     )
 
     # Timeout subset
