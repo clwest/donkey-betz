@@ -268,11 +268,21 @@ class DomainContentContextBuilder:
             parts.append(f"- Active agents: {agent_count}")
             parts.append(f"- Agent executions this week: {recent_executions}")
 
-            # Recent successful agent patterns
+            # Recent successful agent patterns.
+            # Arc I-0100 P4 §4.2 F1 fold (PR-A7 sweep re-verification
+            # 2026-07-06): exclude PA meta-agent rows — "most active
+            # agents" (top 3) appears in Rigby's platform-context
+            # prompt injection; PA agentic loop volume would dominate
+            # the ranking incorrectly. Use agent__name form per
+            # ADR-0002 F1 fold equivalent (Postgres JSONField
+            # NULL-semantics make the input_data__source='pa' form
+            # unsafe for pre-flag-flip rows).
             successful = AgentExecution.objects.filter(
                 status='completed',
                 created_at__gte=timezone.now() - timedelta(days=7)
-            ).values('agent__name').annotate(
+            ).exclude(agent__name='PersonalAssistant').values(
+                'agent__name'
+            ).annotate(
                 count=Count('id')
             ).order_by('-count')[:3]
 
