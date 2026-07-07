@@ -147,6 +147,10 @@ def on_delegation_lifecycle(sender, instance, created, **kwargs):
     if not getattr(settings, "RIGBY_DELEGATION_ENABLED", False):
         return
 
+    from core.services.delegation_auto_disable_monitor import is_tripped
+    if is_tripped():
+        return
+
     # Resolve the work item + mission run. Use try/except — never let
     # the signal crash a save.
     try:
