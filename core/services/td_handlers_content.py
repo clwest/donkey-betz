@@ -3163,16 +3163,27 @@ class ContentHandlersMixin:
                 )
             )
 
-            # Calculate success rate for this agent
+            # Calculate success rate for this agent.
+            # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.1 #4 ratified):
+            # exclude PA meta-agent rows — per-agent success rate
+            # measures router-agent job success; PA agentic loop
+            # success is a different denominator. The icontains match
+            # ordinarily narrows to the requested agent, but explicit
+            # exclude locks in the semantic and prevents accidental
+            # inclusion when agent_name is 'assistant' or a substring
+            # that could match PA. Use agent__name form per ADR-0002
+            # F1 fold equivalent (Postgres JSONField NULL-semantics
+            # make the input_data__source='pa' form unsafe for
+            # pre-flag-flip rows).
             total = AgentExecution.objects.filter(
                 agent__name__icontains=agent_name,
                 created_at__gte=cutoff
-            ).count()
+            ).exclude(agent__name='PersonalAssistant').count()
             successes = AgentExecution.objects.filter(
                 agent__name__icontains=agent_name,
                 created_at__gte=cutoff,
                 status='completed'
-            ).count()
+            ).exclude(agent__name='PersonalAssistant').count()
 
             return {
                 'action': 'by_agent',

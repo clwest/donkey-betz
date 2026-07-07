@@ -142,11 +142,21 @@ def agent_analytics_needs_attention(request):
                 'agent_type': agent.agent_type,
             })
 
-        # Find agents with recent failures
+        # Find agents with recent failures.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-B1 §3.1 #3 ratified): exclude
+        # PA meta-agent rows — needs-attention feed ranks router-agent
+        # job failures; PA agentic loop failures would dominate the
+        # ranking incorrectly. Same shape as PR-A1
+        # feedback_loop_engine.needs_attention. Use agent__name form
+        # per ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form unsafe
+        # for pre-flag-flip rows).
         recent_failures = AgentExecution.objects.filter(
             status='failed',
             created_at__gte=week_ago
-        ).values('agent__id', 'agent__name', 'agent__agent_type').annotate(
+        ).exclude(agent__name='PersonalAssistant').values(
+            'agent__id', 'agent__name', 'agent__agent_type'
+        ).annotate(
             failure_count=Count('id')
         ).order_by('-failure_count')[:limit]
 
