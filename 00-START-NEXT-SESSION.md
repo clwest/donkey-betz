@@ -2,13 +2,13 @@
 
 ---
 
-## READ THIS FIRST — ARC I-0100 STAGE 6 CLOSED (LOCAL); FIRST PRODUCTION IMPLEMENTATION ARC COMPLETE UNDER IOS v1.5; NO ACTIVE ARC PENDING CHRIS DIRECTIVE
+## READ THIS FIRST — ARC I-0100 FULLY CLOSED (LOCAL); NO ACTIVE ARC; AWAITING CHRIS DIRECTIVE FOR NEXT ARC
 
-**Refreshed 2026-07-07 (Stage 6 close-time housekeeping; PR #2976 close doc merged; PR #2973 + PR #2975 acceptance packages on `main`).**
+**Refreshed 2026-07-07 (post-close-out: arc SIGN pin retired + wrapper rotation confirmed + docs cascade PR opened).**
 
 ### What just happened (arc-scope summary)
 
-Arc I-0100 (`observability_spine_mission_evidence_substrate`) — the first production implementation arc under IOS active v1.5 — is **COMPLETE under the LOCAL operating model**. All three T1 intakes are in terminal dispositions:
+Arc I-0100 (`observability_spine_mission_evidence_substrate`) — the first production implementation arc under IOS active v1.5 — is **FULLY CLOSED under the LOCAL operating model**. All three T1 intakes are in terminal dispositions and all arc-close ritual actions are discharged.
 
 | Intake | ADR | Terminal Disposition | Runtime PRs | Acceptance |
 |--------|-----|---------------------|-------------|------------|
@@ -24,9 +24,18 @@ Arc I-0100 (`observability_spine_mission_evidence_substrate`) — the first prod
 - `RIGBY_DELEGATION_ENABLED` — env-driven `false` at `core/settings.py:138-140`.
 - `PA_AGENT_EXECUTION_WRITE_ENABLED` — env-driven `false` at `core/settings.py:173-174`.
 
+### Arc I-0100 close-out actions — DISCHARGED
+
+Both Stage 6 close-time ritual steps flagged in the close doc §7 are now complete:
+
+1. **Arc SIGN pin retired** — `pa-c5b235f7b15f45be` (label `ios-arc-open-I-0100`) retired via Rigby `session_tool.retire` at session-open time. Response: `retired: true, updated_count: 0, previously_active: false, is_current_bound: false`. Idempotent housekeeping — the pin was already inactive at session-tool state; the retire call locked the terminal disposition.
+2. **Wrapper rotation confirmed** — `tools/pa_local.sh:456` points at `pa-44a6eb70d8814e34` (T4 Group 1700 Observability paused-research pin), rotated via PR #2978 at Stage 6 close-time housekeeping. Unchanged since.
+
+No further Arc I-0100 work is expected. Do not reopen the arc; the scoping frontmatter is locked at `status: closed-local`, `stage: 6`, `stage_state: closed`, `close_ratified_pr: 2976`.
+
 ### Phase
 
-**`implementation`.** IOS `active v1.5` on `main`. No active arc. Awaiting Chris directive for the next arc.
+**`implementation`.** IOS `active v1.5` on `main`. No active arc.
 
 ### Active arc
 
@@ -36,43 +45,40 @@ Arc I-0100 (`observability_spine_mission_evidence_substrate`) — the first prod
 
 **Do not attempt Railway/prod verification unless Chris explicitly provides a live prod access path.** The historical Railway URL is dead (404 `x-railway-fallback: true`) and Railway CLI is unauthenticated with no project link. Repeated probes waste session budget and produce noise. If any future arc needs prod validation, that path opens with Chris naming the environment (URL + auth token, or `railway link` + `railway run …`, or a read-only prod `DATABASE_URL`).
 
-### Remaining Arc I-0100 administrative actions (not blockers to close; not implementation work)
-
-Both items were flagged in the Stage 6 close doc §7 as arc-close ritual steps requiring tooling Claude Code does not have direct access to. They are NOT reasons to reopen Arc I-0100.
-
-1. **Retire the arc SIGN pin** `pa-c5b235f7b15f45be` (label `ios-arc-open-I-0100`). Retirement is done via Rigby: `session_tool.retire conversation_id=pa-c5b235f7b15f45be` invoked from a **different** conversation pin (self-referential retirement not supported). Recommend routing through the paused-research pin `pa-44a6eb70d8814e34` per `tools/pa_local.sh:427-434`.
-2. **Rotate `tools/pa_local.sh:448`** from the arc pin back to the paused-research pin `pa-44a6eb70d8814e34` per the wrapper's own instructions at lines 421-434.
-
-These are tooling/session housekeeping actions best executed by Chris via the Chat UI (or by Claude Code in a follow-on session where the wrapper is already rotated to a non-self-referential pin).
-
 ### Next executable action
 
-**Chris sequencing directive determines next action.** Per Stage 6 close doc §7, Arc I-0100 is retired from active implementation. Candidate paths for next work:
+**Chris sequencing directive determines the next arc.** No admin cleanup remains for Arc I-0100. The next session's work opens one of these two paths:
 
-- **(a) Perform the two administrative retirement actions** listed above (Chris-driven via Chat UI, or in a follow-on session with the wrapper pre-rotated). Purely tooling/session housekeeping; not implementation work.
-- **(b) Run the docs cascade for the arc-close artifacts.** Per MEMORY rule `feedback_cascade_pr_must_include_embed_step.md`, arc-close time is when Rigby's RAG should ingest the acceptance docs + close doc. The 4-step cascade (`build_docs_index` → `build_rag_corpus` → `sync_docs_index_to_documents` → `embed_documents --all-unembedded`) + `build_docs_provenance` runs as its own PR, docs-only, after this Stage 6 housekeeping merges.
-- **(c) Open a new implementation arc.** Chris directive names the target. Candidates already-triaged in `docs/research/implementation/BACKLOG.md` include: 1399 memory arc T1 rows, 1499 revenue arc T1 rows, 1599 sports arc T1 rows, 1699 content arc T1 rows.
-- **(d) Return to research phase.** If Chris wants to resume the paused T4 Group 1700 Observability arc, rotate `tools/pa_local.sh` back to `pa-44a6eb70d8814e34` first (which is also the retirement rotation from item (a)).
+- **(c) Open a new implementation arc.** Candidates already-triaged in `docs/research/implementation/BACKLOG.md`:
+  - `IB-1399-T1-*` — memory arc T1 rows
+  - `IB-1499-T1-*` — revenue arc T1 rows
+  - `IB-1599-T1-*` — sports arc T1 rows
+  - `IB-1699-T1-*` — content arc T1 rows
+  - Any T0/gate row from the 32-row register requiring individual Chris gate at Stage 2 entry
+- **(d) Return to research phase.** T4 Group 1700 Observability is the currently-pinned research thread (`tools/pa_local.sh:456` already routes to `pa-44a6eb70d8814e34`). Load-bearing inputs are documented in the wrapper's comment block (envelope-shape telemetry emit-signature + per-Consumer conformance metrics + doc_claim_verification hooks + audit-log hook signature + Cat C1 Path C+compensating debt-C1-4 + optional §9.1a cross-arc reconciliation-layer ownership decision).
 
-**My read:** (a) + (b) are the natural close-out actions before any new implementation or research work opens. (c) or (d) waits on Chris's directive for the next arc.
+**My read:** No default — this is a Chris sequencing decision. Do not open (c) or advance (d) without an explicit directive. If Chris is silent at session open, ask before touching either lane.
+
+### Deferred (not blocking, not urgent)
+
+- **`project_deployment_state_between_merged_and_active.md` — 2 triggers so far** (Arc I-0100 P3 + P4). Chris directive: apply four-trigger threshold before proposing IOS v1.6 to name the "code-merged, flag-flip-blocked" state. Do NOT propose v1.6 until pattern surfaces in 2+ more independent arcs. Use ad-hoc terminology in the interim.
 
 ### Read as background
 
 - **Arc I-0100 canonical close:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md` (PR #2976).
 - **P3 acceptance:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_p3_local_activation_acceptance.md` (PR #2975).
 - **P4 acceptance:** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_p4_local_activation_acceptance.md` (PR #2973).
-- **LOCAL-only reality codified:** PR #2972 (guardrail against prod verification without explicit Chris directive).
+- **LOCAL-only reality codified:** PR #2972.
 - **All 3 ADRs:** `docs/adr/ADR-000{1,2,3}*.md`.
 - **All 3 runtime discharge PRs on main:** #2954 (P2), #2955 + #2970 (P4), #2957 + #2974 (P3).
-- **MEMORY rules** — as usual.
-- **MEMORY project entries carried forward:** `project_deployment_state_between_merged_and_active.md` (2 triggers so far — Arc I-0100 P3 + P4 — Chris directive still holds: four-trigger threshold before IOS v1.6 proposal).
+- **BACKLOG:** `docs/research/implementation/BACKLOG.md` — T0/T1/T2/T3/DEFER rows for next-arc selection under (c).
+- **T4 paused research pin context:** `tools/pa_local.sh:20-42` comment block.
 
 ### Session ready check (before next action)
 
 1. **First tool call:** `context-kit orient`.
-2. Verify Stage 6 housekeeping PR merged: `git log --oneline -5` includes the housekeeping merge commit and the close doc PR #2976.
-3. Verify both runtime flags OFF: `grep -E 'PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — both env-driven `false` defaults.
-4. Verify `MONITORING_SURFACE_INTEGRATED=True` on main at `core/services/delegation_auto_disable.py:87` (from PR #2974).
-5. Verify kill sentinel state — `python manage.py delegation_auto_disable_check --verbose` or `python manage.py shell -c "from core.services.delegation_auto_disable_monitor import is_tripped; print(is_tripped())"`. Sentinel state is dev-local; expected `False` unless a prior canary was left tripped.
-6. Read Chris sequencing directive from prior session.
-7. If directive names one of the 4 candidate next actions above (a-d), execute per that action's discipline. If ambiguous, ask.
+2. Verify no in-flight arc: `grep -A2 '^## In-progress' docs/research/OPEN_ARCS.md | head -20` — the table should be empty of live rows.
+3. Verify wrapper pin unchanged: `grep 'conversation pa-' tools/pa_local.sh | tail -1` — expect `pa-44a6eb70d8814e34`.
+4. Verify runtime flags OFF: `grep -E 'PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — both env-driven `false` defaults.
+5. Read Chris sequencing directive from the current session.
+6. If directive names (c) or (d), execute per that path's discipline. If ambiguous or absent, ask.
