@@ -2074,11 +2074,20 @@ class ComplianceEngine:
         cutoff = tz.now() - timedelta(hours=hours)
         anomalies = []
 
-        # Check agent execution frequency — flag agents with unusually high activity
+        # Check agent execution frequency — flag agents with unusually high activity.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+        # 2026-07-06): exclude PA meta-agent rows — anomaly detector
+        # flags "unusually high activity" against router-agent
+        # baseline; PA agentic loop volume would always top the
+        # ranking and trigger false-positive alerts. Use agent__name
+        # form per ADR-0002 F1 fold equivalent (Postgres JSONField
+        # NULL-semantics make the input_data__source='pa' form
+        # unsafe for pre-flag-flip rows).
         try:
             from core.models_unified_system import AgentExecution
             agent_counts = list(
                 AgentExecution.objects.filter(created_at__gte=cutoff)
+                .exclude(agent__name='PersonalAssistant')
                 .values('agent__name')
                 .annotate(exec_count=Count('id'))
                 .order_by('-exec_count')[:20]
@@ -2686,11 +2695,21 @@ class ValueRealizationEngine:
         cutoff = tz.now() - timedelta(days=days)
         gaps = []
 
-        # Agents with high execution count but high failure rate
+        # Agents with high execution count but high failure rate.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-A8 direct-callsite sweep
+        # 2026-07-06): exclude PA meta-agent rows — gap analysis
+        # flags high-count + high-failure router-agent jobs for
+        # remediation; PA agentic loop failure counts would
+        # dominate the ranking + trigger false-positive gaps. Use
+        # agent__name form per ADR-0002 F1 fold equivalent
+        # (Postgres JSONField NULL-semantics make the
+        # input_data__source='pa' form unsafe for pre-flag-flip
+        # rows).
         try:
             from core.models_unified_system import AgentExecution
             agent_stats = list(
                 AgentExecution.objects.filter(created_at__gte=cutoff)
+                .exclude(agent__name='PersonalAssistant')
                 .values('agent__name')
                 .annotate(
                     total=Count('id'),
