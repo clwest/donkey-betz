@@ -778,10 +778,19 @@ RESEARCH DATA:
                 )[:3],
             })
 
-        # By agent
+        # By agent.
+        # Arc I-0100 P4 §4.2 F1 fold (PR-A7 sweep re-verification
+        # 2026-07-06): exclude PA meta-agent rows — per-agent
+        # execution + failure-count ranking in ops summary; PA
+        # agentic loop volume would dominate the ranking + skew
+        # failure_rate. Use agent__name form per ADR-0002 F1 fold
+        # equivalent (Postgres JSONField NULL-semantics make the
+        # input_data__source='pa' form unsafe for pre-flag-flip
+        # rows).
         from core.models import AgentExecution
         by_agent_raw = list(
             AgentExecution.objects.filter(created_at__gte=cutoff)
+            .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(
                 execution_count=Count('id'),

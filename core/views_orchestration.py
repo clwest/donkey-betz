@@ -1009,9 +1009,21 @@ class ActiveWorkView(View):
             exec_completed = recent_execs.filter(status='completed').count()
             exec_failed = recent_execs.filter(status='failed').count()
 
-            # Top 5 most active agents in last 24h
+            # Top 5 most active agents in last 24h.
+            # Arc I-0100 P4 §4.2 F1 fold (PR-A7 sweep re-verification
+            # 2026-07-06): exclude PA meta-agent rows — top-5-most-
+            # active on the orchestration dashboard ranks router-agent
+            # dispatch targets; PA agentic loop volume would dominate
+            # the ranking incorrectly. exec_total / completed / failed
+            # counts above intentionally remain cross-source (Category
+            # A liveness metrics per PR-B1 §3.2 posture). Use
+            # agent__name form per ADR-0002 F1 fold equivalent
+            # (Postgres JSONField NULL-semantics make the
+            # input_data__source='pa' form unsafe for pre-flag-flip
+            # rows).
             top_agents = list(
-                recent_execs.values('agent__name')
+                recent_execs.exclude(agent__name='PersonalAssistant')
+                .values('agent__name')
                 .annotate(c=Count('id'))
                 .order_by('-c')[:5]
             )
