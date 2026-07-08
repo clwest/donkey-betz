@@ -302,17 +302,24 @@ def search_embeddings(
         # Cycle 1A KFI-3 (ADR-0130 §2.1): apply weighted ranking +
         # deterministic tie-break in Python. Sort key composition:
         #   1. weighted_score DESC
-        #   2. Coalesce(updated_at, created_at) DESC
-        #   3. id ASC (deterministic final tie-break)
+        #   2. Coalesce(document.updated_at, document.created_at) DESC
+        #   3. document.id ASC (primary final tie-break per ADR §2.1)
+        #   4. chunk.id ASC (post-code SIGN hardening: two chunks from
+        #      the same Document tie on 1-3; DocumentEmbedding.id keeps
+        #      chunk ordering deterministic)
         if authority_weighted:
             def _sort_key(row):
                 meta = row['metadata']
                 effective_ts = meta.get('updated_at') or meta.get('created_at')
                 doc_id_str = str(meta.get('document_id') or '')
-                # Return tuple: (-weighted, -epoch, +id) so builtin
-                # ascending sort yields weighted DESC, ts DESC, id ASC.
+                chunk_id_str = str(row.get('id') or '')
                 epoch = effective_ts.timestamp() if effective_ts else 0.0
-                return (-row['weighted_score'], -epoch, doc_id_str)
+                return (
+                    -row['weighted_score'],
+                    -epoch,
+                    doc_id_str,
+                    chunk_id_str,
+                )
             documents.sort(key=_sort_key)
             documents = documents[:limit]
 

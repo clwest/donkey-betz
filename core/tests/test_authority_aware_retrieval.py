@@ -258,7 +258,8 @@ class WeightedRankingTests(_FixtureBase):
 
     def test_t6_tie_break_by_id_asc_when_timestamps_tie(self):
         # All 3 rows: identical canonical_authority + identical timestamps
-        # → sort must fall through to id ASC for deterministic order.
+        # → sort must fall through to document.id ASC (primary) then
+        # chunk.id ASC (post-code SIGN hardening) for deterministic order.
         Document.objects.filter(id=self.workspace_doc.id).update(
             updated_at=self._ts_old,
         )
@@ -270,16 +271,38 @@ class WeightedRankingTests(_FixtureBase):
             canonical_authority='workspace_canonical',
             updated_at=self._ts_old,
         )
+        # Add a second chunk to the workspace_doc so tie-break at
+        # chunk-id level is exercised.
+        _make_embedding(self.workspace_doc, chunk_index=1, chunk_text='chunk-2')
+
         rows = self._run_search(authority_weighted=True)
-        # Extract per-row title -> str(uuid).
-        titles = [r['metadata']['title'] for r in rows]
-        # All 3 rows have equal weighted_score + equal ts → id ASC final.
-        # We don't know Document UUIDs in advance, but sorted() by title
-        # is not guaranteed. Instead assert the sort is stable by
-        # re-running and checking identical results.
+
+        # Re-run to prove determinism.
         rows2 = self._run_search(authority_weighted=True)
-        titles2 = [r['metadata']['title'] for r in rows2]
-        self.assertEqual(titles, titles2, 'tie-break must be deterministic')
+        self.assertEqual(
+            [r['id'] for r in rows],
+            [r['id'] for r in rows2],
+            'tie-break must be deterministic across repeated calls',
+        )
+
+        # Chunks from the same document (workspace_doc has 2) must be
+        # ordered by chunk-id ASC.
+        ws_doc_id_str = str(self.workspace_doc.id)
+        ws_chunk_ids = [
+            r['id']
+            for r in rows
+            if r['metadata']['citation'].startswith(f'[{self.workspace_doc.file_path}#')
+            or (
+                # Fallback if citation differs — match on title.
+                r['metadata']['title'] == 'workspace-tier'
+            )
+        ]
+        # If both chunks made it into the top-K, they must be sorted asc.
+        if len(ws_chunk_ids) >= 2:
+            self.assertEqual(
+                ws_chunk_ids, sorted(ws_chunk_ids),
+                'multi-chunk same-document tie-break must be chunk.id ASC',
+            )
 
     def test_t7_integration_workspace_beats_repo_beats_derived(self):
         # Each tier at equal similarity — weighted ranking must produce
