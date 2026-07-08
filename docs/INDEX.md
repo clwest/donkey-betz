@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-08 01:06
+**Generated:** 2026-07-08 02:36
 **Current Session:** 0
 **Total Documentation:** 2986 files | 894,411 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 7,412 |
+| Total cross-references | 7,401 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/INDEX.md` | 156 | INDEX |
 | `docs/research/ARCHITECTURE_INDEX.md` | 137 | ARCHITECTURE INDEX |
 | `docs/research/OPEN_ARCS.md` | 133 | OPEN ARCS |
-| `docs/archive/old-structure/capabilities/06_Decision_Systems/README.md` | 121 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/ops/README.md` | 121 | docs/ops/ — runtime output directory |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 113 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/AGENTS.md` | 80 | AGENTS |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 68 | DOC LIFECYCLE |
@@ -255,7 +255,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 399 | 2026-07-08 00:01 |
+| INDEX.md | docs | 399 | 2026-07-08 01:08 |
 | SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md | handoffs | 310 | 2026-07-07 21:42 |
 | SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md | handoffs | 283 | 2026-07-07 20:05 |
 | cross_domain_integration_audit.md | research | 2,911 | 2026-07-07 11:01 |
