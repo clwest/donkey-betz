@@ -483,20 +483,16 @@ app.conf.beat_schedule = {
         'options': {'queue': 'default', 'expires': 3600},
     },
 
-    # Session 1235 P5#2 — daily docs-corpus auto-refresh. Hash-delta
-    # gated cascade (build_docs_index → build_rag_corpus →
-    # sync_docs_index_to_documents → fan-out embed). Pre-this-task,
-    # the cascade was manual-only; prod corpus drifted 12 days +
-    # 1820 Documents unembedded during Session 1234 (D9-D16 arc).
-    # Pin to 4:00 AM Denver — 3h pre-morning_brief for headroom on
-    # cold cascades. NOT in LOCAL_DENY_TASKS (delta cost is sub-penny
-    # and local Rigby benefits from fresh corpus). Worst case on
-    # local: one redundant skip log per fire when corpus is current.
-    'refresh-docs-corpus-daily': {
-        'task': 'core.tasks.refresh_docs_corpus',
-        'schedule': crontab(hour=4, minute=0),  # 4:00 AM Denver
-        'options': {'queue': 'default', 'expires': 3600},
-    },
+    # Cycle 1A KFI-4 (ADR-0140 §2.1 (1)) — the legacy
+    # ``refresh-docs-corpus-daily`` static beat_schedule entry was
+    # removed as part of KFI-4. Scheduled invocation of the docs
+    # cascade moved to ``rigby_documentation_manager_daily`` (DB
+    # PeriodicTask seeded by migration 0372, fires daily at 12:30 UTC
+    # via the MissionRunner path with hash-delta preflight). The
+    # underlying ``core.tasks.refresh_docs_corpus`` function is
+    # preserved as a callable-only compatibility API (see the
+    # docstring on that function for details). Migration 0378 drops
+    # the DB PeriodicTask row that mirrored this entry.
 
     # ────────────────────────────────────────────────────────────────────────
     # Session 1115 batch-3 — DB hygiene + metrics tasks that were defined but

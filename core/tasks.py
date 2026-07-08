@@ -5815,6 +5815,19 @@ def generate_outreach_drafts_daily(self, limit=5, scope='all', offers=None):
 def refresh_docs_corpus(self, force=False):
     """Daily auto-cascade for the docs corpus.
 
+    DEPRECATED (Cycle 1A KFI-4 / ADR-0140 §2.1 (3)): scheduled invocation
+    of this task was retired in KFI-4. The static beat_schedule entry at
+    ``core/celery.py`` and the corresponding DB ``PeriodicTask`` row are
+    dropped by migration 0378. The function body is preserved unchanged
+    as a callable-only backward-compat surface — direct calls from tests,
+    management commands, or ad-hoc programmatic callers continue to work.
+    The scheduled docs cascade now runs via ``rigby_documentation_manager_daily``
+    (MissionRunner path with hash-delta preflight, per ADR §2.1 (4)-(5)).
+    The ``force`` param on this task is orthogonal to
+    ``rigby_documentation_manager_daily(force=...)`` — the two forces live
+    on distinct tasks, distinct cache keys, and distinct semantics; the
+    KFI-4 force bypasses ONLY the MissionRunner preflight step.
+
     Session 1235 P5#2 — closes the 12-day-stale failure mode discovered
     during Session 1234's D9→D16 docs-corpus retrieval arc. Pre-this-task,
     the cascade ``build_docs_index → build_rag_corpus →
