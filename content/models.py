@@ -630,6 +630,32 @@ class Document(UnifiedBaseModel):
         help_text="Promotion gate: staged docs are not embedded or retrievable until promoted"
     )
 
+    # Cycle 1A KFI-2 (ADR-0120): source-tier classification for
+    # authority-aware retrieval. Populated at Document create by 0110
+    # mirror pipeline (workspace_canonical) or docs cascade, and via
+    # ``content/_canonical_authority_helpers.py`` derivation for the
+    # backfill migration (0049).
+    CANONICAL_AUTHORITY_CHOICES = [
+        ('workspace_canonical', 'Workspace Canonical'),
+        ('repo_canonical', 'Repo Canonical'),
+        ('derived', 'Derived'),
+    ]
+    canonical_authority = models.CharField(
+        max_length=20,
+        choices=CANONICAL_AUTHORITY_CHOICES,
+        default='derived',
+        db_index=True,
+        help_text=(
+            "Source-tier classification for authority-aware retrieval. "
+            "'workspace_canonical' = mirror of a workspace Deliverable "
+            "(canonical for research/governance per 0005 §3). "
+            "'repo_canonical' = ingested from git-canonical /docs/ file "
+            "(canonical for its own content in the repo). "
+            "'derived' = downstream/derived surface (e.g., API-imported, "
+            "spider-scraped, or unclassified)."
+        ),
+    )
+
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
@@ -650,8 +676,8 @@ class Document(UnifiedBaseModel):
         ]
     
     def __str__(self):
-        return f"{self.title} ({self.document_type})"
-    
+        return f"{self.title} ({self.document_type}) [{self.canonical_authority}]"
+
     def save(self, *args, **kwargs):
         # Generate content hash for deduplication
         if self.processed_content and not self.content_hash:
