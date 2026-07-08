@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-08T14:56:34+00:00",
+    "generated": "2026-07-08T22:33:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "20df44602873",
-    "doc_count": 2438,
-    "commit_count": 7775,
+    "git_head": "d24f738ecb94",
+    "doc_count": 2460,
+    "commit_count": 7780,
     "confidence_breakdown": {
       "HIGH": 1591,
-      "MEDIUM": 352,
+      "MEDIUM": 374,
       "LOW": 5,
       "UNKNOWN": 490
     },
@@ -1983,6 +1983,25 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/ENGINEERING_PLAYBOOK.md": {
+      "originating_session": 2716,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "d24f738e",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "feat(playbook): inaugural Engineering Playbook v0.1.0 body",
+      "sessions_touched": [
+        2716,
+        2720,
+        2721,
+        2723,
+        2725,
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/ERROR_TRACKING.md": {
       "originating_session": 752,
       "confidence": "HIGH",
@@ -2520,7 +2539,7 @@
         2502,
         2504
       ],
-      "commit_count": 1274,
+      "commit_count": 1275,
       "prs": [
         10,
         11,
@@ -7372,7 +7391,7 @@
         2502,
         2504
       ],
-      "commit_count": 230,
+      "commit_count": 231,
       "prs": [
         2213,
         2219,
@@ -35892,6 +35911,20 @@
         2982
       ]
     },
+    "docs/research/platform/constitutional_ecosystem_inventory.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/platform/cross_domain_integration_audit.md": {
       "originating_session": 1274,
       "confidence": "HIGH",
@@ -35909,6 +35942,288 @@
         2937,
         2985
       ]
+    },
+    "docs/research/platform/engineering_playbook_architecture_proposal.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/engineering_playbook_architecture_specification.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/engineering_playbook_authoring_protocol.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/engineering_playbook_evidence_manifest.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/platform_architecture_workspace_boundary_analysis.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/platform_constitutional_architecture.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/platform_constitutional_transition_review.md": {
+      "originating_session": 2716,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "5513edd6",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Session 2727 constitutional transition review",
+      "sessions_touched": [
+        2716,
+        2720,
+        2721,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_authoring_session_2716.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_authoring_session_2718.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_authoring_session_2719.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_authoring_session_2720.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_authoring_session_2721.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_authoring_validation_and_chapter6_preparation.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_constitutional_correction_pass_session_2723.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_constitutional_correction_session_2725.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_constitutional_sign_audit_session_2722.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_final_constitutional_verification.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_v0_1_body_corrected.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/playbook_v0_1_ratification_package.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/platform/workspace_architecture_and_constitution_proposal.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6147f844",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/platform_architecture_inventory.md": {
       "originating_session": 1273,
