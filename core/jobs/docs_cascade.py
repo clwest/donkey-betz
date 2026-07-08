@@ -48,6 +48,7 @@ history.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -56,9 +57,10 @@ import threading
 import time
 from io import StringIO
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.management import call_command
 from django.utils import timezone
 
@@ -693,10 +695,216 @@ def _docs_escalation_spec_factory(
     )
 
 
+# ── Cycle 1A KFI-4 (ADR-0140) — hash-delta preflight ─────────────────
+#
+# Chris directive 2026-07-08 (Option B for the "downstream short-circuit"
+# implementation contradiction): preflight evaluation happens at MISSION
+# CONSTRUCTION time in the factory below, NOT at MissionRunner step-loop
+# execution time. Rationale: MissionRunner does not currently support
+# success-driven early termination — only failure-driven termination.
+# Rather than expanding shared MissionRunner infrastructure with a new
+# execution semantic, KFI-4 optimizes at construction: when preflight
+# decides "no changes required", the factory wires a runner containing
+# ONLY the preflight-marker step; when preflight decides "changes
+# required", the factory wires the full 5-step pipeline (marker + 4
+# cascade steps).
+#
+# MissionRunner remains untouched. The optimization is local to the
+# docs cascade. See preflight_pass / preflight_short_circuit
+# OpsRunEvent labels for observability parity per ADR §2.6.3.
+
+_DOCS_INDEX_HASH_CACHE_KEY = "docs_index_hash"
+
+
+def _iter_docs_md_paths() -> Sequence[Path]:
+    """Yield the docs/**.md file paths that participate in the docs
+    hash. Excludes:
+
+    - hidden directories (``.git/`` etc.)
+    - underscore-prefixed derived files (``docs/_index.json``,
+      ``docs/_provenance.json``) — those are OUTPUTS of the cascade,
+      not inputs (see ADR §2.1 (4)).
+
+    Returns a sorted list for determinism.
+    """
+    docs_root = Path(settings.BASE_DIR) / "docs"
+    if not docs_root.is_dir():
+        return []
+    paths = []
+    for path in docs_root.rglob("*.md"):
+        rel_parts = path.relative_to(docs_root).parts
+        if any(part.startswith(".") for part in rel_parts):
+            continue
+        if any(part.startswith("_") for part in rel_parts):
+            continue
+        paths.append(path)
+    return sorted(paths)
+
+
+def _hash_docs_tree() -> str:
+    """Return a canonical SHA-256 aggregate over docs/**.md files.
+
+    Contract from ADR-0140 §2.1 (4): hash the RAW docs state (bytes
+    + relative path). MTIMES ARE NOT INCLUDED — content-hash catches
+    every meaningful change deterministically, and mtimes are an
+    unreliable signal under sync/checkout scenarios that touch files
+    without changing content.
+
+    Aggregation: for each participating .md file, compute
+    ``rel_path_bytes + b':' + sha256(file_body)``. Sort those tuples
+    lexicographically. Concatenate. Hash once more.
+    """
+    docs_root = Path(settings.BASE_DIR) / "docs"
+    entries = []
+    for path in _iter_docs_md_paths():
+        rel = path.relative_to(docs_root).as_posix().encode("utf-8")
+        body_digest = hashlib.sha256(path.read_bytes()).digest()
+        entries.append(rel + b":" + body_digest)
+    entries.sort()
+    return hashlib.sha256(b"".join(entries)).hexdigest()
+
+
+def _preflight_should_short_circuit(
+    force: bool = False,
+) -> Tuple[bool, Dict[str, Any]]:
+    """Evaluate whether the docs cascade preflight should short-circuit.
+
+    Returns ``(should_short_circuit, detail_dict)``.
+
+    Contract:
+      - ``force=True`` never short-circuits (returns False).
+      - Short-circuit iff cached ``docs_index_hash`` == current tree hash
+        AND ``unembedded_count == 0`` (per KFI-2 predicate).
+      - Any hashing/query error falls through to "proceed" so the
+        cascade runs (fail-safe).
+    """
+    if force:
+        return False, {"reason": "forced", "force": True}
+
+    try:
+        docs_hash = _hash_docs_tree()
+    except Exception as exc:  # pragma: no cover — defensive
+        return False, {
+            "reason": "hash_error",
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+    try:
+        # Match the pattern refresh_docs_corpus uses (core/tasks.py:5894)
+        # — Django's `embeddings__isnull=True` reverse FK filter blows
+        # up on the DocumentEmbedding relation. Instead: enumerate
+        # embedded doc ids, exclude them, then filter by
+        # source/active/raw_content.
+        from content.models import Document, DocumentEmbedding
+
+        embedded_doc_ids = set(
+            DocumentEmbedding.objects
+            .values_list("document_id", flat=True)
+            .distinct()
+        )
+        unembedded_count = (
+            Document.objects
+            .exclude(id__in=embedded_doc_ids)
+            .filter(
+                source="imported",
+                is_active=True,
+                raw_content__gt="",
+            )
+            .count()
+        )
+    except Exception as exc:  # pragma: no cover — defensive
+        return False, {
+            "reason": "unembedded_query_error",
+            "error": f"{type(exc).__name__}: {exc}",
+            "current_hash": docs_hash,
+        }
+
+    cached_hash = cache.get(_DOCS_INDEX_HASH_CACHE_KEY)
+    if cached_hash == docs_hash and unembedded_count == 0:
+        return True, {
+            "reason": "no_changes",
+            "cached_hash": cached_hash,
+            "unembedded_count": 0,
+        }
+    return False, {
+        "reason": "changes_or_unembedded",
+        "current_hash": docs_hash,
+        "cached_hash": cached_hash,
+        "unembedded_count": unembedded_count,
+    }
+
+
+def _make_preflight_hash_delta_step(
+    short_circuit: bool,
+    detail: Dict[str, Any],
+) -> Callable[[Any], StepResult]:
+    """Return a preflight-marker Step function for the docs cascade.
+
+    Two variants:
+
+    - **Short-circuit variant**: emits ``preflight_short_circuit``
+      OpsRunEvent. Returns ``StepResult(passed=True, extra={
+      'verdict': 'SKIPPED_NO_CHANGES', 'preflight_short_circuit': True,
+      ...detail})``. This is the ONLY step in the short-circuit
+      mission (per Chris Option B factory-side conditional).
+
+    - **Proceed variant**: emits ``preflight_pass`` OpsRunEvent.
+      Returns ``StepResult(passed=True, extra={'preflight_pass': True,
+      ...detail})``. Preflight runs first in the proceed pipeline;
+      cascade steps 1-4 run after.
+
+    Health semantics (Chris directive 2026-07-08): SKIPPED_NO_CHANGES
+    is a HEALTHY operational outcome. Both variants set
+    ``passed=True`` so MissionRunner maps to ``OpsRun.status='passed'``
+    and the run counts toward ``cascade_success_rate_7d`` +
+    ``cascade_last_success_at`` per ADR §2.6.1.
+    """
+
+    def step_0_preflight_hash_delta(mission) -> StepResult:
+        started = time.monotonic()
+        if short_circuit:
+            _emit_event(
+                mission,
+                "preflight_short_circuit",
+                "info",
+                **{k: v for k, v in detail.items() if k != "reason"},
+                reason=detail.get("reason", "no_changes"),
+            )
+            extra: Dict[str, Any] = {
+                "verdict": "SKIPPED_NO_CHANGES",
+                "preflight_short_circuit": True,
+            }
+            extra.update(detail)
+            return StepResult(
+                passed=True,
+                output="preflight: no changes; short-circuit",
+                duration_ms=int((time.monotonic() - started) * 1000),
+                extra=extra,
+            )
+        else:
+            _emit_event(
+                mission,
+                "preflight_pass",
+                "info",
+                **{k: v for k, v in detail.items() if k != "reason"},
+                reason=detail.get("reason", "changes_or_unembedded"),
+            )
+            extra = {"preflight_pass": True}
+            extra.update(detail)
+            return StepResult(
+                passed=True,
+                output="preflight: proceed",
+                duration_ms=int((time.monotonic() - started) * 1000),
+                extra=extra,
+            )
+
+    return step_0_preflight_hash_delta
+
+
 # ── Public factory ────────────────────────────────────────────────────
 
 
-def build_docs_manager_runner() -> MissionRunner:
+def build_docs_manager_runner(force: bool = False) -> MissionRunner:
     """Wire all docs-cascade-specific config + hooks into a MissionRunner.
 
     Called by the Celery task; also usable from tests + management
@@ -709,6 +917,25 @@ def build_docs_manager_runner() -> MissionRunner:
     workspace travels via ``EscalationDeliverableSpec.workspace_name``
     on the spec factory above (spec precedence wins over
     ``config.workspace_name`` per ``_resolve_workspace_for_spec``).
+
+    Cycle 1A KFI-4 (ADR-0140 §2.1 (4), Chris Option B 2026-07-08):
+    the docs-tree hash-delta preflight is evaluated HERE at factory
+    time. If preflight decides "no changes required", the returned
+    runner contains only the preflight-marker step. If preflight
+    decides "changes required", the returned runner contains the
+    preflight-marker step + the 4 cascade steps. MissionRunner
+    execution semantics are unchanged.
+
+    Args:
+        force: When True, bypass the hash-delta short-circuit and
+            always wire the full cascade pipeline. Passed through
+            from ``rigby_documentation_manager_daily(self, force=...)``.
+            NOTE: this ``force`` is orthogonal to the legacy
+            ``core.tasks.refresh_docs_corpus(force=...)`` — the two
+            tasks live on distinct entry points, distinct cache keys,
+            and distinct semantics. This ``force`` means ONLY
+            "bypass MissionRunner preflight step in the docs-manager
+            factory."
     """
     config = MissionRunnerConfig(
         # Identity
@@ -731,12 +958,45 @@ def build_docs_manager_runner() -> MissionRunner:
         pin_settings_key=PIN_SETTINGS_KEY,
     )
 
-    steps = [
-        Step(name="step_1_index", fn=step_1_build_docs_index),
-        Step(name="step_2_corpus", fn=step_2_build_rag_corpus),
-        Step(name="step_3_sync", fn=step_3_sync_docs_index_to_documents),
-        Step(name="step_4_embed", fn=step_4_embed),
-    ]
+    # Cycle 1A KFI-4 Option B — decide the mission shape at construction.
+    short_circuit, preflight_detail = _preflight_should_short_circuit(
+        force=force,
+    )
+    preflight_step = Step(
+        name="step_0_preflight_hash_delta",
+        fn=_make_preflight_hash_delta_step(short_circuit, preflight_detail),
+    )
+    if short_circuit:
+        steps = [preflight_step]
+    else:
+        steps = [
+            preflight_step,
+            Step(name="step_1_index", fn=step_1_build_docs_index),
+            Step(name="step_2_corpus", fn=step_2_build_rag_corpus),
+            Step(name="step_3_sync", fn=step_3_sync_docs_index_to_documents),
+            Step(name="step_4_embed", fn=step_4_embed),
+        ]
+
+    # Cache update on full-cascade success only (skipped by short-circuit
+    # runs — they didn't run the cascade). We wrap the existing
+    # ``_postflight`` so its behavior is preserved AND the cache is
+    # refreshed with the docs_hash observed at preflight time.
+    docs_hash = preflight_detail.get("current_hash") or preflight_detail.get(
+        "cached_hash"
+    )
+
+    def _postflight_with_cache_update(ctx: "PostflightContext") -> None:
+        _postflight(ctx)
+        if ctx.passed and not short_circuit and docs_hash:
+            try:
+                cache.set(
+                    _DOCS_INDEX_HASH_CACHE_KEY, docs_hash, timeout=None,
+                )
+            except Exception as exc:  # pragma: no cover — defensive
+                logger.warning(
+                    "[docs_cascade] failed to update docs_index_hash "
+                    "cache: %s: %s", type(exc).__name__, exc,
+                )
 
     return MissionRunner(
         config=config,
@@ -747,7 +1007,7 @@ def build_docs_manager_runner() -> MissionRunner:
         shift_report_fn=_shift_report_fn,
         pa_post_fn=post_pa_escalation,
         preflight_fn=_make_preflight(),
-        postflight_fn=_postflight,
+        postflight_fn=_postflight_with_cache_update,
     )
 
 

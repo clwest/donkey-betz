@@ -33,15 +33,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build docs index
+      # Cycle 1A KFI-4 (ADR-0140 §2.1 (6)) — 4-step inline cascade.
+      # Env-per-step so each step's required secrets are auditable at
+      # its own block (Chris F3' cycle-2 clarification). CI bypasses
+      # the MissionRunner hash-delta preflight entirely — the workflow
+      # runs the same 4 management commands the Beat path invokes.
+
+      - name: Step 1 — Build docs index
         run: python manage.py build_docs_index
 
-      - name: Sync docs to DB with embeddings
+      - name: Step 2 — Build RAG corpus
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: python manage.py build_rag_corpus
+
+      - name: Step 3 — Sync docs to DB with embeddings
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DJANGO_SETTINGS_MODULE: core.settings
         run: python manage.py sync_docs_index_to_documents --embed
+
+      - name: Step 4 — Build docs provenance
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: python manage.py build_docs_provenance
 
       - name: Summary
         run: echo "Docs index synced. $(wc -l < docs/_index.json) lines in index."
