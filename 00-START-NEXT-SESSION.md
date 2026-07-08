@@ -2,99 +2,106 @@
 
 ---
 
-## READ THIS FIRST — ARC I-0200 FULLY CLOSED (LOCAL); NO ACTIVE ARC; AWAITING CHRIS DIRECTIVE
+## READ THIS FIRST — CYCLE 1A COMPLETE; NO ACTIVE IMPLEMENTATION ARC; GOVERNANCE-ONLY WORK REMAINS
 
-**Refreshed 2026-07-07 (post Stage 6 close: canonical close doc drafted + cross_domain_integration_audit §14.18 appended + arc-scoped SIGN pin retired + wrapper rotated back to paused-research T4 pin + close-doc PR in flight).**
+**Refreshed 2026-07-08 (SESSION 2706 close: all five Cycle 1A KFI code streams shipped and cascade-verified; 0199_CYCLE_1_CLOSEOUT authored in workspace; repository, docs corpus, and RAG synchronized).**
 
-### What just happened (arc-scope summary)
+---
 
-Arc I-0200 (`rag_corpus_substrate_maturity`) — the SECOND production implementation arc under IOS active v1.5 — is **FULLY CLOSED under the LOCAL operating model**. The sole T0 intake is in a terminal `SHIPPED` disposition; ADR-0004 landed accepted PROVISIONAL; all Stage 6 close ritual actions are discharged in the close PR bundle.
+## Current repository state
 
-| Intake | ADR | Terminal Disposition | Merge SHA | PR |
-|--------|-----|----------------------|-----------|-----|
-| **`IB-2199-T0-01`** (RAG corpus substrate maturity gradient) | ADR-0004 (accepted PROVISIONAL) | **SHIPPED (I-0200)** | `84b45a11` | #2984 |
+| Field | Value |
+|---|---|
+| Branch | `main` |
+| HEAD | `44c92b9e` (KFI-5 docs cascade merge, PR #2999) — will advance to the SESSION 2706 close-merge SHA once this PR lands |
+| Cleanliness | Working tree clean; origin/main matches local |
+| Pending migrations | 0 |
+| Open Cycle 1 PRs | 0 |
+| Open Cycle 1 branches | 0 |
 
-**Canonical close doc:** `docs/research/implementation/rag_corpus_substrate_maturity/I-020099_rag_corpus_substrate_maturity_implementation_close.md` (in this Stage 6 close PR).
+Full merge ledger: [`docs/handoffs/SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md`](docs/handoffs/SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md) §2 + §4.
 
-**Operating model:** LOCAL-only, per Arc I-0100 PR #2972 guardrail. No prod endpoint responded during the arc; no prod DB was touched; no prod flag was flipped. Arc I-0200 was docs-only from Stage 2 through Stage 6.
+---
 
-**Flag defaults (unchanged throughout the arc):**
-- `RIGBY_DELEGATION_ENABLED` — env-driven `false` at `core/settings.py:138-140`.
-- `PA_AGENT_EXECUTION_WRITE_ENABLED` — env-driven `false` at `core/settings.py:173-174`.
+## Current engineering state
 
-### Arc I-0200 close-out actions — DISCHARGED
+**All five Cycle 1A KFIs shipped, cascade-verified, and closed.**
 
-All Stage 6 ritual steps per IOS §4.3 Stage 6 items 1-7 are complete in this close PR:
+| KFI | ADR | Merge SHA |
+|---|---|---|
+| KFI-1 | 0110 (Deliverable→Document mirror) | `eecb867d` |
+| KFI-2 | 0120 (canonical_authority field + backfill) | `65be2bc9` |
+| KFI-3 | 0130 (authority-aware retrieval) | `06e69cd7` |
+| KFI-4 | 0140 (docs cascade automation) | `9d7764ad` |
+| KFI-5 | 0150 (CLAUDE.md workspace-canonical governance anchor) | `50c1eb44` |
 
-1. **Canonical close doc drafted** — 9 sections per Playbook §11.3 xx99 mirror + §10 Stage 6 housekeeping section. Records 4 drift items per Chris directive (scoping stage_state fix + design-prep §7.1(iv) mis-citation record + CC-1 two-application-within-arc ambiguity + CC-4 ADR-0001 forward-compat candidate) + notes Arc I-0100 §14 audit-refresh gap for future backfill.
-2. **`cross_domain_integration_audit.md §14.18` appended** — first implementation-arc §14 entry (all prior §14.2-§14.17 entries are research-arc closes).
-3. **5-step docs cascade** run locally before close PR + `docs/INDEX.md` + `docs/_provenance.json` diffs co-committed + §12.5.d evidence block in PR body.
-4. **`OPEN_ARCS.md` update** — I-0200 row moved from `In-progress` to `Closed`; wrapper-pin note updated.
-5. **Backlog cleanup** — new arc-open history row for Stage 6 close; `IB-2199-T0-01` unchanged (already `SHIPPED` from PR #2984).
-6. **Implementation debt** — no new IDBT entry authored; 5 drift items recorded in close doc §6 for audit trail.
-7. **Rigby SIGN on close doc** — mandatory per IOS §4.3 Stage 6 item 7 + §7.2 Table (Stage 6 requires full SIGN); routed on arc-scoped pin `pa-1b76ee75adbf4031`; folds applied pre-Chris-ratification; pin retires post-Chris-ratification per §15.14.
+**No active implementation arc.** Do not open new ADRs. Do not touch shipped surfaces.
 
-**Arc-scoped SIGN pin retired.** `pa-1b76ee75adbf4031` (label `ios-arc-open-I-0200`) retired via `session_tool.retire force=true` at close-PR merge time (SECOND fresh arc-scoped implementation-pin retirement after `pa-c5b235f7b15f45be` from Arc I-0100 close PR #2977).
+---
 
-**Wrapper rotation confirmed.** `tools/pa_local.sh --conversation` flipped from `pa-1b76ee75adbf4031` back to paused-research T4 pin `pa-44a6eb70d8814e34` per §15.14 restoration rule (mirrors Arc I-0100 PR #2978 pattern).
+## Current governance state
 
-### Phase
+**Cycle 1 governance is mid-cycle.** The engineering record for Cycle 1A (the immutable `0199_CYCLE_1_CLOSEOUT`) has been **authored** but has **not yet been SIGN'd or ratified**. The Engineering Playbook (Cycle 1's downstream governance artifact) is **not started** and MUST NOT be started until 0199 is ratified.
 
-**`implementation` (transitioning to no-active-arc).** IOS `active v1.5` on `main`. No active arc post-Stage-6-close-PR merge.
+Governance-only remaining work (blocking order strict):
 
-### Active arc
+1. **SIGN review of 0199** — Rigby adversarial review of the canonical engineering record. *This is the next session's first task.*
+2. **Ratification of 0199** — Chris ratification record. Blocked on (1).
+3. **Engineering Playbook authoring** — synthesis of Cycle 1A methodology into stable operating contract. Blocked on (2). NOT STARTED.
+4. **Cycle 2 planning** — successor cycle scoping. Blocked on (3) and Chris directive. NOT STARTED.
 
-**None.** Arc I-0200 closed via this Stage 6 close PR merge; no successor opened.
+---
 
-### Guardrail (still in force — carried forward from Arc I-0100 PR #2972)
+## Current workspace state
 
-**Do not attempt Railway/prod verification unless Chris explicitly provides a live prod access path.** Historical guardrail unchanged since Arc I-0100 close. If any future arc needs prod validation, that path opens with Chris naming the environment (URL + auth token, or `railway link` + `railway run …`, or a read-only prod `DATABASE_URL`).
+**Workspace:** `a9a16593-e0a4-44dc-8256-efc65d524b3c` (Architecture & Research)
 
-### Next executable action
+| Artifact | Deliverable ID |
+|---|---|
+| `0100_CYCLE_1_OPEN` | `462c5837-c454-4ad4-a8ed-8e836524ffbe` |
+| Ratification `RATIFICATION_20260707_0100_CYCLE_1_OPEN` | `89e2bfd7-1dcb-47fe-9b56-0a8fb299134c` |
+| **`0199_CYCLE_1_CLOSEOUT`** — canonical Cycle 1A engineering record | **`53756b1c-3867-428b-8003-084604526591`** |
+| Ratification records for ADRs 0110–0150 | Discover via `deliverable_tool.list workspace_id=… title__icontains=RATIFICATION_20260707` |
 
-**Chris sequencing directive determines the next arc.** No admin cleanup remains for Arc I-0200. The next session's work opens one of these paths:
+**Runtime state snapshot (2026-07-08):**
 
-- **(c) Open a new implementation arc.** Candidates already-triaged in `docs/research/implementation/BACKLOG.md`:
-  - `IB-1399-T1-*` — memory arc T1 rows
-  - `IB-1499-T1-*` — revenue arc T1 rows
-  - `IB-1599-T1-*` — sports arc T1 rows
-  - `IB-1699-T1-*` — content arc T1 rows
-  - Any T0/gate row from the register requiring individual Chris gate at Stage 2 entry
-  - `IB-1999-T0-01` (Authority per-plane posture) — Arc I-0200 fallback candidate now available as standalone T0 arc if Chris directs
-  - Any of the 8 T-slot execution PRs named in ADR-0004 §4.1 (T22 / T13 / T18 / T19 / T21 / T26a / T27 / T29) can be opened as a future implementation arc
-  - Any of the 5 codification candidates (CC-1 through CC-5) can open a dedicated IOS-patch arc if Chris directs
-- **(d) Return to research phase.** T4 Group 1700 Observability is the currently-paused research thread (`tools/pa_local.sh` now routes to `pa-44a6eb70d8814e34`). Load-bearing inputs are documented in the wrapper's comment block.
-- **(e) Optional companion PR to ADR-0001 §3.3.** If Chris directs, open a companion ADR-0001 amendment to codify the F20 forward-compat rule ("consumers MUST ignore unknown frontmatter keys") platform-wide. Currently ADR-0004-scoped only.
-- **(f) Arc I-0100 §14 audit-refresh backfill.** Optional cleanup to add the missing §14 entry for Arc I-0100 close (gap noted in Arc I-0200 close doc §6.5).
+- Documents: 2,996 total · 7 with `source='workspace'`
+- `canonical_authority` distribution: `repo_canonical=2986` · `workspace_canonical=7` · `derived=3`
+- Embeddings: 58,509 · Unembedded documents: 0
+- Beat: 91 enabled + 5 disabled = 96 rows; `refresh-docs-corpus-daily` DROPPED; `rigby_documentation_manager_daily` PRESENT + ENABLED
 
-**My read:** No default — this is a Chris sequencing decision. Do not open (c) or advance (d) without an explicit directive. If Chris is silent at session open, ask before touching either lane.
+Full snapshot + verification commands: SESSION 2706 handoff §5.
 
-### Deferred (not blocking, not urgent)
+---
 
-- **IOS §14.2 codification candidates from Arc I-0200 (5 total; all single-trigger unless noted):**
-  - CC-1 arc-scoped workflow overrides — two-application-within-arc; ambiguity per close doc §6.3 (whether that counts as two triggers or one for §14.2 threshold).
-  - CC-2 PROVISIONAL ADR two-field pattern — first live ratification.
-  - CC-3 docs-only ADR "code state" definition.
-  - CC-4 additive-frontmatter forward-compat rule — candidate ADR-0001 §3.3 companion amendment.
-  - CC-5 research→ADR strict-verbatim discipline.
-- **From Arc I-0100:** `project_deployment_state_between_merged_and_active.md` — 2/4 triggers. Do NOT propose IOS v1.6 until pattern surfaces in 2+ more independent arcs.
+## Current recommended first task
 
-### Read as background
+> **Phase 1 — SIGN review of `0199_CYCLE_1_CLOSEOUT`.**
 
-- **Arc I-0200 canonical close:** `docs/research/implementation/rag_corpus_substrate_maturity/I-020099_rag_corpus_substrate_maturity_implementation_close.md`.
-- **Arc I-0200 ADR:** `docs/adr/ADR-0004-rag-corpus-substrate-maturity-gradient.md`.
-- **Arc I-0200 supporting artifacts:** scoping / severability determination / design-prep / RATIFICATION_2026-07-07 all in `docs/research/implementation/rag_corpus_substrate_maturity/` or `docs/research/implementation/`.
-- **Arc I-0100 canonical close (Stage 6 template reference):** `docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md` (PR #2976).
-- **First-queue ratification precedent:** `docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md`.
-- **BACKLOG:** `docs/research/implementation/BACKLOG.md` — T0/T1/T2/T3/DEFER rows for next-arc selection under (c). Post-I-0200 close, `IB-2199-T0-01` is `SHIPPED`; all Arc I-0100 rows terminal.
-- **T4 paused research pin context:** `tools/pa_local.sh` header comment block.
-- **Cross-domain audit §14.18 (Arc I-0200 delta):** `docs/research/platform/cross_domain_integration_audit.md`.
+Concretely:
 
-### Session ready check (before next action)
+1. `context-kit orient` (mandatory session-open).
+2. Read `SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md` in full.
+3. Read `0199_CYCLE_1_CLOSEOUT` in full (workspace deliverable `53756b1c-3867-428b-8003-084604526591`; fall-back drafting mirror at `/tmp/0199_cycle_1_closeout.md` on Chris's authoring machine — NOT canonical).
+4. Route SIGN request to Rigby via the standard SIGN protocol against a fresh pin. Include §1–§12 and Appendices A–D. Preserve any dissent verbatim (matches Rigby KFI-4 dissent preservation pattern already established in 0199 §8).
+5. Return SIGN outcome to Chris; wait for Chris's directive on folds and ratification. Do not skip ahead to Playbook drafting even if SIGN comes back clean.
 
-1. **First tool call:** `context-kit orient`.
-2. Verify no in-flight arc: `grep -A2 '^## In-progress' docs/research/OPEN_ARCS.md | head -20` — table should be empty of live rows.
-3. Verify wrapper pin restored: `grep 'conversation pa-' tools/pa_local.sh | tail -1` — expect `pa-44a6eb70d8814e34`.
-4. Verify runtime flags OFF: `grep -E 'PA_AGENT_EXECUTION_WRITE_ENABLED|RIGBY_DELEGATION_ENABLED' core/settings.py` — both env-driven `false` defaults.
-5. Read Chris sequencing directive from the current session.
-6. If directive names any of (c) / (d) / (e) / (f), execute per that path's discipline. If ambiguous or absent, ask.
+---
+
+## Explicit non-starts for the next session
+
+- **Do NOT begin the Engineering Playbook.** It begins only after 0199 is SIGN'd and ratified.
+- **Do NOT begin Cycle 2 planning.** It begins only after the Playbook lands.
+- **Do NOT open new ADRs (0160+).**
+- **Do NOT modify any Cycle 1A shipped surface** (0110/0120/0130/0140/0150 code paths, KFI migrations, CLAUDE.md L7 blockquote, `0199` content).
+- **Do NOT re-run the Cycle 1A KFI cascades** — they are already discharged (§4 of the SESSION 2706 handoff).
+
+---
+
+## Reference documents (read order)
+
+1. [`docs/handoffs/SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md`](docs/handoffs/SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md) — this session's operational close-out and 14-item Session Close Checklist
+2. [`docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md`](docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md) — pre-code Cycle 1A ratification state
+3. `0199_CYCLE_1_CLOSEOUT` (workspace deliverable) — canonical Cycle 1A engineering record
+4. Per-ADR ratification records (workspace, dated 2026-07-07)
+5. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap; L7 blockquote is the KFI-5 workspace-canonical governance anchor
