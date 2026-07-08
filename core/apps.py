@@ -73,6 +73,16 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Deliverable status signals not available
 
+        # Cycle 1A KFI-1 (ADR-0110): connect the Deliverable → Document
+        # mirror signal (fires on new ratification_record deliverables).
+        try:
+            from core.signals.deliverable_mirror_signals import (
+                connect_deliverable_mirror_signals,
+            )
+            connect_deliverable_mirror_signals()
+        except ImportError:
+            pass  # Deliverable mirror signals not available
+
         # Session 1250 PR 8: Connect Rigby Mission Delegation lifecycle
         # signals — observes AgentExecution.post_save for delegated
         # executions and appends agent_assigned / agent_completed /

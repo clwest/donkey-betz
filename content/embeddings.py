@@ -58,6 +58,11 @@ def _derive_source_type(document) -> str:
         return 'api'
     if source in ('upload', 'user_upload'):
         return 'user_upload'
+    # Cycle 1A KFI-1 (ADR-0110): workspace-mirrored Documents originate
+    # from ratified workspace Deliverables and are canonical for
+    # research/governance per 0005 §3.
+    if source == 'workspace':
+        return 'internal'
     if doc_type == 'markdown' or source in ('', 'internal', 'system'):
         return 'internal'
     return 'unknown'

@@ -674,7 +674,18 @@ class Document(UnifiedBaseModel):
             # Session G2: Retention query indexes
             models.Index(fields=['data_sensitivity', '-created_at']),
         ]
-    
+        # Cycle 1A KFI-1 (ADR-0110): mirror identity uniqueness for
+        # workspace-mirrored Documents. Partial constraint — applies only
+        # to rows where source='workspace' so other sources retain
+        # unconstrained source_reference semantics.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source', 'source_reference'],
+                condition=models.Q(source='workspace'),
+                name='uniq_workspace_source_reference',
+            ),
+        ]
+
     def __str__(self):
         return f"{self.title} ({self.document_type}) [{self.canonical_authority}]"
 
