@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-08T13:10:31+00:00",
+    "generated": "2026-07-08T13:14:44+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "44c92b9ee304",
-    "doc_count": 2436,
-    "commit_count": 7769,
+    "git_head": "f92a88ede2e3",
+    "doc_count": 2437,
+    "commit_count": 7771,
     "confidence_breakdown": {
-      "HIGH": 1589,
+      "HIGH": 1590,
       "MEDIUM": 352,
       "LOW": 5,
       "UNKNOWN": 490
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1272,
+      "commit_count": 1273,
       "prs": [
         10,
         11,
@@ -7372,7 +7372,7 @@
         2502,
         2504
       ],
-      "commit_count": 228,
+      "commit_count": 229,
       "prs": [
         2213,
         2219,
@@ -18998,6 +18998,19 @@
       "prs": [
         2988
       ]
+    },
+    "docs/handoffs/SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md": {
+      "originating_session": 2706,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "61d7c710",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(cycle-1a-close): SESSION 2706 closeout handoff + 00-START rewrite",
+      "sessions_touched": [
+        2706
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
       "originating_session": 273,
